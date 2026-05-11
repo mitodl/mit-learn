@@ -220,7 +220,7 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
 const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   const pages = useQuery(pagesQueries.programPages(readableId))
   const programs = useQuery(
-    programsQueries.programsList({ readable_id: readableId }),
+    programsQueries.programsList({ readable_id: readableId, live: true }),
   )
 
   const page = pages.data?.items[0]

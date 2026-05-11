@@ -43,7 +43,7 @@ const setupApis = ({
   page: CoursePageItem
 }) => {
   setMockResponse.get(
-    urls.courses.coursesList({ readable_id: course.readable_id }),
+    urls.courses.coursesList({ readable_id: course.readable_id, live: true }),
     { results: [course] },
   )
 
@@ -352,7 +352,7 @@ describe("CoursePage", () => {
     { courses: [], pages: [] },
   ])("Returns 404 if no course found", async ({ courses, pages }) => {
     setMockResponse.get(
-      urls.courses.coursesList({ readable_id: "readable_id" }),
+      urls.courses.coursesList({ readable_id: "readable_id", live: true }),
       { results: courses },
     )
     if (courses.length > 0) {
@@ -370,6 +370,23 @@ describe("CoursePage", () => {
     })
 
     renderWithProviders(<CoursePage readableId="readable_id" />)
+    await waitFor(() => {
+      expect(notFound).toHaveBeenCalled()
+    })
+  })
+
+  test("Returns 404 if course has live=false", async () => {
+    const course = makeCourse()
+    const page = makePage({ course_details: course })
+    // Simulate live=false: the API filters it out, returning empty results
+    setMockResponse.get(
+      urls.courses.coursesList({ readable_id: course.readable_id, live: true }),
+      { results: [] },
+    )
+    setMockResponse.get(urls.pages.coursePages(course.readable_id), {
+      items: [page],
+    })
+    renderWithProviders(<CoursePage readableId={course.readable_id} />)
     await waitFor(() => {
       expect(notFound).toHaveBeenCalled()
     })

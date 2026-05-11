@@ -43,7 +43,7 @@ const PrerequisitesSection = styled.section({
 const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   const pages = useQuery(pagesQueries.coursePages(readableId))
   const courses = useQuery(
-    coursesQueries.coursesList({ readable_id: readableId }),
+    coursesQueries.coursesList({ readable_id: readableId, live: true }),
   )
   const page = pages.data?.items[0]
   const course = courses.data?.results?.[0]
