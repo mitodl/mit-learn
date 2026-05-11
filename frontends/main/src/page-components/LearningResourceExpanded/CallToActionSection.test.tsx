@@ -476,7 +476,6 @@ describe("CallToActionSection", () => {
     })
   })
 
-
   describe("PostHog integration", () => {
     it("calls posthog.capture when CTA link is clicked", () => {
       const originalPostHogKey = process.env.NEXT_PUBLIC_POSTHOG_API_KEY
