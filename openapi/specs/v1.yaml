@@ -11894,8 +11894,8 @@ components:
           readOnly: true
         item_count:
           type: integer
-          description: Return the number of items in the list
           readOnly: true
+          description: Number of published items in the list.
       required:
       - id
       - item_count
@@ -16332,8 +16332,8 @@ components:
             $ref: '#/components/schemas/LearningResourceTopic'
         item_count:
           type: integer
-          description: Return the number of items in the list
           readOnly: true
+          description: Number of published items in the list.
         image:
           type: object
           additionalProperties: {}
