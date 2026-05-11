@@ -571,7 +571,6 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                   sources[0]?.type === "video/youtube"
                     ? undefined
                     : (video?.video?.cover_image_url ??
-                      video?.content_files?.[0]?.image_src ??
                       video?.image?.url ??
                       undefined)
                 }
@@ -581,12 +580,10 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                 ariaLabel={`Video: ${videoTitleLabel}`}
                 ariaDescribedBy="video-description"
               />
-            ) : video?.image?.url || video?.content_files?.[0]?.image_src ? (
+            ) : video?.image?.url ? (
               <ThumbnailWrapper>
                 <Image
-                  src={
-                    (video?.image?.url ?? video?.content_files?.[0]?.image_src)!
-                  }
+                  src={video.image.url}
                   alt={videoThumbnailAlt}
                   fill
                   sizes="100vw"
@@ -679,10 +676,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                       const itemDuration = item.video?.duration
                         ? formatDurationClockTime(item.video.duration)
                         : null
-                      const imageUrl =
-                        item.image?.url ??
-                        item.content_files?.[0]?.image_src ??
-                        null
+                      const imageUrl = item.image?.url ?? null
                       const itemTopicNames = (item.topics ?? [])
                         .map((topic) => topic.name)
                         .filter(Boolean)
