@@ -8,10 +8,9 @@ import {
 import { getQueryClient } from "@/app/getQueryClient"
 import VideoDetailPageRouter from "@/app-pages/VideoPlaylistCollectionPage/VideoDetailPageRouter"
 import { notFound } from "next/navigation"
+import type { VideoResource } from "api/v1"
 
-export const generateMetadata = async (
-  props: PageProps<"/video-playlist/detail/[id]">,
-) => {
+export const generateMetadata = async (props: PageProps<"/video/[id]">) => {
   const { id } = await props.params
   const videoId = Number(id)
   if (!Number.isInteger(videoId) || videoId <= 0) {
@@ -32,7 +31,7 @@ export const generateMetadata = async (
   })
 }
 
-const Page: React.FC<PageProps<"/video-playlist/detail/[id]">> = async ({
+const Page: React.FC<PageProps<"/video/[id]">> = async ({
   params,
   searchParams,
 }) => {
@@ -43,8 +42,16 @@ const Page: React.FC<PageProps<"/video-playlist/detail/[id]">> = async ({
     notFound()
   }
 
-  const rawPlaylist = resolvedSearchParams?.playlist
+  const queryClient = getQueryClient()
+
+  const video = (await queryClient.fetchQueryOr404(
+    learningResourceQueries.detail(videoId),
+  )) as VideoResource
+
+  // Resolve playlistId: prefer explicit ?playlist= param, fall back to video.playlists[0]
   let playlistId: number | null = null
+  const rawPlaylist = resolvedSearchParams?.playlist
+
   if (rawPlaylist !== undefined) {
     // searchParams values can be string | string[]; treat array as invalid
     if (Array.isArray(rawPlaylist)) {
@@ -55,26 +62,27 @@ const Page: React.FC<PageProps<"/video-playlist/detail/[id]">> = async ({
       notFound()
     }
     playlistId = parsed
+  } else {
+    // Use the first playlist the video belongs to, if any
+    const firstPlaylist = video.playlists?.[0]
+    if (firstPlaylist !== undefined) {
+      const parsed = Number(firstPlaylist)
+      if (Number.isInteger(parsed) && parsed > 0) {
+        playlistId = parsed
+      }
+    }
   }
 
-  const queryClient = getQueryClient()
-
-  await queryClient.fetchQueryOr404(learningResourceQueries.detail(videoId))
-
-  const prefetches: Promise<unknown>[] = []
-
   if (playlistId !== null) {
-    prefetches.push(
+    await Promise.all([
       queryClient.fetchQueryOr404(videoPlaylistQueries.detail(playlistId)),
       queryClient.prefetchQuery(
         learningResourceQueries.items(playlistId, {
           learning_resource_id: playlistId,
         }),
       ),
-    )
+    ])
   }
-
-  await Promise.all(prefetches)
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
