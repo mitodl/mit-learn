@@ -33,17 +33,8 @@ def create_user(username, email, profile_data=None, user_extra=None):
     defaults.update({"username": username})
 
     with transaction.atomic():
-        user, created = User.objects.get_or_create(email=email, defaults=defaults)
-
+        user, _ = User.objects.get_or_create(email=email, defaults=defaults)
         profile_api.ensure_profile(user, profile_data=profile_data)
-        if created:
-            transaction.on_commit(
-                lambda: user_created_actions(
-                    user=user,
-                    is_new=True,
-                    details=profile_data or {},
-                )
-            )
 
     return user
 

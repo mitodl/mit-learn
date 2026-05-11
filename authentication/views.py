@@ -9,6 +9,7 @@ from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views import View
 
 from main.middleware.apisix_user import ApisixUserMiddleware, decode_apisix_headers
+from profiles.tasks import send_welcome_email
 
 log = logging.getLogger(__name__)
 
@@ -100,6 +101,7 @@ class CustomLoginView(View):
                     redirect_url = f"{settings.MITOL_NEW_USER_LOGIN_URL}?{params}"
                     profile.save()
 
+                send_welcome_email.delay(request.user.id)
                 profile.has_logged_in = True
                 profile.save()
 
