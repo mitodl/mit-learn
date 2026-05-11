@@ -179,6 +179,9 @@ def test_custom_login_view_authenticated_user_needs_onboarding(
         "authentication.views.settings.MITOL_NEW_USER_LOGIN_URL", "/onboarding"
     )
     mocker.patch("authentication.views.decode_apisix_headers", return_value={})
+    mock_send_welcome_email = mocker.patch(
+        "authentication.views.send_welcome_email.delay"
+    )
 
     response = CustomLoginView().get(request)
 
@@ -188,6 +191,7 @@ def test_custom_login_view_authenticated_user_needs_onboarding(
         assert response.url == f"/onboarding?{urlencode({'next': expected_redirect})}"
     else:
         assert response.url == expected_redirect
+    mock_send_welcome_email.assert_called_once_with(request.user.id)
 
 
 def test_custom_login_view_authenticated_user_who_has_logged_in_before(mocker):
@@ -199,11 +203,15 @@ def test_custom_login_view_authenticated_user_who_has_logged_in_before(mocker):
     )
     request.user = MagicMock(is_anonymous=False)
     request.user.profile = MagicMock(has_logged_in=True)
+    mock_send_welcome_email = mocker.patch(
+        "authentication.views.send_welcome_email.delay"
+    )
 
     response = CustomLoginView().get(request)
 
     assert response.status_code == 302
     assert response.url == "/should-be-redirect?foo"
+    mock_send_welcome_email.assert_not_called()
 
 
 def test_custom_login_view_anonymous_user(mocker):
@@ -231,9 +239,13 @@ def test_custom_login_view_first_time_login_sets_has_logged_in(mocker):
 
     mock_user = MagicMock()
     mock_user.is_anonymous = False
+    mock_user.id = 123
     mock_user.profile = mock_profile
 
     request.user = mock_user
+    mock_send_welcome_email = mocker.patch(
+        "authentication.views.send_welcome_email.delay"
+    )
 
     response = CustomLoginView().get(request)
 
@@ -243,6 +255,7 @@ def test_custom_login_view_first_time_login_sets_has_logged_in(mocker):
     # Verify that has_logged_in was set to True and profile was saved
     assert mock_profile.has_logged_in is True
     mock_profile.save.assert_called_once()
+    mock_send_welcome_email.assert_called_once_with(mock_user.id)
 
 
 class LoginOrgUserRedirectParams(NamedTuple):
@@ -286,6 +299,9 @@ def test_login_org_user_redirect(
     # Set up user profile based on test scenario
     user.profile.has_logged_in = has_logged_in
     user.profile.save()
+    mock_send_welcome_email = mocker.patch(
+        "authentication.views.send_welcome_email.delay"
+    )
 
     header_str = b64encode(
         json.dumps(
@@ -319,3 +335,7 @@ def test_login_org_user_redirect(
 
     user.profile.refresh_from_db()
     assert user.profile.has_logged_in is True
+    if has_logged_in:
+        mock_send_welcome_email.assert_not_called()
+    else:
+        mock_send_welcome_email.assert_called_once_with(user.id)
