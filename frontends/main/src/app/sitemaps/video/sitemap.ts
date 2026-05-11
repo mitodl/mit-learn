@@ -29,8 +29,8 @@ export async function generateSitemaps(): Promise<GenerateSitemapResult[]> {
 
   const queryClient = getQueryClient()
   const { count } = await queryClient.fetchQuery(
-    learningResourceQueries.list({
-      limit: PAGE_SIZE,
+    learningResourceQueries.summaryList({
+      limit: 1,
       resource_type: RESOURCE_TYPES,
     }),
   )

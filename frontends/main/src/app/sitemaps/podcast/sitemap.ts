@@ -32,8 +32,8 @@ export async function generateSitemaps(): Promise<GenerateSitemapResult[]> {
 
   const queryClient = getQueryClient()
   const { count } = await queryClient.fetchQuery(
-    learningResourceQueries.list({
-      limit: PAGE_SIZE,
+    learningResourceQueries.summaryList({
+      limit: 1,
       resource_type: RESOURCE_TYPES,
     }),
   )
@@ -70,14 +70,11 @@ export default async function sitemap({
       ]
     }
     if (resource.resource_type === ResourceTypeEnum.PodcastEpisode) {
-      const parentPodcastId = resource.podcast_episode?.podcasts?.[0]
-      if (!parentPodcastId) return []
-      return [
-        {
-          url: `${BASE_URL}/podcast/${parentPodcastId}/podcast_episode/${resource.id}`,
-          lastModified: resource.last_modified ?? undefined,
-        },
-      ]
+      const parentPodcastIds = resource.podcast_episode?.podcasts ?? []
+      return parentPodcastIds.map((parentPodcastId) => ({
+        url: `${BASE_URL}/podcast/${parentPodcastId}/podcast_episode/${resource.id}`,
+        lastModified: resource.last_modified ?? undefined,
+      }))
     }
     return []
   })

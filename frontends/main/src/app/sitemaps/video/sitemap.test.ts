@@ -8,17 +8,17 @@ const RESOURCE_TYPES = [ResourceTypeEnum.Video, ResourceTypeEnum.VideoPlaylist]
 describe("Video Sitemaps", () => {
   it("returns expected sitemap params", async () => {
     const pages = faker.number.int({ min: 4, max: 6 })
-    const resources = factories.learningResources.resources({
+    const summaries = factories.learningResources.resourceSummaries({
       count: pages * 1_000 - 350,
-      pageSize: 10,
+      pageSize: 1,
     })
 
     setMockResponse.get(
-      urls.learningResources.list({
-        limit: 1_000,
+      urls.learningResources.summaryList({
+        limit: 1,
         resource_type: RESOURCE_TYPES,
       }),
-      resources,
+      summaries,
     )
 
     const result = await generateSitemaps()

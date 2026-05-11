@@ -11,17 +11,17 @@ const RESOURCE_TYPES = [
 describe("Podcast Sitemaps", () => {
   it("returns expected sitemap params", async () => {
     const pages = faker.number.int({ min: 4, max: 6 })
-    const resources = factories.learningResources.resources({
+    const summaries = factories.learningResources.resourceSummaries({
       count: pages * 1_000 - 350,
-      pageSize: 10,
+      pageSize: 1,
     })
 
     setMockResponse.get(
-      urls.learningResources.list({
-        limit: 1_000,
+      urls.learningResources.summaryList({
+        limit: 1,
         resource_type: RESOURCE_TYPES,
       }),
-      resources,
+      summaries,
     )
 
     const result = await generateSitemaps()
@@ -60,15 +60,26 @@ describe("Podcast Sitemaps", () => {
   })
 
   it("generates expected URLs for podcast episode resources", async () => {
-    const page = faker.number.int({ min: 5, max: 10 })
-    const parentPodcastId = String(faker.number.int())
-    const episodeWithParent = factories.learningResources.podcastEpisode({
-      podcast_episode: { podcasts: [parentPodcastId] },
+    // Use a non-overlapping range from the podcast test (which uses { min: 5, max: 10 })
+    // to avoid query cache collisions on the same list URL.
+    const page = faker.number.int({ min: 11, max: 20 })
+    const podcastId1 = String(faker.number.int())
+    const podcastId2 = String(faker.number.int())
+    const episodeWithMultipleParents =
+      factories.learningResources.podcastEpisode({
+        podcast_episode: { podcasts: [podcastId1, podcastId2] },
+      })
+    const episodeWithOneParent = factories.learningResources.podcastEpisode({
+      podcast_episode: { podcasts: [podcastId1] },
     })
     const episodeWithoutParent = factories.learningResources.podcastEpisode({
       podcast_episode: { podcasts: [] },
     })
-    const results = [episodeWithParent, episodeWithoutParent]
+    const results = [
+      episodeWithMultipleParents,
+      episodeWithOneParent,
+      episodeWithoutParent,
+    ]
 
     setMockResponse.get(
       urls.learningResources.list({
@@ -80,11 +91,19 @@ describe("Podcast Sitemaps", () => {
     )
 
     const sitemapPage = await sitemap({ id: String(page) })
-    // episodeWithoutParent should be excluded
+    // episodeWithoutParent should be excluded; episodeWithMultipleParents emits one entry per parent
     expect(sitemapPage).toEqual([
       {
-        url: `http://test.learn.odl.local:8062/podcast/${parentPodcastId}/podcast_episode/${episodeWithParent.id}`,
-        lastModified: episodeWithParent.last_modified ?? undefined,
+        url: `http://test.learn.odl.local:8062/podcast/${podcastId1}/podcast_episode/${episodeWithMultipleParents.id}`,
+        lastModified: episodeWithMultipleParents.last_modified ?? undefined,
+      },
+      {
+        url: `http://test.learn.odl.local:8062/podcast/${podcastId2}/podcast_episode/${episodeWithMultipleParents.id}`,
+        lastModified: episodeWithMultipleParents.last_modified ?? undefined,
+      },
+      {
+        url: `http://test.learn.odl.local:8062/podcast/${podcastId1}/podcast_episode/${episodeWithOneParent.id}`,
+        lastModified: episodeWithOneParent.last_modified ?? undefined,
       },
     ])
   })
