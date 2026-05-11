@@ -40,11 +40,7 @@ export const generateMetadata = ({
     return { title: isEmbeddableVideo ? (resource?.title ?? "Video") : "Video" }
   })
 
-const Page = async ({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) => {
+const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params
   const videoId = Number(id)
   if (!Number.isInteger(videoId) || videoId <= 0) {

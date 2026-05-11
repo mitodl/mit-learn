@@ -83,9 +83,7 @@ const VideoEmbedPage: React.FC<VideoEmbedPageProps> = ({ videoId }) => {
         key={videoId}
         sources={sources}
         tracks={video?.video?.caption_urls ?? []}
-        poster={
-          video?.video?.cover_image_url ?? video?.image?.url ?? undefined
-        }
+        poster={video?.video?.cover_image_url ?? video?.image?.url ?? undefined}
         autoplay={false}
         controls
         fluid={false}
