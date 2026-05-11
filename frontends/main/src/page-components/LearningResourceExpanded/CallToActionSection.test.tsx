@@ -382,7 +382,7 @@ describe("CallToActionSection", () => {
     ) => {
       return factories.learningResources.resource({
         platform: { code: PlatformEnum.Ocw },
-        url: `${ocwUrl}resources/resource-abc`,
+        url: ocwUrl,
         ...overrides,
       })
     }
@@ -456,6 +456,7 @@ describe("CallToActionSection", () => {
       const resource = ocwResource({
         resource_type: ResourceTypeEnum.Video,
         resource_category: "Lecture Video",
+        url: `${ocwUrl}resources/abc-def`,
       })
 
       renderWithProviders(
@@ -470,7 +471,7 @@ describe("CallToActionSection", () => {
         name: "Access Learning Material",
       })
       const href = link.getAttribute("href")
-      expect(href).toContain(`/courses/o/${ocwSlug}`)
+      expect(href).toContain(`/courses/o/${ocwSlug}/resources/abc-def`)
       expect(href).not.toContain("ocw.mit.edu")
       expect(href).not.toContain("utm_")
     })

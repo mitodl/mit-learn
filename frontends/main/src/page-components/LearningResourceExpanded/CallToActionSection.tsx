@@ -324,14 +324,6 @@ const getResourceUrl = (
   },
 ) => {
   if (
-    ocwProductPages &&
-    resource.platform?.code === PlatformEnum.Ocw &&
-    resource.url
-  ) {
-    const url = new URL(resource.url)
-    return url.pathname.replace(/^\/courses/, "/courses/o")
-  }
-  if (
     mitxonlineProductPages &&
     resource.platform?.code === PlatformEnum.Mitxonline
   ) {
@@ -379,6 +371,15 @@ const getResourceUrl = (
         resource?.podcast_episode?.podcasts[0].toString(),
       )
     }
+  }
+
+  if (
+    ocwProductPages &&
+    resource.platform?.code === PlatformEnum.Ocw &&
+    resource.url
+  ) {
+    const url = new URL(resource.url)
+    return url.pathname.replace(/^\/courses/, "/courses/o")
   }
   return resource.url
 }
