@@ -454,7 +454,6 @@ def test_vector_search_sortby_pagination(mocker, client):
     )
 
     params = {
-        "q": "test",
         "sortby": "-created_on",
         "limit": 20,
         "offset": 60,
@@ -464,7 +463,7 @@ def test_vector_search_sortby_pagination(mocker, client):
         reverse("vector_search:v0:vector_learning_resources_search"), data=params
     )
 
-    call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
+    call_kwargs = mock_qdrant.scroll.mock_calls[0].kwargs
 
     # Should request offset+limit results, not just limit
     assert call_kwargs["limit"] == 80  # 60 + 20
