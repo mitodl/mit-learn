@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.67.1
+Version 0.67.1 (Released May 11, 2026)
 --------------
 
 - fix: 404 on product pages when live=false (#3295)
