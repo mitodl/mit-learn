@@ -3,8 +3,17 @@
 import React from "react"
 import ErrorPageTemplate from "./ErrorPageTemplate"
 
-const FallbackErrorPage = () => {
-  return <ErrorPageTemplate title="Something went wrong." />
+type FallbackErrorPageProps = {
+  hideHomeButton?: boolean
+}
+
+const FallbackErrorPage = ({ hideHomeButton }: FallbackErrorPageProps) => {
+  return (
+    <ErrorPageTemplate
+      title="Something went wrong."
+      hideHomeButton={hideHomeButton}
+    />
+  )
 }
 
 export default FallbackErrorPage
