@@ -3,7 +3,6 @@
 import React, { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { Typography, styled, theme, Skeleton } from "ol-components"
 import VideoContainer from "./VideoContainer"
 import { RiShareForwardFill, RiPlayCircleFill } from "@remixicon/react"
@@ -16,9 +15,6 @@ import {
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { VideoResourceResourceTypeEnum } from "api/v1"
 import { formatDurationClockTime } from "ol-utilities"
-import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { notFound } from "next/navigation"
 import SharePopover from "@/components/SharePopover/SharePopover"
 import { buildVideoStructuredData } from "./videoStructuredData"
 import VideoResourcePlayer from "./VideoResourcePlayer"
@@ -345,11 +341,6 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
     enabled: !!playlistId,
   })
 
-  const showVideoPlaylistPage = useFeatureFlagEnabled(
-    FeatureFlags.VideoPlaylistPage,
-  )
-  const flagsLoaded = useFeatureFlagsLoaded()
-
   const playlist = playlistData as VideoPlaylistResource | undefined
   const video = resource as VideoResource | undefined
 
@@ -397,10 +388,6 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
   // VideoObject JSON-LD for Google search indexing.
   // See: https://developers.google.com/search/docs/appearance/structured-data/video
   const structuredData = !isLoading ? buildVideoStructuredData(video) : null
-
-  if (!showVideoPlaylistPage) {
-    return flagsLoaded ? notFound() : null
-  }
 
   return (
     <PageWrapper>

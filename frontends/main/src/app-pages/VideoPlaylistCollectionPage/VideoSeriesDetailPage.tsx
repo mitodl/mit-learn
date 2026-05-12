@@ -1,15 +1,11 @@
 "use client"
 
 import React, { useEffect, useRef } from "react"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { Skeleton, styled } from "ol-components"
 import VideoContainer from "./VideoContainer"
 import { useLearningResourcesDetail } from "api/hooks/learningResources"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { formatDurationClockTime } from "ol-utilities"
-import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { notFound } from "next/navigation"
 import { useSeriesNavigation } from "./useSeriesNavigation"
 import SeriesNavBar from "./SeriesNavBar"
 import UpNextSection from "./UpNextSection"
@@ -38,11 +34,6 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
 
   const { data: resource, isLoading: videoLoading } =
     useLearningResourcesDetail(videoId)
-
-  const showVideoPlaylistPage = useFeatureFlagEnabled(
-    FeatureFlags.VideoPlaylistPage,
-  )
-  const flagsLoaded = useFeatureFlagsLoaded()
 
   const playlist = playlistData as VideoPlaylistResource | undefined
   const video = resource as VideoResource | undefined
@@ -83,10 +74,6 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
   // any additional JS. The replace guard prevents </script> injection.
   // See: https://developers.google.com/search/docs/appearance/structured-data/video
   const structuredData = !isLoading ? buildVideoStructuredData(video) : null
-
-  if (!showVideoPlaylistPage) {
-    return flagsLoaded ? notFound() : null
-  }
 
   return (
     <Styled.PageWrapper>

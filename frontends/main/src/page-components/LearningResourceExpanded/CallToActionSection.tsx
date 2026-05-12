@@ -314,11 +314,9 @@ const getResourceUrl = (
   resource: LearningResource,
   {
     mitxonlineProductPages,
-    showVideoPlaylistPage,
     showPodcastPage,
   }: {
     mitxonlineProductPages?: boolean
-    showVideoPlaylistPage?: boolean
     showPodcastPage?: boolean
   },
 ) => {
@@ -345,16 +343,14 @@ const getResourceUrl = (
       })
     }
   }
-  if (showVideoPlaylistPage) {
-    if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
-      return videoPlaylistPageView(resource.id.toString())
-    }
-    if (
-      resource.resource_type === ResourceTypeEnum.Video &&
-      resource?.playlists?.length > 0
-    ) {
-      return videoDetailPageView(resource.id, Number(resource.playlists[0]))
-    }
+  if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
+    return videoPlaylistPageView(resource.id.toString())
+  }
+  if (
+    resource.resource_type === ResourceTypeEnum.Video &&
+    resource?.playlists?.length > 0
+  ) {
+    return videoDetailPageView(resource.id, Number(resource.playlists[0]))
   }
 
   if (showPodcastPage) {
@@ -401,9 +397,6 @@ const CallToActionSection = ({
   const mitxonlineProductPages = useFeatureFlagEnabled(
     FeatureFlags.MitxOnlineProductPages,
   )
-  const showVideoPlaylistPage = useFeatureFlagEnabled(
-    FeatureFlags.VideoPlaylistPage,
-  )
   const showPodcastPage = useFeatureFlagEnabled(FeatureFlags.PodcastDetailPage)
 
   if (hide) {
@@ -433,7 +426,6 @@ const CallToActionSection = ({
   const url = appendUtmParams(
     getResourceUrl(resource, {
       mitxonlineProductPages,
-      showVideoPlaylistPage,
       showPodcastPage,
     }),
     resource.title,

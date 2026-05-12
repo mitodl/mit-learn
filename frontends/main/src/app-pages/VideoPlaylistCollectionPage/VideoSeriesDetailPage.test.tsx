@@ -1,17 +1,9 @@
 import React from "react"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { renderWithProviders, screen } from "@/test-utils"
-import { notFound } from "next/navigation"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import VideoSeriesDetailPage from "./VideoSeriesDetailPage"
 import { ResourceTypeEnum } from "api/v1"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
-
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
-jest.mock("@/common/useFeatureFlagsLoaded")
-const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 
 jest.mock("next-nprogress-bar", () => ({
   useRouter: () => ({}),
@@ -101,37 +93,6 @@ const renderPage = ({
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe("VideoSeriesDetailPage", () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-  })
-
-  describe("feature-flag gating", () => {
-    test("calls notFound when VideoPlaylistPage flag is disabled and flags are loaded", () => {
-      mockedUseFeatureFlagEnabled.mockReturnValue(false)
-      mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-
-      renderPage()
-
-      expect(notFound).toHaveBeenCalled()
-    })
-
-    test("does not call notFound when the flag is enabled", () => {
-      renderPage()
-      expect(notFound).not.toHaveBeenCalled()
-    })
-
-    test("does not call notFound when the flag is undefined and flags are not yet loaded", () => {
-      mockedUseFeatureFlagEnabled.mockReturnValue(undefined)
-      mockedUseFeatureFlagsLoaded.mockReturnValue(false)
-
-      renderPage()
-
-      expect(notFound).not.toHaveBeenCalled()
-    })
-  })
-
   describe("video title and institution label", () => {
     test("renders the video title once data is loaded", async () => {
       const video = makeVideo({ title: "Introduction to Machine Learning" })
