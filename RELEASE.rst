@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.67.2
+Version 0.67.2 (Released May 12, 2026)
 --------------
 
 - feat: display MicroMasters® label on MITxOnline program product pages (#3318)
