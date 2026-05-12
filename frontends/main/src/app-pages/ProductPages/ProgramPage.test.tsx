@@ -693,7 +693,9 @@ describe("ProgramPage", () => {
         await screen.findByRole("heading", { name: page.title })
         const programTypeLabel = screen.getByTestId("program-type-label")
         expect(programTypeLabel).toBeInTheDocument()
-        expect(within(programTypeLabel).getByText("MicroMasters®")).toBeInTheDocument()
+        expect(
+          within(programTypeLabel).getByText("MicroMasters®"),
+        ).toBeInTheDocument()
       },
     )
 
