@@ -1,4 +1,5 @@
 import { factories } from "api/mitxonline-test-utils"
+import type { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
 import {
   getDashboardLanguageOptions,
   getDistinctDashboardLanguageOptions,
@@ -217,6 +218,20 @@ describe("dashboardViewModel", () => {
       )
 
       expect(options.map((option) => option.value)).toEqual(["language:fr"])
+    })
+
+    test("skips enrollments with missing runs", () => {
+      const course = factories.courses.course({ id: 30, language_options: [] })
+      const missingRunEnrollment = {
+        run: undefined,
+      } as unknown as CourseRunEnrollmentV3
+
+      const options = getDistinctDashboardLanguageOptions(
+        [course],
+        [missingRunEnrollment],
+      )
+
+      expect(options).toEqual([])
     })
   })
 

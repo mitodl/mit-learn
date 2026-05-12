@@ -212,6 +212,10 @@ const getDashboardLanguageOptions = (
       : enrollments
 
   scopedEnrollments.forEach((enrollment) => {
+    if (!enrollment.run) {
+      return
+    }
+
     if (!enrollmentMatchesCourse(course, enrollment)) {
       return
     }
@@ -249,6 +253,10 @@ const getDistinctDashboardLanguageOptions = (
       : enrollments
 
   scopedEnrollments.forEach((enrollment) => {
+    if (!enrollment.run) {
+      return
+    }
+
     if (!courseIds.has(enrollment.run.course.id)) {
       return
     }
