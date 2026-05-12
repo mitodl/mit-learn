@@ -8,7 +8,7 @@ MITOL_LEARNING_RESOURCES_PLUGINS = get_string(
     "MITOL_LEARNING_RESOURCES_PLUGINS",
     "learning_resources_search.plugins.SearchIndexPlugin,channels.plugins.ChannelPlugin",
 )
-MITOL_ARTICLES_PLUGINS = get_string(
-    "MITOL_ARTICLES_PLUGINS",
-    "news_events.plugins.ArticleNewsPlugin",
+MITOL_WEBSITE_CONTENT_PLUGINS = get_string(
+    "MITOL_WEBSITE_CONTENT_PLUGINS",
+    "news_events.plugins.WebsiteContentNewsPlugin",
 )

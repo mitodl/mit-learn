@@ -35,7 +35,7 @@ def mock_articles(mocker):
     mock_queryset.select_related.return_value = [mock_article]
 
     mocker.patch(
-        "news_events.etl.articles_news.Article.objects.filter",
+        "news_events.etl.articles_news.WebsiteContent.objects.filter",
         return_value=mock_queryset,
     )
 
