@@ -5,6 +5,7 @@ import {
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { getBestRun } from "@/common/mitxonline"
+import { pickDisplayedEnrollmentForLegacyDashboard } from "./model/dashboardViewModel"
 export { getBestRun }
 
 const ResourceType = {
@@ -51,25 +52,7 @@ const selectBestEnrollment = (
   course: CourseWithCourseRunsSerializerV2,
   enrollments: CourseRunEnrollmentV3[],
 ): CourseRunEnrollmentV3 | null => {
-  const courseEnrollments = enrollments.filter((enrollment) =>
-    course.courseruns.some((run) => run.id === enrollment.run.id),
-  )
-  if (courseEnrollments.length === 0) {
-    return null
-  }
-  return courseEnrollments.reduce((best, current) => {
-    const bestHasCert = !!best.certificate?.uuid
-    const currentHasCert = !!current.certificate?.uuid
-
-    // Prioritize having a certificate
-    if (currentHasCert && !bestHasCert) return current
-    if (bestHasCert && !currentHasCert) return best
-
-    // If both have or don't have certificates, compare grades
-    const bestGrade = Math.max(0, ...best.grades.map((g) => g.grade ?? 0))
-    const currentGrade = Math.max(0, ...current.grades.map((g) => g.grade ?? 0))
-    return currentGrade > bestGrade ? current : best
-  }, courseEnrollments[0])
+  return pickDisplayedEnrollmentForLegacyDashboard(course, enrollments)
 }
 
 const getEnrollmentStatus = (

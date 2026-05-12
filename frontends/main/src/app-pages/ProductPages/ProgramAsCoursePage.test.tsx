@@ -53,7 +53,10 @@ const setupApis = ({
   childPrograms: V2ProgramDetail[]
 } => {
   setMockResponse.get(
-    urls.programs.programsList({ readable_id: program.readable_id }),
+    urls.programs.programsList({
+      readable_id: program.readable_id,
+      live: true,
+    }),
     { results: [program] },
   )
   setMockResponse.get(urls.pages.programPages(program.readable_id), {
@@ -163,13 +166,35 @@ describe("ProgramAsCoursePage", () => {
 
   test("Returns 404 if no program found", async () => {
     setMockResponse.get(
-      urls.programs.programsList({ readable_id: "readable_id" }),
+      urls.programs.programsList({ readable_id: "readable_id", live: true }),
       { results: [] },
     )
     setMockResponse.get(urls.pages.programPages("readable_id"), {
       items: [],
     })
     renderWithProviders(<ProgramAsCoursePage readableId="readable_id" />)
+    await waitFor(() => {
+      expect(notFound).toHaveBeenCalled()
+    })
+  })
+
+  test("Returns 404 if program has live=false", async () => {
+    const program = makeProgramAsCourse()
+    const page = makePage({ program_details: program })
+    // Simulate live=false: the API filters it out, returning empty results
+    setMockResponse.get(
+      urls.programs.programsList({
+        readable_id: program.readable_id,
+        live: true,
+      }),
+      { results: [] },
+    )
+    setMockResponse.get(urls.pages.programPages(program.readable_id), {
+      items: [page],
+    })
+    renderWithProviders(
+      <ProgramAsCoursePage readableId={program.readable_id} />,
+    )
     await waitFor(() => {
       expect(notFound).toHaveBeenCalled()
     })

@@ -262,11 +262,12 @@ const getCallToActionText = (resource: LearningResource): string => {
   const listenToPodcast = "Listen to Podcast"
   const viewArticle = "View Article"
   const learnMore = "Learn More"
+  const watchVideo = "Watch Video"
   const callsToAction = {
     [ResourceTypeEnum.Course]: learnMore,
     [ResourceTypeEnum.Program]: learnMore,
     [ResourceTypeEnum.LearningPath]: learnMore,
-    [ResourceTypeEnum.Video]: learnMore,
+    [ResourceTypeEnum.Video]: watchVideo,
     [ResourceTypeEnum.VideoPlaylist]: learnMore,
     [ResourceTypeEnum.Podcast]: listenToPodcast,
     [ResourceTypeEnum.PodcastEpisode]: listenToPodcast,
@@ -280,7 +281,7 @@ const getCallToActionText = (resource: LearningResource): string => {
   if (resource?.platform?.code === PlatformEnum.Ocw) {
     if (resource.resource_type === ResourceTypeEnum.Course) {
       return accessCourseMaterials
-    } else {
+    } else if (resource.resource_type === ResourceTypeEnum.Document) {
       return accessLearningMaterial
     }
   }
@@ -477,7 +478,10 @@ const CallToActionSection = ({
         >
           {cta}
         </StyledLink>
-        {platformImage ? (
+        {platformImage &&
+        (resource.resource_type === ResourceTypeEnum.Course ||
+          resource.resource_type === ResourceTypeEnum.Program ||
+          resource.resource_type === ResourceTypeEnum.Document) ? (
           <PlatformContainer>
             <Platform>
               <OnPlatform>on</OnPlatform>

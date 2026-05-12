@@ -55,14 +55,14 @@ describe("CallToActionSection", () => {
       {
         resourceType: ResourceTypeEnum.Video,
         platform: PlatformEnum.Youtube,
-        resourceCategory: "Lecture Video",
-        expectedText: "Learn More",
+        resourceCategory: "Video",
+        expectedText: "Watch Video",
       },
       {
         resourceType: ResourceTypeEnum.Video,
         platform: PlatformEnum.Ocw,
         resourceCategory: "Lecture Video",
-        expectedText: "Access Learning Material",
+        expectedText: "Watch Video",
       },
       {
         resourceType: ResourceTypeEnum.VideoPlaylist,

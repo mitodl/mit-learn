@@ -1,6 +1,10 @@
 import React from "react"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
-import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
+import {
+  safeGenerateMetadata,
+  standardizeMetadata,
+  MetadataNotFound,
+} from "@/common/metadata"
 import CoursePage from "@/app-pages/ProductPages/CoursePage"
 import { notFound } from "next/navigation"
 import { pagesQueries } from "api/mitxonline-hooks/pages"
@@ -18,17 +22,16 @@ export const generateMetadata = async (
   return safeGenerateMetadata(async () => {
     const queryClient = getQueryClient()
 
-    const coursePages = await queryClient.fetchQuery(
-      pagesQueries.coursePages(readableId),
+    const { results: courses } = await queryClient.fetchQuery(
+      coursesQueries.coursesList({ readable_id: readableId, live: true }),
     )
 
-    if (coursePages.items.length === 0) {
-      notFound()
+    if (courses.length === 0) {
+      throw new MetadataNotFound()
     }
-    const [course] = coursePages.items
+    const [course] = courses
 
-    const image =
-      course.course_details.page.feature_image_src || DEFAULT_RESOURCE_IMG
+    const image = course.page?.feature_image_src || DEFAULT_RESOURCE_IMG
 
     return standardizeMetadata({
       title: course.title,
@@ -50,7 +53,7 @@ const Page: React.FC<PageProps<"/courses/[readable_id]">> = async (props) => {
   const [coursePages, courses] = await Promise.all([
     queryClient.fetchQuery(pagesQueries.coursePages(readableId)),
     queryClient.fetchQuery(
-      coursesQueries.coursesList({ readable_id: readableId }),
+      coursesQueries.coursesList({ readable_id: readableId, live: true }),
     ),
   ])
 

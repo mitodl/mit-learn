@@ -99,6 +99,39 @@ def test_user_list_endpoint_list_query_count_constant(
     assert expanded_resp.status_code == 200
 
 
+def test_user_list_endpoint_item_count_excludes_unpublished(client):
+    """item_count should only include published resources"""
+    author = UserFactory.create()
+    user_list = factories.UserListFactory.create(author=author)
+    factories.UserListRelationshipFactory.create(parent=user_list, position=1)
+    factories.UserListRelationshipFactory.create(
+        parent=user_list, position=2, child__published=False
+    )
+
+    client.force_login(author)
+    resp = client.get(reverse("lr:v1:userlists_api-detail", args=[user_list.id]))
+    assert resp.status_code == 200
+    assert resp.data.get("item_count") == 1
+
+
+def test_user_list_items_endpoint_excludes_unpublished(client):
+    """Items list endpoint should only return relationships with published children"""
+    author = UserFactory.create()
+    user_list = factories.UserListFactory.create(author=author)
+    published_rel = factories.UserListRelationshipFactory.create(
+        parent=user_list, position=1
+    )
+    factories.UserListRelationshipFactory.create(
+        parent=user_list, position=2, child__published=False
+    )
+
+    client.force_login(author)
+    resp = client.get(reverse("lr:v1:userlistitems_api-list", args=[user_list.id]))
+    assert resp.status_code == 200
+    results = resp.json()["results"]
+    assert [item["child"] for item in results] == [published_rel.child_id]
+
+
 @pytest.mark.parametrize("is_anonymous", [True, False])
 def test_user_list_endpoint_create(  # pylint: disable=too-many-arguments
     client, is_anonymous

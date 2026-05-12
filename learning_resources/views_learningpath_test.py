@@ -345,6 +345,52 @@ def test_learning_path_items_endpoint_delete_items(client, user, is_editor, num_
         assert item.position == (old_position - 1 if is_editor else old_position)
 
 
+def test_learning_path_endpoint_item_count_excludes_unpublished(client, user):
+    """LearningPath item_count should only include published children"""
+    update_editor_group(user, True)  # noqa: FBT003
+    learning_path_res = factories.LearningResourceFactory.create(
+        is_learning_path=True, published=True
+    )
+    learning_path_res.children.all().delete()
+    factories.LearningPathRelationshipFactory.create(
+        parent=learning_path_res, position=1
+    )
+    factories.LearningPathRelationshipFactory.create(
+        parent=learning_path_res, position=2, child__published=False
+    )
+
+    client.force_login(user)
+    resp = client.get(
+        reverse("lr:v1:learningpaths_api-detail", args=[learning_path_res.id])
+    )
+    assert resp.status_code == 200
+    assert resp.data["learning_path"]["item_count"] == 1
+
+
+def test_learning_path_items_endpoint_excludes_unpublished(client):
+    """Items list endpoint should only return relationships with published children"""
+    learning_path = factories.LearningPathFactory.create()
+    learning_path.learning_resource.children.all().delete()
+    published_rel = factories.LearningPathRelationshipFactory.create(
+        parent=learning_path.learning_resource, position=1
+    )
+    factories.LearningPathRelationshipFactory.create(
+        parent=learning_path.learning_resource,
+        position=2,
+        child__published=False,
+    )
+
+    resp = client.get(
+        reverse(
+            "lr:v1:learningpathitems_api-list",
+            args=[learning_path.learning_resource.id],
+        )
+    )
+    assert resp.status_code == 200
+    results = resp.json()["results"]
+    assert [item["child"] for item in results] == [published_rel.child_id]
+
+
 @pytest.mark.parametrize("is_editor", [True, False])
 def test_learning_path_endpoint_delete(client, user, is_editor):
     """Test learningpath endpoint for deleting a LearningPath"""

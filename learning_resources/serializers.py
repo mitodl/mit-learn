@@ -397,14 +397,10 @@ class LearningResourceRunSerializer(serializers.ModelSerializer):
 class ResourceListMixin(serializers.Serializer):
     """Common fields for LearningPath and other future resource lists"""
 
-    item_count = serializers.SerializerMethodField()
-
-    def get_item_count(self, instance) -> int:
-        """Return the number of items in the list"""
-        return (
-            getattr(instance, "item_count", None)
-            or instance.learning_resource.children.count()
-        )
+    item_count = serializers.IntegerField(
+        read_only=True,
+        help_text="Number of published items in the list.",
+    )
 
 
 class CourseNumberSerializer(serializers.Serializer):
@@ -1626,7 +1622,10 @@ class UserListSerializer(serializers.ModelSerializer, WriteableTopicsMixin):
     Simplified serializer for UserList model.
     """
 
-    item_count = serializers.SerializerMethodField()
+    item_count = serializers.IntegerField(
+        read_only=True,
+        help_text="Number of published items in the list.",
+    )
     image = serializers.SerializerMethodField()
 
     def get_image(self, instance) -> dict:
@@ -1635,10 +1634,6 @@ class UserListSerializer(serializers.ModelSerializer, WriteableTopicsMixin):
         if list_item and list_item.child.image:
             return LearningResourceImageSerializer(instance=list_item.child.image).data
         return None
-
-    def get_item_count(self, instance) -> int:
-        """Return the number of items in the list"""
-        return getattr(instance, "item_count", None) or instance.resources.count()
 
     def create(self, validated_data):
         """Create a new user list"""
