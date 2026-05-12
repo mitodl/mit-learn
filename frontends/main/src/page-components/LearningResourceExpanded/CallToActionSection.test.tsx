@@ -468,7 +468,7 @@ describe("CallToActionSection", () => {
       )
 
       const link = screen.getByRole("link", {
-        name: "Access Learning Material",
+        name: "Watch Video",
       })
       const href = link.getAttribute("href")
       expect(href).toContain(`/courses/o/${ocwSlug}/resources/abc-def`)
