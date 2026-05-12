@@ -38,8 +38,6 @@ export const credentials: AuthCredential[] = new SharedArray(
 
     const parsed = JSON.parse(open(__ENV.USERS_JSON_FILE))
 
-    console.log(parsed)
-
     _validate_credentials(parsed)
 
     return parsed
