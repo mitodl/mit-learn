@@ -349,7 +349,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                       {label ? (
                         <Chip
                           label={label}
-                          data-testid="program-type-label"
+                          data-testid="product-page-label"
                           variant="outlinedWhite"
                           size="large"
                           sx={{ typography: "subtitle2" }}
