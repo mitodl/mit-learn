@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.67.2
+--------------
+
+- feat: display MicroMasters® label on MITxOnline program product pages (#3318)
+- fix: add sitemap for video and podcast page (#3323)
+- Show (and count) only published items in userlists/paths (#3321)
+
 Version 0.67.1 (Released May 11, 2026)
 --------------
 
