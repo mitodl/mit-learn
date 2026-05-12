@@ -691,7 +691,9 @@ describe("ProgramPage", () => {
         renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
         await screen.findByRole("heading", { name: page.title })
-        expect(screen.getByText("MicroMasters®")).toBeInTheDocument()
+        const programTypeLabel = screen.getByTestId("program-type-label")
+        expect(programTypeLabel).toBeInTheDocument()
+        expect(within(programTypeLabel).getByText("MicroMasters®")).toBeInTheDocument()
       },
     )
 
