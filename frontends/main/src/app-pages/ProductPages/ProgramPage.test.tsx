@@ -691,7 +691,7 @@ describe("ProgramPage", () => {
         renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
         await screen.findByRole("heading", { name: page.title })
-        const programTypeLabel = screen.getByTestId("program-type-label")
+        const programTypeLabel = screen.getByTestId("product-page-label")
         expect(programTypeLabel).toBeInTheDocument()
         expect(
           within(programTypeLabel).getByText("MicroMasters®"),
@@ -706,7 +706,7 @@ describe("ProgramPage", () => {
       renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
       await screen.findByRole("heading", { name: page.title })
-      expect(screen.queryByTestId("program-type-label")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("product-page-label")).not.toBeInTheDocument()
     })
 
     test("Shows no label when program_type is null", async () => {
@@ -716,7 +716,7 @@ describe("ProgramPage", () => {
       renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
       await screen.findByRole("heading", { name: page.title })
-      expect(screen.queryByTestId("program-type-label")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("product-page-label")).not.toBeInTheDocument()
     })
   })
 
