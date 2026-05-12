@@ -3,7 +3,7 @@
 ### Usage (Docker)
 
 ```shell
-./scripts/k6.sh /app/learn.smoke.ts -e BACKEND_BASE_URL=#### -e FRONTEND_BASE_URL=####
+./scripts/k6.sh run /app/learn.smoke.ts -e BACKEND_BASE_URL=#### -e FRONTEND_BASE_URL=####
 ```
 
 ### Usage (local k6)
