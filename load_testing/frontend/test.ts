@@ -75,10 +75,15 @@ async function loginKeycloak(page: Page, credential: AuthCredential) {
   const credentialnameInput = await page.locator("input#username")
   await credentialnameInput.type(credential.email)
   await page.locator("button#kc-login").click()
+  await page.waitForNavigation()
+  console.log(page.url())
 
   const passwordInput = await page.locator("input#password")
   await passwordInput.type(credential.password)
   await page.locator("button#kc-login").click()
+  await page.waitForNavigation()
+
+  console.log(page.url())
 }
 
 async function dashboard(page: Page) {
