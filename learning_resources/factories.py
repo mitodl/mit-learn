@@ -19,7 +19,7 @@ from learning_resources.constants import (
     LevelType,
     PlatformType,
 )
-from learning_resources.etl.constants import CourseNumberType
+from learning_resources.etl.constants import CourseNumberType, ETLSource
 from main.factories import UserFactory
 
 # pylint:disable=unused-argument
@@ -892,6 +892,7 @@ class VideoChannelFactory(DjangoModelFactory):
 
     channel_id = factory.Sequence(lambda n: f"VIDEO-CHANNEL-{n:03d}.MIT")
     title = factory.Faker("word")
+    etl_source = FuzzyChoice((ETLSource.youtube.name, ETLSource.ovs.name))
 
     class Params:
         is_unpublished = factory.Trait(published=False)
