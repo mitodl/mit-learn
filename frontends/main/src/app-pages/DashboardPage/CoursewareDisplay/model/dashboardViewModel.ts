@@ -171,9 +171,10 @@ const getDashboardLanguageOptions = (
   enrollments: CourseRunEnrollmentV3[],
   opts?: LanguageOptionScope,
 ): SimpleSelectOption[] => {
+  const baseOptions = getDistinctLanguageOptions([course])
   const optionsByKey = new Map<string, SimpleSelectOption>()
 
-  getDistinctLanguageOptions([course]).forEach((option) => {
+  baseOptions.forEach((option) => {
     optionsByKey.set(String(option.value), option)
   })
 
@@ -203,7 +204,19 @@ const getDashboardLanguageOptions = (
     }
   })
 
-  return Array.from(optionsByKey.values())
+  const additionalOptions = Array.from(optionsByKey.values()).filter(
+    (option) =>
+      !baseOptions.some(
+        (base) =>
+          getLanguageOptionKeyValue(base) === getLanguageOptionKeyValue(option),
+      ),
+  )
+
+  additionalOptions.sort((a, b) =>
+    String(a.label).localeCompare(String(b.label)),
+  )
+
+  return [...baseOptions, ...additionalOptions]
 }
 
 const getDistinctDashboardLanguageOptions = (

@@ -220,6 +220,65 @@ describe("dashboardViewModel", () => {
       expect(options.map((option) => option.value)).toEqual(["language:fr"])
     })
 
+    test("sorts enrollment-derived language options by label", () => {
+      const course = factories.courses.course({
+        id: 50,
+        language_options: [],
+        courseruns: [],
+      })
+
+      const frenchEnrollment = factories.enrollment.courseEnrollment({
+        run: {
+          id: 500,
+          language: "fr",
+          title: "Run FR",
+          run_tag: "FR-1",
+          course: { id: 50, title: course.title },
+          courseware_id: "cw-fr-500",
+          courseware_url: "https://example.com/fr-500",
+          is_enrollable: true,
+          is_upgradable: false,
+          is_archived: false,
+          is_self_paced: true,
+          start_date: null,
+          end_date: null,
+          upgrade_deadline: null,
+          certificate_available_date: null,
+          course_number: "",
+        },
+      })
+      const spanishEnrollment = factories.enrollment.courseEnrollment({
+        run: {
+          id: 501,
+          language: "es",
+          title: "Run ES",
+          run_tag: "ES-1",
+          course: { id: 50, title: course.title },
+          courseware_id: "cw-es-501",
+          courseware_url: "https://example.com/es-501",
+          is_enrollable: true,
+          is_upgradable: false,
+          is_archived: false,
+          is_self_paced: true,
+          start_date: null,
+          end_date: null,
+          upgrade_deadline: null,
+          certificate_available_date: null,
+          course_number: "",
+        },
+      })
+
+      const options = getDashboardLanguageOptions(course, [
+        frenchEnrollment,
+        spanishEnrollment,
+      ])
+
+      expect(options.map((option) => option.value)).toEqual([
+        "language:es",
+        "language:fr",
+      ])
+    })
+
     test("skips enrollments with missing runs", () => {
       const course = factories.courses.course({ id: 30, language_options: [] })
       const missingRunEnrollment = {
