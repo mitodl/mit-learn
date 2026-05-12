@@ -1470,7 +1470,7 @@ def test_vector_search_hybrid(mocker, client):
     mock_search_result = mocker.MagicMock()
     mock_search_result.points = []
     mock_qdrant.query_points.return_value = mock_search_result
-    mock_qdrant.count.return_value = models.CountResult(count=0)
+    mock_qdrant.count.return_value = models.CountResult(count=1)
     mock_dense_encoder = mocker.patch("vector_search.views.dense_encoder")()
     mock_dense_encoder.clear_cache()
 

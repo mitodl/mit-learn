@@ -1424,6 +1424,14 @@ paths:
         description: "The category of learning resource             \n\n* `course`\
           \ - Course\n* `program` - Program\n* `learning_material` - Learning Material"
       - in: query
+        name: score_cutoff
+        schema:
+          type: number
+          format: double
+          minimum: 0
+          default: 0.1
+        description: The minimum score a result must have to be returned
+      - in: query
         name: sortby
         schema:
           enum:

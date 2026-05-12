@@ -836,6 +836,10 @@ VECTOR_HYBRID_SEARCH_PREFETCH_MULTIPLIER = get_int(
 VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = get_int(
     name="VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT", default=500
 )
+
+# hard limit for special cases where we need to return all results without pagination
+VECTOR_SEARCH_PAGE_MAX_LIMIT = get_int("VECTOR_SEARCH_PAGE_MAX_LIMIT", 200)
+
 # toggle to use requests (default for local) or webdriver which renders js elements
 EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(
     "EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER", default=False
