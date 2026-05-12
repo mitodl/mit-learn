@@ -7,7 +7,7 @@ import { resolveVideoSources } from "@/app-pages/VideoPlaylistCollectionPage/vid
 import VideoEmbedPage from "@/app-pages/VideoEmbedPage/VideoEmbedPage"
 import { VideoResourceResourceTypeEnum } from "api/v1"
 import type { VideoResource } from "api/v1"
-import { safeGenerateMetadata } from "@/common/metadata"
+import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
 export const generateMetadata = ({
   params,
 }: {
@@ -37,7 +37,11 @@ export const generateMetadata = ({
         )[0]?.type ?? "",
       )
 
-    return { title: isEmbeddableVideo ? (resource?.title ?? "Video") : "Video" }
+    return standardizeMetadata({
+      title: isEmbeddableVideo ? (resource?.title ?? "Video") : "Video",
+      robots: "noindex, nofollow",
+      social: false,
+    })
   })
 
 const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
