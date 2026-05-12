@@ -1,27 +1,12 @@
 import React from "react"
+import EmbedNotFoundPage from "@/app-pages/VideoEmbedPage/EmbedNotFoundPage"
 
 export const metadata = {
   title: "Not Found",
 }
 
 const NotFound: React.FC = () => {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: "100vw",
-        height: "100vh",
-        backgroundColor: "#000",
-        color: "#fff",
-        fontFamily: "sans-serif",
-        fontSize: "1rem",
-      }}
-    >
-      Video not found
-    </div>
-  )
+  return <EmbedNotFoundPage />
 }
 
 export default NotFound
