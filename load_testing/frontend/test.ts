@@ -77,10 +77,10 @@ async function login(page: Page, context: Context) {
 const ESCAPED_SSO_URL = escapeRegex(SSO_BASE_URL)
 
 const KEYCLOAK_USERNAME_URL_RE = new RegExp(
-  `${ESCAPED_SSO_URL}\/realms\/[a-z\-]+\/protocol\/openid-connect\/auth.*`,
+  `${ESCAPED_SSO_URL}\/realms\/[a-z-]+\/protocol\/openid-connect\/auth.*`,
 )
 const KEYCLOAK_PASSWORD_URL_RE = new RegExp(
-  `${ESCAPED_SSO_URL}\/realms\/[a-z\-]+\/login-actions\/authenticate.*`,
+  `${ESCAPED_SSO_URL}\/realms\/[a-z-]+\/login-actions\/authenticate.*`,
 )
 
 async function loginKeycloak(
