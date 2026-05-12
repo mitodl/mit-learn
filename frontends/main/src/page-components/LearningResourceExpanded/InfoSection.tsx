@@ -40,7 +40,6 @@ import { theme, Link } from "ol-components"
 import { ocwLearnPageView } from "@/common/urls"
 import { FeatureFlags } from "@/common/feature_flags"
 import DifferingRunsTable from "./DifferingRunsTable"
-import { isHmrRefresh } from "next/dist/server/app-render/work-unit-async-storage.external"
 
 const SeparatorContainer = styled.span({
   padding: "0 8px",
