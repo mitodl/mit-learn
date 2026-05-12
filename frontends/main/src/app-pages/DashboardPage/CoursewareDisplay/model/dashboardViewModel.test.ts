@@ -233,6 +233,61 @@ describe("dashboardViewModel", () => {
 
       expect(options).toEqual([])
     })
+
+    test("uses the shared native language fallback label for enrollment-derived options", () => {
+      const originalDisplayNames = Intl.DisplayNames
+      Object.defineProperty(Intl, "DisplayNames", {
+        value: undefined,
+        configurable: true,
+        writable: true,
+      })
+
+      try {
+        const course = factories.courses.course({
+          id: 40,
+          language_options: [],
+          courseruns: [],
+        })
+        const enrollment = factories.enrollment.courseEnrollment({
+          run: {
+            id: 400,
+            language: "es",
+            title: "Spanish Run",
+            run_tag: "ES-1",
+            course: { id: 40, title: course.title },
+            courseware_id: "cw-es-400",
+            courseware_url: "https://example.com/es-400",
+            is_enrollable: true,
+            is_upgradable: false,
+            is_archived: false,
+            is_self_paced: true,
+            start_date: null,
+            end_date: null,
+            upgrade_deadline: null,
+            certificate_available_date: null,
+            course_number: "",
+          },
+        })
+
+        const options = getDistinctDashboardLanguageOptions(
+          [course],
+          [enrollment],
+        )
+
+        expect(options).toEqual([
+          {
+            value: "language:es",
+            label: "español",
+          },
+        ])
+      } finally {
+        Object.defineProperty(Intl, "DisplayNames", {
+          value: originalDisplayNames,
+          configurable: true,
+          writable: true,
+        })
+      }
+    })
   })
 
   describe("resolveSlotForLanguage", () => {

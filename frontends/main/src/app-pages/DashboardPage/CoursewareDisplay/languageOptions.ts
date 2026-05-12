@@ -557,4 +557,5 @@ export {
   getCourseRunForSelectedLanguage,
   getEnrollmentForSelectedLanguage,
   getResolvedRunForSelectedLanguage,
+  getNativeLanguageName,
 }

@@ -21,6 +21,7 @@ import {
   getEnrollmentForSelectedLanguage,
   getResolvedRunForSelectedLanguage,
   getSelectedLanguageOption,
+  getNativeLanguageName,
   selectBestContractEnrollmentForLanguage,
 } from "../languageOptions"
 
@@ -131,34 +132,6 @@ const getLanguageCodeFromText = (language?: string | null): string | null => {
   return normalized || null
 }
 
-const getLanguageLabelFromCode = (languageCode: string): string => {
-  const normalized = languageCode.trim().toLowerCase()
-  const baseLanguageCode = normalized.split("-")[0]
-
-  try {
-    if (typeof Intl.DisplayNames === "function") {
-      const displayNames = new Intl.DisplayNames([normalized], {
-        type: "language",
-      })
-      const exact = displayNames.of(normalized)
-      if (exact && exact.toLowerCase() !== normalized) {
-        return exact
-      }
-
-      if (baseLanguageCode && baseLanguageCode !== normalized) {
-        const base = displayNames.of(baseLanguageCode)
-        if (base && base.toLowerCase() !== baseLanguageCode) {
-          return base
-        }
-      }
-    }
-  } catch {
-    // Fall through and use normalized code.
-  }
-
-  return baseLanguageCode || normalized
-}
-
 const getLanguageOptionFromEnrollment = (
   enrollment: CourseRunEnrollmentV3,
 ): SimpleSelectOption | null => {
@@ -169,7 +142,7 @@ const getLanguageOptionFromEnrollment = (
 
   return {
     value: `language:${languageCode}`,
-    label: getLanguageLabelFromCode(languageCode),
+    label: getNativeLanguageName(languageCode),
   }
 }
 
