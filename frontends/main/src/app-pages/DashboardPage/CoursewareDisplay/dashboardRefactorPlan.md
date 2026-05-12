@@ -265,7 +265,7 @@ This phase also folds in a small, isolated bug fix: enrolled-but-not-enrollable 
 **Hypothesised approach** (verify before executing):
 
 - [ ] Add a composite function — working name `resolveSlotForLanguage(course, enrollments, selectedLanguageKey, { contractId })` — that returns `{ displayedEnrollment, displayedRun, selectedLanguageOption }`. Internally it calls today's primitives in the same order they are called at every callsite, so behavior is preserved by construction. **Place it in `model/dashboardViewModel.ts`** (Phase 1's pure-model home), not in `languageOptions.ts`.
-- [ ] Add a composite function for the language picker — working name `getDashboardLanguageOptions(course, enrollments)` — that returns the union of enrollable V2 `course.language_options` and languages from the user's V3 `enrollment.run.language`. Also placed in `dashboardViewModel.ts`.
+- [ ] Add a composite function for the language picker — working name `getDistinctDashboardLanguageOptions(courses, enrollments)` — that returns the union of V2 `course.language_options` across the given courses and languages from the user's V3 `enrollment.run.language`. Also placed in `dashboardViewModel.ts`.
 - [ ] Update callsites in `EnrollmentDisplay.tsx` and `ContractContent.tsx` to use the composites. The 4-call dance disappears at the callsite; render code stops knowing the orchestration exists.
 - [ ] Begin migrating helpers from `languageOptions.ts` into `dashboardViewModel.ts` opportunistically (anything the composites depend on internally can move). Full deletion of `languageOptions.ts` is committed to Phase 7; this phase need only consolidate what it touches.
 - [ ] Do not introduce a multi-run selector.

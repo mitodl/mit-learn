@@ -16,12 +16,13 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { selectBestEnrollment } from "../helpers"
 import {
-  getCourseRunForSelectedLanguage,
+  getNativeLanguageName,
   getDistinctLanguageOptions,
+  // below five are used only for resolveSlotForLanguage
+  getCourseRunForSelectedLanguage,
   getEnrollmentForSelectedLanguage,
   getResolvedRunForSelectedLanguage,
   getSelectedLanguageOption,
-  getNativeLanguageName,
   selectBestContractEnrollmentForLanguage,
 } from "../languageOptions"
 
@@ -127,15 +128,22 @@ const groupProgramEnrollmentsByProgramId = (
   )
 }
 
-const getLanguageCodeFromText = (language?: string | null): string | null => {
-  const normalized = language?.trim().toLowerCase().replace(/_/g, "-")
-  return normalized || null
+/**
+ * The mitxonline API emits language codes in POSIX form (`de_de`,
+ * `pt_br`, `zh_hans`); convert to BCP 47 (`de-de`, `pt-br`, `zh-hans`)
+ * so `Intl.DisplayNames` can resolve them, and to give picker options a
+ * canonical key shape.
+ */
+const getLanguageCodeFromText = (language: string): string => {
+  return language.trim().toLowerCase().replace(/_/g, "-")
 }
 
 const getLanguageOptionFromEnrollment = (
   enrollment: CourseRunEnrollmentV3,
 ): SimpleSelectOption | null => {
-  const languageCode = getLanguageCodeFromText(enrollment.run.language)
+  const languageCode = enrollment.run.language
+    ? getLanguageCodeFromText(enrollment.run.language)
+    : null
   if (!languageCode) {
     return null
   }
@@ -161,6 +169,28 @@ const enrollmentMatchesCourse = (
 
   return course.courseruns.some((courseRun) => courseRun.id === run.id)
 }
+
+const filterEnrollmentsToCourses = (
+  enrollments: CourseRunEnrollmentV3[],
+  courses: CourseWithCourseRunsSerializerV2[],
+) => {
+  const courseIds = new Set(courses.map((course) => course.id))
+  return enrollments.filter((enrollment) =>
+    courseIds.has(enrollment.run.course.id),
+  )
+}
+
+/**
+ * Filter enrollments to exclusively those matching the given contractId.
+ * If no contractId is given, filter to enrollments with no contract.
+ */
+const enrollmentMatchesContract =
+  (contractId?: number | null) => (enrollment: CourseRunEnrollmentV3) => {
+    if (typeof contractId !== "number") {
+      return enrollment.b2b_contract_id === null
+    }
+    return enrollment.b2b_contract_id === contractId
+  }
 
 type LanguageOptionScope = {
   contractId?: number
@@ -224,52 +254,34 @@ const getDistinctDashboardLanguageOptions = (
   enrollments: CourseRunEnrollmentV3[],
   opts?: LanguageOptionScope,
 ): SimpleSelectOption[] => {
-  const baseOptions = getDistinctLanguageOptions(courses)
-  const optionsByKey = new Map<string, SimpleSelectOption>()
-  baseOptions.forEach((option) => {
-    optionsByKey.set(String(option.value), option)
-  })
-
-  const courseIds = new Set(courses.map((course) => course.id))
-  const scopedEnrollments =
-    typeof opts?.contractId === "number"
-      ? enrollments.filter(
-          (enrollment) => enrollment.b2b_contract_id === opts.contractId,
-        )
-      : enrollments
-
-  scopedEnrollments.forEach((enrollment) => {
-    if (!enrollment.run) {
-      return
-    }
-
-    if (!courseIds.has(enrollment.run.course.id)) {
-      return
-    }
-
-    const derivedOption = getLanguageOptionFromEnrollment(enrollment)
-    if (!derivedOption) {
-      return
-    }
-
-    if (!optionsByKey.has(String(derivedOption.value))) {
-      optionsByKey.set(String(derivedOption.value), derivedOption)
-    }
-  })
-
-  const additionalOptions = Array.from(optionsByKey.values()).filter(
-    (option) =>
-      !baseOptions.some(
-        (base) =>
-          getLanguageOptionKeyValue(base) === getLanguageOptionKeyValue(option),
+  const coursesLanguages = courses.flatMap((c) =>
+    c.language_options
+      .map((opt) => opt.language)
+      .filter((lang): lang is string => !!lang),
+  )
+  const enrollmentLanguages = filterEnrollmentsToCourses(enrollments, courses)
+    .filter(enrollmentMatchesContract(opts?.contractId))
+    .map((e) => e.run.language)
+    .filter((lang): lang is string => !!lang)
+  const distinctCodes = Array.from(
+    new Set(
+      [...coursesLanguages, ...enrollmentLanguages].map(
+        getLanguageCodeFromText,
       ),
+    ),
   )
-
-  additionalOptions.sort((a, b) =>
-    String(a.label).localeCompare(String(b.label)),
+  const options: SimpleSelectOption[] = distinctCodes.map((code) => {
+    return {
+      value: `language:${code}`,
+      label: getNativeLanguageName(code),
+    }
+  })
+  options.sort((a, b) =>
+    String(a.label).localeCompare(String(b.label), undefined, {
+      sensitivity: "base",
+    }),
   )
-
-  return [...baseOptions, ...additionalOptions]
+  return options
 }
 
 const getLanguageOptionKeyValue = (option: SimpleSelectOption): string =>
@@ -285,6 +297,10 @@ type ResolveSlotForLanguageResult = {
   selectedLanguageOption: CourseRunLanguageOption | null
 }
 
+/**
+ * Given a language selection and course/enrollment data, pick the
+ * `displayedEnrollment` and `displayedRun` for a dashboard slot.
+ */
 const resolveSlotForLanguage = (
   course: CourseWithCourseRunsSerializerV2,
   enrollments: CourseRunEnrollmentV3[],
