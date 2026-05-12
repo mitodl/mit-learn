@@ -11,4 +11,4 @@ docker run --rm -ti \
 	-v $ROOT_DIR/load_testing:/app \
 	--add-host learn.odl.local:host-gateway \
 	grafana/k6:master-with-browser \
-	run /app/learn.ts "$@"
+	run "$@"

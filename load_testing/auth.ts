@@ -14,7 +14,7 @@ export function hasAccessToken(): boolean {
 }
 
 function _validate_credentials(credentials) {
-  if (typeof credentials !== "array") {
+  if (!Array.isArray(credentials)) {
     throw Error("Expected an array of credentials")
   }
 
@@ -37,6 +37,8 @@ export const credentials: AuthCredential[] = new SharedArray(
     }
 
     const parsed = JSON.parse(open(__ENV.USERS_JSON_FILE))
+
+    console.log(parsed)
 
     _validate_credentials(parsed)
 
