@@ -345,22 +345,24 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                         title={title}
                       />
                     </SidebarCol>
-                    {label ? (
-                      <Chip
-                        label={label}
-                        data-testid="program-type-label"
-                        variant="outlinedWhite"
-                        size="large"
-                        sx={{ typography: "subtitle2" }}
-                      />
-                    ) : null}
-                    <Typography
-                      component="h1"
-                      typography={{ xs: "h4", sm: "h4", md: "h3" }}
-                      style={{ lineHeight: "2.25rem" }}
-                    >
-                      {title}
-                    </Typography>
+                    <Stack alignItems="flex-start" gap="16px">
+                      {label ? (
+                        <Chip
+                          label={label}
+                          data-testid="program-type-label"
+                          variant="outlinedWhite"
+                          size="large"
+                          sx={{ typography: "subtitle2" }}
+                        />
+                      ) : null}
+                      <Typography
+                        component="h1"
+                        typography={{ xs: "h4", sm: "h4", md: "h3" }}
+                        style={{ lineHeight: "2.25rem" }}
+                      >
+                        {title}
+                      </Typography>
+                    </Stack>
                     <ShortDescription>{shortDescription}</ShortDescription>
                     <Stack
                       direction={{ xs: "column", md: "row" }}
