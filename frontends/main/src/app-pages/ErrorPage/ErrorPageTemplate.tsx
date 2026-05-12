@@ -116,6 +116,7 @@ const ErrorPageTemplate: React.FC<ErrorPageTemplateProps> = ({
   title,
   timSays,
   loading = false,
+  hideHomeButton = false,
 }) => {
   if (loading) {
     return (
@@ -140,7 +141,11 @@ const ErrorPageTemplate: React.FC<ErrorPageTemplateProps> = ({
   }
   return (
     <Page>
-      <ErrorContent title={title} timSays={timSays} />
+      <ErrorContent
+        title={title}
+        timSays={timSays}
+        hideHomeButton={hideHomeButton}
+      />
     </Page>
   )
 }

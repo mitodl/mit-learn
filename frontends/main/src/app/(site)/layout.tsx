@@ -3,7 +3,6 @@ import Header from "@/page-components/Header/Header"
 import Footer from "@/page-components/Footer/Footer"
 import { PageWrapper, PageWrapperInner } from "@/app/styled"
 import { MITLearnGlobalStyles } from "ol-components"
-
 export default function SiteLayout({
   children,
 }: {

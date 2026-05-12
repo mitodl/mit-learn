@@ -7,7 +7,11 @@ import { resolveVideoSources } from "@/app-pages/VideoPlaylistCollectionPage/vid
 import VideoEmbedPage from "@/app-pages/VideoEmbedPage/VideoEmbedPage"
 import { VideoResourceResourceTypeEnum } from "api/v1"
 import type { VideoResource } from "api/v1"
-import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
+import {
+  safeGenerateMetadata,
+  standardizeMetadata,
+  MetadataNotFound,
+} from "@/common/metadata"
 export const generateMetadata = ({
   params,
 }: {
@@ -17,14 +21,14 @@ export const generateMetadata = ({
     const { id } = await params
     const videoId = Number(id)
     if (!Number.isInteger(videoId) || videoId <= 0) {
-      return { title: "Video" }
+      throw new MetadataNotFound()
     }
     const queryClient = getQueryClient()
-    // Catch here so errors don't propagate to safeGenerateMetadata, which
-    // would call notFound() on 404s and prevent us from returning a title.
     const resource = await queryClient
       .fetchQuery(learningResourceQueries.detail(videoId))
-      .catch(() => null)
+      .catch(() => {
+        throw new MetadataNotFound()
+      })
 
     const SUPPORTED_TYPES = [
       "application/x-mpegURL",
@@ -41,8 +45,12 @@ export const generateMetadata = ({
         )[0]?.type ?? "",
       )
 
+    if (!isEmbeddableVideo) {
+      throw new MetadataNotFound()
+    }
+
     return standardizeMetadata({
-      title: isEmbeddableVideo ? (resource?.title ?? "Video") : "Video",
+      title: resource?.title ?? "Video",
       robots: "noindex, nofollow",
       social: false,
     })
