@@ -476,6 +476,15 @@ class QdrantView(APIView):
                 score_cutoff=score_cutoff,
                 hybrid_search=hybrid_search,
             )
+            if order_by:
+                # Qdrant does not support sorting with score cutoffs
+                hits = sorted(
+                    hits,
+                    key=lambda x: (
+                        x.get(order_by.lstrip("-")) if order_by.lstrip("-") in x else 0
+                    ),
+                    reverse=order_by.startswith("-"),
+                )
             counts = await self._async_vector_resource_counts(
                 hits, params, search_collection=search_collection
             )
