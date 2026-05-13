@@ -1,8 +1,17 @@
+import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { factories } from "api/mitxonline-test-utils"
 import {
+  bucketAndSortHomeEnrollments,
+  enrollmentCourseIsInPrograms,
   getDistinctDashboardLanguageOptions,
+  getModuleCourseIdsFromPrograms,
+  getNonContractProgramEnrollments,
+  getTopLevelProgramEnrollments,
   groupCourseRunEnrollmentsByCourseId,
+  groupModuleCoursesByProgramId,
   groupProgramEnrollmentsByProgramId,
+  isNonContractEnrollment,
+  isProgramAsCourse,
   pickDisplayedEnrollmentForLegacyDashboard,
   resolveSlotForLanguage,
 } from "./dashboardViewModel"
@@ -63,30 +72,25 @@ describe("dashboardViewModel", () => {
   })
 
   describe("groupCourseRunEnrollmentsByCourseId", () => {
-    test("groups enrollments by the course that owns their run", () => {
-      const run1 = factories.courses.courseRun({ id: 11 })
-      const run2 = factories.courses.courseRun({ id: 22 })
-      const course1 = factories.courses.course({ id: 1, courseruns: [run1] })
-      const course2 = factories.courses.course({ id: 2, courseruns: [run2] })
-
-      const enrollment1 = factories.enrollment.courseEnrollment({
-        run: { id: 11 },
+    test("groups enrollments by their run's course id", () => {
+      const enrollmentA1 = factories.enrollment.courseEnrollment({
+        run: { course: { id: 1 } },
       })
-      const enrollment2 = factories.enrollment.courseEnrollment({
-        run: { id: 22 },
+      const enrollmentA2 = factories.enrollment.courseEnrollment({
+        run: { course: { id: 1 } },
       })
-      const unknownRunEnrollment = factories.enrollment.courseEnrollment({
-        run: { id: 999 },
+      const enrollmentB = factories.enrollment.courseEnrollment({
+        run: { course: { id: 2 } },
       })
 
-      const grouped = groupCourseRunEnrollmentsByCourseId(
-        [course1, course2],
-        [enrollment1, enrollment2, unknownRunEnrollment],
-      )
+      const grouped = groupCourseRunEnrollmentsByCourseId([
+        enrollmentA1,
+        enrollmentA2,
+        enrollmentB,
+      ])
 
-      expect(grouped[1]).toEqual([enrollment1])
-      expect(grouped[2]).toEqual([enrollment2])
-      expect(grouped[999]).toBeUndefined()
+      expect(grouped[1]).toEqual([enrollmentA1, enrollmentA2])
+      expect(grouped[2]).toEqual([enrollmentB])
     })
   })
 
@@ -106,6 +110,314 @@ describe("dashboardViewModel", () => {
 
       expect(grouped[101]).toEqual(enrollment1)
       expect(grouped[202]).toEqual(enrollment2)
+    })
+  })
+
+  describe("isProgramAsCourse", () => {
+    test("matches programs whose display_mode is Course", () => {
+      const courseProgram = factories.programs.program({
+        display_mode: DisplayModeEnum.Course,
+      })
+      const regularProgram = factories.programs.program({ display_mode: null })
+      expect(isProgramAsCourse(courseProgram)).toBe(true)
+      expect(isProgramAsCourse(regularProgram)).toBe(false)
+    })
+  })
+
+  describe("isNonContractEnrollment", () => {
+    test("matches enrollments with no b2b_contract_id", () => {
+      const nonContract = factories.enrollment.courseEnrollment({
+        b2b_contract_id: null,
+      })
+      const contract = factories.enrollment.courseEnrollment({
+        b2b_contract_id: 42,
+      })
+      expect(isNonContractEnrollment(nonContract)).toBe(true)
+      expect(isNonContractEnrollment(contract)).toBe(false)
+    })
+  })
+
+  describe("enrollmentCourseIsInPrograms", () => {
+    test("returns predicate matching enrollments whose course id appears in any program", () => {
+      const programA = factories.programs.program({ courses: [10, 11] })
+      const programB = factories.programs.program({ courses: [20] })
+      const inA = factories.enrollment.courseEnrollment({
+        run: { course: { id: 10 } },
+      })
+      const inB = factories.enrollment.courseEnrollment({
+        run: { course: { id: 20 } },
+      })
+      const outside = factories.enrollment.courseEnrollment({
+        run: { course: { id: 99 } },
+      })
+
+      const isCovered = enrollmentCourseIsInPrograms([programA, programB])
+      expect([inA, inB, outside].filter(isCovered)).toEqual([inA, inB])
+    })
+  })
+
+  describe("getNonContractProgramEnrollments", () => {
+    test("excludes program enrollments whose program is in any contract", () => {
+      const inContract = factories.enrollment.programEnrollmentV3({
+        program: factories.programs.program({ id: 1 }),
+      })
+      const standalone = factories.enrollment.programEnrollmentV3({
+        program: factories.programs.program({ id: 2 }),
+      })
+      const contracts = [factories.contracts.contract({ programs: [1] })]
+
+      expect(
+        getNonContractProgramEnrollments([inContract, standalone], contracts),
+      ).toEqual([standalone])
+    })
+  })
+
+  describe("getTopLevelProgramEnrollments", () => {
+    test("excludes program enrollments whose program is a child in another program's req_tree", () => {
+      const childProgram = factories.programs.program({ id: 50 })
+      const parentProgram = factories.programs.program({
+        id: 51,
+        req_tree: [
+          {
+            id: 1,
+            data: {
+              node_type: "operator",
+              operator: "all_of",
+              operator_value: null,
+              elective_flag: false,
+              title: null,
+              course: null,
+              required_program: null,
+            },
+            children: [
+              {
+                id: 2,
+                data: {
+                  node_type: "program",
+                  required_program: childProgram.id,
+                  operator: null,
+                  operator_value: null,
+                  elective_flag: false,
+                  title: null,
+                  course: null,
+                },
+                children: [],
+              },
+            ],
+          },
+        ],
+      })
+      const childEnrollment = factories.enrollment.programEnrollmentV3({
+        program: childProgram,
+      })
+      const parentEnrollment = factories.enrollment.programEnrollmentV3({
+        program: parentProgram,
+      })
+
+      expect(
+        getTopLevelProgramEnrollments(
+          [childEnrollment, parentEnrollment],
+          [parentProgram],
+        ),
+      ).toEqual([parentEnrollment])
+    })
+  })
+
+  describe("getModuleCourseIdsFromPrograms", () => {
+    test("returns the distinct set of course ids referenced anywhere in the programs' req_trees", () => {
+      const program = factories.programs.program({
+        req_tree: [
+          {
+            id: 1,
+            data: {
+              node_type: "operator",
+              operator: "all_of",
+              operator_value: null,
+              elective_flag: false,
+              title: null,
+              course: null,
+              required_program: null,
+            },
+            children: [
+              {
+                id: 2,
+                data: {
+                  node_type: "course",
+                  course: 100,
+                  operator: null,
+                  operator_value: null,
+                  elective_flag: false,
+                  title: null,
+                  required_program: null,
+                },
+                children: [],
+              },
+              {
+                id: 3,
+                data: {
+                  node_type: "course",
+                  course: 200,
+                  operator: null,
+                  operator_value: null,
+                  elective_flag: false,
+                  title: null,
+                  required_program: null,
+                },
+                children: [],
+              },
+              {
+                id: 4,
+                data: {
+                  node_type: "course",
+                  course: 100,
+                  operator: null,
+                  operator_value: null,
+                  elective_flag: false,
+                  title: null,
+                  required_program: null,
+                },
+                children: [],
+              },
+            ],
+          },
+        ],
+      })
+
+      expect(getModuleCourseIdsFromPrograms([program]).sort()).toEqual([
+        100, 200,
+      ])
+    })
+
+    test("dedupes course ids across multiple programs", () => {
+      const makeCourseLeaf = (id: number, courseId: number) => ({
+        id,
+        data: {
+          node_type: "course" as const,
+          course: courseId,
+          operator: null,
+          operator_value: null,
+          elective_flag: false,
+          title: null,
+          required_program: null,
+        },
+        children: [],
+      })
+      const makeProgram = (programId: number, courseIds: number[]) =>
+        factories.programs.program({
+          id: programId,
+          req_tree: [
+            {
+              id: programId * 10,
+              data: {
+                node_type: "operator",
+                operator: "all_of",
+                operator_value: null,
+                elective_flag: false,
+                title: null,
+                course: null,
+                required_program: null,
+              },
+              children: courseIds.map((c) => makeCourseLeaf(c + programId, c)),
+            },
+          ],
+        })
+
+      const programA = makeProgram(1, [100, 200])
+      const programB = makeProgram(2, [200, 300])
+
+      expect(
+        getModuleCourseIdsFromPrograms([programA, programB]).sort(),
+      ).toEqual([100, 200, 300])
+    })
+  })
+
+  describe("groupModuleCoursesByProgramId", () => {
+    test("indexes courses by the program whose courses[] lists them", () => {
+      const programA = factories.programs.program({ id: 1, courses: [10, 11] })
+      const programB = factories.programs.program({ id: 2, courses: [20] })
+      const course10 = factories.courses.course({ id: 10 })
+      const course11 = factories.courses.course({ id: 11 })
+      const course20 = factories.courses.course({ id: 20 })
+      const courseUnreferenced = factories.courses.course({ id: 99 })
+
+      const grouped = groupModuleCoursesByProgramId(
+        [programA, programB],
+        [course10, course11, course20, courseUnreferenced],
+      )
+
+      expect(grouped[1]).toEqual([course10, course11])
+      expect(grouped[2]).toEqual([course20])
+    })
+
+    test("maps program with empty courses[] to an empty array", () => {
+      const program = factories.programs.program({ id: 1, courses: [] })
+      const course = factories.courses.course({ id: 10 })
+      expect(groupModuleCoursesByProgramId([program], [course])).toEqual({
+        1: [],
+      })
+    })
+  })
+
+  describe("bucketAndSortHomeEnrollments", () => {
+    const past = new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString()
+    const future = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()
+
+    test("buckets enrollments by status and sorts each bucket", () => {
+      const completedEnrollment = factories.enrollment.courseEnrollment({
+        grades: [factories.enrollment.grade({ grade: 0.9, passed: true })],
+        run: { course: { title: "Zeta" } },
+      })
+      const expiredEnrollment = factories.enrollment.courseEnrollment({
+        run: { start_date: past, end_date: past, course: { title: "Alpha" } },
+      })
+      const startedAlpha = factories.enrollment.courseEnrollment({
+        run: { start_date: past, end_date: future, course: { title: "Alpha" } },
+      })
+      const startedBeta = factories.enrollment.courseEnrollment({
+        run: { start_date: past, end_date: future, course: { title: "Beta" } },
+      })
+      const notStartedSooner = factories.enrollment.courseEnrollment({
+        run: {
+          start_date: future,
+          end_date: null,
+          course: { title: "Late" },
+        },
+      })
+      const notStartedLater = factories.enrollment.courseEnrollment({
+        run: {
+          start_date: new Date(
+            Date.now() + 1000 * 60 * 60 * 24 * 7,
+          ).toISOString(),
+          end_date: null,
+          course: { title: "Earlier-by-title-but-later-by-date" },
+        },
+      })
+
+      const buckets = bucketAndSortHomeEnrollments([
+        notStartedLater,
+        startedBeta,
+        startedAlpha,
+        notStartedSooner,
+        expiredEnrollment,
+        completedEnrollment,
+      ])
+
+      expect(buckets.completed).toEqual([completedEnrollment])
+      expect(buckets.expired).toEqual([expiredEnrollment])
+      expect(buckets.started).toEqual([startedAlpha, startedBeta])
+      expect(buckets.notStarted).toEqual([notStartedSooner, notStartedLater])
+    })
+
+    test("classifies a completed enrollment whose end_date has passed as completed, not expired", () => {
+      const completedAndExpired = factories.enrollment.courseEnrollment({
+        grades: [factories.enrollment.grade({ grade: 0.9, passed: true })],
+        run: { start_date: past, end_date: past },
+      })
+
+      const buckets = bucketAndSortHomeEnrollments([completedAndExpired])
+
+      expect(buckets.completed).toEqual([completedAndExpired])
+      expect(buckets.expired).toEqual([])
     })
   })
 

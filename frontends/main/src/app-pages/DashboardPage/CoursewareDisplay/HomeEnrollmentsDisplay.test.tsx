@@ -57,6 +57,46 @@ describe("HomeEnrollmentsDisplay", () => {
     })
   })
 
+  test("Renders one card per enrollment when a single course has multiple enrollments", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const sharedCourseId = faker.number.int()
+    const enrollmentA = mitxonline.factories.enrollment.courseEnrollment({
+      run: {
+        title: "Same Course — Run A",
+        course: { id: sharedCourseId },
+      },
+    })
+    const enrollmentB = mitxonline.factories.enrollment.courseEnrollment({
+      run: {
+        title: "Same Course — Run B",
+        course: { id: sharedCourseId },
+      },
+    })
+
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      enrollmentA,
+      enrollmentB,
+    ])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [],
+    )
+
+    renderWithProviders(<HomeEnrollmentsDisplay />)
+
+    await screen.findByRole("heading", { name: "My Learning" })
+    const cards = await screen.findAllByTestId("enrollment-card-desktop")
+    expect(cards).toHaveLength(2)
+    expect(
+      cards.find((c) => c.textContent?.includes("Same Course — Run A")),
+    ).toBeDefined()
+    expect(
+      cards.find((c) => c.textContent?.includes("Same Course — Run B")),
+    ).toBeDefined()
+  })
+
   test("Renders the proper amount of unenroll and email settings buttons in the context menus", async () => {
     const { enrollments } = setupApis()
     renderWithProviders(<HomeEnrollmentsDisplay />)
