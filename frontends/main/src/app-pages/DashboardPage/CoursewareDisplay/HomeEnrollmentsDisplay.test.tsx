@@ -819,6 +819,47 @@ describe("HomeEnrollmentsDisplay", () => {
     expect(screen.queryByText(b2bSimpleProgram.title)).not.toBeInTheDocument()
   })
 
+  test("Filters B2B course enrollments from display", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+    const b2bEnrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: 42,
+      run: {
+        title: "B2B Hidden Course",
+        course: { title: "B2B Hidden Course" },
+      },
+    })
+    const nonB2BEnrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+      run: {
+        title: "Personal Visible Course",
+        course: { title: "Personal Visible Course" },
+      },
+    })
+
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      b2bEnrollment,
+      nonB2BEnrollment,
+    ])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [],
+    )
+
+    renderWithProviders(<HomeEnrollmentsDisplay />)
+
+    await screen.findByRole("heading", { name: "My Learning" })
+
+    const personalCourseCards = await screen.findAllByText(
+      nonB2BEnrollment.run.title,
+    )
+    expect(personalCourseCards.length).toBeGreaterThan(0)
+    expect(screen.queryByText(b2bEnrollment.run.title)).not.toBeInTheDocument()
+  })
+
   test("Hides child program enrollments that are part of an enrolled parent program", async () => {
     const mitxOnlineUser = mitxonline.factories.user.user()
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
