@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.68.0
+Version 0.68.0 (Released May 13, 2026)
 --------------
 
 - fix open textbooks (#3337)
