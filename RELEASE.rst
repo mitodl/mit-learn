@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+Version 0.68.0
+--------------
+
+- fix open textbooks (#3337)
+- youtube etl should not unpublish ovs (#3334)
+- dashboard refactor stage 2 (#3330)
+- Adds a feature flag to link ocw course urls to corresponding learn urls (/courses/o/*) (#3263)
+- Min score for vector learning resources endpoint (#3285)
+- Update dependency granian to v2.7.4 [SECURITY] (#3309)
+- Update dependency litellm to v1.83.10 [SECURITY] (#3331)
+- Update dependency urllib3 to v2.7.0 [SECURITY] (#3329)
+
 Version 0.67.2 (Released May 12, 2026)
 --------------
 
