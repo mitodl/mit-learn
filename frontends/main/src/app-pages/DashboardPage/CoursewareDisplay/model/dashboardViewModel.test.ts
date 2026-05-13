@@ -1,6 +1,5 @@
 import { factories } from "api/mitxonline-test-utils"
 import {
-  getDashboardLanguageOptions,
   getDistinctDashboardLanguageOptions,
   groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
@@ -110,7 +109,7 @@ describe("dashboardViewModel", () => {
     })
   })
 
-  describe("getDashboardLanguageOptions", () => {
+  describe("getDistinctDashboardLanguageOptions", () => {
     test("includes enrollment language not present in enrollable language options", () => {
       const englishRun = factories.courses.courseRun({
         id: 101,
@@ -158,7 +157,10 @@ describe("dashboardViewModel", () => {
         },
       })
 
-      const options = getDashboardLanguageOptions(course, [spanishEnrollment])
+      const options = getDistinctDashboardLanguageOptions(
+        [course],
+        [spanishEnrollment],
+      )
 
       expect(options.map((option) => option.value)).toEqual([
         "language:en",
@@ -267,10 +269,10 @@ describe("dashboardViewModel", () => {
         },
       })
 
-      const options = getDashboardLanguageOptions(course, [
-        frenchEnrollment,
-        spanishEnrollment,
-      ])
+      const options = getDistinctDashboardLanguageOptions(
+        [course],
+        [frenchEnrollment, spanishEnrollment],
+      )
 
       expect(options.map((option) => option.value)).toEqual([
         "language:es",

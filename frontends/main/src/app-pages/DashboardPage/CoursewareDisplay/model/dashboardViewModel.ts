@@ -17,7 +17,6 @@ import type {
 import { selectBestEnrollment } from "../helpers"
 import {
   getNativeLanguageName,
-  getDistinctLanguageOptions,
   // below five are used only for resolveSlotForLanguage
   getCourseRunForSelectedLanguage,
   getEnrollmentForSelectedLanguage,
@@ -138,38 +137,6 @@ const getLanguageCodeFromText = (language: string): string => {
   return language.trim().toLowerCase().replace(/_/g, "-")
 }
 
-const getLanguageOptionFromEnrollment = (
-  enrollment: CourseRunEnrollmentV3,
-): SimpleSelectOption | null => {
-  const languageCode = enrollment.run.language
-    ? getLanguageCodeFromText(enrollment.run.language)
-    : null
-  if (!languageCode) {
-    return null
-  }
-
-  return {
-    value: `language:${languageCode}`,
-    label: getNativeLanguageName(languageCode),
-  }
-}
-
-const enrollmentMatchesCourse = (
-  course: CourseWithCourseRunsSerializerV2,
-  enrollment: CourseRunEnrollmentV3,
-): boolean => {
-  const run = enrollment.run
-  if (!run) {
-    return false
-  }
-
-  if (run.course.id === course.id) {
-    return true
-  }
-
-  return course.courseruns.some((courseRun) => courseRun.id === run.id)
-}
-
 const filterEnrollmentsToCourses = (
   enrollments: CourseRunEnrollmentV3[],
   courses: CourseWithCourseRunsSerializerV2[],
@@ -194,59 +161,6 @@ const enrollmentMatchesContract =
 
 type LanguageOptionScope = {
   contractId?: number
-}
-
-const getDashboardLanguageOptions = (
-  course: CourseWithCourseRunsSerializerV2,
-  enrollments: CourseRunEnrollmentV3[],
-  opts?: LanguageOptionScope,
-): SimpleSelectOption[] => {
-  const baseOptions = getDistinctLanguageOptions([course])
-  const optionsByKey = new Map<string, SimpleSelectOption>()
-
-  baseOptions.forEach((option) => {
-    optionsByKey.set(String(option.value), option)
-  })
-
-  const scopedEnrollments =
-    typeof opts?.contractId === "number"
-      ? enrollments.filter(
-          (enrollment) => enrollment.b2b_contract_id === opts.contractId,
-        )
-      : enrollments
-
-  scopedEnrollments.forEach((enrollment) => {
-    if (!enrollment.run) {
-      return
-    }
-
-    if (!enrollmentMatchesCourse(course, enrollment)) {
-      return
-    }
-
-    const derivedOption = getLanguageOptionFromEnrollment(enrollment)
-    if (!derivedOption) {
-      return
-    }
-
-    if (!optionsByKey.has(String(derivedOption.value))) {
-      optionsByKey.set(String(derivedOption.value), derivedOption)
-    }
-  })
-
-  const additionalOptions = Array.from(optionsByKey.values()).filter(
-    (option) =>
-      !baseOptions.some(
-        (base) =>
-          getLanguageOptionKeyValue(base) === getLanguageOptionKeyValue(option),
-      ),
-  )
-
-  additionalOptions.sort((a, b) =>
-    String(a.label).localeCompare(String(b.label)),
-  )
-
-  return [...baseOptions, ...additionalOptions]
 }
 
 const getDistinctDashboardLanguageOptions = (
@@ -283,9 +197,6 @@ const getDistinctDashboardLanguageOptions = (
   )
   return options
 }
-
-const getLanguageOptionKeyValue = (option: SimpleSelectOption): string =>
-  String(option.value)
 
 type ResolveSlotForLanguageOpts = {
   contractId?: number
@@ -374,6 +285,5 @@ export {
   groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
   resolveSlotForLanguage,
-  getDashboardLanguageOptions,
   getDistinctDashboardLanguageOptions,
 }
