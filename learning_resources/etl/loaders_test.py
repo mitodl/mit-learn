@@ -16,6 +16,7 @@ from learning_resources.constants import (
     CONTENT_TYPE_PAGE,
     CURRENCY_USD,
     OCW_CONTENT_CATEGORY_LECTURE_VIDEOS,
+    OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS,
     Availability,
     LearningResourceDelivery,
     LearningResourceRelationTypes,
@@ -3296,18 +3297,25 @@ def test_load_learning_materials(mocker, settings, create_ocw_learning_materials
         learning_resource__is_course=True,
     )
 
-    relevant_content_tag = LearningResourceContentTagFactory.create(
+    assignments_tag = LearningResourceContentTagFactory.create(
         name="Programming Assignments"
     )
+    textbook_tag = LearningResourceContentTagFactory.create(name="Open Textbooks")
     irrelevant_content_tag = LearningResourceContentTagFactory.create(name="Syllabus")
 
     no_longer_relevant_resource = LearningResourceFactory.create(
         resource_type=LearningResourceType.document.name,
     )
 
-    learning_material_content_file = ContentFileFactory.create(
+    assignments_content_file = ContentFileFactory.create(
         run=ocw_course.learning_resource.runs.first(),
-        content_tags=[relevant_content_tag],
+        content_tags=[assignments_tag],
+        content_type=CONTENT_TYPE_FILE,
+    )
+
+    textbook_content_file = ContentFileFactory.create(
+        run=ocw_course.learning_resource.runs.first(),
+        content_tags=[textbook_tag],
         content_type=CONTENT_TYPE_FILE,
     )
 
@@ -3325,24 +3333,40 @@ def test_load_learning_materials(mocker, settings, create_ocw_learning_materials
     loaders.load_learning_materials(
         course_run=ocw_course.learning_resource.runs.first(),
         content_file_ids=[
-            learning_material_content_file.id,
+            assignments_content_file.id,
+            textbook_content_file.id,
             other_content_file.id,
         ],
     )
 
     if create_ocw_learning_materials:
-        # Programming assignments are promoted
-        assert load_learning_materials_spy.call_count == 1
+        # Programming assignments and Open Textbooks are promoted
+        assert load_learning_materials_spy.call_count == 2
         load_learning_materials_spy.assert_any_call(
             ocw_course.learning_resource.runs.first(),
-            learning_material_content_file,
+            assignments_content_file,
             {"Programming Assignments"},
         )
+        load_learning_materials_spy.assert_any_call(
+            ocw_course.learning_resource.runs.first(),
+            textbook_content_file,
+            {"Open Textbooks"},
+        )
         resource_relationships = ocw_course.learning_resource.children.all()
-        assert resource_relationships.count() == 1
-        # 1 load_learning_material call (calls update_index)
+        assert resource_relationships.count() == 2
+
+        # Verify resource categories
+        categories = set(
+            resource_relationships.values_list("child__resource_category", flat=True)
+        )
+        assert categories == {
+            OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS,
+            "Practice & Assignment",
+        }
+
+        # 2 load_learning_material calls (each calls update_index)
         # + 1 for unpublishing no_longer_relevant_resource
-        assert mock_index.call_count == 2
+        assert mock_index.call_count == 3
 
         no_longer_relevant_resource.refresh_from_db()
         assert no_longer_relevant_resource.published is False
