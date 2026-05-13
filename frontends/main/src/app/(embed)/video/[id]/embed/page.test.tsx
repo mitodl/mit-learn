@@ -1,4 +1,3 @@
-import React from "react"
 import { notFound } from "next/navigation"
 import { factories } from "api/test-utils"
 import type { VideoResource } from "api/v1"
