@@ -12,7 +12,6 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from website_content.permissions import is_website_content_editor
 from authentication import api as auth_api
 from learning_resources.models import LearningResourceTopic
 from learning_resources.permissions import is_admin_user, is_learning_path_editor
@@ -33,6 +32,7 @@ from profiles.utils import (
     fetch_program_letter_template_data,
     image_uri,
 )
+from website_content.permissions import is_website_content_editor
 
 User = get_user_model()
 

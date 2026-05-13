@@ -11,11 +11,11 @@ from django.db import migrations
 from website_content.constants import GROUP_STAFF_ARTICLE_EDITORS
 
 
-def add_editors_group(apps, schema_editor):  # noqa: ARG001
+def add_editors_group(apps, schema_editor):
     Group.objects.get_or_create(name=GROUP_STAFF_ARTICLE_EDITORS)
 
 
-def remove_editors_group(apps, schema_editor):  # noqa: ARG001
+def remove_editors_group(apps, schema_editor):
     Group.objects.filter(name=GROUP_STAFF_ARTICLE_EDITORS).delete()
 
 
