@@ -982,8 +982,16 @@ class LearningPathQuerySet(LearningResourceDetailQuerySet):
     """QuerySet for LearningPath"""
 
     def for_serialization(self):
-        """Prefetch for serialization"""
-        return self
+        """Annotate item_count for serialization"""
+        return self.annotate(
+            item_count=Count(
+                "learning_resource__children",
+                filter=Q(
+                    learning_resource__children__relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+                    learning_resource__children__child__published=True,
+                ),
+            )
+        )
 
 
 class LearningPath(LearningResourceDetailModel):
@@ -1008,13 +1016,28 @@ class LearningPath(LearningResourceDetailModel):
     def __str__(self):
         return f"Learning Path: {self.learning_resource.title}"
 
+    @cached_property
+    def item_count(self) -> int:
+        """Number of published resources in the learning path."""
+        return self.learning_resource.children.filter(
+            relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+            child__published=True,
+        ).count()
+
 
 class LearningResourceRelationshipQuerySet(TimestampedModelQuerySet):
     """QuerySet for LearningResourceRelationship"""
 
     def for_serialization(self):
         """Prefetch related objects used by API serializers"""
-        return self.select_related("child", "child__image").order_by("position", "id")
+        return (
+            self.select_related("child", "child__image")
+            .exclude(
+                relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+                child__published=False,
+            )
+            .order_by("position", "id")
+        )
 
 
 class LearningResourceRelationship(TimestampedModel):
@@ -1272,6 +1295,11 @@ class UserList(TimestampedModel):
             return self.children.order_by("position").first()
         return children[0] if children else None
 
+    @cached_property
+    def item_count(self) -> int:
+        """Number of published resources in the list."""
+        return self.resources.filter(published=True).count()
+
 
 class UserListQuerySet(TimestampedModelQuerySet):
     """QuerySet for UserList"""
@@ -1286,9 +1314,9 @@ class UserListQuerySet(TimestampedModelQuerySet):
             ),
             Prefetch(
                 "children",
-                queryset=UserListRelationship.objects.select_related(
-                    "child", "child__image"
-                ).order_by("position"),
+                queryset=UserListRelationship.objects.filter(child__published=True)
+                .select_related("child", "child__image")
+                .order_by("position"),
                 to_attr="_children",
             ),
         )
@@ -1303,7 +1331,10 @@ class UserListRelationshipQuerySet(TimestampedModelQuerySet):
     def for_serialization(self):
         """Prefetch related objects used by API serializers"""
         return self.select_related("parent", "parent__author").prefetch_related(
-            Prefetch("child", queryset=LearningResource.objects.for_serialization())
+            Prefetch(
+                "child",
+                queryset=LearningResource.objects.for_serialization(),
+            )
         )
 
 

@@ -35,7 +35,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.67.1"
+VERSION = "0.67.2"
 
 log = logging.getLogger()
 
@@ -836,6 +836,10 @@ VECTOR_HYBRID_SEARCH_PREFETCH_MULTIPLIER = get_int(
 VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = get_int(
     name="VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT", default=500
 )
+
+# hard limit for special cases where we need to return all results without pagination
+VECTOR_SEARCH_PAGE_MAX_LIMIT = get_int("VECTOR_SEARCH_PAGE_MAX_LIMIT", 200)
+
 # toggle to use requests (default for local) or webdriver which renders js elements
 EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(
     "EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER", default=False
