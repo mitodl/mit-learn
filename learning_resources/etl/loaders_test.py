@@ -57,10 +57,10 @@ from learning_resources.etl.loaders import (
     load_run_dependent_values,
     load_topics,
     load_video,
-    load_video_channels,
     load_video_with_content_file,
     load_videos,
     load_videos_from_content_files,
+    load_youtube_video_channels,
 )
 from learning_resources.etl.mitxonline import transform_programs
 from learning_resources.etl.utils import get_s3_prefix_for_source
@@ -2793,8 +2793,8 @@ def test_load_ovs_playlists_empty_aborts(mocker):
     assert vp.learning_resource.published is True
 
 
-def test_load_video_channels():
-    """Test load_video_channels"""
+def test_load_youtube_video_channels():
+    """Test load_youtube_video_channels"""
     assert VideoChannel.objects.count() == 0
     assert VideoPlaylist.objects.count() == 0
 
@@ -2818,7 +2818,7 @@ def test_load_video_channels():
         channel_data["playlists"] = [playlist_data]
         channels_data.append(channel_data)
 
-    results = load_video_channels(channels_data)
+    results = load_youtube_video_channels(channels_data)
 
     assert len(results) == len(channels_data)
 
@@ -2828,7 +2828,7 @@ def test_load_video_channels():
         assert result.playlists.count() == 1
 
 
-def test_load_video_channels_error(mocker):
+def test_load_youtube_video_channels_error(mocker):
     """Test that an error doesn't fail the entire operation"""
 
     def pop_channel_id_with_exception(data):
@@ -2843,17 +2843,19 @@ def test_load_video_channels_error(mocker):
     mock_log = mocker.patch("learning_resources.etl.loaders.log")
     channel_id = "abc"
 
-    load_video_channels([{"channel_id": channel_id}])
+    load_youtube_video_channels([{"channel_id": channel_id}])
 
     mock_log.exception.assert_called_once_with(
         "Error with extracted video channel: channel_id=%s", channel_id
     )
 
 
-def test_load_video_channels_unpublish(mock_upsert_tasks):
-    """Test load_video_channels when a video/playlist gets unpublished"""
-    channel = VideoChannelFactory.create()
+def test_load_youtube_video_channels_unpublish(mock_upsert_tasks):
+    """Test load_youtube_video_channels when a video/playlist gets unpublished"""
+    channel = VideoChannelFactory.create(etl_source=ETLSource.youtube.name)
+    ovs_channel = VideoChannelFactory.create(etl_source=ETLSource.ovs.name)
     playlist = VideoPlaylistFactory.create(channel=channel).learning_resource
+    ovs_playlist = VideoPlaylistFactory.create(channel=ovs_channel).learning_resource
     video = VideoFactory.create().learning_resource
     playlist.resources.set(
         [video],
@@ -2864,9 +2866,10 @@ def test_load_video_channels_unpublish(mock_upsert_tasks):
     assert channel.published is True
     assert video.published is True
     assert playlist.published is True
+    assert ovs_playlist.published is True
 
     # inputs don't matter here
-    load_video_channels([])
+    load_youtube_video_channels([])
 
     video.refresh_from_db()
     assert video.published is False
@@ -2874,6 +2877,11 @@ def test_load_video_channels_unpublish(mock_upsert_tasks):
     assert playlist.published is False
     channel.refresh_from_db()
     assert channel.published is False
+
+    ovs_channel.refresh_from_db()
+    assert ovs_channel.published is True
+    ovs_playlist.refresh_from_db()
+    assert ovs_playlist.published is True
 
 
 @pytest.mark.parametrize("course_exists", [True, False])
