@@ -43,6 +43,7 @@ import {
   videoPlaylistPageView,
   podcastPageView,
   podcastEpisodePageView,
+  ocwLearnPageView,
 } from "@/common/urls"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -313,6 +314,7 @@ const appendUtmParams = (url?: string | null, resourceTitle?: string) => {
 const getResourceUrl = (
   resource: LearningResource,
   {
+    ocwProductPages,
     mitxonlineProductPages,
     showVideoPlaylistPage,
     showPodcastPage,
@@ -320,6 +322,7 @@ const getResourceUrl = (
     mitxonlineProductPages?: boolean
     showVideoPlaylistPage?: boolean
     showPodcastPage?: boolean
+    ocwProductPages?: boolean
   },
 ) => {
   if (
@@ -371,6 +374,15 @@ const getResourceUrl = (
       )
     }
   }
+
+  if (
+    ocwProductPages &&
+    resource.platform?.code === PlatformEnum.Ocw &&
+    resource.url
+  ) {
+    return ocwLearnPageView(resource.url)
+  }
+
   return resource.url
 }
 
@@ -398,6 +410,7 @@ const CallToActionSection = ({
   const posthog = usePostHog()
   const [shareExpanded, setShareExpanded] = useState(false)
   const [copyText, setCopyText] = useState("Copy Link")
+  const ocwProductPages = useFeatureFlagEnabled(FeatureFlags.OcwProductPages)
   const mitxonlineProductPages = useFeatureFlagEnabled(
     FeatureFlags.MitxOnlineProductPages,
   )
@@ -435,6 +448,7 @@ const CallToActionSection = ({
       mitxonlineProductPages,
       showVideoPlaylistPage,
       showPodcastPage,
+      ocwProductPages,
     }),
     resource.title,
   )

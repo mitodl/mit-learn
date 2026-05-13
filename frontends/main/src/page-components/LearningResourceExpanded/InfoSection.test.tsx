@@ -14,6 +14,13 @@ import {
 } from "api"
 import { factories } from "api/test-utils"
 import { faker } from "@faker-js/faker/locale/en"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
+import { ocwLearnPageView } from "@/common/urls"
+
+jest.mock("posthog-js/react")
+
+const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
 // This is a pipe followed by a zero-width space
 const SEPARATOR = "|​"
@@ -35,6 +42,10 @@ const formatTestDate = (isoDate: string): string => {
   }
   return date.toLocaleDateString("en-US", options)
 }
+
+beforeEach(() => {
+  mockedUseFeatureFlagEnabled.mockReturnValue(false)
+})
 
 describe("Learning resource info section pricing", () => {
   test("Free course, no certificate", () => {
@@ -450,6 +461,48 @@ describe("Learning resource info section parent course", () => {
 
     const section = screen.getByTestId("drawer-info-items")
     expect(within(section).queryByText("Parent Course:")).toBeNull()
+  })
+
+  test.each([
+    {
+      caseName:
+        "uses original parent course URL when OCW product pages flag is disabled",
+      ocwProductPagesEnabled: false,
+      expectedHref: (url: string) => url,
+    },
+    {
+      caseName:
+        "uses OCW Learn parent course URL when OCW product pages flag is enabled",
+      ocwProductPagesEnabled: true,
+      expectedHref: (url: string) => ocwLearnPageView(url),
+    },
+  ])("$caseName", ({ ocwProductPagesEnabled, expectedHref }) => {
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => ocwProductPagesEnabled && flag === FeatureFlags.OcwProductPages,
+    )
+
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Document,
+      platform: {
+        code: PlatformEnum.Ocw,
+        name: "OCW",
+      },
+      url: "https://ocw.mit.edu/courses/test-course",
+      content_files: [
+        factories.learningResources.contentFile({
+          run_title: "Test Course Title",
+          course_number: ["TEST-101"],
+        }),
+      ],
+    })
+
+    renderWithTheme(<InfoSection resource={resource} />)
+
+    const link = screen.getByRole("link", {
+      name: "TEST-101: Test Course Title",
+    })
+    invariant(resource.url)
+    expect(link).toHaveAttribute("href", expectedHref(resource.url))
   })
 })
 

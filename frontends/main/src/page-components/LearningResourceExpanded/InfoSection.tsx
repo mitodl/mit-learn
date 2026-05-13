@@ -1,6 +1,7 @@
 import React, { useState } from "react"
 import styled from "@emotion/styled"
 import ISO6391 from "iso-639-1"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 import {
   RemixiconComponentType,
   RiVerifiedBadgeLine,
@@ -36,6 +37,8 @@ import {
   formattedParentCourseName,
 } from "ol-utilities"
 import { theme, Link } from "ol-components"
+import { ocwLearnPageView } from "@/common/urls"
+import { FeatureFlags } from "@/common/feature_flags"
 import DifferingRunsTable from "./DifferingRunsTable"
 
 const SeparatorContainer = styled.span({
@@ -145,7 +148,10 @@ const Certificate = styled.div({
   },
 })
 
-type InfoSelector = (resource: LearningResource) => React.ReactNode
+type InfoSelector = (
+  resource: LearningResource,
+  ocwProductPages?: boolean,
+) => React.ReactNode
 
 type InfoItemConfig = {
   label: string | ((resource: LearningResource) => string)
@@ -528,11 +534,17 @@ const INFO_ITEMS: InfoItemConfig = [
   {
     label: "Parent Course:",
     Icon: RiBookLine,
-    selector: (resource: LearningResource) => {
+    selector: (resource: LearningResource, ocwProductPages?: boolean) => {
       const name = formattedParentCourseName(resource)
       if (!name || !resource.url) return name
+
+      const href =
+        ocwProductPages && resource.platform?.code === PlatformEnum.Ocw
+          ? ocwLearnPageView(resource.url)
+          : resource.url
+
       return (
-        <Link href={resource.url} color="red" hovercolor="red" size="small">
+        <Link href={href} color="red" hovercolor="red" size="small">
           {name}
         </Link>
       )
@@ -579,6 +591,8 @@ const InfoItem = ({ label, Icon, value }: InfoItemProps) => {
 }
 
 const InfoSection = ({ resource }: { resource?: LearningResource }) => {
+  const ocwProductPages = useFeatureFlagEnabled(FeatureFlags.OcwProductPages)
+
   if (!resource) {
     return null
   }
@@ -586,7 +600,7 @@ const InfoSection = ({ resource }: { resource?: LearningResource }) => {
   const infoItems = INFO_ITEMS.map(({ label, Icon, selector }) => ({
     label: typeof label === "function" ? label(resource) : label,
     Icon,
-    value: selector(resource),
+    value: selector(resource, ocwProductPages),
   })).filter(({ value }) => value !== null && value !== "")
 
   if (infoItems.length === 0) {
