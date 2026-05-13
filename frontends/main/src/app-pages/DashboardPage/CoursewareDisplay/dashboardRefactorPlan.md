@@ -511,7 +511,7 @@ This is a structural unification, not a redesign. Each variant must reproduce to
   - `contractCourse` — only if contract-specific behavior cannot be expressed via existing variant inputs (`contractId`, `useVerifiedEnrollment`); prefer to fold this into `courseEnrollment` / `unenrolledCourse` rather than add a variant.
 - [ ] For each variant, write a test that asserts byte-for-byte rendering parity with the corresponding case in today's `DashboardCard.test.tsx` / `ModuleCard.test.tsx`. Port — don't rewrite — these tests against `CoursewareCard`.
 - [ ] Migrate callsites in this order, with the prior step verified before moving on:
-  1. Home dashboard (`AllEnrollmentsDisplay`) — lowest risk; one card per enrollment, V3 data.
+  1. Home dashboard (`HomeEnrollmentsDashboard`) — lowest risk; one card per enrollment, V3 data.
   2. Program-as-course rows (`ProgramAsCourseCard`) — replaces `ModuleCard` usage; localized to one component.
   3. Program dashboard (`ProgramEnrollmentDisplay`) — slot-driven by Phase 4's hook.
   4. Contract dashboard (`ContractContent.tsx`) — highest risk; B2B paths.
