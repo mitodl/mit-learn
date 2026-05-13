@@ -13,7 +13,7 @@ import {
   FREE_COURSES_CAROUSEL,
 } from "@/common/carousels"
 import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarousel"
-import { HomeEnrollmentsDashboard } from "./CoursewareDisplay/HomeEnrollmentsDashboard"
+import { HomeEnrollmentsDisplay } from "./CoursewareDisplay/HomeEnrollmentsDisplay"
 import { useUserMe } from "api/hooks/user"
 import { OrganizationCards } from "./CoursewareDisplay/OrganizationCards"
 import EnrollmentRedirectAlert from "./EnrollmentRedirectAlert"
@@ -96,7 +96,7 @@ const HomeContent: React.FC = () => {
         <EnrollmentRedirectAlert />
       </EnrollmentRedirectAlertContainer>
       <OrganizationCards />
-      <HomeEnrollmentsDashboard />
+      <HomeEnrollmentsDisplay />
       <Suspense>
         <StyledResourceCarousel
           titleComponent="h2"

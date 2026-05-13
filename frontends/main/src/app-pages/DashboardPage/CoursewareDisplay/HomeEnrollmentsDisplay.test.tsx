@@ -8,7 +8,7 @@ import {
   user,
   within,
 } from "@/test-utils"
-import { HomeEnrollmentsDashboard } from "./HomeEnrollmentsDashboard"
+import { HomeEnrollmentsDisplay } from "./HomeEnrollmentsDisplay"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { setupEnrollments } from "./test-utils"
@@ -19,7 +19,7 @@ const mockedUseFeatureFlagEnabled = jest
   .mocked(useFeatureFlagEnabled)
   .mockImplementation(() => false)
 
-describe("HomeEnrollmentsDashboard", () => {
+describe("HomeEnrollmentsDisplay", () => {
   setupLocationMock()
 
   const setupApis = (includeExpired: boolean = true) => {
@@ -43,7 +43,7 @@ describe("HomeEnrollmentsDashboard", () => {
 
   test("Renders the expected cards", async () => {
     const { completed, started, notStarted } = setupApis()
-    renderWithProviders(<HomeEnrollmentsDashboard />)
+    renderWithProviders(<HomeEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
 
@@ -59,7 +59,7 @@ describe("HomeEnrollmentsDashboard", () => {
 
   test("Renders the proper amount of unenroll and email settings buttons in the context menus", async () => {
     const { enrollments } = setupApis()
-    renderWithProviders(<HomeEnrollmentsDashboard />)
+    renderWithProviders(<HomeEnrollmentsDisplay />)
 
     const cards = await screen.findAllByTestId("enrollment-card-desktop")
     expect(cards.length).toBe(enrollments.length)
@@ -81,7 +81,7 @@ describe("HomeEnrollmentsDashboard", () => {
 
   test("Clicking show all reveals ended courses", async () => {
     const { completed, expired, started, notStarted } = setupApis()
-    renderWithProviders(<HomeEnrollmentsDashboard />)
+    renderWithProviders(<HomeEnrollmentsDisplay />)
 
     const showAllButton = await screen.findByText("Show all")
     await user.click(showAllButton)
@@ -103,7 +103,7 @@ describe("HomeEnrollmentsDashboard", () => {
 
   test("If there are no extra enrollments to display, there should be no show all", async () => {
     setupApis(false)
-    renderWithProviders(<HomeEnrollmentsDashboard />)
+    renderWithProviders(<HomeEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
 
@@ -149,7 +149,7 @@ describe("HomeEnrollmentsDashboard", () => {
       },
     )
 
-    renderWithProviders(<HomeEnrollmentsDashboard />)
+    renderWithProviders(<HomeEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
 
@@ -235,7 +235,7 @@ describe("HomeEnrollmentsDashboard", () => {
       programAsCourseCourses,
     )
 
-    renderWithProviders(<HomeEnrollmentsDashboard />)
+    renderWithProviders(<HomeEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
     expect(
@@ -317,7 +317,7 @@ describe("HomeEnrollmentsDashboard", () => {
       },
     )
 
-    renderWithProviders(<HomeEnrollmentsDashboard />)
+    renderWithProviders(<HomeEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
 
@@ -423,7 +423,7 @@ describe("HomeEnrollmentsDashboard", () => {
       },
     )
 
-    renderWithProviders(<HomeEnrollmentsDashboard />)
+    renderWithProviders(<HomeEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
 
@@ -479,7 +479,7 @@ describe("HomeEnrollmentsDashboard", () => {
       },
     )
 
-    renderWithProviders(<HomeEnrollmentsDashboard />)
+    renderWithProviders(<HomeEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
 
@@ -504,7 +504,7 @@ describe("HomeEnrollmentsDashboard", () => {
       [],
     )
 
-    renderWithProviders(<HomeEnrollmentsDashboard />)
+    renderWithProviders(<HomeEnrollmentsDisplay />)
 
     // Wait a moment for queries to complete
     await act(async () => {
@@ -558,7 +558,7 @@ describe("HomeEnrollmentsDashboard", () => {
       },
     )
 
-    renderWithProviders(<HomeEnrollmentsDashboard />)
+    renderWithProviders(<HomeEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
     expect((await screen.findAllByText("Solo Program")).length).toBeGreaterThan(
@@ -588,7 +588,7 @@ describe("HomeEnrollmentsDashboard", () => {
       [],
     )
 
-    renderWithProviders(<HomeEnrollmentsDashboard />)
+    renderWithProviders(<HomeEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
     expect(
@@ -630,7 +630,7 @@ describe("HomeEnrollmentsDashboard", () => {
       [],
     )
 
-    renderWithProviders(<HomeEnrollmentsDashboard />)
+    renderWithProviders(<HomeEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
     expect(
@@ -692,7 +692,7 @@ describe("HomeEnrollmentsDashboard", () => {
       [],
     )
 
-    renderWithProviders(<HomeEnrollmentsDashboard />)
+    renderWithProviders(<HomeEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
 
@@ -767,7 +767,7 @@ describe("HomeEnrollmentsDashboard", () => {
       },
     )
 
-    renderWithProviders(<HomeEnrollmentsDashboard />)
+    renderWithProviders(<HomeEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
 
@@ -830,7 +830,7 @@ describe("HomeEnrollmentsDashboard", () => {
       },
     )
 
-    renderWithProviders(<HomeEnrollmentsDashboard />)
+    renderWithProviders(<HomeEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
 

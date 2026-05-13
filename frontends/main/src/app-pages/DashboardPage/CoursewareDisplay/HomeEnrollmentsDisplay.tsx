@@ -337,7 +337,7 @@ const getNonContractProgramEnrollments = (
  * are shown directly so the section is never blank for an enrolled user.
  * The section is hidden entirely only when there are no enrollments at all.
  */
-const HomeEnrollmentsDashboard: React.FC = () => {
+const HomeEnrollmentsDisplay: React.FC = () => {
   const [upgradeError, setUpgradeError] = React.useState<string | null>(null)
   const { data: enrolledCourses, isLoading: courseEnrollmentsLoading } =
     useQuery(enrollmentQueries.courseRunEnrollmentsList())
@@ -502,4 +502,4 @@ const HomeEnrollmentsDashboard: React.FC = () => {
   ) : null
 }
 
-export { HomeEnrollmentsDashboard }
+export { HomeEnrollmentsDisplay }

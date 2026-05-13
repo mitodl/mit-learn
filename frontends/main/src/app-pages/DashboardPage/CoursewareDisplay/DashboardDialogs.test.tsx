@@ -7,7 +7,7 @@ import {
   user,
   within,
 } from "@/test-utils"
-import { HomeEnrollmentsDashboard } from "./HomeEnrollmentsDashboard"
+import { HomeEnrollmentsDisplay } from "./HomeEnrollmentsDisplay"
 import { DashboardCard, DashboardType } from "./DashboardCard"
 import { dashboardCourse, setupEnrollments } from "./test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
@@ -57,7 +57,7 @@ describe("DashboardDialogs", () => {
       mitxonline.urls.enrollment.courseEnrollment(enrollment.id),
       null,
     )
-    renderWithProviders(<HomeEnrollmentsDashboard />)
+    renderWithProviders(<HomeEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
 
@@ -111,7 +111,7 @@ describe("DashboardDialogs", () => {
       mitxonline.urls.enrollment.courseEnrollment(enrollment.id),
       null,
     )
-    renderWithProviders(<HomeEnrollmentsDashboard />)
+    renderWithProviders(<HomeEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
 
