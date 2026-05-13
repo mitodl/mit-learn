@@ -6,14 +6,13 @@ from website_content.constants import GROUP_STAFF_ARTICLE_EDITORS
 
 def is_website_content_editor(request):
     """
-    Return True if the request user belongs to the article_editors group or
-    is an admin.
+    Return True if the request user belongs to the article_editors group.
 
     Args:
         request (HTTPRequest): django request object
 
     Returns:
-        bool: True if user is a content editor or admin
+        bool: True if user is a content editor
     """
     return (
         request.user is not None

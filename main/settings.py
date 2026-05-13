@@ -132,7 +132,6 @@ INSTALLED_APPS = (
     "learning_resources_search",
     "website_content.apps.WebsiteContentConfig",
     "openapi",
-    "articles",
     "oauth2_provider",
     "news_events",
     "testimonials",

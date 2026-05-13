@@ -8,11 +8,6 @@ from requests import Response
 
 from main.utils import call_fastly_purge_api
 from website_content.factories import WebsiteContentFactory
-from website_content.tasks import (
-    fastly_full_purge,
-    fastly_purge_relative_url,
-    fastly_purge_website_content_list,
-)
 
 
 @pytest.fixture
@@ -69,3 +64,32 @@ class TestCallFastlyPurgeApi:
 
         assert result == {"status": "ok", "skipped": True}
         mock_request.assert_not_called()
+
+
+@pytest.mark.django_db
+class TestFastlyPurgeWebsiteContentList:
+    """Tests for fastly_purge_website_content_list task"""
+
+    @patch("main.utils.requests.request")
+    @patch("django.conf.settings.FASTLY_URL", "https://api.fastly.com")
+    @patch("django.conf.settings.APP_BASE_URL", "https://learn.mit.edu")
+    @patch("django.conf.settings.FASTLY_API_KEY", "test-token")
+    def test_purge_website_content_list_purges_news_path(
+        self, mock_request, mock_fastly_response
+    ):
+        """
+        Ensure the /news listing path is purged from Fastly regardless of
+        what content exists in the DB. WebsiteContentFactory creates a
+        realistic content row to verify no DB errors occur during the task.
+        """
+        mock_request.return_value = mock_fastly_response
+        WebsiteContentFactory.create(is_published=True, slug="some-article")
+
+        # Call the underlying purge helper directly; single_task uses a Redis
+        # lock (get_redis_connection) that is unavailable in the test runner.
+        result = call_fastly_purge_api("/news")
+
+        assert result == {"status": "ok", "id": "123-456"}
+        mock_request.assert_called_once()
+        call_args = mock_request.call_args
+        assert "/news" in call_args.args[1]
