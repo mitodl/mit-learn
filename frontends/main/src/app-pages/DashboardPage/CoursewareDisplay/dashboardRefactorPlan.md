@@ -354,7 +354,7 @@ Expected: all tests pass.
 **Phase exit check: thin composer.** Per the Working agreement's success criterion, this phase delivers cleanup only if `useHomeDashboardData.ts` is a _composer_, not a re-home of inline orchestration. Concrete checks at exit:
 
 - Hook body line count: target ~80 lines or less, mostly fetch + compose + return. If significantly larger, the hook is implementing logic that belongs in `model/dashboardViewModel.ts`.
-- Inline transforms in the hook body: target zero. Anything that loops, filters, sorts, joins, groups, or branches on data shape is a named helper imported from the model layer with its own unit test.
+- The hook composes named helpers; it doesn't re-home orchestration. Glue like `enrollments.filter(existingPredicate)` or `enrollments.sort(existingComparator)` is fine — wrapping it in a named helper would be noise. What's not fine: predicates or comparators _defined_ inline, multi-step pipelines that together encode "what the home dashboard means," or grouping/joining inline. Those are named helpers in `model/dashboardViewModel.ts` with their own unit tests. Litmus: if a reader has to read the inline code to learn a domain rule, the rule belongs in a named helper.
 - Helper test coverage: every transform helper has an isolated unit test, separate from the hook's integration test.
 - Consuming callsite shrinkage: `EnrollmentDisplay.tsx`'s home path measurably drops in size because the orchestration moved.
 
@@ -406,7 +406,7 @@ Expected: all tests pass.
 **Phase exit check: thin composer.** Per the Working agreement's success criterion, this phase delivers cleanup only if `useProgramDashboardData.ts` is a _composer_, not a re-home of inline orchestration. Concrete checks at exit:
 
 - Hook body line count: target ~80 lines or less, mostly fetch + compose + return. Requirement-section construction, enrollment grouping, language-option computation, and slot construction are named helpers in `model/dashboardViewModel.ts` (or `dashboardLanguagePolicy.ts`), not inline code.
-- Inline transforms in the hook body: target zero. Anything that loops, filters, sorts, joins, groups, or branches on data shape is a named helper.
+- The hook composes named helpers; it doesn't re-home orchestration. Glue like `enrollments.filter(existingPredicate)` or `enrollments.sort(existingComparator)` is fine — wrapping it in a named helper would be noise. What's not fine: predicates or comparators _defined_ inline, multi-step pipelines that together encode "what the program dashboard means," or grouping/joining inline. Those are named helpers in `model/dashboardViewModel.ts` (or `dashboardLanguagePolicy.ts`).
 - Helper test coverage: `buildRequirementSections`, slot constructors, and grouping helpers each have isolated unit tests.
 - Consuming callsite shrinkage: `EnrollmentDisplay.tsx`'s program path measurably drops in size.
 
@@ -455,7 +455,7 @@ Expected: all tests pass.
 **Phase exit check: thin composer.** Per the Working agreement's success criterion, this phase delivers cleanup only if `useContractDashboardData.ts` is a _composer_, not a re-home of inline orchestration. Concrete checks at exit:
 
 - Hook body line count: target ~80 lines or less, mostly fetch + compose + return. Contract-scoped filtering (`programHasContractRuns`, `programsInCollections`, `sortedPrograms`), collection shaping, and slot construction are named helpers in `model/dashboardViewModel.ts`, not inline code.
-- Inline transforms in the hook body: target zero. Anything that loops, filters, sorts, joins, groups, or branches on data shape is a named helper.
+- The hook composes named helpers; it doesn't re-home orchestration. Glue like `enrollments.filter(existingPredicate)` or `enrollments.sort(existingComparator)` is fine — wrapping it in a named helper would be noise. What's not fine: predicates or comparators _defined_ inline, multi-step pipelines that together encode "what the contract dashboard means," or grouping/joining inline. Those are named helpers in `model/dashboardViewModel.ts`.
 - Helper test coverage: each contract-scoping helper has an isolated unit test that does not require mounting the full dashboard.
 - Consuming callsite shrinkage: `ContractContent.tsx` measurably drops in size — this is the most-watched signal because contract orchestration is currently the largest single tangle.
 - B2B-specific concern: shared helpers between `useProgramDashboardData` and `useContractDashboardData` are explicitly identified. If the same logic is being inlined twice instead of factored once, fix it before declaring done.
