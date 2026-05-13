@@ -8,6 +8,7 @@
  */
 import type { SimpleSelectOption } from "ol-components"
 import type {
+  BaseProgramDisplayMode,
   ContractPage,
   CourseRunEnrollmentV3,
   CourseRunLanguageOption,
@@ -123,8 +124,9 @@ const groupProgramEnrollmentsByProgramId = (
   )
 }
 
-const isProgramAsCourse = (program: V2ProgramDetail) =>
-  program.display_mode === DisplayModeEnum.Course
+const isProgramAsCourse = (program: {
+  display_mode?: BaseProgramDisplayMode | null
+}) => program.display_mode === DisplayModeEnum.Course
 
 const isNonContractEnrollment = (enrollment: CourseRunEnrollmentV3) =>
   !enrollment.b2b_contract_id

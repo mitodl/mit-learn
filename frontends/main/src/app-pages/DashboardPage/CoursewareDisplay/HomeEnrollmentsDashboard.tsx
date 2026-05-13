@@ -14,9 +14,7 @@ import { Alert } from "@mitodl/smoot-design"
 import {
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
-  DisplayModeEnum,
   V2ProgramDetail,
-  V2ProgramRequirement,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
@@ -134,17 +132,7 @@ const isProgramAsCourseEnrollment = (
   resource: DashboardResource,
 ): resource is ProgramEnrollmentResource => {
   if (resource.type !== DashboardType.ProgramEnrollment) return false
-  return resource.data.program.display_mode === DisplayModeEnum.Course
-}
-
-type ProgramAsCourseProgramData = {
-  id: number
-  readable_id: string
-  title?: string | null
-  start_date?: string | null
-  end_date?: string | null
-  courses?: number[]
-  req_tree?: V2ProgramRequirement[]
+  return isProgramAsCourse(resource.data.program)
 }
 
 interface EnrollmentExpandCollapseProps {
@@ -152,7 +140,7 @@ interface EnrollmentExpandCollapseProps {
   maybeShown: DashboardResource[]
   isLoading?: boolean
   enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>
-  courseProgramsById: Map<number, ProgramAsCourseProgramData>
+  courseProgramsById: Map<number, V2ProgramDetail>
   moduleCoursesByProgramId: Record<number, CourseWithCourseRunsSerializerV2[]>
   onUpgradeError?: (error: string) => void
 }
@@ -317,10 +305,12 @@ const useHomeDashboardData = (): HomeDashboardData => {
 
   return {
     ...buckets,
-    programEnrollments: getTopLevelProgramEnrollments(
-      nonContractProgramEnrollments,
-      enrolledProgramsResults,
-    ),
+    programEnrollments: enrolledPrograms
+      ? getTopLevelProgramEnrollments(
+          nonContractProgramEnrollments,
+          enrolledProgramsResults,
+        )
+      : [],
     enrollmentsByCourseId: groupCourseRunEnrollmentsByCourseId(
       enrolledCourses ?? [],
     ),

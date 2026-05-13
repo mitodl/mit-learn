@@ -197,10 +197,9 @@ Add focused files under the existing dashboard area. The end state consolidates 
 
 ```text
 frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/
-  hooks/
-    useHomeDashboardData.ts
-    useProgramDashboardData.ts
-    useContractDashboardData.ts
+  hooks/                                          # may not materialize — see Open question after Phase 3
+    useProgramDashboardData.ts                    # location TBD: separate file vs. inlined in component
+    useContractDashboardData.ts                   # location TBD: separate file vs. inlined in component
   model/
     dashboardViewModel.ts
     dashboardAdapters.ts
@@ -208,9 +207,9 @@ frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/
 
 Responsibilities:
 
-- `hooks/useHomeDashboardData.ts`: owns home queries, home enrollment sorting, home program-as-course data assembly, and loading aggregation.
-- `hooks/useProgramDashboardData.ts`: owns program detail query, course/enrollment/program enrollment joins, requirement-section construction, language options, slot assembly, and program-as-course slot context.
-- `hooks/useContractDashboardData.ts`: owns contract-scoped courses/programs/collections, contract enrollment filtering, program filtering, collection shaping, language options, slot assembly, and loading aggregation.
+- `useHomeDashboardData` (composer): owns home queries, home enrollment sorting, home program-as-course data assembly, and loading aggregation. **As shipped in Phase 3, inlined as a private function inside `HomeEnrollmentsDashboard.tsx` rather than a standalone file** — see Open question after Phase 3.
+- `useProgramDashboardData` (composer): owns program detail query, course/enrollment/program enrollment joins, requirement-section construction, language options, slot assembly, and program-as-course slot context. Location decided per Open question.
+- `useContractDashboardData` (composer): owns contract-scoped courses/programs/collections, contract enrollment filtering, program filtering, collection shaping, language options, slot assembly, and loading aggregation. Location decided per Open question.
 - `model/dashboardViewModel.ts`: the **single pure-model home**. Owns the canonical types (`DashboardCourseSlot`, section shapes, home buckets), grouping helpers, slot constructors, requirement-section builders, language-option computation, the composite slot/language resolver introduced in Phase 2, the renamed display-policy helper, and Cases 2 + 3 of `getResolvedRunForSelectedLanguage`. By Phase 7's end, every pure helper that survives the cleanup lives here.
 - `model/dashboardAdapters.ts`: temporary adapters from the new view model to current `DashboardCard` / `ProgramAsCourseCard` props. Deletion candidate at Phase 7 — its lifespan ends when `CoursewareCard` consumes the slot directly.
 
@@ -218,7 +217,7 @@ Responsibilities:
 
 | File                            | Layer                      | Knows React? | Knows queries? | Long-term?                              |
 | ------------------------------- | -------------------------- | ------------ | -------------- | --------------------------------------- |
-| `hooks/useXxxDashboardData.ts`  | Composer (data + actions)  | Yes          | Yes            | Yes                                     |
+| `useXxxDashboardData` composer  | Composer (data + actions)  | Yes          | Yes            | Yes (location: file or inlined; TBD)    |
 | `model/dashboardViewModel.ts`   | Pure model — single home   | No           | No             | Yes — load-bearing                      |
 | `model/dashboardAdapters.ts`    | Pure model (legacy bridge) | No           | No             | No — deleted in Phase 7                 |
 | `helpers.ts` (existing)         | Pure model                 | No           | No             | No — absorbed into viewModel by Phase 7 |
@@ -293,7 +292,8 @@ This phase also folds in a small, isolated bug fix: enrolled-but-not-enrollable 
 
 ```bash
 yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/languageOptions.test.ts
-yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/EnrollmentDisplay.test.tsx
+yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/HomeEnrollmentsDashboard.test.tsx
+yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ProgramEnrollmentDisplay.test.tsx
 yarn test frontends/main/src/app-pages/DashboardPage/ContractContent.test.tsx
 ```
 
@@ -316,11 +316,11 @@ Expected: all tests pass; callsite line-counts in the two render components meas
 
 **Purpose:** Make the home dashboard easier to reason about without changing its enrollment-flat behavior.
 
-**Files:**
+**Files (as shipped):**
 
-- Create: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/hooks/useHomeDashboardData.ts`
-- Modify: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/EnrollmentDisplay.tsx`
-- Test: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/EnrollmentDisplay.test.tsx`
+- Create: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/HomeEnrollmentsDashboard.tsx` (extracted from `EnrollmentDisplay.tsx`; carries the inlined `useHomeDashboardData` composer — see Open question)
+- Rename: `EnrollmentDisplay.tsx` → `ProgramEnrollmentDisplay.tsx` (wrapper deleted; consumers in `HomeContent.tsx` / `ProgramContent.tsx` now import the dashboards directly)
+- Test: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/HomeEnrollmentsDashboard.test.tsx` (new) and `ProgramEnrollmentDisplay.test.tsx` (renamed)
 
 - [ ] Move home-only queries out of `AllEnrollmentsDisplay`:
   - course-run enrollments,
@@ -337,7 +337,7 @@ Expected: all tests pass; callsite line-counts in the two render components meas
 - [ ] Keep one card per enrollment on home.
 - [ ] Keep existing show/hide/expand behavior.
 - [ ] Keep existing `onUpgradeError` behavior.
-- [ ] Update `AllEnrollmentsDisplay` to consume the hook and render as before.
+- [ ] Update the home dashboard component to consume the hook and render as before.
 - [ ] Add or update tests proving:
   - multiple enrollments for the same course still render as multiple home cards,
   - B2B contract enrollments are excluded from home buckets as before,
@@ -346,17 +346,17 @@ Expected: all tests pass; callsite line-counts in the two render components meas
 - [ ] Run:
 
 ```bash
-yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/EnrollmentDisplay.test.tsx
+yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/HomeEnrollmentsDashboard.test.tsx
 ```
 
 Expected: all tests pass.
 
-**Phase exit check: thin composer.** Per the Working agreement's success criterion, this phase delivers cleanup only if `useHomeDashboardData.ts` is a _composer_, not a re-home of inline orchestration. Concrete checks at exit:
+**Phase exit check: thin composer.** Per the Working agreement's success criterion, this phase delivers cleanup only if `useHomeDashboardData` is a _composer_, not a re-home of inline orchestration. Concrete checks at exit:
 
 - Hook body line count: target ~80 lines or less, mostly fetch + compose + return. If significantly larger, the hook is implementing logic that belongs in `model/dashboardViewModel.ts`.
 - The hook composes named helpers; it doesn't re-home orchestration. Glue like `enrollments.filter(existingPredicate)` or `enrollments.sort(existingComparator)` is fine — wrapping it in a named helper would be noise. What's not fine: predicates or comparators _defined_ inline, multi-step pipelines that together encode "what the home dashboard means," or grouping/joining inline. Those are named helpers in `model/dashboardViewModel.ts` with their own unit tests. Litmus: if a reader has to read the inline code to learn a domain rule, the rule belongs in a named helper.
 - Helper test coverage: every transform helper has an isolated unit test, separate from the hook's integration test.
-- Consuming callsite shrinkage: `EnrollmentDisplay.tsx`'s home path measurably drops in size because the orchestration moved.
+- Consuming callsite shrinkage: the home path drops in size because the orchestration moved into `HomeEnrollmentsDashboard.tsx`'s composer (and the leftover `ProgramEnrollmentDisplay.tsx` no longer carries home concerns).
 
 If any of these fails, the phase has relocated complexity rather than reduced it. Stop and split before declaring done.
 
@@ -378,10 +378,10 @@ What the model layer must hold regardless: `buildRequirementSections`, slot cons
 
 **Files:**
 
-- Create: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/hooks/useProgramDashboardData.ts`
-- Modify: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/EnrollmentDisplay.tsx`
+- Add: `useProgramDashboardData` composer (location TBD — see Open question; default per Phase 3 precedent is inlined in `ProgramEnrollmentDisplay.tsx`)
+- Modify: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ProgramEnrollmentDisplay.tsx`
 - Modify: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ProgramAsCourseCard.tsx` only if needed for adapter boundaries
-- Test: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/EnrollmentDisplay.test.tsx`
+- Test: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ProgramEnrollmentDisplay.test.tsx`
 - Test: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ProgramAsCourseCard.test.tsx`
 
 - [ ] Move program detail query and course queries into the hook.
@@ -409,18 +409,18 @@ What the model layer must hold regardless: `buildRequirementSections`, slot cons
 - [ ] Run:
 
 ```bash
-yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/EnrollmentDisplay.test.tsx
+yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ProgramEnrollmentDisplay.test.tsx
 yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ProgramAsCourseCard.test.tsx
 ```
 
 Expected: all tests pass.
 
-**Phase exit check: thin composer.** Per the Working agreement's success criterion, this phase delivers cleanup only if `useProgramDashboardData.ts` is a _composer_, not a re-home of inline orchestration. Concrete checks at exit:
+**Phase exit check: thin composer.** Per the Working agreement's success criterion, this phase delivers cleanup only if `useProgramDashboardData` is a _composer_, not a re-home of inline orchestration. Concrete checks at exit:
 
 - Hook body line count: target ~80 lines or less, mostly fetch + compose + return. Requirement-section construction, enrollment grouping, language-option computation, and slot construction are named helpers in `model/dashboardViewModel.ts` (or `dashboardLanguagePolicy.ts`), not inline code.
 - The hook composes named helpers; it doesn't re-home orchestration. Glue like `enrollments.filter(existingPredicate)` or `enrollments.sort(existingComparator)` is fine — wrapping it in a named helper would be noise. What's not fine: predicates or comparators _defined_ inline, multi-step pipelines that together encode "what the program dashboard means," or grouping/joining inline. Those are named helpers in `model/dashboardViewModel.ts` (or `dashboardLanguagePolicy.ts`).
 - Helper test coverage: `buildRequirementSections`, slot constructors, and grouping helpers each have isolated unit tests.
-- Consuming callsite shrinkage: `EnrollmentDisplay.tsx`'s program path measurably drops in size.
+- Consuming callsite shrinkage: `ProgramEnrollmentDisplay.tsx`'s program path measurably drops in size.
 
 If any of these fails, the phase has relocated complexity rather than reduced it. Stop and split before declaring done.
 
@@ -476,16 +476,17 @@ If any of these fails, the phase has relocated complexity rather than reduced it
 
 ## Phase 6: Shrink render components
 
-**Purpose:** Make `EnrollmentDisplay.tsx` and `ContractContent.tsx` mostly presentational after their data composers exist.
+**Purpose:** Make `HomeEnrollmentsDashboard.tsx`, `ProgramEnrollmentDisplay.tsx`, and `ContractContent.tsx` mostly presentational after their data composers exist.
 
 **Files:**
 
-- Modify: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/EnrollmentDisplay.tsx`
+- Modify: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/HomeEnrollmentsDashboard.tsx`
+- Modify: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ProgramEnrollmentDisplay.tsx`
 - Modify: `frontends/main/src/app-pages/DashboardPage/ContractContent.tsx`
 - Modify: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ProgramAsCourseCard.tsx` if module-slot inputs are now available
 - Test: existing dashboard tests touched above
 
-- [ ] Remove now-duplicated inline query and grouping code from `EnrollmentDisplay.tsx`.
+- [ ] Remove now-duplicated inline query and grouping code from `HomeEnrollmentsDashboard.tsx` and `ProgramEnrollmentDisplay.tsx`.
 - [ ] Remove now-duplicated inline query and grouping code from `ContractContent.tsx`.
 - [ ] Keep UI state that is truly UI-only in components:
   - selected language key,
@@ -498,7 +499,8 @@ If any of these fails, the phase has relocated complexity rather than reduced it
 - [ ] Run:
 
 ```bash
-yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/EnrollmentDisplay.test.tsx
+yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/HomeEnrollmentsDashboard.test.tsx
+yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ProgramEnrollmentDisplay.test.tsx
 yarn test frontends/main/src/app-pages/DashboardPage/ContractContent.test.tsx
 yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ProgramAsCourseCard.test.tsx
 ```
@@ -576,7 +578,8 @@ Do not answer these in this refactor:
 Run targeted tests after each phase. Before merging the final phase in a PR series, run:
 
 ```bash
-yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/EnrollmentDisplay.test.tsx
+yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/HomeEnrollmentsDashboard.test.tsx
+yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ProgramEnrollmentDisplay.test.tsx
 yarn test frontends/main/src/app-pages/DashboardPage/ContractContent.test.tsx
 yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ProgramAsCourseCard.test.tsx
 yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/languageOptions.test.ts
@@ -636,7 +639,11 @@ Test files (`*.test.tsx`, `*.test.ts`) are omitted for brevity. Each non-test so
 -     DashboardCard.tsx                                deleted (Phase 7)
 -     ModuleCard.tsx                                   deleted (Phase 7)
 +     CoursewareCard.tsx                               new (Phase 7) — unified router
-~     EnrollmentDisplay.tsx                            shrinks substantially (Phase 3, 4, 6)
++     HomeEnrollmentsDashboard.tsx                     new (Phase 3) — extracted from EnrollmentDisplay.tsx;
+                                                         carries inlined useHomeDashboardData composer
+~     ProgramEnrollmentDisplay.tsx                     renamed from EnrollmentDisplay.tsx (Phase 3);
+                                                         shrinks substantially (Phase 4, 6); will carry
+                                                         useProgramDashboardData composer (Phase 4)
 ~     ProgramAsCourseCard.tsx                          uses CoursewareCard moduleRow (Phase 7)
 ~     OrganizationCards.tsx                            decouples DashboardCardRoot (Phase 7)
 ~     DashboardDialogs.tsx                             may shift if dialog wiring moves (Phase 7)
@@ -657,15 +664,13 @@ Test files (`*.test.tsx`, `*.test.ts`) are omitted for brevity. Each non-test so
                                                          absorbed contents of helpers.ts + languageOptions.ts (Phase 7)
 +       dashboardAdapters.ts                           temp adapter — may be deleted in Phase 7
 
-+     hooks/                                           new directory (Phase 3–5)
-+       useHomeDashboardData.ts                        Phase 3
-+       useProgramDashboardData.ts                     Phase 4
-+       useContractDashboardData.ts                    Phase 5
+      # No hooks/ directory: useHomeDashboardData was inlined in HomeEnrollmentsDashboard.tsx (Phase 3).
+      # Location of useProgramDashboardData / useContractDashboardData (Phase 4–5) TBD per Open question.
 ```
 
 **Reading notes:**
 
 - The `language/` directory is bracketed by Phase 2's exit decision — it's only created if the existing primitives become internal. Otherwise the composite is added to `languageOptions.ts` and no new file appears.
 - `model/dashboardAdapters.ts` shows up as new in Phase 1 but is a deletion candidate in Phase 7 — its lifespan depends on whether `CoursewareCard` consumes the slot directly without translation.
-- Net file-count effect: roughly +6 to +9 added, –4 deleted; the surviving render-heavy components (`EnrollmentDisplay.tsx`, `ContractContent.tsx`) shrink substantially.
+- Net file-count effect: roughly +5 to +8 added, –4 deleted (no `hooks/` directory after Phase 3 chose to inline composers); the surviving render-heavy components (`HomeEnrollmentsDashboard.tsx`, `ProgramEnrollmentDisplay.tsx`, `ContractContent.tsx`) shrink substantially.
 - The biggest LoC win is the deletion of `DashboardCard.tsx` (~1099 lines) and `ModuleCard.tsx` (~933 lines). New files are smaller and single-purpose.
