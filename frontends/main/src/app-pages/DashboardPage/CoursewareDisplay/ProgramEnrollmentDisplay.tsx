@@ -18,7 +18,6 @@ import {
   groupProgramEnrollmentsByProgramId,
   resolveSlotForLanguage,
 } from "./model/dashboardViewModel"
-import { HomeEnrollmentsDashboard } from "./HomeEnrollmentsDashboard"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import {
@@ -528,16 +527,4 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   )
 }
 
-interface EnrollmentDisplayProps {
-  programId?: number
-}
-
-const EnrollmentDisplay: React.FC<EnrollmentDisplayProps> = ({ programId }) => {
-  if (programId) {
-    return <ProgramEnrollmentDisplay programId={programId} />
-  }
-
-  return <HomeEnrollmentsDashboard />
-}
-
-export { EnrollmentDisplay }
+export { ProgramEnrollmentDisplay }
