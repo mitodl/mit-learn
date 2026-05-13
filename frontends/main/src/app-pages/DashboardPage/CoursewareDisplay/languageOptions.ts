@@ -1,3 +1,10 @@
+/**
+ * Helpers for resolving language selection against course/enrollment data.
+ *
+ * **Note:** `course.courseruns` and `course.language_options` are
+ * mostly disjoint. `language_options` describes which languages the course is
+ * offered; `courseruns` materializes only the default-language runs.
+ */
 import type {
   CourseRunEnrollmentV3,
   CourseRunLanguageOption,
