@@ -2,10 +2,10 @@ import { useRef } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { AxiosProgressEvent } from "axios"
 
-import { articlesApi, mediaApi } from "../../clients"
+import { websiteContentApi, mediaApi } from "../../clients"
 import type {
-  ArticlesApiArticlesListRequest as ArticleListRequest,
-  RichTextArticle as Article,
+  WebsiteContentApiWebsiteContentListRequest as ArticleListRequest,
+  WebsiteContent as Article,
 } from "../../generated/v1"
 import { articleQueries, articleKeys } from "./queries"
 
@@ -45,8 +45,8 @@ const useArticleCreate = () => {
         "id" | "user" | "created_on" | "updated_on" | "publish_date"
       >,
     ) =>
-      articlesApi
-        .articlesCreate({ RichTextArticleRequest: data })
+      websiteContentApi
+        .websiteContentCreate({ WebsiteContentRequest: data })
         .then((response) => response.data),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: articleKeys.listRoot() })
@@ -100,7 +100,7 @@ export const useMediaUpload = () => {
 const useArticleDestroy = () => {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (id: number) => articlesApi.articlesDestroy({ id }),
+    mutationFn: (id: number) => websiteContentApi.websiteContentDestroy({ id }),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: articleKeys.listRoot() })
     },
@@ -110,10 +110,10 @@ const useArticlePartialUpdate = () => {
   const client = useQueryClient()
   return useMutation({
     mutationFn: ({ id, ...data }: Partial<Article> & Pick<Article, "id">) =>
-      articlesApi
-        .articlesPartialUpdate({
+      websiteContentApi
+        .websiteContentPartialUpdate({
           id,
-          PatchedRichTextArticleRequest: data,
+          PatchedWebsiteContentRequest: data,
         })
         .then((response) => response.data),
     onSuccess: (article: Article) => {

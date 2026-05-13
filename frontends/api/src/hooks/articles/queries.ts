@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
-import { articlesApi } from "../../clients"
-import type { ArticlesApiArticlesListRequest as ArticleListRequest } from "../../generated/v1"
+import { websiteContentApi } from "../../clients"
+import type { WebsiteContentApiWebsiteContentListRequest as ArticleListRequest } from "../../generated/v1"
 
 const articleKeys = {
   root: ["articles"],
@@ -18,20 +18,23 @@ const articleQueries = {
   list: (params: ArticleListRequest) =>
     queryOptions({
       queryKey: articleKeys.list(params),
-      queryFn: () => articlesApi.articlesList(params).then((res) => res.data),
+      queryFn: () =>
+        websiteContentApi.websiteContentList(params).then((res) => res.data),
     }),
   detail: (id: number) =>
     queryOptions({
       queryKey: articleKeys.detail(id),
       queryFn: () =>
-        articlesApi.articlesRetrieve({ id }).then((res) => res.data),
+        websiteContentApi
+          .websiteContentRetrieve({ id })
+          .then((res) => res.data),
     }),
   articlesDetailRetrieve: (identifier: string) =>
     queryOptions({
       queryKey: articleKeys.articlesDetailRetrieve(identifier),
       queryFn: () =>
-        articlesApi
-          .articlesDetailRetrieve({ identifier })
+        websiteContentApi
+          .websiteContentDetailRetrieve({ identifier })
           .then((res) => res.data),
     }),
 }
