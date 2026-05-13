@@ -173,9 +173,25 @@ class MediaUploadView(APIView):
         serializer = WebsiteContentImageUploadSerializer(
             data=request.data, context={"request": request}
         )
-        if serializer.is_valid():
-            instance = serializer.save()
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        instance = serializer.save()
+
+        file_url = None
+        if instance.image_file:
+            try:
+                file_url = instance.image_file.url
+            except (AttributeError, ValueError, OSError):
+                file_url = None
+
+        if not file_url:
             return Response(
-                {"url": instance.image_file.url}, status=status.HTTP_201_CREATED
+                {"error": "Upload failed"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        if settings.DEBUG:
+            file_url = request.build_absolute_uri(file_url)
+
+        return Response({"url": file_url}, status=status.HTTP_201_CREATED)
