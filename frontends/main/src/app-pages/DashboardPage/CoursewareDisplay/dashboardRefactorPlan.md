@@ -360,6 +360,18 @@ Expected: all tests pass.
 
 If any of these fails, the phase has relocated complexity rather than reduced it. Stop and split before declaring done.
 
+## Open question (resolve before Phase 4 starts): hook location and testing
+
+Phase 3's `useHomeDashboardData` ended up inlined as a private function inside `HomeEnrollmentsDashboard.tsx` rather than living in `hooks/`. The reasoning: the hook is glue (composition of named helpers from the model layer), and a standalone hook file with no isolated tests reads as "why no tests?" Inlining keeps the readability split between data and render without orphaning a file.
+
+Before Phase 4 begins, settle for `useProgramDashboardData` and `useContractDashboardData`:
+
+- **Location**: separate `hooks/...` file vs inlined in the component file. A separate file should pair with isolated tests, not be orphaned.
+- **Test strategy**: integration via the component test (status quo for Phase 3) vs dedicated `renderHook` tests. Integration is slow to bisect when a hook regresses; `renderHook` duplicates mock setup. Contract orchestration is the largest tangle and may justify isolated tests on complexity grounds alone, even if program does not.
+- **Language picker**: candidate for its own `useDashboardLanguagePicker(options)` (selected key + reset-on-options-change effect) reusable across program and contract. Where it lives follows the same location decision.
+
+What the model layer must hold regardless: `buildRequirementSections`, slot constructors, contract-scoped filters (`programHasContractRuns`, `programsInCollections`, `sortedPrograms`), collection shaping. These are domain logic and need named helpers with unit tests no matter where the hook lives. The "thin composer" exit checks apply to the hook function whether it's a file or inline.
+
 ## Phase 4: Extract `useProgramDashboardData`
 
 **Purpose:** Move program-dashboard query orchestration, requirement-tree shaping, language policy, and slot construction out of `ProgramEnrollmentDisplay`.

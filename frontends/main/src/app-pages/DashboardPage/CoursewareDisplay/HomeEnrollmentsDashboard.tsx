@@ -1,4 +1,5 @@
 import React from "react"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import {
   Collapse,
   Link,
@@ -14,8 +15,14 @@ import {
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
   DisplayModeEnum,
+  V2ProgramDetail,
   V2ProgramRequirement,
+  V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
+import { coursesQueries } from "api/mitxonline-hooks/courses"
+import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
+import { mitxUserQueries } from "api/mitxonline-hooks/user"
+import { programsQueries } from "api/mitxonline-hooks/programs"
 import { DASHBOARD_MY_LEARNING_ID } from "@/common/urls"
 import { getKey, ResourceType } from "./helpers"
 import {
@@ -24,7 +31,17 @@ import {
   DashboardType,
 } from "./DashboardCard"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
-import { useHomeDashboardData } from "./hooks/useHomeDashboardData"
+import {
+  bucketAndSortHomeEnrollments,
+  enrollmentCourseIsInPrograms,
+  getModuleCourseIdsFromPrograms,
+  getNonContractProgramEnrollments,
+  getTopLevelProgramEnrollments,
+  groupCourseRunEnrollmentsByCourseId,
+  groupModuleCoursesByProgramId,
+  isNonContractEnrollment,
+  isProgramAsCourse,
+} from "./model/dashboardViewModel"
 
 const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
@@ -228,6 +245,97 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
       )}
     </>
   )
+}
+
+type HomeDashboardData = {
+  started: CourseRunEnrollmentV3[]
+  notStarted: CourseRunEnrollmentV3[]
+  completed: CourseRunEnrollmentV3[]
+  expired: CourseRunEnrollmentV3[]
+  programEnrollments: V3UserProgramEnrollment[]
+  enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>
+  courseProgramsById: Map<number, V2ProgramDetail>
+  moduleCoursesByProgramId: Record<number, CourseWithCourseRunsSerializerV2[]>
+  isLoading: boolean
+}
+
+/**
+ * Composes the queries and pure-model helpers that drive the home dashboard.
+ * Returns bucket data (started / notStarted / completed / expired) plus the
+ * auxiliary lookups the renderer needs for ProgramAsCourseCard.
+ *
+ * Private to this file: the home dashboard is its only consumer, and the
+ * model-layer helpers it composes are individually unit-tested.
+ */
+const useHomeDashboardData = (): HomeDashboardData => {
+  const { data: enrolledCourses, isLoading: courseEnrollmentsLoading } =
+    useQuery(enrollmentQueries.courseRunEnrollmentsList())
+  const { data: contracts, isLoading: contractsLoading } = useQuery({
+    ...mitxUserQueries.me(),
+    select: (user) => user.b2b_organizations.flatMap((org) => org.contracts),
+  })
+  const { data: programEnrollments, isLoading: programEnrollmentsLoading } =
+    useQuery(enrollmentQueries.programEnrollmentsList())
+
+  const nonContractProgramEnrollments =
+    contracts && programEnrollments
+      ? getNonContractProgramEnrollments(programEnrollments, contracts)
+      : []
+  const enrolledProgramIds = nonContractProgramEnrollments.map(
+    (enrollment) => enrollment.program.id,
+  )
+
+  const { data: enrolledPrograms, isLoading: enrolledProgramsLoading } =
+    useQuery({
+      ...programsQueries.programsList({
+        id: enrolledProgramIds,
+        page_size: enrolledProgramIds.length,
+      }),
+      enabled: enrolledProgramIds.length > 0,
+      placeholderData: keepPreviousData,
+    })
+
+  const enrolledProgramsResults = enrolledPrograms?.results ?? []
+  const coursePrograms = enrolledProgramsResults.filter(isProgramAsCourse)
+  const courseProgramModuleIds = getModuleCourseIdsFromPrograms(coursePrograms)
+
+  const { data: courseProgramModuleCourses, isLoading: moduleCoursesLoading } =
+    useQuery({
+      ...coursesQueries.coursesList({
+        id: courseProgramModuleIds,
+        page_size: courseProgramModuleIds.length || undefined,
+      }),
+      enabled: courseProgramModuleIds.length > 0,
+      placeholderData: keepPreviousData,
+    })
+
+  const isCovered = enrollmentCourseIsInPrograms(enrolledProgramsResults)
+  const bucketableEnrollments = (enrolledCourses ?? [])
+    .filter(isNonContractEnrollment)
+    .filter((enrollment) => !isCovered(enrollment))
+  const buckets = bucketAndSortHomeEnrollments(bucketableEnrollments)
+
+  return {
+    ...buckets,
+    programEnrollments: getTopLevelProgramEnrollments(
+      nonContractProgramEnrollments,
+      enrolledProgramsResults,
+    ),
+    enrollmentsByCourseId: groupCourseRunEnrollmentsByCourseId(
+      enrolledCourses ?? [],
+    ),
+    courseProgramsById: new Map(coursePrograms.map((p) => [p.id, p])),
+    moduleCoursesByProgramId: groupModuleCoursesByProgramId(
+      coursePrograms,
+      courseProgramModuleCourses?.results ?? [],
+    ),
+    isLoading:
+      courseEnrollmentsLoading ||
+      programEnrollmentsLoading ||
+      contractsLoading ||
+      enrolledProgramsLoading ||
+      moduleCoursesLoading,
+  }
 }
 
 /**
