@@ -18,6 +18,14 @@ This plan is not a script. Every phase is a judgment opportunity, not a checklis
 
 **Success criterion: complexity is reduced, not relocated.** The user-visible improvement of this refactor is "the dashboard is easier to reason about." That improvement is _not_ delivered by adding new directories or by colocating queries into hooks. It is delivered by **each artifact having a single, name-able responsibility that fits in your head**. A hook that composes 6 named helpers fits in your head; a hook that inlines 6 transforms does not. Moving a 700-line orchestration into a 700-line hook is a failure of this phase, even if every checkbox is ticked. Every extracted unit must be smaller, more focused, and more testable than what it replaced — or the extraction has not delivered cleanup.
 
+**Discover dead code and bad assumptions as you go, not at the boundary.** Phase-exit review (question 2 below) is a safety net, not the primary mechanism. Surface findings in the moment:
+
+- **When you stop calling an existing function, check for remaining callers.** If it now has no production consumer (only tests, or nothing at all), propose deletion in the same PR. Don't leave dangling helpers for "later" — the next phase inherits more cleanup work, and reviewers can't tell intentional preservation from oversight.
+- **When you introduce a new helper, check whether an existing one already covers the case.** Composing on top of a helper you should have replaced costs cleanup work twice.
+- **When you read an existing helper before composing it, check whether its premise still holds.** A filter that targets data shapes the codebase no longer produces — or never produced — is dead even if it has callers. Surface it; don't propagate it.
+
+The cost of catching these during the phase is one extra lookup per touched symbol. The cost of catching them at phase exit is a ballooning cleanup PR and a reviewer who can't tell what's deliberate.
+
 **Phase-boundary review questions.** At the end of every phase, the agent and reviewer answer together:
 
 1. **Did this phase make the dashboard easier to reason about?** Concretely — what is now smaller, more isolated, or better tested? If the answer is "not really," investigate why before continuing.
@@ -145,6 +153,8 @@ type HomeDashboardData = {
 
 Program and contract dashboards should use a slot model.
 
+A **slot** is the per-course data shape the dashboard arranges into its layout — one slot per course, carrying that course plus every enrollment for it plus the row's display state (language selection, derived "displayed" enrollment/run, contract scoping, ancestor program context). Slot ≠ card: the slot is the data shape, the card is the UI that renders from it. Today one slot renders as one card; once multi-run UX lands, one slot might render as multiple cards (a dropdown, an expanded list, a dialog) without the slot itself changing. The plural is what carries the term's intuition: a program dashboard arranges N slots into its requirement layout; a contract dashboard arranges N slots per program. Home (`My Learning`) is _not_ slot-driven — it's enrollment-flat (one card per enrollment, multiple cards possible for the same course).
+
 ```ts
 type DashboardCourseSlot = {
   course: CourseWithCourseRunsSerializerV2
@@ -265,7 +275,7 @@ This phase also folds in a small, isolated bug fix: enrolled-but-not-enrollable 
 **Hypothesised approach** (verify before executing):
 
 - [ ] Add a composite function — working name `resolveSlotForLanguage(course, enrollments, selectedLanguageKey, { contractId })` — that returns `{ displayedEnrollment, displayedRun, selectedLanguageOption }`. Internally it calls today's primitives in the same order they are called at every callsite, so behavior is preserved by construction. **Place it in `model/dashboardViewModel.ts`** (Phase 1's pure-model home), not in `languageOptions.ts`.
-- [ ] Add a composite function for the language picker — working name `getDashboardLanguageOptions(course, enrollments)` — that returns the union of enrollable V2 `course.language_options` and languages from the user's V3 `enrollment.run.language`. Also placed in `dashboardViewModel.ts`.
+- [ ] Add a composite function for the language picker — working name `getDistinctDashboardLanguageOptions(courses, enrollments)` — that returns the union of V2 `course.language_options` across the given courses and languages from the user's V3 `enrollment.run.language`. Also placed in `dashboardViewModel.ts`.
 - [ ] Update callsites in `EnrollmentDisplay.tsx` and `ContractContent.tsx` to use the composites. The 4-call dance disappears at the callsite; render code stops knowing the orchestration exists.
 - [ ] Begin migrating helpers from `languageOptions.ts` into `dashboardViewModel.ts` opportunistically (anything the composites depend on internally can move). Full deletion of `languageOptions.ts` is committed to Phase 7; this phase need only consolidate what it touches.
 - [ ] Do not introduce a multi-run selector.

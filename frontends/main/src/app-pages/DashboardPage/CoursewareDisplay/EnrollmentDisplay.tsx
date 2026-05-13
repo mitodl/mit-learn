@@ -22,7 +22,6 @@ import {
   getRequirementsProgress,
   getKey,
   ResourceType,
-  selectBestEnrollment,
 } from "./helpers"
 import {
   DashboardCard,
@@ -30,12 +29,9 @@ import {
   DashboardType,
 } from "./DashboardCard"
 import {
-  getDistinctLanguageOptions,
-  getSelectedLanguageOption,
-  getCourseRunForSelectedLanguage,
-  getEnrollmentForSelectedLanguage,
-  getResolvedRunForSelectedLanguage,
-} from "./languageOptions"
+  getDistinctDashboardLanguageOptions,
+  resolveSlotForLanguage,
+} from "./model/dashboardViewModel"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import {
@@ -520,8 +516,12 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     [programCourses?.results],
   )
   const languageOptions = React.useMemo(
-    () => getDistinctLanguageOptions(allProgramCourses),
-    [allProgramCourses],
+    () =>
+      getDistinctDashboardLanguageOptions(
+        allProgramCourses,
+        rawEnrollments ?? [],
+      ),
+    [allProgramCourses, rawEnrollments],
   )
   const [selectedLanguageKey, setSelectedLanguageKey] = React.useState("")
   useEffect(() => {
@@ -728,56 +728,33 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                 if (item.resourceType === "course") {
                   const courseEnrollments =
                     enrollmentsByCourseId[item.course.id] || []
-                  const selectedLanguageOption = getSelectedLanguageOption(
-                    item.course,
-                    selectedLanguageKey,
-                  )
-                  const selectedRun = getCourseRunForSelectedLanguage(
-                    item.course,
-                    selectedLanguageKey,
-                  )
-                  const selectedLanguageEnrollment =
-                    getEnrollmentForSelectedLanguage(
+                  const { displayedEnrollment, displayedRun } =
+                    resolveSlotForLanguage(
+                      item.course,
                       courseEnrollments,
-                      selectedLanguageOption,
-                      selectedRun,
+                      selectedLanguageKey,
                     )
-                  const resolvedRun = getResolvedRunForSelectedLanguage(
-                    item.course,
-                    selectedLanguageOption,
-                    selectedRun,
-                    selectedLanguageEnrollment,
-                  )
 
-                  // When a language is selected, only use an enrollment that
-                  // matches that specific language run. Don't fall back to a
-                  // different-language enrollment, which would show the wrong
-                  // title/URL and a misleading "Continue" CTA.
-                  const hasLanguageSelected = Boolean(
-                    selectedLanguageKey && languageOptions.length > 0,
-                  )
-                  const effectiveEnrollment = hasLanguageSelected
-                    ? selectedLanguageEnrollment
-                    : selectBestEnrollment(item.course, courseEnrollments)
-
-                  const resource = effectiveEnrollment
+                  const resource = displayedEnrollment
                     ? {
                         type: DashboardType.CourseRunEnrollment,
-                        data: effectiveEnrollment,
+                        data: displayedEnrollment,
                       }
                     : { type: DashboardType.Course, data: item.course }
+
+                  const runId = displayedEnrollment?.run.id ?? displayedRun?.id
 
                   return (
                     <DashboardCardStyled
                       key={getKey({
                         resourceType: ResourceType.Course,
                         id: item.course.id,
-                        runId: effectiveEnrollment?.run.id ?? resolvedRun?.id,
+                        runId,
                       })}
                       resource={resource}
                       programEnrollment={programEnrollment}
                       showNotComplete={false}
-                      selectedCourseRun={resolvedRun}
+                      selectedCourseRun={displayedRun}
                     />
                   )
                 }

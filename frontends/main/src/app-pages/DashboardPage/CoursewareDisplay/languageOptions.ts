@@ -1,4 +1,10 @@
-import type { SimpleSelectOption } from "ol-components"
+/**
+ * Helpers for resolving language selection against course/enrollment data.
+ *
+ * **Note:** `course.courseruns` and `course.language_options` are
+ * mostly disjoint. `language_options` describes which languages the course is
+ * offered; `courseruns` materializes only the default-language runs.
+ */
 import type {
   CourseRunEnrollmentV3,
   CourseRunLanguageOption,
@@ -15,14 +21,6 @@ const getLanguageCode = (option: CourseRunLanguageOption): string | null => {
 const getLanguageOptionKey = (option: CourseRunLanguageOption): string => {
   const languageCode = getLanguageCode(option)
   return languageCode ? `language:${languageCode}` : ""
-}
-
-const getLanguageCodeFromOptionKey = (optionKey: string): string | null => {
-  if (!optionKey.startsWith("language:")) {
-    return null
-  }
-  const code = optionKey.replace("language:", "").trim().toLowerCase()
-  return code || null
 }
 
 const FALLBACK_NATIVE_LANGUAGE_NAMES: Record<string, string> = {
@@ -116,15 +114,6 @@ const getNativeLanguageName = (languageCode: string): string => {
 
   nativeLanguageNameCache.set(normalizedLanguageCode, finalLabel)
   return finalLabel
-}
-
-const getLanguageOptionLabel = (option: CourseRunLanguageOption): string => {
-  const languageCode = getLanguageCode(option)
-  if (!languageCode) {
-    return ""
-  }
-
-  return getNativeLanguageName(languageCode)
 }
 
 type ExtendedLanguageOption = CourseRunLanguageOption & {
@@ -226,46 +215,6 @@ const getDefaultLanguageOptionKey = (
 
   const key = getLanguageOptionKey(byCoursewareId)
   return key || null
-}
-
-const getDistinctLanguageOptions = (
-  courses: CourseWithCourseRunsSerializerV2[],
-): SimpleSelectOption[] => {
-  const optionsByKey = new Map<string, SimpleSelectOption>()
-  const defaultLanguageCounts = new Map<string, number>()
-
-  courses.forEach((course) => {
-    const defaultLanguageKey = getDefaultLanguageOptionKey(course)
-    if (defaultLanguageKey) {
-      defaultLanguageCounts.set(
-        defaultLanguageKey,
-        (defaultLanguageCounts.get(defaultLanguageKey) ?? 0) + 1,
-      )
-    }
-
-    getEnrollableLanguageOptions(course).forEach((option) => {
-      const key = getLanguageOptionKey(option)
-      const label = getLanguageOptionLabel(option)
-      if (!key || !label) {
-        return
-      }
-      if (!optionsByKey.has(key)) {
-        optionsByKey.set(key, {
-          value: key,
-          label,
-        })
-      }
-    })
-  })
-
-  return Array.from(optionsByKey.values()).sort((a, b) => {
-    const defaultCountA = defaultLanguageCounts.get(String(a.value)) ?? 0
-    const defaultCountB = defaultLanguageCounts.get(String(b.value)) ?? 0
-    if (defaultCountA !== defaultCountB) {
-      return defaultCountB - defaultCountA
-    }
-    return String(a.label).localeCompare(String(b.label))
-  })
 }
 
 const getSelectedLanguageOption = (
@@ -549,12 +498,10 @@ const getResolvedRunForSelectedLanguage = (
 }
 
 export {
-  getLanguageCodeFromOptionKey,
-  getLanguageOptionKey,
   selectBestContractEnrollmentForLanguage,
-  getDistinctLanguageOptions,
   getSelectedLanguageOption,
   getCourseRunForSelectedLanguage,
   getEnrollmentForSelectedLanguage,
   getResolvedRunForSelectedLanguage,
+  getNativeLanguageName,
 }
