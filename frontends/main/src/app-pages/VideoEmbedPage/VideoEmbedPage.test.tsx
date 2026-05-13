@@ -87,6 +87,9 @@ describe("VideoEmbedPage", () => {
     renderWithProviders(<VideoEmbedPage videoId={video.id} />)
 
     const iframe = await screen.findByTitle(/^Video: /)
-    expect(iframe).toHaveAttribute("src", expect.stringContaining("dQw4w9WgXcQ"))
+    expect(iframe).toHaveAttribute(
+      "src",
+      expect.stringContaining("dQw4w9WgXcQ"),
+    )
   })
 })

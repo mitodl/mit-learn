@@ -12,6 +12,9 @@ import {
   standardizeMetadata,
   MetadataNotFound,
 } from "@/common/metadata"
+
+const SUPPORTED_TYPES = ["application/x-mpegURL", "video/mp4", "video/youtube"]
+
 export const generateMetadata = ({
   params,
 }: {
@@ -30,11 +33,6 @@ export const generateMetadata = ({
         throw new MetadataNotFound()
       })
 
-    const SUPPORTED_TYPES = [
-      "application/x-mpegURL",
-      "video/mp4",
-      "video/youtube",
-    ]
     const isEmbeddableVideo =
       resource?.resource_type === VideoResourceResourceTypeEnum.Video &&
       SUPPORTED_TYPES.includes(
@@ -79,11 +77,6 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
     videoResource.content_files?.[0]?.youtube_id,
   )
 
-  const SUPPORTED_TYPES = [
-    "application/x-mpegURL",
-    "video/mp4",
-    "video/youtube",
-  ]
   if (sources.length === 0 || !SUPPORTED_TYPES.includes(sources[0].type)) {
     notFound()
   }
