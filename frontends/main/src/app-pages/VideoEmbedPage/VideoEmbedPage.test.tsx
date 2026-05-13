@@ -68,4 +68,25 @@ describe("VideoEmbedPage", () => {
     const sources = JSON.parse(player.getAttribute("data-sources") ?? "[]")
     expect(sources[0].type).toBe("video/mp4")
   })
+
+  test("renders YouTube iframe for a video with content_files youtube_id", async () => {
+    const video = makeVideo({
+      video: {
+        id: 3,
+        streaming_url: null,
+        duration: "PT3M",
+        caption_urls: [],
+        cover_image_url: null,
+      },
+      content_files: [
+        factories.learningResources.contentFile({ youtube_id: "dQw4w9WgXcQ" }),
+      ],
+    })
+    setupVideoApi(video)
+
+    renderWithProviders(<VideoEmbedPage videoId={video.id} />)
+
+    const iframe = await screen.findByTitle(/^Video: /)
+    expect(iframe).toHaveAttribute("src", expect.stringContaining("dQw4w9WgXcQ"))
+  })
 })
