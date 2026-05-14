@@ -2,6 +2,7 @@
 
 import random
 from datetime import timedelta
+from types import SimpleNamespace
 
 import pytest
 from django.conf import settings
@@ -46,7 +47,6 @@ from learning_resources.models import (
 )
 from learning_resources.serializers import (
     ContentFileSerializer,
-    LearningResourceDepartmentSerializer,
     LearningResourceDisplayInfoResponseSerializer,
     LearningResourceOfferorDetailSerializer,
     LearningResourcePlatformSerializer,
@@ -113,6 +113,29 @@ def test_get_course_detail_endpoint(client, url):
             resp.data.get("runs")[i]["start_date"]
             >= resp.data.get("runs")[i - 1]["start_date"]
         )
+
+
+@pytest.mark.parametrize(
+    ("url", "version"),
+    [
+        ("lr:v1:courses_api-detail", "v1"),
+        ("lr:v2:courses_api-detail", "v2"),
+    ],
+)
+def test_run_enrollment_url_versioning(client, url, version):
+    """enrollment_url should appear on runs for v2 only, derived from run.url."""
+    course = CourseFactory.create()
+    run = course.learning_resource.runs.first()
+    run.url = "https://example.com/course"
+    run.save()
+
+    resp = client.get(reverse(url, args=[course.learning_resource.id]))
+    run_data = next(r for r in resp.data["runs"] if r["id"] == run.id)
+
+    if version == "v2":
+        assert run_data["enrollment_url"] == "https://example.com/course/enroll/"
+    else:
+        assert "enrollment_url" not in run_data
 
 
 @pytest.mark.parametrize(
@@ -718,43 +741,72 @@ def test_topic_channel_url(client, published):
         assert resp.status_code == 404
 
 
-def test_departments_list_endpoint(client):
-    """Test departments list endpoint"""
+@pytest.mark.parametrize(
+    ("version", "url_key"),
+    [("v1", "channel_url"), ("v2", "url")],
+)
+def test_departments_list_endpoint(client, version, url_key):
+    """Test departments list endpoint for both v1 and v2"""
     departments = sorted(
         LearningResourceDepartmentFactory.create_batch(3),
         key=lambda department: department.department_id,
     )
 
-    resp = client.get(reverse("lr:v1:departments_api-list"))
+    resp = client.get(reverse(f"lr:{version}:departments_api-list"))
     assert resp.data.get("count") == 3
     for i in range(3):
-        assert (
-            resp.data.get("results")[i]
-            == LearningResourceDepartmentSerializer(instance=departments[i]).data
-        )
+        dept = departments[i]
+        assert resp.data.get("results")[i] == {
+            "department_id": dept.department_id,
+            "name": dept.name,
+            url_key: dept.channel_url,
+            "school": {
+                "id": dept.school.id,
+                "name": dept.school.name,
+                "url": dept.school.url,
+            },
+        }
 
 
-def test_departments_detail_endpoint(client):
-    """Test departments detail endpoint"""
+@pytest.mark.parametrize(
+    ("version", "url_key"),
+    [("v1", "channel_url"), ("v2", "url")],
+)
+def test_departments_detail_endpoint(client, version, url_key):
+    """Test departments detail endpoint for both v1 and v2"""
     department = LearningResourceDepartmentFactory.create(
         department_id="ABC", name="Alpha Beta Charlie"
     )
 
+    expected = {
+        "department_id": department.department_id,
+        "name": department.name,
+        url_key: department.channel_url,
+        "school": {
+            "id": department.school.id,
+            "name": department.school.name,
+            "url": department.school.url,
+        },
+    }
     for dept_id in ("abc", "aBc", "ABC"):
-        resp = client.get(reverse("lr:v1:departments_api-detail", args=[dept_id]))
-        assert (
-            resp.data == LearningResourceDepartmentSerializer(instance=department).data
+        resp = client.get(
+            reverse(f"lr:{version}:departments_api-detail", args=[dept_id])
         )
+        assert resp.data == expected
 
 
-def test_schools_list_endpoint(client):
-    """Test schools list endpoint"""
+@pytest.mark.parametrize(
+    ("version", "url_key"),
+    [("v1", "channel_url"), ("v2", "url")],
+)
+def test_schools_list_endpoint(client, version, url_key):
+    """Test schools list endpoint for both v1 and v2"""
     schools = sorted(
         [dept.school for dept in LearningResourceDepartmentFactory.create_batch(3)],
         key=lambda school: school.id,
     )
 
-    resp = client.get(reverse("lr:v1:schools_api-list"))
+    resp = client.get(reverse(f"lr:{version}:schools_api-list"))
     assert resp.data.get("count") == 3
     for i in range(3):
         assert resp.data.get("results")[i] == {
@@ -765,24 +817,37 @@ def test_schools_list_endpoint(client):
                 {
                     "department_id": dept.department_id,
                     "name": dept.name,
-                    "channel_url": None,
+                    url_key: dept.channel_url,
                 }
                 for dept in schools[i].departments.all().order_by("department_id")
             ],
         }
 
 
-def test_schools_detail_endpoint(client):
-    """Test schools detail endpoint"""
-    department = LearningResourceDepartmentFactory.create(
-        department_id="ABC", name="Alpha Beta Charlie"
-    )
+@pytest.mark.parametrize(
+    ("version", "url_key"),
+    [("v1", "channel_url"), ("v2", "url")],
+)
+def test_schools_detail_endpoint(client, version, url_key):
+    """Test schools detail endpoint for both v1 and v2"""
+    departments = LearningResourceDepartmentFactory.create_batch(2)
+    school = departments[0].school
 
-    for dept_id in ("abc", "aBc", "ABC"):
-        resp = client.get(reverse("lr:v1:departments_api-detail", args=[dept_id]))
-        assert (
-            resp.data == LearningResourceDepartmentSerializer(instance=department).data
-        )
+    expected = {
+        "id": school.id,
+        "name": school.name,
+        "url": school.url,
+        "departments": [
+            {
+                "department_id": dept.department_id,
+                "name": dept.name,
+                url_key: dept.channel_url,
+            }
+            for dept in school.departments.all().order_by("department_id")
+        ],
+    }
+    resp = client.get(reverse(f"lr:{version}:schools_api-detail", args=[school.id]))
+    assert resp.data == expected
 
 
 def test_platforms_list_endpoint(client):
@@ -883,10 +948,15 @@ def test_get_video_playlist_detail_endpoint(client, url):
 
 
 @pytest.mark.parametrize(
-    "url",
-    ["lr:v1:learning_resource_items_api-list", "lr:v1:video_playlist_items_api-list"],
+    ("url", "api_version"),
+    [
+        ("lr:v1:learning_resource_items_api-list", "v1"),
+        ("lr:v1:video_playlist_items_api-list", "v1"),
+        ("lr:v2:learning_resource_items_api-list", "v2"),
+        ("lr:v2:video_playlist_items_api-list", "v2"),
+    ],
 )
-def test_get_video_playlist_items_endpoint(client, url):
+def test_get_video_playlist_items_endpoint(client, url, api_version):
     """Test video playlist items endpoint"""
     playlist = VideoPlaylistFactory.create().learning_resource
     videos = VideoFactory.create_batch(2)
@@ -920,20 +990,24 @@ def test_get_video_playlist_items_endpoint(client, url):
         )
     ):
         assert resp.data.get("results")[idx]["id"] == resource_relationship.id
-        assert (
-            resp.data.get("results")[idx]["resource"]
-            == VideoResourceSerializer(instance=resource_relationship.child).data
-        )
+        mock_request = SimpleNamespace(version=api_version)
+        expected = VideoResourceSerializer(
+            instance=resource_relationship.child,
+            context={"request": mock_request},
+        ).data
+        assert resp.data.get("results")[idx]["resource"] == expected
 
 
 @pytest.mark.parametrize(
-    ("url", "params"),
+    ("url", "params", "api_version"),
     [
-        ("lr:v1:videos_api-list", ""),
-        ("lr:v1:learning_resources_api-list", "resource_type=video"),
+        ("lr:v1:videos_api-list", "", "v1"),
+        ("lr:v1:learning_resources_api-list", "resource_type=video", "v1"),
+        ("lr:v2:videos_api-list", "", "v2"),
+        ("lr:v2:learning_resources_api-list", "resource_type=video", "v2"),
     ],
 )
-def test_list_video_endpoint(client, url, params):
+def test_list_video_endpoint(client, url, params, api_version):
     """Test video endpoint"""
     videos = sorted(VideoFactory.create_batch(2), key=lambda resource: resource.id)
 
@@ -943,12 +1017,13 @@ def test_list_video_endpoint(client, url, params):
     resp = client.get(f"{reverse(url)}?{params}")
     assert resp.data.get("count") == 2
 
+    mock_request = SimpleNamespace(version=api_version)
     for idx, video in enumerate(videos):
         assert resp.data.get("results")[idx]["id"] == video.learning_resource.id
-        assert (
-            resp.data.get("results")[idx]["video"]
-            == VideoSerializer(instance=video).data
-        )
+        expected = VideoSerializer(
+            instance=video, context={"request": mock_request}
+        ).data
+        assert resp.data.get("results")[idx]["video"] == expected
 
 
 @pytest.mark.parametrize(
@@ -975,16 +1050,24 @@ def test_list_video_endpoint_returns_playlists(client, url, params):
 
 
 @pytest.mark.parametrize(
-    "url", ["lr:v1:videos_api-detail", "lr:v1:learning_resources_api-detail"]
+    ("url", "api_version"),
+    [
+        ("lr:v1:videos_api-detail", "v1"),
+        ("lr:v1:learning_resources_api-detail", "v1"),
+        ("lr:v2:videos_api-detail", "v2"),
+        ("lr:v2:learning_resources_api-detail", "v2"),
+    ],
 )
-def test_get_video_detail_endpoint(client, url):
+def test_get_video_detail_endpoint(client, url, api_version):
     """Test video detail endpoint"""
     video = VideoFactory.create()
 
     resp = client.get(reverse(url, args=[video.learning_resource.id]))
 
+    mock_request = SimpleNamespace(version=api_version)
+    expected = VideoSerializer(instance=video, context={"request": mock_request}).data
     assert resp.data.get("readable_id") == video.learning_resource.readable_id
-    assert resp.data.get("video") == VideoSerializer(instance=video).data
+    assert resp.data.get("video") == expected
 
 
 @pytest.mark.parametrize(

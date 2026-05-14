@@ -1,160 +1,10 @@
 openapi: 3.0.3
 info:
   title: MIT Learn API
-  version: 0.0.1 (v1)
+  version: 0.0.1 (v2)
   description: MIT public API
 paths:
-  /api/v1/articles/:
-    get:
-      operationId: articles_list
-      description: Get a paginated list of articles
-      summary: List
-      parameters:
-      - in: query
-        name: draft
-        schema:
-          type: boolean
-        description: Filter to show only draft articles. Only available for admins
-          and article editors. If true, returns unpublished articles. If not specified,
-          returns all articles.
-      - name: limit
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
-      - name: offset
-        required: false
-        in: query
-        description: The initial index from which to return the results.
-        schema:
-          type: integer
-      tags:
-      - articles
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedRichTextArticleList'
-          description: ''
-    post:
-      operationId: articles_create
-      description: Create a new article
-      summary: Create
-      tags:
-      - articles
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RichTextArticleRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/RichTextArticleRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/RichTextArticleRequest'
-        required: true
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RichTextArticle'
-          description: ''
-  /api/v1/articles/{id}/:
-    get:
-      operationId: articles_retrieve
-      description: Retrieve a single article
-      summary: Retrieve
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this article.
-        required: true
-      tags:
-      - articles
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RichTextArticle'
-          description: ''
-    patch:
-      operationId: articles_partial_update
-      description: Update an article
-      summary: Update
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this article.
-        required: true
-      tags:
-      - articles
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedRichTextArticleRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedRichTextArticleRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedRichTextArticleRequest'
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RichTextArticle'
-          description: ''
-    delete:
-      operationId: articles_destroy
-      description: Delete an article
-      summary: Destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this article.
-        required: true
-      tags:
-      - articles
-      responses:
-        '204':
-          description: No response body
-  /api/v1/articles/detail/{identifier}/:
-    get:
-      operationId: articles_detail_retrieve
-      description: If the path parameter is numeric → ID, else → slug.
-      summary: Retrieve article by ID or slug
-      parameters:
-      - in: path
-        name: identifier
-        schema:
-          type: string
-        description: Article ID (number) or slug (string)
-        required: true
-      tags:
-      - articles
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RichTextArticle'
-          description: ''
-        '404':
-          description: No response body
-  /api/v1/content_file_search/:
+  /api/v2/content_file_search/:
     get:
       operationId: content_file_search_retrieve
       description: Search for content files
@@ -359,7 +209,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ContentFileSearchResponse'
           description: ''
-  /api/v1/contentfiles/:
+  /api/v2/contentfiles/:
     get:
       operationId: contentfiles_list
       description: Viewset for ContentFiles
@@ -510,7 +360,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedContentFileList'
           description: ''
-  /api/v1/contentfiles/{id}/:
+  /api/v2/contentfiles/{id}/:
     get:
       operationId: contentfiles_retrieve
       description: Viewset for ContentFiles
@@ -537,7 +387,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ContentFile'
           description: ''
-  /api/v1/course_features/:
+  /api/v2/course_features/:
     get:
       operationId: course_features_list
       description: Course Features and Content Feature Types
@@ -564,7 +414,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedLearningResourceContentTagList'
           description: ''
-  /api/v1/course_features/{id}/:
+  /api/v2/course_features/{id}/:
     get:
       operationId: course_features_retrieve
       description: Course Features and Content Feature Types
@@ -586,7 +436,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResourceContentTag'
           description: ''
-  /api/v1/courses/:
+  /api/v2/courses/:
     get:
       operationId: courses_list
       description: Get a paginated list of courses
@@ -990,7 +840,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedCourseResourceList'
           description: ''
-  /api/v1/courses/{id}/:
+  /api/v2/courses/{id}/:
     get:
       operationId: courses_retrieve
       description: Retrieve a single course
@@ -1011,7 +861,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/CourseResource'
           description: ''
-  /api/v1/courses/{learning_resource_id}/contentfiles/:
+  /api/v2/courses/{learning_resource_id}/contentfiles/:
     get:
       operationId: courses_contentfiles_list
       description: Show content files for a learning resource
@@ -1162,7 +1012,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedContentFileList'
           description: ''
-  /api/v1/courses/{learning_resource_id}/contentfiles/{id}/:
+  /api/v2/courses/{learning_resource_id}/contentfiles/{id}/:
     get:
       operationId: courses_contentfiles_retrieve
       description: Show content files for a learning resource
@@ -1189,7 +1039,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ContentFile'
           description: ''
-  /api/v1/departments/:
+  /api/v2/departments/:
     get:
       operationId: departments_list
       description: MIT academic departments
@@ -1216,7 +1066,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedLearningResourceDepartmentList'
           description: ''
-  /api/v1/departments/{department_id}/:
+  /api/v2/departments/{department_id}/:
     get:
       operationId: departments_retrieve
       description: MIT academic departments
@@ -1237,7 +1087,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResourceDepartment'
           description: ''
-  /api/v1/featured/:
+  /api/v2/featured/:
     get:
       operationId: featured_list
       description: Get a paginated list of featured resources
@@ -1641,7 +1491,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedLearningResourceList'
           description: ''
-  /api/v1/featured/{id}/:
+  /api/v2/featured/{id}/:
     get:
       operationId: featured_retrieve
       description: Retrieve a single featured resource
@@ -1662,183 +1512,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResource'
           description: ''
-  /api/v1/hubspot/forms/:
-    get:
-      operationId: hubspot_forms_list
-      description: List HubSpot forms from the backend.
-      parameters:
-      - in: query
-        name: after
-        schema:
-          type: string
-      - in: query
-        name: archived
-        schema:
-          type: boolean
-      - in: query
-        name: form_types
-        schema:
-          type: array
-          items:
-            type: string
-      - in: query
-        name: limit
-        schema:
-          type: integer
-      tags:
-      - hubspot
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPaging'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-        '503':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-        4XX:
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-        5XX:
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-  /api/v1/hubspot/forms/{form_id}/:
-    get:
-      operationId: hubspot_forms_detail_retrieve
-      description: Get one HubSpot form by id from the backend.
-      parameters:
-      - in: query
-        name: archived
-        schema:
-          type: boolean
-      - in: path
-        name: form_id
-        schema:
-          type: string
-          pattern: ^[^/]+$
-        required: true
-      tags:
-      - hubspot
-      security:
-      - {}
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HubspotFormDefinition'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-        '503':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-        4XX:
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-        5XX:
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-  /api/v1/hubspot/forms/{form_id}/submit/:
-    post:
-      operationId: hubspot_forms_submit
-      description: Submit a form to HubSpot.
-      parameters:
-      - in: path
-        name: form_id
-        schema:
-          type: string
-          pattern: ^[^/]+$
-        required: true
-      tags:
-      - hubspot
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/HubspotFormSubmitRequestRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/HubspotFormSubmitRequestRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/HubspotFormSubmitRequestRequest'
-        required: true
-      security:
-      - {}
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HubspotFormSubmitResponse'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-        '503':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-        4XX:
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-        5XX:
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-  /api/v1/learning_resource_display_info/:
+  /api/v2/learning_resource_display_info/:
     get:
       operationId: learning_resource_display_info_list
       description: Get a paginated list of learning resource display info
@@ -2242,7 +1916,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedLearningResourceDisplayInfoResponseList'
           description: ''
-  /api/v1/learning_resource_display_info/{id}/:
+  /api/v2/learning_resource_display_info/{id}/:
     get:
       operationId: learning_resource_display_info_retrieve
       description: Retrieve display info for a learning resource.
@@ -2263,7 +1937,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResourceDisplayInfoResponse'
           description: ''
-  /api/v1/learning_resources/:
+  /api/v2/learning_resources/:
     get:
       operationId: learning_resources_list
       description: Get a paginated list of learning resources.
@@ -2667,7 +2341,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedLearningResourceList'
           description: ''
-  /api/v1/learning_resources/{id}/:
+  /api/v2/learning_resources/{id}/:
     get:
       operationId: learning_resources_retrieve
       description: Retrieve a single learning resource.
@@ -2688,7 +2362,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResource'
           description: ''
-  /api/v1/learning_resources/{id}/similar/:
+  /api/v2/learning_resources/{id}/similar/:
     get:
       operationId: learning_resources_similar_list
       description: |-
@@ -3051,7 +2725,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/LearningResource'
           description: ''
-  /api/v1/learning_resources/{id}/vector_similar/:
+  /api/v2/learning_resources/{id}/vector_similar/:
     get:
       operationId: learning_resources_vector_similar_list
       description: |-
@@ -3414,7 +3088,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/LearningResource'
           description: ''
-  /api/v1/learning_resources/{learning_resource_id}/contentfiles/:
+  /api/v2/learning_resources/{learning_resource_id}/contentfiles/:
     get:
       operationId: learning_resources_contentfiles_list
       description: Show content files for a learning resource
@@ -3565,7 +3239,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedContentFileList'
           description: ''
-  /api/v1/learning_resources/{learning_resource_id}/contentfiles/{id}/:
+  /api/v2/learning_resources/{learning_resource_id}/contentfiles/{id}/:
     get:
       operationId: learning_resources_contentfiles_retrieve
       description: Show content files for a learning resource
@@ -3592,7 +3266,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ContentFile'
           description: ''
-  /api/v1/learning_resources/{learning_resource_id}/items/:
+  /api/v2/learning_resources/{learning_resource_id}/items/:
     get:
       operationId: learning_resources_items_list
       description: Get a list of related learning resources for a learning resource.
@@ -3631,7 +3305,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedLearningResourceRelationshipList'
           description: ''
-  /api/v1/learning_resources/{learning_resource_id}/items/{id}/:
+  /api/v2/learning_resources/{learning_resource_id}/items/{id}/:
     get:
       operationId: learning_resources_items_retrieve
       description: Get a singe related learning resource for a learning resource.
@@ -3658,7 +3332,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResourceRelationship'
           description: ''
-  /api/v1/learning_resources/{id}/learning_paths/:
+  /api/v2/learning_resources/{id}/learning_paths/:
     patch:
       operationId: learning_resources_learning_paths_partial_update
       description: Set Learning Path Relationships on a given Learning Resource.
@@ -3699,7 +3373,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/LearningResourceRelationship'
           description: ''
-  /api/v1/learning_resources/{id}/userlists/:
+  /api/v2/learning_resources/{id}/userlists/:
     patch:
       operationId: learning_resources_userlists_partial_update
       description: Set User List Relationships on a given Learning Resource.
@@ -3740,7 +3414,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/UserListRelationship'
           description: ''
-  /api/v1/learning_resources/summary/:
+  /api/v2/learning_resources/summary/:
     get:
       operationId: learning_resources_summary_list
       description: Get a paginated list of learning resources with summary fields
@@ -4144,7 +3818,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedLearningResourceSummaryList'
           description: ''
-  /api/v1/learning_resources_search/:
+  /api/v2/learning_resources_search/:
     get:
       operationId: learning_resources_search_retrieve
       description: Search for learning resources
@@ -4675,7 +4349,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResourcesSearchResponse'
           description: ''
-  /api/v1/learning_resources_user_subscription/:
+  /api/v2/learning_resources_user_subscription/:
     get:
       operationId: learning_resources_user_subscription_list
       description: View for listing percolate query subscriptions for a user
@@ -5208,7 +4882,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/PercolateQuery'
           description: ''
-  /api/v1/learning_resources_user_subscription/{id}/unsubscribe/:
+  /api/v2/learning_resources_user_subscription/{id}/unsubscribe/:
     delete:
       operationId: learning_resources_user_subscription_unsubscribe_destroy
       description: |-
@@ -5231,7 +4905,7 @@ paths:
       responses:
         '204':
           description: No response body
-  /api/v1/learning_resources_user_subscription/check/:
+  /api/v2/learning_resources_user_subscription/check/:
     get:
       operationId: learning_resources_user_subscription_check_list
       description: View for listing percolate query subscriptions for a user
@@ -5778,7 +5452,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/PercolateQuery'
           description: ''
-  /api/v1/learning_resources_user_subscription/subscribe/:
+  /api/v2/learning_resources_user_subscription/subscribe/:
     post:
       operationId: learning_resources_user_subscription_subscribe_create
       description: Subscribe a user to query
@@ -6334,7 +6008,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PercolateQuery'
           description: ''
-  /api/v1/learningpaths/:
+  /api/v2/learningpaths/:
     get:
       operationId: learningpaths_list
       description: Get a paginated list of learning paths
@@ -6763,7 +6437,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningPathResource'
           description: ''
-  /api/v1/learningpaths/{id}/:
+  /api/v2/learningpaths/{id}/:
     get:
       operationId: learningpaths_retrieve
       description: Retrive a single learning path
@@ -6831,7 +6505,7 @@ paths:
       responses:
         '204':
           description: No response body
-  /api/v1/learningpaths/{learning_resource_id}/items/:
+  /api/v2/learningpaths/{learning_resource_id}/items/:
     get:
       operationId: learningpaths_items_list
       description: Viewset for LearningPath related resources
@@ -6901,7 +6575,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningPathRelationship'
           description: ''
-  /api/v1/learningpaths/{learning_resource_id}/items/{id}/:
+  /api/v2/learningpaths/{learning_resource_id}/items/{id}/:
     get:
       operationId: learningpaths_items_retrieve
       description: Get a singe related learning resource for a learning resource.
@@ -6987,7 +6661,7 @@ paths:
       responses:
         '204':
           description: No response body
-  /api/v1/learningpaths/membership/:
+  /api/v2/learningpaths/membership/:
     get:
       operationId: learningpaths_membership_list
       description: Get a list of all learning path items
@@ -7003,7 +6677,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/MicroLearningPathRelationship'
           description: ''
-  /api/v1/offerors/:
+  /api/v2/offerors/:
     get:
       operationId: offerors_list
       description: MIT organizations that offer learning resources
@@ -7030,7 +6704,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedLearningResourceOfferorDetailList'
           description: ''
-  /api/v1/offerors/{code}/:
+  /api/v2/offerors/{code}/:
     get:
       operationId: offerors_retrieve
       description: MIT organizations that offer learning resources
@@ -7051,7 +6725,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResourceOfferorDetail'
           description: ''
-  /api/v1/platforms/:
+  /api/v2/platforms/:
     get:
       operationId: platforms_list
       description: Platforms on which learning resources are hosted
@@ -7078,7 +6752,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedLearningResourcePlatformList'
           description: ''
-  /api/v1/platforms/{code}/:
+  /api/v2/platforms/{code}/:
     get:
       operationId: platforms_retrieve
       description: Platforms on which learning resources are hosted
@@ -7099,7 +6773,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResourcePlatform'
           description: ''
-  /api/v1/podcast_episodes/:
+  /api/v2/podcast_episodes/:
     get:
       operationId: podcast_episodes_list
       description: Get a paginated list of podcast episodes
@@ -7503,7 +7177,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedPodcastEpisodeResourceList'
           description: ''
-  /api/v1/podcast_episodes/{id}/:
+  /api/v2/podcast_episodes/{id}/:
     get:
       operationId: podcast_episodes_retrieve
       description: Retrieve a single podcast episode
@@ -7524,7 +7198,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PodcastEpisodeResource'
           description: ''
-  /api/v1/podcasts/:
+  /api/v2/podcasts/:
     get:
       operationId: podcasts_list
       description: Get a paginated list of podcasts
@@ -7928,7 +7602,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedPodcastResourceList'
           description: ''
-  /api/v1/podcasts/{id}/:
+  /api/v2/podcasts/{id}/:
     get:
       operationId: podcasts_retrieve
       description: Retrieve a single podcast
@@ -7949,7 +7623,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PodcastResource'
           description: ''
-  /api/v1/podcasts/{learning_resource_id}/items/:
+  /api/v2/podcasts/{learning_resource_id}/items/:
     get:
       operationId: podcasts_items_list
       description: Get a list of related learning resources for a learning resource.
@@ -7988,7 +7662,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedLearningResourceRelationshipList'
           description: ''
-  /api/v1/podcasts/{learning_resource_id}/items/{id}/:
+  /api/v2/podcasts/{learning_resource_id}/items/{id}/:
     get:
       operationId: podcasts_items_retrieve
       description: Get a singe related learning resource for a learning resource.
@@ -8015,28 +7689,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResourceRelationship'
           description: ''
-  /api/v1/program_letters/{id}/:
-    get:
-      operationId: program_letters_retrieve
-      description: Detail only View for program letters
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this program letter.
-        required: true
-      tags:
-      - program_letters
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProgramLetter'
-          description: ''
-  /api/v1/programs/:
+  /api/v2/programs/:
     get:
       operationId: programs_list
       description: Get a paginated list of programs
@@ -8440,7 +8093,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedProgramResourceList'
           description: ''
-  /api/v1/programs/{id}/:
+  /api/v2/programs/{id}/:
     get:
       operationId: programs_retrieve
       description: Retrieve a single program
@@ -8461,7 +8114,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProgramResource'
           description: ''
-  /api/v1/schools/:
+  /api/v2/schools/:
     get:
       operationId: schools_list
       description: MIT schools
@@ -8488,7 +8141,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedLearningResourceSchoolList'
           description: ''
-  /api/v1/schools/{id}/:
+  /api/v2/schools/{id}/:
     get:
       operationId: schools_retrieve
       description: MIT schools
@@ -8509,7 +8162,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResourceSchool'
           description: ''
-  /api/v1/topics/:
+  /api/v2/topics/:
     get:
       operationId: topics_list
       description: Topics covered by learning resources
@@ -8559,7 +8212,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedLearningResourceTopicList'
           description: ''
-  /api/v1/topics/{id}/:
+  /api/v2/topics/{id}/:
     get:
       operationId: topics_retrieve
       description: Topics covered by learning resources
@@ -8580,33 +8233,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResourceTopic'
           description: ''
-  /api/v1/upload-media/:
-    post:
-      operationId: media_upload
-      description: Upload an image (multipart/form-data) and return the storage URL.
-      tags:
-      - media
-      requestBody:
-        content:
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ArticleImageUploadRequest'
-        required: true
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  url:
-                    type: string
-          description: Successful Upload
-        '400':
-          description: Bad request
-        '401':
-          description: Authentication required
-  /api/v1/userlists/:
+  /api/v2/userlists/:
     get:
       operationId: userlists_list
       description: Viewset for UserLists
@@ -8658,7 +8285,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserList'
           description: ''
-  /api/v1/userlists/{id}/:
+  /api/v2/userlists/{id}/:
     get:
       operationId: userlists_retrieve
       description: Viewset for UserLists
@@ -8726,7 +8353,7 @@ paths:
       responses:
         '204':
           description: No response body
-  /api/v1/userlists/{userlist_id}/items/:
+  /api/v2/userlists/{userlist_id}/items/:
     get:
       operationId: userlists_items_list
       description: Viewset for UserListRelationships
@@ -8791,7 +8418,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserListRelationship'
           description: ''
-  /api/v1/userlists/{userlist_id}/items/{id}/:
+  /api/v2/userlists/{userlist_id}/items/{id}/:
     get:
       operationId: userlists_items_retrieve
       description: Viewset for UserListRelationships
@@ -8877,7 +8504,7 @@ paths:
       responses:
         '204':
           description: No response body
-  /api/v1/userlists/membership/:
+  /api/v2/userlists/membership/:
     get:
       operationId: userlists_membership_list
       description: Get a list of all userlist items for a user
@@ -8893,7 +8520,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/MicroUserListRelationship'
           description: ''
-  /api/v1/video_playlists/:
+  /api/v2/video_playlists/:
     get:
       operationId: video_playlists_list
       description: Get a paginated list of video playlists
@@ -9297,7 +8924,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedVideoPlaylistResourceList'
           description: ''
-  /api/v1/video_playlists/{id}/:
+  /api/v2/video_playlists/{id}/:
     get:
       operationId: video_playlists_retrieve
       description: Retrieve a single video playlist
@@ -9318,7 +8945,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/VideoPlaylistResource'
           description: ''
-  /api/v1/video_playlists/{learning_resource_id}/items/:
+  /api/v2/video_playlists/{learning_resource_id}/items/:
     get:
       operationId: video_playlists_items_list
       description: Get a list of related learning resources for a learning resource.
@@ -9357,7 +8984,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedLearningResourceRelationshipList'
           description: ''
-  /api/v1/video_playlists/{learning_resource_id}/items/{id}/:
+  /api/v2/video_playlists/{learning_resource_id}/items/{id}/:
     get:
       operationId: video_playlists_items_retrieve
       description: Get a singe related learning resource for a learning resource.
@@ -9384,7 +9011,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResourceRelationship'
           description: ''
-  /api/v1/videos/:
+  /api/v2/videos/:
     get:
       operationId: videos_list
       description: Get a paginated list of videos
@@ -9788,7 +9415,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedVideoResourceList'
           description: ''
-  /api/v1/videos/{id}/:
+  /api/v2/videos/{id}/:
     get:
       operationId: videos_retrieve
       description: Retrieve a single video
@@ -9808,164 +9435,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/VideoResource'
-          description: ''
-  /api/v1/webhooks/content_files/:
-    post:
-      operationId: webhooks_content_files_create
-      description: Webhook handler for ContentFile updates
-      parameters:
-      - in: query
-        name: content_path
-        schema:
-          type: string
-      - in: query
-        name: course_id
-        schema:
-          type: string
-      - in: query
-        name: course_readable_id
-        schema:
-          type: string
-      - in: query
-        name: source
-        schema:
-          enum:
-          - micromasters
-          - mit_edx
-          - mitpe
-          - mitxonline
-          - oll
-          - ocw
-          - podcast
-          - mit_climate
-          - see
-          - xpro
-          - youtube
-          - canvas
-          - ovs
-          type: string
-          minLength: 1
-        description: |-
-          * `micromasters` - micromasters
-          * `mit_edx` - mit_edx
-          * `mitpe` - mitpe
-          * `mitxonline` - mitxonline
-          * `oll` - oll
-          * `ocw` - ocw
-          * `podcast` - podcast
-          * `mit_climate` - mit_climate
-          * `see` - see
-          * `xpro` - xpro
-          * `youtube` - youtube
-          * `canvas` - canvas
-          * `ovs` - ovs
-        required: true
-      tags:
-      - webhooks
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ContentFileWebHookRequestRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ContentFileWebHookRequestRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ContentFileWebHookRequestRequest'
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WebhookResponse'
-          description: ''
-  /api/v1/webhooks/content_files/delete/:
-    post:
-      operationId: webhooks_content_files_delete_create
-      description: Webhook handler for ContentFile DELETE requests
-      tags:
-      - webhooks
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ContentFileWebHookRequestRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ContentFileWebHookRequestRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ContentFileWebHookRequestRequest'
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ContentFileWebHookRequest'
-          description: ''
-  /api/v1/webhooks/ovs_videos/:
-    post:
-      operationId: webhooks_ovs_videos_create
-      description: Webhook handler for OVS video upserts and deletes from the dagster
-        pipeline
-      tags:
-      - webhooks
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/OVSVideoWebhookRequestRequest'
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WebhookResponse'
-          description: ''
-  /api/v1/webhooks/video_shorts/:
-    post:
-      operationId: webhooks_video_shorts_create
-      description: Webhook handler for VideoShort updates
-      parameters:
-      - in: query
-        name: source
-        schema:
-          type: string
-      - in: query
-        name: video_id
-        schema:
-          type: string
-          minLength: 1
-        required: true
-      - in: query
-        name: video_metadata
-        schema:
-          type: object
-          additionalProperties: {}
-        required: true
-      tags:
-      - webhooks
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VideoShortWebhookRequestRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/VideoShortWebhookRequestRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/VideoShortWebhookRequestRequest'
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WebhookResponse'
           description: ''
 components:
   schemas:
@@ -10016,14 +9485,6 @@ components:
       - delivery
       - resource_type_group
       - resource_category
-    ArticleImageUploadRequest:
-      type: object
-      properties:
-        image_file:
-          type: string
-          format: binary
-      required:
-      - image_file
     AvailabilityEnum:
       enum:
       - dated
@@ -10046,10 +9507,14 @@ components:
         url:
           type: string
           format: uri
+        word_count:
+          type: integer
+          readOnly: true
       required:
       - language
       - language_name
       - url
+      - word_count
     CaptionUrlRequest:
       type: object
       description: Serializer for caption URL entries
@@ -10270,34 +9735,6 @@ components:
       - next
       - previous
       - results
-    ContentFileWebHookRequest:
-      type: object
-      description: Serializer for ContentFile webhook requests.
-      properties:
-        content_path:
-          type: string
-        source:
-          $ref: '#/components/schemas/SourceEnum'
-        course_id:
-          type: string
-        course_readable_id:
-          type: string
-      required:
-      - source
-    ContentFileWebHookRequestRequest:
-      type: object
-      description: Serializer for ContentFile webhook requests.
-      properties:
-        content_path:
-          type: string
-        source:
-          $ref: '#/components/schemas/SourceEnum'
-        course_id:
-          type: string
-        course_readable_id:
-          type: string
-      required:
-      - source
     ContentTypeEnum:
       enum:
       - page
@@ -10323,6 +9760,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CourseNumber'
+          nullable: true
+        credits_earned:
+          type: number
+          format: double
           nullable: true
       required:
       - course_numbers
@@ -10364,6 +9805,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CourseNumberRequest'
+          nullable: true
+        credits_earned:
+          type: number
+          format: double
           nullable: true
       required:
       - course_numbers
@@ -11281,610 +10726,6 @@ components:
       type: string
       enum:
       - document
-    HubspotCollectionResponseFormDefinitionBaseForwardPaging:
-      type: object
-      properties:
-        paging:
-          $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingPaging'
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem'
-    HubspotCollectionResponseFormDefinitionBaseForwardPagingPaging:
-      type: object
-      properties:
-        next:
-          $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingPagingNext'
-    HubspotCollectionResponseFormDefinitionBaseForwardPagingPagingNext:
-      type: object
-      properties:
-        link:
-          type: string
-          nullable: true
-        after:
-          type: string
-          nullable: true
-    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem:
-      type: object
-      properties:
-        form_type:
-          type: string
-          nullable: true
-        id:
-          type: string
-          nullable: true
-        name:
-          type: string
-          nullable: true
-        created_at:
-          type: string
-          format: date-time
-          nullable: true
-        updated_at:
-          type: string
-          format: date-time
-          nullable: true
-        archived:
-          type: boolean
-          nullable: true
-        archived_at:
-          type: string
-          format: date-time
-          nullable: true
-        field_groups:
-          type: array
-          items:
-            $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItem'
-        configuration:
-          $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration'
-        display_options:
-          $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptions'
-        legal_consent_options:
-          $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptions'
-    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration:
-      type: object
-      properties:
-        create_new_contact_for_new_email:
-          type: boolean
-          nullable: true
-        editable:
-          type: boolean
-          nullable: true
-        allow_link_to_reset_known_values:
-          type: boolean
-          nullable: true
-        lifecycle_stages:
-          type: array
-          items:
-            $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationLifecycleStageItem'
-        post_submit_action:
-          $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationPostSubmitAction'
-        language:
-          type: string
-          nullable: true
-        pre_populate_known_values:
-          type: boolean
-          nullable: true
-        cloneable:
-          type: boolean
-          nullable: true
-        notify_contact_owner:
-          type: boolean
-          nullable: true
-        recaptcha_enabled:
-          type: boolean
-          nullable: true
-        archivable:
-          type: boolean
-          nullable: true
-        notify_recipients:
-          type: array
-          items:
-            type: string
-            nullable: true
-    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationLifecycleStageItem:
-      type: object
-      properties:
-        object_type_id:
-          type: string
-          nullable: true
-        value:
-          type: string
-          nullable: true
-    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationPostSubmitAction:
-      type: object
-      properties:
-        type:
-          type: string
-          nullable: true
-        value:
-          type: string
-          nullable: true
-    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptions:
-      type: object
-      properties:
-        render_raw_html:
-          type: boolean
-          nullable: true
-        css_class:
-          type: string
-          nullable: true
-        theme:
-          type: string
-          nullable: true
-        submit_button_text:
-          type: string
-          nullable: true
-        style:
-          $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle'
-    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle:
-      type: object
-      properties:
-        label_text_size:
-          type: string
-          nullable: true
-        legal_consent_text_color:
-          type: string
-          nullable: true
-        font_family:
-          type: string
-          nullable: true
-        legal_consent_text_size:
-          type: string
-          nullable: true
-        background_width:
-          type: string
-          nullable: true
-        help_text_size:
-          type: string
-          nullable: true
-        submit_font_color:
-          type: string
-          nullable: true
-        label_text_color:
-          type: string
-          nullable: true
-        submit_alignment:
-          type: string
-          nullable: true
-        submit_size:
-          type: string
-          nullable: true
-        help_text_color:
-          type: string
-          nullable: true
-        submit_color:
-          type: string
-          nullable: true
-    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItem:
-      type: object
-      properties:
-        group_type:
-          type: string
-          nullable: true
-        rich_text_type:
-          type: string
-          nullable: true
-        rich_text:
-          type: string
-          nullable: true
-        fields:
-          type: array
-          items:
-            $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItemFieldItemTruncated'
-    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItemFieldItemTruncated:
-      type: object
-      properties:
-        object_type_id:
-          type: string
-          nullable: true
-        hidden:
-          type: boolean
-          nullable: true
-        default_value:
-          type: string
-          nullable: true
-        name:
-          type: string
-          nullable: true
-        description:
-          type: string
-          nullable: true
-        label:
-          type: string
-          nullable: true
-        placeholder:
-          type: string
-          nullable: true
-        field_type:
-          type: string
-          nullable: true
-        required:
-          type: boolean
-          nullable: true
-        use_country_code_select:
-          type: boolean
-          nullable: true
-        allow_multiple_files:
-          type: boolean
-          nullable: true
-    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptions:
-      type: object
-      properties:
-        type:
-          type: string
-          nullable: true
-        subscription_type_ids:
-          type: array
-          items:
-            type: integer
-            nullable: true
-        lawful_basis:
-          type: string
-          nullable: true
-        privacy_text:
-          type: string
-          nullable: true
-        communications_checkboxes:
-          type: array
-          items:
-            $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptionsCommunicationsCheckboxItem'
-        communication_consent_text:
-          type: string
-          nullable: true
-        consent_to_process_checkbox_label:
-          type: string
-          nullable: true
-        consent_to_process_footer_text:
-          type: string
-          nullable: true
-        consent_to_process_text:
-          type: string
-          nullable: true
-    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptionsCommunicationsCheckboxItem:
-      type: object
-      properties:
-        subscription_type_id:
-          type: integer
-          nullable: true
-        label:
-          type: string
-          nullable: true
-        required:
-          type: boolean
-          nullable: true
-    HubspotFormDefinition:
-      type: object
-      properties:
-        form_type:
-          type: string
-          nullable: true
-        id:
-          type: string
-          nullable: true
-        name:
-          type: string
-          nullable: true
-        created_at:
-          type: string
-          format: date-time
-          nullable: true
-        updated_at:
-          type: string
-          format: date-time
-          nullable: true
-        archived:
-          type: boolean
-          nullable: true
-        archived_at:
-          type: string
-          format: date-time
-          nullable: true
-        field_groups:
-          type: array
-          items:
-            $ref: '#/components/schemas/HubspotFormDefinitionFieldGroupItem'
-        configuration:
-          $ref: '#/components/schemas/HubspotFormDefinitionConfiguration'
-        display_options:
-          $ref: '#/components/schemas/HubspotFormDefinitionDisplayOptions'
-        legal_consent_options:
-          $ref: '#/components/schemas/HubspotFormDefinitionLegalConsentOptions'
-    HubspotFormDefinitionConfiguration:
-      type: object
-      properties:
-        create_new_contact_for_new_email:
-          type: boolean
-          nullable: true
-        editable:
-          type: boolean
-          nullable: true
-        allow_link_to_reset_known_values:
-          type: boolean
-          nullable: true
-        lifecycle_stages:
-          type: array
-          items:
-            $ref: '#/components/schemas/HubspotFormDefinitionConfigurationLifecycleStageItem'
-        post_submit_action:
-          $ref: '#/components/schemas/HubspotFormDefinitionConfigurationPostSubmitAction'
-        language:
-          type: string
-          nullable: true
-        pre_populate_known_values:
-          type: boolean
-          nullable: true
-        cloneable:
-          type: boolean
-          nullable: true
-        notify_contact_owner:
-          type: boolean
-          nullable: true
-        recaptcha_enabled:
-          type: boolean
-          nullable: true
-        archivable:
-          type: boolean
-          nullable: true
-        notify_recipients:
-          type: array
-          items:
-            type: string
-            nullable: true
-    HubspotFormDefinitionConfigurationLifecycleStageItem:
-      type: object
-      properties:
-        object_type_id:
-          type: string
-          nullable: true
-        value:
-          type: string
-          nullable: true
-    HubspotFormDefinitionConfigurationPostSubmitAction:
-      type: object
-      properties:
-        type:
-          type: string
-          nullable: true
-        value:
-          type: string
-          nullable: true
-    HubspotFormDefinitionDisplayOptions:
-      type: object
-      properties:
-        render_raw_html:
-          type: boolean
-          nullable: true
-        css_class:
-          type: string
-          nullable: true
-        theme:
-          type: string
-          nullable: true
-        submit_button_text:
-          type: string
-          nullable: true
-        style:
-          $ref: '#/components/schemas/HubspotFormDefinitionDisplayOptionsStyle'
-    HubspotFormDefinitionDisplayOptionsStyle:
-      type: object
-      properties:
-        label_text_size:
-          type: string
-          nullable: true
-        legal_consent_text_color:
-          type: string
-          nullable: true
-        font_family:
-          type: string
-          nullable: true
-        legal_consent_text_size:
-          type: string
-          nullable: true
-        background_width:
-          type: string
-          nullable: true
-        help_text_size:
-          type: string
-          nullable: true
-        submit_font_color:
-          type: string
-          nullable: true
-        label_text_color:
-          type: string
-          nullable: true
-        submit_alignment:
-          type: string
-          nullable: true
-        submit_size:
-          type: string
-          nullable: true
-        help_text_color:
-          type: string
-          nullable: true
-        submit_color:
-          type: string
-          nullable: true
-    HubspotFormDefinitionFieldGroupItem:
-      type: object
-      properties:
-        group_type:
-          type: string
-          nullable: true
-        rich_text_type:
-          type: string
-          nullable: true
-        rich_text:
-          type: string
-          nullable: true
-        fields:
-          type: array
-          items:
-            $ref: '#/components/schemas/HubspotFormDefinitionFieldGroupItemFieldItem'
-    HubspotFormDefinitionFieldGroupItemFieldItem:
-      type: object
-      properties:
-        object_type_id:
-          type: string
-          nullable: true
-        hidden:
-          type: boolean
-          nullable: true
-        default_value:
-          type: string
-          nullable: true
-        name:
-          type: string
-          nullable: true
-        description:
-          type: string
-          nullable: true
-        label:
-          type: string
-          nullable: true
-        placeholder:
-          type: string
-          nullable: true
-        field_type:
-          type: string
-          nullable: true
-        required:
-          type: boolean
-          nullable: true
-        validation:
-          $ref: '#/components/schemas/HubspotFormDefinitionFieldGroupItemFieldItemValidation'
-        use_country_code_select:
-          type: boolean
-          nullable: true
-        options:
-          type: array
-          items:
-            $ref: '#/components/schemas/HubspotFormDefinitionFieldGroupItemFieldItemOptionItemTruncated'
-        default_values:
-          type: array
-          items:
-            type: string
-            nullable: true
-        allow_multiple_files:
-          type: boolean
-          nullable: true
-    HubspotFormDefinitionFieldGroupItemFieldItemOptionItemTruncated:
-      type: object
-      properties:
-        display_order:
-          type: integer
-          nullable: true
-        description:
-          type: string
-          nullable: true
-        label:
-          type: string
-          nullable: true
-        value:
-          type: string
-          nullable: true
-    HubspotFormDefinitionFieldGroupItemFieldItemValidation:
-      type: object
-      properties:
-        min_allowed_digits:
-          type: integer
-          nullable: true
-        max_allowed_digits:
-          type: integer
-          nullable: true
-    HubspotFormDefinitionLegalConsentOptions:
-      type: object
-      properties:
-        type:
-          type: string
-          nullable: true
-        subscription_type_ids:
-          type: array
-          items:
-            type: integer
-            nullable: true
-        lawful_basis:
-          type: string
-          nullable: true
-        privacy_text:
-          type: string
-          nullable: true
-        communications_checkboxes:
-          type: array
-          items:
-            $ref: '#/components/schemas/HubspotFormDefinitionLegalConsentOptionsCommunicationsCheckboxItem'
-        communication_consent_text:
-          type: string
-          nullable: true
-        consent_to_process_checkbox_label:
-          type: string
-          nullable: true
-        consent_to_process_footer_text:
-          type: string
-          nullable: true
-        consent_to_process_text:
-          type: string
-          nullable: true
-    HubspotFormDefinitionLegalConsentOptionsCommunicationsCheckboxItem:
-      type: object
-      properties:
-        subscription_type_id:
-          type: integer
-          nullable: true
-        label:
-          type: string
-          nullable: true
-        required:
-          type: boolean
-          nullable: true
-    HubspotFormFieldValueRequest:
-      type: object
-      description: Serializer for individual form field values in submission.
-      properties:
-        name:
-          type: string
-          minLength: 1
-        value:
-          nullable: true
-      required:
-      - name
-      - value
-    HubspotFormSubmitRequestRequest:
-      type: object
-      description: Serializer for HubSpot form submission requests.
-      properties:
-        fields:
-          type: array
-          items:
-            $ref: '#/components/schemas/HubspotFormFieldValueRequest'
-        page_uri:
-          type: string
-          format: uri
-          minLength: 1
-        hutk:
-          type: string
-        page_name:
-          type: string
-        submitted_at:
-          type: integer
-          minimum: 0
-        recaptcha_token:
-          type: string
-          minLength: 1
-        page_title:
-          type: string
-        timestamp:
-          type: integer
-          minimum: 0
-      required:
-      - fields
-    HubspotFormSubmitResponse:
-      type: object
-      description: Serializer for HubSpot form submission response.
-      properties:
-        status:
-          type: string
-          default: submitted
     LearningPath:
       type: object
       description: Serializer for the LearningPath model
@@ -11894,8 +10735,8 @@ components:
           readOnly: true
         item_count:
           type: integer
+          description: Return the number of items in the list
           readOnly: true
-          description: Number of published items in the list.
       required:
       - id
       - item_count
@@ -12391,14 +11232,14 @@ components:
         name:
           type: string
           maxLength: 256
-        channel_url:
+        url:
           type: string
           readOnly: true
           nullable: true
       required:
-      - channel_url
       - department_id
       - name
+      - url
     LearningResourceBaseSchool:
       type: object
       description: |-
@@ -12462,7 +11303,7 @@ components:
         name:
           type: string
           maxLength: 256
-        channel_url:
+        url:
           type: string
           readOnly: true
           nullable: true
@@ -12472,10 +11313,10 @@ components:
           readOnly: true
           nullable: true
       required:
-      - channel_url
       - department_id
       - name
       - school
+      - url
     LearningResourceDepartmentRequest:
       type: object
       description: Full serializer for LearningResourceDepartment, including school
@@ -13067,6 +11908,11 @@ components:
           items:
             $ref: '#/components/schemas/LearningResourcePrice'
           readOnly: true
+        enrollment_url:
+          type: string
+          nullable: true
+          description: Return a URL for enrollment, derived from the run URL.
+          readOnly: true
         run_id:
           type: string
           maxLength: 128
@@ -13172,6 +12018,7 @@ components:
           nullable: true
       required:
       - delivery
+      - enrollment_url
       - format
       - id
       - image
@@ -13504,24 +12351,6 @@ components:
     NullEnum:
       enum:
       - null
-    OVSVideoWebhookRequestRequest:
-      type: object
-      description: |-
-        Serializer for OVS video webhook requests.
-
-        Accepts either an OVS video upsert payload (full result dict from the OVS
-        public videos API; `key` is required) or a delete payload (`video_id` plus
-        `delete: true`).
-      properties:
-        key:
-          type: string
-          minLength: 1
-        video_id:
-          type: string
-          minLength: 1
-        delete:
-          type: boolean
-          default: false
     OfferedByEnum:
       enum:
       - mitx
@@ -13939,29 +12768,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProgramResource'
-    PaginatedRichTextArticleList:
-      type: object
-      required:
-      - count
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?offset=400&limit=100
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?offset=200&limit=100
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/RichTextArticle'
     PaginatedUserListList:
       type: object
       required:
@@ -14174,25 +12980,6 @@ components:
           type: integer
         child:
           type: integer
-    PatchedRichTextArticleRequest:
-      type: object
-      description: Serializer for LearningResourceInstructor model
-      properties:
-        title:
-          type: string
-          minLength: 1
-          maxLength: 255
-        author_name:
-          type: string
-          default: ''
-        content:
-          default: {}
-        is_published:
-          type: boolean
-        slug:
-          type: string
-          maxLength: 60
-          pattern: ^[-a-zA-Z0-9_]+$
     PatchedUserListRelationshipRequest:
       type: object
       description: Serializer for UserListRelationship model
@@ -15494,150 +14281,6 @@ components:
       required:
       - course_count
       - program_count
-    ProgramCertificate:
-      type: object
-      description: Serializer for Program Certificates
-      properties:
-        record_hash:
-          type: string
-          readOnly: true
-        program_letter_generate_url:
-          type: string
-          readOnly: true
-        program_letter_share_url:
-          type: string
-          readOnly: true
-        program_title:
-          type: string
-          maxLength: 256
-        user_full_name:
-          type: string
-          maxLength: 256
-        user_email:
-          type: string
-          maxLength: 256
-        user_edxorg_id:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        micromasters_program_id:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        mitxonline_program_id:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        user_edxorg_username:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_gender:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_address_city:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_first_name:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_last_name:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_year_of_birth:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_country:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_address_postal_code:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_street_address:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_address_state_or_territory:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_mitxonline_username:
-          type: string
-          nullable: true
-          maxLength: 256
-        program_completion_timestamp:
-          type: string
-          format: date-time
-          nullable: true
-      required:
-      - program_letter_generate_url
-      - program_letter_share_url
-      - program_title
-      - record_hash
-      - user_email
-    ProgramLetter:
-      type: object
-      description: Serializer for Program Letters
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-        template_fields:
-          allOf:
-          - $ref: '#/components/schemas/ProgramLetterTemplateField'
-          readOnly: true
-        certificate:
-          $ref: '#/components/schemas/ProgramCertificate'
-      required:
-      - certificate
-      - id
-      - template_fields
-    ProgramLetterTemplateField:
-      type: object
-      description: |-
-        Seriializer for program letter template data which is configured in
-        micromasters
-      properties:
-        id:
-          type: integer
-        meta: {}
-        title:
-          type: string
-        program_id:
-          type: integer
-        program_letter_footer: {}
-        program_letter_footer_text:
-          type: string
-        program_letter_header_text:
-          type: string
-        program_letter_text:
-          type: string
-        program_letter_logo: {}
-        program_letter_signatories:
-          type: array
-          items: {}
-      required:
-      - id
-      - meta
-      - program_id
-      - program_letter_footer
-      - program_letter_footer_text
-      - program_letter_header_text
-      - program_letter_logo
-      - program_letter_signatories
-      - program_letter_text
-      - title
     ProgramResource:
       type: object
       description: Serializer for program resources
@@ -16118,71 +14761,6 @@ components:
       - Course
       - Program
       - Learning Material
-    RichTextArticle:
-      type: object
-      description: Serializer for LearningResourceInstructor model
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        title:
-          type: string
-          maxLength: 255
-        author_name:
-          type: string
-          default: ''
-        content:
-          default: {}
-        user:
-          allOf:
-          - $ref: '#/components/schemas/User'
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
-        updated_on:
-          type: string
-          format: date-time
-          readOnly: true
-        publish_date:
-          type: string
-          format: date-time
-          readOnly: true
-        is_published:
-          type: boolean
-        slug:
-          type: string
-          maxLength: 60
-          pattern: ^[-a-zA-Z0-9_]+$
-      required:
-      - created_on
-      - id
-      - publish_date
-      - title
-      - updated_on
-      - user
-    RichTextArticleRequest:
-      type: object
-      description: Serializer for LearningResourceInstructor model
-      properties:
-        title:
-          type: string
-          minLength: 1
-          maxLength: 255
-        author_name:
-          type: string
-          default: ''
-        content:
-          default: {}
-        is_published:
-          type: boolean
-        slug:
-          type: string
-          maxLength: 60
-          pattern: ^[-a-zA-Z0-9_]+$
-      required:
-      - title
     SearchModeEnum:
       enum:
       - phrase
@@ -16255,50 +14833,6 @@ components:
       - Popularity ascending
       - Popularity descending
       - Next start date ascending
-    SourceEnum:
-      enum:
-      - micromasters
-      - mit_edx
-      - mitpe
-      - mitxonline
-      - oll
-      - ocw
-      - podcast
-      - mit_climate
-      - see
-      - xpro
-      - youtube
-      - canvas
-      - ovs
-      type: string
-      description: |-
-        * `micromasters` - micromasters
-        * `mit_edx` - mit_edx
-        * `mitpe` - mitpe
-        * `mitxonline` - mitxonline
-        * `oll` - oll
-        * `ocw` - ocw
-        * `podcast` - podcast
-        * `mit_climate` - mit_climate
-        * `see` - see
-        * `xpro` - xpro
-        * `youtube` - youtube
-        * `canvas` - canvas
-        * `ovs` - ovs
-      x-enum-descriptions:
-      - micromasters
-      - mit_edx
-      - mitpe
-      - mitxonline
-      - oll
-      - ocw
-      - podcast
-      - mit_climate
-      - see
-      - xpro
-      - youtube
-      - canvas
-      - ovs
     SourceTypeEnum:
       enum:
       - search_subscription_type
@@ -16310,16 +14844,6 @@ components:
       x-enum-descriptions:
       - search_subscription_type
       - channel_subscription_type
-    User:
-      type: object
-      description: Serializer for article author user fields.
-      properties:
-        first_name:
-          type: string
-          maxLength: 150
-        last_name:
-          type: string
-          maxLength: 150
     UserList:
       type: object
       description: Simplified serializer for UserList model.
@@ -16333,8 +14857,8 @@ components:
             $ref: '#/components/schemas/LearningResourceTopic'
         item_count:
           type: integer
+          description: Return the number of items in the list
           readOnly: true
-          description: Number of published items in the list.
         image:
           type: object
           additionalProperties: {}
@@ -16413,16 +14937,6 @@ components:
           $ref: '#/components/schemas/PrivacyLevelEnum'
       required:
       - title
-    UserRequest:
-      type: object
-      description: Serializer for article author user fields.
-      properties:
-        first_name:
-          type: string
-          maxLength: 150
-        last_name:
-          type: string
-          maxLength: 150
     Video:
       type: object
       description: Serializer for the Video model
@@ -16440,7 +14954,7 @@ components:
           format: uri
           readOnly: true
           nullable: true
-        cover_image_url:
+        thumbnail_url:
           type: string
           format: uri
           readOnly: true
@@ -16450,10 +14964,10 @@ components:
           maxLength: 11
       required:
       - caption_urls
-      - cover_image_url
       - duration
       - id
       - streaming_url
+      - thumbnail_url
     VideoChannel:
       type: object
       description: Serializer for the VideoChannel model
@@ -17312,30 +15826,3 @@ components:
       type: string
       enum:
       - video
-    VideoShortWebhookRequestRequest:
-      type: object
-      description: Serializer for Video Short webhook requests.
-      properties:
-        video_id:
-          type: string
-          minLength: 1
-        video_metadata:
-          type: object
-          additionalProperties: {}
-        source:
-          type: string
-      required:
-      - video_id
-      - video_metadata
-    WebhookResponse:
-      type: object
-      description: Serializer for webhook responses.
-      properties:
-        status:
-          type: string
-        message:
-          type: string
-        error:
-          type: string
-      required:
-      - status

@@ -1,11 +1,12 @@
 """Serializers for testimonials."""
 
+from mitol.api_versioning.mixins import VersionedSerializerMixin
 from rest_framework import serializers
 
 from testimonials.models import Attestation
 
 
-class AttestationSerializer(serializers.ModelSerializer):
+class AttestationSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """Serializer for attestations."""
 
     avatar = serializers.SerializerMethodField()

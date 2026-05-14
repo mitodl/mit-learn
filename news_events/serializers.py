@@ -1,5 +1,6 @@
 """Serializers for news_events"""
 
+from mitol.api_versioning.mixins import VersionedSerializerMixin
 from rest_framework import serializers
 
 from news_events import models
@@ -8,7 +9,7 @@ from news_events.constants import FeedType
 COMMON_IGNORED_FIELDS = ("created_on", "updated_on")
 
 
-class FeedImageSerializer(serializers.ModelSerializer):
+class FeedImageSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """Serializer for FeedImage"""
 
     class Meta:
@@ -16,7 +17,7 @@ class FeedImageSerializer(serializers.ModelSerializer):
         exclude = COMMON_IGNORED_FIELDS
 
 
-class FeedSourceSerializer(serializers.ModelSerializer):
+class FeedSourceSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """FeedSource serializer"""
 
     image = FeedImageSerializer()
@@ -26,7 +27,7 @@ class FeedSourceSerializer(serializers.ModelSerializer):
         exclude = COMMON_IGNORED_FIELDS
 
 
-class FeedEventDetailSerializer(serializers.ModelSerializer):
+class FeedEventDetailSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """FeedEventDetail serializer"""
 
     class Meta:
@@ -34,7 +35,7 @@ class FeedEventDetailSerializer(serializers.ModelSerializer):
         exclude = ("feed_item", *COMMON_IGNORED_FIELDS)
 
 
-class FeedNewsDetailSerializer(serializers.ModelSerializer):
+class FeedNewsDetailSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """FeedNewsDetail serializer"""
 
     class Meta:
@@ -42,7 +43,7 @@ class FeedNewsDetailSerializer(serializers.ModelSerializer):
         exclude = ("feed_item", *COMMON_IGNORED_FIELDS)
 
 
-class FeedItemBaseSerializer(serializers.ModelSerializer):
+class FeedItemBaseSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """Base serializer for FeedItem"""
 
     feed_type = serializers.CharField(source="source.feed_type")

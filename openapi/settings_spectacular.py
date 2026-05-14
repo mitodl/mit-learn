@@ -15,5 +15,6 @@ open_spectacular_settings = {
     "POSTPROCESSING_HOOKS": [
         "drf_spectacular.hooks.postprocess_schema_enums",
         "openapi.hooks.postprocess_x_enum_descriptions",
+        "mitol.api_versioning.schema_hooks.postprocess_versioned_schema",
     ],
 }
