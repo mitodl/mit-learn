@@ -17,7 +17,7 @@ from authentication import api as auth_api
 from learning_resources.models import LearningResourceTopic
 from learning_resources.permissions import is_admin_user, is_learning_path_editor
 from learning_resources.serializers import LearningResourceTopicSerializer
-from profiles.api import get_site_type_from_url
+from profiles.api import get_site_type_from_url, sync_to_keycloak
 from profiles.models import (
     PERSONAL_SITE_TYPE,
     PROFILE_PROPS,
@@ -153,6 +153,8 @@ class ProfileSerializer(serializers.ModelSerializer):
 
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
+
+            sync_to_keycloak(instance, validated_data.keys())
 
             update_image = "image_file" in validated_data
             instance.save(update_image=update_image)

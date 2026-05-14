@@ -64,6 +64,7 @@ dependencies = [
     "markdown>=3.7,<4",
     "markdown2>=2.4.8,<3",
     "mitol-django-common>=2026.4.2,<2027",
+    "mitol-django-keycloak",
     "mitol-django-scim>=2026.4.2,<2027",
     "mitol-django-observability>=2026.1.0,<2027",
     "named-enum>=1.4.0,<2",
@@ -156,6 +157,7 @@ override-dependencies = ["setuptools<80"]
 
 [tool.uv.sources]
 django-health-check = { git = "https://github.com/revsys/django-health-check", rev = "53f9bdc3a7acc8a577319987fef0bd3040eef4b4" } # pragma: allowlist secret
+mitol-django-keycloak = { git = "https://github.com/mitodl/ol-django", branch = "nl/add-keycloak", subdirectory = "src/keycloak"}
 
 [tool.uv.build-backend]
 module-root = ""

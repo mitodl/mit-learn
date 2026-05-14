@@ -20,6 +20,7 @@ from urllib.parse import urljoin
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 from mitol.scim.settings.scim import *  # noqa: F403
+from mitol.keycloak.settings.keycloak import *  # noqa: F403
 
 from main.envs import (
     get_bool,
