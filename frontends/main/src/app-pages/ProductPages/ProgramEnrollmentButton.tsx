@@ -19,8 +19,7 @@ import NiceModal from "@ebay/nice-modal-react"
 import { userQueries } from "api/hooks/user"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 import { programView } from "@/common/urls"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
+import { usePostHog } from "posthog-js/react"
 import {
   enrollmentAlertSuccessUrl,
   formatPrice,
@@ -58,9 +57,6 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
     ...enrollmentQueries.programEnrollmentsList(),
     throwOnError: false,
   })
-  const programDashboardEnabled = useFeatureFlagEnabled(
-    FeatureFlags.EnrollmentDashboard,
-  )
   const enrollment =
     program && enrollments.data?.find((e) => e.program.id === program.id)
 
@@ -118,7 +114,7 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
       setAnchor(e.currentTarget)
     }
   }
-  const href = programDashboardEnabled ? programView(program.id) : undefined
+  const href = programView(program.id)
 
   return (
     <>

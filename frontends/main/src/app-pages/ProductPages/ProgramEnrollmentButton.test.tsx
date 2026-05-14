@@ -13,16 +13,13 @@ import {
   urls as mitxUrls,
   factories as mitxFactories,
 } from "api/mitxonline-test-utils"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { usePostHog } from "posthog-js/react"
 import { programView } from "@/common/urls"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import * as routes from "@/common/urls"
 import { PostHogEvents } from "@/common/constants"
 
 jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest
-  .mocked(useFeatureFlagEnabled)
-  .mockImplementation(() => false)
 const mockCapture = jest.fn()
 jest.mocked(usePostHog).mockReturnValue(
   // @ts-expect-error Not mocking all of posthog
@@ -40,10 +37,6 @@ describe("ProgramEnrollmentButton", () => {
   const ENROLL_FREE = "Enroll for Free"
 
   setupLocationMock()
-
-  beforeEach(() => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(false)
-  })
 
   test("Shows loading state while enrollments and user loading", async () => {
     const program = makeProgram({
@@ -76,35 +69,7 @@ describe("ProgramEnrollmentButton", () => {
     expect(screen.queryByRole("progressbar", { name: "Loading" })).toBeNull()
   })
 
-  test("Shows 'Enrolled' button without link when feature flag is off", async () => {
-    const program = makeProgram({
-      enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
-    })
-    const enrollments = [
-      makeProgramEnrollment(),
-      makeProgramEnrollment({ program: { id: program.id } }),
-      makeProgramEnrollment(),
-    ]
-    const user = makeUser({ is_authenticated: true })
-
-    setMockResponse.get(
-      mitxUrls.programEnrollments.enrollmentsListV3(),
-      enrollments,
-    )
-    setMockResponse.get(urls.userMe.get(), user)
-
-    renderWithProviders(
-      <ProgramEnrollmentButton program={program} variant="primary" />,
-    )
-
-    const enrolledButton = await screen.findByText(ENROLLED)
-    // When feature flag is off, button should not have href
-    expect(enrolledButton.closest("a")).toHaveAttribute("href", "")
-  })
-
-  test("Shows 'Enrolled' button with dashboard link when feature flag is on", async () => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
-
+  test("Shows 'Enrolled' button with dashboard link", async () => {
     const program = makeProgram({
       enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
     })
