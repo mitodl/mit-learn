@@ -48,6 +48,19 @@ export const articlesDraftView = (id: string) =>
 export const articlesEditView = (id: number) =>
   generatePath(ARTICLES_EDIT, { id: String(id) })
 
+// User-created articles (served under /articles)
+export const USER_ARTICLES_LISTING = "/articles/"
+export const USER_ARTICLES_VIEW = "/articles/[id]"
+export const USER_ARTICLES_DRAFT_VIEW = "/articles/[id]/draft"
+export const USER_ARTICLES_EDIT = "/articles/[id]/edit"
+export const USER_ARTICLES_CREATE = "/articles/new"
+export const userArticlesView = (id: string) =>
+  generatePath(USER_ARTICLES_VIEW, { id: String(id) })
+export const userArticlesDraftView = (id: string) =>
+  generatePath(USER_ARTICLES_DRAFT_VIEW, { id: String(id) })
+export const userArticlesEditView = (id: number) =>
+  generatePath(USER_ARTICLES_EDIT, { id: String(id) })
+
 export const DEPARTMENTS = "/departments/"
 export const TOPICS = "/topics/"
 
