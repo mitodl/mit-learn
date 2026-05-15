@@ -390,6 +390,7 @@ const ProgramPaySection = styled.div(({ theme }) => ({
 
 const ProgramPayLabel = styled.span(({ theme }) => ({
   ...theme.typography.body4,
+  fontSize: "12px",
   fontWeight: theme.typography.fontWeightMedium,
   color: theme.custom.colors.silverGrayDark,
   textTransform: "uppercase",
@@ -439,6 +440,7 @@ const ProgramDiscountBlock = styled.div(({ theme }) => ({
 const ProgramSavingsText = styled.span(({ theme }) => ({
   ...theme.typography.subtitle2,
   color: theme.custom.colors.green,
+  fontSize: "16px",
 }))
 
 const ProgramListPriceText = styled.span(({ theme }) => ({
@@ -451,6 +453,7 @@ const ProgramPriceDivider = styled.div(({ theme }) => ({
   width: "100%",
   maxWidth: "346px",
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
+  marginBottom: "20px",
   flex: "none",
   alignSelf: "stretch",
 }))
@@ -734,15 +737,16 @@ type ProgramInfoRowProps = {
   program: V2ProgramDetail
 } & HTMLAttributes<HTMLDivElement>
 
+const getTotalRequiredCourses = (program: V2ProgramDetail) => {
+  const parsedReqs = parseReqTree(program.req_tree)
+  return parsedReqs.reduce((sum, req) => sum + req.requiredCount, 0)
+}
+
 const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
   program,
   ...others
 }) => {
-  const parsedReqs = parseReqTree(program.req_tree)
-  const totalRequired = parsedReqs.reduce(
-    (sum, req) => sum + req.requiredCount,
-    0,
-  )
+  const totalRequired = getTotalRequiredCourses(program)
   if (totalRequired === 0) return null
 
   // Always say "Courses" here. Whether a child program should be labeled
@@ -891,6 +895,8 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
     currentAmount !== null && listAmount !== null && listAmount > currentAmount
   const savingsAmount = hasSavings ? listAmount - currentAmount : null
 
+  const totalRequired = getTotalRequiredCourses(program)
+
   const paidSection =
     enrollmentType === "paid" && currentPrice ? (
       <ProgramPaySection>
@@ -908,8 +914,9 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
                 Save {formatPrice(savingsAmount, { avoidCents: true })}
               </ProgramSavingsText>
               <ProgramListPriceText>
-                {formatPrice(listAmount, { avoidCents: true })} total for
-                courses purchased separately
+                {formatPrice(listAmount, { avoidCents: true })} total for{" "}
+                {totalRequired} {pluralize("course", totalRequired)} purchased
+                separately
               </ProgramListPriceText>
             </ProgramDiscountBlock>
           ) : null}
@@ -920,7 +927,7 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
     )
 
   return (
-    <Stack {...others} gap="8px" width="100%">
+    <Stack {...others} gap="0px" width="100%">
       {enrollmentType === "paid" ? <ProgramPriceDivider /> : null}
       <InfoRow>
         {enrollmentType === "paid" ? (
