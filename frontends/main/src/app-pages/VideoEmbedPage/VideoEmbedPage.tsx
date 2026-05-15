@@ -2,7 +2,6 @@
 
 import React from "react"
 import { styled } from "ol-components"
-import { useLearningResourcesDetail } from "api/hooks/learningResources"
 import VideoResourcePlayer from "@/app-pages/VideoPlaylistCollectionPage/VideoResourcePlayer"
 import type { VideoResource } from "api/v1"
 
@@ -13,20 +12,17 @@ const EmbedPlayer = styled(VideoResourcePlayer)({
 })
 
 type VideoEmbedPageProps = {
-  videoId: number
+  videoResource: VideoResource
 }
 
-const VideoEmbedPage: React.FC<VideoEmbedPageProps> = ({ videoId }) => {
-  const { data: resource, isLoading } = useLearningResourcesDetail(videoId)
-  const video = resource as VideoResource | undefined
-
-  const videoTitleLabel = video?.title?.trim() || "Untitled video"
+const VideoEmbedPage: React.FC<VideoEmbedPageProps> = ({ videoResource }) => {
+  const videoTitleLabel = videoResource.title?.trim() || "Untitled video"
 
   return (
     <EmbedPlayer
-      video={video}
-      videoId={videoId}
-      isLoading={isLoading}
+      video={videoResource}
+      videoId={videoResource.id}
+      isLoading={false}
       videoTitleLabel={videoTitleLabel}
       videoThumbnailAlt={`Video thumbnail for ${videoTitleLabel}`}
     />

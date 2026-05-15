@@ -4,7 +4,7 @@ import { learningResourceQueries } from "api/hooks/learningResources"
 import { getQueryClient } from "@/app/getQueryClient"
 import { notFound } from "next/navigation"
 import VideoEmbedPage from "@/app-pages/VideoEmbedPage/VideoEmbedPage"
-import { VideoResourceResourceTypeEnum } from "api/v1"
+import { VideoResourceResourceTypeEnum, type VideoResource } from "api/v1"
 import {
   safeGenerateMetadata,
   standardizeMetadata,
@@ -58,7 +58,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <VideoEmbedPage videoId={videoId} />
+      <VideoEmbedPage videoResource={resource as VideoResource} />
     </HydrationBoundary>
   )
 }

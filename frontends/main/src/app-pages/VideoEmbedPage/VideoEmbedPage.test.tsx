@@ -1,5 +1,5 @@
 import React from "react"
-import { setMockResponse, urls, factories } from "api/test-utils"
+import { factories } from "api/test-utils"
 import { renderWithProviders, screen } from "@/test-utils"
 import VideoEmbedPage from "./VideoEmbedPage"
 import type { VideoResource } from "api/v1"
@@ -32,16 +32,11 @@ const makeVideo = (overrides: Partial<VideoResource> = {}): VideoResource =>
     ...overrides,
   }) as VideoResource
 
-const setupVideoApi = (video: VideoResource) => {
-  setMockResponse.get(urls.learningResources.details({ id: video.id }), video)
-}
-
 describe("VideoEmbedPage", () => {
   test("renders VideoJsPlayer for a video with a streaming URL", async () => {
     const video = makeVideo()
-    setupVideoApi(video)
 
-    renderWithProviders(<VideoEmbedPage videoId={video.id} />)
+    renderWithProviders(<VideoEmbedPage videoResource={video} />)
 
     const player = await screen.findByTestId("video-js-player")
     expect(player).toBeInTheDocument()
@@ -60,9 +55,8 @@ describe("VideoEmbedPage", () => {
         cover_image_url: null,
       },
     })
-    setupVideoApi(video)
 
-    renderWithProviders(<VideoEmbedPage videoId={video.id} />)
+    renderWithProviders(<VideoEmbedPage videoResource={video} />)
 
     const player = await screen.findByTestId("video-js-player")
     const sources = JSON.parse(player.getAttribute("data-sources") ?? "[]")
@@ -82,9 +76,8 @@ describe("VideoEmbedPage", () => {
         factories.learningResources.contentFile({ youtube_id: "dQw4w9WgXcQ" }),
       ],
     })
-    setupVideoApi(video)
 
-    renderWithProviders(<VideoEmbedPage videoId={video.id} />)
+    renderWithProviders(<VideoEmbedPage videoResource={video} />)
 
     const iframe = await screen.findByTitle(/^Video: /)
     expect(iframe).toHaveAttribute(
