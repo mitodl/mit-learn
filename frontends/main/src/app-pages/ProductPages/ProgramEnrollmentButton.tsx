@@ -22,7 +22,6 @@ import { programView } from "@/common/urls"
 import { usePostHog } from "posthog-js/react"
 import {
   enrollmentAlertSuccessUrl,
-  formatPrice,
   getEnrollmentType,
 } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
@@ -63,16 +62,7 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
   const enrollmentType = getEnrollmentType(program.enrollment_modes)
   const isPaidWithoutPrice =
     enrollmentType === "paid" && !program.products[0]?.price
-
-  const getEnrollButtonText = () => {
-    if (enrollmentType === "paid") {
-      const price = program.products[0]?.price
-      return price
-        ? `Enroll Now—${formatPrice(price, { avoidCents: true })}`
-        : "Enroll Now"
-    }
-    return "Enroll for Free"
-  }
+  const enrollButtonLabel = "Enroll in Program"
 
   const isLoading = enrollments.isLoading || me.isLoading
   const isPending =
@@ -88,7 +78,7 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
       posthog.capture(PostHogEvents.CallToActionClicked, {
         readableId: program.readable_id,
         resourceType: "program",
-        label: getEnrollButtonText(),
+        label: enrollButtonLabel,
       })
     }
     if (me.data?.is_authenticated) {
@@ -147,7 +137,7 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
               ) : undefined
             }
           >
-            {isLoading ? null : getEnrollButtonText()}
+            {isLoading ? null : enrollButtonLabel}
           </Button>
         )}
         {isError && (
