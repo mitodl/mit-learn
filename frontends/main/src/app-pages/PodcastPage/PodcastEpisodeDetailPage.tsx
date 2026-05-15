@@ -25,7 +25,7 @@ import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource } from "api/v1"
 import moment from "moment"
 import { formatDate } from "ol-utilities"
-import { HOME, podcastPageView } from "@/common/urls"
+import { HOME, podcastPageView, podcastEpisodePageView } from "@/common/urls"
 import DOMPurify from "isomorphic-dompurify"
 import { EpisodeItem } from "./PodcastDetailPage"
 import PodcastContainer from "./PodcastContainer"
@@ -354,6 +354,11 @@ export const PodcastEpisodeDetailPage: React.FC<
                 <EpisodeItem
                   key={episode.id}
                   episode={episode}
+                  href={
+                    podcastId
+                      ? podcastEpisodePageView(String(episode.id), podcastId)
+                      : "#"
+                  }
                   isPlaying={
                     playingEpisode?.id === episode.id && isAudioPlaying
                   }

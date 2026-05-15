@@ -90,7 +90,7 @@ const VideoPlaylistCollectionPage: React.FC<
     learning_resource_id: playlistId,
     limit: VIDEOS_PAGE_SIZE,
   })
-
+  console.log("itemsData", itemsData)
   const { data: similarData, isLoading: similarLoading } = useQuery({
     ...learningResourceQueries.vectorSimilar({
       id: playlistId,
@@ -99,7 +99,7 @@ const VideoPlaylistCollectionPage: React.FC<
     }),
   })
 
-  if (!showVideoPlaylistPage) {
+  if (showVideoPlaylistPage) {
     return flagsLoaded ? notFound() : null
   }
 
@@ -107,6 +107,7 @@ const VideoPlaylistCollectionPage: React.FC<
     return notFound()
   }
   const isLoading = playlistLoading || itemsLoading
+  const totalCount = itemsData?.pages[0]?.count ?? 0
   const videos = (
     itemsData?.pages.flatMap((page) =>
       page.results.map((rel) => rel.resource),
@@ -117,7 +118,6 @@ const VideoPlaylistCollectionPage: React.FC<
   )
   const playlistType = isOcwPlaylist(playlist)
 
-  const totalVideos = videos.length
   const totalVideoSeconds = videos.reduce((acc, video) => {
     const duration = video.video?.duration ?? ""
     const match = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(duration)
@@ -141,7 +141,7 @@ const VideoPlaylistCollectionPage: React.FC<
       <VideoPageHeader
         playlist={playlist}
         isSeries={playlistType}
-        totalVideos={videos.length}
+        totalVideos={totalCount}
       />
 
       {isLoading ? (
@@ -151,7 +151,7 @@ const VideoPlaylistCollectionPage: React.FC<
           video={videos[0]}
           href={getVideoHref(videos[0])}
           isSeries={playlistType}
-          totalVideos={totalVideos}
+          totalVideos={totalCount}
           totalTime={totalTime}
         />
       ) : null}

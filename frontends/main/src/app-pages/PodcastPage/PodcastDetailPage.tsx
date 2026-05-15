@@ -1,6 +1,8 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from "react"
+import { notFound } from "next/navigation"
+import { useRouter } from "next-nprogress-bar"
 import { Breadcrumbs, Typography, styled, useMediaQuery } from "ol-components"
 import type { Theme } from "ol-components"
 import { Button, ActionButton } from "@mitodl/smoot-design"
@@ -15,12 +17,11 @@ import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource } from "api/v1"
 import moment from "moment"
 import { formatDate } from "ol-utilities"
-import { HOME } from "@/common/urls"
+import { HOME, podcastEpisodePageView } from "@/common/urls"
 import PodcastContainer from "./PodcastContainer"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
-import { notFound } from "next/navigation"
 
 const HeaderSection = styled.div(({ theme }) => ({
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -148,7 +149,7 @@ const EpisodesHeading = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const EpisodeList = styled.ul({
+const EpisodeList = styled.div({
   listStyle: "none",
   margin: 0,
   padding: 0,
@@ -156,9 +157,10 @@ const EpisodeList = styled.ul({
   gridTemplateColumns: "1fr",
 })
 
-const EpisodeRow = styled("li", {
+const EpisodeRow = styled("div", {
   shouldForwardProp: (prop) => prop !== "isEpisodePage",
 })<{ isEpisodePage?: boolean }>(({ theme, isEpisodePage }) => ({
+  cursor: "pointer",
   margin: 0,
   display: "flex",
   flexDirection: "row",
@@ -310,6 +312,7 @@ const PlayButton = styled(ActionButton, {
 
 export type EpisodeItemProps = {
   episode: LearningResource
+  href: string
   onPlayClick: (episode: LearningResource) => void
   onPauseClick?: () => void
   isPlaying: boolean
@@ -319,12 +322,14 @@ export type EpisodeItemProps = {
 
 export const EpisodeItem: React.FC<EpisodeItemProps> = ({
   episode,
+  href,
   onPlayClick,
   onPauseClick,
   isPlaying,
   isPlayable,
   isEpisodePage = false,
 }) => {
+  const router = useRouter()
   const podcastEpisode =
     episode.resource_type === "podcast_episode" ? episode.podcast_episode : null
 
@@ -339,10 +344,7 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
   const metaParts = [duration ? `${duration} min` : null, date].filter(Boolean)
 
   return (
-    <EpisodeRow
-      onClick={() => (isPlaying ? onPauseClick?.() : onPlayClick(episode))}
-      isEpisodePage={isEpisodePage}
-    >
+    <EpisodeRow onClick={() => router.push(href)} isEpisodePage={isEpisodePage}>
       <EpisodeInfo>
         <EpisodeTitleLink className="episode-title">
           {episode.title}
@@ -364,6 +366,15 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
           aria-label={
             isPlaying ? `Pause ${episode.title}` : `Play ${episode.title}`
           }
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            if (isPlaying) {
+              onPauseClick?.()
+            } else {
+              onPlayClick(episode)
+            }
+          }}
           isPlaying={isPlaying}
           disabled={!isPlayable}
           variant="secondary"
@@ -575,6 +586,10 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
                   <EpisodeItem
                     key={episode.id}
                     episode={episode}
+                    href={podcastEpisodePageView(
+                      String(episode.id),
+                      String(id),
+                    )}
                     onPlayClick={handlePlayClick}
                     onPauseClick={() => playerRef.current?.pause()}
                     isPlaying={
