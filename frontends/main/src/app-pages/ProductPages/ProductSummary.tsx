@@ -383,18 +383,22 @@ const ProgramPaySection = styled.div(({ theme }) => ({
   flexDirection: "column",
   alignItems: "flex-start",
   gap: "4px",
-  width: "100%",
-  maxWidth: "346px",
+  width: "346px",
+  alignSelf: "stretch",
+  flex: "none",
   color: theme.custom.colors.darkGray2,
 }))
 
 const ProgramPayLabel = styled.span(({ theme }) => ({
   ...theme.typography.body4,
   fontSize: "12px",
+  lineHeight: "16px",
   fontWeight: theme.typography.fontWeightMedium,
   color: theme.custom.colors.silverGrayDark,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
+  width: "100%",
+  alignSelf: "stretch",
 }))
 
 const ProgramPayContent = styled.div(({ theme }) => ({
@@ -426,28 +430,39 @@ const ProgramPriceAmount = styled.span(({ theme }) => ({
 const ProgramPriceSuffix = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
   fontWeight: theme.typography.fontWeightMedium,
+  fontSize: "18px",
+  lineHeight: "26px",
   color: theme.custom.colors.silverGrayDark,
 }))
 
 const ProgramDiscountBlock = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
+  justifyContent: "center",
   alignItems: "flex-start",
-  gap: "4px",
+  gap: "8px",
   color: theme.custom.colors.darkGray2,
 }))
 
 const ProgramSavingsText = styled.span(({ theme }) => ({
   ...theme.typography.subtitle2,
-  color: theme.custom.colors.green,
+  color: "#008000",
   fontSize: "16px",
+  lineHeight: "24px",
+  fontWeight: theme.typography.fontWeightBold,
 }))
 
 const ProgramListPriceText = styled.span(({ theme }) => ({
   ...theme.typography.body2,
+  fontSize: "14px",
+  lineHeight: "18px",
+  fontWeight: theme.typography.fontWeightMedium,
   color: theme.custom.colors.silverGrayDark,
-  textDecoration: "line-through",
 }))
+
+const ProgramListPriceAmount = styled.span({
+  textDecoration: "line-through",
+})
 
 const ProgramPriceDivider = styled.div(({ theme }) => ({
   width: "100%",
@@ -456,6 +471,41 @@ const ProgramPriceDivider = styled.div(({ theme }) => ({
   marginBottom: "20px",
   flex: "none",
   alignSelf: "stretch",
+}))
+
+const ProgramStartForFreeBox = styled.div((_theme) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+  padding: "8px 16px",
+  borderRadius: "8px",
+  background:
+    "linear-gradient(0deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.94)), #004D1A",
+}))
+
+const ProgramStartForFreeIcon = styled.svg(() => ({
+  width: "24px",
+  height: "24px",
+  flexShrink: 0,
+  "path": {
+    fill: "#008000",
+  },
+}))
+
+const ProgramStartForFreeTextContainer = styled.span(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: "4px",
+  ...theme.typography.body2,
+}))
+
+const ProgramStartForFreeTextStrong = styled.span(({ theme }) => ({
+  color: "#008000",
+  fontWeight: theme.typography.fontWeightMedium,
+}))
+
+const ProgramStartForFreeTextRegular = styled.span(({ theme }) => ({
+  color: theme.custom.colors.darkGray2,
 }))
 
 const CertificateBoxRoot = styled.div(({ theme }) => ({
@@ -841,40 +891,6 @@ const ProgramPaceRow: React.FC<
 const PROGRAM_CERT_INFO_HREF =
   "https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
 
-const ProgramCertificateBox: React.FC<{ program: V2ProgramDetail }> = ({
-  program,
-}) => {
-  const price = program.products[0]?.price
-  if (!price) return null
-  return (
-    <CertificateBoxRoot>
-      <InfoRowInner flexWrap="nowrap">
-        <span>
-          <UnderlinedLink
-            href={PROGRAM_CERT_INFO_HREF}
-            target="_blank"
-            rel="noopener noreferrer"
-            color="black"
-          >
-            <InfoLabel>Earn a certificate</InfoLabel>
-          </UnderlinedLink>
-          : {formatPrice(price, { avoidCents: true })}
-        </span>
-      </InfoRowInner>
-      {program.page.financial_assistance_form_url ? (
-        <UnderlinedLink
-          color="black"
-          href={mitxonlineLegacyUrl(program.page.financial_assistance_form_url)}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ minWidth: "fit-content" }}
-        >
-          Financial assistance available
-        </UnderlinedLink>
-      ) : null}
-    </CertificateBoxRoot>
-  )
-}
 
 type ProgramPriceRowProps = HTMLAttributes<HTMLDivElement> & {
   program: V2ProgramDetail
@@ -898,7 +914,7 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
   const totalRequired = getTotalRequiredCourses(program)
 
   const paidSection =
-    enrollmentType === "paid" && currentPrice ? (
+    currentPrice ? (
       <ProgramPaySection>
         <ProgramPayLabel>Price</ProgramPayLabel>
         <ProgramPayContent>
@@ -914,12 +930,48 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
                 Save {formatPrice(savingsAmount, { avoidCents: true })}
               </ProgramSavingsText>
               <ProgramListPriceText>
-                {formatPrice(listAmount, { avoidCents: true })} total for{" "}
+                <ProgramListPriceAmount>
+                  {formatPrice(listAmount, { avoidCents: true })}
+                </ProgramListPriceAmount>{" "}
+                total for{" "}
                 {totalRequired} {pluralize("course", totalRequired)} purchased
                 separately
               </ProgramListPriceText>
             </ProgramDiscountBlock>
           ) : null}
+          {enrollmentType === "both" ? (
+            <ProgramStartForFreeBox>
+              <ProgramStartForFreeIcon
+                width="24"
+                height="24"
+                viewBox="0 0 22 19"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+              >
+                <path d="M14 0C16.2091 0 18 1.79086 18 4C18 4.72903 17.8049 5.41251 17.4642 6.00111L22 6V7.99999H20V18C20 18.5523 19.5523 19 19 19H3C2.44772 19 2 18.5523 2 18V7.99999H0V6L4.53577 6.00111C4.19504 5.41251 4 4.72903 4 4C4 1.79086 5.79086 0 8 0C9.19522 0 10.268 0.52421 11.0009 1.35526C11.732 0.52421 12.8048 0 14 0ZM10 7.99999H4V17H10V7.99999ZM18 7.99999H12V17H18V7.99999ZM8 2C6.89543 2 6 2.89543 6 4C6 5.05436 6.81588 5.91816 7.85074 5.99451L8 6H10V4C10 2.99835 9.26372 2.16869 8.30278 2.02277L8.14927 2.00548L8 2ZM14 2C12.9456 2 12.0818 2.81588 12.0055 3.85074L12 4V6H14C15.0543 6 15.9181 5.18412 15.9945 4.14926L16 4C16 2.89543 15.1046 2 14 2Z" />
+              </ProgramStartForFreeIcon>
+              <ProgramStartForFreeTextContainer>
+                <ProgramStartForFreeTextStrong>
+                  Start for free
+                </ProgramStartForFreeTextStrong>
+                <ProgramStartForFreeTextRegular>
+                  or upgrade to certificate
+                </ProgramStartForFreeTextRegular>
+              </ProgramStartForFreeTextContainer>
+            </ProgramStartForFreeBox>
+          ) : null}
+          {program.page.financial_assistance_form_url ? (
+          <UnderlinedLink
+            color="black"
+            href={mitxonlineLegacyUrl(program.page.financial_assistance_form_url)}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ minWidth: "fit-content" }}
+          >
+            Financial assistance available
+          </UnderlinedLink>
+        ) : null}
         </ProgramPayContent>
       </ProgramPaySection>
     ) : (
@@ -928,9 +980,9 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
 
   return (
     <Stack {...others} gap="0px" width="100%">
-      {enrollmentType === "paid" ? <ProgramPriceDivider /> : null}
+      {enrollmentType === "paid" || enrollmentType === "both" ? <ProgramPriceDivider /> : null}
       <InfoRow>
-        {enrollmentType === "paid" ? (
+        {enrollmentType === "paid" || enrollmentType === "both" ? (
           paidSection
         ) : (
           <>
@@ -939,9 +991,6 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
             </InfoRowIcon>
             <InfoRowInner>
               <InfoLabelValue label="Price" value="Free to Learn" />
-              {enrollmentType === "both" ? (
-                <ProgramCertificateBox program={program} />
-              ) : null}
             </InfoRowInner>
           </>
         )}
