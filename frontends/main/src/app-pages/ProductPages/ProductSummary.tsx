@@ -38,6 +38,14 @@ const UnderlinedLink = styled(ResponsiveLink)({
   textDecoration: "underline",
 })
 
+const SecondaryUnderlinedLink = styled(UnderlinedLink)(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.silverGrayDark,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body4,
+  },
+}))
+
 const InfoRow = styled.div(({ theme }) => ({
   width: "100%",
   display: "flex",
@@ -456,13 +464,19 @@ const ProgramListPriceText = styled.span(({ theme }) => ({
   ...theme.typography.body2,
   fontSize: "14px",
   lineHeight: "18px",
-  fontWeight: theme.typography.fontWeightMedium,
+  fontWeight: theme.typography.fontWeightRegular,
   color: theme.custom.colors.silverGrayDark,
 }))
 
-const ProgramListPriceAmount = styled.span({
+const ProgramListPriceAmount = styled.span(({ theme }) => ({
+  fontStyle: "normal",
+  fontSize: "14px",
+  lineHeight: "18px",
+  letterSpacing: "0",
+  verticalAlign: "bottom",
   textDecoration: "line-through",
-})
+  fontWeight: theme.typography.fontWeightMedium,
+}))
 
 const ProgramPriceDivider = styled.div(({ theme }) => ({
   width: "100%",
@@ -939,6 +953,16 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
               </ProgramListPriceText>
             </ProgramDiscountBlock>
           ) : null}
+          {program.page.financial_assistance_form_url ? (
+            <SecondaryUnderlinedLink
+              href={mitxonlineLegacyUrl(program.page.financial_assistance_form_url)}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ minWidth: "fit-content" }}
+            >
+              Financial assistance available
+            </SecondaryUnderlinedLink>
+          ) : null}
           {enrollmentType === "both" ? (
             <ProgramStartForFreeBox>
               <ProgramStartForFreeIcon
@@ -961,17 +985,6 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
               </ProgramStartForFreeTextContainer>
             </ProgramStartForFreeBox>
           ) : null}
-          {program.page.financial_assistance_form_url ? (
-          <UnderlinedLink
-            color="black"
-            href={mitxonlineLegacyUrl(program.page.financial_assistance_form_url)}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ minWidth: "fit-content" }}
-          >
-            Financial assistance available
-          </UnderlinedLink>
-        ) : null}
         </ProgramPayContent>
       </ProgramPaySection>
     ) : (
