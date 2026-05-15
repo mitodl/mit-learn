@@ -886,7 +886,7 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
   // if (enrollmentType === "none") return null
 
   const currentPrice = program.products[0]?.price
-  const listPrice = program.list_price
+  const listPrice = program.page.list_price
 
   const currentAmount = toNumericPrice(currentPrice)
   const listAmount = toNumericPrice(listPrice)
@@ -916,7 +916,6 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
               </ProgramListPriceText>
             </ProgramDiscountBlock>
           ) : null}
-          <GrayText>(includes {program.certificate_type})</GrayText>
         </ProgramPayContent>
       </ProgramPaySection>
     ) : (
