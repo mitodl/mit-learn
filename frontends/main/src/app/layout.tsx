@@ -1,9 +1,5 @@
 import React from "react"
-import Header from "@/page-components/Header/Header"
-import Footer from "@/page-components/Footer/Footer"
-import { PageWrapper, PageWrapperInner } from "./styled"
 import Providers from "./providers"
-import { MITLearnGlobalStyles } from "ol-components"
 import Script from "next/script"
 
 import "./GlobalStyles"
@@ -116,17 +112,7 @@ j=d.createElement(s),dl=l!=='dataLayer'?'&l='+l:'';j.async=true;j.src=
             />
           </noscript>
         ) : null}
-        <Providers>
-          <MITLearnGlobalStyles />
-          <PageWrapper>
-            <Header />
-            <PageWrapperInner>{children}</PageWrapperInner>
-            <Footer />
-          </PageWrapper>
-        </Providers>
-        {process.env.NEXT_PUBLIC_APPZI_URL ? (
-          <Script async src={process.env.NEXT_PUBLIC_APPZI_URL} />
-        ) : null}
+        <Providers>{children}</Providers>
         {process.env.NEXT_PUBLIC_HUBSPOT_PORTAL_ID ? (
           <Script
             id="hs-script-loader"

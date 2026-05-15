@@ -1,5 +1,5 @@
 import React from "react"
-import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
+import EmbedNotFoundPage from "@/app-pages/VideoEmbedPage/EmbedNotFoundPage"
 import { standardizeMetadata } from "@/common/metadata"
 import type { Metadata } from "next"
 
@@ -8,8 +8,8 @@ export const metadata: Metadata = standardizeMetadata({
   social: false,
 })
 
-const Page: React.FC = () => {
-  return <NotFoundPage />
+const NotFound: React.FC = () => {
+  return <EmbedNotFoundPage />
 }
 
-export default Page
+export default NotFound
