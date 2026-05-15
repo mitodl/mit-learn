@@ -3,7 +3,6 @@ import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { getQueryClient } from "@/app/getQueryClient"
 import { notFound } from "next/navigation"
-import { resolveVideoSources } from "@/app-pages/VideoPlaylistCollectionPage/videoSources"
 import VideoEmbedPage from "@/app-pages/VideoEmbedPage/VideoEmbedPage"
 import { VideoResourceResourceTypeEnum } from "api/v1"
 import type { VideoResource } from "api/v1"
@@ -12,8 +11,6 @@ import {
   standardizeMetadata,
   MetadataNotFound,
 } from "@/common/metadata"
-
-const SUPPORTED_TYPES = ["application/x-mpegURL", "video/mp4", "video/youtube"]
 
 export const generateMetadata = ({
   params,
@@ -33,22 +30,12 @@ export const generateMetadata = ({
         throw new MetadataNotFound()
       })
 
-    const isEmbeddableVideo =
-      resource?.resource_type === VideoResourceResourceTypeEnum.Video &&
-      SUPPORTED_TYPES.includes(
-        resolveVideoSources(
-          (resource).video?.streaming_url,
-          resource.url,
-          resource.content_files?.[0]?.youtube_id,
-        )[0]?.type ?? "",
-      )
-
-    if (!isEmbeddableVideo) {
+    if (resource?.resource_type !== VideoResourceResourceTypeEnum.Video) {
       throw new MetadataNotFound()
     }
 
     return standardizeMetadata({
-      title: resource.title
+      title: resource.title,
       robots: "noindex, nofollow",
       social: false,
     })
@@ -70,20 +57,9 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
     notFound()
   }
 
-  const videoResource = resource as VideoResource
-  const sources = resolveVideoSources(
-    videoResource.video?.streaming_url,
-    videoResource.url,
-    videoResource.content_files?.[0]?.youtube_id,
-  )
-
-  if (sources.length === 0 || !SUPPORTED_TYPES.includes(sources[0].type)) {
-    notFound()
-  }
-
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <VideoEmbedPage videoResource={videoResource} />
+      <VideoEmbedPage videoResource={resource as VideoResource} />
     </HydrationBoundary>
   )
 }
