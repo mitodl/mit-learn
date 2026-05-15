@@ -156,7 +156,9 @@ const WelcomeMessage: React.FC<{ contract?: ContractPage }> = ({
   return (
     <Stack gap="12px" paddingTop="40px" paddingBottom="24px">
       <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography variant="h5" component="h2">{welcomeMessage}</Typography>
+        <Typography variant="h5" component="h2">
+          {welcomeMessage}
+        </Typography>
         <Link
           scroll={false}
           color="red"

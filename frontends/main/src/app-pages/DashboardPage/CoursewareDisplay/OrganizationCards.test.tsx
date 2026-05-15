@@ -139,8 +139,12 @@ describe("OrganizationCards", () => {
         2,
       )
       // Contract names should be wrapped in heading elements
-      expect(screen.getAllByRole("heading", { name: "Contract 1" })).toHaveLength(2)
-      expect(screen.getAllByRole("heading", { name: "Contract 2" })).toHaveLength(2)
+      expect(
+        screen.getAllByRole("heading", { name: "Contract 1" }),
+      ).toHaveLength(2)
+      expect(
+        screen.getAllByRole("heading", { name: "Contract 2" }),
+      ).toHaveLength(2)
     })
 
     it("renders Continue buttons with correct organization URLs", async () => {
