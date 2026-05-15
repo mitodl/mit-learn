@@ -2045,6 +2045,46 @@ describe.each([
     })
 
     test.each([{ useProductPages: false }, { useProductPages: true }])(
+      "Context menu for program enrollment includes Program Record to mitxonline (flag=$useProductPages)",
+      async ({ useProductPages }) => {
+        mockedUseFeatureFlagEnabled.mockReturnValue(useProductPages)
+        setupUserApis()
+
+        const program = mitxonline.factories.programs.simpleProgram({
+          id: 99,
+          readable_id: "program-for-record-test",
+        })
+        const programEnrollment =
+          mitxonline.factories.enrollment.programEnrollmentV3({
+            program,
+          })
+
+        renderWithProviders(
+          <DashboardCard
+            resource={{
+              type: DashboardType.ProgramEnrollment,
+              data: programEnrollment,
+            }}
+          />,
+        )
+
+        const card = getCard()
+        const contextMenuButton = within(card).getByRole("button", {
+          name: "More options",
+        })
+        await user.click(contextMenuButton)
+
+        const programRecordItem = screen.getByRole("menuitem", {
+          name: "Program Record",
+        })
+        expect(programRecordItem).toHaveAttribute(
+          "href",
+          mitxonlineLegacyUrl("/records/99/"),
+        )
+      },
+    )
+
+    test.each([{ useProductPages: false }, { useProductPages: true }])(
       "Context menu for course enrollment shows View Details (flag=$useProductPages) using readable_id",
       async ({ useProductPages }) => {
         setupUserApis()
