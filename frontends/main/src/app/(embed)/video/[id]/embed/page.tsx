@@ -48,7 +48,7 @@ export const generateMetadata = ({
     }
 
     return standardizeMetadata({
-      title: resource?.title ?? "Video",
+      title: resource.title
       robots: "noindex, nofollow",
       social: false,
     })
