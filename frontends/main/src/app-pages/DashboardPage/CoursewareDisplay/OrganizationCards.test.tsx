@@ -74,6 +74,9 @@ describe("OrganizationCards", () => {
         )
       })
       expect(elements.length).toBeGreaterThan(0)
+      await screen.findByRole("heading", {
+        name: `As a member of ${org.name} you have access to:`,
+      })
     }
   })
 
@@ -135,6 +138,9 @@ describe("OrganizationCards", () => {
       expect(screen.getAllByRole("link", { name: "Contract 2" })).toHaveLength(
         2,
       )
+      // Contract names should be wrapped in heading elements
+      expect(screen.getAllByRole("heading", { name: "Contract 1" })).toHaveLength(2)
+      expect(screen.getAllByRole("heading", { name: "Contract 2" })).toHaveLength(2)
     })
 
     it("renders Continue buttons with correct organization URLs", async () => {
