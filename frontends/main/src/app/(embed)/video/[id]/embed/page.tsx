@@ -5,7 +5,6 @@ import { getQueryClient } from "@/app/getQueryClient"
 import { notFound } from "next/navigation"
 import VideoEmbedPage from "@/app-pages/VideoEmbedPage/VideoEmbedPage"
 import { VideoResourceResourceTypeEnum } from "api/v1"
-import type { VideoResource } from "api/v1"
 import {
   safeGenerateMetadata,
   standardizeMetadata,
@@ -59,7 +58,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <VideoEmbedPage videoResource={resource as VideoResource} />
+      <VideoEmbedPage videoId={videoId} />
     </HydrationBoundary>
   )
 }

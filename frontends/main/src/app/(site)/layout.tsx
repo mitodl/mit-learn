@@ -1,4 +1,5 @@
 import React from "react"
+import Script from "next/script"
 import Header from "@/page-components/Header/Header"
 import Footer from "@/page-components/Footer/Footer"
 import { PageWrapper, PageWrapperInner } from "@/app/styled"
@@ -16,6 +17,9 @@ export default function SiteLayout({
         <PageWrapperInner>{children}</PageWrapperInner>
         <Footer />
       </PageWrapper>
+      {process.env.NEXT_PUBLIC_APPZI_URL ? (
+        <Script async src={process.env.NEXT_PUBLIC_APPZI_URL} />
+      ) : null}
     </>
   )
 }

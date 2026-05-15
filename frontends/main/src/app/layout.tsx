@@ -113,9 +113,6 @@ j=d.createElement(s),dl=l!=='dataLayer'?'&l='+l:'';j.async=true;j.src=
           </noscript>
         ) : null}
         <Providers>{children}</Providers>
-        {process.env.NEXT_PUBLIC_APPZI_URL ? (
-          <Script async src={process.env.NEXT_PUBLIC_APPZI_URL} />
-        ) : null}
         {process.env.NEXT_PUBLIC_HUBSPOT_PORTAL_ID ? (
           <Script
             id="hs-script-loader"
