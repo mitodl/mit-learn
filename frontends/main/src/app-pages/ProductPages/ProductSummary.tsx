@@ -378,6 +378,83 @@ const GrayText = styled.span(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
+const ProgramPaySection = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: "4px",
+  width: "100%",
+  maxWidth: "346px",
+  color: theme.custom.colors.darkGray2,
+}))
+
+const ProgramPayLabel = styled.span(({ theme }) => ({
+  ...theme.typography.body4,
+  fontWeight: theme.typography.fontWeightMedium,
+  color: theme.custom.colors.silverGrayDark,
+  textTransform: "uppercase",
+  letterSpacing: "0.04em",
+}))
+
+const ProgramPayContent = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: "12px",
+  width: "100%",
+  maxWidth: "320px",
+  [theme.breakpoints.down("sm")]: {
+    maxWidth: "100%",
+  },
+}))
+
+const ProgramPriceLine = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "flex-end",
+  gap: "4px",
+  flexWrap: "wrap",
+  color: theme.custom.colors.darkGray2,
+}))
+
+const ProgramPriceAmount = styled.span(({ theme }) => ({
+  ...theme.typography.h3,
+  fontWeight: theme.typography.fontWeightBold,
+  lineHeight: "36px",
+}))
+
+const ProgramPriceSuffix = styled.span(({ theme }) => ({
+  ...theme.typography.subtitle1,
+  fontWeight: theme.typography.fontWeightMedium,
+  color: theme.custom.colors.silverGrayDark,
+}))
+
+const ProgramDiscountBlock = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: "4px",
+  color: theme.custom.colors.darkGray2,
+}))
+
+const ProgramSavingsText = styled.span(({ theme }) => ({
+  ...theme.typography.subtitle2,
+  color: theme.custom.colors.green,
+}))
+
+const ProgramListPriceText = styled.span(({ theme }) => ({
+  ...theme.typography.body2,
+  color: theme.custom.colors.silverGrayDark,
+  textDecoration: "line-through",
+}))
+
+const ProgramPriceDivider = styled.div(({ theme }) => ({
+  width: "100%",
+  maxWidth: "346px",
+  borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
+  flex: "none",
+  alignSelf: "stretch",
+}))
+
 const CertificateBoxRoot = styled.div(({ theme }) => ({
   width: "100%",
   backgroundColor: theme.custom.colors.lightGray1,
@@ -796,40 +873,87 @@ const ProgramCertificateBox: React.FC<{ program: V2ProgramDetail }> = ({
 }
 
 type ProgramPriceRowProps = HTMLAttributes<HTMLDivElement> & {
-  program: V2ProgramDetail
+  program: V2ProgramDetail & {
+    // Temporary local extension while list_price rolls into upstream API typings.
+    list_price?: number | string | null
+  }
 }
 const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
   program,
   ...others
 }) => {
   const enrollmentType = getEnrollmentType(program.enrollment_modes)
-  if (enrollmentType === "none") return null
+  // if (enrollmentType === "none") return null
 
-  const paidPrice =
-    enrollmentType === "paid" && program.products[0]?.price ? (
-      <>
-        {formatPrice(program.products[0].price, { avoidCents: true })}{" "}
-        <GrayText>(includes {program.certificate_type})</GrayText>
-      </>
-    ) : null
+  const currentPrice = program.products[0]?.price
+  const listPrice = program.list_price
+
+  const currentAmount = toNumericPrice(currentPrice)
+  const listAmount = toNumericPrice(listPrice)
+  const hasSavings =
+    currentAmount !== null && listAmount !== null && listAmount > currentAmount
+  const savingsAmount = hasSavings ? listAmount - currentAmount : null
+
+  const paidSection =
+    enrollmentType === "paid" && currentPrice ? (
+      <ProgramPaySection>
+        <ProgramPayLabel>Price</ProgramPayLabel>
+        <ProgramPayContent>
+          <ProgramPriceLine>
+            <ProgramPriceAmount>
+              {formatPrice(currentPrice, { avoidCents: true })}
+            </ProgramPriceAmount>
+            <ProgramPriceSuffix>/ full program</ProgramPriceSuffix>
+          </ProgramPriceLine>
+          {hasSavings && savingsAmount !== null && listAmount !== null ? (
+            <ProgramDiscountBlock>
+              <ProgramSavingsText>
+                Save {formatPrice(savingsAmount, { avoidCents: true })}
+              </ProgramSavingsText>
+              <ProgramListPriceText>
+                {formatPrice(listAmount, { avoidCents: true })} total for
+                courses purchased separately
+              </ProgramListPriceText>
+            </ProgramDiscountBlock>
+          ) : null}
+          <GrayText>(includes {program.certificate_type})</GrayText>
+        </ProgramPayContent>
+      </ProgramPaySection>
+    ) : (
+      <InfoLabelValue label="Price" value="Price unavailable" />
+    )
 
   return (
-    <InfoRow {...others}>
-      <InfoRowIcon>
-        <RiPriceTag3Line aria-hidden="true" />
-      </InfoRowIcon>
-      <InfoRowInner>
+    <Stack {...others} gap="8px" width="100%">
+      {enrollmentType === "paid" ? <ProgramPriceDivider /> : null}
+      <InfoRow>
         {enrollmentType === "paid" ? (
-          <InfoLabelValue label="Price" value={paidPrice} />
+          paidSection
         ) : (
-          <InfoLabelValue label="Price" value="Free to Learn" />
+          <>
+            <InfoRowIcon>
+              <RiPriceTag3Line aria-hidden="true" />
+            </InfoRowIcon>
+            <InfoRowInner>
+              <InfoLabelValue label="Price" value="Free to Learn" />
+              {enrollmentType === "both" ? (
+                <ProgramCertificateBox program={program} />
+              ) : null}
+            </InfoRowInner>
+          </>
         )}
-        {enrollmentType === "both" ? (
-          <ProgramCertificateBox program={program} />
-        ) : null}
-      </InfoRowInner>
-    </InfoRow>
+      </InfoRow>
+    </Stack>
   )
+}
+
+const toNumericPrice = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) return value
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return null
 }
 
 const ProgramSummary: React.FC<{
