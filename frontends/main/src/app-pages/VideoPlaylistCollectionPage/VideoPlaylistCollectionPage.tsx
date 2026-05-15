@@ -90,7 +90,7 @@ const VideoPlaylistCollectionPage: React.FC<
     learning_resource_id: playlistId,
     limit: VIDEOS_PAGE_SIZE,
   })
-  console.log("itemsData", itemsData)
+
   const { data: similarData, isLoading: similarLoading } = useQuery({
     ...learningResourceQueries.vectorSimilar({
       id: playlistId,
@@ -99,7 +99,7 @@ const VideoPlaylistCollectionPage: React.FC<
     }),
   })
 
-  if (showVideoPlaylistPage) {
+  if (!showVideoPlaylistPage) {
     return flagsLoaded ? notFound() : null
   }
 

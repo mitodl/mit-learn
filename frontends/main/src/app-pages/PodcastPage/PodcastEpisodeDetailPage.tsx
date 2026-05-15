@@ -47,9 +47,13 @@ const PageSection = styled.div(({ theme }) => ({
   minHeight: "100vh",
 }))
 
-const HeaderSection = styled.div(({ theme }) => ({
-  borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
-  marginBottom: "64px",
+const HeaderSection = styled("div", {
+  shouldForwardProp: (prop) => prop !== "hasEpisodes",
+})<{ hasEpisodes?: boolean }>(({ theme, hasEpisodes }) => ({
+  ...(hasEpisodes && {
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+    marginBottom: "64px",
+  }),
   paddingBottom: "64px",
   [theme.breakpoints.down("sm")]: {
     marginBottom: "24px",
@@ -305,7 +309,7 @@ export const PodcastEpisodeDetailPage: React.FC<
             />
           </PodcastContainer>
         </BreadcrumbBar>
-        <HeaderSection>
+        <HeaderSection hasEpisodes={episodes.length > 0}>
           <EpisodeContainer>
             {podcast?.title && (
               <EpisodeLabel href={podcastHref}>{podcast.title}</EpisodeLabel>
@@ -357,7 +361,7 @@ export const PodcastEpisodeDetailPage: React.FC<
                   href={
                     podcastId
                       ? podcastEpisodePageView(String(episode.id), podcastId)
-                      : "#"
+                      : ""
                   }
                   isPlaying={
                     playingEpisode?.id === episode.id && isAudioPlaying

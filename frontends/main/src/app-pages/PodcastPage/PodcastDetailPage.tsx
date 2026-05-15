@@ -122,8 +122,10 @@ const HeaderTextContent = styled.div({
 
 /* ── Episodes list ── */
 
-const EpisodesSection = styled.div(({ theme }) => ({
-  padding: "0 48px",
+const EpisodesSection = styled("div", {
+  shouldForwardProp: (prop) => prop !== "hasMoreEpisodes",
+})<{ hasMoreEpisodes?: boolean }>(({ theme, hasMoreEpisodes }) => ({
+  padding: hasMoreEpisodes ? "0 48px" : "0 48px 40px 48px",
   [theme.breakpoints.down("sm")]: {
     padding: "0 0 48px",
   },
@@ -150,7 +152,6 @@ const EpisodesHeading = styled(Typography)(({ theme }) => ({
 }))
 
 const EpisodeList = styled.div({
-  listStyle: "none",
   margin: 0,
   padding: 0,
   display: "grid",
@@ -183,6 +184,10 @@ const EpisodeRow = styled("div", {
   "&:hover": {
     backgroundColor: theme.custom.colors.lightGray1,
     cursor: "pointer",
+  },
+  "&:focus-visible": {
+    outline: `2px solid ${theme.custom.colors.red}`,
+    outlineOffset: "-2px",
   },
   "&:hover .episode-title, &:focus-visible .episode-title": {
     color: theme.custom.colors.red,
@@ -330,6 +335,10 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
   isEpisodePage = false,
 }) => {
   const router = useRouter()
+
+  const handleRowNavigate = () => {
+    if (href) router.push(href)
+  }
   const podcastEpisode =
     episode.resource_type === "podcast_episode" ? episode.podcast_episode : null
 
@@ -344,7 +353,18 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
   const metaParts = [duration ? `${duration} min` : null, date].filter(Boolean)
 
   return (
-    <EpisodeRow onClick={() => router.push(href)} isEpisodePage={isEpisodePage}>
+    <EpisodeRow
+      onClick={handleRowNavigate}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          handleRowNavigate()
+        }
+      }}
+      role="link"
+      tabIndex={0}
+      isEpisodePage={isEpisodePage}
+    >
       <EpisodeInfo>
         <EpisodeTitleLink className="episode-title">
           {episode.title}
@@ -577,26 +597,27 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
         </HeaderSection>
 
         <PodcastContainer>
-          <EpisodesSection>
+          <EpisodesSection hasMoreEpisodes={!!hasNextPage}>
             <EpisodesHeading variant="subtitle3">Episodes</EpisodesHeading>
 
             {episodes && episodes.length > 0 && (
-              <EpisodeList>
+              <EpisodeList role="list">
                 {episodes.map((episode) => (
-                  <EpisodeItem
-                    key={episode.id}
-                    episode={episode}
-                    href={podcastEpisodePageView(
-                      String(episode.id),
-                      String(id),
-                    )}
-                    onPlayClick={handlePlayClick}
-                    onPauseClick={() => playerRef.current?.pause()}
-                    isPlaying={
-                      playingEpisode?.id === episode.id && isAudioPlaying
-                    }
-                    isPlayable={Boolean(getEpisodeAudioUrl(episode))}
-                  />
+                  <div key={episode.id} role="listitem">
+                    <EpisodeItem
+                      episode={episode}
+                      href={podcastEpisodePageView(
+                        String(episode.id),
+                        String(id),
+                      )}
+                      onPlayClick={handlePlayClick}
+                      onPauseClick={() => playerRef.current?.pause()}
+                      isPlaying={
+                        playingEpisode?.id === episode.id && isAudioPlaying
+                      }
+                      isPlayable={Boolean(getEpisodeAudioUrl(episode))}
+                    />
+                  </div>
                 ))}
               </EpisodeList>
             )}
