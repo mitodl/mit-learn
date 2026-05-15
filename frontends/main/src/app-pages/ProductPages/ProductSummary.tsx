@@ -873,17 +873,14 @@ const ProgramCertificateBox: React.FC<{ program: V2ProgramDetail }> = ({
 }
 
 type ProgramPriceRowProps = HTMLAttributes<HTMLDivElement> & {
-  program: V2ProgramDetail & {
-    // Temporary local extension while list_price rolls into upstream API typings.
-    list_price?: number | string | null
-  }
+  program: V2ProgramDetail
 }
 const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
   program,
   ...others
 }) => {
   const enrollmentType = getEnrollmentType(program.enrollment_modes)
-  // if (enrollmentType === "none") return null
+  if (enrollmentType === "none") return null
 
   const currentPrice = program.products[0]?.price
   const listPrice = program.page.list_price
