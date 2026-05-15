@@ -11,7 +11,7 @@ type ErrorPageTemplateProps = {
   title: string
   timSays?: string
   loading?: boolean
-  hideHomeButton?: boolean
+  showHomeButton?: boolean
 }
 
 const Page = styled.div(({ theme }) => ({
@@ -85,7 +85,7 @@ const Button = styled(ButtonLink)({
 export const ErrorContent: React.FC<ErrorPageTemplateProps> = ({
   title,
   timSays,
-  hideHomeButton = false,
+  showHomeButton = true,
 }) => {
   return (
     <ErrorContainer>
@@ -101,7 +101,7 @@ export const ErrorContent: React.FC<ErrorPageTemplateProps> = ({
       >
         {title}
       </Typography>
-      {!hideHomeButton && (
+      {showHomeButton && (
         <Footer>
           <Button variant="primary" href={HOME} Component="a">
             Home
@@ -116,7 +116,7 @@ const ErrorPageTemplate: React.FC<ErrorPageTemplateProps> = ({
   title,
   timSays,
   loading = false,
-  hideHomeButton = false,
+  showHomeButton = true,
 }) => {
   if (loading) {
     return (
@@ -144,7 +144,7 @@ const ErrorPageTemplate: React.FC<ErrorPageTemplateProps> = ({
       <ErrorContent
         title={title}
         timSays={timSays}
-        hideHomeButton={hideHomeButton}
+        showHomeButton={showHomeButton}
       />
     </Page>
   )

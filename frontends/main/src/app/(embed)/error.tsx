@@ -10,7 +10,7 @@ const Error = ({ error }: { error: Error }) => {
     Sentry.captureException(error)
   }, [error])
 
-  return <FallbackErrorPage hideHomeButton />
+  return <FallbackErrorPage showHomeButton={false} />
 }
 
 export default Error

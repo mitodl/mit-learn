@@ -26,7 +26,7 @@ const EmbedNotFoundPage: React.FC = () => {
       <ErrorContent
         title="Looks like we couldn't find what you were looking for!"
         timSays="404"
-        hideHomeButton
+        showHomeButton={false}
       />
     </Page>
   )
