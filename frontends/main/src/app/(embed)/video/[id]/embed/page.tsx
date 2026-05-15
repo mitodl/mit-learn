@@ -37,7 +37,7 @@ export const generateMetadata = ({
       resource?.resource_type === VideoResourceResourceTypeEnum.Video &&
       SUPPORTED_TYPES.includes(
         resolveVideoSources(
-          (resource as VideoResource).video?.streaming_url,
+          (resource).video?.streaming_url,
           resource.url,
           resource.content_files?.[0]?.youtube_id,
         )[0]?.type ?? "",
