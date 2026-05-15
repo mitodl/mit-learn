@@ -14,7 +14,7 @@ import {
 } from "ol-components"
 import { Permission } from "api/hooks/user"
 import { useArticleList } from "api/hooks/articles"
-import type { RichTextArticle } from "api/v1"
+import type { WebsiteContent } from "api/v1"
 import { LocalDate } from "ol-utilities"
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
 import { ArticleBanner, DEFAULT_BACKGROUND_IMAGE_URL } from "./ArticleBanner"
@@ -66,7 +66,7 @@ const DraftBadge = styled.span`
   font-weight: ${theme.typography.fontWeightMedium};
 `
 
-export const DraftArticle: React.FC<{ article: RichTextArticle }> = ({
+export const DraftArticle: React.FC<{ article: WebsiteContent }> = ({
   article,
 }) => {
   const articleUrl = article.is_published

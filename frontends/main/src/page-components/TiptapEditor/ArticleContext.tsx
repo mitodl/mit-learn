@@ -1,8 +1,8 @@
 import { createContext, useContext } from "react"
-import type { RichTextArticle } from "api/v1"
+import type { WebsiteContent } from "api/v1"
 
 interface ArticleContextValue {
-  article?: RichTextArticle
+  article?: WebsiteContent
 }
 
 const ArticleContext = createContext<ArticleContextValue>({})

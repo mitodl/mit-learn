@@ -8,9 +8,9 @@ from news_events import tasks
 @pytest.fixture(autouse=True)
 def _mock_cdn_purge(mocker):
     """Auto-mock CDN purge tasks for all tests in this module"""
-    mocker.patch("articles.tasks.fastly_purge_relative_url")
-    mocker.patch("articles.tasks.fastly_purge_relative_url.delay")
-    mocker.patch("articles.tasks.fastly_purge_articles_list.delay")
+    mocker.patch("website_content.tasks.fastly_purge_relative_url")
+    mocker.patch("website_content.tasks.fastly_purge_relative_url.delay")
+    mocker.patch("website_content.tasks.fastly_purge_website_content_list.delay")
 
 
 def test_get_medium_mit_news(mocker):
@@ -54,15 +54,15 @@ def test_get_mitpe_news(mocker):
 
 @pytest.mark.django_db
 def test_sync_article_to_news_success(mocker, user):
-    """Task should sync published article to news feed"""
-    from articles.models import Article
+    """Task should sync published website content item to news feed"""
+    from website_content.models import WebsiteContent
 
-    # Create a published article
-    article = Article.objects.create(
+    content = WebsiteContent.objects.create(
         title="Test Article",
         content={"type": "doc", "content": []},
         is_published=True,
         user=user,
+        content_type="news",
     )
 
     mock_sync = mocker.patch(
@@ -72,16 +72,15 @@ def test_sync_article_to_news_success(mocker, user):
         "news_events.tasks.clear_views_cache", autospec=True
     )
 
-    # Execute the task directly (not via .delay())
-    tasks.sync_article_to_news(article.id)
+    tasks.sync_website_content_to_news(content.id)
 
-    mock_sync.assert_called_once_with(article)
+    mock_sync.assert_called_once_with(content)
     mock_clear_cache.assert_called_once()
 
 
 @pytest.mark.django_db
 def test_sync_article_to_news_article_not_found(mocker, caplog):
-    """Task should log warning if article doesn't exist"""
+    """Task should log warning if content item doesn't exist"""
     mock_sync = mocker.patch(
         "news_events.etl.articles_news.sync_single_article_to_news", autospec=True
     )
@@ -89,28 +88,25 @@ def test_sync_article_to_news_article_not_found(mocker, caplog):
         "news_events.tasks.clear_views_cache", autospec=True
     )
 
-    # Execute task with non-existent article ID
-    tasks.sync_article_to_news(99999)
+    tasks.sync_website_content_to_news(99999)
 
-    # Should not call sync or clear cache
     mock_sync.assert_not_called()
     mock_clear_cache.assert_not_called()
 
-    # Should log warning
-    assert "Article 99999 not found or not published" in caplog.text
+    assert "WebsiteContent 99999 not found or not published" in caplog.text
 
 
 @pytest.mark.django_db
 def test_sync_article_to_news_unpublished_article(mocker, user, caplog):
-    """Task should skip unpublished articles"""
-    from articles.models import Article
+    """Task should skip unpublished content items"""
+    from website_content.models import WebsiteContent
 
-    # Create an unpublished article
-    article = Article.objects.create(
+    content = WebsiteContent.objects.create(
         title="Draft Article",
         content={"type": "doc", "content": []},
         is_published=False,
         user=user,
+        content_type="news",
     )
 
     mock_sync = mocker.patch(
@@ -120,29 +116,27 @@ def test_sync_article_to_news_unpublished_article(mocker, user, caplog):
         "news_events.tasks.clear_views_cache", autospec=True
     )
 
-    tasks.sync_article_to_news(article.id)
+    tasks.sync_website_content_to_news(content.id)
 
-    # Should not sync unpublished articles
     mock_sync.assert_not_called()
     mock_clear_cache.assert_not_called()
 
-    # Should log warning
-    assert f"Article {article.id} not found or not published" in caplog.text
+    assert f"WebsiteContent {content.id} not found or not published" in caplog.text
 
 
 @pytest.mark.django_db
 def test_sync_article_to_news_sync_failure(mocker, user):
     """Task should retry on sync failure"""
-    from articles.models import Article
+    from website_content.models import WebsiteContent
 
-    article = Article.objects.create(
+    content = WebsiteContent.objects.create(
         title="Test Article",
         content={"type": "doc", "content": []},
         is_published=True,
         user=user,
+        content_type="news",
     )
 
-    # Mock sync to raise an exception
     mock_sync = mocker.patch(
         "news_events.etl.articles_news.sync_single_article_to_news",
         autospec=True,
@@ -152,10 +146,8 @@ def test_sync_article_to_news_sync_failure(mocker, user):
         "news_events.tasks.clear_views_cache", autospec=True
     )
 
-    # Should raise exception to trigger retry
     with pytest.raises(Exception, match="Sync failed"):
-        tasks.sync_article_to_news(article.id)
+        tasks.sync_website_content_to_news(content.id)
 
-    mock_sync.assert_called_once_with(article)
-    # Cache should not be cleared if sync fails
+    mock_sync.assert_called_once_with(content)
     mock_clear_cache.assert_not_called()

@@ -35,7 +35,7 @@ def mock_articles(mocker):
     mock_queryset.select_related.return_value = [mock_article]
 
     mocker.patch(
-        "news_events.etl.articles_news.Article.objects.filter",
+        "news_events.etl.articles_news.WebsiteContent.objects.filter",
         return_value=mock_queryset,
     )
 
@@ -633,6 +633,7 @@ def test_sync_single_article_to_news(mocker):
             ],
         }
         is_published = True
+        content_type = "news"
         created_on = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
         updated_on = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
         publish_date = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)

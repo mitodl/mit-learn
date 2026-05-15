@@ -1,9 +1,6 @@
 import pytest
 
-from articles.validators import clean_html
-
-# # - On all tags: https://docs.rs/ammonia/latest/ammonia/struct.Builder.html#method.generic_attributes
-# },
+from website_content.validators import clean_html
 
 
 @pytest.mark.parametrize(
@@ -24,17 +21,14 @@ from articles.validators import clean_html
             ),
         ),
         (
-            # class alllowed on figures
             '<figure class="xyz" bad="bad"></figure>',
             '<figure class="xyz"></figure>',
         ),
         (
-            # scripts not allowed
             '<script>alert("Hi")</script>',
             "",
         ),
         (
-            # h1 not allowed
             "<h1>1111</h1><h2>2222</h2><h3>3333</h3><h4>4444</h4>",
             "1111<h2>2222</h2><h3>3333</h3><h4>4444</h4>",
         ),

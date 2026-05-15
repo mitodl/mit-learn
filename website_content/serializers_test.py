@@ -5,16 +5,19 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
 from rest_framework import serializers
 
-from articles.models import ArticleImageUpload
-from articles.serializers import ArticleImageUploadSerializer, SanitizedHtmlField
+from website_content.models import WebsiteContentImageUpload
+from website_content.serializers import (
+    SanitizedHtmlField,
+    WebsiteContentImageUploadSerializer,
+)
 
 
-class HTMLSantizingSerializer(serializers.Serializer):
+class HTMLSanitizingSerializer(serializers.Serializer):
     html = SanitizedHtmlField()
 
 
 def test_html_sanitization():
-    serializer = HTMLSantizingSerializer(
+    serializer = HTMLSanitizingSerializer(
         data={"html": "<p><script>console.error('danger!')</script></p>"}
     )
     serializer.is_valid()
@@ -36,7 +39,7 @@ def generate_test_image():
 
 
 @pytest.mark.django_db
-def test_article_image_upload_serializer(django_user_model):
+def test_website_content_image_upload_serializer(django_user_model):
     image_file = generate_test_image()
 
     user = django_user_model.objects.create_user(
@@ -51,7 +54,7 @@ def test_article_image_upload_serializer(django_user_model):
     request = FakeRequest()
     request.user = user
 
-    serializer = ArticleImageUploadSerializer(
+    serializer = WebsiteContentImageUploadSerializer(
         data={"image_file": image_file},
         context={"request": request},
     )
@@ -60,8 +63,7 @@ def test_article_image_upload_serializer(django_user_model):
 
     instance = serializer.save()
 
-    assert isinstance(instance, ArticleImageUpload)
+    assert isinstance(instance, WebsiteContentImageUpload)
     assert instance.user == user
-    # ✅ Check for valid saved file
     assert instance.image_file
     assert instance.image_file.name.endswith(".jpg")

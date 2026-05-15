@@ -2,8 +2,9 @@ from django.contrib.auth import get_user_model
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from articles import models
-from articles.validators import clean_html
+from website_content import models
+from website_content.constants import CONTENT_TYPE_NEWS
+from website_content.validators import clean_html
 
 User = get_user_model()
 
@@ -24,9 +25,9 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ["first_name", "last_name"]
 
 
-class RichTextArticleSerializer(serializers.ModelSerializer):
+class WebsiteContentSerializer(serializers.ModelSerializer):
     """
-    Serializer for LearningResourceInstructor model
+    Serializer for WebsiteContent model.
     """
 
     created_on = serializers.DateTimeField(read_only=True, required=False)
@@ -37,14 +38,20 @@ class RichTextArticleSerializer(serializers.ModelSerializer):
     title = serializers.CharField(max_length=255)
     author_name = serializers.CharField(required=False, allow_blank=True, default="")
     user = UserSerializer(read_only=True)
+    content_type = serializers.ChoiceField(
+        choices=["news", "article"],
+        default=CONTENT_TYPE_NEWS,
+        required=False,
+    )
 
     class Meta:
-        model = models.Article
+        model = models.WebsiteContent
         fields = [
             "id",
             "title",
             "author_name",
             "content",
+            "content_type",
             "user",
             "created_on",
             "updated_on",
@@ -54,12 +61,12 @@ class RichTextArticleSerializer(serializers.ModelSerializer):
         ]
 
 
-class ArticleImageUploadSerializer(serializers.Serializer):
+class WebsiteContentImageUploadSerializer(serializers.Serializer):
     image_file = serializers.ImageField(required=True)
 
     def create(self, validated_data):
         user = self.context.get("request").user
-        return models.ArticleImageUpload.objects.create(
+        return models.WebsiteContentImageUpload.objects.create(
             user=user,
             image_file=validated_data["image_file"],
         )

@@ -13,69 +13,88 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from articles.api import article_published_actions, purge_article_on_save
-from articles.models import Article
-from articles.serializers import RichTextArticleSerializer
 from learning_resources.permissions import is_admin_user
 from main.constants import VALID_HTTP_METHODS
 from main.utils import cache_page_per_user, clear_views_cache
-
-from .permissions import CanEditArticle, CanViewArticle, is_article_group_user
-from .serializers import ArticleImageUploadSerializer
+from website_content.api import content_published_actions, purge_content_on_save
+from website_content.models import WebsiteContent
+from website_content.permissions import (
+    CanEditWebsiteContent,
+    CanViewWebsiteContent,
+    is_website_content_editor,
+)
+from website_content.serializers import (
+    WebsiteContentImageUploadSerializer,
+    WebsiteContentSerializer,
+)
 
 
 @extend_schema_view(
     list=extend_schema(
         summary="List",
-        description="Get a paginated list of articles",
+        description="Get a paginated list of website content items",
         parameters=[
             OpenApiParameter(
                 name="draft",
                 type=bool,
                 location=OpenApiParameter.QUERY,
                 description=(
-                    "Filter to show only draft articles. Only available for "
-                    "admins and article editors. If true, returns unpublished "
-                    "articles. If not specified, returns all articles."
+                    "Filter to show only draft items. Only available for "
+                    "admins and content editors. If true, returns unpublished "
+                    "items. If not specified, returns all items."
                 ),
                 required=False,
-            )
+            ),
+            OpenApiParameter(
+                name="content_type",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                description="Filter by content type (e.g. 'news' or 'article').",
+                required=False,
+            ),
         ],
     ),
-    retrieve=extend_schema(summary="Retrieve", description="Retrieve a single article"),
-    create=extend_schema(summary="Create", description="Create a new article"),
-    destroy=extend_schema(summary="Destroy", description="Delete an article"),
-    partial_update=extend_schema(summary="Update", description="Update an article"),
+    retrieve=extend_schema(
+        summary="Retrieve", description="Retrieve a single content item"
+    ),
+    create=extend_schema(summary="Create", description="Create a new content item"),
+    destroy=extend_schema(summary="Destroy", description="Delete a content item"),
+    partial_update=extend_schema(summary="Update", description="Update a content item"),
 )
-class ArticleViewSet(viewsets.ModelViewSet):
+class WebsiteContentViewSet(viewsets.ModelViewSet):
     """
-    Viewset for Article viewing and editing.
+    Viewset for WebsiteContent viewing and editing.
+
+    Registered under both `api/v1/website_content/` (primary) and
+    `api/v1/articles/` (backward-compatible alias).
     """
 
-    serializer_class = RichTextArticleSerializer
-    queryset = Article.objects.all()
-    permission_classes = [CanViewArticle, CanEditArticle]
+    serializer_class = WebsiteContentSerializer
+    queryset = WebsiteContent.objects.all()
+    permission_classes = [CanViewWebsiteContent, CanEditWebsiteContent]
     http_method_names = VALID_HTTP_METHODS
 
     def get_queryset(self):
-        qs = Article.objects.all()
+        qs = WebsiteContent.objects.all()
 
-        # Admins/staff/learning_path_article_editors group see everything
-        if is_admin_user(self.request) or is_article_group_user(self.request):
-            # Apply optional draft filter for admins/editors
+        if is_admin_user(self.request) or is_website_content_editor(self.request):
             draft_param = self.request.query_params.get("draft")
             if draft_param and draft_param.lower() in ("true", "1"):
-                # If draft=true, return only unpublished articles
                 qs = qs.filter(is_published=False)
-            # Otherwise, return all articles (both published and unpublished)
-            return qs
+        else:
+            qs = qs.filter(is_published=True)
 
-        # Normal users only see published articles
-        return qs.filter(is_published=True)
+        content_type_param = self.request.query_params.get("content_type")
+        if content_type_param:
+            qs = qs.filter(content_type=content_type_param)
+
+        return qs
 
     @method_decorator(
-        cache_page_per_user(  # Need user-specific caching here (see filtering above)
-            settings.REDIS_VIEW_CACHE_DURATION, cache="redis", key_prefix="articles"
+        cache_page_per_user(
+            settings.REDIS_VIEW_CACHE_DURATION,
+            cache="redis",
+            key_prefix="website_content",
         )
     )
     def list(self, request, *args, **kwargs):
@@ -83,33 +102,31 @@ class ArticleViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         clear_views_cache()
-        article = serializer.save(user=self.request.user)
-        purge_article_on_save(article)
-        article_published_actions(article=article)
+        content = serializer.save(user=self.request.user)
+        purge_content_on_save(content)
+        content_published_actions(content=content)
 
     def perform_update(self, serializer):
         clear_views_cache()
-        article = serializer.save()
-        purge_article_on_save(article)
-        article_published_actions(article=article)
+        content = serializer.save()
+        purge_content_on_save(content)
+        content_published_actions(content=content)
 
     def destroy(self, request, *args, **kwargs):
         clear_views_cache()
         return super().destroy(request, *args, **kwargs)
 
     @extend_schema(
-        summary="Retrieve article by ID or slug",
-        description="If the path parameter is numeric → ID, else → slug.",
+        summary="Retrieve by ID or slug",
+        description="Retrieve a content item by numeric ID or slug",
         parameters=[
             OpenApiParameter(
                 name="identifier",
                 type=str,
                 location=OpenApiParameter.PATH,
-                description="Article ID (number) or slug (string)",
-                required=True,
+                description="Numeric ID or slug of the content item",
             )
         ],
-        responses={200: RichTextArticleSerializer, 404: OpenApiResponse()},
     )
     @action(
         detail=False,
@@ -121,21 +138,19 @@ class ArticleViewSet(viewsets.ModelViewSet):
         qs = self.get_queryset()
 
         if identifier.isdigit():
-            article = get_object_or_404(qs, id=int(identifier))
+            content = get_object_or_404(qs, id=int(identifier))
         else:
-            article = get_object_or_404(qs, slug=identifier)
+            content = get_object_or_404(qs, slug=identifier)
 
-        serializer = self.get_serializer(article)
+        serializer = self.get_serializer(content)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @extend_schema_view(
     post=extend_schema(
-        # request: multipart/form-data with a binary file field
         request={
-            "multipart/form-data": ArticleImageUploadSerializer,
+            "multipart/form-data": WebsiteContentImageUploadSerializer,
         },
-        # response: 201 with JSON containing the URL
         responses={
             201: OpenApiResponse(
                 description="Successful Upload",
@@ -155,26 +170,28 @@ class MediaUploadView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = ArticleImageUploadSerializer(
+        serializer = WebsiteContentImageUploadSerializer(
             data=request.data, context={"request": request}
         )
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        obj = serializer.save()
+        instance = serializer.save()
 
         file_url = None
-        if obj.image_file:
+        if instance.image_file:
             try:
-                file_url = obj.image_file.url
+                file_url = instance.image_file.url
             except (AttributeError, ValueError, OSError):
                 file_url = None
 
         if not file_url:
-            # Defensive: if save didn't attach image_file for any reason
             return Response(
-                {"error": "Upload failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Upload failed"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
         if settings.DEBUG:
             file_url = request.build_absolute_uri(file_url)
+
         return Response({"url": file_url}, status=status.HTTP_201_CREATED)

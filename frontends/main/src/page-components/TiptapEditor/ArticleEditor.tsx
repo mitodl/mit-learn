@@ -3,7 +3,7 @@
 import React, { ChangeEventHandler, useState, useEffect } from "react"
 import styled from "@emotion/styled"
 import { EditorContext, JSONContent, useEditor } from "@tiptap/react"
-import type { RichTextArticle } from "api/v1"
+import type { WebsiteContent } from "api/v1"
 import {
   LoadingSpinner,
   Typography,
@@ -77,11 +77,11 @@ const StyledAlert = styled(Alert)({
 
 interface ArticleEditorProps {
   value?: object
-  onSave?: (article: RichTextArticle) => void
+  onSave?: (article: WebsiteContent) => void
   readOnly?: boolean
   title?: string
   setTitle?: ChangeEventHandler<HTMLTextAreaElement | HTMLInputElement>
-  article?: RichTextArticle
+  article?: WebsiteContent
 }
 const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   const [title, setTitle] = React.useState(article?.title)

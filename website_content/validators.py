@@ -1,6 +1,6 @@
 import nh3
 
-article_html_config = {
+website_content_html_config = {
     "tags": {
         # Headings
         "h2",
@@ -36,10 +36,10 @@ article_html_config = {
         "figure": {"class", "style"},
         "oembed": {"url"},
     },
-    # 👇 Allow data: URLs for src attributes
+    # Allow data: URLs for src attributes
     "url_schemes": {"data"},
 }
 
 
 def clean_html(html: str) -> str:
-    return nh3.clean(html, **article_html_config)
+    return nh3.clean(html, **website_content_html_config)

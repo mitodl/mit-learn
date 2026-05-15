@@ -6,12 +6,12 @@ import { getQueryClient } from "@/app/getQueryClient"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { extractLearningResourceIds } from "@/page-components/TiptapEditor/extensions/utils"
 import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
-import type { RichTextArticle } from "api/v1"
+import type { WebsiteContent } from "api/v1"
 import type { JSONContent } from "@tiptap/react"
 
 // Extracts the banner subheading paragraph at known location
 const extractArticleDescription = (
-  article: RichTextArticle,
+  article: WebsiteContent,
 ): string | undefined => {
   const banner = article.content?.content?.[0]
   const subheading = banner?.content?.[1]
@@ -20,7 +20,7 @@ const extractArticleDescription = (
 }
 
 const extractImageMetadata = (
-  article: RichTextArticle,
+  article: WebsiteContent,
 ): { src: string; alt: string } | null => {
   const imageWithCaption = article.content?.content?.find(
     (node: JSONContent) => node.type === "imageWithCaption",

@@ -1,4 +1,4 @@
-"""ckeditor models"""
+"""website_content models"""
 
 from django.conf import settings
 from django.db import models
@@ -7,11 +7,18 @@ from django.utils.text import slugify
 
 from main.models import TimestampedModel
 from profiles.utils import article_image_upload_uri
+from website_content.constants import (
+    CONTENT_TYPE_CHOICES,
+    CONTENT_TYPE_NEWS,
+)
 
 
-class Article(TimestampedModel):
+class WebsiteContent(TimestampedModel):
     """
     Stores rich-text content created by staff members.
+
+    The `content_type` field distinguishes between different kinds of authored
+    content (e.g. "news" posts vs standalone "article" pages).
     """
 
     user = models.ForeignKey(
@@ -26,16 +33,19 @@ class Article(TimestampedModel):
     slug = models.SlugField(max_length=255, unique=True, blank=True, null=True)
     is_published = models.BooleanField(default=False)
     publish_date = models.DateTimeField(null=True, blank=True)
+    content_type = models.CharField(
+        max_length=50,
+        choices=CONTENT_TYPE_CHOICES,
+        default=CONTENT_TYPE_NEWS,
+    )
 
     def save(self, *args, **kwargs):
-        previous = Article.objects.get(pk=self.pk) if self.pk else None
+        previous = WebsiteContent.objects.get(pk=self.pk) if self.pk else None
         was_published = getattr(previous, "is_published", None)
 
-        # Always initialize slug
         slug = self.slug or None
 
         if not was_published and self.is_published:
-            # Set publish_date only on first publish
             if not self.publish_date:
                 self.publish_date = timezone.now()
 
@@ -45,8 +55,7 @@ class Article(TimestampedModel):
             slug = base_slug
             counter = 1
 
-            # Prevent collisions
-            while Article.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+            while WebsiteContent.objects.filter(slug=slug).exclude(pk=self.pk).exists():
                 suffix = f"-{counter}"
                 slug = f"{base_slug[: max_length - len(suffix)]}{suffix}"
                 counter += 1
@@ -56,14 +65,16 @@ class Article(TimestampedModel):
 
     def get_url(self):
         """
-        Return the relative URL for this article.
+        Return the relative URL for this content item.
         """
-        if self.slug:
+        if not self.slug:
+            return None
+        if self.content_type == CONTENT_TYPE_NEWS:
             return f"/news/{self.slug}"
-        return None
+        return f"/articles/{self.slug}"
 
 
-class ArticleImageUpload(models.Model):
+class WebsiteContentImageUpload(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     image_file = models.ImageField(
         null=True, upload_to=article_image_upload_uri, max_length=2083, editable=False
@@ -71,4 +82,4 @@ class ArticleImageUpload(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"ArticleImageUpload({self.user_id})"
+        return f"WebsiteContentImageUpload({self.user_id})"

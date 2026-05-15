@@ -1,16 +1,18 @@
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
-from articles.constants import GROUP_STAFF_ARTICLE_EDITORS
 from learning_resources.permissions import is_admin_user
+from website_content.constants import GROUP_STAFF_ARTICLE_EDITORS
 
 
-def is_article_group_user(request):
+def is_website_content_editor(request):
     """
+    Return True if the request user belongs to the article_editors group.
+
     Args:
         request (HTTPRequest): django request object
 
     Returns:
-        bool: True if user is staff/admin
+        bool: True if user is a content editor
     """
     return (
         request.user is not None
@@ -19,24 +21,21 @@ def is_article_group_user(request):
     )
 
 
-class CanViewArticle(BasePermission):
+class CanViewWebsiteContent(BasePermission):
     """
-    Allow viewing an article if:
-    - user is admin (article editor), OR
-    - article is published
+    Allow viewing a content item if:
+    - user is admin/content editor, OR
+    - the item is published
     """
 
     def has_object_permission(self, request, _, obj):
-        # Editors (admins) may view any article
-        if is_admin_user(request) or is_article_group_user(request):
+        if is_admin_user(request) or is_website_content_editor(request):
             return True
-
-        # Normal users may view ONLY published articles
         return obj.is_published
 
 
-class CanEditArticle(BasePermission):
+class CanEditWebsiteContent(BasePermission):
     def has_permission(self, request, _view):
         if request.method not in SAFE_METHODS:
-            return is_admin_user(request) or is_article_group_user(request)
+            return is_admin_user(request) or is_website_content_editor(request)
         return True

@@ -2,14 +2,14 @@ from django.apps import AppConfig
 from pluggy import HookimplMarker, HookspecMarker
 
 
-class ArticlesConfig(AppConfig):
-    """Articles AppConfig"""
+class WebsiteContentConfig(AppConfig):
+    """WebsiteContent AppConfig"""
 
-    name = "articles"
+    name = "website_content"
 
     hookimpl = HookimplMarker(name)
     hookspec = HookspecMarker(name)
 
     def ready(self):
         """Import tasks when the app is ready"""
-        import articles.tasks  # noqa: F401
+        import website_content.tasks  # noqa: F401

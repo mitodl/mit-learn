@@ -1,4 +1,4 @@
-"""Tasks for articles CDN purge"""
+"""Tasks for website_content CDN purge"""
 
 import logging
 
@@ -42,17 +42,11 @@ def fastly_full_purge():
 
 @app.task()
 @single_task(10)
-def fastly_purge_articles_list():
+def fastly_purge_website_content_list():
     """
-    Purges the articles list page from the Fastly cache.
+    Purges the news listing page from the Fastly cache.
 
     Can be called directly (runs immediately) or via .delay() (enqueued for Celery).
     """
-    log.info("Purging articles list page from the Fastly cache...")
-    articles_url = "/news"
-    return call_fastly_purge_api(articles_url)
-
-
-# Backwards compatibility aliases
-queue_fastly_purge_articles_list = fastly_purge_articles_list
-queue_fastly_full_purge = fastly_full_purge
+    log.info("Purging website content list pages from the Fastly cache...")
+    return call_fastly_purge_api("/news")
