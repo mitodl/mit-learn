@@ -8,6 +8,7 @@ import {
 import { createV0Client, createV1Client } from "./client/client.ts"
 import { NewsEventsListParams } from "./client/v0/api.schemas.ts"
 import { FeaturedListParams } from "./client/v1/api.schemas.ts"
+import { hasAccessToken } from "../auth.ts"
 
 export function testBackend() {
   group("api", function () {
@@ -15,23 +16,32 @@ export function testBackend() {
       exec.vu.metrics.tags.apiVersion = "v0"
 
       const client = createV0Client()
-      let res = client.videoShortsList({ limit: 50 })
+      group("video shorts", () => {
+        const res = client.videoShortsList({ limit: 50 })
 
-      check(res, {
-        "is status 200": (r) => r.response.status === 200,
-        "has results": (r) => r.response.json("results").length > 0,
+        group
+        check(res, {
+          "is status 200": (r) => r.response.status === 200,
+          "has results": (r) => r.response.json("results").length > 0,
+        })
       })
 
-      res = client.usersMeRetrieve()
-      check(res, {
-        "is status 200": (r) => r.response.status === 200,
+      group("users/me", () => {
+        const res = client.usersMeRetrieve()
+        check(res, {
+          "is status 200": (r) => r.response.status === 200,
+          "expected auth state": (r) =>
+            r.response.json("is_authenticated") === hasAccessToken(),
+        })
       })
 
-      res = client.testimonialsList({ position: 1 })
+      group("testimonials", () => {
+        const res = client.testimonialsList({ position: 1 })
 
-      check(res, {
-        "is status 200": (r) => r.response.status === 200,
-        "has results": (r) => r.response.json("results").length > 0,
+        check(res, {
+          "is status 200": (r) => r.response.status === 200,
+          "has results": (r) => r.response.json("results").length > 0,
+        })
       })
 
       group("news", function () {
