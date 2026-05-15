@@ -56,6 +56,11 @@ const CardRootStyled = styled(DashboardCardRoot)({
   },
 })
 
+const ContractTitleHeading = styled.h3({
+  margin: 0,
+  width: "100%",
+})
+
 const TitleLink = styled(Link)({
   width: "100%",
 })
@@ -107,9 +112,11 @@ const OrganizationContracts: React.FC<OrganizationContractsProps> = ({
       const href = contractView(org.slug.replace("org-", ""), contract.slug)
       return (
         <CardContent key={contract.id} direction="row">
-          <TitleLink size="medium" color="black" href={href}>
-            {contract.name}
-          </TitleLink>
+          <ContractTitleHeading>
+            <TitleLink size="medium" color="black" href={href}>
+              {contract.name}
+            </TitleLink>
+          </ContractTitleHeading>
           <CardButton size="small" href={href} endIcon={<RiArrowRightLine />}>
             Continue
           </CardButton>
@@ -127,7 +134,7 @@ const OrganizationContracts: React.FC<OrganizationContractsProps> = ({
             style={{ objectFit: "contain" }}
           />
         </ImageContainer>
-        <Typography variant="body2">
+        <Typography variant="body2" component="h2">
           {"As a member of "}
           <Typography variant="subtitle2" component="span">
             {org.name}
