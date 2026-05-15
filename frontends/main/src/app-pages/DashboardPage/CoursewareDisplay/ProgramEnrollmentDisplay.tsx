@@ -14,12 +14,13 @@ import { getRequirementsProgress, getKey, ResourceType } from "./helpers"
 import { DashboardCard, DashboardType } from "./DashboardCard"
 import {
   getDistinctDashboardLanguageOptions,
+  groupCourseRunEnrollmentsByCourseId,
+  groupProgramEnrollmentsByProgramId,
   resolveSlotForLanguage,
 } from "./model/dashboardViewModel"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import {
-  CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
   DisplayModeEnum,
   V2ProgramDetail,
@@ -219,24 +220,12 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     requiredProgramsLoading ||
     requiredProgramCoursesLoading
 
-  const enrollmentsByCourseId = (rawEnrollments || []).reduce(
-    (acc, enrollment) => {
-      const courseId = enrollment.run.course.id
-      if (!acc[courseId]) {
-        acc[courseId] = []
-      }
-      acc[courseId].push(enrollment)
-      return acc
-    },
-    {} as Record<number, CourseRunEnrollmentV3[]>,
+  const enrollmentsByCourseId = groupCourseRunEnrollmentsByCourseId(
+    rawEnrollments ?? [],
   )
 
-  const programEnrollmentsById = (programEnrollments ?? []).reduce(
-    (acc, enrollment) => {
-      acc[enrollment.program.id] = enrollment
-      return acc
-    },
-    {} as Record<number, V3UserProgramEnrollment>,
+  const programEnrollmentsById = groupProgramEnrollmentsByProgramId(
+    programEnrollments ?? [],
   )
 
   const allProgramCourses = React.useMemo(

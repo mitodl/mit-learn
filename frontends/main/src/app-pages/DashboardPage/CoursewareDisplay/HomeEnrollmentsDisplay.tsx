@@ -1,6 +1,5 @@
 import React from "react"
-import { DASHBOARD_MY_LEARNING_ID } from "@/common/urls"
-import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import {
   Collapse,
   Link,
@@ -12,32 +11,35 @@ import {
   theme,
 } from "ol-components"
 import { Alert } from "@mitodl/smoot-design"
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import {
-  EnrollmentStatus,
-  getEnrollmentStatus,
-  getKey,
-  ResourceType,
-} from "./helpers"
+  CourseRunEnrollmentV3,
+  CourseWithCourseRunsSerializerV2,
+  V2ProgramDetail,
+  V3UserProgramEnrollment,
+} from "@mitodl/mitxonline-api-axios/v2"
+import { coursesQueries } from "api/mitxonline-hooks/courses"
+import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
+import { mitxUserQueries } from "api/mitxonline-hooks/user"
+import { programsQueries } from "api/mitxonline-hooks/programs"
+import { DASHBOARD_MY_LEARNING_ID } from "@/common/urls"
+import { getKey, ResourceType } from "./helpers"
 import {
   DashboardCard,
   DashboardResource,
   DashboardType,
 } from "./DashboardCard"
-import { coursesQueries } from "api/mitxonline-hooks/courses"
-import { programsQueries } from "api/mitxonline-hooks/programs"
-import {
-  ContractPage,
-  CourseRunEnrollmentV3,
-  CourseWithCourseRunsSerializerV2,
-  DisplayModeEnum,
-  V2ProgramDetail,
-  V2ProgramRequirement,
-  V3UserProgramEnrollment,
-} from "@mitodl/mitxonline-api-axios/v2"
-import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
-import { getIdsFromReqTree } from "@/common/mitxonline"
+import {
+  bucketAndSortHomeEnrollments,
+  enrollmentCourseIsInPrograms,
+  getModuleCourseIdsFromPrograms,
+  getNonContractProgramEnrollments,
+  getTopLevelProgramEnrollments,
+  groupCourseRunEnrollmentsByCourseId,
+  groupModuleCoursesByProgramId,
+  isNonContractEnrollment,
+  isProgramAsCourse,
+} from "./model/dashboardViewModel"
 
 const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
@@ -102,62 +104,7 @@ const ShowAllContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const alphabeticalSort = (a: CourseRunEnrollmentV3, b: CourseRunEnrollmentV3) =>
-  a.run.course.title.localeCompare(b.run.course.title)
-
-const startsSooner = (a: CourseRunEnrollmentV3, b: CourseRunEnrollmentV3) => {
-  if (!a.run.start_date && !b.run.start_date) return 0
-  if (!a.run.start_date) return 1
-  if (!b.run.start_date) return -1
-  const x = new Date(a.run.start_date)
-  const y = new Date(b.run.start_date)
-  return x.getTime() - y.getTime()
-}
-
-const sortEnrollments = (enrollments: CourseRunEnrollmentV3[]) => {
-  const expired: CourseRunEnrollmentV3[] = []
-  const completed: CourseRunEnrollmentV3[] = []
-  const started: CourseRunEnrollmentV3[] = []
-  const notStarted: CourseRunEnrollmentV3[] = []
-  enrollments.forEach((enrollment) => {
-    if (!enrollment?.b2b_contract_id) {
-      const enrollmentStatus = getEnrollmentStatus(enrollment)
-      if (enrollmentStatus === EnrollmentStatus.Completed) {
-        completed.push(enrollment)
-      } else if (
-        enrollment.run.end_date &&
-        new Date(enrollment.run.end_date) < new Date()
-      ) {
-        expired.push(enrollment)
-      } else if (
-        enrollment.run.start_date &&
-        new Date(enrollment.run.start_date) < new Date()
-      ) {
-        started.push(enrollment)
-      } else {
-        notStarted.push(enrollment)
-      }
-    }
-  })
-
-  return {
-    completed: completed.sort(alphabeticalSort),
-    expired: expired.sort(alphabeticalSort),
-    started: started.sort(alphabeticalSort),
-    notStarted: notStarted.sort(startsSooner),
-  }
-}
-
-const dedupeEnrollments = (
-  enrollments: CourseRunEnrollmentV3[],
-  enrolledPrograms: V2ProgramDetail[],
-) => {
-  return enrollments.filter((enrollment) => {
-    return !enrolledPrograms.some((program) =>
-      program.courses?.includes(enrollment.run.course.id),
-    )
-  })
-}
+const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL || ""
 
 const getResourceKey = (resource: DashboardResource): string => {
   if (resource.type === DashboardType.ProgramEnrollment) {
@@ -185,17 +132,7 @@ const isProgramAsCourseEnrollment = (
   resource: DashboardResource,
 ): resource is ProgramEnrollmentResource => {
   if (resource.type !== DashboardType.ProgramEnrollment) return false
-  return resource.data.program.display_mode === DisplayModeEnum.Course
-}
-
-type ProgramAsCourseProgramData = {
-  id: number
-  readable_id: string
-  title?: string | null
-  start_date?: string | null
-  end_date?: string | null
-  courses?: number[]
-  req_tree?: V2ProgramRequirement[]
+  return isProgramAsCourse(resource.data.program)
 }
 
 interface EnrollmentExpandCollapseProps {
@@ -203,7 +140,7 @@ interface EnrollmentExpandCollapseProps {
   maybeShown: DashboardResource[]
   isLoading?: boolean
   enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>
-  courseProgramsById: Map<number, ProgramAsCourseProgramData>
+  courseProgramsById: Map<number, V2ProgramDetail>
   moduleCoursesByProgramId: Record<number, CourseWithCourseRunsSerializerV2[]>
   onUpgradeError?: (error: string) => void
 }
@@ -298,29 +235,97 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
   )
 }
 
-const getTopLevelProgramEnrollments = (
-  programEnrollments: V3UserProgramEnrollment[],
-  programs: V2ProgramDetail[],
-) => {
-  const childIds = new Set(
-    programs.flatMap(
-      (program) => getIdsFromReqTree(program.req_tree).programIds,
-    ),
-  )
-  return programEnrollments.filter(
-    (enrollment) => !childIds.has(enrollment.program.id),
-  )
+type HomeDashboardData = {
+  started: CourseRunEnrollmentV3[]
+  notStarted: CourseRunEnrollmentV3[]
+  completed: CourseRunEnrollmentV3[]
+  expired: CourseRunEnrollmentV3[]
+  programEnrollments: V3UserProgramEnrollment[]
+  enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>
+  courseProgramsById: Map<number, V2ProgramDetail>
+  moduleCoursesByProgramId: Record<number, CourseWithCourseRunsSerializerV2[]>
+  isLoading: boolean
 }
-const getNonContractProgramEnrollments = (
-  programEnrollments: V3UserProgramEnrollment[],
-  contracts: ContractPage[],
-) => {
-  const contractPrograms = new Set(
-    contracts.flatMap((contract) => contract.programs),
+
+/**
+ * Composes the queries and pure-model helpers that drive the home dashboard.
+ * Returns bucket data (started / notStarted / completed / expired) plus the
+ * auxiliary lookups the renderer needs for ProgramAsCourseCard.
+ *
+ * Private to this file: the home dashboard is its only consumer, and the
+ * model-layer helpers it composes are individually unit-tested.
+ */
+const useHomeDashboardData = (): HomeDashboardData => {
+  const { data: enrolledCourses, isLoading: courseEnrollmentsLoading } =
+    useQuery(enrollmentQueries.courseRunEnrollmentsList())
+  const { data: contracts, isLoading: contractsLoading } = useQuery({
+    ...mitxUserQueries.me(),
+    select: (user) => user.b2b_organizations.flatMap((org) => org.contracts),
+  })
+  const { data: programEnrollments, isLoading: programEnrollmentsLoading } =
+    useQuery(enrollmentQueries.programEnrollmentsList())
+
+  const nonContractProgramEnrollments =
+    contracts && programEnrollments
+      ? getNonContractProgramEnrollments(programEnrollments, contracts)
+      : []
+  const enrolledProgramIds = nonContractProgramEnrollments.map(
+    (enrollment) => enrollment.program.id,
   )
-  return programEnrollments.filter(
-    (enrollment) => !contractPrograms.has(enrollment.program.id),
-  )
+
+  const { data: enrolledPrograms, isLoading: enrolledProgramsLoading } =
+    useQuery({
+      ...programsQueries.programsList({
+        id: enrolledProgramIds,
+        page_size: enrolledProgramIds.length,
+      }),
+      enabled: enrolledProgramIds.length > 0,
+      placeholderData: keepPreviousData,
+    })
+
+  const enrolledProgramsResults = enrolledPrograms?.results ?? []
+  const coursePrograms = enrolledProgramsResults.filter(isProgramAsCourse)
+  const courseProgramModuleIds = getModuleCourseIdsFromPrograms(coursePrograms)
+
+  const { data: courseProgramModuleCourses, isLoading: moduleCoursesLoading } =
+    useQuery({
+      ...coursesQueries.coursesList({
+        id: courseProgramModuleIds,
+        page_size: courseProgramModuleIds.length || undefined,
+      }),
+      enabled: courseProgramModuleIds.length > 0,
+      placeholderData: keepPreviousData,
+    })
+
+  const isCovered = enrollmentCourseIsInPrograms(enrolledProgramsResults)
+  const bucketableEnrollments = (enrolledCourses ?? [])
+    .filter(isNonContractEnrollment)
+    .filter((enrollment) => !isCovered(enrollment))
+  const buckets = bucketAndSortHomeEnrollments(bucketableEnrollments)
+
+  return {
+    ...buckets,
+    programEnrollments: enrolledPrograms
+      ? getTopLevelProgramEnrollments(
+          nonContractProgramEnrollments,
+          enrolledProgramsResults,
+        )
+      : [],
+    enrollmentsByCourseId: groupCourseRunEnrollmentsByCourseId(
+      enrolledCourses ?? [],
+    ),
+    courseProgramsById: new Map(coursePrograms.map((p) => [p.id, p])),
+    moduleCoursesByProgramId: groupModuleCoursesByProgramId(
+      coursePrograms,
+      courseProgramModuleCourses?.results ?? [],
+    ),
+    isLoading:
+      courseEnrollmentsLoading ||
+      programEnrollmentsLoading ||
+      contractsLoading ||
+      enrolledProgramsLoading ||
+      moduleCoursesLoading,
+  }
 }
 
 /**
@@ -339,107 +344,17 @@ const getNonContractProgramEnrollments = (
  */
 const HomeEnrollmentsDisplay: React.FC = () => {
   const [upgradeError, setUpgradeError] = React.useState<string | null>(null)
-  const { data: enrolledCourses, isLoading: courseEnrollmentsLoading } =
-    useQuery(enrollmentQueries.courseRunEnrollmentsList())
-
-  const contracts = useQuery({
-    ...mitxUserQueries.me(), // this query has the contracts and should already be loaded
-    select: (user) => user.b2b_organizations.flatMap((org) => org.contracts),
-  })
-  const { data: programEnrollments, isLoading: programEnrollmentsLoading } =
-    useQuery(enrollmentQueries.programEnrollmentsList())
-  const nonContractProgramEnrollments =
-    contracts.data && programEnrollments
-      ? getNonContractProgramEnrollments(programEnrollments, contracts.data)
-      : []
-  const enrolledProgramIds = nonContractProgramEnrollments.map(
-    (enrollment) => enrollment.program.id,
-  )
-
-  const { data: enrolledPrograms, isLoading: enrolledProgramsLoading } =
-    useQuery({
-      ...programsQueries.programsList({
-        id: enrolledProgramIds,
-        page_size: enrolledProgramIds.length,
-      }),
-      enabled: enrolledProgramIds.length > 0,
-      // If the query key changes, show the old data while loading
-      // example: Deleting a program enrollment
-      placeholderData: keepPreviousData,
-    })
-
-  const filteredProgramEnrollments = enrolledPrograms
-    ? getTopLevelProgramEnrollments(
-        nonContractProgramEnrollments,
-        enrolledPrograms.results,
-      )
-    : []
-
-  const homeCoursePrograms = enrolledPrograms?.results.filter(
-    (program) => program.display_mode === DisplayModeEnum.Course,
-  )
-
-  const homeCourseProgramModuleIds = [
-    ...new Set(
-      homeCoursePrograms?.flatMap(
-        (courseProgram) => getIdsFromReqTree(courseProgram.req_tree).courseIds,
-      ),
-    ),
-  ]
-
   const {
-    data: homeCourseProgramModuleCourses,
-    isLoading: homeCourseProgramModuleCoursesLoading,
-  } = useQuery({
-    ...coursesQueries.coursesList({
-      id: homeCourseProgramModuleIds,
-      page_size: homeCourseProgramModuleIds.length || undefined,
-    }),
-    enabled: homeCourseProgramModuleIds.length > 0,
-    placeholderData: keepPreviousData,
-  })
-
-  const homeCourseProgramsById = new Map(
-    (homeCoursePrograms ?? []).map((courseProgram) => [
-      courseProgram.id,
-      courseProgram,
-    ]),
-  )
-
-  const homeModuleCoursesByProgramId = (() => {
-    const allCourses = homeCourseProgramModuleCourses?.results ?? []
-
-    return (homeCoursePrograms ?? []).reduce<
-      Record<number, CourseWithCourseRunsSerializerV2[]>
-    >((acc, courseProgram) => {
-      const courseIds = new Set(courseProgram.courses ?? [])
-      acc[courseProgram.id] = allCourses.filter((course) =>
-        courseIds.has(course.id),
-      )
-      return acc
-    }, {})
-  })()
-
-  const homeEnrollmentsByCourseId = (enrolledCourses || []).reduce(
-    (acc, enrollment) => {
-      const courseId = enrollment.run.course.id
-      if (!acc[courseId]) {
-        acc[courseId] = []
-      }
-      acc[courseId].push(enrollment)
-      return acc
-    },
-    {} as Record<number, CourseRunEnrollmentV3[]>,
-  )
-
-  const supportEmail = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL || ""
-
-  const filteredEnrollments = React.useMemo(() => {
-    if (!enrolledCourses) return []
-    return dedupeEnrollments(enrolledCourses, enrolledPrograms?.results ?? [])
-  }, [enrolledCourses, enrolledPrograms?.results])
-  const { completed, expired, started, notStarted } =
-    sortEnrollments(filteredEnrollments)
+    started,
+    notStarted,
+    completed,
+    expired,
+    programEnrollments,
+    enrollmentsByCourseId,
+    courseProgramsById,
+    moduleCoursesByProgramId,
+    isLoading,
+  } = useHomeDashboardData()
 
   const normallyShown: DashboardResource[] = [
     ...started.map((data) => ({
@@ -454,7 +369,7 @@ const HomeEnrollmentsDisplay: React.FC = () => {
       data,
       type: DashboardType.CourseRunEnrollment,
     })),
-    ...filteredProgramEnrollments.map((data) => ({
+    ...programEnrollments.map((data) => ({
       data,
       type: DashboardType.ProgramEnrollment,
     })),
@@ -477,7 +392,7 @@ const HomeEnrollmentsDisplay: React.FC = () => {
           onClose={() => setUpgradeError(null)}
         >
           {upgradeError}{" "}
-          <Link color="red" href={`mailto:${supportEmail}`}>
+          <Link color="red" href={`mailto:${SUPPORT_EMAIL}`}>
             Contact Support
           </Link>{" "}
           for assistance.
@@ -486,16 +401,10 @@ const HomeEnrollmentsDisplay: React.FC = () => {
       <EnrollmentExpandCollapse
         normallyShown={normallyShown}
         maybeShown={maybeShown}
-        isLoading={
-          courseEnrollmentsLoading ||
-          programEnrollmentsLoading ||
-          contracts.isLoading ||
-          enrolledProgramsLoading ||
-          homeCourseProgramModuleCoursesLoading
-        }
-        enrollmentsByCourseId={homeEnrollmentsByCourseId}
-        courseProgramsById={homeCourseProgramsById}
-        moduleCoursesByProgramId={homeModuleCoursesByProgramId}
+        isLoading={isLoading}
+        enrollmentsByCourseId={enrollmentsByCourseId}
+        courseProgramsById={courseProgramsById}
+        moduleCoursesByProgramId={moduleCoursesByProgramId}
         onUpgradeError={setUpgradeError}
       />
     </Wrapper>
