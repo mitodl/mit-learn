@@ -290,7 +290,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@grafana/openapi-to-k6@npm:^0.4.1":
+"@grafana/openapi-to-k6@npm:0.4.1":
   version: 0.4.1
   resolution: "@grafana/openapi-to-k6@npm:0.4.1"
   dependencies:
@@ -860,7 +860,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/k6@npm:^1.0.0, @types/k6@npm:^1.7.0":
+"@types/k6@npm:1.7.0, @types/k6@npm:^1.0.0":
   version: 1.7.0
   resolution: "@types/k6@npm:1.7.0"
   checksum: 10/8ed6d963da39ae6042dd3083e4a6a305d274fc5860e174bb4f6656fdd018442655f3c05f31c3c85d67af698a8d2139314dbb8c2172cf4b05ef0391d3e9291237
@@ -2601,8 +2601,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "mit-learn-load-testing@workspace:."
   dependencies:
-    "@grafana/openapi-to-k6": "npm:^0.4.1"
-    "@types/k6": "npm:^1.7.0"
+    "@grafana/openapi-to-k6": "npm:0.4.1"
+    "@types/k6": "npm:1.7.0"
   languageName: unknown
   linkType: soft
 

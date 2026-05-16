@@ -10,7 +10,7 @@ services:
   db:
     profiles:
       - backend
-    image: postgres:16
+    image: postgres:16@sha256:b6ccf02e9b47eac0d67b5eaa0ef56fd59163bffa5506f64e96ceb5053130ec86
     healthcheck:
       test: ["CMD", "pg_isready"]
       interval: 3s
@@ -30,7 +30,7 @@ services:
   redis:
     profiles:
       - backend
-    image: redis:8.2.2
+    image: redis:8.2.2@sha256:4521b581dbddea6e7d81f8fe95ede93f5648aaa66a9dacd581611bf6fe7527bd
     healthcheck:
       test: ["CMD", "redis-cli", "ping", "|", "grep", "PONG"]
       interval: 3s
@@ -39,7 +39,7 @@ services:
     ports:
       - "6379"
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:latest@sha256:b3063c673f3973877c038eeecc392bad5011f072ee7892b56c9a8e204a3bdea9
     ports:
       - "6333:6333"
     volumes:
@@ -67,12 +67,12 @@ services:
   tika:
     profiles:
       - backend
-    image: apache/tika:2.5.0
+    image: apache/tika:2.5.0@sha256:d680d1d7136f35de43294e7b80ac495da463f069b0f1d59be1ebac5f0543f075
     ports:
       - "9998:9998"
 
   locust:
-    image: locustio/locust
+    image: locustio/locust@sha256:7acfc1db2477028fcb5632ec00c4cce7efbbf1a420e0edc2238f7a69c660cf7b
     ports:
       - "8089:8089"
     volumes:
@@ -84,7 +84,7 @@ services:
       - load-testing
 
   locust-worker:
-    image: locustio/locust
+    image: locustio/locust@sha256:7acfc1db2477028fcb5632ec00c4cce7efbbf1a420e0edc2238f7a69c660cf7b
     volumes:
       - ./load_testing_locust:/mnt/locust
     command: -f /mnt/locust/locustfile.py --worker --master-host locust
@@ -96,7 +96,7 @@ services:
   keycloak:
     profiles:
       - keycloak
-    image: quay.io/keycloak/keycloak:26.4
+    image: quay.io/keycloak/keycloak:26.4@sha256:9409c59bdfb65dbffa20b11e6f18b8abb9281d480c7ca402f51ed3d5977e6007
     depends_on:
       db:
         condition: service_healthy
@@ -122,7 +122,7 @@ services:
   apigateway:
     profiles:
       - apisix
-    image: apache/apisix:3.13.0-debian # versions above this drop the local port on redirects
+    image: apache/apisix:3.13.0-debian@sha256:c5c7a55ebb5c07abc210dbb963a37f41030e12c91d23bacedbaa168fec633bd7 # versions above this drop the local port on redirects
     <<: *default-extra-hosts
     environment:
       - CSRF_COOKIE_DOMAIN=${CSRF_COOKIE_DOMAIN:-.odl.local}
