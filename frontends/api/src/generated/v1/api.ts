@@ -25391,9 +25391,10 @@ export const MediaApiAxiosParamCreator = function (
       }
       const localVarHeaderParameter = {} as any
       const localVarQueryParameter = {} as any
-      const localVarFormParams = new ((configuration &&
-        configuration.formDataCtor) ||
-        FormData)()
+      const localVarFormParams = new (
+        (configuration && configuration.formDataCtor) ||
+        FormData
+      )()
 
       if (image_file !== undefined) {
         localVarFormParams.append("image_file", image_file as any)
