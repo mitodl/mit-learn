@@ -22,10 +22,11 @@ from vector_search.constants import (
     COLLECTION_PARAM_MAP,
     CONTENT_FILES_COLLECTION_NAME,
     CONTENT_FILES_RETRIEVE_PAYLOAD,
+    DENSE_VECTOR_SEARCH_MIN_SCORE,
+    HYBRID_VECTOR_SEARCH_MIN_SCORE,
     QDRANT_RESOURCE_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
     RESOURCES_RETRIEVE_PAYLOAD,
-    VECTOR_SEARCH_MIN_SCORE,
 )
 from vector_search.serializers import (
     ContentFileVectorSearchRequestSerializer,
@@ -45,6 +46,19 @@ from vector_search.utils import (
 )
 
 log = logging.getLogger(__name__)
+
+
+def _normalize_score_cutoff(value, hybrid_search_enabled):
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return None
+    min_score_cutoff = (
+        HYBRID_VECTOR_SEARCH_MIN_SCORE
+        if hybrid_search_enabled
+        else DENSE_VECTOR_SEARCH_MIN_SCORE
+    )
+    return value if value >= min_score_cutoff else None
 
 
 class QdrantView(APIView):
@@ -131,7 +145,7 @@ class QdrantView(APIView):
             "limit": limit,
         }
 
-        if type(score_cutoff) is float and score_cutoff >= VECTOR_SEARCH_MIN_SCORE:
+        if _normalize_score_cutoff(score_cutoff, hybrid_search) is not None:
             search_params["score_threshold"] = score_cutoff
 
         if hybrid_search:
@@ -463,8 +477,7 @@ class QdrantView(APIView):
     ):
         if (
             query_string
-            and type(score_cutoff) is float
-            and score_cutoff >= VECTOR_SEARCH_MIN_SCORE
+            and _normalize_score_cutoff(score_cutoff, hybrid_search) is not None
         ):
             hits = await self._async_vector_hits(
                 query_string,
@@ -476,6 +489,19 @@ class QdrantView(APIView):
                 score_cutoff=score_cutoff,
                 hybrid_search=hybrid_search,
             )
+            if order_by:
+                # in addition to fetching all results unpaginated,
+                # manually apply the sorting since
+                # Qdrant does not support sorting with score cutoffs
+                hits = sorted(
+                    hits,
+                    key=lambda x: (
+                        x.get(order_by.lstrip("-"))
+                        if x.get(order_by.lstrip("-"))
+                        else 0
+                    ),
+                    reverse=order_by.startswith("-"),
+                )
             counts = await self._async_vector_resource_counts(
                 hits, params, search_collection=search_collection
             )
@@ -548,6 +574,13 @@ class LearningResourcesVectorSearchView(QdrantView):
             limit = request_data.data.get("limit", 10)
             offset = request_data.data.get("offset", 0)
             order_by = request_data.data.get("sortby")
+            score_cutoff = request_data.data.get(
+                "score_cutoff",
+                settings.VECTOR_HYBRID_SEARCH_MIN_SCORE
+                if hybrid_search
+                else DENSE_VECTOR_SEARCH_MIN_SCORE,
+            )
+
             response = await self.async_vector_search(
                 query_text,
                 order_by=order_by,
@@ -555,7 +588,7 @@ class LearningResourcesVectorSearchView(QdrantView):
                 offset=offset,
                 params=request_data.data,
                 hybrid_search=hybrid_search,
-                score_cutoff=request_data.data.get("score_cutoff", 0),
+                score_cutoff=score_cutoff,
             )
             if request_data.data.get("dev_mode"):
                 return Response(response)
