@@ -58,7 +58,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <VideoEmbedPage videoResource={resource as VideoResource} />
+      <VideoEmbedPage videoResource={resource} />
     </HydrationBoundary>
   )
 }
