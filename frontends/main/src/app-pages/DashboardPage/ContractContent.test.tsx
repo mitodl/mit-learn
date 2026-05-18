@@ -1910,4 +1910,29 @@ describe("ContractContent", () => {
     const coursewareButton = within(card).getByTestId("courseware-button")
     expect(coursewareButton).toHaveAttribute("href", enrolledRun.courseware_url)
   })
+
+  it("renders without crashing when program.page is null", async () => {
+    const { orgX, programA, programB } = setupProgramsAndCourses()
+    const contract = orgX.contracts[0]
+
+    setMockResponse.get(
+      urls.programs.programsList({
+        org_id: orgX.id,
+        contract_id: contract.id,
+        page_size: 30,
+      }),
+      {
+        results: [
+          { ...programA, page: null },
+          { ...programB, page: null },
+        ],
+      },
+    )
+
+    renderWithProviders(
+      <ContractContent orgSlug={orgX.slug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByRole("heading", { name: orgX.name })
+  })
 })

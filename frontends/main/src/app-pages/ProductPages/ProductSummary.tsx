@@ -855,8 +855,8 @@ const ProgramDurationRow: React.FC<ProgramInfoRowProps> = ({
   program,
   ...others
 }) => {
-  const duration = program.page.length ?? ""
-  const effort = program.page.effort ?? ""
+  const duration = program.page?.length ?? ""
+  const effort = program.page?.effort ?? ""
   if (!duration) return null
   const display = [duration, effort].filter(Boolean).join(", ")
 
@@ -932,7 +932,7 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
   if (enrollmentType === "none") return null
 
   const currentPrice = program.products[0]?.price
-  const listPrice = program.page.list_price
+  const listPrice = program.page?.list_price
 
   const currentAmount = toNumericPrice(currentPrice)
   const listAmount = toNumericPrice(listPrice)
@@ -980,10 +980,12 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
           </ProgramSavingsDetailText>
         </ProgramDiscountRow>
       ) : null}
-      {program.page.financial_assistance_form_url ? (
+      {program.page?.financial_assistance_form_url ? (
         <SecondaryUnderlinedLink
           color="black"
-          href={mitxonlineLegacyUrl(program.page.financial_assistance_form_url)}
+          href={mitxonlineLegacyUrl(
+            program.page?.financial_assistance_form_url,
+          )}
           target="_blank"
           rel="noopener noreferrer"
           style={{ minWidth: "fit-content" }}
