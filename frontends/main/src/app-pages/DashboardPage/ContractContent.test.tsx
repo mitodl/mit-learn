@@ -1933,6 +1933,7 @@ describe("ContractContent", () => {
       <ContractContent orgSlug={orgX.slug} contractSlug={contract.slug} />,
     )
 
-    await screen.findByRole("heading", { name: orgX.name })
+    await screen.findByText(programA.title)
+    await screen.findByText(programB.title)
   })
 })
