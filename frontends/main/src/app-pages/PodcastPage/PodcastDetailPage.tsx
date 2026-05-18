@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react"
 import { notFound } from "next/navigation"
-import { useRouter } from "next-nprogress-bar"
+import Link from "next/link"
 import { Breadcrumbs, Typography, styled, useMediaQuery } from "ol-components"
 import type { Theme } from "ol-components"
 import { Button, ActionButton } from "@mitodl/smoot-design"
@@ -158,10 +158,10 @@ const EpisodeList = styled.div({
   gridTemplateColumns: "1fr",
 })
 
-const EpisodeRow = styled("div", {
+const EpisodeRow = styled(Link, {
   shouldForwardProp: (prop) => prop !== "isEpisodePage",
 })<{ isEpisodePage?: boolean }>(({ theme, isEpisodePage }) => ({
-  cursor: "pointer",
+  textDecoration: "none",
   margin: 0,
   display: "flex",
   flexDirection: "row",
@@ -318,6 +318,7 @@ const PlayButton = styled(ActionButton, {
 export type EpisodeItemProps = {
   episode: LearningResource
   href: string
+  role?: string
   onPlayClick: (episode: LearningResource) => void
   onPauseClick?: () => void
   isPlaying: boolean
@@ -328,17 +329,13 @@ export type EpisodeItemProps = {
 export const EpisodeItem: React.FC<EpisodeItemProps> = ({
   episode,
   href,
+  role,
   onPlayClick,
   onPauseClick,
   isPlaying,
   isPlayable,
   isEpisodePage = false,
 }) => {
-  const router = useRouter()
-
-  const handleRowNavigate = () => {
-    if (href) router.push(href)
-  }
   const podcastEpisode =
     episode.resource_type === "podcast_episode" ? episode.podcast_episode : null
 
@@ -353,18 +350,7 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
   const metaParts = [duration ? `${duration} min` : null, date].filter(Boolean)
 
   return (
-    <EpisodeRow
-      onClick={handleRowNavigate}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault()
-          handleRowNavigate()
-        }
-      }}
-      role="link"
-      tabIndex={0}
-      isEpisodePage={isEpisodePage}
-    >
+    <EpisodeRow href={href} role={role} isEpisodePage={isEpisodePage}>
       <EpisodeInfo>
         <EpisodeTitleLink className="episode-title">
           {episode.title}
@@ -603,21 +589,21 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
             {episodes && episodes.length > 0 && (
               <EpisodeList role="list">
                 {episodes.map((episode) => (
-                  <div key={episode.id} role="listitem">
-                    <EpisodeItem
-                      episode={episode}
-                      href={podcastEpisodePageView(
-                        String(episode.id),
-                        String(id),
-                      )}
-                      onPlayClick={handlePlayClick}
-                      onPauseClick={() => playerRef.current?.pause()}
-                      isPlaying={
-                        playingEpisode?.id === episode.id && isAudioPlaying
-                      }
-                      isPlayable={Boolean(getEpisodeAudioUrl(episode))}
-                    />
-                  </div>
+                  <EpisodeItem
+                    role="listitem"
+                    key={episode.id}
+                    episode={episode}
+                    href={podcastEpisodePageView(
+                      String(episode.id),
+                      String(id),
+                    )}
+                    onPlayClick={handlePlayClick}
+                    onPauseClick={() => playerRef.current?.pause()}
+                    isPlaying={
+                      playingEpisode?.id === episode.id && isAudioPlaying
+                    }
+                    isPlayable={Boolean(getEpisodeAudioUrl(episode))}
+                  />
                 ))}
               </EpisodeList>
             )}
