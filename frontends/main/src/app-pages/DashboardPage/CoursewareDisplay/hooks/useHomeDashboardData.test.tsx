@@ -134,4 +134,64 @@ describe("useHomeDashboardData", () => {
     expect(result.current.cards).toEqual([])
     expect(result.current.initiallyVisibleCount).toBe(0)
   })
+
+  test("exposes program-as-course lookups (courseProgramsById, moduleCoursesByProgramId)", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const reqTree =
+      new mitxonline.factories.requirements.RequirementTreeBuilder()
+    const moduleSection = reqTree.addOperator({ operator: "all_of" })
+    moduleSection.addCourse({ course: 11 })
+    moduleSection.addCourse({ course: 12 })
+
+    const programAsCourse = mitxonline.factories.programs.program({
+      id: 555,
+      display_mode: "course",
+      courses: [11, 12],
+      req_tree: reqTree.serialize(),
+    })
+    const programAsCourseEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        program: { id: programAsCourse.id },
+      })
+    const moduleCourses = {
+      count: 2,
+      next: null,
+      previous: null,
+      results: [
+        mitxonline.factories.courses.course({ id: 11 }),
+        mitxonline.factories.courses.course({ id: 12 }),
+      ],
+    }
+
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [programAsCourseEnrollment],
+    )
+    setMockResponse.get(
+      mitxonline.urls.programs.programsList({
+        id: [programAsCourse.id],
+        page_size: 1,
+      }),
+      { count: 1, next: null, previous: null, results: [programAsCourse] },
+    )
+    setMockResponse.get(
+      mitxonline.urls.courses.coursesList({
+        id: programAsCourse.courses,
+        page_size: programAsCourse.courses.length,
+      }),
+      moduleCourses,
+    )
+
+    const { result } = renderUseHomeDashboardData()
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.courseProgramsById.get(555)?.id).toBe(555)
+    expect(
+      result.current.moduleCoursesByProgramId[555].map((c) => c.id),
+    ).toEqual([11, 12])
+  })
 })

@@ -372,14 +372,14 @@ Phase 3 was redone on `cc/dashboard-refactor-phase-3-v3` to set one consistent, 
 - **`useHomeDashboardData` moved to a separate, exported file** `CoursewareDisplay/hooks/useHomeDashboardData.ts`. It returns the durable contract `{ cards, initiallyVisibleCount, enrollmentsByCourseId, courseProgramsById, moduleCoursesByProgramId, isLoading }`.
 - **New `renderHook` suite** `hooks/useHomeDashboardData.test.tsx` reuses `setupEnrollments` from `CoursewareDisplay/test-utils.ts` (shared scenario setup — no duplicated mock wiring).
 - **`EnrollmentExpandCollapse` is now zero-logic**: `cards.slice(0, initiallyVisibleCount)` / `cards.slice(initiallyVisibleCount)` + the toggle's `useState`. The visibility rule moved entirely into the model helper.
-- **`HomeEnrollmentsDisplay.test.tsx` left exactly untouched** as the behavior-preservation oracle.
+- **`HomeEnrollmentsDisplay.test.tsx` not modified by the v3 extraction** (commit `8ec7d3026` and the review-fix commit produce an empty diff for it). It serves as the behavior-preservation oracle for the v3 extraction. Note for branch-vs-`main` reviewers: the file itself is **new on this branch** — created and extended in Phase 3 **v1** (`cf3c0db28` extracted it from `EnrollmentDisplay.test.tsx`; `d8127306d` added the B2B course-filter test). "Untouched" means the v3 extraction did not change it, not that the branch leaves it unchanged vs `main`.
 
 **Files (Phase 3 v3):**
 
 - Add: `CoursewareDisplay/model/dashboardViewModel.ts` — `assembleHomeCardList` (+ unit tests in `dashboardViewModel.test.ts`)
 - Add: `CoursewareDisplay/hooks/useHomeDashboardData.ts` (exported) + `hooks/useHomeDashboardData.test.tsx` (renderHook)
 - Modify: `CoursewareDisplay/HomeEnrollmentsDisplay.tsx` (consumes the hook; `EnrollmentExpandCollapse` reduced to slice + toggle)
-- Untouched: `CoursewareDisplay/HomeEnrollmentsDisplay.test.tsx` (regression oracle)
+- Not modified by the v3 extraction: `CoursewareDisplay/HomeEnrollmentsDisplay.test.tsx` (the Phase 3 v1 integration suite, used as the v3 regression oracle)
 
 ## Resolved decision (settled before Phase 4): hook location and testing
 
@@ -389,7 +389,7 @@ Phase 3 was redone on `cc/dashboard-refactor-phase-3-v3` to set one consistent, 
 - **Layered tests:**
   1. **Pure model unit tests** (`model/dashboardViewModel.test.ts`, no React/mocks) own the domain logic — every transform the composer uses is a named helper tested here (ordering, counting, slot, language, requirement-section rules).
   2. **`renderHook` suite** per composer (`hooks/useXxxDashboardData.test.tsx`) asserts the composer wires queries → helpers → the returned contract. Reuses the **shared scenario setup** in `CoursewareDisplay/test-utils.ts`; mock setup is not duplicated.
-  3. **The original component integration test is left exactly untouched** as the extraction PR's behavior-preservation oracle. It is slimmed only in a later, separate pass — never in the same PR as the extraction (a deleted test is indistinguishable from a regression in the same diff).
+  3. **The pre-existing component integration test is not modified by the extraction** — it is the extraction's behavior-preservation oracle. ("Not modified by the extraction commit," scoped to the extraction; if the test file is itself new earlier on the same branch, say so explicitly so branch-vs-`main` reviewers aren't misled.) It is slimmed only in a later, separate pass — never in the same PR as the extraction (a deleted test is indistinguishable from a regression in the same diff).
 - **Why `renderHook` (reversing Phase-3-v1 reasoning):** asserting on returned data is clearer and faster to bisect than DOM assertions; "duplicates mock setup" is answered by the shared `test-utils` scenario factory, not by inlining the hook.
 - **Phase-7 stability rule:** the composer emits the **durable contract** (Home: `{ cards, initiallyVisibleCount, … }`; Program: slot-bearing requirement sections — see Phase 4). It never emits adapted/legacy card props; `adaptCourseSlotToLegacyDashboardCardProps` is applied at the render callsite, never in the hook, and hook tests never assert through the adapter. This is what makes the `renderHook` investment survive the Phase 7 card unification.
 - **Language picker — decided: hook owns it (option b).** Extract `useDashboardLanguagePicker(availableLanguages)` (selected key + reset-on-options-change effect) in **Phase 4**, composed inside `useProgramDashboardData`, which returns `{ selectedLanguageKey, setSelectedLanguageKey, availableLanguages, … }`. The component becomes purely presentational (renders the `<select>` from hook-provided values; no component-side language state or effect). Rationale: Phase 4's hook must take the language key as an input to build slots regardless of a second consumer, so the YAGNI-defer argument doesn't hold — owning the key's state where its options are derived removes the hook→options→effect→key→hook cross-boundary loop (the "complexity relocated, not reduced" failure mode). Phase 5's `useContractDashboardData` reuses the same `useDashboardLanguagePicker`.
@@ -616,7 +616,7 @@ Three layers, applied uniformly to every dashboard composer (decided in Phase 3 
 
 1. **Pure model unit tests** — `model/dashboardViewModel.test.ts`. No React, no mocks. Owns every domain rule (ordering, MIN_VISIBLE promotion, bucketing, requirement-section construction, slot/language resolution). Fast; this is where logic is exhaustively pinned.
 2. **Composer `renderHook` suites** — `hooks/useXxxDashboardData.test.tsx`. Assert the composer wires queries → helpers → the **durable returned contract**. Reuse the shared scenario setup in `CoursewareDisplay/test-utils.ts`. Never assert through the legacy adapter (keeps these Phase-7-stable).
-3. **Component integration test (the oracle)** — `HomeEnrollmentsDisplay.test.tsx` / `ProgramEnrollmentDisplay.test.tsx` / `ContractContent.test.tsx`. Left **exactly untouched** in the extraction PR as the behavior-preservation proof; slimmed only later, in a separate pass, once layers 1–2 have earned trust.
+3. **Component integration test (the oracle)** — `HomeEnrollmentsDisplay.test.tsx` / `ProgramEnrollmentDisplay.test.tsx` / `ContractContent.test.tsx`. **Not modified by the extraction commit** (the behavior-preservation proof); slimmed only later, in a separate pass, once layers 1–2 have earned trust. If the oracle file is itself newly created earlier on the same branch, the review narrative must say so — "untouched" is scoped to the extraction, not the whole branch vs `main`.
 
 **Durable-contract assertion rule (uniform, Phase-7 robustness).** Layer-2 composer suites assert only the composer's _durable_ returned contract and never reach through `adaptCourseSlotToLegacyDashboardCardProps`. Concretely:
 
