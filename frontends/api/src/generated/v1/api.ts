@@ -10157,23 +10157,23 @@ export interface WebsiteContent {
 }
 
 /**
- * * `news` - news * `article` - article
+ * * `news` - News * `article` - Article
  * @export
  * @enum {string}
  */
 
 export const WebsiteContentContentTypeEnumDescriptions = {
-  news: "news",
-  article: "article",
+  news: "News",
+  article: "Article",
 } as const
 
 export const WebsiteContentContentTypeEnum = {
   /**
-   * news
+   * News
    */
   News: "news",
   /**
-   * article
+   * Article
    */
   Article: "article",
 } as const

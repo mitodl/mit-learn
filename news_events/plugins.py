@@ -21,9 +21,9 @@ class WebsiteContentNewsPlugin:
         Args:
             content (WebsiteContent): The content item that was published or updated
         """
-        from website_content.constants import CONTENT_TYPE_NEWS
+        from website_content.constants import WebsiteContentType
 
-        if content.content_type != CONTENT_TYPE_NEWS:
+        if content.content_type != WebsiteContentType.news.name:
             log.info(
                 "WebsiteContentNewsPlugin: Skipping non-news content: id=%s, type=%s",
                 content.id,

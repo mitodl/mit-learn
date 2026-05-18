@@ -4,13 +4,13 @@ import logging
 
 from news_events.constants import FeedType
 from news_events.etl import loaders
-from website_content.constants import CONTENT_TYPE_NEWS
+from website_content.constants import WebsiteContentType
 from website_content.models import WebsiteContent
 
 log = logging.getLogger(__name__)
 
 
-def extract_single_article(article: WebsiteContent) -> dict:
+def extract_single_website_content(article: WebsiteContent) -> dict:
     """
     Extract a single published news content item from the database.
     Returns a dict in the same format as extract().
@@ -36,16 +36,16 @@ def transform_single_article(article_data: dict) -> dict:
     return items[0] if items else None
 
 
-def sync_single_article_to_news(article: WebsiteContent):
+def sync_single_website_content_news_to_news(article: WebsiteContent):
     """
     Sync a single published news content item to the news feed.
     Only syncs content items with content_type='news'.
     """
     if not article.is_published:
         return
-    if article.content_type != CONTENT_TYPE_NEWS:
+    if article.content_type != WebsiteContentType.news.name:
         return
-    article_data = extract_single_article(article)
+    article_data = extract_single_website_content(article)
     item_data = transform_single_article(article_data)
     if not item_data:
         return
@@ -72,7 +72,7 @@ def extract() -> list[dict]:
     """
     # Get only published news-type content items
     articles = WebsiteContent.objects.filter(
-        is_published=True, content_type=CONTENT_TYPE_NEWS
+        is_published=True, content_type=WebsiteContentType.news.name
     ).select_related("user")
 
     return [

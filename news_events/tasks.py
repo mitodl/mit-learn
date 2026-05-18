@@ -76,14 +76,14 @@ def sync_website_content_to_news(self, content_id: int):
     """
     import logging
 
-    from news_events.etl.articles_news import sync_single_article_to_news
+    from news_events.etl.articles_news import sync_single_website_content_news_to_news
     from website_content.models import WebsiteContent
 
     logger = logging.getLogger(__name__)
 
     try:
         content = WebsiteContent.objects.get(id=content_id, is_published=True)
-        sync_single_article_to_news(content)
+        sync_single_website_content_news_to_news(content)
         clear_views_cache()
         logger.info(
             "Successfully synced content %s to news feed",

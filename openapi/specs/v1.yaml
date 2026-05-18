@@ -14361,8 +14361,7 @@ components:
         author_name:
           type: string
           default: ''
-        content:
-          default: {}
+        content: {}
         content_type:
           allOf:
           - $ref: '#/components/schemas/WebsiteContentContentTypeEnum'
@@ -17437,8 +17436,7 @@ components:
         author_name:
           type: string
           default: ''
-        content:
-          default: {}
+        content: {}
         content_type:
           allOf:
           - $ref: '#/components/schemas/WebsiteContentContentTypeEnum'
@@ -17478,11 +17476,11 @@ components:
       - article
       type: string
       description: |-
-        * `news` - news
-        * `article` - article
+        * `news` - News
+        * `article` - Article
       x-enum-descriptions:
-      - news
-      - article
+      - News
+      - Article
     WebsiteContentImageUploadRequest:
       type: object
       properties:
@@ -17502,8 +17500,7 @@ components:
         author_name:
           type: string
           default: ''
-        content:
-          default: {}
+        content: {}
         content_type:
           allOf:
           - $ref: '#/components/schemas/WebsiteContentContentTypeEnum'

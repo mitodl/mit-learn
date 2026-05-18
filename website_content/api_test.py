@@ -2,6 +2,81 @@
 
 import pytest
 
+from website_content.api import purge_content_on_save
+from website_content.constants import WebsiteContentType
+from website_content.factories import WebsiteContentFactory
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("slug", "is_published", "expect_purge"),
+    [
+        ("test-article", True, True),
+        ("test-article", False, False),
+        ("", True, False),
+        ("", False, False),
+    ],
+)
+def test_purge_content_on_save(mocker, slug, is_published, expect_purge):
+    """
+    CDN purge should only fire when the content is published AND has a slug.
+    Asserts on call_fastly_purge_api (the lowest plumbing before the HTTP call)
+    so the test is independent of FASTLY_API_KEY being set in the test env.
+    @single_task uses a Redis lock so fastly_purge_website_content_list.delay
+    is mocked to avoid that dependency in unit tests.
+    """
+    mock_purge_api = mocker.patch("website_content.tasks.call_fastly_purge_api")
+    mock_purge_api.return_value = {"status": "ok", "id": "abc"}
+    mocker.patch("website_content.tasks.fastly_purge_website_content_list.delay")
+
+    content = WebsiteContentFactory.build(
+        is_published=is_published,
+        slug=slug or None,
+        content_type=WebsiteContentType.news.name,
+    )
+
+    purge_content_on_save(content)
+
+    if expect_purge:
+        assert mock_purge_api.called
+    else:
+        mock_purge_api.assert_not_called()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("content_type", "expected_listing"),
+    [
+        (WebsiteContentType.news.name, "/news"),
+        (WebsiteContentType.article.name, "/articles"),
+    ],
+)
+def test_purge_content_on_save_listing_url(mocker, content_type, expected_listing):
+    """
+    The listing-page purge task should be enqueued with the URL matching
+    the content's content_type.
+    """
+    mocker.patch("website_content.tasks.call_fastly_purge_api").return_value = {
+        "status": "ok",
+        "id": "abc",
+    }
+    mock_purge_list = mocker.patch(
+        "website_content.tasks.fastly_purge_website_content_list.delay"
+    )
+
+    content = WebsiteContentFactory.build(
+        is_published=True,
+        slug="some-slug",
+        content_type=content_type,
+    )
+    mocker.patch.object(
+        type(content), "get_url", return_value=f"/{content_type}/some-slug"
+    )
+
+    purge_content_on_save(content)
+
+    mock_purge_list.assert_called_once_with(expected_listing)
+
 
 @pytest.mark.django_db
 def test_content_published_actions_triggers_hook(mocker, user):

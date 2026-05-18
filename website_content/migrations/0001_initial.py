@@ -2,7 +2,7 @@
 
 import django.db.models.deletion
 import django.utils.timezone
-import profiles.utils
+import website_content.utils
 from django.conf import settings
 from django.db import migrations, models
 
@@ -80,7 +80,7 @@ class Migration(migrations.Migration):
                         editable=False,
                         max_length=2083,
                         null=True,
-                        upload_to=profiles.utils.article_image_upload_uri,
+                        upload_to=website_content.utils.website_content_image_upload_uri,
                     ),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),

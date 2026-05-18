@@ -6,11 +6,8 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from main.models import TimestampedModel
-from profiles.utils import article_image_upload_uri
-from website_content.constants import (
-    CONTENT_TYPE_CHOICES,
-    CONTENT_TYPE_NEWS,
-)
+from website_content.constants import WebsiteContentType
+from website_content.utils import website_content_image_upload_uri
 
 
 class WebsiteContent(TimestampedModel):
@@ -35,8 +32,8 @@ class WebsiteContent(TimestampedModel):
     publish_date = models.DateTimeField(null=True, blank=True)
     content_type = models.CharField(
         max_length=50,
-        choices=CONTENT_TYPE_CHOICES,
-        default=CONTENT_TYPE_NEWS,
+        choices=WebsiteContentType.as_tuple(),
+        default=WebsiteContentType.news.name,
     )
 
     def save(self, *args, **kwargs):
@@ -69,7 +66,7 @@ class WebsiteContent(TimestampedModel):
         """
         if not self.slug:
             return None
-        if self.content_type == CONTENT_TYPE_NEWS:
+        if self.content_type == WebsiteContentType.news.name:
             return f"/news/{self.slug}"
         return f"/articles/{self.slug}"
 
@@ -77,7 +74,10 @@ class WebsiteContent(TimestampedModel):
 class WebsiteContentImageUpload(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     image_file = models.ImageField(
-        null=True, upload_to=article_image_upload_uri, max_length=2083, editable=False
+        null=True,
+        upload_to=website_content_image_upload_uri,
+        max_length=2083,
+        editable=False,
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
