@@ -16,7 +16,7 @@ type VideoEmbedPageProps = {
 }
 
 const VideoEmbedPage: React.FC<VideoEmbedPageProps> = ({ videoResource }) => {
-  const videoTitleLabel = videoResource.title?.trim() || "Untitled video"
+  const videoTitleLabel = videoResource.title.trim()
 
   return (
     <EmbedPlayer
