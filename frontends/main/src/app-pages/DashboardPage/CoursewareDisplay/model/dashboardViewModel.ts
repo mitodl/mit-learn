@@ -18,6 +18,11 @@ import type {
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
+// Type-only import: erased at compile time, so this introduces no runtime
+// dependency/cycle on the DashboardCard component. The DashboardResource
+// shape is the durable home-dashboard contract; it migrates into this file
+// when the legacy cards are removed (Phase 7).
+import type { DashboardResource } from "../DashboardCard"
 import { getIdsFromReqTree } from "@/common/mitxonline"
 import {
   EnrollmentStatus,
@@ -275,6 +280,63 @@ const bucketAndSortHomeEnrollments = (
 }
 
 /**
+ * Minimum number of cards the home dashboard shows before "Show all" when
+ * every card is expired (so the section is never blank for an enrolled user).
+ */
+const MIN_VISIBLE_HOME_CARDS = 3
+
+type HomeCardListInput = HomeEnrollmentBuckets & {
+  programEnrollments: V3UserProgramEnrollment[]
+}
+
+type HomeCardList = {
+  cards: DashboardResource[]
+  initiallyVisibleCount: number
+}
+
+/**
+ * Flatten home buckets into the single ordered card list the dashboard
+ * renders, plus how many of those cards are visible before "Show all".
+ *
+ * Order: started, notStarted, completed, programEnrollments, then expired.
+ *
+ * Visibility rule (preserves legacy behavior): if there is at least one
+ * non-expired card, all non-expired cards are visible and every expired card
+ * is hidden behind "Show all". If there are no non-expired cards, up to
+ * MIN_VISIBLE_HOME_CARDS expired cards are promoted into view.
+ */
+const assembleHomeCardList = ({
+  started,
+  notStarted,
+  completed,
+  expired,
+  programEnrollments,
+}: HomeCardListInput): HomeCardList => {
+  const courseRunCard = (data: CourseRunEnrollmentV3): DashboardResource => ({
+    type: "courserun-enrollment",
+    data,
+  })
+
+  const nonExpired: DashboardResource[] = [
+    ...started.map(courseRunCard),
+    ...notStarted.map(courseRunCard),
+    ...completed.map(courseRunCard),
+    ...programEnrollments.map(
+      (data): DashboardResource => ({ type: "program-enrollment", data }),
+    ),
+  ]
+  const expiredCards = expired.map(courseRunCard)
+
+  return {
+    cards: [...nonExpired, ...expiredCards],
+    initiallyVisibleCount:
+      nonExpired.length > 0
+        ? nonExpired.length
+        : Math.min(MIN_VISIBLE_HOME_CARDS, expiredCards.length),
+  }
+}
+
+/**
  * The mitxonline API emits language codes in POSIX form (`de_de`,
  * `pt_br`, `zh_hans`); convert to BCP 47 (`de-de`, `pt-br`, `zh-hans`)
  * so `Intl.DisplayNames` can resolve them, and to give picker options a
@@ -441,4 +503,5 @@ export {
   getModuleCourseIdsFromPrograms,
   groupModuleCoursesByProgramId,
   bucketAndSortHomeEnrollments,
+  assembleHomeCardList,
 }

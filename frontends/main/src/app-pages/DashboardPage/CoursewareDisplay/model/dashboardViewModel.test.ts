@@ -1,6 +1,7 @@
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { factories } from "api/mitxonline-test-utils"
 import {
+  assembleHomeCardList,
   bucketAndSortHomeEnrollments,
   enrollmentCourseIsInPrograms,
   getDistinctDashboardLanguageOptions,
@@ -418,6 +419,92 @@ describe("dashboardViewModel", () => {
 
       expect(buckets.completed).toEqual([completedAndExpired])
       expect(buckets.expired).toEqual([])
+    })
+  })
+
+  describe("assembleHomeCardList", () => {
+    test("orders cards started → notStarted → completed → programEnrollments → expired with type tags", () => {
+      const started = factories.enrollment.courseEnrollment()
+      const notStarted = factories.enrollment.courseEnrollment()
+      const completed = factories.enrollment.courseEnrollment()
+      const expired = factories.enrollment.courseEnrollment()
+      const programEnrollment = factories.enrollment.programEnrollmentV3()
+
+      const { cards } = assembleHomeCardList({
+        started: [started],
+        notStarted: [notStarted],
+        completed: [completed],
+        expired: [expired],
+        programEnrollments: [programEnrollment],
+      })
+
+      expect(cards).toEqual([
+        { type: "courserun-enrollment", data: started },
+        { type: "courserun-enrollment", data: notStarted },
+        { type: "courserun-enrollment", data: completed },
+        { type: "program-enrollment", data: programEnrollment },
+        { type: "courserun-enrollment", data: expired },
+      ])
+    })
+
+    test("initiallyVisibleCount is the non-expired count when any non-expired exist (all expired hidden)", () => {
+      const { initiallyVisibleCount, cards } = assembleHomeCardList({
+        started: [factories.enrollment.courseEnrollment()],
+        notStarted: [],
+        completed: [factories.enrollment.courseEnrollment()],
+        expired: [
+          factories.enrollment.courseEnrollment(),
+          factories.enrollment.courseEnrollment(),
+        ],
+        programEnrollments: [factories.enrollment.programEnrollmentV3()],
+      })
+
+      // 1 started + 1 completed + 1 program enrollment visible; 2 expired hidden
+      expect(initiallyVisibleCount).toBe(3)
+      expect(cards).toHaveLength(5)
+    })
+
+    test("promotes up to MIN_VISIBLE expired when there are no non-expired cards", () => {
+      const expired = Array.from({ length: 5 }, () =>
+        factories.enrollment.courseEnrollment(),
+      )
+
+      const { initiallyVisibleCount } = assembleHomeCardList({
+        started: [],
+        notStarted: [],
+        completed: [],
+        expired,
+        programEnrollments: [],
+      })
+
+      expect(initiallyVisibleCount).toBe(3)
+    })
+
+    test("shows all expired when there are no non-expired cards and fewer than MIN_VISIBLE expired", () => {
+      const { initiallyVisibleCount } = assembleHomeCardList({
+        started: [],
+        notStarted: [],
+        completed: [],
+        expired: [
+          factories.enrollment.courseEnrollment(),
+          factories.enrollment.courseEnrollment(),
+        ],
+        programEnrollments: [],
+      })
+
+      expect(initiallyVisibleCount).toBe(2)
+    })
+
+    test("empty input yields no cards and zero visible", () => {
+      expect(
+        assembleHomeCardList({
+          started: [],
+          notStarted: [],
+          completed: [],
+          expired: [],
+          programEnrollments: [],
+        }),
+      ).toEqual({ cards: [], initiallyVisibleCount: 0 })
     })
   })
 

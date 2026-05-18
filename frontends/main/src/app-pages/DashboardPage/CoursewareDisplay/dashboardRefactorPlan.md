@@ -207,9 +207,9 @@ frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/
 
 Responsibilities:
 
-- `useHomeDashboardData` (composer): owns home queries, home enrollment sorting, home program-as-course data assembly, and loading aggregation. **As shipped in Phase 3, inlined as a private function inside `HomeEnrollmentsDisplay.tsx` rather than a standalone file** — see Open question after Phase 3.
-- `useProgramDashboardData` (composer): owns program detail query, course/enrollment/program enrollment joins, requirement-section construction, language options, slot assembly, and program-as-course slot context. Location decided per Open question.
-- `useContractDashboardData` (composer): owns contract-scoped courses/programs/collections, contract enrollment filtering, program filtering, collection shaping, language options, slot assembly, and loading aggregation. Location decided per Open question.
+- `useHomeDashboardData` (composer): owns home queries, enrollment bucketing, card-list assembly (`assembleHomeCardList`), and loading aggregation. **As shipped in Phase 3 v3: a separate exported file `CoursewareDisplay/hooks/useHomeDashboardData.ts` with a `renderHook` suite** — see [Resolved decision](#resolved-decision-settled-before-phase-4-hook-location-and-testing).
+- `useProgramDashboardData` (composer): owns program detail query, course/enrollment/program enrollment joins, requirement-section construction, language options, slot assembly, and program-as-course slot context. Separate exported file `hooks/useProgramDashboardData.ts` + `renderHook` suite (per Resolved decision).
+- `useContractDashboardData` (composer): owns contract-scoped courses/programs/collections, contract enrollment filtering, program filtering, collection shaping, language options, slot assembly, and loading aggregation. Separate exported file `hooks/useContractDashboardData.ts` + `renderHook` suite (per Resolved decision).
 - `model/dashboardViewModel.ts`: the **single pure-model home**. Owns the canonical types (`DashboardCourseSlot`, section shapes, home buckets), grouping helpers, slot constructors, requirement-section builders, language-option computation, the composite slot/language resolver introduced in Phase 2, the renamed display-policy helper, and Cases 2 + 3 of `getResolvedRunForSelectedLanguage`. By Phase 7's end, every pure helper that survives the cleanup lives here.
 - `model/dashboardAdapters.ts`: temporary adapters from the new view model to current `DashboardCard` / `ProgramAsCourseCard` props. Deletion candidate at Phase 7 — its lifespan ends when `CoursewareCard` consumes the slot directly.
 
@@ -316,11 +316,13 @@ Expected: all tests pass; callsite line-counts in the two render components meas
 
 **Purpose:** Make the home dashboard easier to reason about without changing its enrollment-flat behavior.
 
-**Files (as shipped):**
+**Files (as shipped — superseded by Phase 3 v3 below):**
 
-- Create: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/HomeEnrollmentsDisplay.tsx` (extracted from `EnrollmentDisplay.tsx`; carries the inlined `useHomeDashboardData` composer — see Open question)
+- Create: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/HomeEnrollmentsDisplay.tsx` (extracted from `EnrollmentDisplay.tsx`)
 - Rename: `EnrollmentDisplay.tsx` → `ProgramEnrollmentDisplay.tsx` (wrapper deleted; consumers in `HomeContent.tsx` / `ProgramContent.tsx` now import the dashboards directly)
 - Test: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/HomeEnrollmentsDisplay.test.tsx` (new) and `ProgramEnrollmentDisplay.test.tsx` (renamed)
+
+> Phase 3 v1 inlined `useHomeDashboardData` as a private function in `HomeEnrollmentsDisplay.tsx`. This was **revised on `cc/dashboard-refactor-phase-3-v3`** — see [Phase 3 v3 — as shipped](#phase-3-v3--as-shipped) and [Resolved decision](#resolved-decision-settled-before-phase-4-hook-location-and-testing) below.
 
 - [ ] Move home-only queries out of `AllEnrollmentsDisplay`:
   - course-run enrollments,
@@ -360,17 +362,39 @@ Expected: all tests pass.
 
 If any of these fails, the phase has relocated complexity rather than reduced it. Stop and split before declaring done.
 
-## Open question (resolve before Phase 4 starts): hook location and testing
+## Phase 3 v3 — as shipped
 
-Phase 3's `useHomeDashboardData` ended up inlined as a private function inside `HomeEnrollmentsDisplay.tsx` rather than living in `hooks/`. The reasoning: the hook is glue (composition of named helpers from the model layer), and a standalone hook file with no isolated tests reads as "why no tests?" Inlining keeps the readability split between data and render without orphaning a file.
+Phase 3 was redone on `cc/dashboard-refactor-phase-3-v3` to set one consistent, forward-looking composer/testing pattern for the whole dashboard (Phases 4–5 follow it). Behavior is unchanged; `HomeEnrollmentsDisplay.test.tsx` was **not modified** and stays green.
 
-Before Phase 4 begins, settle for `useProgramDashboardData` and `useContractDashboardData`:
+**What changed vs. Phase 3 v1:**
 
-- **Location**: separate `hooks/...` file vs inlined in the component file. A separate file should pair with isolated tests, not be orphaned.
-- **Test strategy**: integration via the component test (status quo for Phase 3) vs dedicated `renderHook` tests. Integration is slow to bisect when a hook regresses; `renderHook` duplicates mock setup. Contract orchestration is the largest tangle and may justify isolated tests on complexity grounds alone, even if program does not.
-- **Language picker**: candidate for its own `useDashboardLanguagePicker(options)` (selected key + reset-on-options-change effect) reusable across program and contract. Where it lives follows the same location decision.
+- **New pure helper** `assembleHomeCardList(buckets+programEnrollments) → { cards: DashboardResource[], initiallyVisibleCount }` in `model/dashboardViewModel.ts`. It owns the home card **ordering** (started → notStarted → completed → programEnrollments → expired) and the **MIN_VISIBLE promotion rule** (if any non-expired card exists, all non-expired are visible and every expired hides behind "Show all"; otherwise up to 3 expired are promoted). This was previously logic stranded in the presentational `EnrollmentExpandCollapse` / inline in the component. It has isolated unit tests in `dashboardViewModel.test.ts`.
+- **`useHomeDashboardData` moved to a separate, exported file** `CoursewareDisplay/hooks/useHomeDashboardData.ts`. It returns the durable contract `{ cards, initiallyVisibleCount, enrollmentsByCourseId, courseProgramsById, moduleCoursesByProgramId, isLoading }`.
+- **New `renderHook` suite** `hooks/useHomeDashboardData.test.tsx` reuses `setupEnrollments` from `CoursewareDisplay/test-utils.ts` (shared scenario setup — no duplicated mock wiring).
+- **`EnrollmentExpandCollapse` is now zero-logic**: `cards.slice(0, initiallyVisibleCount)` / `cards.slice(initiallyVisibleCount)` + the toggle's `useState`. The visibility rule moved entirely into the model helper.
+- **`HomeEnrollmentsDisplay.test.tsx` left exactly untouched** as the behavior-preservation oracle.
 
-What the model layer must hold regardless: `buildRequirementSections`, slot constructors, contract-scoped filters (`programHasContractRuns`, `programsInCollections`, `sortedPrograms`), collection shaping. These are domain logic and need named helpers with unit tests no matter where the hook lives. The "thin composer" exit checks apply to the hook function whether it's a file or inline.
+**Files (Phase 3 v3):**
+
+- Add: `CoursewareDisplay/model/dashboardViewModel.ts` — `assembleHomeCardList` (+ unit tests in `dashboardViewModel.test.ts`)
+- Add: `CoursewareDisplay/hooks/useHomeDashboardData.ts` (exported) + `hooks/useHomeDashboardData.test.tsx` (renderHook)
+- Modify: `CoursewareDisplay/HomeEnrollmentsDisplay.tsx` (consumes the hook; `EnrollmentExpandCollapse` reduced to slice + toggle)
+- Untouched: `CoursewareDisplay/HomeEnrollmentsDisplay.test.tsx` (regression oracle)
+
+## Resolved decision (settled before Phase 4): hook location and testing
+
+**Decided** (supersedes the former "Open question"). One pattern for every dashboard composer (`useHomeDashboardData`, and Phase 4/5's `useProgramDashboardData` / `useContractDashboardData`):
+
+- **Location**: each composer is a **separate, exported** file under `CoursewareDisplay/hooks/`. Not inlined-private. The earlier "orphaned file" objection is void precisely because the file is paired with isolated `renderHook` tests.
+- **Layered tests:**
+  1. **Pure model unit tests** (`model/dashboardViewModel.test.ts`, no React/mocks) own the domain logic — every transform the composer uses is a named helper tested here (ordering, counting, slot, language, requirement-section rules).
+  2. **`renderHook` suite** per composer (`hooks/useXxxDashboardData.test.tsx`) asserts the composer wires queries → helpers → the returned contract. Reuses the **shared scenario setup** in `CoursewareDisplay/test-utils.ts`; mock setup is not duplicated.
+  3. **The original component integration test is left exactly untouched** as the extraction PR's behavior-preservation oracle. It is slimmed only in a later, separate pass — never in the same PR as the extraction (a deleted test is indistinguishable from a regression in the same diff).
+- **Why `renderHook` (reversing Phase-3-v1 reasoning):** asserting on returned data is clearer and faster to bisect than DOM assertions; "duplicates mock setup" is answered by the shared `test-utils` scenario factory, not by inlining the hook.
+- **Phase-7 stability rule:** the composer emits the **durable contract** (Home: `{ cards, initiallyVisibleCount, … }`; Program: slot-bearing requirement sections — see Phase 4). It never emits adapted/legacy card props; `adaptCourseSlotToLegacyDashboardCardProps` is applied at the render callsite, never in the hook, and hook tests never assert through the adapter. This is what makes the `renderHook` investment survive the Phase 7 card unification.
+- **Language picker**: deferred to Phase 5. Keep `selectedLanguageKey` state + reset-on-options-change effect inline in the component for now; extract a shared `useDashboardLanguagePicker(options)` only when `ContractContent` becomes the second real consumer (YAGNI from one callsite).
+
+What the model layer must hold regardless: `buildRequirementSections`, slot constructors, contract-scoped filters (`programHasContractRuns`, `programsInCollections`, `sortedPrograms`), collection shaping. These are domain logic and need named helpers with unit tests no matter where the hook lives. The "thin composer" exit checks apply to the composer function in its `hooks/` file.
 
 ## Phase 4: Extract `useProgramDashboardData`
 
@@ -378,11 +402,13 @@ What the model layer must hold regardless: `buildRequirementSections`, slot cons
 
 **Files:**
 
-- Add: `useProgramDashboardData` composer (location TBD — see Open question; default per Phase 3 precedent is inlined in `ProgramEnrollmentDisplay.tsx`)
+- Create: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/hooks/useProgramDashboardData.ts` (separate, exported — per [Resolved decision](#resolved-decision-settled-before-phase-4-hook-location-and-testing))
+- Create: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/hooks/useProgramDashboardData.test.tsx` (`renderHook` suite; reuse / extend the shared scenario setup in `CoursewareDisplay/test-utils.ts`)
 - Modify: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ProgramEnrollmentDisplay.tsx`
 - Modify: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ProgramAsCourseCard.tsx` only if needed for adapter boundaries
-- Test: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ProgramEnrollmentDisplay.test.tsx`
+- Untouched (regression oracle, slimmed only in a later separate pass): `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ProgramEnrollmentDisplay.test.tsx`
 - Test: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ProgramAsCourseCard.test.tsx`
+- Add the flat-`req_tree` assumption comment at the helpers that rely on it (`getRequirementsProgress` / `buildRequirementSections`) — deferred here from Phase 3 (home helpers use the recursive `getIdsFromReqTree` and do not assume flatness).
 
 - [ ] Move program detail query and course queries into the hook.
 - [ ] Move `requirementSections` construction into the hook.
@@ -476,7 +502,9 @@ If any of these fails, the phase has relocated complexity rather than reduced it
 
 ## Phase 6: Shrink render components
 
-**Purpose:** Make `HomeEnrollmentsDisplay.tsx`, `ProgramEnrollmentDisplay.tsx`, and `ContractContent.tsx` mostly presentational after their data composers exist.
+> **Re-scoped (decided during Phase 3 v3).** Phase 3 v3 extracted the composer **and** cleaned the render component (`EnrollmentExpandCollapse` is already zero-logic) in the same PR. If Phases 4 and 5 hold the same discipline (extract composer + clean the render component together), **Phase 6 is no longer an implementation phase** — it collapses into a verification checkpoint: confirm no render component imports language-resolution helpers or calls `selectBestEnrollment` / `selectBestContractEnrollmentForLanguage` directly, and confirm the three render components are presentational. The one genuine residual — `ProgramAsCourseCard` still calls `selectBestEnrollment` internally — is folded into **Phase 7** (it becomes a `CoursewareCard moduleRow` consumer when `ModuleCard` is deleted), not a standalone Phase 6 task. Fold the checklist below into each of Phases 3–5's exit review.
+
+**Purpose (legacy framing — see re-scope above):** Make `HomeEnrollmentsDisplay.tsx`, `ProgramEnrollmentDisplay.tsx`, and `ContractContent.tsx` mostly presentational after their data composers exist.
 
 **Files:**
 
@@ -573,11 +601,21 @@ Do not answer these in this refactor:
 - whether the default visible run should prefer active work, certificate completion, newest run, or some other policy,
 - whether program and contract dashboards should expose identical multi-run affordances.
 
+## Testing strategy (overall)
+
+Three layers, applied uniformly to every dashboard composer (decided in Phase 3 v3, see [Resolved decision](#resolved-decision-settled-before-phase-4-hook-location-and-testing)):
+
+1. **Pure model unit tests** — `model/dashboardViewModel.test.ts`. No React, no mocks. Owns every domain rule (ordering, MIN_VISIBLE promotion, bucketing, requirement-section construction, slot/language resolution). Fast; this is where logic is exhaustively pinned.
+2. **Composer `renderHook` suites** — `hooks/useXxxDashboardData.test.tsx`. Assert the composer wires queries → helpers → the **durable returned contract**. Reuse the shared scenario setup in `CoursewareDisplay/test-utils.ts`. Never assert through the legacy adapter (keeps these Phase-7-stable).
+3. **Component integration test (the oracle)** — `HomeEnrollmentsDisplay.test.tsx` / `ProgramEnrollmentDisplay.test.tsx` / `ContractContent.test.tsx`. Left **exactly untouched** in the extraction PR as the behavior-preservation proof; slimmed only later, in a separate pass, once layers 1–2 have earned trust.
+
 ## Validation plan
 
 Run targeted tests after each phase. Before merging the final phase in a PR series, run:
 
 ```bash
+yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/model/dashboardViewModel.test.ts
+yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/hooks/  # composer renderHook suites
 yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/HomeEnrollmentsDisplay.test.tsx
 yarn test frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ProgramEnrollmentDisplay.test.tsx
 yarn test frontends/main/src/app-pages/DashboardPage/ContractContent.test.tsx
@@ -664,8 +702,13 @@ Test files (`*.test.tsx`, `*.test.ts`) are omitted for brevity. Each non-test so
                                                          absorbed contents of helpers.ts + languageOptions.ts (Phase 7)
 +       dashboardAdapters.ts                           temp adapter — may be deleted in Phase 7
 
-      # No hooks/ directory: useHomeDashboardData was inlined in HomeEnrollmentsDisplay.tsx (Phase 3).
-      # Location of useProgramDashboardData / useContractDashboardData (Phase 4–5) TBD per Open question.
++     hooks/                                           new directory (Phase 3 v3)
++       useHomeDashboardData.ts                        exported composer (Phase 3 v3) + renderHook test
++       useProgramDashboardData.ts                     exported composer (Phase 4) + renderHook test
++       useContractDashboardData.ts                    exported composer (Phase 5) + renderHook test
+      # Each composer is a separate exported file with an isolated renderHook
+      # suite; the original component integration test stays untouched as the
+      # behavior oracle. See "Resolved decision" above.
 ```
 
 **Reading notes:**
