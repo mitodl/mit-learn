@@ -34,14 +34,16 @@ export type HomeDashboardData = {
 }
 
 /**
- * Composes the queries and pure-model helpers that drive the home dashboard.
+ * Data composer for the "My Learning" home dashboard.
  *
- * It is a thin composer: every transform it performs is a named, individually
- * unit-tested helper from the model layer (`dashboardViewModel.ts`). The hook
- * only fetches, filters with existing predicates, and composes. Its own
- * integration is covered by `useHomeDashboardData.test.tsx`; the home
- * component's behavior remains covered, unchanged, by
- * `HomeEnrollmentsDisplay.test.tsx`.
+ * Fetches the home queries (course-run enrollments, program enrollments,
+ * enrolled programs, program-as-course module courses, the user's contracts)
+ * and composes the pure helpers in `dashboardViewModel.ts` into render-ready
+ * data: the ordered enrollment-flat card list with its initial visible count,
+ * plus the lookups the renderer needs for program-as-course rows.
+ *
+ * Pure transforms are unit-tested in `dashboardViewModel.test.ts`; this hook's
+ * query→helper wiring is tested in `useHomeDashboardData.test.tsx`.
  */
 const useHomeDashboardData = (): HomeDashboardData => {
   const { data: enrolledCourses, isLoading: courseEnrollmentsLoading } =

@@ -16,6 +16,12 @@ const wrapper = ({ children }: { children: React.ReactNode }) => {
 const renderUseHomeDashboardData = () =>
   renderHook(() => useHomeDashboardData(), { wrapper })
 
+/**
+ * These assert the composer's durable returned contract (ordering,
+ * initiallyVisibleCount, B2B exclusion, grouping, isLoading) — not the legacy
+ * card shape. `c.type` is used only for TS narrowing to read a durable id;
+ * see the durable-contract assertion rule in dashboardRefactorPlan.md.
+ */
 describe("useHomeDashboardData", () => {
   test("composes buckets into one ordered card list with expired last", async () => {
     const mitxOnlineUser = mitxonline.factories.user.user()

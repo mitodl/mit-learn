@@ -495,6 +495,19 @@ describe("dashboardViewModel", () => {
       expect(initiallyVisibleCount).toBe(2)
     })
 
+    test("makes every card visible when there are no expired cards", () => {
+      const { cards, initiallyVisibleCount } = assembleHomeCardList({
+        started: [factories.enrollment.courseEnrollment()],
+        notStarted: [],
+        completed: [factories.enrollment.courseEnrollment()],
+        expired: [],
+        programEnrollments: [factories.enrollment.programEnrollmentV3()],
+      })
+
+      expect(initiallyVisibleCount).toBe(cards.length)
+      expect(cards).toHaveLength(3)
+    })
+
     test("empty input yields no cards and zero visible", () => {
       expect(
         assembleHomeCardList({

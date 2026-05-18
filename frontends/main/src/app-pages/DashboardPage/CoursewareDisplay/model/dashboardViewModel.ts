@@ -18,17 +18,13 @@ import type {
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-// Type-only import: erased at compile time, so this introduces no runtime
-// dependency/cycle on the DashboardCard component. The DashboardResource
-// shape is the durable home-dashboard contract; it migrates into this file
-// when the legacy cards are removed (Phase 7).
+// Type-only import: erased at compile time, so this line adds no runtime
+// dependency on the DashboardCard component. DashboardResource is the durable
+// enrollment-flat home contract; it moves into this file when the legacy
+// cards are removed (Phase 7).
 import type { DashboardResource } from "../DashboardCard"
 import { getIdsFromReqTree } from "@/common/mitxonline"
-import {
-  EnrollmentStatus,
-  getEnrollmentStatus,
-  selectBestEnrollment,
-} from "../helpers"
+import { EnrollmentStatus, getEnrollmentStatus } from "../helpers"
 import {
   getNativeLanguageName,
   // below five are used only for resolveSlotForLanguage
@@ -62,8 +58,8 @@ export type DashboardCourseSlot = {
     parentProgramReadableIds?: string[]
     useVerifiedEnrollment?: boolean
   }
-  // Whether these fields survive past the legacy-card removal is an open tied
-  // to new card UX (run selection controlled by card or parent.)
+  // Whether these fields survive past the legacy-card removal is an open
+  // question tied to new card UX (run selection controlled by card or parent).
   displayedEnrollment: CourseRunEnrollmentV3 | null
   displayedRun: CourseRunV2 | null
 }
@@ -473,7 +469,7 @@ const resolveSlotForLanguage = (
   )
   const displayedEnrollment = selectedLanguageKey
     ? selectedLanguageEnrollment
-    : selectBestEnrollment(course, enrollments)
+    : pickDisplayedEnrollmentForLegacyDashboard(course, enrollments)
 
   const displayedRun = getResolvedRunForSelectedLanguage(
     course,

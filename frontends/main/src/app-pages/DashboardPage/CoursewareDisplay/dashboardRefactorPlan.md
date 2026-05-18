@@ -609,6 +609,11 @@ Three layers, applied uniformly to every dashboard composer (decided in Phase 3 
 2. **Composer `renderHook` suites** — `hooks/useXxxDashboardData.test.tsx`. Assert the composer wires queries → helpers → the **durable returned contract**. Reuse the shared scenario setup in `CoursewareDisplay/test-utils.ts`. Never assert through the legacy adapter (keeps these Phase-7-stable).
 3. **Component integration test (the oracle)** — `HomeEnrollmentsDisplay.test.tsx` / `ProgramEnrollmentDisplay.test.tsx` / `ContractContent.test.tsx`. Left **exactly untouched** in the extraction PR as the behavior-preservation proof; slimmed only later, in a separate pass, once layers 1–2 have earned trust.
 
+**Durable-contract assertion rule (uniform, Phase-7 robustness).** Layer-2 composer suites assert only the composer's _durable_ returned contract and never reach through `adaptCourseSlotToLegacyDashboardCardProps`. Concretely:
+
+- Home: assert ordering, `initiallyVisibleCount`, B2B exclusion, grouping, `isLoading` — durable enrollment-flat facts. The legacy `DashboardResource`/`DashboardType` discriminant is used only for TS narrowing to read a durable id, never as the assertion subject (those types migrate into `dashboardViewModel.ts` in Phase 7 — a mechanical relocation, not semantic churn).
+- Program/Contract: the composer suite asserts the durable slot fields (`slot.enrollments`, `selectedLanguageKey`, `availableLanguages`, requirement-section structure/ordering/counts). The UX-direction-dependent `displayedEnrollment` / `displayedRun` derivation is pinned **only** in the pure `resolveSlotForLanguage` unit suite (layer 1), where it is one isolated, cheap-to-rewrite file if Phase 7 changes run-selection ownership — not spread across composer suites. This is what makes the renderHook investment actually survive Phase 7, rather than aspirationally.
+
 ## Validation plan
 
 Run targeted tests after each phase. Before merging the final phase in a PR series, run:
