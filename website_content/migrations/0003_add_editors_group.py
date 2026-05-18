@@ -1,22 +1,29 @@
 """
-Ensure the article_editors Group exists in the database.
+Ensure the website_content_editors Group exists in the database.
 
-Reuses the same group name as the old articles app so that existing users
-already in the group retain their permissions without any manual intervention.
+If the legacy article_editors Group exists, copy its members into the new group
+so existing editors retain access after the rename.
 """
 
-from django.contrib.auth.models import Group
 from django.db import migrations
 
-from website_content.constants import GROUP_STAFF_ARTICLE_EDITORS
+OLD_GROUP_NAME = "article_editors"
+NEW_GROUP_NAME = "website_content_editors"
 
 
-def add_editors_group(apps, schema_editor):  # noqa: ARG001
-    Group.objects.get_or_create(name=GROUP_STAFF_ARTICLE_EDITORS)
+def add_editors_group(apps, schema_editor):
+    Group = apps.get_model("auth", "Group")
+
+    new_group, _ = Group.objects.get_or_create(name=NEW_GROUP_NAME)
+    old_group = Group.objects.filter(name=OLD_GROUP_NAME).first()
+
+    if old_group and old_group.pk != new_group.pk:
+        new_group.user_set.add(*old_group.user_set.all())
 
 
-def remove_editors_group(apps, schema_editor):  # noqa: ARG001
-    Group.objects.filter(name=GROUP_STAFF_ARTICLE_EDITORS).delete()
+def remove_editors_group(apps, schema_editor):
+    Group = apps.get_model("auth", "Group")
+    Group.objects.filter(name=NEW_GROUP_NAME).delete()
 
 
 class Migration(migrations.Migration):

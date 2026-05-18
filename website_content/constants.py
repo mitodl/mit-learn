@@ -2,7 +2,7 @@
 
 from named_enum import ExtendedEnum
 
-GROUP_STAFF_ARTICLE_EDITORS = "article_editors"
+GROUP_WEBSITE_CONTENT_EDITORS = "website_content_editors"
 
 
 class WebsiteContentType(ExtendedEnum):

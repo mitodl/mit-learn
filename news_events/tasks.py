@@ -54,8 +54,11 @@ def get_website_content_news():
     clear_views_cache()
 
 
-# Backward-compatible alias so any queued Celery tasks using the old name still work.
-get_articles_news = get_website_content_news
+@app.task(name="news_events.tasks.get_articles_news")
+def get_articles_news():
+    """Backward-compatible alias for get_website_content_news."""
+    pipelines.articles_news_etl()
+    clear_views_cache()
 
 
 @app.task(
@@ -105,5 +108,11 @@ def sync_website_content_to_news(self, content_id: int):
         raise
 
 
-# Backward-compatible alias so any queued Celery tasks using the old name still work.
-sync_article_to_news = sync_website_content_to_news
+@app.task(
+    name="news_events.tasks.sync_article_to_news",
+    autoretry_for=(Exception,),
+    retry_kwargs={"max_retries": 3, "countdown": 5},
+)
+def sync_article_to_news(article_id: int):
+    """Backward-compatible alias for sync_website_content_to_news."""
+    sync_website_content_to_news.apply(args=[article_id], throw=True)

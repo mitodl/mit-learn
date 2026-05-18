@@ -1,12 +1,12 @@
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 from learning_resources.permissions import is_admin_user
-from website_content.constants import GROUP_STAFF_ARTICLE_EDITORS
+from website_content.constants import GROUP_WEBSITE_CONTENT_EDITORS
 
 
 def is_website_content_editor(request):
     """
-    Return True if the request user belongs to the article_editors group.
+    Return True if the request user belongs to the website_content_editors group.
 
     Args:
         request (HTTPRequest): django request object
@@ -16,7 +16,7 @@ def is_website_content_editor(request):
     """
     return (
         request.user is not None
-        and request.user.groups.filter(name=GROUP_STAFF_ARTICLE_EDITORS).first()
+        and request.user.groups.filter(name=GROUP_WEBSITE_CONTENT_EDITORS).first()
         is not None
     )
 
