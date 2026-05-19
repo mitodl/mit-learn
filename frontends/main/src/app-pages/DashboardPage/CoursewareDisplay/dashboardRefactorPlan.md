@@ -515,6 +515,11 @@ If any of these fails, the phase has relocated complexity rather than reduced it
 
 **Purpose:** Move contract-scoped orchestration out of `ContractContent.tsx` while preserving B2B behavior.
 
+**Implementation decisions (2026-05-19, Phase 5 kickoff):**
+
+- **Language-picker state:** inline in `useContractDashboardData` for now, with a short comment explaining this is temporary while Phase 4 is developed in parallel. If Phase 4 lands first, lift both to the shared `useDashboardLanguagePicker`; if Phase 5 lands first, Phase 4 reuses/extracts from the inlined implementation.
+- **Loading UI shape:** keep loading skeletons structurally aligned with the final contract UI (program blocks with course rows beneath each header), rather than generic flat skeleton lists.
+
 **Files:**
 
 - Create: `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/hooks/useContractDashboardData.ts`
@@ -535,6 +540,7 @@ If any of these fails, the phase has relocated complexity rather than reduced it
 - [ ] Preserve contract-scoped enrollment filtering using `b2b_contract_id`.
 - [ ] Preserve contract-scoped run filtering using `contract_id` query params and `contractId` run resolution.
 - [ ] Preserve current language picker behavior and selected-language state.
+- [ ] For this phase's branch order, inline the language-picker state/effect in `useContractDashboardData` with a TODO note to extract to shared `useDashboardLanguagePicker` once Phase 4 merges.
 - [ ] Use `dashboardAdapters.ts` to keep rendering through `DashboardCard` in this phase.
 - [ ] Add or update tests proving:
   - only contract programs are rendered,
@@ -542,7 +548,7 @@ If any of these fails, the phase has relocated complexity rather than reduced it
   - collections render only when at least one program has valid contract runs,
   - selected-language enrollment is preferred over contract next/best run,
   - contract A does not display contract B enrollment,
-  - welcome/header/skeleton behavior is unchanged.
+  - welcome/header behavior is unchanged and the loading skeleton preserves program + course-row structure.
 - [ ] Run:
 
 ```bash
