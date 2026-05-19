@@ -2,13 +2,18 @@ import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { factories, RequirementTreeBuilder } from "api/mitxonline-test-utils"
 import {
   assembleHomeCardList,
+  buildContractCourseDisplaySlots,
   bucketAndSortHomeEnrollments,
   buildCourseEntry,
   buildRequirementSections,
   enrollmentCourseIsInPrograms,
+  getCollectionFirstCoursesInDisplayOrder,
   getDistinctDashboardLanguageOptions,
   getModuleCourseIdsFromPrograms,
   getNonContractProgramEnrollments,
+  getProgramCoursesInContractOrder,
+  getRenderableContractCollections,
+  getSortedStandaloneContractPrograms,
   getTopLevelProgramEnrollments,
   groupCourseRunEnrollmentsByCourseId,
   groupModuleCoursesByProgramId,
@@ -16,6 +21,7 @@ import {
   isNonContractEnrollment,
   isProgramAsCourse,
   pickDisplayedEnrollmentForLegacyDashboard,
+  programHasContractRuns,
   resolveCourseEntryForLanguage,
 } from "./dashboardViewModel"
 
@@ -747,6 +753,184 @@ describe("dashboardViewModel", () => {
           writable: true,
         })
       }
+    })
+  })
+
+  describe("contract dashboard helpers", () => {
+    test("programHasContractRuns checks course membership in contract course ids", () => {
+      const program = factories.programs.program({ courses: [10, 20] })
+      const contractCourseIds = new Set([20, 99])
+
+      expect(programHasContractRuns(program, contractCourseIds)).toBe(true)
+      expect(programHasContractRuns(program, new Set([99]))).toBe(false)
+    })
+
+    test("getSortedStandaloneContractPrograms excludes collection programs and sorts by contract order", () => {
+      const programA = factories.programs.program({ id: 1, courses: [101] })
+      const programB = factories.programs.program({ id: 2, courses: [102] })
+      const programC = factories.programs.program({ id: 3, courses: [103] })
+      const contract = factories.contracts.contract({
+        programs: [3, 1, 2],
+      })
+      const collection = factories.programs.programCollection({
+        programs: [{ id: 2, title: programB.title, order: 1 }],
+      })
+      const contractCourses = [
+        factories.courses.course({ id: 101 }),
+        factories.courses.course({ id: 103 }),
+      ]
+
+      const programs = getSortedStandaloneContractPrograms(
+        [programA, programB, programC],
+        [collection],
+        contract,
+        contractCourses,
+      )
+
+      expect(programs.map((program) => program.id)).toEqual([3, 1])
+    })
+
+    test("getRenderableContractCollections keeps only collections with in-contract programs that have contract runs", () => {
+      const programA = factories.programs.program({ id: 10, courses: [1001] })
+      const programB = factories.programs.program({ id: 20, courses: [2001] })
+      const programC = factories.programs.program({ id: 30, courses: [3001] })
+      const contract = factories.contracts.contract({ programs: [10, 20] })
+
+      const noValidRuns = factories.programs.programCollection({
+        id: 1,
+        programs: [{ id: 10, title: programA.title, order: 1 }],
+      })
+      const validRuns = factories.programs.programCollection({
+        id: 2,
+        programs: [{ id: 20, title: programB.title, order: 1 }],
+      })
+      const outsideContract = factories.programs.programCollection({
+        id: 3,
+        programs: [{ id: 30, title: programC.title, order: 1 }],
+      })
+
+      expect(
+        getRenderableContractCollections(
+          [noValidRuns, validRuns, outsideContract],
+          [programA, programB, programC],
+          contract,
+          [factories.courses.course({ id: 2001 })],
+        ).map((collection) => collection.id),
+      ).toEqual([2])
+    })
+
+    test("getProgramCoursesInContractOrder preserves program course id order and skips missing", () => {
+      const program = factories.programs.program({ courses: [3, 1, 2] })
+      const course1 = factories.courses.course({ id: 1 })
+      const course2 = factories.courses.course({ id: 2 })
+
+      const courses = getProgramCoursesInContractOrder(program, [
+        course2,
+        course1,
+      ])
+
+      expect(courses.map((course) => course.id)).toEqual([1, 2])
+    })
+
+    test("getCollectionFirstCoursesInDisplayOrder follows collection order and selects first available contract course", () => {
+      const programA = factories.programs.program({
+        id: 10,
+        courses: [101, 102],
+      })
+      const programB = factories.programs.program({ id: 20, courses: [201] })
+      const collection = factories.programs.programCollection({
+        programs: [
+          { id: 10, title: programA.title, order: 2 },
+          { id: 20, title: programB.title, order: 1 },
+        ],
+      })
+      const course102 = factories.courses.course({ id: 102 })
+      const course201 = factories.courses.course({ id: 201 })
+
+      const courses = getCollectionFirstCoursesInDisplayOrder(
+        collection,
+        [programA, programB],
+        [course102, course201],
+      )
+
+      expect(courses.map((course) => course.id)).toEqual([201, 102])
+    })
+
+    test("buildContractCourseDisplaySlots uses only enrollments from the selected contract", () => {
+      const run = factories.courses.courseRun({
+        id: 501,
+        language: "en",
+        courseware_id: "cw-en-501",
+        courseware_url: "https://example.com/en-501",
+        is_enrollable: true,
+      })
+      const course = factories.courses.course({
+        id: 500,
+        courseruns: [run],
+        next_run_id: run.id,
+        language_options: [
+          {
+            id: run.id,
+            language: "en",
+            title: run.title,
+            run_tag: run.run_tag,
+            courseware_id: run.courseware_id,
+            courseware_url: run.courseware_url ?? "",
+          },
+        ],
+      })
+
+      const otherContractEnrollment = factories.enrollment.courseEnrollment({
+        b2b_contract_id: 2,
+        run: {
+          id: run.id,
+          language: "en",
+          title: run.title,
+          run_tag: run.run_tag,
+          course: { id: course.id, title: course.title },
+          courseware_id: run.courseware_id,
+          courseware_url: run.courseware_url,
+          is_enrollable: run.is_enrollable,
+          is_upgradable: run.is_upgradable,
+          is_archived: run.is_archived,
+          is_self_paced: run.is_self_paced,
+          start_date: run.start_date,
+          end_date: run.end_date,
+          upgrade_deadline: run.upgrade_deadline,
+          certificate_available_date: run.certificate_available_date,
+          course_number: run.course_number,
+        },
+      })
+      const selectedContractEnrollment = factories.enrollment.courseEnrollment({
+        b2b_contract_id: 1,
+        run: {
+          id: run.id,
+          language: "en",
+          title: run.title,
+          run_tag: run.run_tag,
+          course: { id: course.id, title: course.title },
+          courseware_id: run.courseware_id,
+          courseware_url: run.courseware_url,
+          is_enrollable: run.is_enrollable,
+          is_upgradable: run.is_upgradable,
+          is_archived: run.is_archived,
+          is_self_paced: run.is_self_paced,
+          start_date: run.start_date,
+          end_date: run.end_date,
+          upgrade_deadline: run.upgrade_deadline,
+          certificate_available_date: run.certificate_available_date,
+          course_number: run.course_number,
+        },
+      })
+
+      const [slot] = buildContractCourseDisplaySlots(
+        [course],
+        [otherContractEnrollment, selectedContractEnrollment],
+        "",
+        1,
+      )
+
+      expect(slot.displayedEnrollment?.b2b_contract_id).toBe(1)
     })
   })
 
