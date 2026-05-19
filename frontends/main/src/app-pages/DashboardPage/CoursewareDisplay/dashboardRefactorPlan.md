@@ -400,11 +400,65 @@ What the model layer must hold regardless: `buildRequirementSections`, slot cons
 
 **Purpose:** Move program-dashboard query orchestration, requirement-tree shaping, language policy, and slot construction out of `ProgramEnrollmentDisplay`.
 
-**Pre-decisions (settle at Phase 4 brainstorming, before code):**
+**Pre-decisions — SETTLED at Phase 4 brainstorming (2026-05-19).** Full design
+record with rationale + rejected alternatives:
+`feature_work/TODOS_AND_IDEAS/phase4-design.md` (local; gitignored). Summary:
 
-1. **Slot/adapter: prove or delete.** `DashboardCourseSlot` + `adaptCourseSlotToLegacyDashboardCardProps` (Phase 1) currently have **zero production consumers**, and `resolveSlotForLanguage` returns a fragment (`{ displayedEnrollment, displayedRun, selectedLanguageOption }`), not a slot. Home did **not** exercise them (Home is structurally enrollment-flat — one card per enrollment, heterogeneous incl. program / program-as-course — so it cannot be cleanly slot-shaped without regressing its multi-enrollment behavior; forcing degenerate per-enrollment slots would prove nothing). **Phase 4/Program is the first genuine slot consumer.** The decision: either (A) build a real `buildCourseSlot(...) → DashboardCourseSlot` constructor, have `useProgramDashboardData` emit slot-bearing requirement sections, and route them through `adaptCourseSlotToLegacyDashboardCardProps` at the render callsite — actually exercising the durable contract end-to-end; or (B) delete `DashboardCourseSlot` + `dashboardAdapters.ts` as speculative and have Program build the legacy resource union directly (keeping only the "one test-layering pattern" claim, dropping "one data contract"). Default lean: **(A)** — the slot is the whole point of the refactor's Phase 7 payoff; do not carry dead Phase-1 abstractions indefinitely, and do not let Program quietly hand-roll the resource union like the pre-refactor code did. Confirm at brainstorming.
-2. **`test-utils.ts` is infra-only, not scenario-shape.** Shared setup may own _infrastructure_ (user/org/contract identity, the `setMockResponse` plumbing) but **never the scenario shape** (the `req_tree`, the language matrix, the enrollment→run mapping). Provide a small composable `buildProgramScenario({ reqTree, courses, enrollments }) → { entities, mockAll() }` returning the built entities so each test wires its scenario-specific `coursesList`/`programsList` mocks, rather than a fixed god-`setupProgramsAndCourses`. Decide the builder shape before the first `renderHook` test, or the suite calcifies around the first test's ad-hoc shape. (Note: existing `setupProgramsAndCourses` is _contract_-shaped, not _program_-shaped — Phase 4 cannot reuse it as-is.)
-3. **Language picker — decided (option b):** `useProgramDashboardData` composes a new `useDashboardLanguagePicker(availableLanguages)` and owns `selectedLanguageKey` + the reset effect; the component is presentational. See [Resolved decision](#resolved-decision-settled-before-phase-4-hook-location-and-testing).
+1. **Slot/adapter: (A), and rename `slot` → `entry`.** Build a real
+   `buildCourseEntry(...) → DashboardCourseEntry` constructor; the composer
+   emits a discriminated-union requirement-section model; route the `course`
+   arm through `adaptCourseEntryToLegacyDashboardCardProps` at the render
+   callsite — exercising the durable contract end-to-end. Phase-1's shape is a
+   draft the first real consumer (Phase 4) finalizes. **"Slot" vocabulary
+   misleads** (reads as layout position / content projection): rename
+   `DashboardCourseSlot → DashboardCourseEntry`,
+   `buildCourseSlot → buildCourseEntry`,
+   `resolveSlotForLanguage → resolveCourseEntryForLanguage`,
+   `adaptCourseSlotToLegacyDashboardCardProps → adaptCourseEntryToLegacyDashboardCardProps`.
+   The rename spans code **and the rest of this plan doc** and is executed as
+   **step 0** (its own commit; zero production callers today). The composer
+   returns the `RequirementSectionItem` union (`course` → `entry:
+DashboardCourseEntry`; `program-as-course`; `program-enrollment`) **plus
+   shared aux** `enrollmentsByCourseId` + pre-derived
+   `ancestorProgramEnrollment` for the non-course arms (mirrors
+   `useHomeDashboardData`'s shared-map pattern; arms stay lean).
+2. **`buildProgramScenario`: option 2a (thin entities-in mock-wirer).** Tests
+   build the entities (program/courses/enrollments/req_tree) themselves with
+   existing factories + optional small composable entity helpers and pass them
+   in; `buildProgramScenario({ programId, program, programCourses,
+courseEnrollments, programEnrollments, requiredPrograms?,
+requiredProgramCourses? }) → { entities, mockAll }` only computes query keys
+   - fires `setMockResponse`. Builder owns **infra only**; tests own scenario
+     shape. (Existing `setupProgramsAndCourses` is _contract_-shaped — not
+     reusable here.)
+3. **Language picker — hook owns it.** `useProgramDashboardData` composes
+   `useDashboardLanguagePicker(availableLanguages)`; component presentational.
+   Implementation = **derive-during-render** (store raw user pick, derive
+   effective key — no reconcile effect). The composer's returned
+   `selectedLanguageKey` (and `DashboardCourseEntry.selectedLanguageKey`, and
+   `<select value>`) is the **effective** key; `setSelectedLanguageKey` records
+   the raw choice. Own test file `hooks/useDashboardLanguagePicker.test.tsx`
+   (renderHook, no API mocks — not in the pure-model suite, not in the composer
+   suite). See [Resolved decision](#resolved-decision-settled-before-phase-4-hook-location-and-testing).
+4. **Shared `parseProgramRequirementSections` in `@/common/mitxonline`.** The
+   req-tree → ordered-operator-sections → leaf `{type,id}` + elective +
+   requiredCount structural parse is shared with product `parseReqTree`
+   (`ProductPages/util.ts`). Phase 4 introduces it as a **structure-only** (hard
+   rule) helper: NO default/fallback titles, NO display copy, NO completion
+   logic, NO entity resolution — it returns ids + operator metadata +
+   `rawTitle: string | null`. Dashboard `buildRequirementSections` **composes**
+   it and owns all dashboard **display policy** (`getRequirementSectionTitle`
+   formatting incl. `min_number_of → "Electives (Complete N)"`, the
+   `items.length > 0` filter, completion counts, three-arm resolution). Product
+   `parseReqTree` is **not touched** in the Phase 4 PR; its migration to a thin
+   adapter over the shared helper is the **immediate next stacked PR**
+   (`util.test.ts` is its oracle). **Re-ask this sharing question at Phase 4
+   exit** (per the Working agreement) before declaring done.
+5. **Behavior-preservation scope.** Stable/settled render is the contract and
+   is preserved exactly. First-paint / transients may change if they converge
+   quickly to the same settled state — **except loading states**, which are
+   preserved. (Lets `useDashboardLanguagePicker` drop the legacy
+   `useState("")`+effect transient for derive-during-render.)
 
 **Files:**
 
