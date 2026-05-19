@@ -14,7 +14,7 @@ import {
   isNonContractEnrollment,
   isProgramAsCourse,
   pickDisplayedEnrollmentForLegacyDashboard,
-  resolveSlotForLanguage,
+  resolveCourseEntryForLanguage,
 } from "./dashboardViewModel"
 
 describe("dashboardViewModel", () => {
@@ -748,7 +748,7 @@ describe("dashboardViewModel", () => {
     })
   })
 
-  describe("resolveSlotForLanguage", () => {
+  describe("resolveCourseEntryForLanguage", () => {
     test("prefers selected-language enrollment", () => {
       const englishRun = factories.courses.courseRun({
         id: 11,
@@ -829,7 +829,7 @@ describe("dashboardViewModel", () => {
         },
       })
 
-      const resolved = resolveSlotForLanguage(
+      const resolved = resolveCourseEntryForLanguage(
         course,
         [englishEnrollment, spanishEnrollment],
         "language:es",
@@ -900,7 +900,7 @@ describe("dashboardViewModel", () => {
         },
       })
 
-      const resolved = resolveSlotForLanguage(
+      const resolved = resolveCourseEntryForLanguage(
         course,
         [otherContractEnrollment],
         "language:es",
@@ -942,9 +942,14 @@ describe("dashboardViewModel", () => {
         ],
       })
 
-      const resolved = resolveSlotForLanguage(course, [], "language:es", {
-        contractId: 1,
-      })
+      const resolved = resolveCourseEntryForLanguage(
+        course,
+        [],
+        "language:es",
+        {
+          contractId: 1,
+        },
+      )
 
       expect(resolved.displayedEnrollment).toBeNull()
       expect(resolved.displayedRun?.id).toBe(32)

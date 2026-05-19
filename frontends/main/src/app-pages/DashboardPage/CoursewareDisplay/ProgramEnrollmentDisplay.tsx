@@ -16,7 +16,7 @@ import {
   getDistinctDashboardLanguageOptions,
   groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
-  resolveSlotForLanguage,
+  resolveCourseEntryForLanguage,
 } from "./model/dashboardViewModel"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
@@ -446,7 +446,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                   const courseEnrollments =
                     enrollmentsByCourseId[item.course.id] || []
                   const { displayedEnrollment, displayedRun } =
-                    resolveSlotForLanguage(
+                    resolveCourseEntryForLanguage(
                       item.course,
                       courseEnrollments,
                       selectedLanguageKey,

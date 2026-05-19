@@ -1,8 +1,8 @@
 /**
  * Pure-model layer for the dashboard.
  *
- * Owns the canonical types (e.g. DashboardCourseSlot) and the pure transforms
- * — grouping, slot construction, display policy — that data hooks compose into
+ * Owns the canonical types (e.g. DashboardCourseEntry) and the pure transforms
+ * — grouping, entry construction, display policy — that data hooks compose into
  * render-ready shapes. No React, no queries; everything is synchronous and
  * unit-testable in isolation.
  */
@@ -27,7 +27,7 @@ import { getIdsFromReqTree } from "@/common/mitxonline"
 import { EnrollmentStatus, getEnrollmentStatus } from "../helpers"
 import {
   getNativeLanguageName,
-  // below five are used only for resolveSlotForLanguage
+  // below five are used only for resolveCourseEntryForLanguage
   getCourseRunForSelectedLanguage,
   getEnrollmentForSelectedLanguage,
   getResolvedRunForSelectedLanguage,
@@ -43,10 +43,10 @@ import {
  * `enrollments` must be course-matched (by run id) with no language filter —
  * language is a display selection (`selectedLanguageKey` → `displayedEnrollment`
  * / `displayedRun`), not a filter on the underlying list. Contract scoping,
- * when applicable, must be applied by the slot constructor before the list
- * reaches the slot.
+ * when applicable, must be applied by the entry constructor before the list
+ * reaches the entry.
  */
-export type DashboardCourseSlot = {
+export type DashboardCourseEntry = {
   course: CourseWithCourseRunsSerializerV2
   enrollments: CourseRunEnrollmentV3[]
   selectedLanguageKey: string
@@ -403,11 +403,11 @@ const getDistinctDashboardLanguageOptions = (
   return options
 }
 
-type ResolveSlotForLanguageOpts = {
+type ResolveCourseEntryForLanguageOpts = {
   contractId?: number
 }
 
-type ResolveSlotForLanguageResult = {
+type ResolveCourseEntryForLanguageResult = {
   displayedEnrollment: CourseRunEnrollmentV3 | null
   displayedRun: CourseRunV2 | null
   selectedLanguageOption: CourseRunLanguageOption | null
@@ -415,14 +415,14 @@ type ResolveSlotForLanguageResult = {
 
 /**
  * Given a language selection and course/enrollment data, pick the
- * `displayedEnrollment` and `displayedRun` for a dashboard slot.
+ * `displayedEnrollment` and `displayedRun` for a dashboard course entry.
  */
-const resolveSlotForLanguage = (
+const resolveCourseEntryForLanguage = (
   course: CourseWithCourseRunsSerializerV2,
   enrollments: CourseRunEnrollmentV3[],
   selectedLanguageKey: string,
-  opts?: ResolveSlotForLanguageOpts,
-): ResolveSlotForLanguageResult => {
+  opts?: ResolveCourseEntryForLanguageOpts,
+): ResolveCourseEntryForLanguageResult => {
   const selectedLanguageOption = getSelectedLanguageOption(
     course,
     selectedLanguageKey,
@@ -489,7 +489,7 @@ export {
   pickDisplayedEnrollmentForLegacyDashboard,
   groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
-  resolveSlotForLanguage,
+  resolveCourseEntryForLanguage,
   getDistinctDashboardLanguageOptions,
   isProgramAsCourse,
   isNonContractEnrollment,
