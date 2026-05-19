@@ -15,10 +15,6 @@ import FallbackErrorPage from "@/app-pages/ErrorPage/FallbackErrorPage"
 import { ForbiddenError } from "@/common/errors"
 import ForbiddenPage from "@/app-pages/ErrorPage/ForbiddenPage"
 
-export const metadata = {
-  title: "Error",
-}
-
 const Error = ({ error }: { error: Error }) => {
   useEffect(() => {
     console.error("Error encountered in React error boundary:", error)

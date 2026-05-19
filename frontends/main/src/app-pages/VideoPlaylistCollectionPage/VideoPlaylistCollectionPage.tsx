@@ -3,7 +3,6 @@
 import React from "react"
 import { styled, Skeleton, Typography } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { notFound } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import {
@@ -21,8 +20,6 @@ import FeaturedVideo from "./FeaturedVideo"
 import VideoCollection from "./VideoCollection"
 import RelatedPlaylist from "./RelatedPlaylist"
 import VideoContainer from "./VideoContainer"
-import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 
 const Page = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray1,
@@ -69,11 +66,6 @@ const VideoPlaylistCollectionPage: React.FC<
   const getVideoHref = (resource: VideoResource) =>
     `/video/${resource.id}?playlist=${playlistId}`
 
-  const showVideoPlaylistPage = useFeatureFlagEnabled(
-    FeatureFlags.VideoPlaylistPage,
-  )
-  const flagsLoaded = useFeatureFlagsLoaded()
-
   const {
     data: playlist,
     isLoading: playlistLoading,
@@ -98,10 +90,6 @@ const VideoPlaylistCollectionPage: React.FC<
       resource_type: [ResourceTypeEnum.VideoPlaylist],
     }),
   })
-
-  if (!showVideoPlaylistPage) {
-    return flagsLoaded ? notFound() : null
-  }
 
   if (isError) {
     return notFound()
