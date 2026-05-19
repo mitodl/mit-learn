@@ -684,6 +684,47 @@ describe("ContractContent", () => {
     expect(collections.length).toBe(0)
   })
 
+  test("only renders programs whose courses appear in the contract-scoped courses response", async () => {
+    const { orgX, programA, programB } = setupProgramsAndCourses()
+
+    // Create a program whose courses are not in the contract-scoped courses response.
+    // The courses API mock from setupProgramsAndCourses only returns coursesA and coursesB,
+    // so getSortedStandaloneContractPrograms will exclude programC because none of its
+    // course IDs appear in contractCourses.
+    const programC = factories.programs.program({
+      courses: [99991, 99992],
+    })
+
+    // Override the contract-filtered programs list to include the extra program.
+    setMockResponse.get(
+      urls.programs.programsList({
+        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
+        page_size: 30,
+      }),
+      { results: [programA, programB, programC] },
+    )
+    setMockResponse.get(urls.programCollections.programCollectionsList(), {
+      results: [],
+    })
+
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
+
+    await screen.findByRole("heading", { name: orgX.name })
+    // A and B have contract-scoped courses, so they render.
+    const renderedPrograms = await screen.findAllByTestId("org-program-root")
+    expect(renderedPrograms.length).toBe(2)
+    // C has no contract-scoped courses, so it must not appear.
+    expect(
+      screen.queryByRole("heading", { name: programC.title }),
+    ).not.toBeInTheDocument()
+  })
+
   test("Does not render program collection if all programs have no courses", async () => {
     const { orgX, programA, programB } = setupProgramsAndCourses()
 
