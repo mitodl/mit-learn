@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.68.1
+Version 0.68.1 (Released May 19, 2026)
 --------------
 
 - split EnrollmentDisplay into HomeEnrollmentsDisplay + ProgramEnrollMentDisplay… (#3341)
