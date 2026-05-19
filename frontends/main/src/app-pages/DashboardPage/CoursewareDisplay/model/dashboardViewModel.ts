@@ -8,13 +8,23 @@
  */
 import type { SimpleSelectOption } from "ol-components"
 import type {
+  BaseProgramDisplayMode,
+  ContractPage,
   CourseRunEnrollmentV3,
   CourseRunLanguageOption,
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
+  V2ProgramDetail,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { selectBestEnrollment } from "../helpers"
+import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
+// Type-only import: erased at compile time, so this line adds no runtime
+// dependency on the DashboardCard component. DashboardResource is the durable
+// enrollment-flat home contract; it moves into this file when the legacy
+// cards are removed (Phase 7).
+import type { DashboardResource } from "../DashboardCard"
+import { getIdsFromReqTree } from "@/common/mitxonline"
+import { EnrollmentStatus, getEnrollmentStatus } from "../helpers"
 import {
   getNativeLanguageName,
   // below five are used only for resolveSlotForLanguage
@@ -48,8 +58,8 @@ export type DashboardCourseSlot = {
     parentProgramReadableIds?: string[]
     useVerifiedEnrollment?: boolean
   }
-  // Whether these fields survive past the legacy-card removal is an open tied
-  // to new card UX (run selection controlled by card or parent.)
+  // Whether these fields survive past the legacy-card removal is an open
+  // question tied to new card UX (run selection controlled by card or parent).
   displayedEnrollment: CourseRunEnrollmentV3 | null
   displayedRun: CourseRunV2 | null
 }
@@ -91,23 +101,11 @@ const pickDisplayedEnrollmentForLegacyDashboard = (
 }
 
 const groupCourseRunEnrollmentsByCourseId = (
-  courses: CourseWithCourseRunsSerializerV2[],
   enrollments: CourseRunEnrollmentV3[],
 ): Record<number, CourseRunEnrollmentV3[]> => {
-  const runIdToCourseId = new Map<number, number>()
-  courses.forEach((course) => {
-    course.courseruns.forEach((run) => {
-      runIdToCourseId.set(run.id, course.id)
-    })
-  })
-
   return enrollments.reduce<Record<number, CourseRunEnrollmentV3[]>>(
     (acc, enrollment) => {
-      const courseId = runIdToCourseId.get(enrollment.run.id)
-      if (!courseId) {
-        return acc
-      }
-
+      const courseId = enrollment.run.course.id
       acc[courseId] = [...(acc[courseId] ?? []), enrollment]
       return acc
     },
@@ -125,6 +123,213 @@ const groupProgramEnrollmentsByProgramId = (
     },
     {},
   )
+}
+
+const isProgramAsCourse = (program: {
+  display_mode?: BaseProgramDisplayMode | null
+}) => program.display_mode === DisplayModeEnum.Course
+
+const isNonContractEnrollment = (enrollment: CourseRunEnrollmentV3) =>
+  !enrollment.b2b_contract_id
+
+/**
+ * Closure-factory predicate: returns a predicate that tests whether an
+ * enrollment's course id appears in any of the given programs' `courses[]`.
+ * The Set is built once per factory call and reused across the predicate's
+ * invocations, so the natural usage is `enrollments.filter(predicate)`.
+ */
+const enrollmentCourseIsInPrograms = (programs: V2ProgramDetail[]) => {
+  const coveredCourseIds = new Set(programs.flatMap((p) => p.courses))
+  return (enrollment: CourseRunEnrollmentV3) =>
+    coveredCourseIds.has(enrollment.run.course.id)
+}
+
+const getNonContractProgramEnrollments = (
+  programEnrollments: V3UserProgramEnrollment[],
+  contracts: ContractPage[],
+) => {
+  const contractPrograms = new Set(
+    contracts.flatMap((contract) => contract.programs),
+  )
+  return programEnrollments.filter(
+    (enrollment) => !contractPrograms.has(enrollment.program.id),
+  )
+}
+
+const getTopLevelProgramEnrollments = (
+  programEnrollments: V3UserProgramEnrollment[],
+  programs: V2ProgramDetail[],
+) => {
+  const childIds = new Set(
+    programs.flatMap(
+      (program) => getIdsFromReqTree(program.req_tree).programIds,
+    ),
+  )
+  return programEnrollments.filter(
+    (enrollment) => !childIds.has(enrollment.program.id),
+  )
+}
+
+/**
+ * Distinct course ids referenced anywhere in the given programs' req_trees.
+ * Used to drive the home dashboard's program-as-course module course query.
+ */
+const getModuleCourseIdsFromPrograms = (
+  programs: V2ProgramDetail[],
+): number[] => {
+  return [
+    ...new Set(
+      programs.flatMap(
+        (program) => getIdsFromReqTree(program.req_tree).courseIds,
+      ),
+    ),
+  ]
+}
+
+/**
+ * For each program, the subset of `courses` whose ids appear in
+ * `program.courses[]`. Used by both home and program dashboards to wire
+ * program-as-course module data into the cards that render it.
+ */
+const groupModuleCoursesByProgramId = (
+  programs: V2ProgramDetail[],
+  courses: CourseWithCourseRunsSerializerV2[],
+): Record<number, CourseWithCourseRunsSerializerV2[]> => {
+  return programs.reduce<Record<number, CourseWithCourseRunsSerializerV2[]>>(
+    (acc, program) => {
+      const programCourseIds = new Set(program.courses)
+      acc[program.id] = courses.filter((course) =>
+        programCourseIds.has(course.id),
+      )
+      return acc
+    },
+    {},
+  )
+}
+
+const byTitle = (a: CourseRunEnrollmentV3, b: CourseRunEnrollmentV3) =>
+  a.run.course.title.localeCompare(b.run.course.title)
+
+const byStartsSooner = (a: CourseRunEnrollmentV3, b: CourseRunEnrollmentV3) => {
+  if (!a.run.start_date && !b.run.start_date) return 0
+  if (!a.run.start_date) return 1
+  if (!b.run.start_date) return -1
+  return (
+    new Date(a.run.start_date).getTime() - new Date(b.run.start_date).getTime()
+  )
+}
+
+type HomeEnrollmentBuckets = {
+  started: CourseRunEnrollmentV3[]
+  notStarted: CourseRunEnrollmentV3[]
+  completed: CourseRunEnrollmentV3[]
+  expired: CourseRunEnrollmentV3[]
+}
+
+/**
+ * Bucket enrollments into the four home-dashboard sections and sort each
+ * bucket. Assumes input is already filtered to the enrollments the home
+ * dashboard renders (e.g. non-contract).
+ *
+ * Bucket policy:
+ *  - completed: any passing grade
+ *  - expired: end_date in the past
+ *  - started: start_date in the past, not expired, not completed
+ *  - notStarted: everything else
+ *
+ * Sort policy: alphabetical by course title in every bucket except
+ * notStarted, which is sorted by start_date ascending.
+ */
+const bucketAndSortHomeEnrollments = (
+  enrollments: CourseRunEnrollmentV3[],
+): HomeEnrollmentBuckets => {
+  const now = new Date()
+  const buckets: HomeEnrollmentBuckets = {
+    started: [],
+    notStarted: [],
+    completed: [],
+    expired: [],
+  }
+  enrollments.forEach((enrollment) => {
+    if (getEnrollmentStatus(enrollment) === EnrollmentStatus.Completed) {
+      buckets.completed.push(enrollment)
+    } else if (
+      enrollment.run.end_date &&
+      new Date(enrollment.run.end_date) < now
+    ) {
+      buckets.expired.push(enrollment)
+    } else if (
+      enrollment.run.start_date &&
+      new Date(enrollment.run.start_date) < now
+    ) {
+      buckets.started.push(enrollment)
+    } else {
+      buckets.notStarted.push(enrollment)
+    }
+  })
+  return {
+    started: buckets.started.sort(byTitle),
+    notStarted: buckets.notStarted.sort(byStartsSooner),
+    completed: buckets.completed.sort(byTitle),
+    expired: buckets.expired.sort(byTitle),
+  }
+}
+
+/**
+ * Minimum number of cards the home dashboard shows before "Show all" when
+ * every card is expired (so the section is never blank for an enrolled user).
+ */
+const MIN_VISIBLE_HOME_CARDS = 3
+
+type HomeCardListInput = HomeEnrollmentBuckets & {
+  programEnrollments: V3UserProgramEnrollment[]
+}
+
+type HomeCardList = {
+  cards: DashboardResource[]
+  initiallyVisibleCount: number
+}
+
+/**
+ * Flatten home buckets into the single ordered card list the dashboard
+ * renders, plus how many of those cards are visible before "Show all".
+ *
+ * Order: started, notStarted, completed, programEnrollments, then expired.
+ *
+ * Visibility rule (preserves legacy behavior): if there is at least one
+ * non-expired card, all non-expired cards are visible and every expired card
+ * is hidden behind "Show all". If there are no non-expired cards, up to
+ * MIN_VISIBLE_HOME_CARDS expired cards are promoted into view.
+ */
+const assembleHomeCardList = ({
+  started,
+  notStarted,
+  completed,
+  expired,
+  programEnrollments,
+}: HomeCardListInput): HomeCardList => {
+  const courseRunCard = (data: CourseRunEnrollmentV3): DashboardResource => ({
+    type: "courserun-enrollment",
+    data,
+  })
+
+  const nonExpired: DashboardResource[] = [
+    ...started.map(courseRunCard),
+    ...notStarted.map(courseRunCard),
+    ...completed.map(courseRunCard),
+    ...programEnrollments.map(
+      (data): DashboardResource => ({ type: "program-enrollment", data }),
+    ),
+  ]
+  const expiredCards = expired.map(courseRunCard)
+
+  return {
+    cards: [...nonExpired, ...expiredCards],
+    initiallyVisibleCount:
+      nonExpired.length > 0
+        ? nonExpired.length
+        : Math.min(MIN_VISIBLE_HOME_CARDS, expiredCards.length),
+  }
 }
 
 /**
@@ -264,7 +469,7 @@ const resolveSlotForLanguage = (
   )
   const displayedEnrollment = selectedLanguageKey
     ? selectedLanguageEnrollment
-    : selectBestEnrollment(course, enrollments)
+    : pickDisplayedEnrollmentForLegacyDashboard(course, enrollments)
 
   const displayedRun = getResolvedRunForSelectedLanguage(
     course,
@@ -286,4 +491,13 @@ export {
   groupProgramEnrollmentsByProgramId,
   resolveSlotForLanguage,
   getDistinctDashboardLanguageOptions,
+  isProgramAsCourse,
+  isNonContractEnrollment,
+  enrollmentCourseIsInPrograms,
+  getNonContractProgramEnrollments,
+  getTopLevelProgramEnrollments,
+  getModuleCourseIdsFromPrograms,
+  groupModuleCoursesByProgramId,
+  bucketAndSortHomeEnrollments,
+  assembleHomeCardList,
 }
