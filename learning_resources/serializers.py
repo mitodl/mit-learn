@@ -474,7 +474,7 @@ class VideoChannelSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.VideoChannel
-        exclude = ["published", *COMMON_IGNORED_FIELDS]
+        exclude = ["published", "etl_source", *COMMON_IGNORED_FIELDS]
 
 
 class CaptionUrlSerializer(serializers.Serializer):

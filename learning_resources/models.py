@@ -1440,6 +1440,7 @@ class VideoChannel(TimestampedModel):
     channel_id = models.CharField(max_length=80, primary_key=True)
     title = models.CharField(max_length=256)
     published = models.BooleanField(default=True)
+    etl_source = models.CharField(max_length=12, default="")
 
     def __str__(self):
         return f"VideoChannel: {self.title} - {self.channel_id}"

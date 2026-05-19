@@ -2,17 +2,17 @@ import React from "react"
 import { renderWithProviders, screen } from "@/test-utils"
 import ProgramContent from "./ProgramContent"
 
-// Mock the EnrollmentDisplay component
-jest.mock("./CoursewareDisplay/EnrollmentDisplay", () => ({
-  EnrollmentDisplay: jest.fn(({ programId }) => (
+// Mock the ProgramEnrollmentDisplay component
+jest.mock("./CoursewareDisplay/ProgramEnrollmentDisplay", () => ({
+  ProgramEnrollmentDisplay: jest.fn(({ programId }) => (
     <div data-testid="enrollment-display" data-program-id={programId}>
-      Mocked EnrollmentDisplay with programId: {programId}
+      Mocked ProgramEnrollmentDisplay with programId: {programId}
     </div>
   )),
 }))
 
 describe("ProgramContent", () => {
-  test("renders EnrollmentDisplay with programId prop", () => {
+  test("renders ProgramEnrollmentDisplay with programId prop", () => {
     const programId = 123
     renderWithProviders(<ProgramContent programId={programId} />)
 
@@ -21,12 +21,14 @@ describe("ProgramContent", () => {
     expect(enrollmentDisplay).toHaveAttribute("data-program-id", "123")
   })
 
-  test("passes correct programId to EnrollmentDisplay", () => {
+  test("passes correct programId to ProgramEnrollmentDisplay", () => {
     const programId = 456
     renderWithProviders(<ProgramContent programId={programId} />)
 
     expect(
-      screen.getByText(`Mocked EnrollmentDisplay with programId: ${programId}`),
+      screen.getByText(
+        `Mocked ProgramEnrollmentDisplay with programId: ${programId}`,
+      ),
     ).toBeInTheDocument()
   })
 

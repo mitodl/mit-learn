@@ -174,7 +174,9 @@ def ocw_courses_etl(
         raise ExtractException(message)
 
 
-youtube_etl = compose(loaders.load_video_channels, youtube.transform, youtube.extract)
+youtube_etl = compose(
+    loaders.load_youtube_video_channels, youtube.transform, youtube.extract
+)
 
 ovs_etl = compose(loaders.load_ovs_playlists, ovs.transform, ovs.extract)
 

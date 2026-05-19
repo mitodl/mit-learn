@@ -35,12 +35,9 @@ import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
 import {
-  getCourseRunForSelectedLanguage,
-  getDistinctLanguageOptions,
-  getResolvedRunForSelectedLanguage,
-  getSelectedLanguageOption,
-  selectBestContractEnrollmentForLanguage,
-} from "./CoursewareDisplay/languageOptions"
+  getDistinctDashboardLanguageOptions,
+  resolveSlotForLanguage,
+} from "./CoursewareDisplay/model/dashboardViewModel"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 
 const HeaderRoot = styled.div(({ theme }) => ({
@@ -398,54 +395,36 @@ const OrgProgramCollectionDisplay: React.FC<{
             enrollments?.filter(
               (enrollment) => enrollment.b2b_contract_id === contract.id,
             ) ?? []
-          // Prefer the user's existing enrollment for the selected language
-          // over the next/best run, so older-run enrollments stay visible
-          // when the contract surfaces a newer run.
-          const selectedLanguageEnrollment =
-            selectBestContractEnrollmentForLanguage(
-              course,
-              contractEnrollments,
-              selectedLanguageKey,
-            )
-          const selectedLanguageOption = getSelectedLanguageOption(
+          const { displayedEnrollment, displayedRun } = resolveSlotForLanguage(
             course,
+            contractEnrollments,
             selectedLanguageKey,
+            { contractId: contract.id },
           )
-          const selectedRun = selectedLanguageEnrollment
-            ? ((course.courseruns ?? []).find(
-                (r) => r.id === selectedLanguageEnrollment.run.id,
-              ) ?? null)
-            : getCourseRunForSelectedLanguage(course, selectedLanguageKey)
-          const resolvedRun = getResolvedRunForSelectedLanguage(
-            course,
-            selectedLanguageOption,
-            selectedRun,
-            selectedLanguageEnrollment,
-            contract.id,
-          )
+
+          const resource = displayedEnrollment
+            ? {
+                type: DashboardType.CourseRunEnrollment,
+                data: displayedEnrollment,
+              }
+            : { type: DashboardType.Course, data: course }
+
           return (
             <DashboardCardStyled
               Component="li"
               key={getKey({
                 resourceType: ResourceType.Course,
                 id: course.id,
-                runId: selectedLanguageEnrollment?.run.id ?? resolvedRun?.id,
+                runId: displayedEnrollment?.run.id ?? displayedRun?.id,
               })}
-              resource={
-                selectedLanguageEnrollment
-                  ? {
-                      type: DashboardType.CourseRunEnrollment,
-                      data: selectedLanguageEnrollment,
-                    }
-                  : { type: DashboardType.Course, data: course }
-              }
+              resource={resource}
               noun="Module"
               offerUpgrade={false}
               buttonHref={
-                selectedLanguageEnrollment?.run.courseware_url ??
-                resolvedRun?.courseware_url
+                displayedEnrollment?.run.courseware_url ??
+                displayedRun?.courseware_url
               }
-              selectedCourseRun={resolvedRun}
+              selectedCourseRun={displayedRun}
               contractId={contract.id}
             />
           )
@@ -526,31 +505,20 @@ const OrgProgramDisplay: React.FC<{
                 courseRunEnrollments?.filter(
                   (enrollment) => enrollment.b2b_contract_id === contract?.id,
                 ) ?? []
-              // Prefer the user's existing enrollment for the selected
-              // language over the next/best run, so older-run enrollments
-              // stay visible when the contract surfaces a newer run.
-              const selectedLanguageEnrollment =
-                selectBestContractEnrollmentForLanguage(
+              const { displayedEnrollment, displayedRun } =
+                resolveSlotForLanguage(
                   course,
                   contractEnrollments,
                   selectedLanguageKey,
+                  { contractId: contract?.id },
                 )
-              const selectedLanguageOption = getSelectedLanguageOption(
-                course,
-                selectedLanguageKey,
-              )
-              const selectedRun = selectedLanguageEnrollment
-                ? ((course.courseruns ?? []).find(
-                    (r) => r.id === selectedLanguageEnrollment.run.id,
-                  ) ?? null)
-                : getCourseRunForSelectedLanguage(course, selectedLanguageKey)
-              const resolvedRun = getResolvedRunForSelectedLanguage(
-                course,
-                selectedLanguageOption,
-                selectedRun,
-                selectedLanguageEnrollment,
-                contract?.id,
-              )
+
+              const resource = displayedEnrollment
+                ? {
+                    type: DashboardType.CourseRunEnrollment,
+                    data: displayedEnrollment,
+                  }
+                : { type: DashboardType.Course, data: course }
 
               return (
                 <DashboardCardStyled
@@ -558,24 +526,16 @@ const OrgProgramDisplay: React.FC<{
                   key={getKey({
                     resourceType: ResourceType.Course,
                     id: course.id,
-                    runId:
-                      selectedLanguageEnrollment?.run.id ?? resolvedRun?.id,
+                    runId: displayedEnrollment?.run.id ?? displayedRun?.id,
                   })}
-                  resource={
-                    selectedLanguageEnrollment
-                      ? {
-                          type: DashboardType.CourseRunEnrollment,
-                          data: selectedLanguageEnrollment,
-                        }
-                      : { type: DashboardType.Course, data: course }
-                  }
+                  resource={resource}
                   noun="Module"
                   offerUpgrade={false}
                   buttonHref={
-                    selectedLanguageEnrollment?.run.courseware_url ??
-                    resolvedRun?.courseware_url
+                    displayedEnrollment?.run.courseware_url ??
+                    displayedRun?.courseware_url
                   }
-                  selectedCourseRun={resolvedRun}
+                  selectedCourseRun={displayedRun}
                   contractId={contract?.id}
                 />
               )
@@ -644,8 +604,13 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
     [coursesQuery.data?.results],
   )
   const languageOptions = React.useMemo(
-    () => getDistinctLanguageOptions(contractCourses),
-    [contractCourses],
+    () =>
+      getDistinctDashboardLanguageOptions(
+        contractCourses,
+        courseRunEnrollmentsQuery.data ?? [],
+        { contractId: contract.id },
+      ),
+    [contract.id, contractCourses, courseRunEnrollmentsQuery.data],
   )
   const [selectedLanguageKey, setSelectedLanguageKey] = React.useState("")
 
