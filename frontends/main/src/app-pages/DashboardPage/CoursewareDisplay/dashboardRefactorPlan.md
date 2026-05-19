@@ -211,17 +211,17 @@ Responsibilities:
 - `useProgramDashboardData` (composer): owns program detail query, course/enrollment/program enrollment joins, requirement-section construction, language options, slot assembly, and program-as-course slot context. Separate exported file `hooks/useProgramDashboardData.ts` + `renderHook` suite (per Resolved decision).
 - `useContractDashboardData` (composer): owns contract-scoped courses/programs/collections, contract enrollment filtering, program filtering, collection shaping, language options, slot assembly, and loading aggregation. Separate exported file `hooks/useContractDashboardData.ts` + `renderHook` suite (per Resolved decision).
 - `model/dashboardViewModel.ts`: the **single pure-model home**. Owns the canonical types (`DashboardCourseSlot`, section shapes, home buckets), grouping helpers, slot constructors, requirement-section builders, language-option computation, the composite slot/language resolver introduced in Phase 2, the renamed display-policy helper, and Cases 2 + 3 of `getResolvedRunForSelectedLanguage`. By Phase 7's end, every pure helper that survives the cleanup lives here.
-- `model/dashboardAdapters.ts`: temporary adapters from the new view model to current `DashboardCard` / `ProgramAsCourseCard` props. Deletion candidate at Phase 7 — its lifespan ends when `CoursewareCard` consumes the slot directly.
+- `model/dashboardAdapters.ts`: temporary adapters from the new view model to current `DashboardCard` / `ProgramAsCourseCard` props. Deletion candidate at Phase 7 — narrows or dies once the slot→variant mapping folds into `CoursewareCard`'s variant constructors. `CoursewareCard` consumes a per-row variant union, never a slot.
 
 **Layer roles (illustrative, not prescriptive — boundaries may shift at phase exits):**
 
-| File                            | Layer                      | Knows React? | Knows queries? | Long-term?                              |
-| ------------------------------- | -------------------------- | ------------ | -------------- | --------------------------------------- |
-| `useXxxDashboardData` composer  | Composer (data + actions)  | Yes          | Yes            | Yes (location: file or inlined; TBD)    |
-| `model/dashboardViewModel.ts`   | Pure model — single home   | No           | No             | Yes — load-bearing                      |
-| `model/dashboardAdapters.ts`    | Pure model (legacy bridge) | No           | No             | No — deleted in Phase 7                 |
-| `helpers.ts` (existing)         | Pure model                 | No           | No             | No — absorbed into viewModel by Phase 7 |
-| `languageOptions.ts` (existing) | Pure model                 | No           | No             | No — absorbed into viewModel by Phase 7 |
+| File                            | Layer                      | Knows React? | Knows queries? | Long-term?                                       |
+| ------------------------------- | -------------------------- | ------------ | -------------- | ------------------------------------------------ |
+| `useXxxDashboardData` composer  | Composer (data + actions)  | Yes          | Yes            | Yes (separate exported file — Resolved decision) |
+| `model/dashboardViewModel.ts`   | Pure model — single home   | No           | No             | Yes — load-bearing                               |
+| `model/dashboardAdapters.ts`    | Pure model (legacy bridge) | No           | No             | No — deleted in Phase 7                          |
+| `helpers.ts` (existing)         | Pure model                 | No           | No             | No — absorbed into viewModel by Phase 7          |
+| `languageOptions.ts` (existing) | Pure model                 | No           | No             | No — absorbed into viewModel by Phase 7          |
 
 The `EnrollmentStatus` enum currently in `helpers.ts` is consumed by `EnrollmentStatusIndicator.tsx` and `ProgressBadge.tsx`. After consolidation it is exported from `dashboardViewModel.ts`; no separate "shared types" file is needed.
 
@@ -728,6 +728,6 @@ Test files (`*.test.tsx`, `*.test.ts`) are omitted for brevity. Each non-test so
 **Reading notes:**
 
 - The `language/` directory is bracketed by Phase 2's exit decision — it's only created if the existing primitives become internal. Otherwise the composite is added to `languageOptions.ts` and no new file appears.
-- `model/dashboardAdapters.ts` shows up as new in Phase 1 but is a deletion candidate in Phase 7 — its lifespan depends on whether `CoursewareCard` consumes the slot directly without translation.
-- Net file-count effect: roughly +5 to +8 added, –4 deleted (no `hooks/` directory after Phase 3 chose to inline composers); the surviving render-heavy components (`HomeEnrollmentsDisplay.tsx`, `ProgramEnrollmentDisplay.tsx`, `ContractContent.tsx`) shrink substantially.
+- `model/dashboardAdapters.ts` shows up as new in Phase 1 but is a deletion candidate in Phase 7 — its lifespan depends on whether the slot→variant mapping stays a freestanding adapter or folds into `CoursewareCard`'s variant constructors. `CoursewareCard` consumes a per-row variant union, not a slot.
+- Net file-count effect: roughly +5 to +8 added, –4 deleted (includes a `hooks/` directory of separate exported composers per the Resolved decision); the surviving render-heavy components (`HomeEnrollmentsDisplay.tsx`, `ProgramEnrollmentDisplay.tsx`, `ContractContent.tsx`) shrink substantially.
 - The biggest LoC win is the deletion of `DashboardCard.tsx` (~1099 lines) and `ModuleCard.tsx` (~933 lines). New files are smaller and single-purpose.
