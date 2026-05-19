@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.68.2
+--------------
+
+- feat: add video embed page and route group restructure (#3327)
+- dashboard refactor: useHomeDashboardData (#3342)
+- fix: add heading tags to B2B org section (#3347)
+- fix: certificate page being indexed in google search (#3348)
+- Granian reload for local dev (#3351)
+
 Version 0.68.1 (Released May 19, 2026)
 --------------
 
