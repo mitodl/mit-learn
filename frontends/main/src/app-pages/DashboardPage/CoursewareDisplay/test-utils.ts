@@ -12,6 +12,9 @@ import {
   OrganizationPage,
   User,
   V2Program,
+  V2ProgramDetail,
+  V3UserProgramEnrollment,
+  DisplayModeEnum,
 } from "@mitodl/mitxonline-api-axios/v2"
 
 const makeCourses = factories.courses.courses
@@ -410,6 +413,150 @@ const createCoursesWithContractRuns = (contracts: ContractPage[]) => {
   })
 }
 
+type BuildProgramScenarioInput = {
+  programId: number
+  program: V2ProgramDetail
+  programCourses?: CourseWithCourseRunsSerializerV2[]
+  courseEnrollments?: CourseRunEnrollmentV3[]
+  programEnrollments?: V3UserProgramEnrollment[]
+  requiredPrograms?: V2ProgramDetail[]
+  requiredProgramCourses?: CourseWithCourseRunsSerializerV2[]
+}
+
+type BuildProgramScenarioResult = {
+  entities: {
+    programId: number
+    program: V2ProgramDetail
+    programCourses: CourseWithCourseRunsSerializerV2[]
+    courseEnrollments: CourseRunEnrollmentV3[]
+    programEnrollments: V3UserProgramEnrollment[]
+    requiredPrograms: V2ProgramDetail[]
+    requiredProgramCourses: CourseWithCourseRunsSerializerV2[]
+  }
+  mockAll: () => void
+}
+
+/**
+ * Thin entities-in mock-wirer for `useProgramDashboardData` renderHook tests.
+ *
+ * Tests build the scenario-specific entities (programs, courses, enrollments,
+ * req_tree shape) and pass them in; this builder only wires the standard
+ * `setMockResponse` calls that match the hook's 6 queries exactly (same
+ * query keys, params, page_size, enabled gating). The returned `mockAll()`
+ * also mocks the mitxonline user identity endpoint that the test harness needs.
+ *
+ * Tests may add/override raw `setMockResponse` after `mockAll()` for edge cases.
+ *
+ * Builder owns INFRA ONLY — scenario shape (req_tree, languages, enrollment→run
+ * mapping) lives in each test.
+ */
+const buildProgramScenario = (
+  input: BuildProgramScenarioInput,
+): BuildProgramScenarioResult => {
+  const {
+    programId,
+    program,
+    programCourses = [],
+    courseEnrollments = [],
+    programEnrollments = [],
+    requiredPrograms = [],
+    requiredProgramCourses = [],
+  } = input
+
+  const entities = {
+    programId,
+    program,
+    programCourses,
+    courseEnrollments,
+    programEnrollments,
+    requiredPrograms,
+    requiredProgramCourses,
+  }
+
+  const mockAll = () => {
+    // Infra: identity endpoint needed by the test harness
+    const mitxOnlineUser = factories.user.user()
+    setMockResponse.get(urls.userMe.get(), mitxOnlineUser)
+
+    // Query 1: course-run enrollments list
+    setMockResponse.get(urls.enrollment.enrollmentsListV3(), courseEnrollments)
+
+    // Query 2: program detail
+    setMockResponse.get(urls.programs.programDetail(programId), program)
+
+    // Query 3: program enrollments list
+    setMockResponse.get(
+      urls.programEnrollments.enrollmentsListV3(),
+      programEnrollments,
+    )
+
+    // Query 4: program courses
+    // enabled: !!program && program.courses.length > 0 && enrolledInProgram
+    // Always mock it; tests that need enabled=false just won't call it.
+    if (program.courses && program.courses.length > 0) {
+      setMockResponse.get(
+        urls.courses.coursesList({
+          id: program.courses,
+          page_size: program.courses.length || undefined,
+        }),
+        {
+          count: programCourses.length,
+          next: null,
+          previous: null,
+          results: programCourses,
+        },
+      )
+    }
+
+    // Query 5: required programs list
+    // enabled: Boolean(enrolledInProgram && requiredProgramIds.length > 0)
+    // Must mirror useProgramDashboardData.ts requiredProgramIds useMemo exactly — if that changes, mock query keys drift and these scenarios silently fail.
+    const requiredProgramIds = requiredPrograms.map((p) => p.id)
+    if (requiredProgramIds.length > 0) {
+      setMockResponse.get(
+        urls.programs.programsList({
+          id: requiredProgramIds,
+          page_size: requiredProgramIds.length || undefined,
+        }),
+        {
+          count: requiredPrograms.length,
+          next: null,
+          previous: null,
+          results: requiredPrograms,
+        },
+      )
+    }
+
+    // Query 6: required-program courses (program-as-course module courses)
+    // enabled: Boolean(enrolledInProgram && programAsCourseCourseIds.length > 0)
+    // Must mirror useProgramDashboardData.ts programAsCourseCourseIds useMemo exactly — same drift risk.
+    const uniqueIds = new Set<number>()
+    requiredPrograms
+      .filter((p) => p.display_mode === DisplayModeEnum.Course)
+      .forEach((p) => {
+        p.courses?.forEach((courseId) => uniqueIds.add(courseId))
+      })
+    const programAsCourseCourseIds = [...uniqueIds]
+
+    if (programAsCourseCourseIds.length > 0) {
+      setMockResponse.get(
+        urls.courses.coursesList({
+          id: programAsCourseCourseIds,
+          page_size: programAsCourseCourseIds.length || undefined,
+        }),
+        {
+          count: requiredProgramCourses.length,
+          next: null,
+          previous: null,
+          results: requiredProgramCourses,
+        },
+      )
+    }
+  }
+
+  return { entities, mockAll }
+}
+
 export {
   dashboardCourse,
   dashboardProgram,
@@ -420,4 +567,5 @@ export {
   createTestContracts,
   createCoursesWithContractRuns,
   createEnrollmentsForContractRuns,
+  buildProgramScenario,
 }
