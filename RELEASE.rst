@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.68.3
+Version 0.68.3 (Released May 19, 2026)
 --------------
 
 - fix: link the podcast episode to its detail page and fix the video count on collection page (#3345)
