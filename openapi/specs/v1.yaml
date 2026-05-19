@@ -14,14 +14,19 @@ paths:
         name: content_type
         schema:
           type: string
-        description: Filter by content type (e.g. 'news' or 'article').
+          enum:
+          - article
+          - news
+        description: |-
+          Filter by content type
+
+          * `news` - News
+          * `article` - Article
       - in: query
         name: draft
         schema:
           type: boolean
-        description: Filter to show only draft items. Only available for admins and
-          content editors. If true, returns unpublished items. If not specified, returns
-          all items.
+        description: Filter to show only draft (unpublished) items
       - name: limit
         required: false
         in: query
@@ -9980,14 +9985,19 @@ paths:
         name: content_type
         schema:
           type: string
-        description: Filter by content type (e.g. 'news' or 'article').
+          enum:
+          - article
+          - news
+        description: |-
+          Filter by content type
+
+          * `news` - News
+          * `article` - Article
       - in: query
         name: draft
         schema:
           type: boolean
-        description: Filter to show only draft items. Only available for admins and
-          content editors. If true, returns unpublished items. If not specified, returns
-          all items.
+        description: Filter to show only draft (unpublished) items
       - name: limit
         required: false
         in: query

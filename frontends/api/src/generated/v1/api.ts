@@ -10382,15 +10382,15 @@ export const ArticlesApiAxiosParamCreator = function (
     /**
      * Get a paginated list of website content items
      * @summary List
-     * @param {string} [content_type] Filter by content type (e.g. \&#39;news\&#39; or \&#39;article\&#39;).
-     * @param {boolean} [draft] Filter to show only draft items. Only available for admins and content editors. If true, returns unpublished items. If not specified, returns all items.
+     * @param {ArticlesListContentTypeEnum} [content_type] Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
+     * @param {boolean} [draft] Filter to show only draft (unpublished) items
      * @param {number} [limit] Number of results to return per page.
      * @param {number} [offset] The initial index from which to return the results.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     articlesList: async (
-      content_type?: string,
+      content_type?: ArticlesListContentTypeEnum,
       draft?: boolean,
       limit?: number,
       offset?: number,
@@ -10641,15 +10641,15 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
     /**
      * Get a paginated list of website content items
      * @summary List
-     * @param {string} [content_type] Filter by content type (e.g. \&#39;news\&#39; or \&#39;article\&#39;).
-     * @param {boolean} [draft] Filter to show only draft items. Only available for admins and content editors. If true, returns unpublished items. If not specified, returns all items.
+     * @param {ArticlesListContentTypeEnum} [content_type] Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
+     * @param {boolean} [draft] Filter to show only draft (unpublished) items
      * @param {number} [limit] Number of results to return per page.
      * @param {number} [offset] The initial index from which to return the results.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async articlesList(
-      content_type?: string,
+      content_type?: ArticlesListContentTypeEnum,
       draft?: boolean,
       limit?: number,
       offset?: number,
@@ -10902,14 +10902,14 @@ export interface ArticlesApiArticlesDetailRetrieveRequest {
  */
 export interface ArticlesApiArticlesListRequest {
   /**
-   * Filter by content type (e.g. \&#39;news\&#39; or \&#39;article\&#39;).
-   * @type {string}
+   * Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
+   * @type {'article' | 'news'}
    * @memberof ArticlesApiArticlesList
    */
-  readonly content_type?: string
+  readonly content_type?: ArticlesListContentTypeEnum
 
   /**
-   * Filter to show only draft items. Only available for admins and content editors. If true, returns unpublished items. If not specified, returns all items.
+   * Filter to show only draft (unpublished) items
    * @type {boolean}
    * @memberof ArticlesApiArticlesList
    */
@@ -11084,6 +11084,16 @@ export class ArticlesApi extends BaseAPI {
       .then((request) => request(this.axios, this.basePath))
   }
 }
+
+/**
+ * @export
+ */
+export const ArticlesListContentTypeEnum = {
+  Article: "article",
+  News: "news",
+} as const
+export type ArticlesListContentTypeEnum =
+  (typeof ArticlesListContentTypeEnum)[keyof typeof ArticlesListContentTypeEnum]
 
 /**
  * ContentFileSearchApi - axios parameter creator
@@ -34009,15 +34019,15 @@ export const WebsiteContentApiAxiosParamCreator = function (
     /**
      * Get a paginated list of website content items
      * @summary List
-     * @param {string} [content_type] Filter by content type (e.g. \&#39;news\&#39; or \&#39;article\&#39;).
-     * @param {boolean} [draft] Filter to show only draft items. Only available for admins and content editors. If true, returns unpublished items. If not specified, returns all items.
+     * @param {WebsiteContentListContentTypeEnum} [content_type] Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
+     * @param {boolean} [draft] Filter to show only draft (unpublished) items
      * @param {number} [limit] Number of results to return per page.
      * @param {number} [offset] The initial index from which to return the results.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     websiteContentList: async (
-      content_type?: string,
+      content_type?: WebsiteContentListContentTypeEnum,
       draft?: boolean,
       limit?: number,
       offset?: number,
@@ -34272,15 +34282,15 @@ export const WebsiteContentApiFp = function (configuration?: Configuration) {
     /**
      * Get a paginated list of website content items
      * @summary List
-     * @param {string} [content_type] Filter by content type (e.g. \&#39;news\&#39; or \&#39;article\&#39;).
-     * @param {boolean} [draft] Filter to show only draft items. Only available for admins and content editors. If true, returns unpublished items. If not specified, returns all items.
+     * @param {WebsiteContentListContentTypeEnum} [content_type] Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
+     * @param {boolean} [draft] Filter to show only draft (unpublished) items
      * @param {number} [limit] Number of results to return per page.
      * @param {number} [offset] The initial index from which to return the results.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async websiteContentList(
-      content_type?: string,
+      content_type?: WebsiteContentListContentTypeEnum,
       draft?: boolean,
       limit?: number,
       offset?: number,
@@ -34537,14 +34547,14 @@ export interface WebsiteContentApiWebsiteContentDetailRetrieveRequest {
  */
 export interface WebsiteContentApiWebsiteContentListRequest {
   /**
-   * Filter by content type (e.g. \&#39;news\&#39; or \&#39;article\&#39;).
-   * @type {string}
+   * Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
+   * @type {'article' | 'news'}
    * @memberof WebsiteContentApiWebsiteContentList
    */
-  readonly content_type?: string
+  readonly content_type?: WebsiteContentListContentTypeEnum
 
   /**
-   * Filter to show only draft items. Only available for admins and content editors. If true, returns unpublished items. If not specified, returns all items.
+   * Filter to show only draft (unpublished) items
    * @type {boolean}
    * @memberof WebsiteContentApiWebsiteContentList
    */
@@ -34719,3 +34729,13 @@ export class WebsiteContentApi extends BaseAPI {
       .then((request) => request(this.axios, this.basePath))
   }
 }
+
+/**
+ * @export
+ */
+export const WebsiteContentListContentTypeEnum = {
+  Article: "article",
+  News: "news",
+} as const
+export type WebsiteContentListContentTypeEnum =
+  (typeof WebsiteContentListContentTypeEnum)[keyof typeof WebsiteContentListContentTypeEnum]
