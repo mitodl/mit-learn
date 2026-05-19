@@ -6,7 +6,7 @@ import { Container } from "ol-components"
 import { RiShareFill } from "@remixicon/react"
 import { ActionButton, TextField } from "@mitodl/smoot-design"
 import type { JSONContent } from "@tiptap/core"
-import { useArticle } from "../../../ArticleContext"
+import { useWebsiteContent } from "../../../ArticleContext"
 import { calculateReadTime } from "../../utils"
 import SharePopover from "@/components/SharePopover/SharePopover"
 
@@ -93,7 +93,7 @@ interface ArticleByLineInfoBarContentProps {
   onAuthorNameChange?: (name: string) => void
 }
 
-export const ArticleByLineInfoBarContent = ({
+export const ByLineInfoBarContent = ({
   publishedDate,
   content,
   isEditable = false,
@@ -103,7 +103,7 @@ export const ArticleByLineInfoBarContent = ({
   const [shareOpen, setShareOpen] = useState(false)
   const shareButtonRef = useRef<HTMLDivElement>(null)
 
-  const article = useArticle()
+  const article = useWebsiteContent()
 
   const readTime = calculateReadTime(content)
 
@@ -165,12 +165,12 @@ export const ArticleByLineInfoBarContent = ({
   )
 }
 
-const ArticleByLineInfoBar = ({
+const ByLineInfoBar = ({
   editor,
   node,
   updateAttributes,
 }: ReactNodeViewProps) => {
-  const article = useArticle()
+  const article = useWebsiteContent()
 
   const publishedDate = article?.is_published ? article?.created_on : null
 
@@ -200,7 +200,7 @@ const ArticleByLineInfoBar = ({
 
   return (
     <NodeViewWrapper>
-      <ArticleByLineInfoBarContent
+      <ByLineInfoBarContent
         publishedDate={publishedDate}
         content={content}
         isEditable={editor?.isEditable}
@@ -211,4 +211,7 @@ const ArticleByLineInfoBar = ({
   )
 }
 
-export default ArticleByLineInfoBar
+export default ByLineInfoBar
+
+/** @deprecated Use ByLineInfoBarContent */
+export { ByLineInfoBarContent as ArticleByLineInfoBarContent }

@@ -1,9 +1,8 @@
-import React from "react"
-import { ArticleEditPage } from "@/app-pages/Articles/ArticleEditPage"
+import { redirect } from "next/navigation"
 
-const Page: React.FC<PageProps<"/news/[slugOrId]/edit">> = async (props) => {
+const Page = async (props: { params: Promise<{ slugOrId: string }> }) => {
   const { slugOrId } = await props.params
-
-  return <ArticleEditPage articleId={slugOrId} />
+  redirect(`/website_content/news/${slugOrId}/edit`)
 }
+
 export default Page

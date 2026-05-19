@@ -1,14 +1,22 @@
 import { createContext, useContext } from "react"
 import type { WebsiteContent } from "api/v1"
 
-interface ArticleContextValue {
+interface WebsiteContentContextValue {
   article?: WebsiteContent
 }
 
-const ArticleContext = createContext<ArticleContextValue>({})
+const WebsiteContentContext = createContext<WebsiteContentContextValue>({})
 
-export const ArticleProvider = ArticleContext.Provider
+export const WebsiteContentProvider = WebsiteContentContext.Provider
 
+export function useWebsiteContent() {
+  return useContext(WebsiteContentContext).article
+}
+
+/** @deprecated Use WebsiteContentProvider */
+export const ArticleProvider = WebsiteContentProvider
+
+/** @deprecated Use useWebsiteContent */
 export function useArticle() {
-  return useContext(ArticleContext).article
+  return useWebsiteContent()
 }

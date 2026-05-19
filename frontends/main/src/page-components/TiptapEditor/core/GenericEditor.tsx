@@ -19,9 +19,10 @@ import dynamic from "next/dynamic"
 
 import { Toolbar } from "../vendor/components/tiptap-ui-primitive/toolbar"
 import { TiptapEditor, MainToolbarContent, TipTapViewer } from "../TiptapEditor"
+import { BannerViewer } from "../extensions/node/Banner/BannerNode"
 import { handleImageUpload } from "../vendor/lib/tiptap-utils"
 import { useSchema } from "../useSchema"
-import { ArticleProvider } from "../ArticleContext"
+import { WebsiteContentProvider } from "../ArticleContext"
 import { extractLearningResourceIds, contentsMatch } from "../extensions/utils"
 import { LearningResourceProvider } from "../extensions/node/LearningResource/LearningResourceDataProvider"
 
@@ -33,13 +34,18 @@ const LearningResourceDrawer = dynamic(
 
 const TOOLBAR_HEIGHT = 43
 
-const ViewContainer = styled.div<{ toolbarVisible: boolean }>(
-  ({ toolbarVisible, theme }) => ({
-    width: "100vw",
-    marginTop: toolbarVisible ? TOOLBAR_HEIGHT : 0,
-    backgroundColor: theme.custom.colors.white,
-  }),
-)
+const ViewContainer = styled.div<{
+  toolbarVisible: boolean
+  backgroundColor?: string
+  readOnly?: boolean
+}>(({ toolbarVisible, backgroundColor, readOnly, theme }) => ({
+  width: "100vw",
+  marginTop: toolbarVisible ? TOOLBAR_HEIGHT : 0,
+  backgroundColor:
+    readOnly && backgroundColor
+      ? theme.custom.colors[backgroundColor as keyof typeof theme.custom.colors]
+      : theme.custom.colors.white,
+}))
 
 const StyledToolbar = styled(Toolbar)(({ theme }) => ({
   "&&": {
@@ -125,7 +131,7 @@ export type CreateExtensionsFn = (
   setUploadError: (error: string | null) => void,
 ) => (Extension | Node | Mark)[]
 
-export interface GenericEditorProps {
+export interface WebsiteContentEditorProps {
   /**
    * Factory that builds the full extensions list for this content type.
    * Must be a stable reference (module-level function or useCallback).
@@ -154,9 +160,12 @@ export interface GenericEditorProps {
   onSave?: (article: WebsiteContent) => void
   readOnly?: boolean
   article?: WebsiteContent
+  backgroundColor?: string
+  bannerViewer?: typeof BannerViewer
+  bylineViewer?: typeof BannerViewer
 }
 
-const GenericEditor = ({
+const WebsiteContentEditor = ({
   createExtensions,
   initialDoc,
   toolbarSlot,
@@ -166,7 +175,10 @@ const GenericEditor = ({
   onSave,
   readOnly,
   article,
-}: GenericEditorProps) => {
+  bannerViewer,
+  bylineViewer,
+  backgroundColor,
+}: WebsiteContentEditorProps) => {
   const [isPublishing, setIsPublishing] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [resetAttempted, setResetAttempted] = useState(false)
@@ -349,8 +361,12 @@ const GenericEditor = ({
   const resourceIds = extractLearningResourceIds(content)
 
   return (
-    <ViewContainer toolbarVisible={!!isArticleEditor}>
-      <ArticleProvider value={{ article }}>
+    <ViewContainer
+      toolbarVisible={!!isArticleEditor}
+      backgroundColor={backgroundColor}
+      readOnly={readOnly}
+    >
+      <WebsiteContentProvider value={{ article }}>
         <LearningResourceProvider resourceIds={resourceIds}>
           <EditorContext.Provider value={{ editor }}>
             {isArticleEditor ? (
@@ -434,16 +450,27 @@ const GenericEditor = ({
             {readOnly ? (
               <>
                 <LearningResourceDrawer />
-                <TipTapViewer content={content} extensions={extensions} />
+                <TipTapViewer
+                  content={content}
+                  extensions={extensions}
+                  bannerViewer={bannerViewer}
+                  bylineViewer={bylineViewer}
+                />
               </>
             ) : (
               <TiptapEditor editor={editor} className={className} />
             )}
           </EditorContext.Provider>
         </LearningResourceProvider>
-      </ArticleProvider>
+      </WebsiteContentProvider>
     </ViewContainer>
   )
 }
 
-export { GenericEditor }
+export { WebsiteContentEditor }
+
+/** @deprecated Use WebsiteContentEditor */
+export { WebsiteContentEditor as GenericEditor }
+
+/** @deprecated Use WebsiteContentEditorProps */
+export type { WebsiteContentEditorProps as GenericEditorProps }

@@ -61,6 +61,21 @@ export const userArticlesDraftView = (id: string) =>
 export const userArticlesEditView = (id: number) =>
   generatePath(USER_ARTICLES_EDIT, { id: String(id) })
 
+// Generic website content editing routes
+export const WEBSITE_CONTENT_CREATE = "/website_content/[type]/new"
+export const WEBSITE_CONTENT_EDIT = "/website_content/[type]/[idOrSlug]/edit"
+export const WEBSITE_CONTENT_DRAFTS = "/website_content/drafts"
+export const websiteContentCreateView = (type: string) =>
+  `/website_content/${type}/new`
+export const websiteContentEditView = (
+  type: string,
+  idOrSlug: string | number,
+) => `/website_content/${type}/${idOrSlug}/edit`
+export const websiteContentDraftsView = (contentType?: string) =>
+  contentType
+    ? `${WEBSITE_CONTENT_DRAFTS}?content_type=${contentType}`
+    : WEBSITE_CONTENT_DRAFTS
+
 export const DEPARTMENTS = "/departments/"
 export const TOPICS = "/topics/"
 

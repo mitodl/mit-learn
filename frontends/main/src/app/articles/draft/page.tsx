@@ -1,15 +1,7 @@
-import React from "react"
-import { Metadata } from "next"
-import { standardizeMetadata } from "@/common/metadata"
-import { UserArticleDraftPage } from "@/app-pages/UserArticles/UserArticleDraftListingPage"
+import { redirect } from "next/navigation"
 
-export const metadata: Metadata = standardizeMetadata({
-  title: "Article Drafts",
-  robots: "noindex, nofollow",
-})
-
-const Page: React.FC<PageProps<"/articles/draft">> = () => {
-  return <UserArticleDraftPage />
+const Page = () => {
+  redirect("/website_content/drafts?content_type=article")
 }
 
 export default Page

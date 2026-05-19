@@ -6,11 +6,14 @@ import type { WebsiteContent } from "api/v1"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { useArticleCreate, useArticlePartialUpdate } from "api/hooks/articles"
 import { Spacer } from "../../vendor/components/tiptap-ui-primitive/spacer"
-import { GenericEditor } from "../../core/GenericEditor"
+import { WebsiteContentEditor } from "../../core/GenericEditor"
 import {
   createArticleExtensions,
   newArticleDocument,
 } from "./articleExtensions"
+import { ArticleBannerViewer } from "../../extensions/node/Banner/ArticleBannerNode"
+
+const NullBylineViewer = () => <></>
 
 // Article-specific: extract author name from the byline node
 const extractArticleExtraFields = (content: {
@@ -50,13 +53,17 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   const updateMutation = useArticlePartialUpdate()
 
   const editUrl = article
-    ? `/articles/${article.is_published ? article.slug : article.id}/edit`
-    : "/articles/new"
+    ? `/website_content/article/${article.is_published ? article.slug : article.id}/edit`
+    : "/website_content/article/new"
 
   const toolbarSlot = readOnly ? (
     <>
       <Spacer />
-      <ButtonLink variant="secondary" href="/articles/draft" size="small">
+      <ButtonLink
+        variant="secondary"
+        href="/website_content/drafts?content_type=article"
+        size="small"
+      >
         Drafts
       </ButtonLink>
       <ButtonLink variant="primary" href={editUrl} size="small">
@@ -66,7 +73,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   ) : null
 
   return (
-    <GenericEditor
+    <WebsiteContentEditor
       createExtensions={createArticleExtensions}
       initialDoc={newArticleDocument}
       toolbarSlot={toolbarSlot}
@@ -75,6 +82,9 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       onSave={onSave}
       readOnly={readOnly}
       article={article}
+      backgroundColor="lightGray1"
+      bannerViewer={ArticleBannerViewer}
+      bylineViewer={NullBylineViewer}
     />
   )
 }

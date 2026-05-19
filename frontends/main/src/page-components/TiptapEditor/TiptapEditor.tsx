@@ -49,7 +49,7 @@ import "./vendor/components/tiptap-templates/simple/simple-editor.scss"
 
 import "./TiptapEditor.styles.scss"
 import { BannerViewer } from "./extensions/node/Banner/BannerNode"
-import { ArticleByLineInfoBarViewer } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarViewer"
+import { ByLineInfoBarViewer } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarViewer"
 import { ImageWithCaptionViewer } from "./extensions/node/Image/ImageWithCaption"
 import { DividerViewer } from "./extensions/node/Divider/DividerNode"
 import { LearningResourceButton } from "./extensions/ui/LearningResource/LearningResourceButton"
@@ -82,6 +82,9 @@ const Container = styled.div<{
         },
       }
     : {}),
+  "&& .tiptap.ProseMirror.abc > :nth-child(2)": {
+    paddingTop: "36px",
+  },
   "&& .tiptap.ProseMirror, && .tiptap-viewer": {
     fontFamily: theme.typography.fontFamily,
     color: theme.custom.colors.darkGray2,
@@ -290,13 +293,17 @@ const TiptapEditor = ({ editor, className }: TiptapEditorProps) => {
 const TipTapViewer = ({
   content,
   extensions,
+  bannerViewer = BannerViewer,
+  bylineViewer = ByLineInfoBarViewer,
 }: {
   content: JSONContent
   extensions: Array<Extension | Node | Mark>
+  bannerViewer?: typeof BannerViewer
+  bylineViewer?: typeof BannerViewer
 }) => {
   return (
     <Container readOnly data-testid="editor">
-      <div className="tiptap ProseMirror tiptap-viewer">
+      <div className="tiptap ProseMirror tiptap-viewer abc">
         {renderToReactElement({
           extensions,
           content,
@@ -310,8 +317,8 @@ const TipTapViewer = ({
              * See https://tiptap.dev/docs/editor/api/utilities/static-renderer#react-nodeviews
              */
             nodeMapping: {
-              banner: BannerViewer,
-              byline: ArticleByLineInfoBarViewer,
+              banner: bannerViewer,
+              byline: bylineViewer,
               divider: DividerViewer,
               imageWithCaption: ImageWithCaptionViewer,
               learningResource: LearningResourceCardViewer,

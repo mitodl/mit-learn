@@ -6,7 +6,7 @@ import type { WebsiteContent } from "api/v1"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { useArticleCreate, useArticlePartialUpdate } from "api/hooks/articles"
 import { Spacer } from "../../vendor/components/tiptap-ui-primitive/spacer"
-import { GenericEditor } from "../../core/GenericEditor"
+import { WebsiteContentEditor } from "../../core/GenericEditor"
 import { createNewsExtensions, newNewsDocument } from "./newsExtensions"
 
 // News-specific: extract the author name from the byline node in the document
@@ -41,13 +41,17 @@ const NewsEditor = ({ onSave, readOnly, article }: NewsEditorProps) => {
   const updateMutation = useArticlePartialUpdate()
 
   const editUrl = article
-    ? `/news/${article.is_published ? article.slug : article.id}/edit`
-    : "/news/new"
+    ? `/website_content/news/${article.is_published ? article.slug : article.id}/edit`
+    : "/website_content/news/new"
 
   const toolbarSlot = readOnly ? (
     <>
       <Spacer />
-      <ButtonLink variant="secondary" href="/news/draft" size="small">
+      <ButtonLink
+        variant="secondary"
+        href="/website_content/drafts?content_type=news"
+        size="small"
+      >
         Drafts
       </ButtonLink>
       <ButtonLink variant="primary" href={editUrl} size="small">
@@ -57,7 +61,7 @@ const NewsEditor = ({ onSave, readOnly, article }: NewsEditorProps) => {
   ) : null
 
   return (
-    <GenericEditor
+    <WebsiteContentEditor
       createExtensions={createNewsExtensions}
       initialDoc={newNewsDocument}
       toolbarSlot={toolbarSlot}

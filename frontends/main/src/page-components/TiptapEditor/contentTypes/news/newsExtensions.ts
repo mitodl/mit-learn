@@ -1,29 +1,8 @@
 import type { Extension, Node, Mark } from "@tiptap/core"
 import Document from "@tiptap/extension-document"
-import { Placeholder, Selection } from "@tiptap/extensions"
-import { StarterKit } from "@tiptap/starter-kit"
-import { TaskItem, TaskList } from "@tiptap/extension-list"
-import { Heading } from "@tiptap/extension-heading"
-import { Image } from "@tiptap/extension-image"
-import { TextAlign } from "@tiptap/extension-text-align"
-import { Typography as TiptapTypography } from "@tiptap/extension-typography"
-import { Subscript } from "@tiptap/extension-subscript"
-import { Superscript } from "@tiptap/extension-superscript"
-import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
-import { HorizontalRule } from "../../vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
-import { ImageNode } from "../../extensions/node/Image/ImageNode"
-import { ImageWithCaptionNode } from "../../extensions/node/Image/ImageWithCaptionNode"
-import { DividerNode } from "../../extensions/node/Divider/DividerNode"
-import { ArticleByLineInfoBarNode } from "../../extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarNode"
-import { LearningResourceNode } from "../../extensions/node/LearningResource/LearningResourceNode"
-import { LearningResourceInputNode } from "../../extensions/node/LearningResource/LearningResourceInputNode"
-import { LearningResourceURLHandler } from "../../extensions/node/LearningResource/LearningResourcePaste"
-import { MediaEmbedURLHandler } from "../../extensions/node/MediaEmbed/MediaEmbedURLHandler"
-import { MediaEmbedNode } from "../../extensions/node/MediaEmbed/MediaEmbedNode"
-import { MediaEmbedInputNode } from "../../extensions/node/MediaEmbed/MediaEmbedInputNode"
 import { BannerNode } from "../../extensions/node/Banner/BannerNode"
-import type { ExtendedNodeConfig } from "../../extensions/node/types"
-import { MAX_FILE_SIZE } from "../../vendor/lib/tiptap-utils"
+import { ByLineInfoBarNode } from "../../extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarNode"
+import { createBaseExtensions } from "../../extensions/baseExtensions"
 import type { CreateExtensionsFn } from "../../core/GenericEditor"
 
 export const NewsDocument = Document.extend({
@@ -57,97 +36,14 @@ export const newNewsDocument = {
 
 /**
  * Factory function that builds the full extensions list for the news content type.
- * Pass to GenericEditor as `createExtensions`.
+ * Pass to WebsiteContentEditor as `createExtensions`.
  */
 export const createNewsExtensions: CreateExtensionsFn = (
   uploadHandler,
   setUploadError,
 ): (Extension | Node | Mark)[] => [
   NewsDocument,
-  StarterKit.configure({
-    document: false,
-    horizontalRule: false,
-    heading: false,
-    link: {
-      openOnClick: false,
-      enableClickSelection: true,
-    },
-    trailingNode: {
-      node: "paragraph",
-    },
-  }),
-  Heading.configure({
-    levels: [1, 2, 3, 4, 5, 6],
-  }),
-  Placeholder.configure({
-    showOnlyCurrent: false,
-    includeChildren: true,
-    placeholder: ({ node, editor }): string => {
-      let parentNode: typeof node | null = null
-
-      editor.state.doc.descendants((n: ProseMirrorNode) => {
-        n.forEach((childNode: ProseMirrorNode) => {
-          if (childNode === node) {
-            parentNode = n
-          }
-        })
-        if (parentNode) {
-          return false
-        }
-        return undefined
-      })
-
-      if (parentNode) {
-        const parentExtension = editor.extensionManager.extensions.find(
-          (ext) => ext.name === parentNode!.type.name,
-        )
-
-        if (
-          parentExtension &&
-          "config" in parentExtension &&
-          parentExtension.config &&
-          typeof (parentExtension.config as ExtendedNodeConfig)
-            .getPlaceholders === "function"
-        ) {
-          const placeholder = (
-            parentExtension.config as ExtendedNodeConfig
-          ).getPlaceholders(node)
-          if (placeholder) {
-            return placeholder
-          }
-        }
-      }
-
-      if (node.type.name === "heading") {
-        return "Add a heading"
-      }
-      return "Add some text"
-    },
-  }),
-  HorizontalRule,
-  LearningResourceURLHandler,
-  LearningResourceNode,
-  LearningResourceInputNode,
-  TextAlign.configure({ types: ["heading", "paragraph"] }),
-  TaskList,
-  TaskItem.configure({ nested: true }),
-  TiptapTypography,
-  Superscript,
-  Subscript,
-  Selection,
-  Image,
-  MediaEmbedNode,
-  MediaEmbedInputNode,
-  DividerNode,
-  ArticleByLineInfoBarNode,
-  ImageWithCaptionNode,
-  MediaEmbedURLHandler,
-  ImageNode.configure({
-    accept: "image/*",
-    maxSize: MAX_FILE_SIZE,
-    limit: 3,
-    upload: uploadHandler,
-    onError: (error) => setUploadError(error.message),
-  }),
+  ...createBaseExtensions(uploadHandler, setUploadError),
   BannerNode,
+  ByLineInfoBarNode,
 ]
