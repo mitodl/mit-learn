@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.68.2
+Version 0.68.2 (Released May 19, 2026)
 --------------
 
 - feat: add video embed page and route group restructure (#3327)
