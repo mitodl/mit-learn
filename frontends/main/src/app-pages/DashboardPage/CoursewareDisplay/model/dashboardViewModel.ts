@@ -15,6 +15,7 @@ import type {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
   V2ProgramDetail,
+  V2ProgramRequirement,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
@@ -23,8 +24,16 @@ import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 // enrollment-flat home contract; it moves into this file when the legacy
 // cards are removed (Phase 7).
 import type { DashboardResource } from "../DashboardCard"
-import { getIdsFromReqTree } from "@/common/mitxonline"
-import { EnrollmentStatus, getEnrollmentStatus } from "../helpers"
+import {
+  getIdsFromReqTree,
+  parseProgramRequirementSections,
+} from "@/common/mitxonline"
+import type { ProgramRequirementSection } from "@/common/mitxonline"
+import {
+  EnrollmentStatus,
+  getEnrollmentStatus,
+  getRequirementsProgress,
+} from "../helpers"
 import {
   getNativeLanguageName,
   // below five are used only for resolveCourseEntryForLanguage
@@ -485,6 +494,261 @@ const resolveCourseEntryForLanguage = (
   }
 }
 
+/**
+ * Dashboard's display title for a requirement section operator node.
+ *
+ * Display policy owned by the dashboard — NOT by the shared parser
+ * (`parseProgramRequirementSections`). The shared parser returns `rawTitle`
+ * (null when absent); this function layers the fallback copy on top.
+ *
+ * Title precedence:
+ * 1. `node.data.title` — explicit title wins
+ * 2. elective + `min_number_of` + numeric `operator_value` → "Electives (Complete N)"
+ * 3. elective (any other config) → "Elective Courses"
+ * 4. default → "Core Courses"
+ */
+const getRequirementSectionTitle = (node: V2ProgramRequirement): string => {
+  if (node.data.title) {
+    return node.data.title
+  }
+  if (node.data.elective_flag) {
+    if (node.data.operator === "min_number_of" && node.data.operator_value) {
+      return `Electives (Complete ${node.data.operator_value})`
+    }
+    return "Elective Courses"
+  }
+  return "Core Courses"
+}
+
+/**
+ * A single item in a requirement section — a discriminated union of three kinds.
+ *
+ * Terminology note: `item` refers to any arm of this union (heterogeneous);
+ * `entry` refers specifically to the `DashboardCourseEntry` resolved for the
+ * `course` arm (the only arm with language / contract / enrollment complexity).
+ * The other two arms are not `DashboardCourseEntry`-shaped and are intentionally
+ * left as lighter structs.
+ */
+type RequirementSectionItem =
+  | { kind: "course"; entry: DashboardCourseEntry }
+  | {
+      kind: "program-as-course"
+      courseProgram: V2ProgramDetail
+      moduleCourses: CourseWithCourseRunsSerializerV2[]
+      courseProgramEnrollment?: V3UserProgramEnrollment
+    }
+  | { kind: "program-enrollment"; enrollment: V3UserProgramEnrollment }
+
+/**
+ * A fully-resolved requirement section for the program dashboard.
+ *
+ * Carries `node` (the source operator from `req_tree`) because the dashboard
+ * feeds it to `getRequirementsProgress(V2ProgramRequirement[])` for progress
+ * counts — a dashboard-internal need. It is distinct from the shared
+ * structure-only `ProgramRequirementSection` (which carries `node` as a
+ * back-reference but has no display/completion data).
+ */
+type RequirementSection = {
+  key: string | number | null | undefined
+  title: string
+  node: V2ProgramRequirement
+  items: RequirementSectionItem[]
+  completed: number
+  total: number
+}
+
+/**
+ * Build a fully-resolved `DashboardCourseEntry` for a single course.
+ *
+ * This is a pure constructor — it delegates display-resolution to
+ * `resolveCourseEntryForLanguage` and assembles the result with the
+ * caller-supplied metadata. The caller is responsible for:
+ *  - pre-filtering `enrollments` to this course (e.g. `enrollmentsByCourseId[course.id] ?? []`)
+ *  - computing `availableLanguages` once at the composer level (NOT re-derived here)
+ *  - supplying the effective `selectedLanguageKey` (a valid option or fallback)
+ *
+ * `enrollments` is stored uncollapsed on the entry — the full list, never
+ * filtered to the displayed choice. The `displayedEnrollment`/`displayedRun`
+ * pair is derived by `resolveCourseEntryForLanguage` for the legacy card UI.
+ */
+const buildCourseEntry = (
+  course: CourseWithCourseRunsSerializerV2,
+  enrollments: CourseRunEnrollmentV3[],
+  selectedLanguageKey: string,
+  opts: {
+    availableLanguages: SimpleSelectOption[]
+    contractId?: number
+    isContractPageResource?: boolean
+    ancestorContext?: DashboardCourseEntry["ancestorContext"]
+  },
+): DashboardCourseEntry => {
+  const { displayedEnrollment, displayedRun } = resolveCourseEntryForLanguage(
+    course,
+    enrollments,
+    selectedLanguageKey,
+    opts.contractId !== undefined ? { contractId: opts.contractId } : undefined,
+  )
+  return {
+    course,
+    enrollments,
+    selectedLanguageKey,
+    availableLanguages: opts.availableLanguages,
+    contractId: opts.contractId,
+    isContractPageResource: opts.isContractPageResource,
+    ancestorContext: opts.ancestorContext,
+    displayedEnrollment,
+    displayedRun,
+  }
+}
+
+type BuildRequirementSectionsArgs = {
+  /**
+   * The program's `req_tree`. Assumes a flat structure: operators are never
+   * nested inside operators; direct children of each operator are leaves
+   * (`node_type: "course"` or `"program"`). See `getRequirementsProgress`
+   * for the same assumption and rationale.
+   */
+  reqTree: V2ProgramRequirement[]
+  /** All courses belonging to the program (fetched once by the composer). */
+  programCourses: CourseWithCourseRunsSerializerV2[]
+  /** Course-run enrollments keyed by course id (pre-grouped by the composer). */
+  enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>
+  /** Program enrollments keyed by program id (pre-grouped by the composer). */
+  programEnrollmentsById: Record<number, V3UserProgramEnrollment>
+  /** Nested programs referenced in `req_tree` (fetched by the composer). */
+  requiredPrograms: V2ProgramDetail[]
+  /**
+   * Module courses for each required program (keyed by program id). Used to
+   * wire `program-as-course` items. Pre-derived by the composer via
+   * `groupModuleCoursesByProgramId`.
+   */
+  requiredProgramModuleCoursesByProgramId: Record<
+    number,
+    CourseWithCourseRunsSerializerV2[]
+  >
+  /** Effective language key (valid option or fallback ""). */
+  selectedLanguageKey: string
+  /**
+   * Dashboard-wide language options list, computed once by the composer.
+   * Stored as-is on each course entry — NOT recomputed here.
+   */
+  availableLanguages: SimpleSelectOption[]
+  /**
+   * The top-level program's own enrollment (from `programEnrollmentsById`).
+   * When present, placed on every course arm's `ancestorContext.programEnrollment`.
+   */
+  ancestorProgramEnrollment?: V3UserProgramEnrollment
+}
+
+/**
+ * Build the requirement sections for the program dashboard.
+ *
+ * Composes `parseProgramRequirementSections` for the structural parse, then
+ * layers dashboard-only enrichment: entity resolution (course/program lookups),
+ * the three-arm `RequirementSectionItem` discriminated union, section title
+ * display copy (via `getRequirementSectionTitle`), and per-section + overall
+ * progress counts (via `getRequirementsProgress`).
+ *
+ * Assumes a flat `req_tree`: operators are never nested inside operators.
+ * See `getRequirementsProgress` for the same assumption and rationale.
+ *
+ * Preserves `req_tree` ordering. Sections with no resolved items are filtered
+ * out (oracle: `.filter(section => section.items.length > 0)`).
+ * Overall counts are computed over the filtered sections' nodes (not the full
+ * `req_tree`) to match the oracle exactly.
+ */
+const buildRequirementSections = ({
+  reqTree,
+  programCourses,
+  enrollmentsByCourseId,
+  programEnrollmentsById,
+  requiredPrograms,
+  requiredProgramModuleCoursesByProgramId,
+  selectedLanguageKey,
+  availableLanguages,
+  ancestorProgramEnrollment,
+}: BuildRequirementSectionsArgs): {
+  sections: RequirementSection[]
+  completedCount: number
+  totalCount: number
+} => {
+  const coursesById = new Map(programCourses.map((c) => [c.id, c]))
+  const programsById = new Map(requiredPrograms.map((p) => [p.id, p]))
+
+  const parsedSections: ProgramRequirementSection[] =
+    parseProgramRequirementSections(reqTree)
+
+  const sections: RequirementSection[] = parsedSections
+    .map((section) => {
+      const items: RequirementSectionItem[] = section.items
+        .map((resource): RequirementSectionItem | null => {
+          if (resource.type === "course") {
+            const course = coursesById.get(resource.id)
+            if (!course) return null
+            return {
+              kind: "course",
+              entry: buildCourseEntry(
+                course,
+                enrollmentsByCourseId[course.id] ?? [],
+                selectedLanguageKey,
+                {
+                  availableLanguages,
+                  ancestorContext: ancestorProgramEnrollment
+                    ? { programEnrollment: ancestorProgramEnrollment }
+                    : undefined,
+                },
+              ),
+            }
+          }
+
+          // resource.type === "program"
+          const program = programsById.get(resource.id)
+          if (!program) return null
+
+          if (isProgramAsCourse(program)) {
+            return {
+              kind: "program-as-course",
+              courseProgram: program,
+              moduleCourses:
+                requiredProgramModuleCoursesByProgramId[program.id] ?? [],
+              courseProgramEnrollment: programEnrollmentsById[program.id],
+            }
+          }
+
+          const enrollment = programEnrollmentsById[program.id]
+          if (!enrollment) return null
+
+          return { kind: "program-enrollment", enrollment }
+        })
+        .filter((item): item is RequirementSectionItem => item !== null)
+
+      const { completed, total } = getRequirementsProgress(
+        [section.node],
+        enrollmentsByCourseId,
+        programEnrollmentsById,
+      )
+
+      return {
+        key: section.id,
+        title: getRequirementSectionTitle(section.node),
+        node: section.node,
+        items,
+        completed,
+        total,
+      }
+    })
+    .filter((section) => section.items.length > 0)
+
+  const { completed: completedCount, total: totalCount } =
+    getRequirementsProgress(
+      sections.map((s) => s.node),
+      enrollmentsByCourseId,
+      programEnrollmentsById,
+    )
+
+  return { sections, completedCount, totalCount }
+}
+
 export {
   pickDisplayedEnrollmentForLegacyDashboard,
   groupCourseRunEnrollmentsByCourseId,
@@ -500,4 +764,8 @@ export {
   groupModuleCoursesByProgramId,
   bucketAndSortHomeEnrollments,
   assembleHomeCardList,
+  buildCourseEntry,
+  buildRequirementSections,
+  getRequirementSectionTitle,
 }
+export type { RequirementSectionItem, RequirementSection }

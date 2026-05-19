@@ -1,8 +1,10 @@
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import { factories } from "api/mitxonline-test-utils"
+import { factories, RequirementTreeBuilder } from "api/mitxonline-test-utils"
 import {
   assembleHomeCardList,
   bucketAndSortHomeEnrollments,
+  buildCourseEntry,
+  buildRequirementSections,
   enrollmentCourseIsInPrograms,
   getDistinctDashboardLanguageOptions,
   getModuleCourseIdsFromPrograms,
@@ -745,6 +747,807 @@ describe("dashboardViewModel", () => {
           writable: true,
         })
       }
+    })
+  })
+
+  describe("buildCourseEntry", () => {
+    test("returns null displayedEnrollment and a displayedRun when there are no enrollments", () => {
+      const run = factories.courses.courseRun({ id: 100 })
+      const course = factories.courses.course({
+        courseruns: [run],
+        next_run_id: run.id,
+      })
+      const availableLanguages = [{ value: "language:en", label: "English" }]
+
+      const entry = buildCourseEntry(course, [], "language:en", {
+        availableLanguages,
+      })
+
+      expect(entry.displayedEnrollment).toBeNull()
+      expect(entry.displayedRun).not.toBeNull()
+      expect(entry.displayedRun?.id).toBe(run.id)
+    })
+
+    test("returns correct displayedEnrollment for single enrollment", () => {
+      const run = factories.courses.courseRun({ id: 201 })
+      const course = factories.courses.course({
+        courseruns: [run],
+        next_run_id: run.id,
+        language_options: [
+          {
+            id: run.id,
+            courseware_id: run.courseware_id,
+            courseware_url: run.courseware_url ?? "",
+            language: "en",
+            title: run.title,
+            run_tag: run.run_tag,
+          },
+        ],
+      })
+      const enrollment = factories.enrollment.courseEnrollment({
+        run: {
+          id: run.id,
+          language: "en",
+          course: { id: course.id, title: course.title },
+          title: run.title,
+          run_tag: run.run_tag,
+          courseware_id: run.courseware_id,
+          courseware_url: run.courseware_url,
+          is_enrollable: run.is_enrollable,
+          is_upgradable: run.is_upgradable,
+          is_archived: run.is_archived,
+          is_self_paced: run.is_self_paced,
+          start_date: run.start_date,
+          end_date: run.end_date,
+          upgrade_deadline: run.upgrade_deadline,
+          certificate_available_date: run.certificate_available_date,
+          course_number: run.course_number,
+        },
+      })
+      const availableLanguages = [{ value: "language:en", label: "English" }]
+
+      const entry = buildCourseEntry(course, [enrollment], "language:en", {
+        availableLanguages,
+      })
+
+      expect(entry.displayedEnrollment).toBe(enrollment)
+      expect(entry.displayedRun?.id).toBe(run.id)
+    })
+
+    test("without selected language picks best legacy enrollment (cert > grade)", () => {
+      const run = factories.courses.courseRun({ id: 301 })
+      const course = factories.courses.course({ courseruns: [run] })
+      const noCert = factories.enrollment.courseEnrollment({
+        run: { id: run.id },
+        certificate: null,
+        grades: [factories.enrollment.grade({ grade: 0.5, passed: false })],
+      })
+      const withCert = factories.enrollment.courseEnrollment({
+        run: { id: run.id },
+        certificate: { uuid: "cert-abc" },
+        grades: [factories.enrollment.grade({ grade: 0.9, passed: true })],
+      })
+
+      // no selectedLanguageKey → legacy path
+      const entry = buildCourseEntry(course, [noCert, withCert], "", {
+        availableLanguages: [],
+      })
+
+      expect(entry.displayedEnrollment).toBe(withCert)
+    })
+
+    test("selected-language key prefers matching language enrollment", () => {
+      const enRun = factories.courses.courseRun({
+        id: 401,
+        language: "en",
+        courseware_id: "cw-en-401",
+        courseware_url: "https://example.com/en-401",
+        is_enrollable: true,
+      })
+      const esRun = factories.courses.courseRun({
+        id: 402,
+        language: "es",
+        courseware_id: "cw-es-402",
+        courseware_url: "https://example.com/es-402",
+        is_enrollable: true,
+      })
+      const course = factories.courses.course({
+        courseruns: [enRun, esRun],
+        next_run_id: enRun.id,
+        language_options: [
+          {
+            id: enRun.id,
+            courseware_id: enRun.courseware_id,
+            courseware_url: enRun.courseware_url ?? "",
+            language: "en",
+            title: enRun.title,
+            run_tag: enRun.run_tag,
+          },
+          {
+            id: esRun.id,
+            courseware_id: esRun.courseware_id,
+            courseware_url: esRun.courseware_url ?? "",
+            language: "es",
+            title: esRun.title,
+            run_tag: esRun.run_tag,
+          },
+        ],
+      })
+      const enEnrollment = factories.enrollment.courseEnrollment({
+        run: {
+          id: enRun.id,
+          language: "en",
+          course: { id: course.id, title: course.title },
+          title: enRun.title,
+          run_tag: enRun.run_tag,
+          courseware_id: enRun.courseware_id,
+          courseware_url: enRun.courseware_url,
+          is_enrollable: enRun.is_enrollable,
+          is_upgradable: enRun.is_upgradable,
+          is_archived: enRun.is_archived,
+          is_self_paced: enRun.is_self_paced,
+          start_date: enRun.start_date,
+          end_date: enRun.end_date,
+          upgrade_deadline: enRun.upgrade_deadline,
+          certificate_available_date: enRun.certificate_available_date,
+          course_number: enRun.course_number,
+        },
+      })
+      const esEnrollment = factories.enrollment.courseEnrollment({
+        run: {
+          id: esRun.id,
+          language: "es",
+          course: { id: course.id, title: course.title },
+          title: esRun.title,
+          run_tag: esRun.run_tag,
+          courseware_id: esRun.courseware_id,
+          courseware_url: esRun.courseware_url,
+          is_enrollable: esRun.is_enrollable,
+          is_upgradable: esRun.is_upgradable,
+          is_archived: esRun.is_archived,
+          is_self_paced: esRun.is_self_paced,
+          start_date: esRun.start_date,
+          end_date: esRun.end_date,
+          upgrade_deadline: esRun.upgrade_deadline,
+          certificate_available_date: esRun.certificate_available_date,
+          course_number: esRun.course_number,
+        },
+      })
+      const availableLanguages = [
+        { value: "language:en", label: "English" },
+        { value: "language:es", label: "Spanish" },
+      ]
+
+      const entry = buildCourseEntry(
+        course,
+        [enEnrollment, esEnrollment],
+        "language:es",
+        { availableLanguages },
+      )
+
+      expect(entry.displayedEnrollment?.run.id).toBe(esRun.id)
+      expect(entry.displayedRun?.id).toBe(esRun.id)
+    })
+
+    test("contract-scoped: does not pick an enrollment from a different contract", () => {
+      const run = factories.courses.courseRun({
+        id: 501,
+        b2b_contract: 10,
+        courseware_id: "cw-501",
+        courseware_url: "https://example.com/501",
+        is_enrollable: true,
+      })
+      const course = factories.courses.course({
+        courseruns: [run],
+        next_run_id: run.id,
+        language_options: [
+          {
+            id: run.id,
+            courseware_id: run.courseware_id,
+            courseware_url: run.courseware_url ?? "",
+            language: "en",
+            title: run.title,
+            run_tag: run.run_tag,
+          },
+        ],
+      })
+      // enrollment belongs to contract 99, not contract 10
+      const otherContractEnrollment = factories.enrollment.courseEnrollment({
+        b2b_contract_id: 99,
+        run: {
+          id: run.id,
+          course: { id: course.id, title: course.title },
+          title: run.title,
+          run_tag: run.run_tag,
+          courseware_id: run.courseware_id,
+          courseware_url: run.courseware_url,
+          is_enrollable: run.is_enrollable,
+          is_upgradable: run.is_upgradable,
+          is_archived: run.is_archived,
+          is_self_paced: run.is_self_paced,
+          start_date: run.start_date,
+          end_date: run.end_date,
+          upgrade_deadline: run.upgrade_deadline,
+          certificate_available_date: run.certificate_available_date,
+          course_number: run.course_number,
+        },
+      })
+
+      const entry = buildCourseEntry(
+        course,
+        [otherContractEnrollment],
+        "language:en",
+        {
+          availableLanguages: [{ value: "language:en", label: "English" }],
+          contractId: 10,
+        },
+      )
+
+      expect(entry.displayedEnrollment).toBeNull()
+    })
+
+    test("stores all input enrollments uncollapsed regardless of displayedEnrollment choice", () => {
+      const run = factories.courses.courseRun({ id: 601 })
+      const course = factories.courses.course({ courseruns: [run] })
+      const e1 = factories.enrollment.courseEnrollment({
+        run: { id: run.id },
+        certificate: null,
+      })
+      const e2 = factories.enrollment.courseEnrollment({
+        run: { id: run.id },
+        certificate: { uuid: "cert-xyz" },
+      })
+
+      const entry = buildCourseEntry(course, [e1, e2], "", {
+        availableLanguages: [],
+      })
+
+      // displayedEnrollment picks best one (e2), but all remain on entry
+      expect(entry.enrollments).toEqual([e1, e2])
+      expect(entry.displayedEnrollment).toBe(e2)
+    })
+
+    test("passthrough: course, availableLanguages, contractId, and ancestorContext are stored verbatim", () => {
+      const run = factories.courses.courseRun({ id: 701 })
+      const course = factories.courses.course({ courseruns: [run] })
+      const availableLanguages = [
+        { value: "language:en", label: "English" },
+        { value: "language:de", label: "German" },
+      ]
+      const programEnrollment = factories.enrollment.programEnrollmentV3()
+      const ancestorContext = { programEnrollment }
+
+      const entry = buildCourseEntry(course, [], "language:en", {
+        availableLanguages,
+        contractId: 42,
+        ancestorContext,
+      })
+
+      expect(entry.course).toBe(course)
+      expect(entry.availableLanguages).toBe(availableLanguages)
+      expect(entry.contractId).toBe(42)
+      expect(entry.ancestorContext).toBe(ancestorContext)
+    })
+
+    test("isContractPageResource is stored verbatim", () => {
+      const course = factories.courses.course()
+
+      const entry = buildCourseEntry(course, [], "", {
+        availableLanguages: [],
+        isContractPageResource: true,
+      })
+
+      expect(entry.isContractPageResource).toBe(true)
+    })
+  })
+
+  describe("buildRequirementSections", () => {
+    /**
+     * Builds a flat req_tree with one all_of section containing the given course ids.
+     * Convenience helper for tests that only need one section.
+     */
+    const makeSingleSectionReqTree = (courseIds: number[]) => {
+      const root = new RequirementTreeBuilder()
+      const op = root.addOperator({ operator: "all_of", title: "Core Courses" })
+      courseIds.forEach((id) => op.addCourse({ course: id }))
+      return root.serialize()
+    }
+
+    test("produces a course arm item for each course found in programCourses", () => {
+      const course = factories.courses.course({ id: 1001 })
+      const reqTree = makeSingleSectionReqTree([course.id])
+
+      const { sections } = buildRequirementSections({
+        reqTree,
+        programCourses: [course],
+        enrollmentsByCourseId: {},
+        programEnrollmentsById: {},
+        requiredPrograms: [],
+        requiredProgramModuleCoursesByProgramId: {},
+        selectedLanguageKey: "",
+        availableLanguages: [],
+      })
+
+      expect(sections).toHaveLength(1)
+      expect(sections[0].items).toHaveLength(1)
+      expect(sections[0].items[0].kind).toBe("course")
+      if (sections[0].items[0].kind === "course") {
+        expect(sections[0].items[0].entry.course).toBe(course)
+      }
+    })
+
+    test("drops a course item when course id is not in programCourses", () => {
+      const reqTree = makeSingleSectionReqTree([9999])
+
+      const { sections } = buildRequirementSections({
+        reqTree,
+        programCourses: [], // 9999 not present
+        enrollmentsByCourseId: {},
+        programEnrollmentsById: {},
+        requiredPrograms: [],
+        requiredProgramModuleCoursesByProgramId: {},
+        selectedLanguageKey: "",
+        availableLanguages: [],
+      })
+
+      // Section has no items → filtered out
+      expect(sections).toHaveLength(0)
+    })
+
+    test("produces a program-as-course arm for programs with display_mode Course", () => {
+      const moduleCourse = factories.courses.course({ id: 2001 })
+      const requiredProgram = factories.programs.program({
+        id: 3001,
+        display_mode: DisplayModeEnum.Course,
+        courses: [moduleCourse.id],
+      })
+      const programEnrollment = factories.enrollment.programEnrollmentV3({
+        program: factories.programs.simpleProgram({ id: requiredProgram.id }),
+      })
+      const programEnrollmentsById = {
+        [requiredProgram.id]: programEnrollment,
+      }
+      const root = new RequirementTreeBuilder()
+      const op = root.addOperator({ operator: "all_of", title: "Modules" })
+      op.addProgram({ program: requiredProgram.id })
+      const reqTree = root.serialize()
+
+      const { sections } = buildRequirementSections({
+        reqTree,
+        programCourses: [],
+        enrollmentsByCourseId: {},
+        programEnrollmentsById,
+        requiredPrograms: [requiredProgram],
+        requiredProgramModuleCoursesByProgramId: {
+          [requiredProgram.id]: [moduleCourse],
+        },
+        selectedLanguageKey: "",
+        availableLanguages: [],
+      })
+
+      expect(sections).toHaveLength(1)
+      expect(sections[0].items[0].kind).toBe("program-as-course")
+      if (sections[0].items[0].kind === "program-as-course") {
+        expect(sections[0].items[0].courseProgram).toBe(requiredProgram)
+        expect(sections[0].items[0].moduleCourses).toEqual([moduleCourse])
+        expect(sections[0].items[0].courseProgramEnrollment).toBe(
+          programEnrollment,
+        )
+      }
+    })
+
+    test("produces a program-enrollment arm for regular programs that have an enrollment", () => {
+      const requiredProgram = factories.programs.program({
+        id: 4001,
+        display_mode: null,
+      })
+      const programEnrollment = factories.enrollment.programEnrollmentV3({
+        program: factories.programs.simpleProgram({ id: requiredProgram.id }),
+      })
+      const root = new RequirementTreeBuilder()
+      const op = root.addOperator({ operator: "all_of", title: "Programs" })
+      op.addProgram({ program: requiredProgram.id })
+      const reqTree = root.serialize()
+
+      const { sections } = buildRequirementSections({
+        reqTree,
+        programCourses: [],
+        enrollmentsByCourseId: {},
+        programEnrollmentsById: { [requiredProgram.id]: programEnrollment },
+        requiredPrograms: [requiredProgram],
+        requiredProgramModuleCoursesByProgramId: {},
+        selectedLanguageKey: "",
+        availableLanguages: [],
+      })
+
+      expect(sections).toHaveLength(1)
+      expect(sections[0].items[0].kind).toBe("program-enrollment")
+      if (sections[0].items[0].kind === "program-enrollment") {
+        expect(sections[0].items[0].enrollment).toBe(programEnrollment)
+      }
+    })
+
+    test("drops a regular program item when there is no enrollment for it", () => {
+      const requiredProgram = factories.programs.program({
+        id: 5001,
+        display_mode: null,
+      })
+      const root = new RequirementTreeBuilder()
+      const op = root.addOperator({ operator: "all_of", title: "Programs" })
+      op.addProgram({ program: requiredProgram.id })
+      const reqTree = root.serialize()
+
+      const { sections } = buildRequirementSections({
+        reqTree,
+        programCourses: [],
+        enrollmentsByCourseId: {},
+        programEnrollmentsById: {}, // no enrollment for this program
+        requiredPrograms: [requiredProgram],
+        requiredProgramModuleCoursesByProgramId: {},
+        selectedLanguageKey: "",
+        availableLanguages: [],
+      })
+
+      expect(sections).toHaveLength(0)
+    })
+
+    test("drops a program item when the program id is not in requiredPrograms", () => {
+      const root = new RequirementTreeBuilder()
+      const op = root.addOperator({ operator: "all_of", title: "Programs" })
+      op.addProgram({ program: 9999 })
+      const reqTree = root.serialize()
+
+      const { sections } = buildRequirementSections({
+        reqTree,
+        programCourses: [],
+        enrollmentsByCourseId: {},
+        programEnrollmentsById: {},
+        requiredPrograms: [], // 9999 not present
+        requiredProgramModuleCoursesByProgramId: {},
+        selectedLanguageKey: "",
+        availableLanguages: [],
+      })
+
+      expect(sections).toHaveLength(0)
+    })
+
+    test("filters out sections with no items", () => {
+      const root = new RequirementTreeBuilder()
+      // Section A — will have an item
+      const opA = root.addOperator({ operator: "all_of", title: "Section A" })
+      const courseA = factories.courses.course({ id: 6001 })
+      opA.addCourse({ course: courseA.id })
+      // Section B — course not in programCourses → no items
+      const opB = root.addOperator({ operator: "all_of", title: "Section B" })
+      opB.addCourse({ course: 9999 })
+      const reqTree = root.serialize()
+
+      const { sections } = buildRequirementSections({
+        reqTree,
+        programCourses: [courseA],
+        enrollmentsByCourseId: {},
+        programEnrollmentsById: {},
+        requiredPrograms: [],
+        requiredProgramModuleCoursesByProgramId: {},
+        selectedLanguageKey: "",
+        availableLanguages: [],
+      })
+
+      expect(sections).toHaveLength(1)
+      expect(sections[0].title).toBe("Section A")
+    })
+
+    test("preserves req_tree ordering across sections", () => {
+      const c1 = factories.courses.course({ id: 7001 })
+      const c2 = factories.courses.course({ id: 7002 })
+      const c3 = factories.courses.course({ id: 7003 })
+      const root = new RequirementTreeBuilder()
+      const op1 = root.addOperator({ operator: "all_of", title: "First" })
+      op1.addCourse({ course: c1.id })
+      const op2 = root.addOperator({ operator: "all_of", title: "Second" })
+      op2.addCourse({ course: c2.id })
+      const op3 = root.addOperator({ operator: "all_of", title: "Third" })
+      op3.addCourse({ course: c3.id })
+      const reqTree = root.serialize()
+
+      const { sections } = buildRequirementSections({
+        reqTree,
+        programCourses: [c1, c2, c3],
+        enrollmentsByCourseId: {},
+        programEnrollmentsById: {},
+        requiredPrograms: [],
+        requiredProgramModuleCoursesByProgramId: {},
+        selectedLanguageKey: "",
+        availableLanguages: [],
+      })
+
+      expect(sections.map((s) => s.title)).toEqual(["First", "Second", "Third"])
+    })
+
+    test("per-section completed/total: one passing enrollment → completed=1, total=1", () => {
+      const course = factories.courses.course({ id: 8001 })
+      const root = new RequirementTreeBuilder()
+      const op = root.addOperator({ operator: "all_of", title: "Core" })
+      op.addCourse({ course: course.id })
+      const reqTree = root.serialize()
+
+      const enrollment = factories.enrollment.courseEnrollment({
+        run: { course: { id: course.id } },
+        grades: [factories.enrollment.grade({ passed: true })],
+      })
+
+      const { sections } = buildRequirementSections({
+        reqTree,
+        programCourses: [course],
+        enrollmentsByCourseId: { [course.id]: [enrollment] },
+        programEnrollmentsById: {},
+        requiredPrograms: [],
+        requiredProgramModuleCoursesByProgramId: {},
+        selectedLanguageKey: "",
+        availableLanguages: [],
+      })
+
+      expect(sections[0].completed).toBe(1)
+      expect(sections[0].total).toBe(1)
+    })
+
+    test("overall counts are computed over POST-filter sections only (ghost dropped section does not inflate counts)", () => {
+      // keptCourse appears in programCourses → its section survives the filter.
+      // ghostCourseId is absent from programCourses → its section is dropped.
+      // The ghost enrollment has a passing grade, so a buggy pre-filter
+      // implementation (counting over ALL parsed sections before the
+      // `items.length > 0` filter) would report completedCount=1 and totalCount=2
+      // instead of the correct completedCount=0 and totalCount=1.
+      const keptCourse = factories.courses.course({ id: 9001 })
+      const ghostCourseId = 9999
+
+      const root = new RequirementTreeBuilder()
+      const opKept = root.addOperator({ operator: "all_of", title: "Kept" })
+      opKept.addCourse({ course: keptCourse.id })
+      const opDropped = root.addOperator({
+        operator: "all_of",
+        title: "Dropped",
+      })
+      opDropped.addCourse({ course: ghostCourseId })
+      const reqTree = root.serialize()
+
+      const ghostEnrollment = factories.enrollment.courseEnrollment({
+        run: { course: { id: ghostCourseId } },
+        grades: [factories.enrollment.grade({ passed: true })],
+      })
+
+      const result = buildRequirementSections({
+        reqTree,
+        // keptCourse is present; ghostCourseId is intentionally absent →
+        // the "Dropped" section will have no items and be filtered out.
+        programCourses: [keptCourse],
+        enrollmentsByCourseId: { [ghostCourseId]: [ghostEnrollment] },
+        programEnrollmentsById: {},
+        requiredPrograms: [],
+        requiredProgramModuleCoursesByProgramId: {},
+        selectedLanguageKey: "",
+        availableLanguages: [],
+      })
+
+      // Only the "Kept" section survives; the ghost section is dropped.
+      expect(result.sections).toHaveLength(1)
+      expect(result.sections[0].title).toBe("Kept")
+      // totalCount = 1 (only the kept course); completedCount = 0 (no enrollment for keptCourse).
+      // A buggy pre-filter implementation would return totalCount=2, completedCount=1.
+      expect(result.totalCount).toBe(1)
+      expect(result.completedCount).toBe(0)
+    })
+
+    describe("getRequirementSectionTitle behavior", () => {
+      test("uses node.data.title when present", () => {
+        const c = factories.courses.course({ id: 10001 })
+        const root = new RequirementTreeBuilder()
+        const op = root.addOperator({
+          operator: "all_of",
+          title: "Custom Section Title",
+        })
+        op.addCourse({ course: c.id })
+        const reqTree = root.serialize()
+
+        const { sections } = buildRequirementSections({
+          reqTree,
+          programCourses: [c],
+          enrollmentsByCourseId: {},
+          programEnrollmentsById: {},
+          requiredPrograms: [],
+          requiredProgramModuleCoursesByProgramId: {},
+          selectedLanguageKey: "",
+          availableLanguages: [],
+        })
+
+        expect(sections[0].title).toBe("Custom Section Title")
+      })
+
+      test("returns 'Electives (Complete N)' for min_number_of elective with operator_value", () => {
+        const c = factories.courses.course({ id: 10002 })
+        const root = new RequirementTreeBuilder()
+        // RequirementTreeBuilder sets elective_flag=true for min_number_of operators
+        const op = root.addOperator({
+          operator: "min_number_of",
+          operator_value: "3",
+        })
+        op.addCourse({ course: c.id })
+        const reqTree = root.serialize()
+        // Manually clear the auto-set title so that the title fallback logic kicks in
+        reqTree[0].data.title = null
+
+        const { sections } = buildRequirementSections({
+          reqTree,
+          programCourses: [c],
+          enrollmentsByCourseId: {},
+          programEnrollmentsById: {},
+          requiredPrograms: [],
+          requiredProgramModuleCoursesByProgramId: {},
+          selectedLanguageKey: "",
+          availableLanguages: [],
+        })
+
+        expect(sections[0].title).toBe("Electives (Complete 3)")
+      })
+
+      test("returns 'Elective Courses' for elective without operator_value", () => {
+        const c = factories.courses.course({ id: 10003 })
+        // Build node manually to control all data fields precisely
+        const opNode = {
+          id: 55555,
+          data: {
+            node_type: "operator" as const,
+            operator: "all_of" as const,
+            operator_value: null,
+            elective_flag: true,
+            title: null,
+            course: null,
+            required_program: null,
+          },
+          children: [
+            {
+              id: 55556,
+              data: {
+                node_type: "course" as const,
+                course: c.id,
+                operator: null,
+                operator_value: null,
+                elective_flag: false,
+                title: null,
+                required_program: null,
+              },
+              children: [],
+            },
+          ],
+        }
+
+        const { sections } = buildRequirementSections({
+          reqTree: [opNode],
+          programCourses: [c],
+          enrollmentsByCourseId: {},
+          programEnrollmentsById: {},
+          requiredPrograms: [],
+          requiredProgramModuleCoursesByProgramId: {},
+          selectedLanguageKey: "",
+          availableLanguages: [],
+        })
+
+        expect(sections[0].title).toBe("Elective Courses")
+      })
+
+      test("returns 'Core Courses' when no title and not elective", () => {
+        const c = factories.courses.course({ id: 10004 })
+        const opNode = {
+          id: 66666,
+          data: {
+            node_type: "operator" as const,
+            operator: "all_of" as const,
+            operator_value: null,
+            elective_flag: false,
+            title: null,
+            course: null,
+            required_program: null,
+          },
+          children: [
+            {
+              id: 66667,
+              data: {
+                node_type: "course" as const,
+                course: c.id,
+                operator: null,
+                operator_value: null,
+                elective_flag: false,
+                title: null,
+                required_program: null,
+              },
+              children: [],
+            },
+          ],
+        }
+
+        const { sections } = buildRequirementSections({
+          reqTree: [opNode],
+          programCourses: [c],
+          enrollmentsByCourseId: {},
+          programEnrollmentsById: {},
+          requiredPrograms: [],
+          requiredProgramModuleCoursesByProgramId: {},
+          selectedLanguageKey: "",
+          availableLanguages: [],
+        })
+
+        expect(sections[0].title).toBe("Core Courses")
+      })
+    })
+
+    test("course arm entry carries ancestorContext from ancestorProgramEnrollment", () => {
+      const course = factories.courses.course({ id: 11001 })
+      const reqTree = makeSingleSectionReqTree([course.id])
+      const programEnrollment = factories.enrollment.programEnrollmentV3()
+
+      const { sections } = buildRequirementSections({
+        reqTree,
+        programCourses: [course],
+        enrollmentsByCourseId: {},
+        programEnrollmentsById: {},
+        requiredPrograms: [],
+        requiredProgramModuleCoursesByProgramId: {},
+        selectedLanguageKey: "",
+        availableLanguages: [],
+        ancestorProgramEnrollment: programEnrollment,
+      })
+
+      const item = sections[0].items[0]
+      expect(item.kind).toBe("course")
+      if (item.kind === "course") {
+        expect(item.entry.ancestorContext?.programEnrollment).toBe(
+          programEnrollment,
+        )
+      }
+    })
+
+    test("section key equals node id", () => {
+      const c = factories.courses.course({ id: 12001 })
+      const opNode = {
+        id: 77777,
+        data: {
+          node_type: "operator" as const,
+          operator: "all_of" as const,
+          operator_value: null,
+          elective_flag: false,
+          title: "Keyed Section",
+          course: null,
+          required_program: null,
+        },
+        children: [
+          {
+            id: 77778,
+            data: {
+              node_type: "course" as const,
+              course: c.id,
+              operator: null,
+              operator_value: null,
+              elective_flag: false,
+              title: null,
+              required_program: null,
+            },
+            children: [],
+          },
+        ],
+      }
+
+      const { sections } = buildRequirementSections({
+        reqTree: [opNode],
+        programCourses: [c],
+        enrollmentsByCourseId: {},
+        programEnrollmentsById: {},
+        requiredPrograms: [],
+        requiredProgramModuleCoursesByProgramId: {},
+        selectedLanguageKey: "",
+        availableLanguages: [],
+      })
+
+      expect(sections[0].key).toBe(opNode.id)
     })
   })
 
