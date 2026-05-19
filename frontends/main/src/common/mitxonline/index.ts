@@ -189,6 +189,80 @@ const getCourseEnrollmentAction = (
   return { type: "none" }
 }
 
+type ProgramRequirementSection = {
+  /**
+   * The source operator node, returned as a convenience back-reference for
+   * consumers that still need raw-tree operations (e.g. the dashboard's
+   * `getRequirementsProgress(V2ProgramRequirement[])`). It is NOT an invitation
+   * to bypass the derived fields (`items`, `operator`, `requiredCount`,
+   * `rawTitle`, `elective`). Note: `id === node.id` — a convenience stable
+   * identifier.
+   */
+  node: V2ProgramRequirement
+  id: number | null | undefined
+  elective: boolean
+  operator: string | null
+  requiredCount: number
+  rawTitle: string | null
+  items: { type: "course" | "program"; id: number }[]
+}
+
+/**
+ * Parse a program's req_tree into ordered operator sections.
+ *
+ * Structure-only: returns ids + operator metadata + rawTitle.
+ * No default/fallback titles, no display copy, no completion/progress logic,
+ * no entity resolution, no logging. Consumer is responsible for all of that.
+ *
+ * Note: the product `parseReqTree` (`ProductPages/util.ts`) will migrate onto
+ * this helper in a later separate PR — that is why two structurally-similar
+ * functions currently coexist.
+ */
+const parseProgramRequirementSections = (
+  reqTree: V2ProgramRequirement[],
+): ProgramRequirementSection[] => {
+  return reqTree
+    .filter((node) => node.data.node_type === NodeTypeEnum.Operator)
+    .map((node) => {
+      const items: { type: "course" | "program"; id: number }[] = []
+      const walk = (children: V2ProgramRequirement[]) => {
+        for (const child of children) {
+          if (
+            child.data.node_type === NodeTypeEnum.Course &&
+            typeof child.data.course === "number"
+          ) {
+            items.push({ type: "course", id: child.data.course })
+          } else if (
+            child.data.node_type === NodeTypeEnum.Program &&
+            typeof child.data.required_program === "number"
+          ) {
+            items.push({ type: "program", id: child.data.required_program })
+          }
+          if (child.children) walk(child.children)
+        }
+      }
+      walk(node.children ?? [])
+
+      // Mirrors parseReqTree's formula exactly on purpose (including NaN when
+      // operator_value is absent/non-numeric) so the deferred product migration
+      // is a behavior no-op — do not "fix" the NaN path here.
+      const requiredCount =
+        node.data.operator === "min_number_of"
+          ? Number(node.data.operator_value)
+          : items.length
+
+      return {
+        node,
+        id: node.id,
+        elective: node.data.elective_flag ?? false,
+        operator: node.data.operator ?? null,
+        requiredCount,
+        rawTitle: node.data.title ?? null,
+        items,
+      }
+    })
+}
+
 /**
  * Extract all course and program IDs from a program's req_tree.
  * This is the single source of truth for which courses/programs belong to a program.
@@ -254,7 +328,13 @@ export {
   getEnrollmentType,
   getCourseEnrollmentAction,
   getIdsFromReqTree,
+  parseProgramRequirementSections,
   getBestRun,
   isVerifiedEnrollmentMode,
 }
-export type { PriceWithDiscount, EnrollmentType, CourseEnrollmentAction }
+export type {
+  PriceWithDiscount,
+  EnrollmentType,
+  CourseEnrollmentAction,
+  ProgramRequirementSection,
+}
