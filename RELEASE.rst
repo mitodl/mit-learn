@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.68.1 (Released May 19, 2026)
+--------------
+
+- split EnrollmentDisplay into HomeEnrollmentsDisplay + ProgramEnrollMentDisplay… (#3341)
+- Remove enrollment-dashboard feature flag (#3343)
+- feat: Added Program Record Link to Learn Dashboard Program Card . (#3336)
+- Update dependency drf-spectacular to >=0.29,<0.30 (#2734)
+
 Version 0.68.0 (Released May 13, 2026)
 --------------
 
