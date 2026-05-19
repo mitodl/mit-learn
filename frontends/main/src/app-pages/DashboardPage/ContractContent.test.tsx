@@ -106,6 +106,14 @@ describe("ContractContent", () => {
       }),
       { results: reversedCoursesA },
     )
+    setMockResponse.get(
+      urls.courses.coursesList({
+        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
+        page_size: 200,
+      }),
+      { results: reversedCoursesA },
+    )
 
     renderWithProviders(
       <ContractContent
@@ -376,6 +384,14 @@ describe("ContractContent", () => {
       }),
       { results: [firstCourseB, firstCourseA] },
     )
+    setMockResponse.get(
+      urls.courses.coursesList({
+        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
+        page_size: 200,
+      }),
+      { results: [...normalizedCoursesA, ...normalizedCoursesB] },
+    )
 
     renderWithProviders(
       <ContractContent
@@ -464,6 +480,14 @@ describe("ContractContent", () => {
         contract_id: orgX.contracts[0].id,
       }),
       { results: [firstCourseA, firstCourseB] }, // API returns A's course first
+    )
+    setMockResponse.get(
+      urls.courses.coursesList({
+        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
+        page_size: 200,
+      }),
+      { results: [...normalizedCoursesA, ...normalizedCoursesB] },
     )
 
     renderWithProviders(
@@ -736,6 +760,14 @@ describe("ContractContent", () => {
       }),
       { results: [programANoCourses, programB] },
     )
+    setMockResponse.get(
+      urls.programs.programsList({
+        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
+        page_size: 30,
+      }),
+      { results: [programANoCourses, programB] },
+    )
 
     // Mock bulk course API call - only programB has courses, so only its first course should be included
     const firstCourseBId = programB.courses[0]
@@ -745,6 +777,14 @@ describe("ContractContent", () => {
       urls.courses.coursesList({
         id: [firstCourseBId],
         contract_id: orgX.contracts[0].id,
+      }),
+      { results: [firstCourseB] },
+    )
+    setMockResponse.get(
+      urls.courses.coursesList({
+        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
+        page_size: 200,
       }),
       { results: [firstCourseB] },
     )
