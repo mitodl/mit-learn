@@ -766,6 +766,5 @@ export {
   assembleHomeCardList,
   buildCourseEntry,
   buildRequirementSections,
-  getRequirementSectionTitle,
 }
 export type { RequirementSectionItem, RequirementSection }

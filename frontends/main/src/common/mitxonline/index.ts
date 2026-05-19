@@ -217,6 +217,12 @@ type ProgramRequirementSection = {
  * Note: the product `parseReqTree` (`ProductPages/util.ts`) will migrate onto
  * this helper in a later separate PR — that is why two structurally-similar
  * functions currently coexist.
+ *
+ * The parser walks the tree recursively for parity with the legacy
+ * `extractResourcesFromNode`. The flat-`req_tree` invariant (operators never
+ * nest operators) makes recursion equivalent to iterating direct children, so
+ * this stays consistent with `getRequirementsProgress`, which counts direct
+ * children only.
  */
 const parseProgramRequirementSections = (
   reqTree: V2ProgramRequirement[],

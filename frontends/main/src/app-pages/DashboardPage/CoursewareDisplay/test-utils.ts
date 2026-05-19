@@ -16,6 +16,7 @@ import {
   V3UserProgramEnrollment,
   DisplayModeEnum,
 } from "@mitodl/mitxonline-api-axios/v2"
+import { getIdsFromReqTree } from "@/common/mitxonline"
 
 const makeCourses = factories.courses.courses
 const makeProgram = factories.programs.program
@@ -510,8 +511,12 @@ const buildProgramScenario = (
 
     // Query 5: required programs list
     // enabled: Boolean(enrolledInProgram && requiredProgramIds.length > 0)
-    // Must mirror useProgramDashboardData.ts requiredProgramIds useMemo exactly — if that changes, mock query keys drift and these scenarios silently fail.
-    const requiredProgramIds = requiredPrograms.map((p) => p.id)
+    // Mirrors useProgramDashboardData.ts requiredProgramIds useMemo exactly:
+    //   [...new Set(getIdsFromReqTree(program.req_tree).programIds)]
+    // If that changes, mock query keys drift and these scenarios silently fail.
+    const requiredProgramIds = program.req_tree
+      ? [...new Set(getIdsFromReqTree(program.req_tree).programIds)]
+      : []
     if (requiredProgramIds.length > 0) {
       setMockResponse.get(
         urls.programs.programsList({

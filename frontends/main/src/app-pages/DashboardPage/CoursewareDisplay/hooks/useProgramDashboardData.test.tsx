@@ -652,6 +652,49 @@ describe("useProgramDashboardData", () => {
     }
   })
 
+  test("program-enrollment arm is correctly identified in sections", async () => {
+    const parentReqTree =
+      new mitxonline.factories.requirements.RequirementTreeBuilder()
+    const requirements = parentReqTree.addOperator({
+      operator: "all_of",
+      title: "Requirements",
+    })
+    requirements.addProgram({ program: 901 })
+
+    // Not display_mode=course, with a user enrollment in it → program-enrollment
+    // arm. Only `id` is under test; this arm reads neither courses nor req_tree
+    // of a required program, so no other overrides.
+    const requiredProgram = mitxonline.factories.programs.program({
+      id: 901,
+    })
+
+    const parentProgram = mitxonline.factories.programs.program({
+      id: 1001,
+      courses: [],
+      req_tree: parentReqTree.serialize(),
+    })
+    const parentProgramEnrollment = makeProgramEnrollment(parentProgram)
+    const requiredProgramEnrollment = makeProgramEnrollment(requiredProgram)
+
+    const { mockAll } = buildProgramScenario({
+      programId: parentProgram.id,
+      program: parentProgram,
+      programEnrollments: [parentProgramEnrollment, requiredProgramEnrollment],
+      requiredPrograms: [requiredProgram],
+    })
+    mockAll()
+
+    const { result } = renderUseProgramDashboardData(parentProgram.id)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.sections).toHaveLength(1)
+    const item = result.current.sections[0].items[0]
+    expect(item.kind).toBe("program-enrollment")
+    if (item.kind === "program-enrollment") {
+      expect(item.enrollment.program.id).toBe(901)
+    }
+  })
+
   test("sections with no resolved items are filtered out", async () => {
     // Two sections: one with a real course, one with a course not in programCourses
     const course = mitxonline.factories.courses.course({ id: 60 })

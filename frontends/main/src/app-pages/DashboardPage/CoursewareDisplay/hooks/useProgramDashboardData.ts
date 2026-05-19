@@ -4,10 +4,7 @@ import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import type { SimpleSelectOption } from "ol-components"
-import type {
-  CourseRunEnrollmentV3,
-  V3UserProgramEnrollment,
-} from "@mitodl/mitxonline-api-axios/v2"
+import type { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { getIdsFromReqTree } from "@/common/mitxonline"
 import {
@@ -58,7 +55,7 @@ export type ProgramDashboardData = {
  * hook's query→helper wiring is tested in `useProgramDashboardData.test.tsx`.
  */
 const useProgramDashboardData = (programId: number): ProgramDashboardData => {
-  // --- 6 queries (replicated exactly from ProgramEnrollmentDisplay oracle) ---
+  // --- 6 program-dashboard queries ---
 
   const { data: rawEnrollments, isLoading: userEnrollmentsLoading } = useQuery(
     enrollmentQueries.courseRunEnrollmentsList(),
@@ -207,4 +204,3 @@ const useProgramDashboardData = (programId: number): ProgramDashboardData => {
 }
 
 export { useProgramDashboardData }
-export type { V3UserProgramEnrollment }
