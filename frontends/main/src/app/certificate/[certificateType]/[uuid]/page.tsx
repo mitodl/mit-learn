@@ -52,6 +52,7 @@ export async function generateMetadata({
     return standardizeMetadata({
       title: `${userName}'s ${displayType}`,
       description: `${userName} has successfully completed: ${title}`,
+      robots: { index: false },
     })
   })
 }
