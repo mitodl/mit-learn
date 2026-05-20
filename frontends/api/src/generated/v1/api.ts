@@ -338,10 +338,10 @@ export interface ContentFile {
   content_feature_type: Array<string>
   /**
    *
-   * @type {ContentFileContentTypeEnum}
+   * @type {ContentTypeEnum}
    * @memberof ContentFile
    */
-  content_type?: ContentFileContentTypeEnum
+  content_type?: ContentTypeEnum
   /**
    *
    * @type {string}
@@ -457,41 +457,6 @@ export interface ContentFile {
    */
   youtube_id?: string | null
 }
-
-/**
- * * `page` - page * `file` - file * `video` - video * `pdf` - pdf
- * @export
- * @enum {string}
- */
-
-export const ContentFileContentTypeEnumDescriptions = {
-  page: "page",
-  file: "file",
-  video: "video",
-  pdf: "pdf",
-} as const
-
-export const ContentFileContentTypeEnum = {
-  /**
-   * page
-   */
-  Page: "page",
-  /**
-   * file
-   */
-  File: "file",
-  /**
-   * video
-   */
-  Video: "video",
-  /**
-   * pdf
-   */
-  Pdf: "pdf",
-} as const
-
-export type ContentFileContentTypeEnum =
-  (typeof ContentFileContentTypeEnum)[keyof typeof ContentFileContentTypeEnum]
 
 /**
  * SearchResponseSerializer with OpenAPI annotations for Content Files search
@@ -635,6 +600,41 @@ export interface ContentFileWebHookRequestRequest {
    */
   course_readable_id?: string
 }
+
+/**
+ * * `page` - page * `file` - file * `video` - video * `pdf` - pdf
+ * @export
+ * @enum {string}
+ */
+
+export const ContentTypeEnumDescriptions = {
+  page: "page",
+  file: "file",
+  video: "video",
+  pdf: "pdf",
+} as const
+
+export const ContentTypeEnum = {
+  /**
+   * page
+   */
+  Page: "page",
+  /**
+   * file
+   */
+  File: "file",
+  /**
+   * video
+   */
+  Video: "video",
+  /**
+   * pdf
+   */
+  Pdf: "pdf",
+} as const
+
+export type ContentTypeEnum =
+  (typeof ContentTypeEnum)[keyof typeof ContentTypeEnum]
 
 /**
  * Serializer for the Course model
@@ -5767,6 +5767,37 @@ export interface PaginatedProgramResourceList {
 /**
  *
  * @export
+ * @interface PaginatedRichTextArticleList
+ */
+export interface PaginatedRichTextArticleList {
+  /**
+   *
+   * @type {number}
+   * @memberof PaginatedRichTextArticleList
+   */
+  count: number
+  /**
+   *
+   * @type {string}
+   * @memberof PaginatedRichTextArticleList
+   */
+  next?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PaginatedRichTextArticleList
+   */
+  previous?: string | null
+  /**
+   *
+   * @type {Array<RichTextArticle>}
+   * @memberof PaginatedRichTextArticleList
+   */
+  results: Array<RichTextArticle>
+}
+/**
+ *
+ * @export
  * @interface PaginatedUserListList
  */
 export interface PaginatedUserListList {
@@ -5887,37 +5918,6 @@ export interface PaginatedVideoResourceList {
    * @memberof PaginatedVideoResourceList
    */
   results: Array<VideoResource>
-}
-/**
- *
- * @export
- * @interface PaginatedWebsiteContentList
- */
-export interface PaginatedWebsiteContentList {
-  /**
-   *
-   * @type {number}
-   * @memberof PaginatedWebsiteContentList
-   */
-  count: number
-  /**
-   *
-   * @type {string}
-   * @memberof PaginatedWebsiteContentList
-   */
-  next?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof PaginatedWebsiteContentList
-   */
-  previous?: string | null
-  /**
-   *
-   * @type {Array<WebsiteContent>}
-   * @memberof PaginatedWebsiteContentList
-   */
-  results: Array<WebsiteContent>
 }
 /**
  * Create serializer for nested learning path items.  The parent is derived from the nested route and must not be client-supplied.
@@ -6111,6 +6111,43 @@ export interface PatchedLearningResourceRelationshipRequest {
 }
 
 /**
+ * Serializer for LearningResourceInstructor model
+ * @export
+ * @interface PatchedRichTextArticleRequest
+ */
+export interface PatchedRichTextArticleRequest {
+  /**
+   *
+   * @type {string}
+   * @memberof PatchedRichTextArticleRequest
+   */
+  title?: string
+  /**
+   *
+   * @type {string}
+   * @memberof PatchedRichTextArticleRequest
+   */
+  author_name?: string
+  /**
+   *
+   * @type {any}
+   * @memberof PatchedRichTextArticleRequest
+   */
+  content?: any
+  /**
+   *
+   * @type {boolean}
+   * @memberof PatchedRichTextArticleRequest
+   */
+  is_published?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof PatchedRichTextArticleRequest
+   */
+  slug?: string
+}
+/**
  * Serializer for UserListRelationship model
  * @export
  * @interface PatchedUserListRelationshipRequest
@@ -6165,50 +6202,6 @@ export interface PatchedUserListRequest {
    * @memberof PatchedUserListRequest
    */
   privacy_level?: PrivacyLevelEnum
-}
-
-/**
- * Serializer for WebsiteContent model.
- * @export
- * @interface PatchedWebsiteContentRequest
- */
-export interface PatchedWebsiteContentRequest {
-  /**
-   *
-   * @type {string}
-   * @memberof PatchedWebsiteContentRequest
-   */
-  title?: string
-  /**
-   *
-   * @type {string}
-   * @memberof PatchedWebsiteContentRequest
-   */
-  author_name?: string
-  /**
-   *
-   * @type {any}
-   * @memberof PatchedWebsiteContentRequest
-   */
-  content?: any
-  /**
-   *
-   * @type {WebsiteContentContentTypeEnum}
-   * @memberof PatchedWebsiteContentRequest
-   */
-  content_type?: WebsiteContentContentTypeEnum
-  /**
-   *
-   * @type {boolean}
-   * @memberof PatchedWebsiteContentRequest
-   */
-  is_published?: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof PatchedWebsiteContentRequest
-   */
-  slug?: string
 }
 
 /**
@@ -8579,6 +8572,110 @@ export type ResourceTypeGroupEnum =
   (typeof ResourceTypeGroupEnum)[keyof typeof ResourceTypeGroupEnum]
 
 /**
+ * Serializer for LearningResourceInstructor model
+ * @export
+ * @interface RichTextArticle
+ */
+export interface RichTextArticle {
+  /**
+   *
+   * @type {number}
+   * @memberof RichTextArticle
+   */
+  id: number
+  /**
+   *
+   * @type {string}
+   * @memberof RichTextArticle
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof RichTextArticle
+   */
+  author_name?: string
+  /**
+   *
+   * @type {any}
+   * @memberof RichTextArticle
+   */
+  content?: any
+  /**
+   *
+   * @type {User}
+   * @memberof RichTextArticle
+   */
+  user: User
+  /**
+   *
+   * @type {string}
+   * @memberof RichTextArticle
+   */
+  created_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof RichTextArticle
+   */
+  updated_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof RichTextArticle
+   */
+  publish_date: string
+  /**
+   *
+   * @type {boolean}
+   * @memberof RichTextArticle
+   */
+  is_published?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof RichTextArticle
+   */
+  slug?: string
+}
+/**
+ * Serializer for LearningResourceInstructor model
+ * @export
+ * @interface RichTextArticleRequest
+ */
+export interface RichTextArticleRequest {
+  /**
+   *
+   * @type {string}
+   * @memberof RichTextArticleRequest
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof RichTextArticleRequest
+   */
+  author_name?: string
+  /**
+   *
+   * @type {any}
+   * @memberof RichTextArticleRequest
+   */
+  content?: any
+  /**
+   *
+   * @type {boolean}
+   * @memberof RichTextArticleRequest
+   */
+  is_published?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof RichTextArticleRequest
+   */
+  slug?: string
+}
+/**
  * * `phrase` - phrase * `best_fields` - best_fields * `most_fields` - most_fields * `hybrid` - hybrid  * `phrase` - phrase * `best_fields` - best_fields * `most_fields` - most_fields * `hybrid` - hybrid
  * @export
  * @enum {string}
@@ -10082,148 +10179,6 @@ export interface WebhookResponse {
    */
   error?: string
 }
-/**
- * Serializer for WebsiteContent model.
- * @export
- * @interface WebsiteContent
- */
-export interface WebsiteContent {
-  /**
-   *
-   * @type {number}
-   * @memberof WebsiteContent
-   */
-  id: number
-  /**
-   *
-   * @type {string}
-   * @memberof WebsiteContent
-   */
-  title: string
-  /**
-   *
-   * @type {string}
-   * @memberof WebsiteContent
-   */
-  author_name?: string
-  /**
-   *
-   * @type {any}
-   * @memberof WebsiteContent
-   */
-  content?: any
-  /**
-   *
-   * @type {WebsiteContentContentTypeEnum}
-   * @memberof WebsiteContent
-   */
-  content_type?: WebsiteContentContentTypeEnum
-  /**
-   *
-   * @type {User}
-   * @memberof WebsiteContent
-   */
-  user: User
-  /**
-   *
-   * @type {string}
-   * @memberof WebsiteContent
-   */
-  created_on: string
-  /**
-   *
-   * @type {string}
-   * @memberof WebsiteContent
-   */
-  updated_on: string
-  /**
-   *
-   * @type {string}
-   * @memberof WebsiteContent
-   */
-  publish_date: string
-  /**
-   *
-   * @type {boolean}
-   * @memberof WebsiteContent
-   */
-  is_published?: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof WebsiteContent
-   */
-  slug?: string
-}
-
-/**
- * * `news` - News * `article` - Article
- * @export
- * @enum {string}
- */
-
-export const WebsiteContentContentTypeEnumDescriptions = {
-  news: "News",
-  article: "Article",
-} as const
-
-export const WebsiteContentContentTypeEnum = {
-  /**
-   * News
-   */
-  News: "news",
-  /**
-   * Article
-   */
-  Article: "article",
-} as const
-
-export type WebsiteContentContentTypeEnum =
-  (typeof WebsiteContentContentTypeEnum)[keyof typeof WebsiteContentContentTypeEnum]
-
-/**
- * Serializer for WebsiteContent model.
- * @export
- * @interface WebsiteContentRequest
- */
-export interface WebsiteContentRequest {
-  /**
-   *
-   * @type {string}
-   * @memberof WebsiteContentRequest
-   */
-  title: string
-  /**
-   *
-   * @type {string}
-   * @memberof WebsiteContentRequest
-   */
-  author_name?: string
-  /**
-   *
-   * @type {any}
-   * @memberof WebsiteContentRequest
-   */
-  content?: any
-  /**
-   *
-   * @type {WebsiteContentContentTypeEnum}
-   * @memberof WebsiteContentRequest
-   */
-  content_type?: WebsiteContentContentTypeEnum
-  /**
-   *
-   * @type {boolean}
-   * @memberof WebsiteContentRequest
-   */
-  is_published?: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof WebsiteContentRequest
-   */
-  slug?: string
-}
 
 /**
  * ArticlesApi - axios parameter creator
@@ -10234,21 +10189,21 @@ export const ArticlesApiAxiosParamCreator = function (
 ) {
   return {
     /**
-     * Create a new content item
+     * Create a new article
      * @summary Create
-     * @param {WebsiteContentRequest} WebsiteContentRequest
+     * @param {RichTextArticleRequest} RichTextArticleRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     articlesCreate: async (
-      WebsiteContentRequest: WebsiteContentRequest,
+      RichTextArticleRequest: RichTextArticleRequest,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
-      // verify required parameter 'WebsiteContentRequest' is not null or undefined
+      // verify required parameter 'RichTextArticleRequest' is not null or undefined
       assertParamExists(
         "articlesCreate",
-        "WebsiteContentRequest",
-        WebsiteContentRequest,
+        "RichTextArticleRequest",
+        RichTextArticleRequest,
       )
       const localVarPath = `/api/v1/articles/`
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
@@ -10277,7 +10232,7 @@ export const ArticlesApiAxiosParamCreator = function (
         ...options.headers,
       }
       localVarRequestOptions.data = serializeDataIfNeeded(
-        WebsiteContentRequest,
+        RichTextArticleRequest,
         localVarRequestOptions,
         configuration,
       )
@@ -10288,9 +10243,9 @@ export const ArticlesApiAxiosParamCreator = function (
       }
     },
     /**
-     * Delete a content item
+     * Delete an article
      * @summary Destroy
-     * @param {number} id A unique integer value identifying this website content.
+     * @param {number} id A unique integer value identifying this article.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -10334,9 +10289,9 @@ export const ArticlesApiAxiosParamCreator = function (
       }
     },
     /**
-     * Retrieve a content item by numeric ID or slug
-     * @summary Retrieve by ID or slug
-     * @param {string} identifier Numeric ID or slug of the content item
+     * If the path parameter is numeric → ID, else → slug.
+     * @summary Retrieve article by ID or slug
+     * @param {string} identifier Article ID (number) or slug (string)
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -10380,17 +10335,15 @@ export const ArticlesApiAxiosParamCreator = function (
       }
     },
     /**
-     * Get a paginated list of website content items
+     * Get a paginated list of articles
      * @summary List
-     * @param {ArticlesListContentTypeEnum} [content_type] Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
-     * @param {boolean} [draft] Filter to show only draft (unpublished) items
+     * @param {boolean} [draft] Filter to show only draft articles. Only available for admins and article editors. If true, returns unpublished articles. If not specified, returns all articles.
      * @param {number} [limit] Number of results to return per page.
      * @param {number} [offset] The initial index from which to return the results.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     articlesList: async (
-      content_type?: ArticlesListContentTypeEnum,
       draft?: boolean,
       limit?: number,
       offset?: number,
@@ -10411,10 +10364,6 @@ export const ArticlesApiAxiosParamCreator = function (
       }
       const localVarHeaderParameter = {} as any
       const localVarQueryParameter = {} as any
-
-      if (content_type !== undefined) {
-        localVarQueryParameter["content_type"] = content_type
-      }
 
       if (draft !== undefined) {
         localVarQueryParameter["draft"] = draft
@@ -10443,16 +10392,16 @@ export const ArticlesApiAxiosParamCreator = function (
       }
     },
     /**
-     * Update a content item
+     * Update an article
      * @summary Update
-     * @param {number} id A unique integer value identifying this website content.
-     * @param {PatchedWebsiteContentRequest} [PatchedWebsiteContentRequest]
+     * @param {number} id A unique integer value identifying this article.
+     * @param {PatchedRichTextArticleRequest} [PatchedRichTextArticleRequest]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     articlesPartialUpdate: async (
       id: number,
-      PatchedWebsiteContentRequest?: PatchedWebsiteContentRequest,
+      PatchedRichTextArticleRequest?: PatchedRichTextArticleRequest,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'id' is not null or undefined
@@ -10487,7 +10436,7 @@ export const ArticlesApiAxiosParamCreator = function (
         ...options.headers,
       }
       localVarRequestOptions.data = serializeDataIfNeeded(
-        PatchedWebsiteContentRequest,
+        PatchedRichTextArticleRequest,
         localVarRequestOptions,
         configuration,
       )
@@ -10498,9 +10447,9 @@ export const ArticlesApiAxiosParamCreator = function (
       }
     },
     /**
-     * Retrieve a single content item
+     * Retrieve a single article
      * @summary Retrieve
-     * @param {number} id A unique integer value identifying this website content.
+     * @param {number} id A unique integer value identifying this article.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -10554,20 +10503,23 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
   const localVarAxiosParamCreator = ArticlesApiAxiosParamCreator(configuration)
   return {
     /**
-     * Create a new content item
+     * Create a new article
      * @summary Create
-     * @param {WebsiteContentRequest} WebsiteContentRequest
+     * @param {RichTextArticleRequest} RichTextArticleRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async articlesCreate(
-      WebsiteContentRequest: WebsiteContentRequest,
+      RichTextArticleRequest: RichTextArticleRequest,
       options?: RawAxiosRequestConfig,
     ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<WebsiteContent>
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<RichTextArticle>
     > {
       const localVarAxiosArgs = await localVarAxiosParamCreator.articlesCreate(
-        WebsiteContentRequest,
+        RichTextArticleRequest,
         options,
       )
       const index = configuration?.serverIndex ?? 0
@@ -10582,9 +10534,9 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
         )(axios, operationBasePath || basePath)
     },
     /**
-     * Delete a content item
+     * Delete an article
      * @summary Destroy
-     * @param {number} id A unique integer value identifying this website content.
+     * @param {number} id A unique integer value identifying this article.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -10610,9 +10562,9 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
         )(axios, operationBasePath || basePath)
     },
     /**
-     * Retrieve a content item by numeric ID or slug
-     * @summary Retrieve by ID or slug
-     * @param {string} identifier Numeric ID or slug of the content item
+     * If the path parameter is numeric → ID, else → slug.
+     * @summary Retrieve article by ID or slug
+     * @param {string} identifier Article ID (number) or slug (string)
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -10620,7 +10572,10 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
       identifier: string,
       options?: RawAxiosRequestConfig,
     ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<WebsiteContent>
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<RichTextArticle>
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.articlesDetailRetrieve(
@@ -10639,17 +10594,15 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
         )(axios, operationBasePath || basePath)
     },
     /**
-     * Get a paginated list of website content items
+     * Get a paginated list of articles
      * @summary List
-     * @param {ArticlesListContentTypeEnum} [content_type] Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
-     * @param {boolean} [draft] Filter to show only draft (unpublished) items
+     * @param {boolean} [draft] Filter to show only draft articles. Only available for admins and article editors. If true, returns unpublished articles. If not specified, returns all articles.
      * @param {number} [limit] Number of results to return per page.
      * @param {number} [offset] The initial index from which to return the results.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async articlesList(
-      content_type?: ArticlesListContentTypeEnum,
       draft?: boolean,
       limit?: number,
       offset?: number,
@@ -10658,10 +10611,9 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
       (
         axios?: AxiosInstance,
         basePath?: string,
-      ) => AxiosPromise<PaginatedWebsiteContentList>
+      ) => AxiosPromise<PaginatedRichTextArticleList>
     > {
       const localVarAxiosArgs = await localVarAxiosParamCreator.articlesList(
-        content_type,
         draft,
         limit,
         offset,
@@ -10679,24 +10631,27 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
         )(axios, operationBasePath || basePath)
     },
     /**
-     * Update a content item
+     * Update an article
      * @summary Update
-     * @param {number} id A unique integer value identifying this website content.
-     * @param {PatchedWebsiteContentRequest} [PatchedWebsiteContentRequest]
+     * @param {number} id A unique integer value identifying this article.
+     * @param {PatchedRichTextArticleRequest} [PatchedRichTextArticleRequest]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async articlesPartialUpdate(
       id: number,
-      PatchedWebsiteContentRequest?: PatchedWebsiteContentRequest,
+      PatchedRichTextArticleRequest?: PatchedRichTextArticleRequest,
       options?: RawAxiosRequestConfig,
     ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<WebsiteContent>
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<RichTextArticle>
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.articlesPartialUpdate(
           id,
-          PatchedWebsiteContentRequest,
+          PatchedRichTextArticleRequest,
           options,
         )
       const index = configuration?.serverIndex ?? 0
@@ -10711,9 +10666,9 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
         )(axios, operationBasePath || basePath)
     },
     /**
-     * Retrieve a single content item
+     * Retrieve a single article
      * @summary Retrieve
-     * @param {number} id A unique integer value identifying this website content.
+     * @param {number} id A unique integer value identifying this article.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -10721,7 +10676,10 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
       id: number,
       options?: RawAxiosRequestConfig,
     ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<WebsiteContent>
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<RichTextArticle>
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.articlesRetrieve(id, options)
@@ -10751,7 +10709,7 @@ export const ArticlesApiFactory = function (
   const localVarFp = ArticlesApiFp(configuration)
   return {
     /**
-     * Create a new content item
+     * Create a new article
      * @summary Create
      * @param {ArticlesApiArticlesCreateRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
@@ -10760,13 +10718,13 @@ export const ArticlesApiFactory = function (
     articlesCreate(
       requestParameters: ArticlesApiArticlesCreateRequest,
       options?: RawAxiosRequestConfig,
-    ): AxiosPromise<WebsiteContent> {
+    ): AxiosPromise<RichTextArticle> {
       return localVarFp
-        .articlesCreate(requestParameters.WebsiteContentRequest, options)
+        .articlesCreate(requestParameters.RichTextArticleRequest, options)
         .then((request) => request(axios, basePath))
     },
     /**
-     * Delete a content item
+     * Delete an article
      * @summary Destroy
      * @param {ArticlesApiArticlesDestroyRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
@@ -10781,8 +10739,8 @@ export const ArticlesApiFactory = function (
         .then((request) => request(axios, basePath))
     },
     /**
-     * Retrieve a content item by numeric ID or slug
-     * @summary Retrieve by ID or slug
+     * If the path parameter is numeric → ID, else → slug.
+     * @summary Retrieve article by ID or slug
      * @param {ArticlesApiArticlesDetailRetrieveRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -10790,13 +10748,13 @@ export const ArticlesApiFactory = function (
     articlesDetailRetrieve(
       requestParameters: ArticlesApiArticlesDetailRetrieveRequest,
       options?: RawAxiosRequestConfig,
-    ): AxiosPromise<WebsiteContent> {
+    ): AxiosPromise<RichTextArticle> {
       return localVarFp
         .articlesDetailRetrieve(requestParameters.identifier, options)
         .then((request) => request(axios, basePath))
     },
     /**
-     * Get a paginated list of website content items
+     * Get a paginated list of articles
      * @summary List
      * @param {ArticlesApiArticlesListRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
@@ -10805,10 +10763,9 @@ export const ArticlesApiFactory = function (
     articlesList(
       requestParameters: ArticlesApiArticlesListRequest = {},
       options?: RawAxiosRequestConfig,
-    ): AxiosPromise<PaginatedWebsiteContentList> {
+    ): AxiosPromise<PaginatedRichTextArticleList> {
       return localVarFp
         .articlesList(
-          requestParameters.content_type,
           requestParameters.draft,
           requestParameters.limit,
           requestParameters.offset,
@@ -10817,7 +10774,7 @@ export const ArticlesApiFactory = function (
         .then((request) => request(axios, basePath))
     },
     /**
-     * Update a content item
+     * Update an article
      * @summary Update
      * @param {ArticlesApiArticlesPartialUpdateRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
@@ -10826,17 +10783,17 @@ export const ArticlesApiFactory = function (
     articlesPartialUpdate(
       requestParameters: ArticlesApiArticlesPartialUpdateRequest,
       options?: RawAxiosRequestConfig,
-    ): AxiosPromise<WebsiteContent> {
+    ): AxiosPromise<RichTextArticle> {
       return localVarFp
         .articlesPartialUpdate(
           requestParameters.id,
-          requestParameters.PatchedWebsiteContentRequest,
+          requestParameters.PatchedRichTextArticleRequest,
           options,
         )
         .then((request) => request(axios, basePath))
     },
     /**
-     * Retrieve a single content item
+     * Retrieve a single article
      * @summary Retrieve
      * @param {ArticlesApiArticlesRetrieveRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
@@ -10845,7 +10802,7 @@ export const ArticlesApiFactory = function (
     articlesRetrieve(
       requestParameters: ArticlesApiArticlesRetrieveRequest,
       options?: RawAxiosRequestConfig,
-    ): AxiosPromise<WebsiteContent> {
+    ): AxiosPromise<RichTextArticle> {
       return localVarFp
         .articlesRetrieve(requestParameters.id, options)
         .then((request) => request(axios, basePath))
@@ -10861,10 +10818,10 @@ export const ArticlesApiFactory = function (
 export interface ArticlesApiArticlesCreateRequest {
   /**
    *
-   * @type {WebsiteContentRequest}
+   * @type {RichTextArticleRequest}
    * @memberof ArticlesApiArticlesCreate
    */
-  readonly WebsiteContentRequest: WebsiteContentRequest
+  readonly RichTextArticleRequest: RichTextArticleRequest
 }
 
 /**
@@ -10874,7 +10831,7 @@ export interface ArticlesApiArticlesCreateRequest {
  */
 export interface ArticlesApiArticlesDestroyRequest {
   /**
-   * A unique integer value identifying this website content.
+   * A unique integer value identifying this article.
    * @type {number}
    * @memberof ArticlesApiArticlesDestroy
    */
@@ -10888,7 +10845,7 @@ export interface ArticlesApiArticlesDestroyRequest {
  */
 export interface ArticlesApiArticlesDetailRetrieveRequest {
   /**
-   * Numeric ID or slug of the content item
+   * Article ID (number) or slug (string)
    * @type {string}
    * @memberof ArticlesApiArticlesDetailRetrieve
    */
@@ -10902,14 +10859,7 @@ export interface ArticlesApiArticlesDetailRetrieveRequest {
  */
 export interface ArticlesApiArticlesListRequest {
   /**
-   * Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
-   * @type {'article' | 'news'}
-   * @memberof ArticlesApiArticlesList
-   */
-  readonly content_type?: ArticlesListContentTypeEnum
-
-  /**
-   * Filter to show only draft (unpublished) items
+   * Filter to show only draft articles. Only available for admins and article editors. If true, returns unpublished articles. If not specified, returns all articles.
    * @type {boolean}
    * @memberof ArticlesApiArticlesList
    */
@@ -10937,7 +10887,7 @@ export interface ArticlesApiArticlesListRequest {
  */
 export interface ArticlesApiArticlesPartialUpdateRequest {
   /**
-   * A unique integer value identifying this website content.
+   * A unique integer value identifying this article.
    * @type {number}
    * @memberof ArticlesApiArticlesPartialUpdate
    */
@@ -10945,10 +10895,10 @@ export interface ArticlesApiArticlesPartialUpdateRequest {
 
   /**
    *
-   * @type {PatchedWebsiteContentRequest}
+   * @type {PatchedRichTextArticleRequest}
    * @memberof ArticlesApiArticlesPartialUpdate
    */
-  readonly PatchedWebsiteContentRequest?: PatchedWebsiteContentRequest
+  readonly PatchedRichTextArticleRequest?: PatchedRichTextArticleRequest
 }
 
 /**
@@ -10958,7 +10908,7 @@ export interface ArticlesApiArticlesPartialUpdateRequest {
  */
 export interface ArticlesApiArticlesRetrieveRequest {
   /**
-   * A unique integer value identifying this website content.
+   * A unique integer value identifying this article.
    * @type {number}
    * @memberof ArticlesApiArticlesRetrieve
    */
@@ -10973,7 +10923,7 @@ export interface ArticlesApiArticlesRetrieveRequest {
  */
 export class ArticlesApi extends BaseAPI {
   /**
-   * Create a new content item
+   * Create a new article
    * @summary Create
    * @param {ArticlesApiArticlesCreateRequest} requestParameters Request parameters.
    * @param {*} [options] Override http request option.
@@ -10985,12 +10935,12 @@ export class ArticlesApi extends BaseAPI {
     options?: RawAxiosRequestConfig,
   ) {
     return ArticlesApiFp(this.configuration)
-      .articlesCreate(requestParameters.WebsiteContentRequest, options)
+      .articlesCreate(requestParameters.RichTextArticleRequest, options)
       .then((request) => request(this.axios, this.basePath))
   }
 
   /**
-   * Delete a content item
+   * Delete an article
    * @summary Destroy
    * @param {ArticlesApiArticlesDestroyRequest} requestParameters Request parameters.
    * @param {*} [options] Override http request option.
@@ -11007,8 +10957,8 @@ export class ArticlesApi extends BaseAPI {
   }
 
   /**
-   * Retrieve a content item by numeric ID or slug
-   * @summary Retrieve by ID or slug
+   * If the path parameter is numeric → ID, else → slug.
+   * @summary Retrieve article by ID or slug
    * @param {ArticlesApiArticlesDetailRetrieveRequest} requestParameters Request parameters.
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
@@ -11024,7 +10974,7 @@ export class ArticlesApi extends BaseAPI {
   }
 
   /**
-   * Get a paginated list of website content items
+   * Get a paginated list of articles
    * @summary List
    * @param {ArticlesApiArticlesListRequest} requestParameters Request parameters.
    * @param {*} [options] Override http request option.
@@ -11037,7 +10987,6 @@ export class ArticlesApi extends BaseAPI {
   ) {
     return ArticlesApiFp(this.configuration)
       .articlesList(
-        requestParameters.content_type,
         requestParameters.draft,
         requestParameters.limit,
         requestParameters.offset,
@@ -11047,7 +10996,7 @@ export class ArticlesApi extends BaseAPI {
   }
 
   /**
-   * Update a content item
+   * Update an article
    * @summary Update
    * @param {ArticlesApiArticlesPartialUpdateRequest} requestParameters Request parameters.
    * @param {*} [options] Override http request option.
@@ -11061,14 +11010,14 @@ export class ArticlesApi extends BaseAPI {
     return ArticlesApiFp(this.configuration)
       .articlesPartialUpdate(
         requestParameters.id,
-        requestParameters.PatchedWebsiteContentRequest,
+        requestParameters.PatchedRichTextArticleRequest,
         options,
       )
       .then((request) => request(this.axios, this.basePath))
   }
 
   /**
-   * Retrieve a single content item
+   * Retrieve a single article
    * @summary Retrieve
    * @param {ArticlesApiArticlesRetrieveRequest} requestParameters Request parameters.
    * @param {*} [options] Override http request option.
@@ -11084,16 +11033,6 @@ export class ArticlesApi extends BaseAPI {
       .then((request) => request(this.axios, this.basePath))
   }
 }
-
-/**
- * @export
- */
-export const ArticlesListContentTypeEnum = {
-  Article: "article",
-  News: "news",
-} as const
-export type ArticlesListContentTypeEnum =
-  (typeof ArticlesListContentTypeEnum)[keyof typeof ArticlesListContentTypeEnum]
 
 /**
  * ContentFileSearchApi - axios parameter creator
@@ -33856,886 +33795,3 @@ export const WebhooksContentFilesCreateSourceEnum = {
 } as const
 export type WebhooksContentFilesCreateSourceEnum =
   (typeof WebhooksContentFilesCreateSourceEnum)[keyof typeof WebhooksContentFilesCreateSourceEnum]
-
-/**
- * WebsiteContentApi - axios parameter creator
- * @export
- */
-export const WebsiteContentApiAxiosParamCreator = function (
-  configuration?: Configuration,
-) {
-  return {
-    /**
-     * Create a new content item
-     * @summary Create
-     * @param {WebsiteContentRequest} WebsiteContentRequest
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websiteContentCreate: async (
-      WebsiteContentRequest: WebsiteContentRequest,
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
-      // verify required parameter 'WebsiteContentRequest' is not null or undefined
-      assertParamExists(
-        "websiteContentCreate",
-        "WebsiteContentRequest",
-        WebsiteContentRequest,
-      )
-      const localVarPath = `/api/v1/website_content/`
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
-      let baseOptions
-      if (configuration) {
-        baseOptions = configuration.baseOptions
-      }
-
-      const localVarRequestOptions = {
-        method: "POST",
-        ...baseOptions,
-        ...options,
-      }
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
-
-      localVarHeaderParameter["Content-Type"] = "application/json"
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter)
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {}
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      }
-      localVarRequestOptions.data = serializeDataIfNeeded(
-        WebsiteContentRequest,
-        localVarRequestOptions,
-        configuration,
-      )
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      }
-    },
-    /**
-     * Delete a content item
-     * @summary Destroy
-     * @param {number} id A unique integer value identifying this website content.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websiteContentDestroy: async (
-      id: number,
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
-      // verify required parameter 'id' is not null or undefined
-      assertParamExists("websiteContentDestroy", "id", id)
-      const localVarPath = `/api/v1/website_content/{id}/`.replace(
-        `{${"id"}}`,
-        encodeURIComponent(String(id)),
-      )
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
-      let baseOptions
-      if (configuration) {
-        baseOptions = configuration.baseOptions
-      }
-
-      const localVarRequestOptions = {
-        method: "DELETE",
-        ...baseOptions,
-        ...options,
-      }
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter)
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {}
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      }
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      }
-    },
-    /**
-     * Retrieve a content item by numeric ID or slug
-     * @summary Retrieve by ID or slug
-     * @param {string} identifier Numeric ID or slug of the content item
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websiteContentDetailRetrieve: async (
-      identifier: string,
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
-      // verify required parameter 'identifier' is not null or undefined
-      assertParamExists(
-        "websiteContentDetailRetrieve",
-        "identifier",
-        identifier,
-      )
-      const localVarPath =
-        `/api/v1/website_content/detail/{identifier}/`.replace(
-          `{${"identifier"}}`,
-          encodeURIComponent(String(identifier)),
-        )
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
-      let baseOptions
-      if (configuration) {
-        baseOptions = configuration.baseOptions
-      }
-
-      const localVarRequestOptions = {
-        method: "GET",
-        ...baseOptions,
-        ...options,
-      }
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter)
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {}
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      }
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      }
-    },
-    /**
-     * Get a paginated list of website content items
-     * @summary List
-     * @param {WebsiteContentListContentTypeEnum} [content_type] Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
-     * @param {boolean} [draft] Filter to show only draft (unpublished) items
-     * @param {number} [limit] Number of results to return per page.
-     * @param {number} [offset] The initial index from which to return the results.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websiteContentList: async (
-      content_type?: WebsiteContentListContentTypeEnum,
-      draft?: boolean,
-      limit?: number,
-      offset?: number,
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
-      const localVarPath = `/api/v1/website_content/`
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
-      let baseOptions
-      if (configuration) {
-        baseOptions = configuration.baseOptions
-      }
-
-      const localVarRequestOptions = {
-        method: "GET",
-        ...baseOptions,
-        ...options,
-      }
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
-
-      if (content_type !== undefined) {
-        localVarQueryParameter["content_type"] = content_type
-      }
-
-      if (draft !== undefined) {
-        localVarQueryParameter["draft"] = draft
-      }
-
-      if (limit !== undefined) {
-        localVarQueryParameter["limit"] = limit
-      }
-
-      if (offset !== undefined) {
-        localVarQueryParameter["offset"] = offset
-      }
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter)
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {}
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      }
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      }
-    },
-    /**
-     * Update a content item
-     * @summary Update
-     * @param {number} id A unique integer value identifying this website content.
-     * @param {PatchedWebsiteContentRequest} [PatchedWebsiteContentRequest]
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websiteContentPartialUpdate: async (
-      id: number,
-      PatchedWebsiteContentRequest?: PatchedWebsiteContentRequest,
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
-      // verify required parameter 'id' is not null or undefined
-      assertParamExists("websiteContentPartialUpdate", "id", id)
-      const localVarPath = `/api/v1/website_content/{id}/`.replace(
-        `{${"id"}}`,
-        encodeURIComponent(String(id)),
-      )
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
-      let baseOptions
-      if (configuration) {
-        baseOptions = configuration.baseOptions
-      }
-
-      const localVarRequestOptions = {
-        method: "PATCH",
-        ...baseOptions,
-        ...options,
-      }
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
-
-      localVarHeaderParameter["Content-Type"] = "application/json"
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter)
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {}
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      }
-      localVarRequestOptions.data = serializeDataIfNeeded(
-        PatchedWebsiteContentRequest,
-        localVarRequestOptions,
-        configuration,
-      )
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      }
-    },
-    /**
-     * Retrieve a single content item
-     * @summary Retrieve
-     * @param {number} id A unique integer value identifying this website content.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websiteContentRetrieve: async (
-      id: number,
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
-      // verify required parameter 'id' is not null or undefined
-      assertParamExists("websiteContentRetrieve", "id", id)
-      const localVarPath = `/api/v1/website_content/{id}/`.replace(
-        `{${"id"}}`,
-        encodeURIComponent(String(id)),
-      )
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
-      let baseOptions
-      if (configuration) {
-        baseOptions = configuration.baseOptions
-      }
-
-      const localVarRequestOptions = {
-        method: "GET",
-        ...baseOptions,
-        ...options,
-      }
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter)
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {}
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      }
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      }
-    },
-  }
-}
-
-/**
- * WebsiteContentApi - functional programming interface
- * @export
- */
-export const WebsiteContentApiFp = function (configuration?: Configuration) {
-  const localVarAxiosParamCreator =
-    WebsiteContentApiAxiosParamCreator(configuration)
-  return {
-    /**
-     * Create a new content item
-     * @summary Create
-     * @param {WebsiteContentRequest} WebsiteContentRequest
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async websiteContentCreate(
-      WebsiteContentRequest: WebsiteContentRequest,
-      options?: RawAxiosRequestConfig,
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<WebsiteContent>
-    > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.websiteContentCreate(
-          WebsiteContentRequest,
-          options,
-        )
-      const index = configuration?.serverIndex ?? 0
-      const operationBasePath =
-        operationServerMap["WebsiteContentApi.websiteContentCreate"]?.[index]
-          ?.url
-      return (axios, basePath) =>
-        createRequestFunction(
-          localVarAxiosArgs,
-          globalAxios,
-          BASE_PATH,
-          configuration,
-        )(axios, operationBasePath || basePath)
-    },
-    /**
-     * Delete a content item
-     * @summary Destroy
-     * @param {number} id A unique integer value identifying this website content.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async websiteContentDestroy(
-      id: number,
-      options?: RawAxiosRequestConfig,
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>
-    > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.websiteContentDestroy(id, options)
-      const index = configuration?.serverIndex ?? 0
-      const operationBasePath =
-        operationServerMap["WebsiteContentApi.websiteContentDestroy"]?.[index]
-          ?.url
-      return (axios, basePath) =>
-        createRequestFunction(
-          localVarAxiosArgs,
-          globalAxios,
-          BASE_PATH,
-          configuration,
-        )(axios, operationBasePath || basePath)
-    },
-    /**
-     * Retrieve a content item by numeric ID or slug
-     * @summary Retrieve by ID or slug
-     * @param {string} identifier Numeric ID or slug of the content item
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async websiteContentDetailRetrieve(
-      identifier: string,
-      options?: RawAxiosRequestConfig,
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<WebsiteContent>
-    > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.websiteContentDetailRetrieve(
-          identifier,
-          options,
-        )
-      const index = configuration?.serverIndex ?? 0
-      const operationBasePath =
-        operationServerMap["WebsiteContentApi.websiteContentDetailRetrieve"]?.[
-          index
-        ]?.url
-      return (axios, basePath) =>
-        createRequestFunction(
-          localVarAxiosArgs,
-          globalAxios,
-          BASE_PATH,
-          configuration,
-        )(axios, operationBasePath || basePath)
-    },
-    /**
-     * Get a paginated list of website content items
-     * @summary List
-     * @param {WebsiteContentListContentTypeEnum} [content_type] Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
-     * @param {boolean} [draft] Filter to show only draft (unpublished) items
-     * @param {number} [limit] Number of results to return per page.
-     * @param {number} [offset] The initial index from which to return the results.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async websiteContentList(
-      content_type?: WebsiteContentListContentTypeEnum,
-      draft?: boolean,
-      limit?: number,
-      offset?: number,
-      options?: RawAxiosRequestConfig,
-    ): Promise<
-      (
-        axios?: AxiosInstance,
-        basePath?: string,
-      ) => AxiosPromise<PaginatedWebsiteContentList>
-    > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.websiteContentList(
-          content_type,
-          draft,
-          limit,
-          offset,
-          options,
-        )
-      const index = configuration?.serverIndex ?? 0
-      const operationBasePath =
-        operationServerMap["WebsiteContentApi.websiteContentList"]?.[index]?.url
-      return (axios, basePath) =>
-        createRequestFunction(
-          localVarAxiosArgs,
-          globalAxios,
-          BASE_PATH,
-          configuration,
-        )(axios, operationBasePath || basePath)
-    },
-    /**
-     * Update a content item
-     * @summary Update
-     * @param {number} id A unique integer value identifying this website content.
-     * @param {PatchedWebsiteContentRequest} [PatchedWebsiteContentRequest]
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async websiteContentPartialUpdate(
-      id: number,
-      PatchedWebsiteContentRequest?: PatchedWebsiteContentRequest,
-      options?: RawAxiosRequestConfig,
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<WebsiteContent>
-    > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.websiteContentPartialUpdate(
-          id,
-          PatchedWebsiteContentRequest,
-          options,
-        )
-      const index = configuration?.serverIndex ?? 0
-      const operationBasePath =
-        operationServerMap["WebsiteContentApi.websiteContentPartialUpdate"]?.[
-          index
-        ]?.url
-      return (axios, basePath) =>
-        createRequestFunction(
-          localVarAxiosArgs,
-          globalAxios,
-          BASE_PATH,
-          configuration,
-        )(axios, operationBasePath || basePath)
-    },
-    /**
-     * Retrieve a single content item
-     * @summary Retrieve
-     * @param {number} id A unique integer value identifying this website content.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async websiteContentRetrieve(
-      id: number,
-      options?: RawAxiosRequestConfig,
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<WebsiteContent>
-    > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.websiteContentRetrieve(id, options)
-      const index = configuration?.serverIndex ?? 0
-      const operationBasePath =
-        operationServerMap["WebsiteContentApi.websiteContentRetrieve"]?.[index]
-          ?.url
-      return (axios, basePath) =>
-        createRequestFunction(
-          localVarAxiosArgs,
-          globalAxios,
-          BASE_PATH,
-          configuration,
-        )(axios, operationBasePath || basePath)
-    },
-  }
-}
-
-/**
- * WebsiteContentApi - factory interface
- * @export
- */
-export const WebsiteContentApiFactory = function (
-  configuration?: Configuration,
-  basePath?: string,
-  axios?: AxiosInstance,
-) {
-  const localVarFp = WebsiteContentApiFp(configuration)
-  return {
-    /**
-     * Create a new content item
-     * @summary Create
-     * @param {WebsiteContentApiWebsiteContentCreateRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websiteContentCreate(
-      requestParameters: WebsiteContentApiWebsiteContentCreateRequest,
-      options?: RawAxiosRequestConfig,
-    ): AxiosPromise<WebsiteContent> {
-      return localVarFp
-        .websiteContentCreate(requestParameters.WebsiteContentRequest, options)
-        .then((request) => request(axios, basePath))
-    },
-    /**
-     * Delete a content item
-     * @summary Destroy
-     * @param {WebsiteContentApiWebsiteContentDestroyRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websiteContentDestroy(
-      requestParameters: WebsiteContentApiWebsiteContentDestroyRequest,
-      options?: RawAxiosRequestConfig,
-    ): AxiosPromise<void> {
-      return localVarFp
-        .websiteContentDestroy(requestParameters.id, options)
-        .then((request) => request(axios, basePath))
-    },
-    /**
-     * Retrieve a content item by numeric ID or slug
-     * @summary Retrieve by ID or slug
-     * @param {WebsiteContentApiWebsiteContentDetailRetrieveRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websiteContentDetailRetrieve(
-      requestParameters: WebsiteContentApiWebsiteContentDetailRetrieveRequest,
-      options?: RawAxiosRequestConfig,
-    ): AxiosPromise<WebsiteContent> {
-      return localVarFp
-        .websiteContentDetailRetrieve(requestParameters.identifier, options)
-        .then((request) => request(axios, basePath))
-    },
-    /**
-     * Get a paginated list of website content items
-     * @summary List
-     * @param {WebsiteContentApiWebsiteContentListRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websiteContentList(
-      requestParameters: WebsiteContentApiWebsiteContentListRequest = {},
-      options?: RawAxiosRequestConfig,
-    ): AxiosPromise<PaginatedWebsiteContentList> {
-      return localVarFp
-        .websiteContentList(
-          requestParameters.content_type,
-          requestParameters.draft,
-          requestParameters.limit,
-          requestParameters.offset,
-          options,
-        )
-        .then((request) => request(axios, basePath))
-    },
-    /**
-     * Update a content item
-     * @summary Update
-     * @param {WebsiteContentApiWebsiteContentPartialUpdateRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websiteContentPartialUpdate(
-      requestParameters: WebsiteContentApiWebsiteContentPartialUpdateRequest,
-      options?: RawAxiosRequestConfig,
-    ): AxiosPromise<WebsiteContent> {
-      return localVarFp
-        .websiteContentPartialUpdate(
-          requestParameters.id,
-          requestParameters.PatchedWebsiteContentRequest,
-          options,
-        )
-        .then((request) => request(axios, basePath))
-    },
-    /**
-     * Retrieve a single content item
-     * @summary Retrieve
-     * @param {WebsiteContentApiWebsiteContentRetrieveRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websiteContentRetrieve(
-      requestParameters: WebsiteContentApiWebsiteContentRetrieveRequest,
-      options?: RawAxiosRequestConfig,
-    ): AxiosPromise<WebsiteContent> {
-      return localVarFp
-        .websiteContentRetrieve(requestParameters.id, options)
-        .then((request) => request(axios, basePath))
-    },
-  }
-}
-
-/**
- * Request parameters for websiteContentCreate operation in WebsiteContentApi.
- * @export
- * @interface WebsiteContentApiWebsiteContentCreateRequest
- */
-export interface WebsiteContentApiWebsiteContentCreateRequest {
-  /**
-   *
-   * @type {WebsiteContentRequest}
-   * @memberof WebsiteContentApiWebsiteContentCreate
-   */
-  readonly WebsiteContentRequest: WebsiteContentRequest
-}
-
-/**
- * Request parameters for websiteContentDestroy operation in WebsiteContentApi.
- * @export
- * @interface WebsiteContentApiWebsiteContentDestroyRequest
- */
-export interface WebsiteContentApiWebsiteContentDestroyRequest {
-  /**
-   * A unique integer value identifying this website content.
-   * @type {number}
-   * @memberof WebsiteContentApiWebsiteContentDestroy
-   */
-  readonly id: number
-}
-
-/**
- * Request parameters for websiteContentDetailRetrieve operation in WebsiteContentApi.
- * @export
- * @interface WebsiteContentApiWebsiteContentDetailRetrieveRequest
- */
-export interface WebsiteContentApiWebsiteContentDetailRetrieveRequest {
-  /**
-   * Numeric ID or slug of the content item
-   * @type {string}
-   * @memberof WebsiteContentApiWebsiteContentDetailRetrieve
-   */
-  readonly identifier: string
-}
-
-/**
- * Request parameters for websiteContentList operation in WebsiteContentApi.
- * @export
- * @interface WebsiteContentApiWebsiteContentListRequest
- */
-export interface WebsiteContentApiWebsiteContentListRequest {
-  /**
-   * Filter by content type  * &#x60;news&#x60; - News * &#x60;article&#x60; - Article
-   * @type {'article' | 'news'}
-   * @memberof WebsiteContentApiWebsiteContentList
-   */
-  readonly content_type?: WebsiteContentListContentTypeEnum
-
-  /**
-   * Filter to show only draft (unpublished) items
-   * @type {boolean}
-   * @memberof WebsiteContentApiWebsiteContentList
-   */
-  readonly draft?: boolean
-
-  /**
-   * Number of results to return per page.
-   * @type {number}
-   * @memberof WebsiteContentApiWebsiteContentList
-   */
-  readonly limit?: number
-
-  /**
-   * The initial index from which to return the results.
-   * @type {number}
-   * @memberof WebsiteContentApiWebsiteContentList
-   */
-  readonly offset?: number
-}
-
-/**
- * Request parameters for websiteContentPartialUpdate operation in WebsiteContentApi.
- * @export
- * @interface WebsiteContentApiWebsiteContentPartialUpdateRequest
- */
-export interface WebsiteContentApiWebsiteContentPartialUpdateRequest {
-  /**
-   * A unique integer value identifying this website content.
-   * @type {number}
-   * @memberof WebsiteContentApiWebsiteContentPartialUpdate
-   */
-  readonly id: number
-
-  /**
-   *
-   * @type {PatchedWebsiteContentRequest}
-   * @memberof WebsiteContentApiWebsiteContentPartialUpdate
-   */
-  readonly PatchedWebsiteContentRequest?: PatchedWebsiteContentRequest
-}
-
-/**
- * Request parameters for websiteContentRetrieve operation in WebsiteContentApi.
- * @export
- * @interface WebsiteContentApiWebsiteContentRetrieveRequest
- */
-export interface WebsiteContentApiWebsiteContentRetrieveRequest {
-  /**
-   * A unique integer value identifying this website content.
-   * @type {number}
-   * @memberof WebsiteContentApiWebsiteContentRetrieve
-   */
-  readonly id: number
-}
-
-/**
- * WebsiteContentApi - object-oriented interface
- * @export
- * @class WebsiteContentApi
- * @extends {BaseAPI}
- */
-export class WebsiteContentApi extends BaseAPI {
-  /**
-   * Create a new content item
-   * @summary Create
-   * @param {WebsiteContentApiWebsiteContentCreateRequest} requestParameters Request parameters.
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   * @memberof WebsiteContentApi
-   */
-  public websiteContentCreate(
-    requestParameters: WebsiteContentApiWebsiteContentCreateRequest,
-    options?: RawAxiosRequestConfig,
-  ) {
-    return WebsiteContentApiFp(this.configuration)
-      .websiteContentCreate(requestParameters.WebsiteContentRequest, options)
-      .then((request) => request(this.axios, this.basePath))
-  }
-
-  /**
-   * Delete a content item
-   * @summary Destroy
-   * @param {WebsiteContentApiWebsiteContentDestroyRequest} requestParameters Request parameters.
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   * @memberof WebsiteContentApi
-   */
-  public websiteContentDestroy(
-    requestParameters: WebsiteContentApiWebsiteContentDestroyRequest,
-    options?: RawAxiosRequestConfig,
-  ) {
-    return WebsiteContentApiFp(this.configuration)
-      .websiteContentDestroy(requestParameters.id, options)
-      .then((request) => request(this.axios, this.basePath))
-  }
-
-  /**
-   * Retrieve a content item by numeric ID or slug
-   * @summary Retrieve by ID or slug
-   * @param {WebsiteContentApiWebsiteContentDetailRetrieveRequest} requestParameters Request parameters.
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   * @memberof WebsiteContentApi
-   */
-  public websiteContentDetailRetrieve(
-    requestParameters: WebsiteContentApiWebsiteContentDetailRetrieveRequest,
-    options?: RawAxiosRequestConfig,
-  ) {
-    return WebsiteContentApiFp(this.configuration)
-      .websiteContentDetailRetrieve(requestParameters.identifier, options)
-      .then((request) => request(this.axios, this.basePath))
-  }
-
-  /**
-   * Get a paginated list of website content items
-   * @summary List
-   * @param {WebsiteContentApiWebsiteContentListRequest} requestParameters Request parameters.
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   * @memberof WebsiteContentApi
-   */
-  public websiteContentList(
-    requestParameters: WebsiteContentApiWebsiteContentListRequest = {},
-    options?: RawAxiosRequestConfig,
-  ) {
-    return WebsiteContentApiFp(this.configuration)
-      .websiteContentList(
-        requestParameters.content_type,
-        requestParameters.draft,
-        requestParameters.limit,
-        requestParameters.offset,
-        options,
-      )
-      .then((request) => request(this.axios, this.basePath))
-  }
-
-  /**
-   * Update a content item
-   * @summary Update
-   * @param {WebsiteContentApiWebsiteContentPartialUpdateRequest} requestParameters Request parameters.
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   * @memberof WebsiteContentApi
-   */
-  public websiteContentPartialUpdate(
-    requestParameters: WebsiteContentApiWebsiteContentPartialUpdateRequest,
-    options?: RawAxiosRequestConfig,
-  ) {
-    return WebsiteContentApiFp(this.configuration)
-      .websiteContentPartialUpdate(
-        requestParameters.id,
-        requestParameters.PatchedWebsiteContentRequest,
-        options,
-      )
-      .then((request) => request(this.axios, this.basePath))
-  }
-
-  /**
-   * Retrieve a single content item
-   * @summary Retrieve
-   * @param {WebsiteContentApiWebsiteContentRetrieveRequest} requestParameters Request parameters.
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   * @memberof WebsiteContentApi
-   */
-  public websiteContentRetrieve(
-    requestParameters: WebsiteContentApiWebsiteContentRetrieveRequest,
-    options?: RawAxiosRequestConfig,
-  ) {
-    return WebsiteContentApiFp(this.configuration)
-      .websiteContentRetrieve(requestParameters.id, options)
-      .then((request) => request(this.axios, this.basePath))
-  }
-}
-
-/**
- * @export
- */
-export const WebsiteContentListContentTypeEnum = {
-  Article: "article",
-  News: "news",
-} as const
-export type WebsiteContentListContentTypeEnum =
-  (typeof WebsiteContentListContentTypeEnum)[keyof typeof WebsiteContentListContentTypeEnum]
