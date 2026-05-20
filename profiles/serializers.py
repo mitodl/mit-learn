@@ -159,7 +159,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
 
-            sync_to_keycloak(instance, validated_data.keys())
+            sync_to_keycloak(instance, set(validated_data.keys()))
 
             update_image = "image_file" in validated_data
             instance.save(update_image=update_image)

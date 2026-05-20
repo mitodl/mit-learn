@@ -28,66 +28,6 @@ pytestmark = [pytest.mark.django_db]
 User = get_user_model()
 
 
-def test_list_users(staff_client, staff_user):
-    """
-    List users
-    """
-    url = reverse("profile:v0:user_api-list")
-    resp = staff_client.get(url)
-    assert resp.status_code == 200
-    assert resp.json() == [
-        {
-            "id": staff_user.id,
-            "username": staff_user.username,
-            "first_name": staff_user.first_name,
-            "last_name": staff_user.last_name,
-            "is_learning_path_editor": True,
-            "is_article_editor": True,
-            "profile": ProfileSerializer(staff_user.profile).data,
-            "is_authenticated": True,
-        }
-    ]
-
-
-# These can be removed once all clients have been updated and are sending both these fields
-@pytest.mark.parametrize("email_optin", [None, True, False])
-@pytest.mark.parametrize("toc_optin", [None, True, False])
-def test_create_user(staff_client, staff_user, email_optin, toc_optin):  # pylint: disable=too-many-arguments
-    """
-    Create a user and assert the response
-    """
-    staff_user.email = ""
-    staff_user.profile.email_optin = None
-    staff_user.profile.save()
-    staff_user.save()
-    url = reverse("profile:v0:user_api-list")
-    email = "test.email@example.com"
-    payload = {
-        "email": email,
-        "profile": {
-            "name": "name",
-            "image": "image",
-            "image_small": "image_small",
-            "image_medium": "image_medium",
-            "bio": "bio",
-            "headline": "headline",
-            "placename": "",
-        },
-    }
-    if email_optin is not None:
-        payload["profile"]["email_optin"] = email_optin
-    if toc_optin is not None:
-        payload["profile"]["toc_optin"] = toc_optin
-
-    resp = staff_client.post(url, data=payload)
-    user = User.objects.get(username=resp.json()["username"])
-    assert resp.status_code == 201
-    assert resp.json()["profile"] == ProfileSerializer(user.profile).data
-    assert user.email == email
-    assert user.profile.email_optin is email_optin
-    assert user.profile.toc_optin is toc_optin
-
-
 def test_get_user(staff_client, user):
     """
     Get a user

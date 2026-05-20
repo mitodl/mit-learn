@@ -49,7 +49,7 @@ def get_site_type_from_url(url):
     return PERSONAL_SITE_TYPE
 
 
-def sync_to_keycloak(profile: Profile, update_fields: list[str]):
+def sync_to_keycloak(profile: Profile, update_fields: set[str]):
     """
     Sync a profile to Keycloak
     """
