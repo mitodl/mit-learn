@@ -805,14 +805,18 @@ const getSortedStandaloneContractPrograms = (
   const contractProgramIds = new Set(contract.programs)
   const programsInCollections = getProgramsInCollections(collections)
   const contractCourseIds = new Set(contractCourses.map((course) => course.id))
+  // Precompute sort order map: O(m) once, not O(n*m) per sort
+  const programOrder = new Map(
+    contract.programs.map((id, index) => [id, index]),
+  )
 
   return programs
     .filter((program) => !programsInCollections.has(program.id))
     .filter((program) => contractProgramIds.has(program.id))
     .filter((program) => programHasContractRuns(program, contractCourseIds))
     .sort((a, b) => {
-      const indexA = contract.programs.indexOf(a.id)
-      const indexB = contract.programs.indexOf(b.id)
+      const indexA = programOrder.get(a.id) ?? Infinity
+      const indexB = programOrder.get(b.id) ?? Infinity
       return indexA - indexB
     })
 }

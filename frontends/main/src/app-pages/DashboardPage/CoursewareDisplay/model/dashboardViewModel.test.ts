@@ -819,6 +819,100 @@ describe("dashboardViewModel", () => {
       expect(programs.map((program) => program.id)).toEqual([3, 1])
     })
 
+    test("getSortedStandaloneContractPrograms returns empty when contract has no programs", () => {
+      const program = factories.programs.program({ id: 1, courses: [101] })
+      const contract = factories.contracts.contract({ programs: [] })
+
+      const programs = getSortedStandaloneContractPrograms(
+        [program],
+        [],
+        contract,
+        [factories.courses.course({ id: 101 })],
+      )
+
+      expect(programs).toEqual([])
+    })
+
+    test("getSortedStandaloneContractPrograms filters by contract course availability", () => {
+      const programWithContracts = factories.programs.program({
+        id: 1,
+        courses: [101, 102],
+      })
+      const programNoContracts = factories.programs.program({
+        id: 2,
+        courses: [201, 202],
+      })
+      const contract = factories.contracts.contract({
+        programs: [1, 2],
+      })
+      const contractCourses = [
+        factories.courses.course({ id: 101 }),
+        factories.courses.course({ id: 102 }),
+      ]
+
+      const programs = getSortedStandaloneContractPrograms(
+        [programWithContracts, programNoContracts],
+        [],
+        contract,
+        contractCourses,
+      )
+
+      expect(programs.map((p) => p.id)).toEqual([1])
+    })
+
+    test("getSortedStandaloneContractPrograms preserves contract-specified sort order", () => {
+      const programs = [
+        factories.programs.program({ id: 10, courses: [1001] }),
+        factories.programs.program({ id: 20, courses: [2001] }),
+        factories.programs.program({ id: 30, courses: [3001] }),
+      ]
+      const contract = factories.contracts.contract({
+        programs: [30, 10, 20],
+      })
+      const contractCourses = [
+        factories.courses.course({ id: 1001 }),
+        factories.courses.course({ id: 2001 }),
+        factories.courses.course({ id: 3001 }),
+      ]
+
+      const result = getSortedStandaloneContractPrograms(
+        programs,
+        [],
+        contract,
+        contractCourses,
+      )
+
+      expect(result.map((p) => p.id)).toEqual([30, 10, 20])
+    })
+
+    test("getSortedStandaloneContractPrograms returns empty when all programs are filtered", () => {
+      const programInCollection = factories.programs.program({
+        id: 1,
+        courses: [101],
+      })
+      const programNoContractRuns = factories.programs.program({
+        id: 2,
+        courses: [201, 202],
+      })
+      const contract = factories.contracts.contract({
+        programs: [1, 2],
+      })
+      const collection = factories.programs.programCollection({
+        programs: [{ id: 1, title: programInCollection.title, order: 1 }],
+      })
+      // Contract only has courses 101, so program 2 (courses 201, 202) has no contract runs
+      const contractCourses = [factories.courses.course({ id: 101 })]
+
+      const programs = getSortedStandaloneContractPrograms(
+        [programInCollection, programNoContractRuns],
+        [collection],
+        contract,
+        contractCourses,
+      )
+
+      expect(programs).toEqual([])
+    })
+
     test("getRenderableContractCollections keeps only collections with in-contract programs that have contract runs", () => {
       const programA = factories.programs.program({ id: 10, courses: [1001] })
       const programB = factories.programs.program({ id: 20, courses: [2001] })
