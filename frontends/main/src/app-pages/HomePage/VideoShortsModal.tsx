@@ -135,7 +135,7 @@ const isIOS = () => {
 type VideoWithErrorHandlerProps = {
   index: number
   video: VideoResource
-  videosRef: React.RefObject<(HTMLVideoElement | null)[]>
+  videosRef: React.MutableRefObject<(HTMLVideoElement | null)[]>
   onError: (index: number, e: Event) => void
   onVideoClick: () => void
   videoWidth: number
