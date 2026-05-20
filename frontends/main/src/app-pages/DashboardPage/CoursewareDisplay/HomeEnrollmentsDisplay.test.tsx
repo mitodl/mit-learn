@@ -1,3 +1,19 @@
+/**
+ * Test layering — what belongs in THIS file:
+ *
+ * 1. Smoke / seam tests for the HomeEnrollmentsDisplay <-> useHomeDashboardData
+ *    integration: that the hook's output actually renders (e.g. N enrollments
+ *    -> N cards). Only the rendered component proves the seam — the hook test
+ *    asserts the data, not that it renders.
+ * 2. Genuine component-level concerns: simple display cases, a11y
+ *    roles/headings, user interactions (context-menu clicks, "Show all"
+ *    expand/collapse, empty / "My Learning" states).
+ *
+ * Exhaustive case coverage — bucketing, ordering, dedup, B2B filtering,
+ * completion math, language-key resolution — belongs in the pure model
+ * (model/dashboardViewModel.test.ts) or the hook tests
+ * (hooks/useHomeDashboardData.test.tsx), NOT here.
+ */
 import React from "react"
 import { act } from "@testing-library/react"
 import {

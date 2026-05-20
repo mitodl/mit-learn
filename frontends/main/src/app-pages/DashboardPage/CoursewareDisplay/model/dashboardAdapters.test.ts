@@ -1,16 +1,16 @@
 import { factories } from "api/mitxonline-test-utils"
 import {
-  adaptCourseSlotToLegacyDashboardCardProps,
+  adaptCourseEntryToLegacyDashboardCardProps,
   type LegacyDashboardCardAdapterOutput,
 } from "./dashboardAdapters"
 import {
   pickDisplayedEnrollmentForLegacyDashboard,
-  type DashboardCourseSlot,
+  type DashboardCourseEntry,
 } from "./dashboardViewModel"
 
-const makeSlot = (
-  overrides: Partial<DashboardCourseSlot>,
-): DashboardCourseSlot => {
+const makeEntry = (
+  overrides: Partial<DashboardCourseEntry>,
+): DashboardCourseEntry => {
   const defaultRun = factories.courses.courseRun({
     id: 1,
     courseware_url: "/courseware/default-run/",
@@ -44,13 +44,13 @@ const expectEnrollmentResource = (
 
 describe("dashboardAdapters", () => {
   test("no enrollment: adapts to course resource", () => {
-    const slot = makeSlot({ displayedEnrollment: null })
+    const entry = makeEntry({ displayedEnrollment: null })
 
-    const adapted = adaptCourseSlotToLegacyDashboardCardProps(slot)
+    const adapted = adaptCourseEntryToLegacyDashboardCardProps(entry)
 
     expect(adapted.resource.type).toBe("course")
-    expect(adapted.selectedCourseRun?.id).toBe(slot.displayedRun?.id)
-    expect(adapted.buttonHref).toBe(slot.displayedRun?.courseware_url)
+    expect(adapted.selectedCourseRun?.id).toBe(entry.displayedRun?.id)
+    expect(adapted.buttonHref).toBe(entry.displayedRun?.courseware_url)
   })
 
   test("one enrollment: adapts to enrollment resource", () => {
@@ -61,13 +61,13 @@ describe("dashboardAdapters", () => {
     const course = factories.courses.course({ id: 20, courseruns: [run] })
     const enrollment = factories.enrollment.courseEnrollment({ run })
 
-    const slot = makeSlot({
+    const entry = makeEntry({
       course,
       enrollments: [enrollment],
       displayedEnrollment: enrollment,
       displayedRun: run,
     })
-    const adapted = adaptCourseSlotToLegacyDashboardCardProps(slot)
+    const adapted = adaptCourseEntryToLegacyDashboardCardProps(entry)
 
     expectEnrollmentResource(adapted, run.id)
     expect(adapted.buttonHref).toBe(run.courseware_url)
@@ -89,13 +89,13 @@ describe("dashboardAdapters", () => {
       course,
       [noCertificate, withCertificate],
     )
-    const slot = makeSlot({
+    const entry = makeEntry({
       course,
       enrollments: [noCertificate, withCertificate],
       displayedEnrollment,
       displayedRun: run,
     })
-    const adapted = adaptCourseSlotToLegacyDashboardCardProps(slot)
+    const adapted = adaptCourseEntryToLegacyDashboardCardProps(entry)
 
     expectEnrollmentResource(adapted, withCertificate.run.id)
   })
@@ -118,13 +118,13 @@ describe("dashboardAdapters", () => {
       course,
       [lowGrade, highGrade],
     )
-    const slot = makeSlot({
+    const entry = makeEntry({
       course,
       enrollments: [lowGrade, highGrade],
       displayedEnrollment,
       displayedRun: run,
     })
-    const adapted = adaptCourseSlotToLegacyDashboardCardProps(slot)
+    const adapted = adaptCourseEntryToLegacyDashboardCardProps(entry)
 
     expectEnrollmentResource(adapted, highGrade.run.id)
   })
@@ -148,14 +148,14 @@ describe("dashboardAdapters", () => {
       run: esRun,
     })
 
-    const slot = makeSlot({
+    const entry = makeEntry({
       course,
       enrollments: [selectedLanguageEnrollment],
       selectedLanguageKey: "language:es",
       displayedEnrollment: selectedLanguageEnrollment,
       displayedRun: esRun,
     })
-    const adapted = adaptCourseSlotToLegacyDashboardCardProps(slot)
+    const adapted = adaptCourseEntryToLegacyDashboardCardProps(entry)
 
     expectEnrollmentResource(adapted, esRun.id)
     expect(adapted.buttonHref).toBe(esRun.courseware_url)
@@ -173,7 +173,7 @@ describe("dashboardAdapters", () => {
     })
     const programEnrollment = factories.enrollment.programEnrollmentV3()
 
-    const slot = makeSlot({
+    const entry = makeEntry({
       course,
       enrollments: [contractEnrollment],
       selectedLanguageKey: "language:es",
@@ -182,7 +182,7 @@ describe("dashboardAdapters", () => {
       contractId: 999,
       ancestorContext: { programEnrollment },
     })
-    const adapted = adaptCourseSlotToLegacyDashboardCardProps(slot)
+    const adapted = adaptCourseEntryToLegacyDashboardCardProps(entry)
 
     expectEnrollmentResource(adapted, run.id)
     expect(adapted.contractId).toBe(999)

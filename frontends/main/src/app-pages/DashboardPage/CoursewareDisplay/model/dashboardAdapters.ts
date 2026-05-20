@@ -4,7 +4,7 @@ import type {
   CourseWithCourseRunsSerializerV2,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
-import type { DashboardCourseSlot } from "./dashboardViewModel"
+import type { DashboardCourseEntry } from "./dashboardViewModel"
 
 export type LegacyDashboardCardResource =
   | { type: "course"; data: CourseWithCourseRunsSerializerV2 }
@@ -18,27 +18,27 @@ export type LegacyDashboardCardAdapterOutput = {
   programEnrollment?: V3UserProgramEnrollment
 }
 
-const adaptCourseSlotToLegacyDashboardCardProps = (
-  slot: DashboardCourseSlot,
+const adaptCourseEntryToLegacyDashboardCardProps = (
+  entry: DashboardCourseEntry,
 ): LegacyDashboardCardAdapterOutput => {
   return {
-    resource: slot.displayedEnrollment
+    resource: entry.displayedEnrollment
       ? {
           type: "courserun-enrollment",
-          data: slot.displayedEnrollment,
+          data: entry.displayedEnrollment,
         }
       : {
           type: "course",
-          data: slot.course,
+          data: entry.course,
         },
-    selectedCourseRun: slot.displayedRun,
+    selectedCourseRun: entry.displayedRun,
     buttonHref:
-      slot.displayedEnrollment?.run.courseware_url ??
-      slot.displayedRun?.courseware_url ??
+      entry.displayedEnrollment?.run.courseware_url ??
+      entry.displayedRun?.courseware_url ??
       null,
-    contractId: slot.contractId,
-    programEnrollment: slot.ancestorContext?.programEnrollment,
+    contractId: entry.contractId,
+    programEnrollment: entry.ancestorContext?.programEnrollment,
   }
 }
 
-export { adaptCourseSlotToLegacyDashboardCardProps }
+export { adaptCourseEntryToLegacyDashboardCardProps }
