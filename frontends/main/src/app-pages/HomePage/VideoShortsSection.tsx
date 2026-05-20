@@ -2,11 +2,10 @@ import React, { useState } from "react"
 import Image from "next/image"
 import { Container, Typography, Card, styled } from "ol-components"
 import { CarouselV2 } from "ol-components/CarouselV2"
-import { useVideoShortsList } from "api/hooks/videoShorts"
+import { useVideoShortsLearningResources } from "api/hooks/videoShorts"
 import VideoShortsModal from "./VideoShortsModal"
 import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
-
-const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
+import type { VideoResource } from "api/v1"
 
 const Section = styled.section(({ theme }) => ({
   padding: "80px 0",
@@ -80,7 +79,7 @@ const ImagePlaceholder = styled.div(({ theme }) => ({
 }))
 
 const VideoShortsSection = () => {
-  const { data, isLoading } = useVideoShortsList()
+  const { data, isLoading } = useVideoShortsLearningResources()
 
   const [showModal, setShowModal] = useState(false)
   const [videoIndex, setVideoIndex] = useState(0)
@@ -106,8 +105,8 @@ const VideoShortsSection = () => {
           </Typography>
         </Header>
         <StyledCarouselV2>
-          {data?.map((video, index: number) => (
-            <CarouselSlide width={235} height={235 / ASPECT_RATIO} key={index}>
+          {data?.map((video: VideoResource, index: number) => (
+            <CarouselSlide width={235} height={235 / ASPECT_RATIO} key={video.id}>
               {/* 235 is our fixed width to ensure slides align with the container edge */}
               <Card
                 onClick={() => {
@@ -117,13 +116,16 @@ const VideoShortsSection = () => {
               >
                 <Card.Content>
                   <CardContent width={235} height={235 / ASPECT_RATIO}>
-                    {video.thumbnail_small_url ? (
+                    {video.image?.url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        width={(235 / ASPECT_RATIO) * (270 / 480)}
-                        height={235 / ASPECT_RATIO}
-                        src={`${NEXT_PUBLIC_ORIGIN}${video.thumbnail_small_url}`}
-                        alt={video.title}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
+                        src={video.image.url}
+                        alt={video.image.alt ?? video.title}
                       />
                     ) : (
                       <ImagePlaceholder>

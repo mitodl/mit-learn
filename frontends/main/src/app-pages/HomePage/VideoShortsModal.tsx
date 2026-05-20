@@ -5,10 +5,11 @@ import { CarouselV2Vertical } from "ol-components/CarouselV2Vertical"
 import { RiCloseLine, RiVolumeMuteLine, RiVolumeUpLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
 import { useWindowDimensions } from "ol-utilities"
-import type { VideoShort } from "api/v0"
+import type { VideoResource } from "api/v1"
 import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
 
-const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
+const MODAL_VIDEO_CHROME_OFFSET = 60
+const PORTRAIT_ASPECT_RATIO = 9 / 16
 
 const Overlay = styled.div(({ theme }) => ({
   position: "fixed",
@@ -59,24 +60,30 @@ const MuteButton = styled(BaseButton)(({ theme }) => ({
   },
 }))
 
-const CarouselSlide = styled.div<{ width: number }>(({ width, theme }) => ({
-  width,
-  overflow: "hidden",
-  borderRadius: "12px",
-  flex: "0 0 calc(100% - 60px)",
-  margin: "30px 0",
-  position: "relative",
-  [theme.breakpoints.down("md")]: {
-    width: "100%",
-    margin: "10px 0",
-    flex: "0 0 calc(100% - 20px)",
-    borderRadius: 0,
-  },
-}))
+const CarouselSlide = styled.div<{ width: number; height: number }>(
+  ({ width, height, theme }) => ({
+    width,
+    height,
+    overflow: "hidden",
+    borderRadius: "12px",
+    flex: "0 0 auto",
+    margin: "30px 0",
+    position: "relative",
+    [theme.breakpoints.down("md")]: {
+      width: "100%",
+      height: "100%",
+      margin: "10px 0",
+      flex: "0 0 calc(100% - 20px)",
+      borderRadius: 0,
+    },
+  }),
+)
 
 const Video = styled.video(({ height, width, theme }) => ({
   width,
   height,
+  objectFit: "cover",
+  display: "block",
   backgroundColor: theme.custom.colors.black,
   [theme.breakpoints.down("md")]: {
     width: "100%",
@@ -127,8 +134,8 @@ const isIOS = () => {
 
 type VideoWithErrorHandlerProps = {
   index: number
-  video: VideoShort
-  videosRef: React.MutableRefObject<(HTMLVideoElement | null)[]>
+  video: VideoResource
+  videosRef: React.RefObject<(HTMLVideoElement | null)[]>
   onError: (index: number, e: Event) => void
   onVideoClick: () => void
   videoWidth: number
@@ -145,6 +152,7 @@ const VideoWithErrorHandler = ({
   videoHeight,
 }: VideoWithErrorHandlerProps) => {
   const handlerRef = useRef<((e: Event) => void) | null>(null)
+  const src = video.video?.streaming_url ?? undefined
 
   const refCallback = useCallback(
     (el: HTMLVideoElement | null) => {
@@ -172,7 +180,7 @@ const VideoWithErrorHandler = ({
     <Video
       ref={refCallback}
       onClick={onVideoClick}
-      src={`${NEXT_PUBLIC_ORIGIN}${video.video_url}`}
+      src={src}
       autoPlay
       muted
       playsInline
@@ -189,7 +197,7 @@ const VideoWithErrorHandler = ({
 
 type VideoShortsModalProps = {
   startIndex: number
-  videoData: VideoShort[]
+  videoData: VideoResource[]
   onClose: () => void
 }
 const VideoShortsModal = ({
@@ -301,42 +309,47 @@ const VideoShortsModal = ({
         initialSlide={startIndex}
         onSlidesInView={onSlidesInView}
       >
-        {videoData?.map((video: VideoShort, index: number) => (
-          <CarouselSlide
-            key={index}
-            width={(height - 60) * (9 / 16)}
-            data-index={index}
-          >
-            {selectedIndex !== null && Math.abs(selectedIndex - index) < 2 ? (
-              videoErrors[index] ? (
-                <Placeholder>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <Image
-                    src={MITOpenLearningLogo.src}
-                    alt="MIT Open Learning Logo"
-                    width={178}
-                    height={47}
-                    style={{ filter: "brightness(0) invert(1)" }}
+        {videoData?.map((video: VideoResource, index: number) => {
+          const videoHeight = Math.max(height - MODAL_VIDEO_CHROME_OFFSET, 0)
+
+          return (
+            <CarouselSlide
+              key={video.id}
+              width={videoHeight * PORTRAIT_ASPECT_RATIO}
+              height={videoHeight}
+              data-index={index}
+            >
+              {selectedIndex !== null && Math.abs(selectedIndex - index) < 2 ? (
+                videoErrors[index] ? (
+                  <Placeholder>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <Image
+                      src={MITOpenLearningLogo.src}
+                      alt="MIT Open Learning Logo"
+                      width={178}
+                      height={47}
+                      style={{ filter: "brightness(0) invert(1)" }}
+                    />
+                    <Typography variant="h4">Playback errored!</Typography>
+                    <Typography variant="h2">{video.title}</Typography>
+                  </Placeholder>
+                ) : (
+                  <VideoWithErrorHandler
+                    index={index}
+                    video={video}
+                    videosRef={videosRef}
+                    onError={onVideoError}
+                    onVideoClick={handleVideoClick}
+                    videoWidth={videoHeight * PORTRAIT_ASPECT_RATIO}
+                    videoHeight={videoHeight}
                   />
-                  <Typography variant="h4">Playback errored!</Typography>
-                  <Typography variant="h2">{video.title}</Typography>
-                </Placeholder>
+                )
               ) : (
-                <VideoWithErrorHandler
-                  index={index}
-                  video={video}
-                  videosRef={videosRef}
-                  onError={onVideoError}
-                  onVideoClick={handleVideoClick}
-                  videoWidth={(height - 60) * (9 / 16)}
-                  videoHeight={height - 60}
-                />
-              )
-            ) : (
-              <Placeholder />
-            )}
-          </CarouselSlide>
-        ))}
+                <Placeholder />
+              )}
+            </CarouselSlide>
+          )
+        })}
       </CarouselV2Vertical>
     </Overlay>
   )

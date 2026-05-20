@@ -1,45 +1,33 @@
 import React from "react"
 import VideoShortsModal from "./VideoShortsModal"
-import type { VideoShort } from "api/v0"
-import { renderWithProviders, screen, user, fireEvent } from "@/test-utils"
+import type { VideoResource } from "api/v1"
+import { ResourceTypeEnum } from "api/v1"
+import { factories } from "api/test-utils"
+import { renderWithProviders, screen, user, fireEvent, act } from "@/test-utils"
 
-jest.mock("ol-utilities", () => ({
-  ...jest.requireActual("ol-utilities"),
-  useWindowDimensions: () => ({ height: 800, width: 1024 }),
-}))
+// JSDOM does not implement HTMLMediaElement methods
+window.HTMLMediaElement.prototype.play = jest.fn(() => Promise.resolve())
+window.HTMLMediaElement.prototype.pause = jest.fn()
 
-const originalEnv = process.env
-
-// NEXT_PUBLIC_ORIGIN is read at module load; Jest typically sets this for tests
-const TEST_ORIGIN =
-  process.env.NEXT_PUBLIC_ORIGIN ?? "http://test.learn.odl.local:8062"
-
-const createMockVideoShort = (
-  overrides: Partial<VideoShort> = {},
-): VideoShort => ({
-  video_id: "test-video-id",
-  title: "Test Video Title",
-  video_url: "/media/shorts/test.mp4",
-  published_at: "2024-01-01T00:00:00Z",
-  created_on: "2024-01-01T00:00:00Z",
-  updated_on: "2024-01-01T00:00:00Z",
-  ...overrides,
-})
+const makeVideoResource = (overrides: Partial<VideoResource> = {}): VideoResource =>
+  factories.learningResources.video({
+    resource_type: ResourceTypeEnum.Video,
+    video: {
+      id: 1,
+      streaming_url: "https://example.com/video.mp4",
+      duration: "PT1M",
+      caption_urls: [],
+      cover_image_url: null,
+    },
+    ...overrides,
+  }) as VideoResource
 
 describe("VideoShortsModal", () => {
-  beforeEach(() => {
-    jest.resetModules()
-  })
-
-  afterEach(() => {
-    process.env = originalEnv
-  })
-
   const defaultProps = {
     startIndex: 0,
     videoData: [
-      createMockVideoShort({ title: "First Video" }),
-      createMockVideoShort({ title: "Second Video", video_id: "vid-2" }),
+      makeVideoResource({ title: "First Video" }),
+      makeVideoResource({ title: "Second Video" }),
     ],
     onClose: jest.fn(),
   }
@@ -76,80 +64,61 @@ describe("VideoShortsModal", () => {
     const buttons = screen.getAllByRole("button")
     const muteButton = buttons[1]
     await user.click(muteButton)
-
-    // After click, mute button should show volume up icon (unmuted state)
-    // Click again to toggle back
     await user.click(muteButton)
 
-    // Both clicks should be handled without error
     expect(buttons[1]).toBeInTheDocument()
   })
 
-  test("renders video with /media prefix unchanged", () => {
-    const videoData = [
-      createMockVideoShort({
-        video_url: "/media/shorts/existing.mp4",
-        title: "Existing Prefix Video",
-      }),
-    ]
-
-    renderWithProviders(
-      <VideoShortsModal
-        startIndex={0}
-        videoData={videoData}
-        onClose={jest.fn()}
-      />,
-    )
+  test("renders native video elements for nearby slides", () => {
+    renderWithProviders(<VideoShortsModal {...defaultProps} />)
 
     const videos = document.querySelectorAll("video")
-    expect(videos[0]).toHaveAttribute(
-      "src",
-      `${TEST_ORIGIN}/media/shorts/existing.mp4`,
-    )
+    expect(videos.length).toBeGreaterThanOrEqual(1)
   })
 
-  test("displays error placeholder when video errors", async () => {
-    const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation()
-
-    const videoData = [createMockVideoShort({ title: "Error Video" })]
+  test("video element has correct src from streaming_url", () => {
+    const videoData = [makeVideoResource({ title: "Test Video" })]
 
     renderWithProviders(
-      <VideoShortsModal
-        startIndex={0}
-        videoData={videoData}
-        onClose={jest.fn()}
-      />,
+      <VideoShortsModal startIndex={0} videoData={videoData} onClose={jest.fn()} />,
     )
 
     const video = document.querySelector("video")
-    expect(video).toBeInTheDocument()
+    expect(video?.src).toBe("https://example.com/video.mp4")
+  })
 
-    fireEvent.error(video!)
+  test("displays error placeholder when video errors", async () => {
+    const videoData = [makeVideoResource({ title: "Error Video" })]
+    const consoleSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {})
+
+    renderWithProviders(
+      <VideoShortsModal startIndex={0} videoData={videoData} onClose={jest.fn()} />,
+    )
+
+    const video = document.querySelector("video")
+
+    await act(async () => {
+      if (video) fireEvent.error(video)
+    })
 
     expect(screen.getByText("Playback errored!")).toBeInTheDocument()
     expect(screen.getByText("Error Video")).toBeInTheDocument()
-
-    consoleErrorSpy.mockRestore()
+    consoleSpy.mockRestore()
   })
 
   test("renders with startIndex to show correct initial video", () => {
     const videoData = [
-      createMockVideoShort({ title: "First", video_id: "1" }),
-      createMockVideoShort({ title: "Second", video_id: "2" }),
-      createMockVideoShort({ title: "Third", video_id: "3" }),
+      makeVideoResource({ title: "First" }),
+      makeVideoResource({ title: "Second" }),
+      makeVideoResource({ title: "Third" }),
     ]
 
     renderWithProviders(
-      <VideoShortsModal
-        startIndex={1}
-        videoData={videoData}
-        onClose={jest.fn()}
-      />,
+      <VideoShortsModal startIndex={1} videoData={videoData} onClose={jest.fn()} />,
     )
 
-    // With startIndex=1, selectedIndex starts at 1
-    // Videos at index 0, 1, 2 are within Math.abs(selectedIndex - index) < 2
-    // So we should see videos for indices 0, 1, 2
     const videos = document.querySelectorAll("video")
     expect(videos.length).toBeGreaterThanOrEqual(1)
   })
