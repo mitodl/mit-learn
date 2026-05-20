@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import { NextResponse } from "next/server"
 import invariant from "tiny-invariant"
 import * as resourceSitemap from "../resources/sitemap"
@@ -6,8 +7,8 @@ import * as productsSitemap from "../products/sitemap"
 import * as videoSitemap from "../video/sitemap"
 import * as podcastSitemap from "../podcast/sitemap"
 
-invariant(process.env.NEXT_PUBLIC_ORIGIN, "NEXT_PUBLIC_ORIGIN must be defined")
-const BASE_URL: string = process.env.NEXT_PUBLIC_ORIGIN
+invariant(env("NEXT_PUBLIC_ORIGIN"), "NEXT_PUBLIC_ORIGIN must be defined")
+const BASE_URL: string = env("NEXT_PUBLIC_ORIGIN")
 
 export async function GET() {
   const content = await buildSitemapIndex()

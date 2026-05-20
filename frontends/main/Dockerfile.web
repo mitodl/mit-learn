@@ -171,7 +171,14 @@ ENV NEXT_PUBLIC_DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY="90"
 # Runs `next build` to compile the application. With output: "standalone" in
 # next.config.js this emits a minimal server at .next/standalone/ that includes
 # only the required runtime files and can be run with plain node.
+#
+# NEXT_BUILD_CI=1 skips validateEnv() in next.config.js, which would fail
+# because NEXT_PUBLIC_* vars are not available at build time — they are
+# injected at runtime by Kubernetes and surfaced to the browser via
+# PublicEnvScript. Validation runs at server startup in instrumentation-node.ts.
 FROM base AS build
+
+ENV NEXT_BUILD_CI=1
 
 RUN yarn build
 

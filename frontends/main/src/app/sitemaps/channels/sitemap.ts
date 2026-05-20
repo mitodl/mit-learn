@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import type { MetadataRoute } from "next"
 import invariant from "tiny-invariant"
 import type { GenerateSitemapResult } from "../types"
@@ -5,7 +6,7 @@ import { dangerouslyDetectProductionBuildPhase } from "../util"
 import { getQueryClient } from "@/app/getQueryClient"
 import { channelQueries } from "api/hooks/channels"
 
-const BASE_URL = process.env.NEXT_PUBLIC_ORIGIN
+const BASE_URL = env("NEXT_PUBLIC_ORIGIN")
 invariant(BASE_URL, "NEXT_PUBLIC_ORIGIN must be defined")
 
 const PAGE_SIZE = 100

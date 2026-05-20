@@ -1,5 +1,6 @@
 "use client"
 
+import { env } from "@/env"
 import React, { useRef, useEffect, useCallback, useState } from "react"
 import { notFound } from "next/navigation"
 import Image from "next/image"
@@ -556,7 +557,7 @@ const Certificate = ({
                 src={
                   signatory.signature_image.startsWith("http")
                     ? signatory.signature_image
-                    : `${process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL}${signatory.signature_image}`
+                    : `${env("NEXT_PUBLIC_MITX_ONLINE_BASE_URL")}${signatory.signature_image}`
                 }
                 alt={signatory.name}
                 crossOrigin="anonymous"

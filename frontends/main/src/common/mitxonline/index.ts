@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import type {
   BaseProduct,
   CourseRunV2,
@@ -13,8 +14,9 @@ import {
 } from "@mitodl/mitxonline-api-axios/v2"
 import invariant from "tiny-invariant"
 
-const NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL =
-  process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL
+const NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL = env(
+  "NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL",
+)
 invariant(NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL)
 
 const upgradeRunUrl = (product: ProductFlexiblePrice): string => {

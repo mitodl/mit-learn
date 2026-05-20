@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React, { useState } from "react"
 import { styled, RoutedDrawer } from "ol-components"
 import { RiCloseLine } from "@remixicon/react"
@@ -70,9 +71,9 @@ const DrawerContent: React.FC<{
         askTimTitle="to recommend a course"
         scrollElement={scrollElement}
         requestOpts={{
-          apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT!,
+          apiUrl: env("NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT")!,
           csrfCookieName:
-            process.env.NEXT_PUBLIC_LEARN_AI_CSRF_COOKIE_NAME || "csrftoken",
+            env("NEXT_PUBLIC_LEARN_AI_CSRF_COOKIE_NAME") || "csrftoken",
           csrfHeaderName: "X-CSRFToken",
           fetchOpts: {
             credentials: "include",

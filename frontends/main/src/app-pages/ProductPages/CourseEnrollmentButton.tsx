@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React from "react"
 import { styled, Stack, LoadingSpinner } from "ol-components"
 import { useQuery } from "@tanstack/react-query"
@@ -94,7 +95,7 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
     if (me.isLoading) {
       return
     }
-    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
       posthog.capture(PostHogEvents.CallToActionClicked, {
         readableId: course.readable_id,
         resourceType: "course",

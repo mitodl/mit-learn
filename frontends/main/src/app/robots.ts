@@ -1,8 +1,9 @@
+import { env } from "@/env"
 import type { MetadataRoute } from "next"
 import invariant from "tiny-invariant"
 
-invariant(process.env.NEXT_PUBLIC_ORIGIN, "NEXT_PUBLIC_ORIGIN must be defined")
-const BASE_URL: string = process.env.NEXT_PUBLIC_ORIGIN
+invariant(env("NEXT_PUBLIC_ORIGIN"), "NEXT_PUBLIC_ORIGIN must be defined")
+const BASE_URL: string = env("NEXT_PUBLIC_ORIGIN")
 
 export default function robots(): MetadataRoute.Robots {
   const shouldIndex = process.env.MITOL_NOINDEX === "false"

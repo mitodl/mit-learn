@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React, { useState } from "react"
 import styled from "@emotion/styled"
 import { default as NextImage } from "next/image"
@@ -50,7 +51,7 @@ import { FeatureFlags } from "@/common/feature_flags"
 import { externalLinkProps } from "@/common/utils"
 import invariant from "tiny-invariant"
 
-const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
+const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 invariant(NEXT_PUBLIC_ORIGIN, "NEXT_PUBLIC_ORIGIN must be defined")
 
 const showChatClass = "show-chat"
@@ -456,7 +457,7 @@ const CallToActionSection = ({
           size="medium"
           href={url}
           onClick={() => {
-            if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+            if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
               posthog.capture(PostHogEvents.CallToActionClicked, {
                 resource,
                 label: cta,

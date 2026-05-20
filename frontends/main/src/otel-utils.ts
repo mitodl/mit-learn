@@ -16,7 +16,7 @@ export type RequestLogEntry = {
   version: string | null
 }
 
-const APP_VERSION = process.env.NEXT_PUBLIC_VERSION ?? null
+const APP_VERSION = process.env["NEXT_PUBLIC_VERSION"] ?? null
 
 type OtelEnvSubset = Readonly<Record<string, string | undefined>>
 

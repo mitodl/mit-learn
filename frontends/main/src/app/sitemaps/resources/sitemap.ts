@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import type { MetadataRoute } from "next"
 import { getQueryClient } from "@/app/getQueryClient"
 import { learningResourceQueries } from "api/hooks/learningResources"
@@ -5,7 +6,7 @@ import invariant from "tiny-invariant"
 import { GenerateSitemapResult } from "../types"
 import { dangerouslyDetectProductionBuildPhase } from "../util"
 
-const BASE_URL = process.env.NEXT_PUBLIC_ORIGIN
+const BASE_URL = env("NEXT_PUBLIC_ORIGIN")
 invariant(BASE_URL, "NEXT_PUBLIC_ORIGIN must be defined")
 
 const PAGE_SIZE = 1_000

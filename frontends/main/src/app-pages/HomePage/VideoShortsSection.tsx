@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React, { useState } from "react"
 import Image from "next/image"
 import { Container, Typography, Card, styled } from "ol-components"
@@ -6,7 +7,7 @@ import { useVideoShortsList } from "api/hooks/videoShorts"
 import VideoShortsModal from "./VideoShortsModal"
 import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
 
-const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
+const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 const Section = styled.section(({ theme }) => ({
   padding: "80px 0",

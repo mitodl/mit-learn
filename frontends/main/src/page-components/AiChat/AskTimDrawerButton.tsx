@@ -1,5 +1,6 @@
 "use client"
 
+import { env } from "@/env"
 import React from "react"
 import { Typography, styled, LinkAdapter } from "ol-components"
 import { RiSparkling2Line } from "@remixicon/react"
@@ -33,7 +34,7 @@ const AskTIMButton = () => {
         shallow
         href={`?${RECOMMENDER_QUERY_PARAM}`}
         onClick={() => {
-          if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+          if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
             posthog.capture(PostHogEvents.AskTimClicked, {
               type: "recommendation_bot",
             })

@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { styled, Typography } from "ol-components"
@@ -8,7 +9,7 @@ import { useWindowDimensions } from "ol-utilities"
 import type { VideoShort } from "api/v0"
 import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
 
-const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
+const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 const Overlay = styled.div(({ theme }) => ({
   position: "fixed",

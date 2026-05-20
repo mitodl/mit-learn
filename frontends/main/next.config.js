@@ -1,7 +1,13 @@
 // @ts-check
 const { validateEnv } = require("./validateEnv")
 
-validateEnv()
+// In CI Docker builds (NEXT_BUILD_CI=1), NEXT_PUBLIC_* vars are not available
+// at build time — they are injected at runtime via PublicEnvScript. Skip
+// build-time validation; validateEnv() runs at server startup instead (see
+// src/instrumentation-node.ts).
+if (!process.env.NEXT_BUILD_CI) {
+  validateEnv()
+}
 
 const NEXT_PUBLIC_OPTIMIZE_IMAGES = Boolean(
   (process.env.NEXT_PUBLIC_OPTIMIZE_IMAGES ?? "true") === "true",
@@ -11,22 +17,6 @@ const IS_LOCAL_DEV = process.env.NODE_ENV === "development"
 const NEXT_CACHE_S_MAXAGE_SECONDS =
   process.env.NEXT_CACHE_S_MAXAGE_SECONDS || "1800"
 const PAGE_CACHE_CONTROL = `s-maxage=${NEXT_CACHE_S_MAXAGE_SECONDS}, stale-if-error=86400, stale-while-revalidate=86400`
-
-const processFeatureFlags = () => {
-  const featureFlagPrefix =
-    process.env.NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX || "FEATURE_"
-  const bootstrapFeatureFlags = {}
-
-  for (const [key, value] of Object.entries(process.env)) {
-    if (key.startsWith(`NEXT_PUBLIC_${featureFlagPrefix}`)) {
-      bootstrapFeatureFlags[
-        key.replace(`NEXT_PUBLIC_${featureFlagPrefix}`, "").replaceAll("_", "-")
-      ] = value === "True" ? true : JSON.stringify(value)
-    }
-  }
-
-  return bootstrapFeatureFlags
-}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -138,10 +128,6 @@ const nextConfig = {
       },
     ],
     qualities: [25, 50, 75, 100],
-  },
-
-  env: {
-    FEATURE_FLAGS: JSON.stringify(processFeatureFlags()),
   },
 
   experimental: {
