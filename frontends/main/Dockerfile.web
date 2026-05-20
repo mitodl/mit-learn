@@ -105,6 +105,12 @@ ENV NEXT_PUBLIC_SENTRY_ENV=$NEXT_PUBLIC_SENTRY_ENV
 ARG NEXT_PUBLIC_VERSION
 ENV NEXT_PUBLIC_VERSION=$NEXT_PUBLIC_VERSION
 
+# GIT_REF is the full commit SHA, passed by Concourse as BUILD_ARG_GIT_REF.
+# It is used by next.config.js generateBuildId as a fallback when
+# NEXT_PUBLIC_VERSION is not set (e.g. CI/main-branch builds).
+ARG GIT_REF
+ENV GIT_REF=$GIT_REF
+
 ARG NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE
 ENV NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE=$NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE
 
@@ -156,32 +162,37 @@ ENV NEXT_PUBLIC_DEFAULT_SEARCH_STALENESS_PENALTY="2.5"
 ENV NEXT_PUBLIC_DEFAULT_SEARCH_MINIMUM_SCORE_CUTOFF="0"
 ENV NEXT_PUBLIC_DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY="90"
 
-# NEW STAGE: build_skip_yarn
-# This stage is intended for scenarios where the 'yarn build' step
-# is not needed (e.g., build artifacts are provided externally or
-# for a development setup where 'yarn dev' might be used).
-# Note: 'yarn start' in the CMD requires a prior build to have occurred
-# and the '.next' directory to be present.
-FROM base AS build_skip_yarn
-
-EXPOSE 3000
-
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
-CMD ["yarn", "start"]
-
-# DEFAULT STAGE: build
-# This stage performs the 'yarn build' step and is the default target
-# if no --target is specified during the Docker build command.
+# STAGE: build
+# Runs `next build` to compile the application. With output: "standalone" in
+# next.config.js this emits a minimal server at .next/standalone/ that includes
+# only the required runtime files and can be run with plain node.
 FROM base AS build
 
 RUN yarn build
 
+# STAGE: runner (default)
+# Copies only the standalone server, static assets, and public directory from
+# the build stage into a clean image. No yarn, no node_modules, no source code.
+#
+# The standalone server is started directly with node (not `yarn start`), which
+# avoids yarn overhead and is the pattern recommended by Next.js for Docker:
+# https://github.com/vercel/next.js/tree/canary/examples/with-docker
+FROM node:24-alpine AS runner
+
+WORKDIR /app
+
+# Copy the standalone server (includes a minimal node_modules)
+COPY --from=build /app/frontends/main/.next/standalone ./
+
+# Copy static assets served by the Next.js server under /_next/static/
+COPY --from=build /app/frontends/main/.next/static ./frontends/main/.next/static
+
+# Copy the public directory (robots.txt, favicon.ico, etc.)
+COPY --from=build /app/frontends/main/public ./frontends/main/public
+
 EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# CMD ["node", "/app/frontends/main/.next/standalone/frontends/main/server.js"]
-CMD ["yarn", "start"]
+CMD ["node", "frontends/main/server.js"]
