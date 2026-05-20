@@ -371,10 +371,7 @@ def test_get_course_ids_from_req_tree_display_mode_course():
 
 
 def test_get_child_positions_interleaves_courses_and_display_mode_course_programs():
-    """
-    Courses and display_mode="course" sub-programs share the PROGRAM_COURSES
-    children of a parent and must be positioned in req_tree traversal order.
-    """
+    """Courses and display_mode="course" sub-programs share PROGRAM_COURSES slots in req_tree traversal order."""
     programs_by_id = {
         36: {"display_mode": "course", "req_tree": []},
         37: {"display_mode": "course", "req_tree": []},
@@ -406,10 +403,7 @@ def test_get_child_positions_interleaves_courses_and_display_mode_course_program
 
 
 def test_get_child_positions_recurses_through_display_mode_program():
-    """
-    A display_mode="program" child has its req_tree expanded inline; the
-    program itself does not occupy a PROGRAM_COURSES position.
-    """
+    """A display_mode="program" child's req_tree is expanded inline; the program itself takes no slot."""
     programs_by_id = {
         50: {
             "display_mode": "program",
@@ -1501,10 +1495,7 @@ def test_fetch_courses_by_ids_empty_list(mocker, settings):
 
 
 def test_fetch_courses_by_ids_preserves_requested_order(mocker, settings):
-    """
-    The MITx Online API returns courses in its own order; _fetch_courses_by_ids
-    must restore the requested ID order. Missing courses are silently dropped.
-    """
+    """Requested ID order must be restored from the API response, with missing IDs silently dropped."""
     settings.MITX_ONLINE_COURSES_API_URL = "http://localhost/test/courses/api"
     # API returns reversed order, and omits id=30 (e.g. no longer live).
     mocker.patch(
