@@ -172,7 +172,7 @@ const useContractDashboardData = (
       programsQuery.isLoading ||
       programCollectionsQuery.isLoading ||
       coursesQuery.isLoading,
-    showNoPrograms: programs.length === 0,
+    showNoPrograms: programRows.length === 0 && collectionRows.length === 0,
     languageOptions,
     selectedLanguageKey,
     setSelectedLanguageKey,
