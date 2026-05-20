@@ -7,6 +7,7 @@ import {
 } from "api/mitxonline-hooks/programs"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
+import { useDashboardLanguagePicker } from "./useDashboardLanguagePicker"
 import type {
   ContractPage,
   CourseRunEnrollmentV3,
@@ -95,24 +96,8 @@ const useContractDashboardData = (
     [contract.id, contractCourses, courseRunEnrollments],
   )
 
-  const [selectedLanguageKey, setSelectedLanguageKey] = React.useState("")
-
-  // TODO: Move to shared useDashboardLanguagePicker once Phase 4 merges.
-  React.useEffect(() => {
-    if (languageOptions.length === 0) {
-      if (selectedLanguageKey) {
-        setSelectedLanguageKey("")
-      }
-      return
-    }
-
-    const hasSelectedLanguage = languageOptions.some(
-      (option) => option.value === selectedLanguageKey,
-    )
-    if (!hasSelectedLanguage) {
-      setSelectedLanguageKey(String(languageOptions[0].value))
-    }
-  }, [languageOptions, selectedLanguageKey])
+  const { selectedLanguageKey, setSelectedLanguageKey } =
+    useDashboardLanguagePicker(languageOptions)
 
   const programs = programsQuery.data?.results ?? []
   const collections = programCollectionsQuery.data?.results ?? []
