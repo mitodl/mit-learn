@@ -516,11 +516,69 @@ def _collect_program_ids(
         _collect_program_ids(node.get("children", []), seen_ids, program_ids)
 
 
+def get_child_positions(
+    nodes: list[dict],
+    programs_by_id: dict[int, dict] | None = None,
+) -> dict[tuple[str, int], int]:
+    """
+    Return a {(resource_type, id): position} map for items that appear as
+    PROGRAM_COURSES children of a program, in req_tree traversal order.
+
+    resource_type is "course" for course nodes and "program" for program nodes
+    whose program has display_mode="course".
+
+    Positions are stamped onto transformed courses and child_programs in
+    transform_programs so the loader can persist req_tree order across
+    pass 1 (courses) and pass 2 (display_mode="course" sub-programs).
+    """
+    positions: dict[tuple[str, int], int] = {}
+    visited_programs: set[int] = set()
+    _collect_child_positions(nodes, programs_by_id, visited_programs, positions)
+    return positions
+
+
+def _collect_child_positions(
+    nodes: list[dict],
+    programs_by_id: dict[int, dict] | None,
+    visited_programs: set[int],
+    positions: dict[tuple[str, int], int],
+) -> None:
+    """Recursive helper for get_child_positions."""
+    for node in nodes:
+        data = node.get("data", {})
+        node_type = data.get("node_type")
+        if node_type == "course":
+            cid = data.get("course")
+            if isinstance(cid, int) and ("course", cid) not in positions:
+                positions[("course", cid)] = len(positions)
+        elif node_type == "program" and programs_by_id:
+            pid = data.get("required_program")
+            if isinstance(pid, int) and pid not in visited_programs:
+                visited_programs.add(pid)
+                child = programs_by_id.get(pid)
+                if child and child.get("display_mode") == "course":
+                    if ("program", pid) not in positions:
+                        positions[("program", pid)] = len(positions)
+                elif child:
+                    _collect_child_positions(
+                        child.get("req_tree", []),
+                        programs_by_id,
+                        visited_programs,
+                        positions,
+                    )
+        _collect_child_positions(
+            node.get("children", []),
+            programs_by_id,
+            visited_programs,
+            positions,
+        )
+
+
 def _fetch_courses_by_ids(course_ids):
     if not course_ids:
         return []
     if settings.MITX_ONLINE_COURSES_API_URL:
-        return list(
+        fetched = list(
             _fetch_data(
                 settings.MITX_ONLINE_COURSES_API_URL,
                 params={
@@ -529,6 +587,8 @@ def _fetch_courses_by_ids(course_ids):
                 },
             )
         )
+        courses_by_id = {course["id"]: course for course in fetched}
+        return [courses_by_id[cid] for cid in course_ids if cid in courses_by_id]
 
     log.warning("Missing required setting MITX_ONLINE_COURSES_API_URL")
     return []
@@ -548,17 +608,23 @@ def transform_programs(programs: list[dict]) -> Iterator[dict]:
     # normalize the MITx Online data
     programs_by_id = {p["id"]: p for p in programs}
     for program in programs:
+        child_positions = get_child_positions(
+            program.get("req_tree", []), programs_by_id
+        )
+        fetched_courses = _fetch_courses_by_ids(
+            get_course_ids_from_req_tree(program.get("req_tree", []), programs_by_id)
+        )
+        mitx_id_by_readable = {c["readable_id"]: c["id"] for c in fetched_courses}
         courses = transform_courses(
             [
                 course
-                for course in _fetch_courses_by_ids(
-                    get_course_ids_from_req_tree(
-                        program.get("req_tree", []), programs_by_id
-                    )
-                )
+                for course in fetched_courses
                 if not re.search(EXCLUDE_REGEX, course["title"], re.IGNORECASE)
             ]
         )
+        for course in courses:
+            mitx_id = mitx_id_by_readable.get(course["readable_id"])
+            course["position"] = child_positions.get(("course", mitx_id))
         pace = sorted(
             {course_pace for course in courses for course_pace in course["pace"]}
         )
@@ -616,6 +682,7 @@ def transform_programs(programs: list[dict]) -> Iterator[dict]:
                 {
                     "readable_id": programs_by_id[pid]["readable_id"],
                     "display_mode": programs_by_id[pid].get("display_mode"),
+                    "position": child_positions.get(("program", pid)),
                 }
             )
         has_certification = parse_certification(OFFERED_BY["code"], [run])

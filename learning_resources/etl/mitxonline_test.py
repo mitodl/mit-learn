@@ -30,6 +30,7 @@ from learning_resources.etl.mitxonline import (
     _transform_run,
     extract_courses,
     extract_programs,
+    get_child_positions,
     get_course_ids_from_req_tree,
     get_program_ids_from_req_tree,
     is_fully_enrollable,
@@ -369,6 +370,106 @@ def test_get_course_ids_from_req_tree_display_mode_course():
     assert result == [10, 500]
 
 
+def test_get_child_positions_interleaves_courses_and_display_mode_course_programs():
+    """
+    Courses and display_mode="course" sub-programs share the PROGRAM_COURSES
+    children of a parent and must be positioned in req_tree traversal order.
+    """
+    programs_by_id = {
+        36: {"display_mode": "course", "req_tree": []},
+        37: {"display_mode": "course", "req_tree": []},
+    }
+    req_tree = [
+        {
+            "data": {"node_type": "operator", "operator": "all_of"},
+            "id": 1,
+            "children": [
+                {
+                    "data": {"node_type": "program", "required_program": 36},
+                    "id": 2,
+                },
+                {
+                    "data": {"node_type": "program", "required_program": 37},
+                    "id": 3,
+                },
+                {"data": {"node_type": "course", "course": 159}, "id": 4},
+                {"data": {"node_type": "course", "course": 152}, "id": 5},
+            ],
+        }
+    ]
+    assert get_child_positions(req_tree, programs_by_id) == {
+        ("program", 36): 0,
+        ("program", 37): 1,
+        ("course", 159): 2,
+        ("course", 152): 3,
+    }
+
+
+def test_get_child_positions_recurses_through_display_mode_program():
+    """
+    A display_mode="program" child has its req_tree expanded inline; the
+    program itself does not occupy a PROGRAM_COURSES position.
+    """
+    programs_by_id = {
+        50: {
+            "display_mode": "program",
+            "req_tree": [
+                {"data": {"node_type": "course", "course": 600}, "id": 100},
+                {"data": {"node_type": "course", "course": 601}, "id": 101},
+            ],
+        },
+    }
+    req_tree = [
+        {"data": {"node_type": "course", "course": 10}, "id": 1},
+        {
+            "data": {"node_type": "program", "required_program": 50},
+            "id": 2,
+        },
+        {"data": {"node_type": "course", "course": 20}, "id": 3},
+    ]
+    # Program 50's courses (600, 601) take the slot between courses 10 and 20.
+    # Program 50 itself gets no PROGRAM_COURSES position.
+    assert get_child_positions(req_tree, programs_by_id) == {
+        ("course", 10): 0,
+        ("course", 600): 1,
+        ("course", 601): 2,
+        ("course", 20): 3,
+    }
+
+
+def test_get_child_positions_handles_circular_reference():
+    """Circular program references must not loop infinitely."""
+    programs_by_id = {
+        1: {
+            "display_mode": "program",
+            "req_tree": [
+                {"data": {"node_type": "program", "required_program": 2}, "id": 10},
+                {"data": {"node_type": "course", "course": 100}, "id": 11},
+            ],
+        },
+        2: {
+            "display_mode": "program",
+            "req_tree": [
+                {"data": {"node_type": "program", "required_program": 1}, "id": 20},
+                {"data": {"node_type": "course", "course": 200}, "id": 21},
+            ],
+        },
+    }
+    # Start from program 1's req_tree (as transform_programs would).
+    positions = get_child_positions(programs_by_id[1]["req_tree"], programs_by_id)
+    assert set(positions.keys()) == {("course", 100), ("course", 200)}
+
+
+def test_get_child_positions_skips_program_nodes_without_programs_by_id():
+    """Program nodes are ignored if programs_by_id is None or empty."""
+    req_tree = [
+        {"data": {"node_type": "course", "course": 10}, "id": 1},
+        {"data": {"node_type": "program", "required_program": 999}, "id": 2},
+    ]
+    assert get_child_positions(req_tree, None) == {("course", 10): 0}
+    assert get_child_positions(req_tree, {}) == {("course", 10): 0}
+
+
 @pytest.mark.parametrize(
     ("req_tree", "expected_ids"),
     [
@@ -533,13 +634,19 @@ def test_mitxonline_transform_programs(
 
     result = transform_programs(mock_mitxonline_programs_data["results"])
     expected = []
+    programs_by_id = {p["id"]: p for p in mock_mitxonline_programs_data["results"]}
+    courses_by_id = {c["id"]: c for c in mock_mitxonline_courses_data["results"]}
     for program_data in mock_mitxonline_programs_data["results"]:
+        program_course_ids = get_course_ids_from_req_tree(
+            program_data.get("req_tree", []), programs_by_id
+        )
+        child_positions = get_child_positions(
+            program_data.get("req_tree", []), programs_by_id
+        )
         expected_courses = []
-        for course_data in sorted(
-            mock_mitxonline_courses_data["results"],
-            key=lambda x: x["readable_id"],
-        ):
-            if "PROCTORED EXAM" in course_data["title"]:
+        for cid in program_course_ids:
+            course_data = courses_by_id.get(cid)
+            if course_data is None or "PROCTORED EXAM" in course_data["title"]:
                 continue
             has_course_product_page = bool(
                 parse_page_attribute(course_data, "page_url")
@@ -611,6 +718,7 @@ def test_mitxonline_transform_programs(
                             }
                         ]
                     },
+                    "position": child_positions.get(("course", cid)),
                 }
             )
         has_program_product_page = bool(parse_page_attribute(program_data, "page_url"))
@@ -626,6 +734,10 @@ def test_mitxonline_transform_programs(
                 else None
             )
         )
+        # Pace is derived from the program's courses, so it depends on which
+        # courses survived the req_tree filter — programs whose req_tree
+        # references courses absent from the courses fixture get an empty pace.
+        expected_pace = sorted({p for c in expected_courses for p in c["pace"]})
         expected.append(
             {
                 "readable_id": program_data["readable_id"],
@@ -662,7 +774,7 @@ def test_mitxonline_transform_programs(
                 "availability": program_data["availability"],
                 "topics": transform_topics(program_data["topics"], OFFERED_BY["code"]),
                 "format": [Format.asynchronous.name],
-                "pace": [Pace.instructor_paced.name],
+                "pace": expected_pace,
                 "runs": [
                     {
                         "run_id": program_data["readable_id"],
@@ -690,7 +802,7 @@ def test_mitxonline_transform_programs(
                         else RunStatus.archived.value,
                         "availability": program_data["availability"],
                         "format": [Format.asynchronous.name],
-                        "pace": [Pace.instructor_paced.name],
+                        "pace": expected_pace,
                         "duration": program_data.get("duration") or "",
                         "time_commitment": program_data.get("time_commitment") or "",
                         "min_weeks": program_data.get("min_weeks"),
@@ -1386,3 +1498,21 @@ def test_fetch_courses_by_ids_empty_list(mocker, settings):
     result = _fetch_courses_by_ids([])
     assert result == []
     mock_fetch.assert_not_called()
+
+
+def test_fetch_courses_by_ids_preserves_requested_order(mocker, settings):
+    """
+    The MITx Online API returns courses in its own order; _fetch_courses_by_ids
+    must restore the requested ID order. Missing courses are silently dropped.
+    """
+    settings.MITX_ONLINE_COURSES_API_URL = "http://localhost/test/courses/api"
+    # API returns reversed order, and omits id=30 (e.g. no longer live).
+    mocker.patch(
+        "learning_resources.etl.mitxonline._fetch_data",
+        return_value=[
+            {"id": 20, "readable_id": "course-v1:T+B"},
+            {"id": 10, "readable_id": "course-v1:T+A"},
+        ],
+    )
+    result = _fetch_courses_by_ids([10, 20, 30])
+    assert [c["id"] for c in result] == [10, 20]
