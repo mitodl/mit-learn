@@ -60,11 +60,9 @@ const MuteButton = styled(BaseButton)(({ theme }) => ({
   },
 }))
 
-const CarouselSlide = styled.div(
-  {
-    shouldForwardProp: (prop) => prop !== "width" && prop !== "height",
-  },
-)<{ width: number; height: number }>(({ width, height, theme }) => ({
+const CarouselSlide = styled("div", {
+  shouldForwardProp: (prop) => prop !== "width" && prop !== "height",
+})<{ width: number; height: number }>(({ width, height, theme }) => ({
   width,
   height,
   overflow: "hidden",
