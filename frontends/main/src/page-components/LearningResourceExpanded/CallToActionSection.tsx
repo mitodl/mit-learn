@@ -43,6 +43,7 @@ import {
   videoPlaylistPageView,
   podcastPageView,
   podcastEpisodePageView,
+  ocwLearnPageView,
 } from "@/common/urls"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -313,13 +314,13 @@ const appendUtmParams = (url?: string | null, resourceTitle?: string) => {
 const getResourceUrl = (
   resource: LearningResource,
   {
+    ocwProductPages,
     mitxonlineProductPages,
-    showVideoPlaylistPage,
     showPodcastPage,
   }: {
     mitxonlineProductPages?: boolean
-    showVideoPlaylistPage?: boolean
     showPodcastPage?: boolean
+    ocwProductPages?: boolean
   },
 ) => {
   if (
@@ -345,16 +346,14 @@ const getResourceUrl = (
       })
     }
   }
-  if (showVideoPlaylistPage) {
-    if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
-      return videoPlaylistPageView(resource.id.toString())
-    }
-    if (
-      resource.resource_type === ResourceTypeEnum.Video &&
-      resource?.playlists?.length > 0
-    ) {
-      return videoDetailPageView(resource.id, Number(resource.playlists[0]))
-    }
+  if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
+    return videoPlaylistPageView(resource.id.toString())
+  }
+  if (
+    resource.resource_type === ResourceTypeEnum.Video &&
+    resource?.playlists?.length > 0
+  ) {
+    return videoDetailPageView(resource.id, Number(resource.playlists[0]))
   }
 
   if (showPodcastPage) {
@@ -371,6 +370,15 @@ const getResourceUrl = (
       )
     }
   }
+
+  if (
+    ocwProductPages &&
+    resource.platform?.code === PlatformEnum.Ocw &&
+    resource.url
+  ) {
+    return ocwLearnPageView(resource.url)
+  }
+
   return resource.url
 }
 
@@ -398,11 +406,9 @@ const CallToActionSection = ({
   const posthog = usePostHog()
   const [shareExpanded, setShareExpanded] = useState(false)
   const [copyText, setCopyText] = useState("Copy Link")
+  const ocwProductPages = useFeatureFlagEnabled(FeatureFlags.OcwProductPages)
   const mitxonlineProductPages = useFeatureFlagEnabled(
     FeatureFlags.MitxOnlineProductPages,
-  )
-  const showVideoPlaylistPage = useFeatureFlagEnabled(
-    FeatureFlags.VideoPlaylistPage,
   )
   const showPodcastPage = useFeatureFlagEnabled(FeatureFlags.PodcastDetailPage)
 
@@ -433,8 +439,8 @@ const CallToActionSection = ({
   const url = appendUtmParams(
     getResourceUrl(resource, {
       mitxonlineProductPages,
-      showVideoPlaylistPage,
       showPodcastPage,
+      ocwProductPages,
     }),
     resource.title,
   )

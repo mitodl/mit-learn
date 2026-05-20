@@ -3,7 +3,6 @@
 import React from "react"
 import { styled, Skeleton, Typography } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { notFound } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import {
@@ -21,8 +20,6 @@ import FeaturedVideo from "./FeaturedVideo"
 import VideoCollection from "./VideoCollection"
 import RelatedPlaylist from "./RelatedPlaylist"
 import VideoContainer from "./VideoContainer"
-import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 
 const Page = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray1,
@@ -69,11 +66,6 @@ const VideoPlaylistCollectionPage: React.FC<
   const getVideoHref = (resource: VideoResource) =>
     `/video/${resource.id}?playlist=${playlistId}`
 
-  const showVideoPlaylistPage = useFeatureFlagEnabled(
-    FeatureFlags.VideoPlaylistPage,
-  )
-  const flagsLoaded = useFeatureFlagsLoaded()
-
   const {
     data: playlist,
     isLoading: playlistLoading,
@@ -99,14 +91,11 @@ const VideoPlaylistCollectionPage: React.FC<
     }),
   })
 
-  if (!showVideoPlaylistPage) {
-    return flagsLoaded ? notFound() : null
-  }
-
   if (isError) {
     return notFound()
   }
   const isLoading = playlistLoading || itemsLoading
+  const totalCount = itemsData?.pages[0]?.count ?? 0
   const videos = (
     itemsData?.pages.flatMap((page) =>
       page.results.map((rel) => rel.resource),
@@ -117,7 +106,6 @@ const VideoPlaylistCollectionPage: React.FC<
   )
   const playlistType = isOcwPlaylist(playlist)
 
-  const totalVideos = videos.length
   const totalVideoSeconds = videos.reduce((acc, video) => {
     const duration = video.video?.duration ?? ""
     const match = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(duration)
@@ -141,7 +129,7 @@ const VideoPlaylistCollectionPage: React.FC<
       <VideoPageHeader
         playlist={playlist}
         isSeries={playlistType}
-        totalVideos={videos.length}
+        totalVideos={totalCount}
       />
 
       {isLoading ? (
@@ -151,7 +139,7 @@ const VideoPlaylistCollectionPage: React.FC<
           video={videos[0]}
           href={getVideoHref(videos[0])}
           isSeries={playlistType}
-          totalVideos={totalVideos}
+          totalVideos={totalCount}
           totalTime={totalTime}
         />
       ) : null}

@@ -2,6 +2,9 @@
 
 import logging
 
+
+from website_content.constants import WebsiteContentType
+
 from website_content.hooks import get_plugin_manager
 from website_content.tasks import (
     PURGE_TIMEOUT_SECONDS,
@@ -10,6 +13,12 @@ from website_content.tasks import (
 )
 
 log = logging.getLogger(__name__)
+
+
+_CONTENT_TYPE_LISTING_URL = {
+    WebsiteContentType.news.name: "/news",
+    WebsiteContentType.article.name: "/articles",
+}
 
 
 def purge_content_on_save(content):
@@ -44,7 +53,10 @@ def purge_content_on_save(content):
             fastly_purge_relative_url.delay(content_url)
             log.exception("Content purge request failed, enqueued for retry.")
 
-        fastly_purge_website_content_list.delay()
+        fastly_purge_website_content_list.delay(
+            _CONTENT_TYPE_LISTING_URL.get(content.content_type, "/news")
+        )
+
     else:
         log.debug(
             "WebsiteContent %s is not published or has no slug, skipping CDN purge.",

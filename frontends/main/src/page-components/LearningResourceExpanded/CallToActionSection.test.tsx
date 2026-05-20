@@ -372,6 +372,111 @@ describe("CallToActionSection", () => {
     })
   })
 
+  describe("OCW product pages", () => {
+    const ocwSlug =
+      "16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006"
+    const ocwUrl = `https://ocw.mit.edu/courses/${ocwSlug}/`
+
+    const ocwResource: typeof factories.learningResources.resource = (
+      overrides,
+    ) => {
+      return factories.learningResources.resource({
+        platform: { code: PlatformEnum.Ocw },
+        url: ocwUrl,
+        ...overrides,
+      })
+    }
+
+    it("links to internal OCW page when flag is ON for OCW course", () => {
+      mockUseFeatureFlagEnabled.mockImplementation(
+        (flag) => flag === FeatureFlags.OcwProductPages,
+      )
+      const resource = ocwResource({ resource_type: ResourceTypeEnum.Course })
+
+      renderWithProviders(
+        <CallToActionSection
+          imgConfig={IMG_CONFIG}
+          resource={resource}
+          shareUrl="https://learn.mit.edu/test"
+        />,
+      )
+
+      const link = screen.getByRole("link", { name: "Access Course Materials" })
+      expect(link).toHaveAttribute("href", `/courses/o/${ocwSlug}`)
+      expect(link.getAttribute("href")).not.toContain("utm_")
+    })
+
+    it("uses external URL with UTM params when flag is OFF for OCW course", () => {
+      mockUseFeatureFlagEnabled.mockReturnValue(false)
+      const resource = ocwResource({ resource_type: ResourceTypeEnum.Course })
+
+      renderWithProviders(
+        <CallToActionSection
+          imgConfig={IMG_CONFIG}
+          resource={resource}
+          shareUrl="https://learn.mit.edu/test"
+        />,
+      )
+
+      const link = screen.getByRole("link", { name: "Access Course Materials" })
+      const href = link.getAttribute("href")
+      expect(href).toContain("ocw.mit.edu")
+      expect(href).toContain("utm_source=mit-learn")
+      expect(href).toContain("utm_medium=referral")
+    })
+
+    it("does not transform non-OCW course URL when only OcwProductPages flag is ON", () => {
+      mockUseFeatureFlagEnabled.mockImplementation(
+        (flag) => flag === FeatureFlags.OcwProductPages,
+      )
+      const resource = factories.learningResources.resource({
+        platform: { code: PlatformEnum.Mitxonline },
+        resource_type: ResourceTypeEnum.Course,
+        url: "https://courses.mitxonline.mit.edu/learn/course/some-course/",
+      })
+
+      renderWithProviders(
+        <CallToActionSection
+          imgConfig={IMG_CONFIG}
+          resource={resource}
+          shareUrl="https://learn.mit.edu/test"
+        />,
+      )
+
+      const link = screen.getByRole("link", { name: "Learn More" })
+      const href = link.getAttribute("href")
+      expect(href).toContain("mitxonline.mit.edu")
+      expect(href).not.toContain("/courses/o/")
+    })
+
+    it("transforms OCW non-course URL when flag is ON", () => {
+      mockUseFeatureFlagEnabled.mockImplementation(
+        (flag) => flag === FeatureFlags.OcwProductPages,
+      )
+      const resource = ocwResource({
+        resource_type: ResourceTypeEnum.Video,
+        resource_category: "Lecture Video",
+        url: `${ocwUrl}resources/abc-def`,
+      })
+
+      renderWithProviders(
+        <CallToActionSection
+          imgConfig={IMG_CONFIG}
+          resource={resource}
+          shareUrl="https://learn.mit.edu/test"
+        />,
+      )
+
+      const link = screen.getByRole("link", {
+        name: "Watch Video",
+      })
+      const href = link.getAttribute("href")
+      expect(href).toContain(`/courses/o/${ocwSlug}/resources/abc-def`)
+      expect(href).not.toContain("ocw.mit.edu")
+      expect(href).not.toContain("utm_")
+    })
+  })
+
   describe("PostHog integration", () => {
     it("calls posthog.capture when CTA link is clicked", () => {
       const originalPostHogKey = process.env.NEXT_PUBLIC_POSTHOG_API_KEY

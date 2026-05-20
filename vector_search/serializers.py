@@ -24,6 +24,7 @@ from vector_search.constants import (
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_SORTBY_FIELDS,
     QDRANT_RESOURCE_PARAM_MAP,
+    VECTOR_SEARCH_MIN_SCORE,
 )
 
 
@@ -223,6 +224,12 @@ class LearningResourcesVectorSearchRequestSerializer(
         required=False,
         default=False,
         help_text="Whether to use a hybrid search",
+    )
+    score_cutoff = serializers.FloatField(
+        required=False,
+        default=VECTOR_SEARCH_MIN_SCORE,
+        min_value=0,
+        help_text="The minimum score a result must have to be returned",
     )
 
     def validate(self, attrs):

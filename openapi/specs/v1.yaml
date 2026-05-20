@@ -14,14 +14,19 @@ paths:
         name: content_type
         schema:
           type: string
-        description: Filter by content type (e.g. 'news' or 'article').
+          enum:
+          - article
+          - news
+        description: |-
+          Filter by content type
+
+          * `news` - News
+          * `article` - Article
       - in: query
         name: draft
         schema:
           type: boolean
-        description: Filter to show only draft items. Only available for admins and
-          content editors. If true, returns unpublished items. If not specified, returns
-          all items.
+        description: Filter to show only draft (unpublished) items
       - name: limit
         required: false
         in: query
@@ -238,10 +243,10 @@ paths:
               * `mitpe` - MIT Professional Education
               * `see` - MIT Sloan Executive Education
               * `climate` - MIT Climate
-        description: "The organization that offers the learning resource         \
-          \    \n\n* `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` -\
-          \ Bootcamps\n* `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education\n* `climate` - MIT Climate"
+        description: "The organization that offers the learning resource             \n\n*
+          `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` - Bootcamps\n*
+          `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n* `see` - MIT
+          Sloan Executive Education\n* `climate` - MIT Climate"
       - in: query
         name: offset
         schema:
@@ -297,16 +302,15 @@ paths:
               * `canvas` - Canvas
               * `climate` - MIT Climate
               * `ovs` - ODL Video Service
-        description: "The platform on which the learning resource is offered     \
-          \        \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open\
-          \ Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n\
-          * `xpro` - MIT xPRO\n* `csail` - CSAIL\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education\n* `scc` - Schwarzman College of\
-          \ Computing\n* `ctl` - Center for Transportation & Logistics\n* `whu` -\
-          \ WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn`\
-          \ - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube`\
-          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate\n* `ovs` - ODL\
-          \ Video Service"
+        description: "The platform on which the learning resource is offered             \n\n*
+          `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open Learning Library\n*
+          `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n* `xpro` - MIT xPRO\n*
+          `csail` - CSAIL\n* `mitpe` - MIT Professional Education\n* `see` - MIT Sloan
+          Executive Education\n* `scc` - Schwarzman College of Computing\n* `ctl`
+          - Center for Transportation & Logistics\n* `whu` - WHU\n* `susskind` - Susskind\n*
+          `globalalumni` - Global Alumni\n* `simplilearn` - Simplilearn\n* `emeritus`
+          - Emeritus\n* `podcast` - Podcast\n* `youtube` - YouTube\n* `canvas` - Canvas\n*
+          `climate` - MIT Climate\n* `ovs` - ODL Video Service"
       - in: query
         name: q
         schema:
@@ -2726,9 +2730,9 @@ paths:
               * `professional` - Professional Certificate
               * `completion` - Certificate of Completion
               * `none` - No Certificate
-        description: "The type of certificate             \n\n* `micromasters` - MicroMasters\
-          \ Credential\n* `professional` - Professional Certificate\n* `completion`\
-          \ - Certificate of Completion\n* `none` - No Certificate"
+        description: "The type of certificate             \n\n* `micromasters` - MicroMasters
+          Credential\n* `professional` - Professional Certificate\n* `completion`
+          - Certificate of Completion\n* `none` - No Certificate"
       - in: query
         name: course_feature
         schema:
@@ -2753,9 +2757,9 @@ paths:
               * `hybrid` - Hybrid
               * `in_person` - In person
               * `offline` - Offline
-        description: "The delivery options in which the learning resource is offered\
-          \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
-          \ - In person\n* `offline` - Offline"
+        description: "The delivery options in which the learning resource is offered
+          \            \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`
+          - In person\n* `offline` - Offline"
       - in: query
         name: department
         schema:
@@ -2838,24 +2842,23 @@ paths:
               * `SP` - Special Programs
               * `STS` - Science, Technology, and Society
               * `WGS` - Women's and Gender Studies
-        description: "The department that offers the learning resource           \
-          \  \n\n* `1` - Civil and Environmental Engineering\n* `2` - Mechanical Engineering\n\
-          * `3` - Materials Science and Engineering\n* `4` - Architecture\n* `5` -\
-          \ Chemistry\n* `6` - Electrical Engineering and Computer Science\n* `7`\
-          \ - Biology\n* `8` - Physics\n* `9` - Brain and Cognitive Sciences\n* `10`\
-          \ - Chemical Engineering\n* `11` - Urban Studies and Planning\n* `12` -\
-          \ Earth, Atmospheric, and Planetary Sciences\n* `14` - Economics\n* `15`\
-          \ - Management\n* `16` - Aeronautics and Astronautics\n* `17` - Political\
-          \ Science\n* `18` - Mathematics\n* `20` - Biological Engineering\n* `21A`\
-          \ - Anthropology\n* `21G` - Global Languages\n* `21H` - History\n* `21L`\
-          \ - Literature\n* `21M` - Music and Theater Arts\n* `22` - Nuclear Science\
-          \ and Engineering\n* `24` - Linguistics and Philosophy\n* `CC` - Concourse\n\
-          * `CMS-W` - Comparative Media Studies/Writing\n* `EC` - Edgerton Center\n\
-          * `ES` - Experimental Study Group\n* `ESD` - Engineering Systems Division\n\
-          * `HST` - Medical Engineering and Science\n* `IDS` - Data, Systems, and\
-          \ Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics, Physical\
-          \ Education and Recreation\n* `SP` - Special Programs\n* `STS` - Science,\
-          \ Technology, and Society\n* `WGS` - Women's and Gender Studies"
+        description: "The department that offers the learning resource             \n\n*
+          `1` - Civil and Environmental Engineering\n* `2` - Mechanical Engineering\n*
+          `3` - Materials Science and Engineering\n* `4` - Architecture\n* `5` - Chemistry\n*
+          `6` - Electrical Engineering and Computer Science\n* `7` - Biology\n* `8`
+          - Physics\n* `9` - Brain and Cognitive Sciences\n* `10` - Chemical Engineering\n*
+          `11` - Urban Studies and Planning\n* `12` - Earth, Atmospheric, and Planetary
+          Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
+          and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
+          - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
+          `22` - Nuclear Science and Engineering\n* `24` - Linguistics and Philosophy\n*
+          `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n* `EC`
+          - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
+          Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
+          Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
+          Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: free
         schema:
@@ -2922,10 +2925,10 @@ paths:
               * `mitpe` - MIT Professional Education
               * `see` - MIT Sloan Executive Education
               * `climate` - MIT Climate
-        description: "The organization that offers the learning resource         \
-          \    \n\n* `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` -\
-          \ Bootcamps\n* `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education\n* `climate` - MIT Climate"
+        description: "The organization that offers the learning resource             \n\n*
+          `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` - Bootcamps\n*
+          `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n* `see` - MIT
+          Sloan Executive Education\n* `climate` - MIT Climate"
       - in: query
         name: platform
         schema:
@@ -2976,16 +2979,15 @@ paths:
               * `canvas` - Canvas
               * `climate` - MIT Climate
               * `ovs` - ODL Video Service
-        description: "The platform on which the learning resource is offered     \
-          \        \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open\
-          \ Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n\
-          * `xpro` - MIT xPRO\n* `csail` - CSAIL\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education\n* `scc` - Schwarzman College of\
-          \ Computing\n* `ctl` - Center for Transportation & Logistics\n* `whu` -\
-          \ WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn`\
-          \ - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube`\
-          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate\n* `ovs` - ODL\
-          \ Video Service"
+        description: "The platform on which the learning resource is offered             \n\n*
+          `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open Learning Library\n*
+          `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n* `xpro` - MIT xPRO\n*
+          `csail` - CSAIL\n* `mitpe` - MIT Professional Education\n* `see` - MIT Sloan
+          Executive Education\n* `scc` - Schwarzman College of Computing\n* `ctl`
+          - Center for Transportation & Logistics\n* `whu` - WHU\n* `susskind` - Susskind\n*
+          `globalalumni` - Global Alumni\n* `simplilearn` - Simplilearn\n* `emeritus`
+          - Emeritus\n* `podcast` - Podcast\n* `youtube` - YouTube\n* `canvas` - Canvas\n*
+          `climate` - MIT Climate\n* `ovs` - ODL Video Service"
       - in: query
         name: professional
         schema:
@@ -3015,10 +3017,10 @@ paths:
               * `video` - video
               * `video_playlist` - video playlist
               * `document` - document
-        description: "The type of learning resource             \n\n* `course` - course\n\
-          * `program` - program\n* `learning_path` - learning path\n* `podcast` -\
-          \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
-          \ - video playlist\n* `document` - document"
+        description: "The type of learning resource             \n\n* `course` - course\n*
+          `program` - program\n* `learning_path` - learning path\n* `podcast` - podcast\n*
+          `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`
+          - video playlist\n* `document` - document"
       - in: query
         name: resource_type_group
         schema:
@@ -3033,8 +3035,8 @@ paths:
               * `course` - Course
               * `program` - Program
               * `learning_material` - Learning Material
-        description: "The category of learning resource             \n\n* `course`\
-          \ - Course\n* `program` - Program\n* `learning_material` - Learning Material"
+        description: "The category of learning resource             \n\n* `course`
+          - Course\n* `program` - Program\n* `learning_material` - Learning Material"
       - in: query
         name: topic
         schema:
@@ -3089,9 +3091,9 @@ paths:
               * `professional` - Professional Certificate
               * `completion` - Certificate of Completion
               * `none` - No Certificate
-        description: "The type of certificate             \n\n* `micromasters` - MicroMasters\
-          \ Credential\n* `professional` - Professional Certificate\n* `completion`\
-          \ - Certificate of Completion\n* `none` - No Certificate"
+        description: "The type of certificate             \n\n* `micromasters` - MicroMasters
+          Credential\n* `professional` - Professional Certificate\n* `completion`
+          - Certificate of Completion\n* `none` - No Certificate"
       - in: query
         name: course_feature
         schema:
@@ -3116,9 +3118,9 @@ paths:
               * `hybrid` - Hybrid
               * `in_person` - In person
               * `offline` - Offline
-        description: "The delivery options in which the learning resource is offered\
-          \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
-          \ - In person\n* `offline` - Offline"
+        description: "The delivery options in which the learning resource is offered
+          \            \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`
+          - In person\n* `offline` - Offline"
       - in: query
         name: department
         schema:
@@ -3201,24 +3203,23 @@ paths:
               * `SP` - Special Programs
               * `STS` - Science, Technology, and Society
               * `WGS` - Women's and Gender Studies
-        description: "The department that offers the learning resource           \
-          \  \n\n* `1` - Civil and Environmental Engineering\n* `2` - Mechanical Engineering\n\
-          * `3` - Materials Science and Engineering\n* `4` - Architecture\n* `5` -\
-          \ Chemistry\n* `6` - Electrical Engineering and Computer Science\n* `7`\
-          \ - Biology\n* `8` - Physics\n* `9` - Brain and Cognitive Sciences\n* `10`\
-          \ - Chemical Engineering\n* `11` - Urban Studies and Planning\n* `12` -\
-          \ Earth, Atmospheric, and Planetary Sciences\n* `14` - Economics\n* `15`\
-          \ - Management\n* `16` - Aeronautics and Astronautics\n* `17` - Political\
-          \ Science\n* `18` - Mathematics\n* `20` - Biological Engineering\n* `21A`\
-          \ - Anthropology\n* `21G` - Global Languages\n* `21H` - History\n* `21L`\
-          \ - Literature\n* `21M` - Music and Theater Arts\n* `22` - Nuclear Science\
-          \ and Engineering\n* `24` - Linguistics and Philosophy\n* `CC` - Concourse\n\
-          * `CMS-W` - Comparative Media Studies/Writing\n* `EC` - Edgerton Center\n\
-          * `ES` - Experimental Study Group\n* `ESD` - Engineering Systems Division\n\
-          * `HST` - Medical Engineering and Science\n* `IDS` - Data, Systems, and\
-          \ Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics, Physical\
-          \ Education and Recreation\n* `SP` - Special Programs\n* `STS` - Science,\
-          \ Technology, and Society\n* `WGS` - Women's and Gender Studies"
+        description: "The department that offers the learning resource             \n\n*
+          `1` - Civil and Environmental Engineering\n* `2` - Mechanical Engineering\n*
+          `3` - Materials Science and Engineering\n* `4` - Architecture\n* `5` - Chemistry\n*
+          `6` - Electrical Engineering and Computer Science\n* `7` - Biology\n* `8`
+          - Physics\n* `9` - Brain and Cognitive Sciences\n* `10` - Chemical Engineering\n*
+          `11` - Urban Studies and Planning\n* `12` - Earth, Atmospheric, and Planetary
+          Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
+          and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
+          - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
+          `22` - Nuclear Science and Engineering\n* `24` - Linguistics and Philosophy\n*
+          `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n* `EC`
+          - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
+          Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
+          Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
+          Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: free
         schema:
@@ -3285,10 +3286,10 @@ paths:
               * `mitpe` - MIT Professional Education
               * `see` - MIT Sloan Executive Education
               * `climate` - MIT Climate
-        description: "The organization that offers the learning resource         \
-          \    \n\n* `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` -\
-          \ Bootcamps\n* `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education\n* `climate` - MIT Climate"
+        description: "The organization that offers the learning resource             \n\n*
+          `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` - Bootcamps\n*
+          `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n* `see` - MIT
+          Sloan Executive Education\n* `climate` - MIT Climate"
       - in: query
         name: platform
         schema:
@@ -3339,16 +3340,15 @@ paths:
               * `canvas` - Canvas
               * `climate` - MIT Climate
               * `ovs` - ODL Video Service
-        description: "The platform on which the learning resource is offered     \
-          \        \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open\
-          \ Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n\
-          * `xpro` - MIT xPRO\n* `csail` - CSAIL\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education\n* `scc` - Schwarzman College of\
-          \ Computing\n* `ctl` - Center for Transportation & Logistics\n* `whu` -\
-          \ WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn`\
-          \ - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube`\
-          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate\n* `ovs` - ODL\
-          \ Video Service"
+        description: "The platform on which the learning resource is offered             \n\n*
+          `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open Learning Library\n*
+          `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n* `xpro` - MIT xPRO\n*
+          `csail` - CSAIL\n* `mitpe` - MIT Professional Education\n* `see` - MIT Sloan
+          Executive Education\n* `scc` - Schwarzman College of Computing\n* `ctl`
+          - Center for Transportation & Logistics\n* `whu` - WHU\n* `susskind` - Susskind\n*
+          `globalalumni` - Global Alumni\n* `simplilearn` - Simplilearn\n* `emeritus`
+          - Emeritus\n* `podcast` - Podcast\n* `youtube` - YouTube\n* `canvas` - Canvas\n*
+          `climate` - MIT Climate\n* `ovs` - ODL Video Service"
       - in: query
         name: professional
         schema:
@@ -3378,10 +3378,10 @@ paths:
               * `video` - video
               * `video_playlist` - video playlist
               * `document` - document
-        description: "The type of learning resource             \n\n* `course` - course\n\
-          * `program` - program\n* `learning_path` - learning path\n* `podcast` -\
-          \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
-          \ - video playlist\n* `document` - document"
+        description: "The type of learning resource             \n\n* `course` - course\n*
+          `program` - program\n* `learning_path` - learning path\n* `podcast` - podcast\n*
+          `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`
+          - video playlist\n* `document` - document"
       - in: query
         name: resource_type_group
         schema:
@@ -3396,8 +3396,8 @@ paths:
               * `course` - Course
               * `program` - Program
               * `learning_material` - Learning Material
-        description: "The category of learning resource             \n\n* `course`\
-          \ - Course\n* `program` - Program\n* `learning_material` - Learning Material"
+        description: "The category of learning resource             \n\n* `course`
+          - Course\n* `program` - Program\n* `learning_material` - Learning Material"
       - in: query
         name: topic
         schema:
@@ -4212,9 +4212,9 @@ paths:
               * `professional` - Professional Certificate
               * `completion` - Certificate of Completion
               * `none` - No Certificate
-        description: "The type of certificate             \n\n* `micromasters` - MicroMasters\
-          \ Credential\n* `professional` - Professional Certificate\n* `completion`\
-          \ - Certificate of Completion\n* `none` - No Certificate"
+        description: "The type of certificate             \n\n* `micromasters` - MicroMasters
+          Credential\n* `professional` - Professional Certificate\n* `completion`
+          - Certificate of Completion\n* `none` - No Certificate"
       - in: query
         name: content_file_score_weight
         schema:
@@ -4249,9 +4249,9 @@ paths:
               * `hybrid` - Hybrid
               * `in_person` - In person
               * `offline` - Offline
-        description: "The delivery options in which the learning resource is offered\
-          \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
-          \ - In person\n* `offline` - Offline"
+        description: "The delivery options in which the learning resource is offered
+          \            \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`
+          - In person\n* `offline` - Offline"
       - in: query
         name: department
         schema:
@@ -4334,24 +4334,23 @@ paths:
               * `SP` - Special Programs
               * `STS` - Science, Technology, and Society
               * `WGS` - Women's and Gender Studies
-        description: "The department that offers the learning resource           \
-          \  \n\n* `1` - Civil and Environmental Engineering\n* `2` - Mechanical Engineering\n\
-          * `3` - Materials Science and Engineering\n* `4` - Architecture\n* `5` -\
-          \ Chemistry\n* `6` - Electrical Engineering and Computer Science\n* `7`\
-          \ - Biology\n* `8` - Physics\n* `9` - Brain and Cognitive Sciences\n* `10`\
-          \ - Chemical Engineering\n* `11` - Urban Studies and Planning\n* `12` -\
-          \ Earth, Atmospheric, and Planetary Sciences\n* `14` - Economics\n* `15`\
-          \ - Management\n* `16` - Aeronautics and Astronautics\n* `17` - Political\
-          \ Science\n* `18` - Mathematics\n* `20` - Biological Engineering\n* `21A`\
-          \ - Anthropology\n* `21G` - Global Languages\n* `21H` - History\n* `21L`\
-          \ - Literature\n* `21M` - Music and Theater Arts\n* `22` - Nuclear Science\
-          \ and Engineering\n* `24` - Linguistics and Philosophy\n* `CC` - Concourse\n\
-          * `CMS-W` - Comparative Media Studies/Writing\n* `EC` - Edgerton Center\n\
-          * `ES` - Experimental Study Group\n* `ESD` - Engineering Systems Division\n\
-          * `HST` - Medical Engineering and Science\n* `IDS` - Data, Systems, and\
-          \ Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics, Physical\
-          \ Education and Recreation\n* `SP` - Special Programs\n* `STS` - Science,\
-          \ Technology, and Society\n* `WGS` - Women's and Gender Studies"
+        description: "The department that offers the learning resource             \n\n*
+          `1` - Civil and Environmental Engineering\n* `2` - Mechanical Engineering\n*
+          `3` - Materials Science and Engineering\n* `4` - Architecture\n* `5` - Chemistry\n*
+          `6` - Electrical Engineering and Computer Science\n* `7` - Biology\n* `8`
+          - Physics\n* `9` - Brain and Cognitive Sciences\n* `10` - Chemical Engineering\n*
+          `11` - Urban Studies and Planning\n* `12` - Earth, Atmospheric, and Planetary
+          Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
+          and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
+          - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
+          `22` - Nuclear Science and Engineering\n* `24` - Linguistics and Philosophy\n*
+          `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n* `EC`
+          - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
+          Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
+          Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
+          Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: dev_mode
         schema:
@@ -4449,10 +4448,10 @@ paths:
               * `mitpe` - MIT Professional Education
               * `see` - MIT Sloan Executive Education
               * `climate` - MIT Climate
-        description: "The organization that offers the learning resource         \
-          \    \n\n* `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` -\
-          \ Bootcamps\n* `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education\n* `climate` - MIT Climate"
+        description: "The organization that offers the learning resource             \n\n*
+          `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` - Bootcamps\n*
+          `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n* `see` - MIT
+          Sloan Executive Education\n* `climate` - MIT Climate"
       - in: query
         name: offset
         schema:
@@ -4508,16 +4507,15 @@ paths:
               * `canvas` - Canvas
               * `climate` - MIT Climate
               * `ovs` - ODL Video Service
-        description: "The platform on which the learning resource is offered     \
-          \        \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open\
-          \ Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n\
-          * `xpro` - MIT xPRO\n* `csail` - CSAIL\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education\n* `scc` - Schwarzman College of\
-          \ Computing\n* `ctl` - Center for Transportation & Logistics\n* `whu` -\
-          \ WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn`\
-          \ - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube`\
-          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate\n* `ovs` - ODL\
-          \ Video Service"
+        description: "The platform on which the learning resource is offered             \n\n*
+          `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open Learning Library\n*
+          `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n* `xpro` - MIT xPRO\n*
+          `csail` - CSAIL\n* `mitpe` - MIT Professional Education\n* `see` - MIT Sloan
+          Executive Education\n* `scc` - Schwarzman College of Computing\n* `ctl`
+          - Center for Transportation & Logistics\n* `whu` - WHU\n* `susskind` - Susskind\n*
+          `globalalumni` - Global Alumni\n* `simplilearn` - Simplilearn\n* `emeritus`
+          - Emeritus\n* `podcast` - Podcast\n* `youtube` - YouTube\n* `canvas` - Canvas\n*
+          `climate` - MIT Climate\n* `ovs` - ODL Video Service"
       - in: query
         name: professional
         schema:
@@ -4561,10 +4559,10 @@ paths:
               * `video` - video
               * `video_playlist` - video playlist
               * `document` - document
-        description: "The type of learning resource             \n\n* `course` - course\n\
-          * `program` - program\n* `learning_path` - learning path\n* `podcast` -\
-          \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
-          \ - video playlist\n* `document` - document"
+        description: "The type of learning resource             \n\n* `course` - course\n*
+          `program` - program\n* `learning_path` - learning path\n* `podcast` - podcast\n*
+          `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`
+          - video playlist\n* `document` - document"
       - in: query
         name: resource_type_group
         schema:
@@ -4595,10 +4593,10 @@ paths:
           - hybrid
           type: string
           minLength: 1
-        description: "The open search search type for text queries             \n\n\
-          * `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
-          * `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n\
-          * `most_fields` - most_fields\n* `hybrid` - hybrid"
+        description: "The open search search type for text queries             \n\n*
+          `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n*
+          `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n*
+          `most_fields` - most_fields\n* `hybrid` - hybrid"
       - in: query
         name: show_ocw_files
         schema:
@@ -4743,9 +4741,9 @@ paths:
               * `professional` - Professional Certificate
               * `completion` - Certificate of Completion
               * `none` - No Certificate
-        description: "The type of certificate             \n\n* `micromasters` - MicroMasters\
-          \ Credential\n* `professional` - Professional Certificate\n* `completion`\
-          \ - Certificate of Completion\n* `none` - No Certificate"
+        description: "The type of certificate             \n\n* `micromasters` - MicroMasters
+          Credential\n* `professional` - Professional Certificate\n* `completion`
+          - Certificate of Completion\n* `none` - No Certificate"
       - in: query
         name: content_file_score_weight
         schema:
@@ -4780,9 +4778,9 @@ paths:
               * `hybrid` - Hybrid
               * `in_person` - In person
               * `offline` - Offline
-        description: "The delivery options in which the learning resource is offered\
-          \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
-          \ - In person\n* `offline` - Offline"
+        description: "The delivery options in which the learning resource is offered
+          \            \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`
+          - In person\n* `offline` - Offline"
       - in: query
         name: department
         schema:
@@ -4865,24 +4863,23 @@ paths:
               * `SP` - Special Programs
               * `STS` - Science, Technology, and Society
               * `WGS` - Women's and Gender Studies
-        description: "The department that offers the learning resource           \
-          \  \n\n* `1` - Civil and Environmental Engineering\n* `2` - Mechanical Engineering\n\
-          * `3` - Materials Science and Engineering\n* `4` - Architecture\n* `5` -\
-          \ Chemistry\n* `6` - Electrical Engineering and Computer Science\n* `7`\
-          \ - Biology\n* `8` - Physics\n* `9` - Brain and Cognitive Sciences\n* `10`\
-          \ - Chemical Engineering\n* `11` - Urban Studies and Planning\n* `12` -\
-          \ Earth, Atmospheric, and Planetary Sciences\n* `14` - Economics\n* `15`\
-          \ - Management\n* `16` - Aeronautics and Astronautics\n* `17` - Political\
-          \ Science\n* `18` - Mathematics\n* `20` - Biological Engineering\n* `21A`\
-          \ - Anthropology\n* `21G` - Global Languages\n* `21H` - History\n* `21L`\
-          \ - Literature\n* `21M` - Music and Theater Arts\n* `22` - Nuclear Science\
-          \ and Engineering\n* `24` - Linguistics and Philosophy\n* `CC` - Concourse\n\
-          * `CMS-W` - Comparative Media Studies/Writing\n* `EC` - Edgerton Center\n\
-          * `ES` - Experimental Study Group\n* `ESD` - Engineering Systems Division\n\
-          * `HST` - Medical Engineering and Science\n* `IDS` - Data, Systems, and\
-          \ Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics, Physical\
-          \ Education and Recreation\n* `SP` - Special Programs\n* `STS` - Science,\
-          \ Technology, and Society\n* `WGS` - Women's and Gender Studies"
+        description: "The department that offers the learning resource             \n\n*
+          `1` - Civil and Environmental Engineering\n* `2` - Mechanical Engineering\n*
+          `3` - Materials Science and Engineering\n* `4` - Architecture\n* `5` - Chemistry\n*
+          `6` - Electrical Engineering and Computer Science\n* `7` - Biology\n* `8`
+          - Physics\n* `9` - Brain and Cognitive Sciences\n* `10` - Chemical Engineering\n*
+          `11` - Urban Studies and Planning\n* `12` - Earth, Atmospheric, and Planetary
+          Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
+          and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
+          - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
+          `22` - Nuclear Science and Engineering\n* `24` - Linguistics and Philosophy\n*
+          `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n* `EC`
+          - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
+          Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
+          Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
+          Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: dev_mode
         schema:
@@ -4980,10 +4977,10 @@ paths:
               * `mitpe` - MIT Professional Education
               * `see` - MIT Sloan Executive Education
               * `climate` - MIT Climate
-        description: "The organization that offers the learning resource         \
-          \    \n\n* `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` -\
-          \ Bootcamps\n* `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education\n* `climate` - MIT Climate"
+        description: "The organization that offers the learning resource             \n\n*
+          `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` - Bootcamps\n*
+          `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n* `see` - MIT
+          Sloan Executive Education\n* `climate` - MIT Climate"
       - in: query
         name: offset
         schema:
@@ -5039,16 +5036,15 @@ paths:
               * `canvas` - Canvas
               * `climate` - MIT Climate
               * `ovs` - ODL Video Service
-        description: "The platform on which the learning resource is offered     \
-          \        \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open\
-          \ Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n\
-          * `xpro` - MIT xPRO\n* `csail` - CSAIL\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education\n* `scc` - Schwarzman College of\
-          \ Computing\n* `ctl` - Center for Transportation & Logistics\n* `whu` -\
-          \ WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn`\
-          \ - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube`\
-          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate\n* `ovs` - ODL\
-          \ Video Service"
+        description: "The platform on which the learning resource is offered             \n\n*
+          `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open Learning Library\n*
+          `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n* `xpro` - MIT xPRO\n*
+          `csail` - CSAIL\n* `mitpe` - MIT Professional Education\n* `see` - MIT Sloan
+          Executive Education\n* `scc` - Schwarzman College of Computing\n* `ctl`
+          - Center for Transportation & Logistics\n* `whu` - WHU\n* `susskind` - Susskind\n*
+          `globalalumni` - Global Alumni\n* `simplilearn` - Simplilearn\n* `emeritus`
+          - Emeritus\n* `podcast` - Podcast\n* `youtube` - YouTube\n* `canvas` - Canvas\n*
+          `climate` - MIT Climate\n* `ovs` - ODL Video Service"
       - in: query
         name: professional
         schema:
@@ -5092,10 +5088,10 @@ paths:
               * `video` - video
               * `video_playlist` - video playlist
               * `document` - document
-        description: "The type of learning resource             \n\n* `course` - course\n\
-          * `program` - program\n* `learning_path` - learning path\n* `podcast` -\
-          \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
-          \ - video playlist\n* `document` - document"
+        description: "The type of learning resource             \n\n* `course` - course\n*
+          `program` - program\n* `learning_path` - learning path\n* `podcast` - podcast\n*
+          `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`
+          - video playlist\n* `document` - document"
       - in: query
         name: resource_type_group
         schema:
@@ -5126,10 +5122,10 @@ paths:
           - hybrid
           type: string
           minLength: 1
-        description: "The open search search type for text queries             \n\n\
-          * `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
-          * `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n\
-          * `most_fields` - most_fields\n* `hybrid` - hybrid"
+        description: "The open search search type for text queries             \n\n*
+          `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n*
+          `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n*
+          `most_fields` - most_fields\n* `hybrid` - hybrid"
       - in: query
         name: show_ocw_files
         schema:
@@ -5299,9 +5295,9 @@ paths:
               * `professional` - Professional Certificate
               * `completion` - Certificate of Completion
               * `none` - No Certificate
-        description: "The type of certificate             \n\n* `micromasters` - MicroMasters\
-          \ Credential\n* `professional` - Professional Certificate\n* `completion`\
-          \ - Certificate of Completion\n* `none` - No Certificate"
+        description: "The type of certificate             \n\n* `micromasters` - MicroMasters
+          Credential\n* `professional` - Professional Certificate\n* `completion`
+          - Certificate of Completion\n* `none` - No Certificate"
       - in: query
         name: content_file_score_weight
         schema:
@@ -5336,9 +5332,9 @@ paths:
               * `hybrid` - Hybrid
               * `in_person` - In person
               * `offline` - Offline
-        description: "The delivery options in which the learning resource is offered\
-          \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
-          \ - In person\n* `offline` - Offline"
+        description: "The delivery options in which the learning resource is offered
+          \            \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`
+          - In person\n* `offline` - Offline"
       - in: query
         name: department
         schema:
@@ -5421,24 +5417,23 @@ paths:
               * `SP` - Special Programs
               * `STS` - Science, Technology, and Society
               * `WGS` - Women's and Gender Studies
-        description: "The department that offers the learning resource           \
-          \  \n\n* `1` - Civil and Environmental Engineering\n* `2` - Mechanical Engineering\n\
-          * `3` - Materials Science and Engineering\n* `4` - Architecture\n* `5` -\
-          \ Chemistry\n* `6` - Electrical Engineering and Computer Science\n* `7`\
-          \ - Biology\n* `8` - Physics\n* `9` - Brain and Cognitive Sciences\n* `10`\
-          \ - Chemical Engineering\n* `11` - Urban Studies and Planning\n* `12` -\
-          \ Earth, Atmospheric, and Planetary Sciences\n* `14` - Economics\n* `15`\
-          \ - Management\n* `16` - Aeronautics and Astronautics\n* `17` - Political\
-          \ Science\n* `18` - Mathematics\n* `20` - Biological Engineering\n* `21A`\
-          \ - Anthropology\n* `21G` - Global Languages\n* `21H` - History\n* `21L`\
-          \ - Literature\n* `21M` - Music and Theater Arts\n* `22` - Nuclear Science\
-          \ and Engineering\n* `24` - Linguistics and Philosophy\n* `CC` - Concourse\n\
-          * `CMS-W` - Comparative Media Studies/Writing\n* `EC` - Edgerton Center\n\
-          * `ES` - Experimental Study Group\n* `ESD` - Engineering Systems Division\n\
-          * `HST` - Medical Engineering and Science\n* `IDS` - Data, Systems, and\
-          \ Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics, Physical\
-          \ Education and Recreation\n* `SP` - Special Programs\n* `STS` - Science,\
-          \ Technology, and Society\n* `WGS` - Women's and Gender Studies"
+        description: "The department that offers the learning resource             \n\n*
+          `1` - Civil and Environmental Engineering\n* `2` - Mechanical Engineering\n*
+          `3` - Materials Science and Engineering\n* `4` - Architecture\n* `5` - Chemistry\n*
+          `6` - Electrical Engineering and Computer Science\n* `7` - Biology\n* `8`
+          - Physics\n* `9` - Brain and Cognitive Sciences\n* `10` - Chemical Engineering\n*
+          `11` - Urban Studies and Planning\n* `12` - Earth, Atmospheric, and Planetary
+          Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
+          and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
+          - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
+          `22` - Nuclear Science and Engineering\n* `24` - Linguistics and Philosophy\n*
+          `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n* `EC`
+          - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
+          Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
+          Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
+          Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: dev_mode
         schema:
@@ -5536,10 +5531,10 @@ paths:
               * `mitpe` - MIT Professional Education
               * `see` - MIT Sloan Executive Education
               * `climate` - MIT Climate
-        description: "The organization that offers the learning resource         \
-          \    \n\n* `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` -\
-          \ Bootcamps\n* `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education\n* `climate` - MIT Climate"
+        description: "The organization that offers the learning resource             \n\n*
+          `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` - Bootcamps\n*
+          `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n* `see` - MIT
+          Sloan Executive Education\n* `climate` - MIT Climate"
       - in: query
         name: offset
         schema:
@@ -5595,16 +5590,15 @@ paths:
               * `canvas` - Canvas
               * `climate` - MIT Climate
               * `ovs` - ODL Video Service
-        description: "The platform on which the learning resource is offered     \
-          \        \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open\
-          \ Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n\
-          * `xpro` - MIT xPRO\n* `csail` - CSAIL\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education\n* `scc` - Schwarzman College of\
-          \ Computing\n* `ctl` - Center for Transportation & Logistics\n* `whu` -\
-          \ WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn`\
-          \ - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube`\
-          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate\n* `ovs` - ODL\
-          \ Video Service"
+        description: "The platform on which the learning resource is offered             \n\n*
+          `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open Learning Library\n*
+          `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n* `xpro` - MIT xPRO\n*
+          `csail` - CSAIL\n* `mitpe` - MIT Professional Education\n* `see` - MIT Sloan
+          Executive Education\n* `scc` - Schwarzman College of Computing\n* `ctl`
+          - Center for Transportation & Logistics\n* `whu` - WHU\n* `susskind` - Susskind\n*
+          `globalalumni` - Global Alumni\n* `simplilearn` - Simplilearn\n* `emeritus`
+          - Emeritus\n* `podcast` - Podcast\n* `youtube` - YouTube\n* `canvas` - Canvas\n*
+          `climate` - MIT Climate\n* `ovs` - ODL Video Service"
       - in: query
         name: professional
         schema:
@@ -5648,10 +5642,10 @@ paths:
               * `video` - video
               * `video_playlist` - video playlist
               * `document` - document
-        description: "The type of learning resource             \n\n* `course` - course\n\
-          * `program` - program\n* `learning_path` - learning path\n* `podcast` -\
-          \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
-          \ - video playlist\n* `document` - document"
+        description: "The type of learning resource             \n\n* `course` - course\n*
+          `program` - program\n* `learning_path` - learning path\n* `podcast` - podcast\n*
+          `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`
+          - video playlist\n* `document` - document"
       - in: query
         name: resource_type_group
         schema:
@@ -5682,10 +5676,10 @@ paths:
           - hybrid
           type: string
           minLength: 1
-        description: "The open search search type for text queries             \n\n\
-          * `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
-          * `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n\
-          * `most_fields` - most_fields\n* `hybrid` - hybrid"
+        description: "The open search search type for text queries             \n\n*
+          `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n*
+          `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n*
+          `most_fields` - most_fields\n* `hybrid` - hybrid"
       - in: query
         name: show_ocw_files
         schema:
@@ -5846,9 +5840,9 @@ paths:
               * `professional` - Professional Certificate
               * `completion` - Certificate of Completion
               * `none` - No Certificate
-        description: "The type of certificate             \n\n* `micromasters` - MicroMasters\
-          \ Credential\n* `professional` - Professional Certificate\n* `completion`\
-          \ - Certificate of Completion\n* `none` - No Certificate"
+        description: "The type of certificate             \n\n* `micromasters` - MicroMasters
+          Credential\n* `professional` - Professional Certificate\n* `completion`
+          - Certificate of Completion\n* `none` - No Certificate"
       - in: query
         name: content_file_score_weight
         schema:
@@ -5883,9 +5877,9 @@ paths:
               * `hybrid` - Hybrid
               * `in_person` - In person
               * `offline` - Offline
-        description: "The delivery options in which the learning resource is offered\
-          \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
-          \ - In person\n* `offline` - Offline"
+        description: "The delivery options in which the learning resource is offered
+          \            \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`
+          - In person\n* `offline` - Offline"
       - in: query
         name: department
         schema:
@@ -5968,24 +5962,23 @@ paths:
               * `SP` - Special Programs
               * `STS` - Science, Technology, and Society
               * `WGS` - Women's and Gender Studies
-        description: "The department that offers the learning resource           \
-          \  \n\n* `1` - Civil and Environmental Engineering\n* `2` - Mechanical Engineering\n\
-          * `3` - Materials Science and Engineering\n* `4` - Architecture\n* `5` -\
-          \ Chemistry\n* `6` - Electrical Engineering and Computer Science\n* `7`\
-          \ - Biology\n* `8` - Physics\n* `9` - Brain and Cognitive Sciences\n* `10`\
-          \ - Chemical Engineering\n* `11` - Urban Studies and Planning\n* `12` -\
-          \ Earth, Atmospheric, and Planetary Sciences\n* `14` - Economics\n* `15`\
-          \ - Management\n* `16` - Aeronautics and Astronautics\n* `17` - Political\
-          \ Science\n* `18` - Mathematics\n* `20` - Biological Engineering\n* `21A`\
-          \ - Anthropology\n* `21G` - Global Languages\n* `21H` - History\n* `21L`\
-          \ - Literature\n* `21M` - Music and Theater Arts\n* `22` - Nuclear Science\
-          \ and Engineering\n* `24` - Linguistics and Philosophy\n* `CC` - Concourse\n\
-          * `CMS-W` - Comparative Media Studies/Writing\n* `EC` - Edgerton Center\n\
-          * `ES` - Experimental Study Group\n* `ESD` - Engineering Systems Division\n\
-          * `HST` - Medical Engineering and Science\n* `IDS` - Data, Systems, and\
-          \ Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics, Physical\
-          \ Education and Recreation\n* `SP` - Special Programs\n* `STS` - Science,\
-          \ Technology, and Society\n* `WGS` - Women's and Gender Studies"
+        description: "The department that offers the learning resource             \n\n*
+          `1` - Civil and Environmental Engineering\n* `2` - Mechanical Engineering\n*
+          `3` - Materials Science and Engineering\n* `4` - Architecture\n* `5` - Chemistry\n*
+          `6` - Electrical Engineering and Computer Science\n* `7` - Biology\n* `8`
+          - Physics\n* `9` - Brain and Cognitive Sciences\n* `10` - Chemical Engineering\n*
+          `11` - Urban Studies and Planning\n* `12` - Earth, Atmospheric, and Planetary
+          Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
+          and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
+          - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
+          `22` - Nuclear Science and Engineering\n* `24` - Linguistics and Philosophy\n*
+          `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n* `EC`
+          - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
+          Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
+          Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
+          Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: dev_mode
         schema:
@@ -6083,10 +6076,10 @@ paths:
               * `mitpe` - MIT Professional Education
               * `see` - MIT Sloan Executive Education
               * `climate` - MIT Climate
-        description: "The organization that offers the learning resource         \
-          \    \n\n* `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` -\
-          \ Bootcamps\n* `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education\n* `climate` - MIT Climate"
+        description: "The organization that offers the learning resource             \n\n*
+          `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` - Bootcamps\n*
+          `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n* `see` - MIT
+          Sloan Executive Education\n* `climate` - MIT Climate"
       - in: query
         name: offset
         schema:
@@ -6142,16 +6135,15 @@ paths:
               * `canvas` - Canvas
               * `climate` - MIT Climate
               * `ovs` - ODL Video Service
-        description: "The platform on which the learning resource is offered     \
-          \        \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open\
-          \ Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n\
-          * `xpro` - MIT xPRO\n* `csail` - CSAIL\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education\n* `scc` - Schwarzman College of\
-          \ Computing\n* `ctl` - Center for Transportation & Logistics\n* `whu` -\
-          \ WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn`\
-          \ - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube`\
-          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate\n* `ovs` - ODL\
-          \ Video Service"
+        description: "The platform on which the learning resource is offered             \n\n*
+          `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open Learning Library\n*
+          `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n* `xpro` - MIT xPRO\n*
+          `csail` - CSAIL\n* `mitpe` - MIT Professional Education\n* `see` - MIT Sloan
+          Executive Education\n* `scc` - Schwarzman College of Computing\n* `ctl`
+          - Center for Transportation & Logistics\n* `whu` - WHU\n* `susskind` - Susskind\n*
+          `globalalumni` - Global Alumni\n* `simplilearn` - Simplilearn\n* `emeritus`
+          - Emeritus\n* `podcast` - Podcast\n* `youtube` - YouTube\n* `canvas` - Canvas\n*
+          `climate` - MIT Climate\n* `ovs` - ODL Video Service"
       - in: query
         name: professional
         schema:
@@ -6195,10 +6187,10 @@ paths:
               * `video` - video
               * `video_playlist` - video playlist
               * `document` - document
-        description: "The type of learning resource             \n\n* `course` - course\n\
-          * `program` - program\n* `learning_path` - learning path\n* `podcast` -\
-          \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
-          \ - video playlist\n* `document` - document"
+        description: "The type of learning resource             \n\n* `course` - course\n*
+          `program` - program\n* `learning_path` - learning path\n* `podcast` - podcast\n*
+          `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`
+          - video playlist\n* `document` - document"
       - in: query
         name: resource_type_group
         schema:
@@ -6229,10 +6221,10 @@ paths:
           - hybrid
           type: string
           minLength: 1
-        description: "The open search search type for text queries             \n\n\
-          * `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
-          * `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n\
-          * `most_fields` - most_fields\n* `hybrid` - hybrid"
+        description: "The open search search type for text queries             \n\n*
+          `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n*
+          `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n*
+          `most_fields` - most_fields\n* `hybrid` - hybrid"
       - in: query
         name: show_ocw_files
         schema:
@@ -9980,14 +9972,19 @@ paths:
         name: content_type
         schema:
           type: string
-        description: Filter by content type (e.g. 'news' or 'article').
+          enum:
+          - article
+          - news
+        description: |-
+          Filter by content type
+
+          * `news` - News
+          * `article` - Article
       - in: query
         name: draft
         schema:
           type: boolean
-        description: Filter to show only draft items. Only available for admins and
-          content editors. If true, returns unpublished items. If not specified, returns
-          all items.
+        description: Filter to show only draft (unpublished) items
       - name: limit
         required: false
         in: query
@@ -14361,8 +14358,7 @@ components:
         author_name:
           type: string
           default: ''
-        content:
-          default: {}
+        content: {}
         content_type:
           allOf:
           - $ref: '#/components/schemas/WebsiteContentContentTypeEnum'
@@ -14421,24 +14417,23 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/OfferedByEnum'
-          description: "The organization that offers the learning resource       \
-            \      \n\n* `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps`\
-            \ - Bootcamps\n* `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n\
-            * `see` - MIT Sloan Executive Education\n* `climate` - MIT Climate"
+          description: "The organization that offers the learning resource             \n\n*
+            `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` - Bootcamps\n*
+            `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n* `see` - MIT
+            Sloan Executive Education\n* `climate` - MIT Climate"
         platform:
           type: array
           items:
             $ref: '#/components/schemas/PlatformEnum'
-          description: "The platform on which the learning resource is offered   \
-            \          \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` -\
-            \ Open Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` -\
-            \ Bootcamps\n* `xpro` - MIT xPRO\n* `csail` - CSAIL\n* `mitpe` - MIT Professional\
-            \ Education\n* `see` - MIT Sloan Executive Education\n* `scc` - Schwarzman\
-            \ College of Computing\n* `ctl` - Center for Transportation & Logistics\n\
-            * `whu` - WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n\
-            * `simplilearn` - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` -\
-            \ Podcast\n* `youtube` - YouTube\n* `canvas` - Canvas\n* `climate` - MIT\
-            \ Climate\n* `ovs` - ODL Video Service"
+          description: "The platform on which the learning resource is offered             \n\n*
+            `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open Learning Library\n*
+            `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n* `xpro` - MIT
+            xPRO\n* `csail` - CSAIL\n* `mitpe` - MIT Professional Education\n* `see`
+            - MIT Sloan Executive Education\n* `scc` - Schwarzman College of Computing\n*
+            `ctl` - Center for Transportation & Logistics\n* `whu` - WHU\n* `susskind`
+            - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn` - Simplilearn\n*
+            `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube` - YouTube\n*
+            `canvas` - Canvas\n* `climate` - MIT Climate\n* `ovs` - ODL Video Service"
         topic:
           type: array
           items:
@@ -14486,10 +14481,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PercolateQuerySubscriptionRequestResourceTypeEnum'
-          description: "The type of learning resource             \n\n* `course` -\
-            \ course\n* `program` - program\n* `learning_path` - learning path\n*\
-            \ `podcast` - podcast\n* `podcast_episode` - podcast episode\n* `video`\
-            \ - video\n* `video_playlist` - video playlist\n* `document` - document"
+          description: "The type of learning resource             \n\n* `course` -
+            course\n* `program` - program\n* `learning_path` - learning path\n* `podcast`
+            - podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n*
+            `video_playlist` - video playlist\n* `document` - document"
         free:
           type: boolean
           nullable: true
@@ -14512,31 +14507,31 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CertificationTypeEnum'
-          description: "The type of certificate             \n\n* `micromasters` -\
-            \ MicroMasters Credential\n* `professional` - Professional Certificate\n\
-            * `completion` - Certificate of Completion\n* `none` - No Certificate"
+          description: "The type of certificate             \n\n* `micromasters` -
+            MicroMasters Credential\n* `professional` - Professional Certificate\n*
+            `completion` - Certificate of Completion\n* `none` - No Certificate"
         department:
           type: array
           items:
             $ref: '#/components/schemas/DepartmentEnum'
-          description: "The department that offers the learning resource         \
-            \    \n\n* `1` - Civil and Environmental Engineering\n* `2` - Mechanical\
-            \ Engineering\n* `3` - Materials Science and Engineering\n* `4` - Architecture\n\
-            * `5` - Chemistry\n* `6` - Electrical Engineering and Computer Science\n\
-            * `7` - Biology\n* `8` - Physics\n* `9` - Brain and Cognitive Sciences\n\
-            * `10` - Chemical Engineering\n* `11` - Urban Studies and Planning\n*\
-            \ `12` - Earth, Atmospheric, and Planetary Sciences\n* `14` - Economics\n\
-            * `15` - Management\n* `16` - Aeronautics and Astronautics\n* `17` - Political\
-            \ Science\n* `18` - Mathematics\n* `20` - Biological Engineering\n* `21A`\
-            \ - Anthropology\n* `21G` - Global Languages\n* `21H` - History\n* `21L`\
-            \ - Literature\n* `21M` - Music and Theater Arts\n* `22` - Nuclear Science\
-            \ and Engineering\n* `24` - Linguistics and Philosophy\n* `CC` - Concourse\n\
-            * `CMS-W` - Comparative Media Studies/Writing\n* `EC` - Edgerton Center\n\
-            * `ES` - Experimental Study Group\n* `ESD` - Engineering Systems Division\n\
-            * `HST` - Medical Engineering and Science\n* `IDS` - Data, Systems, and\
-            \ Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics, Physical\
-            \ Education and Recreation\n* `SP` - Special Programs\n* `STS` - Science,\
-            \ Technology, and Society\n* `WGS` - Women's and Gender Studies"
+          description: "The department that offers the learning resource             \n\n*
+            `1` - Civil and Environmental Engineering\n* `2` - Mechanical Engineering\n*
+            `3` - Materials Science and Engineering\n* `4` - Architecture\n* `5` -
+            Chemistry\n* `6` - Electrical Engineering and Computer Science\n* `7`
+            - Biology\n* `8` - Physics\n* `9` - Brain and Cognitive Sciences\n* `10`
+            - Chemical Engineering\n* `11` - Urban Studies and Planning\n* `12` -
+            Earth, Atmospheric, and Planetary Sciences\n* `14` - Economics\n* `15`
+            - Management\n* `16` - Aeronautics and Astronautics\n* `17` - Political
+            Science\n* `18` - Mathematics\n* `20` - Biological Engineering\n* `21A`
+            - Anthropology\n* `21G` - Global Languages\n* `21H` - History\n* `21L`
+            - Literature\n* `21M` - Music and Theater Arts\n* `22` - Nuclear Science
+            and Engineering\n* `24` - Linguistics and Philosophy\n* `CC` - Concourse\n*
+            `CMS-W` - Comparative Media Studies/Writing\n* `EC` - Edgerton Center\n*
+            `ES` - Experimental Study Group\n* `ESD` - Engineering Systems Division\n*
+            `HST` - Medical Engineering and Science\n* `IDS` - Data, Systems, and
+            Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics, Physical
+            Education and Recreation\n* `SP` - Special Programs\n* `STS` - Science,
+            Technology, and Society\n* `WGS` - Women's and Gender Studies"
         level:
           type: array
           items:
@@ -14556,9 +14551,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DeliveryEnum'
-          description: "The delivery options in which the learning resource is offered\
-            \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
-            \ - In person\n* `offline` - Offline"
+          description: "The delivery options in which the learning resource is offered
+            \            \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`
+            - In person\n* `offline` - Offline"
         resource_type_group:
           type: array
           items:
@@ -14583,10 +14578,10 @@ components:
         search_mode:
           allOf:
           - $ref: '#/components/schemas/SearchModeEnum'
-          description: "The open search search type for text queries             \n\
-            \n* `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields`\
-            \ - most_fields\n* `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields`\
-            \ - best_fields\n* `most_fields` - most_fields\n* `hybrid` - hybrid"
+          description: "The open search search type for text queries             \n\n*
+            `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n*
+            `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n*
+            `most_fields` - most_fields\n* `hybrid` - hybrid"
         slop:
           type: integer
           nullable: true
@@ -17437,8 +17432,7 @@ components:
         author_name:
           type: string
           default: ''
-        content:
-          default: {}
+        content: {}
         content_type:
           allOf:
           - $ref: '#/components/schemas/WebsiteContentContentTypeEnum'
@@ -17478,11 +17472,11 @@ components:
       - article
       type: string
       description: |-
-        * `news` - news
-        * `article` - article
+        * `news` - News
+        * `article` - Article
       x-enum-descriptions:
-      - news
-      - article
+      - News
+      - Article
     WebsiteContentImageUploadRequest:
       type: object
       properties:
@@ -17502,8 +17496,7 @@ components:
         author_name:
           type: string
           default: ''
-        content:
-          default: {}
+        content: {}
         content_type:
           allOf:
           - $ref: '#/components/schemas/WebsiteContentContentTypeEnum'

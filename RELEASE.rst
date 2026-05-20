@@ -1,6 +1,47 @@
 Release Notes
 =============
 
+Version 0.68.3 (Released May 19, 2026)
+--------------
+
+- fix: link the podcast episode to its detail page and fix the video count on collection page (#3345)
+
+Version 0.68.2 (Released May 19, 2026)
+--------------
+
+- feat: add video embed page and route group restructure (#3327)
+- dashboard refactor: useHomeDashboardData (#3342)
+- fix: add heading tags to B2B org section (#3347)
+- fix: certificate page being indexed in google search (#3348)
+- Granian reload for local dev (#3351)
+
+Version 0.68.1 (Released May 19, 2026)
+--------------
+
+- split EnrollmentDisplay into HomeEnrollmentsDisplay + ProgramEnrollMentDisplay… (#3341)
+- Remove enrollment-dashboard feature flag (#3343)
+- feat: Added Program Record Link to Learn Dashboard Program Card . (#3336)
+- Update dependency drf-spectacular to >=0.29,<0.30 (#2734)
+
+Version 0.68.0 (Released May 13, 2026)
+--------------
+
+- fix open textbooks (#3337)
+- youtube etl should not unpublish ovs (#3334)
+- dashboard refactor stage 2 (#3330)
+- Adds a feature flag to link ocw course urls to corresponding learn urls (/courses/o/*) (#3263)
+- Min score for vector learning resources endpoint (#3285)
+- Update dependency granian to v2.7.4 [SECURITY] (#3309)
+- Update dependency litellm to v1.83.10 [SECURITY] (#3331)
+- Update dependency urllib3 to v2.7.0 [SECURITY] (#3329)
+
+Version 0.67.2 (Released May 12, 2026)
+--------------
+
+- feat: display MicroMasters® label on MITxOnline program product pages (#3318)
+- fix: add sitemap for video and podcast page (#3323)
+- Show (and count) only published items in userlists/paths (#3321)
+
 Version 0.67.1 (Released May 11, 2026)
 --------------
 

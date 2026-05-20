@@ -50,12 +50,16 @@ def get_mitpe_events():
 @app.task
 def get_website_content_news():
     """Run the website content news ETL pipeline"""
+
     pipelines.articles_news_etl()
     clear_views_cache()
 
 
-# Backward-compatible alias so any queued Celery tasks using the old name still work.
-get_articles_news = get_website_content_news
+@app.task(name="news_events.tasks.get_articles_news")
+def get_articles_news():
+    """Backward-compatible alias for get_website_content_news."""
+    pipelines.articles_news_etl()
+    clear_views_cache()
 
 
 @app.task(
@@ -76,14 +80,16 @@ def sync_website_content_to_news(self, content_id: int):
     """
     import logging
 
-    from news_events.etl.articles_news import sync_single_article_to_news
+    from news_events.etl.articles_news import sync_single_website_content_news_to_news
     from website_content.models import WebsiteContent
 
     logger = logging.getLogger(__name__)
 
     try:
         content = WebsiteContent.objects.get(id=content_id, is_published=True)
-        sync_single_article_to_news(content)
+
+        sync_single_website_content_news_to_news(content)
+
         clear_views_cache()
         logger.info(
             "Successfully synced content %s to news feed",
@@ -105,5 +111,11 @@ def sync_website_content_to_news(self, content_id: int):
         raise
 
 
-# Backward-compatible alias so any queued Celery tasks using the old name still work.
-sync_article_to_news = sync_website_content_to_news
+@app.task(
+    name="news_events.tasks.sync_article_to_news",
+    autoretry_for=(Exception,),
+    retry_kwargs={"max_retries": 3, "countdown": 5},
+)
+def sync_article_to_news(article_id: int):
+    """Backward-compatible alias for sync_website_content_to_news."""
+    sync_website_content_to_news.apply(args=[article_id], throw=True)

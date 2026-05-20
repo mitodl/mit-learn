@@ -1,11 +1,14 @@
 """Constants for website_content app"""
 
-GROUP_STAFF_ARTICLE_EDITORS = "article_editors"
+from named_enum import ExtendedEnum
 
-CONTENT_TYPE_NEWS = "news"
-CONTENT_TYPE_ARTICLE = "article"
+GROUP_WEBSITE_CONTENT_EDITORS = "website_content_editors"
 
-CONTENT_TYPE_CHOICES = [
-    (CONTENT_TYPE_NEWS, "News"),
-    (CONTENT_TYPE_ARTICLE, "Article"),
-]
+
+class WebsiteContentType(ExtendedEnum):
+    """
+    Enum for WebsiteContent content_type values.
+    """
+
+    news = "News"
+    article = "Article"

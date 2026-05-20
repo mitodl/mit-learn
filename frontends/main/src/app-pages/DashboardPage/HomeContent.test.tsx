@@ -15,14 +15,8 @@ import {
 } from "api"
 import React from "react"
 import * as mitxonline from "api/mitxonline-test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import HomeContent from "./HomeContent"
 import invariant from "tiny-invariant"
-
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest
-  .mocked(useFeatureFlagEnabled)
-  .mockImplementation(() => false)
 
 const makeSearchResponse = (
   results: LearningResource[],
@@ -96,6 +90,8 @@ describe("HomeContent", () => {
     setMockResponse.get(urls.userMe.get(), user)
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
     setMockResponse.get(urls.profileMe.get(), user.profile)
+    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
 
     // Set Top Picks Response
     setSearchResponse(
@@ -208,41 +204,23 @@ describe("HomeContent", () => {
     within(popular).getByText(resources.popular[2].title)
   })
 
-  test.each([{ enrollmentsEnabled: true }, { enrollmentsEnabled: false }])(
-    "Shows enrollments if and only if feature flag is enabled",
-    async ({ enrollmentsEnabled }) => {
-      setupAPIs()
-      mockedUseFeatureFlagEnabled.mockImplementation((flag) => {
-        if (flag === "enrollment-dashboard") return enrollmentsEnabled
-        return false
-      })
+  test("Shows enrollments", async () => {
+    setupAPIs()
 
-      // Mock empty contracts and organizations to avoid org cards rendering
-      setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
+    const enrollments = Array.from({ length: 3 }, () =>
+      mitxonline.factories.enrollment.courseEnrollment({
+        b2b_contract_id: null, // Personal enrollment, not B2B
+      }),
+    )
+    setMockResponse.get(
+      mitxonline.urls.enrollment.enrollmentsListV3(),
+      enrollments,
+    )
 
-      if (enrollmentsEnabled) {
-        const enrollments = Array.from({ length: 3 }, () =>
-          mitxonline.factories.enrollment.courseEnrollment({
-            b2b_contract_id: null, // Personal enrollment, not B2B
-          }),
-        )
-        setMockResponse.get(
-          mitxonline.urls.enrollment.enrollmentsListV3(),
-          enrollments,
-        )
-      }
+    renderWithProviders(<HomeContent />)
 
-      renderWithProviders(<HomeContent />)
-
-      if (enrollmentsEnabled) {
-        await screen.findByRole("heading", { name: "My Learning" })
-      } else {
-        expect(
-          screen.queryByRole("heading", { name: "My Learning" }),
-        ).not.toBeInTheDocument()
-      }
-    },
-  )
+    await screen.findByRole("heading", { name: "My Learning" })
+  })
 
   test("Does not display enrollment error alert when query param is not present", async () => {
     setupAPIs()

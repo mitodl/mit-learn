@@ -42,11 +42,17 @@ def fastly_full_purge():
 
 @app.task()
 @single_task(10)
-def fastly_purge_website_content_list():
+def fastly_purge_website_content_list(listing_url="/news"):
     """
-    Purges the news listing page from the Fastly cache.
+    Purges a website content listing page from the Fastly cache.
+
+    Args:
+        listing_url: The listing path to purge (e.g. "/news" or "/articles").
+                     Defaults to "/news" for backward compatibility.
 
     Can be called directly (runs immediately) or via .delay() (enqueued for Celery).
     """
-    log.info("Purging website content list pages from the Fastly cache...")
-    return call_fastly_purge_api("/news")
+    log.info(
+        "Purging website content list page %s from the Fastly cache...", listing_url
+    )
+    return call_fastly_purge_api(listing_url)

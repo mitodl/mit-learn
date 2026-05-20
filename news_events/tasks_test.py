@@ -66,7 +66,8 @@ def test_sync_article_to_news_success(mocker, user):
     )
 
     mock_sync = mocker.patch(
-        "news_events.etl.articles_news.sync_single_article_to_news", autospec=True
+        "news_events.etl.articles_news.sync_single_website_content_news_to_news",
+        autospec=True,
     )
     mock_clear_cache = mocker.patch(
         "news_events.tasks.clear_views_cache", autospec=True
@@ -82,7 +83,8 @@ def test_sync_article_to_news_success(mocker, user):
 def test_sync_article_to_news_article_not_found(mocker, caplog):
     """Task should log warning if content item doesn't exist"""
     mock_sync = mocker.patch(
-        "news_events.etl.articles_news.sync_single_article_to_news", autospec=True
+        "news_events.etl.articles_news.sync_single_website_content_news_to_news",
+        autospec=True,
     )
     mock_clear_cache = mocker.patch(
         "news_events.tasks.clear_views_cache", autospec=True
@@ -110,7 +112,8 @@ def test_sync_article_to_news_unpublished_article(mocker, user, caplog):
     )
 
     mock_sync = mocker.patch(
-        "news_events.etl.articles_news.sync_single_article_to_news", autospec=True
+        "news_events.etl.articles_news.sync_single_website_content_news_to_news",
+        autospec=True,
     )
     mock_clear_cache = mocker.patch(
         "news_events.tasks.clear_views_cache", autospec=True
@@ -138,7 +141,7 @@ def test_sync_article_to_news_sync_failure(mocker, user):
     )
 
     mock_sync = mocker.patch(
-        "news_events.etl.articles_news.sync_single_article_to_news",
+        "news_events.etl.articles_news.sync_single_website_content_news_to_news",
         autospec=True,
         side_effect=Exception("Sync failed"),
     )

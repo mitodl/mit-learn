@@ -5,7 +5,8 @@ from unittest.mock import patch
 import pytest
 from django.contrib.auth import get_user_model
 
-from website_content.constants import CONTENT_TYPE_ARTICLE, CONTENT_TYPE_NEWS
+
+from website_content.constants import WebsiteContentType
 from website_content.models import WebsiteContent
 
 User = get_user_model()
@@ -31,7 +32,7 @@ class TestWebsiteContentModel:
             content={"type": "doc", "content": []},
             is_published=True,
             user=user,
-            content_type=CONTENT_TYPE_NEWS,
+            content_type=WebsiteContentType.news.name,
         )
 
         assert content.get_url() == f"/news/{content.slug}"
@@ -51,7 +52,7 @@ class TestWebsiteContentModel:
             content={"type": "doc", "content": []},
             is_published=True,
             user=user,
-            content_type=CONTENT_TYPE_ARTICLE,
+            content_type=WebsiteContentType.article.name,
         )
 
         assert content.get_url() == f"/articles/{content.slug}"
@@ -69,7 +70,7 @@ class TestWebsiteContentModel:
             content={"type": "doc", "content": []},
             is_published=False,
             user=user,
-            content_type=CONTENT_TYPE_NEWS,
+            content_type=WebsiteContentType.news.name,
         )
 
         assert content.get_url() is None
@@ -87,7 +88,7 @@ class TestWebsiteContentModel:
             content={"type": "doc", "content": []},
             is_published=False,
             user=user,
-            content_type=CONTENT_TYPE_NEWS,
+            content_type=WebsiteContentType.news.name,
         )
 
         assert content.slug is None
@@ -113,4 +114,4 @@ class TestWebsiteContentModel:
             user=user,
         )
 
-        assert content.content_type == CONTENT_TYPE_NEWS
+        assert content.content_type == WebsiteContentType.news.name

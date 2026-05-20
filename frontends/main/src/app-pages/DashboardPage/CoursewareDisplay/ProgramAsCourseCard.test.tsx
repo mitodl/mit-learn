@@ -16,6 +16,7 @@ import moment from "moment"
 import NiceModal from "@ebay/nice-modal-react"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { UnenrollProgramDialog } from "./DashboardDialogs"
+import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest
@@ -466,6 +467,13 @@ describe("ProgramAsCourseCard", () => {
       "href",
       expect.stringContaining("ecom-service=true"),
     )
+
+    expect(
+      screen.getByRole("menuitem", { name: "Program Record" }),
+    ).toHaveAttribute(
+      "href",
+      mitxonlineLegacyUrl(`/records/${cardData.courseProgram.id}/`),
+    )
   })
 
   test("shows product-page details link in context menu when product pages flag is enabled", async () => {
@@ -491,6 +499,13 @@ describe("ProgramAsCourseCard", () => {
     expect(detailsLink).toHaveAttribute(
       "href",
       `/courses/p/${cardData.courseProgram.readable_id}`,
+    )
+
+    expect(
+      screen.getByRole("menuitem", { name: "Program Record" }),
+    ).toHaveAttribute(
+      "href",
+      mitxonlineLegacyUrl(`/records/${cardData.courseProgram.id}/`),
     )
   })
 

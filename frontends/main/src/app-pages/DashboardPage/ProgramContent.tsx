@@ -1,14 +1,14 @@
 "use client"
 
 import React from "react"
-import { EnrollmentDisplay } from "./CoursewareDisplay/EnrollmentDisplay"
+import { ProgramEnrollmentDisplay } from "./CoursewareDisplay/ProgramEnrollmentDisplay"
 
 interface ProgramContentProps {
   programId: number
 }
 
 const ProgramContent: React.FC<ProgramContentProps> = ({ programId }) => {
-  return <EnrollmentDisplay programId={programId} />
+  return <ProgramEnrollmentDisplay programId={programId} />
 }
 
 export default ProgramContent

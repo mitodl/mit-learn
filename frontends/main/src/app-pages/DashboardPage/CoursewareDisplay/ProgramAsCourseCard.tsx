@@ -37,7 +37,7 @@ import { ActionButton } from "@mitodl/smoot-design"
 import { RiAwardFill, RiMore2Line } from "@remixicon/react"
 import NiceModal from "@ebay/nice-modal-react"
 import { UnenrollProgramDialog } from "./DashboardDialogs"
-import { ProgramCertificateButton } from "./EnrollmentDisplay"
+import { ProgramCertificateButton } from "./ProgramEnrollmentDisplay"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { programPageView } from "@/common/urls"
@@ -305,6 +305,13 @@ const getContextMenuItems = (
       href: detailsUrl,
     })
   }
+
+  courseMenuItems.push({
+    className: "dashboard-card-menu-item",
+    key: "program-record",
+    label: "Program Record",
+    href: mitxonlineLegacyUrl(`/records/${resource.id}/`),
+  })
 
   if (enrollmentMode && !isVerifiedEnrollmentMode(enrollmentMode)) {
     courseMenuItems.push({

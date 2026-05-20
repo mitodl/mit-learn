@@ -1,6 +1,9 @@
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
+
+from django_filters.rest_framework import DjangoFilterBackend
+
 from drf_spectacular.utils import (
     OpenApiParameter,
     OpenApiResponse,
@@ -17,6 +20,7 @@ from learning_resources.permissions import is_admin_user
 from main.constants import VALID_HTTP_METHODS
 from main.utils import cache_page_per_user, clear_views_cache
 from website_content.api import content_published_actions, purge_content_on_save
+from website_content.filters import WebsiteContentFilter
 from website_content.models import WebsiteContent
 from website_content.permissions import (
     CanEditWebsiteContent,
@@ -33,26 +37,6 @@ from website_content.serializers import (
     list=extend_schema(
         summary="List",
         description="Get a paginated list of website content items",
-        parameters=[
-            OpenApiParameter(
-                name="draft",
-                type=bool,
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Filter to show only draft items. Only available for "
-                    "admins and content editors. If true, returns unpublished "
-                    "items. If not specified, returns all items."
-                ),
-                required=False,
-            ),
-            OpenApiParameter(
-                name="content_type",
-                type=str,
-                location=OpenApiParameter.QUERY,
-                description="Filter by content type (e.g. 'news' or 'article').",
-                required=False,
-            ),
-        ],
     ),
     retrieve=extend_schema(
         summary="Retrieve", description="Retrieve a single content item"
@@ -74,19 +58,13 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
     permission_classes = [CanViewWebsiteContent, CanEditWebsiteContent]
     http_method_names = VALID_HTTP_METHODS
 
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = WebsiteContentFilter
+
     def get_queryset(self):
         qs = WebsiteContent.objects.all()
-
-        if is_admin_user(self.request) or is_website_content_editor(self.request):
-            draft_param = self.request.query_params.get("draft")
-            if draft_param and draft_param.lower() in ("true", "1"):
-                qs = qs.filter(is_published=False)
-        else:
+        if not (is_admin_user(self.request) or is_website_content_editor(self.request)):
             qs = qs.filter(is_published=True)
-
-        content_type_param = self.request.query_params.get("content_type")
-        if content_type_param:
-            qs = qs.filter(content_type=content_type_param)
 
         return qs
 

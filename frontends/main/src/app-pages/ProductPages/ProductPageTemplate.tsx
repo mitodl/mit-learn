@@ -9,6 +9,7 @@ import {
   Typography,
   HEADER_HEIGHT,
   Grid2,
+  Chip,
 } from "ol-components"
 import { DEFAULT_RESOURCE_IMG, useImageWithFallback } from "ol-utilities"
 import { convertToEmbedUrl, hexToRgba } from "@/common/utils"
@@ -271,6 +272,7 @@ export type ResourceInfo = {
 
 type ProductPageTemplateProps = {
   currentBreadcrumbLabel: string
+  label?: string
   title: string
   shortDescription: React.ReactNode
   imageSrc: string
@@ -284,6 +286,7 @@ type ProductPageTemplateProps = {
 )
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   currentBreadcrumbLabel,
+  label,
   title,
   shortDescription,
   imageSrc,
@@ -342,13 +345,24 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                         title={title}
                       />
                     </SidebarCol>
-                    <Typography
-                      component="h1"
-                      typography={{ xs: "h4", sm: "h4", md: "h3" }}
-                      style={{ lineHeight: "2.25rem" }}
-                    >
-                      {title}
-                    </Typography>
+                    <Stack alignItems="flex-start" gap="16px">
+                      {label ? (
+                        <Chip
+                          label={label}
+                          data-testid="product-page-label"
+                          variant="outlinedWhite"
+                          size="large"
+                          sx={{ typography: "subtitle2" }}
+                        />
+                      ) : null}
+                      <Typography
+                        component="h1"
+                        typography={{ xs: "h4", sm: "h4", md: "h3" }}
+                        style={{ lineHeight: "2.25rem" }}
+                      >
+                        {title}
+                      </Typography>
+                    </Stack>
                     <ShortDescription>{shortDescription}</ShortDescription>
                     <Stack
                       direction={{ xs: "column", md: "row" }}

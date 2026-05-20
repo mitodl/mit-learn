@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from collections import Counter
 from functools import wraps
 from itertools import chain
 
@@ -18,10 +19,13 @@ from authentication.decorators import blocked_ip_exempt
 from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
 from main.utils import cache_page_for_anonymous_users
 from vector_search.constants import (
+    COLLECTION_PARAM_MAP,
     CONTENT_FILES_COLLECTION_NAME,
     CONTENT_FILES_RETRIEVE_PAYLOAD,
+    QDRANT_RESOURCE_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
     RESOURCES_RETRIEVE_PAYLOAD,
+    VECTOR_SEARCH_MIN_SCORE,
 )
 from vector_search.serializers import (
     ContentFileVectorSearchRequestSerializer,
@@ -105,6 +109,7 @@ class QdrantView(APIView):
         encoder_dense,
         encoder_sparse,
         hybrid_search,
+        score_cutoff: float | None,
     ):
         search_params = {
             "collection_name": search_collection,
@@ -126,6 +131,9 @@ class QdrantView(APIView):
             "limit": limit,
         }
 
+        if type(score_cutoff) is float and score_cutoff >= VECTOR_SEARCH_MIN_SCORE:
+            search_params["score_threshold"] = score_cutoff
+
         if hybrid_search:
             sparse_query, dense_query = await asyncio.gather(
                 sync_to_async(encoder_sparse.embed, thread_sensitive=False)(
@@ -135,23 +143,24 @@ class QdrantView(APIView):
                     query_string
                 ),
             )
-            if order_by:
+            prefetch_params = [
+                models.Prefetch(
+                    filter=search_filter,
+                    query=sparse_query,
+                    using=encoder_sparse.model_short_name(),
+                    limit=prefetch_limit,
+                ),
+                models.Prefetch(
+                    filter=search_filter,
+                    query=dense_query,
+                    using=encoder_dense.model_short_name(),
+                    limit=prefetch_limit,
+                ),
+            ]
+            if order_by and "score_threshold" not in search_params:
                 # Nest: vector prefetches → fusion prefetch → order_by query
                 search_params["prefetch"] = models.Prefetch(
-                    prefetch=[
-                        models.Prefetch(
-                            filter=search_filter,
-                            query=sparse_query,
-                            using=encoder_sparse.model_short_name(),
-                            limit=prefetch_limit,
-                        ),
-                        models.Prefetch(
-                            filter=search_filter,
-                            query=dense_query,
-                            using=encoder_dense.model_short_name(),
-                            limit=prefetch_limit,
-                        ),
-                    ],
+                    prefetch=prefetch_params,
                     query=models.FusionQuery(fusion=models.Fusion.RRF),
                     limit=prefetch_limit,
                 )
@@ -159,20 +168,7 @@ class QdrantView(APIView):
                     order_by=self._format_order_by(order_by)
                 )
             else:
-                search_params["prefetch"] = [
-                    models.Prefetch(
-                        filter=search_filter,
-                        query=sparse_query,
-                        using=encoder_sparse.model_short_name(),
-                        limit=prefetch_limit,
-                    ),
-                    models.Prefetch(
-                        filter=search_filter,
-                        query=dense_query,
-                        using=encoder_dense.model_short_name(),
-                        limit=prefetch_limit,
-                    ),
-                ]
+                search_params["prefetch"] = prefetch_params
                 search_params["query"] = models.FusionQuery(fusion=models.Fusion.RRF)
         else:
             dense_query = await sync_to_async(encoder_dense.embed_query)(query_string)
@@ -214,7 +210,13 @@ class QdrantView(APIView):
         return search_result
 
     async def _execute_scroll_search(  # noqa: PLR0913
-        self, client, search_collection, search_filter, limit, offset, order_by
+        self,
+        client,
+        search_collection,
+        search_filter,
+        limit,
+        offset,
+        order_by,
     ):
         # Build common scroll kwargs
         scroll_kwargs = {
@@ -257,7 +259,7 @@ class QdrantView(APIView):
                 break
         return search_result[:limit]
 
-    async def async_vector_search(  # noqa: PLR0913
+    async def _async_vector_hits(  # noqa: PLR0913
         self,
         query_string: str,
         params: dict,
@@ -265,9 +267,13 @@ class QdrantView(APIView):
         limit: int = 10,
         offset: int = 0,
         search_collection=RESOURCES_COLLECTION_NAME,
+        score_cutoff: float | None = None,
         *,
         hybrid_search: bool = False,
     ):
+        """
+        Execute vector search and return hydrated hits
+        """
         client = async_qdrant_client()
         encoder_dense = dense_encoder()
         encoder_sparse = sparse_encoder()
@@ -300,6 +306,7 @@ class QdrantView(APIView):
                 encoder_dense,
                 encoder_sparse,
                 hybrid_search,
+                score_cutoff,
             )
 
             if "group_by" in params:
@@ -320,18 +327,111 @@ class QdrantView(APIView):
         else:
             # No query string — use scroll API
             search_result = await self._execute_scroll_search(
-                client, search_collection, search_filter, limit, offset, order_by
+                client,
+                search_collection,
+                search_filter,
+                limit,
+                offset,
+                order_by,
             )
 
-        hits_coroutine = (
-            sync_to_async(_resource_vector_hits)(search_result)
-            if search_collection == RESOURCES_COLLECTION_NAME
-            else sync_to_async(_content_file_vector_hits)(search_result)
+        if search_collection == RESOURCES_COLLECTION_NAME:
+            return await sync_to_async(_resource_vector_hits)(search_result)
+        else:
+            return await sync_to_async(_content_file_vector_hits)(search_result)
+
+    def _extract_values(self, obj, qdrant_field):
+        """
+        Extract values from a nested dictionary based on a path like 'topics[].name'
+        """
+        if not qdrant_field:
+            return []
+
+        parts = qdrant_field.split(".")
+        values = [obj]
+
+        for part in parts:
+            is_array = part.endswith("[]")
+            key = part[:-2] if is_array else part
+
+            next_values = []
+            for v in values:
+                if not isinstance(v, dict):
+                    continue
+                item = v.get(key)
+                if item is None:
+                    continue
+
+                if isinstance(item, list):
+                    next_values.extend(item)
+                else:
+                    next_values.append(item)
+            values = next_values
+
+        return values
+
+    async def _async_vector_resource_counts(
+        self, hits, params, search_collection=RESOURCES_COLLECTION_NAME
+    ):
+        """
+        Compute total count and aggregations/facets based on
+        hits returned from the vector search. This is a fallback
+        for when the aggregation counts are inaccurate
+        due to Qdrant's approximate search.
+        """
+        total_count = len(hits)
+        aggregation_keys = params.get("aggregations") or []
+        aggregations = {}
+
+        if not aggregation_keys or not hits:
+            return {
+                "total": {"value": total_count},
+                "aggregations": aggregations,
+            }
+
+        param_map = COLLECTION_PARAM_MAP.get(
+            search_collection, QDRANT_RESOURCE_PARAM_MAP
         )
 
+        for agg_key in aggregation_keys:
+            qdrant_field = param_map.get(agg_key)
+            if not qdrant_field:
+                continue
+
+            counter = Counter()
+            for hit in hits:
+                seen = set()
+                for val in self._extract_values(hit, qdrant_field):
+                    if isinstance(val, (str, int, float, bool)):
+                        key = str(val).lower() if isinstance(val, bool) else str(val)
+                        if key not in seen:
+                            seen.add(key)
+                            counter[key] += 1
+
+            aggregations[agg_key] = [
+                {"key": k, "doc_count": v} for k, v in counter.most_common()
+            ]
+
+        return {
+            "total": {"value": total_count},
+            "aggregations": aggregations,
+        }
+
+    async def _async_vector_counts(
+        self,
+        params: dict,
+        search_collection=RESOURCES_COLLECTION_NAME,
+    ):
+        """
+        Compute total count and aggregations/facets
+        """
+        client = async_qdrant_client()
+        search_filter = qdrant_query_conditions(
+            params, collection_name=search_collection
+        )
         aggregation_keys = params.get("aggregations") or []
-        hits, count_result, aggregations = await asyncio.gather(
-            hits_coroutine,
+
+        count_result, aggregations = await asyncio.gather(
             client.count(
                 collection_name=search_collection,
                 count_filter=search_filter,
@@ -345,9 +445,66 @@ class QdrantView(APIView):
         )
 
         return {
-            "hits": hits,
             "total": {"value": count_result.count},
             "aggregations": aggregations or {},
+        }
+
+    async def async_vector_search(  # noqa: PLR0913
+        self,
+        query_string: str,
+        params: dict,
+        order_by: str | None = None,
+        limit: int = 10,
+        offset: int = 0,
+        search_collection=RESOURCES_COLLECTION_NAME,
+        score_cutoff: float | None = None,
+        *,
+        hybrid_search: bool = False,
+    ):
+        if (
+            query_string
+            and type(score_cutoff) is float
+            and score_cutoff >= VECTOR_SEARCH_MIN_SCORE
+        ):
+            hits = await self._async_vector_hits(
+                query_string,
+                params,
+                order_by=order_by,
+                limit=settings.VECTOR_SEARCH_PAGE_MAX_LIMIT,
+                offset=0,
+                search_collection=search_collection,
+                score_cutoff=score_cutoff,
+                hybrid_search=hybrid_search,
+            )
+            counts = await self._async_vector_resource_counts(
+                hits, params, search_collection=search_collection
+            )
+
+            return {
+                "hits": hits,
+                **counts,
+            }
+
+        hits, counts = await asyncio.gather(
+            self._async_vector_hits(
+                query_string,
+                params,
+                order_by=order_by,
+                limit=limit,
+                offset=offset,
+                search_collection=search_collection,
+                score_cutoff=score_cutoff,
+                hybrid_search=hybrid_search,
+            ),
+            self._async_vector_counts(
+                params,
+                search_collection=search_collection,
+            ),
+        )
+
+        return {
+            "hits": hits,
+            **counts,
         }
 
     def handle_exception(self, exc):
@@ -398,6 +555,7 @@ class LearningResourcesVectorSearchView(QdrantView):
                 offset=offset,
                 params=request_data.data,
                 hybrid_search=hybrid_search,
+                score_cutoff=request_data.data.get("score_cutoff", 0),
             )
             if request_data.data.get("dev_mode"):
                 return Response(response)

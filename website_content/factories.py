@@ -4,7 +4,8 @@ import factory
 from factory.django import DjangoModelFactory
 
 from website_content import models
-from website_content.constants import CONTENT_TYPE_NEWS
+
+from website_content.constants import WebsiteContentType
 
 
 class WebsiteContentFactory(DjangoModelFactory):
@@ -12,7 +13,7 @@ class WebsiteContentFactory(DjangoModelFactory):
 
     content = factory.LazyFunction(lambda: {"type": "doc", "content": []})
     title = factory.Faker("sentence", nb_words=4)
-    content_type = CONTENT_TYPE_NEWS
+    content_type = WebsiteContentType.news.name
 
     class Meta:
         model = models.WebsiteContent
