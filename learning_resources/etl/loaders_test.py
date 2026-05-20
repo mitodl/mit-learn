@@ -1559,8 +1559,6 @@ def test_load_programs_orders_courses_by_req_tree_with_display_mode_course_child
     )
 
     parent_resource = LearningResource.objects.get(readable_id="mitx-parent-program")
-    # Parent req_tree: course 10, program 1001 (display_mode=program → expands to
-    # course 70), program 1002 (display_mode=course → PROGRAM_COURSES child).
     program_courses = (
         parent_resource.children.filter(
             relation_type=LearningResourceRelationTypes.PROGRAM_COURSES.value
@@ -1601,6 +1599,40 @@ def test_load_programs_appends_program_program_children_after_courses(
     )
     assert program_programs_positions, "expected at least one PROGRAM_PROGRAMS child"
     assert min(program_programs_positions) > program_courses_max
+
+
+def test_create_child_program_relationships_uses_existing_max_position():
+    """New child without explicit position should land at existing_max + 1."""
+    platform = LearningResourcePlatformFactory.create(code=PlatformType.mitxonline.name)
+    parent = ProgramFactory.create(
+        platform=platform.code,
+        learning_resource__readable_id="parent-with-existing-children",
+    ).learning_resource
+    existing_child = CourseFactory.create(platform=platform.code).learning_resource
+    LearningResourceRelationship.objects.create(
+        parent=parent,
+        child=existing_child,
+        relation_type=LearningResourceRelationTypes.PROGRAM_COURSES.value,
+        position=5,
+    )
+    new_child_program = ProgramFactory.create(
+        platform=platform.code,
+        learning_resource__readable_id="new-child-program",
+    ).learning_resource
+
+    loaders._create_child_program_relationships(  # noqa: SLF001
+        [
+            (
+                parent,
+                [{"readable_id": new_child_program.readable_id}],
+            )
+        ]
+    )
+
+    new_rel = LearningResourceRelationship.objects.get(
+        parent=parent, child=new_child_program
+    )
+    assert new_rel.position == 6
 
 
 def test_load_programs_idempotent_child_relationships(

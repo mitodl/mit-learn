@@ -298,10 +298,7 @@ def test_get_course_ids_from_req_tree_circular_reference():
             ],
         },
     }
-    # Starting from program 1's req_tree
     result = get_course_ids_from_req_tree(programs_by_id[1]["req_tree"], programs_by_id)
-    # Should get course 200 (from program 2) and course 100 (from program 1)
-    # but NOT recurse infinitely back into program 1 from program 2
     assert set(result) == {100, 200}
 
 
@@ -365,8 +362,6 @@ def test_get_course_ids_from_req_tree_display_mode_course():
         }
     ]
     result = get_course_ids_from_req_tree(req_tree, programs_by_id)
-    # Course 10 from direct child, course 500 from program 60 (normal program),
-    # but NOT courses 300/400 from program 50 (display_mode="course")
     assert result == [10, 500]
 
 
@@ -421,8 +416,6 @@ def test_get_child_positions_recurses_through_display_mode_program():
         },
         {"data": {"node_type": "course", "course": 20}, "id": 3},
     ]
-    # Program 50's courses (600, 601) take the slot between courses 10 and 20.
-    # Program 50 itself gets no PROGRAM_COURSES position.
     assert get_child_positions(req_tree, programs_by_id) == {
         ("course", 10): 0,
         ("course", 600): 1,
@@ -449,7 +442,6 @@ def test_get_child_positions_handles_circular_reference():
             ],
         },
     }
-    # Start from program 1's req_tree (as transform_programs would).
     positions = get_child_positions(programs_by_id[1]["req_tree"], programs_by_id)
     assert set(positions.keys()) == {("course", 100), ("course", 200)}
 
@@ -462,6 +454,24 @@ def test_get_child_positions_skips_program_nodes_without_programs_by_id():
     ]
     assert get_child_positions(req_tree, None) == {("course", 10): 0}
     assert get_child_positions(req_tree, {}) == {("course", 10): 0}
+
+
+def test_transform_programs_stamps_position_on_child_programs(mocker, settings):
+    """Only display_mode="course" sub-programs get a stamped position."""
+    settings.MITX_ONLINE_BASE_URL = "https://mitxonline.mit.edu"
+    settings.APP_BASE_URL = "https://learn.example.test/"
+    mocker.patch(
+        "learning_resources.etl.mitxonline._fetch_courses_by_ids",
+        return_value=[],
+    )
+    with open("./test_json/mitxonline_child_program_positions.json") as f:  # noqa: PTH123
+        programs = json.load(f)
+
+    result = list(transform_programs(programs))
+    parent = next(p for p in result if p["readable_id"] == "parent")
+    by_readable = {cp["readable_id"]: cp for cp in parent["child_programs"]}
+    assert by_readable["child-as-course"]["position"] == 1
+    assert by_readable["child-as-program"]["position"] is None
 
 
 @pytest.mark.parametrize(
@@ -634,9 +644,6 @@ def test_mitxonline_transform_programs(
         program_course_ids = get_course_ids_from_req_tree(
             program_data.get("req_tree", []), programs_by_id
         )
-        child_positions = get_child_positions(
-            program_data.get("req_tree", []), programs_by_id
-        )
         expected_courses = []
         for cid in program_course_ids:
             course_data = courses_by_id.get(cid)
@@ -712,7 +719,7 @@ def test_mitxonline_transform_programs(
                             }
                         ]
                     },
-                    "position": child_positions.get(("course", cid)),
+                    "position": len(expected_courses),
                 }
             )
         has_program_product_page = bool(parse_page_attribute(program_data, "page_url"))
@@ -728,9 +735,6 @@ def test_mitxonline_transform_programs(
                 else None
             )
         )
-        # Pace is derived from the program's courses, so it depends on which
-        # courses survived the req_tree filter — programs whose req_tree
-        # references courses absent from the courses fixture get an empty pace.
         expected_pace = sorted({p for c in expected_courses for p in c["pace"]})
         expected.append(
             {
