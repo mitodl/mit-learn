@@ -86,7 +86,7 @@ def get_user_from_apisix_headers(request, decoded_headers, original_header):
 
     user, created = User.objects.filter(
         Q(global_id=global_id) | Q(global_id__isnull=True, email=email)
-    ).get_or_create(
+    ).update_or_create(
         defaults={
             "global_id": global_id,
             "email": email,
