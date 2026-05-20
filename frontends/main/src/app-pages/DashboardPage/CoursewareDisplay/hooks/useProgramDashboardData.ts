@@ -46,7 +46,7 @@ export type ProgramDashboardData = {
  *
  * Fetches the 6 program-dashboard queries (course-run enrollments,
  * programDetail, program enrollments, program courses, required programs,
- * required-program courses) and composes the pure helpers in
+ * required program-courses) and composes the pure helpers in
  * `dashboardViewModel.ts` into the durable returned contract:
  * requirement sections with per-section counts, language picker state,
  * overall completion counts, and shared aux for non-course arms.
