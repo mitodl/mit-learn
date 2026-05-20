@@ -171,7 +171,7 @@ def test_patch_profile_by_user(mocker, client, logged_in_profile):
     assert logged_in_profile.name == "new name"
     assert logged_in_profile.bio == "updated_bio_value"
     mock_sync_to_keycloak.assert_called_once_with(
-        logged_in_profile, ["name", "bio", "location"]
+        logged_in_profile, {"name", "bio", "location"}
     )
 
 
