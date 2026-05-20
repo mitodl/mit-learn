@@ -2,6 +2,7 @@
 
 import React, { useEffect, useId, useMemo } from "react"
 import { useRouter } from "next-nprogress-bar"
+import { usePostHog } from "posthog-js/react"
 import {
   styled,
   Step,
@@ -33,6 +34,7 @@ import {
   ProfileSchema,
 } from "@/common/profile"
 import { useSearchParams } from "next/navigation"
+import { PostHogEvents } from "@/common/constants"
 
 const NUM_STEPS = 5
 
@@ -155,6 +157,7 @@ const OnboardingPage: React.FC = () => {
   const { isLoading: userLoading, data: user } = useUserMe()
   const [activeStep, setActiveStep] = React.useState<number>(0)
   const router = useRouter()
+  const posthog = usePostHog()
   const searchParams = useSearchParams()
   const nextUrl = searchParams.get("next")
 
@@ -163,6 +166,14 @@ const OnboardingPage: React.FC = () => {
     initialValues: initialFormData ?? ProfileSchema.getDefault(),
     validationSchema: ProfileSchema,
     onSubmit: async (values) => {
+      const label = activeStep < NUM_STEPS - 1 ? "Next" : "Finish"
+      if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+        posthog.capture(PostHogEvents.CallToActionClicked, {
+          label,
+          step: activeStep + 1,
+          location: "onboarding",
+        })
+      }
       if (formik.dirty) {
         await mutateAsync({
           ...values,
