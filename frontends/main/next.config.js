@@ -31,6 +31,13 @@ const processFeatureFlags = () => {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   productionBrowserSourceMaps: true,
+  /**
+   * Standalone output emits a minimal self-contained server at
+   * .next/standalone/ with only the required runtime files. The resulting
+   * Docker image requires no node_modules and no yarn at startup.
+   * See: https://nextjs.org/docs/app/getting-started/deploying#docker
+   */
+  output: "standalone",
   async rewrites() {
     return [
       /* Static assets moved from /static, though image paths are sometimes
@@ -69,6 +76,9 @@ const nextConfig = {
             key: "Cache-Control",
             value: PAGE_CACHE_CONTROL,
           },
+          // Tag sitemaps with "html-pages" so Fastly can purge them on deploy
+          // without also purging immutable /_next/static/ chunks.
+          { key: "Surrogate-Key", value: "html-pages" },
         ],
       },
       /* This is intended to target the base HTML responses and streamed RSC
@@ -85,6 +95,11 @@ const nextConfig = {
             key: "Cache-Control",
             value: PAGE_CACHE_CONTROL,
           },
+          // Tag all HTML/page routes so Fastly can purge them on deploy
+          // without also purging immutable /_next/static/ chunks.
+          // The pattern above already excludes file extensions, so /_next/static/*.js
+          // will never receive this tag.
+          { key: "Surrogate-Key", value: "html-pages" },
         ],
       },
 
@@ -133,6 +148,46 @@ const nextConfig = {
     // Turbopack filesystem caching is enabled by default in Next.js 16.1+
     // Explicitly enable it for clarity (optional - already default)
     turbopackFileSystemCacheForDev: true,
+  },
+
+  /**
+   * Stable, deterministic build ID based on the git SHA / version tag.
+   *
+   * Next.js embeds the build ID in manifest filenames (_buildManifest.js,
+   * _ssgManifest.js) and in page-data paths. Using the same ID across
+   * rebuilds of the same commit reduces inter-build hash drift.
+   *
+   * NEXT_PUBLIC_VERSION is set as a Kubernetes env var (and as a Docker
+   * build arg in future standalone builds). GIT_REF is the full commit SHA
+   * passed by Concourse. The 'dev' fallback is for local builds.
+   */
+  generateBuildId: async () =>
+    process.env.NEXT_PUBLIC_VERSION || process.env.GIT_REF || "dev",
+
+  /**
+   * Replace webpack's [chunkhash] with [contenthash].
+   *
+   * [chunkhash] is influenced by module ordering and internal IDs, so two
+   * builds of identical code can produce different filenames. [contenthash]
+   * is derived purely from the file's content, making chunk names stable
+   * across rebuilds when code is unchanged.
+   *
+   * See: https://github.com/vercel/next.js/discussions/65856
+   */
+  webpack: (config) => {
+    if (config.output.filename) {
+      config.output.filename = config.output.filename.replace(
+        "[chunkhash]",
+        "[contenthash]",
+      )
+    }
+    if (config.output.chunkFilename) {
+      config.output.chunkFilename = config.output.chunkFilename.replace(
+        "[chunkhash]",
+        "[contenthash]",
+      )
+    }
+    return config
   },
 }
 
