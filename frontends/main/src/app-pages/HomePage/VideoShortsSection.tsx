@@ -106,7 +106,11 @@ const VideoShortsSection = () => {
         </Header>
         <StyledCarouselV2>
           {data?.map((video: VideoResource, index: number) => (
-            <CarouselSlide width={235} height={235 / ASPECT_RATIO} key={video.id}>
+            <CarouselSlide
+              width={235}
+              height={235 / ASPECT_RATIO}
+              key={video.id}
+            >
               {/* 235 is our fixed width to ensure slides align with the container edge */}
               <Card
                 onClick={() => {

@@ -9,7 +9,9 @@ import { renderWithProviders, screen, user, fireEvent, act } from "@/test-utils"
 window.HTMLMediaElement.prototype.play = jest.fn(() => Promise.resolve())
 window.HTMLMediaElement.prototype.pause = jest.fn()
 
-const makeVideoResource = (overrides: Partial<VideoResource> = {}): VideoResource =>
+const makeVideoResource = (
+  overrides: Partial<VideoResource> = {},
+): VideoResource =>
   factories.learningResources.video({
     resource_type: ResourceTypeEnum.Video,
     video: {
@@ -80,7 +82,11 @@ describe("VideoShortsModal", () => {
     const videoData = [makeVideoResource({ title: "Test Video" })]
 
     renderWithProviders(
-      <VideoShortsModal startIndex={0} videoData={videoData} onClose={jest.fn()} />,
+      <VideoShortsModal
+        startIndex={0}
+        videoData={videoData}
+        onClose={jest.fn()}
+      />,
     )
 
     const video = document.querySelector("video")
@@ -89,12 +95,14 @@ describe("VideoShortsModal", () => {
 
   test("displays error placeholder when video errors", async () => {
     const videoData = [makeVideoResource({ title: "Error Video" })]
-    const consoleSpy = jest
-      .spyOn(console, "error")
-      .mockImplementation(() => {})
+    const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {})
 
     renderWithProviders(
-      <VideoShortsModal startIndex={0} videoData={videoData} onClose={jest.fn()} />,
+      <VideoShortsModal
+        startIndex={0}
+        videoData={videoData}
+        onClose={jest.fn()}
+      />,
     )
 
     const video = document.querySelector("video")
@@ -116,7 +124,11 @@ describe("VideoShortsModal", () => {
     ]
 
     renderWithProviders(
-      <VideoShortsModal startIndex={1} videoData={videoData} onClose={jest.fn()} />,
+      <VideoShortsModal
+        startIndex={1}
+        videoData={videoData}
+        onClose={jest.fn()}
+      />,
     )
 
     const videos = document.querySelectorAll("video")
