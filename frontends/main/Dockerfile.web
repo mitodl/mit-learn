@@ -172,7 +172,9 @@ RUN yarn build
 
 # STAGE: runner (default)
 # Copies only the standalone server, static assets, and public directory from
-# the build stage into a clean image. No yarn, no node_modules, no source code.
+# the build stage into a clean image. No workspace install is needed; the
+# standalone bundle ships with the minimal node_modules required to run the
+# server. No source code or build tooling is included.
 #
 # The standalone server is started directly with node (not `yarn start`), which
 # avoids yarn overhead and is the pattern recommended by Next.js for Docker:
@@ -192,6 +194,7 @@ COPY --from=build /app/frontends/main/public ./frontends/main/public
 
 EXPOSE 3000
 
+ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 

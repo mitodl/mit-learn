@@ -93,10 +93,12 @@ const nextConfig = {
        * sets no-cache. However we are currently serving public content that is
        * cacheable.
        *
-       * Excludes everything with a file extension so we're matching only on routes.
+       * Excludes everything with a file extension (so /_next/static/*.js is
+       * never matched) and also excludes /healthcheck, which returns JSON and
+       * should not be tagged as an HTML page for Fastly surrogate-key purges.
        */
       {
-        source: "/((?!.*\\.[a-zA-Z0-9]{2,4}$).*)",
+        source: "/((?!.*\\.[a-zA-Z0-9]{2,4}$)(?!healthcheck$).*)",
         headers: [
           {
             key: "Cache-Control",
@@ -104,8 +106,6 @@ const nextConfig = {
           },
           // Tag all HTML/page routes so Fastly can purge them on deploy
           // without also purging immutable /_next/static/ chunks.
-          // The pattern above already excludes file extensions, so /_next/static/*.js
-          // will never receive this tag.
           { key: "Surrogate-Key", value: "html-pages" },
         ],
       },
