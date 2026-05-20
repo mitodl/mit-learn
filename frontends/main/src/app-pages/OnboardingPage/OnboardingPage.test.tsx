@@ -19,6 +19,18 @@ import {
   type Profile,
 } from "api/v0"
 import OnboardingPage from "./OnboardingPage"
+import { usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
+
+jest.mock("posthog-js/react", () => ({
+  ...jest.requireActual("posthog-js/react"),
+  usePostHog: jest.fn(),
+}))
+const mockCapture = jest.fn()
+jest.mocked(usePostHog).mockReturnValue(
+  // @ts-expect-error Not mocking all of posthog
+  { capture: mockCapture },
+)
 
 jest.mock("next/navigation", () =>
   jest.requireActual("next-router-mock/navigation"),
@@ -166,5 +178,42 @@ describe("OnboardingPage", () => {
     await user.click(finishButton)
 
     expect(mockRouter.asPath).toEqual("/search?resource=184")
+  })
+
+  describe("PostHog tracking", () => {
+    beforeEach(() => {
+      process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+      mockCapture.mockReset()
+    })
+
+    afterEach(() => {
+      delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+    })
+
+    it("fires cta_clicked with label 'Next' and step when Next is clicked", async () => {
+      await setupAndProgressToStep(0)
+      await user.click(await findNextButton())
+      expect(mockCapture).toHaveBeenCalledWith(
+        PostHogEvents.CallToActionClicked,
+        { label: "Next", step: 1, location: "onboarding" },
+      )
+    })
+
+    it("fires cta_clicked with label 'Finish' and step when Finish is clicked", async () => {
+      await setupAndProgressToStep(STEPS_DATA.length - 1)
+      mockCapture.mockClear()
+      await user.click(await findFinishButton())
+      expect(mockCapture).toHaveBeenCalledWith(
+        PostHogEvents.CallToActionClicked,
+        { label: "Finish", step: STEPS_DATA.length, location: "onboarding" },
+      )
+    })
+
+    it("does not fire cta_clicked when NEXT_PUBLIC_POSTHOG_API_KEY is not set", async () => {
+      delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+      await setupAndProgressToStep(0)
+      await user.click(await findNextButton())
+      expect(mockCapture).not.toHaveBeenCalled()
+    })
   })
 })
