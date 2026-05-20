@@ -60,24 +60,26 @@ const MuteButton = styled(BaseButton)(({ theme }) => ({
   },
 }))
 
-const CarouselSlide = styled.div<{ width: number; height: number }>(
-  ({ width, height, theme }) => ({
-    width,
-    height,
-    overflow: "hidden",
-    borderRadius: "12px",
-    flex: "0 0 auto",
-    margin: "30px 0",
-    position: "relative",
-    [theme.breakpoints.down("md")]: {
-      width: "100%",
-      height: "100%",
-      margin: "10px 0",
-      flex: "0 0 calc(100% - 20px)",
-      borderRadius: 0,
-    },
-  }),
-)
+const CarouselSlide = styled.div(
+  {
+    shouldForwardProp: (prop) => prop !== "width" && prop !== "height",
+  },
+)<{ width: number; height: number }>(({ width, height, theme }) => ({
+  width,
+  height,
+  overflow: "hidden",
+  borderRadius: "12px",
+  flex: "0 0 auto",
+  margin: "30px 0",
+  position: "relative",
+  [theme.breakpoints.down("md")]: {
+    width: "100%",
+    height: "100%",
+    margin: "10px 0",
+    flex: "0 0 calc(100% - 20px)",
+    borderRadius: 0,
+  },
+}))
 
 const Video = styled.video(({ height, width, theme }) => ({
   width,
