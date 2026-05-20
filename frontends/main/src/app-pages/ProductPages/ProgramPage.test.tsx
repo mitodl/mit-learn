@@ -701,6 +701,48 @@ describe("ProgramPage", () => {
     delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
   })
 
+  describe("Program type label", () => {
+    test.each(["MicroMasters®", "MicroMasters"])(
+      "Shows 'MicroMasters®' label when program_type is '%s'",
+      async (programType) => {
+        const program = makeProgram({
+          ...makeReqs(),
+          program_type: programType,
+        })
+        const page = makePage({ program_details: program })
+        setupApis({ program, page })
+        renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+        await screen.findByRole("heading", { name: page.title })
+        const programTypeLabel = screen.getByTestId("product-page-label")
+        expect(programTypeLabel).toBeInTheDocument()
+        expect(
+          within(programTypeLabel).getByText("MicroMasters®"),
+        ).toBeInTheDocument()
+      },
+    )
+
+    test("Shows no label for unbranded types like 'Series'", async () => {
+      const program = makeProgram({ ...makeReqs(), program_type: "Series" })
+      const page = makePage({ program_details: program })
+      setupApis({ program, page })
+      renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+      await screen.findByRole("heading", { name: page.title })
+      expect(screen.queryByTestId("product-page-label")).not.toBeInTheDocument()
+    })
+
+    test("Shows no label when program_type is null", async () => {
+      const program = makeProgram({ ...makeReqs(), program_type: null })
+      const page = makePage({ program_details: program })
+      setupApis({ program, page })
+      renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+      await screen.findByRole("heading", { name: page.title })
+      expect(screen.queryByTestId("product-page-label")).not.toBeInTheDocument()
+    })
+  })
+
   describe("Stay Updated button", () => {
     useStayUpdatedEnv()
 

@@ -13,9 +13,7 @@ import {
   FREE_COURSES_CAROUSEL,
 } from "@/common/carousels"
 import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarousel"
-import { EnrollmentDisplay } from "./CoursewareDisplay/EnrollmentDisplay"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
+import { HomeEnrollmentsDisplay } from "./CoursewareDisplay/HomeEnrollmentsDisplay"
 import { useUserMe } from "api/hooks/user"
 import { OrganizationCards } from "./CoursewareDisplay/OrganizationCards"
 import EnrollmentRedirectAlert from "./EnrollmentRedirectAlert"
@@ -78,9 +76,6 @@ const HomeContent: React.FC = () => {
   const { isLoading: isLoadingProfile, data: user } = useUserMe()
   const topics = user?.profile?.preference_search_filters.topic
   const certification = user?.profile?.preference_search_filters.certification
-  const showEnrollments = useFeatureFlagEnabled(
-    FeatureFlags.EnrollmentDashboard,
-  )
 
   return (
     <>
@@ -101,7 +96,7 @@ const HomeContent: React.FC = () => {
         <EnrollmentRedirectAlert />
       </EnrollmentRedirectAlertContainer>
       <OrganizationCards />
-      {showEnrollments ? <EnrollmentDisplay /> : null}
+      <HomeEnrollmentsDisplay />
       <Suspense>
         <StyledResourceCarousel
           titleComponent="h2"

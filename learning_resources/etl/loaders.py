@@ -1543,7 +1543,11 @@ def _upsert_ovs_playlist_from_collection(collection_data: dict) -> LearningResou
     playlist_data["resource_category"] = LearningResourceType.video_playlist.value
     channel, _ = VideoChannel.objects.get_or_create(
         channel_id="ovs",
-        defaults={"title": "ODL Video Service"},
+        defaults={
+            "title": "ODL Video Service",
+            "etl_source": ETLSource.ovs.name,
+            "published": True,
+        },
     )
     playlist, _ = LearningResource.objects.update_or_create(
         readable_id=playlist_id,
@@ -1600,9 +1604,13 @@ def load_ovs_playlist(playlist_data: dict) -> LearningResource | None:
         LearningResource | None: the created or updated playlist resource,
             or None if not all videos could be matched
     """
-    channel, _ = VideoChannel.objects.get_or_create(
+    channel, _ = VideoChannel.objects.update_or_create(
         channel_id="ovs",
-        defaults={"title": "ODL Video Service"},
+        defaults={
+            "title": "ODL Video Service",
+            "etl_source": ETLSource.ovs.name,
+            "published": True,
+        },
     )
     return load_playlist(channel, playlist_data)
 
@@ -1797,13 +1805,6 @@ def load_videos_from_content_files(
 
     threshold = total * OCW_PLAYLIST_VIDEO_THRESHOLD
     if len(matched) < threshold:
-        log.info(
-            "Only %d/%d videos have matching content files (threshold: %.2f). "
-            "Skipping playlist.",
-            len(matched),
-            total,
-            OCW_PLAYLIST_VIDEO_THRESHOLD,
-        )
         return None
 
     videos = []
@@ -1872,7 +1873,7 @@ def load_video_channel(video_channel_data: dict) -> VideoChannel:
     return video_channel
 
 
-def load_video_channels(video_channels_data: iter) -> list[VideoChannel]:
+def load_youtube_video_channels(video_channels_data: iter) -> list[VideoChannel]:
     """
     Load a list of video channels
 
@@ -1887,6 +1888,8 @@ def load_video_channels(video_channels_data: iter) -> list[VideoChannel]:
     for video_channel_data in video_channels_data:
         channel_id = video_channel_data["channel_id"]
         channel_ids.append(channel_id)
+        video_channel_data["etl_source"] = ETLSource.youtube.name
+        video_channel_data["published"] = True
         try:
             video_channel = load_video_channel(video_channel_data)
         except ExtractException:
@@ -1902,12 +1905,17 @@ def load_video_channels(video_channels_data: iter) -> list[VideoChannel]:
         else:
             video_channels.append(video_channel)
 
-    VideoChannel.objects.exclude(channel_id__in=channel_ids).update(published=False)
+    VideoChannel.objects.filter(etl_source=ETLSource.youtube.name).exclude(
+        channel_id__in=channel_ids
+    ).update(published=False)
 
     # Unpublish any video playlists not included in published channels
-    orphaned_playlist_ids = VideoPlaylist.objects.exclude(
-        channel__channel_id__in=channel_ids
-    ).values_list("learning_resource__id", flat=True)
+    orphaned_playlist_ids = (
+        VideoPlaylist.objects.exclude(channel__channel_id__in=channel_ids)
+        .filter(channel__etl_source=ETLSource.youtube.name)
+        .values_list("learning_resource__id", flat=True)
+    )
+
     if orphaned_playlist_ids:
         LearningResource.objects.filter(id__in=orphaned_playlist_ids).update(
             published=False

@@ -7,12 +7,12 @@ export enum FeatureFlags {
   PrDrawerChatbot = "pr-drawer-chatbot",
   RecommendationBot = "recommendation-bot",
   HomePageRecommendationBot = "home-page-recommendation-bot",
-  EnrollmentDashboard = "enrollment-dashboard",
   UniversalAI = "universal-ai",
   UniversalAISearchBanner = "universal-ai-search-banner",
   VideoShorts = "video-shorts",
   MitxOnlineProductPages = "mitxonline-product-pages",
   CourseOutlineSection = "course-outline-section",
+  OcwProductPages = "ocw-product-pages",
   VideoPlaylistPage = "video-playlist-page",
   PodcastDetailPage = "podcast-detail-page",
 }

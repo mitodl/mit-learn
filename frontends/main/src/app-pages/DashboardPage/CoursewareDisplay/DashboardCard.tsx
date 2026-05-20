@@ -205,6 +205,13 @@ const getContextMenuItems = (
       })
     }
 
+    menuItems.push({
+      className: "dashboard-card-menu-item",
+      key: "program-record",
+      label: "Program Record",
+      href: mitxonlineLegacyUrl(`/records/${program.id}/`),
+    })
+
     if (
       program.display_mode !== DisplayModeEnum.Course &&
       !isVerifiedEnrollmentMode(resource.data.enrollment_mode)

@@ -1,6 +1,8 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from "react"
+import { notFound } from "next/navigation"
+import Link from "next/link"
 import { Breadcrumbs, Typography, styled, useMediaQuery } from "ol-components"
 import type { Theme } from "ol-components"
 import { Button, ActionButton } from "@mitodl/smoot-design"
@@ -15,12 +17,11 @@ import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource } from "api/v1"
 import moment from "moment"
 import { formatDate } from "ol-utilities"
-import { HOME } from "@/common/urls"
+import { HOME, podcastEpisodePageView } from "@/common/urls"
 import PodcastContainer from "./PodcastContainer"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
-import { notFound } from "next/navigation"
 
 const HeaderSection = styled.div(({ theme }) => ({
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -121,8 +122,10 @@ const HeaderTextContent = styled.div({
 
 /* ── Episodes list ── */
 
-const EpisodesSection = styled.div(({ theme }) => ({
-  padding: "0 48px",
+const EpisodesSection = styled("div", {
+  shouldForwardProp: (prop) => prop !== "hasMoreEpisodes",
+})<{ hasMoreEpisodes?: boolean }>(({ theme, hasMoreEpisodes }) => ({
+  padding: hasMoreEpisodes ? "0 48px" : "0 48px 40px 48px",
   [theme.breakpoints.down("sm")]: {
     padding: "0 0 48px",
   },
@@ -148,17 +151,17 @@ const EpisodesHeading = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const EpisodeList = styled.ul({
-  listStyle: "none",
+const EpisodeList = styled.div({
   margin: 0,
   padding: 0,
   display: "grid",
   gridTemplateColumns: "1fr",
 })
 
-const EpisodeRow = styled("li", {
+const EpisodeRow = styled(Link, {
   shouldForwardProp: (prop) => prop !== "isEpisodePage",
 })<{ isEpisodePage?: boolean }>(({ theme, isEpisodePage }) => ({
+  textDecoration: "none",
   margin: 0,
   display: "flex",
   flexDirection: "row",
@@ -181,6 +184,10 @@ const EpisodeRow = styled("li", {
   "&:hover": {
     backgroundColor: theme.custom.colors.lightGray1,
     cursor: "pointer",
+  },
+  "&:focus-visible": {
+    outline: `2px solid ${theme.custom.colors.red}`,
+    outlineOffset: "-2px",
   },
   "&:hover .episode-title, &:focus-visible .episode-title": {
     color: theme.custom.colors.red,
@@ -310,6 +317,8 @@ const PlayButton = styled(ActionButton, {
 
 export type EpisodeItemProps = {
   episode: LearningResource
+  href: string
+  role?: string
   onPlayClick: (episode: LearningResource) => void
   onPauseClick?: () => void
   isPlaying: boolean
@@ -319,6 +328,8 @@ export type EpisodeItemProps = {
 
 export const EpisodeItem: React.FC<EpisodeItemProps> = ({
   episode,
+  href,
+  role,
   onPlayClick,
   onPauseClick,
   isPlaying,
@@ -339,10 +350,7 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
   const metaParts = [duration ? `${duration} min` : null, date].filter(Boolean)
 
   return (
-    <EpisodeRow
-      onClick={() => (isPlaying ? onPauseClick?.() : onPlayClick(episode))}
-      isEpisodePage={isEpisodePage}
-    >
+    <EpisodeRow href={href} role={role} isEpisodePage={isEpisodePage}>
       <EpisodeInfo>
         <EpisodeTitleLink className="episode-title">
           {episode.title}
@@ -364,6 +372,15 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
           aria-label={
             isPlaying ? `Pause ${episode.title}` : `Play ${episode.title}`
           }
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            if (isPlaying) {
+              onPauseClick?.()
+            } else {
+              onPlayClick(episode)
+            }
+          }}
           isPlaying={isPlaying}
           disabled={!isPlayable}
           variant="secondary"
@@ -566,15 +583,20 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
         </HeaderSection>
 
         <PodcastContainer>
-          <EpisodesSection>
+          <EpisodesSection hasMoreEpisodes={!!hasNextPage}>
             <EpisodesHeading variant="subtitle3">Episodes</EpisodesHeading>
 
             {episodes && episodes.length > 0 && (
-              <EpisodeList>
+              <EpisodeList role="list">
                 {episodes.map((episode) => (
                   <EpisodeItem
+                    role="listitem"
                     key={episode.id}
                     episode={episode}
+                    href={podcastEpisodePageView(
+                      String(episode.id),
+                      String(id),
+                    )}
                     onPlayClick={handlePlayClick}
                     onPauseClick={() => playerRef.current?.pause()}
                     isPlaying={

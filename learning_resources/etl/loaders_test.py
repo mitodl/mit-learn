@@ -16,6 +16,7 @@ from learning_resources.constants import (
     CONTENT_TYPE_PAGE,
     CURRENCY_USD,
     OCW_CONTENT_CATEGORY_LECTURE_VIDEOS,
+    OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS,
     Availability,
     LearningResourceDelivery,
     LearningResourceRelationTypes,
@@ -57,10 +58,10 @@ from learning_resources.etl.loaders import (
     load_run_dependent_values,
     load_topics,
     load_video,
-    load_video_channels,
     load_video_with_content_file,
     load_videos,
     load_videos_from_content_files,
+    load_youtube_video_channels,
 )
 from learning_resources.etl.mitxonline import transform_programs
 from learning_resources.etl.utils import get_s3_prefix_for_source
@@ -2793,8 +2794,8 @@ def test_load_ovs_playlists_empty_aborts(mocker):
     assert vp.learning_resource.published is True
 
 
-def test_load_video_channels():
-    """Test load_video_channels"""
+def test_load_youtube_video_channels():
+    """Test load_youtube_video_channels"""
     assert VideoChannel.objects.count() == 0
     assert VideoPlaylist.objects.count() == 0
 
@@ -2818,7 +2819,7 @@ def test_load_video_channels():
         channel_data["playlists"] = [playlist_data]
         channels_data.append(channel_data)
 
-    results = load_video_channels(channels_data)
+    results = load_youtube_video_channels(channels_data)
 
     assert len(results) == len(channels_data)
 
@@ -2828,7 +2829,7 @@ def test_load_video_channels():
         assert result.playlists.count() == 1
 
 
-def test_load_video_channels_error(mocker):
+def test_load_youtube_video_channels_error(mocker):
     """Test that an error doesn't fail the entire operation"""
 
     def pop_channel_id_with_exception(data):
@@ -2843,17 +2844,19 @@ def test_load_video_channels_error(mocker):
     mock_log = mocker.patch("learning_resources.etl.loaders.log")
     channel_id = "abc"
 
-    load_video_channels([{"channel_id": channel_id}])
+    load_youtube_video_channels([{"channel_id": channel_id}])
 
     mock_log.exception.assert_called_once_with(
         "Error with extracted video channel: channel_id=%s", channel_id
     )
 
 
-def test_load_video_channels_unpublish(mock_upsert_tasks):
-    """Test load_video_channels when a video/playlist gets unpublished"""
-    channel = VideoChannelFactory.create()
+def test_load_youtube_video_channels_unpublish(mock_upsert_tasks):
+    """Test load_youtube_video_channels when a video/playlist gets unpublished"""
+    channel = VideoChannelFactory.create(etl_source=ETLSource.youtube.name)
+    ovs_channel = VideoChannelFactory.create(etl_source=ETLSource.ovs.name)
     playlist = VideoPlaylistFactory.create(channel=channel).learning_resource
+    ovs_playlist = VideoPlaylistFactory.create(channel=ovs_channel).learning_resource
     video = VideoFactory.create().learning_resource
     playlist.resources.set(
         [video],
@@ -2864,9 +2867,10 @@ def test_load_video_channels_unpublish(mock_upsert_tasks):
     assert channel.published is True
     assert video.published is True
     assert playlist.published is True
+    assert ovs_playlist.published is True
 
     # inputs don't matter here
-    load_video_channels([])
+    load_youtube_video_channels([])
 
     video.refresh_from_db()
     assert video.published is False
@@ -2874,6 +2878,11 @@ def test_load_video_channels_unpublish(mock_upsert_tasks):
     assert playlist.published is False
     channel.refresh_from_db()
     assert channel.published is False
+
+    ovs_channel.refresh_from_db()
+    assert ovs_channel.published is True
+    ovs_playlist.refresh_from_db()
+    assert ovs_playlist.published is True
 
 
 @pytest.mark.parametrize("course_exists", [True, False])
@@ -3288,18 +3297,25 @@ def test_load_learning_materials(mocker, settings, create_ocw_learning_materials
         learning_resource__is_course=True,
     )
 
-    relevant_content_tag = LearningResourceContentTagFactory.create(
+    assignments_tag = LearningResourceContentTagFactory.create(
         name="Programming Assignments"
     )
+    textbook_tag = LearningResourceContentTagFactory.create(name="Open Textbooks")
     irrelevant_content_tag = LearningResourceContentTagFactory.create(name="Syllabus")
 
     no_longer_relevant_resource = LearningResourceFactory.create(
         resource_type=LearningResourceType.document.name,
     )
 
-    learning_material_content_file = ContentFileFactory.create(
+    assignments_content_file = ContentFileFactory.create(
         run=ocw_course.learning_resource.runs.first(),
-        content_tags=[relevant_content_tag],
+        content_tags=[assignments_tag],
+        content_type=CONTENT_TYPE_FILE,
+    )
+
+    textbook_content_file = ContentFileFactory.create(
+        run=ocw_course.learning_resource.runs.first(),
+        content_tags=[textbook_tag],
         content_type=CONTENT_TYPE_FILE,
     )
 
@@ -3317,24 +3333,40 @@ def test_load_learning_materials(mocker, settings, create_ocw_learning_materials
     loaders.load_learning_materials(
         course_run=ocw_course.learning_resource.runs.first(),
         content_file_ids=[
-            learning_material_content_file.id,
+            assignments_content_file.id,
+            textbook_content_file.id,
             other_content_file.id,
         ],
     )
 
     if create_ocw_learning_materials:
-        # Programming assignments are promoted
-        assert load_learning_materials_spy.call_count == 1
+        # Programming assignments and Open Textbooks are promoted
+        assert load_learning_materials_spy.call_count == 2
         load_learning_materials_spy.assert_any_call(
             ocw_course.learning_resource.runs.first(),
-            learning_material_content_file,
+            assignments_content_file,
             {"Programming Assignments"},
         )
+        load_learning_materials_spy.assert_any_call(
+            ocw_course.learning_resource.runs.first(),
+            textbook_content_file,
+            {"Open Textbooks"},
+        )
         resource_relationships = ocw_course.learning_resource.children.all()
-        assert resource_relationships.count() == 1
-        # 1 load_learning_material call (calls update_index)
+        assert resource_relationships.count() == 2
+
+        # Verify resource categories
+        categories = set(
+            resource_relationships.values_list("child__resource_category", flat=True)
+        )
+        assert categories == {
+            OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS,
+            "Practice & Assignment",
+        }
+
+        # 2 load_learning_material calls (each calls update_index)
         # + 1 for unpublishing no_longer_relevant_resource
-        assert mock_index.call_count == 2
+        assert mock_index.call_count == 3
 
         no_longer_relevant_resource.refresh_from_db()
         assert no_longer_relevant_resource.published is False

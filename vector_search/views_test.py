@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from django.contrib.auth.models import Group
 from django.urls import reverse
@@ -405,10 +407,17 @@ def test_vector_search_sortby_parameter(mocker, client, query_string, hybrid_sea
         "q": query_string,
         "sortby": "-views",
         "hybrid_search": hybrid_search,
+        "score_cutoff": 0,
     }
-
-    client.get(
-        reverse("vector_search:v0:vector_learning_resources_search"), data=params
+    view = QdrantView()
+    asyncio.run(
+        view.async_vector_search(
+            query_string,
+            params,
+            order_by="-views",
+            score_cutoff=0,
+            hybrid_search=hybrid_search,
+        )
     )
 
     if query_string:
@@ -452,7 +461,6 @@ def test_vector_search_sortby_pagination(mocker, client):
     )
 
     params = {
-        "q": "test",
         "sortby": "-created_on",
         "limit": 20,
         "offset": 60,
@@ -462,13 +470,49 @@ def test_vector_search_sortby_pagination(mocker, client):
         reverse("vector_search:v0:vector_learning_resources_search"), data=params
     )
 
-    call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
+    call_kwargs = mock_qdrant.scroll.mock_calls[0].kwargs
 
     # Should request offset+limit results, not just limit
     assert call_kwargs["limit"] == 80  # 60 + 20
 
     # Should NOT pass offset to Qdrant when using OrderByQuery
     assert "offset" not in call_kwargs
+
+
+def test_vector_search_with_score_cutoff_enforces_max_limit(mocker, client, settings):
+    """A query with a score cutoff should enforce VECTOR_SEARCH_PAGE_MAX_LIMIT."""
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+
+    settings.VECTOR_SEARCH_PAGE_MAX_LIMIT = 5
+
+    mock_result = mocker.MagicMock()
+    mock_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    # count is no longer called in this branch
+    mocker.patch(
+        "vector_search.views.async_qdrant_client",
+        return_value=mock_qdrant,
+    )
+
+    params = {
+        "q": "test",
+        "limit": 10,
+        "offset": 20,
+        "score_cutoff": 0.5,
+    }
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"), data=params
+    )
+
+    call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
+    assert call_kwargs["limit"] == 5
+    assert call_kwargs["offset"] == 0
+    assert call_kwargs["score_threshold"] == 0.5
 
 
 def test_vector_search_sortby_scroll_pagination(mocker, client):
@@ -519,3 +563,96 @@ def test_vector_search_sortby_scroll_pagination(mocker, client):
 
     # query_points should not be called (no query string)
     assert mock_qdrant.query_points.call_count == 0
+
+
+def test_async_vector_resource_counts_aggregation_buckets():
+    """
+    _async_vector_resource_counts should compute correct aggregation
+    buckets from hydrated hits that contain multi-valued fields
+    (topics, delivery) and scalar fields (free).
+    """
+    view = QdrantView()
+
+    # Simulate hydrated hits (dicts keyed by payload field paths)
+    hits = [
+        {
+            "readable_id": "course-1",
+            "topics": [{"name": "Mathematics"}, {"name": "Physics"}],
+            "delivery": [{"code": "online"}, {"code": "in_person"}],
+            "free": True,
+        },
+        {
+            "readable_id": "course-2",
+            "topics": [{"name": "Mathematics"}, {"name": "Social Science"}],
+            "delivery": [{"code": "online"}],
+            "free": False,
+        },
+        {
+            "readable_id": "course-3",
+            "topics": [{"name": "Physics"}],
+            "delivery": [{"code": "in_person"}],
+            "free": True,
+        },
+    ]
+
+    params = {"aggregations": ["topic", "delivery", "free"]}
+
+    result = asyncio.run(
+        view._async_vector_resource_counts(hits, params)  # noqa: SLF001
+    )
+
+    assert result["total"]["value"] == 3
+
+    # Build lookup dicts for easier assertions
+    topic_buckets = {b["key"]: b["doc_count"] for b in result["aggregations"]["topic"]}
+    delivery_buckets = {
+        b["key"]: b["doc_count"] for b in result["aggregations"]["delivery"]
+    }
+    free_buckets = {b["key"]: b["doc_count"] for b in result["aggregations"]["free"]}
+
+    # topic: Mathematics appears in 2 hits, Physics in 2, Social Science in 1
+    assert topic_buckets == {
+        "Mathematics": 2,
+        "Physics": 2,
+        "Social Science": 1,
+    }
+
+    # delivery: online in 2 hits, in_person in 2
+    assert delivery_buckets == {"online": 2, "in_person": 2}
+
+    # free: True (→ "true") in 2 hits, False (→ "false") in 1
+    assert free_buckets == {"true": 2, "false": 1}
+
+
+def test_vector_search_no_score_cutoff_omits_score_threshold(
+    mocker, client, django_user_model
+):
+    """Test that if score_cutoff is not explicitly passed, score_threshold is omitted from qdrant query"""
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+
+    mock_result = mocker.MagicMock()
+    mock_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=42))
+    mocker.patch(
+        "vector_search.views.async_qdrant_client",
+        return_value=mock_qdrant,
+    )
+    user = django_user_model.objects.create()
+    group, _ = Group.objects.get_or_create(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS)
+    group.user_set.add(user)
+    client.force_login(user)
+
+    params = {
+        "q": "test",
+        "limit": 10,
+        "offset": 20,
+    }
+
+    client.get(reverse("vector_search:v0:vector_content_files_search"), data=params)
+
+    call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
+    assert "score_threshold" not in call_kwargs
