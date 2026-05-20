@@ -704,7 +704,6 @@ def load_program(
     program_data.setdefault("delivery", [LearningResourceDelivery.online.name])
     runs_data = program_data.get("runs", [])
 
-    course_resources = []
     with transaction.atomic():
         learning_resource, created = upsert_course_or_program(
             program_data, [], [], LearningResourceType.program.name
@@ -749,7 +748,6 @@ def load_program(
                 course_data, blocklist, duplicates, config=config.courses
             )
             if course_resource:
-                course_resources.append(course_resource)
                 loaded_courses.append(
                     LoadedProgramCourse(
                         position=explicit_position, resource=course_resource
