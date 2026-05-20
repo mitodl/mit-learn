@@ -77,6 +77,17 @@ const getMaxEnrollmentGrade = (enrollment: CourseRunEnrollmentV3): number => {
   return Math.max(0, ...enrollment.grades.map((grade) => grade.grade ?? 0))
 }
 
+const enrollmentBelongsToCourse = (
+  course: CourseWithCourseRunsSerializerV2,
+  enrollment: CourseRunEnrollmentV3,
+): boolean => {
+  if (enrollment.run.course?.id === course.id) {
+    return true
+  }
+
+  return course.courseruns.some((run) => run.id === enrollment.run.id)
+}
+
 /**
  * Legacy display policy used by dashboard cards.
  *
@@ -90,7 +101,7 @@ const pickDisplayedEnrollmentForLegacyDashboard = (
   enrollments: CourseRunEnrollmentV3[],
 ): CourseRunEnrollmentV3 | null => {
   const courseEnrollments = enrollments.filter((enrollment) =>
-    course.courseruns.some((run) => run.id === enrollment.run.id),
+    enrollmentBelongsToCourse(course, enrollment),
   )
   if (courseEnrollments.length === 0) {
     return null
