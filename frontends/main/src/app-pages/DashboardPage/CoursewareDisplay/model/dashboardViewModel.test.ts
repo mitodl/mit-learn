@@ -2,7 +2,7 @@ import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { factories, RequirementTreeBuilder } from "api/mitxonline-test-utils"
 import {
   assembleHomeCardList,
-  buildContractCourseDisplaySlots,
+  buildContractCourseEntries,
   bucketAndSortHomeEnrollments,
   buildCourseEntry,
   buildRequirementSections,
@@ -979,7 +979,7 @@ describe("dashboardViewModel", () => {
       expect(courses.map((course) => course.id)).toEqual([201, 102])
     })
 
-    test("buildContractCourseDisplaySlots uses only enrollments from the selected contract", () => {
+    test("buildContractCourseEntries uses only enrollments from the selected contract", () => {
       const run = factories.courses.courseRun({
         id: 501,
         language: "en",
@@ -1046,14 +1046,14 @@ describe("dashboardViewModel", () => {
         },
       })
 
-      const [slot] = buildContractCourseDisplaySlots(
+      const [entry] = buildContractCourseEntries(
         [course],
         [otherContractEnrollment, selectedContractEnrollment],
         "",
         1,
       )
 
-      expect(slot.displayedEnrollment?.b2b_contract_id).toBe(1)
+      expect(entry.displayedEnrollment?.b2b_contract_id).toBe(1)
     })
   })
 

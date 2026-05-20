@@ -45,7 +45,7 @@ describe("useContractDashboardData", () => {
     ])
   })
 
-  test("builds collection first-course slots in collection program order", async () => {
+  test("builds collection first-course entries in collection program order", async () => {
     const { orgX, programA, programB, programCollection } =
       setupProgramsAndCourses()
 
@@ -68,7 +68,7 @@ describe("useContractDashboardData", () => {
       (row) => row.collection.id === programCollection.id,
     )
     expect(collection).toBeDefined()
-    expect(collection?.slots.map((slot) => slot.course.id)).toEqual([
+    expect(collection?.entries.map((entry) => entry.course.id)).toEqual([
       programB.courses[0],
       programA.courses[0],
     ])
