@@ -1,5 +1,6 @@
 "use client"
 
+import { env } from "@/env"
 import {
   Breadcrumbs,
   Container,
@@ -64,7 +65,7 @@ const UnorderedList = styled.ul(({ theme }) => ({
   marginTop: "10px",
 }))
 
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME
+const SITE_NAME = env("NEXT_PUBLIC_SITE_NAME")
 
 const HonorCodePage: React.FC = () => {
   return (

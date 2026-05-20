@@ -1,5 +1,6 @@
 "use client"
 
+import { env } from "@/env"
 import React, { useState, useCallback } from "react"
 import { useRouter } from "next-nprogress-bar"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -202,7 +203,7 @@ const TrendingContainer = styled.div({
 const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
   const posthog = usePostHog()
   const posthogCapture = (event: string) => {
-    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
       posthog.capture(event)
     }
   }
@@ -252,7 +253,7 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
                 <TopicLink
                   href="/topics/"
                   onClick={() => {
-                    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+                    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
                       posthogCapture(PostHogEvents.HeroBrowseTopics)
                     }
                   }}

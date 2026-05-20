@@ -1,3 +1,4 @@
+import { env } from "@/env"
 /* eslint-disable no-restricted-syntax */
 import React from "react"
 import type { AxiosError } from "axios"
@@ -384,7 +385,7 @@ const CertificateDoc = ({
                     source={
                       signatory.signature_image.startsWith("http")
                         ? signatory.signature_image
-                        : `${process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL}${signatory.signature_image}`
+                        : `${env("NEXT_PUBLIC_MITX_ONLINE_BASE_URL")}${signatory.signature_image}`
                     }
                     style={{
                       width: "100px",

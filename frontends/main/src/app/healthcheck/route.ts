@@ -1,4 +1,5 @@
-const VERSION = process.env.NEXT_PUBLIC_VERSION || "unknown"
+import { env } from "@/env"
+const VERSION = env("NEXT_PUBLIC_VERSION") || "unknown"
 export async function GET() {
   return Response.json(
     {

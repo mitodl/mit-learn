@@ -1,9 +1,10 @@
 "use client"
 
+import { env } from "@/env"
 import React from "react"
 import invariant from "tiny-invariant"
 
-const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
+const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 invariant(NEXT_PUBLIC_ORIGIN, "NEXT_PUBLIC_ORIGIN must be defined")
 
 export type YouTubeIframePlayerProps = {

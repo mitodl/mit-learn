@@ -1,5 +1,6 @@
 "use client"
 
+import { env } from "@/env"
 import React from "react"
 import {
   Container,
@@ -311,7 +312,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
 
   const handleStayUpdatedClick = () => {
     if (!showStayUpdated || !resource) return
-    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
       posthog.capture(PostHogEvents.CallToActionClicked, {
         label: "Stay Updated",
         readableId: resource.readable_id,

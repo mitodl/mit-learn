@@ -1,5 +1,6 @@
 "use client"
 
+import { env } from "@/env"
 import React, { useMemo } from "react"
 import {
   Container,
@@ -34,7 +35,7 @@ const captureTopicClicked = (
   event: string,
   topic: string,
 ) => {
-  if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+  if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
     posthog.capture(event, { topic })
   }
 }
