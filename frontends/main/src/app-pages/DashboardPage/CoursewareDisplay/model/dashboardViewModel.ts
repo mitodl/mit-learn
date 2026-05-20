@@ -768,11 +768,6 @@ const buildRequirementSections = ({
   return { sections, completedCount, totalCount }
 }
 
-const contractEnrollmentMatches =
-  (contractId: number) => (enrollment: CourseRunEnrollmentV3) => {
-    return enrollment.b2b_contract_id === contractId
-  }
-
 const getProgramsInCollections = (
   collections: V2ProgramCollection[],
 ): Set<number> => {
@@ -915,13 +910,10 @@ const buildContractCourseDisplaySlots = (
   selectedLanguageKey: string,
   contractId: number,
 ): ContractCourseDisplaySlot[] => {
-  const contractEnrollments = enrollments.filter(
-    contractEnrollmentMatches(contractId),
-  )
   return courses.map((course) => {
     const { displayedEnrollment, displayedRun } = resolveCourseEntryForLanguage(
       course,
-      contractEnrollments,
+      enrollments,
       selectedLanguageKey,
       { contractId },
     )
