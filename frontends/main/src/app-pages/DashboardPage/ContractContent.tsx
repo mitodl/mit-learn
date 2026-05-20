@@ -27,7 +27,7 @@ import { RiAwardFill } from "@remixicon/react"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
-import type { ContractCourseDisplaySlot } from "./CoursewareDisplay/model/dashboardViewModel"
+import type { ContractCourseEntry } from "./CoursewareDisplay/model/dashboardViewModel"
 import { useContractDashboardData } from "./CoursewareDisplay/hooks/useContractDashboardData"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 
@@ -267,16 +267,16 @@ const ProgramLanguageSelect = styled(SimpleSelectField)(({ theme }) => ({
 })) as typeof SimpleSelectField
 
 type ContractCourseCard = {
-  course: ContractCourseDisplaySlot["course"]
-  displayedEnrollment: ContractCourseDisplaySlot["displayedEnrollment"]
-  displayedRun: ContractCourseDisplaySlot["displayedRun"]
+  course: ContractCourseEntry["course"]
+  displayedEnrollment: ContractCourseEntry["displayedEnrollment"]
+  displayedRun: ContractCourseEntry["displayedRun"]
 }
 
 const OrgProgramCollectionDisplay: React.FC<{
   collection: V2ProgramCollection
   contract: ContractPage
-  slots: ContractCourseCard[]
-}> = ({ collection, contract, slots }) => {
+  entries: ContractCourseCard[]
+}> = ({ collection, contract, entries }) => {
   const header = (
     <ProgramHeader>
       <ProgramHeaderText>
@@ -288,7 +288,7 @@ const OrgProgramCollectionDisplay: React.FC<{
     </ProgramHeader>
   )
 
-  if (slots.length === 0) {
+  if (entries.length === 0) {
     return null
   }
 
@@ -296,7 +296,7 @@ const OrgProgramCollectionDisplay: React.FC<{
     <ProgramRoot data-testid="org-program-collection-root">
       {header}
       <PlainList>
-        {slots.map(({ course, displayedEnrollment, displayedRun }) => {
+        {entries.map(({ course, displayedEnrollment, displayedRun }) => {
           const resource = displayedEnrollment
             ? {
                 type: DashboardType.CourseRunEnrollment,
@@ -332,9 +332,9 @@ const OrgProgramCollectionDisplay: React.FC<{
 const OrgProgramDisplay: React.FC<{
   program: V2Program
   contract: ContractPage
-  slots: ContractCourseCard[]
+  entries: ContractCourseCard[]
   programEnrollment?: V3UserProgramEnrollment
-}> = ({ program, contract, slots, programEnrollment }) => {
+}> = ({ program, contract, entries, programEnrollment }) => {
   const hasValidCertificate = !!programEnrollment?.certificate
   return (
     <ProgramRoot data-testid="org-program-root">
@@ -359,7 +359,7 @@ const OrgProgramDisplay: React.FC<{
         )}
       </ProgramHeader>
       <PlainList>
-        {slots.map(({ course, displayedEnrollment, displayedRun }) => {
+        {entries.map(({ course, displayedEnrollment, displayedRun }) => {
           const resource = displayedEnrollment
             ? {
                 type: DashboardType.CourseRunEnrollment,
@@ -494,7 +494,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
         <WelcomeMessage contract={contract} />
       </Stack>
       <ContractRoot>
-        {programs.map(({ program, slots, programEnrollment }) => (
+        {programs.map(({ program, entries, programEnrollment }) => (
           <OrgProgramDisplay
             key={getKey({
               resourceType: ResourceType.Program,
@@ -502,12 +502,12 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
             })}
             contract={contract}
             program={program}
-            slots={slots}
+            entries={entries}
             programEnrollment={programEnrollment}
           />
         ))}
         <ProgramCollectionsList>
-          {collections.map(({ collection, slots }) => (
+          {collections.map(({ collection, entries }) => (
             <OrgProgramCollectionDisplay
               key={getKey({
                 resourceType: ResourceType.ProgramCollection,
@@ -515,7 +515,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
               })}
               collection={collection}
               contract={contract}
-              slots={slots}
+              entries={entries}
             />
           ))}
         </ProgramCollectionsList>

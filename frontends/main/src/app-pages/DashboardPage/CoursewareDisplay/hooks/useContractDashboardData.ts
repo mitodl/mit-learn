@@ -17,25 +17,25 @@ import type {
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import {
-  buildContractCourseDisplaySlots,
+  buildContractCourseEntries,
   getCollectionFirstCoursesInDisplayOrder,
   getDistinctDashboardLanguageOptions,
   getProgramCoursesInContractOrder,
   getRenderableContractCollections,
   getSortedStandaloneContractPrograms,
   groupProgramEnrollmentsByProgramId,
-  type ContractCourseDisplaySlot,
+  type ContractCourseEntry,
 } from "../model/dashboardViewModel"
 
 type ContractProgramDisplayData = {
   program: V2Program
-  slots: ContractCourseDisplaySlot[]
+  entries: ContractCourseEntry[]
   programEnrollment?: V3UserProgramEnrollment
 }
 
 type ContractCollectionDisplayData = {
   collection: V2ProgramCollection
-  slots: ContractCourseDisplaySlot[]
+  entries: ContractCourseEntry[]
 }
 
 type ContractDashboardData = {
@@ -123,7 +123,7 @@ const useContractDashboardData = (
     const courses = getProgramCoursesInContractOrder(program, contractCourses)
     return {
       program,
-      slots: buildContractCourseDisplaySlots(
+      entries: buildContractCourseEntries(
         courses,
         courseRunEnrollments,
         selectedLanguageKey,
@@ -141,7 +141,7 @@ const useContractDashboardData = (
     )
     return {
       collection,
-      slots: buildContractCourseDisplaySlots(
+      entries: buildContractCourseEntries(
         firstCourses,
         courseRunEnrollments,
         selectedLanguageKey,

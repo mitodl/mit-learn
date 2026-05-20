@@ -424,7 +424,7 @@ type ResolveCourseEntryForLanguageResult = {
   selectedLanguageOption: CourseRunLanguageOption | null
 }
 
-type ContractCourseDisplaySlot = {
+type ContractCourseEntry = {
   course: CourseWithCourseRunsSerializerV2
   displayedEnrollment: CourseRunEnrollmentV3 | null
   displayedRun: CourseRunV2 | null
@@ -893,12 +893,12 @@ const getCollectionFirstCoursesInDisplayOrder = (
   })
 }
 
-const buildContractCourseDisplaySlots = (
+const buildContractCourseEntries = (
   courses: CourseWithCourseRunsSerializerV2[],
   enrollments: CourseRunEnrollmentV3[],
   selectedLanguageKey: string,
   contractId: number,
-): ContractCourseDisplaySlot[] => {
+): ContractCourseEntry[] => {
   return courses.map((course) => {
     const { displayedEnrollment, displayedRun } = resolveCourseEntryForLanguage(
       course,
@@ -937,11 +937,7 @@ export {
   getRenderableContractCollections,
   getProgramCoursesInContractOrder,
   getCollectionFirstCoursesInDisplayOrder,
-  buildContractCourseDisplaySlots,
+  buildContractCourseEntries,
 }
 
-export type {
-  RequirementSectionItem,
-  RequirementSection,
-  ContractCourseDisplaySlot,
-}
+export type { RequirementSectionItem, RequirementSection, ContractCourseEntry }
