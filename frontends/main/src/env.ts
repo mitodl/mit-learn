@@ -1,3 +1,5 @@
+import invariant from "tiny-invariant"
+
 /**
  * Runtime environment variable accessor for NEXT_PUBLIC_* vars.
  *
@@ -32,4 +34,10 @@ export const env = (key: `NEXT_PUBLIC_${string}`): string | undefined => {
   // Server: dynamic bracket access is NOT replaced by DefinePlugin, so this
   // reads the actual Kubernetes env var at request time.
   return process.env[key]
+}
+
+export const requiredEnv = (key: `NEXT_PUBLIC_${string}`): string => {
+  const value = env(key)
+  invariant(value, `${key} must be defined`)
+  return value
 }
