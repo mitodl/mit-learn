@@ -1,4 +1,4 @@
-import { env, requiredEnv } from "@/env"
+import { requiredEnv } from "@/env"
 import type { MetadataRoute } from "next"
 
 const BASE_URL = requiredEnv("NEXT_PUBLIC_ORIGIN")
