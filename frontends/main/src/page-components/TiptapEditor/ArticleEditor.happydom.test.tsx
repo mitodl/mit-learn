@@ -42,7 +42,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
       content,
       is_published: false,
     })
-    setMockResponse.get(urls.articles.details(articleId), article)
+    setMockResponse.get(urls.websiteContent.details(articleId), article)
 
     renderWithProviders(
       <ArticleEditor article={article} onSave={mockOnSave} />,
@@ -119,7 +119,10 @@ describe("ArticleEditor - Content Editing and Saving", () => {
           ],
         },
       }
-      setMockResponse.patch(urls.articles.details(article.id), updatedArticle)
+      setMockResponse.patch(
+        urls.websiteContent.details(article.id),
+        updatedArticle,
+      )
 
       const heading = screen.getByRole("heading", { level: 1 })
       await userEvent.click(heading)
@@ -137,7 +140,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
 
       expect(makeRequest).toHaveBeenCalledWith(
         "patch",
-        urls.articles.details(article.id),
+        urls.websiteContent.details(article.id),
         expect.objectContaining({
           content: updatedArticle.content,
           is_published: true,
@@ -237,13 +240,16 @@ describe("ArticleEditor - Content Editing and Saving", () => {
           ],
         },
       }
-      setMockResponse.patch(urls.articles.details(article.id), updatedArticle)
+      setMockResponse.patch(
+        urls.websiteContent.details(article.id),
+        updatedArticle,
+      )
 
       await userEvent.click(updateButton)
 
       expect(makeRequest).toHaveBeenCalledWith(
         "patch",
-        urls.articles.details(article.id),
+        urls.websiteContent.details(article.id),
         expect.objectContaining({
           content: updatedArticle.content,
           is_published: true,
@@ -413,7 +419,10 @@ describe("ArticleEditor - Content Editing and Saving", () => {
         }),
         is_published: false,
       }
-      setMockResponse.patch(urls.articles.details(article.id), updatedArticle)
+      setMockResponse.patch(
+        urls.websiteContent.details(article.id),
+        updatedArticle,
+      )
 
       const saveDraftButton = await screen.findByRole("button", {
         name: "Save As Draft",
@@ -425,7 +434,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
 
       expect(makeRequest).toHaveBeenCalledWith(
         "patch",
-        urls.articles.details(article.id),
+        urls.websiteContent.details(article.id),
         expect.objectContaining({
           is_published: false,
           author_name: "",
@@ -466,7 +475,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
       const article = await setupEditor(initialContent, 209, "Title")
 
       setMockResponse.patch(
-        urls.articles.details(article.id),
+        urls.websiteContent.details(article.id),
         { detail: "Server error" },
         { code: 500 },
       )
@@ -510,7 +519,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
         title: "My Article",
         is_published: true,
       })
-      setMockResponse.post(urls.articles.list(), createdArticle)
+      setMockResponse.post(urls.websiteContent.list(), createdArticle)
 
       renderWithProviders(<ArticleEditor onSave={mockOnSave} />, { user })
 
@@ -543,7 +552,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
         () => {
           expect(makeRequest).toHaveBeenCalledWith(
             "post",
-            urls.articles.list(),
+            urls.websiteContent.list(),
             expect.objectContaining({
               title: "My Article",
               author_name: "",
@@ -635,7 +644,7 @@ describe("ArticleEditor - Document Rendering", () => {
       title: "Test Article",
       content,
     })
-    setMockResponse.get(urls.articles.details(articleId), article)
+    setMockResponse.get(urls.websiteContent.details(articleId), article)
 
     renderWithProviders(
       <ArticleEditor article={article} onSave={mockOnSave} readOnly />,

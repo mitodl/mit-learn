@@ -33,7 +33,7 @@ describe("useArticleList", () => {
     "Calls the correct API",
     async (params) => {
       const data = factory.articles({ count: 3 })
-      const url = urls.articles.list(params)
+      const url = urls.websiteContent.list(params)
       const { wrapper } = setupReactQueryTest()
       setMockResponse.get(url, data)
       const useTestHook = () => useArticleList(params)
@@ -46,7 +46,7 @@ describe("useArticleList", () => {
 describe("useArticleDetail", () => {
   it("Calls the correct API", async () => {
     const data = factory.article()
-    const url = urls.articles.details(data.id)
+    const url = urls.websiteContent.details(data.id)
 
     const { wrapper } = setupReactQueryTest()
     setMockResponse.get(url, data)
@@ -59,7 +59,7 @@ describe("useArticleDetail", () => {
 
 describe("Article CRUD", () => {
   test("useArticleCreate calls correct API", async () => {
-    const url = urls.articles.list()
+    const url = urls.websiteContent.list()
     const data = factory.article()
     const { id, ...requestData } = factory.article()
     setMockResponse.post(url, data)
@@ -78,7 +78,7 @@ describe("Article CRUD", () => {
 
   test("useArticlePartialUpdate calls correct API", async () => {
     const article = factory.article()
-    const url = urls.articles.details(article.id)
+    const url = urls.websiteContent.details(article.id)
     setMockResponse.patch(url, article)
 
     const { wrapper, queryClient } = setupReactQueryTest()
@@ -96,7 +96,7 @@ describe("Article CRUD", () => {
 
   test("useArticleDestroy calls correct API", async () => {
     const { id } = factory.article()
-    const url = urls.articles.details(id)
+    const url = urls.websiteContent.details(id)
     setMockResponse.delete(url, null)
 
     const { wrapper, queryClient } = setupReactQueryTest()

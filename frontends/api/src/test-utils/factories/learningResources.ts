@@ -41,7 +41,7 @@ import {
   LearningResourceRunLevelInnerCodeEnum,
   PlatformEnum,
   CourseResourceCertificationTypeCodeEnum,
-  ContentTypeEnum,
+  ContentFileContentTypeEnum,
   ResourceTypeGroupEnum,
 } from "api"
 
@@ -253,7 +253,9 @@ const contentFile: Factory<ContentFile> = (overrides = {}) => {
     key: faker.string.uuid(),
     uid: faker.string.uuid(),
     url: faker.internet.url(),
-    content_type: faker.helpers.arrayElement(Object.values(ContentTypeEnum)),
+    content_type: faker.helpers.arrayElement(
+      Object.values(ContentFileContentTypeEnum),
+    ),
     content: faker.lorem.paragraph(),
     ...overrides,
   }
