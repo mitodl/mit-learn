@@ -4,7 +4,7 @@ import {
   UserlistsApi,
   OfferorsApi,
   TopicsApi,
-  ArticlesApi,
+  WebsiteContentApi,
   ProgramLettersApi,
   LearningResourcesSearchApi,
   PlatformsApi,
@@ -71,7 +71,11 @@ const platformsApi = new PlatformsApi(undefined, BASE_PATH, axiosInstance)
 
 const topicsApi = new TopicsApi(undefined, BASE_PATH, axiosInstance)
 
-const articlesApi = new ArticlesApi(undefined, BASE_PATH, axiosInstance)
+const websiteContentApi = new WebsiteContentApi(
+  undefined,
+  BASE_PATH,
+  axiosInstance,
+)
 const mediaApi = new MediaApi(undefined, BASE_PATH, axiosInstance)
 const hubspotApi = new HubspotApi(undefined, BASE_PATH, axiosInstance)
 
@@ -118,7 +122,7 @@ export {
   learningPathsApi,
   userListsApi,
   topicsApi,
-  articlesApi,
+  websiteContentApi,
   mediaApi,
   hubspotApi,
   offerorsApi,

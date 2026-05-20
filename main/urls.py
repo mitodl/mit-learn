@@ -53,7 +53,7 @@ urlpatterns = (
         re_path(r"", include("widgets.urls")),
         re_path(r"", include("openapi.urls")),
         re_path(r"", include("learning_resources.urls")),
-        re_path(r"", include("articles.urls")),
+        re_path(r"", include("website_content.urls")),
         re_path(r"", include("testimonials.urls")),
         re_path(r"", include("news_events.urls")),
         re_path(r"", include("ol_hubspot.urls")),

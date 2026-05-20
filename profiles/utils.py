@@ -118,6 +118,9 @@ def profile_image_upload_uri(instance, filename):
 def article_image_upload_uri(_, filename):
     """
     upload_to handler for ArticleImageUpload.image_file
+
+    Deprecated: use website_content.utils.website_content_image_upload_uri instead.
+    Kept here so existing migrations that reference this dotted path remain replayable.
     """
     return generate_filepath(filename, "", "", "article")
 

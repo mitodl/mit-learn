@@ -1,17 +1,18 @@
-"""ETL functions for Articles News data."""
+"""ETL functions for website_content news data."""
 
 import logging
 
-from articles.models import Article
 from news_events.constants import FeedType
 from news_events.etl import loaders
+from website_content.constants import WebsiteContentType
+from website_content.models import WebsiteContent
 
 log = logging.getLogger(__name__)
 
 
-def extract_single_article(article: Article) -> dict:
+def extract_single_website_content(article: WebsiteContent) -> dict:
     """
-    Extract a single published article from the database.
+    Extract a single published news content item from the database.
     Returns a dict in the same format as extract().
     """
     return {
@@ -35,14 +36,16 @@ def transform_single_article(article_data: dict) -> dict:
     return items[0] if items else None
 
 
-def sync_single_article_to_news(article: Article):
+def sync_single_website_content_news_to_news(article: WebsiteContent):
     """
-    Sync a single published article to the news feed (create or update FeedItem).
+    Sync a single published news content item to the news feed.
+    Only syncs content items with content_type='news'.
     """
-    # Only sync if published
     if not article.is_published:
         return
-    article_data = extract_single_article(article)
+    if article.content_type != WebsiteContentType.news.name:
+        return
+    article_data = extract_single_website_content(article)
     item_data = transform_single_article(article_data)
     if not item_data:
         return
@@ -67,8 +70,10 @@ def extract() -> list[dict]:
     Returns:
         list[dict]: List of article data dictionaries.
     """
-    # Get only published articles
-    articles = Article.objects.filter(is_published=True).select_related("user")
+    # Get only published news-type content items
+    articles = WebsiteContent.objects.filter(
+        is_published=True, content_type=WebsiteContentType.news.name
+    ).select_related("user")
 
     return [
         {

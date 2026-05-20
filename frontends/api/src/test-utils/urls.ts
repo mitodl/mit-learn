@@ -18,6 +18,7 @@ import type {
   LearningpathsApi,
   ArticlesApi,
   HubspotApi,
+  WebsiteContentApi,
   UserlistsApi,
   OfferorsApi,
   PlatformsApi,
@@ -159,6 +160,14 @@ const articles = {
     `${API_BASE_URL}/api/v1/articles/detail/${identifier}/`,
 }
 
+const websiteContent = {
+  list: (params?: Params<WebsiteContentApi, "websiteContentList">) =>
+    `${API_BASE_URL}/api/v1/website_content/${query(params)}`,
+  details: (id: number) => `${API_BASE_URL}/api/v1/website_content/${id}/`,
+  detailRetrieve: (identifier: string) =>
+    `${API_BASE_URL}/api/v1/website_content/detail/${identifier}/`,
+}
+
 const hubspot = {
   list: (params?: Params<HubspotApi, "hubspotFormsList">) =>
     `${API_BASE_URL}/api/v1/hubspot/forms/${query(params)}`,
@@ -240,6 +249,7 @@ export {
   topics,
   learningPaths,
   articles,
+  websiteContent,
   hubspot,
   search,
   userLists,
