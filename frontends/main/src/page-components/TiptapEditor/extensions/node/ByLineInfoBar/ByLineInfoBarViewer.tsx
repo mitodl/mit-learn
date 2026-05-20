@@ -1,7 +1,7 @@
 import React from "react"
-import { useWebsiteContent } from "../../../ArticleContext"
-import { ByLineInfoBarContent } from "./ArticleByLineInfoBar"
-import { ArticleByLineInBanner } from "./ArticleByLineInfoBarInBanner"
+import { useWebsiteContent } from "../../../WebsiteContentContext"
+import { ByLineInfoBarContent } from "./ByLineInfoBar"
+import { ByLineInBanner } from "./ByLineInfoBarInBanner"
 
 const ByLineInfoBarViewer = () => {
   const article = useWebsiteContent()
@@ -22,10 +22,7 @@ const ByLineInfoBarViewer = () => {
 
 export { ByLineInfoBarViewer }
 
-/** @deprecated Use ByLineInfoBarViewer */
-export { ByLineInfoBarViewer as ArticleByLineInfoBarViewer }
-
-const ArticleByLineInBannerViewer = () => {
+const ByLineInBannerViewer = () => {
   const article = useWebsiteContent()
 
   const publishedDate = article?.is_published ? article?.created_on : null
@@ -33,7 +30,7 @@ const ArticleByLineInBannerViewer = () => {
   const authorName = article?.author_name ?? null
 
   return (
-    <ArticleByLineInBanner
+    <ByLineInBanner
       publishedDate={publishedDate}
       content={content}
       authorName={authorName}
@@ -41,4 +38,7 @@ const ArticleByLineInBannerViewer = () => {
   )
 }
 
-export { ArticleByLineInBannerViewer }
+export { ByLineInBannerViewer }
+
+/** @deprecated Use ByLineInBannerViewer */
+export { ByLineInBannerViewer as ArticleByLineInBannerViewer }

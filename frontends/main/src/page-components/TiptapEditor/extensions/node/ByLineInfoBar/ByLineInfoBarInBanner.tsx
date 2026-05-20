@@ -27,7 +27,7 @@ interface ArticleByLineInBannerProps {
   content?: JSONContent | null
 }
 
-const ArticleByLineInBanner = ({
+const ByLineInBanner = ({
   authorName,
   publishedDate,
   content,
@@ -57,4 +57,4 @@ const ArticleByLineInBanner = ({
   )
 }
 
-export { ArticleByLineInBanner }
+export { ByLineInBanner }

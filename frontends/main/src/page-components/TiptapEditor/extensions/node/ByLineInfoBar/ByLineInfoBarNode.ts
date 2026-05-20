@@ -1,9 +1,8 @@
 import { Node, mergeAttributes } from "@tiptap/core"
 import { ReactNodeViewRenderer } from "@tiptap/react"
-import ArticleByLineInfoBar from "./ArticleByLineInfoBar"
+import ByLineInfoBar from "./ByLineInfoBar"
 
-/** @deprecated Use ByLineInfoBarNode */
-export const ArticleByLineInfoBarNode = Node.create({
+export const ByLineInfoBarNode = Node.create({
   name: "byline",
   atom: true,
   selectable: false,
@@ -35,9 +34,6 @@ export const ArticleByLineInfoBarNode = Node.create({
 
   addNodeView() {
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    return ReactNodeViewRenderer(ArticleByLineInfoBar)
+    return ReactNodeViewRenderer(ByLineInfoBar)
   },
 })
-
-/** Primary export — use this name in new code. */
-export { ArticleByLineInfoBarNode as ByLineInfoBarNode }

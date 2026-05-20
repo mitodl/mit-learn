@@ -12,11 +12,3 @@ export const WebsiteContentProvider = WebsiteContentContext.Provider
 export function useWebsiteContent() {
   return useContext(WebsiteContentContext).article
 }
-
-/** @deprecated Use WebsiteContentProvider */
-export const ArticleProvider = WebsiteContentProvider
-
-/** @deprecated Use useWebsiteContent */
-export function useArticle() {
-  return useWebsiteContent()
-}

@@ -115,7 +115,7 @@ const StyledNodeViewContent = styled(NodeViewContent)(({ theme }) => ({
   },
 }))
 
-import { ArticleByLineInBannerViewer } from "../ArticleByLineInfoBar/ArticleByLineInfoBarViewer"
+import { ArticleByLineInBannerViewer } from "../ByLineInfoBar/ByLineInfoBarViewer"
 
 const ArticleBannerViewer = ({
   children,

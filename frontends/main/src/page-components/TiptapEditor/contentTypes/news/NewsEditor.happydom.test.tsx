@@ -8,7 +8,7 @@ import React from "react"
 import { screen, waitFor, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { setMockResponse, factories, urls, makeRequest } from "api/test-utils"
-import { ArticleEditor } from "./ArticleEditor"
+import { NewsEditor } from "./NewsEditor"
 import type { JSONContent } from "@tiptap/react"
 import { renderWithProviders } from "@/test-utils"
 
@@ -19,7 +19,7 @@ jest.mock("posthog-js/react", () => ({
 
 const mockOnSave = jest.fn()
 
-describe("ArticleEditor - Content Editing and Saving", () => {
+describe("NewsEditor - Content Editing and Saving", () => {
   beforeEach(() => {
     mockOnSave.mockClear()
     jest.clearAllMocks()
@@ -44,10 +44,9 @@ describe("ArticleEditor - Content Editing and Saving", () => {
     })
     setMockResponse.get(urls.websiteContent.details(articleId), article)
 
-    renderWithProviders(
-      <ArticleEditor article={article} onSave={mockOnSave} />,
-      { user },
-    )
+    renderWithProviders(<NewsEditor article={article} onSave={mockOnSave} />, {
+      user,
+    })
 
     await screen.findByTestId("editor")
     return article
@@ -521,7 +520,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
       })
       setMockResponse.post(urls.websiteContent.list(), createdArticle)
 
-      renderWithProviders(<ArticleEditor onSave={mockOnSave} />, { user })
+      renderWithProviders(<NewsEditor onSave={mockOnSave} />, { user })
 
       await screen.findByTestId("editor")
 
@@ -607,7 +606,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
   })
 })
 
-describe("ArticleEditor - Document Rendering", () => {
+describe("NewsEditor - Document Rendering", () => {
   let consoleErrorSpy: ReturnType<typeof jest.spyOn>
 
   beforeEach(() => {
@@ -647,7 +646,7 @@ describe("ArticleEditor - Document Rendering", () => {
     setMockResponse.get(urls.websiteContent.details(articleId), article)
 
     renderWithProviders(
-      <ArticleEditor article={article} onSave={mockOnSave} readOnly />,
+      <NewsEditor article={article} onSave={mockOnSave} readOnly />,
       { user },
     )
 
@@ -662,7 +661,7 @@ describe("ArticleEditor - Document Rendering", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    renderWithProviders(<ArticleEditor onSave={mockOnSave} />, { user })
+    renderWithProviders(<NewsEditor onSave={mockOnSave} />, { user })
 
     await screen.findByTestId("editor")
   })

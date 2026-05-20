@@ -49,7 +49,7 @@ import "./vendor/components/tiptap-templates/simple/simple-editor.scss"
 
 import "./TiptapEditor.styles.scss"
 import { BannerViewer } from "./extensions/node/Banner/BannerNode"
-import { ByLineInfoBarViewer } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarViewer"
+import { ByLineInfoBarViewer } from "./extensions/node/ByLineInfoBar/ByLineInfoBarViewer"
 import { ImageWithCaptionViewer } from "./extensions/node/Image/ImageWithCaption"
 import { DividerViewer } from "./extensions/node/Divider/DividerNode"
 import { LearningResourceButton } from "./extensions/ui/LearningResource/LearningResourceButton"

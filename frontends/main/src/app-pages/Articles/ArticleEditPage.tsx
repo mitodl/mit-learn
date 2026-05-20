@@ -7,7 +7,7 @@ import { Permission } from "api/hooks/user"
 import { useArticleDetailRetrieve } from "api/hooks/articles"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 import { styled, LoadingSpinner } from "ol-components"
-import { ArticleEditor } from "@/page-components/TiptapEditor/ArticleEditor"
+import { NewsEditor } from "@/page-components/TiptapEditor/contentTypes/news/NewsEditor"
 import { articlesView, articlesDraftView } from "@/common/urls"
 import invariant from "tiny-invariant"
 
@@ -43,7 +43,7 @@ const ArticleEditPage = ({ articleId }: { articleId: string }) => {
   return (
     <RestrictedRoute requires={Permission.ArticleEditor}>
       <PageContainer>
-        <ArticleEditor
+        <NewsEditor
           article={article}
           onSave={(article) => {
             if (article.is_published) {

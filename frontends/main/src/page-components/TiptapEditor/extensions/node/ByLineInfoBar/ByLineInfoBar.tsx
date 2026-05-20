@@ -6,7 +6,7 @@ import { Container } from "ol-components"
 import { RiShareFill } from "@remixicon/react"
 import { ActionButton, TextField } from "@mitodl/smoot-design"
 import type { JSONContent } from "@tiptap/core"
-import { useWebsiteContent } from "../../../ArticleContext"
+import { useWebsiteContent } from "../../../WebsiteContentContext"
 import { calculateReadTime } from "../../utils"
 import SharePopover from "@/components/SharePopover/SharePopover"
 
@@ -85,7 +85,7 @@ const AuthorInput = styled(TextField)(({ theme }) => ({
   width: "300px",
 }))
 
-interface ArticleByLineInfoBarContentProps {
+interface ByLineInfoBarContentProps {
   publishedDate: string | null
   content: JSONContent | null | undefined
   isEditable?: boolean
@@ -99,7 +99,7 @@ export const ByLineInfoBarContent = ({
   isEditable = false,
   authorName,
   onAuthorNameChange,
-}: ArticleByLineInfoBarContentProps) => {
+}: ByLineInfoBarContentProps) => {
   const [shareOpen, setShareOpen] = useState(false)
   const shareButtonRef = useRef<HTMLDivElement>(null)
 
@@ -117,7 +117,7 @@ export const ByLineInfoBarContent = ({
         title={article?.title ?? ""}
         anchorEl={shareButtonRef.current}
         onClose={() => setShareOpen(false)}
-        pageUrl={`${NEXT_PUBLIC_ORIGIN}/news/${article?.slug}`}
+        pageUrl={`${NEXT_PUBLIC_ORIGIN}/${article?.content_type === "article" ? "articles" : "news"}/${article?.slug}`}
       />
       <InnerContainer noAuthor={!displayAuthorName && !isEditable}>
         {(displayAuthorName || isEditable) && (
@@ -212,6 +212,3 @@ const ByLineInfoBar = ({
 }
 
 export default ByLineInfoBar
-
-/** @deprecated Use ByLineInfoBarContent */
-export { ByLineInfoBarContent as ArticleByLineInfoBarContent }

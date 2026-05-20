@@ -1,7 +1,7 @@
 import React from "react"
 import { screen, renderWithProviders, setMockResponse } from "@/test-utils"
 import { factories, urls } from "api/test-utils"
-import { ArticleEditor } from "./ArticleEditor"
+import { NewsEditor } from "./contentTypes/news/NewsEditor"
 
 describe("ArticleViewer", () => {
   test("renders article content", async () => {
@@ -64,7 +64,7 @@ describe("ArticleViewer", () => {
       },
     })
 
-    renderWithProviders(<ArticleEditor article={article} readOnly />)
+    renderWithProviders(<NewsEditor article={article} readOnly />)
 
     await screen.findByRole("heading", { name: "Test Title", level: 1 })
     await screen.findByText("Test subheading")
@@ -83,7 +83,7 @@ describe("ArticleViewer", () => {
       author_name: authorName,
     })
 
-    renderWithProviders(<ArticleEditor article={article} readOnly />)
+    renderWithProviders(<NewsEditor article={article} readOnly />)
 
     await screen.findByText(`By ${authorName}`)
   })
@@ -202,7 +202,7 @@ describe("ArticleViewer", () => {
       },
     })
 
-    renderWithProviders(<ArticleEditor article={article} readOnly />)
+    renderWithProviders(<NewsEditor article={article} readOnly />)
 
     await screen.findByRole("heading", { level: 1, name: "Heading Level 1" })
     await screen.findByRole("heading", { level: 2, name: "Heading Level 2" })
@@ -294,7 +294,7 @@ describe("ArticleViewer", () => {
       },
     })
 
-    renderWithProviders(<ArticleEditor article={article} readOnly />)
+    renderWithProviders(<NewsEditor article={article} readOnly />)
 
     const firstUnordered = await screen.findByText("First unordered item")
     const secondUnordered = await screen.findByText("Second unordered item")
@@ -398,7 +398,7 @@ describe("ArticleViewer", () => {
       },
     })
 
-    renderWithProviders(<ArticleEditor article={article} readOnly />)
+    renderWithProviders(<NewsEditor article={article} readOnly />)
 
     const boldText = await screen.findByText("bold text")
     expect(boldText).toBeInTheDocument()
@@ -486,7 +486,7 @@ describe("ArticleViewer", () => {
       },
     })
 
-    renderWithProviders(<ArticleEditor article={article} readOnly />)
+    renderWithProviders(<NewsEditor article={article} readOnly />)
 
     const link = await screen.findByRole("link", { name: "example.com" })
     expect(link).toBeInTheDocument()
@@ -501,7 +501,7 @@ describe("ArticleViewer", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
     const article = factories.articles.article()
-    renderWithProviders(<ArticleEditor article={article} readOnly />)
+    renderWithProviders(<NewsEditor article={article} readOnly />)
 
     await screen.findByRole("link", { name: "Edit" })
   })

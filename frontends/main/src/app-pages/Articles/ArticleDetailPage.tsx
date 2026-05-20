@@ -3,7 +3,7 @@
 import React from "react"
 import { useArticleDetailRetrieve } from "api/hooks/articles"
 import { LoadingSpinner, styled } from "ol-components"
-import { ArticleEditor } from "@/page-components/TiptapEditor/ArticleEditor"
+import { NewsEditor } from "@/page-components/TiptapEditor/contentTypes/news/NewsEditor"
 import { notFound } from "next/navigation"
 import { LearningResourceProvider } from "@/page-components/TiptapEditor/extensions/node/LearningResource/LearningResourceDataProvider"
 
@@ -43,7 +43,7 @@ export const ArticleDetailPage = ({
   return (
     <PageContainer>
       <LearningResourceProvider resourceIds={learningResourceIds}>
-        <ArticleEditor article={article} readOnly />
+        <NewsEditor article={article} readOnly />
       </LearningResourceProvider>
     </PageContainer>
   )

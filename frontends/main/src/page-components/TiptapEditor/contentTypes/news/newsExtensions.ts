@@ -1,9 +1,9 @@
 import type { Extension, Node, Mark } from "@tiptap/core"
 import Document from "@tiptap/extension-document"
 import { BannerNode } from "../../extensions/node/Banner/BannerNode"
-import { ByLineInfoBarNode } from "../../extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarNode"
+import { ByLineInfoBarNode } from "../../extensions/node/ByLineInfoBar/ByLineInfoBarNode"
 import { createBaseExtensions } from "../../extensions/baseExtensions"
-import type { CreateExtensionsFn } from "../../core/GenericEditor"
+import type { CreateExtensionsFn } from "../../core/WebsiteContentEditor"
 
 export const NewsDocument = Document.extend({
   content: "banner byline block+",

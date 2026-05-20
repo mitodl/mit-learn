@@ -6,7 +6,7 @@ import type { WebsiteContent } from "api/v1"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { useArticleCreate, useArticlePartialUpdate } from "api/hooks/articles"
 import { Spacer } from "../../vendor/components/tiptap-ui-primitive/spacer"
-import { WebsiteContentEditor } from "../../core/GenericEditor"
+import { WebsiteContentEditor } from "../../core/WebsiteContentEditor"
 import {
   createArticleExtensions,
   newArticleDocument,
@@ -37,7 +37,7 @@ interface ArticleEditorProps {
 
 /**
  * Editor shell configured for the article content type (served under /articles).
- * Owns its own save mutations so GenericEditor stays API-agnostic.
+ * Owns its own save mutations so WebsiteContentEditor stays API-agnostic.
  *
  * Currently uses the same websiteContent API as the news editor. When /articles
  * gets its own Django model and viewset, swap in the new hooks here:
@@ -45,7 +45,7 @@ interface ArticleEditorProps {
  *   const createMutation = useUserArticleCreate()    // future hook
  *   const updateMutation = useUserArticlePartialUpdate()
  *
- * GenericEditor does not need to change at all.
+ * WebsiteContentEditor does not need to change at all.
  */
 const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   // Swap these two lines when a dedicated UserArticle API exists.

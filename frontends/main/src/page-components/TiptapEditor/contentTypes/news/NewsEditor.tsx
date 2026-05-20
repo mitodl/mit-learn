@@ -6,7 +6,7 @@ import type { WebsiteContent } from "api/v1"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { useArticleCreate, useArticlePartialUpdate } from "api/hooks/articles"
 import { Spacer } from "../../vendor/components/tiptap-ui-primitive/spacer"
-import { WebsiteContentEditor } from "../../core/GenericEditor"
+import { WebsiteContentEditor } from "../../core/WebsiteContentEditor"
 import { createNewsExtensions, newNewsDocument } from "./newsExtensions"
 
 // News-specific: extract the author name from the byline node in the document
@@ -32,7 +32,7 @@ interface NewsEditorProps {
 /**
  * Editor shell configured for the news content type (served under /news).
  * Owns its own save mutations (websiteContent API) and passes them to
- * GenericEditor — keeping the generic shell decoupled from any specific API.
+ * WebsiteContentEditor — keeping the generic shell decoupled from any specific API.
  */
 const NewsEditor = ({ onSave, readOnly, article }: NewsEditorProps) => {
   // News content type uses the websiteContent (articles) API.

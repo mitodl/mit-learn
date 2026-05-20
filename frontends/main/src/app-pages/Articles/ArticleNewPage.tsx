@@ -5,7 +5,7 @@ import { useRouter } from "next-nprogress-bar"
 import { Permission } from "api/hooks/user"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 import { styled } from "ol-components"
-import { ArticleEditor } from "@/page-components/TiptapEditor/ArticleEditor"
+import { NewsEditor } from "@/page-components/TiptapEditor/contentTypes/news/NewsEditor"
 import { articlesDraftView, articlesView } from "@/common/urls"
 import invariant from "tiny-invariant"
 
@@ -21,7 +21,7 @@ const ArticleNewPage: React.FC = () => {
   return (
     <RestrictedRoute requires={Permission.ArticleEditor}>
       <PageContainer>
-        <ArticleEditor
+        <NewsEditor
           onSave={(article) => {
             if (article.is_published) {
               invariant(article.slug, "Published article must have a slug")

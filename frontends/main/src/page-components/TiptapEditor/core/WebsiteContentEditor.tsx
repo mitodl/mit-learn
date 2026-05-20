@@ -22,7 +22,7 @@ import { TiptapEditor, MainToolbarContent, TipTapViewer } from "../TiptapEditor"
 import { BannerViewer } from "../extensions/node/Banner/BannerNode"
 import { handleImageUpload } from "../vendor/lib/tiptap-utils"
 import { useSchema } from "../useSchema"
-import { WebsiteContentProvider } from "../ArticleContext"
+import { WebsiteContentProvider } from "../WebsiteContentContext"
 import { extractLearningResourceIds, contentsMatch } from "../extensions/utils"
 import { LearningResourceProvider } from "../extensions/node/LearningResource/LearningResourceDataProvider"
 
@@ -90,18 +90,18 @@ export interface SavePayload {
 
 /**
  * Per-type save mutations. Each content type owns its own API hooks and passes
- * the resulting mutation objects here, so GenericEditor never imports a
+ * the resulting mutation objects here, so WebsiteContentEditor never imports a
  * specific API hook directly.
  *
  * Example — news type uses websiteContent API:
  *   const create = useArticleCreate()
  *   const update = useArticlePartialUpdate()
- *   <GenericEditor saveMutations={{ create, update }} ... />
+ *   <WebsiteContentEditor saveMutations={{ create, update }} ... />
  *
  * A future user-article type could use a completely different API hook:
- *   const create = useUserArticleCreate()
+ *   const create = useUserArticleCreate()    // future hook
  *   const update = useUserArticlePartialUpdate()
- *   <GenericEditor saveMutations={{ create, update }} ... />
+ *   <WebsiteContentEditor saveMutations={{ create, update }} ... />
  */
 export interface SaveMutations {
   create: {
@@ -154,7 +154,7 @@ export interface WebsiteContentEditorProps {
   extractExtraFields?: (content: JSONContent) => Record<string, unknown>
   /**
    * Mutations for create and update. Provided by the content-type wrapper so
-   * GenericEditor stays decoupled from any specific API endpoint.
+   * WebsiteContentEditor stays decoupled from any specific API endpoint.
    */
   saveMutations: SaveMutations
   onSave?: (article: WebsiteContent) => void
@@ -468,9 +468,3 @@ const WebsiteContentEditor = ({
 }
 
 export { WebsiteContentEditor }
-
-/** @deprecated Use WebsiteContentEditor */
-export { WebsiteContentEditor as GenericEditor }
-
-/** @deprecated Use WebsiteContentEditorProps */
-export type { WebsiteContentEditorProps as GenericEditorProps }

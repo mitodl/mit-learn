@@ -28,7 +28,7 @@ import { MediaEmbedNode } from "./node/MediaEmbed/MediaEmbedNode"
 import { MediaEmbedInputNode } from "./node/MediaEmbed/MediaEmbedInputNode"
 import type { ExtendedNodeConfig } from "./node/types"
 import { MAX_FILE_SIZE } from "../vendor/lib/tiptap-utils"
-import type { UploadHandler } from "../core/GenericEditor"
+import type { UploadHandler } from "../core/WebsiteContentEditor"
 
 export const createBaseExtensions = (
   uploadHandler: UploadHandler,
