@@ -166,18 +166,18 @@ const OnboardingPage: React.FC = () => {
     initialValues: initialFormData ?? ProfileSchema.getDefault(),
     validationSchema: ProfileSchema,
     onSubmit: async (values) => {
+      if (formik.dirty) {
+        await mutateAsync({
+          ...values,
+          topic_interests: values.topic_interests.map((id) => parseInt(id)),
+        })
+      }
       const label = activeStep < NUM_STEPS - 1 ? "Next" : "Finish"
       if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
         posthog.capture(PostHogEvents.CallToActionClicked, {
           label,
           step: activeStep + 1,
           location: "onboarding",
-        })
-      }
-      if (formik.dirty) {
-        await mutateAsync({
-          ...values,
-          topic_interests: values.topic_interests.map((id) => parseInt(id)),
         })
       }
       if (activeStep < NUM_STEPS - 1) {
