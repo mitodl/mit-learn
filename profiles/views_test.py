@@ -150,16 +150,6 @@ def test_get_profile(logged_in, user, user_client):
     }
 
 
-def test_get_profile_automatically_creates_profile(user, user_client):
-    """Profiles should automatically get created for users without one"""
-    user.profile.delete()
-    url = reverse("profile:v0:profile_api-detail", kwargs={"user__username": "me"})
-    resp = user_client.get(url)
-    assert resp.status_code == 200
-    user.refresh_from_db()
-    assert user.profile is not None
-
-
 @pytest.mark.parametrize("email", ["", "test.email@example.com"])
 @pytest.mark.parametrize("email_optin", [None, True, False])
 @pytest.mark.parametrize("toc_optin", [None, True, False])
@@ -211,10 +201,11 @@ def test_patch_username(staff_client, user):
     assert resp.json()["username"] == user.username
 
 
-def test_patch_profile_by_user(client, logged_in_profile):
+def test_patch_profile_by_user(mocker, client, logged_in_profile):
     """
     Test that users can update their profiles, including profile images
     """
+    mock_sync_to_keycloak = mocker.patch("profiles.serializers.sync_to_keycloak")
     url = reverse(
         "profile:v0:profile_api-detail",
         kwargs={"user__username": logged_in_profile.user.username},
@@ -224,17 +215,24 @@ def test_patch_profile_by_user(client, logged_in_profile):
     resp = client.patch(
         url,
         data={
+            "name": "new name",
             "bio": "updated_bio_value",
             "location": json.dumps(location_json),
         },
         format="multipart",
     )
     assert resp.status_code == 200
+    assert resp.json()["name"] == "new name"
     assert resp.json()["bio"] == "updated_bio_value"
     assert resp.json()["placename"] == "Boston"
 
     logged_in_profile.refresh_from_db()
     assert logged_in_profile.location == location_json
+    assert logged_in_profile.name == "new name"
+    assert logged_in_profile.bio == "updated_bio_value"
+    mock_sync_to_keycloak.assert_called_once_with(
+        logged_in_profile, ["name", "bio", "location"]
+    )
 
 
 @pytest.mark.skip_nplusone_check

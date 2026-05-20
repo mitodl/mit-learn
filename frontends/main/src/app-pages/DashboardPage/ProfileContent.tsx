@@ -24,7 +24,6 @@ import {
   DELIVERY_CHOICES,
   ProfileSchema,
 } from "@/common/profile"
-import { useUserMe } from "api/hooks/user"
 import { TitleText } from "./HomeContent"
 
 const FormContainer = styled.div(({ theme }) => ({
@@ -76,7 +75,6 @@ const ProfileContent: React.FC = () => {
         profile?.topic_interests?.map((topic) => String(topic.id)) || [],
     }
   }, [profile])
-  const { data: user } = useUserMe()
 
   const { isPending: isSaving, mutateAsync } = useProfileMeMutation()
   const { data: topics } = useLearningResourceTopics({ is_toplevel: true })
@@ -113,10 +111,10 @@ const ProfileContent: React.FC = () => {
           <NameRow>
             <TextField
               label="Full Name"
-              name="full_name"
+              name="name"
               fullWidth
-              value={user?.profile?.name}
-              disabled
+              value={formik.values.name}
+              onChange={formik.handleChange}
             />
           </NameRow>
           <CheckboxChoiceBoxField

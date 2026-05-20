@@ -1,7 +1,10 @@
 """Profile API"""
 
 import tldextract
+from mitol.keycloak import api as keycloak_api
+from mitol.keycloak.data_models import UserAttributes
 
+from profiles.constants import PROFILE_TO_KEYCLOAK_ATTR_MAP
 from profiles.models import (
     PERSONAL_SITE_TYPE,
     SITE_TYPE_OPTIONS,
@@ -44,3 +47,23 @@ def get_site_type_from_url(url):
     if domain in SITE_TYPE_OPTIONS:
         return domain
     return PERSONAL_SITE_TYPE
+
+
+def sync_to_keycloak(profile: Profile, update_fields: list[str]):
+    """
+    Sync a profile to Keycloak
+    """
+    raw_attrs = {
+        PROFILE_TO_KEYCLOAK_ATTR_MAP[key]: getattr(profile, key)
+        for key in update_fields
+        if key in PROFILE_TO_KEYCLOAK_ATTR_MAP
+    }
+
+    if not raw_attrs:
+        # no attributes that need to be updated in keycloak
+        return
+
+    attributes = UserAttributes(**raw_attrs)
+    user = profile.user
+
+    keycloak_api.update_user(user.global_id, attributes=attributes)

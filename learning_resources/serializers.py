@@ -107,7 +107,7 @@ class LearningResourceTopicSerializer(serializers.ModelSerializer):
 class WriteableTopicsMixin(serializers.Serializer):
     """Class for editable topics"""
 
-    topics = WriteableSerializerMethodField()
+    topics = WriteableSerializerMethodField(default=list)
 
     def validate_topics(self, topics):
         """Validate specified topics exist."""

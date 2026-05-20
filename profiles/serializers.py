@@ -16,7 +16,8 @@ from authentication import api as auth_api
 from learning_resources.models import LearningResourceTopic
 from learning_resources.permissions import is_admin_user, is_learning_path_editor
 from learning_resources.serializers import LearningResourceTopicSerializer
-from profiles.api import get_site_type_from_url
+from main.serializers import WriteableSerializerMethodField
+from profiles.api import get_site_type_from_url, sync_to_keycloak
 from profiles.models import (
     PERSONAL_SITE_TYPE,
     PROFILE_PROPS,
@@ -83,7 +84,7 @@ class PreferencesSearchSerializer(serializers.Serializer):
 class ProfileSerializer(serializers.ModelSerializer):
     """Serializer for Profile"""
 
-    name = serializers.SerializerMethodField(read_only=True)
+    name = WriteableSerializerMethodField()
     email_optin = serializers.BooleanField(write_only=True, required=False)
     toc_optin = serializers.BooleanField(write_only=True, required=False)
     username = serializers.SerializerMethodField(read_only=True)
@@ -92,6 +93,10 @@ class ProfileSerializer(serializers.ModelSerializer):
     placename = serializers.SerializerMethodField(read_only=True)
     topic_interests = TopicInterestsField(default=list)
     preference_search_filters = serializers.SerializerMethodField(read_only=True)
+
+    def validate_name(self, value):
+        """Validate the profile name"""
+        return {"name": value}
 
     def get_name(self, obj) -> str:
         """Get the user's name"""
@@ -153,6 +158,8 @@ class ProfileSerializer(serializers.ModelSerializer):
 
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
+
+            sync_to_keycloak(instance, validated_data.keys())
 
             update_image = "image_file" in validated_data
             instance.save(update_image=update_image)

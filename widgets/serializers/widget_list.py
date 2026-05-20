@@ -18,7 +18,7 @@ def _serializer_for_widget_type(widget_type_name):
 class WidgetListSerializer(serializers.ModelSerializer):
     """Serializer for WidgetLists"""
 
-    widgets = WriteableSerializerMethodField()
+    widgets = WriteableSerializerMethodField(default=list)
     available_widgets = serializers.SerializerMethodField()
 
     def validate_widgets(self, value):
