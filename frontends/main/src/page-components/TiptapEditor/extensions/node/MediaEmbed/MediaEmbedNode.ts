@@ -36,6 +36,17 @@ export const MediaEmbedNode = Node.create({
           "data-caption": attrs.caption,
         }),
       },
+      mitLearnVideoId: {
+        default: null,
+        parseHTML: (element) => {
+          const val = element.getAttribute("data-mit-learn-video-id")
+          return val ? Number(val) : null
+        },
+        renderHTML: (attrs) =>
+          attrs.mitLearnVideoId
+            ? { "data-mit-learn-video-id": String(attrs.mitLearnVideoId) }
+            : {},
+      },
     }
   },
 

@@ -5,6 +5,9 @@ import { FullWidth, WideWidth, DefaultWidth } from "./Icons"
 import { RiCloseLargeLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
 import { EditableCaption } from "../shared/EditableCaption"
+import { useLearningResourcesDetail } from "api/hooks/learningResources"
+import VideoResourcePlayer from "@/app-pages/VideoPlaylistCollectionPage/VideoResourcePlayer"
+import type { VideoResource } from "api/v1"
 
 const StyledNodeViewWrapper = styled(NodeViewWrapper, {
   shouldForwardProp: (prop) =>
@@ -145,6 +148,25 @@ interface MediaEmbedNodeProps {
   updateAttributes: (attrs: Record<string, string>) => void
 }
 
+const OVSVideoPlayer = ({
+  videoId,
+  title,
+}: {
+  videoId: number
+  title: string
+}) => {
+  const { data: resource, isLoading } = useLearningResourcesDetail(videoId)
+  return (
+    <VideoResourcePlayer
+      video={resource as VideoResource}
+      videoId={videoId}
+      isLoading={isLoading}
+      videoTitleLabel={title || "Video"}
+      videoThumbnailAlt={title || "Video thumbnail"}
+    />
+  )
+}
+
 export const MediaEmbedNodeView = ({
   node,
   editor,
@@ -153,7 +175,7 @@ export const MediaEmbedNodeView = ({
 }: MediaEmbedNodeProps) => {
   const [hovering, setHovering] = useState(false)
 
-  const { layout, caption, src, editable } = node.attrs
+  const { layout, caption, src, editable, mitLearnVideoId } = node.attrs
 
   const handleRemove = () => {
     const pos = getPos()
@@ -216,13 +238,17 @@ export const MediaEmbedNodeView = ({
       )}
 
       <MediaContainer>
-        <iframe
-          src={src}
-          frameBorder="0"
-          allowFullScreen
-          title={caption}
-          inert={editable}
-        />
+        {mitLearnVideoId ? (
+          <OVSVideoPlayer videoId={mitLearnVideoId} title={caption} />
+        ) : (
+          <iframe
+            src={src}
+            frameBorder="0"
+            allowFullScreen
+            title={caption}
+            inert={editable}
+          />
+        )}
       </MediaContainer>
 
       <EditableCaption

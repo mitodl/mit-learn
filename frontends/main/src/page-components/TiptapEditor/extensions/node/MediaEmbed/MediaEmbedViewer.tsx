@@ -1,6 +1,9 @@
 import React from "react"
 import styled from "@emotion/styled"
 import { EditableCaption } from "../shared/EditableCaption"
+import { useLearningResourcesDetail } from "api/hooks/learningResources"
+import VideoResourcePlayer from "@/app-pages/VideoPlaylistCollectionPage/VideoResourcePlayer"
+import type { VideoResource } from "api/v1"
 
 const StyledWrapper = styled.div({
   position: "relative",
@@ -42,18 +45,43 @@ interface MediaEmbedNode {
     src?: string
     caption?: string
     layout?: string
+    mitLearnVideoId?: number | null
   }
+}
+
+const OVSVideoPlayer = ({
+  videoId,
+  title,
+}: {
+  videoId: number
+  title: string
+}) => {
+  const { data: resource, isLoading } = useLearningResourcesDetail(videoId)
+  return (
+    <VideoResourcePlayer
+      video={resource as VideoResource}
+      videoId={videoId}
+      isLoading={isLoading}
+      videoTitleLabel={title || "Video"}
+      videoThumbnailAlt={title || "Video thumbnail"}
+    />
+  )
 }
 
 export const MediaEmbedViewer = ({ node }: { node?: MediaEmbedNode }) => {
   const src = node?.attrs?.src || ""
   const caption = node?.attrs?.caption || ""
   const layout = node?.attrs?.layout || "default"
+  const mitLearnVideoId = node?.attrs?.mitLearnVideoId ?? null
 
   return (
     <StyledWrapper className={`layout-${layout}`}>
       <MediaContainer>
-        <iframe src={src} frameBorder="0" allowFullScreen title={caption} />
+        {mitLearnVideoId ? (
+          <OVSVideoPlayer videoId={mitLearnVideoId} title={caption} />
+        ) : (
+          <iframe src={src} frameBorder="0" allowFullScreen title={caption} />
+        )}
       </MediaContainer>
 
       <EditableCaption
