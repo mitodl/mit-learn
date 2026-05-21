@@ -39,6 +39,3 @@ const ByLineInBannerViewer = () => {
 }
 
 export { ByLineInBannerViewer }
-
-/** @deprecated Use ByLineInBannerViewer */
-export { ByLineInBannerViewer as ArticleByLineInBannerViewer }

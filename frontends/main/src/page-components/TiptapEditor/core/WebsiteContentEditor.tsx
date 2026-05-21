@@ -14,7 +14,7 @@ import {
 } from "ol-components"
 import { Alert, Button } from "@mitodl/smoot-design"
 import { useUserHasPermission, Permission } from "api/hooks/user"
-import { useMediaUpload } from "api/hooks/articles"
+import { useMediaUpload } from "api/hooks/website_content"
 import dynamic from "next/dynamic"
 
 import { Toolbar } from "../vendor/components/tiptap-ui-primitive/toolbar"
@@ -94,8 +94,8 @@ export interface SavePayload {
  * specific API hook directly.
  *
  * Example — news type uses websiteContent API:
- *   const create = useArticleCreate()
- *   const update = useArticlePartialUpdate()
+ *   const create = useWebsiteContentCreate()
+ *   const update = useWebsiteContentPartialUpdate()
  *   <WebsiteContentEditor saveMutations={{ create, update }} ... />
  *
  * A future user-article type could use a completely different API hook:

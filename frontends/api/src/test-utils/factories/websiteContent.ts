@@ -3,7 +3,7 @@ import { makePaginatedFactory } from "ol-test-utilities"
 import type { Factory } from "ol-test-utilities"
 import type { WebsiteContent } from "../../generated/v1"
 
-const article: Factory<WebsiteContent> = (overrides = {}) => ({
+const websiteContent: Factory<WebsiteContent> = (overrides = {}) => ({
   id: faker.number.int(),
   title: faker.lorem.sentence(),
   content: {
@@ -25,6 +25,6 @@ const article: Factory<WebsiteContent> = (overrides = {}) => ({
   ...overrides,
 })
 
-const articles = makePaginatedFactory(article)
+const websiteContents = makePaginatedFactory(websiteContent)
 
-export { article, articles }
+export { websiteContent, websiteContents }

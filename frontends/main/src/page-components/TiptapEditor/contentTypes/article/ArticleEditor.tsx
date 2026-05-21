@@ -1,10 +1,12 @@
 "use client"
 
 import React from "react"
-import type { ChangeEventHandler } from "react"
 import type { WebsiteContent } from "api/v1"
 import { ButtonLink } from "@mitodl/smoot-design"
-import { useArticleCreate, useArticlePartialUpdate } from "api/hooks/articles"
+import {
+  useWebsiteContentCreate,
+  useWebsiteContentPartialUpdate,
+} from "api/hooks/website_content"
 import { Spacer } from "../../vendor/components/tiptap-ui-primitive/spacer"
 import { WebsiteContentEditor } from "../../core/WebsiteContentEditor"
 import {
@@ -20,18 +22,15 @@ const extractArticleExtraFields = (content: {
   content?: Array<{ type?: string; attrs?: Record<string, unknown> }>
 }): Record<string, unknown> => {
   const bylineNode = content.content?.find((node) => node.type === "byline")
-  return { author_name: bylineNode?.attrs?.authorName || "" }
+  return {
+    author_name: bylineNode?.attrs?.authorName || "",
+    content_type: "article",
+  }
 }
 
 interface ArticleEditorProps {
-  /** @deprecated unused, kept for API compatibility */
-  value?: object
   onSave?: (article: WebsiteContent) => void
   readOnly?: boolean
-  /** @deprecated unused, kept for API compatibility */
-  title?: string
-  /** @deprecated unused, kept for API compatibility */
-  setTitle?: ChangeEventHandler<HTMLTextAreaElement | HTMLInputElement>
   article?: WebsiteContent
 }
 
@@ -49,8 +48,8 @@ interface ArticleEditorProps {
  */
 const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   // Swap these two lines when a dedicated UserArticle API exists.
-  const createMutation = useArticleCreate()
-  const updateMutation = useArticlePartialUpdate()
+  const createMutation = useWebsiteContentCreate()
+  const updateMutation = useWebsiteContentPartialUpdate()
 
   const editUrl = article
     ? `/website_content/article/${article.is_published ? article.slug : article.id}/edit`

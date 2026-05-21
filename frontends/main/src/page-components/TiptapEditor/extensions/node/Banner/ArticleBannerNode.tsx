@@ -115,7 +115,7 @@ const StyledNodeViewContent = styled(NodeViewContent)(({ theme }) => ({
   },
 }))
 
-import { ArticleByLineInBannerViewer } from "../ByLineInfoBar/ByLineInfoBarViewer"
+import { ByLineInBannerViewer } from "../ByLineInfoBar/ByLineInfoBarViewer"
 
 const ArticleBannerViewer = ({
   children,
@@ -145,7 +145,7 @@ const ArticleBannerViewer = ({
             <ArticleBannerSection>
               <InnerContainer>
                 <StyledNodeViewContent className="banner-content-editable" />
-                <ArticleByLineInBannerViewer />
+                <ByLineInBannerViewer />
               </InnerContainer>
             </ArticleBannerSection>
           </FullWidthContainer>

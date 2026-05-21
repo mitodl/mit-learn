@@ -1,8 +1,9 @@
 "use client"
 
 import React from "react"
-import { useArticleDetailRetrieve } from "api/hooks/articles"
+import { useWebsiteContentDetailRetrieve } from "api/hooks/website_content"
 import { LoadingSpinner, styled } from "ol-components"
+import { NewsEditor } from "@/page-components/TiptapEditor/contentTypes/news/NewsEditor"
 import { ArticleEditor } from "@/page-components/TiptapEditor/contentTypes/article/ArticleEditor"
 import { LearningResourceProvider } from "@/page-components/TiptapEditor/extensions/node/LearningResource/LearningResourceDataProvider"
 import { notFound } from "next/navigation"
@@ -20,14 +21,15 @@ const Spinner = styled(LoadingSpinner)({
   transform: "translate(-50%, -50%)",
 })
 
-const UserArticleDetailPage = ({
+const WebsiteContentDetail = ({
   articleId,
   learningResourceIds = [],
 }: {
   articleId: string
   learningResourceIds?: number[]
 }) => {
-  const { data: article, isLoading } = useArticleDetailRetrieve(articleId)
+  const { data: article, isLoading } =
+    useWebsiteContentDetailRetrieve(articleId)
 
   if (isLoading) {
     return (
@@ -40,13 +42,15 @@ const UserArticleDetailPage = ({
     return notFound()
   }
 
+  const Editor = article.content_type === "article" ? ArticleEditor : NewsEditor
+
   return (
     <PageContainer>
       <LearningResourceProvider resourceIds={learningResourceIds}>
-        <ArticleEditor article={article} readOnly />
+        <Editor article={article} readOnly />
       </LearningResourceProvider>
     </PageContainer>
   )
 }
 
-export { UserArticleDetailPage }
+export { WebsiteContentDetail }

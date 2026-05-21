@@ -11,7 +11,7 @@ describe("ArticleViewer", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    const article = factories.articles.article({
+    const article = factories.websiteContent.websiteContent({
       content: {
         type: "doc",
         content: [
@@ -78,7 +78,7 @@ describe("ArticleViewer", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
     const authorName = `${user.first_name} ${user.last_name}`
-    const article = factories.articles.article({
+    const article = factories.websiteContent.websiteContent({
       user,
       author_name: authorName,
     })
@@ -95,7 +95,7 @@ describe("ArticleViewer", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    const article = factories.articles.article({
+    const article = factories.websiteContent.websiteContent({
       content: {
         type: "doc",
         content: [
@@ -219,7 +219,7 @@ describe("ArticleViewer", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    const article = factories.articles.article({
+    const article = factories.websiteContent.websiteContent({
       content: {
         type: "doc",
         content: [
@@ -321,7 +321,7 @@ describe("ArticleViewer", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    const article = factories.articles.article({
+    const article = factories.websiteContent.websiteContent({
       content: {
         type: "doc",
         content: [
@@ -428,7 +428,7 @@ describe("ArticleViewer", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    const article = factories.articles.article({
+    const article = factories.websiteContent.websiteContent({
       content: {
         type: "doc",
         content: [
@@ -500,7 +500,7 @@ describe("ArticleViewer", () => {
       is_article_editor: true,
     })
     setMockResponse.get(urls.userMe.get(), user)
-    const article = factories.articles.article()
+    const article = factories.websiteContent.websiteContent()
     renderWithProviders(<NewsEditor article={article} readOnly />)
 
     await screen.findByRole("link", { name: "Edit" })

@@ -6,7 +6,7 @@ import {
 } from "@/test-utils"
 import { waitFor } from "@testing-library/react"
 import { factories, urls } from "api/test-utils"
-import { ArticleNewPage } from "./ArticleNewPage"
+import { WebsiteContentNewPage } from "./WebsiteContentNewPage"
 
 const mockPush = jest.fn()
 jest.mock("next/navigation", () => ({
@@ -15,7 +15,7 @@ jest.mock("next/navigation", () => ({
   }),
 }))
 
-describe("ArticleNewPage", () => {
+describe("WebsiteContentNewPage", () => {
   test("throws ForbiddenError when user lacks ArticleEditor permission", async () => {
     const user = factories.user.user({
       is_authenticated: true,
@@ -28,7 +28,7 @@ describe("ArticleNewPage", () => {
 
     renderWithProviders(
       <TestingErrorBoundary onError={onError}>
-        <ArticleNewPage />
+        <WebsiteContentNewPage type="news" />
       </TestingErrorBoundary>,
     )
 

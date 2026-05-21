@@ -36,7 +36,7 @@ describe("NewsEditor - Content Editing and Saving", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    const article = factories.articles.article({
+    const article = factories.websiteContent.websiteContent({
       id: articleId,
       title,
       content,
@@ -513,7 +513,7 @@ describe("NewsEditor - Content Editing and Saving", () => {
       })
       setMockResponse.get(urls.userMe.get(), user)
 
-      const createdArticle = factories.articles.article({
+      const createdArticle = factories.websiteContent.websiteContent({
         id: 101,
         title: "My Article",
         is_published: true,
@@ -638,7 +638,7 @@ describe("NewsEditor - Document Rendering", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    const article = factories.articles.article({
+    const article = factories.websiteContent.websiteContent({
       id: 1,
       title: "Test Article",
       content,

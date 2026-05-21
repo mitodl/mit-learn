@@ -1,7 +1,7 @@
 import React from "react"
 import { Metadata } from "next"
 import { standardizeMetadata } from "@/common/metadata"
-import { ArticleListingPage } from "@/app-pages/Articles/ArticleListingPage"
+import { NewsListingPage } from "@/app-pages/News/NewsListingPage"
 
 export const metadata: Metadata = standardizeMetadata({
   title: "MIT Learn | News",
@@ -9,7 +9,7 @@ export const metadata: Metadata = standardizeMetadata({
 })
 
 const Page: React.FC<PageProps<"/news">> = () => {
-  return <ArticleListingPage />
+  return <NewsListingPage />
 }
 
 export default Page

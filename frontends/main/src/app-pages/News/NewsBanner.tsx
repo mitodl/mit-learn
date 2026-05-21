@@ -50,7 +50,7 @@ const BannerDescription = styled(Typography)`
   }
 `
 
-interface ArticleBannerProps {
+interface NewsBannerProps {
   title: string
   description: string
   currentBreadcrumb?: string
@@ -58,7 +58,7 @@ interface ArticleBannerProps {
   className?: string
 }
 
-const ArticleBanner: React.FC<ArticleBannerProps> = ({
+const NewsBanner: React.FC<NewsBannerProps> = ({
   title,
   description,
   currentBreadcrumb = "MIT News",
@@ -87,4 +87,4 @@ const ArticleBanner: React.FC<ArticleBannerProps> = ({
   )
 }
 
-export { ArticleBanner }
+export { NewsBanner }

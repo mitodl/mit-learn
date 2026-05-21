@@ -36,17 +36,17 @@ export const learningPathsView = (id: number) =>
 export const PROGRAMLETTER_VIEW = "/program_letter/[id]/view/"
 export const programLetterView = (id: string) =>
   generatePath(PROGRAMLETTER_VIEW, { id: String(id) })
-export const ARTICLES_LISTING = "/news/"
-export const ARTICLES_VIEW = "/news/[id]"
-export const ARTICLES_DRAFT_VIEW = "/news/[id]/draft"
-export const ARTICLES_EDIT = "/news/[id]/edit"
-export const ARTICLES_CREATE = "/news/new"
-export const articlesView = (id: string) =>
-  generatePath(ARTICLES_VIEW, { id: String(id) })
-export const articlesDraftView = (id: string) =>
-  generatePath(ARTICLES_DRAFT_VIEW, { id: String(id) })
-export const articlesEditView = (id: number) =>
-  generatePath(ARTICLES_EDIT, { id: String(id) })
+export const NEWS_LISTING = "/news/"
+export const NEWS_VIEW = "/news/[id]"
+export const NEWS_DRAFT_VIEW = "/news/[id]/draft"
+export const NEWS_EDIT = "/news/[id]/edit"
+export const NEWS_CREATE = "/news/new"
+export const newsView = (id: string) =>
+  generatePath(NEWS_VIEW, { id: String(id) })
+export const newsDraftView = (id: string) =>
+  generatePath(NEWS_DRAFT_VIEW, { id: String(id) })
+export const newsEditView = (id: number) =>
+  generatePath(NEWS_EDIT, { id: String(id) })
 
 // User-created articles (served under /articles)
 export const USER_ARTICLES_LISTING = "/articles/"

@@ -13,8 +13,11 @@ import {
   Typography,
 } from "ol-components"
 import { Permission } from "api/hooks/user"
-import { useArticleList } from "api/hooks/articles"
-import type { WebsiteContent } from "api/v1"
+import { useWebsiteContentList } from "api/hooks/website_content"
+import type {
+  WebsiteContent,
+  WebsiteContentApiWebsiteContentListRequest as WebsiteContentListRequest,
+} from "api/v1"
 import { LocalDate } from "ol-utilities"
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
 import { extractFirstImageFromArticle } from "@/common/articleUtils"
@@ -116,8 +119,6 @@ const DraftItem: React.FC<{ article: WebsiteContent; type: string }> = ({
 interface WebsiteContentDraftListingPageProps {
   /**
    * Content type to show drafts for (e.g. 'article', 'news').
-   * Filtering by content_type requires the OpenAPI client to be regenerated
-   * after adding WebsiteContentFilter to the Django viewset.
    */
   contentType?: string
 }
@@ -130,16 +131,20 @@ const WebsiteContentDraftListingPage: React.FC<
   const type = contentType || "article"
   const label = CONTENT_TYPE_LABELS[type] ?? type
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const listParams: any = {
+  const listParams: WebsiteContentListRequest = {
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
     draft: true,
-    ...(contentType ? { content_type: contentType } : {}),
+    ...(contentType
+      ? {
+          content_type:
+            contentType as WebsiteContentListRequest["content_type"],
+        }
+      : {}),
   }
 
   const { data: articles, isLoading: isLoadingArticles } =
-    useArticleList(listParams)
+    useWebsiteContentList(listParams)
 
   useEffect(() => {
     if (page > 1 && scrollRef.current) {

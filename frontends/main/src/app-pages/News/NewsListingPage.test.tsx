@@ -1,5 +1,5 @@
 import React from "react"
-import { ArticleListingPage } from "./ArticleListingPage"
+import { NewsListingPage } from "./NewsListingPage"
 import { urls, setMockResponse } from "api/test-utils"
 import type { NewsFeedItem } from "api/v0"
 import { newsEvents } from "api/test-utils/factories"
@@ -19,7 +19,7 @@ jest.mock("@/common/useFeatureFlagsLoaded")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 
-describe("ArticleListingPage", () => {
+describe("NewsListingPage", () => {
   beforeEach(() => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
@@ -36,13 +36,13 @@ describe("ArticleListingPage", () => {
 
   test("displays loading spinner on initial load", () => {
     setupAPI(0)
-    renderWithProviders(<ArticleListingPage />)
+    renderWithProviders(<NewsListingPage />)
     expect(screen.getByRole("progressbar")).toBeInTheDocument()
   })
 
   test("displays empty state when no articles are available", async () => {
     setupAPI(0)
-    renderWithProviders(<ArticleListingPage />)
+    renderWithProviders(<NewsListingPage />)
 
     await screen.findByText("No News Available")
 
@@ -55,7 +55,7 @@ describe("ArticleListingPage", () => {
 
   test("displays main news and grid stories on desktop", async () => {
     const news = setupAPI(21)
-    renderWithProviders(<ArticleListingPage />)
+    renderWithProviders(<NewsListingPage />)
 
     await waitFor(() => {
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
@@ -73,18 +73,18 @@ describe("ArticleListingPage", () => {
     )
   })
 
-  test("displays article banner with correct title and description", async () => {
+  test("displays News banner with correct title and description", async () => {
     setupAPI(21)
-    renderWithProviders(<ArticleListingPage />)
+    renderWithProviders(<NewsListingPage />)
 
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "News" })).toBeInTheDocument()
     })
   })
 
-  test("displays article images when available", async () => {
+  test("displays News images when available", async () => {
     const news = setupAPI(21)
-    renderWithProviders(<ArticleListingPage />)
+    renderWithProviders(<NewsListingPage />)
 
     await waitFor(() => {
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
@@ -95,38 +95,38 @@ describe("ArticleListingPage", () => {
     expect(images.length).toBeGreaterThan(0)
   })
 
-  test("displays article publish dates", async () => {
+  test("displays News publish dates", async () => {
     const news = setupAPI(21)
-    renderWithProviders(<ArticleListingPage />)
+    renderWithProviders(<NewsListingPage />)
 
     await waitFor(() => {
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
     })
 
     // Verify that LocalDate component renders dates for articles
-    // Check that there are multiple date elements rendered (one per article)
+    // Check that there are multiple date elements rendered (one per news)
     const listItems = screen.getAllByRole("listitem")
     expect(listItems.length).toBeGreaterThan(0)
 
     // Verify that dates are present in the document
-    // The first article should have a publish date
-    const firstArticle = news.results[0] as NewsFeedItem
-    const firstArticleDate = firstArticle.news_details?.publish_date
-    if (firstArticleDate) {
+    // The first news should have a publish date
+    const firstNews = news.results[0] as NewsFeedItem
+    const firstNewsDate = firstNews.news_details?.publish_date
+    if (firstNewsDate) {
       // LocalDate component will format the date, so check for parts of the date
       const dateElements = screen.getAllByText((content, element) => {
         return (
           element?.tagName.toLowerCase() === "time" ||
-          content.includes(new Date(firstArticleDate).getFullYear().toString())
+          content.includes(new Date(firstNewsDate).getFullYear().toString())
         )
       })
       expect(dateElements.length).toBeGreaterThan(0)
     }
   })
 
-  test("links to article URLs correctly", async () => {
+  test("links to News URLs correctly", async () => {
     const news = setupAPI(21)
-    renderWithProviders(<ArticleListingPage />)
+    renderWithProviders(<NewsListingPage />)
 
     await waitFor(() => {
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
@@ -141,7 +141,7 @@ describe("ArticleListingPage", () => {
     expect(firstArticleLink).toHaveAttribute("href", news.results[0].url)
   })
 
-  test("displays article summaries with HTML stripped", async () => {
+  test("displays News summaries with HTML stripped", async () => {
     const newsWithHtml = newsEvents.newsItems({ count: 1 })
     // Summaries are now cleaned by the backend, so they come without HTML
     newsWithHtml.results[0].summary = "This is a test summary"
@@ -151,7 +151,7 @@ describe("ArticleListingPage", () => {
       newsWithHtml,
     )
 
-    renderWithProviders(<ArticleListingPage />)
+    renderWithProviders(<NewsListingPage />)
 
     await waitFor(() => {
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
@@ -195,7 +195,7 @@ describe("ArticleListingPage", () => {
       secondPage,
     )
 
-    renderWithProviders(<ArticleListingPage />)
+    renderWithProviders(<NewsListingPage />)
 
     await waitFor(() => {
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
@@ -216,7 +216,7 @@ describe("ArticleListingPage", () => {
     const news = newsEvents.newsItems({ count: 100 })
     setMockResponse.get(expect.stringContaining(urls.newsEvents.list()), news)
 
-    renderWithProviders(<ArticleListingPage />)
+    renderWithProviders(<NewsListingPage />)
 
     await waitFor(() => {
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
@@ -233,7 +233,7 @@ describe("ArticleListingPage", () => {
     news.count = 1500 // Override to simulate 1500 total items
     setMockResponse.get(expect.stringContaining(urls.newsEvents.list()), news)
 
-    renderWithProviders(<ArticleListingPage />)
+    renderWithProviders(<NewsListingPage />)
 
     await waitFor(() => {
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
@@ -274,7 +274,7 @@ describe("ArticleListingPage", () => {
       secondPage,
     )
 
-    renderWithProviders(<ArticleListingPage />)
+    renderWithProviders(<NewsListingPage />)
 
     await waitFor(() => {
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
@@ -300,7 +300,7 @@ describe("ArticleListingPage", () => {
 
   test("hides pagination when no articles", async () => {
     setupAPI(0)
-    renderWithProviders(<ArticleListingPage />)
+    renderWithProviders(<NewsListingPage />)
 
     await screen.findByText("No News Available")
 
@@ -330,7 +330,7 @@ describe("ArticleListingPage", () => {
       secondPage,
     )
 
-    renderWithProviders(<ArticleListingPage />)
+    renderWithProviders(<NewsListingPage />)
 
     await waitFor(() => {
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
@@ -344,7 +344,7 @@ describe("ArticleListingPage", () => {
 
   test("renders responsive mobile layout", async () => {
     const news = setupAPI(21)
-    renderWithProviders(<ArticleListingPage />)
+    renderWithProviders(<NewsListingPage />)
 
     await waitFor(() => {
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
@@ -358,7 +358,7 @@ describe("ArticleListingPage", () => {
 
   test("calculates grid stories correctly for page 1", async () => {
     const news = setupAPI(21)
-    renderWithProviders(<ArticleListingPage />)
+    renderWithProviders(<NewsListingPage />)
 
     await waitFor(() => {
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()

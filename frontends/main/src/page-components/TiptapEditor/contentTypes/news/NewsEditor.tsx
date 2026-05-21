@@ -1,10 +1,12 @@
 "use client"
 
 import React from "react"
-import type { ChangeEventHandler } from "react"
 import type { WebsiteContent } from "api/v1"
 import { ButtonLink } from "@mitodl/smoot-design"
-import { useArticleCreate, useArticlePartialUpdate } from "api/hooks/articles"
+import {
+  useWebsiteContentCreate,
+  useWebsiteContentPartialUpdate,
+} from "api/hooks/website_content"
 import { Spacer } from "../../vendor/components/tiptap-ui-primitive/spacer"
 import { WebsiteContentEditor } from "../../core/WebsiteContentEditor"
 import { createNewsExtensions, newNewsDocument } from "./newsExtensions"
@@ -14,18 +16,15 @@ const extractNewsExtraFields = (content: {
   content?: Array<{ type?: string; attrs?: Record<string, unknown> }>
 }): Record<string, unknown> => {
   const bylineNode = content.content?.find((node) => node.type === "byline")
-  return { author_name: bylineNode?.attrs?.authorName || "" }
+  return {
+    author_name: bylineNode?.attrs?.authorName || "",
+    content_type: "news",
+  }
 }
 
 interface NewsEditorProps {
-  /** @deprecated unused, kept for API compatibility */
-  value?: object
   onSave?: (article: WebsiteContent) => void
   readOnly?: boolean
-  /** @deprecated unused, kept for API compatibility */
-  title?: string
-  /** @deprecated unused, kept for API compatibility */
-  setTitle?: ChangeEventHandler<HTMLTextAreaElement | HTMLInputElement>
   article?: WebsiteContent
 }
 
@@ -37,8 +36,8 @@ interface NewsEditorProps {
 const NewsEditor = ({ onSave, readOnly, article }: NewsEditorProps) => {
   // News content type uses the websiteContent (articles) API.
   // A different content type would call different hooks here.
-  const createMutation = useArticleCreate()
-  const updateMutation = useArticlePartialUpdate()
+  const createMutation = useWebsiteContentCreate()
+  const updateMutation = useWebsiteContentPartialUpdate()
 
   const editUrl = article
     ? `/website_content/news/${article.is_published ? article.slug : article.id}/edit`

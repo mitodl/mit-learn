@@ -1,7 +1,7 @@
 import React from "react"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
-import { articleQueries } from "api/hooks/articles/queries"
-import { UserArticleDetailPage } from "@/app-pages/UserArticles/UserArticleDetailPage"
+import { websiteContentQueries } from "api/hooks/website_content/queries"
+import { WebsiteContentDetail } from "@/app-pages/WebsiteContent/WebsiteContentDetail"
 import { getQueryClient } from "@/app/getQueryClient"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { extractLearningResourceIds } from "@/page-components/TiptapEditor/extensions/utils"
@@ -44,7 +44,7 @@ export const generateMetadata = async (
 
   return safeGenerateMetadata(async () => {
     const article = await queryClient.fetchQuery(
-      articleQueries.articlesDetailRetrieve(slugOrId),
+      websiteContentQueries.websiteContentDetailRetrieve(slugOrId),
     )
 
     const description = extractArticleDescription(article)
@@ -65,10 +65,11 @@ const Page: React.FC<PageProps<"/articles/[slugOrId]">> = async (props) => {
   const queryClient = getQueryClient()
 
   await queryClient.fetchQueryOr404(
-    articleQueries.articlesDetailRetrieve(slugOrId),
+    websiteContentQueries.websiteContentDetailRetrieve(slugOrId),
   )
 
-  const queryKey = articleQueries.articlesDetailRetrieve(slugOrId).queryKey
+  const queryKey =
+    websiteContentQueries.websiteContentDetailRetrieve(slugOrId).queryKey
   const cacheData = queryClient.getQueryData(queryKey)
 
   const learningResourceIds = cacheData?.content
@@ -84,7 +85,7 @@ const Page: React.FC<PageProps<"/articles/[slugOrId]">> = async (props) => {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <UserArticleDetailPage
+      <WebsiteContentDetail
         articleId={slugOrId}
         learningResourceIds={learningResourceIds}
       />

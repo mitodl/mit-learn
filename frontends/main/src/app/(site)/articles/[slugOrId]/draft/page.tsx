@@ -1,6 +1,6 @@
 import React from "react"
 import { standardizeMetadata } from "@/common/metadata"
-import { UserArticleDetailPage } from "@/app-pages/UserArticles/UserArticleDetailPage"
+import { WebsiteContentDetail } from "@/app-pages/WebsiteContent/WebsiteContentDetail"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 import { Permission } from "api/hooks/user"
 
@@ -17,7 +17,7 @@ const Page: React.FC<PageProps<"/articles/[slugOrId]/draft">> = async (
 
   return (
     <RestrictedRoute requires={Permission.ArticleEditor}>
-      <UserArticleDetailPage articleId={slugOrId} learningResourceIds={[]} />
+      <WebsiteContentDetail articleId={slugOrId} learningResourceIds={[]} />
     </RestrictedRoute>
   )
 }

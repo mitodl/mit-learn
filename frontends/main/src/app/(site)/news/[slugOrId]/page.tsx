@@ -1,7 +1,7 @@
 import React from "react"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
-import { articleQueries } from "api/hooks/articles/queries"
-import { ArticleDetailPage } from "@/app-pages/Articles/ArticleDetailPage"
+import { websiteContentQueries } from "api/hooks/website_content/queries"
+import { WebsiteContentDetail } from "@/app-pages/WebsiteContent/WebsiteContentDetail"
 import { getQueryClient } from "@/app/getQueryClient"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { extractLearningResourceIds } from "@/page-components/TiptapEditor/extensions/utils"
@@ -10,7 +10,7 @@ import type { WebsiteContent } from "api/v1"
 import type { JSONContent } from "@tiptap/react"
 
 // Extracts the banner subheading paragraph at known location
-const extractArticleDescription = (
+const extractWebsiteContentDescription = (
   article: WebsiteContent,
 ): string | undefined => {
   const banner = article.content?.content?.[0]
@@ -20,9 +20,9 @@ const extractArticleDescription = (
 }
 
 const extractImageMetadata = (
-  article: WebsiteContent,
+  news: WebsiteContent,
 ): { src: string; alt: string } | null => {
-  const imageWithCaption = article.content?.content?.find(
+  const imageWithCaption = news.content?.content?.find(
     (node: JSONContent) => node.type === "imageWithCaption",
   )
   if (!imageWithCaption) {
@@ -44,15 +44,15 @@ export const generateMetadata = async (
   const queryClient = getQueryClient()
 
   return safeGenerateMetadata(async () => {
-    const article = await queryClient.fetchQuery(
-      articleQueries.articlesDetailRetrieve(slugOrId),
+    const news = await queryClient.fetchQuery(
+      websiteContentQueries.websiteContentDetailRetrieve(slugOrId),
     )
 
-    const description = extractArticleDescription(article)
-    const leadImage = extractImageMetadata(article)
+    const description = extractWebsiteContentDescription(news)
+    const leadImage = extractImageMetadata(news)
 
     return standardizeMetadata({
-      title: article.title,
+      title: news.title,
       description,
       image: leadImage?.src,
       imageAlt: leadImage?.alt,
@@ -66,10 +66,11 @@ const Page: React.FC<PageProps<"/news/[slugOrId]">> = async (props) => {
   const queryClient = getQueryClient()
 
   await queryClient.fetchQueryOr404(
-    articleQueries.articlesDetailRetrieve(slugOrId),
+    websiteContentQueries.websiteContentDetailRetrieve(slugOrId),
   )
 
-  const queryKey = articleQueries.articlesDetailRetrieve(slugOrId).queryKey
+  const queryKey =
+    websiteContentQueries.websiteContentDetailRetrieve(slugOrId).queryKey
   const cacheData = queryClient.getQueryData(queryKey)
 
   const learningResourceIds = cacheData?.content
@@ -85,7 +86,7 @@ const Page: React.FC<PageProps<"/news/[slugOrId]">> = async (props) => {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <ArticleDetailPage
+      <WebsiteContentDetail
         articleId={slugOrId}
         learningResourceIds={learningResourceIds}
       />

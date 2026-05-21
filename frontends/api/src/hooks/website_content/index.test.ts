@@ -1,16 +1,16 @@
 import { renderHook, waitFor } from "@testing-library/react"
 
 import { setupReactQueryTest } from "../test-utils"
-import { articleKeys } from "./queries"
+import { websiteContentKeys } from "./queries"
 import { setMockResponse, urls, makeRequest } from "../../test-utils"
 import { UseQueryResult } from "@tanstack/react-query"
-import { articles as factory } from "../../test-utils/factories"
+import { websiteContent as factory } from "../../test-utils/factories"
 import {
-  useArticleList,
-  useArticleDetail,
-  useArticleCreate,
-  useArticlePartialUpdate,
-  useArticleDestroy,
+  useWebsiteContentList,
+  useWebsiteContentDetail,
+  useWebsiteContentCreate,
+  useWebsiteContentPartialUpdate,
+  useWebsiteContentDestroy,
 } from "./index"
 
 /**
@@ -28,86 +28,86 @@ const assertApiCalled = async (
   expect(result.current.data).toEqual(data)
 }
 
-describe("useArticleList", () => {
+describe("useWebsiteContentList", () => {
   it.each([undefined, { limit: 5 }, { limit: 5, offset: 10 }])(
     "Calls the correct API",
     async (params) => {
-      const data = factory.articles({ count: 3 })
+      const data = factory.websiteContents({ count: 3 })
       const url = urls.websiteContent.list(params)
       const { wrapper } = setupReactQueryTest()
       setMockResponse.get(url, data)
-      const useTestHook = () => useArticleList(params)
+      const useTestHook = () => useWebsiteContentList(params)
       const { result } = renderHook(useTestHook, { wrapper })
       assertApiCalled(result, url, "GET", data)
     },
   )
 })
 
-describe("useArticleDetail", () => {
+describe("useWebsiteContentDetail", () => {
   it("Calls the correct API", async () => {
-    const data = factory.article()
+    const data = factory.websiteContent()
     const url = urls.websiteContent.details(data.id)
 
     const { wrapper } = setupReactQueryTest()
     setMockResponse.get(url, data)
-    const useTestHook = () => useArticleDetail(data.id)
+    const useTestHook = () => useWebsiteContentDetail(data.id)
     const { result } = renderHook(useTestHook, { wrapper })
 
     assertApiCalled(result, url, "GET", data)
   })
 })
 
-describe("Article CRUD", () => {
-  test("useArticleCreate calls correct API", async () => {
+describe("Website Content CRUD", () => {
+  test("useWebsiteContentCreate calls correct API", async () => {
     const url = urls.websiteContent.list()
-    const data = factory.article()
-    const { id, ...requestData } = factory.article()
+    const data = factory.websiteContent()
+    const { id, ...requestData } = factory.websiteContent()
     setMockResponse.post(url, data)
 
     const { wrapper, queryClient } = setupReactQueryTest()
     jest.spyOn(queryClient, "invalidateQueries")
-    const { result } = renderHook(useArticleCreate, { wrapper })
+    const { result } = renderHook(useWebsiteContentCreate, { wrapper })
     result.current.mutate(requestData)
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(makeRequest).toHaveBeenCalledWith("post", url, requestData)
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
-      queryKey: articleKeys.listRoot(),
+      queryKey: websiteContentKeys.listRoot(),
     })
   })
 
-  test("useArticlePartialUpdate calls correct API", async () => {
-    const article = factory.article()
+  test("useWebsiteContentPartialUpdate calls correct API", async () => {
+    const article = factory.websiteContent()
     const url = urls.websiteContent.details(article.id)
     setMockResponse.patch(url, article)
 
     const { wrapper, queryClient } = setupReactQueryTest()
     jest.spyOn(queryClient, "invalidateQueries")
-    const { result } = renderHook(useArticlePartialUpdate, { wrapper })
+    const { result } = renderHook(useWebsiteContentPartialUpdate, { wrapper })
     result.current.mutate(article)
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     const { id, ...patchData } = article
     expect(makeRequest).toHaveBeenCalledWith("patch", url, patchData)
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
-      queryKey: articleKeys.detail(article.id),
+      queryKey: websiteContentKeys.detail(article.id),
     })
   })
 
-  test("useArticleDestroy calls correct API", async () => {
-    const { id } = factory.article()
+  test("useWebsiteContentDestroy calls correct API", async () => {
+    const { id } = factory.websiteContent()
     const url = urls.websiteContent.details(id)
     setMockResponse.delete(url, null)
 
     const { wrapper, queryClient } = setupReactQueryTest()
     jest.spyOn(queryClient, "invalidateQueries")
-    const { result } = renderHook(useArticleDestroy, { wrapper })
+    const { result } = renderHook(useWebsiteContentDestroy, { wrapper })
     result.current.mutate(id)
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(makeRequest).toHaveBeenCalledWith("delete", url, undefined)
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
-      queryKey: articleKeys.listRoot(),
+      queryKey: websiteContentKeys.listRoot(),
     })
   })
 })

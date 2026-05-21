@@ -4,7 +4,7 @@ import React from "react"
 import { useRouter } from "next-nprogress-bar"
 import { notFound } from "next/navigation"
 import { Permission } from "api/hooks/user"
-import { useArticleDetailRetrieve } from "api/hooks/articles"
+import { useWebsiteContentDetailRetrieve } from "api/hooks/website_content"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 import { styled, LoadingSpinner } from "ol-components"
 import { ArticleEditor } from "@/page-components/TiptapEditor/contentTypes/article/ArticleEditor"
@@ -57,7 +57,7 @@ const WebsiteContentEditPage = ({
     data: article,
     isLoading,
     isFetching,
-  } = useArticleDetailRetrieve(idOrSlug)
+  } = useWebsiteContentDetailRetrieve(idOrSlug)
   const router = useRouter()
 
   const Editor = EDITORS[type]

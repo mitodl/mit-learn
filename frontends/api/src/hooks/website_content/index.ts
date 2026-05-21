@@ -4,17 +4,17 @@ import type { AxiosProgressEvent } from "axios"
 
 import { websiteContentApi, mediaApi } from "../../clients"
 import type {
-  WebsiteContentApiWebsiteContentListRequest as ArticleListRequest,
-  WebsiteContent as Article,
+  WebsiteContentApiWebsiteContentListRequest as WebsiteContentListRequest,
+  WebsiteContent,
 } from "../../generated/v1"
-import { articleQueries, articleKeys } from "./queries"
+import { websiteContentQueries, websiteContentKeys } from "./queries"
 
-const useArticleList = (
-  params: ArticleListRequest = {},
+const useWebsiteContentList = (
+  params: WebsiteContentListRequest = {},
   opts?: { enabled?: boolean },
 ) => {
   return useQuery({
-    ...articleQueries.list(params),
+    ...websiteContentQueries.list(params),
     ...opts,
   })
 }
@@ -22,26 +22,26 @@ const useArticleList = (
 /**
  * Query is disabled if id is undefined.
  */
-const useArticleDetail = (id: number | undefined) => {
+const useWebsiteContentDetail = (id: number | undefined) => {
   return useQuery({
-    ...articleQueries.detail(id ?? -1),
+    ...websiteContentQueries.detail(id ?? -1),
     enabled: id !== undefined,
   })
 }
 
-const useArticleDetailRetrieve = (identifier: string | undefined) => {
+const useWebsiteContentDetailRetrieve = (identifier: string | undefined) => {
   return useQuery({
-    ...articleQueries.articlesDetailRetrieve(identifier ?? ""),
+    ...websiteContentQueries.websiteContentDetailRetrieve(identifier ?? ""),
     enabled: identifier !== undefined,
   })
 }
 
-const useArticleCreate = () => {
+const useWebsiteContentCreate = () => {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (
       data: Omit<
-        Article,
+        WebsiteContent,
         "id" | "user" | "created_on" | "updated_on" | "publish_date"
       >,
     ) =>
@@ -49,7 +49,7 @@ const useArticleCreate = () => {
         .websiteContentCreate({ WebsiteContentRequest: data })
         .then((response) => response.data),
     onSuccess: () => {
-      client.invalidateQueries({ queryKey: articleKeys.listRoot() })
+      client.invalidateQueries({ queryKey: websiteContentKeys.listRoot() })
     },
   })
 }
@@ -97,41 +97,46 @@ export const useMediaUpload = () => {
   }
 }
 
-const useArticleDestroy = () => {
+const useWebsiteContentDestroy = () => {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => websiteContentApi.websiteContentDestroy({ id }),
     onSuccess: () => {
-      client.invalidateQueries({ queryKey: articleKeys.listRoot() })
+      client.invalidateQueries({ queryKey: websiteContentKeys.listRoot() })
     },
   })
 }
-const useArticlePartialUpdate = () => {
+const useWebsiteContentPartialUpdate = () => {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, ...data }: Partial<Article> & Pick<Article, "id">) =>
+    mutationFn: ({
+      id,
+      ...data
+    }: Partial<WebsiteContent> & Pick<WebsiteContent, "id">) =>
       websiteContentApi
         .websiteContentPartialUpdate({
           id,
           PatchedWebsiteContentRequest: data,
         })
         .then((response) => response.data),
-    onSuccess: (article: Article) => {
-      client.invalidateQueries({ queryKey: articleKeys.detail(article.id) })
-      const identifier = article.slug || article.id.toString()
+    onSuccess: (websiteContent: WebsiteContent) => {
       client.invalidateQueries({
-        queryKey: articleKeys.articlesDetailRetrieve(identifier),
+        queryKey: websiteContentKeys.detail(websiteContent.id),
+      })
+      const identifier = websiteContent.slug || websiteContent.id.toString()
+      client.invalidateQueries({
+        queryKey: websiteContentKeys.websiteContentDetailRetrieve(identifier),
       })
     },
   })
 }
 
 export {
-  useArticleList,
-  useArticleDetail,
-  useArticleCreate,
-  useArticleDestroy,
-  useArticlePartialUpdate,
-  articleQueries,
-  useArticleDetailRetrieve,
+  useWebsiteContentList,
+  useWebsiteContentDetail,
+  useWebsiteContentCreate,
+  useWebsiteContentDestroy,
+  useWebsiteContentPartialUpdate,
+  websiteContentQueries,
+  useWebsiteContentDetailRetrieve,
 }
