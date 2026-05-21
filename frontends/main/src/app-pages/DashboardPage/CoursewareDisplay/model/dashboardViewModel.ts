@@ -14,6 +14,8 @@ import type {
   CourseRunLanguageOption,
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
+  V2Program,
+  V2ProgramCollection,
   V2ProgramDetail,
   V2ProgramRequirement,
   V3UserProgramEnrollment,
@@ -760,6 +762,154 @@ const buildRequirementSections = ({
   return { sections, completedCount, totalCount }
 }
 
+const getProgramsInCollections = (
+  collections: V2ProgramCollection[],
+): Set<number> => {
+  return new Set(
+    collections.flatMap((collection) =>
+      collection.programs
+        .map((program) => program.id)
+        .filter((id): id is number => id !== undefined),
+    ),
+  )
+}
+
+const programHasContractRuns = (
+  program: V2Program,
+  contractCourseIds: Set<number>,
+): boolean => {
+  return program.courses.some((courseId) => contractCourseIds.has(courseId))
+}
+
+const getSortedStandaloneContractPrograms = (
+  programs: V2Program[],
+  collections: V2ProgramCollection[],
+  contract: ContractPage,
+  contractCourses: CourseWithCourseRunsSerializerV2[],
+): V2Program[] => {
+  if (!contract.programs || contract.programs.length === 0) {
+    return []
+  }
+
+  const contractProgramIds = new Set(contract.programs)
+  const programsInCollections = getProgramsInCollections(collections)
+  const contractCourseIds = new Set(contractCourses.map((course) => course.id))
+  // Precompute sort order map: O(m) once, not O(n*m) per sort
+  const programOrder = new Map(
+    contract.programs.map((id, index) => [id, index]),
+  )
+
+  return programs
+    .filter((program) => !programsInCollections.has(program.id))
+    .filter((program) => contractProgramIds.has(program.id))
+    .filter((program) => programHasContractRuns(program, contractCourseIds))
+    .sort((a, b) => {
+      const indexA = programOrder.get(a.id) ?? Infinity
+      const indexB = programOrder.get(b.id) ?? Infinity
+      return indexA - indexB
+    })
+}
+
+/**
+ * Filter `collections` to those the contract dashboard should render.
+ *
+ * A collection is renderable when **both** conditions hold:
+ *  1. At least one of the collection's programs appears in `contract.programs`
+ *     (i.e. the collection is relevant to this contract).
+ *  2. At least one of the collection's programs has at least one course that
+ *     belongs to the contract (via `programHasContractRuns`), so the card list
+ *     will not be empty.
+ *
+ * If the contract has no programs at all, returns `[]` immediately.
+ */
+const getRenderableContractCollections = (
+  collections: V2ProgramCollection[],
+  programs: V2Program[],
+  contract: ContractPage,
+  contractCourses: CourseWithCourseRunsSerializerV2[],
+): V2ProgramCollection[] => {
+  if (!contract.programs || contract.programs.length === 0) {
+    return []
+  }
+
+  const contractProgramIds = new Set(contract.programs)
+  const contractCourseIds = new Set(contractCourses.map((course) => course.id))
+  const programsById = new Map(programs.map((program) => [program.id, program]))
+
+  return collections.filter((collection) => {
+    const collectionProgramIds = collection.programs
+      .map((program) => program.id)
+      .filter((id): id is number => id !== undefined)
+
+    const hasProgramInContract = collectionProgramIds.some((id) =>
+      contractProgramIds.has(id),
+    )
+    if (!hasProgramInContract) {
+      return false
+    }
+
+    return collectionProgramIds.some((id) => {
+      const program = programsById.get(id)
+      return program
+        ? programHasContractRuns(program, contractCourseIds)
+        : false
+    })
+  })
+}
+
+const getProgramCoursesInContractOrder = (
+  program: V2Program,
+  contractCourses: CourseWithCourseRunsSerializerV2[],
+): CourseWithCourseRunsSerializerV2[] => {
+  const contractCoursesById = new Map(
+    contractCourses.map((course) => [course.id, course]),
+  )
+  return program.courses
+    .map((courseId) => contractCoursesById.get(courseId))
+    .filter((course): course is CourseWithCourseRunsSerializerV2 => !!course)
+}
+
+const getCollectionFirstCoursesInDisplayOrder = (
+  collection: V2ProgramCollection,
+  programs: V2Program[],
+  contractCourses: CourseWithCourseRunsSerializerV2[],
+): CourseWithCourseRunsSerializerV2[] => {
+  const programsById = new Map(programs.map((program) => [program.id, program]))
+  const contractCoursesById = new Map(
+    contractCourses.map((course) => [course.id, course]),
+  )
+  const contractCourseIds = new Set(contractCourses.map((course) => course.id))
+
+  const firstCourses = collection.programs
+    .slice()
+    .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity))
+    .map((collectionProgram) => {
+      if (typeof collectionProgram.id !== "number") {
+        return null
+      }
+      const program = programsById.get(collectionProgram.id)
+      if (!program) {
+        return null
+      }
+      const firstCourseId = program.courses.find((courseId) =>
+        contractCourseIds.has(courseId),
+      )
+      return typeof firstCourseId === "number"
+        ? (contractCoursesById.get(firstCourseId) ?? null)
+        : null
+    })
+    .filter((course): course is CourseWithCourseRunsSerializerV2 => !!course)
+
+  const seenCourseIds = new Set<number>()
+  return firstCourses.filter((course) => {
+    if (seenCourseIds.has(course.id)) {
+      return false
+    }
+    seenCourseIds.add(course.id)
+    return true
+  })
+}
+
 export {
   pickDisplayedEnrollmentForLegacyDashboard,
   groupCourseRunEnrollmentsByCourseId,
@@ -777,5 +927,11 @@ export {
   assembleHomeCardList,
   buildCourseEntry,
   buildRequirementSections,
+  programHasContractRuns,
+  getSortedStandaloneContractPrograms,
+  getRenderableContractCollections,
+  getProgramCoursesInContractOrder,
+  getCollectionFirstCoursesInDisplayOrder,
 }
+
 export type { RequirementSectionItem, RequirementSection }

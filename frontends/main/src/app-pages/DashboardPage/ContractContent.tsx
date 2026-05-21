@@ -3,13 +3,8 @@
 import React, { useEffect } from "react"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
-import {
-  programsQueries,
-  programCollectionQueries,
-} from "api/mitxonline-hooks/programs"
-import { coursesQueries } from "api/mitxonline-hooks/courses"
-import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
-import { DashboardCard, DashboardType } from "./CoursewareDisplay/DashboardCard"
+import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
+import { adaptCourseEntryToLegacyDashboardCardProps } from "./CoursewareDisplay/model/dashboardAdapters"
 import {
   Link,
   PlainList,
@@ -21,7 +16,6 @@ import {
 } from "ol-components"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import {
-  CourseRunEnrollmentV3,
   ContractPage,
   OrganizationPage,
   V2ProgramCollection,
@@ -34,10 +28,8 @@ import { RiAwardFill } from "@remixicon/react"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
-import {
-  getDistinctDashboardLanguageOptions,
-  resolveCourseEntryForLanguage,
-} from "./CoursewareDisplay/model/dashboardViewModel"
+import type { DashboardCourseEntry } from "./CoursewareDisplay/model/dashboardViewModel"
+import { useContractDashboardData } from "./CoursewareDisplay/hooks/useContractDashboardData"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 
 const HeaderRoot = styled.div(({ theme }) => ({
@@ -275,78 +267,10 @@ const ProgramLanguageSelect = styled(SimpleSelectField)(({ theme }) => ({
   },
 })) as typeof SimpleSelectField
 
-// Custom hook to handle multiple program queries and check if any have courses
-const useProgramCollectionCourses = (
-  programCollection: V2ProgramCollection,
-  contractId: number,
-) => {
-  const programIds = programCollection.programs
-    .map((program) => program.id)
-    .filter((id) => id !== undefined)
-  const programsQuery = useQuery({
-    ...programsQueries.programsList({
-      id: programIds,
-      contract_id: contractId,
-      page_size: programIds.length,
-    }),
-    enabled: programIds.length > 0,
-  })
-  const isLoading = programsQuery.isLoading
-
-  const programsWithCourses = programsQuery.data?.results.map((program) => {
-    return {
-      programId: program.id,
-      program: program,
-      hasCourses: program.courses && program.courses.length > 0,
-    }
-  })
-
-  const hasAnyCourses = programsQuery.data?.results.some(
-    (p) => p?.courses && p.courses.length > 0,
-  )
-
-  return {
-    isLoading,
-    programsWithCourses,
-    hasAnyCourses,
-  }
-}
-
 const OrgProgramCollectionDisplay: React.FC<{
   collection: V2ProgramCollection
-  contract: ContractPage
-  enrollments?: CourseRunEnrollmentV3[]
-  selectedLanguageKey: string
-}> = ({ collection, contract, enrollments, selectedLanguageKey }) => {
-  const { isLoading, programsWithCourses, hasAnyCourses } =
-    useProgramCollectionCourses(collection, contract.id)
-  const firstCourseIds = programsWithCourses
-    ?.map((p) => p?.program.courses[0])
-    .filter((id): id is number => id !== undefined)
-  const courses = useQuery({
-    ...coursesQueries.coursesList({
-      id: firstCourseIds,
-      contract_id: contract.id,
-    }),
-    enabled: firstCourseIds !== undefined && firstCourseIds.length > 0,
-  })
-  const rawCourses = React.useMemo(() => {
-    const courseIdToOrder = new Map<number, number>()
-    programsWithCourses?.forEach((item) => {
-      const firstCourseId = item.program.courses[0]
-      const programId = item.programId
-      const order =
-        collection.programs.find((p) => p.id === programId)?.order ?? Infinity
-      courseIdToOrder.set(firstCourseId, order)
-    })
-
-    const results = courses.data?.results ?? []
-    return [...results].sort((a, b) => {
-      const orderA = courseIdToOrder.get(a.id) ?? Infinity
-      const orderB = courseIdToOrder.get(b.id) ?? Infinity
-      return orderA - orderB
-    })
-  }, [courses.data?.results, programsWithCourses, collection.programs])
+  entries: DashboardCourseEntry[]
+}> = ({ collection, entries }) => {
   const header = (
     <ProgramHeader>
       <ProgramHeaderText>
@@ -358,23 +282,7 @@ const OrgProgramCollectionDisplay: React.FC<{
     </ProgramHeader>
   )
 
-  if (isLoading) {
-    return (
-      <ProgramRoot data-testid="org-program-collection-root">
-        {header}
-        <PlainList>
-          <Skeleton
-            width="100%"
-            height="65px"
-            style={{ marginBottom: "16px" }}
-          />
-        </PlainList>
-      </ProgramRoot>
-    )
-  }
-
-  // Only render if at least one program has courses
-  if (!hasAnyCourses) {
+  if (entries.length === 0) {
     return null
   }
 
@@ -382,56 +290,20 @@ const OrgProgramCollectionDisplay: React.FC<{
     <ProgramRoot data-testid="org-program-collection-root">
       {header}
       <PlainList>
-        {courses.isLoading &&
-          programsWithCourses?.map((item, index) => (
-            <Skeleton
-              key={`${collection.id}-${item?.programId}-${index}`}
-              width="100%"
-              height="65px"
-              style={{ marginBottom: "16px" }}
-            />
-          ))}
-        {rawCourses.map((course) => {
-          // Filter enrollments to only those matching this contract
-          const contractEnrollments =
-            enrollments?.filter(
-              (enrollment) => enrollment.b2b_contract_id === contract.id,
-            ) ?? []
-          const { displayedEnrollment, displayedRun } =
-            resolveCourseEntryForLanguage(
-              course,
-              contractEnrollments,
-              selectedLanguageKey,
-              { contractId: contract.id },
-            )
-
-          const resource = displayedEnrollment
-            ? {
-                type: DashboardType.CourseRunEnrollment,
-                data: displayedEnrollment,
-              }
-            : { type: DashboardType.Course, data: course }
-
-          return (
-            <DashboardCardStyled
-              Component="li"
-              key={getKey({
-                resourceType: ResourceType.Course,
-                id: course.id,
-                runId: displayedEnrollment?.run.id ?? displayedRun?.id,
-              })}
-              resource={resource}
-              noun="Module"
-              offerUpgrade={false}
-              buttonHref={
-                displayedEnrollment?.run.courseware_url ??
-                displayedRun?.courseware_url
-              }
-              selectedCourseRun={displayedRun}
-              contractId={contract.id}
-            />
-          )
-        })}
+        {entries.map((entry) => (
+          <DashboardCardStyled
+            Component="li"
+            key={getKey({
+              resourceType: ResourceType.Course,
+              id: entry.course.id,
+              runId:
+                entry.displayedEnrollment?.run.id ?? entry.displayedRun?.id,
+            })}
+            {...adaptCourseEntryToLegacyDashboardCardProps(entry)}
+            noun="Module"
+            offerUpgrade={false}
+          />
+        ))}
       </PlainList>
     </ProgramRoot>
   )
@@ -439,44 +311,10 @@ const OrgProgramCollectionDisplay: React.FC<{
 
 const OrgProgramDisplay: React.FC<{
   program: V2Program
-  contract?: ContractPage
-  courseRunEnrollments?: CourseRunEnrollmentV3[]
-  programEnrollments?: V3UserProgramEnrollment[]
-  programLoading: boolean
-  orgId: number
-  selectedLanguageKey: string
-}> = ({
-  program,
-  contract,
-  courseRunEnrollments,
-  programEnrollments,
-  programLoading,
-  orgId: _orgId,
-  selectedLanguageKey,
-}) => {
-  const programEnrollment = programEnrollments?.find(
-    (enrollment) => enrollment.program.id === program.id,
-  )
+  entries: DashboardCourseEntry[]
+  programEnrollment?: V3UserProgramEnrollment
+}> = ({ program, entries, programEnrollment }) => {
   const hasValidCertificate = !!programEnrollment?.certificate
-  const coursesQuery = useQuery(
-    coursesQueries.coursesList({
-      id: program.courses,
-      contract_id: contract?.id,
-      page_size: 30,
-    }),
-  )
-  const skeleton = (
-    <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
-  )
-
-  const courses = React.useMemo(
-    () =>
-      [...(coursesQuery.data?.results ?? [])].sort((a, b) => {
-        return program.courses.indexOf(a.id) - program.courses.indexOf(b.id)
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [coursesQuery.data?.results, program.courses],
-  )
   return (
     <ProgramRoot data-testid="org-program-root">
       <ProgramHeader>
@@ -484,7 +322,7 @@ const OrgProgramDisplay: React.FC<{
           <Typography variant="subtitle1" component="h2">
             {program.title}
           </Typography>
-          <ProgramDescription html={program.page.description ?? ""} />
+          <ProgramDescription html={program.page?.description ?? ""} />
         </ProgramHeaderText>
         {hasValidCertificate && (
           <ProgramControls>
@@ -500,49 +338,20 @@ const OrgProgramDisplay: React.FC<{
         )}
       </ProgramHeader>
       <PlainList>
-        {programLoading || coursesQuery.isLoading
-          ? skeleton
-          : courses.map((course) => {
-              // Filter enrollments to only those matching this contract
-              const contractEnrollments =
-                courseRunEnrollments?.filter(
-                  (enrollment) => enrollment.b2b_contract_id === contract?.id,
-                ) ?? []
-              const { displayedEnrollment, displayedRun } =
-                resolveCourseEntryForLanguage(
-                  course,
-                  contractEnrollments,
-                  selectedLanguageKey,
-                  { contractId: contract?.id },
-                )
-
-              const resource = displayedEnrollment
-                ? {
-                    type: DashboardType.CourseRunEnrollment,
-                    data: displayedEnrollment,
-                  }
-                : { type: DashboardType.Course, data: course }
-
-              return (
-                <DashboardCardStyled
-                  Component="li"
-                  key={getKey({
-                    resourceType: ResourceType.Course,
-                    id: course.id,
-                    runId: displayedEnrollment?.run.id ?? displayedRun?.id,
-                  })}
-                  resource={resource}
-                  noun="Module"
-                  offerUpgrade={false}
-                  buttonHref={
-                    displayedEnrollment?.run.courseware_url ??
-                    displayedRun?.courseware_url
-                  }
-                  selectedCourseRun={displayedRun}
-                  contractId={contract?.id}
-                />
-              )
+        {entries.map((entry) => (
+          <DashboardCardStyled
+            Component="li"
+            key={getKey({
+              resourceType: ResourceType.Course,
+              id: entry.course.id,
+              runId:
+                entry.displayedEnrollment?.run.id ?? entry.displayedRun?.id,
             })}
+            {...adaptCourseEntryToLegacyDashboardCardProps(entry)}
+            noun="Module"
+            offerUpgrade={false}
+          />
+        ))}
       </PlainList>
     </ProgramRoot>
   )
@@ -578,109 +387,37 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
   org,
   contract,
 }) => {
-  const orgId = org.id
-  const courseRunEnrollmentsQuery = useQuery(
-    enrollmentQueries.courseRunEnrollmentsList(),
-  )
-  const programEnrollmentsQuery = useQuery(
-    enrollmentQueries.programEnrollmentsList(),
-  )
-  const programsQuery = useQuery(
-    programsQueries.programsList({
-      org_id: orgId,
-      contract_id: contract.id,
-      page_size: 30,
-    }),
-  )
-  const programCollectionsQuery = useQuery(
-    programCollectionQueries.programCollectionsList({}),
-  )
-  const coursesQuery = useQuery(
-    coursesQueries.coursesList({
-      org_id: orgId,
-      contract_id: contract.id,
-      page_size: 200,
-    }),
-  )
-  const contractCourses = React.useMemo(
-    () => coursesQuery.data?.results ?? [],
-    [coursesQuery.data?.results],
-  )
-  const languageOptions = React.useMemo(
-    () =>
-      getDistinctDashboardLanguageOptions(
-        contractCourses,
-        courseRunEnrollmentsQuery.data ?? [],
-        { contractId: contract.id },
-      ),
-    [contract.id, contractCourses, courseRunEnrollmentsQuery.data],
-  )
-  const [selectedLanguageKey, setSelectedLanguageKey] = React.useState("")
-
-  useEffect(() => {
-    if (languageOptions.length === 0) {
-      if (selectedLanguageKey) {
-        setSelectedLanguageKey("")
-      }
-      return
-    }
-
-    const hasSelectedLanguage = languageOptions.some(
-      (option) => option.value === selectedLanguageKey,
-    )
-    if (!hasSelectedLanguage) {
-      setSelectedLanguageKey(String(languageOptions[0].value))
-    }
-  }, [languageOptions, selectedLanguageKey])
-
-  // Helper to check if a program has any courses with contract-scoped runs
-  const programHasContractRuns = (programId: number): boolean => {
-    const programData = programsQuery.data?.results.find(
-      (p) => p.id === programId,
-    )
-    if (!programData?.courses || !coursesQuery.data?.results) return false
-    // Since courses query is already filtered by contract_id,
-    // we just need to check if any of the program's courses exist in the results
-    return programData.courses.some((courseId) =>
-      coursesQuery.data.results.some((c) => c.id === courseId),
-    )
-  }
-
-  // Get IDs of all programs that are in collections
-  const programsInCollections = new Set(
-    programCollectionsQuery.data?.results.flatMap((collection) =>
-      collection.programs.map((p) => p.id),
-    ) ?? [],
-  )
-
-  const sortedPrograms = programsQuery.data?.results
-    .filter((program) => !programsInCollections.has(program.id))
-    .filter(() => {
-      // If contract has no programs defined, show nothing
-      return contract?.programs && contract.programs.length > 0
-    })
-    .filter((program) => {
-      // Only include programs that are in the contract
-      return contract?.programs.includes(program.id)
-    })
-    .filter((program) => programHasContractRuns(program.id))
-    .sort((a, b) => {
-      if (!contract?.programs) return 0
-      const indexA = contract.programs.indexOf(a.id)
-      const indexB = contract.programs.indexOf(b.id)
-      return indexA - indexB
-    })
+  const {
+    isLoading,
+    showNoPrograms,
+    languageOptions,
+    selectedLanguageKey,
+    setSelectedLanguageKey,
+    programs,
+    collections,
+  } = useContractDashboardData(org, contract)
 
   const skeleton = (
     <Stack gap="16px">
-      <Skeleton width="100%" height="65px" />
-      <Skeleton width="100%" height="65px" />
-      <Skeleton width="100%" height="65px" />
+      {Array.from({ length: 2 }).map((_, index) => (
+        <ProgramRoot key={index}>
+          <ProgramHeader>
+            <ProgramHeaderText>
+              <Skeleton width="260px" height="28px" />
+              <Skeleton width="420px" height="20px" />
+            </ProgramHeaderText>
+          </ProgramHeader>
+          <PlainList>
+            <Skeleton width="100%" height="65px" />
+            <Skeleton width="100%" height="65px" />
+            <Skeleton width="100%" height="65px" />
+          </PlainList>
+        </ProgramRoot>
+      ))}
     </Stack>
   )
 
-  // Wait for all program and collection data to load
-  if (programsQuery.isLoading || programCollectionsQuery.isLoading) {
+  if (isLoading) {
     return (
       <>
         <Stack>
@@ -722,61 +459,30 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
         <WelcomeMessage contract={contract} />
       </Stack>
       <ContractRoot>
-        {!sortedPrograms
-          ? skeleton
-          : sortedPrograms.map((program) => (
-              <OrgProgramDisplay
-                key={getKey({
-                  resourceType: ResourceType.Program,
-                  id: program.id,
-                })}
-                contract={contract}
-                program={program}
-                courseRunEnrollments={courseRunEnrollmentsQuery.data}
-                programEnrollments={programEnrollmentsQuery.data}
-                programLoading={programsQuery.isLoading}
-                orgId={orgId}
-                selectedLanguageKey={selectedLanguageKey}
-              />
-            ))}
-        <ProgramCollectionsList>
-          {(programCollectionsQuery.data?.results ?? [])
-            .filter(() => {
-              // If contract has no programs defined, show nothing
-              return contract?.programs && contract.programs.length > 0
-            })
-            .filter((collection) => {
-              // Only show collections where at least one program is in the contract
-              const collectionProgramIds = collection.programs.map((p) => p.id)
-              return collectionProgramIds.some(
-                (id) => id !== undefined && contract?.programs.includes(id),
-              )
-            })
-            .filter((collection) => {
-              // Filter out collections where none of the programs have valid course runs
-              const collectionProgramIds = collection.programs
-                .map((p) => p.id)
-                .filter((id): id is number => id !== undefined)
-              return collectionProgramIds.some((id) =>
-                programHasContractRuns(id),
-              )
-            })
-            .map((collection) => {
-              return (
-                <OrgProgramCollectionDisplay
-                  key={getKey({
-                    resourceType: ResourceType.ProgramCollection,
-                    id: collection.id,
-                  })}
-                  collection={collection}
-                  contract={contract}
-                  enrollments={courseRunEnrollmentsQuery.data}
-                  selectedLanguageKey={selectedLanguageKey}
-                />
-              )
+        {programs.map(({ program, entries, programEnrollment }) => (
+          <OrgProgramDisplay
+            key={getKey({
+              resourceType: ResourceType.Program,
+              id: program.id,
             })}
+            program={program}
+            entries={entries}
+            programEnrollment={programEnrollment}
+          />
+        ))}
+        <ProgramCollectionsList>
+          {collections.map(({ collection, entries }) => (
+            <OrgProgramCollectionDisplay
+              key={getKey({
+                resourceType: ResourceType.ProgramCollection,
+                id: collection.id,
+              })}
+              collection={collection}
+              entries={entries}
+            />
+          ))}
         </ProgramCollectionsList>
-        {programsQuery.data?.results.length === 0 && (
+        {showNoPrograms && (
           <HeaderRoot>
             <Typography variant="h3" component="h2">
               No programs found

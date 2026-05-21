@@ -6,9 +6,13 @@ import {
   buildCourseEntry,
   buildRequirementSections,
   enrollmentCourseIsInPrograms,
+  getCollectionFirstCoursesInDisplayOrder,
   getDistinctDashboardLanguageOptions,
   getModuleCourseIdsFromPrograms,
   getNonContractProgramEnrollments,
+  getProgramCoursesInContractOrder,
+  getRenderableContractCollections,
+  getSortedStandaloneContractPrograms,
   getTopLevelProgramEnrollments,
   groupCourseRunEnrollmentsByCourseId,
   groupModuleCoursesByProgramId,
@@ -16,6 +20,7 @@ import {
   isNonContractEnrollment,
   isProgramAsCourse,
   pickDisplayedEnrollmentForLegacyDashboard,
+  programHasContractRuns,
   resolveCourseEntryForLanguage,
 } from "./dashboardViewModel"
 
@@ -578,31 +583,13 @@ describe("dashboardViewModel", () => {
         ],
       })
 
-      const spanishEnrollment = factories.enrollment.courseEnrollment({
-        b2b_contract_id: null,
-        run: {
-          id: 999,
-          language: "es",
-          title: "Modulo Espanol",
-          run_tag: "ES-1",
-          course: { id: course.id, title: course.title },
-          courseware_id: "cw-es-999",
-          courseware_url: "https://example.com/es-999",
-          is_enrollable: false,
-          is_upgradable: false,
-          is_archived: false,
-          is_self_paced: true,
-          start_date: null,
-          end_date: null,
-          upgrade_deadline: null,
-          certificate_available_date: null,
-          course_number: "",
-        },
+      const esEnrollment = factories.enrollment.courseEnrollment({
+        run: { id: 999, language: "es", course: { id: course.id } },
       })
 
       const options = getDistinctDashboardLanguageOptions(
         [course],
-        [spanishEnrollment],
+        [esEnrollment],
       )
 
       expect(options.map((option) => option.value)).toEqual([
@@ -616,44 +603,10 @@ describe("dashboardViewModel", () => {
       const courseB = factories.courses.course({ id: 20, language_options: [] })
 
       const enrollmentA = factories.enrollment.courseEnrollment({
-        run: {
-          id: 1,
-          language: "fr",
-          title: "Run FR",
-          run_tag: "FR-1",
-          course: { id: 10, title: "Course A" },
-          courseware_id: "cw-fr-1",
-          courseware_url: "https://example.com/fr-1",
-          is_enrollable: true,
-          is_upgradable: false,
-          is_archived: false,
-          is_self_paced: true,
-          start_date: null,
-          end_date: null,
-          upgrade_deadline: null,
-          certificate_available_date: null,
-          course_number: "",
-        },
+        run: { language: "fr", course: { id: 10 } },
       })
       const enrollmentOtherCourse = factories.enrollment.courseEnrollment({
-        run: {
-          id: 2,
-          language: "de",
-          title: "Run DE",
-          run_tag: "DE-1",
-          course: { id: 999, title: "Outside" },
-          courseware_id: "cw-de-2",
-          courseware_url: "https://example.com/de-2",
-          is_enrollable: true,
-          is_upgradable: false,
-          is_archived: false,
-          is_self_paced: true,
-          start_date: null,
-          end_date: null,
-          upgrade_deadline: null,
-          certificate_available_date: null,
-          course_number: "",
-        },
+        run: { language: "de", course: { id: 999 } },
       })
 
       const options = getDistinctDashboardLanguageOptions(
@@ -670,46 +623,11 @@ describe("dashboardViewModel", () => {
         language_options: [],
         courseruns: [],
       })
-
       const frenchEnrollment = factories.enrollment.courseEnrollment({
-        run: {
-          id: 500,
-          language: "fr",
-          title: "Run FR",
-          run_tag: "FR-1",
-          course: { id: 50, title: course.title },
-          courseware_id: "cw-fr-500",
-          courseware_url: "https://example.com/fr-500",
-          is_enrollable: true,
-          is_upgradable: false,
-          is_archived: false,
-          is_self_paced: true,
-          start_date: null,
-          end_date: null,
-          upgrade_deadline: null,
-          certificate_available_date: null,
-          course_number: "",
-        },
+        run: { language: "fr", course: { id: 50 } },
       })
       const spanishEnrollment = factories.enrollment.courseEnrollment({
-        run: {
-          id: 501,
-          language: "es",
-          title: "Run ES",
-          run_tag: "ES-1",
-          course: { id: 50, title: course.title },
-          courseware_id: "cw-es-501",
-          courseware_url: "https://example.com/es-501",
-          is_enrollable: true,
-          is_upgradable: false,
-          is_archived: false,
-          is_self_paced: true,
-          start_date: null,
-          end_date: null,
-          upgrade_deadline: null,
-          certificate_available_date: null,
-          course_number: "",
-        },
+        run: { language: "es", course: { id: 50 } },
       })
 
       const options = getDistinctDashboardLanguageOptions(
@@ -738,24 +656,7 @@ describe("dashboardViewModel", () => {
           courseruns: [],
         })
         const enrollment = factories.enrollment.courseEnrollment({
-          run: {
-            id: 400,
-            language: "es",
-            title: "Spanish Run",
-            run_tag: "ES-1",
-            course: { id: 40, title: course.title },
-            courseware_id: "cw-es-400",
-            courseware_url: "https://example.com/es-400",
-            is_enrollable: true,
-            is_upgradable: false,
-            is_archived: false,
-            is_self_paced: true,
-            start_date: null,
-            end_date: null,
-            upgrade_deadline: null,
-            certificate_available_date: null,
-            course_number: "",
-          },
+          run: { language: "es", course: { id: 40 } },
         })
 
         const options = getDistinctDashboardLanguageOptions(
@@ -776,6 +677,201 @@ describe("dashboardViewModel", () => {
           writable: true,
         })
       }
+    })
+  })
+
+  describe("contract dashboard helpers", () => {
+    test("programHasContractRuns checks course membership in contract course ids", () => {
+      const program = factories.programs.program({ courses: [10, 20] })
+      const contractCourseIds = new Set([20, 99])
+
+      expect(programHasContractRuns(program, contractCourseIds)).toBe(true)
+      expect(programHasContractRuns(program, new Set([99]))).toBe(false)
+    })
+
+    test("getSortedStandaloneContractPrograms excludes collection programs and sorts by contract order", () => {
+      const programA = factories.programs.program({ id: 1, courses: [101] })
+      const programB = factories.programs.program({ id: 2, courses: [102] })
+      const programC = factories.programs.program({ id: 3, courses: [103] })
+      const contract = factories.contracts.contract({
+        programs: [3, 1, 2],
+      })
+      const collection = factories.programs.programCollection({
+        programs: [{ id: 2, title: programB.title, order: 1 }],
+      })
+      const contractCourses = [
+        factories.courses.course({ id: 101 }),
+        factories.courses.course({ id: 103 }),
+      ]
+
+      const programs = getSortedStandaloneContractPrograms(
+        [programA, programB, programC],
+        [collection],
+        contract,
+        contractCourses,
+      )
+
+      expect(programs.map((program) => program.id)).toEqual([3, 1])
+    })
+
+    test("getSortedStandaloneContractPrograms returns empty when contract has no programs", () => {
+      const program = factories.programs.program({ id: 1, courses: [101] })
+      const contract = factories.contracts.contract({ programs: [] })
+
+      const programs = getSortedStandaloneContractPrograms(
+        [program],
+        [],
+        contract,
+        [factories.courses.course({ id: 101 })],
+      )
+
+      expect(programs).toEqual([])
+    })
+
+    test("getSortedStandaloneContractPrograms filters by contract course availability", () => {
+      const programWithContracts = factories.programs.program({
+        id: 1,
+        courses: [101, 102],
+      })
+      const programNoContracts = factories.programs.program({
+        id: 2,
+        courses: [201, 202],
+      })
+      const contract = factories.contracts.contract({
+        programs: [1, 2],
+      })
+      const contractCourses = [
+        factories.courses.course({ id: 101 }),
+        factories.courses.course({ id: 102 }),
+      ]
+
+      const programs = getSortedStandaloneContractPrograms(
+        [programWithContracts, programNoContracts],
+        [],
+        contract,
+        contractCourses,
+      )
+
+      expect(programs.map((p) => p.id)).toEqual([1])
+    })
+
+    test("getSortedStandaloneContractPrograms preserves contract-specified sort order", () => {
+      const programs = [
+        factories.programs.program({ id: 10, courses: [1001] }),
+        factories.programs.program({ id: 20, courses: [2001] }),
+        factories.programs.program({ id: 30, courses: [3001] }),
+      ]
+      const contract = factories.contracts.contract({
+        programs: [30, 10, 20],
+      })
+      const contractCourses = [
+        factories.courses.course({ id: 1001 }),
+        factories.courses.course({ id: 2001 }),
+        factories.courses.course({ id: 3001 }),
+      ]
+
+      const result = getSortedStandaloneContractPrograms(
+        programs,
+        [],
+        contract,
+        contractCourses,
+      )
+
+      expect(result.map((p) => p.id)).toEqual([30, 10, 20])
+    })
+
+    test("getSortedStandaloneContractPrograms returns empty when all programs are filtered", () => {
+      const programInCollection = factories.programs.program({
+        id: 1,
+        courses: [101],
+      })
+      const programNoContractRuns = factories.programs.program({
+        id: 2,
+        courses: [201, 202],
+      })
+      const contract = factories.contracts.contract({
+        programs: [1, 2],
+      })
+      const collection = factories.programs.programCollection({
+        programs: [{ id: 1, title: programInCollection.title, order: 1 }],
+      })
+      // Contract only has courses 101, so program 2 (courses 201, 202) has no contract runs
+      const contractCourses = [factories.courses.course({ id: 101 })]
+
+      const programs = getSortedStandaloneContractPrograms(
+        [programInCollection, programNoContractRuns],
+        [collection],
+        contract,
+        contractCourses,
+      )
+
+      expect(programs).toEqual([])
+    })
+
+    test("getRenderableContractCollections keeps only collections with in-contract programs that have contract runs", () => {
+      const programA = factories.programs.program({ id: 10, courses: [1001] })
+      const programB = factories.programs.program({ id: 20, courses: [2001] })
+      const programC = factories.programs.program({ id: 30, courses: [3001] })
+      const contract = factories.contracts.contract({ programs: [10, 20] })
+
+      const noValidRuns = factories.programs.programCollection({
+        id: 1,
+        programs: [{ id: 10, title: programA.title, order: 1 }],
+      })
+      const validRuns = factories.programs.programCollection({
+        id: 2,
+        programs: [{ id: 20, title: programB.title, order: 1 }],
+      })
+      const outsideContract = factories.programs.programCollection({
+        id: 3,
+        programs: [{ id: 30, title: programC.title, order: 1 }],
+      })
+
+      expect(
+        getRenderableContractCollections(
+          [noValidRuns, validRuns, outsideContract],
+          [programA, programB, programC],
+          contract,
+          [factories.courses.course({ id: 2001 })],
+        ).map((collection) => collection.id),
+      ).toEqual([2])
+    })
+
+    test("getProgramCoursesInContractOrder preserves program course id order and skips missing", () => {
+      const program = factories.programs.program({ courses: [3, 1, 2] })
+      const course1 = factories.courses.course({ id: 1 })
+      const course2 = factories.courses.course({ id: 2 })
+
+      const courses = getProgramCoursesInContractOrder(program, [
+        course2,
+        course1,
+      ])
+
+      expect(courses.map((course) => course.id)).toEqual([1, 2])
+    })
+
+    test("getCollectionFirstCoursesInDisplayOrder follows collection order and selects first available contract course", () => {
+      const programA = factories.programs.program({
+        id: 10,
+        courses: [101, 102],
+      })
+      const programB = factories.programs.program({ id: 20, courses: [201] })
+      const collection = factories.programs.programCollection({
+        programs: [
+          { id: 10, title: programA.title, order: 2 },
+          { id: 20, title: programB.title, order: 1 },
+        ],
+      })
+      const course102 = factories.courses.course({ id: 102 })
+      const course201 = factories.courses.course({ id: 201 })
+
+      const courses = getCollectionFirstCoursesInDisplayOrder(
+        collection,
+        [programA, programB],
+        [course102, course201],
+      )
+
+      expect(courses.map((course) => course.id)).toEqual([201, 102])
     })
   })
 
@@ -815,22 +911,9 @@ describe("dashboardViewModel", () => {
       })
       const enrollment = factories.enrollment.courseEnrollment({
         run: {
-          id: run.id,
+          ...run,
           language: "en",
           course: { id: course.id, title: course.title },
-          title: run.title,
-          run_tag: run.run_tag,
-          courseware_id: run.courseware_id,
-          courseware_url: run.courseware_url,
-          is_enrollable: run.is_enrollable,
-          is_upgradable: run.is_upgradable,
-          is_archived: run.is_archived,
-          is_self_paced: run.is_self_paced,
-          start_date: run.start_date,
-          end_date: run.end_date,
-          upgrade_deadline: run.upgrade_deadline,
-          certificate_available_date: run.certificate_available_date,
-          course_number: run.course_number,
         },
       })
       const availableLanguages = [{ value: "language:en", label: "English" }]
@@ -904,42 +987,16 @@ describe("dashboardViewModel", () => {
       })
       const enEnrollment = factories.enrollment.courseEnrollment({
         run: {
-          id: enRun.id,
+          ...enRun,
           language: "en",
           course: { id: course.id, title: course.title },
-          title: enRun.title,
-          run_tag: enRun.run_tag,
-          courseware_id: enRun.courseware_id,
-          courseware_url: enRun.courseware_url,
-          is_enrollable: enRun.is_enrollable,
-          is_upgradable: enRun.is_upgradable,
-          is_archived: enRun.is_archived,
-          is_self_paced: enRun.is_self_paced,
-          start_date: enRun.start_date,
-          end_date: enRun.end_date,
-          upgrade_deadline: enRun.upgrade_deadline,
-          certificate_available_date: enRun.certificate_available_date,
-          course_number: enRun.course_number,
         },
       })
       const esEnrollment = factories.enrollment.courseEnrollment({
         run: {
-          id: esRun.id,
+          ...esRun,
           language: "es",
           course: { id: course.id, title: course.title },
-          title: esRun.title,
-          run_tag: esRun.run_tag,
-          courseware_id: esRun.courseware_id,
-          courseware_url: esRun.courseware_url,
-          is_enrollable: esRun.is_enrollable,
-          is_upgradable: esRun.is_upgradable,
-          is_archived: esRun.is_archived,
-          is_self_paced: esRun.is_self_paced,
-          start_date: esRun.start_date,
-          end_date: esRun.end_date,
-          upgrade_deadline: esRun.upgrade_deadline,
-          certificate_available_date: esRun.certificate_available_date,
-          course_number: esRun.course_number,
         },
       })
       const availableLanguages = [
@@ -984,21 +1041,9 @@ describe("dashboardViewModel", () => {
       const otherContractEnrollment = factories.enrollment.courseEnrollment({
         b2b_contract_id: 99,
         run: {
-          id: run.id,
+          ...run,
+          language: "en",
           course: { id: course.id, title: course.title },
-          title: run.title,
-          run_tag: run.run_tag,
-          courseware_id: run.courseware_id,
-          courseware_url: run.courseware_url,
-          is_enrollable: run.is_enrollable,
-          is_upgradable: run.is_upgradable,
-          is_archived: run.is_archived,
-          is_self_paced: run.is_self_paced,
-          start_date: run.start_date,
-          end_date: run.end_date,
-          upgrade_deadline: run.upgrade_deadline,
-          certificate_available_date: run.certificate_available_date,
-          course_number: run.course_number,
         },
       })
 
@@ -1013,6 +1058,49 @@ describe("dashboardViewModel", () => {
       )
 
       expect(entry.displayedEnrollment).toBeNull()
+    })
+
+    test("contract-scoped: picks the matching-contract enrollment when multiple are present", () => {
+      const run = factories.courses.courseRun({
+        id: 501,
+        b2b_contract: 1,
+        courseware_id: "cw-501",
+        is_enrollable: true,
+      })
+      const course = factories.courses.course({
+        courseruns: [run],
+        next_run_id: run.id,
+        language_options: [
+          {
+            id: run.id,
+            courseware_id: run.courseware_id,
+            courseware_url: run.courseware_url ?? "",
+            language: "en",
+            title: run.title,
+            run_tag: run.run_tag,
+          },
+        ],
+      })
+      const otherContractEnrollment = factories.enrollment.courseEnrollment({
+        b2b_contract_id: 2,
+        run: { ...run, course: { id: course.id, title: course.title } },
+      })
+      const selectedContractEnrollment = factories.enrollment.courseEnrollment({
+        b2b_contract_id: 1,
+        run: { ...run, course: { id: course.id, title: course.title } },
+      })
+
+      const entry = buildCourseEntry(
+        course,
+        [otherContractEnrollment, selectedContractEnrollment],
+        "language:en",
+        {
+          availableLanguages: [{ value: "language:en", label: "English" }],
+          contractId: 1,
+        },
+      )
+
+      expect(entry.displayedEnrollment?.b2b_contract_id).toBe(1)
     })
 
     test("stores all input enrollments uncollapsed regardless of displayedEnrollment choice", () => {
@@ -1582,14 +1670,14 @@ describe("dashboardViewModel", () => {
 
   describe("resolveCourseEntryForLanguage", () => {
     test("prefers selected-language enrollment", () => {
-      const englishRun = factories.courses.courseRun({
+      const enRun = factories.courses.courseRun({
         id: 11,
         language: "en",
         courseware_id: "cw-en-11",
         courseware_url: "https://example.com/en-11",
         is_enrollable: true,
       })
-      const spanishRun = factories.courses.courseRun({
+      const esRun = factories.courses.courseRun({
         id: 12,
         language: "es",
         courseware_id: "cw-es-12",
@@ -1598,66 +1686,40 @@ describe("dashboardViewModel", () => {
       })
       const course = factories.courses.course({
         id: 1,
-        courseruns: [englishRun, spanishRun],
-        next_run_id: englishRun.id,
+        courseruns: [enRun, esRun],
+        next_run_id: enRun.id,
         language_options: [
           {
-            id: englishRun.id,
-            courseware_id: englishRun.courseware_id,
-            courseware_url: englishRun.courseware_url ?? "",
+            id: enRun.id,
+            courseware_id: enRun.courseware_id,
+            courseware_url: enRun.courseware_url ?? "",
             language: "en",
-            title: englishRun.title,
-            run_tag: englishRun.run_tag,
+            title: enRun.title,
+            run_tag: enRun.run_tag,
           },
           {
-            id: spanishRun.id,
-            courseware_id: spanishRun.courseware_id,
-            courseware_url: spanishRun.courseware_url ?? "",
+            id: esRun.id,
+            courseware_id: esRun.courseware_id,
+            courseware_url: esRun.courseware_url ?? "",
             language: "es",
-            title: spanishRun.title,
-            run_tag: spanishRun.run_tag,
+            title: esRun.title,
+            run_tag: esRun.run_tag,
           },
         ],
       })
 
       const englishEnrollment = factories.enrollment.courseEnrollment({
         run: {
-          id: englishRun.id,
+          ...enRun,
           language: "en",
           course: { id: course.id, title: course.title },
-          title: englishRun.title,
-          run_tag: englishRun.run_tag,
-          courseware_id: englishRun.courseware_id,
-          courseware_url: englishRun.courseware_url,
-          is_enrollable: englishRun.is_enrollable,
-          is_upgradable: englishRun.is_upgradable,
-          is_archived: englishRun.is_archived,
-          is_self_paced: englishRun.is_self_paced,
-          start_date: englishRun.start_date,
-          end_date: englishRun.end_date,
-          upgrade_deadline: englishRun.upgrade_deadline,
-          certificate_available_date: englishRun.certificate_available_date,
-          course_number: englishRun.course_number,
         },
       })
       const spanishEnrollment = factories.enrollment.courseEnrollment({
         run: {
-          id: spanishRun.id,
+          ...esRun,
           language: "es",
           course: { id: course.id, title: course.title },
-          title: spanishRun.title,
-          run_tag: spanishRun.run_tag,
-          courseware_id: spanishRun.courseware_id,
-          courseware_url: spanishRun.courseware_url,
-          is_enrollable: spanishRun.is_enrollable,
-          is_upgradable: spanishRun.is_upgradable,
-          is_archived: spanishRun.is_archived,
-          is_self_paced: spanishRun.is_self_paced,
-          start_date: spanishRun.start_date,
-          end_date: spanishRun.end_date,
-          upgrade_deadline: spanishRun.upgrade_deadline,
-          certificate_available_date: spanishRun.certificate_available_date,
-          course_number: spanishRun.course_number,
         },
       })
 
@@ -1667,19 +1729,19 @@ describe("dashboardViewModel", () => {
         "language:es",
       )
 
-      expect(resolved.displayedEnrollment?.run.id).toBe(spanishRun.id)
-      expect(resolved.displayedRun?.id).toBe(spanishRun.id)
+      expect(resolved.displayedEnrollment?.run.id).toBe(esRun.id)
+      expect(resolved.displayedRun?.id).toBe(esRun.id)
     })
 
     test("does not pick enrollment from another contract", () => {
-      const englishRun = factories.courses.courseRun({
+      const enRun = factories.courses.courseRun({
         id: 21,
         b2b_contract: 1,
         courseware_id: "cw-en-21",
         courseware_url: "https://example.com/en-21",
         is_enrollable: true,
       })
-      const spanishRun = factories.courses.courseRun({
+      const esRun = factories.courses.courseRun({
         id: 22,
         b2b_contract: 2,
         courseware_id: "cw-es-22",
@@ -1688,24 +1750,24 @@ describe("dashboardViewModel", () => {
       })
       const course = factories.courses.course({
         id: 2,
-        courseruns: [englishRun, spanishRun],
-        next_run_id: englishRun.id,
+        courseruns: [enRun, esRun],
+        next_run_id: enRun.id,
         language_options: [
           {
-            id: englishRun.id,
-            courseware_id: englishRun.courseware_id,
-            courseware_url: englishRun.courseware_url ?? "",
+            id: enRun.id,
+            courseware_id: enRun.courseware_id,
+            courseware_url: enRun.courseware_url ?? "",
             language: "en",
-            title: englishRun.title,
-            run_tag: englishRun.run_tag,
+            title: enRun.title,
+            run_tag: enRun.run_tag,
           },
           {
-            id: spanishRun.id,
-            courseware_id: spanishRun.courseware_id,
-            courseware_url: spanishRun.courseware_url ?? "",
+            id: esRun.id,
+            courseware_id: esRun.courseware_id,
+            courseware_url: esRun.courseware_url ?? "",
             language: "es",
-            title: spanishRun.title,
-            run_tag: spanishRun.run_tag,
+            title: esRun.title,
+            run_tag: esRun.run_tag,
           },
         ],
       })
@@ -1713,22 +1775,9 @@ describe("dashboardViewModel", () => {
       const otherContractEnrollment = factories.enrollment.courseEnrollment({
         b2b_contract_id: 2,
         run: {
-          id: spanishRun.id,
+          ...esRun,
           language: "es",
           course: { id: course.id, title: course.title },
-          title: spanishRun.title,
-          run_tag: spanishRun.run_tag,
-          courseware_id: spanishRun.courseware_id,
-          courseware_url: spanishRun.courseware_url,
-          is_enrollable: spanishRun.is_enrollable,
-          is_upgradable: spanishRun.is_upgradable,
-          is_archived: spanishRun.is_archived,
-          is_self_paced: spanishRun.is_self_paced,
-          start_date: spanishRun.start_date,
-          end_date: spanishRun.end_date,
-          upgrade_deadline: spanishRun.upgrade_deadline,
-          certificate_available_date: spanishRun.certificate_available_date,
-          course_number: spanishRun.course_number,
         },
       })
 
