@@ -405,14 +405,14 @@ const ProgramPayLabel = styled.span(({ theme }) => ({
 }))
 
 /** Horizontal row: [current price block] | [vertical divider] | [list price block] */
-const ProgramPriceRowInner = styled.div<{}>({
+const ProgramPriceRowInner = styled.div({
   display: "flex",
   flexDirection: "row" as const,
   alignItems: "flex-end" as const,
   gap: "24px",
 })
 
-const ProgramCurrentPriceBlock = styled.div<{}>({
+const ProgramCurrentPriceBlock = styled.div({
   display: "flex",
   flexDirection: "column" as const,
   justifyContent: "flex-end" as const,
@@ -440,7 +440,7 @@ const ProgramVerticalDivider = styled.div(() => ({
   flexShrink: 0,
 }))
 
-const ProgramListPriceBlock = styled.div<{}>({
+const ProgramListPriceBlock = styled.div({
   display: "flex",
   flexDirection: "column" as const,
   justifyContent: "flex-end" as const,
@@ -464,7 +464,7 @@ const ProgramListPriceSubLabel = styled.span({
 })
 
 /** Inline row: "Save $X  compared to purchasing N courses separately" */
-const ProgramDiscountRow = styled.div<{}>({
+const ProgramDiscountRow = styled.div({
   display: "flex",
   flexDirection: "row" as const,
   alignItems: "center" as const,
