@@ -343,7 +343,7 @@ const OrgProgramDisplay: React.FC<{
           <Typography variant="subtitle1" component="h2">
             {program.title}
           </Typography>
-          <ProgramDescription html={program.page.description ?? ""} />
+          <ProgramDescription html={program.page?.description ?? ""} />
         </ProgramHeaderText>
         {hasValidCertificate && (
           <ProgramControls>
