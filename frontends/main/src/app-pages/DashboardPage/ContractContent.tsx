@@ -3,7 +3,8 @@
 import React, { useEffect } from "react"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
-import { DashboardCard, DashboardType } from "./CoursewareDisplay/DashboardCard"
+import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
+import { adaptCourseEntryToLegacyDashboardCardProps } from "./CoursewareDisplay/model/dashboardAdapters"
 import {
   Link,
   PlainList,
@@ -27,7 +28,7 @@ import { RiAwardFill } from "@remixicon/react"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
-import type { ContractCourseEntry } from "./CoursewareDisplay/model/dashboardViewModel"
+import type { DashboardCourseEntry } from "./CoursewareDisplay/model/dashboardViewModel"
 import { useContractDashboardData } from "./CoursewareDisplay/hooks/useContractDashboardData"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 
@@ -266,17 +267,10 @@ const ProgramLanguageSelect = styled(SimpleSelectField)(({ theme }) => ({
   },
 })) as typeof SimpleSelectField
 
-type ContractCourseCard = {
-  course: ContractCourseEntry["course"]
-  displayedEnrollment: ContractCourseEntry["displayedEnrollment"]
-  displayedRun: ContractCourseEntry["displayedRun"]
-}
-
 const OrgProgramCollectionDisplay: React.FC<{
   collection: V2ProgramCollection
-  contract: ContractPage
-  entries: ContractCourseCard[]
-}> = ({ collection, contract, entries }) => {
+  entries: DashboardCourseEntry[]
+}> = ({ collection, entries }) => {
   const header = (
     <ProgramHeader>
       <ProgramHeaderText>
@@ -296,34 +290,20 @@ const OrgProgramCollectionDisplay: React.FC<{
     <ProgramRoot data-testid="org-program-collection-root">
       {header}
       <PlainList>
-        {entries.map(({ course, displayedEnrollment, displayedRun }) => {
-          const resource = displayedEnrollment
-            ? {
-                type: DashboardType.CourseRunEnrollment,
-                data: displayedEnrollment,
-              }
-            : { type: DashboardType.Course, data: course }
-
-          return (
-            <DashboardCardStyled
-              Component="li"
-              key={getKey({
-                resourceType: ResourceType.Course,
-                id: course.id,
-                runId: displayedEnrollment?.run.id ?? displayedRun?.id,
-              })}
-              resource={resource}
-              noun="Module"
-              offerUpgrade={false}
-              buttonHref={
-                displayedEnrollment?.run.courseware_url ??
-                displayedRun?.courseware_url
-              }
-              selectedCourseRun={displayedRun}
-              contractId={contract.id}
-            />
-          )
-        })}
+        {entries.map((entry) => (
+          <DashboardCardStyled
+            Component="li"
+            key={getKey({
+              resourceType: ResourceType.Course,
+              id: entry.course.id,
+              runId:
+                entry.displayedEnrollment?.run.id ?? entry.displayedRun?.id,
+            })}
+            {...adaptCourseEntryToLegacyDashboardCardProps(entry)}
+            noun="Module"
+            offerUpgrade={false}
+          />
+        ))}
       </PlainList>
     </ProgramRoot>
   )
@@ -331,10 +311,9 @@ const OrgProgramCollectionDisplay: React.FC<{
 
 const OrgProgramDisplay: React.FC<{
   program: V2Program
-  contract: ContractPage
-  entries: ContractCourseCard[]
+  entries: DashboardCourseEntry[]
   programEnrollment?: V3UserProgramEnrollment
-}> = ({ program, contract, entries, programEnrollment }) => {
+}> = ({ program, entries, programEnrollment }) => {
   const hasValidCertificate = !!programEnrollment?.certificate
   return (
     <ProgramRoot data-testid="org-program-root">
@@ -359,34 +338,20 @@ const OrgProgramDisplay: React.FC<{
         )}
       </ProgramHeader>
       <PlainList>
-        {entries.map(({ course, displayedEnrollment, displayedRun }) => {
-          const resource = displayedEnrollment
-            ? {
-                type: DashboardType.CourseRunEnrollment,
-                data: displayedEnrollment,
-              }
-            : { type: DashboardType.Course, data: course }
-
-          return (
-            <DashboardCardStyled
-              Component="li"
-              key={getKey({
-                resourceType: ResourceType.Course,
-                id: course.id,
-                runId: displayedEnrollment?.run.id ?? displayedRun?.id,
-              })}
-              resource={resource}
-              noun="Module"
-              offerUpgrade={false}
-              buttonHref={
-                displayedEnrollment?.run.courseware_url ??
-                displayedRun?.courseware_url
-              }
-              selectedCourseRun={displayedRun}
-              contractId={contract.id}
-            />
-          )
-        })}
+        {entries.map((entry) => (
+          <DashboardCardStyled
+            Component="li"
+            key={getKey({
+              resourceType: ResourceType.Course,
+              id: entry.course.id,
+              runId:
+                entry.displayedEnrollment?.run.id ?? entry.displayedRun?.id,
+            })}
+            {...adaptCourseEntryToLegacyDashboardCardProps(entry)}
+            noun="Module"
+            offerUpgrade={false}
+          />
+        ))}
       </PlainList>
     </ProgramRoot>
   )
@@ -500,7 +465,6 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
               resourceType: ResourceType.Program,
               id: program.id,
             })}
-            contract={contract}
             program={program}
             entries={entries}
             programEnrollment={programEnrollment}
@@ -514,7 +478,6 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
                 id: collection.id,
               })}
               collection={collection}
-              contract={contract}
               entries={entries}
             />
           ))}

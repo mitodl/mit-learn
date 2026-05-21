@@ -17,25 +17,26 @@ import type {
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import {
-  buildContractCourseEntries,
+  buildCourseEntry,
   getCollectionFirstCoursesInDisplayOrder,
   getDistinctDashboardLanguageOptions,
   getProgramCoursesInContractOrder,
   getRenderableContractCollections,
   getSortedStandaloneContractPrograms,
+  groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
-  type ContractCourseEntry,
+  type DashboardCourseEntry,
 } from "../model/dashboardViewModel"
 
 type ContractProgramDisplayData = {
   program: V2Program
-  entries: ContractCourseEntry[]
+  entries: DashboardCourseEntry[]
   programEnrollment?: V3UserProgramEnrollment
 }
 
 type ContractCollectionDisplayData = {
   collection: V2ProgramCollection
-  entries: ContractCourseEntry[]
+  entries: DashboardCourseEntry[]
 }
 
 type ContractDashboardData = {
@@ -119,17 +120,29 @@ const useContractDashboardData = (
     programEnrollmentsQuery.data ?? [],
   )
 
+  const enrollmentsByCourseId =
+    groupCourseRunEnrollmentsByCourseId(courseRunEnrollments)
+
   const programRows = sortedPrograms.map((program) => {
     const courses = getProgramCoursesInContractOrder(program, contractCourses)
+    const programEnrollment = programEnrollmentsById[program.id]
     return {
       program,
-      entries: buildContractCourseEntries(
-        courses,
-        courseRunEnrollments,
-        selectedLanguageKey,
-        contract.id,
+      entries: courses.map((course) =>
+        buildCourseEntry(
+          course,
+          enrollmentsByCourseId[course.id] ?? [],
+          selectedLanguageKey,
+          {
+            availableLanguages: languageOptions,
+            contractId: contract.id,
+            ancestorContext: programEnrollment
+              ? { programEnrollment }
+              : undefined,
+          },
+        ),
       ),
-      programEnrollment: programEnrollmentsById[program.id],
+      programEnrollment,
     }
   })
 
@@ -141,11 +154,16 @@ const useContractDashboardData = (
     )
     return {
       collection,
-      entries: buildContractCourseEntries(
-        firstCourses,
-        courseRunEnrollments,
-        selectedLanguageKey,
-        contract.id,
+      entries: firstCourses.map((course) =>
+        buildCourseEntry(
+          course,
+          enrollmentsByCourseId[course.id] ?? [],
+          selectedLanguageKey,
+          {
+            availableLanguages: languageOptions,
+            contractId: contract.id,
+          },
+        ),
       ),
     }
   })
