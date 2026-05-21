@@ -154,6 +154,12 @@ const VideoWithErrorHandler = ({
   const handlerRef = useRef<((e: Event) => void) | null>(null)
   const src = video.video?.streaming_url ?? undefined
 
+  useEffect(() => {
+    if (!src) {
+      onError(index, new Event("missingsource"))
+    }
+  }, [src, index, onError])
+
   const refCallback = useCallback(
     (el: HTMLVideoElement | null) => {
       if (!el) {
