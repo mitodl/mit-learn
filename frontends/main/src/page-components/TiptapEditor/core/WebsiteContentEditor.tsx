@@ -14,7 +14,6 @@ import {
 } from "ol-components"
 import { Alert, Button } from "@mitodl/smoot-design"
 import { useUserHasPermission, Permission } from "api/hooks/user"
-import { useMediaUpload } from "api/hooks/website_content"
 import dynamic from "next/dynamic"
 
 import { Toolbar } from "../vendor/components/tiptap-ui-primitive/toolbar"
@@ -77,6 +76,18 @@ export type UploadHandler = (
   onProgress?: (e: { progress: number }) => void,
   abortSignal?: AbortSignal,
 ) => Promise<string>
+
+/**
+ * The minimal interface expected from a media upload mutation.
+ * Matches the shape returned by `useMediaUpload` from `api/hooks/website_content`,
+ * but callers may supply any compatible implementation.
+ */
+export interface MediaUpload {
+  mutateAsync: (data: { file: File }) => Promise<{ url?: string }>
+  setNextProgressCallback: (
+    callback: ((percent: number) => void) | undefined,
+  ) => void
+}
 
 /**
  * The data shape sent to the create/update API.
@@ -158,6 +169,12 @@ export interface WebsiteContentEditorProps {
    * WebsiteContentEditor stays decoupled from any specific API endpoint.
    */
   saveMutations: SaveMutations
+  /**
+   * Upload mutation provided by the content-type wrapper.
+   * Pass the return value of `useMediaUpload()` (or a compatible implementation)
+   * so WebsiteContentEditor stays decoupled from any specific upload endpoint.
+   */
+  uploadImage: MediaUpload
   onSave?: (article: WebsiteContent) => void
   readOnly?: boolean
   article?: WebsiteContent
@@ -173,6 +190,7 @@ const WebsiteContentEditor = ({
   className,
   extractExtraFields,
   saveMutations,
+  uploadImage,
   onSave,
   readOnly,
   article,
@@ -193,7 +211,6 @@ const WebsiteContentEditor = ({
   const isPending = createMutation.isPending || updateMutation.isPending
   const saveError = createMutation.error || updateMutation.error
 
-  const uploadImage = useMediaUpload()
   // Keep a ref so the stable uploadHandler callback always calls the latest mutation.
   const uploadImageRef = useRef(uploadImage)
   uploadImageRef.current = uploadImage

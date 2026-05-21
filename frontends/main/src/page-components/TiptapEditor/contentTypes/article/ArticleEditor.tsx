@@ -6,6 +6,7 @@ import { ButtonLink } from "@mitodl/smoot-design"
 import {
   useWebsiteContentCreate,
   useWebsiteContentPartialUpdate,
+  useMediaUpload,
 } from "api/hooks/website_content"
 import { Spacer } from "../../vendor/components/tiptap-ui-primitive/spacer"
 import { WebsiteContentEditor } from "../../core/WebsiteContentEditor"
@@ -50,6 +51,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   // Swap these two lines when a dedicated UserArticle API exists.
   const createMutation = useWebsiteContentCreate()
   const updateMutation = useWebsiteContentPartialUpdate()
+  const uploadImage = useMediaUpload()
 
   const editUrl = article
     ? `/website_content/article/${article.is_published ? article.slug : article.id}/edit`
@@ -78,6 +80,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       toolbarSlot={toolbarSlot}
       extractExtraFields={extractArticleExtraFields}
       saveMutations={{ create: createMutation, update: updateMutation }}
+      uploadImage={uploadImage}
       onSave={onSave}
       readOnly={readOnly}
       article={article}

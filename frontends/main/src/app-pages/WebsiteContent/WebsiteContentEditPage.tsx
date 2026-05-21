@@ -35,13 +35,17 @@ const PUBLISHED_VIEW_URL: Record<string, (slug: string) => string> = {
 const EDITORS: Record<
   string,
   React.ComponentType<{
-    onSave?: (article: WebsiteContent) => void
+    onSave?: (savedContent: WebsiteContent) => void
     readOnly?: boolean
-    article?: WebsiteContent
+    contentItem?: WebsiteContent
   }>
 > = {
-  article: ArticleEditor,
-  news: NewsEditor,
+  article: ({ contentItem, ...props }) => (
+    <ArticleEditor article={contentItem} {...props} />
+  ),
+  news: ({ contentItem, ...props }) => (
+    <NewsEditor newsItem={contentItem} {...props} />
+  ),
 }
 
 interface WebsiteContentEditPageProps {
@@ -78,7 +82,7 @@ const WebsiteContentEditPage = ({
     <RestrictedRoute requires={Permission.ArticleEditor}>
       <PageContainer>
         <Editor
-          article={article}
+          contentItem={article}
           onSave={(saved) => {
             if (saved.is_published) {
               invariant(saved.slug, "Published content must have a slug")

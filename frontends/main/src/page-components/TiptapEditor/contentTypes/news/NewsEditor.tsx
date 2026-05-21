@@ -6,6 +6,7 @@ import { ButtonLink } from "@mitodl/smoot-design"
 import {
   useWebsiteContentCreate,
   useWebsiteContentPartialUpdate,
+  useMediaUpload,
 } from "api/hooks/website_content"
 import { Spacer } from "../../vendor/components/tiptap-ui-primitive/spacer"
 import { WebsiteContentEditor } from "../../core/WebsiteContentEditor"
@@ -23,9 +24,9 @@ const extractNewsExtraFields = (content: {
 }
 
 interface NewsEditorProps {
-  onSave?: (article: WebsiteContent) => void
+  onSave?: (savedContent: WebsiteContent) => void
   readOnly?: boolean
-  article?: WebsiteContent
+  newsItem?: WebsiteContent
 }
 
 /**
@@ -33,14 +34,15 @@ interface NewsEditorProps {
  * Owns its own save mutations (websiteContent API) and passes them to
  * WebsiteContentEditor — keeping the generic shell decoupled from any specific API.
  */
-const NewsEditor = ({ onSave, readOnly, article }: NewsEditorProps) => {
-  // News content type uses the websiteContent (articles) API.
+const NewsEditor = ({ onSave, readOnly, newsItem }: NewsEditorProps) => {
+  // News content type uses the websiteContent API.
   // A different content type would call different hooks here.
   const createMutation = useWebsiteContentCreate()
   const updateMutation = useWebsiteContentPartialUpdate()
+  const uploadImage = useMediaUpload()
 
-  const editUrl = article
-    ? `/website_content/news/${article.is_published ? article.slug : article.id}/edit`
+  const editUrl = newsItem
+    ? `/website_content/news/${newsItem.is_published ? newsItem.slug : newsItem.id}/edit`
     : "/website_content/news/new"
 
   const toolbarSlot = readOnly ? (
@@ -66,9 +68,10 @@ const NewsEditor = ({ onSave, readOnly, article }: NewsEditorProps) => {
       toolbarSlot={toolbarSlot}
       extractExtraFields={extractNewsExtraFields}
       saveMutations={{ create: createMutation, update: updateMutation }}
+      uploadImage={uploadImage}
       onSave={onSave}
       readOnly={readOnly}
-      article={article}
+      article={newsItem}
     />
   )
 }

@@ -42,12 +42,14 @@ const WebsiteContentDetail = ({
     return notFound()
   }
 
-  const Editor = article.content_type === "article" ? ArticleEditor : NewsEditor
-
   return (
     <PageContainer>
       <LearningResourceProvider resourceIds={learningResourceIds}>
-        <Editor article={article} readOnly />
+        {article.content_type === "article" ? (
+          <ArticleEditor article={article} readOnly />
+        ) : (
+          <NewsEditor newsItem={article} readOnly />
+        )}
       </LearningResourceProvider>
     </PageContainer>
   )

@@ -44,9 +44,12 @@ describe("NewsEditor - Content Editing and Saving", () => {
     })
     setMockResponse.get(urls.websiteContent.details(articleId), newsItem)
 
-    renderWithProviders(<NewsEditor article={newsItem} onSave={mockOnSave} />, {
-      user,
-    })
+    renderWithProviders(
+      <NewsEditor newsItem={newsItem} onSave={mockOnSave} />,
+      {
+        user,
+      },
+    )
 
     await screen.findByTestId("editor")
     return newsItem
@@ -646,7 +649,7 @@ describe("NewsEditor - Document Rendering", () => {
     setMockResponse.get(urls.websiteContent.details(articleId), newsItem)
 
     renderWithProviders(
-      <NewsEditor article={newsItem} onSave={mockOnSave} readOnly />,
+      <NewsEditor newsItem={newsItem} onSave={mockOnSave} readOnly />,
       { user },
     )
 

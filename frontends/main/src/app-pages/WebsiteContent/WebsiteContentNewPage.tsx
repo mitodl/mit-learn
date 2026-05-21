@@ -26,13 +26,15 @@ const PUBLISHED_VIEW_URL: Record<string, (slug: string) => string> = {
 const EDITORS: Record<
   string,
   React.ComponentType<{
-    onSave?: (article: WebsiteContent) => void
+    onSave?: (savedContent: WebsiteContent) => void
     readOnly?: boolean
-    article?: WebsiteContent
+    contentItem?: WebsiteContent
   }>
 > = {
-  article: ArticleEditor,
-  news: NewsEditor,
+  article: ({ contentItem, ...props }) => (
+    <ArticleEditor article={contentItem} {...props} />
+  ),
+  news: ({ contentItem: _contentItem, ...props }) => <NewsEditor {...props} />,
 }
 
 interface WebsiteContentNewPageProps {
