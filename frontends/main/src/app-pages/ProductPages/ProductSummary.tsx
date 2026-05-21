@@ -430,13 +430,13 @@ const ProgramPriceAmount = styled.span(({ theme }) => ({
 
 const ProgramPriceSuffix = styled.span(({ theme }) => ({
   ...theme.typography.body3,
-  color: "#626A73",
+  color: theme.custom.colors.silverGrayDark,
 }))
 
 const ProgramVerticalDivider = styled.div(() => ({
   width: "1px",
   height: "48px",
-  backgroundColor: "#CBD2D9",
+  backgroundColor: theme.custom.colors.lightGray2,
   flexShrink: 0,
 }))
 
@@ -455,7 +455,7 @@ const ProgramListPriceAmount = styled.span({
   display: "flex",
   alignItems: "flex-end" as const,
   textDecoration: "line-through",
-  color: "#626A73",
+  color: theme.custom.colors.silverGrayDark,
 })
 
 const ProgramListPriceSubLabel = styled.span({
