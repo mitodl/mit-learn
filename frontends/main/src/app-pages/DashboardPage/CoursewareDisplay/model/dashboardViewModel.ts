@@ -810,6 +810,18 @@ const getSortedStandaloneContractPrograms = (
     })
 }
 
+/**
+ * Filter `collections` to those the contract dashboard should render.
+ *
+ * A collection is renderable when **both** conditions hold:
+ *  1. At least one of the collection's programs appears in `contract.programs`
+ *     (i.e. the collection is relevant to this contract).
+ *  2. At least one of the collection's programs has at least one course that
+ *     belongs to the contract (via `programHasContractRuns`), so the card list
+ *     will not be empty.
+ *
+ * If the contract has no programs at all, returns `[]` immediately.
+ */
 const getRenderableContractCollections = (
   collections: V2ProgramCollection[],
   programs: V2Program[],
