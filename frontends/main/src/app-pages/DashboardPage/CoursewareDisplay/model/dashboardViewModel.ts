@@ -424,12 +424,6 @@ type ResolveCourseEntryForLanguageResult = {
   selectedLanguageOption: CourseRunLanguageOption | null
 }
 
-type ContractCourseEntry = {
-  course: CourseWithCourseRunsSerializerV2
-  displayedEnrollment: CourseRunEnrollmentV3 | null
-  displayedRun: CourseRunV2 | null
-}
-
 /**
  * Given a language selection and course/enrollment data, pick the
  * `displayedEnrollment` and `displayedRun` for a dashboard course entry.
@@ -893,28 +887,6 @@ const getCollectionFirstCoursesInDisplayOrder = (
   })
 }
 
-const buildContractCourseEntries = (
-  courses: CourseWithCourseRunsSerializerV2[],
-  enrollments: CourseRunEnrollmentV3[],
-  selectedLanguageKey: string,
-  contractId: number,
-): ContractCourseEntry[] => {
-  return courses.map((course) => {
-    const { displayedEnrollment, displayedRun } = resolveCourseEntryForLanguage(
-      course,
-      enrollments,
-      selectedLanguageKey,
-      { contractId },
-    )
-
-    return {
-      course,
-      displayedEnrollment,
-      displayedRun,
-    }
-  })
-}
-
 export {
   pickDisplayedEnrollmentForLegacyDashboard,
   groupCourseRunEnrollmentsByCourseId,
@@ -937,7 +909,6 @@ export {
   getRenderableContractCollections,
   getProgramCoursesInContractOrder,
   getCollectionFirstCoursesInDisplayOrder,
-  buildContractCourseEntries,
 }
 
-export type { RequirementSectionItem, RequirementSection, ContractCourseEntry }
+export type { RequirementSectionItem, RequirementSection }

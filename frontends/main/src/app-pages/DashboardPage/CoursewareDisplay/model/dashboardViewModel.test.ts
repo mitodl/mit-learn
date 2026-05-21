@@ -2,7 +2,6 @@ import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { factories, RequirementTreeBuilder } from "api/mitxonline-test-utils"
 import {
   assembleHomeCardList,
-  buildContractCourseEntries,
   bucketAndSortHomeEnrollments,
   buildCourseEntry,
   buildRequirementSections,
@@ -949,83 +948,6 @@ describe("dashboardViewModel", () => {
 
       expect(courses.map((course) => course.id)).toEqual([201, 102])
     })
-
-    test("buildContractCourseEntries uses only enrollments from the selected contract", () => {
-      const run = factories.courses.courseRun({
-        id: 501,
-        language: "en",
-        courseware_id: "cw-en-501",
-        courseware_url: "https://example.com/en-501",
-        is_enrollable: true,
-      })
-      const course = factories.courses.course({
-        id: 500,
-        courseruns: [run],
-        next_run_id: run.id,
-        language_options: [
-          {
-            id: run.id,
-            language: "en",
-            title: run.title,
-            run_tag: run.run_tag,
-            courseware_id: run.courseware_id,
-            courseware_url: run.courseware_url ?? "",
-          },
-        ],
-      })
-
-      const otherContractEnrollment = factories.enrollment.courseEnrollment({
-        b2b_contract_id: 2,
-        run: {
-          id: run.id,
-          language: "en",
-          title: run.title,
-          run_tag: run.run_tag,
-          course: { id: course.id, title: course.title },
-          courseware_id: run.courseware_id,
-          courseware_url: run.courseware_url,
-          is_enrollable: run.is_enrollable,
-          is_upgradable: run.is_upgradable,
-          is_archived: run.is_archived,
-          is_self_paced: run.is_self_paced,
-          start_date: run.start_date,
-          end_date: run.end_date,
-          upgrade_deadline: run.upgrade_deadline,
-          certificate_available_date: run.certificate_available_date,
-          course_number: run.course_number,
-        },
-      })
-      const selectedContractEnrollment = factories.enrollment.courseEnrollment({
-        b2b_contract_id: 1,
-        run: {
-          id: run.id,
-          language: "en",
-          title: run.title,
-          run_tag: run.run_tag,
-          course: { id: course.id, title: course.title },
-          courseware_id: run.courseware_id,
-          courseware_url: run.courseware_url,
-          is_enrollable: run.is_enrollable,
-          is_upgradable: run.is_upgradable,
-          is_archived: run.is_archived,
-          is_self_paced: run.is_self_paced,
-          start_date: run.start_date,
-          end_date: run.end_date,
-          upgrade_deadline: run.upgrade_deadline,
-          certificate_available_date: run.certificate_available_date,
-          course_number: run.course_number,
-        },
-      })
-
-      const [entry] = buildContractCourseEntries(
-        [course],
-        [otherContractEnrollment, selectedContractEnrollment],
-        "",
-        1,
-      )
-
-      expect(entry.displayedEnrollment?.b2b_contract_id).toBe(1)
-    })
   })
 
   describe("buildCourseEntry", () => {
@@ -1262,6 +1184,49 @@ describe("dashboardViewModel", () => {
       )
 
       expect(entry.displayedEnrollment).toBeNull()
+    })
+
+    test("contract-scoped: picks the matching-contract enrollment when multiple are present", () => {
+      const run = factories.courses.courseRun({
+        id: 501,
+        b2b_contract: 1,
+        courseware_id: "cw-501",
+        is_enrollable: true,
+      })
+      const course = factories.courses.course({
+        courseruns: [run],
+        next_run_id: run.id,
+        language_options: [
+          {
+            id: run.id,
+            courseware_id: run.courseware_id,
+            courseware_url: run.courseware_url ?? "",
+            language: "en",
+            title: run.title,
+            run_tag: run.run_tag,
+          },
+        ],
+      })
+      const otherContractEnrollment = factories.enrollment.courseEnrollment({
+        b2b_contract_id: 2,
+        run: { ...run, course: { id: course.id, title: course.title } },
+      })
+      const selectedContractEnrollment = factories.enrollment.courseEnrollment({
+        b2b_contract_id: 1,
+        run: { ...run, course: { id: course.id, title: course.title } },
+      })
+
+      const entry = buildCourseEntry(
+        course,
+        [otherContractEnrollment, selectedContractEnrollment],
+        "language:en",
+        {
+          availableLanguages: [{ value: "language:en", label: "English" }],
+          contractId: 1,
+        },
+      )
+
+      expect(entry.displayedEnrollment?.b2b_contract_id).toBe(1)
     })
 
     test("stores all input enrollments uncollapsed regardless of displayedEnrollment choice", () => {
