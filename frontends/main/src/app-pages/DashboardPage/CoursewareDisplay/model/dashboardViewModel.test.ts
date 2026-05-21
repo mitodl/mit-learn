@@ -72,6 +72,35 @@ describe("dashboardViewModel", () => {
         pickDisplayedEnrollmentForLegacyDashboard(course, [lower, higher]),
       ).toEqual(higher)
     })
+
+    test("keeps an older enrolled run when the course payload only lists the newer run", () => {
+      const olderRun = factories.courses.courseRun({
+        id: 101,
+        title: "Older run",
+      })
+      const newerRun = factories.courses.courseRun({
+        id: 202,
+        title: "Newer run",
+      })
+      const course = factories.courses.course({
+        id: 77,
+        courseruns: [newerRun],
+        next_run_id: newerRun.id,
+      })
+      const olderEnrollment = factories.enrollment.courseEnrollment({
+        run: {
+          id: olderRun.id,
+          title: olderRun.title,
+          course: { id: course.id, title: course.title },
+        },
+        certificate: null,
+        grades: [],
+      })
+
+      expect(
+        pickDisplayedEnrollmentForLegacyDashboard(course, [olderEnrollment]),
+      ).toEqual(olderEnrollment)
+    })
   })
 
   describe("groupCourseRunEnrollmentsByCourseId", () => {
