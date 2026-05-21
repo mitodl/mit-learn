@@ -36,20 +36,20 @@ describe("NewsEditor - Content Editing and Saving", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    const article = factories.websiteContent.websiteContent({
+    const newsItem = factories.websiteContent.websiteContent({
       id: articleId,
       title,
       content,
       is_published: false,
     })
-    setMockResponse.get(urls.websiteContent.details(articleId), article)
+    setMockResponse.get(urls.websiteContent.details(articleId), newsItem)
 
-    renderWithProviders(<NewsEditor article={article} onSave={mockOnSave} />, {
+    renderWithProviders(<NewsEditor article={newsItem} onSave={mockOnSave} />, {
       user,
     })
 
     await screen.findByTestId("editor")
-    return article
+    return newsItem
   }
 
   describe("Editing title in banner heading", () => {
@@ -376,7 +376,7 @@ describe("NewsEditor - Content Editing and Saving", () => {
   })
 
   describe("Save as Draft functionality", () => {
-    test("can save article as draft", async () => {
+    test("can save news as draft", async () => {
       const initialContent: JSONContent = {
         type: "doc",
         content: [
@@ -404,23 +404,23 @@ describe("NewsEditor - Content Editing and Saving", () => {
         ],
       }
 
-      const article = await setupEditor(initialContent, 208, "Title")
+      const newsItem = await setupEditor(initialContent, 208, "Title")
 
       const paragraph = screen.getByText("Content")
       await userEvent.click(paragraph)
       await userEvent.keyboard("{Control>}a{/Control}")
       await userEvent.type(paragraph, "Updated content")
 
-      const updatedArticle = {
-        ...article,
+      const updatedNewsItem = {
+        ...newsItem,
         content: expect.objectContaining({
           type: "doc",
         }),
         is_published: false,
       }
       setMockResponse.patch(
-        urls.websiteContent.details(article.id),
-        updatedArticle,
+        urls.websiteContent.details(newsItem.id),
+        updatedNewsItem,
       )
 
       const saveDraftButton = await screen.findByRole("button", {
@@ -433,7 +433,7 @@ describe("NewsEditor - Content Editing and Saving", () => {
 
       expect(makeRequest).toHaveBeenCalledWith(
         "patch",
-        urls.websiteContent.details(article.id),
+        urls.websiteContent.details(newsItem.id),
         expect.objectContaining({
           is_published: false,
           author_name: "",
@@ -505,20 +505,20 @@ describe("NewsEditor - Content Editing and Saving", () => {
     })
   })
 
-  describe("Creating new articles", () => {
-    test("submits article successfully", async () => {
+  describe("Creating news", () => {
+    test("submits news successfully", async () => {
       const user = factories.user.user({
         is_authenticated: true,
         is_article_editor: true,
       })
       setMockResponse.get(urls.userMe.get(), user)
 
-      const createdArticle = factories.websiteContent.websiteContent({
+      const createdNewsItem = factories.websiteContent.websiteContent({
         id: 101,
         title: "My Article",
         is_published: true,
       })
-      setMockResponse.post(urls.websiteContent.list(), createdArticle)
+      setMockResponse.post(urls.websiteContent.list(), createdNewsItem)
 
       renderWithProviders(<NewsEditor onSave={mockOnSave} />, { user })
 
@@ -598,7 +598,7 @@ describe("NewsEditor - Content Editing and Saving", () => {
 
       expect(savedData).toBeDefined()
       expect(savedData).toMatchObject({
-        id: createdArticle.id,
+        id: createdNewsItem.id,
         title: "My Article",
         is_published: true,
       })
@@ -638,20 +638,20 @@ describe("NewsEditor - Document Rendering", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    const article = factories.websiteContent.websiteContent({
+    const newsItem = factories.websiteContent.websiteContent({
       id: 1,
       title: "Test Article",
       content,
     })
-    setMockResponse.get(urls.websiteContent.details(articleId), article)
+    setMockResponse.get(urls.websiteContent.details(articleId), newsItem)
 
     renderWithProviders(
-      <NewsEditor article={article} onSave={mockOnSave} readOnly />,
+      <NewsEditor article={newsItem} onSave={mockOnSave} readOnly />,
       { user },
     )
 
     await screen.findByTestId("editor")
-    return article
+    return newsItem
   }
 
   test("renders editor when user has ArticleEditor permission", async () => {
