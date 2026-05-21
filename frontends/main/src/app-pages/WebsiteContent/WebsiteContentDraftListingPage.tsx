@@ -20,7 +20,7 @@ import type {
 } from "api/v1"
 import { LocalDate } from "ol-utilities"
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
-import { extractFirstImageFromArticle } from "@/common/articleUtils"
+import { extractFirstImage } from "@/common/websiteContentUtils"
 import { websiteContentEditView, websiteContentCreateView } from "@/common/urls"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 import { ButtonLink } from "@mitodl/smoot-design"
@@ -92,7 +92,7 @@ const DraftItem: React.FC<{ article: WebsiteContent; type: string }> = ({
     ? `/${type === "article" ? "articles" : type}/${article.slug || article.id}`
     : websiteContentEditView(type, article.id)
 
-  const imageUrl = extractFirstImageFromArticle(article.content)
+  const imageUrl = extractFirstImage(article.content)
 
   return (
     <DraftArticleCard forwardClicksToLink>

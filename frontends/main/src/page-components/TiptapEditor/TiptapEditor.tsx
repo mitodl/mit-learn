@@ -82,7 +82,7 @@ const Container = styled.div<{
         },
       }
     : {}),
-  "&& .tiptap.ProseMirror.abc > :nth-child(2)": {
+  "&& .tiptap.ProseMirror.tiptap-viewer > :nth-child(2)": {
     paddingTop: "36px",
   },
   "&& .tiptap.ProseMirror, && .tiptap-viewer": {
@@ -299,11 +299,11 @@ const TipTapViewer = ({
   content: JSONContent
   extensions: Array<Extension | Node | Mark>
   bannerViewer?: typeof BannerViewer
-  bylineViewer?: typeof BannerViewer
+  bylineViewer?: typeof ByLineInfoBarViewer
 }) => {
   return (
     <Container readOnly data-testid="editor">
-      <div className="tiptap ProseMirror tiptap-viewer abc">
+      <div className="tiptap ProseMirror tiptap-viewer">
         {renderToReactElement({
           extensions,
           content,

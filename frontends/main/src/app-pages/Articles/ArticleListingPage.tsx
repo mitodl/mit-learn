@@ -17,12 +17,8 @@ import { useWebsiteContentList } from "api/hooks/website_content"
 import type { WebsiteContent } from "api/v1"
 import { LocalDate } from "ol-utilities"
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
-import { extractFirstImageFromArticle } from "@/common/articleUtils"
-import {
-  userArticlesView,
-  USER_ARTICLES_CREATE,
-  USER_ARTICLES_LISTING,
-} from "@/common/urls"
+import { extractFirstImage } from "@/common/websiteContentUtils"
+import { articleView, ARTICLES_CREATE, ARTICLES_LISTING } from "@/common/urls"
 
 const PAGE_SIZE = 20
 const MAX_PAGE = 50
@@ -71,14 +67,12 @@ const EmptyState = styled.div`
   gap: 16px;
 `
 
-const UserArticleCard: React.FC<{ article: WebsiteContent }> = ({
-  article,
-}) => {
+const ArticleCard: React.FC<{ article: WebsiteContent }> = ({ article }) => {
   const articleUrl = article.is_published
-    ? userArticlesView(article.slug || String(article.id))
-    : `${USER_ARTICLES_LISTING}${article.id}/draft`
+    ? articleView(article.slug || String(article.id))
+    : `${ARTICLES_LISTING}${article.id}/draft`
 
-  const imageUrl = extractFirstImageFromArticle(article.content)
+  const imageUrl = extractFirstImage(article.content)
 
   return (
     <ArticleCardWrapper forwardClicksToLink>
@@ -103,6 +97,7 @@ const ArticleListingPage: React.FC = () => {
   const { data: articles, isLoading } = useWebsiteContentList({
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
+    content_type: "article",
   })
 
   useEffect(() => {
@@ -119,7 +114,7 @@ const ArticleListingPage: React.FC = () => {
       <Container>
         <PageHeader>
           <Typography variant="h3">Articles</Typography>
-          <ButtonLink variant="primary" href={USER_ARTICLES_CREATE}>
+          <ButtonLink variant="primary" href={ARTICLES_CREATE}>
             New Article
           </ButtonLink>
         </PageHeader>
@@ -134,7 +129,7 @@ const ArticleListingPage: React.FC = () => {
                   key={article.id}
                   size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 3 }}
                 >
-                  <UserArticleCard article={article} />
+                  <ArticleCard article={article} />
                 </Grid2>
               ))}
             </Grid2>
@@ -164,7 +159,7 @@ const ArticleListingPage: React.FC = () => {
             <Typography variant="body1" color="textSecondary">
               Get started by creating your first article.
             </Typography>
-            <ButtonLink variant="primary" href={USER_ARTICLES_CREATE}>
+            <ButtonLink variant="primary" href={ARTICLES_CREATE}>
               New Article
             </ButtonLink>
           </EmptyState>

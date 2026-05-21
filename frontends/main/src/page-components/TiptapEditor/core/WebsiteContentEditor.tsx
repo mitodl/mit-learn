@@ -20,6 +20,7 @@ import dynamic from "next/dynamic"
 import { Toolbar } from "../vendor/components/tiptap-ui-primitive/toolbar"
 import { TiptapEditor, MainToolbarContent, TipTapViewer } from "../TiptapEditor"
 import { BannerViewer } from "../extensions/node/Banner/BannerNode"
+import { ByLineInfoBarViewer } from "../extensions/node/ByLineInfoBar/ByLineInfoBarViewer"
 import { handleImageUpload } from "../vendor/lib/tiptap-utils"
 import { useSchema } from "../useSchema"
 import { WebsiteContentProvider } from "../WebsiteContentContext"
@@ -162,7 +163,7 @@ export interface WebsiteContentEditorProps {
   article?: WebsiteContent
   backgroundColor?: string
   bannerViewer?: typeof BannerViewer
-  bylineViewer?: typeof BannerViewer
+  bylineViewer?: typeof ByLineInfoBarViewer
 }
 
 const WebsiteContentEditor = ({
@@ -454,7 +455,7 @@ const WebsiteContentEditor = ({
                   content={content}
                   extensions={extensions}
                   bannerViewer={bannerViewer}
-                  bylineViewer={bylineViewer}
+                  bylineViewer={bylineViewer ?? ByLineInfoBarViewer}
                 />
               </>
             ) : (

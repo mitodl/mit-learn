@@ -3,8 +3,8 @@ import { screen, renderWithProviders, setMockResponse } from "@/test-utils"
 import { factories, urls } from "api/test-utils"
 import { NewsEditor } from "./contentTypes/news/NewsEditor"
 
-describe("ArticleViewer", () => {
-  test("renders article content", async () => {
+describe("NewsViewer", () => {
+  test("renders content", async () => {
     const user = factories.user.user({
       is_authenticated: true,
       is_article_editor: true,

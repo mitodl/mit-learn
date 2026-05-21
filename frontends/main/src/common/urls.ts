@@ -48,18 +48,18 @@ export const newsDraftView = (id: string) =>
 export const newsEditView = (id: number) =>
   generatePath(NEWS_EDIT, { id: String(id) })
 
-// User-created articles (served under /articles)
-export const USER_ARTICLES_LISTING = "/articles/"
-export const USER_ARTICLES_VIEW = "/articles/[id]"
-export const USER_ARTICLES_DRAFT_VIEW = "/articles/[id]/draft"
-export const USER_ARTICLES_EDIT = "/articles/[id]/edit"
-export const USER_ARTICLES_CREATE = "/articles/new"
-export const userArticlesView = (id: string) =>
-  generatePath(USER_ARTICLES_VIEW, { id: String(id) })
-export const userArticlesDraftView = (id: string) =>
-  generatePath(USER_ARTICLES_DRAFT_VIEW, { id: String(id) })
-export const userArticlesEditView = (id: number) =>
-  generatePath(USER_ARTICLES_EDIT, { id: String(id) })
+// Articles (served under /articles)
+export const ARTICLES_LISTING = "/articles/"
+export const ARTICLES_VIEW = "/articles/[id]"
+export const ARTICLES_DRAFT_VIEW = "/articles/[id]/draft"
+export const ARTICLES_EDIT = "/articles/[id]/edit"
+export const ARTICLES_CREATE = "/articles/new"
+export const articleView = (id: string) =>
+  generatePath(ARTICLES_VIEW, { id: String(id) })
+export const articleDraftView = (id: string) =>
+  generatePath(ARTICLES_DRAFT_VIEW, { id: String(id) })
+export const articleEditView = (id: number) =>
+  generatePath(ARTICLES_EDIT, { id: String(id) })
 
 // Generic website content editing routes
 export const WEBSITE_CONTENT_CREATE = "/website_content/[type]/new"
