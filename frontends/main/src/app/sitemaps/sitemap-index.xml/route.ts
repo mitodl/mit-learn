@@ -6,8 +6,6 @@ import * as productsSitemap from "../products/sitemap"
 import * as videoSitemap from "../video/sitemap"
 import * as podcastSitemap from "../podcast/sitemap"
 
-const BASE_URL = requiredEnv("NEXT_PUBLIC_ORIGIN")
-
 export async function GET() {
   const content = await buildSitemapIndex()
   return new NextResponse(content, {
@@ -19,6 +17,9 @@ export async function GET() {
 }
 
 async function buildSitemapIndex(): Promise<string> {
+  // Read at request time so this works in the standalone Docker image where
+  // NEXT_PUBLIC_ORIGIN is injected by Kubernetes, not baked at build time.
+  const BASE_URL = requiredEnv("NEXT_PUBLIC_ORIGIN")
   const sitemaps = await Promise.all([
     resourceSitemap.generateSitemaps(),
     channelsSitemap.generateSitemaps(),

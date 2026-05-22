@@ -110,6 +110,9 @@ FROM node:24-alpine AS runner
 
 WORKDIR /app
 
+# sharp (Next.js image optimisation) requires glibc-compatible libs on Alpine.
+RUN apk add --no-cache libc6-compat
+
 # Copy the standalone server (includes a minimal node_modules)
 COPY --from=build /app/frontends/main/.next/standalone ./
 
@@ -122,6 +125,7 @@ COPY --from=build /app/frontends/main/public ./frontends/main/public
 EXPOSE 3000
 
 ENV NODE_ENV=production
+ENV TZ=UTC
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
