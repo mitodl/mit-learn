@@ -1,9 +1,8 @@
 import { requiredEnv } from "@/env"
 import type { MetadataRoute } from "next"
 
-const BASE_URL = requiredEnv("NEXT_PUBLIC_ORIGIN")
-
 export default function robots(): MetadataRoute.Robots {
+  const BASE_URL = requiredEnv("NEXT_PUBLIC_ORIGIN")
   const shouldIndex = process.env.MITOL_NOINDEX === "false"
 
   if (shouldIndex) {
