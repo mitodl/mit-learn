@@ -81,7 +81,7 @@ const nextConfig = {
        * should not be tagged as an HTML page for Fastly surrogate-key purges.
        */
       {
-        source: "/((?!.*\\.[a-zA-Z0-9]{2,4}$)(?!healthcheck$).*)",
+        source: "/((?!.*\\.[a-zA-Z0-9]+$)(?!healthcheck$).*)",
         headers: [
           {
             key: "Cache-Control",
