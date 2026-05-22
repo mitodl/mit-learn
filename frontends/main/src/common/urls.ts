@@ -1,7 +1,6 @@
 import { env } from "@/env"
 import type { BaseProgramDisplayMode } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import invariant from "tiny-invariant"
 
 // matches ! $ & ' ( ) * + , ; = : @ ~
 const SAFE_IN_PATH_SEGMENT =
@@ -88,12 +87,6 @@ export const makeChannelManageWidgetsPath = (
   channelType: string,
   name: string,
 ) => generatePath(CHANNEL_EDIT_WIDGETS, { channelType, name })
-
-const ORIGIN = env("NEXT_PUBLIC_ORIGIN")
-invariant(ORIGIN, "NEXT_PUBLIC_ORIGIN must be set")
-if (process.env.NODE_ENV !== "production") {
-  invariant(!ORIGIN?.endsWith("/"), "NEXT_PUBLIC_ORIGIN should not end with /")
-}
 
 const MITOL_API_BASE_URL = env("NEXT_PUBLIC_MITOL_API_BASE_URL")
 
@@ -205,7 +198,9 @@ export type LoginUrlOpts = {
 }
 
 const stringifyUrlDescriptor = (val: UrlDescriptor) => {
-  const url = new URL(ORIGIN)
+  // ORIGIN is read at call time (request time) so NEXT_PUBLIC_ORIGIN is
+  // available — it is not set at build time in the standalone Docker image.
+  const url = new URL(env("NEXT_PUBLIC_ORIGIN") ?? "")
   url.pathname = val.pathname
   if (val.searchParams) {
     val.searchParams.forEach((v, k) => url.searchParams.set(k, v))
