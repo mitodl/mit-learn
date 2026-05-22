@@ -2,7 +2,9 @@ import React, { useState } from "react"
 import Image from "next/image"
 import { Container, Typography, Card, styled } from "ol-components"
 import { CarouselV2 } from "ol-components/CarouselV2"
-import { useVideoShortsLearningResources } from "api/hooks/videoShorts"
+import { useQuery } from "@tanstack/react-query"
+import { learningResourceQueries } from "api/hooks/learningResources"
+import { ResourceTypeEnum } from "api"
 import VideoShortsModal from "./VideoShortsModal"
 import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
 import type { VideoResource } from "api/v1"
@@ -79,7 +81,18 @@ const ImagePlaceholder = styled.div(({ theme }) => ({
 }))
 
 const VideoShortsSection = () => {
-  const { data, isLoading } = useVideoShortsLearningResources()
+  const { data, isLoading } = useQuery({
+    ...learningResourceQueries.search({
+      resource_category: ["Video Short"],
+      resource_type: [ResourceTypeEnum.Video],
+      limit: 50,
+      sortby: "new",
+    }),
+    select: (data) =>
+      data?.result.results.filter(
+        (r): r is VideoResource => r.resource_type === ResourceTypeEnum.Video,
+      ),
+  })
 
   const [showModal, setShowModal] = useState(false)
   const [videoIndex, setVideoIndex] = useState(0)
