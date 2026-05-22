@@ -19,7 +19,6 @@ import dynamic from "next/dynamic"
 import { Toolbar } from "../vendor/components/tiptap-ui-primitive/toolbar"
 import { TiptapEditor, MainToolbarContent, TipTapViewer } from "../TiptapEditor"
 import { BannerViewer } from "../extensions/node/Banner/BannerNode"
-import { ByLineInfoBarViewer } from "../extensions/node/ByLineInfoBar/ByLineInfoBarViewer"
 import { handleImageUpload } from "../vendor/lib/tiptap-utils"
 import { useSchema } from "../useSchema"
 import { WebsiteContentProvider } from "../WebsiteContentContext"
@@ -36,15 +35,10 @@ const TOOLBAR_HEIGHT = 43
 
 const ViewContainer = styled.div<{
   toolbarVisible: boolean
-  backgroundColor?: string
-  readOnly?: boolean
-}>(({ toolbarVisible, backgroundColor, readOnly, theme }) => ({
+}>(({ toolbarVisible, theme }) => ({
   width: "100vw",
   marginTop: toolbarVisible ? TOOLBAR_HEIGHT : 0,
-  backgroundColor:
-    readOnly && backgroundColor
-      ? theme.custom.colors[backgroundColor as keyof typeof theme.custom.colors]
-      : theme.custom.colors.white,
+  backgroundColor: theme.custom.colors.white,
 }))
 
 const StyledToolbar = styled(Toolbar)(({ theme }) => ({
@@ -157,7 +151,11 @@ export interface WebsiteContentEditorProps {
    * - In edit mode this slot is appended after the Publish button.
    */
   toolbarSlot?: React.ReactNode
-  /** Optional CSS class forwarded to the editor container for per-type theming. */
+  /**
+   * Optional CSS class applied to the editor root container (covers both edit
+   * and read-only). Used by content-type wrappers via `styled(WebsiteContentEditor)`
+   * to theme nodes through their hook classes.
+   */
   className?: string
   /**
    * Extract additional fields to include in the save payload.
@@ -178,9 +176,7 @@ export interface WebsiteContentEditorProps {
   onSave?: (article: WebsiteContent) => void
   readOnly?: boolean
   article?: WebsiteContent
-  backgroundColor?: string
   bannerViewer?: typeof BannerViewer
-  bylineViewer?: typeof ByLineInfoBarViewer
 }
 
 const WebsiteContentEditor = ({
@@ -195,8 +191,6 @@ const WebsiteContentEditor = ({
   readOnly,
   article,
   bannerViewer,
-  bylineViewer,
-  backgroundColor,
 }: WebsiteContentEditorProps) => {
   const [isPublishing, setIsPublishing] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -379,11 +373,7 @@ const WebsiteContentEditor = ({
   const resourceIds = extractLearningResourceIds(content)
 
   return (
-    <ViewContainer
-      toolbarVisible={!!isArticleEditor}
-      backgroundColor={backgroundColor}
-      readOnly={readOnly}
-    >
+    <ViewContainer className={className} toolbarVisible={!!isArticleEditor}>
       <WebsiteContentProvider value={{ article }}>
         <LearningResourceProvider resourceIds={resourceIds}>
           <EditorContext.Provider value={{ editor }}>
@@ -472,11 +462,10 @@ const WebsiteContentEditor = ({
                   content={content}
                   extensions={extensions}
                   bannerViewer={bannerViewer}
-                  bylineViewer={bylineViewer ?? ByLineInfoBarViewer}
                 />
               </>
             ) : (
-              <TiptapEditor editor={editor} className={className} />
+              <TiptapEditor editor={editor} />
             )}
           </EditorContext.Provider>
         </LearningResourceProvider>

@@ -2,6 +2,7 @@ import React from "react"
 import { screen, renderWithProviders, setMockResponse } from "@/test-utils"
 import { factories, urls } from "api/test-utils"
 import { NewsEditor } from "./contentTypes/news/NewsEditor"
+import { ArticleEditor } from "./contentTypes/article/ArticleEditor"
 
 describe("NewsViewer", () => {
   test("renders content", async () => {
@@ -86,6 +87,39 @@ describe("NewsViewer", () => {
     renderWithProviders(<NewsEditor newsItem={newsItem} readOnly />)
 
     await screen.findByText(`By ${authorName}`)
+  })
+
+  test("article read-only renders the byline with a share button", async () => {
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+    const authorName = `${user.first_name} ${user.last_name}`
+    const article = factories.websiteContent.websiteContent({
+      author_name: authorName,
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              { type: "heading", attrs: { level: 1 }, content: [] },
+              { type: "paragraph", content: [] },
+            ],
+          },
+          { type: "byline" },
+          { type: "paragraph", content: [] },
+        ],
+      },
+    })
+
+    renderWithProviders(<ArticleEditor article={article} readOnly />)
+
+    await screen.findByText(`By ${authorName}`)
+    expect(
+      screen.getByRole("button", { name: /share this article/i }),
+    ).toBeInTheDocument()
   })
 
   test("renders headings levels 1-6", async () => {

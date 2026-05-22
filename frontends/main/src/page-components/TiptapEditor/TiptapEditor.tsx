@@ -56,12 +56,10 @@ import { LearningResourceButton } from "./extensions/ui/LearningResource/Learnin
 import { LearningResourceCardViewer } from "./extensions/node/LearningResource/LearningResourceNode"
 import { MediaEmbedViewer } from "./extensions/node/MediaEmbed/MediaEmbedViewer"
 
-const Container = styled.div<{
-  readOnly: boolean
-}>(({ theme, readOnly }) => ({
+const Container = styled.div(({ theme }) => ({
   maxWidth: "890px",
   minHeight: "calc(100vh - 350px)",
-  backgroundColor: theme.custom.colors.white,
+  backgroundColor: "transparent",
   borderRadius: "10px",
   margin: "0 auto",
 
@@ -70,20 +68,6 @@ const Container = styled.div<{
     [theme.breakpoints.down("sm")]: {
       padding: "0 16px",
     },
-  },
-  ...(readOnly
-    ? {
-        backgroundColor: "transparent",
-        ".tiptap.ProseMirror.simple-editor": {
-          padding: "0 24px",
-          [theme.breakpoints.down("sm")]: {
-            padding: "0 16px",
-          },
-        },
-      }
-    : {}),
-  "&& .tiptap.ProseMirror.tiptap-viewer > :nth-child(2)": {
-    paddingTop: "36px",
   },
   "&& .tiptap.ProseMirror, && .tiptap-viewer": {
     fontFamily: theme.typography.fontFamily,
@@ -275,17 +259,12 @@ interface TiptapEditorProps {
   editor: Editor
   readOnly?: boolean
   fullWidth?: boolean
-  className?: string
 }
 
-const TiptapEditor = ({ editor, className }: TiptapEditorProps) => {
+const TiptapEditor = ({ editor }: TiptapEditorProps) => {
   return (
-    <Container readOnly={false} data-testid="editor">
-      <EditorContent
-        editor={editor}
-        role="presentation"
-        className={className}
-      />
+    <Container data-testid="editor">
+      <EditorContent editor={editor} role="presentation" />
     </Container>
   )
 }
@@ -294,15 +273,13 @@ const TipTapViewer = ({
   content,
   extensions,
   bannerViewer = BannerViewer,
-  bylineViewer = ByLineInfoBarViewer,
 }: {
   content: JSONContent
   extensions: Array<Extension | Node | Mark>
   bannerViewer?: typeof BannerViewer
-  bylineViewer?: typeof ByLineInfoBarViewer
 }) => {
   return (
-    <Container readOnly data-testid="editor">
+    <Container data-testid="editor">
       <div className="tiptap ProseMirror tiptap-viewer">
         {renderToReactElement({
           extensions,
@@ -318,7 +295,7 @@ const TipTapViewer = ({
              */
             nodeMapping: {
               banner: bannerViewer,
-              byline: bylineViewer,
+              byline: ByLineInfoBarViewer,
               divider: DividerViewer,
               imageWithCaption: ImageWithCaptionViewer,
               learningResource: LearningResourceCardViewer,
