@@ -19,6 +19,18 @@ import {
 import { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
+import { contractAdminView } from "@/common/urls"
+
+jest.mock("posthog-js/react", () => ({
+  ...jest.requireActual("posthog-js/react"),
+  useFeatureFlagEnabled: jest.fn(),
+}))
+const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL
+const managerOrganizationsUrl = `${API_BASE_URL}/api/v0/b2b/manager/organizations/`
 
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
@@ -56,6 +68,7 @@ describe("ContractContent", () => {
     setMockResponse.get(urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsListV3(), [])
     setMockResponse.get(urls.contracts.contractsList(), [])
+    mockedUseFeatureFlagEnabled.mockReturnValue(undefined)
   })
 
   it("displays a header for each program returned and cards for courses in program", async () => {
@@ -1392,6 +1405,66 @@ describe("ContractContent", () => {
     )
 
     await screen.findByRole("heading", { name: "Contract not found" })
+  })
+
+  test("does not render the Manage button when the feature flag is off", async () => {
+    mockedUseFeatureFlagEnabled.mockImplementation(() => false)
+    const { orgX } = setupProgramsAndCourses()
+
+    setMockResponse.get(managerOrganizationsUrl, [orgX])
+
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
+
+    await screen.findByRole("heading", { name: orgX.name })
+    expect(screen.queryByRole("link", { name: "Manage" })).not.toBeInTheDocument()
+  })
+
+  test("does not render the Manage button when flag is on but user is not a manager for this org", async () => {
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag === FeatureFlags.B2BContractManagerDashboard,
+    )
+    const { orgX } = setupProgramsAndCourses()
+
+    // Return a different org — user is a manager elsewhere, not for orgX
+    const otherOrg = factories.organizations.organization({})
+    setMockResponse.get(managerOrganizationsUrl, [otherOrg])
+
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
+
+    await screen.findByRole("heading", { name: orgX.name })
+    expect(screen.queryByRole("link", { name: "Manage" })).not.toBeInTheDocument()
+  })
+
+  test("renders the Manage button with correct href when flag is on and user is a manager", async () => {
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag === FeatureFlags.B2BContractManagerDashboard,
+    )
+    const { orgX } = setupProgramsAndCourses()
+
+    setMockResponse.get(managerOrganizationsUrl, [orgX])
+
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
+
+    const manageButton = await screen.findByRole("link", { name: "Manage" })
+    expect(manageButton).toHaveAttribute(
+      "href",
+      contractAdminView(orgX.slug, orgX.contracts[0].slug),
+    )
   })
 
   test("sanitizes HTML content in welcome_message_extra", async () => {
