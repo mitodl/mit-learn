@@ -1,13 +1,9 @@
-import { env } from "@/env"
+import { requiredEnv } from "@/env"
 import type { MetadataRoute } from "next"
-import invariant from "tiny-invariant"
 import type { GenerateSitemapResult } from "../types"
 import { dangerouslyDetectProductionBuildPhase } from "../util"
 import { getQueryClient } from "@/app/getQueryClient"
 import { channelQueries } from "api/hooks/channels"
-
-const BASE_URL = env("NEXT_PUBLIC_ORIGIN")
-invariant(BASE_URL, "NEXT_PUBLIC_ORIGIN must be defined")
 
 const PAGE_SIZE = 100
 
@@ -24,6 +20,7 @@ export async function generateSitemaps(): Promise<GenerateSitemapResult[]> {
    * Early exit here to avoid the useless build-time API calls.
    */
   if (dangerouslyDetectProductionBuildPhase()) return []
+  const BASE_URL = requiredEnv("NEXT_PUBLIC_ORIGIN")
   const queryClient = getQueryClient()
   const { count } = await queryClient.fetchQuery(
     channelQueries.list({ limit: PAGE_SIZE }),
