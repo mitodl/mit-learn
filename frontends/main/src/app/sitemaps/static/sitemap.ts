@@ -1,9 +1,8 @@
 import { requiredEnv } from "@/env"
 import type { MetadataRoute } from "next"
 
-const BASE_URL = requiredEnv("NEXT_PUBLIC_ORIGIN")
-
 export default function sitemap(): MetadataRoute.Sitemap {
+  const BASE_URL = requiredEnv("NEXT_PUBLIC_ORIGIN")
   return [
     {
       url: BASE_URL,
