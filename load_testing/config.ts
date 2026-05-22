@@ -8,7 +8,9 @@ export const FRONTEND_BASE_URL: string = __ENV.FRONTEND_BASE_URL?.replace(
   /\/$/,
   "",
 )
-export const SSO_BASE_URL: string = __ENV.SSO_BASE_URL?.replace(/\/$/, "")
+export const SSO_BASE_URL: string = (
+  __ENV.SSO_BASE_URL ?? "http://localhost"
+).replace(/\/$/, "")
 
 export const IGNORE_HTTPS_ERRORS: boolean =
   (__ENV.IGNORE_HTTPS_ERRORS || "false").toLowerCase() == "true"

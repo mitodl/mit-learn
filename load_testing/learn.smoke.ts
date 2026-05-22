@@ -30,6 +30,8 @@ export const options = {
   thresholds: {
     // the rate of successful checks should be higher than 90%
     checks: ["rate>0.9"],
+    http_req_failed: ["rate<0.01"],
+    browser_http_req_failed: ["rate<0.05"],
   },
   insecureSkipTLSVerify: IGNORE_HTTPS_ERRORS,
 }

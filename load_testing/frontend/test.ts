@@ -103,7 +103,7 @@ async function loginKeycloak(
   await page.locator("button[type=submit]").click()
   console.log("Login > Keycloak > submitting email address")
 
-  await page.waitForNavigation(KEYCLOAK_PASSWORD_URL_RE)
+  await page.waitForURL(KEYCLOAK_PASSWORD_URL_RE)
   console.log("Login > Keycloak > on login password page")
 
   const passwordInput = await page.locator("input[name=password]")
