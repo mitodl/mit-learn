@@ -23,20 +23,16 @@ import {
 } from "./otel-utils"
 import { parseSampleRate } from "./sentry-utils"
 
-// Validate required NEXT_PUBLIC_* env vars at server startup. These are
-// injected by Kubernetes (not baked at build time), so they must be present
-// when the server starts. validateEnv() is skipped in next.config.js during
-// Docker builds (NEXT_BUILD_CI=1) since standalone mode does not re-run
-// next.config.js at startup.
-const REQUIRED_ENV_VARS = [
-  "NEXT_PUBLIC_ORIGIN",
-  "NEXT_PUBLIC_MITOL_API_BASE_URL",
-  "NEXT_PUBLIC_SITE_NAME",
-  "NEXT_PUBLIC_MITOL_SUPPORT_EMAIL",
-  "NEXT_PUBLIC_CSRF_COOKIE_NAME",
-] as const
+// REQUIRED_PUBLIC_ENV_VARS is defined in validateEnv.js and shared with the
+// local-dev yup schema so both lists stay in sync from a single source of
+// truth. validateEnv() is skipped in next.config.js during Docker builds
+// (NEXT_BUILD_CI=1); this loop is the runtime equivalent for Kubernetes pods.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { REQUIRED_PUBLIC_ENV_VARS } = require("../validateEnv") as {
+  REQUIRED_PUBLIC_ENV_VARS: readonly string[]
+}
 
-for (const key of REQUIRED_ENV_VARS) {
+for (const key of REQUIRED_PUBLIC_ENV_VARS) {
   if (!process.env[key]) {
     // Log clearly then exit so the pod crash-loops and ops can see it
     // immediately, rather than silently serving broken pages.
