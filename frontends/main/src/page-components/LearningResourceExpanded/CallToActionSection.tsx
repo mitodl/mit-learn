@@ -1,6 +1,5 @@
 import { env } from "@/env"
-import type React from "react"
-import { useState } from "react"
+import React, { useState } from "react"
 import styled from "@emotion/styled"
 import { default as NextImage } from "next/image"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
