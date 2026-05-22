@@ -89,6 +89,10 @@ export const CONTRACT_VIEW =
   "/dashboard/organization/[orgSlug]/contract/[contractSlug]"
 export const contractView = (orgSlug: string, contractSlug: string) =>
   generatePath(CONTRACT_VIEW, { orgSlug: orgSlug, contractSlug: contractSlug })
+export const CONTRACT_ADMIN_VIEW =
+  "/organization/[orgSlug]/contract/[contractSlug]/admin"
+export const contractAdminView = (orgSlug: string, contractSlug: string) =>
+  generatePath(CONTRACT_ADMIN_VIEW, { orgSlug, contractSlug })
 export const PROGRAM_VIEW = "/dashboard/program/[id]"
 export const programView = (id: number) =>
   generatePath(PROGRAM_VIEW, { id: String(id) })

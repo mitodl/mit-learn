@@ -23,10 +23,14 @@ import {
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
+import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiAwardFill } from "@remixicon/react"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { matchOrganizationBySlug } from "@/common/utils"
+import { FeatureFlags } from "@/common/feature_flags"
+import { contractAdminView } from "@/common/urls"
 import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
 import type { DashboardCourseEntry } from "./CoursewareDisplay/model/dashboardViewModel"
 import { useContractDashboardData } from "./CoursewareDisplay/hooks/useContractDashboardData"
@@ -382,10 +386,14 @@ const ContractHeaderSection = styled.div(({ theme }) => ({
 type ContractContentInternalProps = {
   org: OrganizationPage
   contract: ContractPage
+  orgSlug: string
+  contractSlug: string
 }
 const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
   org,
   contract,
+  orgSlug,
+  contractSlug,
 }) => {
   const {
     isLoading,
@@ -396,6 +404,15 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
     programs,
     collections,
   } = useContractDashboardData(org, contract)
+
+  const managerDashboardFlag = useFeatureFlagEnabled(
+    FeatureFlags.B2BContractManagerDashboard,
+  )
+  const { data: managerOrgs } = useQuery({
+    ...managerOrganizationQueries.managerOrganizationsList(),
+    enabled: managerDashboardFlag === true,
+  })
+  const isManager = managerOrgs?.some(matchOrganizationBySlug(orgSlug)) ?? false
 
   const skeleton = (
     <Stack gap="16px">
@@ -436,6 +453,14 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
       <Stack>
         <ContractHeaderSection>
           <ContractHeader org={org} contract={contract} />
+          {managerDashboardFlag && isManager && (
+            <ButtonLink
+              size="small"
+              href={contractAdminView(orgSlug, contractSlug)}
+            >
+              Manage
+            </ButtonLink>
+          )}
           {languageOptions.length > 1 && (
             <ProgramLanguageSelect
               size="small"
@@ -540,7 +565,12 @@ const ContractContent: React.FC<ContractContentProps> = ({
   }
 
   return (
-    <ContractContentInternal org={b2bOrganization} contract={b2bContract} />
+    <ContractContentInternal
+      org={b2bOrganization}
+      contract={b2bContract}
+      orgSlug={orgSlug}
+      contractSlug={contractSlug}
+    />
   )
 }
 
