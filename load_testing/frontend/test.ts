@@ -21,15 +21,25 @@ async function home(page: Page, context: Context) {
   await page.goto(FRONTEND_BASE_URL)
 
   const carousel = await page.getByTestId("resource-carousel")
-  const articlesCount = await carousel.locator("article").count()
+  const articles = carousel.locator("article")
+
+  try {
+    await articles.first().waitFor({ timeout: 10_000 })
+  } catch {
+    // carousel never populated; let the assertion below report it
+  }
+
+  const articlesCount = await articles.count()
+
   await check(carousel, {
     "home page carousel has 12 items": () => articlesCount === 12,
   })
 
-  await carousel
-    .locator("article")
-    .nth(randomIntBetween(0, articlesCount - 1))
-    .click()
+  if (articlesCount === 0) {
+    return
+  }
+
+  await articles.nth(randomIntBetween(0, articlesCount - 1)).click()
 }
 
 async function search(page: Page, context: Context) {
@@ -53,12 +63,18 @@ async function units(page: Page, context: Context) {
 }
 
 async function login(page: Page, context: Context) {
-  const credential: AuthCredential = randomItem(credentials)
+  const credential: AuthCredential | undefined = randomItem(credentials)
 
   if (credential == null) {
     console.log("Login > skipping because no credentials provided")
+    return
   }
-  if (page.url() == "about:blank") {
+
+  if (!SSO_BASE_URL) {
+    throw Error("SSO_BASE_URL must be set to run the login flow")
+  }
+
+  if (page.url() === "about:blank") {
     await page.goto(FRONTEND_BASE_URL)
   }
 
@@ -67,11 +83,22 @@ async function login(page: Page, context: Context) {
   const loginButton = page.getByTestId("login-button-desktop")
   await loginButton.first().click()
 
-  await loginKeycloak(page, credential, context)
+  let loggedIn = false
 
-  await page.waitForURL(/.*\/dashboard.*/)
+  try {
+    await loginKeycloak(page, credential, context)
+    await page.locator('[aria-label="User Menu"]').waitFor({ timeout: 10_000 })
+    loggedIn = true
+    console.log("Login > authenticated; user menu visible")
+  } catch (err) {
+    console.log(
+      `Login > failed for '${credential.email}' at URL '${page.url()}': ${err}`,
+    )
+  }
 
-  console.log("Login > reached dashboard")
+  check(null, {
+    "login succeeded": () => loggedIn,
+  })
 }
 
 const ESCAPED_SSO_URL = escapeRegex(SSO_BASE_URL)

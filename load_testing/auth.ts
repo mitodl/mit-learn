@@ -10,7 +10,7 @@ export function getAccessToken(): string | null {
 }
 
 export function hasAccessToken(): boolean {
-  return !getAccessToken()
+  return !!getAccessToken()
 }
 
 function _validate_credentials(credentials) {

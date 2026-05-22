@@ -19,7 +19,6 @@ export function testBackend() {
       group("video shorts", () => {
         const res = client.videoShortsList({ limit: 50 })
 
-        group
         check(res, {
           "is status 200": (r) => r.response.status === 200,
           "has results": (r) => r.response.json("results").length > 0,
