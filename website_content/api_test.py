@@ -2,7 +2,6 @@
 
 import pytest
 
-
 from website_content.api import purge_content_on_save
 from website_content.constants import WebsiteContentType
 from website_content.factories import WebsiteContentFactory

@@ -6,7 +6,6 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from main.models import TimestampedModel
-
 from website_content.constants import WebsiteContentType
 from website_content.utils import website_content_image_upload_uri
 

@@ -157,7 +157,11 @@ export interface WebsiteContentEditorProps {
    * - In edit mode this slot is appended after the Publish button.
    */
   toolbarSlot?: React.ReactNode
-  /** Optional CSS class forwarded to the editor container for per-type theming. */
+  /**
+   * Optional CSS class applied to the editor root container (covers both edit
+   * and read-only). Used by content-type wrappers via `styled(WebsiteContentEditor)`
+   * to theme nodes through their hook classes.
+   */
   className?: string
   /**
    * Extract additional fields to include in the save payload.
@@ -182,6 +186,7 @@ export interface WebsiteContentEditorProps {
   bannerViewer?: typeof BannerViewer
   bylineViewer?: typeof ByLineInfoBarViewer
   applyViewerTopSpacing?: boolean
+  article?: WebsiteContent
 }
 
 const WebsiteContentEditor = ({
@@ -385,6 +390,7 @@ const WebsiteContentEditor = ({
       toolbarVisible={!!isArticleEditor}
       backgroundColor={backgroundColor}
       readOnly={readOnly}
+      className={className}
     >
       <WebsiteContentProvider value={{ contentItem }}>
         <LearningResourceProvider resourceIds={resourceIds}>
@@ -475,12 +481,12 @@ const WebsiteContentEditor = ({
                   content={content}
                   extensions={extensions}
                   bannerViewer={bannerViewer}
-                  bylineViewer={bylineViewer ?? ByLineInfoBarViewer}
+                  bylineViewer={bylineViewer}
                   applyViewerTopSpacing={applyViewerTopSpacing}
                 />
               </>
             ) : (
-              <TiptapEditor editor={editor} className={className} />
+              <TiptapEditor editor={editor} />
             )}
           </EditorContext.Provider>
         </LearningResourceProvider>

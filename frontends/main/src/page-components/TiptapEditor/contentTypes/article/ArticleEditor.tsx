@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import styled from "@emotion/styled"
 import type { WebsiteContent } from "api/v1"
 import { ButtonLink } from "@mitodl/smoot-design"
 import {
@@ -16,7 +17,26 @@ import {
 } from "./articleExtensions"
 import { ArticleBannerViewer } from "../../extensions/node/Banner/ArticleBannerNode"
 
-const NullBylineViewer = () => <></>
+/**
+ * Article-specific byline look: merged into the white banner (no bar chrome) with
+ * a "·" separator. Styling lives here (not in the byline node) by targeting the
+ * node's published hook classes, so the node stays content-type-agnostic.
+ */
+const StyledWebsiteContentEditor = styled(WebsiteContentEditor)(
+  ({ theme }) => ({
+    // Article sits on a gray page; the banner + byline render as white islands.
+    backgroundColor: theme.custom.colors.lightGray1,
+    ".byline-info-bar": {
+      boxShadow: "none",
+      border: "none",
+      marginBottom: "40px",
+      paddingTop: 0,
+    },
+    ".byline-info-bar__separator::before": {
+      content: '"·"',
+    },
+  }),
+)
 
 // Article-specific: extract author name from the byline node
 const extractArticleExtraFields = (content: {
@@ -74,7 +94,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   ) : null
 
   return (
-    <WebsiteContentEditor
+    <StyledWebsiteContentEditor
       createExtensions={createArticleExtensions}
       initialDoc={newArticleDocument}
       toolbarSlot={toolbarSlot}
@@ -86,8 +106,8 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       contentItem={article}
       backgroundColor="lightGray1"
       applyViewerTopSpacing
+      article={article}
       bannerViewer={ArticleBannerViewer}
-      bylineViewer={NullBylineViewer}
     />
   )
 }

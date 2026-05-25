@@ -4,7 +4,6 @@ import factory
 from factory.django import DjangoModelFactory
 
 from website_content import models
-
 from website_content.constants import WebsiteContentType
 
 

@@ -1406,28 +1406,37 @@ def test_load_programs(mocker, mock_blocklist, mock_duplicates):
     mock_duplicates.assert_called_once_with("mitx")
 
 
-def test_load_programs_with_child_program_relationships(mocker, settings):
-    """End-to-end loader test for mixed child course/program relationships."""
+@pytest.fixture
+def mitxonline_program_children_fixture(mocker, settings):
+    """
+    Set up topics/platform, patch _fetch_courses_by_ids, and return the parsed
+    mitxonline_program_children_loader JSON fixture.
+    """
     set_up_topics(is_mitx=True)
     LearningResourcePlatformFactory.create(code=PlatformType.mitxonline.name)
 
     with open("./test_json/mitxonline_program_children_loader.json") as f:  # noqa: PTH123
         fixture_data = json.load(f)
 
-    def _mock_fetch_courses_by_ids(course_ids):
-        return [
+    mocker.patch(
+        "learning_resources.etl.mitxonline._fetch_courses_by_ids",
+        side_effect=lambda course_ids: [
             course
             for course in fixture_data["courses"]
             if course["id"] in set(course_ids)
-        ]
-
-    mocker.patch(
-        "learning_resources.etl.mitxonline._fetch_courses_by_ids",
-        side_effect=_mock_fetch_courses_by_ids,
+        ],
     )
     settings.MITX_ONLINE_BASE_URL = "https://mitxonline.mit.edu"
+    return fixture_data
 
-    transformed_programs = list(transform_programs(fixture_data["programs"]))
+
+def test_load_programs_with_child_program_relationships(
+    mitxonline_program_children_fixture,
+):
+    """End-to-end loader test for mixed child course/program relationships."""
+    transformed_programs = list(
+        transform_programs(mitxonline_program_children_fixture["programs"])
+    )
     load_programs(
         ETLSource.mitxonline.name,
         transformed_programs,
@@ -1470,42 +1479,176 @@ def test_load_programs_with_child_program_relationships(mocker, settings):
     assert child_program_positions == sorted(set(child_program_positions))
 
 
-def test_load_programs_idempotent_child_relationships(mocker, settings):
-    """Running load_programs twice should not duplicate child program relationships."""
-    set_up_topics(is_mitx=True)
-    LearningResourcePlatformFactory.create(code=PlatformType.mitxonline.name)
+def test_load_program_honors_explicit_course_position(mock_upsert_tasks):
+    """An explicit `position` on each course_data entry should be honored, preserving gaps for pass 2 to fill."""
+    platform = LearningResourcePlatformFactory.create()
+    program = ProgramFactory.build(courses=[], platform=platform.code)
+    courses = CourseFactory.create_batch(3, platform=platform.code)
 
-    with open("./test_json/mitxonline_program_children_loader.json") as f:  # noqa: PTH123
-        fixture_data = json.load(f)
+    # Simulate gaps where pass 2 would later insert display_mode="course"
+    # child programs at positions 0 and 2.
+    program_courses = [
+        {
+            "readable_id": courses[0].learning_resource.readable_id,
+            "platform": platform.code,
+            "availability": courses[0].learning_resource.availability,
+            "position": 1,
+        },
+        {
+            "readable_id": courses[1].learning_resource.readable_id,
+            "platform": platform.code,
+            "availability": courses[1].learning_resource.availability,
+            "position": 3,
+        },
+        {
+            "readable_id": courses[2].learning_resource.readable_id,
+            "platform": platform.code,
+            "availability": courses[2].learning_resource.availability,
+            "position": 4,
+        },
+    ]
 
-    def _mock_fetch_courses_by_ids(course_ids):
-        return [
-            course
-            for course in fixture_data["courses"]
-            if course["id"] in set(course_ids)
+    result, _, _ = load_program(
+        {
+            "platform": platform.code,
+            "readable_id": program.learning_resource.readable_id,
+            "professional": False,
+            "title": program.learning_resource.title,
+            "url": program.learning_resource.url,
+            "image": {"url": program.learning_resource.image.url},
+            "published": True,
+            "runs": [
+                {
+                    "run_id": program.learning_resource.readable_id,
+                    "start_date": "2024-01-01T00:00:00Z",
+                    "enrollment_start": "2023-12-01T00:00:00Z",
+                    "end_date": "2024-06-01T00:00:00Z",
+                }
+            ],
+            "availability": program.learning_resource.availability,
+            "courses": program_courses,
+        },
+        [],
+        [],
+    )
+
+    positions_by_readable = {
+        rel.child.readable_id: rel.position for rel in result.children.all()
+    }
+    assert positions_by_readable == {
+        courses[0].learning_resource.readable_id: 1,
+        courses[1].learning_resource.readable_id: 3,
+        courses[2].learning_resource.readable_id: 4,
+    }
+
+
+def test_load_programs_orders_courses_by_req_tree_with_display_mode_course_children(
+    mitxonline_program_children_fixture,
+):
+    """
+    PROGRAM_COURSES children should land in req_tree order, interleaving
+    display_mode="course" sub-programs among regular courses.
+    """
+    transformed = list(
+        transform_programs(mitxonline_program_children_fixture["programs"])
+    )
+    load_programs(
+        ETLSource.mitxonline.name,
+        transformed,
+        config=ProgramLoaderConfig(prune=False),
+    )
+
+    parent_resource = LearningResource.objects.get(readable_id="mitx-parent-program")
+    program_courses = (
+        parent_resource.children.filter(
+            relation_type=LearningResourceRelationTypes.PROGRAM_COURSES.value
+        )
+        .order_by("position")
+        .values_list("child__readable_id", flat=True)
+    )
+    assert list(program_courses) == [
+        "course-10",
+        "course-70",
+        "mitx-child-program-displayed-as-course",
+    ]
+
+
+def test_load_programs_appends_program_program_children_after_courses(
+    mitxonline_program_children_fixture,
+):
+    """PROGRAM_PROGRAMS children must sit at positions strictly greater than every PROGRAM_COURSES position so pass 2's display_mode="course" children don't collide with them."""
+    transformed = list(
+        transform_programs(mitxonline_program_children_fixture["programs"])
+    )
+    load_programs(
+        ETLSource.mitxonline.name,
+        transformed,
+        config=ProgramLoaderConfig(prune=False),
+    )
+
+    parent_resource = LearningResource.objects.get(readable_id="mitx-parent-program")
+    program_courses_max = max(
+        parent_resource.children.filter(
+            relation_type=LearningResourceRelationTypes.PROGRAM_COURSES.value
+        ).values_list("position", flat=True)
+    )
+    program_programs_positions = list(
+        parent_resource.children.filter(
+            relation_type=LearningResourceRelationTypes.PROGRAM_PROGRAMS.value
+        ).values_list("position", flat=True)
+    )
+    assert program_programs_positions, "expected at least one PROGRAM_PROGRAMS child"
+    assert min(program_programs_positions) > program_courses_max
+
+
+def test_create_child_program_relationships_uses_existing_max_position():
+    """New child without explicit position should land at existing_max + 1."""
+    platform = LearningResourcePlatformFactory.create(code=PlatformType.mitxonline.name)
+    parent = ProgramFactory.create(
+        platform=platform.code,
+        learning_resource__readable_id="parent-with-existing-children",
+    ).learning_resource
+    existing_child = CourseFactory.create(platform=platform.code).learning_resource
+    LearningResourceRelationship.objects.create(
+        parent=parent,
+        child=existing_child,
+        relation_type=LearningResourceRelationTypes.PROGRAM_COURSES.value,
+        position=5,
+    )
+    new_child_program = ProgramFactory.create(
+        platform=platform.code,
+        learning_resource__readable_id="new-child-program",
+    ).learning_resource
+
+    loaders._create_child_program_relationships(  # noqa: SLF001
+        [
+            (
+                parent,
+                [{"readable_id": new_child_program.readable_id}],
+            )
         ]
-
-    mocker.patch(
-        "learning_resources.etl.mitxonline._fetch_courses_by_ids",
-        side_effect=_mock_fetch_courses_by_ids,
     )
-    settings.MITX_ONLINE_BASE_URL = "https://mitxonline.mit.edu"
 
-    transformed = list(transform_programs(fixture_data["programs"]))
+    new_rel = LearningResourceRelationship.objects.get(
+        parent=parent, child=new_child_program
+    )
+    assert new_rel.position == 6
 
-    # Run twice
-    load_programs(
-        ETLSource.mitxonline.name,
-        transformed,
-        config=ProgramLoaderConfig(prune=False),
-    )
-    # Re-transform since transform_programs pops keys
-    transformed = list(transform_programs(fixture_data["programs"]))
-    load_programs(
-        ETLSource.mitxonline.name,
-        transformed,
-        config=ProgramLoaderConfig(prune=False),
-    )
+
+def test_load_programs_idempotent_child_relationships(
+    mitxonline_program_children_fixture,
+):
+    """Running load_programs twice should not duplicate child program relationships."""
+    for _ in range(2):
+        # Re-transform each iteration since transform_programs pops keys.
+        transformed = list(
+            transform_programs(mitxonline_program_children_fixture["programs"])
+        )
+        load_programs(
+            ETLSource.mitxonline.name,
+            transformed,
+            config=ProgramLoaderConfig(prune=False),
+        )
 
     parent_resource = LearningResource.objects.get(readable_id="mitx-parent-program")
     # Should have exactly 2 child-program relationships, not 4

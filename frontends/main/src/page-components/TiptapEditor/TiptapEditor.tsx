@@ -62,7 +62,7 @@ const Container = styled.div<{
 }>(({ theme, readOnly, applyViewerTopSpacing }) => ({
   maxWidth: "890px",
   minHeight: "calc(100vh - 350px)",
-  backgroundColor: theme.custom.colors.white,
+  backgroundColor: "transparent",
   borderRadius: "10px",
   margin: "0 auto",
 
@@ -72,6 +72,7 @@ const Container = styled.div<{
       padding: "0 16px",
     },
   },
+
   ...(readOnly
     ? {
         backgroundColor: "transparent",
@@ -90,6 +91,7 @@ const Container = styled.div<{
         },
       }
     : {}),
+
   "&& .tiptap.ProseMirror, && .tiptap-viewer": {
     fontFamily: theme.typography.fontFamily,
     color: theme.custom.colors.darkGray2,
@@ -280,17 +282,12 @@ interface TiptapEditorProps {
   editor: Editor
   readOnly?: boolean
   fullWidth?: boolean
-  className?: string
 }
 
-const TiptapEditor = ({ editor, className }: TiptapEditorProps) => {
+const TiptapEditor = ({ editor }: TiptapEditorProps) => {
   return (
-    <Container readOnly={false} data-testid="editor">
-      <EditorContent
-        editor={editor}
-        role="presentation"
-        className={className}
-      />
+    <Container readOnly data-testid="editor">
+      <EditorContent editor={editor} role="presentation" />
     </Container>
   )
 }
@@ -299,7 +296,6 @@ const TipTapViewer = ({
   content,
   extensions,
   bannerViewer = BannerViewer,
-  bylineViewer = ByLineInfoBarViewer,
   applyViewerTopSpacing = false,
 }: {
   content: JSONContent
@@ -329,7 +325,7 @@ const TipTapViewer = ({
              */
             nodeMapping: {
               banner: bannerViewer,
-              byline: bylineViewer,
+              byline: ByLineInfoBarViewer,
               divider: DividerViewer,
               imageWithCaption: ImageWithCaptionViewer,
               learningResource: LearningResourceCardViewer,

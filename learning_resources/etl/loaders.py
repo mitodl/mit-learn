@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import caches
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Max, Q
 
 from learning_resources.constants import (
     CONTENT_TYPE_PAGE,
@@ -657,6 +657,15 @@ class ProgramLoadResult(NamedTuple):
     child_programs_data: list[dict]
 
 
+class LoadedProgramCourse(NamedTuple):
+    """A loaded course paired with the explicit child position to assign,
+    or None to fall back to the sequential index in load_program.
+    """
+
+    position: int | None
+    resource: LearningResource
+
+
 def load_program(
     program_data: dict,
     blocklist: list[str],
@@ -695,7 +704,6 @@ def load_program(
     program_data.setdefault("delivery", [LearningResourceDelivery.online.name])
     runs_data = program_data.get("runs", [])
 
-    course_resources = []
     with transaction.atomic():
         learning_resource, created = upsert_course_or_program(
             program_data, [], [], LearningResourceType.program.name
@@ -729,16 +737,22 @@ def load_program(
 
         load_run_dependent_values(learning_resource)
 
+        loaded_courses: list[LoadedProgramCourse] = []
         for course_data in courses_data:
             # skip courses that don't define a readable_id
             if not course_data.get("readable_id", None):
                 continue
 
+            explicit_position = course_data.pop("position", None)
             course_resource = load_course(
                 course_data, blocklist, duplicates, config=config.courses
             )
             if course_resource:
-                course_resources.append(course_resource)
+                loaded_courses.append(
+                    LoadedProgramCourse(
+                        position=explicit_position, resource=course_resource
+                    )
+                )
         # Replace all children with position-ordered course relationships.
         # Pass 2 in load_programs() will re-create child-program
         # relationships after all programs exist.
@@ -747,11 +761,13 @@ def load_program(
             [
                 LearningResourceRelationship(
                     parent=learning_resource,
-                    child=course_resource,
+                    child=loaded.resource,
                     relation_type=LearningResourceRelationTypes.PROGRAM_COURSES,
-                    position=position,
+                    position=(
+                        loaded.position if loaded.position is not None else fallback_idx
+                    ),
                 )
-                for position, course_resource in enumerate(course_resources)
+                for fallback_idx, loaded in enumerate(loaded_courses)
             ]
         )
 
@@ -786,7 +802,20 @@ def _create_child_program_relationships(
             )
         }
 
-        next_position = parent_resource.children.count()
+        existing_max = parent_resource.children.aggregate(Max("position")).get(
+            "position__max"
+        )
+        explicit_max = max(
+            (
+                cpd["position"]
+                for cpd in child_programs_data
+                if cpd.get("position") is not None
+            ),
+            default=-1,
+        )
+        next_position = (
+            max(existing_max if existing_max is not None else -1, explicit_max) + 1
+        )
         kept_child_ids = set()
         for child_program_data in child_programs_data:
             readable_id = child_program_data.get("readable_id")
@@ -811,16 +840,21 @@ def _create_child_program_relationships(
                 if child_program_data.get("display_mode") == "course"
                 else LearningResourceRelationTypes.PROGRAM_PROGRAMS
             )
+            explicit_position = child_program_data.get("position")
+            if explicit_position is not None:
+                position = explicit_position
+            else:
+                position = next_position
+                next_position += 1
             _, _created = LearningResourceRelationship.objects.update_or_create(
                 parent=parent_resource,
                 child=child_resource,
                 defaults={
                     "relation_type": relation_type,
-                    "position": next_position,
+                    "position": position,
                 },
             )
             kept_child_ids.add(child_resource.id)
-            next_position += 1
 
         # Remove stale child-program relationships no longer in req_tree.
         # Only delete relationships whose child is a program resource;
