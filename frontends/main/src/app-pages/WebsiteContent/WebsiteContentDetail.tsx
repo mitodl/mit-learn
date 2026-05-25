@@ -1,12 +1,23 @@
 "use client"
 
 import React from "react"
+import type { WebsiteContent } from "api/v1"
 import { useWebsiteContentDetailRetrieve } from "api/hooks/website_content"
 import { LoadingSpinner, styled } from "ol-components"
 import { NewsEditor } from "@/page-components/TiptapEditor/contentTypes/news/NewsEditor"
 import { ArticleEditor } from "@/page-components/TiptapEditor/contentTypes/article/ArticleEditor"
 import { LearningResourceProvider } from "@/page-components/TiptapEditor/extensions/node/LearningResource/LearningResourceDataProvider"
 import { notFound } from "next/navigation"
+
+const DETAIL_EDITORS: Record<
+  string,
+  React.ComponentType<{ contentItem: WebsiteContent }>
+> = {
+  article: ({ contentItem }) => (
+    <ArticleEditor article={contentItem} readOnly />
+  ),
+  news: ({ contentItem }) => <NewsEditor newsItem={contentItem} readOnly />,
+}
 
 const PageContainer = styled.div({
   display: "flex",
@@ -22,14 +33,14 @@ const Spinner = styled(LoadingSpinner)({
 })
 
 const WebsiteContentDetail = ({
-  articleId,
+  contentId,
   learningResourceIds = [],
 }: {
-  articleId: string
+  contentId: string
   learningResourceIds?: number[]
 }) => {
-  const { data: article, isLoading } =
-    useWebsiteContentDetailRetrieve(articleId)
+  const { data: contentItem, isLoading } =
+    useWebsiteContentDetailRetrieve(contentId)
 
   if (isLoading) {
     return (
@@ -38,18 +49,20 @@ const WebsiteContentDetail = ({
       </LearningResourceProvider>
     )
   }
-  if (!article) {
+  if (!contentItem) {
+    return notFound()
+  }
+
+  const contentType = contentItem.content_type ?? ""
+  const Editor = DETAIL_EDITORS[contentType]
+  if (!Editor) {
     return notFound()
   }
 
   return (
     <PageContainer>
       <LearningResourceProvider resourceIds={learningResourceIds}>
-        {article.content_type === "article" ? (
-          <ArticleEditor article={article} readOnly />
-        ) : (
-          <NewsEditor newsItem={article} readOnly />
-        )}
+        <Editor contentItem={contentItem} />
       </LearningResourceProvider>
     </PageContainer>
   )

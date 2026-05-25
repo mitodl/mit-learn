@@ -39,16 +39,16 @@ interface ArticleEditorProps {
  * Editor shell configured for the article content type (served under /articles).
  * Owns its own save mutations so WebsiteContentEditor stays API-agnostic.
  *
- * Currently uses the same websiteContent API as the news editor. When /articles
- * gets its own Django model and viewset, swap in the new hooks here:
+ * Currently uses the same websiteContent API as the news editor. If /articles
+ * later needs a dedicated endpoint, swap in the new hooks here:
  *
- *   const createMutation = useUserArticleCreate()    // future hook
- *   const updateMutation = useUserArticlePartialUpdate()
+ *   const createMutation = useArticleCreate()    // future hook
+ *   const updateMutation = useArticlePartialUpdate()
  *
  * WebsiteContentEditor does not need to change at all.
  */
 const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
-  // Swap these two lines when a dedicated UserArticle API exists.
+  // Swap these hooks when a dedicated article API exists.
   const createMutation = useWebsiteContentCreate()
   const updateMutation = useWebsiteContentPartialUpdate()
   const uploadImage = useMediaUpload()
@@ -83,8 +83,9 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       uploadImage={uploadImage}
       onSave={onSave}
       readOnly={readOnly}
-      article={article}
+      contentItem={article}
       backgroundColor="lightGray1"
+      applyViewerTopSpacing
       bannerViewer={ArticleBannerViewer}
       bylineViewer={NullBylineViewer}
     />

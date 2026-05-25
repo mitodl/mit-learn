@@ -134,7 +134,7 @@ const ArticleBannerViewer = ({
                 variant="dark"
                 ancestors={[
                   { href: "/", label: "Home" },
-                  { href: "/articles", label: "MIT Learn Articles" },
+                  { href: "/articles", label: "Articles" },
                 ]}
                 current={getTitle(node || ({} as ProseMirrorNode))}
               />

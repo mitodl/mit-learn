@@ -110,9 +110,9 @@ export interface SavePayload {
  *   const update = useWebsiteContentPartialUpdate()
  *   <WebsiteContentEditor saveMutations={{ create, update }} ... />
  *
- * A future user-article type could use a completely different API hook:
- *   const create = useUserArticleCreate()    // future hook
- *   const update = useUserArticlePartialUpdate()
+ * A future content type could use a different API hook:
+ *   const create = useSpecializedContentCreate()    // future hook
+ *   const update = useSpecializedContentPartialUpdate()
  *   <WebsiteContentEditor saveMutations={{ create, update }} ... />
  */
 export interface SaveMutations {
@@ -149,7 +149,7 @@ export interface WebsiteContentEditorProps {
    * Must be a stable reference (module-level function or useCallback).
    */
   createExtensions: CreateExtensionsFn
-  /** Initial document structure when no article is provided. */
+  /** Initial document structure when no content item is provided. */
   initialDoc: JSONContent
   /**
    * Content-type-specific toolbar content.
@@ -175,12 +175,13 @@ export interface WebsiteContentEditorProps {
    * so WebsiteContentEditor stays decoupled from any specific upload endpoint.
    */
   uploadImage: MediaUpload
-  onSave?: (article: WebsiteContent) => void
+  onSave?: (contentItem: WebsiteContent) => void
   readOnly?: boolean
-  article?: WebsiteContent
+  contentItem?: WebsiteContent
   backgroundColor?: string
   bannerViewer?: typeof BannerViewer
   bylineViewer?: typeof ByLineInfoBarViewer
+  applyViewerTopSpacing?: boolean
 }
 
 const WebsiteContentEditor = ({
@@ -193,18 +194,19 @@ const WebsiteContentEditor = ({
   uploadImage,
   onSave,
   readOnly,
-  article,
+  contentItem,
   bannerViewer,
   bylineViewer,
+  applyViewerTopSpacing,
   backgroundColor,
 }: WebsiteContentEditorProps) => {
   const [isPublishing, setIsPublishing] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [resetAttempted, setResetAttempted] = useState(false)
   const [content, setContent] = useState<JSONContent>(
-    article?.content || initialDoc,
+    contentItem?.content || initialDoc,
   )
-  const [title, setTitle] = useState(article?.title)
+  const [title, setTitle] = useState(contentItem?.title)
   const [touched, setTouched] = useState(false)
 
   const { create: createMutation, update: updateMutation } = saveMutations
@@ -263,10 +265,10 @@ const WebsiteContentEditor = ({
   const handleSave = (publish: boolean) => {
     if (!title) return
     const extraFields = extractExtraFields?.(content) ?? {}
-    if (article) {
+    if (contentItem) {
       updateMutation.mutate(
         {
-          id: article.id,
+          id: contentItem.id,
           title: title.trim(),
           content,
           is_published: publish,
@@ -321,23 +323,23 @@ const WebsiteContentEditor = ({
     extensions,
   })
 
-  // Sync incoming article changes (e.g., after a refetch)
+  // Sync incoming content changes (e.g., after a refetch)
   useEffect(() => {
-    if (!article || !editor) return
+    if (!contentItem || !editor) return
 
-    if (article.content) {
+    if (contentItem.content) {
       const currentContent = editor.getJSON()
-      if (!contentsMatch(article.content, currentContent)) {
-        setContent(article.content)
+      if (!contentsMatch(contentItem.content, currentContent)) {
+        setContent(contentItem.content)
         setTouched(true)
-        editor.commands.setContent(article.content)
+        editor.commands.setContent(contentItem.content)
       }
     }
 
-    if (article.title !== undefined) {
-      setTitle(article.title)
+    if (contentItem.title !== undefined) {
+      setTitle(contentItem.title)
     }
-  }, [article, editor])
+  }, [contentItem, editor])
 
   // Keep title in sync with the h1 heading inside the editor
   useEffect(() => {
@@ -384,7 +386,7 @@ const WebsiteContentEditor = ({
       backgroundColor={backgroundColor}
       readOnly={readOnly}
     >
-      <WebsiteContentProvider value={{ article }}>
+      <WebsiteContentProvider value={{ contentItem }}>
         <LearningResourceProvider resourceIds={resourceIds}>
           <EditorContext.Provider value={{ editor }}>
             {isArticleEditor ? (
@@ -393,7 +395,7 @@ const WebsiteContentEditor = ({
               ) : (
                 <StyledToolbar>
                   <MainToolbarContent editor={editor} />
-                  {!article?.is_published ? (
+                  {!contentItem?.is_published ? (
                     <Button
                       variant="secondary"
                       disabled={isPending || !touched || !title}
@@ -414,7 +416,9 @@ const WebsiteContentEditor = ({
                   <Button
                     variant="primary"
                     disabled={
-                      isPending || !title || (!touched && article?.is_published)
+                      isPending ||
+                      !title ||
+                      (!touched && contentItem?.is_published)
                     }
                     onClick={() => {
                       setIsPublishing(true)
@@ -442,8 +446,7 @@ const WebsiteContentEditor = ({
                 {schemaError && !readOnly ? (
                   <>
                     <Typography variant="body2">
-                      Reset to attempt to align the article to the content
-                      template.
+                      Reset to attempt to align the content to the template.
                     </Typography>
                     {resetAttempted ? (
                       <Typography variant="body2">
@@ -454,7 +457,7 @@ const WebsiteContentEditor = ({
                       variant="secondary"
                       size="small"
                       onClick={() => {
-                        editor.commands.setContent(article?.content)
+                        editor.commands.setContent(contentItem?.content)
                         setResetAttempted(true)
                       }}
                     >
@@ -473,6 +476,7 @@ const WebsiteContentEditor = ({
                   extensions={extensions}
                   bannerViewer={bannerViewer}
                   bylineViewer={bylineViewer ?? ByLineInfoBarViewer}
+                  applyViewerTopSpacing={applyViewerTopSpacing}
                 />
               </>
             ) : (

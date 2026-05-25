@@ -71,7 +71,7 @@ const NewsEditor = ({ onSave, readOnly, newsItem }: NewsEditorProps) => {
       uploadImage={uploadImage}
       onSave={onSave}
       readOnly={readOnly}
-      article={newsItem}
+      contentItem={newsItem}
     />
   )
 }

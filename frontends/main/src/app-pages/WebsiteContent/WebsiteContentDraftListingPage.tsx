@@ -128,19 +128,14 @@ const WebsiteContentDraftListingPage: React.FC<
 > = ({ contentType }) => {
   const [page, setPage] = useState(1)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const type = contentType || "article"
+  const type = contentType || "news"
   const label = CONTENT_TYPE_LABELS[type] ?? type
 
   const listParams: WebsiteContentListRequest = {
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
     draft: true,
-    ...(contentType
-      ? {
-          content_type:
-            contentType as WebsiteContentListRequest["content_type"],
-        }
-      : {}),
+    content_type: type as WebsiteContentListRequest["content_type"],
   }
 
   const { data: contentItems, isLoading: isLoadingContentItems } =
