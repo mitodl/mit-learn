@@ -5,27 +5,29 @@ import styled from "@emotion/styled"
 import { EditorContext, JSONContent, useEditor } from "@tiptap/react"
 import type { Extension, Node, Mark } from "@tiptap/core"
 import { getSchema } from "@tiptap/core"
-import type { WebsiteContent } from "api/v1"
+import type { WebsiteContent, WebsiteContentContentTypeEnum } from "api/v1"
 import {
   LoadingSpinner,
   Typography,
   HEADER_HEIGHT,
   HEADER_HEIGHT_MD,
 } from "ol-components"
-import { Alert, Button } from "@mitodl/smoot-design"
+import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import { useUserHasPermission, Permission } from "api/hooks/user"
-import { useMediaUpload } from "api/hooks/website_content"
 import { useQueryClient, type QueryClient } from "@tanstack/react-query"
 import dynamic from "next/dynamic"
 
 import { Toolbar } from "../vendor/components/tiptap-ui-primitive/toolbar"
 import { TiptapEditor, MainToolbarContent, TipTapViewer } from "../TiptapEditor"
 import { BannerViewer } from "../extensions/node/Banner/BannerNode"
+import { ByLineInfoBarViewer } from "../extensions/node/ByLineInfoBar/ByLineInfoBarViewer"
+import { Spacer } from "../vendor/components/tiptap-ui-primitive/spacer"
 import { handleImageUpload } from "../vendor/lib/tiptap-utils"
 import { useSchema } from "../useSchema"
 import { WebsiteContentProvider } from "../WebsiteContentContext"
 import { extractLearningResourceIds, contentsMatch } from "../extensions/utils"
 import { LearningResourceProvider } from "../extensions/node/LearningResource/LearningResourceDataProvider"
+import { websiteContentDraftsView, websiteContentEditView } from "@/common/urls"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -79,6 +81,18 @@ export type UploadHandler = (
 ) => Promise<string>
 
 /**
+ * The minimal interface expected from a media upload mutation.
+ * Matches the shape returned by `useMediaUpload` from `api/hooks/website_content`,
+ * but callers may supply any compatible implementation.
+ */
+export interface MediaUpload {
+  mutateAsync: (data: { file: File }) => Promise<{ url?: string }>
+  setNextProgressCallback: (
+    callback: ((percent: number) => void) | undefined,
+  ) => void
+}
+
+/**
  * The data shape sent to the create/update API.
  * `[key: string]: unknown` allows per-type extra fields (e.g. author_name).
  */
@@ -99,9 +113,9 @@ export interface SavePayload {
  *   const update = useWebsiteContentPartialUpdate()
  *   <WebsiteContentEditor saveMutations={{ create, update }} ... />
  *
- * A future user-article type could use a completely different API hook:
- *   const create = useUserArticleCreate()    // future hook
- *   const update = useUserArticlePartialUpdate()
+ * A future content type could use a different API hook:
+ *   const create = useSpecializedContentCreate()    // future hook
+ *   const update = useSpecializedContentPartialUpdate()
  *   <WebsiteContentEditor saveMutations={{ create, update }} ... />
  */
 export interface SaveMutations {
@@ -139,15 +153,15 @@ export interface WebsiteContentEditorProps {
    * Must be a stable reference (module-level function or useCallback).
    */
   createExtensions: CreateExtensionsFn
-  /** Initial document structure when no article is provided. */
+  /** Initial document structure when no content item is provided. */
   initialDoc: JSONContent
+  /** Content type for route generation (Drafts/Edit links in read-only toolbar). */
+  contentType: WebsiteContentContentTypeEnum
   /**
-   * Content-type-specific toolbar content.
-   * - In read-only mode this slot provides all toolbar items (e.g. Drafts + Edit links).
-   * - In edit mode this slot is appended after the Publish button.
+   * Optional CSS class applied to the editor root container (covers both edit
+   * and read-only). Used by content-type wrappers via `styled(WebsiteContentEditor)`
+   * to theme nodes through their hook classes.
    */
-  toolbarSlot?: React.ReactNode
-  /** Optional CSS class forwarded to the editor container for per-type theming. */
   className?: string
   /**
    * Extract additional fields to include in the save payload.
@@ -159,42 +173,50 @@ export interface WebsiteContentEditorProps {
    * WebsiteContentEditor stays decoupled from any specific API endpoint.
    */
   saveMutations: SaveMutations
-  onSave?: (article: WebsiteContent) => void
+  /**
+   * Upload mutation provided by the content-type wrapper.
+   * Pass the return value of `useMediaUpload()` (or a compatible implementation)
+   * so WebsiteContentEditor stays decoupled from any specific upload endpoint.
+   */
+  uploadImage: MediaUpload
+  onSave?: (contentItem: WebsiteContent) => void
   readOnly?: boolean
-  article?: WebsiteContent
+  contentItem?: WebsiteContent
   backgroundColor?: string
   bannerViewer?: typeof BannerViewer
-  bylineViewer?: typeof BannerViewer
+  bylineViewer?: typeof ByLineInfoBarViewer
+  applyViewerTopSpacing?: boolean
 }
 
 const WebsiteContentEditor = ({
   createExtensions,
+  contentType,
   initialDoc,
-  toolbarSlot,
   className,
   extractExtraFields,
   saveMutations,
+  uploadImage,
   onSave,
   readOnly,
-  article,
+  contentItem,
   bannerViewer,
   bylineViewer,
+  applyViewerTopSpacing,
   backgroundColor,
 }: WebsiteContentEditorProps) => {
   const [isPublishing, setIsPublishing] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [resetAttempted, setResetAttempted] = useState(false)
   const [content, setContent] = useState<JSONContent>(
-    article?.content || initialDoc,
+    contentItem?.content || initialDoc,
   )
-  const [title, setTitle] = useState(article?.title)
+  const [title, setTitle] = useState(contentItem?.title)
   const [touched, setTouched] = useState(false)
 
   const { create: createMutation, update: updateMutation } = saveMutations
   const isPending = createMutation.isPending || updateMutation.isPending
   const saveError = createMutation.error || updateMutation.error
 
-  const uploadImage = useMediaUpload()
   // Keep a ref so the stable uploadHandler callback always calls the latest mutation.
   const uploadImageRef = useRef(uploadImage)
   uploadImageRef.current = uploadImage
@@ -248,10 +270,10 @@ const WebsiteContentEditor = ({
   const handleSave = (publish: boolean) => {
     if (!title) return
     const extraFields = extractExtraFields?.(content) ?? {}
-    if (article) {
+    if (contentItem) {
       updateMutation.mutate(
         {
-          id: article.id,
+          id: contentItem.id,
           title: title.trim(),
           content,
           is_published: publish,
@@ -306,23 +328,23 @@ const WebsiteContentEditor = ({
     extensions,
   })
 
-  // Sync incoming article changes (e.g., after a refetch)
+  // Sync incoming content changes (e.g., after a refetch)
   useEffect(() => {
-    if (!article || !editor) return
+    if (!contentItem || !editor) return
 
-    if (article.content) {
+    if (contentItem.content) {
       const currentContent = editor.getJSON()
-      if (!contentsMatch(article.content, currentContent)) {
-        setContent(article.content)
+      if (!contentsMatch(contentItem.content, currentContent)) {
+        setContent(contentItem.content)
         setTouched(true)
-        editor.commands.setContent(article.content)
+        editor.commands.setContent(contentItem.content)
       }
     }
 
-    if (article.title !== undefined) {
-      setTitle(article.title)
+    if (contentItem.title !== undefined) {
+      setTitle(contentItem.title)
     }
-  }, [article, editor])
+  }, [contentItem, editor])
 
   // Keep title in sync with the h1 heading inside the editor
   useEffect(() => {
@@ -362,23 +384,48 @@ const WebsiteContentEditor = ({
   const errorMessage =
     error instanceof Error ? error.message : (error as string | null)
   const resourceIds = extractLearningResourceIds(content)
+  const editIdOrSlug = contentItem?.is_published
+    ? (contentItem?.slug ?? contentItem.id)
+    : contentItem?.id
+  const readOnlyToolbarSlot = (
+    <>
+      <Spacer />
+      <ButtonLink
+        variant="secondary"
+        href={websiteContentDraftsView(contentType)}
+        size="small"
+      >
+        Drafts
+      </ButtonLink>
+      {editIdOrSlug !== undefined ? (
+        <ButtonLink
+          variant="primary"
+          href={websiteContentEditView(contentType, editIdOrSlug)}
+          size="small"
+        >
+          Edit
+        </ButtonLink>
+      ) : null}
+    </>
+  )
 
   return (
     <ViewContainer
       toolbarVisible={!!isArticleEditor}
       backgroundColor={backgroundColor}
       readOnly={readOnly}
+      className={className}
     >
-      <WebsiteContentProvider value={{ article }}>
+      <WebsiteContentProvider value={{ contentItem }}>
         <LearningResourceProvider resourceIds={resourceIds}>
           <EditorContext.Provider value={{ editor }}>
             {isArticleEditor ? (
               readOnly ? (
-                <StyledToolbar>{toolbarSlot}</StyledToolbar>
+                <StyledToolbar>{readOnlyToolbarSlot}</StyledToolbar>
               ) : (
                 <StyledToolbar>
                   <MainToolbarContent editor={editor} />
-                  {!article?.is_published ? (
+                  {!contentItem?.is_published ? (
                     <Button
                       variant="secondary"
                       disabled={isPending || !touched || !title}
@@ -399,7 +446,9 @@ const WebsiteContentEditor = ({
                   <Button
                     variant="primary"
                     disabled={
-                      isPending || !title || (!touched && article?.is_published)
+                      isPending ||
+                      !title ||
+                      (!touched && contentItem?.is_published)
                     }
                     onClick={() => {
                       setIsPublishing(true)
@@ -414,7 +463,6 @@ const WebsiteContentEditor = ({
                   >
                     Publish
                   </Button>
-                  {toolbarSlot}
                 </StyledToolbar>
               )
             ) : null}
@@ -427,8 +475,7 @@ const WebsiteContentEditor = ({
                 {schemaError && !readOnly ? (
                   <>
                     <Typography variant="body2">
-                      Reset to attempt to align the article to the content
-                      template.
+                      Reset to attempt to align the content to the template.
                     </Typography>
                     {resetAttempted ? (
                       <Typography variant="body2">
@@ -439,7 +486,7 @@ const WebsiteContentEditor = ({
                       variant="secondary"
                       size="small"
                       onClick={() => {
-                        editor.commands.setContent(article?.content)
+                        editor.commands.setContent(contentItem?.content)
                         setResetAttempted(true)
                       }}
                     >
@@ -458,10 +505,11 @@ const WebsiteContentEditor = ({
                   extensions={extensions}
                   bannerViewer={bannerViewer}
                   bylineViewer={bylineViewer}
+                  applyViewerTopSpacing={applyViewerTopSpacing}
                 />
               </>
             ) : (
-              <TiptapEditor editor={editor} className={className} />
+              <TiptapEditor editor={editor} />
             )}
           </EditorContext.Provider>
         </LearningResourceProvider>

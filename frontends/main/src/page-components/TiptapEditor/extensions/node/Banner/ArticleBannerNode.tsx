@@ -36,7 +36,6 @@ const StyledNodeViewWrapper = styled(NodeViewWrapper)({
     marginLeft: "-50vw",
     marginRight: "-50vw",
     width: "100vw",
-    borderBottom: "1px solid #DDE1E6",
   },
 })
 
@@ -115,8 +114,6 @@ const StyledNodeViewContent = styled(NodeViewContent)(({ theme }) => ({
   },
 }))
 
-import { ByLineInBannerViewer } from "../ByLineInfoBar/ByLineInfoBarViewer"
-
 const ArticleBannerViewer = ({
   children,
   node,
@@ -126,54 +123,34 @@ const ArticleBannerViewer = ({
 }) => {
   return (
     <ReactNodeViewContentProvider content={children}>
-      <StyledNodeViewWrapper as="div">
-        <>
-          <BreadcrumbBar>
-            <BreadcrumContainer className="breadcrum">
-              <Breadcrumbs
-                variant="dark"
-                ancestors={[
-                  { href: "/", label: "Home" },
-                  { href: "/articles", label: "MIT Learn Articles" },
-                ]}
-                current={getTitle(node || ({} as ProseMirrorNode))}
-              />
-            </BreadcrumContainer>
-          </BreadcrumbBar>
-
-          <FullWidthContainer>
-            <ArticleBannerSection>
-              <InnerContainer>
-                <StyledNodeViewContent className="banner-content-editable" />
-                <ByLineInBannerViewer />
-              </InnerContainer>
-            </ArticleBannerSection>
-          </FullWidthContainer>
-        </>
-      </StyledNodeViewWrapper>
+      <ArticleBannerWrapper node={node} />
     </ReactNodeViewContentProvider>
   )
 }
 
 const ArticleBannerWrapper = (props?: { node?: ProseMirrorNode }) => {
   return (
-    <NodeViewWrapper as="div">
+    <StyledNodeViewWrapper as="div">
+      <BreadcrumbBar>
+        <BreadcrumContainer className="breadcrum">
+          <Breadcrumbs
+            variant="dark"
+            ancestors={[
+              { href: "/", label: "Home" },
+              { href: "/articles", label: "MIT Learn Articles" },
+            ]}
+            current={getTitle(props?.node || ({} as ProseMirrorNode))}
+          />
+        </BreadcrumContainer>
+      </BreadcrumbBar>
       <FullWidthContainer>
         <ArticleBannerSection>
           <InnerContainer>
-            <Breadcrumbs
-              variant="dark"
-              ancestors={[
-                { href: "/", label: "Home" },
-                { href: "/articles", label: "MIT Learn Articles" },
-              ]}
-              current={getTitle(props?.node || ({} as ProseMirrorNode))}
-            />
             <StyledNodeViewContent className="banner-content-editable" />
           </InnerContainer>
         </ArticleBannerSection>
       </FullWidthContainer>
-    </NodeViewWrapper>
+    </StyledNodeViewWrapper>
   )
 }
 

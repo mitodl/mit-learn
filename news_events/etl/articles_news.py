@@ -4,7 +4,6 @@ import logging
 
 from news_events.constants import FeedType
 from news_events.etl import loaders
-
 from website_content.constants import WebsiteContentType
 from website_content.models import WebsiteContent
 

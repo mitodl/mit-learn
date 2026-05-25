@@ -2,16 +2,17 @@ import React from "react"
 import { screen, renderWithProviders, setMockResponse } from "@/test-utils"
 import { factories, urls } from "api/test-utils"
 import { NewsEditor } from "./contentTypes/news/NewsEditor"
+import { ArticleEditor } from "./contentTypes/article/ArticleEditor"
 
-describe("ArticleViewer", () => {
-  test("renders article content", async () => {
+describe("NewsViewer", () => {
+  test("renders content", async () => {
     const user = factories.user.user({
       is_authenticated: true,
       is_article_editor: true,
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    const article = factories.websiteContent.websiteContent({
+    const newsItem = factories.websiteContent.websiteContent({
       content: {
         type: "doc",
         content: [
@@ -64,7 +65,7 @@ describe("ArticleViewer", () => {
       },
     })
 
-    renderWithProviders(<NewsEditor article={article} readOnly />)
+    renderWithProviders(<NewsEditor newsItem={newsItem} readOnly />)
 
     await screen.findByRole("heading", { name: "Test Title", level: 1 })
     await screen.findByText("Test subheading")
@@ -78,14 +79,47 @@ describe("ArticleViewer", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
     const authorName = `${user.first_name} ${user.last_name}`
-    const article = factories.websiteContent.websiteContent({
+    const newsItem = factories.websiteContent.websiteContent({
       user,
       author_name: authorName,
     })
 
-    renderWithProviders(<NewsEditor article={article} readOnly />)
+    renderWithProviders(<NewsEditor newsItem={newsItem} readOnly />)
 
     await screen.findByText(`By ${authorName}`)
+  })
+
+  test("article read-only renders the byline with a share button", async () => {
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+    const authorName = `${user.first_name} ${user.last_name}`
+    const article = factories.websiteContent.websiteContent({
+      author_name: authorName,
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              { type: "heading", attrs: { level: 1 }, content: [] },
+              { type: "paragraph", content: [] },
+            ],
+          },
+          { type: "byline" },
+          { type: "paragraph", content: [] },
+        ],
+      },
+    })
+
+    renderWithProviders(<ArticleEditor article={article} readOnly />)
+
+    await screen.findByText(`By ${authorName}`)
+    expect(
+      screen.getByRole("button", { name: /share this article/i }),
+    ).toBeInTheDocument()
   })
 
   test("renders headings levels 1-6", async () => {
@@ -95,7 +129,7 @@ describe("ArticleViewer", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    const article = factories.websiteContent.websiteContent({
+    const newsItem = factories.websiteContent.websiteContent({
       content: {
         type: "doc",
         content: [
@@ -202,7 +236,7 @@ describe("ArticleViewer", () => {
       },
     })
 
-    renderWithProviders(<NewsEditor article={article} readOnly />)
+    renderWithProviders(<NewsEditor newsItem={newsItem} readOnly />)
 
     await screen.findByRole("heading", { level: 1, name: "Heading Level 1" })
     await screen.findByRole("heading", { level: 2, name: "Heading Level 2" })
@@ -219,7 +253,7 @@ describe("ArticleViewer", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    const article = factories.websiteContent.websiteContent({
+    const newsItem = factories.websiteContent.websiteContent({
       content: {
         type: "doc",
         content: [
@@ -294,7 +328,7 @@ describe("ArticleViewer", () => {
       },
     })
 
-    renderWithProviders(<NewsEditor article={article} readOnly />)
+    renderWithProviders(<NewsEditor newsItem={newsItem} readOnly />)
 
     const firstUnordered = await screen.findByText("First unordered item")
     const secondUnordered = await screen.findByText("Second unordered item")
@@ -321,7 +355,7 @@ describe("ArticleViewer", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    const article = factories.websiteContent.websiteContent({
+    const newsItem = factories.websiteContent.websiteContent({
       content: {
         type: "doc",
         content: [
@@ -398,7 +432,7 @@ describe("ArticleViewer", () => {
       },
     })
 
-    renderWithProviders(<NewsEditor article={article} readOnly />)
+    renderWithProviders(<NewsEditor newsItem={newsItem} readOnly />)
 
     const boldText = await screen.findByText("bold text")
     expect(boldText).toBeInTheDocument()
@@ -428,7 +462,7 @@ describe("ArticleViewer", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    const article = factories.websiteContent.websiteContent({
+    const newsItem = factories.websiteContent.websiteContent({
       content: {
         type: "doc",
         content: [
@@ -486,7 +520,7 @@ describe("ArticleViewer", () => {
       },
     })
 
-    renderWithProviders(<NewsEditor article={article} readOnly />)
+    renderWithProviders(<NewsEditor newsItem={newsItem} readOnly />)
 
     const link = await screen.findByRole("link", { name: "example.com" })
     expect(link).toBeInTheDocument()
@@ -500,8 +534,8 @@ describe("ArticleViewer", () => {
       is_article_editor: true,
     })
     setMockResponse.get(urls.userMe.get(), user)
-    const article = factories.websiteContent.websiteContent()
-    renderWithProviders(<NewsEditor article={article} readOnly />)
+    const newsItem = factories.websiteContent.websiteContent()
+    renderWithProviders(<NewsEditor newsItem={newsItem} readOnly />)
 
     await screen.findByRole("link", { name: "Edit" })
   })

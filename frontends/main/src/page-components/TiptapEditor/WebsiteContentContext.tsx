@@ -2,7 +2,7 @@ import { createContext, useContext } from "react"
 import type { WebsiteContent } from "api/v1"
 
 interface WebsiteContentContextValue {
-  article?: WebsiteContent
+  contentItem?: WebsiteContent
 }
 
 const WebsiteContentContext = createContext<WebsiteContentContextValue>({})
@@ -10,5 +10,5 @@ const WebsiteContentContext = createContext<WebsiteContentContextValue>({})
 export const WebsiteContentProvider = WebsiteContentContext.Provider
 
 export function useWebsiteContent() {
-  return useContext(WebsiteContentContext).article
+  return useContext(WebsiteContentContext).contentItem
 }

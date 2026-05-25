@@ -1,0 +1,72 @@
+[
+  {
+    "id": 1,
+    "readable_id": "parent",
+    "title": "Parent",
+    "departments": [],
+    "topics": [],
+    "availability": "anytime",
+    "display_mode": "program",
+    "page": {
+      "page_url": null,
+      "live": true,
+      "include_in_learn_catalog": true
+    },
+    "req_tree": [
+      {
+        "data": { "node_type": "operator", "operator": "all_of" },
+        "id": 100,
+        "children": [
+          { "data": { "node_type": "course", "course": 50 }, "id": 101 },
+          {
+            "data": { "node_type": "program", "required_program": 2 },
+            "id": 102
+          },
+          {
+            "data": { "node_type": "program", "required_program": 3 },
+            "id": 103
+          }
+        ]
+      }
+    ],
+    "start_date": null,
+    "end_date": null,
+    "enrollment_start": null
+  },
+  {
+    "id": 2,
+    "readable_id": "child-as-course",
+    "title": "Child shown as course",
+    "departments": [],
+    "topics": [],
+    "availability": "anytime",
+    "display_mode": "course",
+    "page": {
+      "page_url": null,
+      "live": true,
+      "include_in_learn_catalog": true
+    },
+    "req_tree": [],
+    "start_date": null,
+    "end_date": null,
+    "enrollment_start": null
+  },
+  {
+    "id": 3,
+    "readable_id": "child-as-program",
+    "title": "Child shown as program",
+    "departments": [],
+    "topics": [],
+    "availability": "anytime",
+    "display_mode": "program",
+    "page": {
+      "page_url": null,
+      "live": true,
+      "include_in_learn_catalog": true
+    },
+    "req_tree": [],
+    "start_date": null,
+    "end_date": null,
+    "enrollment_start": null
+  }
+]

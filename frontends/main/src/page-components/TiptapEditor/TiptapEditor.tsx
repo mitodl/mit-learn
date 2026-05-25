@@ -58,10 +58,11 @@ import { MediaEmbedViewer } from "./extensions/node/MediaEmbed/MediaEmbedViewer"
 
 const Container = styled.div<{
   readOnly: boolean
-}>(({ theme, readOnly }) => ({
+  applyViewerTopSpacing?: boolean
+}>(({ theme, readOnly, applyViewerTopSpacing }) => ({
   maxWidth: "890px",
   minHeight: "calc(100vh - 350px)",
-  backgroundColor: theme.custom.colors.white,
+  backgroundColor: "transparent",
   borderRadius: "10px",
   margin: "0 auto",
 
@@ -71,6 +72,7 @@ const Container = styled.div<{
       padding: "0 16px",
     },
   },
+
   ...(readOnly
     ? {
         backgroundColor: "transparent",
@@ -82,9 +84,14 @@ const Container = styled.div<{
         },
       }
     : {}),
-  "&& .tiptap.ProseMirror.abc > :nth-child(2)": {
-    paddingTop: "36px",
-  },
+  ...(applyViewerTopSpacing
+    ? {
+        "&& .tiptap.ProseMirror.tiptap-viewer > :nth-child(2)": {
+          paddingTop: "36px",
+        },
+      }
+    : {}),
+
   "&& .tiptap.ProseMirror, && .tiptap-viewer": {
     fontFamily: theme.typography.fontFamily,
     color: theme.custom.colors.darkGray2,
@@ -275,17 +282,12 @@ interface TiptapEditorProps {
   editor: Editor
   readOnly?: boolean
   fullWidth?: boolean
-  className?: string
 }
 
-const TiptapEditor = ({ editor, className }: TiptapEditorProps) => {
+const TiptapEditor = ({ editor }: TiptapEditorProps) => {
   return (
-    <Container readOnly={false} data-testid="editor">
-      <EditorContent
-        editor={editor}
-        role="presentation"
-        className={className}
-      />
+    <Container readOnly data-testid="editor">
+      <EditorContent editor={editor} role="presentation" />
     </Container>
   )
 }
@@ -294,16 +296,21 @@ const TipTapViewer = ({
   content,
   extensions,
   bannerViewer = BannerViewer,
-  bylineViewer = ByLineInfoBarViewer,
+  applyViewerTopSpacing = false,
 }: {
   content: JSONContent
   extensions: Array<Extension | Node | Mark>
   bannerViewer?: typeof BannerViewer
-  bylineViewer?: typeof BannerViewer
+  bylineViewer?: typeof ByLineInfoBarViewer
+  applyViewerTopSpacing?: boolean
 }) => {
   return (
-    <Container readOnly data-testid="editor">
-      <div className="tiptap ProseMirror tiptap-viewer abc">
+    <Container
+      readOnly
+      applyViewerTopSpacing={applyViewerTopSpacing}
+      data-testid="editor"
+    >
+      <div className="tiptap ProseMirror tiptap-viewer">
         {renderToReactElement({
           extensions,
           content,
@@ -318,7 +325,7 @@ const TipTapViewer = ({
              */
             nodeMapping: {
               banner: bannerViewer,
-              byline: bylineViewer,
+              byline: ByLineInfoBarViewer,
               divider: DividerViewer,
               imageWithCaption: ImageWithCaptionViewer,
               learningResource: LearningResourceCardViewer,

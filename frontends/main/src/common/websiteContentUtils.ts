@@ -1,10 +1,10 @@
 /**
  * Recursively traverses a ProseMirror JSON content structure to find the first image.
  *
- * @param content - The ProseMirror JSON content object from an article
+ * @param content - The ProseMirror JSON content object
  * @returns The URL of the first image found, or null if no image exists
  */
-export function extractFirstImageFromArticle(content: unknown): string | null {
+export function extractFirstImage(content: unknown): string | null {
   if (!content || typeof content !== "object") return null
 
   const node = content as Record<string, unknown>
@@ -21,7 +21,7 @@ export function extractFirstImageFromArticle(content: unknown): string | null {
   // Recursively check content array
   if (Array.isArray(node.content)) {
     for (const childNode of node.content) {
-      const imageUrl = extractFirstImageFromArticle(childNode)
+      const imageUrl = extractFirstImage(childNode)
       if (imageUrl) {
         return imageUrl
       }

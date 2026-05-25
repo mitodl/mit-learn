@@ -1,3 +1,20 @@
+/**
+ * Test layering — what belongs in THIS file:
+ *
+ * 1. Smoke / seam tests for the ProgramEnrollmentDisplay <->
+ *    useProgramDashboardData integration: that the hook's output actually
+ *    renders (sections -> cards, the right kind per item). Only the rendered
+ *    component proves the seam.
+ * 2. Genuine component-level concerns: simple display cases, a11y
+ *    roles/headings, user interactions (enroll dialog, certificate button,
+ *    language <select>), 404 / not-enrolled state.
+ *
+ * Exhaustive case coverage — req-tree ordering, completion/elective caps,
+ * language-key resolution, program-as-course derivation — belongs in the
+ * pure model (model/dashboardViewModel.test.ts) or the hook tests
+ * (hooks/useProgramDashboardData.test.tsx, useDashboardLanguagePicker.test.ts),
+ * NOT here.
+ */
 import React from "react"
 import { waitFor } from "@testing-library/react"
 import {

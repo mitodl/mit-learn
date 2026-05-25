@@ -6,33 +6,11 @@ import { getQueryClient } from "@/app/getQueryClient"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { extractLearningResourceIds } from "@/page-components/TiptapEditor/extensions/utils"
 import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
-import type { WebsiteContent } from "api/v1"
-import type { JSONContent } from "@tiptap/react"
-
-// Extracts the banner subheading paragraph at known location
-const extractWebsiteContentDescription = (
-  article: WebsiteContent,
-): string | undefined => {
-  const banner = article.content?.content?.[0]
-  const subheading = banner?.content?.[1]
-  const textNode = subheading?.content?.[0]
-  return textNode?.text
-}
-
-const extractImageMetadata = (
-  news: WebsiteContent,
-): { src: string; alt: string } | null => {
-  const imageWithCaption = news.content?.content?.find(
-    (node: JSONContent) => node.type === "imageWithCaption",
-  )
-  if (!imageWithCaption) {
-    return null
-  }
-  return {
-    src: imageWithCaption.attrs.src,
-    alt: imageWithCaption.attrs.caption || imageWithCaption.attrs.alt,
-  }
-}
+import {
+  extractImageMetadata,
+  extractWebsiteContentDescription,
+} from "@/common/website_content"
+import { notFound } from "next/navigation"
 
 export const generateMetadata = async (
   props: PageProps<"/news/[slugOrId]">,
@@ -44,15 +22,18 @@ export const generateMetadata = async (
   const queryClient = getQueryClient()
 
   return safeGenerateMetadata(async () => {
-    const news = await queryClient.fetchQuery(
+    const content = await queryClient.fetchQuery(
       websiteContentQueries.websiteContentDetailRetrieve(slugOrId),
     )
+    if (content.content_type !== "news") {
+      return notFound()
+    }
 
-    const description = extractWebsiteContentDescription(news)
-    const leadImage = extractImageMetadata(news)
+    const description = extractWebsiteContentDescription(content)
+    const leadImage = extractImageMetadata(content)
 
     return standardizeMetadata({
-      title: news.title,
+      title: content.title,
       description,
       image: leadImage?.src,
       imageAlt: leadImage?.alt,
@@ -71,11 +52,12 @@ const Page: React.FC<PageProps<"/news/[slugOrId]">> = async (props) => {
 
   const queryKey =
     websiteContentQueries.websiteContentDetailRetrieve(slugOrId).queryKey
-  const cacheData = queryClient.getQueryData(queryKey)
+  const content = queryClient.getQueryData(queryKey)
+  if (!content || content.content_type !== "news") {
+    return notFound()
+  }
 
-  const learningResourceIds = cacheData?.content
-    ? extractLearningResourceIds(cacheData.content)
-    : []
+  const learningResourceIds = extractLearningResourceIds(content.content)
 
   if (learningResourceIds.length > 0) {
     const bulkQuery = learningResourceQueries.list({
@@ -87,7 +69,7 @@ const Page: React.FC<PageProps<"/news/[slugOrId]">> = async (props) => {
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <WebsiteContentDetail
-        articleId={slugOrId}
+        contentId={slugOrId}
         learningResourceIds={learningResourceIds}
       />
     </HydrationBoundary>

@@ -20,7 +20,7 @@ import type {
 } from "api/v1"
 import { LocalDate } from "ol-utilities"
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
-import { extractFirstImageFromArticle } from "@/common/articleUtils"
+import { extractFirstImage } from "@/common/websiteContentUtils"
 import { websiteContentEditView, websiteContentCreateView } from "@/common/urls"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 import { ButtonLink } from "@mitodl/smoot-design"
@@ -46,7 +46,7 @@ const PageHeader = styled.div`
   margin-bottom: 40px;
 `
 
-const DraftArticleCard = styled(Card)`
+const DraftContentCard = styled(Card)`
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -84,35 +84,35 @@ const CONTENT_TYPE_LABELS: Record<string, string> = {
   news: "News",
 }
 
-const DraftItem: React.FC<{ article: WebsiteContent; type: string }> = ({
-  article,
+const DraftItem: React.FC<{ contentItem: WebsiteContent; type: string }> = ({
+  contentItem,
   type,
 }) => {
-  const itemUrl = article.is_published
-    ? `/${type === "article" ? "articles" : type}/${article.slug || article.id}`
-    : websiteContentEditView(type, article.id)
+  const itemUrl = contentItem.is_published
+    ? `/${type === "article" ? "articles" : type}/${contentItem.slug || contentItem.id}`
+    : websiteContentEditView(type, contentItem.id)
 
-  const imageUrl = extractFirstImageFromArticle(article.content)
+  const imageUrl = extractFirstImage(contentItem.content)
 
   return (
-    <DraftArticleCard forwardClicksToLink>
+    <DraftContentCard forwardClicksToLink>
       <Card.Image
         src={imageUrl || DEFAULT_BACKGROUND_IMAGE_URL}
-        alt={article.title}
+        alt={contentItem.title}
       />
       <Card.Title href={itemUrl} lines={2} style={{ marginBottom: "-13px" }}>
-        {article.title}
+        {contentItem.title}
       </Card.Title>
       <Card.Footer>
-        <LocalDate date={article.created_on} />
-        {!article.is_published && (
+        <LocalDate date={contentItem.created_on} />
+        {!contentItem.is_published && (
           <>
             {" • "}
             <DraftBadge>Draft</DraftBadge>
           </>
         )}
       </Card.Footer>
-    </DraftArticleCard>
+    </DraftContentCard>
   )
 }
 
@@ -128,22 +128,17 @@ const WebsiteContentDraftListingPage: React.FC<
 > = ({ contentType }) => {
   const [page, setPage] = useState(1)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const type = contentType || "article"
+  const type = contentType || "news"
   const label = CONTENT_TYPE_LABELS[type] ?? type
 
   const listParams: WebsiteContentListRequest = {
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
     draft: true,
-    ...(contentType
-      ? {
-          content_type:
-            contentType as WebsiteContentListRequest["content_type"],
-        }
-      : {}),
+    content_type: type as WebsiteContentListRequest["content_type"],
   }
 
-  const { data: articles, isLoading: isLoadingArticles } =
+  const { data: contentItems, isLoading: isLoadingContentItems } =
     useWebsiteContentList(listParams)
 
   useEffect(() => {
@@ -152,11 +147,13 @@ const WebsiteContentDraftListingPage: React.FC<
     }
   }, [page])
 
-  const draftArticles = articles?.results
-  const totalPages = articles?.count ? Math.ceil(articles.count / PAGE_SIZE) : 0
+  const draftItems = contentItems?.results
+  const totalPages = contentItems?.count
+    ? Math.ceil(contentItems.count / PAGE_SIZE)
+    : 0
 
-  if (isLoadingArticles) {
-    return <LoadingSpinner loading={isLoadingArticles} />
+  if (isLoadingContentItems) {
+    return <LoadingSpinner loading={isLoadingContentItems} />
   }
 
   return (
@@ -174,19 +171,19 @@ const WebsiteContentDraftListingPage: React.FC<
             </ButtonLink>
           </PageHeader>
 
-          {isLoadingArticles ? (
+          {isLoadingContentItems ? (
             <LoadingContainer>
               <LoadingSpinner loading size={48} />
             </LoadingContainer>
-          ) : draftArticles && draftArticles.length > 0 ? (
+          ) : draftItems && draftItems.length > 0 ? (
             <>
               <Grid2 container columnSpacing="24px" rowSpacing="28px">
-                {draftArticles.map((article) => (
+                {draftItems.map((contentItem) => (
                   <Grid2
-                    key={article.id}
+                    key={contentItem.id}
                     size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 3 }}
                   >
-                    <DraftItem article={article} type={type} />
+                    <DraftItem contentItem={contentItem} type={type} />
                   </Grid2>
                 ))}
               </Grid2>

@@ -1,13 +1,12 @@
 "use client"
 
 import React from "react"
-import type { WebsiteContent } from "api/v1"
-import { ButtonLink } from "@mitodl/smoot-design"
+import { WebsiteContentContentTypeEnum, type WebsiteContent } from "api/v1"
 import {
   useWebsiteContentCreate,
   useWebsiteContentPartialUpdate,
+  useMediaUpload,
 } from "api/hooks/website_content"
-import { Spacer } from "../../vendor/components/tiptap-ui-primitive/spacer"
 import { WebsiteContentEditor } from "../../core/WebsiteContentEditor"
 import { createNewsExtensions, newNewsDocument } from "./newsExtensions"
 
@@ -23,9 +22,9 @@ const extractNewsExtraFields = (content: {
 }
 
 interface NewsEditorProps {
-  onSave?: (article: WebsiteContent) => void
+  onSave?: (savedContent: WebsiteContent) => void
   readOnly?: boolean
-  article?: WebsiteContent
+  newsItem?: WebsiteContent
 }
 
 /**
@@ -33,42 +32,24 @@ interface NewsEditorProps {
  * Owns its own save mutations (websiteContent API) and passes them to
  * WebsiteContentEditor — keeping the generic shell decoupled from any specific API.
  */
-const NewsEditor = ({ onSave, readOnly, article }: NewsEditorProps) => {
-  // News content type uses the websiteContent (articles) API.
+const NewsEditor = ({ onSave, readOnly, newsItem }: NewsEditorProps) => {
+  // News content type uses the websiteContent API.
   // A different content type would call different hooks here.
   const createMutation = useWebsiteContentCreate()
   const updateMutation = useWebsiteContentPartialUpdate()
-
-  const editUrl = article
-    ? `/website_content/news/${article.is_published ? article.slug : article.id}/edit`
-    : "/website_content/news/new"
-
-  const toolbarSlot = readOnly ? (
-    <>
-      <Spacer />
-      <ButtonLink
-        variant="secondary"
-        href="/website_content/drafts?content_type=news"
-        size="small"
-      >
-        Drafts
-      </ButtonLink>
-      <ButtonLink variant="primary" href={editUrl} size="small">
-        Edit
-      </ButtonLink>
-    </>
-  ) : null
+  const uploadImage = useMediaUpload()
 
   return (
     <WebsiteContentEditor
       createExtensions={createNewsExtensions}
+      contentType={WebsiteContentContentTypeEnum.News}
       initialDoc={newNewsDocument}
-      toolbarSlot={toolbarSlot}
       extractExtraFields={extractNewsExtraFields}
       saveMutations={{ create: createMutation, update: updateMutation }}
+      uploadImage={uploadImage}
       onSave={onSave}
       readOnly={readOnly}
-      article={article}
+      contentItem={newsItem}
     />
   )
 }

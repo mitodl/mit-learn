@@ -1,8 +1,8 @@
 /**
  * Pure-model layer for the dashboard.
  *
- * Owns the canonical types (e.g. DashboardCourseSlot) and the pure transforms
- * — grouping, slot construction, display policy — that data hooks compose into
+ * Owns the canonical types (e.g. DashboardCourseEntry) and the pure transforms
+ * — grouping, entry construction, display policy — that data hooks compose into
  * render-ready shapes. No React, no queries; everything is synchronous and
  * unit-testable in isolation.
  */
@@ -14,7 +14,10 @@ import type {
   CourseRunLanguageOption,
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
+  V2Program,
+  V2ProgramCollection,
   V2ProgramDetail,
+  V2ProgramRequirement,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
@@ -23,11 +26,19 @@ import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 // enrollment-flat home contract; it moves into this file when the legacy
 // cards are removed (Phase 7).
 import type { DashboardResource } from "../DashboardCard"
-import { getIdsFromReqTree } from "@/common/mitxonline"
-import { EnrollmentStatus, getEnrollmentStatus } from "../helpers"
+import {
+  getIdsFromReqTree,
+  parseProgramRequirementSections,
+} from "@/common/mitxonline"
+import type { ProgramRequirementSection } from "@/common/mitxonline"
+import {
+  EnrollmentStatus,
+  getEnrollmentStatus,
+  getRequirementsProgress,
+} from "../helpers"
 import {
   getNativeLanguageName,
-  // below five are used only for resolveSlotForLanguage
+  // below five are used only for resolveCourseEntryForLanguage
   getCourseRunForSelectedLanguage,
   getEnrollmentForSelectedLanguage,
   getResolvedRunForSelectedLanguage,
@@ -43,10 +54,10 @@ import {
  * `enrollments` must be course-matched (by run id) with no language filter —
  * language is a display selection (`selectedLanguageKey` → `displayedEnrollment`
  * / `displayedRun`), not a filter on the underlying list. Contract scoping,
- * when applicable, must be applied by the slot constructor before the list
- * reaches the slot.
+ * when applicable, must be applied by the entry constructor before the list
+ * reaches the entry.
  */
-export type DashboardCourseSlot = {
+export type DashboardCourseEntry = {
   course: CourseWithCourseRunsSerializerV2
   enrollments: CourseRunEnrollmentV3[]
   selectedLanguageKey: string
@@ -68,6 +79,17 @@ const getMaxEnrollmentGrade = (enrollment: CourseRunEnrollmentV3): number => {
   return Math.max(0, ...enrollment.grades.map((grade) => grade.grade ?? 0))
 }
 
+const enrollmentBelongsToCourse = (
+  course: CourseWithCourseRunsSerializerV2,
+  enrollment: CourseRunEnrollmentV3,
+): boolean => {
+  if (enrollment.run.course?.id === course.id) {
+    return true
+  }
+
+  return course.courseruns.some((run) => run.id === enrollment.run.id)
+}
+
 /**
  * Legacy display policy used by dashboard cards.
  *
@@ -81,7 +103,7 @@ const pickDisplayedEnrollmentForLegacyDashboard = (
   enrollments: CourseRunEnrollmentV3[],
 ): CourseRunEnrollmentV3 | null => {
   const courseEnrollments = enrollments.filter((enrollment) =>
-    course.courseruns.some((run) => run.id === enrollment.run.id),
+    enrollmentBelongsToCourse(course, enrollment),
   )
   if (courseEnrollments.length === 0) {
     return null
@@ -403,11 +425,11 @@ const getDistinctDashboardLanguageOptions = (
   return options
 }
 
-type ResolveSlotForLanguageOpts = {
+type ResolveCourseEntryForLanguageOpts = {
   contractId?: number
 }
 
-type ResolveSlotForLanguageResult = {
+type ResolveCourseEntryForLanguageResult = {
   displayedEnrollment: CourseRunEnrollmentV3 | null
   displayedRun: CourseRunV2 | null
   selectedLanguageOption: CourseRunLanguageOption | null
@@ -415,14 +437,14 @@ type ResolveSlotForLanguageResult = {
 
 /**
  * Given a language selection and course/enrollment data, pick the
- * `displayedEnrollment` and `displayedRun` for a dashboard slot.
+ * `displayedEnrollment` and `displayedRun` for a dashboard course entry.
  */
-const resolveSlotForLanguage = (
+const resolveCourseEntryForLanguage = (
   course: CourseWithCourseRunsSerializerV2,
   enrollments: CourseRunEnrollmentV3[],
   selectedLanguageKey: string,
-  opts?: ResolveSlotForLanguageOpts,
-): ResolveSlotForLanguageResult => {
+  opts?: ResolveCourseEntryForLanguageOpts,
+): ResolveCourseEntryForLanguageResult => {
   const selectedLanguageOption = getSelectedLanguageOption(
     course,
     selectedLanguageKey,
@@ -485,11 +507,414 @@ const resolveSlotForLanguage = (
   }
 }
 
+/**
+ * Dashboard's display title for a requirement section operator node.
+ *
+ * Display policy owned by the dashboard — NOT by the shared parser
+ * (`parseProgramRequirementSections`). The shared parser returns `rawTitle`
+ * (null when absent); this function layers the fallback copy on top.
+ *
+ * Title precedence:
+ * 1. `node.data.title` — explicit title wins
+ * 2. elective + `min_number_of` + numeric `operator_value` → "Electives (Complete N)"
+ * 3. elective (any other config) → "Elective Courses"
+ * 4. default → "Core Courses"
+ */
+const getRequirementSectionTitle = (node: V2ProgramRequirement): string => {
+  if (node.data.title) {
+    return node.data.title
+  }
+  if (node.data.elective_flag) {
+    if (node.data.operator === "min_number_of" && node.data.operator_value) {
+      return `Electives (Complete ${node.data.operator_value})`
+    }
+    return "Elective Courses"
+  }
+  return "Core Courses"
+}
+
+/**
+ * A single item in a requirement section — a discriminated union of three kinds.
+ *
+ * Terminology note: `item` refers to any arm of this union (heterogeneous);
+ * `entry` refers specifically to the `DashboardCourseEntry` resolved for the
+ * `course` arm (the only arm with language / contract / enrollment complexity).
+ * The other two arms are not `DashboardCourseEntry`-shaped and are intentionally
+ * left as lighter structs.
+ */
+type RequirementSectionItem =
+  | { kind: "course"; entry: DashboardCourseEntry }
+  | {
+      kind: "program-as-course"
+      courseProgram: V2ProgramDetail
+      moduleCourses: CourseWithCourseRunsSerializerV2[]
+      courseProgramEnrollment?: V3UserProgramEnrollment
+    }
+  | { kind: "program-enrollment"; enrollment: V3UserProgramEnrollment }
+
+/**
+ * A fully-resolved requirement section for the program dashboard.
+ *
+ * Carries `node` (the source operator from `req_tree`) because the dashboard
+ * feeds it to `getRequirementsProgress(V2ProgramRequirement[])` for progress
+ * counts — a dashboard-internal need. It is distinct from the shared
+ * structure-only `ProgramRequirementSection` (which carries `node` as a
+ * back-reference but has no display/completion data).
+ */
+type RequirementSection = {
+  key: string | number | null | undefined
+  title: string
+  node: V2ProgramRequirement
+  items: RequirementSectionItem[]
+  completed: number
+  total: number
+}
+
+/**
+ * Build a fully-resolved `DashboardCourseEntry` for a single course.
+ *
+ * This is a pure constructor — it delegates display-resolution to
+ * `resolveCourseEntryForLanguage` and assembles the result with the
+ * caller-supplied metadata. The caller is responsible for:
+ *  - pre-filtering `enrollments` to this course (e.g. `enrollmentsByCourseId[course.id] ?? []`)
+ *  - computing `availableLanguages` once at the composer level (NOT re-derived here)
+ *  - supplying the effective `selectedLanguageKey` (a valid option or fallback)
+ *
+ * `enrollments` is stored uncollapsed on the entry — the full list, never
+ * filtered to the displayed choice. The `displayedEnrollment`/`displayedRun`
+ * pair is derived by `resolveCourseEntryForLanguage` for the legacy card UI.
+ */
+const buildCourseEntry = (
+  course: CourseWithCourseRunsSerializerV2,
+  enrollments: CourseRunEnrollmentV3[],
+  selectedLanguageKey: string,
+  opts: {
+    availableLanguages: SimpleSelectOption[]
+    contractId?: number
+    isContractPageResource?: boolean
+    ancestorContext?: DashboardCourseEntry["ancestorContext"]
+  },
+): DashboardCourseEntry => {
+  const { displayedEnrollment, displayedRun } = resolveCourseEntryForLanguage(
+    course,
+    enrollments,
+    selectedLanguageKey,
+    opts.contractId !== undefined ? { contractId: opts.contractId } : undefined,
+  )
+  return {
+    course,
+    enrollments,
+    selectedLanguageKey,
+    availableLanguages: opts.availableLanguages,
+    contractId: opts.contractId,
+    isContractPageResource: opts.isContractPageResource,
+    ancestorContext: opts.ancestorContext,
+    displayedEnrollment,
+    displayedRun,
+  }
+}
+
+type BuildRequirementSectionsArgs = {
+  /**
+   * The program's `req_tree`. Assumes a flat structure: operators are never
+   * nested inside operators; direct children of each operator are leaves
+   * (`node_type: "course"` or `"program"`). See `getRequirementsProgress`
+   * for the same assumption and rationale.
+   */
+  reqTree: V2ProgramRequirement[]
+  /** All courses belonging to the program (fetched once by the composer). */
+  programCourses: CourseWithCourseRunsSerializerV2[]
+  /** Course-run enrollments keyed by course id (pre-grouped by the composer). */
+  enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>
+  /** Program enrollments keyed by program id (pre-grouped by the composer). */
+  programEnrollmentsById: Record<number, V3UserProgramEnrollment>
+  /** Nested programs referenced in `req_tree` (fetched by the composer). */
+  requiredPrograms: V2ProgramDetail[]
+  /**
+   * Module courses for each required program (keyed by program id). Used to
+   * wire `program-as-course` items. Pre-derived by the composer via
+   * `groupModuleCoursesByProgramId`.
+   */
+  requiredProgramModuleCoursesByProgramId: Record<
+    number,
+    CourseWithCourseRunsSerializerV2[]
+  >
+  /** Effective language key (valid option or fallback ""). */
+  selectedLanguageKey: string
+  /**
+   * Dashboard-wide language options list, computed once by the composer.
+   * Stored as-is on each course entry — NOT recomputed here.
+   */
+  availableLanguages: SimpleSelectOption[]
+  /**
+   * The top-level program's own enrollment (from `programEnrollmentsById`).
+   * When present, placed on every course arm's `ancestorContext.programEnrollment`.
+   */
+  ancestorProgramEnrollment?: V3UserProgramEnrollment
+}
+
+/**
+ * Build the requirement sections for the program dashboard.
+ *
+ * Composes `parseProgramRequirementSections` for the structural parse, then
+ * layers dashboard-only enrichment: entity resolution (course/program lookups),
+ * the three-arm `RequirementSectionItem` discriminated union, section title
+ * display copy (via `getRequirementSectionTitle`), and per-section + overall
+ * progress counts (via `getRequirementsProgress`).
+ *
+ * Assumes a flat `req_tree`: operators are never nested inside operators.
+ * See `getRequirementsProgress` for the same assumption and rationale.
+ *
+ * Preserves `req_tree` ordering. Sections with no resolved items are filtered
+ * out (oracle: `.filter(section => section.items.length > 0)`).
+ * Overall counts are computed over the filtered sections' nodes (not the full
+ * `req_tree`) to match the oracle exactly.
+ */
+const buildRequirementSections = ({
+  reqTree,
+  programCourses,
+  enrollmentsByCourseId,
+  programEnrollmentsById,
+  requiredPrograms,
+  requiredProgramModuleCoursesByProgramId,
+  selectedLanguageKey,
+  availableLanguages,
+  ancestorProgramEnrollment,
+}: BuildRequirementSectionsArgs): {
+  sections: RequirementSection[]
+  completedCount: number
+  totalCount: number
+} => {
+  const coursesById = new Map(programCourses.map((c) => [c.id, c]))
+  const programsById = new Map(requiredPrograms.map((p) => [p.id, p]))
+
+  const parsedSections: ProgramRequirementSection[] =
+    parseProgramRequirementSections(reqTree)
+
+  const sections: RequirementSection[] = parsedSections
+    .map((section) => {
+      const items: RequirementSectionItem[] = section.items
+        .map((resource): RequirementSectionItem | null => {
+          if (resource.type === "course") {
+            const course = coursesById.get(resource.id)
+            if (!course) return null
+            return {
+              kind: "course",
+              entry: buildCourseEntry(
+                course,
+                enrollmentsByCourseId[course.id] ?? [],
+                selectedLanguageKey,
+                {
+                  availableLanguages,
+                  ancestorContext: ancestorProgramEnrollment
+                    ? { programEnrollment: ancestorProgramEnrollment }
+                    : undefined,
+                },
+              ),
+            }
+          }
+
+          // resource.type === "program"
+          const program = programsById.get(resource.id)
+          if (!program) return null
+
+          if (isProgramAsCourse(program)) {
+            return {
+              kind: "program-as-course",
+              courseProgram: program,
+              moduleCourses:
+                requiredProgramModuleCoursesByProgramId[program.id] ?? [],
+              courseProgramEnrollment: programEnrollmentsById[program.id],
+            }
+          }
+
+          const enrollment = programEnrollmentsById[program.id]
+          if (!enrollment) return null
+
+          return { kind: "program-enrollment", enrollment }
+        })
+        .filter((item): item is RequirementSectionItem => item !== null)
+
+      const { completed, total } = getRequirementsProgress(
+        [section.node],
+        enrollmentsByCourseId,
+        programEnrollmentsById,
+      )
+
+      return {
+        key: section.id,
+        title: getRequirementSectionTitle(section.node),
+        node: section.node,
+        items,
+        completed,
+        total,
+      }
+    })
+    .filter((section) => section.items.length > 0)
+
+  const { completed: completedCount, total: totalCount } =
+    getRequirementsProgress(
+      sections.map((s) => s.node),
+      enrollmentsByCourseId,
+      programEnrollmentsById,
+    )
+
+  return { sections, completedCount, totalCount }
+}
+
+const getProgramsInCollections = (
+  collections: V2ProgramCollection[],
+): Set<number> => {
+  return new Set(
+    collections.flatMap((collection) =>
+      collection.programs
+        .map((program) => program.id)
+        .filter((id): id is number => id !== undefined),
+    ),
+  )
+}
+
+const programHasContractRuns = (
+  program: V2Program,
+  contractCourseIds: Set<number>,
+): boolean => {
+  return program.courses.some((courseId) => contractCourseIds.has(courseId))
+}
+
+const getSortedStandaloneContractPrograms = (
+  programs: V2Program[],
+  collections: V2ProgramCollection[],
+  contract: ContractPage,
+  contractCourses: CourseWithCourseRunsSerializerV2[],
+): V2Program[] => {
+  if (!contract.programs || contract.programs.length === 0) {
+    return []
+  }
+
+  const contractProgramIds = new Set(contract.programs)
+  const programsInCollections = getProgramsInCollections(collections)
+  const contractCourseIds = new Set(contractCourses.map((course) => course.id))
+  // Precompute sort order map: O(m) once, not O(n*m) per sort
+  const programOrder = new Map(
+    contract.programs.map((id, index) => [id, index]),
+  )
+
+  return programs
+    .filter((program) => !programsInCollections.has(program.id))
+    .filter((program) => contractProgramIds.has(program.id))
+    .filter((program) => programHasContractRuns(program, contractCourseIds))
+    .sort((a, b) => {
+      const indexA = programOrder.get(a.id) ?? Infinity
+      const indexB = programOrder.get(b.id) ?? Infinity
+      return indexA - indexB
+    })
+}
+
+/**
+ * Filter `collections` to those the contract dashboard should render.
+ *
+ * A collection is renderable when **both** conditions hold:
+ *  1. At least one of the collection's programs appears in `contract.programs`
+ *     (i.e. the collection is relevant to this contract).
+ *  2. At least one of the collection's programs has at least one course that
+ *     belongs to the contract (via `programHasContractRuns`), so the card list
+ *     will not be empty.
+ *
+ * If the contract has no programs at all, returns `[]` immediately.
+ */
+const getRenderableContractCollections = (
+  collections: V2ProgramCollection[],
+  programs: V2Program[],
+  contract: ContractPage,
+  contractCourses: CourseWithCourseRunsSerializerV2[],
+): V2ProgramCollection[] => {
+  if (!contract.programs || contract.programs.length === 0) {
+    return []
+  }
+
+  const contractProgramIds = new Set(contract.programs)
+  const contractCourseIds = new Set(contractCourses.map((course) => course.id))
+  const programsById = new Map(programs.map((program) => [program.id, program]))
+
+  return collections.filter((collection) => {
+    const collectionProgramIds = collection.programs
+      .map((program) => program.id)
+      .filter((id): id is number => id !== undefined)
+
+    const hasProgramInContract = collectionProgramIds.some((id) =>
+      contractProgramIds.has(id),
+    )
+    if (!hasProgramInContract) {
+      return false
+    }
+
+    return collectionProgramIds.some((id) => {
+      const program = programsById.get(id)
+      return program
+        ? programHasContractRuns(program, contractCourseIds)
+        : false
+    })
+  })
+}
+
+const getProgramCoursesInContractOrder = (
+  program: V2Program,
+  contractCourses: CourseWithCourseRunsSerializerV2[],
+): CourseWithCourseRunsSerializerV2[] => {
+  const contractCoursesById = new Map(
+    contractCourses.map((course) => [course.id, course]),
+  )
+  return program.courses
+    .map((courseId) => contractCoursesById.get(courseId))
+    .filter((course): course is CourseWithCourseRunsSerializerV2 => !!course)
+}
+
+const getCollectionFirstCoursesInDisplayOrder = (
+  collection: V2ProgramCollection,
+  programs: V2Program[],
+  contractCourses: CourseWithCourseRunsSerializerV2[],
+): CourseWithCourseRunsSerializerV2[] => {
+  const programsById = new Map(programs.map((program) => [program.id, program]))
+  const contractCoursesById = new Map(
+    contractCourses.map((course) => [course.id, course]),
+  )
+  const contractCourseIds = new Set(contractCourses.map((course) => course.id))
+
+  const firstCourses = collection.programs
+    .slice()
+    .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity))
+    .map((collectionProgram) => {
+      if (typeof collectionProgram.id !== "number") {
+        return null
+      }
+      const program = programsById.get(collectionProgram.id)
+      if (!program) {
+        return null
+      }
+      const firstCourseId = program.courses.find((courseId) =>
+        contractCourseIds.has(courseId),
+      )
+      return typeof firstCourseId === "number"
+        ? (contractCoursesById.get(firstCourseId) ?? null)
+        : null
+    })
+    .filter((course): course is CourseWithCourseRunsSerializerV2 => !!course)
+
+  const seenCourseIds = new Set<number>()
+  return firstCourses.filter((course) => {
+    if (seenCourseIds.has(course.id)) {
+      return false
+    }
+    seenCourseIds.add(course.id)
+    return true
+  })
+}
+
 export {
   pickDisplayedEnrollmentForLegacyDashboard,
   groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
-  resolveSlotForLanguage,
+  resolveCourseEntryForLanguage,
   getDistinctDashboardLanguageOptions,
   isProgramAsCourse,
   isNonContractEnrollment,
@@ -500,4 +925,13 @@ export {
   groupModuleCoursesByProgramId,
   bucketAndSortHomeEnrollments,
   assembleHomeCardList,
+  buildCourseEntry,
+  buildRequirementSections,
+  programHasContractRuns,
+  getSortedStandaloneContractPrograms,
+  getRenderableContractCollections,
+  getProgramCoursesInContractOrder,
+  getCollectionFirstCoursesInDisplayOrder,
 }
+
+export type { RequirementSectionItem, RequirementSection }

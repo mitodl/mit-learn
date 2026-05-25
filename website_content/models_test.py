@@ -5,7 +5,6 @@ from unittest.mock import patch
 import pytest
 from django.contrib.auth import get_user_model
 
-
 from website_content.constants import WebsiteContentType
 from website_content.models import WebsiteContent
 

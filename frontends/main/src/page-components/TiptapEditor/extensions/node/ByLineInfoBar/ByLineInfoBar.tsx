@@ -56,6 +56,12 @@ const InfoText = styled.span(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
+// Separator between read time and date. Default "-"; content-type owners may
+// override the glyph by targeting the "byline-info-bar__separator" hook class.
+const Separator = styled(InfoText)({
+  "&::before": { content: '"-"' },
+})
+
 const AuthorInput = styled(TextField)(({ theme }) => ({
   "& .MuiInputBase-root": {
     ...theme.typography.body2,
@@ -111,7 +117,7 @@ export const ByLineInfoBarContent = ({
   const displayAuthorName = authorName || ""
 
   return (
-    <StyledWrapper>
+    <StyledWrapper className="byline-info-bar">
       <SharePopover
         open={shareOpen}
         title={article?.title ?? ""}
@@ -135,7 +141,9 @@ export const ByLineInfoBarContent = ({
               <NameText>By {displayAuthorName}</NameText>
             )}
             {readTime ? <InfoText>{readTime} min read</InfoText> : null}
-            {readTime && publishedDate ? <InfoText>-</InfoText> : null}
+            {readTime && publishedDate ? (
+              <Separator className="byline-info-bar__separator" />
+            ) : null}
             <InfoText>
               {publishedDate
                 ? new Date(publishedDate).toLocaleDateString("en-US", {

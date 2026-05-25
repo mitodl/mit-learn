@@ -17,7 +17,7 @@ const Page: React.FC<PageProps<"/articles/[slugOrId]/draft">> = async (
 
   return (
     <RestrictedRoute requires={Permission.ArticleEditor}>
-      <WebsiteContentDetail articleId={slugOrId} learningResourceIds={[]} />
+      <WebsiteContentDetail contentId={slugOrId} learningResourceIds={[]} />
     </RestrictedRoute>
   )
 }

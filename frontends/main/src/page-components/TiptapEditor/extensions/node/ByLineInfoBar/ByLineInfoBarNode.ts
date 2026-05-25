@@ -33,7 +33,6 @@ export const ByLineInfoBarNode = Node.create({
   },
 
   addNodeView() {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
     return ReactNodeViewRenderer(ByLineInfoBar)
   },
 })

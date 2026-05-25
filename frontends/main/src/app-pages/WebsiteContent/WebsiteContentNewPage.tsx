@@ -8,7 +8,7 @@ import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 import { styled } from "ol-components"
 import { ArticleEditor } from "@/page-components/TiptapEditor/contentTypes/article/ArticleEditor"
 import { NewsEditor } from "@/page-components/TiptapEditor/contentTypes/news/NewsEditor"
-import { userArticlesView, websiteContentEditView } from "@/common/urls"
+import { articleView, websiteContentEditView } from "@/common/urls"
 import invariant from "tiny-invariant"
 import type { WebsiteContent } from "api/v1"
 
@@ -19,20 +19,22 @@ const PageContainer = styled.div(({ theme }) => ({
 }))
 
 const PUBLISHED_VIEW_URL: Record<string, (slug: string) => string> = {
-  article: (slug) => userArticlesView(slug),
+  article: (slug) => articleView(slug),
   news: (slug) => `/news/${slug}`,
 }
 
 const EDITORS: Record<
   string,
   React.ComponentType<{
-    onSave?: (article: WebsiteContent) => void
+    onSave?: (savedContent: WebsiteContent) => void
     readOnly?: boolean
-    article?: WebsiteContent
+    contentItem?: WebsiteContent
   }>
 > = {
-  article: ArticleEditor,
-  news: NewsEditor,
+  article: ({ contentItem, ...props }) => (
+    <ArticleEditor article={contentItem} {...props} />
+  ),
+  news: ({ contentItem: _contentItem, ...props }) => <NewsEditor {...props} />,
 }
 
 interface WebsiteContentNewPageProps {

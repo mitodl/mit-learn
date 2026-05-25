@@ -2,9 +2,7 @@
 
 import logging
 
-
 from website_content.constants import WebsiteContentType
-
 from website_content.hooks import get_plugin_manager
 from website_content.tasks import (
     PURGE_TIMEOUT_SECONDS,
