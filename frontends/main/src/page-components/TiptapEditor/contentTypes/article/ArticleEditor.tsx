@@ -2,14 +2,12 @@
 
 import React from "react"
 import styled from "@emotion/styled"
-import type { WebsiteContent } from "api/v1"
-import { ButtonLink } from "@mitodl/smoot-design"
+import { WebsiteContentContentTypeEnum, type WebsiteContent } from "api/v1"
 import {
   useWebsiteContentCreate,
   useWebsiteContentPartialUpdate,
   useMediaUpload,
 } from "api/hooks/website_content"
-import { Spacer } from "../../vendor/components/tiptap-ui-primitive/spacer"
 import { WebsiteContentEditor } from "../../core/WebsiteContentEditor"
 import {
   createArticleExtensions,
@@ -73,31 +71,11 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   const updateMutation = useWebsiteContentPartialUpdate()
   const uploadImage = useMediaUpload()
 
-  const editUrl = article
-    ? `/website_content/article/${article.is_published ? article.slug : article.id}/edit`
-    : "/website_content/article/new"
-
-  const toolbarSlot = readOnly ? (
-    <>
-      <Spacer />
-      <ButtonLink
-        variant="secondary"
-        href="/website_content/drafts?content_type=article"
-        size="small"
-      >
-        Drafts
-      </ButtonLink>
-      <ButtonLink variant="primary" href={editUrl} size="small">
-        Edit
-      </ButtonLink>
-    </>
-  ) : null
-
   return (
     <StyledWebsiteContentEditor
       createExtensions={createArticleExtensions}
+      contentType={WebsiteContentContentTypeEnum.Article}
       initialDoc={newArticleDocument}
-      toolbarSlot={toolbarSlot}
       extractExtraFields={extractArticleExtraFields}
       saveMutations={{ create: createMutation, update: updateMutation }}
       uploadImage={uploadImage}
@@ -106,7 +84,6 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       contentItem={article}
       backgroundColor="lightGray1"
       applyViewerTopSpacing
-      article={article}
       bannerViewer={ArticleBannerViewer}
     />
   )

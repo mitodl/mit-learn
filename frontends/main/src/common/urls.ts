@@ -52,14 +52,10 @@ export const newsEditView = (id: number) =>
 export const ARTICLES_LISTING = "/articles/"
 export const ARTICLES_VIEW = "/articles/[id]"
 export const ARTICLES_DRAFT_VIEW = "/articles/[id]/draft"
-export const ARTICLES_EDIT = "/articles/[id]/edit"
-export const ARTICLES_CREATE = "/articles/new"
 export const articleView = (id: string) =>
   generatePath(ARTICLES_VIEW, { id: String(id) })
 export const articleDraftView = (id: string) =>
   generatePath(ARTICLES_DRAFT_VIEW, { id: String(id) })
-export const articleEditView = (id: number) =>
-  generatePath(ARTICLES_EDIT, { id: String(id) })
 
 // Generic website content editing routes
 export const WEBSITE_CONTENT_CREATE = "/website_content/[type]/new"

@@ -1,14 +1,12 @@
 "use client"
 
 import React from "react"
-import type { WebsiteContent } from "api/v1"
-import { ButtonLink } from "@mitodl/smoot-design"
+import { WebsiteContentContentTypeEnum, type WebsiteContent } from "api/v1"
 import {
   useWebsiteContentCreate,
   useWebsiteContentPartialUpdate,
   useMediaUpload,
 } from "api/hooks/website_content"
-import { Spacer } from "../../vendor/components/tiptap-ui-primitive/spacer"
 import { WebsiteContentEditor } from "../../core/WebsiteContentEditor"
 import { createNewsExtensions, newNewsDocument } from "./newsExtensions"
 
@@ -41,31 +39,11 @@ const NewsEditor = ({ onSave, readOnly, newsItem }: NewsEditorProps) => {
   const updateMutation = useWebsiteContentPartialUpdate()
   const uploadImage = useMediaUpload()
 
-  const editUrl = newsItem
-    ? `/website_content/news/${newsItem.is_published ? newsItem.slug : newsItem.id}/edit`
-    : "/website_content/news/new"
-
-  const toolbarSlot = readOnly ? (
-    <>
-      <Spacer />
-      <ButtonLink
-        variant="secondary"
-        href="/website_content/drafts?content_type=news"
-        size="small"
-      >
-        Drafts
-      </ButtonLink>
-      <ButtonLink variant="primary" href={editUrl} size="small">
-        Edit
-      </ButtonLink>
-    </>
-  ) : null
-
   return (
     <WebsiteContentEditor
       createExtensions={createNewsExtensions}
+      contentType={WebsiteContentContentTypeEnum.News}
       initialDoc={newNewsDocument}
-      toolbarSlot={toolbarSlot}
       extractExtraFields={extractNewsExtraFields}
       saveMutations={{ create: createMutation, update: updateMutation }}
       uploadImage={uploadImage}

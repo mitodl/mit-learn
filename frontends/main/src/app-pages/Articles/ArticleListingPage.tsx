@@ -14,14 +14,20 @@ import {
 } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { useWebsiteContentList } from "api/hooks/website_content"
+import { useUserHasPermission, Permission } from "api/hooks/user"
 import type { WebsiteContent } from "api/v1"
 import { LocalDate } from "ol-utilities"
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
 import { extractFirstImage } from "@/common/websiteContentUtils"
-import { articleView, ARTICLES_CREATE, ARTICLES_LISTING } from "@/common/urls"
+import {
+  articleView,
+  ARTICLES_LISTING,
+  websiteContentCreateView,
+} from "@/common/urls"
 
 const PAGE_SIZE = 20
 const MAX_PAGE = 50
+const ARTICLE_CREATE_URL = websiteContentCreateView("article")
 
 export const DEFAULT_BACKGROUND_IMAGE_URL =
   "/images/backgrounds/banner_background.webp"
@@ -93,6 +99,7 @@ const ArticleCard: React.FC<{ article: WebsiteContent }> = ({ article }) => {
 const ArticleListingPage: React.FC = () => {
   const [page, setPage] = useState(1)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const canCreateArticle = useUserHasPermission(Permission.ArticleEditor)
 
   const { data: articles, isLoading } = useWebsiteContentList({
     limit: PAGE_SIZE,
@@ -114,9 +121,11 @@ const ArticleListingPage: React.FC = () => {
       <Container>
         <PageHeader>
           <Typography variant="h3">Articles</Typography>
-          <ButtonLink variant="primary" href={ARTICLES_CREATE}>
-            New Article
-          </ButtonLink>
+          {canCreateArticle ? (
+            <ButtonLink variant="primary" href={ARTICLE_CREATE_URL}>
+              New Article
+            </ButtonLink>
+          ) : null}
         </PageHeader>
 
         {isLoading ? (
@@ -159,9 +168,11 @@ const ArticleListingPage: React.FC = () => {
             <Typography variant="body1" color="textSecondary">
               Get started by creating your first article.
             </Typography>
-            <ButtonLink variant="primary" href={ARTICLES_CREATE}>
-              New Article
-            </ButtonLink>
+            {canCreateArticle ? (
+              <ButtonLink variant="primary" href={ARTICLE_CREATE_URL}>
+                New Article
+              </ButtonLink>
+            ) : null}
           </EmptyState>
         )}
       </Container>

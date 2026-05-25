@@ -5,14 +5,14 @@ import styled from "@emotion/styled"
 import { EditorContext, JSONContent, useEditor } from "@tiptap/react"
 import type { Extension, Node, Mark } from "@tiptap/core"
 import { getSchema } from "@tiptap/core"
-import type { WebsiteContent } from "api/v1"
+import type { WebsiteContent, WebsiteContentContentTypeEnum } from "api/v1"
 import {
   LoadingSpinner,
   Typography,
   HEADER_HEIGHT,
   HEADER_HEIGHT_MD,
 } from "ol-components"
-import { Alert, Button } from "@mitodl/smoot-design"
+import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import { useUserHasPermission, Permission } from "api/hooks/user"
 import dynamic from "next/dynamic"
 
@@ -20,11 +20,13 @@ import { Toolbar } from "../vendor/components/tiptap-ui-primitive/toolbar"
 import { TiptapEditor, MainToolbarContent, TipTapViewer } from "../TiptapEditor"
 import { BannerViewer } from "../extensions/node/Banner/BannerNode"
 import { ByLineInfoBarViewer } from "../extensions/node/ByLineInfoBar/ByLineInfoBarViewer"
+import { Spacer } from "../vendor/components/tiptap-ui-primitive/spacer"
 import { handleImageUpload } from "../vendor/lib/tiptap-utils"
 import { useSchema } from "../useSchema"
 import { WebsiteContentProvider } from "../WebsiteContentContext"
 import { extractLearningResourceIds, contentsMatch } from "../extensions/utils"
 import { LearningResourceProvider } from "../extensions/node/LearningResource/LearningResourceDataProvider"
+import { websiteContentDraftsView, websiteContentEditView } from "@/common/urls"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -151,12 +153,8 @@ export interface WebsiteContentEditorProps {
   createExtensions: CreateExtensionsFn
   /** Initial document structure when no content item is provided. */
   initialDoc: JSONContent
-  /**
-   * Content-type-specific toolbar content.
-   * - In read-only mode this slot provides all toolbar items (e.g. Drafts + Edit links).
-   * - In edit mode this slot is appended after the Publish button.
-   */
-  toolbarSlot?: React.ReactNode
+  /** Content type for route generation (Drafts/Edit links in read-only toolbar). */
+  contentType: WebsiteContentContentTypeEnum
   /**
    * Optional CSS class applied to the editor root container (covers both edit
    * and read-only). Used by content-type wrappers via `styled(WebsiteContentEditor)`
@@ -186,13 +184,12 @@ export interface WebsiteContentEditorProps {
   bannerViewer?: typeof BannerViewer
   bylineViewer?: typeof ByLineInfoBarViewer
   applyViewerTopSpacing?: boolean
-  article?: WebsiteContent
 }
 
 const WebsiteContentEditor = ({
   createExtensions,
+  contentType,
   initialDoc,
-  toolbarSlot,
   className,
   extractExtraFields,
   saveMutations,
@@ -384,6 +381,30 @@ const WebsiteContentEditor = ({
   const errorMessage =
     error instanceof Error ? error.message : (error as string | null)
   const resourceIds = extractLearningResourceIds(content)
+  const editIdOrSlug = contentItem?.is_published
+    ? (contentItem?.slug ?? contentItem.id)
+    : contentItem?.id
+  const readOnlyToolbarSlot = (
+    <>
+      <Spacer />
+      <ButtonLink
+        variant="secondary"
+        href={websiteContentDraftsView(contentType)}
+        size="small"
+      >
+        Drafts
+      </ButtonLink>
+      {editIdOrSlug !== undefined ? (
+        <ButtonLink
+          variant="primary"
+          href={websiteContentEditView(contentType, editIdOrSlug)}
+          size="small"
+        >
+          Edit
+        </ButtonLink>
+      ) : null}
+    </>
+  )
 
   return (
     <ViewContainer
@@ -397,7 +418,7 @@ const WebsiteContentEditor = ({
           <EditorContext.Provider value={{ editor }}>
             {isArticleEditor ? (
               readOnly ? (
-                <StyledToolbar>{toolbarSlot}</StyledToolbar>
+                <StyledToolbar>{readOnlyToolbarSlot}</StyledToolbar>
               ) : (
                 <StyledToolbar>
                   <MainToolbarContent editor={editor} />
@@ -439,7 +460,6 @@ const WebsiteContentEditor = ({
                   >
                     Publish
                   </Button>
-                  {toolbarSlot}
                 </StyledToolbar>
               )
             ) : null}
