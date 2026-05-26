@@ -71,6 +71,20 @@ describe("ContractAdminPage", () => {
     ).not.toBeInTheDocument()
   })
 
+  test("shows 'Something went wrong' when the manager orgs API call fails", async () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    allowConsoleErrors()
+
+    setMockResponse.get(managerOrgsUrl, "Internal Server Error", { code: 500 })
+
+    renderWithProviders(
+      <ContractAdminPage orgSlug="any-org" contractSlug="any-contract" />,
+    )
+
+    await screen.findByRole("heading", { name: "Something went wrong" })
+  })
+
   test("shows 'Organization not found' when user is not a manager for the requested org", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
     mockedUseFeatureFlagEnabled.mockReturnValue(true)

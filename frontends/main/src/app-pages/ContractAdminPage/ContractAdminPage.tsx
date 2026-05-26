@@ -92,9 +92,11 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   orgSlug,
   contractSlug,
 }) => {
-  const { data: managerOrgs, isLoading: isLoadingOrgs } = useQuery(
-    managerOrganizationQueries.managerOrganizationsList(),
-  )
+  const {
+    data: managerOrgs,
+    isLoading: isLoadingOrgs,
+    isError: isOrgsError,
+  } = useQuery(managerOrganizationQueries.managerOrganizationsList())
 
   const org = managerOrgs?.find(matchOrganizationBySlug(orgSlug))
   const contract = org?.contracts.find((c) => c.slug === contractSlug)
@@ -112,6 +114,12 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
       <Page>
         <Skeleton width="100%" height="128px" />
       </Page>
+    )
+  }
+
+  if (isOrgsError) {
+    return (
+      <ErrorContent title="Something went wrong" timSays="Oops!" />
     )
   }
 
