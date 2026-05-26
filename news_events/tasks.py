@@ -50,6 +50,7 @@ def get_mitpe_events():
 @app.task
 def get_website_content_news():
     """Run the website content news ETL pipeline"""
+
     pipelines.articles_news_etl()
     clear_views_cache()
 
@@ -86,7 +87,9 @@ def sync_website_content_to_news(self, content_id: int):
 
     try:
         content = WebsiteContent.objects.get(id=content_id, is_published=True)
+
         sync_single_website_content_news_to_news(content)
+
         clear_views_cache()
         logger.info(
             "Successfully synced content %s to news feed",

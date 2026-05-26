@@ -55,12 +55,12 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
     queryset = WebsiteContent.objects.all()
     permission_classes = [CanViewWebsiteContent, CanEditWebsiteContent]
     http_method_names = VALID_HTTP_METHODS
+
     filter_backends = [DjangoFilterBackend]
     filterset_class = WebsiteContentFilter
 
     def get_queryset(self):
         qs = WebsiteContent.objects.all()
-
         if not (is_admin_user(self.request) or is_website_content_editor(self.request)):
             qs = qs.filter(is_published=True)
 

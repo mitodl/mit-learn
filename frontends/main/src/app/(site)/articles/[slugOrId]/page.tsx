@@ -13,11 +13,10 @@ import {
 import { notFound } from "next/navigation"
 
 export const generateMetadata = async (
-  props: PageProps<"/news/[slugOrId]">,
+  props: PageProps<"/articles/[slugOrId]">,
 ) => {
   const params = await props.params
-
-  const { slugOrId } = await params
+  const { slugOrId } = params
 
   const queryClient = getQueryClient()
 
@@ -25,7 +24,7 @@ export const generateMetadata = async (
     const content = await queryClient.fetchQuery(
       websiteContentQueries.websiteContentDetailRetrieve(slugOrId),
     )
-    if (content.content_type !== "news") {
+    if (content.content_type !== "article") {
       return notFound()
     }
 
@@ -41,7 +40,7 @@ export const generateMetadata = async (
   })
 }
 
-const Page: React.FC<PageProps<"/news/[slugOrId]">> = async (props) => {
+const Page: React.FC<PageProps<"/articles/[slugOrId]">> = async (props) => {
   const { slugOrId } = await props.params
 
   const queryClient = getQueryClient()
@@ -53,7 +52,7 @@ const Page: React.FC<PageProps<"/news/[slugOrId]">> = async (props) => {
   const queryKey =
     websiteContentQueries.websiteContentDetailRetrieve(slugOrId).queryKey
   const content = queryClient.getQueryData(queryKey)
-  if (!content || content.content_type !== "news") {
+  if (!content || content.content_type !== "article") {
     return notFound()
   }
 
@@ -75,4 +74,5 @@ const Page: React.FC<PageProps<"/news/[slugOrId]">> = async (props) => {
     </HydrationBoundary>
   )
 }
+
 export default Page

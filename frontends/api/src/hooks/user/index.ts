@@ -3,6 +3,10 @@ import type { User } from "../../generated/v0/api"
 import { userQueries } from "./queries"
 
 enum Permission {
+  /**
+   * Controls access to all website_content types (both "news" and "article"
+   * content_type). Despite the name, this is not limited to article content.
+   */
   ArticleEditor = "is_article_editor",
   Authenticated = "is_authenticated",
   LearningPathEditor = "is_learning_path_editor",
