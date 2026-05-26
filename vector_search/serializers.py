@@ -227,6 +227,7 @@ class LearningResourcesVectorSearchRequestSerializer(
     score_cutoff = serializers.FloatField(
         required=False,
         help_text="The minimum score a result must have to be returned",
+        default=0.0,
     )
 
     def validate(self, attrs):
