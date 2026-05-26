@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react"
+import Hls from "hls.js"
 import Image from "next/image"
 import { styled, Typography } from "ol-components"
 import { CarouselV2Vertical } from "ol-components/CarouselV2Vertical"
@@ -8,7 +9,7 @@ import { useWindowDimensions } from "ol-utilities"
 import type { VideoResource } from "api/v1"
 import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
 
-const MODAL_VIDEO_CHROME_OFFSET = 60
+const MODAL_VERTICAL_PADDING = 60
 const PORTRAIT_ASPECT_RATIO = 9 / 16
 
 const Overlay = styled.div(({ theme }) => ({
@@ -152,6 +153,7 @@ const VideoWithErrorHandler = ({
   videoHeight,
 }: VideoWithErrorHandlerProps) => {
   const handlerRef = useRef<((e: Event) => void) | null>(null)
+  const hlsRef = useRef<Hls | null>(null)
   const src = video.video?.streaming_url ?? undefined
 
   useEffect(() => {
@@ -167,6 +169,10 @@ const VideoWithErrorHandler = ({
         if (currentEl && handlerRef.current) {
           currentEl.removeEventListener("error", handlerRef.current)
         }
+        if (hlsRef.current) {
+          hlsRef.current.destroy()
+          hlsRef.current = null
+        }
         videosRef.current[index] = null
         return
       }
@@ -178,15 +184,38 @@ const VideoWithErrorHandler = ({
       }
       handlerRef.current = handler
       el.addEventListener("error", handler)
+
+      if (!src) return
+
+      const isHls = src.includes(".m3u8")
+
+      if (!isHls || el.canPlayType("application/vnd.apple.mpegURL")) {
+        // Safari (native HLS) or non-HLS source: set src directly
+        el.src = src
+      } else if (Hls.isSupported()) {
+        // Chrome, Firefox, Edge: use hls.js to polyfill HLS via MSE
+        const hls = new Hls()
+        hlsRef.current = hls
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (data.fatal) {
+            console.error("HLS fatal error", index, data)
+            onError(index, new Event("hlserror"))
+          }
+        })
+        hls.loadSource(src)
+        hls.attachMedia(el)
+      } else {
+        // HLS not supported and no native fallback — surface as an error
+        onError(index, new Event("hlsunsupported"))
+      }
     },
-    [index, onError, videosRef],
+    [index, onError, videosRef, src],
   )
 
   return (
     <Video
       ref={refCallback}
       onClick={onVideoClick}
-      src={src}
       autoPlay
       muted
       playsInline
@@ -316,7 +345,7 @@ const VideoShortsModal = ({
         onSlidesInView={onSlidesInView}
       >
         {videoData?.map((video: VideoResource, index: number) => {
-          const videoHeight = Math.max(height - MODAL_VIDEO_CHROME_OFFSET, 0)
+          const videoHeight = Math.max(height - MODAL_VERTICAL_PADDING, 0)
 
           return (
             <CarouselSlide
