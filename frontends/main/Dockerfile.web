@@ -76,12 +76,6 @@ ENV NODE_ENV=production
 ARG GIT_REF
 ENV GIT_REF=$GIT_REF
 
-ENV NEXT_PUBLIC_DEFAULT_SEARCH_MODE="phrase"
-ENV NEXT_PUBLIC_DEFAULT_SEARCH_SLOP="6"
-ENV NEXT_PUBLIC_DEFAULT_SEARCH_STALENESS_PENALTY="2.5"
-ENV NEXT_PUBLIC_DEFAULT_SEARCH_MINIMUM_SCORE_CUTOFF="0"
-ENV NEXT_PUBLIC_DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY="90"
-
 # STAGE: build
 # Runs `next build` to compile the application. With output: "standalone" in
 # next.config.js this emits a minimal server at .next/standalone/ that includes
