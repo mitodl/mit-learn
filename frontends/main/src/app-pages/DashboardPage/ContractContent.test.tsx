@@ -1421,7 +1421,9 @@ describe("ContractContent", () => {
     )
 
     await screen.findByRole("heading", { name: orgX.name })
-    expect(screen.queryByRole("link", { name: "Manage" })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("link", { name: "Manage" }),
+    ).not.toBeInTheDocument()
   })
 
   test("does not render the Manage button when flag is on but user is not a manager for this org", async () => {
@@ -1442,7 +1444,9 @@ describe("ContractContent", () => {
     )
 
     await screen.findByRole("heading", { name: orgX.name })
-    expect(screen.queryByRole("link", { name: "Manage" })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("link", { name: "Manage" }),
+    ).not.toBeInTheDocument()
   })
 
   test("renders the Manage button with correct href when flag is on and user is a manager", async () => {
