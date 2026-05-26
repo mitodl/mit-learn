@@ -767,7 +767,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     return keyBy(offerorsQuery.data?.results ?? [], (o) => o.code)
   }, [offerorsQuery.data?.results])
 
-  const { data: user, isLoading: isUserLoading } = useUserMe()
+  const { data: user } = useUserMe()
 
   const isVectorSearch = searchParams.get("vector_search") === "true"
 
@@ -787,7 +787,6 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   // @ts-expect-error Typescript has trouble unifying the different query key types
   const { data, isLoading, isFetching } = useQuery({
     ...queryOptions,
-    enabled: !isVectorSearch || !isUserLoading,
     placeholderData: keepPreviousData,
     select: (timedData: {
       result:
