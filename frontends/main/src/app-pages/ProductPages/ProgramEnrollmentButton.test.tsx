@@ -268,6 +268,31 @@ describe("ProgramEnrollmentButton", () => {
     expect(screen.queryByTestId("program-enroll-arrow-icon")).toBeNull()
   })
 
+  test("Still shows loading spinner during initial loading when showArrowIcon is false", async () => {
+    const program = makeProgram({
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
+    })
+    const enrollmentResponse = Promise.withResolvers()
+    const userResponse = Promise.withResolvers()
+
+    setMockResponse.get(
+      mitxUrls.programEnrollments.enrollmentsListV3(),
+      enrollmentResponse.promise,
+    )
+    setMockResponse.get(urls.userMe.get(), userResponse.promise)
+
+    renderWithProviders(
+      <ProgramEnrollmentButton
+        program={program}
+        variant="primary"
+        showArrowIcon={false}
+      />,
+    )
+
+    await screen.findByRole("progressbar", { name: "Loading" })
+    expect(screen.queryByTestId("program-enroll-arrow-icon")).toBeNull()
+  })
+
   test("Shows error alert when basket operation fails (paid)", async () => {
     const product = makeProduct({ price: "500" })
     const program = makeProgram({
