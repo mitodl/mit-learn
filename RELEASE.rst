@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.68.6
+--------------
+
+- refactor: make internal editor code more generic (#3344)
+- Update dependency pyarrow to v23 [SECURITY] (#3358)
+- Task rate limits (#3363)
+- [pre-commit.ci] pre-commit autoupdate (#3370)
+- Product page: list prices and actual prices (#3346)
+- [pre-commit.ci] pre-commit autoupdate (#3352)
+
 Version 0.68.5 (Released May 26, 2026)
 --------------
 
