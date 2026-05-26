@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.68.5
+Version 0.68.5 (Released May 26, 2026)
 --------------
 
 - dashboard refactor phase 5 - extract b2b contract dashboard hooks (#3355)
