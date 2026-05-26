@@ -118,9 +118,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   }
 
   if (isOrgsError) {
-    return (
-      <ErrorContent title="Something went wrong" timSays="Oops!" />
-    )
+    return <ErrorContent title="Something went wrong" timSays="Oops!" />
   }
 
   if (!org) {
