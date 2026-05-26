@@ -715,7 +715,7 @@ def test_vector_search_sortby_with_score_cutoff_manually_sorted(mocker, client):
     params = {
         "hybrid_search": "true",
         "q": "test",
-        "sortby": "-views",
+        "sortby": "-view_count",
     }
 
     response = client.get(
@@ -725,10 +725,10 @@ def test_vector_search_sortby_with_score_cutoff_manually_sorted(mocker, client):
     assert response.status_code == 200
     results = response.json()["results"]
     assert [r["views"] for r in results] == [200, 100, 50]
-    mock_resource_vector_hits.assert_any_call(mocker.ANY, order_by="-views")
+    mock_resource_vector_hits.assert_any_call(mocker.ANY, order_by="-view_count")
 
     # Test ascending sort: sortby=views
-    params["sortby"] = "views"
+    params["sortby"] = "view_count"
 
     response = client.get(
         reverse("vector_search:v0:vector_learning_resources_search"), data=params
@@ -736,8 +736,8 @@ def test_vector_search_sortby_with_score_cutoff_manually_sorted(mocker, client):
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert [r["view_count"] for r in results] == [50, 100, 200]
-    mock_resource_vector_hits.assert_any_call(mocker.ANY, order_by="views")
+    assert [r["views"] for r in results] == [50, 100, 200]
+    mock_resource_vector_hits.assert_any_call(mocker.ANY, order_by="view_count")
 
 
 @pytest.mark.parametrize("hybrid_search", [True, False])
