@@ -48,7 +48,7 @@ QDRANT_RESOURCE_PARAM_MAP = {
     "resource_category": "resource_category",
     "published": "published",
     "next_start_date": "next_start_date",
-    "view_count": "view_count",
+    "views": "view_count",
     "created_on": "created_on",
 }
 

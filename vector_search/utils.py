@@ -927,7 +927,7 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
 
 
 def _resource_vector_hits(search_result, order_by=None):
-    hits = set(
+    hits = list(
         dict.fromkeys(
             readable_id
             for readable_id in (hit.payload.get("readable_id") for hit in search_result)

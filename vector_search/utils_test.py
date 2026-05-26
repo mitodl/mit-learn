@@ -1589,7 +1589,6 @@ def test_resource_vector_hits_preserves_qdrant_score_order():
     ]
 
     result = _resource_vector_hits(search_result)
-
     expected_readable_ids = [r.readable_id for r in shuffled]
     actual_readable_ids = [r["readable_id"] for r in result]
     assert actual_readable_ids == expected_readable_ids

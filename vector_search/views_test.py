@@ -667,7 +667,7 @@ def test_vector_search_no_score_cutoff_omits_score_threshold(
 def test_vector_search_sortby_with_score_cutoff_manually_sorted(mocker, client):
     """
     Test that when a request is made with q, hybrid_search=True, and sortby,
-    and it hits the score cutoff branch, results are manually sorted by the sortby param.
+    and it hits the score cutoff branch, order_by is passed to _resource_vector_hits.
     """
     mock_qdrant = mocker.patch(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
@@ -690,13 +690,25 @@ def test_vector_search_sortby_with_score_cutoff_manually_sorted(mocker, client):
     )
 
     mock_hits = [
-        {"readable_id": "course-1", "views": 100},
-        {"readable_id": "course-2", "views": 50},
-        {"readable_id": "course-3", "views": 200},
+        {"readable_id": "course-1", "views": 100, "view_count": 100},
+        {"readable_id": "course-2", "views": 50, "view_count": 50},
+        {"readable_id": "course-3", "views": 200, "view_count": 200},
     ]
-    mocker.patch(
+
+    def mock_sort(search_result, order_by=None):
+        if order_by:
+            descending = order_by.startswith("-")
+            field = order_by.lstrip("-")
+            return sorted(
+                mock_hits,
+                key=lambda x: x.get(field, 0),
+                reverse=descending,
+            )
+        return mock_hits
+
+    mock_resource_vector_hits = mocker.patch(
         "vector_search.views._resource_vector_hits",
-        return_value=mock_hits,
+        side_effect=mock_sort,
     )
 
     # Test descending sort: sortby=-views
@@ -713,6 +725,7 @@ def test_vector_search_sortby_with_score_cutoff_manually_sorted(mocker, client):
     assert response.status_code == 200
     results = response.json()["results"]
     assert [r["views"] for r in results] == [200, 100, 50]
+    mock_resource_vector_hits.assert_any_call(mocker.ANY, order_by="-views")
 
     # Test ascending sort: sortby=views
     params["sortby"] = "views"
@@ -723,7 +736,8 @@ def test_vector_search_sortby_with_score_cutoff_manually_sorted(mocker, client):
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert [r["views"] for r in results] == [50, 100, 200]
+    assert [r["view_count"] for r in results] == [50, 100, 200]
+    mock_resource_vector_hits.assert_any_call(mocker.ANY, order_by="views")
 
 
 @pytest.mark.parametrize("hybrid_search", [True, False])
