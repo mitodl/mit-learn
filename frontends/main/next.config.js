@@ -9,15 +9,6 @@ if (!process.env.NEXT_BUILD_CI) {
   validateEnv()
 }
 
-const NEXT_PUBLIC_OPTIMIZE_IMAGES = Boolean(
-  (process.env.NEXT_PUBLIC_OPTIMIZE_IMAGES ?? "true") === "true",
-)
-const IS_LOCAL_DEV = process.env.NODE_ENV === "development"
-
-const NEXT_CACHE_S_MAXAGE_SECONDS =
-  process.env.NEXT_CACHE_S_MAXAGE_SECONDS || "1800"
-const PAGE_CACHE_CONTROL = `s-maxage=${NEXT_CACHE_S_MAXAGE_SECONDS}, stale-if-error=86400, stale-while-revalidate=86400`
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   productionBrowserSourceMaps: true,
@@ -62,12 +53,11 @@ const nextConfig = {
       {
         source: "/sitemaps/:path*.xml",
         headers: [
-          {
-            key: "Cache-Control",
-            value: PAGE_CACHE_CONTROL,
-          },
           // Tag sitemaps with "html-pages" so Fastly can purge them on deploy
           // without also purging immutable /_next/static/ chunks.
+          // Cache-Control is set at runtime in src/middleware.ts so that
+          // NEXT_CACHE_S_MAXAGE_SECONDS is read from the Kubernetes env
+          // rather than baked in at Docker build time.
           { key: "Surrogate-Key", value: "html-pages" },
         ],
       },
@@ -83,12 +73,11 @@ const nextConfig = {
       {
         source: "/((?!.*\\.[a-zA-Z0-9]+$)(?!healthcheck$).*)",
         headers: [
-          {
-            key: "Cache-Control",
-            value: PAGE_CACHE_CONTROL,
-          },
           // Tag all HTML/page routes so Fastly can purge them on deploy
           // without also purging immutable /_next/static/ chunks.
+          // Cache-Control is set at runtime in src/middleware.ts so that
+          // NEXT_CACHE_S_MAXAGE_SECONDS is read from the Kubernetes env
+          // rather than baked in at Docker build time.
           { key: "Surrogate-Key", value: "html-pages" },
         ],
       },
@@ -120,14 +109,11 @@ const nextConfig = {
   transpilePackages: ["@mitodl/smoot-design/ai"],
 
   images: {
-    unoptimized: !NEXT_PUBLIC_OPTIMIZE_IMAGES,
-    dangerouslyAllowLocalIP: IS_LOCAL_DEV,
-    remotePatterns: [
-      {
-        hostname: "**",
-      },
-    ],
-    qualities: [25, 50, 75, 100],
+    // Image optimisation is disabled: the app passes images through as-is.
+    // Production uses Fastly for image transformations. Disabling also avoids
+    // baking a per-environment flag (previously NEXT_PUBLIC_OPTIMIZE_IMAGES)
+    // into the Docker image at build time.
+    unoptimized: true,
   },
 
   experimental: {
