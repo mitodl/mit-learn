@@ -1,6 +1,17 @@
 Release Notes
 =============
 
+Version 0.68.5 (Released May 26, 2026)
+--------------
+
+- dashboard refactor phase 5 - extract b2b contract dashboard hooks (#3355)
+- Fix ordering for mitxonline programs (#3360)
+- fix run matching (#3365)
+- feat: add PostHog tracking for onboarding CTA interactions (#3362)
+- Dashboard Refactor, useProgramDashboardData (#3356)
+- Fix eslint config to ignore node_modules (#3359)
+- refactor: make our internally-authored content editing more generic ( First Part) (#3332)
+
 Version 0.68.3 (Released May 19, 2026)
 --------------
 
