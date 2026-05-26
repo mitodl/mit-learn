@@ -648,12 +648,6 @@ export interface Course {
    * @memberof Course
    */
   course_numbers: Array<CourseNumber> | null
-  /**
-   *
-   * @type {string}
-   * @memberof Course
-   */
-  created_on: string
 }
 /**
  * Serializer for CourseNumber
@@ -772,12 +766,6 @@ export interface CourseResource {
    * @memberof CourseResource
    */
   certification: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof CourseResource
-   */
-  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -1581,12 +1569,6 @@ export interface DocumentResource {
    * @memberof DocumentResource
    */
   certification: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof DocumentResource
-   */
-  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -3196,12 +3178,6 @@ export interface LearningPath {
    * @memberof LearningPath
    */
   item_count: number
-  /**
-   *
-   * @type {string}
-   * @memberof LearningPath
-   */
-  created_on: string
 }
 /**
  * Specialized serializer for a LearningPath relationship
@@ -3221,12 +3197,6 @@ export interface LearningPathRelationship {
    * @memberof LearningPathRelationship
    */
   resource: LearningResource
-  /**
-   *
-   * @type {string}
-   * @memberof LearningPathRelationship
-   */
-  created_on: string
   /**
    *
    * @type {number}
@@ -3264,12 +3234,6 @@ export interface LearningPathRelationshipCreate {
    * @memberof LearningPathRelationshipCreate
    */
   resource: LearningResource
-  /**
-   *
-   * @type {string}
-   * @memberof LearningPathRelationshipCreate
-   */
-  created_on: string
   /**
    *
    * @type {number}
@@ -3362,12 +3326,6 @@ export interface LearningPathResource {
    * @memberof LearningPathResource
    */
   certification: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof LearningPathResource
-   */
-  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -4136,12 +4094,6 @@ export interface LearningResourceImage {
    * @type {string}
    * @memberof LearningResourceImage
    */
-  created_on: string
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourceImage
-   */
   url: string
   /**
    *
@@ -4193,12 +4145,6 @@ export interface LearningResourceInstructor {
    * @memberof LearningResourceInstructor
    */
   id: number
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourceInstructor
-   */
-  created_on: string
   /**
    *
    * @type {string}
@@ -4292,12 +4238,6 @@ export interface LearningResourceOfferorDetail {
    * @memberof LearningResourceOfferorDetail
    */
   channel_url: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourceOfferorDetail
-   */
-  created_on: string
   /**
    *
    * @type {string}
@@ -4439,12 +4379,6 @@ export interface LearningResourcePrice {
    * @type {string}
    * @memberof LearningResourcePrice
    */
-  created_on: string
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourcePrice
-   */
   amount: string
   /**
    *
@@ -4490,12 +4424,6 @@ export interface LearningResourceRelationship {
    * @memberof LearningResourceRelationship
    */
   resource: LearningResource
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourceRelationship
-   */
-  created_on: string
   /**
    *
    * @type {number}
@@ -4628,12 +4556,6 @@ export interface LearningResourceRun {
    * @memberof LearningResourceRun
    */
   resource_prices: Array<LearningResourcePrice>
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourceRun
-   */
-  created_on: string
   /**
    *
    * @type {string}
@@ -6308,12 +6230,6 @@ export interface PercolateQuery {
   source_label: string
   /**
    *
-   * @type {string}
-   * @memberof PercolateQuery
-   */
-  created_on: string
-  /**
-   *
    * @type {any}
    * @memberof PercolateQuery
    */
@@ -6723,12 +6639,6 @@ export interface Podcast {
    * @type {string}
    * @memberof Podcast
    */
-  created_on: string
-  /**
-   *
-   * @type {string}
-   * @memberof Podcast
-   */
   apple_podcasts_url?: string | null
   /**
    *
@@ -6761,12 +6671,6 @@ export interface PodcastEpisode {
    * @memberof PodcastEpisode
    */
   podcasts: Array<string>
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastEpisode
-   */
-  created_on: string
   /**
    *
    * @type {string}
@@ -6889,12 +6793,6 @@ export interface PodcastEpisodeResource {
    * @memberof PodcastEpisodeResource
    */
   certification: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastEpisodeResource
-   */
-  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -7381,12 +7279,6 @@ export interface PodcastResource {
   certification: boolean
   /**
    *
-   * @type {string}
-   * @memberof PodcastResource
-   */
-  created_on: string
-  /**
-   *
    * @type {CourseResourceCertificationType}
    * @memberof PodcastResource
    */
@@ -7827,12 +7719,6 @@ export interface Program {
    * @memberof Program
    */
   program_count: number
-  /**
-   *
-   * @type {string}
-   * @memberof Program
-   */
-  created_on: string
 }
 /**
  * Serializer for Program Certificates
@@ -8113,12 +7999,6 @@ export interface ProgramResource {
    * @memberof ProgramResource
    */
   certification: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof ProgramResource
-   */
-  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -9077,12 +8957,6 @@ export interface UserList {
    * @type {string}
    * @memberof UserList
    */
-  created_on: string
-  /**
-   *
-   * @type {string}
-   * @memberof UserList
-   */
   title: string
   /**
    *
@@ -9122,12 +8996,6 @@ export interface UserListRelationship {
    * @memberof UserListRelationship
    */
   resource: LearningResource
-  /**
-   *
-   * @type {string}
-   * @memberof UserListRelationship
-   */
-  created_on: string
   /**
    *
    * @type {number}
@@ -9258,12 +9126,6 @@ export interface Video {
    * @type {string}
    * @memberof Video
    */
-  created_on: string
-  /**
-   *
-   * @type {string}
-   * @memberof Video
-   */
   duration: string
 }
 /**
@@ -9278,12 +9140,6 @@ export interface VideoChannel {
    * @memberof VideoChannel
    */
   channel_id: string
-  /**
-   *
-   * @type {string}
-   * @memberof VideoChannel
-   */
-  created_on: string
   /**
    *
    * @type {string}
@@ -9334,12 +9190,6 @@ export interface VideoPlaylist {
    * @memberof VideoPlaylist
    */
   video_count: number
-  /**
-   *
-   * @type {string}
-   * @memberof VideoPlaylist
-   */
-  created_on: string
 }
 /**
  * Serializer for the VideoPlaylist model
@@ -9408,12 +9258,6 @@ export interface VideoPlaylistResource {
    * @memberof VideoPlaylistResource
    */
   certification: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof VideoPlaylistResource
-   */
-  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -9880,12 +9724,6 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   certification: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof VideoResource
-   */
-  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}

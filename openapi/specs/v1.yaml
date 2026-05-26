@@ -10311,13 +10311,8 @@ components:
           items:
             $ref: '#/components/schemas/CourseNumber'
           nullable: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
       required:
       - course_numbers
-      - created_on
     CourseNumber:
       type: object
       description: Serializer for CourseNumber
@@ -10398,10 +10393,6 @@ components:
           nullable: true
         certification:
           type: boolean
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         certification_type:
           type: object
@@ -10633,7 +10624,6 @@ components:
       - children
       - course
       - course_feature
-      - created_on
       - delivery
       - departments
       - format
@@ -10927,10 +10917,6 @@ components:
         certification:
           type: boolean
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         certification_type:
           type: object
           title: CourseResourceCertificationType
@@ -11164,7 +11150,6 @@ components:
       - children
       - content_files
       - course_feature
-      - created_on
       - delivery
       - departments
       - description
@@ -11898,12 +11883,7 @@ components:
           type: integer
           readOnly: true
           description: Number of published items in the list.
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
       required:
-      - created_on
       - id
       - item_count
     LearningPathRelationship:
@@ -11917,10 +11897,6 @@ components:
           allOf:
           - $ref: '#/components/schemas/LearningResource'
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         position:
           type: integer
           maximum: 2147483647
@@ -11931,7 +11907,6 @@ components:
           type: integer
       required:
       - child
-      - created_on
       - id
       - parent
       - resource
@@ -11949,10 +11924,6 @@ components:
           allOf:
           - $ref: '#/components/schemas/LearningResource'
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         position:
           type: integer
           maximum: 2147483647
@@ -11964,7 +11935,6 @@ components:
           type: integer
       required:
       - child
-      - created_on
       - id
       - parent
       - resource
@@ -12022,10 +11992,6 @@ components:
           nullable: true
         certification:
           type: boolean
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         certification_type:
           type: object
@@ -12257,7 +12223,6 @@ components:
       - certification_type
       - children
       - course_feature
-      - created_on
       - delivery
       - departments
       - format
@@ -12707,10 +12672,6 @@ components:
         id:
           type: integer
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         url:
           type: string
           maxLength: 2048
@@ -12723,7 +12684,6 @@ components:
           nullable: true
           maxLength: 1024
       required:
-      - created_on
       - id
       - url
     LearningResourceImageRequest:
@@ -12751,10 +12711,6 @@ components:
         id:
           type: integer
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         first_name:
           type: string
           nullable: true
@@ -12768,7 +12724,6 @@ components:
           nullable: true
           maxLength: 256
       required:
-      - created_on
       - id
     LearningResourceInstructorRequest:
       type: object
@@ -12817,10 +12772,6 @@ components:
           type: string
           readOnly: true
           nullable: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         name:
           type: string
           maxLength: 256
@@ -12867,7 +12818,6 @@ components:
       required:
       - channel_url
       - code
-      - created_on
       - name
     LearningResourceOfferorRequest:
       type: object
@@ -12916,10 +12866,6 @@ components:
       type: object
       description: Serializer for LearningResourcePrice model
       properties:
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         amount:
           type: string
           format: decimal
@@ -12929,7 +12875,6 @@ components:
           maxLength: 3
       required:
       - amount
-      - created_on
       - currency
     LearningResourcePriceRequest:
       type: object
@@ -12957,10 +12902,6 @@ components:
           allOf:
           - $ref: '#/components/schemas/LearningResource'
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         position:
           type: integer
           maximum: 2147483647
@@ -12973,7 +12914,6 @@ components:
           type: integer
       required:
       - child
-      - created_on
       - id
       - parent
       - resource
@@ -13114,10 +13054,6 @@ components:
           items:
             $ref: '#/components/schemas/LearningResourcePrice'
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         run_id:
           type: string
           maxLength: 128
@@ -13222,7 +13158,6 @@ components:
           minimum: -2147483648
           nullable: true
       required:
-      - created_on
       - delivery
       - format
       - id
@@ -14286,10 +14221,6 @@ components:
         source_label:
           type: string
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         original_query: {}
         query: {}
         source_type:
@@ -14299,7 +14230,6 @@ components:
           description: Friendly display label for the query
           maxLength: 255
       required:
-      - created_on
       - id
       - original_query
       - query
@@ -14641,10 +14571,6 @@ components:
           readOnly: true
         episode_count:
           type: integer
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         apple_podcasts_url:
           type: string
           format: uri
@@ -14661,7 +14587,6 @@ components:
           nullable: true
           maxLength: 2048
       required:
-      - created_on
       - episode_count
       - id
     PodcastEpisode:
@@ -14676,10 +14601,6 @@ components:
           items:
             type: string
           description: Get the podcast id(s) the episode belongs to
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         transcript:
           type: string
@@ -14701,7 +14622,6 @@ components:
           nullable: true
       required:
       - audio_url
-      - created_on
       - id
       - podcasts
     PodcastEpisodeRequest:
@@ -14769,10 +14689,6 @@ components:
           nullable: true
         certification:
           type: boolean
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         certification_type:
           type: object
@@ -15003,7 +14919,6 @@ components:
       - certification_type
       - children
       - course_feature
-      - created_on
       - delivery
       - departments
       - format
@@ -15190,10 +15105,6 @@ components:
           nullable: true
         certification:
           type: boolean
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         certification_type:
           type: object
@@ -15424,7 +15335,6 @@ components:
       - certification_type
       - children
       - course_feature
-      - created_on
       - delivery
       - departments
       - format
@@ -15567,13 +15477,8 @@ components:
         program_count:
           type: integer
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
       required:
       - course_count
-      - created_on
       - program_count
     ProgramCertificate:
       type: object
@@ -15758,10 +15663,6 @@ components:
           nullable: true
         certification:
           type: boolean
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         certification_type:
           type: object
@@ -15992,7 +15893,6 @@ components:
       - certification_type
       - children
       - course_feature
-      - created_on
       - delivery
       - departments
       - format
@@ -16425,10 +16325,6 @@ components:
           additionalProperties: {}
           description: Return the image of the first item
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -16441,7 +16337,6 @@ components:
           readOnly: true
       required:
       - author
-      - created_on
       - id
       - image
       - item_count
@@ -16457,10 +16352,6 @@ components:
           allOf:
           - $ref: '#/components/schemas/LearningResource'
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         position:
           type: integer
           maximum: 2147483647
@@ -16471,7 +16362,6 @@ components:
           type: integer
       required:
       - child
-      - created_on
       - id
       - parent
       - resource
@@ -16539,17 +16429,12 @@ components:
           format: uri
           readOnly: true
           nullable: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         duration:
           type: string
           maxLength: 11
       required:
       - caption_urls
       - cover_image_url
-      - created_on
       - duration
       - id
       - streaming_url
@@ -16560,16 +16445,11 @@ components:
         channel_id:
           type: string
           maxLength: 80
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         title:
           type: string
           maxLength: 256
       required:
       - channel_id
-      - created_on
       - title
     VideoChannelRequest:
       type: object
@@ -16600,13 +16480,8 @@ components:
           nullable: true
         video_count:
           type: integer
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
       required:
       - channel
-      - created_on
       - id
       - video_count
     VideoPlaylistRequest:
@@ -16656,10 +16531,6 @@ components:
           nullable: true
         certification:
           type: boolean
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         certification_type:
           type: object
@@ -16890,7 +16761,6 @@ components:
       - certification_type
       - children
       - course_feature
-      - created_on
       - delivery
       - departments
       - format
@@ -17061,10 +16931,6 @@ components:
           nullable: true
         certification:
           type: boolean
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         certification_type:
           type: object
@@ -17310,7 +17176,6 @@ components:
       - children
       - content_files
       - course_feature
-      - created_on
       - delivery
       - departments
       - description

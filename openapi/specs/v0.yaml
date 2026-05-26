@@ -1026,7 +1026,7 @@ paths:
             - resource_category
             - published
             - next_start_date
-            - views
+            - view_count
             - created_on
             type: string
             description: |-
@@ -1050,7 +1050,7 @@ paths:
               * `resource_category` - Resource Category
               * `published` - Published
               * `next_start_date` - Next Start Date
-              * `views` - Views
+              * `view_count` - View Count
               * `created_on` - Created On
         description: "aggregations for facet counts             \n\n* `readable_id`
           - Readable Id\n* `resource_type` - Resource Type\n* `certification` - Certification\n*
@@ -1060,8 +1060,8 @@ paths:
           `platform` - Platform\n* `offered_by` - Offered By\n* `delivery` - Delivery\n*
           `title` - Title\n* `url` - Url\n* `resource_type_group` - Resource Type
           Group\n* `resource_category` - Resource Category\n* `published` - Published\n*
-          `next_start_date` - Next Start Date\n* `views` - Views\n* `created_on` -
-          Created On"
+          `next_start_date` - Next Start Date\n* `view_count` - View Count\n* `created_on`
+          - Created On"
       - in: query
         name: certification
         schema:
@@ -1433,10 +1433,10 @@ paths:
         schema:
           enum:
           - next_start_date
-          - views
+          - view_count
           - created_on
           - -next_start_date
-          - -views
+          - -view_count
           - -created_on
           type: string
           minLength: 1
@@ -1444,10 +1444,10 @@ paths:
           if the parameter starts with '-' the sort is in descending order
 
           * `next_start_date` - next_start_date
-          * `views` - views
+          * `view_count` - view_count
           * `created_on` - created_on
           * `-next_start_date` - -next_start_date
-          * `-views` - -views
+          * `-view_count` - -view_count
           * `-created_on` - -created_on
       - in: query
         name: title__isnull
@@ -1900,15 +1900,9 @@ components:
       type: object
       description: Serializer for the ChannelDepartmentDetail model
       properties:
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         department:
           type: string
           nullable: true
-      required:
-      - created_on
     ChannelDepartmentDetailRequest:
       type: object
       description: Serializer for the ChannelDepartmentDetail model
@@ -1943,29 +1937,13 @@ components:
         email:
           type: string
           description: Get the email from the associated user
-    ChannelPathwayDetail:
-      type: object
-      description: Serializer for the ChannelPathwayDetail model
-      properties:
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
-      required:
-      - created_on
     ChannelTopicDetail:
       type: object
       description: Serializer for the ChannelTopicDetail model
       properties:
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         topic:
           type: integer
           nullable: true
-      required:
-      - created_on
     ChannelTopicDetailRequest:
       type: object
       description: Serializer for the ChannelTopicDetail model
@@ -1998,12 +1976,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/LearningResourceOfferorDetail'
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
       required:
-      - created_on
       - unit
     ContentFile:
       type: object
@@ -2226,13 +2199,8 @@ components:
           items:
             $ref: '#/components/schemas/CourseNumber'
           nullable: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
       required:
       - course_numbers
-      - created_on
     CourseNumber:
       type: object
       description: Serializer for CourseNumber
@@ -2286,10 +2254,6 @@ components:
           nullable: true
         certification:
           type: boolean
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         certification_type:
           type: object
@@ -2521,7 +2485,6 @@ components:
       - children
       - course
       - course_feature
-      - created_on
       - delivery
       - departments
       - format
@@ -2742,10 +2705,6 @@ components:
           nullable: true
         certification:
           type: boolean
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         certification_type:
           type: object
@@ -2980,7 +2939,6 @@ components:
       - children
       - content_files
       - course_feature
-      - created_on
       - delivery
       - departments
       - description
@@ -3199,12 +3157,7 @@ components:
           type: integer
           readOnly: true
           description: Number of published items in the list.
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
       required:
-      - created_on
       - id
       - item_count
     LearningPathPreview:
@@ -3264,10 +3217,6 @@ components:
           nullable: true
         certification:
           type: boolean
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         certification_type:
           type: object
@@ -3499,7 +3448,6 @@ components:
       - certification_type
       - children
       - course_feature
-      - created_on
       - delivery
       - departments
       - format
@@ -3599,10 +3547,6 @@ components:
         id:
           type: integer
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         url:
           type: string
           maxLength: 2048
@@ -3615,7 +3559,6 @@ components:
           nullable: true
           maxLength: 1024
       required:
-      - created_on
       - id
       - url
     LearningResourceInstructor:
@@ -3624,10 +3567,6 @@ components:
       properties:
         id:
           type: integer
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         first_name:
           type: string
@@ -3642,7 +3581,6 @@ components:
           nullable: true
           maxLength: 256
       required:
-      - created_on
       - id
     LearningResourceOfferor:
       type: object
@@ -3675,10 +3613,6 @@ components:
           type: string
           readOnly: true
           nullable: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         name:
           type: string
           maxLength: 256
@@ -3725,7 +3659,6 @@ components:
       required:
       - channel_url
       - code
-      - created_on
       - name
     LearningResourceOfferorDetailRequest:
       type: object
@@ -3804,10 +3737,6 @@ components:
       type: object
       description: Serializer for LearningResourcePrice model
       properties:
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         amount:
           type: string
           format: decimal
@@ -3817,7 +3746,6 @@ components:
           maxLength: 3
       required:
       - amount
-      - created_on
       - currency
     LearningResourceRelationshipChildField:
       type: object
@@ -3935,10 +3863,6 @@ components:
           items:
             $ref: '#/components/schemas/LearningResourcePrice'
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         run_id:
           type: string
           maxLength: 128
@@ -4043,7 +3967,6 @@ components:
           minimum: -2147483648
           nullable: true
       required:
-      - created_on
       - delivery
       - format
       - id
@@ -4481,8 +4404,6 @@ components:
           allOf:
           - $ref: '#/components/schemas/PathwayChannelTypeEnum'
           readOnly: true
-        pathway_detail:
-          $ref: '#/components/schemas/ChannelPathwayDetail'
         created_on:
           type: string
           format: date-time
@@ -4524,7 +4445,6 @@ components:
       - is_moderator
       - lists
       - name
-      - pathway_detail
       - sub_channels
       - title
       - updated_on
@@ -4544,10 +4464,6 @@ components:
           readOnly: true
         episode_count:
           type: integer
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         apple_podcasts_url:
           type: string
           format: uri
@@ -4564,7 +4480,6 @@ components:
           nullable: true
           maxLength: 2048
       required:
-      - created_on
       - episode_count
       - id
     PodcastEpisode:
@@ -4579,10 +4494,6 @@ components:
           items:
             type: string
           description: Get the podcast id(s) the episode belongs to
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         transcript:
           type: string
@@ -4604,7 +4515,6 @@ components:
           nullable: true
       required:
       - audio_url
-      - created_on
       - id
       - podcasts
     PodcastEpisodeResource:
@@ -4646,10 +4556,6 @@ components:
           nullable: true
         certification:
           type: boolean
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         certification_type:
           type: object
@@ -4880,7 +4786,6 @@ components:
       - certification_type
       - children
       - course_feature
-      - created_on
       - delivery
       - departments
       - format
@@ -4946,10 +4851,6 @@ components:
           nullable: true
         certification:
           type: boolean
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         certification_type:
           type: object
@@ -5180,7 +5081,6 @@ components:
       - certification_type
       - children
       - course_feature
-      - created_on
       - delivery
       - departments
       - format
@@ -5395,13 +5295,8 @@ components:
         program_count:
           type: integer
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
       required:
       - course_count
-      - created_on
       - program_count
     ProgramCertificate:
       type: object
@@ -5533,10 +5428,6 @@ components:
           nullable: true
         certification:
           type: boolean
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         certification_type:
           type: object
@@ -5767,7 +5658,6 @@ components:
       - certification_type
       - children
       - course_feature
-      - created_on
       - delivery
       - departments
       - format
@@ -6228,17 +6118,12 @@ components:
           format: uri
           readOnly: true
           nullable: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         duration:
           type: string
           maxLength: 11
       required:
       - caption_urls
       - cover_image_url
-      - created_on
       - duration
       - id
       - streaming_url
@@ -6249,16 +6134,11 @@ components:
         channel_id:
           type: string
           maxLength: 80
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         title:
           type: string
           maxLength: 256
       required:
       - channel_id
-      - created_on
       - title
     VideoPlaylist:
       type: object
@@ -6274,13 +6154,8 @@ components:
           nullable: true
         video_count:
           type: integer
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
       required:
       - channel
-      - created_on
       - id
       - video_count
     VideoPlaylistResource:
@@ -6322,10 +6197,6 @@ components:
           nullable: true
         certification:
           type: boolean
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         certification_type:
           type: object
@@ -6556,7 +6427,6 @@ components:
       - certification_type
       - children
       - course_feature
-      - created_on
       - delivery
       - departments
       - format
@@ -6622,10 +6492,6 @@ components:
           nullable: true
         certification:
           type: boolean
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         certification_type:
           type: object
@@ -6871,7 +6737,6 @@ components:
       - children
       - content_files
       - course_feature
-      - created_on
       - delivery
       - departments
       - description

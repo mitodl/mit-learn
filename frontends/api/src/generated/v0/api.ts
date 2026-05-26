@@ -408,12 +408,6 @@ export interface ChannelDepartmentDetail {
    * @type {string}
    * @memberof ChannelDepartmentDetail
    */
-  created_on: string
-  /**
-   *
-   * @type {string}
-   * @memberof ChannelDepartmentDetail
-   */
   department?: string | null
 }
 /**
@@ -474,30 +468,11 @@ export interface ChannelModeratorRequest {
   email?: string
 }
 /**
- * Serializer for the ChannelPathwayDetail model
- * @export
- * @interface ChannelPathwayDetail
- */
-export interface ChannelPathwayDetail {
-  /**
-   *
-   * @type {string}
-   * @memberof ChannelPathwayDetail
-   */
-  created_on: string
-}
-/**
  * Serializer for the ChannelTopicDetail model
  * @export
  * @interface ChannelTopicDetail
  */
 export interface ChannelTopicDetail {
-  /**
-   *
-   * @type {string}
-   * @memberof ChannelTopicDetail
-   */
-  created_on: string
   /**
    *
    * @type {number}
@@ -565,12 +540,6 @@ export interface ChannelUnitDetail {
    * @memberof ChannelUnitDetail
    */
   unit: LearningResourceOfferorDetail
-  /**
-   *
-   * @type {string}
-   * @memberof ChannelUnitDetail
-   */
-  created_on: string
 }
 /**
  * Serializer class for course run ContentFiles
@@ -941,12 +910,6 @@ export interface Course {
    * @memberof Course
    */
   course_numbers: Array<CourseNumber> | null
-  /**
-   *
-   * @type {string}
-   * @memberof Course
-   */
-  created_on: string
 }
 /**
  * Serializer for CourseNumber
@@ -1027,12 +990,6 @@ export interface CourseResource {
    * @memberof CourseResource
    */
   certification: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof CourseResource
-   */
-  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -1740,12 +1697,6 @@ export interface DocumentResource {
   certification: boolean
   /**
    *
-   * @type {string}
-   * @memberof DocumentResource
-   */
-  created_on: string
-  /**
-   *
    * @type {CourseResourceCertificationType}
    * @memberof DocumentResource
    */
@@ -2317,12 +2268,6 @@ export interface LearningPath {
    * @memberof LearningPath
    */
   item_count: number
-  /**
-   *
-   * @type {string}
-   * @memberof LearningPath
-   */
-  created_on: string
 }
 /**
  * Serializer for a minimal preview of Learning Paths
@@ -2403,12 +2348,6 @@ export interface LearningPathResource {
    * @memberof LearningPathResource
    */
   certification: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof LearningPathResource
-   */
-  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -2755,12 +2694,6 @@ export interface LearningResourceImage {
    * @type {string}
    * @memberof LearningResourceImage
    */
-  created_on: string
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourceImage
-   */
   url: string
   /**
    *
@@ -2787,12 +2720,6 @@ export interface LearningResourceInstructor {
    * @memberof LearningResourceInstructor
    */
   id: number
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourceInstructor
-   */
-  created_on: string
   /**
    *
    * @type {string}
@@ -2861,12 +2788,6 @@ export interface LearningResourceOfferorDetail {
    * @memberof LearningResourceOfferorDetail
    */
   channel_url: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourceOfferorDetail
-   */
-  created_on: string
   /**
    *
    * @type {string}
@@ -3043,12 +2964,6 @@ export interface LearningResourcePrice {
    * @type {string}
    * @memberof LearningResourcePrice
    */
-  created_on: string
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourcePrice
-   */
   amount: string
   /**
    *
@@ -3149,12 +3064,6 @@ export interface LearningResourceRun {
    * @memberof LearningResourceRun
    */
   resource_prices: Array<LearningResourcePrice>
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourceRun
-   */
-  created_on: string
   /**
    *
    * @type {string}
@@ -3975,12 +3884,6 @@ export interface PathwayChannel {
   channel_type: PathwayChannelTypeEnum
   /**
    *
-   * @type {ChannelPathwayDetail}
-   * @memberof PathwayChannel
-   */
-  pathway_detail: ChannelPathwayDetail
-  /**
-   *
    * @type {string}
    * @memberof PathwayChannel
    */
@@ -4084,12 +3987,6 @@ export interface Podcast {
    * @type {string}
    * @memberof Podcast
    */
-  created_on: string
-  /**
-   *
-   * @type {string}
-   * @memberof Podcast
-   */
   apple_podcasts_url?: string | null
   /**
    *
@@ -4122,12 +4019,6 @@ export interface PodcastEpisode {
    * @memberof PodcastEpisode
    */
   podcasts: Array<string>
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastEpisode
-   */
-  created_on: string
   /**
    *
    * @type {string}
@@ -4213,12 +4104,6 @@ export interface PodcastEpisodeResource {
    * @memberof PodcastEpisodeResource
    */
   certification: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastEpisodeResource
-   */
-  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -4532,12 +4417,6 @@ export interface PodcastResource {
    * @memberof PodcastResource
    */
   certification: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastResource
-   */
-  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -5071,12 +4950,6 @@ export interface Program {
    * @memberof Program
    */
   program_count: number
-  /**
-   *
-   * @type {string}
-   * @memberof Program
-   */
-  created_on: string
 }
 /**
  * Serializer for Program Certificates
@@ -5265,12 +5138,6 @@ export interface ProgramResource {
    * @memberof ProgramResource
    */
   certification: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof ProgramResource
-   */
-  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -6228,12 +6095,6 @@ export interface Video {
    * @type {string}
    * @memberof Video
    */
-  created_on: string
-  /**
-   *
-   * @type {string}
-   * @memberof Video
-   */
   duration: string
 }
 /**
@@ -6248,12 +6109,6 @@ export interface VideoChannel {
    * @memberof VideoChannel
    */
   channel_id: string
-  /**
-   *
-   * @type {string}
-   * @memberof VideoChannel
-   */
-  created_on: string
   /**
    *
    * @type {string}
@@ -6285,12 +6140,6 @@ export interface VideoPlaylist {
    * @memberof VideoPlaylist
    */
   video_count: number
-  /**
-   *
-   * @type {string}
-   * @memberof VideoPlaylist
-   */
-  created_on: string
 }
 /**
  * Serializer for video playlist resources
@@ -6346,12 +6195,6 @@ export interface VideoPlaylistResource {
    * @memberof VideoPlaylistResource
    */
   certification: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof VideoPlaylistResource
-   */
-  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -6665,12 +6508,6 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   certification: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof VideoResource
-   */
-  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -12174,7 +12011,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
     /**
      * Vector Search for learning resources
      * @summary Vector Search
-     * @param {Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category * &#x60;published&#x60; - Published * &#x60;next_start_date&#x60; - Next Start Date * &#x60;views&#x60; - Views * &#x60;created_on&#x60; - Created On
+     * @param {Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category * &#x60;published&#x60; - Published * &#x60;next_start_date&#x60; - Next Start Date * &#x60;view_count&#x60; - View Count * &#x60;created_on&#x60; - Created On
      * @param {boolean | null} [certification] True if the learning resource offers a certificate
      * @param {Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
@@ -12195,7 +12032,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {number} [score_cutoff] The minimum score a result must have to be returned
-     * @param {VectorLearningResourcesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;views&#x60; - views * &#x60;created_on&#x60; - created_on * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-views&#x60; - -views * &#x60;-created_on&#x60; - -created_on
+     * @param {VectorLearningResourcesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;view_count&#x60; - view_count * &#x60;created_on&#x60; - created_on * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-view_count&#x60; - -view_count * &#x60;-created_on&#x60; - -created_on
      * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
      * @param {boolean | null} [url__isnull] Filter to learning resources where url is null/not null
@@ -12376,7 +12213,7 @@ export const VectorLearningResourcesSearchApiFp = function (
     /**
      * Vector Search for learning resources
      * @summary Vector Search
-     * @param {Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category * &#x60;published&#x60; - Published * &#x60;next_start_date&#x60; - Next Start Date * &#x60;views&#x60; - Views * &#x60;created_on&#x60; - Created On
+     * @param {Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category * &#x60;published&#x60; - Published * &#x60;next_start_date&#x60; - Next Start Date * &#x60;view_count&#x60; - View Count * &#x60;created_on&#x60; - Created On
      * @param {boolean | null} [certification] True if the learning resource offers a certificate
      * @param {Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
@@ -12397,7 +12234,7 @@ export const VectorLearningResourcesSearchApiFp = function (
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {number} [score_cutoff] The minimum score a result must have to be returned
-     * @param {VectorLearningResourcesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;views&#x60; - views * &#x60;created_on&#x60; - created_on * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-views&#x60; - -views * &#x60;-created_on&#x60; - -created_on
+     * @param {VectorLearningResourcesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;view_count&#x60; - view_count * &#x60;created_on&#x60; - created_on * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-view_count&#x60; - -view_count * &#x60;-created_on&#x60; - -created_on
      * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
      * @param {boolean | null} [url__isnull] Filter to learning resources where url is null/not null
@@ -12545,8 +12382,8 @@ export const VectorLearningResourcesSearchApiFactory = function (
  */
 export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest {
   /**
-   * aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category * &#x60;published&#x60; - Published * &#x60;next_start_date&#x60; - Next Start Date * &#x60;views&#x60; - Views * &#x60;created_on&#x60; - Created On
-   * @type {Array<'readable_id' | 'resource_type' | 'certification' | 'certification_type' | 'professional' | 'free' | 'course_feature' | 'topic' | 'ocw_topic' | 'level' | 'department' | 'platform' | 'offered_by' | 'delivery' | 'title' | 'url' | 'resource_type_group' | 'resource_category' | 'published' | 'next_start_date' | 'views' | 'created_on'>}
+   * aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category * &#x60;published&#x60; - Published * &#x60;next_start_date&#x60; - Next Start Date * &#x60;view_count&#x60; - View Count * &#x60;created_on&#x60; - Created On
+   * @type {Array<'readable_id' | 'resource_type' | 'certification' | 'certification_type' | 'professional' | 'free' | 'course_feature' | 'topic' | 'ocw_topic' | 'level' | 'department' | 'platform' | 'offered_by' | 'delivery' | 'title' | 'url' | 'resource_type_group' | 'resource_category' | 'published' | 'next_start_date' | 'view_count' | 'created_on'>}
    * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
    */
   readonly aggregations?: Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>
@@ -12692,8 +12529,8 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
   readonly score_cutoff?: number
 
   /**
-   * if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;views&#x60; - views * &#x60;created_on&#x60; - created_on * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-views&#x60; - -views * &#x60;-created_on&#x60; - -created_on
-   * @type {'next_start_date' | 'views' | 'created_on' | '-next_start_date' | '-views' | '-created_on'}
+   * if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;view_count&#x60; - view_count * &#x60;created_on&#x60; - created_on * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-view_count&#x60; - -view_count * &#x60;-created_on&#x60; - -created_on
+   * @type {'next_start_date' | 'view_count' | 'created_on' | '-next_start_date' | '-view_count' | '-created_on'}
    * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
    */
   readonly sortby?: VectorLearningResourcesSearchRetrieveSortbyEnum
@@ -12796,7 +12633,7 @@ export const VectorLearningResourcesSearchRetrieveAggregationsEnum = {
   ResourceCategory: "resource_category",
   Published: "published",
   NextStartDate: "next_start_date",
-  Views: "views",
+  ViewCount: "view_count",
   CreatedOn: "created_on",
 } as const
 export type VectorLearningResourcesSearchRetrieveAggregationsEnum =
@@ -12953,10 +12790,10 @@ export type VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum =
  */
 export const VectorLearningResourcesSearchRetrieveSortbyEnum = {
   NextStartDate: "next_start_date",
-  Views: "views",
+  ViewCount: "view_count",
   CreatedOn: "created_on",
   NextStartDate2: "-next_start_date",
-  Views2: "-views",
+  ViewCount2: "-view_count",
   CreatedOn2: "-created_on",
 } as const
 export type VectorLearningResourcesSearchRetrieveSortbyEnum =
