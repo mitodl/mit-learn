@@ -390,9 +390,9 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
   const {
     isLoading,
     showNoPrograms,
-    languageOptions,
-    selectedLanguageKey,
-    setSelectedLanguageKey,
+    variantOptions,
+    selectedVariantValue,
+    setSelectedVariantValue,
     programs,
     collections,
   } = useContractDashboardData(org, contract)
@@ -436,15 +436,18 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
       <Stack>
         <ContractHeaderSection>
           <ContractHeader org={org} contract={contract} />
-          {languageOptions.length > 1 && (
+          {variantOptions.length > 1 && (
             <ProgramLanguageSelect
               size="small"
               label="Learning Language:"
-              value={selectedLanguageKey}
-              onChange={(e) => setSelectedLanguageKey(String(e.target.value))}
-              options={languageOptions}
+              value={selectedVariantValue}
+              onChange={(e) => setSelectedVariantValue(String(e.target.value))}
+              options={variantOptions.map(({ value, label }) => ({
+                value,
+                label,
+              }))}
               renderValue={(value) => {
-                const selected = languageOptions.find(
+                const selected = variantOptions.find(
                   (opt) => opt.value === value,
                 )
                 return (

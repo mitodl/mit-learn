@@ -1,5 +1,6 @@
 import { factories } from "api/mitxonline-test-utils"
 import type { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
+import { LanguageEnum } from "@mitodl/mitxonline-api-axios/v2"
 import {
   getCourseRunForSelectedLanguage,
   getEnrollmentForSelectedLanguage,
@@ -108,7 +109,7 @@ describe("languageOptions", () => {
         id: spanishRun.id,
         courseware_id: spanishRun.courseware_id,
         courseware_url: spanishRun.courseware_url ?? "",
-        language: "es",
+        language: LanguageEnum.EsEs,
         title: spanishRun.title,
         run_tag: spanishRun.run_tag,
       },
@@ -177,7 +178,7 @@ describe("languageOptions", () => {
           id: templateRun.id,
           courseware_id: templateRun.courseware_id,
           courseware_url: templateRun.courseware_url ?? "",
-          language: "en",
+          language: LanguageEnum.En,
           title: templateRun.title,
           run_tag: templateRun.run_tag,
         },
@@ -185,14 +186,14 @@ describe("languageOptions", () => {
           id: spanishRun.id,
           courseware_id: spanishRun.courseware_id,
           courseware_url: spanishRun.courseware_url ?? "",
-          language: "es",
+          language: LanguageEnum.EsEs,
           title: spanishRun.title,
           run_tag: spanishRun.run_tag,
         },
       ],
     })
 
-    const spanishOption = getSelectedLanguageOption(course, "language:es")
+    const spanishOption = getSelectedLanguageOption(course, "language:es-es")
     const enrollment = factories.enrollment.courseEnrollment({
       run: {
         id: spanishRun.id,
@@ -253,7 +254,7 @@ describe("languageOptions", () => {
           id: nonEnrollableContractRun.id,
           courseware_id: nonEnrollableContractRun.courseware_id,
           courseware_url: nonEnrollableContractRun.courseware_url ?? "",
-          language: "en",
+          language: LanguageEnum.En,
           title: nonEnrollableContractRun.title,
           run_tag: nonEnrollableContractRun.run_tag,
         },
@@ -261,14 +262,14 @@ describe("languageOptions", () => {
           id: 1003,
           courseware_id: "cw-contract-es-synthetic",
           courseware_url: "https://openedx.example.com/contract-spanish",
-          language: "es",
+          language: LanguageEnum.EsEs,
           title: "Modulo sintetico",
           run_tag: "spanish",
         },
       ],
     })
 
-    const spanishOption = getSelectedLanguageOption(course, "language:es")
+    const spanishOption = getSelectedLanguageOption(course, "language:es-es")
 
     const resolved = getResolvedRunForSelectedLanguage(
       course,
@@ -302,14 +303,14 @@ describe("languageOptions", () => {
           id: 2002,
           courseware_id: "cw-contract-es-synthetic",
           courseware_url: "https://openedx.example.com/contract-spanish",
-          language: "es",
+          language: LanguageEnum.EsEs,
           title: "Modulo sintetico",
           run_tag: "spanish",
         },
       ],
     })
 
-    const spanishOption = getSelectedLanguageOption(course, "language:es")
+    const spanishOption = getSelectedLanguageOption(course, "language:es-es")
 
     const resolved = getResolvedRunForSelectedLanguage(
       course,
@@ -343,7 +344,7 @@ describe("languageOptions", () => {
           id: unenrollableEnglish.id,
           courseware_id: unenrollableEnglish.courseware_id,
           courseware_url: unenrollableEnglish.courseware_url ?? "",
-          language: "en",
+          language: LanguageEnum.En,
           title: unenrollableEnglish.title,
           run_tag: unenrollableEnglish.run_tag,
         },
@@ -351,7 +352,7 @@ describe("languageOptions", () => {
           id: enrollableEnglish.id,
           courseware_id: enrollableEnglish.courseware_id,
           courseware_url: enrollableEnglish.courseware_url ?? "",
-          language: "en",
+          language: LanguageEnum.En,
           title: enrollableEnglish.title,
           run_tag: enrollableEnglish.run_tag,
         },
@@ -387,7 +388,7 @@ describe("languageOptions", () => {
           id: run.id,
           courseware_id: run.courseware_id,
           courseware_url: run.courseware_url ?? "",
-          language: "en",
+          language: LanguageEnum.En,
           title: run.title,
           run_tag: run.run_tag,
         },
@@ -441,7 +442,7 @@ describe("languageOptions", () => {
             id: oldRun.id,
             courseware_id: oldRun.courseware_id,
             courseware_url: oldRun.courseware_url ?? "",
-            language: "en",
+            language: LanguageEnum.En,
             title: oldRun.title,
             run_tag: oldRun.run_tag,
           },
@@ -449,7 +450,7 @@ describe("languageOptions", () => {
             id: newRun.id,
             courseware_id: newRun.courseware_id,
             courseware_url: newRun.courseware_url ?? "",
-            language: "en",
+            language: LanguageEnum.En,
             title: newRun.title,
             run_tag: newRun.run_tag,
           },
@@ -494,7 +495,7 @@ describe("languageOptions", () => {
             id: englishRun.id,
             courseware_id: englishRun.courseware_id,
             courseware_url: englishRun.courseware_url ?? "",
-            language: "en",
+            language: LanguageEnum.En,
             title: englishRun.title,
             run_tag: englishRun.run_tag,
           },
@@ -502,7 +503,7 @@ describe("languageOptions", () => {
             id: spanishRun.id,
             courseware_id: spanishRun.courseware_id,
             courseware_url: spanishRun.courseware_url ?? "",
-            language: "es",
+            language: LanguageEnum.EsEs,
             title: spanishRun.title,
             run_tag: spanishRun.run_tag,
           },
@@ -659,7 +660,7 @@ describe("languageOptions", () => {
             id: languageRunA.id,
             courseware_id: languageRunA.courseware_id,
             courseware_url: languageRunA.courseware_url ?? "",
-            language: "en",
+            language: LanguageEnum.En,
             title: languageRunA.title,
             run_tag: languageRunA.run_tag,
           },
@@ -667,7 +668,7 @@ describe("languageOptions", () => {
             id: languageRunB.id,
             courseware_id: languageRunB.courseware_id,
             courseware_url: languageRunB.courseware_url ?? "",
-            language: "en",
+            language: LanguageEnum.En,
             title: languageRunB.title,
             run_tag: languageRunB.run_tag,
           },
@@ -710,7 +711,7 @@ describe("languageOptions", () => {
             id: olderRun.id,
             courseware_id: olderRun.courseware_id,
             courseware_url: olderRun.courseware_url ?? "",
-            language: "en",
+            language: LanguageEnum.En,
             title: olderRun.title,
             run_tag: olderRun.run_tag,
           },
@@ -718,7 +719,7 @@ describe("languageOptions", () => {
             id: newerRun.id,
             courseware_id: newerRun.courseware_id,
             courseware_url: newerRun.courseware_url ?? "",
-            language: "en",
+            language: LanguageEnum.En,
             title: newerRun.title,
             run_tag: newerRun.run_tag,
           },

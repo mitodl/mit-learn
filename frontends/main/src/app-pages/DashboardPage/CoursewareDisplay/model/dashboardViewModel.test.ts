@@ -1,4 +1,4 @@
-import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { DisplayModeEnum, LanguageEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { factories, RequirementTreeBuilder } from "api/mitxonline-test-utils"
 import {
   assembleHomeCardList,
@@ -561,7 +561,7 @@ describe("dashboardViewModel", () => {
     test("includes enrollment language not present in enrollable language options", () => {
       const englishRun = factories.courses.courseRun({
         id: 101,
-        language: "en",
+        language: LanguageEnum.En,
         courseware_id: "cw-en-101",
         courseware_url: "https://example.com/en-101",
         is_enrollable: true,
@@ -576,7 +576,7 @@ describe("dashboardViewModel", () => {
             id: englishRun.id,
             courseware_id: englishRun.courseware_id,
             courseware_url: englishRun.courseware_url ?? "",
-            language: "en",
+            language: LanguageEnum.En,
             title: englishRun.title,
             run_tag: englishRun.run_tag,
           },
@@ -584,7 +584,11 @@ describe("dashboardViewModel", () => {
       })
 
       const esEnrollment = factories.enrollment.courseEnrollment({
-        run: { id: 999, language: "es", course: { id: course.id } },
+        run: {
+          id: 999,
+          language: LanguageEnum.EsEs,
+          course: { id: course.id },
+        },
       })
 
       const options = getDistinctDashboardLanguageOptions(
@@ -594,7 +598,7 @@ describe("dashboardViewModel", () => {
 
       expect(options.map((option) => option.value)).toEqual([
         "language:en",
-        "language:es",
+        "language:es-es",
       ])
     })
 
@@ -627,7 +631,7 @@ describe("dashboardViewModel", () => {
         run: { language: "fr", course: { id: 50 } },
       })
       const spanishEnrollment = factories.enrollment.courseEnrollment({
-        run: { language: "es", course: { id: 50 } },
+        run: { language: LanguageEnum.EsEs, course: { id: 50 } },
       })
 
       const options = getDistinctDashboardLanguageOptions(
@@ -636,7 +640,7 @@ describe("dashboardViewModel", () => {
       )
 
       expect(options.map((option) => option.value)).toEqual([
-        "language:es",
+        "language:es-es",
         "language:fr",
       ])
     })
@@ -656,7 +660,7 @@ describe("dashboardViewModel", () => {
           courseruns: [],
         })
         const enrollment = factories.enrollment.courseEnrollment({
-          run: { language: "es", course: { id: 40 } },
+          run: { language: LanguageEnum.EsEs, course: { id: 40 } },
         })
 
         const options = getDistinctDashboardLanguageOptions(
@@ -666,7 +670,7 @@ describe("dashboardViewModel", () => {
 
         expect(options).toEqual([
           {
-            value: "language:es",
+            value: "language:es-es",
             label: "español",
           },
         ])
@@ -903,7 +907,7 @@ describe("dashboardViewModel", () => {
             id: run.id,
             courseware_id: run.courseware_id,
             courseware_url: run.courseware_url ?? "",
-            language: "en",
+            language: LanguageEnum.En,
             title: run.title,
             run_tag: run.run_tag,
           },
@@ -912,7 +916,7 @@ describe("dashboardViewModel", () => {
       const enrollment = factories.enrollment.courseEnrollment({
         run: {
           ...run,
-          language: "en",
+          language: LanguageEnum.En,
           course: { id: course.id, title: course.title },
         },
       })
@@ -951,14 +955,14 @@ describe("dashboardViewModel", () => {
     test("selected-language key prefers matching language enrollment", () => {
       const enRun = factories.courses.courseRun({
         id: 401,
-        language: "en",
+        language: LanguageEnum.En,
         courseware_id: "cw-en-401",
         courseware_url: "https://example.com/en-401",
         is_enrollable: true,
       })
       const esRun = factories.courses.courseRun({
         id: 402,
-        language: "es",
+        language: LanguageEnum.EsEs,
         courseware_id: "cw-es-402",
         courseware_url: "https://example.com/es-402",
         is_enrollable: true,
@@ -971,7 +975,7 @@ describe("dashboardViewModel", () => {
             id: enRun.id,
             courseware_id: enRun.courseware_id,
             courseware_url: enRun.courseware_url ?? "",
-            language: "en",
+            language: LanguageEnum.En,
             title: enRun.title,
             run_tag: enRun.run_tag,
           },
@@ -979,7 +983,7 @@ describe("dashboardViewModel", () => {
             id: esRun.id,
             courseware_id: esRun.courseware_id,
             courseware_url: esRun.courseware_url ?? "",
-            language: "es",
+            language: LanguageEnum.EsEs,
             title: esRun.title,
             run_tag: esRun.run_tag,
           },
@@ -988,26 +992,26 @@ describe("dashboardViewModel", () => {
       const enEnrollment = factories.enrollment.courseEnrollment({
         run: {
           ...enRun,
-          language: "en",
+          language: LanguageEnum.En,
           course: { id: course.id, title: course.title },
         },
       })
       const esEnrollment = factories.enrollment.courseEnrollment({
         run: {
           ...esRun,
-          language: "es",
+          language: LanguageEnum.EsEs,
           course: { id: course.id, title: course.title },
         },
       })
       const availableLanguages = [
         { value: "language:en", label: "English" },
-        { value: "language:es", label: "Spanish" },
+        { value: "language:es-es", label: "Spanish" },
       ]
 
       const entry = buildCourseEntry(
         course,
         [enEnrollment, esEnrollment],
-        "language:es",
+        "language:es-es",
         { availableLanguages },
       )
 
@@ -1031,7 +1035,7 @@ describe("dashboardViewModel", () => {
             id: run.id,
             courseware_id: run.courseware_id,
             courseware_url: run.courseware_url ?? "",
-            language: "en",
+            language: LanguageEnum.En,
             title: run.title,
             run_tag: run.run_tag,
           },
@@ -1042,7 +1046,7 @@ describe("dashboardViewModel", () => {
         b2b_contract_id: 99,
         run: {
           ...run,
-          language: "en",
+          language: LanguageEnum.En,
           course: { id: course.id, title: course.title },
         },
       })
@@ -1075,7 +1079,7 @@ describe("dashboardViewModel", () => {
             id: run.id,
             courseware_id: run.courseware_id,
             courseware_url: run.courseware_url ?? "",
-            language: "en",
+            language: LanguageEnum.En,
             title: run.title,
             run_tag: run.run_tag,
           },
@@ -1672,14 +1676,14 @@ describe("dashboardViewModel", () => {
     test("prefers selected-language enrollment", () => {
       const enRun = factories.courses.courseRun({
         id: 11,
-        language: "en",
+        language: LanguageEnum.En,
         courseware_id: "cw-en-11",
         courseware_url: "https://example.com/en-11",
         is_enrollable: true,
       })
       const esRun = factories.courses.courseRun({
         id: 12,
-        language: "es",
+        language: LanguageEnum.EsEs,
         courseware_id: "cw-es-12",
         courseware_url: "https://example.com/es-12",
         is_enrollable: true,
@@ -1693,7 +1697,7 @@ describe("dashboardViewModel", () => {
             id: enRun.id,
             courseware_id: enRun.courseware_id,
             courseware_url: enRun.courseware_url ?? "",
-            language: "en",
+            language: LanguageEnum.En,
             title: enRun.title,
             run_tag: enRun.run_tag,
           },
@@ -1701,7 +1705,7 @@ describe("dashboardViewModel", () => {
             id: esRun.id,
             courseware_id: esRun.courseware_id,
             courseware_url: esRun.courseware_url ?? "",
-            language: "es",
+            language: LanguageEnum.EsEs,
             title: esRun.title,
             run_tag: esRun.run_tag,
           },
@@ -1711,14 +1715,14 @@ describe("dashboardViewModel", () => {
       const englishEnrollment = factories.enrollment.courseEnrollment({
         run: {
           ...enRun,
-          language: "en",
+          language: LanguageEnum.En,
           course: { id: course.id, title: course.title },
         },
       })
       const spanishEnrollment = factories.enrollment.courseEnrollment({
         run: {
           ...esRun,
-          language: "es",
+          language: LanguageEnum.EsEs,
           course: { id: course.id, title: course.title },
         },
       })
@@ -1726,7 +1730,7 @@ describe("dashboardViewModel", () => {
       const resolved = resolveCourseEntryForLanguage(
         course,
         [englishEnrollment, spanishEnrollment],
-        "language:es",
+        "language:es-es",
       )
 
       expect(resolved.displayedEnrollment?.run.id).toBe(esRun.id)
@@ -1757,7 +1761,7 @@ describe("dashboardViewModel", () => {
             id: enRun.id,
             courseware_id: enRun.courseware_id,
             courseware_url: enRun.courseware_url ?? "",
-            language: "en",
+            language: LanguageEnum.En,
             title: enRun.title,
             run_tag: enRun.run_tag,
           },
@@ -1765,7 +1769,7 @@ describe("dashboardViewModel", () => {
             id: esRun.id,
             courseware_id: esRun.courseware_id,
             courseware_url: esRun.courseware_url ?? "",
-            language: "es",
+            language: LanguageEnum.EsEs,
             title: esRun.title,
             run_tag: esRun.run_tag,
           },
@@ -1776,7 +1780,7 @@ describe("dashboardViewModel", () => {
         b2b_contract_id: 2,
         run: {
           ...esRun,
-          language: "es",
+          language: LanguageEnum.EsEs,
           course: { id: course.id, title: course.title },
         },
       })
@@ -1784,7 +1788,7 @@ describe("dashboardViewModel", () => {
       const resolved = resolveCourseEntryForLanguage(
         course,
         [otherContractEnrollment],
-        "language:es",
+        "language:es-es",
         { contractId: 1 },
       )
 
@@ -1808,7 +1812,7 @@ describe("dashboardViewModel", () => {
             id: templateRun.id,
             courseware_id: templateRun.courseware_id,
             courseware_url: templateRun.courseware_url ?? "",
-            language: "en",
+            language: LanguageEnum.En,
             title: templateRun.title,
             run_tag: templateRun.run_tag,
           },
@@ -1816,7 +1820,7 @@ describe("dashboardViewModel", () => {
             id: 32,
             courseware_id: "cw-es-32",
             courseware_url: "https://example.com/es-32",
-            language: "es",
+            language: LanguageEnum.EsEs,
             title: "Modulo Espanol",
             run_tag: "ES-32",
           },
@@ -1826,7 +1830,7 @@ describe("dashboardViewModel", () => {
       const resolved = resolveCourseEntryForLanguage(
         course,
         [],
-        "language:es",
+        "language:es-es",
         {
           contractId: 1,
         },

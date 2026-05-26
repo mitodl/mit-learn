@@ -1,14 +1,14 @@
 import React from "react"
 import { useQuery } from "@tanstack/react-query"
-import type { SimpleSelectOption } from "ol-components"
 import {
   programsQueries,
   programCollectionQueries,
 } from "api/mitxonline-hooks/programs"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
-import { useDashboardLanguagePicker } from "./useDashboardLanguagePicker"
+import { useDashboardVariantPicker } from "./useDashboardVariantPicker"
 import type {
+  BaseCourseRun,
   ContractPage,
   CourseRunEnrollmentV3,
   OrganizationPage,
@@ -19,7 +19,6 @@ import type {
 import {
   buildCourseEntry,
   getCollectionFirstCoursesInDisplayOrder,
-  getDistinctDashboardLanguageOptions,
   getProgramCoursesInContractOrder,
   getRenderableContractCollections,
   getSortedStandaloneContractPrograms,
@@ -27,6 +26,11 @@ import {
   groupProgramEnrollmentsByProgramId,
   type DashboardCourseEntry,
 } from "../model/dashboardViewModel"
+import {
+  getDistinctContractVariantOptions,
+  selectVariantRunForCourse,
+  type ContractVariantOption,
+} from "../model/variantOptions"
 
 type ContractProgramDisplayData = {
   program: V2Program
@@ -42,9 +46,9 @@ type ContractCollectionDisplayData = {
 type ContractDashboardData = {
   isLoading: boolean
   showNoPrograms: boolean
-  languageOptions: SimpleSelectOption[]
-  selectedLanguageKey: string
-  setSelectedLanguageKey: (value: string) => void
+  variantOptions: ContractVariantOption[]
+  selectedVariantValue: string
+  setSelectedVariantValue: (value: string) => void
   programs: ContractProgramDisplayData[]
   collections: ContractCollectionDisplayData[]
   courseRunEnrollments: CourseRunEnrollmentV3[]
@@ -85,20 +89,53 @@ const useContractDashboardData = (
   )
   const courseRunEnrollments = courseRunEnrollmentsQuery.data ?? []
 
-  const languageOptions = React.useMemo(
-    () =>
-      getDistinctDashboardLanguageOptions(
-        contractCourses,
-        courseRunEnrollments,
-        {
-          contractId: contract.id,
-        },
-      ),
-    [contract.id, contractCourses, courseRunEnrollments],
+  const variantOptions = React.useMemo(
+    () => getDistinctContractVariantOptions(contractCourses),
+    [contractCourses],
   )
 
-  const { selectedLanguageKey, setSelectedLanguageKey } =
-    useDashboardLanguagePicker(languageOptions)
+  const { selectedVariant, setSelectedVariantValue } =
+    useDashboardVariantPicker(variantOptions)
+
+  // Lazy second-phase query: only fires when a non-default variant is selected.
+  // Returns one entry per course with the matching variant run(s).
+  const variantRunsQuery = useQuery({
+    ...coursesQueries.courseVariantRunsList({
+      contract: contract.id,
+      course_id: contractCourses.map((c) => c.id),
+      language: selectedVariant.language || undefined,
+      industry: selectedVariant.industry || undefined,
+      length: selectedVariant.length || undefined,
+    }),
+    enabled: !selectedVariant.isDefault && contractCourses.length > 0,
+  })
+
+  // Map courseId → best BaseCourseRun for the selected variant.
+  // Empty when the default (Original) variant is active.
+  //
+  // The API returns all runs for a course that match either the selected
+  // variant OR the course's default variant (so the array can hold multiple
+  // sessions and/or a mix of variant types).  We therefore filter to runs
+  // that explicitly match every non-empty field of the selected variant and
+  // pick the best session among those.  Courses with no matching run are
+  // absent from the map, which causes buildCourseEntry to fall back to
+  // next_run_id via the null variantRun path.
+  const variantRunsByCourseId = React.useMemo<
+    Record<number, BaseCourseRun>
+  >(() => {
+    if (selectedVariant.isDefault || !variantRunsQuery.data) return {}
+    const map: Record<number, BaseCourseRun> = {}
+    for (const courseVariantRuns of variantRunsQuery.data) {
+      const best = selectVariantRunForCourse(
+        courseVariantRuns.courseruns,
+        selectedVariant,
+      )
+      if (best) {
+        map[courseVariantRuns.id] = best
+      }
+    }
+    return map
+  }, [selectedVariant, variantRunsQuery.data])
 
   const programs = programsQuery.data?.results ?? []
   const collections = programCollectionsQuery.data?.results ?? []
@@ -123,6 +160,14 @@ const useContractDashboardData = (
   const enrollmentsByCourseId =
     groupCourseRunEnrollmentsByCourseId(courseRunEnrollments)
 
+  // Derive per-course language key from the selected variant for enrollment
+  // matching in the language-based resolution path.
+  const selectedLanguageKey = selectedVariant.isDefault
+    ? ""
+    : selectedVariant.language
+      ? `language:${selectedVariant.language}`
+      : ""
+
   const programRows = sortedPrograms.map((program) => {
     const courses = getProgramCoursesInContractOrder(program, contractCourses)
     const programEnrollment = programEnrollmentsById[program.id]
@@ -134,11 +179,14 @@ const useContractDashboardData = (
           enrollmentsByCourseId[course.id] ?? [],
           selectedLanguageKey,
           {
-            availableLanguages: languageOptions,
+            availableLanguages: variantOptions,
             contractId: contract.id,
             ancestorContext: programEnrollment
               ? { programEnrollment }
               : undefined,
+            variantRun: selectedVariant.isDefault
+              ? undefined
+              : (variantRunsByCourseId[course.id] ?? null),
           },
         ),
       ),
@@ -160,8 +208,11 @@ const useContractDashboardData = (
           enrollmentsByCourseId[course.id] ?? [],
           selectedLanguageKey,
           {
-            availableLanguages: languageOptions,
+            availableLanguages: variantOptions,
             contractId: contract.id,
+            variantRun: selectedVariant.isDefault
+              ? undefined
+              : (variantRunsByCourseId[course.id] ?? null),
           },
         ),
       ),
@@ -176,9 +227,9 @@ const useContractDashboardData = (
       programCollectionsQuery.isLoading ||
       coursesQuery.isLoading,
     showNoPrograms: programRows.length === 0 && collectionRows.length === 0,
-    languageOptions,
-    selectedLanguageKey,
-    setSelectedLanguageKey,
+    variantOptions,
+    selectedVariantValue: selectedVariant.value,
+    setSelectedVariantValue,
     programs: programRows,
     collections: collectionRows,
     courseRunEnrollments,

@@ -6,6 +6,7 @@ import * as mitxonline from "api/mitxonline-test-utils"
 import { useProgramDashboardData } from "./useProgramDashboardData"
 import { buildProgramScenario } from "../test-utils"
 import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
+import { LanguageEnum } from "@mitodl/mitxonline-api-axios/v2"
 
 const makeProgramEnrollment = (
   program: V2ProgramDetail,
@@ -330,10 +331,10 @@ describe("useProgramDashboardData", () => {
 
   test("availableLanguages reflects distinct languages across program courses", async () => {
     const englishRun = mitxonline.factories.courses.courseRun({
-      language: "en",
+      language: LanguageEnum.En,
     })
     const spanishRun = mitxonline.factories.courses.courseRun({
-      language: "es",
+      language: LanguageEnum.EsEs,
     })
     const course = mitxonline.factories.courses.course({
       id: 40,
@@ -343,7 +344,7 @@ describe("useProgramDashboardData", () => {
           id: englishRun.id,
           courseware_id: englishRun.courseware_id,
           courseware_url: englishRun.courseware_url ?? "",
-          language: "en",
+          language: LanguageEnum.En,
           title: englishRun.title,
           run_tag: englishRun.run_tag,
         },
@@ -351,7 +352,7 @@ describe("useProgramDashboardData", () => {
           id: spanishRun.id,
           courseware_id: spanishRun.courseware_id,
           courseware_url: spanishRun.courseware_url ?? "",
-          language: "es",
+          language: LanguageEnum.EsEs,
           title: spanishRun.title,
           run_tag: spanishRun.run_tag,
         },
@@ -387,15 +388,15 @@ describe("useProgramDashboardData", () => {
     expect(result.current.availableLanguages).toHaveLength(2)
     const langValues = result.current.availableLanguages.map((o) => o.value)
     expect(langValues).toContain("language:en")
-    expect(langValues).toContain("language:es")
+    expect(langValues).toContain("language:es-es")
   })
 
   test("selectedLanguageKey defaults to first (alphabetical) option, setSelectedLanguageKey changes it", async () => {
     const englishRun = mitxonline.factories.courses.courseRun({
-      language: "en",
+      language: LanguageEnum.En,
     })
     const spanishRun = mitxonline.factories.courses.courseRun({
-      language: "es",
+      language: LanguageEnum.EsEs,
     })
     const course = mitxonline.factories.courses.course({
       id: 41,
@@ -405,7 +406,7 @@ describe("useProgramDashboardData", () => {
           id: englishRun.id,
           courseware_id: englishRun.courseware_id,
           courseware_url: englishRun.courseware_url ?? "",
-          language: "en",
+          language: LanguageEnum.En,
           title: "English Run",
           run_tag: englishRun.run_tag,
         },
@@ -413,7 +414,7 @@ describe("useProgramDashboardData", () => {
           id: spanishRun.id,
           courseware_id: spanishRun.courseware_id,
           courseware_url: spanishRun.courseware_url ?? "",
-          language: "es",
+          language: LanguageEnum.EsEs,
           title: "Spanish Run",
           run_tag: spanishRun.run_tag,
         },
@@ -448,17 +449,17 @@ describe("useProgramDashboardData", () => {
 
     // Changing to Spanish updates the key
     act(() => {
-      result.current.setSelectedLanguageKey("language:es")
+      result.current.setSelectedLanguageKey("language:es-es")
     })
     await waitFor(() =>
-      expect(result.current.selectedLanguageKey).toBe("language:es"),
+      expect(result.current.selectedLanguageKey).toBe("language:es-es"),
     )
   })
 
   test("representative displayedEnrollment/displayedRun wiring: enrolled course entry resolves displayed run", async () => {
     const run = mitxonline.factories.courses.courseRun({
       id: 90,
-      language: "en",
+      language: LanguageEnum.En,
     })
     const course = mitxonline.factories.courses.course({
       id: 50,
@@ -469,7 +470,7 @@ describe("useProgramDashboardData", () => {
           id: run.id,
           courseware_id: run.courseware_id,
           courseware_url: run.courseware_url ?? "",
-          language: "en",
+          language: LanguageEnum.En,
           title: run.title,
           run_tag: run.run_tag,
         },
@@ -524,12 +525,12 @@ describe("useProgramDashboardData", () => {
   test("language selection changes displayedRun on course entry", async () => {
     const englishRun = mitxonline.factories.courses.courseRun({
       id: 91,
-      language: "en",
+      language: LanguageEnum.En,
       is_enrollable: true,
     })
     const spanishRun = mitxonline.factories.courses.courseRun({
       id: 92,
-      language: "es",
+      language: LanguageEnum.EsEs,
       is_enrollable: true,
     })
     const course = mitxonline.factories.courses.course({
@@ -541,7 +542,7 @@ describe("useProgramDashboardData", () => {
           id: englishRun.id,
           courseware_id: englishRun.courseware_id,
           courseware_url: englishRun.courseware_url ?? "",
-          language: "en",
+          language: LanguageEnum.En,
           title: "English Module",
           run_tag: englishRun.run_tag,
         },
@@ -549,7 +550,7 @@ describe("useProgramDashboardData", () => {
           id: spanishRun.id,
           courseware_id: spanishRun.courseware_id,
           courseware_url: spanishRun.courseware_url ?? "",
-          language: "es",
+          language: LanguageEnum.EsEs,
           title: "Spanish Module",
           run_tag: spanishRun.run_tag,
         },
@@ -592,10 +593,10 @@ describe("useProgramDashboardData", () => {
 
     // Switch to Spanish → Spanish run
     act(() => {
-      result.current.setSelectedLanguageKey("language:es")
+      result.current.setSelectedLanguageKey("language:es-es")
     })
     await waitFor(() =>
-      expect(result.current.selectedLanguageKey).toBe("language:es"),
+      expect(result.current.selectedLanguageKey).toBe("language:es-es"),
     )
     // After key change is confirmed, sections should reflect the Spanish run
     await waitFor(() => {

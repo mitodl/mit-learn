@@ -8,6 +8,8 @@
  */
 import type { SimpleSelectOption } from "ol-components"
 import type {
+  BaseCourseRun,
+  BaseCourseRunLanguage,
   BaseProgramDisplayMode,
   ContractPage,
   CourseRunEnrollmentV3,
@@ -398,12 +400,12 @@ const getDistinctDashboardLanguageOptions = (
   const coursesLanguages = courses.flatMap((c) =>
     c.language_options
       .map((opt) => opt.language)
-      .filter((lang): lang is string => !!lang),
+      .filter((lang): lang is BaseCourseRunLanguage => !!lang),
   )
   const enrollmentLanguages = filterEnrollmentsToCourses(enrollments, courses)
     .filter(enrollmentMatchesContract(opts?.contractId))
     .map((e) => e.run.language)
-    .filter((lang): lang is string => !!lang)
+    .filter((lang): lang is BaseCourseRunLanguage => !!lang)
   const distinctCodes = Array.from(
     new Set(
       [...coursesLanguages, ...enrollmentLanguages].map(
@@ -583,6 +585,12 @@ type RequirementSection = {
  * `enrollments` is stored uncollapsed on the entry — the full list, never
  * filtered to the displayed choice. The `displayedEnrollment`/`displayedRun`
  * pair is derived by `resolveCourseEntryForLanguage` for the legacy card UI.
+ *
+ * When `opts.variantRun` is provided (variant picker path):
+ *  - non-null: use that run as `displayedRun`; look up the full `CourseRunV2` by id
+ *  - null: this course has no variant run for the selection — fall back to
+ *    `next_run_id`-based resolution (same as empty `selectedLanguageKey`)
+ *  - undefined (default): use the existing language-based resolution path
  */
 const buildCourseEntry = (
   course: CourseWithCourseRunsSerializerV2,
@@ -593,14 +601,53 @@ const buildCourseEntry = (
     contractId?: number
     isContractPageResource?: boolean
     ancestorContext?: DashboardCourseEntry["ancestorContext"]
+    /**
+     * Pre-resolved variant run from `courseVariantRunsV3`.
+     * `undefined` → use language-based resolution (non-variant path).
+     * `null` → no run for this course; fall back to `next_run_id`.
+     * `BaseCourseRun` → use this run (look up full CourseRunV2 by id).
+     */
+    variantRun?: BaseCourseRun | null
   },
 ): DashboardCourseEntry => {
-  const { displayedEnrollment, displayedRun } = resolveCourseEntryForLanguage(
-    course,
-    enrollments,
-    selectedLanguageKey,
-    opts.contractId !== undefined ? { contractId: opts.contractId } : undefined,
-  )
+  let displayedRun: CourseRunV2 | null,
+    displayedEnrollment: CourseRunEnrollmentV3 | null
+
+  if (opts.variantRun !== undefined) {
+    // Variant picker path
+    if (opts.variantRun !== null) {
+      // Use the variant run returned by the API; resolve the full CourseRunV2 by id
+      displayedRun =
+        course.courseruns.find((r) => r.id === opts.variantRun!.id) ?? null
+      displayedEnrollment =
+        enrollments.find((e) => e.run.id === opts.variantRun!.id) ?? null
+    } else {
+      // No variant run for this course — fall back to next_run_id via empty language key
+      const fallback = resolveCourseEntryForLanguage(
+        course,
+        enrollments,
+        "",
+        opts.contractId !== undefined
+          ? { contractId: opts.contractId }
+          : undefined,
+      )
+      displayedRun = fallback.displayedRun
+      displayedEnrollment = fallback.displayedEnrollment
+    }
+  } else {
+    // Language picker path (existing logic)
+    const result = resolveCourseEntryForLanguage(
+      course,
+      enrollments,
+      selectedLanguageKey,
+      opts.contractId !== undefined
+        ? { contractId: opts.contractId }
+        : undefined,
+    )
+    displayedRun = result.displayedRun
+    displayedEnrollment = result.displayedEnrollment
+  }
+
   return {
     course,
     enrollments,

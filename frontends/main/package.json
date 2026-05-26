@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "PORT=${PORT:-8062} TZ=UTC next dev",
+    "dev": "PORT=${PORT:-8062} TZ=UTC next dev --webpack",
     "build": "next build",
     "start": "TZ=UTC next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
@@ -14,7 +14,7 @@
     "@emotion/styled": "^11.11.0",
     "@floating-ui/react": "^0.27.16",
     "@mitodl/course-search-utils": "^3.5.2",
-    "@mitodl/mitxonline-api-axios": "2026.5.21",
+    "@mitodl/mitxonline-api-axios": "https://github.com/mitodl/mitxonline-api-clients/raw/8b177aecf9285aad81999fdc1b518c631e13b55f/src/typescript/mitxonline-api-axios/package.tgz",
     "@mitodl/smoot-design": "^6.27.0",
     "@mui/material": "^6.4.5",
     "@mui/material-nextjs": "^6.4.3",

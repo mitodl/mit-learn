@@ -17,6 +17,7 @@
  */
 import React from "react"
 import { waitFor } from "@testing-library/react"
+import { LanguageEnum } from "@mitodl/mitxonline-api-axios/v2"
 import {
   renderWithProviders,
   screen,
@@ -1664,7 +1665,7 @@ describe("ProgramEnrollmentDisplay", () => {
           id: englishRun.id,
           courseware_id: englishRun.courseware_id,
           courseware_url: englishRun.courseware_url ?? "",
-          language: "en",
+          language: LanguageEnum.En,
           title: englishRun.title,
           run_tag: englishRun.run_tag,
         },
@@ -1672,7 +1673,7 @@ describe("ProgramEnrollmentDisplay", () => {
           id: spanishRun.id,
           courseware_id: spanishRun.courseware_id,
           courseware_url: spanishRun.courseware_url ?? "",
-          language: "es",
+          language: LanguageEnum.EsEs,
           title: spanishRun.title,
           run_tag: spanishRun.run_tag,
         },
@@ -1740,7 +1741,12 @@ describe("ProgramEnrollmentDisplay", () => {
     expect(card).toHaveTextContent("Start Course")
 
     await user.click(languageSelect)
-    await user.click(await screen.findByRole("option", { name: "español" }))
+    const languageOptions = await screen.findAllByRole("option")
+    const spanishOption = languageOptions.find((option) =>
+      (option.getAttribute("data-value") ?? "").startsWith("language:es"),
+    )
+    expect(spanishOption).toBeTruthy()
+    await user.click(spanishOption as HTMLElement)
 
     const desktopCard = await screen.findByTestId("enrollment-card-desktop")
     await within(desktopCard).findByText("Modulo en Espanol")
@@ -1769,7 +1775,7 @@ describe("ProgramEnrollmentDisplay", () => {
           id: run.id,
           courseware_id: run.courseware_id,
           courseware_url: run.courseware_url ?? "",
-          language: "en",
+          language: LanguageEnum.En,
           title: run.title,
           run_tag: run.run_tag,
         },

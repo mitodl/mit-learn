@@ -16,7 +16,10 @@ import {
   setupProgramsAndCourses,
   setupOrgDashboardMocks,
 } from "./CoursewareDisplay/test-utils"
-import { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
+import {
+  CourseWithCourseRunsSerializerV2,
+  LanguageEnum,
+} from "@mitodl/mitxonline-api-axios/v2"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 
@@ -1478,26 +1481,27 @@ describe("ContractContent", () => {
       courseware_url: "https://openedx.example.com/program-spanish",
       b2b_contract: contracts[0].id,
       is_enrollable: true,
+      language: LanguageEnum.EsEs,
     })
     const localizedCourse = factories.courses.course({
       courseruns: [englishRun, spanishRun],
       next_run_id: englishRun.id,
-      language_options: [
+      possible_variant_sets: [
         {
-          id: englishRun.id,
-          courseware_id: englishRun.courseware_id,
-          courseware_url: englishRun.courseware_url ?? "",
-          language: "en",
-          title: englishRun.title,
-          run_tag: englishRun.run_tag,
+          language: LanguageEnum.En,
+          variant_industry: "",
+          variant_length: "",
+          active: true,
+          b2b_only: true,
+          default_variant: true,
         },
         {
-          id: spanishRun.id,
-          courseware_id: spanishRun.courseware_id,
-          courseware_url: spanishRun.courseware_url ?? "",
-          language: "es",
-          title: spanishRun.title,
-          run_tag: spanishRun.run_tag,
+          language: LanguageEnum.EsEs,
+          variant_industry: "",
+          variant_length: "",
+          active: true,
+          b2b_only: true,
+          default_variant: false,
         },
       ],
     })
@@ -1511,20 +1515,37 @@ describe("ContractContent", () => {
       [localizedCourse],
       contracts,
     )
+    // Mock the variant runs endpoint for the Spanish selection
+    setMockResponse.get(
+      urls.courses.courseVariantRuns({
+        contract: contracts[0].id,
+        course_id: [localizedCourse.id],
+        language: LanguageEnum.EsEs,
+      }),
+      [{ id: localizedCourse.id, courseruns: [spanishRun] }],
+    )
+
     renderWithProviders(
       <ContractContent orgSlug={orgX.slug} contractSlug={contracts[0].slug} />,
     )
 
     const root = within(await screen.findByTestId("org-program-root"))
     expect(await screen.findAllByRole("combobox")).toHaveLength(1)
-    const languageSelect = await screen.findByRole("combobox")
-    expect(languageSelect).toHaveTextContent("English")
+    const variantSelect = await screen.findByRole("combobox")
+    // Picker defaults to "Original" (show each course's default run)
+    expect(variantSelect).toHaveTextContent("Original")
 
     const card = await root.findByTestId("enrollment-card-desktop")
+    // Default run is the English run (next_run_id)
     expect(card).toHaveTextContent("Module in English")
 
-    await user.click(languageSelect)
-    await user.click(await screen.findByRole("option", { name: "español" }))
+    await user.click(variantSelect)
+    const topLevelVariantOptions = await screen.findAllByRole("option")
+    const topLevelSelectedVariant = topLevelVariantOptions.find((option) =>
+      (option.getAttribute("data-value") ?? "").startsWith("language:es"),
+    )
+    invariant(topLevelSelectedVariant, "Expected a Spanish variant option")
+    await user.click(topLevelSelectedVariant)
 
     await waitFor(() => {
       expect(root.getByTestId("enrollment-card-desktop")).toHaveTextContent(
@@ -1558,26 +1579,27 @@ describe("ContractContent", () => {
       courseware_url: "https://openedx.example.com/collection-spanish",
       b2b_contract: contracts[0].id,
       is_enrollable: true,
+      language: LanguageEnum.EsEs,
     })
     const localizedCourse = factories.courses.course({
       courseruns: [englishRun, spanishRun],
       next_run_id: englishRun.id,
-      language_options: [
+      possible_variant_sets: [
         {
-          id: englishRun.id,
-          courseware_id: englishRun.courseware_id,
-          courseware_url: englishRun.courseware_url ?? "",
-          language: "en",
-          title: englishRun.title,
-          run_tag: englishRun.run_tag,
+          language: LanguageEnum.En,
+          variant_industry: "",
+          variant_length: "",
+          active: true,
+          b2b_only: true,
+          default_variant: true,
         },
         {
-          id: spanishRun.id,
-          courseware_id: spanishRun.courseware_id,
-          courseware_url: spanishRun.courseware_url ?? "",
-          language: "es",
-          title: spanishRun.title,
-          run_tag: spanishRun.run_tag,
+          language: LanguageEnum.EsEs,
+          variant_industry: "",
+          variant_length: "",
+          active: true,
+          b2b_only: true,
+          default_variant: false,
         },
       ],
     })
@@ -1591,6 +1613,16 @@ describe("ContractContent", () => {
       [localizedCourse],
       contracts,
     )
+    // Mock the variant runs endpoint for the Spanish selection
+    setMockResponse.get(
+      urls.courses.courseVariantRuns({
+        contract: contracts[0].id,
+        course_id: [localizedCourse.id],
+        language: LanguageEnum.EsEs,
+      }),
+      [{ id: localizedCourse.id, courseruns: [spanishRun] }],
+    )
+
     const programCollection = factories.programs.programCollection({
       programs: [{ id: program.id, title: program.title, order: 1 }],
     })
@@ -1623,14 +1655,21 @@ describe("ContractContent", () => {
     const collection = within(collectionRoot)
 
     expect(await screen.findAllByRole("combobox")).toHaveLength(1)
-    const languageSelect = await screen.findByRole("combobox")
-    expect(languageSelect).toHaveTextContent("English")
+    const variantSelect = await screen.findByRole("combobox")
+    // Picker defaults to "Original" (show each course's default run)
+    expect(variantSelect).toHaveTextContent("Original")
 
     const card = await collection.findByTestId("enrollment-card-desktop")
+    // Default run is the English run (next_run_id)
     expect(card).toHaveTextContent("Collection English")
 
-    await user.click(languageSelect)
-    await user.click(await screen.findByRole("option", { name: "español" }))
+    await user.click(variantSelect)
+    const collectionVariantOptions = await screen.findAllByRole("option")
+    const collectionSelectedVariant = collectionVariantOptions.find((option) =>
+      (option.getAttribute("data-value") ?? "").startsWith("language:es"),
+    )
+    invariant(collectionSelectedVariant, "Expected a Spanish variant option")
+    await user.click(collectionSelectedVariant)
 
     await waitFor(() => {
       expect(
@@ -1656,7 +1695,7 @@ describe("ContractContent", () => {
           id: run.id,
           courseware_id: run.courseware_id,
           courseware_url: run.courseware_url ?? "",
-          language: "en",
+          language: LanguageEnum.En,
           title: run.title,
           run_tag: run.run_tag,
         },
@@ -1711,7 +1750,7 @@ describe("ContractContent", () => {
           id: run.id,
           courseware_id: run.courseware_id,
           courseware_url: run.courseware_url ?? "",
-          language: "en",
+          language: LanguageEnum.En,
           title: run.title,
           run_tag: run.run_tag,
         },
@@ -1771,7 +1810,7 @@ describe("ContractContent", () => {
 
     const contractRun = factories.courses.courseRun({
       b2b_contract: contracts[0].id,
-      language: "en",
+      language: LanguageEnum.En,
       run_tag: undefined,
       is_enrollable: false,
       courseware_url: "https://openedx.example.com/unenrollable-run",
@@ -1828,7 +1867,7 @@ describe("ContractContent", () => {
     const runs = [
       factories.courses.courseRun({
         b2b_contract: contracts[0].id,
-        language: "en",
+        language: LanguageEnum.En,
         run_tag: undefined,
         courseware_url: "https://openedx.example.com/course-run-1",
         is_enrollable: true,
@@ -1836,7 +1875,7 @@ describe("ContractContent", () => {
       }),
       factories.courses.courseRun({
         b2b_contract: contracts[0].id,
-        language: "en",
+        language: LanguageEnum.En,
         run_tag: undefined,
         courseware_url: "https://openedx.example.com/course-run-2",
         is_enrollable: true,
@@ -1844,7 +1883,7 @@ describe("ContractContent", () => {
       }),
       factories.courses.courseRun({
         b2b_contract: contracts[0].id,
-        language: "en",
+        language: LanguageEnum.En,
         run_tag: undefined,
         courseware_url: "https://openedx.example.com/course-run-3",
         is_enrollable: true,
