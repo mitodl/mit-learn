@@ -13,7 +13,7 @@ import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 
-const PageRoot = styled.div(({ theme }) => ({
+const Page = styled.div(({ theme }) => ({
   maxWidth: "1200px",
   margin: "0 auto",
   padding: "40px 24px",
@@ -29,7 +29,7 @@ const HeaderSection = styled.div(({ theme }) => ({
   gap: "24px",
   borderRadius: "8px",
   backgroundColor: theme.custom.colors.white,
-  boxShadow: "0 1px 3px 0 rgba(120, 147, 172, 0.40)",
+  boxShadow: "0px 1px 3px 0px rgba(120, 147, 172, 0.40)",
   [theme.breakpoints.down("sm")]: {
     padding: "16px",
     gap: "16px",
@@ -109,9 +109,9 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
 
   if (isLoadingOrgs) {
     return (
-      <PageRoot>
+      <Page>
         <Skeleton width="100%" height="128px" />
-      </PageRoot>
+      </Page>
     )
   }
 
@@ -124,7 +124,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   }
 
   return (
-    <PageRoot>
+    <Page>
       <Stack gap="40px">
         <HeaderSection>
           <ImageContainer>
@@ -148,7 +148,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
           </HeaderTextContainer>
         </HeaderSection>
       </Stack>
-    </PageRoot>
+    </Page>
   )
 }
 
@@ -168,9 +168,9 @@ const ContractAdminPage: React.FC<ContractAdminPageProps> = ({
 
   if (!flagsLoaded) {
     return (
-      <PageRoot>
+      <Page>
         <Skeleton width="100%" height="128px" />
-      </PageRoot>
+      </Page>
     )
   }
 
