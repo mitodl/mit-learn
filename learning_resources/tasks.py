@@ -57,6 +57,7 @@ from learning_resources_search.constants import (
 from learning_resources_search.exceptions import RetryError
 from main.celery import app
 from main.constants import ISOFORMAT
+from main.decorators import cooldown_task
 from main.utils import chunks, clear_views_cache, now_in_utc
 
 log = logging.getLogger(__name__)
@@ -117,10 +118,16 @@ def get_micromasters_data():
 
 
 @app.task
+@cooldown_task(
+    wait_time=3600,
+    key_func=lambda *, api_course_datafile=None, api_program_datafile=None: (
+        f"course={api_course_datafile}:program={api_program_datafile}"
+    ),
+)
 def get_mit_edx_data(
     api_course_datafile: str | None = None,
     api_program_datafile: str | None = None,
-) -> int:
+) -> int | None:
     """Task to sync MIT edX data with the database
 
     Args:
@@ -130,7 +137,8 @@ def get_mit_edx_data(
             Otherwise, the API is queried directly.
 
     Returns:
-        int: The number of results that were fetched
+        int | None: The number of results fetched, or None if the call was
+            skipped due to rate limiting.
     """
     courses = pipelines.mit_edx_courses_etl(api_course_datafile)
     programs = pipelines.mit_edx_programs_etl(api_program_datafile)
@@ -139,7 +147,8 @@ def get_mit_edx_data(
 
 
 @app.task
-def get_mitxonline_data() -> int:
+@cooldown_task(wait_time=900)
+def get_mitxonline_data() -> int | None:
     """Execute the MITX Online ETL pipeline"""
     courses = pipelines.mitxonline_courses_etl()
     programs = pipelines.mitxonline_programs_etl()
@@ -148,7 +157,11 @@ def get_mitxonline_data() -> int:
 
 
 @app.task
-def get_oll_data(sheets_id=None):
+@cooldown_task(
+    wait_time=900,
+    key_func=lambda *, sheets_id=None: f"sheets_id={sheets_id}",
+)
+def get_oll_data(sheets_id=None) -> int | None:
     """Execute the OLL ETL pipeline.
 
     Args:
@@ -176,7 +189,8 @@ def get_sloan_data():
 
 
 @app.task
-def get_xpro_data():
+@cooldown_task(wait_time=900)
+def get_xpro_data() -> int | None:
     """Execute the xPro ETL pipeline"""
     courses = pipelines.xpro_courses_etl()
     programs = pipelines.xpro_programs_etl()
