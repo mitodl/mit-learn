@@ -5,12 +5,16 @@ import { factories } from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
+import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import ContractAdminPage from "./ContractAdminPage"
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
   useFeatureFlagEnabled: jest.fn(),
 }))
+jest.mock("@/common/useFeatureFlagsLoaded")
+const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL
@@ -26,10 +30,12 @@ const makeOrgWithContract = () => {
 
 describe("ContractAdminPage", () => {
   beforeEach(() => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(false)
     mockedUseFeatureFlagEnabled.mockReturnValue(undefined)
   })
 
-  test("throws ForbiddenError when feature flag is explicitly false", () => {
+  test("throws ForbiddenError when feature flag is disabled", () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
     mockedUseFeatureFlagEnabled.mockReturnValue(false)
     allowConsoleErrors()
 
@@ -40,17 +46,34 @@ describe("ContractAdminPage", () => {
     ).toThrow(ForbiddenError)
   })
 
-  test("renders nothing while feature flag is loading (undefined)", () => {
+  test("throws ForbiddenError when flags are loaded but flag is absent", () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagEnabled.mockReturnValue(undefined)
+    allowConsoleErrors()
+
+    expect(() =>
+      renderWithProviders(
+        <ContractAdminPage orgSlug="any-org" contractSlug="any-contract" />,
+      ),
+    ).toThrow(ForbiddenError)
+  })
+
+  test("renders a skeleton while PostHog flags are still loading", () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(false)
     mockedUseFeatureFlagEnabled.mockReturnValue(undefined)
 
-    const { view } = renderWithProviders(
+    renderWithProviders(
       <ContractAdminPage orgSlug="any-org" contractSlug="any-contract" />,
     )
 
-    expect(view.container.firstChild).toBeNull()
+    // Skeleton renders as a non-null child; not a 403 error page
+    expect(
+      screen.queryByRole("heading", { name: /forbidden/i }),
+    ).not.toBeInTheDocument()
   })
 
   test("shows 'Organization not found' when user is not a manager for the requested org", async () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
     const otherOrg = factories.organizations.organization({})
@@ -64,6 +87,7 @@ describe("ContractAdminPage", () => {
   })
 
   test("shows 'Contract not found' when org is found but contract slug does not match", async () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
     const { org } = makeOrgWithContract()
@@ -80,6 +104,7 @@ describe("ContractAdminPage", () => {
   })
 
   test("renders org name and contract name when flag is on and user is a manager", async () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
     const { org, contract } = makeOrgWithContract()
@@ -100,6 +125,7 @@ describe("ContractAdminPage", () => {
   })
 
   test("renders seat count from contract detail", async () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
     const { org, contract } = makeOrgWithContract()

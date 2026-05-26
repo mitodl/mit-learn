@@ -9,6 +9,7 @@ import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 
@@ -163,13 +164,18 @@ const ContractAdminPage: React.FC<ContractAdminPageProps> = ({
   const flagEnabled = useFeatureFlagEnabled(
     FeatureFlags.B2BContractManagerDashboard,
   )
+  const flagsLoaded = useFeatureFlagsLoaded()
 
-  if (flagEnabled === false) {
-    throw new ForbiddenError("Not enabled.")
+  if (!flagsLoaded) {
+    return (
+      <PageRoot>
+        <Skeleton width="100%" height="128px" />
+      </PageRoot>
+    )
   }
 
   if (!flagEnabled) {
-    return null
+    throw new ForbiddenError("Not enabled.")
   }
 
   return (
