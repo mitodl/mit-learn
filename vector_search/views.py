@@ -58,7 +58,22 @@ def _normalize_score_cutoff(value, hybrid_search_enabled):
         if hybrid_search_enabled
         else DENSE_VECTOR_SEARCH_MIN_SCORE
     )
-    return value if value >= min_score_cutoff else None
+    return max(value, min_score_cutoff)
+
+
+def _sort_key(x, field):
+    value = x.get(field)
+
+    if value is None:
+        return (2, 0)
+
+    if isinstance(value, (int, float)):
+        return (0, value)
+
+    if isinstance(value, str):
+        return (1, value.lower())
+
+    return (1, str(value).lower())
 
 
 class QdrantView(APIView):
@@ -144,9 +159,9 @@ class QdrantView(APIView):
             ),
             "limit": limit,
         }
-
-        if _normalize_score_cutoff(score_cutoff, hybrid_search) is not None:
-            search_params["score_threshold"] = score_cutoff
+        normalized_score = _normalize_score_cutoff(score_cutoff, hybrid_search)
+        if normalized_score is not None:
+            search_params["score_threshold"] = normalized_score
 
         if hybrid_search:
             sparse_query, dense_query = await asyncio.gather(
@@ -475,10 +490,8 @@ class QdrantView(APIView):
         *,
         hybrid_search: bool = False,
     ):
-        if (
-            query_string
-            and _normalize_score_cutoff(score_cutoff, hybrid_search) is not None
-        ):
+        normalized_score = _normalize_score_cutoff(score_cutoff, hybrid_search)
+        if query_string and normalized_score is not None:
             hits = await self._async_vector_hits(
                 query_string,
                 params,
@@ -486,21 +499,19 @@ class QdrantView(APIView):
                 limit=settings.VECTOR_SEARCH_PAGE_MAX_LIMIT,
                 offset=0,
                 search_collection=search_collection,
-                score_cutoff=score_cutoff,
+                score_cutoff=normalized_score,
                 hybrid_search=hybrid_search,
             )
             if order_by:
                 # in addition to fetching all results unpaginated,
                 # manually apply the sorting since
                 # Qdrant does not support sorting with score cutoffs
+                descending = order_by.startswith("-")
+                order_by_field = order_by.lstrip("-")
                 hits = sorted(
                     hits,
-                    key=lambda x: (
-                        x.get(order_by.lstrip("-"))
-                        if x.get(order_by.lstrip("-"))
-                        else 0
-                    ),
-                    reverse=order_by.startswith("-"),
+                    key=lambda x: _sort_key(x, order_by_field),
+                    reverse=descending,
                 )
             counts = await self._async_vector_resource_counts(
                 hits, params, search_collection=search_collection

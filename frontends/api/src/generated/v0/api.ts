@@ -408,6 +408,12 @@ export interface ChannelDepartmentDetail {
    * @type {string}
    * @memberof ChannelDepartmentDetail
    */
+  created_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelDepartmentDetail
+   */
   department?: string | null
 }
 /**
@@ -468,11 +474,30 @@ export interface ChannelModeratorRequest {
   email?: string
 }
 /**
+ * Serializer for the ChannelPathwayDetail model
+ * @export
+ * @interface ChannelPathwayDetail
+ */
+export interface ChannelPathwayDetail {
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelPathwayDetail
+   */
+  created_on: string
+}
+/**
  * Serializer for the ChannelTopicDetail model
  * @export
  * @interface ChannelTopicDetail
  */
 export interface ChannelTopicDetail {
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelTopicDetail
+   */
+  created_on: string
   /**
    *
    * @type {number}
@@ -540,6 +565,12 @@ export interface ChannelUnitDetail {
    * @memberof ChannelUnitDetail
    */
   unit: LearningResourceOfferorDetail
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelUnitDetail
+   */
+  created_on: string
 }
 /**
  * Serializer class for course run ContentFiles
@@ -910,6 +941,12 @@ export interface Course {
    * @memberof Course
    */
   course_numbers: Array<CourseNumber> | null
+  /**
+   *
+   * @type {string}
+   * @memberof Course
+   */
+  created_on: string
 }
 /**
  * Serializer for CourseNumber
@@ -990,6 +1027,12 @@ export interface CourseResource {
    * @memberof CourseResource
    */
   certification: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResource
+   */
+  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -1697,6 +1740,12 @@ export interface DocumentResource {
   certification: boolean
   /**
    *
+   * @type {string}
+   * @memberof DocumentResource
+   */
+  created_on: string
+  /**
+   *
    * @type {CourseResourceCertificationType}
    * @memberof DocumentResource
    */
@@ -2268,6 +2317,12 @@ export interface LearningPath {
    * @memberof LearningPath
    */
   item_count: number
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPath
+   */
+  created_on: string
 }
 /**
  * Serializer for a minimal preview of Learning Paths
@@ -2348,6 +2403,12 @@ export interface LearningPathResource {
    * @memberof LearningPathResource
    */
   certification: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -2694,6 +2755,12 @@ export interface LearningResourceImage {
    * @type {string}
    * @memberof LearningResourceImage
    */
+  created_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceImage
+   */
   url: string
   /**
    *
@@ -2720,6 +2787,12 @@ export interface LearningResourceInstructor {
    * @memberof LearningResourceInstructor
    */
   id: number
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceInstructor
+   */
+  created_on: string
   /**
    *
    * @type {string}
@@ -2788,6 +2861,12 @@ export interface LearningResourceOfferorDetail {
    * @memberof LearningResourceOfferorDetail
    */
   channel_url: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceOfferorDetail
+   */
+  created_on: string
   /**
    *
    * @type {string}
@@ -2964,6 +3043,12 @@ export interface LearningResourcePrice {
    * @type {string}
    * @memberof LearningResourcePrice
    */
+  created_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourcePrice
+   */
   amount: string
   /**
    *
@@ -3064,6 +3149,12 @@ export interface LearningResourceRun {
    * @memberof LearningResourceRun
    */
   resource_prices: Array<LearningResourcePrice>
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRun
+   */
+  created_on: string
   /**
    *
    * @type {string}
@@ -3884,6 +3975,12 @@ export interface PathwayChannel {
   channel_type: PathwayChannelTypeEnum
   /**
    *
+   * @type {ChannelPathwayDetail}
+   * @memberof PathwayChannel
+   */
+  pathway_detail: ChannelPathwayDetail
+  /**
+   *
    * @type {string}
    * @memberof PathwayChannel
    */
@@ -3987,6 +4084,12 @@ export interface Podcast {
    * @type {string}
    * @memberof Podcast
    */
+  created_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof Podcast
+   */
   apple_podcasts_url?: string | null
   /**
    *
@@ -4019,6 +4122,12 @@ export interface PodcastEpisode {
    * @memberof PodcastEpisode
    */
   podcasts: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisode
+   */
+  created_on: string
   /**
    *
    * @type {string}
@@ -4104,6 +4213,12 @@ export interface PodcastEpisodeResource {
    * @memberof PodcastEpisodeResource
    */
   certification: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -4417,6 +4532,12 @@ export interface PodcastResource {
    * @memberof PodcastResource
    */
   certification: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -4950,6 +5071,12 @@ export interface Program {
    * @memberof Program
    */
   program_count: number
+  /**
+   *
+   * @type {string}
+   * @memberof Program
+   */
+  created_on: string
 }
 /**
  * Serializer for Program Certificates
@@ -5138,6 +5265,12 @@ export interface ProgramResource {
    * @memberof ProgramResource
    */
   certification: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -6095,6 +6228,12 @@ export interface Video {
    * @type {string}
    * @memberof Video
    */
+  created_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof Video
+   */
   duration: string
 }
 /**
@@ -6109,6 +6248,12 @@ export interface VideoChannel {
    * @memberof VideoChannel
    */
   channel_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoChannel
+   */
+  created_on: string
   /**
    *
    * @type {string}
@@ -6140,6 +6285,12 @@ export interface VideoPlaylist {
    * @memberof VideoPlaylist
    */
   video_count: number
+  /**
+   *
+   * @type {string}
+   * @memberof VideoPlaylist
+   */
+  created_on: string
 }
 /**
  * Serializer for video playlist resources
@@ -6195,6 +6346,12 @@ export interface VideoPlaylistResource {
    * @memberof VideoPlaylistResource
    */
   certification: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -6508,6 +6665,12 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   certification: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof VideoResource
+   */
+  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}

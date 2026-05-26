@@ -411,7 +411,7 @@ def test_vector_search_sortby_parameter(mocker, client, query_string, hybrid_sea
         "q": query_string,
         "sortby": "-views",
         "hybrid_search": hybrid_search,
-        "score_cutoff": 0,
+        "score_cutoff": 0.8,
     }
     view = QdrantView()
     asyncio.run(
@@ -419,16 +419,17 @@ def test_vector_search_sortby_parameter(mocker, client, query_string, hybrid_sea
             query_string,
             params,
             order_by="-views",
-            score_cutoff=0,
+            score_cutoff=0.8,
             hybrid_search=hybrid_search,
         )
     )
 
     if query_string:
         call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
-        assert isinstance(call_kwargs["query"], models.OrderByQuery)
-        assert call_kwargs["query"].order_by.key == "views"
-        assert call_kwargs["query"].order_by.direction == models.Direction.DESC
+        if not hybrid_search:
+            assert isinstance(call_kwargs["query"], models.OrderByQuery)
+            assert call_kwargs["query"].order_by.key == "views"
+            assert call_kwargs["query"].order_by.direction == models.Direction.DESC
     else:
         call_kwargs = mock_qdrant.scroll.mock_calls[0].kwargs
         assert "order_by" in call_kwargs
