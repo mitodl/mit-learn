@@ -576,7 +576,7 @@ class LearningResourcesVectorSearchView(QdrantView):
             order_by = request_data.data.get("sortby")
             score_cutoff = request_data.data.get(
                 "score_cutoff",
-                settings.VECTOR_HYBRID_SEARCH_MIN_SCORE
+                HYBRID_VECTOR_SEARCH_MIN_SCORE
                 if hybrid_search
                 else DENSE_VECTOR_SEARCH_MIN_SCORE,
             )
