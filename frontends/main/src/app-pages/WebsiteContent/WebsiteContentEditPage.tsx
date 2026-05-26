@@ -57,11 +57,7 @@ const WebsiteContentEditPage = ({
   type,
   idOrSlug,
 }: WebsiteContentEditPageProps) => {
-  const {
-    data: article,
-    isLoading,
-    isFetching,
-  } = useWebsiteContentDetailRetrieve(idOrSlug)
+  const { data: article, isLoading } = useWebsiteContentDetailRetrieve(idOrSlug)
   const router = useRouter()
 
   const Editor = EDITORS[type]
@@ -71,7 +67,7 @@ const WebsiteContentEditPage = ({
     notFound()
   }
 
-  if (isLoading || isFetching) {
+  if (isLoading) {
     return <Spinner color="inherit" loading={isLoading} size={32} />
   }
   if (!article) {
