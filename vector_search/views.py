@@ -365,7 +365,9 @@ class QdrantView(APIView):
             )
 
         if search_collection == RESOURCES_COLLECTION_NAME:
-            return await sync_to_async(_resource_vector_hits)(search_result)
+            return await sync_to_async(_resource_vector_hits)(
+                search_result, order_by=order_by
+            )
         else:
             return await sync_to_async(_content_file_vector_hits)(search_result)
 
@@ -502,17 +504,7 @@ class QdrantView(APIView):
                 score_cutoff=normalized_score,
                 hybrid_search=hybrid_search,
             )
-            if order_by:
-                # in addition to fetching all results unpaginated,
-                # manually apply the sorting since
-                # Qdrant does not support sorting with score cutoffs
-                descending = order_by.startswith("-")
-                order_by_field = order_by.lstrip("-")
-                hits = sorted(
-                    hits,
-                    key=lambda x: _sort_key(x, order_by_field),
-                    reverse=descending,
-                )
+
             counts = await self._async_vector_resource_counts(
                 hits, params, search_collection=search_collection
             )
