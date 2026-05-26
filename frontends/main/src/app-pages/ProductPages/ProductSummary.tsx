@@ -955,7 +955,8 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
         {hasSavings && listAmount !== null ? (
           <>
             <ProgramVerticalDivider />
-            <ProgramListPriceBlock role="group"
+            <ProgramListPriceBlock
+              role="group"
               aria-label={`Original price: ${formatPrice(listAmount, { avoidCents: true })} purchased separately`}
             >
               <ProgramListPriceAmount aria-hidden="true">

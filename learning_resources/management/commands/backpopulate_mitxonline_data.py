@@ -38,7 +38,7 @@ class Command(ConfirmDeleteMixin, TestResourceConfigurationMixin, BaseCommand):
             ):
                 resource_delete_actions(learning_resource)
         else:
-            task = get_mitxonline_data.delay()
+            task = get_mitxonline_data.delay(_cooldown_force=True)
             self.stdout.write(f"Started task {task} to get MITx Online course data")
             self.stdout.write("Waiting on task...")
             start = now_in_utc()
