@@ -8,6 +8,10 @@ from qdrant_client.http.models.models import CountResult
 from rest_framework.exceptions import NotAuthenticated, PermissionDenied
 
 from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
+from vector_search.constants import (
+    DENSE_VECTOR_SEARCH_MIN_SCORE,
+    HYBRID_VECTOR_SEARCH_MIN_SCORE,
+)
 from vector_search.views import QdrantView
 
 
@@ -500,9 +504,10 @@ def test_vector_search_with_score_cutoff_enforces_max_limit(mocker, client, sett
 
     params = {
         "q": "test",
+        "hybrid_search": True,
         "limit": 10,
         "offset": 20,
-        "score_cutoff": 0.5,
+        "score_cutoff": 0.6,
     }
 
     client.get(
@@ -512,7 +517,7 @@ def test_vector_search_with_score_cutoff_enforces_max_limit(mocker, client, sett
     call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
     assert call_kwargs["limit"] == 5
     assert call_kwargs["offset"] == 0
-    assert call_kwargs["score_threshold"] == 0.5
+    assert call_kwargs["score_threshold"] == 0.6
 
 
 def test_vector_search_sortby_scroll_pagination(mocker, client):
@@ -656,3 +661,108 @@ def test_vector_search_no_score_cutoff_omits_score_threshold(
 
     call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
     assert "score_threshold" not in call_kwargs
+
+
+def test_vector_search_sortby_with_score_cutoff_manually_sorted(mocker, client):
+    """
+    Test that when a request is made with q, hybrid_search=True, and sortby,
+    and it hits the score cutoff branch, results are manually sorted by the sortby param.
+    """
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+
+    mock_result = mocker.MagicMock()
+    mock_point_1 = mocker.MagicMock()
+    mock_point_1.payload = {"readable_id": "course-1"}
+    mock_point_2 = mocker.MagicMock()
+    mock_point_2.payload = {"readable_id": "course-2"}
+    mock_point_3 = mocker.MagicMock()
+    mock_point_3.payload = {"readable_id": "course-3"}
+
+    mock_result.points = [mock_point_1, mock_point_2, mock_point_3]
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mocker.patch(
+        "vector_search.views.async_qdrant_client",
+        return_value=mock_qdrant,
+    )
+
+    mock_hits = [
+        {"readable_id": "course-1", "views": 100},
+        {"readable_id": "course-2", "views": 50},
+        {"readable_id": "course-3", "views": 200},
+    ]
+    mocker.patch(
+        "vector_search.views._resource_vector_hits",
+        return_value=mock_hits,
+    )
+
+    # Test descending sort: sortby=-views
+    params = {
+        "hybrid_search": "true",
+        "q": "test",
+        "sortby": "-views",
+    }
+
+    response = client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"), data=params
+    )
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert [r["views"] for r in results] == [200, 100, 50]
+
+    # Test ascending sort: sortby=views
+    params["sortby"] = "views"
+
+    response = client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"), data=params
+    )
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert [r["views"] for r in results] == [50, 100, 200]
+
+
+@pytest.mark.parametrize("hybrid_search", [True, False])
+def test_vector_search_with_score_cutoff_enforces_min_score(
+    mocker, client, settings, hybrid_search
+):
+    """A query with a score cutoff should enforce VECTOR_SEARCH_PAGE_MAX_LIMIT."""
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+
+    settings.VECTOR_SEARCH_PAGE_MAX_LIMIT = 5
+
+    mock_result = mocker.MagicMock()
+    mock_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    # count is no longer called in this branch
+    mocker.patch(
+        "vector_search.views.async_qdrant_client",
+        return_value=mock_qdrant,
+    )
+
+    params = {
+        "q": "test",
+        "hybrid_search": hybrid_search,
+        "limit": 10,
+        "offset": 20,
+        "score_cutoff": 0.01,
+    }
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"), data=params
+    )
+
+    call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
+    assert call_kwargs["limit"] == 5
+    assert call_kwargs["offset"] == 0
+    if hybrid_search:
+        assert call_kwargs["score_threshold"] == HYBRID_VECTOR_SEARCH_MIN_SCORE
+    else:
+        assert call_kwargs["score_threshold"] == DENSE_VECTOR_SEARCH_MIN_SCORE
