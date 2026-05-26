@@ -520,7 +520,7 @@ const mapVectorSortby = (
   switch (sortby) {
     case "-views":
     case "popular":
-      return "-view_count"
+      return "-views"
     case "upcoming":
       return "next_start_date"
     case "new":
