@@ -35,7 +35,6 @@ const config: StorybookConfig = {
     config.plugins.push(
       new webpack.DefinePlugin({
         APP_SETTINGS: JSON.stringify({
-          EMBEDLY_KEY: process.env.EMBEDLY_KEY,
           PUBLIC_URL: process.env.PUBLIC_URL,
         }),
       }),

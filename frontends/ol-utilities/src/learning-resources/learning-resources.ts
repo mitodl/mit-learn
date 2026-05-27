@@ -16,30 +16,7 @@ const readableResourceTypes: Record<ResourceTypeEnum, string> = {
 const getReadableResourceType = (resourceType: ResourceTypeEnum): string =>
   readableResourceTypes[resourceType]
 
-const BLANK_IMAGE = `${process.env.NEXT_PUBLIC_ORIGIN}/images/blank.png`
-
-const embedlyCroppedImage = (
-  url: string,
-  { key, width, height }: EmbedlyConfig,
-) => {
-  if (!key) return url
-  return `https://i.embed.ly/1/display/crop/?key=${key}&url=${encodeURIComponent(
-    url,
-  )}&height=${height}&width=${width}&grow=true&animate=false&errorurl=${BLANK_IMAGE}`
-}
-
 const DEFAULT_RESOURCE_IMG = "/images/default_resource.jpg"
-
-type EmbedlyConfig = {
-  key: string
-  width: number
-  height: number
-}
-
-const resourceThumbnailSrc = (
-  image: LearningResource["image"],
-  config: EmbedlyConfig,
-) => embedlyCroppedImage(image?.url ?? DEFAULT_RESOURCE_IMG, config)
 
 const formatRunDate = (
   run: LearningResourceRun,
@@ -169,8 +146,6 @@ const resourceContentFilesImageSrc = (
 
 export {
   DEFAULT_RESOURCE_IMG,
-  embedlyCroppedImage,
-  resourceThumbnailSrc,
   getReadableResourceType,
   formatRunDate,
   allRunsAreIdentical,
@@ -178,4 +153,3 @@ export {
   formattedParentCourseName,
   resourceContentFilesImageSrc,
 }
-export type { EmbedlyConfig }
