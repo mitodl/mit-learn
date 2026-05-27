@@ -49,6 +49,7 @@ import {
   CourseWithCourseRunsSerializerV2,
   CourseRunEnrollmentV3,
   V3UserProgramEnrollment,
+  BaseCourseRun,
   CourseRunV2,
   DisplayModeEnum,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -286,7 +287,7 @@ const getContextMenuItems = (
 
 const getTitle = (
   resource: DashboardResource,
-  selectedCourseRun?: CourseRunV2 | null,
+  selectedCourseRun?: BaseCourseRun | CourseRunV2 | null,
 ): string => {
   if (resource.type === DashboardType.Course) {
     return selectedCourseRun?.title ?? resource.data.title
@@ -803,7 +804,7 @@ type DashboardCardProps = {
   contractId?: number
   programEnrollment?: V3UserProgramEnrollment
   onUpgradeError?: (error: string) => void
-  selectedCourseRun?: CourseRunV2 | null
+  selectedCourseRun?: BaseCourseRun | CourseRunV2 | null
   uiLanguageCode?: string
 }
 
@@ -855,7 +856,11 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     ? courseRun?.courseware_url
     : enrollmentRun?.courseware_url
   const b2bContractId =
-    courseRun?.b2b_contract ??
+    // courseRun may be a BaseCourseRun (from the variant-runs endpoint, which
+    // uses a lighter serializer that omits b2b_contract).  The cast is safe:
+    // if it IS a BaseCourseRun, b2b_contract is simply undefined at runtime
+    // and the fallback chain below picks up contractId instead.
+    (courseRun as CourseRunV2 | undefined)?.b2b_contract ??
     (resource.type === DashboardType.CourseRunEnrollment
       ? resource.data.b2b_contract_id
       : undefined) ??

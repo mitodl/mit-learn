@@ -75,7 +75,7 @@ export type DashboardCourseEntry = {
   // Whether these fields survive past the legacy-card removal is an open
   // question tied to new card UX (run selection controlled by card or parent).
   displayedEnrollment: CourseRunEnrollmentV3 | null
-  displayedRun: CourseRunV2 | null
+  displayedRun: BaseCourseRun | null
 }
 
 const getMaxEnrollmentGrade = (enrollment: CourseRunEnrollmentV3): number => {
@@ -612,15 +612,20 @@ const buildCourseEntry = (
     variantRun?: BaseCourseRun | null
   },
 ): DashboardCourseEntry => {
-  let displayedRun: CourseRunV2 | null,
+  let displayedRun: BaseCourseRun | null,
     displayedEnrollment: CourseRunEnrollmentV3 | null
 
   if (opts.variantRun !== undefined) {
     // Variant picker path
     if (opts.variantRun !== null) {
-      // Use the variant run returned by the API; resolve the full CourseRunV2 by id
+      // Prefer the full CourseRunV2 from course.courseruns when available.
+      // The variant-runs endpoint returns BaseCourseRun objects; the main
+      // courses list may not include those runs, so fall back to
+      // opts.variantRun directly (BaseCourseRun has all fields used in the
+      // display path: title, id, courseware_url, is_enrollable, etc.).
       displayedRun =
-        course.courseruns.find((r) => r.id === opts.variantRun!.id) ?? null
+        course.courseruns.find((r) => r.id === opts.variantRun!.id) ??
+        opts.variantRun
       displayedEnrollment =
         enrollments.find((e) => e.run.id === opts.variantRun!.id) ?? null
     } else {
