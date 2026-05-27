@@ -62,18 +62,23 @@ def _normalize_score_cutoff(value, hybrid_search_enabled):
 
 
 def _sort_key(x, field):
-    value = x.get(field)
+    descending = isinstance(field, str) and field.startswith("-")
+    field_name = field[1:] if descending else field
+    value = x.get(field_name)
+
+    present_bucket = 1 if descending else 0
+    missing_bucket = 0 if descending else 1
 
     if value is None:
-        return (2, 0)
+        return (missing_bucket, 0, 0)
 
     if isinstance(value, (int, float)):
-        return (0, value)
+        return (present_bucket, 0, value)
 
     if isinstance(value, str):
-        return (1, value.lower())
+        return (present_bucket, 1, value.lower())
 
-    return (1, str(value).lower())
+    return (present_bucket, 1, str(value).lower())
 
 
 class QdrantView(APIView):
