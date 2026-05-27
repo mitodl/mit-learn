@@ -27,35 +27,8 @@ const VARIANT_LENGTH_LABELS: Record<string, string> = {
   F: "Full",
 }
 
-/**
- * A single option in the contract-level variant picker.
- *
- * `value` is the stable string key used for React state.
- * `language`, `industry`, and `length` carry the raw codes sent to the API.
- * `isDefault` signals that no variant-runs API call is needed (show each
- * course's default run via `next_run_id`).
- */
-type ContractVariantOption = {
-  value: string
-  label: string
-  language: string
-  industry: string
-  length: string
-  isDefault: boolean
-}
-
 /** Stable key for the "Original / default run" option. */
 const DEFAULT_VARIANT_VALUE = ""
-
-/** Pre-built picker option that represents "show each course's default run". */
-const DEFAULT_VARIANT_OPTION: ContractVariantOption = {
-  value: DEFAULT_VARIANT_VALUE,
-  label: "Original",
-  language: "",
-  industry: "",
-  length: "",
-  isDefault: true,
-}
 
 const buildVariantKey = (
   language: string,
@@ -76,20 +49,6 @@ const buildVariantLabel = (
   return `${langLabel}${suffix}`
 }
 
-const variantToOption = (variant: SupportedVariant): ContractVariantOption => {
-  const language = variant.language ?? ""
-  const industry = (variant.variant_industry as string) ?? ""
-  const length = (variant.variant_length as string) ?? ""
-  return {
-    value: buildVariantKey(language, industry, length),
-    label: buildVariantLabel(language, industry, length),
-    language,
-    industry,
-    length,
-    isDefault: variant.default_variant,
-  }
-}
-
 /**
  * Build deduplicated picker options from the union of `possible_variant_sets`
  * across all courses in a contract.
@@ -99,28 +58,40 @@ const variantToOption = (variant: SupportedVariant): ContractVariantOption => {
  */
 const getDistinctContractVariantOptions = (
   courses: CourseWithCourseRunsSerializerV2[],
-): ContractVariantOption[] => {
+): SupportedVariant[] => {
   const seen = new Set<string>()
-  const options: ContractVariantOption[] = []
+  const options: SupportedVariant[] = []
 
   for (const course of courses) {
     for (const variant of course.possible_variant_sets ?? []) {
       if (!variant.active || variant.default_variant) continue
-      const opt = variantToOption(variant)
-      if (!seen.has(opt.value)) {
-        seen.add(opt.value)
-        options.push(opt)
+      const value = buildVariantKey(
+        variant.language ?? "",
+        variant.variant_industry as string,
+        variant.variant_length as string,
+      )
+      if (!seen.has(value)) {
+        seen.add(value)
+        options.push(variant)
       }
     }
   }
 
-  options.sort((a, b) =>
-    String(a.label).localeCompare(String(b.label), undefined, {
-      sensitivity: "base",
-    }),
-  )
+  options.sort((a, b) => {
+    const labelA = buildVariantLabel(
+      a.language ?? "",
+      (a.variant_industry as string) ?? "",
+      (a.variant_length as string) ?? "",
+    )
+    const labelB = buildVariantLabel(
+      b.language ?? "",
+      (b.variant_industry as string) ?? "",
+      (b.variant_length as string) ?? "",
+    )
+    return labelA.localeCompare(labelB, undefined, { sensitivity: "base" })
+  })
 
-  return [DEFAULT_VARIANT_OPTION, ...options]
+  return options
 }
 
 /**
@@ -139,19 +110,20 @@ const getDistinctContractVariantOptions = (
  */
 const selectVariantRunForCourse = (
   runs: BaseCourseRun[],
-  selectedVariant: ContractVariantOption,
+  // selectedVariant: ContractVariantOption,
+  selectedVariant: SupportedVariant,
 ): BaseCourseRun | null => {
   const matching = runs.filter((run) => {
     if (selectedVariant.language && run.language !== selectedVariant.language)
       return false
     if (
-      selectedVariant.industry &&
-      (run.variant_industry ?? "") !== selectedVariant.industry
+      selectedVariant.variant_industry &&
+      (run.variant_industry ?? "") !== selectedVariant.variant_industry
     )
       return false
     if (
-      selectedVariant.length &&
-      (run.variant_length ?? "") !== selectedVariant.length
+      selectedVariant.variant_length &&
+      (run.variant_length ?? "") !== selectedVariant.variant_length
     )
       return false
     return true
@@ -181,7 +153,6 @@ export {
   getDistinctContractVariantOptions,
   selectVariantRunForCourse,
   buildVariantKey,
-  DEFAULT_VARIANT_OPTION,
+  buildVariantLabel,
   DEFAULT_VARIANT_VALUE,
 }
-export type { ContractVariantOption }

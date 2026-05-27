@@ -12,6 +12,7 @@ import type {
   ContractPage,
   CourseRunEnrollmentV3,
   OrganizationPage,
+  SupportedVariant,
   V2Program,
   V2ProgramCollection,
   V3UserProgramEnrollment,
@@ -27,9 +28,9 @@ import {
   type DashboardCourseEntry,
 } from "../model/dashboardViewModel"
 import {
+  buildVariantKey,
   getDistinctContractVariantOptions,
   selectVariantRunForCourse,
-  type ContractVariantOption,
 } from "../model/variantOptions"
 
 type ContractProgramDisplayData = {
@@ -46,7 +47,8 @@ type ContractCollectionDisplayData = {
 type ContractDashboardData = {
   isLoading: boolean
   showNoPrograms: boolean
-  variantOptions: ContractVariantOption[]
+  // variantOptions: ContractVariantOption[]
+  variantOptions: SupportedVariant[]
   selectedVariantValue: string
   setSelectedVariantValue: (value: string) => void
   programs: ContractProgramDisplayData[]
@@ -103,11 +105,11 @@ const useContractDashboardData = (
     ...coursesQueries.courseVariantRunsList({
       contract: contract.id,
       course_id: contractCourses.map((c) => c.id),
-      language: selectedVariant.language || undefined,
-      industry: selectedVariant.industry || undefined,
-      length: selectedVariant.length || undefined,
+      language: selectedVariant?.language || undefined,
+      industry: (selectedVariant?.variant_industry as string) || undefined,
+      length: (selectedVariant?.variant_length as string) || undefined,
     }),
-    enabled: !selectedVariant.isDefault && contractCourses.length > 0,
+    enabled: selectedVariant !== null && contractCourses.length > 0,
   })
 
   // Map courseId → best BaseCourseRun for the selected variant.
@@ -123,7 +125,7 @@ const useContractDashboardData = (
   const variantRunsByCourseId = React.useMemo<
     Record<number, BaseCourseRun>
   >(() => {
-    if (selectedVariant.isDefault || !variantRunsQuery.data) return {}
+    if (selectedVariant === null || !variantRunsQuery.data) return {}
     const map: Record<number, BaseCourseRun> = {}
     for (const courseVariantRuns of variantRunsQuery.data) {
       const best = selectVariantRunForCourse(
@@ -162,11 +164,9 @@ const useContractDashboardData = (
 
   // Derive per-course language key from the selected variant for enrollment
   // matching in the language-based resolution path.
-  const selectedLanguageKey = selectedVariant.isDefault
-    ? ""
-    : selectedVariant.language
-      ? `language:${selectedVariant.language}`
-      : ""
+  const selectedVariantKey = selectedVariant?.language
+    ? `language:${selectedVariant.language}`
+    : ""
 
   const programRows = sortedPrograms.map((program) => {
     const courses = getProgramCoursesInContractOrder(program, contractCourses)
@@ -177,16 +177,17 @@ const useContractDashboardData = (
         buildCourseEntry(
           course,
           enrollmentsByCourseId[course.id] ?? [],
-          selectedLanguageKey,
+          selectedVariantKey,
           {
-            availableLanguages: variantOptions,
+            availableVariants: variantOptions,
             contractId: contract.id,
             ancestorContext: programEnrollment
               ? { programEnrollment }
               : undefined,
-            variantRun: selectedVariant.isDefault
-              ? undefined
-              : (variantRunsByCourseId[course.id] ?? null),
+            variantRun:
+              selectedVariant === null
+                ? undefined
+                : (variantRunsByCourseId[course.id] ?? null),
           },
         ),
       ),
@@ -206,13 +207,14 @@ const useContractDashboardData = (
         buildCourseEntry(
           course,
           enrollmentsByCourseId[course.id] ?? [],
-          selectedLanguageKey,
+          selectedVariantKey,
           {
-            availableLanguages: variantOptions,
+            availableVariants: variantOptions,
             contractId: contract.id,
-            variantRun: selectedVariant.isDefault
-              ? undefined
-              : (variantRunsByCourseId[course.id] ?? null),
+            variantRun:
+              selectedVariant === null
+                ? undefined
+                : (variantRunsByCourseId[course.id] ?? null),
           },
         ),
       ),
@@ -228,7 +230,13 @@ const useContractDashboardData = (
       coursesQuery.isLoading,
     showNoPrograms: programRows.length === 0 && collectionRows.length === 0,
     variantOptions,
-    selectedVariantValue: selectedVariant.value,
+    selectedVariantValue: selectedVariant
+      ? buildVariantKey(
+          selectedVariant.language ?? "",
+          (selectedVariant.variant_industry as string) ?? "",
+          (selectedVariant.variant_length as string) ?? "",
+        )
+      : "",
     setSelectedVariantValue,
     programs: programRows,
     collections: collectionRows,

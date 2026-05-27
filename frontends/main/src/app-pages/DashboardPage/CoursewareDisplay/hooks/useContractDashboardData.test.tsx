@@ -73,10 +73,6 @@ describe("useContractDashboardData", () => {
       programA.courses[0],
     ])
 
-    if (result.current.variantOptions.length > 0) {
-      expect(result.current.selectedVariantValue).toBe(
-        String(result.current.variantOptions[0].value),
-      )
-    }
+    expect(result.current.selectedVariantValue).toBe("")
   })
 })

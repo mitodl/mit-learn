@@ -16,6 +16,7 @@ import type {
   CourseRunLanguageOption,
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
+  SupportedVariant,
   V2Program,
   V2ProgramCollection,
   V2ProgramDetail,
@@ -62,8 +63,8 @@ import {
 export type DashboardCourseEntry = {
   course: CourseWithCourseRunsSerializerV2
   enrollments: CourseRunEnrollmentV3[]
-  selectedLanguageKey: string
-  availableLanguages: SimpleSelectOption[]
+  selectedVariantKey: string
+  availableVariants: SupportedVariant[]
   contractId?: number
   isContractPageResource?: boolean
   ancestorContext?: {
@@ -579,8 +580,8 @@ type RequirementSection = {
  * `resolveCourseEntryForLanguage` and assembles the result with the
  * caller-supplied metadata. The caller is responsible for:
  *  - pre-filtering `enrollments` to this course (e.g. `enrollmentsByCourseId[course.id] ?? []`)
- *  - computing `availableLanguages` once at the composer level (NOT re-derived here)
- *  - supplying the effective `selectedLanguageKey` (a valid option or fallback)
+ *  - computing `availableVariants` once at the composer level (NOT re-derived here)
+ *  - supplying the effective `selectedVariantKey` (a valid option or fallback)
  *
  * `enrollments` is stored uncollapsed on the entry — the full list, never
  * filtered to the displayed choice. The `displayedEnrollment`/`displayedRun`
@@ -589,15 +590,16 @@ type RequirementSection = {
  * When `opts.variantRun` is provided (variant picker path):
  *  - non-null: use that run as `displayedRun`; look up the full `CourseRunV2` by id
  *  - null: this course has no variant run for the selection — fall back to
- *    `next_run_id`-based resolution (same as empty `selectedLanguageKey`)
+ *    `next_run_id`-based resolution (same as empty `selectedVariantKey`)
  *  - undefined (default): use the existing language-based resolution path
  */
 const buildCourseEntry = (
   course: CourseWithCourseRunsSerializerV2,
   enrollments: CourseRunEnrollmentV3[],
-  selectedLanguageKey: string,
+  // selectedLanguageKey: string,
+  selectedVariantKey: string,
   opts: {
-    availableLanguages: SimpleSelectOption[]
+    availableVariants: SupportedVariant[]
     contractId?: number
     isContractPageResource?: boolean
     ancestorContext?: DashboardCourseEntry["ancestorContext"]
@@ -639,7 +641,7 @@ const buildCourseEntry = (
     const result = resolveCourseEntryForLanguage(
       course,
       enrollments,
-      selectedLanguageKey,
+      selectedVariantKey,
       opts.contractId !== undefined
         ? { contractId: opts.contractId }
         : undefined,
@@ -651,8 +653,8 @@ const buildCourseEntry = (
   return {
     course,
     enrollments,
-    selectedLanguageKey,
-    availableLanguages: opts.availableLanguages,
+    selectedVariantKey,
+    availableVariants: opts.availableVariants,
     contractId: opts.contractId,
     isContractPageResource: opts.isContractPageResource,
     ancestorContext: opts.ancestorContext,
@@ -686,13 +688,13 @@ type BuildRequirementSectionsArgs = {
     number,
     CourseWithCourseRunsSerializerV2[]
   >
-  /** Effective language key (valid option or fallback ""). */
-  selectedLanguageKey: string
+  /** Effective variant key (valid option or fallback ""). */
+  selectedVariantKey: string
   /**
-   * Dashboard-wide language options list, computed once by the composer.
+   * Dashboard-wide variant options list, computed once by the composer.
    * Stored as-is on each course entry — NOT recomputed here.
    */
-  availableLanguages: SimpleSelectOption[]
+  availableVariants: SupportedVariant[]
   /**
    * The top-level program's own enrollment (from `programEnrollmentsById`).
    * When present, placed on every course arm's `ancestorContext.programEnrollment`.
@@ -724,8 +726,8 @@ const buildRequirementSections = ({
   programEnrollmentsById,
   requiredPrograms,
   requiredProgramModuleCoursesByProgramId,
-  selectedLanguageKey,
-  availableLanguages,
+  selectedVariantKey,
+  availableVariants,
   ancestorProgramEnrollment,
 }: BuildRequirementSectionsArgs): {
   sections: RequirementSection[]
@@ -750,9 +752,9 @@ const buildRequirementSections = ({
               entry: buildCourseEntry(
                 course,
                 enrollmentsByCourseId[course.id] ?? [],
-                selectedLanguageKey,
+                selectedVariantKey,
                 {
-                  availableLanguages,
+                  availableVariants,
                   ancestorContext: ancestorProgramEnrollment
                     ? { programEnrollment: ancestorProgramEnrollment }
                     : undefined,

@@ -24,8 +24,8 @@ const makeEntry = (
   return {
     course: defaultCourse,
     enrollments: [],
-    selectedLanguageKey: "",
-    availableLanguages: [],
+    selectedVariantKey: "",
+    availableVariants: [],
     displayedEnrollment: null,
     displayedRun: defaultRun,
     ...overrides,
@@ -152,7 +152,7 @@ describe("dashboardAdapters", () => {
     const entry = makeEntry({
       course,
       enrollments: [selectedLanguageEnrollment],
-      selectedLanguageKey: "language:es-es",
+      selectedVariantKey: "language:es-es",
       displayedEnrollment: selectedLanguageEnrollment,
       displayedRun: esRun,
     })
@@ -177,7 +177,7 @@ describe("dashboardAdapters", () => {
     const entry = makeEntry({
       course,
       enrollments: [contractEnrollment],
-      selectedLanguageKey: "language:es-es",
+      selectedVariantKey: "language:es-es",
       displayedEnrollment: contractEnrollment,
       displayedRun: run,
       contractId: 999,
