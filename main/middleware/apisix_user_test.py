@@ -126,6 +126,32 @@ def test_get_request_existing_user_with_global_id_diff_email(mocker, mock_login)
 
 
 @pytest.mark.django_db(transaction=True)
+def test_get_request_ambiguous_identity_fails_closed(mocker, mock_login):
+    """An ambiguous APISIX identity match should not silently pick a user."""
+    close_old_connections()
+    legacy_user = UserFactory.create(email=apisix_user_info["email"], global_id=None)
+    exact_user = UserFactory.create(
+        email="old_email@test.edu", global_id=apisix_user_info["sub"]
+    )
+    mock_request = mocker.Mock(
+        META={
+            "HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode()),
+        },
+        user=AnonymousUser(),
+    )
+    apisix_middleware = ApisixUserMiddleware(mocker.Mock())
+
+    with pytest.raises(User.MultipleObjectsReturned):
+        apisix_middleware.process_request(mock_request)
+
+    mock_login.assert_not_called()
+    legacy_user.refresh_from_db()
+    exact_user.refresh_from_db()
+    assert legacy_user.global_id is None
+    assert exact_user.email == "old_email@test.edu"
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("same_user", [False, True])
 def test_get_request_different_user_logout(mocker, client, same_user):
     """Test that a request with mismatched users logs user out"""
@@ -162,3 +188,74 @@ def test_get_request_logged_in_no_header(mocker, client, user):
     apisix_middleware = ApisixUserMiddleware(mocker.Mock())
     apisix_middleware.process_request(mock_request)
     mock_logout.assert_called_once()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_unchanged_identity_skips_writes(mocker, mock_login):
+    """A repeat request with an unchanged identity issues no writes or re-login."""
+    close_old_connections()
+    header = b64encode(json.dumps(apisix_user_info).encode())
+    apisix_middleware = ApisixUserMiddleware(mocker.Mock())
+
+    # First request creates the user and profile.
+    apisix_middleware.process_request(
+        mocker.Mock(META={"HTTP_X_USERINFO": header}, user=AnonymousUser())
+    )
+    synced_user = User.objects.get(global_id=apisix_user_info["sub"])
+
+    # Second request, now authenticated as that user with the same header:
+    # nothing changed, so no user save, no profile sync, and no re-login.
+    mock_login.reset_mock()
+    mock_save = mocker.patch.object(User, "save")
+    mock_actions = mocker.patch("main.middleware.apisix_user.user_created_actions")
+    apisix_middleware.process_request(
+        mocker.Mock(META={"HTTP_X_USERINFO": header}, user=synced_user)
+    )
+    mock_save.assert_not_called()
+    mock_actions.assert_not_called()
+    mock_login.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_changed_user_field_triggers_update(mocker, mock_login):
+    """A changed user header field updates the user."""
+    close_old_connections()
+    header = b64encode(json.dumps(apisix_user_info).encode())
+    apisix_middleware = ApisixUserMiddleware(mocker.Mock())
+    apisix_middleware.process_request(
+        mocker.Mock(META={"HTTP_X_USERINFO": header}, user=AnonymousUser())
+    )
+    synced_user = User.objects.get(global_id=apisix_user_info["sub"])
+
+    changed_header = b64encode(
+        json.dumps({**apisix_user_info, "family_name": "changed"}).encode()
+    )
+    mock_request = mocker.Mock(
+        META={"HTTP_X_USERINFO": changed_header}, user=synced_user
+    )
+    apisix_middleware.process_request(mock_request)
+    synced_user.refresh_from_db()
+    assert synced_user.last_name == "changed"
+    assert mock_request.user.last_name == "changed"
+
+
+@pytest.mark.django_db(transaction=True)
+def test_changed_profile_field_triggers_update(mocker, mock_login):
+    """A changed profile header field updates the profile."""
+    close_old_connections()
+    header = b64encode(json.dumps(apisix_user_info).encode())
+    apisix_middleware = ApisixUserMiddleware(mocker.Mock())
+    apisix_middleware.process_request(
+        mocker.Mock(META={"HTTP_X_USERINFO": header}, user=AnonymousUser())
+    )
+    synced_user = User.objects.get(global_id=apisix_user_info["sub"])
+    assert synced_user.profile.name == apisix_user_info["name"]
+
+    changed_header = b64encode(
+        json.dumps({**apisix_user_info, "name": "New Name"}).encode()
+    )
+    mock_request = mocker.Mock(
+        META={"HTTP_X_USERINFO": changed_header}, user=synced_user
+    )
+    apisix_middleware.process_request(mock_request)
+    assert mock_request.user.profile.name == "New Name"
