@@ -74,7 +74,6 @@ const learningResourceImage: Factory<LearningResourceImage> = (
   id: uniqueEnforcerId.enforce(() => faker.number.int()),
   url: new URL(faker.internet.url()).toString(),
   description: faker.lorem.words(),
-  created_on: faker.date.past().toISOString(),
   alt: faker.lorem.words(),
   ...overrides,
 })
