@@ -97,6 +97,9 @@ const useContractDashboardData = (
   const { selectedVariant, setSelectedVariant } =
     useDashboardVariantPicker(variantOptions)
 
+  const isDefaultVariantSelection =
+    selectedVariant === null || selectedVariant.default_variant
+
   // Lazy second-phase query: only fires when a non-default variant is selected.
   // Returns one entry per course with the matching variant run(s).
   const variantRunsQuery = useQuery({
@@ -107,7 +110,7 @@ const useContractDashboardData = (
       industry: (selectedVariant?.variant_industry as string) || undefined,
       length: (selectedVariant?.variant_length as string) || undefined,
     }),
-    enabled: selectedVariant !== null && contractCourses.length > 0,
+    enabled: !isDefaultVariantSelection && contractCourses.length > 0,
   })
 
   // Map courseId → best BaseCourseRun for the selected variant.
@@ -123,7 +126,7 @@ const useContractDashboardData = (
   const variantRunsByCourseId = React.useMemo<
     Record<number, BaseCourseRun>
   >(() => {
-    if (selectedVariant === null || !variantRunsQuery.data) return {}
+    if (isDefaultVariantSelection || !variantRunsQuery.data) return {}
     const map: Record<number, BaseCourseRun> = {}
     for (const courseVariantRuns of variantRunsQuery.data) {
       const best = selectVariantRunForCourse(
@@ -135,7 +138,7 @@ const useContractDashboardData = (
       }
     }
     return map
-  }, [selectedVariant, variantRunsQuery.data])
+  }, [isDefaultVariantSelection, selectedVariant, variantRunsQuery.data])
 
   const programs = programsQuery.data?.results ?? []
   const collections = programCollectionsQuery.data?.results ?? []
@@ -162,9 +165,10 @@ const useContractDashboardData = (
 
   // Derive per-course language key from the selected variant for enrollment
   // matching in the language-based resolution path.
-  const selectedVariantKey = selectedVariant?.language
-    ? `language:${selectedVariant.language}`
-    : ""
+  const selectedVariantKey =
+    selectedVariant?.language && !selectedVariant.default_variant
+      ? `language:${selectedVariant.language}`
+      : ""
 
   const programRows = sortedPrograms.map((program) => {
     const courses = getProgramCoursesInContractOrder(program, contractCourses)
@@ -182,10 +186,9 @@ const useContractDashboardData = (
             ancestorContext: programEnrollment
               ? { programEnrollment }
               : undefined,
-            variantRun:
-              selectedVariant === null
-                ? undefined
-                : (variantRunsByCourseId[course.id] ?? null),
+            variantRun: isDefaultVariantSelection
+              ? undefined
+              : (variantRunsByCourseId[course.id] ?? null),
           },
         ),
       ),
@@ -209,10 +212,9 @@ const useContractDashboardData = (
           {
             availableVariants: variantOptions,
             contractId: contract.id,
-            variantRun:
-              selectedVariant === null
-                ? undefined
-                : (variantRunsByCourseId[course.id] ?? null),
+            variantRun: isDefaultVariantSelection
+              ? undefined
+              : (variantRunsByCourseId[course.id] ?? null),
           },
         ),
       ),

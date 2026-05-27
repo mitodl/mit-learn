@@ -30,23 +30,30 @@ const VARIANT_LENGTH_LABELS: Record<string, string> = {
 /** Stable key for the "Original / default run" option. */
 const DEFAULT_VARIANT_VALUE = ""
 
-const buildVariantKey = (
-  language: string,
-  industry: string,
-  length: string,
-): string => `language:${language}|industry:${industry}|length:${length}`
+const buildVariantKey = (variant: SupportedVariant): string =>
+  `language:${variant.language ?? ""}|industry:${variant.variant_industry ?? ""}|length:${variant.variant_length ?? ""}`
 
-const buildVariantLabel = (
-  language: string,
-  industry: string,
-  length: string,
-): string => {
-  const langLabel = language ? getNativeLanguageName(language) : ""
+const buildVariantLabel = (variant: SupportedVariant): string => {
+  const langLabel = variant.language
+    ? getNativeLanguageName(variant.language.replace("_", "-"))
+    : ""
   const modifiers: string[] = []
-  if (industry) modifiers.push(VARIANT_INDUSTRY_LABELS[industry] ?? industry)
-  if (length) modifiers.push(VARIANT_LENGTH_LABELS[length] ?? length)
-  const suffix = modifiers.length ? ` (${modifiers.join(", ")})` : ""
-  return `${langLabel}${suffix}`
+  if (variant.variant_industry) {
+    modifiers.push(
+      VARIANT_INDUSTRY_LABELS[variant.variant_industry] ??
+        variant.variant_industry,
+    )
+  } else {
+    modifiers.push("General")
+  }
+  if (variant.variant_length) {
+    modifiers.push(
+      VARIANT_LENGTH_LABELS[variant.variant_length] ?? variant.variant_length,
+    )
+  } else {
+    modifiers.push("Full")
+  }
+  return [langLabel, ...modifiers].filter(Boolean).join(" • ")
 }
 
 /**
@@ -65,11 +72,7 @@ const getDistinctContractVariantOptions = (
   for (const course of courses) {
     for (const variant of course.possible_variant_sets ?? []) {
       if (!variant.active) continue
-      const value = buildVariantKey(
-        variant.language ?? "",
-        variant.variant_industry as string,
-        variant.variant_length as string,
-      )
+      const value = buildVariantKey(variant)
       if (!seen.has(value)) {
         seen.add(value)
         options.push(variant)
@@ -78,16 +81,8 @@ const getDistinctContractVariantOptions = (
   }
 
   options.sort((a, b) => {
-    const labelA = buildVariantLabel(
-      a.language ?? "",
-      (a.variant_industry as string) ?? "",
-      (a.variant_length as string) ?? "",
-    )
-    const labelB = buildVariantLabel(
-      b.language ?? "",
-      (b.variant_industry as string) ?? "",
-      (b.variant_length as string) ?? "",
-    )
+    const labelA = buildVariantLabel(a)
+    const labelB = buildVariantLabel(b)
     return labelA.localeCompare(labelB, undefined, { sensitivity: "base" })
   })
 

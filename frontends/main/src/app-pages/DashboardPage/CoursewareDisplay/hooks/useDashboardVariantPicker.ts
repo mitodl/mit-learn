@@ -20,11 +20,7 @@ const useDashboardVariantPicker = (
 
   const selectedVariant =
     availableVariants.find((variant) => {
-      const variantKey = buildVariantKey(
-        variant.language ?? "",
-        (variant.variant_industry as string) ?? "",
-        (variant.variant_length as string) ?? "",
-      )
+      const variantKey = buildVariantKey(variant)
       return variantKey === pickedValue
     }) ??
     availableVariants.find((variant) => variant.default_variant) ??
@@ -37,13 +33,7 @@ const useDashboardVariantPicker = (
       return
     }
 
-    setPickedValue(
-      buildVariantKey(
-        variant.language ?? "",
-        (variant.variant_industry as string) ?? "",
-        (variant.variant_length as string) ?? "",
-      ),
-    )
+    setPickedValue(buildVariantKey(variant))
   }
 
   return { selectedVariant, setSelectedVariant }
