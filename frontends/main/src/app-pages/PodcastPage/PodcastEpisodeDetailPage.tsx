@@ -25,7 +25,7 @@ import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource } from "api/v1"
 import moment from "moment"
 import { formatDate } from "ol-utilities"
-import { HOME, podcastPageView } from "@/common/urls"
+import { HOME, podcastPageView, podcastEpisodePageView } from "@/common/urls"
 import DOMPurify from "isomorphic-dompurify"
 import { EpisodeItem } from "./PodcastDetailPage"
 import PodcastContainer from "./PodcastContainer"
@@ -47,9 +47,13 @@ const PageSection = styled.div(({ theme }) => ({
   minHeight: "100vh",
 }))
 
-const HeaderSection = styled.div(({ theme }) => ({
-  borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
-  marginBottom: "64px",
+const HeaderSection = styled("div", {
+  shouldForwardProp: (prop) => prop !== "hasEpisodes",
+})<{ hasEpisodes?: boolean }>(({ theme, hasEpisodes }) => ({
+  ...(hasEpisodes && {
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+    marginBottom: "64px",
+  }),
   paddingBottom: "64px",
   [theme.breakpoints.down("sm")]: {
     marginBottom: "24px",
@@ -305,7 +309,7 @@ export const PodcastEpisodeDetailPage: React.FC<
             />
           </PodcastContainer>
         </BreadcrumbBar>
-        <HeaderSection>
+        <HeaderSection hasEpisodes={episodes.length > 0}>
           <EpisodeContainer>
             {podcast?.title && (
               <EpisodeLabel href={podcastHref}>{podcast.title}</EpisodeLabel>
@@ -354,6 +358,11 @@ export const PodcastEpisodeDetailPage: React.FC<
                 <EpisodeItem
                   key={episode.id}
                   episode={episode}
+                  href={
+                    podcastId
+                      ? podcastEpisodePageView(String(episode.id), podcastId)
+                      : ""
+                  }
                   isPlaying={
                     playingEpisode?.id === episode.id && isAudioPlaying
                   }

@@ -1,6 +1,39 @@
 Release Notes
 =============
 
+Version 0.68.5 (Released May 26, 2026)
+--------------
+
+- dashboard refactor phase 5 - extract b2b contract dashboard hooks (#3355)
+- Fix ordering for mitxonline programs (#3360)
+- fix run matching (#3365)
+- feat: add PostHog tracking for onboarding CTA interactions (#3362)
+- Dashboard Refactor, useProgramDashboardData (#3356)
+- Fix eslint config to ignore node_modules (#3359)
+- refactor: make our internally-authored content editing more generic ( First Part) (#3332)
+
+Version 0.68.3 (Released May 19, 2026)
+--------------
+
+- fix: link the podcast episode to its detail page and fix the video count on collection page (#3345)
+
+Version 0.68.2 (Released May 19, 2026)
+--------------
+
+- feat: add video embed page and route group restructure (#3327)
+- dashboard refactor: useHomeDashboardData (#3342)
+- fix: add heading tags to B2B org section (#3347)
+- fix: certificate page being indexed in google search (#3348)
+- Granian reload for local dev (#3351)
+
+Version 0.68.1 (Released May 19, 2026)
+--------------
+
+- split EnrollmentDisplay into HomeEnrollmentsDisplay + ProgramEnrollMentDisplay… (#3341)
+- Remove enrollment-dashboard feature flag (#3343)
+- feat: Added Program Record Link to Learn Dashboard Program Card . (#3336)
+- Update dependency drf-spectacular to >=0.29,<0.30 (#2734)
+
 Version 0.68.0 (Released May 13, 2026)
 --------------
 

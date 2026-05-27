@@ -1280,7 +1280,7 @@ describe("ProgramSummary", () => {
       expect(priceRow).not.toHaveTextContent("Earn a certificate")
     })
 
-    test("Shows paid price with certificate type and no cert box when all enrollment modes are paid", () => {
+    test("Shows paid price with no cert box when all enrollment modes are paid", () => {
       const product = factories.courses.product({ price: "1499.00" })
       const program = factories.programs.program({
         enrollment_modes: [paidMode()],
@@ -1292,12 +1292,13 @@ describe("ProgramSummary", () => {
       expect(priceRow).toHaveTextContent(
         formatPrice(product.price, { avoidCents: true }),
       )
-      expect(priceRow).toHaveTextContent(program.certificate_type)
+      expect(priceRow).toHaveTextContent("full program")
       expect(priceRow).not.toHaveTextContent("Free to Learn")
       expect(priceRow).not.toHaveTextContent("Earn a certificate")
+      expect(priceRow).not.toHaveTextContent("Audit for free")
     })
 
-    test("Shows 'Free to Learn' and cert box when enrollment modes include both free and paid", () => {
+    test("Shows paid price and 'Start for free' callout when enrollment modes include both free and paid", () => {
       const program = factories.programs.program({
         enrollment_modes: bothModes(),
       })
@@ -1305,11 +1306,14 @@ describe("ProgramSummary", () => {
       renderWithProviders(<ProgramSummary program={program} />)
 
       const priceRow = screen.getByTestId(TestIds.PriceRow)
-      expect(priceRow).toHaveTextContent("Free to Learn")
-      expect(priceRow).toHaveTextContent("Earn a certificate")
+      expect(priceRow).toHaveTextContent("Audit for free")
+      expect(priceRow).toHaveTextContent("or upgrade to")
+      expect(priceRow).toHaveTextContent("certificate")
       expect(priceRow).toHaveTextContent(
         formatPrice(program.products[0].price, { avoidCents: true }),
       )
+      expect(priceRow).not.toHaveTextContent("Free to Learn")
+      expect(priceRow).not.toHaveTextContent("Earn a certificate")
     })
 
     test.each([

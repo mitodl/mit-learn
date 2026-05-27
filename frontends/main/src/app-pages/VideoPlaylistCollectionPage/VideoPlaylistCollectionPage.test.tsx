@@ -1,16 +1,8 @@
 import React from "react"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { renderWithProviders, screen } from "@/test-utils"
-import { notFound } from "next/navigation"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import VideoPage from "./VideoPlaylistCollectionPage"
 import { ResourceTypeEnum } from "api/v1"
-
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
-jest.mock("@/common/useFeatureFlagsLoaded")
-const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 
 jest.mock("next-nprogress-bar", () => ({
   useRouter: () => ({}),
@@ -81,47 +73,6 @@ const setupApis = ({
 }
 
 describe("VideoPage", () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-  })
-
-  describe("feature-flag gating", () => {
-    test("calls notFound when the VideoPlaylistPage flag is disabled and flags are loaded", () => {
-      mockedUseFeatureFlagEnabled.mockReturnValue(false)
-      mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-      const playlist = makePlaylist()
-      setupApis({ playlistId: playlist.id, videos: [], playlist })
-
-      renderWithProviders(<VideoPage playlistId={playlist.id} />)
-
-      expect(notFound).toHaveBeenCalled()
-    })
-
-    test("does not call notFound when the flag is enabled", () => {
-      mockedUseFeatureFlagEnabled.mockReturnValue(true)
-      const playlist = makePlaylist()
-      setupApis({ playlistId: playlist.id, videos: [], playlist })
-
-      renderWithProviders(<VideoPage playlistId={playlist.id} />)
-
-      expect(notFound).not.toHaveBeenCalled()
-    })
-
-    test("does not call notFound when the flag is undefined and flags are not yet loaded", () => {
-      // posthog returns undefined before flags are evaluated
-      mockedUseFeatureFlagEnabled.mockReturnValue(undefined)
-      mockedUseFeatureFlagsLoaded.mockReturnValue(false)
-      const playlist = makePlaylist()
-      setupApis({ playlistId: playlist.id, videos: [], playlist })
-
-      renderWithProviders(<VideoPage playlistId={playlist.id} />)
-
-      expect(notFound).not.toHaveBeenCalled()
-    })
-  })
-
   describe("playlist header", () => {
     test("renders the playlist title once data is loaded", async () => {
       const playlist = makePlaylist()

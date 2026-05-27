@@ -40,6 +40,7 @@ const program: PartialFactory<V2ProgramDetail> = (overrides = {}) => {
       length: `${faker.number.int({ min: 1, max: 12 })} weeks`,
       effort: `${faker.number.int({ min: 1, max: 10 })} hours/week`,
       price: faker.commerce.price(),
+      list_price: faker.commerce.price(),
     },
     program_type: faker.helpers.arrayElement([
       "certificate",

@@ -106,6 +106,14 @@ describe("ContractContent", () => {
       }),
       { results: reversedCoursesA },
     )
+    setMockResponse.get(
+      urls.courses.coursesList({
+        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
+        page_size: 200,
+      }),
+      { results: reversedCoursesA },
+    )
 
     renderWithProviders(
       <ContractContent
@@ -376,6 +384,14 @@ describe("ContractContent", () => {
       }),
       { results: [firstCourseB, firstCourseA] },
     )
+    setMockResponse.get(
+      urls.courses.coursesList({
+        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
+        page_size: 200,
+      }),
+      { results: [...normalizedCoursesA, ...normalizedCoursesB] },
+    )
 
     renderWithProviders(
       <ContractContent
@@ -464,6 +480,14 @@ describe("ContractContent", () => {
         contract_id: orgX.contracts[0].id,
       }),
       { results: [firstCourseA, firstCourseB] }, // API returns A's course first
+    )
+    setMockResponse.get(
+      urls.courses.coursesList({
+        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
+        page_size: 200,
+      }),
+      { results: [...normalizedCoursesA, ...normalizedCoursesB] },
     )
 
     renderWithProviders(
@@ -660,6 +684,47 @@ describe("ContractContent", () => {
     expect(collections.length).toBe(0)
   })
 
+  test("only renders programs whose courses appear in the contract-scoped courses response", async () => {
+    const { orgX, programA, programB } = setupProgramsAndCourses()
+
+    // Create a program whose courses are not in the contract-scoped courses response.
+    // The courses API mock from setupProgramsAndCourses only returns coursesA and coursesB,
+    // so getSortedStandaloneContractPrograms will exclude programC because none of its
+    // course IDs appear in contractCourses.
+    const programC = factories.programs.program({
+      courses: [99991, 99992],
+    })
+
+    // Override the contract-filtered programs list to include the extra program.
+    setMockResponse.get(
+      urls.programs.programsList({
+        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
+        page_size: 30,
+      }),
+      { results: [programA, programB, programC] },
+    )
+    setMockResponse.get(urls.programCollections.programCollectionsList(), {
+      results: [],
+    })
+
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
+
+    await screen.findByRole("heading", { name: orgX.name })
+    // A and B have contract-scoped courses, so they render.
+    const renderedPrograms = await screen.findAllByTestId("org-program-root")
+    expect(renderedPrograms.length).toBe(2)
+    // C has no contract-scoped courses, so it must not appear.
+    expect(
+      screen.queryByRole("heading", { name: programC.title }),
+    ).not.toBeInTheDocument()
+  })
+
   test("Does not render program collection if all programs have no courses", async () => {
     const { orgX, programA, programB } = setupProgramsAndCourses()
 
@@ -736,6 +801,14 @@ describe("ContractContent", () => {
       }),
       { results: [programANoCourses, programB] },
     )
+    setMockResponse.get(
+      urls.programs.programsList({
+        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
+        page_size: 30,
+      }),
+      { results: [programANoCourses, programB] },
+    )
 
     // Mock bulk course API call - only programB has courses, so only its first course should be included
     const firstCourseBId = programB.courses[0]
@@ -745,6 +818,14 @@ describe("ContractContent", () => {
       urls.courses.coursesList({
         id: [firstCourseBId],
         contract_id: orgX.contracts[0].id,
+      }),
+      { results: [firstCourseB] },
+    )
+    setMockResponse.get(
+      urls.courses.coursesList({
+        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
+        page_size: 200,
       }),
       { results: [firstCourseB] },
     )

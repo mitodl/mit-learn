@@ -35,7 +35,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.68.0"
+VERSION = "0.68.5"
 
 log = logging.getLogger()
 
@@ -130,8 +130,8 @@ INSTALLED_APPS = (
     "widgets",
     "learning_resources",
     "learning_resources_search",
+    "website_content.apps.WebsiteContentConfig",
     "openapi",
-    "articles",
     "oauth2_provider",
     "news_events",
     "testimonials",

@@ -49,7 +49,7 @@ import "./vendor/components/tiptap-templates/simple/simple-editor.scss"
 
 import "./TiptapEditor.styles.scss"
 import { BannerViewer } from "./extensions/node/Banner/BannerNode"
-import { ArticleByLineInfoBarViewer } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarViewer"
+import { ByLineInfoBarViewer } from "./extensions/node/ByLineInfoBar/ByLineInfoBarViewer"
 import { ImageWithCaptionViewer } from "./extensions/node/Image/ImageWithCaption"
 import { DividerViewer } from "./extensions/node/Divider/DividerNode"
 import { LearningResourceButton } from "./extensions/ui/LearningResource/LearningResourceButton"
@@ -61,7 +61,7 @@ const Container = styled.div<{
 }>(({ theme, readOnly }) => ({
   maxWidth: "890px",
   minHeight: "calc(100vh - 350px)",
-  backgroundColor: theme.custom.colors.white,
+  backgroundColor: "transparent",
   borderRadius: "10px",
   margin: "0 auto",
 
@@ -71,6 +71,7 @@ const Container = styled.div<{
       padding: "0 16px",
     },
   },
+
   ...(readOnly
     ? {
         backgroundColor: "transparent",
@@ -272,17 +273,12 @@ interface TiptapEditorProps {
   editor: Editor
   readOnly?: boolean
   fullWidth?: boolean
-  className?: string
 }
 
-const TiptapEditor = ({ editor, className }: TiptapEditorProps) => {
+const TiptapEditor = ({ editor }: TiptapEditorProps) => {
   return (
-    <Container readOnly={false} data-testid="editor">
-      <EditorContent
-        editor={editor}
-        role="presentation"
-        className={className}
-      />
+    <Container readOnly data-testid="editor">
+      <EditorContent editor={editor} role="presentation" />
     </Container>
   )
 }
@@ -290,9 +286,11 @@ const TiptapEditor = ({ editor, className }: TiptapEditorProps) => {
 const TipTapViewer = ({
   content,
   extensions,
+  bannerViewer = BannerViewer,
 }: {
   content: JSONContent
   extensions: Array<Extension | Node | Mark>
+  bannerViewer?: typeof BannerViewer
 }) => {
   return (
     <Container readOnly data-testid="editor">
@@ -310,8 +308,8 @@ const TipTapViewer = ({
              * See https://tiptap.dev/docs/editor/api/utilities/static-renderer#react-nodeviews
              */
             nodeMapping: {
-              banner: BannerViewer,
-              byline: ArticleByLineInfoBarViewer,
+              banner: bannerViewer,
+              byline: ByLineInfoBarViewer,
               divider: DividerViewer,
               imageWithCaption: ImageWithCaptionViewer,
               learningResource: LearningResourceCardViewer,

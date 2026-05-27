@@ -35,7 +35,7 @@ def mock_articles(mocker):
     mock_queryset.select_related.return_value = [mock_article]
 
     mocker.patch(
-        "news_events.etl.articles_news.Article.objects.filter",
+        "news_events.etl.articles_news.WebsiteContent.objects.filter",
         return_value=mock_queryset,
     )
 
@@ -564,7 +564,7 @@ def test_extract_single_article():
         publish_date = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
         user = User()
 
-    result = articles_news.extract_single_article(MockArticle())
+    result = articles_news.extract_single_website_content(MockArticle())
 
     assert result["id"] == 1
     assert result["title"] == "Test Article"
@@ -633,13 +633,14 @@ def test_sync_single_article_to_news(mocker):
             ],
         }
         is_published = True
+        content_type = "news"
         created_on = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
         updated_on = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
         publish_date = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
         user = User()
 
     # Sync the article
-    articles_news.sync_single_article_to_news(MockArticle())
+    articles_news.sync_single_website_content_news_to_news(MockArticle())
 
     # Verify FeedSource was created/retrieved
     mock_get_or_create.assert_called_once()
@@ -660,7 +661,20 @@ def test_sync_single_article_unpublished(mocker):
         is_published = False
 
     # Sync the article
-    articles_news.sync_single_article_to_news(MockArticle())
+    articles_news.sync_single_website_content_news_to_news(MockArticle())
 
     # Verify load_feed_item was NOT called
+    mock_load_feed_item.assert_not_called()
+
+
+def test_sync_single_article_wrong_content_type(mocker):
+    """Test that articles with a content_type other than 'news' are not synced"""
+    mock_load_feed_item = mocker.patch("news_events.etl.loaders.load_feed_item")
+
+    class MockArticle:
+        is_published = True
+        content_type = "article"  # not WebsiteContentType.news
+
+    articles_news.sync_single_website_content_news_to_news(MockArticle())
+
     mock_load_feed_item.assert_not_called()

@@ -1,3 +1,19 @@
+/**
+ * Test layering — what belongs in THIS file:
+ *
+ * 1. Smoke / seam tests for the HomeEnrollmentsDisplay <-> useHomeDashboardData
+ *    integration: that the hook's output actually renders (e.g. N enrollments
+ *    -> N cards). Only the rendered component proves the seam — the hook test
+ *    asserts the data, not that it renders.
+ * 2. Genuine component-level concerns: simple display cases, a11y
+ *    roles/headings, user interactions (context-menu clicks, "Show all"
+ *    expand/collapse, empty / "My Learning" states).
+ *
+ * Exhaustive case coverage — bucketing, ordering, dedup, B2B filtering,
+ * completion math, language-key resolution — belongs in the pure model
+ * (model/dashboardViewModel.test.ts) or the hook tests
+ * (hooks/useHomeDashboardData.test.tsx), NOT here.
+ */
 import React from "react"
 import { act } from "@testing-library/react"
 import {
@@ -55,6 +71,46 @@ describe("HomeEnrollmentsDisplay", () => {
     expectedTitles.forEach((title, i) => {
       expect(cards[i]).toHaveTextContent(title)
     })
+  })
+
+  test("Renders one card per enrollment when a single course has multiple enrollments", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const sharedCourseId = faker.number.int()
+    const enrollmentA = mitxonline.factories.enrollment.courseEnrollment({
+      run: {
+        title: "Same Course — Run A",
+        course: { id: sharedCourseId },
+      },
+    })
+    const enrollmentB = mitxonline.factories.enrollment.courseEnrollment({
+      run: {
+        title: "Same Course — Run B",
+        course: { id: sharedCourseId },
+      },
+    })
+
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      enrollmentA,
+      enrollmentB,
+    ])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [],
+    )
+
+    renderWithProviders(<HomeEnrollmentsDisplay />)
+
+    await screen.findByRole("heading", { name: "My Learning" })
+    const cards = await screen.findAllByTestId("enrollment-card-desktop")
+    expect(cards).toHaveLength(2)
+    expect(
+      cards.find((c) => c.textContent?.includes("Same Course — Run A")),
+    ).toBeDefined()
+    expect(
+      cards.find((c) => c.textContent?.includes("Same Course — Run B")),
+    ).toBeDefined()
   })
 
   test("Renders the proper amount of unenroll and email settings buttons in the context menus", async () => {
@@ -777,6 +833,47 @@ describe("HomeEnrollmentsDisplay", () => {
     )
     expect(personalProgramCards.length).toBeGreaterThan(0)
     expect(screen.queryByText(b2bSimpleProgram.title)).not.toBeInTheDocument()
+  })
+
+  test("Filters B2B course enrollments from display", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+    const b2bEnrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: 42,
+      run: {
+        title: "B2B Hidden Course",
+        course: { title: "B2B Hidden Course" },
+      },
+    })
+    const nonB2BEnrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+      run: {
+        title: "Personal Visible Course",
+        course: { title: "Personal Visible Course" },
+      },
+    })
+
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      b2bEnrollment,
+      nonB2BEnrollment,
+    ])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [],
+    )
+
+    renderWithProviders(<HomeEnrollmentsDisplay />)
+
+    await screen.findByRole("heading", { name: "My Learning" })
+
+    const personalCourseCards = await screen.findAllByText(
+      nonB2BEnrollment.run.title,
+    )
+    expect(personalCourseCards.length).toBeGreaterThan(0)
+    expect(screen.queryByText(b2bEnrollment.run.title)).not.toBeInTheDocument()
   })
 
   test("Hides child program enrollments that are part of an enrolled parent program", async () => {
