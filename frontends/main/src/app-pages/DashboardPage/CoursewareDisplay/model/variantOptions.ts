@@ -53,8 +53,8 @@ const buildVariantLabel = (
  * Build deduplicated picker options from the union of `possible_variant_sets`
  * across all courses in a contract.
  *
- * Only active variants are included. A "Default / Original" option is always
- * prepended. Options are sorted alphabetically by label after the default.
+ * Only active variants are included. Options are sorted alphabetically by
+ * label.
  */
 const getDistinctContractVariantOptions = (
   courses: CourseWithCourseRunsSerializerV2[],
@@ -64,7 +64,7 @@ const getDistinctContractVariantOptions = (
 
   for (const course of courses) {
     for (const variant of course.possible_variant_sets ?? []) {
-      if (!variant.active || variant.default_variant) continue
+      if (!variant.active) continue
       const value = buildVariantKey(
         variant.language ?? "",
         variant.variant_industry as string,

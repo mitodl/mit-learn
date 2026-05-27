@@ -4,15 +4,14 @@ import { buildVariantKey } from "../model/variantOptions"
 
 type DashboardVariantPicker = {
   selectedVariant: SupportedVariant | null
-  setSelectedVariantValue: (value: string) => void
+  setSelectedVariant: (variant: SupportedVariant | null) => void
 }
 
 /**
  * Manages the selected variant state for the B2B contract dashboard picker.
  *
- * `null` means "Original" (show each course's default run).
- * Defaults to null. Falls back to null if the stored value no longer matches
- * any available variant (e.g. after course list changes).
+ * Defaults to the upstream-provided default variant when available, otherwise
+ * the first variant in the list.
  */
 const useDashboardVariantPicker = (
   availableVariants: SupportedVariant[],
@@ -20,18 +19,34 @@ const useDashboardVariantPicker = (
   const [pickedValue, setPickedValue] = useState<string | null>(null)
 
   const selectedVariant =
-    pickedValue !== null && pickedValue !== ""
-      ? (availableVariants.find(
-          (v) =>
-            buildVariantKey(
-              v.language ?? "",
-              (v.variant_industry as string) ?? "",
-              (v.variant_length as string) ?? "",
-            ) === pickedValue,
-        ) ?? null)
-      : null
+    availableVariants.find((variant) => {
+      const variantKey = buildVariantKey(
+        variant.language ?? "",
+        (variant.variant_industry as string) ?? "",
+        (variant.variant_length as string) ?? "",
+      )
+      return variantKey === pickedValue
+    }) ??
+    availableVariants.find((variant) => variant.default_variant) ??
+    availableVariants[0] ??
+    null
 
-  return { selectedVariant, setSelectedVariantValue: setPickedValue }
+  const setSelectedVariant = (variant: SupportedVariant | null) => {
+    if (variant === null) {
+      setPickedValue(null)
+      return
+    }
+
+    setPickedValue(
+      buildVariantKey(
+        variant.language ?? "",
+        (variant.variant_industry as string) ?? "",
+        (variant.variant_length as string) ?? "",
+      ),
+    )
+  }
+
+  return { selectedVariant, setSelectedVariant }
 }
 
 export { useDashboardVariantPicker }

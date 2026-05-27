@@ -28,7 +28,6 @@ import {
   type DashboardCourseEntry,
 } from "../model/dashboardViewModel"
 import {
-  buildVariantKey,
   getDistinctContractVariantOptions,
   selectVariantRunForCourse,
 } from "../model/variantOptions"
@@ -47,10 +46,9 @@ type ContractCollectionDisplayData = {
 type ContractDashboardData = {
   isLoading: boolean
   showNoPrograms: boolean
-  // variantOptions: ContractVariantOption[]
   variantOptions: SupportedVariant[]
-  selectedVariantValue: string
-  setSelectedVariantValue: (value: string) => void
+  selectedVariant: SupportedVariant | null
+  setSelectedVariant: (variant: SupportedVariant | null) => void
   programs: ContractProgramDisplayData[]
   collections: ContractCollectionDisplayData[]
   courseRunEnrollments: CourseRunEnrollmentV3[]
@@ -96,7 +94,7 @@ const useContractDashboardData = (
     [contractCourses],
   )
 
-  const { selectedVariant, setSelectedVariantValue } =
+  const { selectedVariant, setSelectedVariant } =
     useDashboardVariantPicker(variantOptions)
 
   // Lazy second-phase query: only fires when a non-default variant is selected.
@@ -230,14 +228,8 @@ const useContractDashboardData = (
       coursesQuery.isLoading,
     showNoPrograms: programRows.length === 0 && collectionRows.length === 0,
     variantOptions,
-    selectedVariantValue: selectedVariant
-      ? buildVariantKey(
-          selectedVariant.language ?? "",
-          (selectedVariant.variant_industry as string) ?? "",
-          (selectedVariant.variant_length as string) ?? "",
-        )
-      : "",
-    setSelectedVariantValue,
+    selectedVariant,
+    setSelectedVariant,
     programs: programRows,
     collections: collectionRows,
     courseRunEnrollments,

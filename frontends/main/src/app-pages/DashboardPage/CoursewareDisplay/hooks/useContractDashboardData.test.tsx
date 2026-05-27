@@ -73,6 +73,6 @@ describe("useContractDashboardData", () => {
       programA.courses[0],
     ])
 
-    expect(result.current.selectedVariantValue).toBe("")
+    expect(result.current.selectedVariant).toBeNull()
   })
 })
