@@ -774,12 +774,6 @@ export interface CourseResource {
   certification: boolean
   /**
    *
-   * @type {string}
-   * @memberof CourseResource
-   */
-  created_on: string
-  /**
-   *
    * @type {CourseResourceCertificationType}
    * @memberof CourseResource
    */
@@ -868,6 +862,12 @@ export interface CourseResource {
    * @memberof CourseResource
    */
   course: Course
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResource
+   */
+  created_on: string
   /**
    *
    * @type {string}
@@ -1589,12 +1589,6 @@ export interface DocumentResource {
   certification: boolean
   /**
    *
-   * @type {string}
-   * @memberof DocumentResource
-   */
-  created_on: string
-  /**
-   *
    * @type {CourseResourceCertificationType}
    * @memberof DocumentResource
    */
@@ -1689,6 +1683,12 @@ export interface DocumentResource {
    * @memberof DocumentResource
    */
   description: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof DocumentResource
+   */
+  created_on: string
   /**
    *
    * @type {string}
@@ -3376,12 +3376,6 @@ export interface LearningPathResource {
   certification: boolean
   /**
    *
-   * @type {string}
-   * @memberof LearningPathResource
-   */
-  created_on: string
-  /**
-   *
    * @type {CourseResourceCertificationType}
    * @memberof LearningPathResource
    */
@@ -3476,6 +3470,12 @@ export interface LearningPathResource {
    * @memberof LearningPathResource
    */
   learning_path: LearningPath
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  created_on: string
   /**
    *
    * @type {string}
@@ -6909,12 +6909,6 @@ export interface PodcastEpisodeResource {
   certification: boolean
   /**
    *
-   * @type {string}
-   * @memberof PodcastEpisodeResource
-   */
-  created_on: string
-  /**
-   *
    * @type {CourseResourceCertificationType}
    * @memberof PodcastEpisodeResource
    */
@@ -7003,6 +6997,12 @@ export interface PodcastEpisodeResource {
    * @memberof PodcastEpisodeResource
    */
   podcast_episode: PodcastEpisode
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  created_on: string
   /**
    *
    * @type {string}
@@ -7405,12 +7405,6 @@ export interface PodcastResource {
   certification: boolean
   /**
    *
-   * @type {string}
-   * @memberof PodcastResource
-   */
-  created_on: string
-  /**
-   *
    * @type {CourseResourceCertificationType}
    * @memberof PodcastResource
    */
@@ -7499,6 +7493,12 @@ export interface PodcastResource {
    * @memberof PodcastResource
    */
   podcast: Podcast
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  created_on: string
   /**
    *
    * @type {string}
@@ -8145,12 +8145,6 @@ export interface ProgramResource {
   certification: boolean
   /**
    *
-   * @type {string}
-   * @memberof ProgramResource
-   */
-  created_on: string
-  /**
-   *
    * @type {CourseResourceCertificationType}
    * @memberof ProgramResource
    */
@@ -8239,6 +8233,12 @@ export interface ProgramResource {
    * @memberof ProgramResource
    */
   program: Program
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  created_on: string
   /**
    *
    * @type {string}
@@ -9446,12 +9446,6 @@ export interface VideoPlaylistResource {
   certification: boolean
   /**
    *
-   * @type {string}
-   * @memberof VideoPlaylistResource
-   */
-  created_on: string
-  /**
-   *
    * @type {CourseResourceCertificationType}
    * @memberof VideoPlaylistResource
    */
@@ -9540,6 +9534,12 @@ export interface VideoPlaylistResource {
    * @memberof VideoPlaylistResource
    */
   video_playlist: VideoPlaylist
+  /**
+   *
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  created_on: string
   /**
    *
    * @type {string}
@@ -9924,12 +9924,6 @@ export interface VideoResource {
   certification: boolean
   /**
    *
-   * @type {string}
-   * @memberof VideoResource
-   */
-  created_on: string
-  /**
-   *
    * @type {CourseResourceCertificationType}
    * @memberof VideoResource
    */
@@ -10036,6 +10030,12 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   description: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoResource
+   */
+  created_on: string
   /**
    *
    * @type {string}

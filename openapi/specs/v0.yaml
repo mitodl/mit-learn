@@ -2287,10 +2287,6 @@ components:
         certification:
           type: boolean
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         certification_type:
           type: object
           title: CourseResourceCertificationType
@@ -2419,6 +2415,10 @@ components:
         course:
           allOf:
           - $ref: '#/components/schemas/Course'
+          readOnly: true
+        created_on:
+          type: string
+          format: date-time
           readOnly: true
         updated_on:
           type: string
@@ -2748,10 +2748,6 @@ components:
         certification:
           type: boolean
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         certification_type:
           type: object
           title: CourseResourceCertificationType
@@ -2886,6 +2882,10 @@ components:
         description:
           type: string
           nullable: true
+          readOnly: true
+        created_on:
+          type: string
+          format: date-time
           readOnly: true
         updated_on:
           type: string
@@ -3275,10 +3275,6 @@ components:
         certification:
           type: boolean
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         certification_type:
           type: object
           title: CourseResourceCertificationType
@@ -3412,6 +3408,10 @@ components:
         learning_path:
           allOf:
           - $ref: '#/components/schemas/LearningPath'
+          readOnly: true
+        created_on:
+          type: string
+          format: date-time
           readOnly: true
         updated_on:
           type: string
@@ -4662,10 +4662,6 @@ components:
         certification:
           type: boolean
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         certification_type:
           type: object
           title: CourseResourceCertificationType
@@ -4794,6 +4790,10 @@ components:
         podcast_episode:
           allOf:
           - $ref: '#/components/schemas/PodcastEpisode'
+          readOnly: true
+        created_on:
+          type: string
+          format: date-time
           readOnly: true
         updated_on:
           type: string
@@ -4967,10 +4967,6 @@ components:
         certification:
           type: boolean
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         certification_type:
           type: object
           title: CourseResourceCertificationType
@@ -5099,6 +5095,10 @@ components:
         podcast:
           allOf:
           - $ref: '#/components/schemas/Podcast'
+          readOnly: true
+        created_on:
+          type: string
+          format: date-time
           readOnly: true
         updated_on:
           type: string
@@ -5559,10 +5559,6 @@ components:
         certification:
           type: boolean
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         certification_type:
           type: object
           title: CourseResourceCertificationType
@@ -5691,6 +5687,10 @@ components:
         program:
           allOf:
           - $ref: '#/components/schemas/Program'
+          readOnly: true
+        created_on:
+          type: string
+          format: date-time
           readOnly: true
         updated_on:
           type: string
@@ -6353,10 +6353,6 @@ components:
         certification:
           type: boolean
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         certification_type:
           type: object
           title: CourseResourceCertificationType
@@ -6485,6 +6481,10 @@ components:
         video_playlist:
           allOf:
           - $ref: '#/components/schemas/VideoPlaylist'
+          readOnly: true
+        created_on:
+          type: string
+          format: date-time
           readOnly: true
         updated_on:
           type: string
@@ -6658,10 +6658,6 @@ components:
         certification:
           type: boolean
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         certification_type:
           type: object
           title: CourseResourceCertificationType
@@ -6807,6 +6803,10 @@ components:
         description:
           type: string
           nullable: true
+          readOnly: true
+        created_on:
+          type: string
+          format: date-time
           readOnly: true
         updated_on:
           type: string
