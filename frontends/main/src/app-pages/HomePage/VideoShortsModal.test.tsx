@@ -58,6 +58,7 @@ jest.mock("@/app-pages/VideoPlaylistCollectionPage/VideoJsPlayer", () => ({
     }
     mockHandles.push(handle)
 
+    // eslint-disable-next-line jsx-a11y/media-has-caption
     return <video src={sources[0]?.src} />
   },
 }))
