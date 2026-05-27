@@ -861,12 +861,6 @@ export interface CourseResource {
    * @type {string}
    * @memberof CourseResource
    */
-  updated_on: string
-  /**
-   *
-   * @type {string}
-   * @memberof CourseResource
-   */
   readable_id: string
   /**
    *
@@ -1671,12 +1665,6 @@ export interface DocumentResource {
    * @memberof DocumentResource
    */
   description: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof DocumentResource
-   */
-  updated_on: string
   /**
    *
    * @type {string}
@@ -3434,12 +3422,6 @@ export interface LearningPathResource {
    * @memberof LearningPathResource
    */
   learning_path: LearningPath
-  /**
-   *
-   * @type {string}
-   * @memberof LearningPathResource
-   */
-  updated_on: string
   /**
    *
    * @type {string}
@@ -6906,12 +6888,6 @@ export interface PodcastEpisodeResource {
    * @type {string}
    * @memberof PodcastEpisodeResource
    */
-  updated_on: string
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastEpisodeResource
-   */
   readable_id: string
   /**
    *
@@ -7391,12 +7367,6 @@ export interface PodcastResource {
    * @memberof PodcastResource
    */
   podcast: Podcast
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastResource
-   */
-  updated_on: string
   /**
    *
    * @type {string}
@@ -8119,12 +8089,6 @@ export interface ProgramResource {
    * @memberof ProgramResource
    */
   program: Program
-  /**
-   *
-   * @type {string}
-   * @memberof ProgramResource
-   */
-  updated_on: string
   /**
    *
    * @type {string}
@@ -9389,12 +9353,6 @@ export interface VideoPlaylistResource {
    * @type {string}
    * @memberof VideoPlaylistResource
    */
-  updated_on: string
-  /**
-   *
-   * @type {string}
-   * @memberof VideoPlaylistResource
-   */
   readable_id: string
   /**
    *
@@ -9874,12 +9832,6 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   description: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof VideoResource
-   */
-  updated_on: string
   /**
    *
    * @type {string}

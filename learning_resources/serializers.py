@@ -1123,7 +1123,7 @@ class LearningResourceRelationshipChildField(serializers.ModelSerializer):
         )
 
 
-@extend_schema_serializer(exclude_fields=("created_on",))
+@extend_schema_serializer(exclude_fields=COMMON_IGNORED_FIELDS)
 class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopicsMixin):
     """Serializer for LearningResource, minus program"""
 
