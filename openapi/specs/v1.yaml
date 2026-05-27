@@ -10399,10 +10399,6 @@ components:
         certification:
           type: boolean
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         certification_type:
           type: object
           title: CourseResourceCertificationType
@@ -10637,7 +10633,6 @@ components:
       - children
       - course
       - course_feature
-      - created_on
       - delivery
       - departments
       - format
@@ -10932,10 +10927,6 @@ components:
         certification:
           type: boolean
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         certification_type:
           type: object
           title: CourseResourceCertificationType
@@ -11173,7 +11164,6 @@ components:
       - children
       - content_files
       - course_feature
-      - created_on
       - delivery
       - departments
       - description
@@ -12033,10 +12023,6 @@ components:
         certification:
           type: boolean
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         certification_type:
           type: object
           title: CourseResourceCertificationType
@@ -12271,7 +12257,6 @@ components:
       - certification_type
       - children
       - course_feature
-      - created_on
       - delivery
       - departments
       - format
@@ -14785,10 +14770,6 @@ components:
         certification:
           type: boolean
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         certification_type:
           type: object
           title: CourseResourceCertificationType
@@ -15022,7 +15003,6 @@ components:
       - certification_type
       - children
       - course_feature
-      - created_on
       - delivery
       - departments
       - format
@@ -15210,10 +15190,6 @@ components:
           nullable: true
         certification:
           type: boolean
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         certification_type:
           type: object
@@ -15448,7 +15424,6 @@ components:
       - certification_type
       - children
       - course_feature
-      - created_on
       - delivery
       - departments
       - format
@@ -15784,10 +15759,6 @@ components:
         certification:
           type: boolean
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         certification_type:
           type: object
           title: CourseResourceCertificationType
@@ -16021,7 +15992,6 @@ components:
       - certification_type
       - children
       - course_feature
-      - created_on
       - delivery
       - departments
       - format
@@ -16687,10 +16657,6 @@ components:
         certification:
           type: boolean
           readOnly: true
-        created_on:
-          type: string
-          format: date-time
-          readOnly: true
         certification_type:
           type: object
           title: CourseResourceCertificationType
@@ -16924,7 +16890,6 @@ components:
       - certification_type
       - children
       - course_feature
-      - created_on
       - delivery
       - departments
       - format
@@ -17096,10 +17061,6 @@ components:
           nullable: true
         certification:
           type: boolean
-          readOnly: true
-        created_on:
-          type: string
-          format: date-time
           readOnly: true
         certification_type:
           type: object
@@ -17349,7 +17310,6 @@ components:
       - children
       - content_files
       - course_feature
-      - created_on
       - delivery
       - departments
       - description

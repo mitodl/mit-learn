@@ -774,12 +774,6 @@ export interface CourseResource {
   certification: boolean
   /**
    *
-   * @type {string}
-   * @memberof CourseResource
-   */
-  created_on: string
-  /**
-   *
    * @type {CourseResourceCertificationType}
    * @memberof CourseResource
    */
@@ -1587,12 +1581,6 @@ export interface DocumentResource {
    * @memberof DocumentResource
    */
   certification: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof DocumentResource
-   */
-  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -3374,12 +3362,6 @@ export interface LearningPathResource {
    * @memberof LearningPathResource
    */
   certification: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof LearningPathResource
-   */
-  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -6909,12 +6891,6 @@ export interface PodcastEpisodeResource {
   certification: boolean
   /**
    *
-   * @type {string}
-   * @memberof PodcastEpisodeResource
-   */
-  created_on: string
-  /**
-   *
    * @type {CourseResourceCertificationType}
    * @memberof PodcastEpisodeResource
    */
@@ -7403,12 +7379,6 @@ export interface PodcastResource {
    * @memberof PodcastResource
    */
   certification: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastResource
-   */
-  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -8143,12 +8113,6 @@ export interface ProgramResource {
    * @memberof ProgramResource
    */
   certification: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof ProgramResource
-   */
-  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
@@ -9446,12 +9410,6 @@ export interface VideoPlaylistResource {
   certification: boolean
   /**
    *
-   * @type {string}
-   * @memberof VideoPlaylistResource
-   */
-  created_on: string
-  /**
-   *
    * @type {CourseResourceCertificationType}
    * @memberof VideoPlaylistResource
    */
@@ -9922,12 +9880,6 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   certification: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof VideoResource
-   */
-  created_on: string
   /**
    *
    * @type {CourseResourceCertificationType}
