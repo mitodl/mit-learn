@@ -73,12 +73,7 @@ const CarouselSlide = styled("div", {
   margin: "30px 0",
   position: "relative",
   [theme.breakpoints.down("md")]: {
-    // Don't override width — keep the computed portrait pixel width so
-    // CarouselScroll's alignItems: "center" can center it in the overlay.
-    // maxWidth: 100% caps it on phones narrower than the portrait width.
     maxWidth: "100%",
-    // Restore height behaviour from the original: flex-basis + margin add
-    // up to 100% of the carousel height so the slide fills the viewport.
     height: "100%",
     margin: "10px 0",
     flex: "0 0 calc(100% - 20px)",
@@ -86,13 +81,6 @@ const CarouselSlide = styled("div", {
   },
 }))
 
-/**
- * Wrapper that fills its parent CarouselSlide completely.
- * CarouselSlide owns the fixed portrait dimensions; CarouselScroll's
- * alignItems: "center" horizontally centers it in the overlay.
- * object-fit: cover on .vjs-tech ensures portrait content fills without
- * letterboxing regardless of the container aspect ratio.
- */
 const VideoPlayerContainer = styled("div")(({ theme }) => ({
   width: "100%",
   height: "100%",
@@ -128,11 +116,6 @@ const Placeholder = styled.div(({ theme }) => ({
   },
 }))
 
-/**
- * Player getter methods in video.js have overloaded signatures (getter + setter),
- * so TypeScript types their return as `T | undefined`. These helpers normalise
- * that to plain booleans/numbers so callers don't need to spread `?? 0` noise.
- */
 const playerPaused = (player: Player): boolean => player.paused() !== false
 const playerEnded = (player: Player): boolean => player.ended() !== false
 const playerCurrentTime = (player: Player): number => player.currentTime() ?? 0
@@ -245,6 +228,7 @@ const VideoShortsModal = ({
   onClose,
 }: VideoShortsModalProps) => {
   const { height } = useWindowDimensions()
+  const videoHeight = Math.max(height - MODAL_VERTICAL_PADDING, 0)
   const [selectedIndex, setSelectedIndex] = useState<number | null>(startIndex)
   const [muted, setMuted] = useState(true)
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
@@ -350,11 +334,8 @@ const VideoShortsModal = ({
         initialSlide={startIndex}
         onSlidesInView={onSlidesInView}
       >
-        {videoData?.map((video: VideoResource, index: number) => {
-          const videoHeight = Math.max(height - MODAL_VERTICAL_PADDING, 0)
-
-          return (
-            <CarouselSlide
+        {videoData?.map((video: VideoResource, index: number) => (
+          <CarouselSlide
               key={video.id}
               width={videoHeight * PORTRAIT_ASPECT_RATIO}
               height={videoHeight}
@@ -387,8 +368,7 @@ const VideoShortsModal = ({
                 <Placeholder />
               )}
             </CarouselSlide>
-          )
-        })}
+        ))}
       </CarouselV2Vertical>
     </Overlay>
   )
