@@ -4,10 +4,66 @@ import type { VideoResource } from "api/v1"
 import { ResourceTypeEnum } from "api/v1"
 import { factories } from "api/test-utils"
 import { renderWithProviders, screen, user, fireEvent, act } from "@/test-utils"
+import type Player from "video.js/dist/types/player"
 
-// JSDOM does not implement HTMLMediaElement methods
-window.HTMLMediaElement.prototype.play = jest.fn(() => Promise.resolve())
-window.HTMLMediaElement.prototype.pause = jest.fn()
+// Stub VideoJsPlayer to avoid loading video.js in the test environment.
+// Captures the onReady callback so tests can simulate the player being ready,
+// and renders a plain <video> so existing DOM queries keep working.
+type MockPlayerHandle = {
+  player: ReturnType<typeof makeMockPlayer>
+  triggerReady: () => void
+  triggerError: () => void
+}
+
+const makeMockPlayer = () => ({
+  play: jest.fn(() => Promise.resolve()),
+  pause: jest.fn(),
+  paused: jest.fn(() => true),
+  ended: jest.fn(() => false),
+  currentTime: jest.fn(() => 0),
+  readyState: jest.fn(() => 0),
+  duration: jest.fn(() => 0),
+  muted: jest.fn(() => true),
+  loop: jest.fn(),
+  on: jest.fn(),
+  one: jest.fn(),
+  el: jest.fn(() => ({ style: {} })),
+  isDisposed: jest.fn(() => false),
+  dispose: jest.fn(),
+})
+
+const mockHandles: MockPlayerHandle[] = []
+
+jest.mock(
+  "@/app-pages/VideoPlaylistCollectionPage/VideoJsPlayer",
+  () => ({
+    __esModule: true,
+    default: ({
+      sources,
+      onReady,
+    }: {
+      sources: { src: string; type: string }[]
+      onReady?: (player: Player) => void
+    }) => {
+      const mockPlayer = makeMockPlayer()
+
+      // Wire up the error handler so tests can fire it
+      const handle: MockPlayerHandle = {
+        player: mockPlayer,
+        triggerReady: () => onReady?.(mockPlayer as unknown as Player),
+        triggerError: () => {
+          const errorCb = (mockPlayer.on as jest.Mock).mock.calls.find(
+            ([event]: [string]) => event === "error",
+          )?.[1]
+          errorCb?.(new Event("error"))
+        },
+      }
+      mockHandles.push(handle)
+
+      return <video src={sources[0]?.src} />
+    },
+  }),
+)
 
 const makeVideoResource = (
   overrides: Partial<VideoResource> = {},
@@ -25,6 +81,10 @@ const makeVideoResource = (
   }) as VideoResource
 
 describe("VideoShortsModal", () => {
+  beforeEach(() => {
+    mockHandles.length = 0
+  })
+
   const defaultProps = {
     startIndex: 0,
     videoData: [
@@ -71,7 +131,7 @@ describe("VideoShortsModal", () => {
     expect(buttons[1]).toBeInTheDocument()
   })
 
-  test("renders native video elements for nearby slides", () => {
+  test("renders video elements for nearby slides", () => {
     renderWithProviders(<VideoShortsModal {...defaultProps} />)
 
     const videos = document.querySelectorAll("video")
@@ -105,10 +165,10 @@ describe("VideoShortsModal", () => {
       />,
     )
 
-    const video = document.querySelector("video")
-
     await act(async () => {
-      if (video) fireEvent.error(video)
+      // Simulate the VideoJsPlayer calling onReady, then firing an error
+      mockHandles[0]?.triggerReady()
+      mockHandles[0]?.triggerError()
     })
 
     expect(screen.getByText("Playback errored!")).toBeInTheDocument()
@@ -148,5 +208,31 @@ describe("VideoShortsModal", () => {
     )
 
     expect(screen.getAllByRole("button").length).toBeGreaterThanOrEqual(2)
+  })
+
+  test("renders placeholder (not video player) when streaming_url is null", () => {
+    const videoData = [
+      makeVideoResource({
+        title: "No URL Video",
+        video: {
+          id: 1,
+          streaming_url: null,
+          duration: "PT1M",
+          caption_urls: [],
+          cover_image_url: null,
+        },
+      }),
+    ]
+
+    renderWithProviders(
+      <VideoShortsModal
+        startIndex={0}
+        videoData={videoData}
+        onClose={jest.fn()}
+      />,
+    )
+
+    // No VideoJsPlayer rendered — no <video> element in the DOM
+    expect(document.querySelector("video")).toBeNull()
   })
 })

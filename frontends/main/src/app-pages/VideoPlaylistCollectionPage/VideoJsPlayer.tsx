@@ -20,6 +20,9 @@ export type VideoJsPlayerProps = {
   autoplay?: boolean
   controls?: boolean
   fluid?: boolean
+  loop?: boolean
+  bigPlayButton?: boolean
+  playsinline?: boolean
   ariaLabel?: string
   ariaDescribedBy?: string
   onReady?: (player: Player) => void
@@ -36,6 +39,9 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
   autoplay = true,
   controls = true,
   fluid = true,
+  loop = false,
+  bigPlayButton = true,
+  playsinline = false,
   ariaLabel,
   ariaDescribedBy,
   onReady,
@@ -95,6 +101,9 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
         controls,
         fluid,
         fill: !fluid,
+        loop,
+        bigPlayButton,
+        playsinline,
         responsive: true,
         poster: poster ?? undefined,
         sources,
@@ -119,9 +128,12 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
     ariaDescribedBy,
     ariaLabel,
     autoplay,
+    bigPlayButton,
     controls,
     fluid,
+    loop,
     onReady,
+    playsinline,
     poster,
     sources,
     tracks,
