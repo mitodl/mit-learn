@@ -108,4 +108,36 @@ describe("request mocking", () => {
     )
     expect(responseStatus).toBe("resolved")
   })
+
+  test("resolves relative URLs against baseURL with path prefixes", async () => {
+    axios.defaults.baseURL = "http://example.test/mitxonline"
+    setMockResponse.get("http://example.test/mitxonline/api/v0/baskets/", {
+      ok: true,
+    })
+
+    const response = await axios.get("/api/v0/baskets/")
+
+    expect(response.data).toEqual({ ok: true })
+  })
+
+  test("records resolved request URLs when baseURL is configured", async () => {
+    axios.defaults.baseURL = "http://example.test/mitxonline"
+    setMockResponse.post(
+      "http://example.test/mitxonline/api/v0/baskets/create_from_product/7/",
+      { ok: true },
+    )
+
+    await axios.request({
+      method: "POST",
+      url: "/api/v0/baskets/create_from_product/7/",
+      data: JSON.stringify({ product_id: 7 }),
+    })
+
+    expect(axios.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "POST",
+        url: "http://example.test/mitxonline/api/v0/baskets/create_from_product/7/",
+      }),
+    )
+  })
 })

@@ -1,14 +1,34 @@
 import axios from "axios"
+import type { LearnApiConfig } from "./runtime"
 
-/**
- * Our axios instance with default baseURL, headers, etc.
- */
 const instance = axios.create({
-  xsrfCookieName: process.env.NEXT_PUBLIC_CSRF_COOKIE_NAME,
   xsrfHeaderName: "X-CSRFToken",
   withXSRFToken: true,
-  withCredentials:
-    process.env.NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS === "true",
 })
+
+let configured = false
+
+instance.interceptors.request.use((request) => {
+  if (!configured) {
+    throw new Error(
+      "API clients are not configured. Call configureApiClients(...) before making requests.",
+    )
+  }
+  return request
+})
+
+export const applyLearnAxiosConfig = (config: LearnApiConfig) => {
+  instance.defaults.baseURL = config.baseUrl
+  instance.defaults.xsrfCookieName = config.csrfCookieName
+  instance.defaults.withCredentials = config.withCredentials
+  configured = true
+}
+
+export const resetLearnAxiosForTests = () => {
+  configured = false
+  delete instance.defaults.baseURL
+  delete instance.defaults.xsrfCookieName
+  delete instance.defaults.withCredentials
+}
 
 export default instance

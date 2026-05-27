@@ -5,6 +5,7 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/generated/v1/api.ts",
+    "./runtime": "./src/runtime/index.ts",
     "./v0": "./src/generated/v0/api.ts",
     "./v1": "./src/generated/v1/api.ts",
     "./hooks/*": "./src/hooks/*/index.ts",

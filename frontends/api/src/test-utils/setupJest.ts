@@ -9,3 +9,22 @@ jest.mock("axios", () => mockAxiosFactory())
 beforeEach(() => {
   assertMockAdapterInstalled()
 })
+
+const { configureApiClients } = require("../runtime")
+
+configureApiClients({
+  learn: {
+    baseUrl:
+      process.env.NEXT_PUBLIC_MITOL_API_BASE_URL ??
+      "http://api.test.learn.odl.local:8065",
+    csrfCookieName: "csrftoken",
+    withCredentials: false,
+  },
+  mitxonline: {
+    baseUrl:
+      process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL ??
+      "http://api.test.learn.odl.local:8065/mitxonline",
+    csrfCookieName: "mitxcsrftoken",
+    withCredentials: false,
+  },
+})
