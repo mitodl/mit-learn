@@ -1427,7 +1427,9 @@ paths:
           type: number
           format: double
           default: 0.0
-        description: The minimum score a result must have to be returned
+        description: The minimum score a result must have to be returned. Defaults
+          to 0.0 when omitted, but the server clamps the effective cutoff to the minimum
+          allowed for the selected search mode (dense or hybrid).
       - in: query
         name: sortby
         schema:
