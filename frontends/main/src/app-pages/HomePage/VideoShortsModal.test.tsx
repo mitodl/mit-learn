@@ -34,36 +34,33 @@ const makeMockPlayer = () => ({
 
 const mockHandles: MockPlayerHandle[] = []
 
-jest.mock(
-  "@/app-pages/VideoPlaylistCollectionPage/VideoJsPlayer",
-  () => ({
-    __esModule: true,
-    default: ({
-      sources,
-      onReady,
-    }: {
-      sources: { src: string; type: string }[]
-      onReady?: (player: Player) => void
-    }) => {
-      const mockPlayer = makeMockPlayer()
+jest.mock("@/app-pages/VideoPlaylistCollectionPage/VideoJsPlayer", () => ({
+  __esModule: true,
+  default: ({
+    sources,
+    onReady,
+  }: {
+    sources: { src: string; type: string }[]
+    onReady?: (player: Player) => void
+  }) => {
+    const mockPlayer = makeMockPlayer()
 
-      // Wire up the error handler so tests can fire it
-      const handle: MockPlayerHandle = {
-        player: mockPlayer,
-        triggerReady: () => onReady?.(mockPlayer as unknown as Player),
-        triggerError: () => {
-          const errorCb = (mockPlayer.on as jest.Mock).mock.calls.find(
-            ([event]: [string]) => event === "error",
-          )?.[1]
-          errorCb?.(new Event("error"))
-        },
-      }
-      mockHandles.push(handle)
+    // Wire up the error handler so tests can fire it
+    const handle: MockPlayerHandle = {
+      player: mockPlayer,
+      triggerReady: () => onReady?.(mockPlayer as unknown as Player),
+      triggerError: () => {
+        const errorCb = (mockPlayer.on as jest.Mock).mock.calls.find(
+          ([event]: [string]) => event === "error",
+        )?.[1]
+        errorCb?.(new Event("error"))
+      },
+    }
+    mockHandles.push(handle)
 
-      return <video src={sources[0]?.src} />
-    },
-  }),
-)
+    return <video src={sources[0]?.src} />
+  },
+}))
 
 const makeVideoResource = (
   overrides: Partial<VideoResource> = {},

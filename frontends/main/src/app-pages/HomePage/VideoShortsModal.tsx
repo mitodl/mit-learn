@@ -273,8 +273,9 @@ const VideoShortsModal = ({
   const onSlidesInView = (inView: number[]) => {
     if (inView.length === 1) {
       playersRef.current
-        .filter((player, index): player is Player =>
-          player !== null && index !== inView[0],
+        .filter(
+          (player, index): player is Player =>
+            player !== null && index !== inView[0],
         )
         .forEach((player) => player.pause())
       setSelectedIndex(inView[0])
@@ -336,38 +337,38 @@ const VideoShortsModal = ({
       >
         {videoData?.map((video: VideoResource, index: number) => (
           <CarouselSlide
-              key={video.id}
-              width={videoHeight * PORTRAIT_ASPECT_RATIO}
-              height={videoHeight}
-              data-index={index}
-            >
-              {selectedIndex !== null && Math.abs(selectedIndex - index) < 2 ? (
-                videoErrors[index] ? (
-                  <Placeholder>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <Image
-                      src={MITOpenLearningLogo.src}
-                      alt="MIT Open Learning Logo"
-                      width={178}
-                      height={47}
-                      style={{ filter: "brightness(0) invert(1)" }}
-                    />
-                    <Typography variant="h4">Playback errored!</Typography>
-                    <Typography variant="h2">{video.title}</Typography>
-                  </Placeholder>
-                ) : (
-                  <VideoWithErrorHandler
-                    index={index}
-                    video={video}
-                    playersRef={playersRef}
-                    onError={onVideoError}
-                    onVideoClick={handleVideoClick}
+            key={video.id}
+            width={videoHeight * PORTRAIT_ASPECT_RATIO}
+            height={videoHeight}
+            data-index={index}
+          >
+            {selectedIndex !== null && Math.abs(selectedIndex - index) < 2 ? (
+              videoErrors[index] ? (
+                <Placeholder>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <Image
+                    src={MITOpenLearningLogo.src}
+                    alt="MIT Open Learning Logo"
+                    width={178}
+                    height={47}
+                    style={{ filter: "brightness(0) invert(1)" }}
                   />
-                )
+                  <Typography variant="h4">Playback errored!</Typography>
+                  <Typography variant="h2">{video.title}</Typography>
+                </Placeholder>
               ) : (
-                <Placeholder />
-              )}
-            </CarouselSlide>
+                <VideoWithErrorHandler
+                  index={index}
+                  video={video}
+                  playersRef={playersRef}
+                  onError={onVideoError}
+                  onVideoClick={handleVideoClick}
+                />
+              )
+            ) : (
+              <Placeholder />
+            )}
+          </CarouselSlide>
         ))}
       </CarouselV2Vertical>
     </Overlay>
