@@ -1,6 +1,6 @@
 import { useState } from "react"
 import type { SupportedVariant } from "@mitodl/mitxonline-api-axios/v2"
-import { buildVariantKey } from "../model/variantOptions"
+import { buildVariantKey } from "../model/dashboardViewModel"
 
 type DashboardVariantPicker = {
   selectedVariant: SupportedVariant | null

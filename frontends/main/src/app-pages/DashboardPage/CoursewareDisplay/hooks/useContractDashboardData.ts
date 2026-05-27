@@ -20,17 +20,15 @@ import type {
 import {
   buildCourseEntry,
   getCollectionFirstCoursesInDisplayOrder,
+  getDistinctContractVariantOptions,
   getProgramCoursesInContractOrder,
   getRenderableContractCollections,
   getSortedStandaloneContractPrograms,
   groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
+  selectVariantRunForCourse,
   type DashboardCourseEntry,
 } from "../model/dashboardViewModel"
-import {
-  getDistinctContractVariantOptions,
-  selectVariantRunForCourse,
-} from "../model/variantOptions"
 
 type ContractProgramDisplayData = {
   program: V2Program
