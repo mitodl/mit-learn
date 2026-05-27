@@ -1137,7 +1137,6 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
         read_only=True, allow_null=True, many=True
     )
     certification = serializers.ReadOnlyField(read_only=True)
-    created_on = serializers.ReadOnlyField(read_only=True)
     certification_type = CertificateTypeField(read_only=True)
     prices = serializers.ListField(
         child=serializers.DecimalField(max_digits=12, decimal_places=2),
@@ -1229,6 +1228,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
             "resources",
             "etl_source",
             "view_count",
+            "updated_on",
         ]
 
 
