@@ -2420,6 +2420,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/Course'
           readOnly: true
+        updated_on:
+          type: string
+          format: date-time
+          readOnly: true
         readable_id:
           type: string
           readOnly: true
@@ -2542,6 +2546,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - updated_on
       - views
     CourseResourceResourceTypeEnum:
       type: string
@@ -2882,6 +2887,10 @@ components:
           type: string
           nullable: true
           readOnly: true
+        updated_on:
+          type: string
+          format: date-time
+          readOnly: true
         readable_id:
           type: string
           readOnly: true
@@ -3002,6 +3011,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - updated_on
       - views
     DocumentResourceResourceTypeEnum:
       type: string
@@ -3403,6 +3413,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/LearningPath'
           readOnly: true
+        updated_on:
+          type: string
+          format: date-time
+          readOnly: true
         readable_id:
           type: string
           readOnly: true
@@ -3521,6 +3535,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - updated_on
       - views
     LearningPathResourceResourceTypeEnum:
       type: string
@@ -4780,6 +4795,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/PodcastEpisode'
           readOnly: true
+        updated_on:
+          type: string
+          format: date-time
+          readOnly: true
         readable_id:
           type: string
           readOnly: true
@@ -4902,6 +4921,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - updated_on
       - views
     PodcastEpisodeResourceResourceTypeEnum:
       type: string
@@ -5080,6 +5100,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/Podcast'
           readOnly: true
+        updated_on:
+          type: string
+          format: date-time
+          readOnly: true
         readable_id:
           type: string
           readOnly: true
@@ -5202,6 +5226,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - updated_on
       - views
     PodcastResourceResourceTypeEnum:
       type: string
@@ -5667,6 +5692,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/Program'
           readOnly: true
+        updated_on:
+          type: string
+          format: date-time
+          readOnly: true
         readable_id:
           type: string
           readOnly: true
@@ -5789,6 +5818,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - updated_on
       - views
     ProgramResourceResourceTypeEnum:
       type: string
@@ -6456,6 +6486,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/VideoPlaylist'
           readOnly: true
+        updated_on:
+          type: string
+          format: date-time
+          readOnly: true
         readable_id:
           type: string
           readOnly: true
@@ -6577,6 +6611,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - updated_on
       - video_playlist
       - views
     VideoPlaylistResourceResourceTypeEnum:
@@ -6773,6 +6808,10 @@ components:
           type: string
           nullable: true
           readOnly: true
+        updated_on:
+          type: string
+          format: date-time
+          readOnly: true
         readable_id:
           type: string
           readOnly: true
@@ -6894,6 +6933,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - updated_on
       - video
       - views
     VideoResourceResourceTypeEnum:

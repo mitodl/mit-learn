@@ -1228,7 +1228,6 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
             "resources",
             "etl_source",
             "view_count",
-            *COMMON_IGNORED_FIELDS,
         ]
 
 
