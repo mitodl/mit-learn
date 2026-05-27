@@ -441,11 +441,6 @@ NOTIFICATION_EMAIL_BACKEND = get_string(
 ADMIN_EMAIL = get_string("MITOL_ADMIN_EMAIL", "")
 ADMINS = (("Admins", ADMIN_EMAIL),) if ADMIN_EMAIL != "" else ()
 
-# embed.ly configuration
-EMBEDLY_KEY = get_string("EMBEDLY_KEY", None)
-EMBEDLY_EMBED_URL = get_string("EMBEDLY_EMBED_URL", "https://api.embed.ly/1/oembed")
-EMBEDLY_EXTRACT_URL = get_string("EMBEDLY_EMBED_URL", "https://api.embed.ly/1/extract")
-
 # configuration for CKEditor token endpoint
 CKEDITOR_ENVIRONMENT_ID = get_string("CKEDITOR_ENVIRONMENT_ID", None)
 CKEDITOR_SECRET_KEY = get_string("CKEDITOR_SECRET_KEY", None)
