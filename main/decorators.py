@@ -9,6 +9,8 @@ from celery import current_task, states
 from celery.exceptions import Reject
 from django.core.cache import caches
 
+from main.constants import TASK_REJECTED
+
 log = logging.getLogger(__name__)
 
 KEY_PREFIX = "cooldown"
@@ -80,6 +82,12 @@ def cooldown_task(
                         state=states.REJECTED,
                         meta={"reason": "cooldown", "key": lock_key},
                     )
+                    try:
+                        current_task.send_event(TASK_REJECTED, requeue=False)
+                    except Exception:  # noqa: BLE001
+                        log.warning(
+                            "Failed to emit task-rejected event for %s", lock_key
+                        )
                     reason = "cooldown active"
                     raise Reject(reason, requeue=False)
                 return None
