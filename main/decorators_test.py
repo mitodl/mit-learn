@@ -3,6 +3,7 @@
 import pytest
 from celery.exceptions import Reject
 
+from main.constants import TASK_REJECTED
 from main.decorators import cooldown_task
 
 
@@ -167,6 +168,7 @@ def test_cooldown_task_raises_reject_inside_celery_worker(mock_redis, mocker):
     mock_task.update_state.assert_called_once()
     assert mock_task.update_state.call_args.kwargs["state"] == "REJECTED"
     assert mock_task.update_state.call_args.kwargs["meta"]["reason"] == "cooldown"
+    mock_task.send_event.assert_called_once_with(TASK_REJECTED, requeue=False)
 
 
 def test_cooldown_task_returns_none_when_called_directly(mock_redis, mocker):
@@ -181,3 +183,4 @@ def test_cooldown_task_returns_none_when_called_directly(mock_redis, mocker):
 
     assert my_task() is None
     mock_task.update_state.assert_not_called()
+    mock_task.send_event.assert_not_called()
