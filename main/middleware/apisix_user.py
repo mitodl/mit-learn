@@ -164,7 +164,7 @@ def get_user_from_apisix_headers(request, decoded_headers, original_header):
     elif user_needs_update(user, user_fields):
         for field, value in user_fields.items():
             setattr(user, field, value)
-        user.save(update_fields=[*user_fields])
+        user.save(update_fields=[*user_fields, "updated_on"])
 
     if created:
         user_created_actions(user=user, is_new=True, details=profile_data)

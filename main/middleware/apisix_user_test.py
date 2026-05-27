@@ -2,6 +2,7 @@
 
 import json
 from base64 import b64encode
+from datetime import timedelta
 from uuid import uuid4
 
 import pytest
@@ -226,6 +227,11 @@ def test_changed_user_field_triggers_update(mocker, mock_login):
         mocker.Mock(META={"HTTP_X_USERINFO": header}, user=AnonymousUser())
     )
     synced_user = User.objects.get(global_id=apisix_user_info["sub"])
+    User.objects.filter(pk=synced_user.pk).update(
+        updated_on=synced_user.updated_on - timedelta(days=1)
+    )
+    synced_user.refresh_from_db()
+    original_updated_on = synced_user.updated_on
 
     changed_header = b64encode(
         json.dumps({**apisix_user_info, "family_name": "changed"}).encode()
@@ -236,6 +242,7 @@ def test_changed_user_field_triggers_update(mocker, mock_login):
     apisix_middleware.process_request(mock_request)
     synced_user.refresh_from_db()
     assert synced_user.last_name == "changed"
+    assert synced_user.updated_on > original_updated_on
     assert mock_request.user.last_name == "changed"
 
 
