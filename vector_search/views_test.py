@@ -730,7 +730,7 @@ def test_vector_search_sortby_with_score_cutoff_manually_sorted(mocker, client):
 def test_vector_search_with_score_cutoff_enforces_min_score(
     mocker, client, settings, hybrid_search
 ):
-    """A query with a score cutoff should enforce VECTOR_SEARCH_PAGE_MAX_LIMIT."""
+    """A query with a score cutoff should clamp score_threshold to the configured minimum score and enforce the page max limit."""
 
     mock_qdrant = mocker.patch(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
