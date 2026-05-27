@@ -226,7 +226,11 @@ class LearningResourcesVectorSearchRequestSerializer(
     )
     score_cutoff = serializers.FloatField(
         required=False,
-        help_text="The minimum score a result must have to be returned",
+        help_text=(
+            "The minimum score a result must have to be returned. Defaults to "
+            "0.0 when omitted, but the server clamps the effective cutoff to "
+            "the minimum allowed for the selected search mode (dense or hybrid)."
+        ),
         default=0.0,
     )
 
