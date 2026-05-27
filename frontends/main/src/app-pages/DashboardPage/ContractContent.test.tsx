@@ -1321,7 +1321,7 @@ describe("ContractContent", () => {
 
     await user.click(showMoreLink)
 
-    expect(screen.getByText("Extra content with")).toBeInTheDocument()
+    expect(screen.getByText(/Extra content with/)).toBeInTheDocument()
     expect(screen.getByText("emphasis")).toBeInTheDocument()
 
     expect(screen.getByText("Show less")).toBeInTheDocument()
@@ -1329,7 +1329,7 @@ describe("ContractContent", () => {
 
     await user.click(screen.getByText("Show less"))
 
-    expect(screen.queryByText("Extra content with")).toBeNull()
+    expect(screen.queryByText(/Extra content with/)).toBeNull()
 
     expect(screen.getByText("Show more")).toBeInTheDocument()
     expect(screen.queryByText("Show less")).toBeNull()
@@ -1456,7 +1456,7 @@ describe("ContractContent", () => {
     expect(screen.queryByText("Second extra content")).toBeNull()
   })
 
-  test("shared contract language picker switches top-level program card title", async () => {
+  test("shared contract variant picker switches top-level program card title", async () => {
     const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
     mitxOnlineUser.legal_address = { country: "US" }
     mitxOnlineUser.user_profile = { year_of_birth: 1988 }
@@ -1530,22 +1530,15 @@ describe("ContractContent", () => {
     )
 
     const root = within(await screen.findByTestId("org-program-root"))
-    expect(await screen.findAllByRole("combobox")).toHaveLength(1)
-    const variantSelect = await screen.findByRole("combobox")
-    // Picker defaults to "Original" (show each course's default run)
-    expect(variantSelect).toHaveTextContent("Original")
+    // Wait for variant picker to appear with English and Spanish radio options
+    await screen.findAllByRole("radio")
 
     const card = await root.findByTestId("enrollment-card-desktop")
     // Default run is the English run (next_run_id)
     expect(card).toHaveTextContent("Module in English")
 
-    await user.click(variantSelect)
-    const topLevelVariantOptions = await screen.findAllByRole("option")
-    const topLevelSelectedVariant = topLevelVariantOptions.find((option) =>
-      (option.getAttribute("data-value") ?? "").startsWith("language:es"),
-    )
-    invariant(topLevelSelectedVariant, "Expected a Spanish variant option")
-    await user.click(topLevelSelectedVariant)
+    // Click the Spanish variant card to switch
+    await user.click(screen.getByText(/español/i))
 
     await waitFor(() => {
       expect(root.getByTestId("enrollment-card-desktop")).toHaveTextContent(
@@ -1554,7 +1547,7 @@ describe("ContractContent", () => {
     })
   })
 
-  test("shared contract language picker switches program collection card title", async () => {
+  test("shared contract variant picker switches program collection card title", async () => {
     const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
     mitxOnlineUser.legal_address = { country: "US" }
     mitxOnlineUser.user_profile = { year_of_birth: 1988 }
@@ -1654,22 +1647,15 @@ describe("ContractContent", () => {
     )
     const collection = within(collectionRoot)
 
-    expect(await screen.findAllByRole("combobox")).toHaveLength(1)
-    const variantSelect = await screen.findByRole("combobox")
-    // Picker defaults to "Original" (show each course's default run)
-    expect(variantSelect).toHaveTextContent("Original")
+    // Wait for variant picker to appear with English and Spanish radio options
+    await screen.findAllByRole("radio")
 
     const card = await collection.findByTestId("enrollment-card-desktop")
     // Default run is the English run (next_run_id)
     expect(card).toHaveTextContent("Collection English")
 
-    await user.click(variantSelect)
-    const collectionVariantOptions = await screen.findAllByRole("option")
-    const collectionSelectedVariant = collectionVariantOptions.find((option) =>
-      (option.getAttribute("data-value") ?? "").startsWith("language:es"),
-    )
-    invariant(collectionSelectedVariant, "Expected a Spanish variant option")
-    await user.click(collectionSelectedVariant)
+    // Click the Spanish variant card to switch
+    await user.click(screen.getByText(/español/i))
 
     await waitFor(() => {
       expect(
@@ -1678,7 +1664,7 @@ describe("ContractContent", () => {
     })
   })
 
-  test("shared contract language picker is hidden when only one language option is present", async () => {
+  test("shared contract variant picker is hidden when only one variant option is present", async () => {
     const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
     mitxOnlineUser.legal_address = { country: "US" }
     mitxOnlineUser.user_profile = { year_of_birth: 1988 }
@@ -1724,7 +1710,7 @@ describe("ContractContent", () => {
     expect(screen.queryByText("Learning Language:")).not.toBeInTheDocument()
   })
 
-  test("shared contract language picker stays hidden for single-language program collections", async () => {
+  test("shared contract variant picker stays hidden for single-variant program collections", async () => {
     const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
     mitxOnlineUser.legal_address = { country: "US" }
     mitxOnlineUser.user_profile = { year_of_birth: 1988 }

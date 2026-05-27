@@ -6,18 +6,17 @@
  *    renders (sections -> cards, the right kind per item). Only the rendered
  *    component proves the seam.
  * 2. Genuine component-level concerns: simple display cases, a11y
- *    roles/headings, user interactions (enroll dialog, certificate button,
- *    language <select>), 404 / not-enrolled state.
+ *    roles/headings, user interactions (enroll dialog, certificate button),
+ *    404 / not-enrolled state.
  *
  * Exhaustive case coverage — req-tree ordering, completion/elective caps,
  * language-key resolution, program-as-course derivation — belongs in the
  * pure model (model/dashboardViewModel.test.ts) or the hook tests
- * (hooks/useProgramDashboardData.test.tsx, useDashboardLanguagePicker.test.ts),
+ * (hooks/useProgramDashboardData.test.tsx),
  * NOT here.
  */
 import React from "react"
 import { waitFor } from "@testing-library/react"
-import { LanguageEnum } from "@mitodl/mitxonline-api-axios/v2"
 import {
   renderWithProviders,
   screen,
@@ -1632,204 +1631,5 @@ describe("ProgramEnrollmentDisplay", () => {
     await screen.findByText("Program Without Certificate")
     const certButton = screen.queryByRole("link", { name: "Certificate" })
     expect(certButton).not.toBeInTheDocument()
-  })
-
-  test("program language picker switches card title on B2C program page", async () => {
-    const mitxOnlineUser = mitxonline.factories.user.user()
-    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
-
-    const englishRun = mitxonline.factories.courses.courseRun({
-      id: faker.number.int(),
-      title: "Module in English",
-      courseware_id: "course-v1:LANG+TEST+EN",
-      courseware_url:
-        "https://courses.example.com/learn/course/course-v1:LANG+TEST+EN/home",
-      is_enrollable: true,
-    })
-    const spanishRun = mitxonline.factories.courses.courseRun({
-      id: faker.number.int(),
-      title: "Modulo en Espanol",
-      courseware_id: "course-v1:LANG+TEST+ES",
-      courseware_url:
-        "https://courses.example.com/learn/course/course-v1:LANG+TEST+ES/home",
-      is_enrollable: true,
-    })
-
-    const localizedCourse = mitxonline.factories.courses.course({
-      id: 991,
-      title: "Base Course Title",
-      courseruns: [englishRun, spanishRun],
-      next_run_id: englishRun.id,
-      language_options: [
-        {
-          id: englishRun.id,
-          courseware_id: englishRun.courseware_id,
-          courseware_url: englishRun.courseware_url ?? "",
-          language: LanguageEnum.En,
-          title: englishRun.title,
-          run_tag: englishRun.run_tag,
-        },
-        {
-          id: spanishRun.id,
-          courseware_id: spanishRun.courseware_id,
-          courseware_url: spanishRun.courseware_url ?? "",
-          language: LanguageEnum.EsEs,
-          title: spanishRun.title,
-          run_tag: spanishRun.run_tag,
-        },
-      ],
-    })
-
-    const reqTree =
-      new mitxonline.factories.requirements.RequirementTreeBuilder()
-    const core = reqTree.addOperator({
-      operator: "all_of",
-      title: "Core Courses",
-    })
-    core.addCourse({ course: localizedCourse.id })
-
-    const program = mitxonline.factories.programs.program({
-      id: 458,
-      title: "Program With Languages",
-      courses: [localizedCourse.id],
-      req_tree: reqTree.serialize(),
-    })
-    const programEnrollment =
-      mitxonline.factories.enrollment.programEnrollmentV3({
-        program: {
-          id: program.id,
-          title: program.title,
-          live: program.live,
-          program_type: program.program_type,
-          readable_id: program.readable_id,
-        },
-        certificate: null,
-      })
-
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
-    setMockResponse.get(
-      mitxonline.urls.programEnrollments.enrollmentsListV3(),
-      [programEnrollment],
-    )
-    setMockResponse.get(
-      mitxonline.urls.programs.programDetail(program.id),
-      program,
-    )
-    setMockResponse.get(
-      mitxonline.urls.courses.coursesList({
-        id: program.courses,
-        page_size: program.courses.length,
-      }),
-      {
-        count: 1,
-        next: null,
-        previous: null,
-        results: [localizedCourse],
-      },
-    )
-
-    renderWithProviders(<ProgramEnrollmentDisplay programId={program.id} />)
-
-    await screen.findByText("Program With Languages")
-    expect(screen.getByText("Learning Language:")).toBeInTheDocument()
-    const languageSelect = await screen.findByRole("combobox")
-    expect(languageSelect).toHaveTextContent("English")
-
-    const card = await screen.findByTestId("enrollment-card-desktop")
-    expect(card).toHaveTextContent("Module in English")
-    expect(card).toHaveTextContent("Start Course")
-
-    await user.click(languageSelect)
-    const languageOptions = await screen.findAllByRole("option")
-    const spanishOption = languageOptions.find((option) =>
-      (option.getAttribute("data-value") ?? "").startsWith("language:es"),
-    )
-    expect(spanishOption).toBeTruthy()
-    await user.click(spanishOption as HTMLElement)
-
-    const desktopCard = await screen.findByTestId("enrollment-card-desktop")
-    await within(desktopCard).findByText("Modulo en Espanol")
-
-    expect(screen.getByText("Learning Language:")).toBeInTheDocument()
-    expect(screen.getByTestId("enrollment-card-desktop")).toHaveTextContent(
-      "Start Course",
-    )
-  })
-
-  test("language picker is hidden when only one language option is present", async () => {
-    const mitxOnlineUser = mitxonline.factories.user.user()
-    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
-
-    const run = mitxonline.factories.courses.courseRun({
-      id: faker.number.int(),
-      title: "Single Language Module",
-      is_enrollable: true,
-    })
-    const course = mitxonline.factories.courses.course({
-      id: 992,
-      courseruns: [run],
-      next_run_id: run.id,
-      language_options: [
-        {
-          id: run.id,
-          courseware_id: run.courseware_id,
-          courseware_url: run.courseware_url ?? "",
-          language: LanguageEnum.En,
-          title: run.title,
-          run_tag: run.run_tag,
-        },
-      ],
-    })
-
-    const reqTree =
-      new mitxonline.factories.requirements.RequirementTreeBuilder()
-    const core = reqTree.addOperator({
-      operator: "all_of",
-      title: "Core Courses",
-    })
-    core.addCourse({ course: course.id })
-
-    const program = mitxonline.factories.programs.program({
-      id: 459,
-      title: "Single Language Program",
-      courses: [course.id],
-      req_tree: reqTree.serialize(),
-    })
-    const programEnrollment =
-      mitxonline.factories.enrollment.programEnrollmentV3({
-        program: {
-          id: program.id,
-          title: program.title,
-          live: program.live,
-          program_type: program.program_type,
-          readable_id: program.readable_id,
-        },
-        certificate: null,
-      })
-
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
-    setMockResponse.get(
-      mitxonline.urls.programEnrollments.enrollmentsListV3(),
-      [programEnrollment],
-    )
-    setMockResponse.get(
-      mitxonline.urls.programs.programDetail(program.id),
-      program,
-    )
-    setMockResponse.get(
-      mitxonline.urls.courses.coursesList({
-        id: program.courses,
-        page_size: program.courses.length,
-      }),
-      { count: 1, next: null, previous: null, results: [course] },
-    )
-
-    renderWithProviders(<ProgramEnrollmentDisplay programId={program.id} />)
-
-    await screen.findByText("Single Language Program")
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
-    expect(screen.queryByText("Learning Language:")).not.toBeInTheDocument()
   })
 })
