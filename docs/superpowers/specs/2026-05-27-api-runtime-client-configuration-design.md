@@ -49,8 +49,7 @@ This design depends on the runtime `env(...)` helper from `tmacey/nextjs-deploym
 
 ```ts
 type LearnApiConfig = {
-  browserBaseUrl: string
-  serverBaseUrl?: string
+  baseUrl: string
   csrfCookieName: string
   withCredentials: boolean
 }
@@ -71,7 +70,7 @@ declare function configureApiClients(config: ApiClientsConfig): void
 
 The exact type names can follow repo naming conventions, but the shape should remain explicit and backend-specific.
 
-`frontends/main` is responsible for resolving which Learn base URL applies in the current runtime. This preserves the current behavior where server-side Learn requests may use a different URL than browser-side Learn requests.
+`frontends/main` is responsible for resolving which Learn base URL applies in the current runtime before calling `configureApiClients(...)`. This preserves the current behavior where server-side Learn requests may use a different URL than browser-side Learn requests, without pushing runtime-selection logic back into `frontends/api`.
 
 `withCredentials` may remain a single env-derived setting in `main` initially, even though the runtime config shape is backend-specific.
 
@@ -107,11 +106,15 @@ As a result:
 2. Manual axios requests in `frontends/api` should use relative URLs derived from paginated `next` links or other absolute API URLs.
 3. The workspace should not need to export runtime `BASE_PATH` values once custom callers are updated to relative paths.
 
+For paginated `next` URLs specifically, the normalization rule should be explicit: when the API returns an absolute `next` URL, callers should discard the origin and use only `pathname + search`. That rule should be applied consistently at all three existing manual pagination sites (`learningResources`, `learningPaths`, and `userLists`) to preserve the current workaround for incorrect ports in absolute pagination URLs.
+
 ### MITx Online legacy cart redirect
 
 `NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL` should not become part of the `frontends/api` runtime config.
 
 Instead, `useReplaceBasketItem` should move from `frontends/api` into `frontends/main`. `frontends/api` should keep the thin data hooks and query helpers (`useAddToBasket`, `useClearBasket`, `basketQueries`), while `frontends/main` owns the orchestration that combines those hooks with browser navigation to the legacy cart URL.
+
+To make that split real, `useAddToBasket` must stop performing redirect logic in its own `onSuccess`. It should become a pure data mutation hook, and the redirect to the legacy cart should be triggered by the `frontends/main` orchestration layer after a successful add-to-basket call.
 
 This keeps `frontends/api` focused on API/client concerns and keeps env-derived app-shell navigation in the app layer where `env(...)` is available.
 
@@ -129,6 +132,8 @@ Concrete bootstrap points in `frontends/main` should be treated as part of the d
 2. **Server runtime:** call `configureApiClients(...)` during the `frontends/main/src/instrumentation.ts` → `instrumentation-node.ts` initialization path.
 
 This is intentionally earlier than any provider `useEffect`. Configuring in a client effect would be too late because child components can execute React Query hooks during render and issue requests before the effect runs.
+
+Outside those Next.js runtime hooks, any non-Next consumer that uses `frontends/api` hooks or clients (for example tests or Storybook) must bootstrap configuration explicitly through a shared helper path rather than assuming instrumentation files will run.
 
 ### Responsibility split
 
@@ -178,13 +183,14 @@ URL-building test helpers must derive their base URL from the same configured so
 Important coverage areas:
 
 1. `configureApiClients(...)` applies Learn and MITx Online config to the correct axios instances.
-2. Learn config preserves current server-versus-browser URL behavior.
+2. Learn config preserves current server-versus-browser URL behavior by passing the already-resolved runtime base URL into `frontends/api`.
 3. Generated client calls use axios `baseURL` correctly for both Learn and MITx Online clients.
 4. Manual request code works with relative URLs after `BASE_PATH` removal, including paginated absolute `next` links.
 5. Using clients before configuration throws the intended error.
 6. Identical repeated configure calls are safe, conflicting reconfigure throws, and test reset works as intended.
 7. Existing URL-building test helpers continue to support request mocking after env removal.
 8. Existing integration coverage still exercises the MITx Online add-to-cart redirect flow after the redirect logic moves to `frontends/main`.
+9. Test and Storybook-style bootstrap paths configure the workspace explicitly when Next.js instrumentation hooks are not present.
 
 ## Alternatives considered
 
@@ -218,9 +224,17 @@ Likely touch points:
 - a dedicated runtime/config export in `frontends/api`
 - bootstrap entry points in `frontends/main`
 - MITx Online basket orchestration moved from `frontends/api/src/mitxonline/hooks/baskets/index.ts` into `frontends/main`
+- current `useReplaceBasketItem` call sites in `frontends/main`:
+  - `frontends/main/src/page-components/EnrollmentDialogs/ProgramEnrollmentDialog.tsx`
+  - `frontends/main/src/page-components/EnrollmentDialogs/CourseEnrollmentDialog.tsx`
+  - `frontends/main/src/app-pages/ProductPages/CourseEnrollmentButton.tsx`
+  - `frontends/main/src/app-pages/ProductPages/ProgramEnrollmentButton.tsx`
+  - `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/DashboardCard.tsx`
+  - `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/ModuleCard.tsx`
 
 The implementation plan should explicitly cover:
 
 1. App Router bootstrap ordering so configuration runs before any request execution in both SSR and browser paths.
-2. Moving `useReplaceBasketItem` into `frontends/main` while leaving `useAddToBasket`, `useClearBasket`, and `basketQueries` in `frontends/api`.
+2. Moving `useReplaceBasketItem` into `frontends/main`, removing redirect logic from `useAddToBasket`, and updating the existing `frontends/main` call sites without adding a compatibility shim unless planning explicitly chooses one.
 3. Keeping test URL builders and configured axios instances on a single shared source of truth.
+4. Providing an explicit bootstrap path for tests and other non-Next consumers.
