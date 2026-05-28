@@ -2,6 +2,7 @@ import { renderHook, waitFor } from "@testing-library/react"
 import { setupReactQueryTest } from "../test-utils"
 import {
   useLearningResourcesDetail,
+  useInfiniteLearningResourceItems,
   useLearningResourcesList,
   useLearningResourceTopics,
 } from "./index"
@@ -55,6 +56,43 @@ describe("useLearningResourcesRetrieve", () => {
     const { result } = renderHook(useTestHook, { wrapper })
 
     await assertApiCalled(result, url, "GET", data)
+  })
+})
+
+describe("useInfiniteLearningResourceItems", () => {
+  it("normalizes absolute next URLs to relative API requests", async () => {
+    const parentId = 99
+    const firstUrl = urls.learningResources.items({ id: parentId })
+    const secondPath = `/api/v1/learning_resources/${parentId}/items/?offset=5`
+    const secondUrl = new URL(secondPath, firstUrl).toString()
+    const firstPage = factory.learningResourceRelationships({
+      count: 7,
+      parent: parentId,
+      pageSize: 5,
+      next: `https://learn.example.edu${secondPath}`,
+    })
+    const secondPage = factory.learningResourceRelationships({
+      count: 7,
+      parent: parentId,
+      pageSize: 2,
+    })
+
+    const { wrapper } = setupReactQueryTest()
+    setMockResponse.get(firstUrl, firstPage)
+    setMockResponse.get(secondUrl, secondPage)
+    const { result } = renderHook(
+      () =>
+        useInfiniteLearningResourceItems(parentId, {
+          learning_resource_id: parentId,
+        }),
+      { wrapper },
+    )
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    result.current.fetchNextPage()
+    await waitFor(() => expect(result.current.isFetching).toBe(false))
+
+    expect(makeRequest).toHaveBeenCalledWith("get", secondUrl, undefined)
   })
 })
 

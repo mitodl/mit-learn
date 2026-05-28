@@ -26,12 +26,8 @@ import type {
 import type { VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorLearningResourcesSearchRetrieveRequest } from "../../generated/v0"
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query"
 import axiosInstance from "../../axios"
+import { toRelativeApiUrl } from "../../runtime/urls"
 import { hasPosition, randomizeGroups } from "./util"
-
-const toRelativeUrl = (url: string) => {
-  const parsed = new URL(url, "https://x")
-  return `${parsed.pathname}${parsed.search}`
-}
 
 const timedPromise = async <T>(
   promise: Promise<T>,
@@ -158,7 +154,7 @@ const learningResourceQueries = {
         const request = pageParam
           ? axiosInstance.request<PaginatedLearningResourceRelationshipList>({
               method: "get",
-              url: toRelativeUrl(pageParam),
+              url: toRelativeApiUrl(pageParam),
             })
           : learningResourcesApi.learningResourcesItemsList(params)
         const { data } = await request
@@ -305,5 +301,4 @@ export {
   schoolQueries,
   offerorQueries,
   videoPlaylistQueries,
-  toRelativeUrl,
 }

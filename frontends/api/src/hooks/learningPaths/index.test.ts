@@ -53,7 +53,7 @@ describe("useLearningPathsList", () => {
 })
 
 describe("useInfiniteLearningPathItems", () => {
-  it("Calls the correct API and can fetch next page", async () => {
+  it("normalizes absolute next URLs to relative API requests", async () => {
     const parentId = faker.number.int()
     const url1 = urls.learningPaths.resources({
       learning_resource_id: parentId,
@@ -62,10 +62,12 @@ describe("useInfiniteLearningPathItems", () => {
       learning_resource_id: parentId,
       offset: 5,
     })
+    const parsedNextUrl = new URL(url2)
+    const nextPath = `${parsedNextUrl.pathname}${parsedNextUrl.search}`
     const response1 = factory.learningPathRelationships({
       count: 7,
       parent: parentId,
-      next: url2,
+      next: `https://learn.example.edu${nextPath}`,
       pageSize: 5,
     })
     const response2 = factory.learningPathRelationships({
