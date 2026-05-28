@@ -104,8 +104,8 @@ const useContractDashboardData = (
       contract: contract.id,
       course_id: contractCourses.map((c) => c.id),
       language: selectedVariant?.language || undefined,
-      industry: (selectedVariant?.variant_industry as string) || undefined,
-      length: (selectedVariant?.variant_length as string) || undefined,
+      industry: selectedVariant?.variant_industry || undefined,
+      length: selectedVariant?.variant_length || undefined,
     }),
     enabled: !isDefaultVariantSelection && contractCourses.length > 0,
   })
