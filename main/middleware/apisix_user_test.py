@@ -140,12 +140,13 @@ def test_get_request_ambiguous_identity_fails_closed(mocker, mock_login):
         },
         user=AnonymousUser(),
     )
-    apisix_middleware = ApisixUserMiddleware(mocker.Mock())
+    mock_get_response = mocker.Mock(return_value="response")
+    apisix_middleware = ApisixUserMiddleware(mock_get_response)
 
-    with pytest.raises(User.MultipleObjectsReturned):
-        apisix_middleware.process_request(mock_request)
+    assert apisix_middleware.process_request(mock_request) == "response"
 
     mock_login.assert_not_called()
+    mock_get_response.assert_called_once_with(mock_request)
     legacy_user.refresh_from_db()
     exact_user.refresh_from_db()
     assert legacy_user.global_id is None

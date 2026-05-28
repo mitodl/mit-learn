@@ -90,7 +90,9 @@ def decode_apisix_headers(request, header, model=settings.AUTH_USER_MODEL):
     }
 
 
-def get_user_from_apisix_headers(request, decoded_headers, original_header):
+def get_user_from_apisix_headers(  # noqa: C901
+    request, decoded_headers, original_header
+):
     """
     Get a user based on the APISIX headers, create user/profile if needed.
 
@@ -128,13 +130,21 @@ def get_user_from_apisix_headers(request, decoded_headers, original_header):
         user = request.user
         created = False
     else:
-        user, created = (
-            User.objects.filter(
-                Q(global_id=global_id) | Q(global_id__isnull=True, email=email)
+        try:
+            user, created = (
+                User.objects.filter(
+                    Q(global_id=global_id) | Q(global_id__isnull=True, email=email)
+                )
+                .select_related("profile")
+                .get_or_create(defaults=user_fields)
             )
-            .select_related("profile")
-            .get_or_create(defaults=user_fields)
-        )
+        except User.MultipleObjectsReturned:
+            log.exception(
+                "Ambiguous APISIX user identity for global_id=%s and email=%s",
+                global_id,
+                email,
+            )
+            return None
 
     if created:
         log.info(
