@@ -40,10 +40,6 @@ import {
   ResourceTypeGroupEnum,
   SearchModeEnumDescriptions,
 } from "api"
-import type {
-  VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorSearchRequest,
-  LearningResourcesVectorSearchResponse,
-} from "api/v0"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { useAdminSearchParams } from "api/hooks/adminSearchParams"
 import {
@@ -438,11 +434,11 @@ const MobileFacetsTitleContainer = styled.div`
   }
 `
 
-const ExplanationContainer = styled.div`
+export const ExplanationContainer = styled.div`
   ${({ theme }) => css({ ...theme.typography.body3 })}
   color: ${({ theme }) => theme.custom.colors.silverGrayDark};
 `
-const AdminTitleContainer = styled.div`
+export const AdminTitleContainer = styled.div`
   ${({ theme }) => css({ ...theme.typography.subtitle3 })}
   margin-top: 20px;
 `
@@ -514,188 +510,7 @@ const searchModeDropdownOptions = Object.entries(
   SearchModeEnumDescriptions,
 ).map(([label, value]) => ({ label, value }))
 
-const mapVectorSortby = (
-  sortby?: string,
-): VectorSearchRequest["sortby"] | undefined => {
-  switch (sortby) {
-    case "-views":
-    case "popular":
-      return "-views"
-    case "upcoming":
-      return "next_start_date"
-    case "new":
-      return "-created_on"
-    default:
-      return undefined
-  }
-}
-
-/**
- * Extracts only the fields supported by the vector search API from a broader
- * search params object, dropping admin-only params (e.g., content_file_score_weight)
- * that the vector endpoint does not accept.
- *
- * The `as` casts for enum arrays are safe because the v0 and v1 generated
- * clients define separate (but structurally identical) enum types for the same
- * string-literal values (e.g., delivery: 'online' | 'hybrid' | ...).
- */
-const toVectorSearchParams = (
-  params: ReturnType<typeof getSearchParams> & { sortby?: string },
-): VectorSearchRequest => ({
-  aggregations: params.aggregations as VectorSearchRequest["aggregations"],
-  certification: params.certification,
-  certification_type:
-    params.certification_type as VectorSearchRequest["certification_type"],
-  course_feature: params.course_feature,
-  delivery: params.delivery as VectorSearchRequest["delivery"],
-  department: params.department as VectorSearchRequest["department"],
-  free: params.free,
-  level: params.level as VectorSearchRequest["level"],
-  limit: params.limit,
-  ocw_topic: params.ocw_topic,
-  offered_by: params.offered_by as VectorSearchRequest["offered_by"],
-  offset: params.offset,
-  platform: params.platform as VectorSearchRequest["platform"],
-  professional: params.professional,
-  q: params.q,
-  resource_type: params.resource_type as VectorSearchRequest["resource_type"],
-  resource_type_group:
-    params.resource_type_group as VectorSearchRequest["resource_type_group"],
-  sortby: mapVectorSortby(params.sortby),
-  topic: params.topic,
-  hybrid_search: true,
-})
-
-const VECTOR_CLIENT_FILTER_FACETS = [
-  "resource_type",
-  "certification_type",
-  "delivery",
-  "department",
-  "topic",
-  "offered_by",
-  "free",
-  "professional",
-  "resource_category",
-  "resource_type_group",
-] as const
-
-type VectorClientFilterFacet = (typeof VECTOR_CLIENT_FILTER_FACETS)[number]
-
-const toUnfacetedVectorSearchParams = (
-  params: ReturnType<typeof getSearchParams> & { sortby?: string },
-): VectorSearchRequest => {
-  const {
-    offset: _offset,
-    limit: _limit,
-    ...vectorParams
-  } = toVectorSearchParams(params)
-
-  return Object.fromEntries(
-    Object.entries(vectorParams).filter(
-      ([key]) =>
-        !VECTOR_CLIENT_FILTER_FACETS.includes(key as VectorClientFilterFacet),
-    ),
-  ) as VectorSearchRequest
-}
-
-const normalizeParamValues = (value: unknown): string[] => {
-  if (Array.isArray(value)) {
-    return value.map(String)
-  }
-  if (value === null || value === undefined || value === "") {
-    return []
-  }
-  return [String(value)]
-}
-
-const getResourceFacetValues = (
-  resource: LearningResource,
-  facet: string,
-): string[] => {
-  switch (facet) {
-    case "certification_type":
-      return normalizeParamValues(
-        "certification_type" in resource
-          ? resource.certification_type?.code
-          : undefined,
-      )
-    case "delivery":
-      return normalizeParamValues(
-        "delivery" in resource ? resource.delivery?.map((d) => d.code) : [],
-      )
-    case "department":
-      return normalizeParamValues(
-        resource.departments?.map((d) => d.department_id),
-      )
-    case "offered_by":
-      return normalizeParamValues(resource.offered_by?.code)
-    case "topic":
-      return normalizeParamValues(resource.topics?.map((t) => t.name))
-    case "free":
-    case "professional":
-    case "resource_type":
-    case "resource_category":
-    case "resource_type_group":
-      return normalizeParamValues(resource[facet])
-    default:
-      return []
-  }
-}
-
-const matchesVectorClientFilters = (
-  resource: LearningResource,
-  params: ReturnType<typeof getSearchParams>,
-  excludedFacet?: string,
-) =>
-  VECTOR_CLIENT_FILTER_FACETS.every((facet) => {
-    if (facet === excludedFacet) {
-      return true
-    }
-    const selectedValues = normalizeParamValues(params[facet])
-    if (selectedValues.length === 0) {
-      return true
-    }
-    const resourceValues = getResourceFacetValues(resource, facet)
-    return selectedValues.some((value) => resourceValues.includes(value))
-  })
-
-const hasVectorClientFilters = (params: ReturnType<typeof getSearchParams>) =>
-  VECTOR_CLIENT_FILTER_FACETS.some(
-    (facet) => normalizeParamValues(params[facet]).length > 0,
-  )
-
-const getVectorClientAggregations = (
-  allResults: LearningResource[],
-  params: ReturnType<typeof getSearchParams>,
-  aggregationNames: string[],
-) => {
-  return Object.fromEntries(
-    aggregationNames.map((name) => {
-      const resultsForFacet = allResults.filter((resource) =>
-        matchesVectorClientFilters(resource, params, name),
-      )
-      const counts = new Map<string, number>()
-      for (const resource of resultsForFacet) {
-        for (const value of getResourceFacetValues(resource, name)) {
-          counts.set(value, (counts.get(value) ?? 0) + 1)
-        }
-      }
-      return [
-        name,
-        Array.from(counts.entries())
-          .map(([key, docCount]) => ({
-            key,
-            doc_count: docCount,
-          }))
-          .sort(
-            (a, b) => b.doc_count - a.doc_count || a.key.localeCompare(b.key),
-          ),
-      ]
-    }),
-  )
-}
-
-interface SearchDisplayProps {
+export interface SearchDisplayProps {
   page: number
   setPage: (newPage: number) => void
   onFetchTimeChange?: (time: number | null) => void
@@ -711,6 +526,13 @@ interface SearchDisplayProps {
   setSearchParams: UseResourceSearchParamsProps["setSearchParams"]
   resultsHeadingEl: "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
   filterHeadingEl: React.ElementType
+  getQueryOptions?: (params: ReturnType<typeof getSearchParams>) => unknown
+  getDisplayData?: (
+    data: LearningResourcesSearchResponse | undefined,
+    params: ReturnType<typeof getSearchParams>,
+  ) => LearningResourcesSearchResponse | undefined
+  hidePagination?: boolean
+  adminOptionsSlot?: React.ReactNode
 }
 
 const SearchDisplay: React.FC<SearchDisplayProps> = ({
@@ -729,6 +551,10 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   resultsHeadingEl,
   filterHeadingEl,
   onFetchTimeChange,
+  getQueryOptions,
+  getDisplayData,
+  hidePagination = false,
+  adminOptionsSlot,
 }) => {
   const [searchParams] = useSearchParams()
   const [expandAdminOptions, setExpandAdminOptions] = useState(false)
@@ -769,32 +595,21 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
 
   const { data: user } = useUserMe()
 
-  const isVectorSearch = searchParams.get("vector_search") === "true"
+  const queryOptions =
+    getQueryOptions?.(allParams) ??
+    learningResourceQueries.search(allParams as LRSearchRequest)
 
-  const isVectorQuerySearch =
-    isVectorSearch &&
-    typeof allParams.q === "string" &&
-    allParams.q.trim() !== ""
-
-  const queryOptions = isVectorSearch
-    ? learningResourceQueries.vectorSearch(
-        isVectorQuerySearch
-          ? toUnfacetedVectorSearchParams(allParams)
-          : toVectorSearchParams(allParams),
-      )
-    : learningResourceQueries.search(allParams as LRSearchRequest)
-
-  // @ts-expect-error Typescript has trouble unifying the different query key types
   const { data, isLoading, isFetching } = useQuery({
-    ...queryOptions,
+    ...(queryOptions as ReturnType<typeof learningResourceQueries.search>),
     placeholderData: keepPreviousData,
     select: (timedData: {
-      result:
-        | LearningResourcesSearchResponse
-        | LearningResourcesVectorSearchResponse
+      result: LearningResourcesSearchResponse
       time: number
     }) => {
-      const { result: data, time } = timedData
+      const { result: data, time } = timedData as {
+        result: LearningResourcesSearchResponse
+        time: number
+      }
 
       // Handle missing data gracefully
       if (
@@ -826,35 +641,10 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     },
   })
 
-  const displayData = useMemo(() => {
-    if (!isVectorQuerySearch || !data) {
-      return data
-    }
-
-    const allResults = data.results ?? []
-    const results = allResults.filter((resource) =>
-      matchesVectorClientFilters(resource, allParams),
-    )
-    const hasClientFilters = hasVectorClientFilters(allParams)
-
-    return {
-      ...data,
-      count: hasClientFilters ? results.length : data.count,
-      next: null,
-      previous: null,
-      results,
-      metadata: {
-        ...data.metadata,
-        aggregations: hasClientFilters
-          ? getVectorClientAggregations(
-              allResults,
-              allParams,
-              allParams.aggregations,
-            )
-          : data.metadata.aggregations,
-      },
-    }
-  }, [allParams, data, isVectorQuerySearch])
+  const displayData = useMemo(
+    () => getDisplayData?.(data, allParams) ?? data,
+    [allParams, data, getDisplayData],
+  )
 
   useEffect(() => {
     if (onFetchTimeChange) {
@@ -1081,25 +871,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               adjustment. 0 means content file matches are not counted in the
               score. Only affects the results if there is a search term.
             </ExplanationContainer>
-            <AdminTitleContainer>Vector Hybrid Search</AdminTitleContainer>
-            <Checkbox
-              aria-label="Vector Hybrid Search"
-              checked={searchParams.get("vector_search") === "true"}
-              onChange={(e) =>
-                setSearchParams((prev) => {
-                  const next = new URLSearchParams(prev)
-                  if (e.target.checked) {
-                    next.set("vector_search", "true")
-                  } else {
-                    next.delete("vector_search")
-                  }
-                  return next
-                })
-              }
-            />
-            <ExplanationContainer>
-              Toggle to use the vector hybrid search endpoint.
-            </ExplanationContainer>
+            {adminOptionsSlot}
             <AdminTitleContainer>Show OCW Files</AdminTitleContainer>
             <Checkbox
               checked={
@@ -1268,7 +1040,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                 )}
               </StyledResultsContainer>
               <PaginationContainer>
-                {!isVectorQuerySearch && (
+                {!hidePagination && (
                   <Pagination
                     count={getLastPage(displayData?.count ?? 0)}
                     page={page}
