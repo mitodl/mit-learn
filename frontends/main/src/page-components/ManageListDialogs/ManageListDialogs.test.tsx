@@ -109,9 +109,7 @@ describe("manageListDialogs.upsertLearningPath", () => {
     screen.getByRole("dialog")
     await user.click(inputs.cancel())
     expect(makeRequest).not.toHaveBeenCalledWith(
-      "patch",
-      expect.anything(),
-      expect.anything(),
+      expect.objectContaining({ method: "patch" }),
     )
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
@@ -188,11 +186,11 @@ describe("manageListDialogs.upsertLearningPath", () => {
     setMockResponse.patch(patchUrl, { ...resource, ...patch })
     await user.click(inputs.submit())
 
-    expect(makeRequest).toHaveBeenCalledWith(
-      "patch",
-      patchUrl,
-      expect.objectContaining({ ...patch }),
-    )
+    expect(makeRequest).toHaveBeenCalledWith({
+      method: "patch",
+      url: patchUrl,
+      body: expect.objectContaining({ ...patch }),
+    })
   }, 10000)
 
   test("Displays overall error if form validates but API call fails", async () => {
@@ -207,11 +205,11 @@ describe("manageListDialogs.upsertLearningPath", () => {
     setMockResponse.patch(patchUrl, {}, { code: 408 })
     await user.click(inputs.submit())
 
-    expect(makeRequest).toHaveBeenCalledWith(
-      "patch",
-      patchUrl,
-      expect.anything(),
-    )
+    expect(makeRequest).toHaveBeenCalledWith({
+      method: "patch",
+      url: patchUrl,
+      body: expect.anything(),
+    })
     const alertMessage = await screen.findByRole("alert")
 
     expect(alertMessage).toHaveTextContent(
@@ -263,9 +261,7 @@ describe("manageListDialogs.upsertUserList", () => {
     screen.getByRole("dialog")
     await user.click(inputs.cancel())
     expect(makeRequest).not.toHaveBeenCalledWith(
-      "patch",
-      expect.anything(),
-      expect.anything(),
+      expect.objectContaining({ method: "patch" }),
     )
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
@@ -318,11 +314,11 @@ describe("manageListDialogs.upsertUserList", () => {
     setMockResponse.patch(patchUrl, { ...userList, ...patch })
     await user.click(inputs.submit("Update"))
 
-    expect(makeRequest).toHaveBeenCalledWith(
-      "patch",
-      patchUrl,
-      expect.objectContaining({ ...patch }),
-    )
+    expect(makeRequest).toHaveBeenCalledWith({
+      method: "patch",
+      url: patchUrl,
+      body: expect.objectContaining({ ...patch }),
+    })
   })
 
   test("Displays overall error if form validates but API call fails", async () => {
@@ -334,11 +330,11 @@ describe("manageListDialogs.upsertUserList", () => {
     setMockResponse.patch(patchUrl, {}, { code: 408 })
     await user.click(inputs.submit("Update"))
 
-    expect(makeRequest).toHaveBeenCalledWith(
-      "patch",
-      patchUrl,
-      expect.anything(),
-    )
+    expect(makeRequest).toHaveBeenCalledWith({
+      method: "patch",
+      url: patchUrl,
+      body: expect.anything(),
+    })
     const alertMessage = await screen.findByRole("alert")
 
     expect(alertMessage).toHaveTextContent(
@@ -396,7 +392,9 @@ describe("manageListDialogs.destroyLearningPath", () => {
     setMockResponse.delete(url, undefined)
     await user.click(inputs.delete())
 
-    expect(makeRequest).toHaveBeenCalledWith("delete", url, undefined)
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "delete", url }),
+    )
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     })
@@ -439,7 +437,9 @@ describe("manageListDialogs.destroyUserList", () => {
     setMockResponse.delete(url, undefined)
     await user.click(inputs.delete())
 
-    expect(makeRequest).toHaveBeenCalledWith("delete", url, undefined)
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "delete", url }),
+    )
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     })

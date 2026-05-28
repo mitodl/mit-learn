@@ -81,9 +81,13 @@ test.each(Object.values(SourceTypeEnum))(
 
     const followButton = screen.getByTestId("action-follow")
     await user.click(followButton)
-    expect(makeRequest).toHaveBeenCalledWith("post", subscribeUrl, {
-      source_type: sourceType,
-      offered_by: ["ocw"],
+    expect(makeRequest).toHaveBeenCalledWith({
+      method: "post",
+      url: subscribeUrl,
+      body: {
+        source_type: sourceType,
+        offered_by: ["ocw"],
+      },
     })
   },
 )
@@ -118,9 +122,7 @@ test.each(Object.values(SourceTypeEnum))(
     await user.click(unsubscribeButton)
 
     expect(makeRequest).toHaveBeenCalledWith(
-      "delete",
-      unsubscribeUrl,
-      undefined,
+      expect.objectContaining({ method: "delete", url: unsubscribeUrl }),
     )
   },
 )

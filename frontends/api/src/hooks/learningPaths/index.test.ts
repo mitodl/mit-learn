@@ -29,12 +29,9 @@ const assertApiCalled = async (
   data: unknown,
 ) => {
   await waitFor(() => expect(result.current.isLoading).toBe(false))
-  expect(
-    makeRequest.mock.calls.some((args) => {
-      // Don't use toHaveBeenCalledWith. It doesn't handle undefined 3rd arg.
-      return args[0].toUpperCase() === method && args[1] === url
-    }),
-  ).toBe(true)
+  expect(makeRequest).toHaveBeenCalledWith(
+    expect.objectContaining({ method: method.toLowerCase(), url }),
+  )
   expect(result.current.data).toEqual(data)
 }
 
@@ -86,12 +83,16 @@ describe("useInfiniteLearningPathItems", () => {
     // First page
     const { result } = renderHook(useTestHook, { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(makeRequest).toHaveBeenCalledWith("get", url1, undefined)
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "get", url: url1 }),
+    )
 
     // Second page
     result.current.fetchNextPage()
     await waitFor(() => expect(result.current.isFetching).toBe(false))
-    expect(makeRequest).toHaveBeenCalledWith("get", url2, undefined)
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "get", url: url2 }),
+    )
   })
 })
 
@@ -149,7 +150,11 @@ describe("LearningPath CRUD", () => {
     result.current.mutate(requestData)
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(makeRequest).toHaveBeenCalledWith("post", url, requestData)
+    expect(makeRequest).toHaveBeenCalledWith({
+      method: "post",
+      url,
+      body: requestData,
+    })
 
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["learningPaths", "list"],
@@ -169,7 +174,9 @@ describe("LearningPath CRUD", () => {
     })
     result.current.mutate({ id: path.id })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(makeRequest).toHaveBeenCalledWith("delete", url, undefined)
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "delete", url }),
+    )
 
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["learningPaths", "list"],
@@ -192,7 +199,11 @@ describe("LearningPath CRUD", () => {
     result.current.mutate(patch)
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(makeRequest).toHaveBeenCalledWith("patch", url, patch)
+    expect(makeRequest).toHaveBeenCalledWith({
+      method: "patch",
+      url,
+      body: patch,
+    })
 
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["learningPaths", "list"],

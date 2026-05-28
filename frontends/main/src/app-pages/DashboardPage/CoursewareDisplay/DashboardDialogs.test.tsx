@@ -14,7 +14,7 @@ import * as mitxonline from "api/mitxonline-test-utils"
 import {
   urls as testUrls,
   factories as testFactories,
-  mockAxiosInstance,
+  makeRequest,
 } from "api/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { faker } from "@faker-js/faker/locale/en"
@@ -95,9 +95,9 @@ describe("DashboardDialogs", () => {
 
     await user.click(confirmButton)
 
-    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+    expect(makeRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        method: "PATCH",
+        method: "patch",
         url: mitxonline.urls.enrollment.courseEnrollment(enrollment.id),
       }),
     )
@@ -138,9 +138,9 @@ describe("DashboardDialogs", () => {
 
     await user.click(confirmButton)
 
-    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+    expect(makeRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        method: "DELETE",
+        method: "delete",
         url: mitxonline.urls.enrollment.courseEnrollment(enrollment.id),
       }),
     )
@@ -270,9 +270,9 @@ describe("UnenrollProgramDialog", () => {
     })
     await user.click(confirmButton)
 
-    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+    expect(makeRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        method: "DELETE",
+        method: "delete",
         url: mitxonline.urls.programEnrollments.programEnrollment(
           programEnrollment.program.id,
         ),
@@ -303,8 +303,8 @@ describe("UnenrollProgramDialog", () => {
 
     await user.click(screen.getByRole("button", { name: "Cancel" }))
 
-    expect(mockAxiosInstance.request).not.toHaveBeenCalledWith(
-      expect.objectContaining({ method: "DELETE" }),
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "delete" }),
     )
   })
 
@@ -555,9 +555,9 @@ describe("JustInTimeDialog", () => {
     await user.click(cancelButton)
 
     // No PATCH calls should have been made
-    expect(mockAxiosInstance.request).not.toHaveBeenCalledWith(
+    expect(makeRequest).not.toHaveBeenCalledWith(
       expect.objectContaining({
-        method: "PATCH",
+        method: "patch",
         url: mitxonline.urls.userMe.get(),
       }),
     )

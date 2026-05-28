@@ -7,7 +7,7 @@ import {
   user,
   waitFor,
 } from "@/test-utils"
-import { mockAxiosInstance, makeRequest, urls, factories } from "api/test-utils"
+import { makeRequest, urls, factories } from "api/test-utils"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
 import {
   urls as mitxUrls,
@@ -117,11 +117,11 @@ describe("ProgramEnrollmentButton", () => {
     await user.click(enrollButton)
 
     await waitFor(() => {
-      expect(makeRequest).toHaveBeenCalledWith(
-        "post",
-        mitxUrls.programEnrollments.enrollmentsListV3(),
-        { program_id: program.id },
-      )
+      expect(makeRequest).toHaveBeenCalledWith({
+        method: "post",
+        url: mitxUrls.programEnrollments.enrollmentsListV3(),
+        body: { program_id: program.id },
+      })
     })
     await waitFor(() => {
       expect(location.current.pathname).toBe(routes.DASHBOARD_HOME)
@@ -183,12 +183,12 @@ describe("ProgramEnrollmentButton", () => {
     await user.click(enrollButton)
 
     await waitFor(() => {
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-        expect.objectContaining({ method: "DELETE", url: clearUrl }),
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "delete", url: clearUrl }),
       )
     })
-    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-      expect.objectContaining({ method: "POST", url: basketUrl }),
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "post", url: basketUrl }),
     )
     expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
   })

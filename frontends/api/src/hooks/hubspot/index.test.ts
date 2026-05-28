@@ -42,11 +42,9 @@ const assertApiCalled = async (
   data: unknown,
 ) => {
   await waitFor(() => expect(result.current.isLoading).toBe(false))
-  expect(
-    makeRequest.mock.calls.some((args) => {
-      return args[0].toUpperCase() === method && args[1] === url
-    }),
-  ).toBe(true)
+  expect(makeRequest).toHaveBeenCalledWith(
+    expect.objectContaining({ method: method.toLowerCase(), url }),
+  )
   expect(result.current.data).toEqual(data)
 }
 
@@ -83,14 +81,14 @@ describe("useHubspotFormSubmit", () => {
     result.current.mutate({ formId, fields, pageUri })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(makeRequest).toHaveBeenCalledWith(
-      "post",
+    expect(makeRequest).toHaveBeenCalledWith({
+      method: "post",
       url,
-      expect.objectContaining({
+      body: expect.objectContaining({
         fields,
         page_uri: pageUri,
       }),
-    )
+    })
     expect(result.current.data).toEqual(response)
   })
 
@@ -112,14 +110,14 @@ describe("useHubspotFormSubmit", () => {
     result.current.mutate({ formId, fields })
 
     await waitFor(() => {
-      expect(makeRequest).toHaveBeenCalledWith(
-        "post",
+      expect(makeRequest).toHaveBeenCalledWith({
+        method: "post",
         url,
-        expect.objectContaining({
+        body: expect.objectContaining({
           fields,
           page_uri: "http://localhost/programs/test-program",
         }),
-      )
+      })
     })
     expect(result.current.data).toEqual(response)
   })
@@ -153,10 +151,10 @@ describe("useHubspotFormSubmit", () => {
 
     // Verify context properties were captured
     const call = makeRequest.mock.calls.find(
-      (args) => args[0] === "post" && args[1] === url,
+      ([args]) => args.method === "post" && args.url === url,
     )
     expect(call).toBeDefined()
-    const requestBody = call![2]
+    const requestBody = call![0].body
 
     const body = requestBody
     if (!isHubspotSubmitBody(body)) {
@@ -189,9 +187,9 @@ describe("useHubspotFormSubmit", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     const call = makeRequest.mock.calls.find(
-      (args) => args[0] === "post" && args[1] === url,
+      ([args]) => args.method === "post" && args.url === url,
     )
-    const requestBody = call![2]
+    const requestBody = call![0].body
 
     if (!isHubspotSubmitBody(requestBody)) {
       throw new Error("Request body does not match expected shape")
@@ -235,9 +233,9 @@ describe("useHubspotFormSubmit", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     const call = makeRequest.mock.calls.find(
-      (args) => args[0] === "post" && args[1] === url,
+      ([args]) => args.method === "post" && args.url === url,
     )
-    const requestBody = call![2]
+    const requestBody = call![0].body
 
     if (!isHubspotSubmitBody(requestBody)) {
       throw new Error("Request body does not match expected shape")

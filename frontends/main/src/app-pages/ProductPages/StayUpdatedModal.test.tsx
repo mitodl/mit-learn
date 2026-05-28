@@ -200,10 +200,10 @@ describe("StayUpdatedModal", () => {
     await screen.findByRole("dialog", { name: "Stay Updated" })
     await user.click(screen.getByRole("button", { name: "Notify Me" }))
 
-    expect(makeRequest).toHaveBeenCalledWith(
-      "post",
-      urls.hubspot.submit(STAY_UPDATED_FORM_ID),
-      expect.objectContaining({
+    expect(makeRequest).toHaveBeenCalledWith({
+      method: "post",
+      url: urls.hubspot.submit(STAY_UPDATED_FORM_ID),
+      body: expect.objectContaining({
         fields: expect.arrayContaining([
           { name: "email", value: TEST_EMAIL },
           {
@@ -212,7 +212,7 @@ describe("StayUpdatedModal", () => {
           },
         ]),
       }),
-    )
+    })
   })
 
   it("submits product_of_interest when the HubSpot response uses field_groups", async () => {
@@ -245,10 +245,10 @@ describe("StayUpdatedModal", () => {
     await screen.findByRole("dialog", { name: "Stay Updated" })
     await user.click(screen.getByRole("button", { name: "Notify Me" }))
 
-    expect(makeRequest).toHaveBeenCalledWith(
-      "post",
-      urls.hubspot.submit(STAY_UPDATED_FORM_ID),
-      expect.objectContaining({
+    expect(makeRequest).toHaveBeenCalledWith({
+      method: "post",
+      url: urls.hubspot.submit(STAY_UPDATED_FORM_ID),
+      body: expect.objectContaining({
         fields: expect.arrayContaining([
           { name: "email", value: TEST_EMAIL },
           {
@@ -257,7 +257,7 @@ describe("StayUpdatedModal", () => {
           },
         ]),
       }),
-    )
+    })
   })
 
   it("omits product_of_interest when the readable id has no matching option value", async () => {
@@ -291,12 +291,13 @@ describe("StayUpdatedModal", () => {
     await user.click(screen.getByRole("button", { name: "Notify Me" }))
 
     const postCall = makeRequest.mock.calls.find(
-      ([method, url]) =>
-        method === "post" && url === urls.hubspot.submit(STAY_UPDATED_FORM_ID),
+      ([args]) =>
+        args.method === "post" &&
+        args.url === urls.hubspot.submit(STAY_UPDATED_FORM_ID),
     )
     expect(postCall).toBeDefined()
 
-    const requestBody = postCall?.[2] as {
+    const requestBody = postCall?.[0].body as {
       fields?: Array<{ name: string; value: unknown }>
     }
     expect(requestBody.fields).toEqual(

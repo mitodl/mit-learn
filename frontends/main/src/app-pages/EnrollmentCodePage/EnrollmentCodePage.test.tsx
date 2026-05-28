@@ -94,7 +94,9 @@ describe("EnrollmentCodePage", () => {
     })
 
     await waitFor(() => {
-      expect(makeRequest).toHaveBeenCalledWith("post", attachUrl, undefined)
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "post", url: attachUrl }),
+      )
     })
 
     await waitFor(() => {
@@ -124,7 +126,9 @@ describe("EnrollmentCodePage", () => {
     })
 
     await waitFor(() => {
-      expect(makeRequest).toHaveBeenCalledWith("post", attachUrl, undefined)
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "post", url: attachUrl }),
+      )
     })
 
     await waitFor(() => {
@@ -146,7 +150,9 @@ describe("EnrollmentCodePage", () => {
     })
 
     await waitFor(() => {
-      expect(makeRequest).toHaveBeenCalledWith("post", attachUrl, undefined)
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "post", url: attachUrl }),
+      )
     })
 
     await waitFor(() => {

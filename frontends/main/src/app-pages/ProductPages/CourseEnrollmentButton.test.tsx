@@ -8,7 +8,7 @@ import {
   waitFor,
 } from "@/test-utils"
 import CourseEnrollmentButton from "./CourseEnrollmentButton"
-import { mockAxiosInstance, urls, factories } from "api/test-utils"
+import { makeRequest, urls, factories } from "api/test-utils"
 import {
   factories as mitxFactories,
   urls as mitxUrls,
@@ -205,12 +205,12 @@ describe("CourseEnrollmentButton", () => {
     await user.click(button)
 
     await waitFor(() => {
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-        expect.objectContaining({ method: "DELETE", url: clearUrl }),
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "delete", url: clearUrl }),
       )
     })
-    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-      expect.objectContaining({ method: "POST", url: basketUrl }),
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "post", url: basketUrl }),
     )
     expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
   })

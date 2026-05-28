@@ -65,9 +65,10 @@ describe("SettingsPage", () => {
     const unsubscribeButton = await screen.findByTestId("dialog-unfollow")
     await user.click(unsubscribeButton)
     expect(makeRequest).toHaveBeenCalledWith(
-      "delete",
-      unsubscribeUrls[0],
-      undefined,
+      expect.objectContaining({
+        method: "delete",
+        url: unsubscribeUrls[0],
+      }),
     )
   })
 
@@ -84,7 +85,9 @@ describe("SettingsPage", () => {
     const unsubscribeButton = await screen.findByTestId("dialog-unfollow")
     await user.click(unsubscribeButton)
     for (const unsubUrl of unsubscribeUrls) {
-      expect(makeRequest).toHaveBeenCalledWith("delete", unsubUrl, undefined)
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "delete", url: unsubUrl }),
+      )
     }
   })
   test("Unsubscribe from all is hidden if there are no subscriptions", async () => {
