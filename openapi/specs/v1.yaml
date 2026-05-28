@@ -16394,6 +16394,7 @@ components:
       - channel_subscription_type
     User:
       type: object
+      description: Serializer for article author user fields.
       properties:
         first_name:
           type: string
@@ -16496,6 +16497,7 @@ components:
       - title
     UserRequest:
       type: object
+      description: Serializer for article author user fields.
       properties:
         first_name:
           type: string

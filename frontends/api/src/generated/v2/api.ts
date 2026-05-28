@@ -1929,7 +1929,7 @@ export interface LearningPath {
    */
   id: number
   /**
-   * Return the number of items in the list
+   * Number of published items in the list.
    * @type {number}
    * @memberof LearningPath
    */
@@ -7170,7 +7170,7 @@ export interface UserList {
    */
   topics?: Array<LearningResourceTopic>
   /**
-   * Return the number of items in the list
+   * Number of published items in the list.
    * @type {number}
    * @memberof UserList
    */
