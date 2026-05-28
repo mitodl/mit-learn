@@ -49,12 +49,6 @@ const coursesQueries = {
           .then((res) => res.data)
       },
     }),
-  /**
-   * Fetch variant runs for the given courses in a contract.
-   *
-   * Note: the generated TypeScript type declares a singular `CourseVariantRunsResponse`,
-   * but the endpoint returns one entry per requested course_id. We cast accordingly.
-   */
   courseVariantRunsList: (opts: CoursesApiCourseVariantRunsV3Request) =>
     queryOptions({
       queryKey: coursesKeys.courseVariantRunsList(opts),
