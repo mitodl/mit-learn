@@ -23,6 +23,9 @@ describe("instrumentation-client", () => {
 
   test("bootstraps API clients at module load", () => {
     jest.isolateModules(() => {
+      // jest.isolateModules takes a sync callback; require is the only way
+      // to load a module synchronously inside it.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       require("./instrumentation-client")
     })
 

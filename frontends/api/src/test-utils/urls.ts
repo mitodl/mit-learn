@@ -84,7 +84,8 @@ const learningResources = {
     `${getApiBaseUrl()}/api/v1/learning_resources/${params.id}/similar/`,
   vectorSimilar: (
     params: Params<LRApi, "learningResourcesVectorSimilarList">,
-  ) => `${getApiBaseUrl()}/api/v1/learning_resources/${params.id}/vector_similar/`,
+  ) =>
+    `${getApiBaseUrl()}/api/v1/learning_resources/${params.id}/vector_similar/`,
   setLearningPathRelationships: (
     params?: Params<LRApi, "learningResourcesLearningPathsPartialUpdate">,
   ) =>
@@ -236,7 +237,8 @@ const userMe = {
 }
 
 const adminSearchParams = {
-  get: () => `${getApiBaseUrl()}/api/v0/learning_resources_search_admin_params/`,
+  get: () =>
+    `${getApiBaseUrl()}/api/v0/learning_resources_search_admin_params/`,
 }
 
 const profileMe = {

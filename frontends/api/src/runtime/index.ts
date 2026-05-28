@@ -24,7 +24,14 @@ export type ApiClientsConfig = {
 let currentConfig: ApiClientsConfig | null = null
 
 const normalizeBaseUrl = (label: string, value: string) => {
-  const normalized = value.replace(/\/+$/, "")
+  // Strip trailing slashes with a linear scan rather than a regex. The regex
+  // /\/+$/ backtracks polynomially on inputs with many trailing slashes (ReDoS);
+  // baseUrl comes from env, which static analysis treats as uncontrolled.
+  let end = value.length
+  while (end > 0 && value[end - 1] === "/") {
+    end--
+  }
+  const normalized = value.slice(0, end)
 
   if (!normalized) {
     throw new Error(`${label} baseUrl is invalid after normalization`)
