@@ -18,11 +18,6 @@ v1_urls = [
         name="content_file_delete_webhook",
     ),
     re_path(
-        r"^video_shorts/$",
-        views.VideoShortWebhookView.as_view(),
-        name="video_short_webhook",
-    ),
-    re_path(
         r"^ovs_videos/$",
         views.OVSVideoWebhookView.as_view(),
         name="ovs_video_webhook",

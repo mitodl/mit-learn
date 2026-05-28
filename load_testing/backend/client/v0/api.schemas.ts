@@ -374,6 +374,11 @@ export interface ContentFile {
   edx_module_id?: string | null
   summary?: string
   flashcards?: unknown
+  /**
+   * @maxLength 32
+   * @nullable
+   */
+  youtube_id?: string | null
 }
 
 export type ContentFileVectorSearchResponseMetadataAggregationsItem = {
@@ -1171,7 +1176,7 @@ export const GoalsEnum = {
  */
 export interface LearningPath {
   readonly id: number
-  /** Return the number of items in the list */
+  /** Number of published items in the list. */
   readonly item_count: number
 }
 
@@ -1892,15 +1897,6 @@ export interface PaginatedFeedSourceList {
   /** @nullable */
   previous?: string | null
   results: FeedSource[]
-}
-
-export interface PaginatedVideoShortList {
-  count: number
-  /** @nullable */
-  next?: string | null
-  /** @nullable */
-  previous?: string | null
-  results: VideoShort[]
 }
 
 /**
@@ -3953,22 +3949,6 @@ export const VideoResourceResourceTypeEnum = {
 } as const
 
 /**
- * ModelSerializer for VideoShort model
- */
-export interface VideoShort {
-  /** @maxLength 20 */
-  video_id: string
-  /** @maxLength 255 */
-  title: string
-  published_at: string
-  thumbnail_small_url?: string
-  thumbnail_large_url?: string
-  video_url?: string
-  readonly created_on: string
-  readonly updated_on: string
-}
-
-/**
  * Returns the configuration to serialize
  */
 export type WidgetInstanceConfiguration = { [key: string]: unknown }
@@ -4230,6 +4210,8 @@ export type VectorContentFilesSearchRetrieveParams = {
   key?: string[]
   /**
    * Number of results to return per page
+   * @minimum 1
+   * @maximum 1000
    */
   limit?: number
   /**
@@ -4238,6 +4220,8 @@ export type VectorContentFilesSearchRetrieveParams = {
   offered_by?: string[]
   /**
    * The initial index from which to return the results
+   * @minimum 0
+   * @maximum 1000
    */
   offset?: number
   /**
@@ -4257,16 +4241,6 @@ export type VectorContentFilesSearchRetrieveParams = {
    * The readable_id value of the run that the content file belongs to
    */
   run_readable_id?: string[]
-  /**
- * if the parameter starts with '-' the sort is in descending order
-
-* `id` - id
-* `-id` - -id
-* `resource_readable_id` - resource_readable_id
-* `-resource_readable_id` - -resource_readable_id
- * @minLength 1
- */
-  sortby?: VectorContentFilesSearchRetrieveSortby
   /**
    * Filter to content files where title is null/not null
    * @nullable
@@ -4324,17 +4298,6 @@ export const VectorContentFilesSearchRetrieveAggregationsItem = {
   checksum: "checksum",
 } as const
 
-export type VectorContentFilesSearchRetrieveSortby =
-  (typeof VectorContentFilesSearchRetrieveSortby)[keyof typeof VectorContentFilesSearchRetrieveSortby]
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
-export const VectorContentFilesSearchRetrieveSortby = {
-  id: "id",
-  "-id": "-id",
-  resource_readable_id: "resource_readable_id",
-  "-resource_readable_id": "-resource_readable_id",
-} as const
-
 export type VectorLearningResourcesSearchRetrieveParams = {
   /**
  * aggregations for facet counts
@@ -4358,6 +4321,9 @@ export type VectorLearningResourcesSearchRetrieveParams = {
 * `resource_type_group` - Resource Type Group
 * `resource_category` - Resource Category
 * `published` - Published
+* `next_start_date` - Next Start Date
+* `views` - Views
+* `created_on` - Created On
  */
   aggregations?: VectorLearningResourcesSearchRetrieveAggregationsItem[]
   /**
@@ -4440,6 +4406,8 @@ export type VectorLearningResourcesSearchRetrieveParams = {
   level?: VectorLearningResourcesSearchRetrieveLevelItem[]
   /**
    * Number of results to return per page
+   * @minimum 1
+   * @maximum 1000
    */
   limit?: number
   /**
@@ -4460,6 +4428,8 @@ export type VectorLearningResourcesSearchRetrieveParams = {
   offered_by?: VectorLearningResourcesSearchRetrieveOfferedByItem[]
   /**
    * The initial index from which to return the results
+   * @minimum 0
+   * @maximum 1000
    */
   offset?: number
   /**
@@ -4528,6 +4498,23 @@ export type VectorLearningResourcesSearchRetrieveParams = {
  */
   resource_type_group?: VectorLearningResourcesSearchRetrieveResourceTypeGroupItem[]
   /**
+   * The minimum score a result must have to be returned
+   * @minimum 0
+   */
+  score_cutoff?: number
+  /**
+ * if the parameter starts with '-' the sort is in descending order
+
+* `next_start_date` - next_start_date
+* `views` - views
+* `created_on` - created_on
+* `-next_start_date` - -next_start_date
+* `-views` - -views
+* `-created_on` - -created_on
+ * @minLength 1
+ */
+  sortby?: VectorLearningResourcesSearchRetrieveSortby
+  /**
    * Filter to learning resources where title is null/not null
    * @nullable
    */
@@ -4563,6 +4550,9 @@ export type VectorLearningResourcesSearchRetrieveParams = {
  * `resource_type_group` - Resource Type Group
  * `resource_category` - Resource Category
  * `published` - Published
+ * `next_start_date` - Next Start Date
+ * `views` - Views
+ * `created_on` - Created On
  */
 export type VectorLearningResourcesSearchRetrieveAggregationsItem =
   (typeof VectorLearningResourcesSearchRetrieveAggregationsItem)[keyof typeof VectorLearningResourcesSearchRetrieveAggregationsItem]
@@ -4588,6 +4578,9 @@ export const VectorLearningResourcesSearchRetrieveAggregationsItem = {
   resource_type_group: "resource_type_group",
   resource_category: "resource_category",
   published: "published",
+  next_start_date: "next_start_date",
+  views: "views",
+  created_on: "created_on",
 } as const
 
 /**
@@ -4844,13 +4837,15 @@ export const VectorLearningResourcesSearchRetrieveResourceTypeGroupItem = {
   learning_material: "learning_material",
 } as const
 
-export type VideoShortsListParams = {
-  /**
-   * Number of results to return per page.
-   */
-  limit?: number
-  /**
-   * The initial index from which to return the results.
-   */
-  offset?: number
-}
+export type VectorLearningResourcesSearchRetrieveSortby =
+  (typeof VectorLearningResourcesSearchRetrieveSortby)[keyof typeof VectorLearningResourcesSearchRetrieveSortby]
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const VectorLearningResourcesSearchRetrieveSortby = {
+  next_start_date: "next_start_date",
+  views: "views",
+  created_on: "created_on",
+  "-next_start_date": "-next_start_date",
+  "-views": "-views",
+  "-created_on": "-created_on",
+} as const

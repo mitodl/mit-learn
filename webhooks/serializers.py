@@ -15,16 +15,6 @@ class ContentFileWebHookRequestSerializer(serializers.Serializer):
     course_readable_id = serializers.CharField(required=False, allow_blank=True)
 
 
-class VideoShortWebhookRequestSerializer(serializers.Serializer):
-    """
-    Serializer for Video Short webhook requests.
-    """
-
-    video_id = serializers.CharField()
-    video_metadata = serializers.DictField()
-    source = serializers.CharField(required=False, allow_blank=True)
-
-
 class OVSVideoWebhookRequestSerializer(serializers.Serializer):
     """
     Serializer for OVS video webhook requests.
