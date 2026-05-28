@@ -9,10 +9,6 @@ import * as Sentry from "@sentry/nextjs"
 import { bootstrapApiClients } from "./bootstrap/api"
 import { parseSampleRate } from "./sentry-utils"
 
-// Configure API clients before React hydration so child render paths can safely
-// fire React Query hooks on first paint.
-bootstrapApiClients()
-
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   release: process.env.NEXT_PUBLIC_VERSION,
@@ -34,5 +30,10 @@ Sentry.init({
     Sentry.browserProfilingIntegration(),
   ],
 })
+
+// Configure API clients before React hydration so child render paths can safely
+// fire React Query hooks on first paint. Runs after Sentry.init so that a
+// missing-env failure here is captured by Sentry rather than crashing silently.
+bootstrapApiClients()
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart
