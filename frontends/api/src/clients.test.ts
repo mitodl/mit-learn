@@ -1,3 +1,5 @@
+export {}
+
 const originalEnv = process.env
 
 const makeConfig = () => ({
