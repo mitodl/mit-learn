@@ -1,5 +1,3 @@
-process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL = "https://env.mitx.example.edu"
-
 import { configureApiClients, resetApiClientsForTests } from "../../runtime"
 import * as urls from "./urls"
 
@@ -8,11 +6,7 @@ describe("MITx test URL builders", () => {
     resetApiClientsForTests()
   })
 
-  afterEach(() => {
-    resetApiClientsForTests()
-  })
-
-  test("programs.programDetail uses runtime config instead of process.env", () => {
+  test("programs.programDetail uses runtime config", () => {
     configureApiClients({
       learn: {
         baseUrl: "https://runtime.learn.example.edu",

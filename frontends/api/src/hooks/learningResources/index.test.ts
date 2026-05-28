@@ -65,17 +65,18 @@ describe("useInfiniteLearningResourceItems", () => {
     const firstUrl = urls.learningResources.items({ id: parentId })
     const secondPath = `/api/v1/learning_resources/${parentId}/items/?offset=5`
     const secondUrl = new URL(secondPath, firstUrl).toString()
-    const firstPage = factory.learningResourceRelationships({
-      count: 7,
-      parent: parentId,
-      pageSize: 5,
+    const firstPage = {
+      count: 0,
       next: `https://learn.example.edu${secondPath}`,
-    })
-    const secondPage = factory.learningResourceRelationships({
-      count: 7,
-      parent: parentId,
-      pageSize: 2,
-    })
+      previous: null,
+      results: [],
+    }
+    const secondPage = {
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    }
 
     const { wrapper } = setupReactQueryTest()
     setMockResponse.get(firstUrl, firstPage)

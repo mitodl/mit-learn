@@ -33,6 +33,9 @@ import { queryify } from "ol-test-utilities"
 
 import { getApiClientsConfig } from "../runtime"
 
+// Keep these helpers absolute so the shared request mock can distinguish Learn
+// and MITx requests by origin; switching to path-only URLs would reintroduce
+// cross-backend collisions in tests.
 const getApiBaseUrl = () => getApiClientsConfig().learn.baseUrl
 
 // OpenAPI Generator declares parameters using interfaces, which makes passing

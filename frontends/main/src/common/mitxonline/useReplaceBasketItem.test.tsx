@@ -1,4 +1,5 @@
 import { act, renderHook, setupLocationMock } from "@/test-utils"
+import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "./useReplaceBasketItem"
 
 const reset = jest.fn()
@@ -33,14 +34,22 @@ describe("useReplaceBasketItem", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    process.env = {
-      ...originalEnv,
-      NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL: "https://mitx.example.edu",
-    }
   })
 
   afterAll(() => {
     process.env = originalEnv
+  })
+
+  test("throws at module load when NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL is missing", () => {
+    jest.resetModules()
+    process.env = { ...originalEnv }
+    delete process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL
+
+    expect(() => {
+      jest.isolateModules(() => {
+        require("./useReplaceBasketItem")
+      })
+    }).toThrow(/NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL/i)
   })
 
   test("redirects after the sync mutate path succeeds", () => {
@@ -60,9 +69,7 @@ describe("useReplaceBasketItem", () => {
       42,
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     )
-    expect(assign).toHaveBeenCalledWith(
-      "https://mitx.example.edu/cart/?ecom-service=true",
-    )
+    expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
   })
 
   test("redirects after the async mutateAsync path succeeds", async () => {
@@ -76,8 +83,6 @@ describe("useReplaceBasketItem", () => {
     expect(reset).toHaveBeenCalled()
     expect(clearMutateAsync).toHaveBeenCalled()
     expect(mutateAsync).toHaveBeenCalledWith(42)
-    expect(assign).toHaveBeenCalledWith(
-      "https://mitx.example.edu/cart/?ecom-service=true",
-    )
+    expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
   })
 })

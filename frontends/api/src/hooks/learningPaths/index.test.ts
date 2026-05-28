@@ -64,17 +64,18 @@ describe("useInfiniteLearningPathItems", () => {
     })
     const parsedNextUrl = new URL(url2)
     const nextPath = `${parsedNextUrl.pathname}${parsedNextUrl.search}`
-    const response1 = factory.learningPathRelationships({
-      count: 7,
-      parent: parentId,
+    const response1 = {
+      count: 0,
       next: `https://learn.example.edu${nextPath}`,
-      pageSize: 5,
-    })
-    const response2 = factory.learningPathRelationships({
-      count: 7,
-      pageSize: 2,
-      parent: parentId,
-    })
+      previous: null,
+      results: [],
+    }
+    const response2 = {
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    }
     setMockResponse.get(url1, response1)
     setMockResponse.get(url2, response2)
     const useTestHook = () =>

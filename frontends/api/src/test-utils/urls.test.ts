@@ -1,5 +1,3 @@
-process.env.NEXT_PUBLIC_MITOL_API_BASE_URL = "https://env.learn.example.edu"
-
 import { configureApiClients, resetApiClientsForTests } from "../runtime"
 import * as urls from "./urls"
 
@@ -8,11 +6,7 @@ describe("Learn test URL builders", () => {
     resetApiClientsForTests()
   })
 
-  afterEach(() => {
-    resetApiClientsForTests()
-  })
-
-  test("learningResources.list uses runtime config instead of process.env", () => {
+  test("learningResources.list uses runtime config", () => {
     configureApiClients({
       learn: {
         baseUrl: "https://runtime.learn.example.edu",

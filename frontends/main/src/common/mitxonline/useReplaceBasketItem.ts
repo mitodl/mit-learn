@@ -1,10 +1,7 @@
 import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
+import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 
-const cartUrl = () =>
-  new URL(
-    "/cart/?ecom-service=true",
-    process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
-  ).toString()
+const cartUrl = () => mitxonlineLegacyUrl("/cart/")
 
 const useReplaceBasketItem = () => {
   const addToBasket = useAddToBasket()

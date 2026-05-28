@@ -51,6 +51,13 @@ describe("bootstrapApiClients", () => {
         expect.objectContaining({
           learn: expect.objectContaining({
             baseUrl: "http://learn.internal:8063",
+            csrfCookieName: "csrftoken",
+            withCredentials: true,
+          }),
+          mitxonline: expect.objectContaining({
+            baseUrl: "https://mitx.example.edu",
+            csrfCookieName: "mitxcsrftoken",
+            withCredentials: true,
           }),
         }),
       )
@@ -70,7 +77,43 @@ describe("bootstrapApiClients", () => {
       expect.objectContaining({
         learn: expect.objectContaining({
           baseUrl: "https://learn.public.example.edu",
+          csrfCookieName: "csrftoken",
+          withCredentials: true,
         }),
+        mitxonline: expect.objectContaining({
+          baseUrl: "https://mitx.example.edu",
+          csrfCookieName: "mitxcsrftoken",
+          withCredentials: true,
+        }),
+      }),
+    )
+  })
+
+  test.each([
+    "NEXT_PUBLIC_MITOL_API_BASE_URL",
+    "NEXT_PUBLIC_CSRF_COOKIE_NAME",
+    "NEXT_PUBLIC_MITX_ONLINE_BASE_URL",
+    "NEXT_PUBLIC_MITX_ONLINE_CSRF_COOKIE_NAME",
+  ])("throws when %s is missing", (envName) => {
+    process.env = { ...process.env }
+    delete process.env[envName]
+
+    expect(() => bootstrapApiClients()).toThrow(new RegExp(envName))
+    expect(configureApiClients).not.toHaveBeenCalled()
+  })
+
+  test("treats NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS values other than true as false", () => {
+    process.env = {
+      ...process.env,
+      NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS: "TRUE",
+    }
+
+    bootstrapApiClients()
+
+    expect(configureApiClients).toHaveBeenCalledWith(
+      expect.objectContaining({
+        learn: expect.objectContaining({ withCredentials: false }),
+        mitxonline: expect.objectContaining({ withCredentials: false }),
       }),
     )
   })
