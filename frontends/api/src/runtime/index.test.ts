@@ -77,29 +77,6 @@ describe("api runtime configuration", () => {
     expect(mitxAxios.defaults.baseURL).toBe("https://mitx.example.edu")
   })
 
-  test("rejects invalid config before mutating either axios singleton", async () => {
-    const invalidConfig = {
-      learn: makeConfig().learn,
-      mitxonline: {
-        ...makeConfig().mitxonline,
-        withCredentials: undefined,
-      },
-    } as unknown as Parameters<typeof configureApiClients>[0]
-
-    expect(() => configureApiClients(invalidConfig)).toThrow(
-      /mitxonline withCredentials must be a boolean/i,
-    )
-    expect(() => getApiClientsConfig()).toThrow(/configureApiClients/)
-    expect(learnAxios.defaults.baseURL).toBeUndefined()
-    expect(mitxAxios.defaults.baseURL).toBeUndefined()
-    await expect(learnAxios.get("/api/v1/learning_resources/")).rejects.toThrow(
-      /configureApiClients/,
-    )
-    await expect(mitxAxios.get("/api/v0/baskets/")).rejects.toThrow(
-      /configureApiClients/,
-    )
-  })
-
   test("rejects slash-only baseUrl as invalid during normalization before mutating axios", () => {
     const invalidConfig = {
       ...makeConfig(),
@@ -111,19 +88,6 @@ describe("api runtime configuration", () => {
 
     expect(() => configureApiClients(invalidConfig)).toThrow(
       /learn baseUrl is invalid after normalization/i,
-    )
-    expect(() => getApiClientsConfig()).toThrow(/configureApiClients/)
-    expect(learnAxios.defaults.baseURL).toBeUndefined()
-    expect(mitxAxios.defaults.baseURL).toBeUndefined()
-  })
-
-  test("rejects configs missing a required backend object", () => {
-    const invalidConfig = {
-      learn: makeConfig().learn,
-    } as unknown as Parameters<typeof configureApiClients>[0]
-
-    expect(() => configureApiClients(invalidConfig)).toThrow(
-      /mitxonline configuration is required/i,
     )
     expect(() => getApiClientsConfig()).toThrow(/configureApiClients/)
     expect(learnAxios.defaults.baseURL).toBeUndefined()

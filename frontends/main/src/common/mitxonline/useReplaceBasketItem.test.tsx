@@ -3,8 +3,9 @@ import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "./useReplaceBasketItem"
 
 const reset = jest.fn()
-const mutate = jest.fn((_productId: number, opts?: { onSuccess?: () => void }) =>
-  opts?.onSuccess?.(),
+const mutate = jest.fn(
+  (_productId: number, opts?: { onSuccess?: () => void }) =>
+    opts?.onSuccess?.(),
 )
 const mutateAsync = jest.fn().mockResolvedValue({ id: 7 })
 const clearMutate = jest.fn(
@@ -34,6 +35,7 @@ describe("useReplaceBasketItem", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    process.env = { ...originalEnv }
   })
 
   afterAll(() => {
@@ -42,7 +44,6 @@ describe("useReplaceBasketItem", () => {
 
   test("throws at module load when NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL is missing", () => {
     jest.resetModules()
-    process.env = { ...originalEnv }
     delete process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL
 
     expect(() => {
