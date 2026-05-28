@@ -1,6 +1,9 @@
 import {
   DisplayModeEnum,
   LanguageEnum,
+  VariantIndustryEnum,
+  VariantLengthEnum,
+  type BaseCourseRun,
   type SupportedVariant,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { factories, RequirementTreeBuilder } from "api/mitxonline-test-utils"
@@ -9,6 +12,8 @@ import {
   bucketAndSortHomeEnrollments,
   buildCourseEntry,
   buildRequirementSections,
+  buildVariantKey,
+  buildVariantLabel,
   enrollmentCourseIsInPrograms,
   getCollectionFirstCoursesInDisplayOrder,
   getDistinctDashboardLanguageOptions,
@@ -26,6 +31,7 @@ import {
   pickDisplayedEnrollmentForLegacyDashboard,
   programHasContractRuns,
   resolveCourseEntryForLanguage,
+  selectVariantRunForCourse,
 } from "./dashboardViewModel"
 
 describe("dashboardViewModel", () => {
@@ -1842,5 +1848,231 @@ describe("dashboardViewModel", () => {
       expect(resolved.displayedRun?.id).toBe(32)
       expect(resolved.displayedRun?.courseware_id).toBe("cw-es-32")
     })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Variant picker model helpers
+// ---------------------------------------------------------------------------
+
+const makeVariant = (
+  overrides: Partial<SupportedVariant> = {},
+): SupportedVariant => ({
+  language: LanguageEnum.En,
+  variant_industry: "",
+  variant_length: "",
+  active: true,
+  b2b_only: true,
+  default_variant: false,
+  ...overrides,
+})
+
+const makeRun = (overrides: Partial<BaseCourseRun> = {}): BaseCourseRun => ({
+  id: 1,
+  course_id: 1,
+  title: "Test Run",
+  courseware_id: "course-v1:test+run",
+  courseware_url: "https://example.com",
+  run_tag: "R1",
+  course_number: "T101",
+  language: LanguageEnum.En,
+  language_label: "",
+  enrollment_modes: [],
+  is_upgradable: false,
+  is_enrollable: true,
+  is_archived: false,
+  ...overrides,
+})
+
+describe("buildVariantKey", () => {
+  test("encodes language, industry, and length into a stable string", () => {
+    expect(
+      buildVariantKey(
+        makeVariant({
+          language: LanguageEnum.En,
+          variant_industry: "",
+          variant_length: "",
+        }),
+      ),
+    ).toBe("language:en|industry:|length:")
+  })
+
+  test("includes a non-empty industry value", () => {
+    expect(
+      buildVariantKey(makeVariant({ variant_industry: VariantIndustryEnum.E })),
+    ).toBe("language:en|industry:E|length:")
+  })
+
+  test("includes a non-empty length value", () => {
+    expect(
+      buildVariantKey(makeVariant({ variant_length: VariantLengthEnum.S })),
+    ).toBe("language:en|industry:|length:S")
+  })
+
+  test("encodes all three dimensions together", () => {
+    expect(
+      buildVariantKey(
+        makeVariant({
+          language: LanguageEnum.EsEs,
+          variant_industry: VariantIndustryEnum.Hc,
+          variant_length: VariantLengthEnum.F,
+        }),
+      ),
+    ).toBe("language:es_ES|industry:HC|length:F")
+  })
+})
+
+describe("buildVariantLabel", () => {
+  test("returns language name with General and Full defaults when no modifiers set", () => {
+    expect(buildVariantLabel(makeVariant({ language: LanguageEnum.En }))).toBe(
+      "English • General • Full",
+    )
+  })
+
+  test("uses the Spanish native name for es_ES", () => {
+    expect(
+      buildVariantLabel(makeVariant({ language: LanguageEnum.EsEs })),
+    ).toMatch(/español/i)
+  })
+
+  test("includes the industry label when variant_industry is set", () => {
+    expect(
+      buildVariantLabel(
+        makeVariant({ variant_industry: VariantIndustryEnum.F }),
+      ),
+    ).toBe("English • Finance • Full")
+  })
+
+  test("includes the length label when variant_length is set", () => {
+    expect(
+      buildVariantLabel(makeVariant({ variant_length: VariantLengthEnum.S })),
+    ).toBe("English • General • Short")
+  })
+
+  test("combines all three when all dimensions are set", () => {
+    expect(
+      buildVariantLabel(
+        makeVariant({
+          language: LanguageEnum.En,
+          variant_industry: VariantIndustryEnum.Hc,
+          variant_length: VariantLengthEnum.F,
+        }),
+      ),
+    ).toBe("English • Healthcare • Full")
+  })
+
+  test("falls back to raw value for an unknown industry code", () => {
+    expect(
+      buildVariantLabel(makeVariant({ variant_industry: "XY" as never })),
+    ).toBe("English • XY • Full")
+  })
+
+  test("falls back to raw value for an unknown length code", () => {
+    expect(
+      buildVariantLabel(makeVariant({ variant_length: "XZ" as never })),
+    ).toBe("English • General • XZ")
+  })
+})
+
+describe("selectVariantRunForCourse", () => {
+  test("returns null for an empty runs list", () => {
+    expect(selectVariantRunForCourse([], makeVariant())).toBeNull()
+  })
+
+  test("returns null when no run matches the selected language", () => {
+    const run = makeRun({ language: LanguageEnum.EsEs })
+    expect(
+      selectVariantRunForCourse(
+        [run],
+        makeVariant({ language: LanguageEnum.Fr }),
+      ),
+    ).toBeNull()
+  })
+
+  test("returns the run that matches the selected language", () => {
+    const enRun = makeRun({ id: 1, language: LanguageEnum.En })
+    const esRun = makeRun({ id: 2, language: LanguageEnum.EsEs })
+    expect(
+      selectVariantRunForCourse(
+        [enRun, esRun],
+        makeVariant({ language: LanguageEnum.EsEs }),
+      ),
+    ).toBe(esRun)
+  })
+
+  test("returns null when no run matches the selected industry", () => {
+    const run = makeRun({
+      language: LanguageEnum.En,
+      variant_industry: VariantIndustryEnum.E,
+    })
+    expect(
+      selectVariantRunForCourse(
+        [run],
+        makeVariant({ variant_industry: VariantIndustryEnum.F }),
+      ),
+    ).toBeNull()
+  })
+
+  test("ignores industry filter when selectedVariant.variant_industry is empty", () => {
+    const run = makeRun({
+      id: 5,
+      language: LanguageEnum.En,
+      variant_industry: VariantIndustryEnum.E,
+    })
+    expect(
+      selectVariantRunForCourse([run], makeVariant({ variant_industry: "" })),
+    ).toBe(run)
+  })
+
+  test("returns null when no run matches the selected length", () => {
+    const run = makeRun({
+      language: LanguageEnum.En,
+      variant_length: VariantLengthEnum.F,
+    })
+    expect(
+      selectVariantRunForCourse(
+        [run],
+        makeVariant({ variant_length: VariantLengthEnum.S }),
+      ),
+    ).toBeNull()
+  })
+
+  test("ignores length filter when selectedVariant.variant_length is empty", () => {
+    const run = makeRun({
+      id: 7,
+      language: LanguageEnum.En,
+      variant_length: VariantLengthEnum.S,
+    })
+    expect(
+      selectVariantRunForCourse([run], makeVariant({ variant_length: "" })),
+    ).toBe(run)
+  })
+
+  test("prefers the nearest upcoming start date over a further-future date", () => {
+    const nearFuture = makeRun({ id: 1, start_date: "2099-01-01T00:00:00Z" })
+    const farFuture = makeRun({ id: 2, start_date: "2099-12-31T00:00:00Z" })
+    expect(
+      selectVariantRunForCourse([farFuture, nearFuture], makeVariant()),
+    ).toBe(nearFuture)
+  })
+
+  test("prefers any upcoming date over any past date", () => {
+    const past = makeRun({ id: 1, start_date: "2020-01-01T00:00:00Z" })
+    const future = makeRun({ id: 2, start_date: "2099-01-01T00:00:00Z" })
+    expect(selectVariantRunForCourse([past, future], makeVariant())).toBe(
+      future,
+    )
+  })
+
+  test("among past-only runs, picks the most recent", () => {
+    const older = makeRun({ id: 1, start_date: "2020-01-01T00:00:00Z" })
+    const newer = makeRun({ id: 2, start_date: "2023-06-15T00:00:00Z" })
+    expect(selectVariantRunForCourse([older, newer], makeVariant())).toBe(newer)
+  })
+
+  test("runs with no start date are ranked last", () => {
+    const noDate = makeRun({ id: 1, start_date: null })
+    const past = makeRun({ id: 2, start_date: "2020-01-01T00:00:00Z" })
+    expect(selectVariantRunForCourse([noDate, past], makeVariant())).toBe(past)
   })
 })
