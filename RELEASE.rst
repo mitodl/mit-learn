@@ -1,6 +1,19 @@
 Release Notes
 =============
 
+Version 0.68.7 (Released May 28, 2026)
+--------------
+
+- Send rejected event so Leek picks it up (#3374)
+- Update styled enrolled button not to show arrow (#3372)
+- Add authentication to load tests (#3246)
+- refactor: make internal editor code more generic (#3344)
+- Update dependency pyarrow to v23 [SECURITY] (#3358)
+- Task rate limits (#3363)
+- [pre-commit.ci] pre-commit autoupdate (#3370)
+- Product page: list prices and actual prices (#3346)
+- [pre-commit.ci] pre-commit autoupdate (#3352)
+
 Version 0.68.5 (Released May 26, 2026)
 --------------
 
