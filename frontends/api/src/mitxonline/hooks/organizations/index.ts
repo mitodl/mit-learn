@@ -20,3 +20,4 @@ const useB2BAttachMutation = (opts: B2bApiB2bAttachCreateRequest) => {
 }
 
 export { organizationQueries, managerOrganizationQueries, useB2BAttachMutation }
+export type { ContractCode } from "./queries"

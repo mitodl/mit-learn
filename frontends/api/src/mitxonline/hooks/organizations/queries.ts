@@ -5,7 +5,16 @@ import {
   ManagerContractDetail,
   B2bApiB2bOrganizationsRetrieveRequest,
   B2bApiB2bManagerOrganizationsContractsRetrieveRequest,
+  B2bApiB2bManagerOrganizationsContractsCodesRetrieveRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
+
+type ContractCode = {
+  id: number
+  code: string
+  is_redeemed: boolean
+  redeemed_by: string | null
+  redeemed_on: string | null
+}
 
 const organizationKeys = {
   root: ["mitxonline", "organizations"],
@@ -39,6 +48,17 @@ const managerOrganizationKeys = {
       "detail",
       opts,
     ] as const,
+  contractCodes: (
+    opts: B2bApiB2bManagerOrganizationsContractsCodesRetrieveRequest,
+  ) =>
+    [
+      "mitxonline",
+      "manager",
+      "organizations",
+      "contracts",
+      "codes",
+      opts,
+    ] as const,
 }
 
 const managerOrganizationQueries = {
@@ -58,6 +78,16 @@ const managerOrganizationQueries = {
           .b2bManagerOrganizationsContractsRetrieve(opts)
           .then((res) => res.data),
     }),
+  managerContractCodes: (
+    opts: B2bApiB2bManagerOrganizationsContractsCodesRetrieveRequest,
+  ) =>
+    queryOptions({
+      queryKey: managerOrganizationKeys.contractCodes(opts),
+      queryFn: async (): Promise<ContractCode[]> =>
+        b2bApi
+          .b2bManagerOrganizationsContractsCodesRetrieve(opts)
+          .then((res) => res.data as unknown as ContractCode[]),
+    }),
 }
 
 export {
@@ -66,3 +96,5 @@ export {
   managerOrganizationQueries,
   managerOrganizationKeys,
 }
+
+export type { ContractCode, ContractCodeRedemption }

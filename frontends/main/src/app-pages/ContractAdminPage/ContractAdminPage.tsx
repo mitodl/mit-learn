@@ -1,11 +1,22 @@
 "use client"
 
-import React from "react"
+import React, { useState } from "react"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
 import { useFeatureFlagEnabled } from "posthog-js/react"
-import { Skeleton, Stack, Typography, styled } from "ol-components"
+import { RiMoreLine } from "@remixicon/react"
+import {
+  Pagination,
+  SearchInput,
+  Skeleton,
+  Stack,
+  TabContext,
+  Typography,
+  styled,
+} from "ol-components"
+import { Button, TabButton, TabButtonList, VisuallyHidden } from "@mitodl/smoot-design"
 import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
+import type { ContractCode } from "api/mitxonline-hooks/organizations"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -13,75 +24,326 @@ import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 
+const PAGE_SIZE = 20
+
 const Page = styled.div(({ theme }) => ({
-  maxWidth: "1200px",
+  maxWidth: "1400px",
   margin: "0 auto",
   padding: "40px 24px",
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     padding: "24px 16px",
   },
 }))
 
 const HeaderSection = styled.div(({ theme }) => ({
   display: "flex",
-  padding: "24px",
   alignItems: "center",
+  justifyContent: "space-between",
   gap: "24px",
-  borderRadius: "8px",
-  backgroundColor: theme.custom.colors.white,
-  boxShadow: "0px 1px 3px 0px rgba(120, 147, 172, 0.40)",
-  [theme.breakpoints.down("sm")]: {
-    padding: "16px",
-    gap: "16px",
+  [theme.breakpoints.down("md")]: {
+    flexDirection: "column",
+    alignItems: "flex-start",
   },
 }))
 
+const OrgDetailsContainer = styled.div({
+  display: "flex",
+  alignItems: "center",
+  gap: "24px",
+})
+
 const ImageContainer = styled.div(({ theme }) => ({
   display: "flex",
-  width: "80px",
-  height: "80px",
-  padding: "16px",
+  width: "60px",
+  height: "60px",
+  padding: "8px",
   alignItems: "center",
   justifyContent: "center",
   flexShrink: 0,
   borderRadius: "8px",
   backgroundColor: theme.custom.colors.white,
-  boxShadow: "0px 1px 3px 0px rgba(120, 147, 172, 0.40)",
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  overflow: "hidden",
   "> img": {
     width: "100%",
     height: "auto",
   },
-  [theme.breakpoints.down("sm")]: {
-    width: "56px",
-    height: "56px",
-    padding: "8px",
-  },
 }))
-
-const HeaderTextContainer = styled.div({
-  display: "flex",
-  flexDirection: "column",
-  gap: "4px",
-  flex: 1,
-})
 
 const OrgName = styled(Typography)(({ theme }) => ({
   ...theme.typography.h3,
   color: theme.custom.colors.darkGray2,
-  [theme.breakpoints.down("sm")]: {
-    ...theme.typography.h5,
-  },
 })) as typeof Typography
 
-const ContractName = styled(Typography)(({ theme }) => ({
+const ContractSubtitle = styled(Typography)(({ theme }) => ({
   ...theme.typography.subtitle1,
   color: theme.custom.colors.silverGrayDark,
 })) as typeof Typography
 
-const SeatCount = styled(Typography)(({ theme }) => ({
+const StatsSide = styled.div(({ theme }) => ({
+  display: "flex",
+  gap: "64px",
+  alignItems: "center",
+  [theme.breakpoints.down("md")]: {
+    gap: "32px",
+    flexWrap: "wrap",
+  },
+}))
+
+const StatBlock = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
+})
+
+const StatValue = styled(Typography)(({ theme }) => ({
+  ...theme.typography.h3,
+  color: theme.custom.colors.darkGray2,
+})) as typeof Typography
+
+const StatLabel = styled(Typography)(({ theme }) => ({
+  ...theme.typography.subtitle1,
+  color: theme.custom.colors.silverGrayDark,
+})) as typeof Typography
+
+const SeatAssignmentsSection = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  gap: "16px",
+  paddingTop: "8px",
+})
+
+const SectionTitle = styled(Typography)(({ theme }) => ({
+  ...theme.typography.h5,
+  color: theme.custom.colors.black,
+})) as typeof Typography
+
+const StyledSearchInput = styled(SearchInput)(({ theme }) => ({
+  minWidth: "356px",
+  [theme.breakpoints.down("md")]: {
+    minWidth: "auto",
+    width: "100%",
+    order: -1,
+  },
+}))
+
+const SeatAssignmentsControls = styled.div(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: "16px",
+  [theme.breakpoints.down("md")]: {
+    flexDirection: "column",
+    alignItems: "stretch",
+  },
+}))
+
+const ExportButtonWrapper = styled.div(({ theme }) => ({
+  [theme.breakpoints.down("md")]: {
+    width: "100%",
+    "> button": {
+      width: "100%",
+    },
+  },
+}))
+
+const ControlsLeft = styled.div(({ theme }) => ({
+  display: "flex",
+  gap: "16px",
+  alignItems: "center",
+  flex: 1,
+  [theme.breakpoints.down("md")]: {
+    flexWrap: "wrap",
+    gap: "12px",
+  },
+}))
+
+
+
+const TableCard = styled.div(({ theme }) => ({
+  backgroundColor: theme.custom.colors.white,
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  borderRadius: "4px",
+  padding: "32px",
+  [theme.breakpoints.down("md")]: {
+    padding: "16px",
+  },
+}))
+
+const TableHeaderRow = styled.div(({ theme }) => ({
+  display: "flex",
+  gap: "16px",
+  alignItems: "center",
+  paddingBottom: "16px",
+  borderBottom: `2px solid ${theme.custom.colors.silverGrayDark}`,
+  [theme.breakpoints.down("md")]: {
+    display: "none",
+  },
+}))
+
+const TableHeaderCell = styled.div<{ $flex: number }>(
+  ({ $flex, theme }) => ({
+    flex: $flex,
+    minWidth: 0,
+    ...theme.typography.subtitle2,
+    color: theme.custom.colors.black,
+  }),
+)
+
+const TableRow = styled.div(({ theme }) => ({
+  display: "flex",
+  gap: "16px",
+  alignItems: "center",
+  padding: "14px 0",
+  borderBottom: `1px solid ${theme.custom.colors.silverGrayLight}`,
+  "&:last-child": {
+    borderBottom: "none",
+  },
+  [theme.breakpoints.down("md")]: {
+    position: "relative",
+    flexWrap: "wrap",
+    gap: "6px 0",
+    padding: "16px 40px 16px 0",
+  },
+}))
+
+const MobileLabel = styled.span(({ theme }) => ({
+  display: "none",
+  [theme.breakpoints.down("md")]: {
+    display: "inline",
+    ...theme.typography.subtitle2,
+    color: theme.custom.colors.darkGray2,
+    minWidth: "120px",
+    flexShrink: 0,
+  },
+}))
+
+const TableCell = styled.div<{ $flex: number; $primary?: boolean }>(
+  ({ $flex, $primary, theme }) => ({
+    flex: $flex,
+    minWidth: 0,
+    ...theme.typography.body2,
+    color: theme.custom.colors.black,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    [theme.breakpoints.down("md")]: {
+      flex: "none",
+      width: "100%",
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      overflow: "visible",
+      whiteSpace: "normal",
+      ...($primary && {
+        ...theme.typography.subtitle2,
+        marginBottom: "4px",
+      }),
+    },
+  }),
+)
+
+const STATUS_BADGE_STYLES = {
+  redeemed: {
+    backgroundColor: "rgba(0, 173, 0, 0.2)",
+    color: "#004d1a",
+  },
+  pending: {
+    backgroundColor: "rgba(25, 102, 255, 0.2)",
+    color: "#002896",
+  },
+}
+
+const StatusBadge = styled.span<{ $status: "redeemed" | "pending" }>(
+  ({ $status, theme }) => ({
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "2px 8px",
+    borderRadius: "4px",
+    fontSize: "12px",
+    fontWeight: theme.typography.fontWeightBold,
+    lineHeight: "16px",
+    whiteSpace: "nowrap",
+    ...STATUS_BADGE_STYLES[$status],
+  }),
+)
+
+const ActionCell = styled.div(({ theme }) => ({
+  width: "40px",
+  flexShrink: 0,
+  display: "flex",
+  justifyContent: "center",
+  [theme.breakpoints.down("md")]: {
+    position: "absolute",
+    top: "16px",
+    right: 0,
+  },
+}))
+
+const IconButton = styled.button(({ theme }) => ({
+  background: "none",
+  border: "none",
+  padding: "4px",
+  cursor: "pointer",
+  borderRadius: "4px",
+  color: theme.custom.colors.silverGrayDark,
+  display: "flex",
+  alignItems: "center",
+  "&:hover": {
+    backgroundColor: theme.custom.colors.lightGray2,
+    color: theme.custom.colors.darkGray2,
+  },
+  "&:focus-visible": {
+    outline: `2px solid ${theme.custom.colors.darkGray2}`,
+    outlineOffset: "2px",
+  },
+}))
+
+const TableFooter = styled.div({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  paddingTop: "16px",
+})
+
+const TableFootnote = styled(Typography)(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
 })) as typeof Typography
+
+const EmptyTableMessage = styled(Typography)(({ theme }) => ({
+  ...theme.typography.body2,
+  color: theme.custom.colors.silverGrayDark,
+  padding: "32px 0",
+  textAlign: "center",
+})) as typeof Typography
+
+
+const STUB = "—"
+
+type StatusFilter = "all" | "pending" | "redeemed" | "uninvited"
+
+const COLUMN_FLEX = {
+  assignedTo: 2,
+  redeemedBy: 2,
+  status: 1.5,
+  assignedOn: 1.2,
+  redeemedOn: 1.2,
+  lastSent: 1,
+}
+
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return STUB
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })
+}
+
+function isRedeemed(code: ContractCode): boolean {
+  return code.is_redeemed
+}
 
 type ContractAdminPageInternalProps = {
   orgSlug: string
@@ -92,6 +354,10 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   orgSlug,
   contractSlug,
 }) => {
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [page, setPage] = useState(1)
+
   const {
     data: managerOrgs,
     isLoading: isLoadingOrgs,
@@ -103,6 +369,14 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
 
   const { data: contractDetail, isLoading: isLoadingDetail } = useQuery({
     ...managerOrganizationQueries.managerContractDetail({
+      id: contract?.id ?? 0,
+      parent_lookup_organization: org?.id ?? 0,
+    }),
+    enabled: !!org && !!contract,
+  })
+
+  const { data: codes, isLoading: isLoadingCodes } = useQuery({
+    ...managerOrganizationQueries.managerContractCodes({
       id: contract?.id ?? 0,
       parent_lookup_organization: org?.id ?? 0,
     }),
@@ -129,30 +403,224 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     return <ErrorContent title="Contract not found" timSays="404" />
   }
 
+  const totalPurchased = contractDetail?.total_codes
+  const totalRedeemed = contractDetail?.total_enrollments
+
+  const filteredCodes = (codes ?? []).filter((code) => {
+    const redeemed = isRedeemed(code)
+    const matchesFilter =
+      statusFilter === "all" ||
+      (statusFilter === "redeemed" && redeemed) ||
+      (statusFilter === "pending" && !redeemed) ||
+      (statusFilter === "uninvited" && !redeemed)
+    const email = code.redeemed_by ?? ""
+    const matchesSearch =
+      !searchQuery || email.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesFilter && matchesSearch
+  })
+
+  const totalPages = Math.ceil(filteredCodes.length / PAGE_SIZE)
+  const pagedCodes = filteredCodes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const handleTabChange = (_: React.SyntheticEvent, val: StatusFilter) => {
+    setStatusFilter(val)
+    setPage(1)
+  }
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value)
+    setPage(1)
+  }
+
   return (
     <Page>
-      <Stack gap="40px">
+      <Stack gap="24px">
+        {/* Header */}
         <HeaderSection>
-          <ImageContainer>
-            <Image
-              width={72}
-              height={78}
-              src={org.logo ?? graduateLogo}
-              alt=""
-            />
-          </ImageContainer>
-          <HeaderTextContainer>
-            <OrgName component="h1">{org.name}</OrgName>
-            <ContractName>{contract.name}</ContractName>
-            {isLoadingDetail ? (
-              <Skeleton width="80px" height="20px" />
-            ) : (
-              contractDetail?.total_codes !== undefined && (
-                <SeatCount>{contractDetail.total_codes} seats</SeatCount>
-              )
-            )}
-          </HeaderTextContainer>
+          <OrgDetailsContainer>
+            <ImageContainer>
+              <Image
+                width={60}
+                height={60}
+                src={org.logo ?? graduateLogo}
+                alt=""
+              />
+            </ImageContainer>
+            <div>
+              <OrgName component="h1">{org.name}</OrgName>
+              <ContractSubtitle>
+                <span>{contract.name}</span>
+                {isLoadingDetail ? null : totalPurchased !== undefined ? (
+                  <> · <span>{totalPurchased} seats</span></>
+                ) : null}
+              </ContractSubtitle>
+            </div>
+          </OrgDetailsContainer>
+          <StatsSide>
+            <StatBlock role="group" aria-label="Total purchased">
+              {isLoadingDetail ? (
+                <Skeleton width="48px" height="36px" />
+              ) : (
+                <StatValue>{totalPurchased ?? STUB}</StatValue>
+              )}
+              <StatLabel>Total purchased</StatLabel>
+            </StatBlock>
+            <StatBlock role="group" aria-label="Unassigned">
+              <StatValue>{STUB}</StatValue>
+              <StatLabel>Unassigned</StatLabel>
+            </StatBlock>
+            <StatBlock role="group" aria-label="Pending claim">
+              <StatValue>{STUB}</StatValue>
+              <StatLabel>Pending claim</StatLabel>
+            </StatBlock>
+            <StatBlock role="group" aria-label="Redeemed">
+              {isLoadingDetail ? (
+                <Skeleton width="48px" height="36px" />
+              ) : (
+                <StatValue>{totalRedeemed ?? STUB}</StatValue>
+              )}
+              <StatLabel>Redeemed</StatLabel>
+            </StatBlock>
+          </StatsSide>
         </HeaderSection>
+
+        {/* Seat Assignments */}
+        <SeatAssignmentsSection>
+          <SectionTitle component="h2">Seat Assignments</SectionTitle>
+          <SeatAssignmentsControls>
+            <ControlsLeft>
+              <TabContext value={statusFilter}>
+                <TabButtonList onChange={handleTabChange}>
+                  <TabButton label="All" value="all" />
+                  <TabButton label="Pending claim" value="pending" />
+                  <TabButton label="Redeemed" value="redeemed" />
+                  <TabButton label="Uninvite" value="uninvited" />
+                </TabButtonList>
+              </TabContext>
+              <StyledSearchInput
+                placeholder="Search by email or status.."
+                value={searchQuery}
+                size="medium"
+                onChange={handleSearchChange}
+                onClear={() => {
+                  setSearchQuery("")
+                  setPage(1)
+                }}
+                onSubmit={(e) => setSearchQuery(e.target.value)}
+              />
+            </ControlsLeft>
+            <ExportButtonWrapper>
+              <Button variant="bordered">Export CSV</Button>
+            </ExportButtonWrapper>
+          </SeatAssignmentsControls>
+          <TableCard>
+            <div role="table" aria-label="Seat assignments">
+              <div role="rowgroup">
+                <TableHeaderRow role="row">
+                  <TableHeaderCell role="columnheader" $flex={COLUMN_FLEX.assignedTo}>
+                    Assigned to
+                  </TableHeaderCell>
+                  <TableHeaderCell role="columnheader" $flex={COLUMN_FLEX.redeemedBy}>
+                    Redeemed by
+                  </TableHeaderCell>
+                  <TableHeaderCell role="columnheader" $flex={COLUMN_FLEX.status}>
+                    Status
+                  </TableHeaderCell>
+                  <TableHeaderCell role="columnheader" $flex={COLUMN_FLEX.assignedOn}>
+                    Assigned on
+                  </TableHeaderCell>
+                  <TableHeaderCell role="columnheader" $flex={COLUMN_FLEX.redeemedOn}>
+                    Redeemed on
+                  </TableHeaderCell>
+                  <TableHeaderCell role="columnheader" $flex={COLUMN_FLEX.lastSent}>
+                    Last sent
+                  </TableHeaderCell>
+                  <ActionCell role="columnheader" />
+                </TableHeaderRow>
+              </div>
+              <div role="rowgroup">
+                <VisuallyHidden aria-live="polite" aria-atomic="true">
+                  {isLoadingCodes
+                    ? "Loading seat assignments"
+                    : filteredCodes.length === 0
+                      ? "No seat assignments found"
+                      : `Showing ${filteredCodes.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filteredCodes.length)} of ${filteredCodes.length} assignment${filteredCodes.length !== 1 ? "s" : ""}`}
+                </VisuallyHidden>
+                {isLoadingCodes ? (
+                  <Stack gap="8px" style={{ paddingTop: "16px" }}>
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} width="100%" height="48px" />
+                    ))}
+                  </Stack>
+                ) : pagedCodes.length === 0 ? (
+                  <EmptyTableMessage role="row">No seat assignments found.</EmptyTableMessage>
+                ) : (
+                  pagedCodes.map((code) => {
+                    const redeemed = isRedeemed(code)
+                    return (
+                      <TableRow role="row" key={code.id}>
+                        <TableCell role="cell" $flex={COLUMN_FLEX.assignedTo} $primary>
+                          {code.redeemed_by ?? STUB}
+                        </TableCell>
+                        <TableCell role="cell" $flex={COLUMN_FLEX.redeemedBy}>
+                          <MobileLabel aria-hidden="true">Redeemed by</MobileLabel>
+                          {code.redeemed_by ?? STUB}
+                        </TableCell>
+                        <TableCell role="cell" $flex={COLUMN_FLEX.status}>
+                          <MobileLabel aria-hidden="true">Status</MobileLabel>
+                          <StatusBadge $status={redeemed ? "redeemed" : "pending"}>
+                            {redeemed ? "Redeemed" : "Pending claim"}
+                          </StatusBadge>
+                        </TableCell>
+                        <TableCell role="cell" $flex={COLUMN_FLEX.assignedOn}>
+                          <MobileLabel aria-hidden="true">Assigned on</MobileLabel>
+                          {STUB}
+                        </TableCell>
+                        <TableCell role="cell" $flex={COLUMN_FLEX.redeemedOn}>
+                          <MobileLabel aria-hidden="true">Redeemed on</MobileLabel>
+                          {formatDate(code.redeemed_on)}
+                        </TableCell>
+                        <TableCell role="cell" $flex={COLUMN_FLEX.lastSent}>
+                          <MobileLabel aria-hidden="true">Last sent</MobileLabel>
+                          {STUB}
+                        </TableCell>
+                        <ActionCell role="cell">
+                          <IconButton
+                            type="button"
+                            aria-label={`More actions for ${code.redeemed_by ?? "unassigned seat"}`}
+                          >
+                            <RiMoreLine size={16} />
+                          </IconButton>
+                        </ActionCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+            <TableFooter>
+              <TableFootnote aria-hidden="true">
+                Showing{" "}
+                {filteredCodes.length === 0
+                  ? 0
+                  : (page - 1) * PAGE_SIZE + 1}
+                –{Math.min(page * PAGE_SIZE, filteredCodes.length)} of{" "}
+                {filteredCodes.length} assignment
+                {filteredCodes.length !== 1 ? "s" : ""}
+              </TableFootnote>
+              {totalPages > 1 && (
+                <Pagination
+                  count={totalPages}
+                  page={page}
+                  onChange={(_, p) => setPage(p)}
+                  shape="rounded"
+                  size="small"
+                  aria-label="Seat assignments pagination"
+                />
+              )}
+            </TableFooter>
+          </TableCard>
+        </SeatAssignmentsSection>
       </Stack>
     </Page>
   )
