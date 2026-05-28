@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "PORT=${PORT:-8062} TZ=UTC next dev --webpack",
+    "dev": "PORT=${PORT:-8062} TZ=UTC next dev",
     "build": "next build",
     "start": "TZ=UTC next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
