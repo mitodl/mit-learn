@@ -23,7 +23,15 @@ export type ApiClientsConfig = {
 
 let currentConfig: ApiClientsConfig | null = null
 
-const normalizeBaseUrl = (value: string) => value.replace(/\/+$/, "")
+const normalizeBaseUrl = (label: string, value: string) => {
+  const normalized = value.replace(/\/+$/, "")
+
+  if (!normalized) {
+    throw new Error(`${label} baseUrl is invalid after normalization`)
+  }
+
+  return normalized
+}
 
 const freezeConfig = (config: ApiClientsConfig): ApiClientsConfig =>
   Object.freeze({
@@ -34,7 +42,7 @@ const freezeConfig = (config: ApiClientsConfig): ApiClientsConfig =>
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null
 
-const validateBackendConfigShape = (label: string, entry: unknown) => {
+const validateApiConfigShape = (label: string, entry: unknown) => {
   if (!isRecord(entry)) {
     throw new Error(`${label} configuration is required`)
   }
@@ -52,67 +60,43 @@ const validateBackendConfigShape = (label: string, entry: unknown) => {
   }
 }
 
-const validateBackendConfig = (
-  label: string,
-  entry: LearnApiConfig | MitxOnlineApiConfig,
-) => {
-  if (!entry.baseUrl) {
-    throw new Error(`${label} baseUrl is required`)
-  }
-}
-
 const normalizeConfig = (config: ApiClientsConfig): ApiClientsConfig => ({
   learn: {
     ...config.learn,
-    baseUrl: normalizeBaseUrl(config.learn.baseUrl),
+    baseUrl: normalizeBaseUrl("learn", config.learn.baseUrl),
   },
   mitxonline: {
     ...config.mitxonline,
-    baseUrl: normalizeBaseUrl(config.mitxonline.baseUrl),
+    baseUrl: normalizeBaseUrl("mitxonline", config.mitxonline.baseUrl),
   },
 })
 
-// Keep this in sync with ApiClientsConfig so conflicting reconfiguration checks
-// cover every runtime-configurable field.
-const configsMatch = (left: ApiClientsConfig, right: ApiClientsConfig) =>
-  left.learn.baseUrl === right.learn.baseUrl &&
-  left.learn.csrfCookieName === right.learn.csrfCookieName &&
-  left.learn.withCredentials === right.learn.withCredentials &&
-  left.mitxonline.baseUrl === right.mitxonline.baseUrl &&
-  left.mitxonline.csrfCookieName === right.mitxonline.csrfCookieName &&
-  left.mitxonline.withCredentials === right.mitxonline.withCredentials
-
-const validateConfigShape = (config: ApiClientsConfig) => {
+const validateConfig = (config: ApiClientsConfig) => {
   if (!isRecord(config)) {
     throw new Error("API client configuration is required")
   }
 
-  validateBackendConfigShape("learn", config.learn)
-  validateBackendConfigShape("mitxonline", config.mitxonline)
-}
-
-const validateConfig = (config: ApiClientsConfig) => {
-  validateBackendConfig("learn", config.learn)
-  validateBackendConfig("mitxonline", config.mitxonline)
+  validateApiConfigShape("learn", config.learn)
+  validateApiConfigShape("mitxonline", config.mitxonline)
 }
 
 export const configureApiClients = (config: ApiClientsConfig) => {
-  validateConfigShape(config)
-  const normalized = normalizeConfig(config)
-  validateConfig(normalized)
-
   if (currentConfig) {
-    if (!configsMatch(currentConfig, normalized)) {
-      throw new Error("configureApiClients called with conflicting values")
-    }
-    return currentConfig
+    throw new Error(
+      "API clients are already configured. Call resetApiClientsForTests() first if you need to reconfigure.",
+    )
   }
+
+  validateConfig(config)
+  const normalized = normalizeConfig(config)
 
   applyLearnAxiosConfig(normalized.learn)
   applyMitxOnlineAxiosConfig(normalized.mitxonline)
   currentConfig = freezeConfig(normalized)
   return currentConfig
 }
+
+export const isApiClientsConfigured = (): boolean => currentConfig !== null
 
 export const getApiClientsConfig = () => {
   if (!currentConfig) {

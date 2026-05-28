@@ -5,6 +5,7 @@ import { setMockResponse } from "../test-utils/mockAxios"
 import {
   configureApiClients,
   getApiClientsConfig,
+  isApiClientsConfigured,
   resetApiClientsForTests,
 } from "./index"
 
@@ -36,8 +37,7 @@ describe("api runtime configuration", () => {
     )
   })
 
-  test("stores normalized config and allows equivalent reconfiguration", () => {
-    configureApiClients(makeConfig())
+  test("normalizes baseUrl and applies it to the axios singletons", () => {
     configureApiClients({
       ...makeConfig(),
       learn: { ...makeConfig().learn, baseUrl: "https://learn.example.edu/" },
@@ -46,6 +46,14 @@ describe("api runtime configuration", () => {
     expect(getApiClientsConfig()).toEqual(makeConfig())
     expect(learnAxios.defaults.baseURL).toBe("https://learn.example.edu")
     expect(mitxAxios.defaults.baseURL).toBe("https://mitx.example.edu")
+  })
+
+  test("isApiClientsConfigured reflects configuration state", () => {
+    expect(isApiClientsConfigured()).toBe(false)
+    configureApiClients(makeConfig())
+    expect(isApiClientsConfigured()).toBe(true)
+    resetApiClientsForTests()
+    expect(isApiClientsConfigured()).toBe(false)
   })
 
   test("returns frozen config so callers cannot mutate runtime state", () => {
@@ -92,7 +100,7 @@ describe("api runtime configuration", () => {
     )
   })
 
-  test("rejects slash-only baseUrl after normalization before mutating axios", () => {
+  test("rejects slash-only baseUrl as invalid during normalization before mutating axios", () => {
     const invalidConfig = {
       ...makeConfig(),
       learn: {
@@ -102,7 +110,7 @@ describe("api runtime configuration", () => {
     }
 
     expect(() => configureApiClients(invalidConfig)).toThrow(
-      /learn baseUrl is required/i,
+      /learn baseUrl is invalid after normalization/i,
     )
     expect(() => getApiClientsConfig()).toThrow(/configureApiClients/)
     expect(learnAxios.defaults.baseURL).toBeUndefined()
@@ -122,18 +130,12 @@ describe("api runtime configuration", () => {
     expect(mitxAxios.defaults.baseURL).toBeUndefined()
   })
 
-  test("throws on conflicting reconfiguration", () => {
+  test("throws when configureApiClients is called more than once", () => {
     configureApiClients(makeConfig())
 
-    expect(() =>
-      configureApiClients({
-        ...makeConfig(),
-        learn: {
-          ...makeConfig().learn,
-          baseUrl: "https://other.learn.example.edu",
-        },
-      }),
-    ).toThrow(/conflicting/i)
+    expect(() => configureApiClients(makeConfig())).toThrow(
+      /already configured/i,
+    )
   })
 
   test("reset restores the unconfigured state", async () => {

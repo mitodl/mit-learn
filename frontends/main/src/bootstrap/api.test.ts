@@ -1,8 +1,9 @@
-import { configureApiClients } from "api/runtime"
+import { configureApiClients, isApiClientsConfigured } from "api/runtime"
 import { bootstrapApiClients } from "./api"
 
 jest.mock("api/runtime", () => ({
   configureApiClients: jest.fn(),
+  isApiClientsConfigured: jest.fn(() => false),
 }))
 
 const originalEnv = process.env
@@ -72,5 +73,13 @@ describe("bootstrapApiClients", () => {
         }),
       }),
     )
+  })
+
+  test("no-ops when API clients are already configured", () => {
+    ;(isApiClientsConfigured as jest.Mock).mockReturnValueOnce(true)
+
+    bootstrapApiClients()
+
+    expect(configureApiClients).not.toHaveBeenCalled()
   })
 })
