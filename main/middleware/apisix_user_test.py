@@ -41,6 +41,16 @@ def setup_test_database():
     close_old_connections()
 
 
+@pytest.fixture
+def synced_user(mocker, mock_login):
+    """Run an initial APISIX request to create the user, then return it."""
+    header = b64encode(json.dumps(apisix_user_info).encode())
+    ApisixUserMiddleware(mocker.Mock()).process_request(
+        mocker.Mock(META={"HTTP_X_USERINFO": header}, user=AnonymousUser())
+    )
+    return User.objects.get(global_id=apisix_user_info["sub"])
+
+
 @pytest.mark.django_db(transaction=True)
 def test_get_request(mocker, mock_login, settings):
     """Test that a valid request creates a new user."""
@@ -193,24 +203,13 @@ def test_get_request_logged_in_no_header(mocker, client, user):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_unchanged_identity_skips_writes(mocker, mock_login):
+def test_unchanged_identity_skips_writes(mocker, mock_login, synced_user):
     """A repeat request with an unchanged identity issues no writes or re-login."""
-    close_old_connections()
     header = b64encode(json.dumps(apisix_user_info).encode())
-    apisix_middleware = ApisixUserMiddleware(mocker.Mock())
-
-    # First request creates the user and profile.
-    apisix_middleware.process_request(
-        mocker.Mock(META={"HTTP_X_USERINFO": header}, user=AnonymousUser())
-    )
-    synced_user = User.objects.get(global_id=apisix_user_info["sub"])
-
-    # Second request, now authenticated as that user with the same header:
-    # nothing changed, so no user save, no profile sync, and no re-login.
     mock_login.reset_mock()
     mock_save = mocker.patch.object(User, "save")
     mock_actions = mocker.patch("main.middleware.apisix_user.user_created_actions")
-    apisix_middleware.process_request(
+    ApisixUserMiddleware(mocker.Mock()).process_request(
         mocker.Mock(META={"HTTP_X_USERINFO": header}, user=synced_user)
     )
     mock_save.assert_not_called()
@@ -219,15 +218,30 @@ def test_unchanged_identity_skips_writes(mocker, mock_login):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_changed_user_field_triggers_update(mocker, mock_login):
-    """A changed user header field updates the user."""
-    close_old_connections()
-    header = b64encode(json.dumps(apisix_user_info).encode())
-    apisix_middleware = ApisixUserMiddleware(mocker.Mock())
-    apisix_middleware.process_request(
-        mocker.Mock(META={"HTTP_X_USERINFO": header}, user=AnonymousUser())
+@pytest.mark.parametrize(
+    ("changed_field", "new_value", "get_attr"),
+    [
+        ("family_name", "changed", lambda u: u.last_name),
+        ("name", "New Name", lambda u: u.profile.name),
+    ],
+)
+def test_changed_field_triggers_update(
+    mocker, synced_user, changed_field, new_value, get_attr
+):
+    """A changed header field updates the synced user or profile."""
+    changed_header = b64encode(
+        json.dumps({**apisix_user_info, changed_field: new_value}).encode()
     )
-    synced_user = User.objects.get(global_id=apisix_user_info["sub"])
+    mock_request = mocker.Mock(
+        META={"HTTP_X_USERINFO": changed_header}, user=synced_user
+    )
+    ApisixUserMiddleware(mocker.Mock()).process_request(mock_request)
+    assert get_attr(mock_request.user) == new_value
+
+
+@pytest.mark.django_db(transaction=True)
+def test_user_update_bumps_updated_on(mocker, synced_user):
+    """A user-field change should advance updated_on."""
     User.objects.filter(pk=synced_user.pk).update(
         updated_on=synced_user.updated_on - timedelta(days=1)
     )
@@ -237,33 +251,8 @@ def test_changed_user_field_triggers_update(mocker, mock_login):
     changed_header = b64encode(
         json.dumps({**apisix_user_info, "family_name": "changed"}).encode()
     )
-    mock_request = mocker.Mock(
-        META={"HTTP_X_USERINFO": changed_header}, user=synced_user
+    ApisixUserMiddleware(mocker.Mock()).process_request(
+        mocker.Mock(META={"HTTP_X_USERINFO": changed_header}, user=synced_user)
     )
-    apisix_middleware.process_request(mock_request)
     synced_user.refresh_from_db()
-    assert synced_user.last_name == "changed"
     assert synced_user.updated_on > original_updated_on
-    assert mock_request.user.last_name == "changed"
-
-
-@pytest.mark.django_db(transaction=True)
-def test_changed_profile_field_triggers_update(mocker, mock_login):
-    """A changed profile header field updates the profile."""
-    close_old_connections()
-    header = b64encode(json.dumps(apisix_user_info).encode())
-    apisix_middleware = ApisixUserMiddleware(mocker.Mock())
-    apisix_middleware.process_request(
-        mocker.Mock(META={"HTTP_X_USERINFO": header}, user=AnonymousUser())
-    )
-    synced_user = User.objects.get(global_id=apisix_user_info["sub"])
-    assert synced_user.profile.name == apisix_user_info["name"]
-
-    changed_header = b64encode(
-        json.dumps({**apisix_user_info, "name": "New Name"}).encode()
-    )
-    mock_request = mocker.Mock(
-        META={"HTTP_X_USERINFO": changed_header}, user=synced_user
-    )
-    apisix_middleware.process_request(mock_request)
-    assert mock_request.user.profile.name == "New Name"
