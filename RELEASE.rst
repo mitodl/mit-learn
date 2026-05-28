@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.68.8
+--------------
+
+- feat: migrate video shorts to learning resources API (#3361)
+- chore: Remove embedly (#3377)
+- remove authentication requirement from hybrid search  (#3371)
+
 Version 0.68.7 (Released May 28, 2026)
 --------------
 
