@@ -134,5 +134,4 @@ export {
   videoShortsApi,
   videoPlaylistsApi,
   vectorLearningResourcesSearchApi,
-  BASE_PATH,
 }

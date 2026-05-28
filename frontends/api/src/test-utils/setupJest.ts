@@ -1,4 +1,5 @@
 import { mockAxiosFactory, assertMockAdapterInstalled } from "./mockAxios"
+import { configureApiClients } from "../runtime"
 
 // Wrapped in `() => …` to defer the identifier lookup past TDZ — jest.mock
 // is hoisted above imports, so passing `mockAxiosFactory` directly would
@@ -9,8 +10,6 @@ jest.mock("axios", () => mockAxiosFactory())
 beforeEach(() => {
   assertMockAdapterInstalled()
 })
-
-const { configureApiClients } = require("../runtime")
 
 configureApiClients({
   learn: {

@@ -48,6 +48,9 @@ describe("useReplaceBasketItem", () => {
 
     expect(() => {
       jest.isolateModules(() => {
+        // jest.isolateModules takes a sync callback; require is the only way
+        // to load a module synchronously inside it.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         require("./useReplaceBasketItem")
       })
     }).toThrow(/NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL/i)
