@@ -49,6 +49,7 @@ const courseEnrollment: PartialFactory<CourseRunEnrollmentV3> = (
     run: {
       enrollment_modes: [courses.enrollmentMode()],
       id: uniqueRunId.enforce(() => faker.number.int()),
+      course_id: faker.number.int(),
       title,
       start_date: faker.date.past().toISOString(),
       end_date: faker.date.future().toISOString(),
