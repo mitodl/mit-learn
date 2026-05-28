@@ -16,8 +16,8 @@ const contract = (overrides: Partial<ContractPage> = {}): ContractPage => ({
   welcome_message: faker.lorem.sentence(),
   welcome_message_extra: `<p>${faker.lorem.paragraph()}</p>`,
   programs: [],
-  variant_options: [],
   ...overrides,
+  variant_options: overrides.variant_options ?? [],
 })
 
 const contracts = makePaginatedFactory(contract)
