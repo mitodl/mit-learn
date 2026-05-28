@@ -37,15 +37,21 @@ describe("api runtime configuration", () => {
     )
   })
 
-  test("normalizes baseUrl and applies it to the axios singletons", () => {
+  test("normalizes baseUrl and applies the full config to the axios singletons", () => {
     configureApiClients({
       ...makeConfig(),
       learn: { ...makeConfig().learn, baseUrl: "https://learn.example.edu/" },
     })
 
     expect(getApiClientsConfig()).toEqual(makeConfig())
+
     expect(learnAxios.defaults.baseURL).toBe("https://learn.example.edu")
+    expect(learnAxios.defaults.xsrfCookieName).toBe("csrftoken")
+    expect(learnAxios.defaults.withCredentials).toBe(true)
+
     expect(mitxAxios.defaults.baseURL).toBe("https://mitx.example.edu")
+    expect(mitxAxios.defaults.xsrfCookieName).toBe("mitxcsrftoken")
+    expect(mitxAxios.defaults.withCredentials).toBe(false)
   })
 
   test("isApiClientsConfigured reflects configuration state", () => {
@@ -63,8 +69,6 @@ describe("api runtime configuration", () => {
     Reflect.set(config.mitxonline, "csrfCookieName", "different-mitxcsrftoken")
 
     expect(getApiClientsConfig()).toEqual(makeConfig())
-    expect(learnAxios.defaults.baseURL).toBe("https://learn.example.edu")
-    expect(mitxAxios.defaults.baseURL).toBe("https://mitx.example.edu")
   })
 
   test("rejects slash-only baseUrl as invalid during normalization before mutating axios", () => {

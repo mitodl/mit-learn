@@ -89,4 +89,35 @@ describe("useReplaceBasketItem", () => {
     expect(mutateAsync).toHaveBeenCalledWith(42)
     expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
   })
+
+  test("does not add or redirect when the sync clear never succeeds", () => {
+    const assign = jest.mocked(window.location.assign)
+    // Simulate clear failing: its onSuccess is never invoked. This also pins the
+    // ordering — add must be nested inside clear's onSuccess, not fired directly.
+    clearMutate.mockImplementationOnce(() => {})
+    const { result } = renderHook(() => useReplaceBasketItem())
+
+    act(() => {
+      result.current.mutate(42)
+    })
+
+    expect(clearMutate).toHaveBeenCalled()
+    expect(mutate).not.toHaveBeenCalled()
+    expect(assign).not.toHaveBeenCalled()
+  })
+
+  test("does not add or redirect when the async clear rejects", async () => {
+    const assign = jest.mocked(window.location.assign)
+    clearMutateAsync.mockRejectedValueOnce(new Error("clear failed"))
+    const { result } = renderHook(() => useReplaceBasketItem())
+
+    await act(async () => {
+      await expect(result.current.mutateAsync(42)).rejects.toThrow(
+        "clear failed",
+      )
+    })
+
+    expect(mutateAsync).not.toHaveBeenCalled()
+    expect(assign).not.toHaveBeenCalled()
+  })
 })
