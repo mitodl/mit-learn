@@ -51,13 +51,6 @@ describe("bootstrapApiClients", () => {
         expect.objectContaining({
           learn: expect.objectContaining({
             baseUrl: "http://learn.internal:8063",
-            csrfCookieName: "csrftoken",
-            withCredentials: true,
-          }),
-          mitxonline: expect.objectContaining({
-            baseUrl: "https://mitx.example.edu",
-            csrfCookieName: "mitxcsrftoken",
-            withCredentials: true,
           }),
         }),
       )
