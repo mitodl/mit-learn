@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.68.8
+Version 0.68.8 (Released May 28, 2026)
 --------------
 
 - feat: migrate video shorts to learning resources API (#3361)
