@@ -596,7 +596,6 @@ type RequirementSection = {
 const buildCourseEntry = (
   course: CourseWithCourseRunsSerializerV2,
   enrollments: CourseRunEnrollmentV3[],
-  // selectedLanguageKey: string,
   selectedVariantKey: string,
   opts: {
     availableVariants: SupportedVariant[]
