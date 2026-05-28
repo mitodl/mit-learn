@@ -12,8 +12,8 @@ const requireEnv = (name: string): string => {
 export const bootstrapApiClients = () => {
   // First-wins: the server process calls this once from instrumentation and may
   // re-enter via the SSR pass through providers.tsx; the browser calls this
-  // once from providers.tsx and may re-enter under Fast Refresh. In every case
-  // the second call is the same intent as the first, so no-op.
+  // once from instrumentation-client.ts and may re-enter under Fast Refresh.
+  // In every case the second call is the same intent as the first, so no-op.
   if (isApiClientsConfigured()) return
 
   const learnBaseUrl =

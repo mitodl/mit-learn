@@ -13,13 +13,8 @@ import { usePrefetchWarnings } from "api/ssr/usePrefetchWarnings"
 import { AppProgressBar as ProgressBar } from "next-nprogress-bar"
 import type { NProgressOptions } from "next-nprogress-bar"
 import { ReloadOnUserChange } from "@/page-components/ReloadOnUserChange/ReloadOnUserChange"
-import { bootstrapApiClients } from "@/bootstrap/api"
 
 const PROGRESS_BAR_OPTS: NProgressOptions = { showSpinner: false }
-
-// Configure API clients before any child render path can fire React Query hooks.
-// Keeping this at module scope ensures bootstrap happens before the first request.
-bootstrapApiClients()
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const queryClient = getQueryClient()

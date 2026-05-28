@@ -1,0 +1,31 @@
+const bootstrapApiClients = jest.fn()
+
+jest.mock("./bootstrap/api", () => ({
+  bootstrapApiClients,
+}))
+
+jest.mock("@sentry/nextjs", () => ({
+  init: jest.fn(),
+  browserTracingIntegration: jest.fn(() => "browserTracingIntegration"),
+  browserProfilingIntegration: jest.fn(() => "browserProfilingIntegration"),
+  captureRouterTransitionStart: jest.fn(),
+}))
+
+jest.mock("./sentry-utils", () => ({
+  parseSampleRate: jest.fn((_value, fallback) => fallback),
+}))
+
+describe("instrumentation-client", () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    jest.resetModules()
+  })
+
+  test("bootstraps API clients at module load", () => {
+    jest.isolateModules(() => {
+      require("./instrumentation-client")
+    })
+
+    expect(bootstrapApiClients).toHaveBeenCalledTimes(1)
+  })
+})
