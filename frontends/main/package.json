@@ -14,7 +14,7 @@
     "@emotion/styled": "^11.11.0",
     "@floating-ui/react": "^0.27.16",
     "@mitodl/course-search-utils": "^3.5.2",
-    "@mitodl/mitxonline-api-axios": "https://github.com/mitodl/mitxonline-api-clients/raw/b21b5e1fc0247d20bdbfd8b85d9c3518d90b8425/src/typescript/mitxonline-api-axios/package.tgz",
+    "@mitodl/mitxonline-api-axios": "https://github.com/mitodl/mitxonline-api-clients/raw/ba63f4c1223615ee544da6cb6c3c648cfaa8c087/src/typescript/mitxonline-api-axios/package.tgz",
     "@mitodl/smoot-design": "^6.27.0",
     "@mui/material": "^6.4.5",
     "@mui/material-nextjs": "^6.4.3",
