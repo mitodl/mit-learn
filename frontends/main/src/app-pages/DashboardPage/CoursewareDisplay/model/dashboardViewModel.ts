@@ -925,9 +925,6 @@ const VARIANT_LENGTH_LABELS: Record<string, string> = {
   F: "Full",
 }
 
-/** Stable key for the "Original / default run" option. */
-const DEFAULT_VARIANT_VALUE = ""
-
 const buildVariantKey = (variant: SupportedVariant): string =>
   `language:${variant.language ?? ""}|industry:${variant.variant_industry ?? ""}|length:${variant.variant_length ?? ""}`
 
@@ -1086,7 +1083,6 @@ export {
   buildVariantKey,
   buildVariantLabel,
   selectVariantRunForCourse,
-  DEFAULT_VARIANT_VALUE,
 }
 
 export type { RequirementSectionItem, RequirementSection }
