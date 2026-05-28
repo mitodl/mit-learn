@@ -39,6 +39,9 @@ const VariantChoiceBox = styled("label", {
   backgroundColor: theme.custom.colors.white,
   border: `${checked ? "2px" : "1px"} solid ${checked ? theme.custom.colors.red : theme.custom.colors.silverGrayLight}`,
   cursor: "pointer",
+  "&:focus-within": {
+    border: `2px solid ${theme.custom.colors.red}`,
+  },
 }))
 
 type VariantCardProps = {
@@ -87,13 +90,18 @@ type VariantChoiceBoxesProps = {
   variantOptions: SupportedVariant[]
   selectedVariant: SupportedVariant | null
   setSelectedVariant: (variant: SupportedVariant | null) => void
+  "aria-label"?: string
+  "aria-labelledby"?: string
 }
 
 const VariantChoiceBoxes: React.FC<VariantChoiceBoxesProps> = ({
   variantOptions,
   selectedVariant,
   setSelectedVariant,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledby,
 }) => {
+  const groupName = React.useId()
   const selectedValue = selectedVariant
     ? buildVariantKey(selectedVariant)
     : null
@@ -105,14 +113,21 @@ const VariantChoiceBoxes: React.FC<VariantChoiceBoxesProps> = ({
     setSelectedVariant(variant ?? null)
   }
   return (
-    <Stack direction="row" gap="16px" flexWrap="wrap">
+    <Stack
+      role="radiogroup"
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledby}
+      direction="row"
+      gap="16px"
+      flexWrap="wrap"
+    >
       {variantOptions.map((variant) => {
         const value = buildVariantKey(variant)
         const label = buildVariantLabel(variant)
         return (
           <VariantCard
             key={value}
-            name={`variant-option-${value}`}
+            name={groupName}
             value={value}
             title={label}
             certEligible={variant.default_variant}
@@ -152,13 +167,15 @@ const VariantPicker: React.FC<VariantPickerProps> = ({
   title = "Available Versions",
   description,
 }) => {
+  const titleId = React.useId()
   return (
     <VariantPickerRoot>
-      <Typography variant="h5" component="h2">
+      <Typography id={titleId} variant="h5" component="h2">
         {title}
       </Typography>
       {description && <Typography variant="body2">{description}</Typography>}
       <VariantChoiceBoxes
+        aria-labelledby={titleId}
         variantOptions={variantOptions}
         selectedVariant={selectedVariant}
         setSelectedVariant={setSelectedVariant}
