@@ -85,10 +85,10 @@ const TermsPage: React.FC = () => {
             single online platform for accessing all of MIT's non-degree
             learning resources. Through MIT Learn, learners across the globe can
             search and browse courses, programs, and various educational
-            materials from across MIT, including Universal AI, MITx, MIT
-            OpenCourseWare, MIT Professional Education, MIT Sloan Executive
-            Education, MIT xPRO, and other departments across the Institute
-            ("Offerings").
+            materials from across MIT, including Universal AI, MITx, MITx
+            MicroMasters®, MIT OpenCourseWare, MIT Professional Education, MIT 
+            Sloan Executive Education, MIT xPRO, and other departments across 
+            the Institute ("Offerings").
           </BodyText>
           <BodyText variant="body1">
             Please read these Terms of Service ("TOS") and the MIT Learn{" "}
