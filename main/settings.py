@@ -137,7 +137,6 @@ INSTALLED_APPS = (
     "testimonials",
     "data_fixtures",
     "vector_search",
-    "video_shorts",
     "ol_hubspot",
     "mitol.scim.apps.ScimApp",
     "health_check",
