@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.68.7
+Version 0.68.7 (Released May 28, 2026)
 --------------
 
 - Send rejected event so Leek picks it up (#3374)
