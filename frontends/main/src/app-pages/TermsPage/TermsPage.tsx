@@ -545,14 +545,14 @@ const TermsPage: React.FC = () => {
             promotional purposes, or in any way that deliberately or
             inadvertently claims, suggests or, in MIT's sole judgment, gives the
             appearance or impression of a relationship with or endorsement by
-            MIT. MIT is an authorized Licensee of the MicroMasters mark which is
-            a registered trademark of Axim Collaborative, Inc. All rights reserved
-            worldwide.
+            MIT.
           </BodyText>
           <BodyText variant="body1">
             All trademarks not owned by MIT that appear on the Site or through
             the services made available on or through the Site are the property
-            of their respective owners.
+            of their respective owners. For example, MIT is an authorized
+            Licensee of the MicroMasters mark, which is a registered trademark
+            of Axim Collaborative, Inc. All rights reserved worldwide.
           </BodyText>
           <BodyText variant="body1">
             Nothing contained on the Site should be construed as granting, by
