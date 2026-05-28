@@ -116,10 +116,10 @@ const Placeholder = styled.div(({ theme }) => ({
   },
 }))
 
-const playerPaused = (player: Player): boolean => player.paused() !== false
-const playerEnded = (player: Player): boolean => player.ended() !== false
+const playerPaused = (player: Player): boolean => player.paused()
+const playerEnded = (player: Player): boolean => player.ended()
 const playerCurrentTime = (player: Player): number => player.currentTime() ?? 0
-const playerReadyState = (player: Player): number => player.readyState() ?? 0
+const playerReadyState = (player: Player): number => player.readyState()
 const playerDuration = (player: Player): number => player.duration() ?? 0
 const playerMuted = (player: Player): boolean => player.muted() ?? true
 
