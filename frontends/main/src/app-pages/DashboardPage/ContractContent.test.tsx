@@ -1706,8 +1706,10 @@ describe("ContractContent", () => {
     )
 
     await screen.findByTestId("org-program-root")
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
-    expect(screen.queryByText("Learning Language:")).not.toBeInTheDocument()
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("heading", { name: "Available Versions" }),
+    ).not.toBeInTheDocument()
   })
 
   test("shared contract variant picker stays hidden for single-variant program collections", async () => {
@@ -1779,8 +1781,10 @@ describe("ContractContent", () => {
     )
 
     await screen.findByTestId("org-program-collection-root")
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
-    expect(screen.queryByText("Learning Language:")).not.toBeInTheDocument()
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("heading", { name: "Available Versions" }),
+    ).not.toBeInTheDocument()
   })
 
   test("disables CTA for non-enrolled B2B course when no translations and no enrollable runs", async () => {
