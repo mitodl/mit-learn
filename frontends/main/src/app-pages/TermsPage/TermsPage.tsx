@@ -86,8 +86,8 @@ const TermsPage: React.FC = () => {
             learning resources. Through MIT Learn, learners across the globe can
             search and browse courses, programs, and various educational
             materials from across MIT, including Universal AI, MITx, MITx
-            MicroMasters®, MIT OpenCourseWare, MIT Professional Education, MIT 
-            Sloan Executive Education, MIT xPRO, and other departments across 
+            MicroMasters®, MIT OpenCourseWare, MIT Professional Education, MIT
+            Sloan Executive Education, MIT xPRO, and other departments across
             the Institute ("Offerings").
           </BodyText>
           <BodyText variant="body1">
