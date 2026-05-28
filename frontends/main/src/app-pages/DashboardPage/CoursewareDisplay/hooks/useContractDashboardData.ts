@@ -20,7 +20,6 @@ import type {
 import {
   buildCourseEntry,
   getCollectionFirstCoursesInDisplayOrder,
-  getDistinctContractVariantOptions,
   getProgramCoursesInContractOrder,
   getRenderableContractCollections,
   getSortedStandaloneContractPrograms,
@@ -88,8 +87,8 @@ const useContractDashboardData = (
   const courseRunEnrollments = courseRunEnrollmentsQuery.data ?? []
 
   const variantOptions = React.useMemo(
-    () => getDistinctContractVariantOptions(contractCourses),
-    [contractCourses],
+    () => contract.variant_options ?? [],
+    [contract],
   )
 
   const { selectedVariant, setSelectedVariant } =

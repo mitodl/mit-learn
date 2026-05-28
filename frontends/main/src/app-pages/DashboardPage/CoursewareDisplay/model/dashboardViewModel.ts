@@ -956,39 +956,6 @@ const buildVariantLabel = (variant: SupportedVariant): string => {
 }
 
 /**
- * Build deduplicated picker options from the union of `possible_variant_sets`
- * across all courses in a contract.
- *
- * Only active variants are included. Options are sorted alphabetically by
- * label.
- */
-const getDistinctContractVariantOptions = (
-  courses: CourseWithCourseRunsSerializerV2[],
-): SupportedVariant[] => {
-  const seen = new Set<string>()
-  const options: SupportedVariant[] = []
-
-  for (const course of courses) {
-    for (const variant of course.possible_variant_sets ?? []) {
-      if (!variant.active) continue
-      const value = buildVariantKey(variant)
-      if (!seen.has(value)) {
-        seen.add(value)
-        options.push(variant)
-      }
-    }
-  }
-
-  options.sort((a, b) => {
-    const labelA = buildVariantLabel(a)
-    const labelB = buildVariantLabel(b)
-    return labelA.localeCompare(labelB, undefined, { sensitivity: "base" })
-  })
-
-  return options
-}
-
-/**
  * Given the list of runs the API returned for one course (which may include
  * both the course's default-variant runs AND the requested-variant runs),
  * return the single best run that matches the selected variant combination.
@@ -1119,7 +1086,6 @@ export {
   getCollectionFirstCoursesInDisplayOrder,
   buildVariantKey,
   buildVariantLabel,
-  getDistinctContractVariantOptions,
   selectVariantRunForCourse,
   DEFAULT_VARIANT_VALUE,
 }

@@ -1465,6 +1465,24 @@ describe("ContractContent", () => {
     const contracts = createTestContracts(orgX.id, 1, [program.id])
     orgX.contracts = contracts
     mitxOnlineUser.b2b_organizations[0].contracts = contracts
+    contracts[0].variant_options = [
+      {
+        language: LanguageEnum.En,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: true,
+      },
+      {
+        language: LanguageEnum.EsEs,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: false,
+      },
+    ]
 
     const englishRun = factories.courses.courseRun({
       id: faker.number.int(),
@@ -1486,24 +1504,6 @@ describe("ContractContent", () => {
     const localizedCourse = factories.courses.course({
       courseruns: [englishRun, spanishRun],
       next_run_id: englishRun.id,
-      possible_variant_sets: [
-        {
-          language: LanguageEnum.En,
-          variant_industry: "",
-          variant_length: "",
-          active: true,
-          b2b_only: true,
-          default_variant: true,
-        },
-        {
-          language: LanguageEnum.EsEs,
-          variant_industry: "",
-          variant_length: "",
-          active: true,
-          b2b_only: true,
-          default_variant: false,
-        },
-      ],
     })
     program.courses = [localizedCourse.id]
 
@@ -1556,6 +1556,24 @@ describe("ContractContent", () => {
     const contracts = createTestContracts(orgX.id, 1, [program.id])
     orgX.contracts = contracts
     mitxOnlineUser.b2b_organizations[0].contracts = contracts
+    contracts[0].variant_options = [
+      {
+        language: LanguageEnum.En,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: true,
+      },
+      {
+        language: LanguageEnum.EsEs,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: false,
+      },
+    ]
 
     const englishRun = factories.courses.courseRun({
       id: faker.number.int(),
@@ -1577,24 +1595,6 @@ describe("ContractContent", () => {
     const localizedCourse = factories.courses.course({
       courseruns: [englishRun, spanishRun],
       next_run_id: englishRun.id,
-      possible_variant_sets: [
-        {
-          language: LanguageEnum.En,
-          variant_industry: "",
-          variant_length: "",
-          active: true,
-          b2b_only: true,
-          default_variant: true,
-        },
-        {
-          language: LanguageEnum.EsEs,
-          variant_industry: "",
-          variant_length: "",
-          active: true,
-          b2b_only: true,
-          default_variant: false,
-        },
-      ],
     })
     program.courses = [localizedCourse.id]
 
