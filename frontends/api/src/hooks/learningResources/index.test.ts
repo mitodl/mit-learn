@@ -93,7 +93,9 @@ describe("useInfiniteLearningResourceItems", () => {
     result.current.fetchNextPage()
     await waitFor(() => expect(result.current.isFetching).toBe(false))
 
-    expect(makeRequest).toHaveBeenCalledWith("get", secondUrl, undefined)
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "get", url: secondUrl }),
+    )
   })
 })
 

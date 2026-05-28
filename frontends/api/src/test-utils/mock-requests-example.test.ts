@@ -133,9 +133,9 @@ describe("request mocking", () => {
       data: JSON.stringify({ product_id: 7 }),
     })
 
-    expect(axios.request).toHaveBeenCalledWith(
+    expect(makeRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        method: "POST",
+        method: "post",
         url: "http://example.test/mitxonline/api/v0/baskets/create_from_product/7/",
       }),
     )
