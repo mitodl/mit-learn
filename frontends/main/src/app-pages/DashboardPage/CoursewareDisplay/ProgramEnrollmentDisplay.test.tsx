@@ -27,7 +27,7 @@ import {
 } from "@/test-utils"
 import { ProgramEnrollmentDisplay } from "./ProgramEnrollmentDisplay"
 import * as mitxonline from "api/mitxonline-test-utils"
-import { mockAxiosInstance } from "api/test-utils"
+import { makeRequest } from "api/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
@@ -1378,11 +1378,11 @@ describe("ProgramEnrollmentDisplay", () => {
     await user.click(startButton)
 
     await waitFor(() => {
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+      expect(makeRequest).toHaveBeenCalledWith(
         expect.objectContaining({
-          method: "POST",
+          method: "post",
           url: childCourseEnrollmentEndpoint,
-          data: JSON.stringify([parentProgramEnrollment.program.readable_id]),
+          body: [parentProgramEnrollment.program.readable_id],
         }),
       )
     })
@@ -1423,14 +1423,14 @@ describe("ProgramEnrollmentDisplay", () => {
     await user.click(startButton)
 
     await waitFor(() => {
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+      expect(makeRequest).toHaveBeenCalledWith(
         expect.objectContaining({
-          method: "POST",
+          method: "post",
           url: moduleCourseEnrollmentEndpoint,
-          data: JSON.stringify([
+          body: [
             programAsCourse.readable_id,
             parentProgramEnrollment.program.readable_id,
-          ]),
+          ],
         }),
       )
     })

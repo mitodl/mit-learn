@@ -1,5 +1,5 @@
 import axiosBase from "axios"
-import { setMockResponse } from "./mockAxios"
+import { setMockResponse, makeRequest } from "./mockAxios"
 import { ControlledPromise, allowConsoleErrors } from "ol-test-utilities"
 
 const axios = axiosBase.create()
@@ -30,19 +30,25 @@ describe("request mocking", () => {
     const r3 = await axios.post("/some-example", { cat: "meow", a: 5 })
 
     // toHaveBeenNthCalledWith is 1-indexed
-    expect(axios.post).toHaveBeenNthCalledWith(1, "/some-example", {
-      dog: "woof",
+    expect(makeRequest).toHaveBeenNthCalledWith(1, {
+      method: "post",
+      url: "/some-example",
+      body: { dog: "woof" },
     })
-    expect(axios.patch).toHaveBeenNthCalledWith(1, "/another-example", {
-      dog: "bark bark",
+    expect(makeRequest).toHaveBeenNthCalledWith(2, {
+      method: "patch",
+      url: "/another-example",
+      body: { dog: "bark bark" },
     })
-    expect(axios.post).toHaveBeenNthCalledWith(2, "/some-example", {
-      baby: "sleep",
-      b: 10,
+    expect(makeRequest).toHaveBeenNthCalledWith(3, {
+      method: "post",
+      url: "/some-example",
+      body: { baby: "sleep", b: 10 },
     })
-    expect(axios.post).toHaveBeenNthCalledWith(3, "/some-example", {
-      cat: "meow",
-      a: 5,
+    expect(makeRequest).toHaveBeenNthCalledWith(4, {
+      method: "post",
+      url: "/some-example",
+      body: { cat: "meow", a: 5 },
     })
 
     expect(r0.data).toEqual({ someResponseKey: "fallback post response" })
@@ -59,7 +65,10 @@ describe("request mocking", () => {
     setMockResponse.post("/some-example", "Bad request", { code: 400 })
     await expect(axios.post("/some-example", { a: 5 })).rejects.toEqual(
       expect.objectContaining({
-        response: { data: "Bad request", status: 400 },
+        response: expect.objectContaining({
+          data: "Bad request",
+          status: 400,
+        }),
       }),
     )
   })

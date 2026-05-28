@@ -7,7 +7,7 @@ import {
   user,
   setupLocationMock,
 } from "@/test-utils"
-import { makeRequest, mockAxiosInstance, setMockResponse } from "api/test-utils"
+import { makeRequest, setMockResponse } from "api/test-utils"
 import {
   urls as mitxUrls,
   factories as mitxFactories,
@@ -345,11 +345,11 @@ describe("CourseEnrollmentDialog", () => {
       await user.click(enrollButton)
 
       await waitFor(() => {
-        expect(makeRequest).toHaveBeenCalledWith(
-          "post",
-          mitxUrls.enrollment.enrollmentsListV1(),
-          { run_id: run.id },
-        )
+        expect(makeRequest).toHaveBeenCalledWith({
+          method: "post",
+          url: mitxUrls.enrollment.enrollmentsListV1(),
+          body: { run_id: run.id },
+        })
       })
     })
 
@@ -380,18 +380,18 @@ describe("CourseEnrollmentDialog", () => {
 
       // Verify clear basket API was called first
       await waitFor(() => {
-        expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+        expect(makeRequest).toHaveBeenCalledWith(
           expect.objectContaining({
-            method: "DELETE",
+            method: "delete",
             url: clearUrl,
           }),
         )
       })
 
       // Verify create basket API was called
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+      expect(makeRequest).toHaveBeenCalledWith(
         expect.objectContaining({
-          method: "POST",
+          method: "post",
           url: basketUrl,
         }),
       )

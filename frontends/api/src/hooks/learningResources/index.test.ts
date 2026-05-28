@@ -22,12 +22,9 @@ const assertApiCalled = async (
   data: unknown,
 ) => {
   await waitFor(() => expect(result.current.isLoading).toBe(false))
-  expect(
-    makeRequest.mock.calls.some((args) => {
-      // Don't use toHaveBeenCalledWith. It doesn't handle undefined 3rd arg.
-      return args[0].toUpperCase() === method && args[1] === url
-    }),
-  ).toBe(true)
+  expect(makeRequest).toHaveBeenCalledWith(
+    expect.objectContaining({ method: method.toLowerCase(), url }),
+  )
   expect(result.current.data).toEqual(data)
 }
 

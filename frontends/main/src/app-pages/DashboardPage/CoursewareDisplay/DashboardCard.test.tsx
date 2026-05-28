@@ -10,7 +10,7 @@ import {
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
-import { mockAxiosInstance } from "api/test-utils"
+import { makeRequest } from "api/test-utils"
 import {
   DashboardCard,
   DashboardType,
@@ -677,17 +677,17 @@ describe.each([
     await user.click(upgradeLink)
 
     // Verify clear basket API was called first
-    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+    expect(makeRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        method: "DELETE",
+        method: "delete",
         url: clearUrl,
       }),
     )
 
     // Verify create basket API was called
-    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+    expect(makeRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        method: "POST",
+        method: "post",
         url: basketUrl,
       }),
     )
@@ -1202,8 +1202,8 @@ describe.each([
 
       await user.click(triggerElement)
 
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-        expect.objectContaining({ method: "POST", url: enrollmentUrl }),
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "post", url: enrollmentUrl }),
       )
     },
   )
@@ -1242,8 +1242,8 @@ describe.each([
       await user.click(triggerElement)
 
       await screen.findByRole("dialog", { name: "Just a Few More Details" })
-      expect(mockAxiosInstance.request).not.toHaveBeenCalledWith(
-        expect.objectContaining({ method: "POST" }),
+      expect(makeRequest).not.toHaveBeenCalledWith(
+        expect.objectContaining({ method: "post" }),
       )
     },
   )
@@ -1333,8 +1333,8 @@ describe.each([
         await user.click(triggerElement)
 
         await waitFor(() => {
-          expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-            expect.objectContaining({ method: "POST", url: enrollmentUrl }),
+          expect(makeRequest).toHaveBeenCalledWith(
+            expect.objectContaining({ method: "post", url: enrollmentUrl }),
           )
         })
 
@@ -1386,8 +1386,8 @@ describe.each([
         await user.click(triggerElement)
 
         await waitFor(() => {
-          expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-            expect.objectContaining({ method: "POST", url: basketUrl }),
+          expect(makeRequest).toHaveBeenCalledWith(
+            expect.objectContaining({ method: "post", url: basketUrl }),
           )
         })
 
@@ -1448,11 +1448,11 @@ describe.each([
       await user.click(button)
 
       await waitFor(() => {
-        expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+        expect(makeRequest).toHaveBeenCalledWith(
           expect.objectContaining({
-            method: "POST",
+            method: "post",
             url: enrollmentUrl,
-            data: JSON.stringify({ run_id: selectedLanguageRun.id }),
+            body: { run_id: selectedLanguageRun.id },
           }),
         )
       })
@@ -1507,9 +1507,9 @@ describe.each([
 
         // Should call enrollment endpoint
         await waitFor(() => {
-          expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+          expect(makeRequest).toHaveBeenCalledWith(
             expect.objectContaining({
-              method: "POST",
+              method: "post",
               url: programEnrollmentEndpoint,
             }),
           )
@@ -1618,8 +1618,8 @@ describe.each([
       await user.click(button)
 
       await waitFor(() => {
-        expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-          expect.objectContaining({ method: "POST", url: verifiedEndpoint }),
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({ method: "post", url: verifiedEndpoint }),
         )
       })
 
@@ -1668,8 +1668,8 @@ describe.each([
       await user.click(button)
 
       await waitFor(() => {
-        expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-          expect.objectContaining({ method: "POST", url: enrollmentUrl }),
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({ method: "post", url: enrollmentUrl }),
         )
       })
 
@@ -1721,8 +1721,8 @@ describe.each([
       await user.click(button)
 
       await waitFor(() => {
-        expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-          expect.objectContaining({ method: "POST", url: basketUrl }),
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({ method: "post", url: basketUrl }),
         )
       })
 

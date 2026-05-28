@@ -7,7 +7,7 @@ import {
   user,
   within,
 } from "@/test-utils"
-import { mockAxiosInstance } from "api/test-utils"
+import { makeRequest } from "api/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import { waitFor } from "@testing-library/react"
@@ -229,14 +229,11 @@ describe("ProgramAsCourseCard", () => {
     await user.click(startButton)
 
     await waitFor(() => {
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+      expect(makeRequest).toHaveBeenCalledWith(
         expect.objectContaining({
-          method: "POST",
+          method: "post",
           url: enrollmentEndpoint,
-          data: JSON.stringify([
-            cardData.courseProgram.readable_id,
-            "grandparent-program",
-          ]),
+          body: [cardData.courseProgram.readable_id, "grandparent-program"],
         }),
       )
     })
@@ -322,8 +319,8 @@ describe("ProgramAsCourseCard", () => {
     await user.click(startButton)
 
     await waitFor(() => {
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-        expect.objectContaining({ method: "POST", url: enrollmentUrl }),
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "post", url: enrollmentUrl }),
       )
     })
     expect(
@@ -374,8 +371,8 @@ describe("ProgramAsCourseCard", () => {
     await user.click(startButton)
 
     await waitFor(() => {
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-        expect.objectContaining({ method: "POST", url: basketUrl }),
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "post", url: basketUrl }),
       )
     })
     expect(
