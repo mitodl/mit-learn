@@ -124,6 +124,7 @@ const useContractDashboardData = (
     Record<number, BaseCourseRun>
   >(() => {
     if (isDefaultVariantSelection || !variantRunsQuery.data) return {}
+    if (!selectedVariant) return {}
     const map: Record<number, BaseCourseRun> = {}
     for (const courseVariantRuns of variantRunsQuery.data) {
       const best = selectVariantRunForCourse(
