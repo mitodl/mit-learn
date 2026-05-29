@@ -806,17 +806,26 @@ def test_build_search_params_sort_with_cutoff_score(
             score_cutoff=min_score,
         )
     )
+    assert not (
+        isinstance(search_params["query"], models.OrderByQuery)
+        and "score_cutoff" in search_params
+    ), (
+        "OrderByQuery query should never be used with a score_cutoff, because Qdrant does not support score_threshold with OrderByQuery.  If both are provided, the view should fall back to a FusionQuery and do manual sorting on the client side."
+    )
+
     if query_string and min_score is not None:
+        if sortby and hybrid_search:
+            assert isinstance(search_params["query"], models.FusionQuery)
+
         assert search_params["score_threshold"] == (
             HYBRID_VECTOR_SEARCH_MIN_SCORE
             if hybrid_search
             else DENSE_VECTOR_SEARCH_MIN_SCORE
         )
-    if query_string and sortby and min_score is None:
-        assert search_params["order_by"].key == "views"
+
+    if sortby and min_score is None:
+        assert isinstance(search_params["query"], models.OrderByQuery)
         if sortby.startswith("-"):
-            assert search_params["order_by"].direction == models.Direction.DESC
+            assert search_params["query"].order_by.direction == models.Direction.DESC
         else:
-            assert search_params["order_by"].direction == models.Direction.ASC
-    else:
-        assert "order_by" not in search_params
+            assert search_params["query"].order_by.direction == models.Direction.ASC
