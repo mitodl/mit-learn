@@ -97,4 +97,4 @@ export {
   managerOrganizationKeys,
 }
 
-export type { ContractCode, ContractCodeRedemption }
+export type { ContractCode }
