@@ -567,17 +567,23 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                       ? "No seat assignments found"
                       : `Showing ${filteredCodes.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filteredCodes.length)} of ${filteredCodes.length} assignment${filteredCodes.length !== 1 ? "s" : ""}`}
                 </VisuallyHidden>
-                {isLoadingCodes ? (
-                  <Stack gap="8px" paddingTop="16px">
-                    {[1, 2, 3].map((i) => (
-                      <Skeleton key={i} width="100%" height="48px" />
-                    ))}
-                  </Stack>
-                ) : pagedCodes.length === 0 ? (
-                  <EmptyTableMessage role="cell">
-                    No seat assignments found.
-                  </EmptyTableMessage>
-                ) : (
+{isLoadingCodes ? (
+  <>
+    {[1, 2, 3].map((i) => (
+      <TableRow role="row" key={i}>
+        <div role="cell" style={{ flex: 1 }}>
+          <Skeleton width="100%" height="48px" />
+        </div>
+      </TableRow>
+    ))}
+  </>
+) : pagedCodes.length === 0 ? (
+  <TableRow role="row">
+    <EmptyTableMessage role="cell" aria-colspan={7} style={{ flex: 1 }}>
+      No seat assignments found.
+    </EmptyTableMessage>
+  </TableRow>
+) : (
                   pagedCodes.map((code) => {
                     const redeemed = isRedeemed(code)
                     return (
