@@ -43,9 +43,11 @@ def sync_single_website_content_news_to_news(article: WebsiteContent):
     """
     if not article.is_published:
         return
+
     if article.content_type != WebsiteContentType.news.name:
         return
     article_data = extract_single_website_content(article)
+
     item_data = transform_single_article(article_data)
     if not item_data:
         return

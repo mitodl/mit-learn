@@ -76,13 +76,12 @@ const setMockApiResponses = ({
 }
 
 const getLastApiSearchParams = () => {
-  const call = makeRequest.mock.calls.find(([method, url]) => {
-    if (method !== "get") return false
-    return url.startsWith(urls.search.resources())
+  const call = makeRequest.mock.calls.find(([args]) => {
+    if (args.method !== "get") return false
+    return args.url.startsWith(urls.search.resources())
   })
   invariant(call)
-  const [_method, url] = call
-  const fullUrl = new URL(url, "http://mit.edu")
+  const fullUrl = new URL(call[0].url, "http://mit.edu")
   return fullUrl.searchParams
 }
 
@@ -286,9 +285,7 @@ describe("SearchPage", () => {
     })
 
     expect(makeRequest).not.toHaveBeenCalledWith(
-      "get",
-      urls.adminSearchParams,
-      expect.anything(),
+      expect.objectContaining({ method: "get", url: urls.adminSearchParams }),
     )
   })
 
@@ -325,9 +322,7 @@ describe("SearchPage", () => {
     })
 
     expect(makeRequest).not.toHaveBeenCalledWith(
-      "get",
-      urls.adminSearchParams,
-      expect.anything(),
+      expect.objectContaining({ method: "get", url: urls.adminSearchParams }),
     )
   })
 
@@ -1051,17 +1046,17 @@ describe("UniversalAIBanner", () => {
     renderWithProviders(<SearchPage />, { url: "?vector_search=true&q=test" })
 
     await waitFor(() => {
-      const call = makeRequest.mock.calls.find(([_method, url]) => {
-        return url.includes(urls.search.vectorResources())
+      const call = makeRequest.mock.calls.find(([args]) => {
+        return args.url.includes(urls.search.vectorResources())
       })
       expect(call).toBeDefined()
     })
 
-    const call = makeRequest.mock.calls.find(([_method, url]) =>
-      url.includes(urls.search.vectorResources()),
+    const call = makeRequest.mock.calls.find(([args]) =>
+      args.url.includes(urls.search.vectorResources()),
     )
     invariant(call)
-    const fullUrl = new URL(call[1], "http://mit.edu")
+    const fullUrl = new URL(call[0].url, "http://mit.edu")
     const apiSearchParams = fullUrl.searchParams
 
     expect(apiSearchParams.get("hybrid_search")).toBe("true")
@@ -1135,8 +1130,9 @@ describe("UniversalAIBanner", () => {
     ).not.toBeInTheDocument()
 
     const initialVectorRequestCount = makeRequest.mock.calls.filter(
-      ([method, url]) =>
-        method === "get" && url.includes(urls.search.vectorResources()),
+      ([args]) =>
+        args.method === "get" &&
+        args.url.includes(urls.search.vectorResources()),
     ).length
 
     await user.click(screen.getByRole("button", { name: /Topic/i }))
@@ -1150,8 +1146,9 @@ describe("UniversalAIBanner", () => {
     expect(screen.queryByText("Chemistry Result")).not.toBeInTheDocument()
 
     const finalVectorRequestCount = makeRequest.mock.calls.filter(
-      ([method, url]) =>
-        method === "get" && url.includes(urls.search.vectorResources()),
+      ([args]) =>
+        args.method === "get" &&
+        args.url.includes(urls.search.vectorResources()),
     ).length
     expect(finalVectorRequestCount).toBe(initialVectorRequestCount)
   })

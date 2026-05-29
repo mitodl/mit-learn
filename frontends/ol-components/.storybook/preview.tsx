@@ -27,9 +27,6 @@ const preview: Preview = {
       },
     },
   },
-  initialGlobals: {
-    EMBEDLY_KEY: process.env.EMBEDLY_KEY,
-  },
 }
 
 export default preview

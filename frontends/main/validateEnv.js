@@ -19,7 +19,6 @@ const schema = yup.object().shape({
   NEXT_PUBLIC_MITOL_API_BASE_URL: yup.string().required(),
   NEXT_PUBLIC_SITE_NAME: yup.string().required(),
   NEXT_PUBLIC_MITOL_SUPPORT_EMAIL: yup.string().required(),
-  NEXT_PUBLIC_EMBEDLY_KEY: yup.string(),
   NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS: yup
     .string()
     .oneOf(["true", "false"]),

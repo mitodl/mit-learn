@@ -1,4 +1,5 @@
 """
+
 Ensure the website_content_editors Group exists in the database.
 
 If the legacy article_editors Group exists, copy its members into the new group

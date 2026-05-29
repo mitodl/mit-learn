@@ -36,17 +36,41 @@ export const learningPathsView = (id: number) =>
 export const PROGRAMLETTER_VIEW = "/program_letter/[id]/view/"
 export const programLetterView = (id: string) =>
   generatePath(PROGRAMLETTER_VIEW, { id: String(id) })
-export const ARTICLES_LISTING = "/news/"
-export const ARTICLES_VIEW = "/news/[id]"
-export const ARTICLES_DRAFT_VIEW = "/news/[id]/draft"
-export const ARTICLES_EDIT = "/news/[id]/edit"
-export const ARTICLES_CREATE = "/news/new"
-export const articlesView = (id: string) =>
+export const NEWS_LISTING = "/news/"
+export const NEWS_VIEW = "/news/[id]"
+export const NEWS_DRAFT_VIEW = "/news/[id]/draft"
+export const NEWS_EDIT = "/news/[id]/edit"
+export const NEWS_CREATE = "/news/new"
+export const newsView = (id: string) =>
+  generatePath(NEWS_VIEW, { id: String(id) })
+export const newsDraftView = (id: string) =>
+  generatePath(NEWS_DRAFT_VIEW, { id: String(id) })
+export const newsEditView = (id: number) =>
+  generatePath(NEWS_EDIT, { id: String(id) })
+
+// Articles (served under /articles)
+export const ARTICLES_LISTING = "/articles/"
+export const ARTICLES_VIEW = "/articles/[id]"
+export const ARTICLES_DRAFT_VIEW = "/articles/[id]/draft"
+export const articleView = (id: string) =>
   generatePath(ARTICLES_VIEW, { id: String(id) })
-export const articlesDraftView = (id: string) =>
+export const articleDraftView = (id: string) =>
   generatePath(ARTICLES_DRAFT_VIEW, { id: String(id) })
-export const articlesEditView = (id: number) =>
-  generatePath(ARTICLES_EDIT, { id: String(id) })
+
+// Generic website content editing routes
+export const WEBSITE_CONTENT_CREATE = "/website_content/[type]/new"
+export const WEBSITE_CONTENT_EDIT = "/website_content/[type]/[idOrSlug]/edit"
+export const WEBSITE_CONTENT_DRAFTS = "/website_content/drafts"
+export const websiteContentCreateView = (type: string) =>
+  `/website_content/${type}/new`
+export const websiteContentEditView = (
+  type: string,
+  idOrSlug: string | number,
+) => `/website_content/${type}/${idOrSlug}/edit`
+export const websiteContentDraftsView = (contentType?: string) =>
+  contentType
+    ? `${WEBSITE_CONTENT_DRAFTS}?content_type=${contentType}`
+    : WEBSITE_CONTENT_DRAFTS
 
 export const DEPARTMENTS = "/departments/"
 export const TOPICS = "/topics/"

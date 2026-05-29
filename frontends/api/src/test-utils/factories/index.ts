@@ -1,4 +1,4 @@
-export * as articles from "./articles"
+export * as websiteContent from "./websiteContent"
 export * as channels from "./channels"
 export * as hubspot from "./hubspot"
 export * as learningResources from "./learningResources"

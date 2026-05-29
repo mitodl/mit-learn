@@ -1,18 +1,19 @@
+// React is referenced by the JSX in the jest.mock factory below; @swc/jest's
+// transform inlines React.createElement, so the import must stay even though
+// TS sees it as unused.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import React from "react"
-import { mockAxiosInstance } from "api/test-utils"
+import {
+  mockAxiosFactory,
+  assertMockAdapterInstalled,
+} from "api/test-utils/mockAxios"
 import preloadAll from "jest-next-dynamic-ts"
 
-jest.mock("axios", () => {
-  const AxiosError = jest.requireActual("axios").AxiosError
-  return {
-    __esModule: true,
-    default: {
-      create: () => mockAxiosInstance,
-      AxiosError,
-    },
-    AxiosError,
-  }
-})
+// Wrapped in `() => …` to defer the identifier lookup past TDZ — jest.mock
+// is hoisted above imports, so passing `mockAxiosFactory` directly would
+// evaluate the (still-unbound) reference at registration time.
+// https://jestjs.io/docs/es6-class-mocks#calling-jestmock-with-the-module-factory-parameter
+jest.mock("axios", () => mockAxiosFactory())
 
 jest.mock("react-markdown", () => {
   return {
@@ -32,6 +33,8 @@ beforeEach(() => {
   // container. So we need to clear it manually.
   // document.head.innerHTML = ""
   document.querySelector("title")?.remove()
+
+  assertMockAdapterInstalled()
 })
 
 window.scrollTo = jest.fn()

@@ -12,6 +12,7 @@ from website_content.tasks import (
 
 log = logging.getLogger(__name__)
 
+
 _CONTENT_TYPE_LISTING_URL = {
     WebsiteContentType.news.name: "/news",
     WebsiteContentType.article.name: "/articles",
@@ -53,6 +54,7 @@ def purge_content_on_save(content):
         fastly_purge_website_content_list.delay(
             _CONTENT_TYPE_LISTING_URL.get(content.content_type, "/news")
         )
+
     else:
         log.debug(
             "WebsiteContent %s is not published or has no slug, skipping CDN purge.",

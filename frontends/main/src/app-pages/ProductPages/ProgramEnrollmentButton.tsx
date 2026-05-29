@@ -54,12 +54,14 @@ type ProgramEnrollmentButtonProps = {
   variant?: ButtonProps["variant"]
   className?: string
   displayAsCourse?: boolean
+  showArrowIcon?: boolean
 }
 const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
   program,
   variant = "primary",
   className,
   displayAsCourse,
+  showArrowIcon = true,
 }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
   const me = useQuery(userQueries.me())
@@ -148,11 +150,11 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
             endIcon={
               isLoading || isPending ? (
                 <LoadingSpinner size="16px" loading={true} color="inherit" />
-              ) : (
-                <EnrollButtonIcon>
+              ) : showArrowIcon ? (
+                <EnrollButtonIcon data-testid="program-enroll-arrow-icon">
                   <RiArrowRightSLine aria-hidden="true" />
                 </EnrollButtonIcon>
-              )
+              ) : undefined
             }
           >
             {isLoading ? null : enrollButtonLabel}

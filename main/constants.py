@@ -40,6 +40,7 @@ ALLOWED_HTML_TAGS = {
     "ul",
 }
 ALLOWED_HTML_ATTRIBUTES = {}
+TASK_REJECTED = "task-rejected"
 
 
 class PostHogEvents(Enum):
