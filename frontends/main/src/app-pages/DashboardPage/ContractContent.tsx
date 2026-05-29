@@ -378,8 +378,19 @@ const ContractHeaderSection = styled.div(({ theme }) => ({
   boxShadow: "0 1px 3px 0 rgba(120, 147, 172, 0.40)",
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
+    alignItems: "flex-start",
     gap: "16px",
     padding: "16px 0 0 0",
+  },
+}))
+
+const ManageButtonWrapper = styled.div(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+    padding: "0 16px 16px",
+    "> a": {
+      width: "100%",
+    },
   },
 }))
 
@@ -408,7 +419,9 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
     ...managerOrganizationQueries.managerOrganizationsList(),
     enabled: managerDashboardFlag === true,
   })
-  const isManager = managerOrgs?.some(matchOrganizationBySlug(org.slug)) ?? false
+  const isManager =
+    managerOrgs?.some(matchOrganizationBySlug(org.slug.replace(/^org-/, ""))) ??
+    false
 
   const skeleton = (
     <Stack gap="16px">
@@ -450,12 +463,17 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
         <ContractHeaderSection>
           <ContractHeader org={org} contract={contract} />
           {managerDashboardFlag && isManager && (
-            <ButtonLink
-              size="small"
-              href={contractAdminView(org.slug, contract.slug)}
-            >
-              Manage
-            </ButtonLink>
+            <ManageButtonWrapper>
+              <ButtonLink
+                size="small"
+                href={contractAdminView(
+                  org.slug.replace(/^org-/, ""),
+                  contract.slug,
+                )}
+              >
+                Manage
+              </ButtonLink>
+            </ManageButtonWrapper>
           )}
           {languageOptions.length > 1 && (
             <ProgramLanguageSelect

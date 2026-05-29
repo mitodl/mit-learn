@@ -374,33 +374,33 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     enabled: !!org && !!contract,
   })
 
-const {
-  data: codes,
-  isLoading: isLoadingCodes,
-  isError: isCodesError,
-} = useQuery({
-  ...managerOrganizationQueries.managerContractCodes({
-    id: contract?.id ?? 0,
-    parent_lookup_organization: org?.id ?? 0,
-  }),
-  enabled: !!org && !!contract,
-})
+  const {
+    data: codes,
+    isLoading: isLoadingCodes,
+    isError: isCodesError,
+  } = useQuery({
+    ...managerOrganizationQueries.managerContractCodes({
+      id: contract?.id ?? 0,
+      parent_lookup_organization: org?.id ?? 0,
+    }),
+    enabled: !!org && !!contract,
+  })
 
-if (isLoadingOrgs) {
-  return (
-    <Page>
-      <Skeleton width="100%" height="128px" />
-    </Page>
-  )
-}
+  if (isLoadingOrgs) {
+    return (
+      <Page>
+        <Skeleton width="100%" height="128px" />
+      </Page>
+    )
+  }
 
-if (isOrgsError || isCodesError) {
-  return <ErrorContent title="Something went wrong" timSays="Oops!" />
-}
+  if (isOrgsError || isCodesError) {
+    return <ErrorContent title="Something went wrong" timSays="Oops!" />
+  }
 
-if (!org) {
-  return <ErrorContent title="Organization not found" timSays="404" />
-}
+  if (!org) {
+    return <ErrorContent title="Organization not found" timSays="404" />
+  }
 
   if (!contract) {
     return <ErrorContent title="Contract not found" timSays="404" />
@@ -571,23 +571,27 @@ if (!org) {
                       ? "No seat assignments found"
                       : `Showing ${filteredCodes.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filteredCodes.length)} of ${filteredCodes.length} assignment${filteredCodes.length !== 1 ? "s" : ""}`}
                 </VisuallyHidden>
-{isLoadingCodes ? (
-  <>
-    {[1, 2, 3].map((i) => (
-      <TableRow role="row" key={i}>
-        <div role="cell" style={{ flex: 1 }}>
-          <Skeleton width="100%" height="48px" />
-        </div>
-      </TableRow>
-    ))}
-  </>
-) : pagedCodes.length === 0 ? (
-  <TableRow role="row">
-    <EmptyTableMessage role="cell" aria-colspan={7} style={{ flex: 1 }}>
-      No seat assignments found.
-    </EmptyTableMessage>
-  </TableRow>
-) : (
+                {isLoadingCodes ? (
+                  <>
+                    {[1, 2, 3].map((i) => (
+                      <TableRow role="row" key={i}>
+                        <div role="cell" style={{ flex: 1 }}>
+                          <Skeleton width="100%" height="48px" />
+                        </div>
+                      </TableRow>
+                    ))}
+                  </>
+                ) : pagedCodes.length === 0 ? (
+                  <TableRow role="row">
+                    <EmptyTableMessage
+                      role="cell"
+                      aria-colspan={7}
+                      style={{ flex: 1 }}
+                    >
+                      No seat assignments found.
+                    </EmptyTableMessage>
+                  </TableRow>
+                ) : (
                   pagedCodes.map((code) => {
                     const redeemed = isRedeemed(code)
                     return (
