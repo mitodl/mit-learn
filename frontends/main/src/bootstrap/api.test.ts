@@ -63,6 +63,36 @@ describe("bootstrapApiClients", () => {
     }
   })
 
+  test("falls back to the public Learn URL when the server URL is blank", () => {
+    Object.defineProperty(global, "window", {
+      configurable: true,
+      value: undefined,
+      writable: true,
+    })
+    // env/codespaces.env ships NEXT_SERVER_MITOL_API_BASE_URL= (empty string),
+    // which must fall back to the public URL rather than being treated as a
+    // configured base (which would throw during normalization).
+    process.env = { ...process.env, NEXT_SERVER_MITOL_API_BASE_URL: "" }
+
+    try {
+      bootstrapApiClients()
+
+      expect(configureApiClients).toHaveBeenCalledWith(
+        expect.objectContaining({
+          learn: expect.objectContaining({
+            baseUrl: "https://learn.public.example.edu",
+          }),
+        }),
+      )
+    } finally {
+      Object.defineProperty(global, "window", {
+        configurable: true,
+        value: originalWindow,
+        writable: true,
+      })
+    }
+  })
+
   test("uses the browser Learn URL when window exists", () => {
     bootstrapApiClients()
 

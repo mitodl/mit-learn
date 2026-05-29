@@ -19,10 +19,16 @@ export const bootstrapApiClients = () => {
   // no-op rather than throw.
   if (isApiClientsConfigured()) return
 
+  // NEXT_SERVER_MITOL_API_BASE_URL points the server at an internal host for
+  // split-host local-dev/docker. An explicitly blank value (as in
+  // env/codespaces.env) means "no separate server host" — fall back to the
+  // public URL. Use `||` rather than `??` so the empty string triggers the
+  // fallback instead of being treated as a configured base URL.
+  const serverLearnBaseUrl = isServerRuntime()
+    ? process.env.NEXT_SERVER_MITOL_API_BASE_URL
+    : undefined
   const learnBaseUrl =
-    (isServerRuntime()
-      ? process.env.NEXT_SERVER_MITOL_API_BASE_URL
-      : undefined) ??
+    serverLearnBaseUrl ||
     requireEnv(
       "NEXT_PUBLIC_MITOL_API_BASE_URL",
       process.env.NEXT_PUBLIC_MITOL_API_BASE_URL,

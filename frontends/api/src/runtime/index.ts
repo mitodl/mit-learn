@@ -1,21 +1,10 @@
 import { learnAxiosClient } from "../axios"
 import { mitxAxiosClient } from "../mitxonline/axios"
-
-export type LearnApiConfig = {
-  baseUrl: string
-  csrfCookieName: string
-  withCredentials: boolean
-}
-
-export type MitxOnlineApiConfig = {
-  baseUrl: string
-  csrfCookieName: string
-  withCredentials: boolean
-}
+import type { ConfigurableAxiosConfig } from "../configurableAxios"
 
 export type ApiClientsConfig = {
-  learn: LearnApiConfig
-  mitxonline: MitxOnlineApiConfig
+  learn: ConfigurableAxiosConfig
+  mitxonline: ConfigurableAxiosConfig
 }
 
 const normalizeBaseUrl = (label: string, value: string) => {
