@@ -511,9 +511,12 @@ class QdrantView(APIView):
                 # in addition to fetching all results unpaginated,
                 # manually apply the sorting since
                 # Qdrant does not support sorting with score cutoffs
+                descending = order_by.startswith("-")
+                order_by_field = order_by.lstrip("-")
                 hits = sorted(
                     hits,
-                    key=lambda x: _sort_key(x, order_by),
+                    key=lambda x: _sort_key(x, order_by_field),
+                    reverse=descending,
                 )
             counts = await self._async_vector_resource_counts(
                 hits, params, search_collection=search_collection
