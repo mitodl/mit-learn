@@ -185,7 +185,9 @@ const TableHeaderRow = styled.div(({ theme }) => ({
   },
 }))
 
-const TableHeaderCell = styled.div<{ $flex: number }>(({ $flex, theme }) => ({
+const TableHeaderCell = styled("div", {
+  shouldForwardProp: (prop) => prop !== "$flex",
+})<{ $flex: number }>(({ $flex, theme }) => ({
   flex: $flex,
   minWidth: 0,
   ...theme.typography.subtitle2,
