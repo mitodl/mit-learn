@@ -585,7 +585,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                           $flex={COLUMN_FLEX.assignedTo}
                           $primary
                         >
-                          {code.redeemed_by ?? STUB}
+                          {STUB}
                         </TableCell>
                         <TableCell role="cell" $flex={COLUMN_FLEX.redeemedBy}>
                           <MobileLabel>Redeemed by</MobileLabel>

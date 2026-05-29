@@ -86,6 +86,8 @@ const managerOrganizationQueries = {
       queryFn: async (): Promise<ContractCode[]> =>
         b2bApi
           .b2bManagerOrganizationsContractsCodesRetrieve(opts)
+          // The generated client types this endpoint as returning ManagerContractDetail,
+          // but the actual API returns ContractCode[]. Cast until the package is updated.
           .then((res) => res.data as unknown as ContractCode[]),
     }),
 }

@@ -386,14 +386,10 @@ const ContractHeaderSection = styled.div(({ theme }) => ({
 type ContractContentInternalProps = {
   org: OrganizationPage
   contract: ContractPage
-  orgSlug: string
-  contractSlug: string
 }
 const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
   org,
   contract,
-  orgSlug,
-  contractSlug,
 }) => {
   const {
     isLoading,
@@ -412,7 +408,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
     ...managerOrganizationQueries.managerOrganizationsList(),
     enabled: managerDashboardFlag === true,
   })
-  const isManager = managerOrgs?.some(matchOrganizationBySlug(orgSlug)) ?? false
+  const isManager = managerOrgs?.some(matchOrganizationBySlug(org.slug)) ?? false
 
   const skeleton = (
     <Stack gap="16px">
@@ -456,7 +452,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
           {managerDashboardFlag && isManager && (
             <ButtonLink
               size="small"
-              href={contractAdminView(orgSlug, contractSlug)}
+              href={contractAdminView(org.slug, contract.slug)}
             >
               Manage
             </ButtonLink>
@@ -565,12 +561,7 @@ const ContractContent: React.FC<ContractContentProps> = ({
   }
 
   return (
-    <ContractContentInternal
-      org={b2bOrganization}
-      contract={b2bContract}
-      orgSlug={orgSlug}
-      contractSlug={contractSlug}
-    />
+    <ContractContentInternal org={b2bOrganization} contract={b2bContract} />
   )
 }
 
