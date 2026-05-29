@@ -303,7 +303,9 @@ const VideoShortsModal = ({
         player.muted(muted)
         // On iOS, only autoplay if muted or if user has interacted
         if (!isIOS() || muted || hasUserInteracted) {
-          player.play()?.catch(() => { setPlaying(false) })
+          player.play()?.catch(() => {
+            setPlaying(false)
+          })
           setPlaying(true)
         }
       }
@@ -331,7 +333,9 @@ const VideoShortsModal = ({
       setHasUserInteracted(true)
 
       if (playerPaused(player)) {
-        player.play()?.catch(() => { setPlaying(false) })
+        player.play()?.catch(() => {
+          setPlaying(false)
+        })
         setPlaying(true)
       } else {
         player.pause()
@@ -389,48 +393,48 @@ const VideoShortsModal = ({
                 }
               }}
             >
-            <PlayPauseButton
-              className={PLAYPAUSE_CLASS}
-              size="large"
-              edge="rounded"
-              variant="text"
-              tabIndex={index === selectedIndex ? 0 : -1}
-              onClick={handleVideoClick}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") e.stopPropagation()
-              }}
-              aria-label={playing ? "Pause" : "Play"}
-              aria-pressed={playing}
-            >
-              {playing ? <RiPauseLine /> : <RiPlayLine />}
-            </PlayPauseButton>
-            {selectedIndex !== null && Math.abs(selectedIndex - index) < 2 ? (
-              videoErrors[index] ? (
-                <Placeholder>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <Image
-                    src={MITOpenLearningLogo.src}
-                    alt="MIT Open Learning Logo"
-                    width={178}
-                    height={47}
-                    style={{ filter: "brightness(0) invert(1)" }}
+              <PlayPauseButton
+                className={PLAYPAUSE_CLASS}
+                size="large"
+                edge="rounded"
+                variant="text"
+                tabIndex={index === selectedIndex ? 0 : -1}
+                onClick={handleVideoClick}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.stopPropagation()
+                }}
+                aria-label={playing ? "Pause" : "Play"}
+                aria-pressed={playing}
+              >
+                {playing ? <RiPauseLine /> : <RiPlayLine />}
+              </PlayPauseButton>
+              {selectedIndex !== null && Math.abs(selectedIndex - index) < 2 ? (
+                videoErrors[index] ? (
+                  <Placeholder>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <Image
+                      src={MITOpenLearningLogo.src}
+                      alt="MIT Open Learning Logo"
+                      width={178}
+                      height={47}
+                      style={{ filter: "brightness(0) invert(1)" }}
+                    />
+                    <Typography variant="h4">Playback errored!</Typography>
+                    <Typography variant="h2">{video.title}</Typography>
+                  </Placeholder>
+                ) : (
+                  <VideoWithErrorHandler
+                    index={index}
+                    video={video}
+                    playersRef={playersRef}
+                    onError={onVideoError}
+                    onVideoClick={handleVideoClick}
                   />
-                  <Typography variant="h4">Playback errored!</Typography>
-                  <Typography variant="h2">{video.title}</Typography>
-                </Placeholder>
+                )
               ) : (
-                <VideoWithErrorHandler
-                  index={index}
-                  video={video}
-                  playersRef={playersRef}
-                  onError={onVideoError}
-                  onVideoClick={handleVideoClick}
-                />
-              )
-            ) : (
-              <Placeholder />
-            )}
-          </CarouselSlide>
+                <Placeholder />
+              )}
+            </CarouselSlide>
           ))}
         </CarouselV2Vertical>
       </Overlay>
