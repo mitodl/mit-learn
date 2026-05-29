@@ -222,30 +222,30 @@ const MobileLabel = styled.span(({ theme }) => ({
   },
 }))
 
-const TableCell = styled.div<{ $flex: number; $primary?: boolean }>(
-  ({ $flex, $primary, theme }) => ({
-    flex: $flex,
-    minWidth: 0,
-    ...theme.typography.body2,
-    color: theme.custom.colors.black,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    [theme.breakpoints.down("md")]: {
-      flex: "none",
-      width: "100%",
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      overflow: "visible",
-      whiteSpace: "normal",
-      ...($primary && {
-        ...theme.typography.subtitle2,
-        marginBottom: "4px",
-      }),
-    },
-  }),
-)
+const TableCell = styled("div", {
+  shouldForwardProp: (prop) => prop !== "$flex" && prop !== "$primary",
+})<{ $flex: number; $primary?: boolean }>(({ $flex, $primary, theme }) => ({
+  flex: $flex,
+  minWidth: 0,
+  ...theme.typography.body2,
+  color: theme.custom.colors.black,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  [theme.breakpoints.down("md")]: {
+    flex: "none",
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    overflow: "visible",
+    whiteSpace: "normal",
+    ...($primary && {
+      ...theme.typography.subtitle2,
+      marginBottom: "4px",
+    }),
+  },
+}))
 
 const StatusBadge = styled(Chip, {
   shouldForwardProp: (prop) => prop !== "$status",
