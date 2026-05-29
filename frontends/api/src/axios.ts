@@ -1,34 +1,11 @@
-import axios from "axios"
+import { createConfigurableAxios } from "./configurableAxios"
 import type { LearnApiConfig } from "./runtime"
 
-const instance = axios.create({
-  xsrfHeaderName: "X-CSRFToken",
-  withXSRFToken: true,
-})
+const learn = createConfigurableAxios("mit-learn.api.axios.learn")
 
-let configured = false
+export const applyLearnAxiosConfig = (config: LearnApiConfig) =>
+  learn.applyConfig(config)
 
-instance.interceptors.request.use((request) => {
-  if (!configured) {
-    throw new Error(
-      "API clients are not configured. Call configureApiClients(...) before making requests.",
-    )
-  }
-  return request
-})
+export const resetLearnAxiosForTests = learn.resetForTests
 
-export const applyLearnAxiosConfig = (config: LearnApiConfig) => {
-  instance.defaults.baseURL = config.baseUrl
-  instance.defaults.xsrfCookieName = config.csrfCookieName
-  instance.defaults.withCredentials = config.withCredentials
-  configured = true
-}
-
-export const resetLearnAxiosForTests = () => {
-  configured = false
-  delete instance.defaults.baseURL
-  delete instance.defaults.xsrfCookieName
-  delete instance.defaults.withCredentials
-}
-
-export default instance
+export default learn.instance

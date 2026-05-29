@@ -1,34 +1,11 @@
-import axios from "axios"
+import { createConfigurableAxios } from "../configurableAxios"
 import type { MitxOnlineApiConfig } from "../runtime"
 
-const mitxAxios = axios.create({
-  xsrfHeaderName: "X-CSRFToken",
-  withXSRFToken: true,
-})
+const mitxonline = createConfigurableAxios("mit-learn.api.axios.mitxonline")
 
-let configured = false
+export const applyMitxOnlineAxiosConfig = (config: MitxOnlineApiConfig) =>
+  mitxonline.applyConfig(config)
 
-mitxAxios.interceptors.request.use((request) => {
-  if (!configured) {
-    throw new Error(
-      "API clients are not configured. Call configureApiClients(...) before making requests.",
-    )
-  }
-  return request
-})
+export const resetMitxOnlineAxiosForTests = mitxonline.resetForTests
 
-export const applyMitxOnlineAxiosConfig = (config: MitxOnlineApiConfig) => {
-  mitxAxios.defaults.baseURL = config.baseUrl
-  mitxAxios.defaults.xsrfCookieName = config.csrfCookieName
-  mitxAxios.defaults.withCredentials = config.withCredentials
-  configured = true
-}
-
-export const resetMitxOnlineAxiosForTests = () => {
-  configured = false
-  delete mitxAxios.defaults.baseURL
-  delete mitxAxios.defaults.xsrfCookieName
-  delete mitxAxios.defaults.withCredentials
-}
-
-export default mitxAxios
+export default mitxonline.instance
