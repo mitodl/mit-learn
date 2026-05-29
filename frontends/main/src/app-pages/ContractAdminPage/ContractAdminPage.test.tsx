@@ -153,6 +153,10 @@ describe("ContractAdminPage", () => {
       total_enrollments: 12,
       total_codes: 75,
     })
+    setMockResponse.get(
+      `${API_BASE_URL}/api/v0/b2b/manager/organizations/${org.id}/contracts/${contract.id}/codes/`,
+      [],
+    )
 
     renderWithProviders(
       <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
