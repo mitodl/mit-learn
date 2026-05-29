@@ -33,7 +33,7 @@
     "embla-carousel-react": "^8.6.0",
     "embla-carousel-wheel-gestures": "^8.0.2",
     "lodash": "^4.17.21",
-    "next": "^16.1.6",
+    "next": "^16.2.0",
     "ol-test-utilities": "0.0.0",
     "ol-utilities": "0.0.0",
     "react": "^19.2.1",
@@ -68,6 +68,6 @@
   },
   "peerDependencies": {
     "@mitodl/smoot-design": "^6.27.0",
-    "next": "^16.1.6"
+    "next": "^16.2.0"
   }
 }
