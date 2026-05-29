@@ -4,7 +4,6 @@ import { basketsApi } from "../mitxonline/clients"
 import { setMockResponse } from "../test-utils/mockAxios"
 import {
   configureApiClients,
-  getApiClientsConfig,
   isApiClientsConfigured,
   resetApiClientsForTests,
 } from "./index"
@@ -43,8 +42,6 @@ describe("api runtime configuration", () => {
       learn: { ...makeConfig().learn, baseUrl: "https://learn.example.edu/" },
     })
 
-    expect(getApiClientsConfig()).toEqual(makeConfig())
-
     expect(learnAxios.defaults.baseURL).toBe("https://learn.example.edu")
     expect(learnAxios.defaults.xsrfCookieName).toBe("csrftoken")
     expect(learnAxios.defaults.withCredentials).toBe(true)
@@ -62,15 +59,6 @@ describe("api runtime configuration", () => {
     expect(isApiClientsConfigured()).toBe(false)
   })
 
-  test("returns frozen config so callers cannot mutate runtime state", () => {
-    const config = configureApiClients(makeConfig())
-
-    Reflect.set(config.learn, "baseUrl", "https://other.learn.example.edu")
-    Reflect.set(config.mitxonline, "csrfCookieName", "different-mitxcsrftoken")
-
-    expect(getApiClientsConfig()).toEqual(makeConfig())
-  })
-
   test("rejects slash-only baseUrl as invalid during normalization before mutating axios", () => {
     const invalidConfig = {
       ...makeConfig(),
@@ -83,7 +71,7 @@ describe("api runtime configuration", () => {
     expect(() => configureApiClients(invalidConfig)).toThrow(
       /learn baseUrl is invalid after normalization/i,
     )
-    expect(() => getApiClientsConfig()).toThrow(/configureApiClients/)
+    expect(isApiClientsConfigured()).toBe(false)
     expect(learnAxios.defaults.baseURL).toBeUndefined()
     expect(mitxAxios.defaults.baseURL).toBeUndefined()
   })
@@ -101,7 +89,7 @@ describe("api runtime configuration", () => {
 
     resetApiClientsForTests()
 
-    expect(() => getApiClientsConfig()).toThrow(/configureApiClients/)
+    expect(isApiClientsConfigured()).toBe(false)
     expect(learnAxios.defaults.baseURL).toBeUndefined()
     expect(mitxAxios.defaults.baseURL).toBeUndefined()
     await expect(learnAxios.get("/api/v1/learning_resources/")).rejects.toThrow(

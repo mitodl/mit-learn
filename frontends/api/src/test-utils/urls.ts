@@ -31,12 +31,13 @@ import type { BaseAPI } from "../generated/v1/base"
 import type { BaseAPI as BaseAPIv0 } from "../generated/v0/base"
 import { queryify } from "ol-test-utilities"
 
-import { getApiClientsConfig } from "../runtime"
+import learnAxios from "../axios"
 
 // Keep these helpers absolute so the shared request mock can distinguish Learn
 // and MITx requests by origin; switching to path-only URLs would reintroduce
-// cross-backend collisions in tests.
-const getApiBaseUrl = () => getApiClientsConfig().learn.baseUrl
+// cross-backend collisions in tests. The base URL is read from the configured
+// axios instance (the single source of truth).
+const getApiBaseUrl = () => learnAxios.defaults.baseURL
 
 // OpenAPI Generator declares parameters using interfaces, which makes passing
 // them to functions a little annoying.

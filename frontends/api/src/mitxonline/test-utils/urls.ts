@@ -7,12 +7,13 @@ import type {
   ProgramsApiProgramsListV2Request,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { queryify } from "ol-test-utilities"
-import { getApiClientsConfig } from "../../runtime"
+import mitxAxios from "../axios"
 
 // Keep these helpers absolute so the shared request mock can distinguish Learn
 // and MITx requests by origin; switching to path-only URLs would reintroduce
-// cross-backend collisions in tests.
-const getApiBaseUrl = () => getApiClientsConfig().mitxonline.baseUrl
+// cross-backend collisions in tests. The base URL is read from the configured
+// axios instance (the single source of truth).
+const getApiBaseUrl = () => mitxAxios.defaults.baseURL
 
 const userMe = {
   get: () => `${getApiBaseUrl()}/api/v0/users/me`,

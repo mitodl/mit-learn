@@ -1,50 +1,57 @@
 import axios, { type AxiosInstance } from "axios"
 
+type GlobalRegistry = Record<symbol, unknown>
+
 /**
- * Build an axios instance that lives on globalThis as a process-wide
- * singleton, with helpers to configure it after construction.
+ * Get-or-create a process-wide singleton parked on globalThis under
+ * `Symbol.for(registryKey)`.
  *
  * # Why globalThis?
  *
- * Next.js bundles its instrumentation runtime and server render runtime as
+ * Next.js bundles its instrumentation runtime and its server render runtime as
  * separate module graphs that each evaluate the same source files
- * independently. Without sharing, `configureApiClients()` called from
- * instrumentation would only mutate instrumentation's copy of the axios
- * instance, leaving the render graph with a fresh unconfigured one.
+ * independently. A plain module-level singleton is therefore duplicated: state
+ * written in one graph is invisible to the other, so `configureApiClients()`
+ * called from instrumentation would mutate only instrumentation's copy and
+ * leave the render graph with a fresh, unconfigured instance.
  *
- * The fix is to park the instance on globalThis under a namespaced
- * `Symbol.for(...)`. `Symbol.for` goes through the per-process global
- * symbol registry, so every module graph that reaches for the same string
- * key gets the same symbol — and therefore the same slot on globalThis,
- * and therefore the same instance.
+ * Parking the value on globalThis under a namespaced `Symbol.for(...)` gives
+ * every module graph the same slot — `Symbol.for` routes through the
+ * per-process global symbol registry, so the same string key always resolves
+ * to the same symbol, and therefore the same globalThis property, and
+ * therefore the same value. (As a bonus the value survives Fast Refresh, which
+ * re-evaluates modules but keeps globalThis intact.)
  *
- * Standard workaround in the Next.js ecosystem; see Prisma's canonical
- * write-up:
+ * Standard pattern in the Next.js ecosystem; see Prisma's canonical write-up:
  * https://www.prisma.io/docs/guides/nextjs#27-set-up-prisma-client
  * (Drizzle and Sentry document the same pattern for the same reason.)
  *
- * Nothing outside this file's callers needs to know the slot exists; they
- * just import the returned `instance` and helpers.
- *
- * # registryKey
- *
- * Must be globally unique across the process. Two callers using the same
- * key would share the same axios instance — almost certainly not what you
- * want. Namespace the string (e.g. `"<app>.<package>.<role>"`) to avoid
- * accidental collisions with other libraries that also use the registry.
+ * `registryKey` must be globally unique across the process — two callers using
+ * the same key would share one value. Namespace it (e.g.
+ * `"<app>.<package>.<role>"`) to avoid colliding with other libraries.
  */
+const globalSingleton = <T>(registryKey: string, create: () => T): T => {
+  const KEY = Symbol.for(registryKey)
+  const registry = globalThis as GlobalRegistry
+  return (registry[KEY] ??= create()) as T
+}
 
-type ConfigurableAxiosConfig = {
+export type ConfigurableAxiosConfig = {
   baseUrl: string
   csrfCookieName: string
   withCredentials: boolean
 }
 
-type GlobalSlot = Record<symbol, AxiosInstance | undefined>
-
+/**
+ * Build a configure-after-construction axios instance. The instance is a
+ * process-wide singleton (see `globalSingleton`), so config applied in Next's
+ * instrumentation runtime is visible to the server render runtime.
+ *
+ * The instance's own `defaults` are the single source of truth for whether the
+ * client is configured (`isConfigured`) — there is no separate state to keep
+ * in sync.
+ */
 export const createConfigurableAxios = (registryKey: string) => {
-  const KEY = Symbol.for(registryKey)
-
   const create = (): AxiosInstance => {
     const inst = axios.create({
       xsrfHeaderName: "X-CSRFToken",
@@ -61,7 +68,7 @@ export const createConfigurableAxios = (registryKey: string) => {
     return inst
   }
 
-  const instance: AxiosInstance = ((globalThis as GlobalSlot)[KEY] ??= create())
+  const instance = globalSingleton(registryKey, create)
 
   const applyConfig = (config: ConfigurableAxiosConfig) => {
     instance.defaults.baseURL = config.baseUrl
@@ -69,11 +76,13 @@ export const createConfigurableAxios = (registryKey: string) => {
     instance.defaults.withCredentials = config.withCredentials
   }
 
+  const isConfigured = (): boolean => Boolean(instance.defaults.baseURL)
+
   const resetForTests = () => {
     delete instance.defaults.baseURL
     delete instance.defaults.xsrfCookieName
     delete instance.defaults.withCredentials
   }
 
-  return { instance, applyConfig, resetForTests }
+  return { instance, applyConfig, isConfigured, resetForTests }
 }

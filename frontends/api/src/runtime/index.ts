@@ -1,8 +1,5 @@
-import { applyLearnAxiosConfig, resetLearnAxiosForTests } from "../axios"
-import {
-  applyMitxOnlineAxiosConfig,
-  resetMitxOnlineAxiosForTests,
-} from "../mitxonline/axios"
+import { learnAxiosClient } from "../axios"
+import { mitxAxiosClient } from "../mitxonline/axios"
 
 export type LearnApiConfig = {
   baseUrl: string
@@ -21,8 +18,6 @@ export type ApiClientsConfig = {
   mitxonline: MitxOnlineApiConfig
 }
 
-let currentConfig: ApiClientsConfig | null = null
-
 const normalizeBaseUrl = (label: string, value: string) => {
   // Strip trailing slashes with a linear scan rather than a regex. The regex
   // /\/+$/ backtracks polynomially on inputs with many trailing slashes (ReDoS);
@@ -40,12 +35,6 @@ const normalizeBaseUrl = (label: string, value: string) => {
   return normalized
 }
 
-const freezeConfig = (config: ApiClientsConfig): ApiClientsConfig =>
-  Object.freeze({
-    learn: Object.freeze({ ...config.learn }),
-    mitxonline: Object.freeze({ ...config.mitxonline }),
-  })
-
 const normalizeConfig = (config: ApiClientsConfig): ApiClientsConfig => ({
   learn: {
     ...config.learn,
@@ -57,34 +46,25 @@ const normalizeConfig = (config: ApiClientsConfig): ApiClientsConfig => ({
   },
 })
 
-export const configureApiClients = (config: ApiClientsConfig) => {
-  if (currentConfig) {
+export const configureApiClients = (config: ApiClientsConfig): void => {
+  if (isApiClientsConfigured()) {
     throw new Error(
       "API clients are already configured. Call resetApiClientsForTests() first if you need to reconfigure.",
     )
   }
 
+  // Normalize before applying so an invalid baseUrl throws without leaving the
+  // axios instances half-configured.
   const normalized = normalizeConfig(config)
 
-  applyLearnAxiosConfig(normalized.learn)
-  applyMitxOnlineAxiosConfig(normalized.mitxonline)
-  currentConfig = freezeConfig(normalized)
-  return currentConfig
+  learnAxiosClient.applyConfig(normalized.learn)
+  mitxAxiosClient.applyConfig(normalized.mitxonline)
 }
 
-export const isApiClientsConfigured = (): boolean => currentConfig !== null
-
-export const getApiClientsConfig = () => {
-  if (!currentConfig) {
-    throw new Error(
-      "API clients are not configured. Call configureApiClients(...) before making requests.",
-    )
-  }
-  return currentConfig
-}
+export const isApiClientsConfigured = (): boolean =>
+  learnAxiosClient.isConfigured() && mitxAxiosClient.isConfigured()
 
 export const resetApiClientsForTests = () => {
-  currentConfig = null
-  resetLearnAxiosForTests()
-  resetMitxOnlineAxiosForTests()
+  learnAxiosClient.resetForTests()
+  mitxAxiosClient.resetForTests()
 }
