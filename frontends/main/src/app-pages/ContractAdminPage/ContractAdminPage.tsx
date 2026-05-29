@@ -374,29 +374,33 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     enabled: !!org && !!contract,
   })
 
-  const { data: codes, isLoading: isLoadingCodes } = useQuery({
-    ...managerOrganizationQueries.managerContractCodes({
-      id: contract?.id ?? 0,
-      parent_lookup_organization: org?.id ?? 0,
-    }),
-    enabled: !!org && !!contract,
-  })
+const {
+  data: codes,
+  isLoading: isLoadingCodes,
+  isError: isCodesError,
+} = useQuery({
+  ...managerOrganizationQueries.managerContractCodes({
+    id: contract?.id ?? 0,
+    parent_lookup_organization: org?.id ?? 0,
+  }),
+  enabled: !!org && !!contract,
+})
 
-  if (isLoadingOrgs) {
-    return (
-      <Page>
-        <Skeleton width="100%" height="128px" />
-      </Page>
-    )
-  }
+if (isLoadingOrgs) {
+  return (
+    <Page>
+      <Skeleton width="100%" height="128px" />
+    </Page>
+  )
+}
 
-  if (isOrgsError) {
-    return <ErrorContent title="Something went wrong" timSays="Oops!" />
-  }
+if (isOrgsError || isCodesError) {
+  return <ErrorContent title="Something went wrong" timSays="Oops!" />
+}
 
-  if (!org) {
-    return <ErrorContent title="Organization not found" timSays="404" />
-  }
+if (!org) {
+  return <ErrorContent title="Organization not found" timSays="404" />
+}
 
   if (!contract) {
     return <ErrorContent title="Contract not found" timSays="404" />
