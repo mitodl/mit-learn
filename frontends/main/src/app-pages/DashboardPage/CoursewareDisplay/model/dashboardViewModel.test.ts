@@ -959,7 +959,7 @@ describe("dashboardViewModel", () => {
       expect(entry.displayedEnrollment).toBe(withCert)
     })
 
-    test("selected-language key prefers matching language enrollment", () => {
+    test("selectedVariantKey is stored verbatim and does not affect enrollment selection", () => {
       const enRun = factories.courses.courseRun({
         id: 401,
         language: LanguageEnum.En,
@@ -1017,8 +1017,8 @@ describe("dashboardViewModel", () => {
         { availableVariants: [] },
       )
 
-      expect(entry.displayedEnrollment?.run.id).toBe(esRun.id)
-      expect(entry.displayedRun?.id).toBe(esRun.id)
+      expect(entry.displayedEnrollment?.run.id).toBe(enRun.id)
+      expect(entry.displayedRun?.id).toBe(enRun.id)
     })
 
     test("contract-scoped: does not pick an enrollment from a different contract", () => {
@@ -1968,7 +1968,7 @@ describe("selectVariantRunForCourse", () => {
     ).toBeNull()
   })
 
-  test("ignores industry filter when selectedVariant.variant_industry is empty", () => {
+  test("does not match a run with a non-empty industry when variant_industry is empty (exact match)", () => {
     const run = makeRun({
       id: 5,
       language: LanguageEnum.En,
@@ -1976,7 +1976,7 @@ describe("selectVariantRunForCourse", () => {
     })
     expect(
       selectVariantRunForCourse([run], makeVariant({ variant_industry: "" })),
-    ).toBe(run)
+    ).toBeNull()
   })
 
   test("returns null when no run matches the selected length", () => {
@@ -1992,7 +1992,7 @@ describe("selectVariantRunForCourse", () => {
     ).toBeNull()
   })
 
-  test("ignores length filter when selectedVariant.variant_length is empty", () => {
+  test("does not match a run with a non-empty length when variant_length is empty (exact match)", () => {
     const run = makeRun({
       id: 7,
       language: LanguageEnum.En,
@@ -2000,15 +2000,15 @@ describe("selectVariantRunForCourse", () => {
     })
     expect(
       selectVariantRunForCourse([run], makeVariant({ variant_length: "" })),
-    ).toBe(run)
+    ).toBeNull()
   })
 
-  test("prefers the nearest upcoming start date over a further-future date", () => {
+  test("among same-enrollability runs, prefers the latest start date", () => {
     const nearFuture = makeRun({ id: 1, start_date: "2099-01-01T00:00:00Z" })
     const farFuture = makeRun({ id: 2, start_date: "2099-12-31T00:00:00Z" })
     expect(
       selectVariantRunForCourse([farFuture, nearFuture], makeVariant()),
-    ).toBe(nearFuture)
+    ).toBe(farFuture)
   })
 
   test("prefers any upcoming date over any past date", () => {
