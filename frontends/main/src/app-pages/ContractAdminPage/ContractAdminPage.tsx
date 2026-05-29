@@ -6,6 +6,8 @@ import { useQuery } from "@tanstack/react-query"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { RiMoreLine } from "@remixicon/react"
 import {
+  Chip,
+  Container,
   Pagination,
   SearchInput,
   Skeleton,
@@ -31,9 +33,8 @@ import graduateLogo from "@/public/images/dashboard/graduate.png"
 
 const PAGE_SIZE = 20
 
-const Page = styled.div(({ theme }) => ({
+const Page = styled(Container)(({ theme }) => ({
   maxWidth: "1400px",
-  margin: "0 auto",
   padding: "40px 24px",
   [theme.breakpoints.down("md")]: {
     padding: "24px 16px",
@@ -244,30 +245,26 @@ const TableCell = styled.div<{ $flex: number; $primary?: boolean }>(
   }),
 )
 
-const STATUS_BADGE_STYLES = {
-  redeemed: {
-    backgroundColor: "rgba(0, 173, 0, 0.2)",
-    color: "#004d1a",
+const StatusBadge = styled(Chip, {
+  shouldForwardProp: (prop) => prop !== "$status",
+})<{ $status: "redeemed" | "pending" }>(({ $status, theme }) => ({
+  height: "20px",
+  borderRadius: "4px",
+  fontSize: "12px",
+  fontWeight: theme.typography.fontWeightBold as number,
+  lineHeight: "16px",
+  "& .MuiChip-label": {
+    padding: "0 8px",
   },
-  pending: {
-    backgroundColor: "rgba(25, 102, 255, 0.2)",
-    color: "#002896",
-  },
-}
-
-const StatusBadge = styled.span<{ $status: "redeemed" | "pending" }>(
-  ({ $status, theme }) => ({
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "2px 8px",
-    borderRadius: "4px",
-    fontSize: "12px",
-    fontWeight: theme.typography.fontWeightBold,
-    lineHeight: "16px",
-    whiteSpace: "nowrap",
-    ...STATUS_BADGE_STYLES[$status],
+  ...($status === "redeemed" && {
+    backgroundColor: `${theme.custom.colors.green}33`,
+    color: theme.custom.colors.darkGreen,
   }),
-)
+  ...($status === "pending" && {
+    backgroundColor: `${theme.custom.colors.blue}33`,
+    color: theme.custom.colors.darkBlue,
+  }),
+}))
 
 const ActionCell = styled.div(({ theme }) => ({
   width: "40px",
@@ -321,7 +318,7 @@ const EmptyTableMessage = styled(Typography)(({ theme }) => ({
 
 const STUB = "—"
 
-type StatusFilter = "all" | "pending" | "redeemed" | "uninvited"
+type StatusFilter = "all" | "pending" | "redeemed"
 
 const COLUMN_FLEX = {
   assignedTo: 2,
@@ -411,8 +408,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     const matchesFilter =
       statusFilter === "all" ||
       (statusFilter === "redeemed" && redeemed) ||
-      (statusFilter === "pending" && !redeemed) ||
-      (statusFilter === "uninvited" && !redeemed)
+      (statusFilter === "pending" && !redeemed)
     const email = code.redeemed_by ?? ""
     const matchesSearch =
       !searchQuery || email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -500,11 +496,10 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                   <TabButton label="All" value="all" />
                   <TabButton label="Pending claim" value="pending" />
                   <TabButton label="Redeemed" value="redeemed" />
-                  <TabButton label="Uninvite" value="uninvited" />
                 </TabButtonList>
               </TabContext>
               <StyledSearchInput
-                placeholder="Search by email or status.."
+                placeholder="Search by email..."
                 value={searchQuery}
                 size="medium"
                 onChange={handleSearchChange}
@@ -571,13 +566,13 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                       : `Showing ${filteredCodes.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filteredCodes.length)} of ${filteredCodes.length} assignment${filteredCodes.length !== 1 ? "s" : ""}`}
                 </VisuallyHidden>
                 {isLoadingCodes ? (
-                  <Stack gap="8px" style={{ paddingTop: "16px" }}>
+                  <Stack gap="8px" paddingTop="16px">
                     {[1, 2, 3].map((i) => (
                       <Skeleton key={i} width="100%" height="48px" />
                     ))}
                   </Stack>
                 ) : pagedCodes.length === 0 ? (
-                  <EmptyTableMessage role="row">
+                  <EmptyTableMessage role="cell">
                     No seat assignments found.
                   </EmptyTableMessage>
                 ) : (
@@ -593,35 +588,26 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                           {code.redeemed_by ?? STUB}
                         </TableCell>
                         <TableCell role="cell" $flex={COLUMN_FLEX.redeemedBy}>
-                          <MobileLabel aria-hidden="true">
-                            Redeemed by
-                          </MobileLabel>
+                          <MobileLabel>Redeemed by</MobileLabel>
                           {code.redeemed_by ?? STUB}
                         </TableCell>
                         <TableCell role="cell" $flex={COLUMN_FLEX.status}>
-                          <MobileLabel aria-hidden="true">Status</MobileLabel>
+                          <MobileLabel>Status</MobileLabel>
                           <StatusBadge
                             $status={redeemed ? "redeemed" : "pending"}
-                          >
-                            {redeemed ? "Redeemed" : "Pending claim"}
-                          </StatusBadge>
+                            label={redeemed ? "Redeemed" : "Pending claim"}
+                          />
                         </TableCell>
                         <TableCell role="cell" $flex={COLUMN_FLEX.assignedOn}>
-                          <MobileLabel aria-hidden="true">
-                            Assigned on
-                          </MobileLabel>
+                          <MobileLabel>Assigned on</MobileLabel>
                           {STUB}
                         </TableCell>
                         <TableCell role="cell" $flex={COLUMN_FLEX.redeemedOn}>
-                          <MobileLabel aria-hidden="true">
-                            Redeemed on
-                          </MobileLabel>
+                          <MobileLabel>Redeemed on</MobileLabel>
                           {formatDate(code.redeemed_on)}
                         </TableCell>
                         <TableCell role="cell" $flex={COLUMN_FLEX.lastSent}>
-                          <MobileLabel aria-hidden="true">
-                            Last sent
-                          </MobileLabel>
+                          <MobileLabel>Last sent</MobileLabel>
                           {STUB}
                         </TableCell>
                         <ActionCell role="cell">
