@@ -952,14 +952,26 @@ const buildVariantLabel = (variant: SupportedVariant): string => {
 }
 
 /**
- * Given the list of runs the API returned for one course (which may include
- * both the course's default-variant runs AND the requested-variant runs),
- * return the single best run that matches the selected variant combination.
+ * Returns true when a run exactly matches all three fields of a variant.
+ * Empty string is treated as a literal value (not a wildcard): a run with
+ * `variant_industry = null` maps to `""` (general), so selecting
+ * `(de, "", "")` matches only general-industry runs, not healthcare ones.
+ */
+const runMatchesVariant =
+  (variant: SupportedVariant) =>
+  (run: BaseCourseRun): boolean =>
+    variant.language === (run.language ?? "") &&
+    variant.variant_industry === (run.variant_industry ?? "") &&
+    variant.variant_length === (run.variant_length ?? "")
+
+/**
+ * Given the list of runs returned by `api/v3/courses/variant_runs/` for one
+ * course, return the single best run that exactly matches the selected variant
+ * combination (language, industry, length). All three fields are matched
+ * literally — `""` means "general/unset", not wildcard.
  *
- * Matching is exact on every non-empty field of the selected variant
- * (language, industry, length).  If the course has no run for that combination
- * the function returns `null`, signalling to the caller that it should fall
- * back to the course's `next_run_id`-based default.
+ * If no run matches, returns `null`, signalling to the caller that it should
+ * fall back to the course's `next_run_id`-based default.
  *
  * Among matching runs, the one with the nearest *upcoming* start date is
  * preferred; if all start dates are in the past the most-recent past run wins;
@@ -969,21 +981,7 @@ const selectVariantRunForCourse = (
   runs: BaseCourseRun[],
   selectedVariant: SupportedVariant,
 ): BaseCourseRun | null => {
-  const matching = runs.filter((run) => {
-    if (selectedVariant.language && run.language !== selectedVariant.language)
-      return false
-    if (
-      selectedVariant.variant_industry &&
-      (run.variant_industry ?? "") !== selectedVariant.variant_industry
-    )
-      return false
-    if (
-      selectedVariant.variant_length &&
-      (run.variant_length ?? "") !== selectedVariant.variant_length
-    )
-      return false
-    return true
-  })
+  const matching = runs.filter(runMatchesVariant(selectedVariant))
 
   if (matching.length === 0) return null
 
