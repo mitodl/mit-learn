@@ -57,6 +57,11 @@ const CarouselSlide = styled.div<{ width: number; height: number }>(
     width,
     maxWidth: width,
     height,
+    cursor: "pointer",
+    "&:focus-visible": {
+      outline: "2px solid AccentColor",
+      borderRadius: "8px",
+    },
   }),
 )
 
@@ -123,14 +128,23 @@ const VideoShortsSection = () => {
               width={235}
               height={235 / ASPECT_RATIO}
               key={video.id}
-            >
-              {/* 235 is our fixed width to ensure slides align with the container edge */}
-              <Card
-                onClick={() => {
+              role="button"
+              tabIndex={0}
+              aria-label={`Play ${video.title}`}
+              onClick={() => {
+                setShowModal(true)
+                setVideoIndex(index)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
                   setShowModal(true)
                   setVideoIndex(index)
-                }}
-              >
+                }
+              }}
+            >
+              {/* 235 is our fixed width to ensure slides align with the container edge */}
+              <Card>
                 <Card.Content>
                   <CardContent width={235} height={235 / ASPECT_RATIO}>
                     {video.image?.url ? (

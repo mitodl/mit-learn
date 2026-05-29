@@ -2,16 +2,24 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import { styled, Typography } from "ol-components"
 import { CarouselV2Vertical } from "ol-components/CarouselV2Vertical"
-import { RiCloseLine, RiVolumeMuteLine, RiVolumeUpLine } from "@remixicon/react"
+import {
+  RiCloseLine,
+  RiVolumeMuteLine,
+  RiVolumeUpLine,
+  RiPlayLine,
+  RiPauseLine,
+} from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
 import { useWindowDimensions } from "ol-utilities"
 import type { VideoResource } from "api/v1"
 import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
 import VideoJsPlayer from "@/app-pages/VideoPlaylistCollectionPage/VideoJsPlayer"
 import type Player from "video.js/dist/types/player"
+import { FocusTrap } from "@mui/base/FocusTrap"
 
 const MODAL_VERTICAL_PADDING = 60
 const PORTRAIT_ASPECT_RATIO = 9 / 16
+const PLAYPAUSE_CLASS = "VideoShorts-playPause"
 
 const Overlay = styled.div(({ theme }) => ({
   position: "fixed",
@@ -62,6 +70,19 @@ const MuteButton = styled(BaseButton)(({ theme }) => ({
   },
 }))
 
+const PlayPauseButton = styled(BaseButton)({
+  top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+  opacity: 0,
+  transition: "opacity 0.2s ease-out",
+  "&:focus-visible": {
+    opacity: 1,
+    outline: "3px solid white",
+    outlineOffset: "4px",
+  },
+})
+
 const CarouselSlide = styled("div", {
   shouldForwardProp: (prop) => prop !== "width" && prop !== "height",
 })<{ width: number; height: number }>(({ width, height, theme }) => ({
@@ -72,6 +93,13 @@ const CarouselSlide = styled("div", {
   flex: "0 0 auto",
   margin: "30px 0",
   position: "relative",
+  "&:focus-visible": {
+    outline: "3px solid white",
+    outlineOffset: "4px",
+  },
+  [`&:hover .${PLAYPAUSE_CLASS}`]: {
+    opacity: 1,
+  },
   [theme.breakpoints.down("md")]: {
     maxWidth: "100%",
     height: "100%",
@@ -212,6 +240,7 @@ const VideoWithErrorHandler = ({
         bigPlayButton={false}
         playsinline={true}
         onReady={handleReady}
+        ariaLabel={video.title}
       />
     </VideoPlayerContainer>
   )
@@ -231,6 +260,7 @@ const VideoShortsModal = ({
   const videoHeight = Math.max(height - MODAL_VERTICAL_PADDING, 0)
   const [selectedIndex, setSelectedIndex] = useState<number | null>(startIndex)
   const [muted, setMuted] = useState(true)
+  const [playing, setPlaying] = useState(false)
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
   const [videoErrors, setVideoErrors] = useState<Record<number, unknown>>({})
 
@@ -247,28 +277,16 @@ const VideoShortsModal = ({
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && onClose) {
+        event.preventDefault()
         onClose()
       }
-
-      if (event.key === " " && selectedIndex !== null) {
-        const player = playersRef.current[selectedIndex]
-        if (player) {
-          if (isPlaying(player)) {
-            player.pause()
-          } else {
-            player.play()?.catch(() => {})
-          }
-        }
-      }
-
-      event.preventDefault()
     }
 
     document.addEventListener("keydown", handleKeyDown)
     return () => {
       document.removeEventListener("keydown", handleKeyDown)
     }
-  }, [onClose, selectedIndex])
+  }, [onClose])
 
   const onSlidesInView = (inView: number[]) => {
     if (inView.length === 1) {
@@ -279,12 +297,14 @@ const VideoShortsModal = ({
         )
         .forEach((player) => player.pause())
       setSelectedIndex(inView[0])
+      setPlaying(false)
       const player = playersRef.current[inView[0]]
       if (player) {
         player.muted(muted)
         // On iOS, only autoplay if muted or if user has interacted
         if (!isIOS() || muted || hasUserInteracted) {
-          player.play()?.catch(() => {})
+          player.play()?.catch(() => { setPlaying(false) })
+          setPlaying(true)
         }
       }
     }
@@ -311,37 +331,79 @@ const VideoShortsModal = ({
       setHasUserInteracted(true)
 
       if (playerPaused(player)) {
-        player.play()?.catch(() => {})
+        player.play()?.catch(() => { setPlaying(false) })
+        setPlaying(true)
       } else {
         player.pause()
+        setPlaying(false)
       }
     }
   }
 
   return (
-    <Overlay>
-      <CloseButton size="large" edge="rounded" variant="text" onClick={onClose}>
-        <RiCloseLine />
-      </CloseButton>
-      <MuteButton
-        size="large"
-        edge="rounded"
-        variant="text"
-        onClick={onClickMute}
+    <FocusTrap open>
+      <Overlay
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Video Shorts"
       >
-        {muted ? <RiVolumeMuteLine /> : <RiVolumeUpLine />}
-      </MuteButton>
-      <CarouselV2Vertical
-        initialSlide={startIndex}
-        onSlidesInView={onSlidesInView}
-      >
-        {videoData?.map((video: VideoResource, index: number) => (
-          <CarouselSlide
-            key={video.id}
-            width={videoHeight * PORTRAIT_ASPECT_RATIO}
-            height={videoHeight}
-            data-index={index}
-          >
+        <CloseButton
+          size="large"
+          edge="rounded"
+          variant="text"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          <RiCloseLine />
+        </CloseButton>
+        <MuteButton
+          // eslint-disable-next-line jsx-a11y/no-autofocus
+          autoFocus
+          size="large"
+          edge="rounded"
+          variant="text"
+          onClick={onClickMute}
+          aria-label={muted ? "Unmute" : "Mute"}
+          aria-pressed={muted}
+        >
+          {muted ? <RiVolumeMuteLine /> : <RiVolumeUpLine />}
+        </MuteButton>
+        <CarouselV2Vertical
+          initialSlide={startIndex}
+          onSlidesInView={onSlidesInView}
+        >
+          {videoData?.map((video: VideoResource, index: number) => (
+            <CarouselSlide
+              key={video.id}
+              width={videoHeight * PORTRAIT_ASPECT_RATIO}
+              height={videoHeight}
+              data-index={index}
+              role="group"
+              aria-roledescription="slide"
+              aria-label={`${index + 1} of ${videoData.length}: ${video.title}`}
+              tabIndex={index === selectedIndex ? 0 : -1}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleVideoClick()
+                }
+              }}
+            >
+            <PlayPauseButton
+              className={PLAYPAUSE_CLASS}
+              size="large"
+              edge="rounded"
+              variant="text"
+              tabIndex={index === selectedIndex ? 0 : -1}
+              onClick={handleVideoClick}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.stopPropagation()
+              }}
+              aria-label={playing ? "Pause" : "Play"}
+              aria-pressed={playing}
+            >
+              {playing ? <RiPauseLine /> : <RiPlayLine />}
+            </PlayPauseButton>
             {selectedIndex !== null && Math.abs(selectedIndex - index) < 2 ? (
               videoErrors[index] ? (
                 <Placeholder>
@@ -369,9 +431,10 @@ const VideoShortsModal = ({
               <Placeholder />
             )}
           </CarouselSlide>
-        ))}
-      </CarouselV2Vertical>
-    </Overlay>
+          ))}
+        </CarouselV2Vertical>
+      </Overlay>
+    </FocusTrap>
   )
 }
 

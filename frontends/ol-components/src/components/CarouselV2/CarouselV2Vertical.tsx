@@ -123,12 +123,13 @@ const CarouselV2Vertical: React.FC<CarouselV2VerticalProps> = ({
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "ArrowUp") {
+        event.preventDefault()
         emblaApi?.scrollPrev()
       }
       if (event.key === "ArrowDown") {
+        event.preventDefault()
         emblaApi?.scrollNext()
       }
-      event.preventDefault()
     }
 
     document.addEventListener("keydown", handleKeyDown)
