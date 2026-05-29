@@ -30,7 +30,7 @@ import {
   isProgramAsCourse,
   pickDisplayedEnrollmentForLegacyDashboard,
   programHasContractRuns,
-  resolveCourseEntryForLanguage,
+  resolveDisplayedRunAndEnrollment,
   selectVariantRunForCourse,
 } from "./dashboardViewModel"
 
@@ -1680,173 +1680,128 @@ describe("dashboardViewModel", () => {
     })
   })
 
-  describe("resolveCourseEntryForLanguage", () => {
-    test("prefers selected-language enrollment", () => {
-      const enRun = factories.courses.courseRun({
+  describe("resolveDisplayedRunAndEnrollment", () => {
+    test("variant path: prefers an enrolled run matching the variant over candidate runs", () => {
+      // User is enrolled in an older run matching the variant. A newer
+      // enrollable candidate also matches. The enrolled run must win.
+      const enrolledRun = factories.courses.courseRun({
         id: 11,
         language: LanguageEnum.En,
-        courseware_id: "cw-en-11",
-        courseware_url: "https://example.com/en-11",
-        is_enrollable: true,
+        variant_industry: VariantIndustryEnum.E,
+        variant_length: "",
+        is_enrollable: false,
+        start_date: "2024-01-01T00:00:00Z",
       })
-      const esRun = factories.courses.courseRun({
+      const newerCandidateRun = factories.courses.courseRun({
         id: 12,
-        language: LanguageEnum.EsEs,
-        courseware_id: "cw-es-12",
-        courseware_url: "https://example.com/es-12",
+        language: LanguageEnum.En,
+        variant_industry: VariantIndustryEnum.E,
+        variant_length: "",
         is_enrollable: true,
+        start_date: "2025-06-01T00:00:00Z",
       })
       const course = factories.courses.course({
         id: 1,
-        courseruns: [enRun, esRun],
-        next_run_id: enRun.id,
-        language_options: [
-          {
-            id: enRun.id,
-            courseware_id: enRun.courseware_id,
-            courseware_url: enRun.courseware_url ?? "",
-            language: LanguageEnum.En,
-            title: enRun.title,
-            run_tag: enRun.run_tag,
-          },
-          {
-            id: esRun.id,
-            courseware_id: esRun.courseware_id,
-            courseware_url: esRun.courseware_url ?? "",
-            language: LanguageEnum.EsEs,
-            title: esRun.title,
-            run_tag: esRun.run_tag,
-          },
-        ],
+        courseruns: [enrolledRun, newerCandidateRun],
+        next_run_id: newerCandidateRun.id,
       })
-
-      const englishEnrollment = factories.enrollment.courseEnrollment({
+      const variant: SupportedVariant = {
+        language: LanguageEnum.En,
+        variant_industry: VariantIndustryEnum.E,
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: false,
+      }
+      const enrollment = factories.enrollment.courseEnrollment({
         run: {
-          ...enRun,
+          ...enrolledRun,
           language: LanguageEnum.En,
-          course: { id: course.id, title: course.title },
-        },
-      })
-      const spanishEnrollment = factories.enrollment.courseEnrollment({
-        run: {
-          ...esRun,
-          language: LanguageEnum.EsEs,
+          variant_industry: VariantIndustryEnum.E,
+          variant_length: "",
           course: { id: course.id, title: course.title },
         },
       })
 
-      const resolved = resolveCourseEntryForLanguage(
-        course,
-        [englishEnrollment, spanishEnrollment],
-        "language:es-es",
-      )
+      const resolved = resolveDisplayedRunAndEnrollment(course, [enrollment], {
+        variant,
+        variantCandidateRuns: [enrolledRun, newerCandidateRun],
+      })
 
-      expect(resolved.displayedEnrollment?.run.id).toBe(esRun.id)
-      expect(resolved.displayedRun?.id).toBe(esRun.id)
+      expect(resolved.displayedEnrollment?.run.id).toBe(enrolledRun.id)
+      expect(resolved.displayedRun?.id).toBe(enrolledRun.id)
     })
 
     test("does not pick enrollment from another contract", () => {
-      const enRun = factories.courses.courseRun({
+      const run = factories.courses.courseRun({
         id: 21,
         b2b_contract: 1,
-        courseware_id: "cw-en-21",
-        courseware_url: "https://example.com/en-21",
-        is_enrollable: true,
-      })
-      const esRun = factories.courses.courseRun({
-        id: 22,
-        b2b_contract: 2,
-        courseware_id: "cw-es-22",
-        courseware_url: "https://example.com/es-22",
+        courseware_id: "cw-21",
+        courseware_url: "https://example.com/21",
         is_enrollable: true,
       })
       const course = factories.courses.course({
         id: 2,
-        courseruns: [enRun, esRun],
-        next_run_id: enRun.id,
-        language_options: [
-          {
-            id: enRun.id,
-            courseware_id: enRun.courseware_id,
-            courseware_url: enRun.courseware_url ?? "",
-            language: LanguageEnum.En,
-            title: enRun.title,
-            run_tag: enRun.run_tag,
-          },
-          {
-            id: esRun.id,
-            courseware_id: esRun.courseware_id,
-            courseware_url: esRun.courseware_url ?? "",
-            language: LanguageEnum.EsEs,
-            title: esRun.title,
-            run_tag: esRun.run_tag,
-          },
-        ],
+        courseruns: [run],
+        next_run_id: run.id,
       })
-
       const otherContractEnrollment = factories.enrollment.courseEnrollment({
         b2b_contract_id: 2,
         run: {
-          ...esRun,
-          language: LanguageEnum.EsEs,
+          ...run,
           course: { id: course.id, title: course.title },
         },
       })
 
-      const resolved = resolveCourseEntryForLanguage(
+      const resolved = resolveDisplayedRunAndEnrollment(
         course,
         [otherContractEnrollment],
-        "language:es-es",
         { contractId: 1 },
       )
 
       expect(resolved.displayedEnrollment).toBeNull()
     })
 
-    test("keeps fallback synthesized run for unenrolled selected language", () => {
-      const templateRun = factories.courses.courseRun({
+    test("variant path: returns best candidate run when user is not enrolled", () => {
+      // No enrollment; the enrollable candidate should be picked over the
+      // unenrollable one (enrollable-first sort in selectVariantRunForCourse).
+      const unenrollableRun = factories.courses.courseRun({
         id: 31,
-        b2b_contract: 1,
-        courseware_id: "cw-en-31",
-        courseware_url: "https://example.com/en-31",
+        language: LanguageEnum.En,
+        variant_industry: VariantIndustryEnum.F,
+        variant_length: "",
+        is_enrollable: false,
+        start_date: "2025-01-01T00:00:00Z",
+      })
+      const enrollableRun = factories.courses.courseRun({
+        id: 32,
+        language: LanguageEnum.En,
+        variant_industry: VariantIndustryEnum.F,
+        variant_length: "",
         is_enrollable: true,
+        start_date: "2024-06-01T00:00:00Z",
       })
       const course = factories.courses.course({
         id: 3,
-        courseruns: [templateRun],
-        next_run_id: templateRun.id,
-        language_options: [
-          {
-            id: templateRun.id,
-            courseware_id: templateRun.courseware_id,
-            courseware_url: templateRun.courseware_url ?? "",
-            language: LanguageEnum.En,
-            title: templateRun.title,
-            run_tag: templateRun.run_tag,
-          },
-          {
-            id: 32,
-            courseware_id: "cw-es-32",
-            courseware_url: "https://example.com/es-32",
-            language: LanguageEnum.EsEs,
-            title: "Modulo Espanol",
-            run_tag: "ES-32",
-          },
-        ],
+        courseruns: [unenrollableRun, enrollableRun],
+        next_run_id: enrollableRun.id,
+      })
+      const variant: SupportedVariant = {
+        language: LanguageEnum.En,
+        variant_industry: VariantIndustryEnum.F,
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: false,
+      }
+
+      const resolved = resolveDisplayedRunAndEnrollment(course, [], {
+        variant,
+        variantCandidateRuns: [unenrollableRun, enrollableRun],
       })
 
-      const resolved = resolveCourseEntryForLanguage(
-        course,
-        [],
-        "language:es-es",
-        {
-          contractId: 1,
-        },
-      )
-
       expect(resolved.displayedEnrollment).toBeNull()
-      expect(resolved.displayedRun?.id).toBe(32)
-      expect(resolved.displayedRun?.courseware_id).toBe("cw-es-32")
+      expect(resolved.displayedRun?.id).toBe(enrollableRun.id)
     })
   })
 })
