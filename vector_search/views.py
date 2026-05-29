@@ -206,7 +206,7 @@ class QdrantView(APIView):
                 search_params["query"] = models.FusionQuery(fusion=models.Fusion.RRF)
         else:
             dense_query = await sync_to_async(encoder_dense.embed_query)(query_string)
-            if order_by:
+            if order_by and "score_threshold" not in search_params:
                 # Nest: dense vector prefetch → order_by query
                 search_params["prefetch"] = models.Prefetch(
                     query=dense_query,
@@ -590,12 +590,7 @@ class LearningResourcesVectorSearchView(QdrantView):
             limit = request_data.data.get("limit", 10)
             offset = request_data.data.get("offset", 0)
             order_by = request_data.data.get("sortby")
-            score_cutoff = request_data.data.get(
-                "score_cutoff",
-                HYBRID_VECTOR_SEARCH_MIN_SCORE
-                if hybrid_search
-                else DENSE_VECTOR_SEARCH_MIN_SCORE,
-            )
+            score_cutoff = request_data.data.get("score_cutoff")
 
             response = await self.async_vector_search(
                 query_text,
