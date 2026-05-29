@@ -6,13 +6,12 @@
  * render-ready shapes. No React, no queries; everything is synchronous and
  * unit-testable in isolation.
  */
-import type { SimpleSelectOption } from "ol-components"
 import type {
   BaseCourseRun,
-  BaseCourseRunLanguage,
   BaseProgramDisplayMode,
   ContractPage,
   CourseRunEnrollmentV3,
+  CourseRunV2,
   CourseWithCourseRunsSerializerV2,
   SupportedVariant,
   V2Program,
@@ -28,6 +27,7 @@ import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 // cards are removed (Phase 7).
 import type { DashboardResource } from "../DashboardCard"
 import {
+  getBestRun,
   getIdsFromReqTree,
   parseProgramRequirementSections,
 } from "@/common/mitxonline"
@@ -36,15 +36,8 @@ import {
   EnrollmentStatus,
   getEnrollmentStatus,
   getRequirementsProgress,
+  selectBestEnrollment,
 } from "../helpers"
-import {
-  getNativeLanguageName,
-  // below four are used only for resolveDisplayedRunAndEnrollment
-  getCourseRunForSelectedLanguage,
-  getEnrollmentForSelectedLanguage,
-  getResolvedRunForSelectedLanguage,
-  selectBestContractEnrollmentForLanguage,
-} from "../languageOptions"
 
 /**
  * A program/contract dashboard's view of a course: every enrollment whose run
@@ -52,10 +45,9 @@ import {
  * single-enrollment card UI.
  *
  * `enrollments` must be course-matched (by run id) with no language filter —
- * language is a display selection (`selectedLanguageKey` → `displayedEnrollment`
- * / `displayedRun`), not a filter on the underlying list. Contract scoping,
- * when applicable, must be applied by the entry constructor before the list
- * reaches the entry.
+ * `displayedEnrollment` and `displayedRun` are the resolved display choice for
+ * the legacy single-enrollment card UI. Contract scoping, when applicable,
+ * must be applied by the entry constructor before the list reaches the entry.
  */
 export type DashboardCourseEntry = {
   course: CourseWithCourseRunsSerializerV2
@@ -355,74 +347,65 @@ const assembleHomeCardList = ({
 }
 
 /**
- * The mitxonline API emits language codes in POSIX form (`de_de`,
- * `pt_br`, `zh_hans`); convert to BCP 47 (`de-de`, `pt-br`, `zh-hans`)
- * so `Intl.DisplayNames` can resolve them, and to give picker options a
- * canonical key shape.
+ * Build the displayed run for a course entry by merging the enrollment's
+ * run data (V3) onto a CourseRunV2 template, or returning the selected run
+ * directly when the user has no enrollment.
+ *
+ * With a contract constraint, the selected run is scoped to that contract
+ * before the merge; if it doesn't belong to the contract a fresh best-run
+ * lookup is used as the template instead.
  */
-const getLanguageCodeFromText = (language: string): string => {
-  return language.trim().toLowerCase().replace(/_/g, "-")
-}
-
-const filterEnrollmentsToCourses = (
-  enrollments: CourseRunEnrollmentV3[],
-  courses: CourseWithCourseRunsSerializerV2[],
-) => {
-  const courseIds = new Set(courses.map((course) => course.id))
-  return enrollments.filter((enrollment) =>
-    courseIds.has(enrollment.run.course.id),
-  )
-}
-
-/**
- * Filter enrollments to exclusively those matching the given contractId.
- * If no contractId is given, filter to enrollments with no contract.
- */
-const enrollmentMatchesContract =
-  (contractId?: number | null) => (enrollment: CourseRunEnrollmentV3) => {
-    if (typeof contractId !== "number") {
-      return enrollment.b2b_contract_id === null
-    }
-    return enrollment.b2b_contract_id === contractId
+const synthesizeDisplayedRun = (
+  course: CourseWithCourseRunsSerializerV2,
+  selectedRun: CourseRunV2 | null,
+  enrollment: CourseRunEnrollmentV3 | null,
+  contractId?: number,
+): BaseCourseRun | null => {
+  // Apply contract scope to the selected run.
+  let scopedSelectedRun = selectedRun
+  if (
+    typeof contractId === "number" &&
+    selectedRun &&
+    "b2b_contract" in selectedRun &&
+    (selectedRun as { b2b_contract?: number | null }).b2b_contract !==
+      contractId
+  ) {
+    scopedSelectedRun = null
   }
 
-type LanguageOptionScope = {
-  contractId?: number
-}
+  let templateRun = scopedSelectedRun
+  if (!templateRun) {
+    templateRun =
+      (typeof contractId === "number"
+        ? getBestRun(course, { contractId })
+        : getBestRun(course)) ?? null
+  }
 
-const getDistinctDashboardLanguageOptions = (
-  courses: CourseWithCourseRunsSerializerV2[],
-  enrollments: CourseRunEnrollmentV3[],
-  opts?: LanguageOptionScope,
-): SimpleSelectOption[] => {
-  const coursesLanguages = courses.flatMap((c) =>
-    c.language_options
-      .map((opt) => opt.language)
-      .filter((lang): lang is BaseCourseRunLanguage => !!lang),
-  )
-  const enrollmentLanguages = filterEnrollmentsToCourses(enrollments, courses)
-    .filter(enrollmentMatchesContract(opts?.contractId))
-    .map((e) => e.run.language)
-    .filter((lang): lang is BaseCourseRunLanguage => !!lang)
-  const distinctCodes = Array.from(
-    new Set(
-      [...coursesLanguages, ...enrollmentLanguages].map(
-        getLanguageCodeFromText,
-      ),
-    ),
-  )
-  const options: SimpleSelectOption[] = distinctCodes.map((code) => {
-    return {
-      value: `language:${code}`,
-      label: getNativeLanguageName(code),
+  const enrollmentRun = enrollment?.run
+  if (enrollmentRun) {
+    if (!templateRun) {
+      return null
     }
-  })
-  options.sort((a, b) =>
-    String(a.label).localeCompare(String(b.label), undefined, {
-      sensitivity: "base",
-    }),
-  )
-  return options
+    return {
+      ...templateRun,
+      id: enrollmentRun.id,
+      title: enrollmentRun.title,
+      courseware_id: enrollmentRun.courseware_id,
+      courseware_url: enrollmentRun.courseware_url,
+      run_tag: enrollmentRun.run_tag,
+      start_date: enrollmentRun.start_date,
+      end_date: enrollmentRun.end_date,
+      is_enrollable: enrollmentRun.is_enrollable,
+      is_upgradable: enrollmentRun.is_upgradable,
+      is_archived: enrollmentRun.is_archived,
+      is_self_paced: enrollmentRun.is_self_paced,
+      upgrade_deadline: enrollmentRun.upgrade_deadline,
+      certificate_available_date: enrollmentRun.certificate_available_date,
+      course_number: enrollmentRun.course_number,
+    }
+  }
+
+  return scopedSelectedRun
 }
 
 /**
@@ -490,22 +473,20 @@ const resolveDisplayedRunAndEnrollment = (
   }
 
   if (typeof opts?.contractId === "number") {
-    const selectedRun = getCourseRunForSelectedLanguage(course, "")
-    const displayedEnrollment = selectBestContractEnrollmentForLanguage(
-      course,
-      scopedEnrollments,
-      "",
-    )
-    const selectedRunForResolution = displayedEnrollment
+    const defaultRun =
+      getBestRun(course, { enrollableOnly: true }) ??
+      course.courseruns[0] ??
+      null
+    const displayedEnrollment = selectBestEnrollment(course, scopedEnrollments)
+    const runForResolution = displayedEnrollment
       ? ((course.courseruns ?? []).find(
           (run) => run.id === displayedEnrollment.run.id,
         ) ?? null)
-      : selectedRun
+      : defaultRun
 
-    const displayedRun = getResolvedRunForSelectedLanguage(
+    const displayedRun = synthesizeDisplayedRun(
       course,
-      null,
-      selectedRunForResolution,
+      runForResolution,
       displayedEnrollment,
       opts.contractId,
     )
@@ -513,22 +494,24 @@ const resolveDisplayedRunAndEnrollment = (
     return { displayedEnrollment, displayedRun }
   }
 
-  const selectedRun = getCourseRunForSelectedLanguage(course, "")
-  const selectedLanguageEnrollment = getEnrollmentForSelectedLanguage(
-    enrollments,
-    null,
-    selectedRun,
-  )
+  const defaultRun =
+    getBestRun(course, { enrollableOnly: true }) ?? course.courseruns[0] ?? null
+  const matchedEnrollment =
+    enrollments.find(
+      (e) =>
+        e.run &&
+        (e.run.id === defaultRun?.id ||
+          e.run.courseware_id === defaultRun?.courseware_id),
+    ) ?? null
   const displayedEnrollment = pickDisplayedEnrollmentForLegacyDashboard(
     course,
     enrollments,
   )
 
-  const displayedRun = getResolvedRunForSelectedLanguage(
+  const displayedRun = synthesizeDisplayedRun(
     course,
-    null,
-    selectedRun,
-    selectedLanguageEnrollment,
+    defaultRun,
+    matchedEnrollment,
   )
 
   return { displayedEnrollment, displayedRun }
@@ -907,6 +890,90 @@ const VARIANT_LENGTH_LABELS: Record<string, string> = {
   F: "Full",
 }
 
+const FALLBACK_NATIVE_LANGUAGE_NAMES: Record<string, string> = {
+  ar: "العربية",
+  de: "Deutsch",
+  en: "English",
+  es: "español",
+  "es-419": "español (Latinoamérica)",
+  fr: "français",
+  hi: "हिन्दी",
+  it: "italiano",
+  ja: "日本語",
+  ko: "한국어",
+  pt: "português",
+  "pt-br": "português (Brasil)",
+  ru: "русский",
+  zh: "中文",
+  "zh-cn": "简体中文",
+  "zh-tw": "繁體中文",
+}
+
+const nativeLanguageNameCache = new Map<string, string>()
+let cachedDisplayNamesRef: typeof Intl.DisplayNames | undefined =
+  Intl.DisplayNames
+
+const ensureNativeLanguageNameCacheIsFresh = (): void => {
+  if (Intl.DisplayNames !== cachedDisplayNamesRef) {
+    cachedDisplayNamesRef = Intl.DisplayNames
+    nativeLanguageNameCache.clear()
+  }
+}
+
+const getFallbackNativeLanguageName = (languageCode: string): string | null => {
+  const exactMatch = FALLBACK_NATIVE_LANGUAGE_NAMES[languageCode]
+  if (exactMatch) {
+    return exactMatch
+  }
+  const baseLanguageSubtag = languageCode.split("-")[0]
+  if (!baseLanguageSubtag) {
+    return null
+  }
+  return (
+    FALLBACK_NATIVE_LANGUAGE_NAMES[baseLanguageSubtag] ?? baseLanguageSubtag
+  )
+}
+
+const getNativeLanguageName = (languageCode: string): string => {
+  ensureNativeLanguageNameCacheIsFresh()
+  const normalizedLanguageCode = languageCode.trim().toLowerCase()
+  const baseLanguageSubtag = normalizedLanguageCode.split("-")[0]
+  const cachedLabel = nativeLanguageNameCache.get(normalizedLanguageCode)
+  if (cachedLabel) {
+    return cachedLabel
+  }
+  let resolvedLabel: string | null = null
+  try {
+    if (typeof Intl.DisplayNames === "function") {
+      const displayNames = new Intl.DisplayNames([normalizedLanguageCode], {
+        type: "language",
+      })
+      const label = displayNames.of(normalizedLanguageCode)
+      if (label && label.toLowerCase() !== normalizedLanguageCode) {
+        resolvedLabel = label
+      }
+      if (
+        !resolvedLabel &&
+        baseLanguageSubtag &&
+        baseLanguageSubtag !== normalizedLanguageCode
+      ) {
+        const baseLabel = displayNames.of(baseLanguageSubtag)
+        if (baseLabel && baseLabel.toLowerCase() !== baseLanguageSubtag) {
+          resolvedLabel = baseLabel
+        }
+      }
+    }
+  } catch {
+    // Fall through to static fallback labels.
+  }
+  const finalLabel =
+    resolvedLabel ??
+    getFallbackNativeLanguageName(normalizedLanguageCode) ??
+    normalizedLanguageCode
+  nativeLanguageNameCache.set(normalizedLanguageCode, finalLabel)
+  return finalLabel
+}
+
 const buildVariantKey = (variant: SupportedVariant): string =>
   `language:${variant.language ?? ""}|industry:${variant.variant_industry ?? ""}|length:${variant.variant_length ?? ""}`
 
@@ -1043,7 +1110,6 @@ export {
   groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
   resolveDisplayedRunAndEnrollment,
-  getDistinctDashboardLanguageOptions,
   isProgramAsCourse,
   isNonContractEnrollment,
   enrollmentCourseIsInPrograms,
