@@ -25,7 +25,6 @@ import {
   getSortedStandaloneContractPrograms,
   groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
-  selectVariantRunForCourse,
   type DashboardCourseEntry,
 } from "../model/dashboardViewModel"
 
@@ -110,33 +109,24 @@ const useContractDashboardData = (
     enabled: !isDefaultVariantSelection && contractCourses.length > 0,
   })
 
-  // Map courseId → best BaseCourseRun for the selected variant.
-  // Empty when the default (Original) variant is active.
+  // Map courseId → all candidate BaseCourseRuns the API returned for the
+  // selected variant.  Empty when the default (Original) variant is active.
   //
-  // The API returns all runs for a course that match either the selected
-  // variant OR the course's default variant (so the array can hold multiple
-  // sessions and/or a mix of variant types).  We therefore filter to runs
-  // that explicitly match every non-empty field of the selected variant and
-  // pick the best session among those.  Courses with no matching run are
-  // absent from the map, which causes buildCourseEntry to fall back to
-  // next_run_id via the null variantRun path.
+  // The API may return a mix of runs matching the selected variant and the
+  // course's default variant.  resolveDisplayedRunAndEnrollment (called inside
+  // buildCourseEntry) is responsible for: preferring any existing enrollment
+  // whose run already matches the variant, then picking the best candidate
+  // session from this list, then falling back to default run resolution.
   const variantRunsByCourseId = React.useMemo<
-    Record<number, BaseCourseRun>
+    Record<number, BaseCourseRun[]>
   >(() => {
     if (isDefaultVariantSelection || !variantRunsQuery.data) return {}
-    if (!selectedVariant) return {}
-    const map: Record<number, BaseCourseRun> = {}
+    const map: Record<number, BaseCourseRun[]> = {}
     for (const courseVariantRuns of variantRunsQuery.data) {
-      const best = selectVariantRunForCourse(
-        courseVariantRuns.courseruns,
-        selectedVariant,
-      )
-      if (best) {
-        map[courseVariantRuns.id] = best
-      }
+      map[courseVariantRuns.id] = courseVariantRuns.courseruns
     }
     return map
-  }, [isDefaultVariantSelection, selectedVariant, variantRunsQuery.data])
+  }, [isDefaultVariantSelection, variantRunsQuery.data])
 
   const programs = programsQuery.data?.results ?? []
   const collections = programCollectionsQuery.data?.results ?? []
@@ -184,9 +174,10 @@ const useContractDashboardData = (
             ancestorContext: programEnrollment
               ? { programEnrollment }
               : undefined,
-            variantRun: isDefaultVariantSelection
+            variant: isDefaultVariantSelection ? undefined : selectedVariant!,
+            variantCandidateRuns: isDefaultVariantSelection
               ? undefined
-              : (variantRunsByCourseId[course.id] ?? null),
+              : variantRunsByCourseId[course.id],
           },
         ),
       ),
@@ -210,9 +201,10 @@ const useContractDashboardData = (
           {
             availableVariants: variantOptions,
             contractId: contract.id,
-            variantRun: isDefaultVariantSelection
+            variant: isDefaultVariantSelection ? undefined : selectedVariant!,
+            variantCandidateRuns: isDefaultVariantSelection
               ? undefined
-              : (variantRunsByCourseId[course.id] ?? null),
+              : variantRunsByCourseId[course.id],
           },
         ),
       ),

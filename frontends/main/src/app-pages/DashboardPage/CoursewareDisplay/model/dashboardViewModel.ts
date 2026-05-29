@@ -426,31 +426,74 @@ const getDistinctDashboardLanguageOptions = (
 }
 
 /**
- * Resolve the default `displayedEnrollment` and `displayedRun` for a
- * dashboard course entry when no variant run is pre-selected.
+ * Resolve the `displayedEnrollment` and `displayedRun` for a dashboard course
+ * entry.
  *
- * Contract path: picks the best contract enrollment (by certificate then
- * grade) and resolves its run. Non-contract path: picks the best enrollment
- * via the legacy display policy (certificate → grade → first match) and
- * resolves the course's default next run.
+ * Options:
+ *  - `contractId`: when present, scopes enrollment lookups to that contract.
+ *  - `variant` + `variantCandidateRuns`: when a non-default variant is
+ *    selected, the function first looks for an existing enrollment whose run
+ *    already matches the variant (preferred — the user is already enrolled).
+ *    If none is found, it picks the best session from `variantCandidateRuns`
+ *    via `selectVariantRunForCourse`. If that also returns nothing, it falls
+ *    through to the default resolution below.
+ *
+ * Default resolution (no variant, or variant with no matching run):
+ *  - Contract path: picks the best contract enrollment (by certificate then
+ *    grade) and resolves its run.
+ *  - Non-contract path: picks the best enrollment via the legacy display
+ *    policy (certificate → grade → first match) and resolves the default next
+ *    run.
  */
 const resolveDisplayedRunAndEnrollment = (
   course: CourseWithCourseRunsSerializerV2,
   enrollments: CourseRunEnrollmentV3[],
-  opts?: { contractId?: number },
+  opts?: {
+    contractId?: number
+    variant?: SupportedVariant
+    variantCandidateRuns?: BaseCourseRun[]
+  },
 ): {
   displayedEnrollment: CourseRunEnrollmentV3 | null
   displayedRun: BaseCourseRun | null
 } => {
-  const selectedRun = getCourseRunForSelectedLanguage(course, "")
+  const scopedEnrollments =
+    typeof opts?.contractId === "number"
+      ? enrollments.filter((e) => e.b2b_contract_id === opts.contractId)
+      : enrollments
+
+  if (opts?.variant) {
+    const matchesVariant = runMatchesVariant(opts.variant)
+
+    // Prefer an existing enrollment whose run already matches the variant.
+    const variantEnrollment =
+      scopedEnrollments.find((e) => matchesVariant(e.run)) ?? null
+    if (variantEnrollment) {
+      const displayedRun =
+        course.courseruns.find((r) => r.id === variantEnrollment.run.id) ??
+        variantEnrollment.run
+      return { displayedEnrollment: variantEnrollment, displayedRun }
+    }
+
+    // Not enrolled: pick the best candidate run from the API results.
+    const bestRun = selectVariantRunForCourse(
+      opts.variantCandidateRuns ?? [],
+      opts.variant,
+    )
+    if (bestRun) {
+      const displayedRun =
+        course.courseruns.find((r) => r.id === bestRun.id) ?? bestRun
+      return { displayedEnrollment: null, displayedRun }
+    }
+
+    // No matching run at all — fall through to default resolution.
+  }
 
   if (typeof opts?.contractId === "number") {
-    const contractEnrollments = enrollments.filter(
-      (enrollment) => enrollment.b2b_contract_id === opts.contractId,
-    )
+    const selectedRun = getCourseRunForSelectedLanguage(course, "")
     const displayedEnrollment = selectBestContractEnrollmentForLanguage(
       course,
-      contractEnrollments,
+      scopedEnrollments,
       "",
     )
     const selectedRunForResolution = displayedEnrollment
@@ -470,6 +513,7 @@ const resolveDisplayedRunAndEnrollment = (
     return { displayedEnrollment, displayedRun }
   }
 
+  const selectedRun = getCourseRunForSelectedLanguage(course, "")
   const selectedLanguageEnrollment = getEnrollmentForSelectedLanguage(
     enrollments,
     null,
@@ -557,9 +601,8 @@ type RequirementSection = {
  * Build a fully-resolved `DashboardCourseEntry` for a single course.
  *
  * This is a pure constructor — it assembles the entry from caller-supplied
- * metadata and delegates display-resolution to either the variant run (when
- * provided) or `resolveDisplayedRunAndEnrollment`. The caller is responsible
- * for:
+ * metadata and delegates all display-resolution to
+ * `resolveDisplayedRunAndEnrollment`. The caller is responsible for:
  *  - pre-filtering `enrollments` to this course (e.g. `enrollmentsByCourseId[course.id] ?? []`)
  *  - computing `availableVariants` once at the composer level (NOT re-derived here)
  *  - supplying the effective `selectedVariantKey` (a valid option or fallback)
@@ -567,10 +610,9 @@ type RequirementSection = {
  * `enrollments` is stored uncollapsed on the entry — the full list, never
  * filtered to the displayed choice.
  *
- * When `opts.variantRun` is truthy, it is used directly as `displayedRun`
- * (preferring the full `CourseRunV2` from `course.courseruns` when available).
- * When absent (null or undefined), `resolveDisplayedRunAndEnrollment` picks
- * the default run and enrollment.
+ * When `opts.variant` and `opts.variantCandidateRuns` are provided,
+ * `resolveDisplayedRunAndEnrollment` will prefer any existing enrollment that
+ * already matches the variant before falling back to the candidate runs.
  */
 const buildCourseEntry = (
   course: CourseWithCourseRunsSerializerV2,
@@ -581,38 +623,18 @@ const buildCourseEntry = (
     contractId?: number
     isContractPageResource?: boolean
     ancestorContext?: DashboardCourseEntry["ancestorContext"]
-    /**
-     * Pre-resolved variant run. When truthy, used as `displayedRun` (full
-     * `CourseRunV2` looked up from `course.courseruns` when available, else
-     * the `BaseCourseRun` directly). When absent (null or undefined), falls
-     * back to default run resolution via `resolveDisplayedRunAndEnrollment`.
-     */
-    variantRun?: BaseCourseRun | null
+    /** Active variant selection, when a non-default variant is chosen. */
+    variant?: SupportedVariant
+    /** Candidate runs from the variant-runs API for this course. */
+    variantCandidateRuns?: BaseCourseRun[]
   },
 ): DashboardCourseEntry => {
-  let displayedRun: BaseCourseRun | null,
-    displayedEnrollment: CourseRunEnrollmentV3 | null
-
-  if (opts.variantRun) {
-    // Variant run provided — prefer the full CourseRunV2 from course.courseruns
-    // when available; fall back to the BaseCourseRun from the variant-runs endpoint.
-    displayedRun =
-      course.courseruns.find((r) => r.id === opts.variantRun!.id) ??
-      opts.variantRun
-    displayedEnrollment =
-      enrollments.find((e) => e.run.id === opts.variantRun!.id) ?? null
-  } else {
-    // No variant run — resolve the default displayed run and enrollment.
-    const result = resolveDisplayedRunAndEnrollment(
-      course,
-      enrollments,
-      opts.contractId !== undefined
-        ? { contractId: opts.contractId }
-        : undefined,
-    )
-    displayedRun = result.displayedRun
-    displayedEnrollment = result.displayedEnrollment
-  }
+  const { displayedRun, displayedEnrollment } =
+    resolveDisplayedRunAndEnrollment(course, enrollments, {
+      contractId: opts.contractId,
+      variant: opts.variant,
+      variantCandidateRuns: opts.variantCandidateRuns,
+    })
 
   return {
     course,
