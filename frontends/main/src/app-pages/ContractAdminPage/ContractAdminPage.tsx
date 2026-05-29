@@ -14,7 +14,12 @@ import {
   Typography,
   styled,
 } from "ol-components"
-import { Button, TabButton, TabButtonList, VisuallyHidden } from "@mitodl/smoot-design"
+import {
+  Button,
+  TabButton,
+  TabButtonList,
+  VisuallyHidden,
+} from "@mitodl/smoot-design"
 import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
 import type { ContractCode } from "api/mitxonline-hooks/organizations"
 import { matchOrganizationBySlug } from "@/common/utils"
@@ -158,8 +163,6 @@ const ControlsLeft = styled.div(({ theme }) => ({
   },
 }))
 
-
-
 const TableCard = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
   border: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -181,14 +184,12 @@ const TableHeaderRow = styled.div(({ theme }) => ({
   },
 }))
 
-const TableHeaderCell = styled.div<{ $flex: number }>(
-  ({ $flex, theme }) => ({
-    flex: $flex,
-    minWidth: 0,
-    ...theme.typography.subtitle2,
-    color: theme.custom.colors.black,
-  }),
-)
+const TableHeaderCell = styled.div<{ $flex: number }>(({ $flex, theme }) => ({
+  flex: $flex,
+  minWidth: 0,
+  ...theme.typography.subtitle2,
+  color: theme.custom.colors.black,
+}))
 
 const TableRow = styled.div(({ theme }) => ({
   display: "flex",
@@ -318,7 +319,6 @@ const EmptyTableMessage = styled(Typography)(({ theme }) => ({
   textAlign: "center",
 })) as typeof Typography
 
-
 const STUB = "—"
 
 type StatusFilter = "all" | "pending" | "redeemed" | "uninvited"
@@ -420,7 +420,10 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   })
 
   const totalPages = Math.ceil(filteredCodes.length / PAGE_SIZE)
-  const pagedCodes = filteredCodes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const pagedCodes = filteredCodes.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
+  )
 
   const handleTabChange = (_: React.SyntheticEvent, val: StatusFilter) => {
     setStatusFilter(val)
@@ -451,7 +454,10 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
               <ContractSubtitle>
                 <span>{contract.name}</span>
                 {isLoadingDetail ? null : totalPurchased !== undefined ? (
-                  <> · <span>{totalPurchased} seats</span></>
+                  <>
+                    {" "}
+                    · <span>{totalPurchased} seats</span>
+                  </>
                 ) : null}
               </ContractSubtitle>
             </div>
@@ -517,22 +523,40 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
             <div role="table" aria-label="Seat assignments">
               <div role="rowgroup">
                 <TableHeaderRow role="row">
-                  <TableHeaderCell role="columnheader" $flex={COLUMN_FLEX.assignedTo}>
+                  <TableHeaderCell
+                    role="columnheader"
+                    $flex={COLUMN_FLEX.assignedTo}
+                  >
                     Assigned to
                   </TableHeaderCell>
-                  <TableHeaderCell role="columnheader" $flex={COLUMN_FLEX.redeemedBy}>
+                  <TableHeaderCell
+                    role="columnheader"
+                    $flex={COLUMN_FLEX.redeemedBy}
+                  >
                     Redeemed by
                   </TableHeaderCell>
-                  <TableHeaderCell role="columnheader" $flex={COLUMN_FLEX.status}>
+                  <TableHeaderCell
+                    role="columnheader"
+                    $flex={COLUMN_FLEX.status}
+                  >
                     Status
                   </TableHeaderCell>
-                  <TableHeaderCell role="columnheader" $flex={COLUMN_FLEX.assignedOn}>
+                  <TableHeaderCell
+                    role="columnheader"
+                    $flex={COLUMN_FLEX.assignedOn}
+                  >
                     Assigned on
                   </TableHeaderCell>
-                  <TableHeaderCell role="columnheader" $flex={COLUMN_FLEX.redeemedOn}>
+                  <TableHeaderCell
+                    role="columnheader"
+                    $flex={COLUMN_FLEX.redeemedOn}
+                  >
                     Redeemed on
                   </TableHeaderCell>
-                  <TableHeaderCell role="columnheader" $flex={COLUMN_FLEX.lastSent}>
+                  <TableHeaderCell
+                    role="columnheader"
+                    $flex={COLUMN_FLEX.lastSent}
+                  >
                     Last sent
                   </TableHeaderCell>
                   <ActionCell role="columnheader" />
@@ -553,35 +577,51 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                     ))}
                   </Stack>
                 ) : pagedCodes.length === 0 ? (
-                  <EmptyTableMessage role="row">No seat assignments found.</EmptyTableMessage>
+                  <EmptyTableMessage role="row">
+                    No seat assignments found.
+                  </EmptyTableMessage>
                 ) : (
                   pagedCodes.map((code) => {
                     const redeemed = isRedeemed(code)
                     return (
                       <TableRow role="row" key={code.id}>
-                        <TableCell role="cell" $flex={COLUMN_FLEX.assignedTo} $primary>
+                        <TableCell
+                          role="cell"
+                          $flex={COLUMN_FLEX.assignedTo}
+                          $primary
+                        >
                           {code.redeemed_by ?? STUB}
                         </TableCell>
                         <TableCell role="cell" $flex={COLUMN_FLEX.redeemedBy}>
-                          <MobileLabel aria-hidden="true">Redeemed by</MobileLabel>
+                          <MobileLabel aria-hidden="true">
+                            Redeemed by
+                          </MobileLabel>
                           {code.redeemed_by ?? STUB}
                         </TableCell>
                         <TableCell role="cell" $flex={COLUMN_FLEX.status}>
                           <MobileLabel aria-hidden="true">Status</MobileLabel>
-                          <StatusBadge $status={redeemed ? "redeemed" : "pending"}>
+                          <StatusBadge
+                            $status={redeemed ? "redeemed" : "pending"}
+                          >
                             {redeemed ? "Redeemed" : "Pending claim"}
                           </StatusBadge>
                         </TableCell>
                         <TableCell role="cell" $flex={COLUMN_FLEX.assignedOn}>
-                          <MobileLabel aria-hidden="true">Assigned on</MobileLabel>
+                          <MobileLabel aria-hidden="true">
+                            Assigned on
+                          </MobileLabel>
                           {STUB}
                         </TableCell>
                         <TableCell role="cell" $flex={COLUMN_FLEX.redeemedOn}>
-                          <MobileLabel aria-hidden="true">Redeemed on</MobileLabel>
+                          <MobileLabel aria-hidden="true">
+                            Redeemed on
+                          </MobileLabel>
                           {formatDate(code.redeemed_on)}
                         </TableCell>
                         <TableCell role="cell" $flex={COLUMN_FLEX.lastSent}>
-                          <MobileLabel aria-hidden="true">Last sent</MobileLabel>
+                          <MobileLabel aria-hidden="true">
+                            Last sent
+                          </MobileLabel>
                           {STUB}
                         </TableCell>
                         <ActionCell role="cell">
@@ -601,10 +641,8 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
             <TableFooter>
               <TableFootnote aria-hidden="true">
                 Showing{" "}
-                {filteredCodes.length === 0
-                  ? 0
-                  : (page - 1) * PAGE_SIZE + 1}
-                –{Math.min(page * PAGE_SIZE, filteredCodes.length)} of{" "}
+                {filteredCodes.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–
+                {Math.min(page * PAGE_SIZE, filteredCodes.length)} of{" "}
                 {filteredCodes.length} assignment
                 {filteredCodes.length !== 1 ? "s" : ""}
               </TableFootnote>
