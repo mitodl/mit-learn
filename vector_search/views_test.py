@@ -12,6 +12,7 @@ from vector_search.constants import (
     DENSE_VECTOR_SEARCH_MIN_SCORE,
     HYBRID_VECTOR_SEARCH_MIN_SCORE,
 )
+from vector_search.encoders.utils import dense_encoder, sparse_encoder
 from vector_search.views import QdrantView
 
 
@@ -764,7 +765,6 @@ def test_vector_search_with_score_cutoff_enforces_min_score(
         "hybrid_search": hybrid_search,
         "limit": 10,
         "offset": 20,
-        "score_cutoff": 0.01,
     }
 
     client.get(
@@ -778,3 +778,45 @@ def test_vector_search_with_score_cutoff_enforces_min_score(
         assert call_kwargs["score_threshold"] == HYBRID_VECTOR_SEARCH_MIN_SCORE
     else:
         assert call_kwargs["score_threshold"] == DENSE_VECTOR_SEARCH_MIN_SCORE
+
+
+@pytest.mark.parametrize("query_string", ["", "test"])
+@pytest.mark.parametrize("hybrid_search", [True, False])
+@pytest.mark.parametrize("min_score", [0.0, 0.1, None])
+@pytest.mark.parametrize("sortby", ["-views", "views", None])
+def test_build_search_params_sort_with_cutoff_score(
+    settings, query_string, hybrid_search, min_score, sortby
+):
+    """
+    Test that _build_search_params returns correct search parameters when sortby and score_cutoff are both provided.
+    """
+    view = QdrantView()
+
+    search_params = asyncio.run(
+        view._build_search_params(  # noqa: SLF001
+            query_string=query_string,
+            search_collection=None,
+            limit=10,
+            prefetch_limit=100,
+            search_filter=None,
+            order_by=sortby,
+            encoder_dense=dense_encoder(),
+            encoder_sparse=sparse_encoder(),
+            hybrid_search=hybrid_search,
+            score_cutoff=min_score,
+        )
+    )
+    if query_string and min_score is not None:
+        assert search_params["score_threshold"] == (
+            HYBRID_VECTOR_SEARCH_MIN_SCORE
+            if hybrid_search
+            else DENSE_VECTOR_SEARCH_MIN_SCORE
+        )
+    if query_string and sortby and min_score is None:
+        assert search_params["order_by"].key == "views"
+        if sortby.startswith("-"):
+            assert search_params["order_by"].direction == models.Direction.DESC
+        else:
+            assert search_params["order_by"].direction == models.Direction.ASC
+    else:
+        assert "order_by" not in search_params
