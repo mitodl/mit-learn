@@ -393,7 +393,11 @@ def test_qdrant_view_format_order_by():
 
 @pytest.mark.parametrize("query_string", ["", "test"])
 @pytest.mark.parametrize("hybrid_search", [True, False])
-def test_vector_search_sortby_parameter(mocker, client, query_string, hybrid_search):
+@pytest.mark.parametrize("min_score", [0.0, 0.1, None])
+@pytest.mark.parametrize("sortby", ["-views", "views", None])
+def test_vector_search_sortby_parameter(  # noqa: PLR0913
+    mocker, client, query_string, hybrid_search, min_score, sortby
+):
     """Test vector search properly passes sortby parameter to qdrant client"""
 
     mock_qdrant = mocker.patch(
@@ -409,32 +413,39 @@ def test_vector_search_sortby_parameter(mocker, client, query_string, hybrid_sea
 
     params = {
         "q": query_string,
-        "sortby": "-views",
+        "sortby": sortby,
         "hybrid_search": hybrid_search,
-        "score_cutoff": 0.8,
+        "score_cutoff": min_score,
     }
     view = QdrantView()
     asyncio.run(
         view.async_vector_search(
             query_string,
             params,
-            order_by="-views",
-            score_cutoff=0.8,
+            order_by=sortby,
+            score_cutoff=min_score,
             hybrid_search=hybrid_search,
         )
     )
 
     if query_string:
         call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
-        if not hybrid_search:
-            assert isinstance(call_kwargs["query"], models.OrderByQuery)
-            assert call_kwargs["query"].order_by.key == "views"
-            assert call_kwargs["query"].order_by.direction == models.Direction.DESC
+        if hybrid_search:
+            if sortby and min_score is None:
+                assert isinstance(call_kwargs["query"], models.OrderByQuery)
+                assert call_kwargs["query"].order_by.key == "views"
+            else:
+                assert isinstance(call_kwargs["query"], models.FusionQuery)
+
     else:
         call_kwargs = mock_qdrant.scroll.mock_calls[0].kwargs
-        assert "order_by" in call_kwargs
-        assert call_kwargs["order_by"].key == "views"
-        assert call_kwargs["order_by"].direction == models.Direction.DESC
+        if sortby:
+            assert "order_by" in call_kwargs
+            assert call_kwargs["order_by"].key == "views"
+            if sortby.startswith("-"):
+                assert call_kwargs["order_by"].direction == models.Direction.DESC
+            else:
+                assert call_kwargs["order_by"].direction == models.Direction.ASC
 
 
 def test_vector_search_sortby_pagination(mocker, client):
