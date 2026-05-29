@@ -47,18 +47,32 @@ export type ConfigurableAxiosConfig = {
  * process-wide singleton (see `globalSingleton`), so config applied in Next's
  * instrumentation runtime is visible to the server render runtime.
  *
- * The instance's own `defaults` are the single source of truth for whether the
- * client is configured (`isConfigured`) — there is no separate state to keep
- * in sync.
+ * `configured` is tracked explicitly on the instance (see `CONFIGURED`) rather
+ * than inferred from `defaults.baseURL`, so it reflects "configure ran", not
+ * "some default happens to be set".
  */
-export const createConfigurableAxios = (registryKey: string) => {
+// Symbol.for (not a bare Symbol) so the key is stable across Next's duplicated
+// module graphs — same registry, same key, same property on the shared instance.
+const CONFIGURED = Symbol.for("mit-learn.api.axios.configured")
+type ConfigurableInstance = AxiosInstance & { [CONFIGURED]?: boolean }
+
+export type ConfigurableAxiosClient = {
+  instance: AxiosInstance // A plain AxiosInstance — the CONFIGURED marker is an internal detail.
+  applyConfig: (config: ConfigurableAxiosConfig) => void
+  isConfigured: () => boolean
+  resetForTests: () => void
+}
+
+export const createConfigurableAxios = (
+  registryKey: string,
+): ConfigurableAxiosClient => {
   const create = (): AxiosInstance => {
-    const inst = axios.create({
+    const inst: ConfigurableInstance = axios.create({
       xsrfHeaderName: "X-CSRFToken",
       withXSRFToken: true,
     })
     inst.interceptors.request.use((request) => {
-      if (!inst.defaults.baseURL) {
+      if (!inst[CONFIGURED]) {
         throw new Error(
           "API clients are not configured. Call configureApiClients(...) before making requests.",
         )
@@ -68,17 +82,19 @@ export const createConfigurableAxios = (registryKey: string) => {
     return inst
   }
 
-  const instance = globalSingleton(registryKey, create)
+  const instance = globalSingleton(registryKey, create) as ConfigurableInstance
 
   const applyConfig = (config: ConfigurableAxiosConfig) => {
     instance.defaults.baseURL = config.baseUrl
     instance.defaults.xsrfCookieName = config.csrfCookieName
     instance.defaults.withCredentials = config.withCredentials
+    instance[CONFIGURED] = true
   }
 
-  const isConfigured = (): boolean => Boolean(instance.defaults.baseURL)
+  const isConfigured = (): boolean => instance[CONFIGURED] === true
 
   const resetForTests = () => {
+    instance[CONFIGURED] = false
     delete instance.defaults.baseURL
     delete instance.defaults.xsrfCookieName
     delete instance.defaults.withCredentials
