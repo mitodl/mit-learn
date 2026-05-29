@@ -955,9 +955,9 @@ const runMatchesVariant =
  * If no run matches, returns `null`, signalling to the caller that it should
  * fall back to the course's `next_run_id`-based default.
  *
- * Among matching runs, the one with the nearest *upcoming* start date is
- * preferred; if all start dates are in the past the most-recent past run wins;
- * runs with no start date are last.
+ * Among matching runs, enrollable runs are preferred first; within each
+ * tier, runs are sorted by start date descending (most recent first); runs
+ * with no start date are last.
  */
 const selectVariantRunForCourse = (
   runs: BaseCourseRun[],
@@ -967,17 +967,17 @@ const selectVariantRunForCourse = (
 
   if (matching.length === 0) return null
 
-  const now = Date.now()
   return (
     [...matching].sort((a, b) => {
+      // Enrollable runs first
+      const aEnrollable = a.is_enrollable ? 0 : 1
+      const bEnrollable = b.is_enrollable ? 0 : 1
+      if (aEnrollable !== bEnrollable) return aEnrollable - bEnrollable
+
+      // Within each tier: descending by start date, nulls last
       const aMs = a.start_date ? new Date(a.start_date).getTime() : null
       const bMs = b.start_date ? new Date(b.start_date).getTime() : null
-      const aFuture = aMs !== null && aMs >= now
-      const bFuture = bMs !== null && bMs >= now
-      if (aFuture && bFuture) return aMs! - bMs! // nearest upcoming first
-      if (aFuture) return -1
-      if (bFuture) return 1
-      if (aMs !== null && bMs !== null) return bMs - aMs // most-recent past first
+      if (aMs !== null && bMs !== null) return bMs - aMs
       if (aMs !== null) return -1
       if (bMs !== null) return 1
       return 0
