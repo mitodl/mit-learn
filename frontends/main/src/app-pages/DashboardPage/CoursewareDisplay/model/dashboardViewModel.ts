@@ -13,8 +13,6 @@ import type {
   BaseProgramDisplayMode,
   ContractPage,
   CourseRunEnrollmentV3,
-  CourseRunLanguageOption,
-  CourseRunV2,
   CourseWithCourseRunsSerializerV2,
   SupportedVariant,
   V2Program,
@@ -41,11 +39,10 @@ import {
 } from "../helpers"
 import {
   getNativeLanguageName,
-  // below five are used only for resolveCourseEntryForLanguage
+  // below four are used only for resolveDisplayedRunAndEnrollment
   getCourseRunForSelectedLanguage,
   getEnrollmentForSelectedLanguage,
   getResolvedRunForSelectedLanguage,
-  getSelectedLanguageOption,
   selectBestContractEnrollmentForLanguage,
 } from "../languageOptions"
 
@@ -428,34 +425,24 @@ const getDistinctDashboardLanguageOptions = (
   return options
 }
 
-type ResolveCourseEntryForLanguageOpts = {
-  contractId?: number
-}
-
-type ResolveCourseEntryForLanguageResult = {
-  displayedEnrollment: CourseRunEnrollmentV3 | null
-  displayedRun: CourseRunV2 | null
-  selectedLanguageOption: CourseRunLanguageOption | null
-}
-
 /**
- * Given a language selection and course/enrollment data, pick the
- * `displayedEnrollment` and `displayedRun` for a dashboard course entry.
+ * Resolve the default `displayedEnrollment` and `displayedRun` for a
+ * dashboard course entry when no variant run is pre-selected.
+ *
+ * Contract path: picks the best contract enrollment (by certificate then
+ * grade) and resolves its run. Non-contract path: picks the best enrollment
+ * via the legacy display policy (certificate → grade → first match) and
+ * resolves the course's default next run.
  */
-const resolveCourseEntryForLanguage = (
+const resolveDisplayedRunAndEnrollment = (
   course: CourseWithCourseRunsSerializerV2,
   enrollments: CourseRunEnrollmentV3[],
-  selectedLanguageKey: string,
-  opts?: ResolveCourseEntryForLanguageOpts,
-): ResolveCourseEntryForLanguageResult => {
-  const selectedLanguageOption = getSelectedLanguageOption(
-    course,
-    selectedLanguageKey,
-  )
-  const selectedRun = getCourseRunForSelectedLanguage(
-    course,
-    selectedLanguageKey,
-  )
+  opts?: { contractId?: number },
+): {
+  displayedEnrollment: CourseRunEnrollmentV3 | null
+  displayedRun: BaseCourseRun | null
+} => {
+  const selectedRun = getCourseRunForSelectedLanguage(course, "")
 
   if (typeof opts?.contractId === "number") {
     const contractEnrollments = enrollments.filter(
@@ -464,7 +451,7 @@ const resolveCourseEntryForLanguage = (
     const displayedEnrollment = selectBestContractEnrollmentForLanguage(
       course,
       contractEnrollments,
-      selectedLanguageKey,
+      "",
     )
     const selectedRunForResolution = displayedEnrollment
       ? ((course.courseruns ?? []).find(
@@ -474,40 +461,33 @@ const resolveCourseEntryForLanguage = (
 
     const displayedRun = getResolvedRunForSelectedLanguage(
       course,
-      selectedLanguageOption,
+      null,
       selectedRunForResolution,
       displayedEnrollment,
       opts.contractId,
     )
 
-    return {
-      displayedEnrollment,
-      displayedRun,
-      selectedLanguageOption,
-    }
+    return { displayedEnrollment, displayedRun }
   }
 
   const selectedLanguageEnrollment = getEnrollmentForSelectedLanguage(
     enrollments,
-    selectedLanguageOption,
+    null,
     selectedRun,
   )
-  const displayedEnrollment = selectedLanguageKey
-    ? selectedLanguageEnrollment
-    : pickDisplayedEnrollmentForLegacyDashboard(course, enrollments)
+  const displayedEnrollment = pickDisplayedEnrollmentForLegacyDashboard(
+    course,
+    enrollments,
+  )
 
   const displayedRun = getResolvedRunForSelectedLanguage(
     course,
-    selectedLanguageOption,
+    null,
     selectedRun,
     selectedLanguageEnrollment,
   )
 
-  return {
-    displayedEnrollment,
-    displayedRun,
-    selectedLanguageOption,
-  }
+  return { displayedEnrollment, displayedRun }
 }
 
 /**
@@ -576,22 +556,21 @@ type RequirementSection = {
 /**
  * Build a fully-resolved `DashboardCourseEntry` for a single course.
  *
- * This is a pure constructor — it delegates display-resolution to
- * `resolveCourseEntryForLanguage` and assembles the result with the
- * caller-supplied metadata. The caller is responsible for:
+ * This is a pure constructor — it assembles the entry from caller-supplied
+ * metadata and delegates display-resolution to either the variant run (when
+ * provided) or `resolveDisplayedRunAndEnrollment`. The caller is responsible
+ * for:
  *  - pre-filtering `enrollments` to this course (e.g. `enrollmentsByCourseId[course.id] ?? []`)
  *  - computing `availableVariants` once at the composer level (NOT re-derived here)
  *  - supplying the effective `selectedVariantKey` (a valid option or fallback)
  *
  * `enrollments` is stored uncollapsed on the entry — the full list, never
- * filtered to the displayed choice. The `displayedEnrollment`/`displayedRun`
- * pair is derived by `resolveCourseEntryForLanguage` for the legacy card UI.
+ * filtered to the displayed choice.
  *
- * When `opts.variantRun` is provided (variant picker path):
- *  - non-null: use that run as `displayedRun`; look up the full `CourseRunV2` by id
- *  - null: this course has no variant run for the selection — fall back to
- *    `next_run_id`-based resolution (same as empty `selectedVariantKey`)
- *  - undefined (default): use the existing language-based resolution path
+ * When `opts.variantRun` is truthy, it is used directly as `displayedRun`
+ * (preferring the full `CourseRunV2` from `course.courseruns` when available).
+ * When absent (null or undefined), `resolveDisplayedRunAndEnrollment` picks
+ * the default run and enrollment.
  */
 const buildCourseEntry = (
   course: CourseWithCourseRunsSerializerV2,
@@ -603,10 +582,10 @@ const buildCourseEntry = (
     isContractPageResource?: boolean
     ancestorContext?: DashboardCourseEntry["ancestorContext"]
     /**
-     * Pre-resolved variant run from `courseVariantRunsV3`.
-     * `undefined` → use language-based resolution (non-variant path).
-     * `null` → no run for this course; fall back to `next_run_id`.
-     * `BaseCourseRun` → use this run (look up full CourseRunV2 by id).
+     * Pre-resolved variant run. When truthy, used as `displayedRun` (full
+     * `CourseRunV2` looked up from `course.courseruns` when available, else
+     * the `BaseCourseRun` directly). When absent (null or undefined), falls
+     * back to default run resolution via `resolveDisplayedRunAndEnrollment`.
      */
     variantRun?: BaseCourseRun | null
   },
@@ -614,38 +593,19 @@ const buildCourseEntry = (
   let displayedRun: BaseCourseRun | null,
     displayedEnrollment: CourseRunEnrollmentV3 | null
 
-  if (opts.variantRun !== undefined) {
-    // Variant picker path
-    if (opts.variantRun !== null) {
-      // Prefer the full CourseRunV2 from course.courseruns when available.
-      // The variant-runs endpoint returns BaseCourseRun objects; the main
-      // courses list may not include those runs, so fall back to
-      // opts.variantRun directly (BaseCourseRun has all fields used in the
-      // display path: title, id, courseware_url, is_enrollable, etc.).
-      displayedRun =
-        course.courseruns.find((r) => r.id === opts.variantRun!.id) ??
-        opts.variantRun
-      displayedEnrollment =
-        enrollments.find((e) => e.run.id === opts.variantRun!.id) ?? null
-    } else {
-      // No variant run for this course — fall back to next_run_id via empty language key
-      const fallback = resolveCourseEntryForLanguage(
-        course,
-        enrollments,
-        "",
-        opts.contractId !== undefined
-          ? { contractId: opts.contractId }
-          : undefined,
-      )
-      displayedRun = fallback.displayedRun
-      displayedEnrollment = fallback.displayedEnrollment
-    }
+  if (opts.variantRun) {
+    // Variant run provided — prefer the full CourseRunV2 from course.courseruns
+    // when available; fall back to the BaseCourseRun from the variant-runs endpoint.
+    displayedRun =
+      course.courseruns.find((r) => r.id === opts.variantRun!.id) ??
+      opts.variantRun
+    displayedEnrollment =
+      enrollments.find((e) => e.run.id === opts.variantRun!.id) ?? null
   } else {
-    // Language picker path (existing logic)
-    const result = resolveCourseEntryForLanguage(
+    // No variant run — resolve the default displayed run and enrollment.
+    const result = resolveDisplayedRunAndEnrollment(
       course,
       enrollments,
-      selectedVariantKey,
       opts.contractId !== undefined
         ? { contractId: opts.contractId }
         : undefined,
@@ -1060,7 +1020,7 @@ export {
   pickDisplayedEnrollmentForLegacyDashboard,
   groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
-  resolveCourseEntryForLanguage,
+  resolveDisplayedRunAndEnrollment,
   getDistinctDashboardLanguageOptions,
   isProgramAsCourse,
   isNonContractEnrollment,
