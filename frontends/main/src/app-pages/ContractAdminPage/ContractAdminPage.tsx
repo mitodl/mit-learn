@@ -356,6 +356,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [page, setPage] = useState(1)
+  const [searchAnnouncement, setSearchAnnouncement] = useState("")
 
   const {
     data: managerOrgs,
@@ -437,6 +438,13 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     setPage(1)
   }
 
+  const announceSearchCount = (count: number) => {
+    setSearchAnnouncement("")
+    setTimeout(() => {
+      setSearchAnnouncement(`${count} result${count !== 1 ? "s" : ""}`)
+    }, 0)
+  }
+
   return (
     <Page>
       <Stack gap="24px">
@@ -510,16 +518,28 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                 size="medium"
                 onChange={handleSearchChange}
                 onClear={() => {
+                  const count = (codes ?? []).filter((code) => {
+                    const redeemed = isRedeemed(code)
+                    return (
+                      statusFilter === "all" ||
+                      (statusFilter === "redeemed" && redeemed) ||
+                      (statusFilter === "pending" && !redeemed)
+                    )
+                  }).length
                   setSearchQuery("")
                   setPage(1)
+                  announceSearchCount(count)
                 }}
-                onSubmit={(e) => setSearchQuery(e.target.value)}
+                onSubmit={() => announceSearchCount(filteredCodes.length)}
               />
             </ControlsLeft>
             <ExportButtonWrapper>
               <Button variant="bordered">Export CSV</Button>
             </ExportButtonWrapper>
           </SeatAssignmentsControls>
+          <VisuallyHidden aria-live="polite" aria-atomic="true">
+            {searchAnnouncement}
+          </VisuallyHidden>
           <TableCard>
             <div role="table" aria-label="Seat assignments">
               <div role="rowgroup">
