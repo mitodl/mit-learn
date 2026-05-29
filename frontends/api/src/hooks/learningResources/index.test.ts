@@ -1,5 +1,8 @@
 import { renderHook, waitFor } from "@testing-library/react"
-import { setupReactQueryTest } from "../test-utils"
+import {
+  setupReactQueryTest,
+  assertNormalizesPaginationNext,
+} from "../test-utils"
 import {
   useLearningResourcesDetail,
   useInfiniteLearningResourceItems,
@@ -61,41 +64,17 @@ describe("useLearningResourcesRetrieve", () => {
 
 describe("useInfiniteLearningResourceItems", () => {
   it("normalizes absolute next URLs to relative API requests", async () => {
-    const parentId = 99
-    const firstUrl = urls.learningResources.items({ id: parentId })
-    const secondPath = `/api/v1/learning_resources/${parentId}/items/?offset=5`
-    const secondUrl = new URL(secondPath, firstUrl).toString()
-    const firstPage = {
-      count: 0,
-      next: `https://learn.example.edu${secondPath}`,
-      previous: null,
-      results: [],
-    }
-    const secondPage = {
-      count: 0,
-      next: null,
-      previous: null,
-      results: [],
-    }
-
-    const { wrapper } = setupReactQueryTest()
-    setMockResponse.get(firstUrl, firstPage)
-    setMockResponse.get(secondUrl, secondPage)
-    const { result } = renderHook(
-      () =>
-        useInfiniteLearningResourceItems(parentId, {
-          learning_resource_id: parentId,
-        }),
-      { wrapper },
-    )
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    result.current.fetchNextPage()
-    await waitFor(() => expect(result.current.isFetching).toBe(false))
-
-    expect(makeRequest).toHaveBeenCalledWith(
-      expect.objectContaining({ method: "get", url: secondUrl }),
-    )
+    const id = 99
+    await assertNormalizesPaginationNext({
+      firstUrl: urls.learningResources.items({ id }),
+      secondUrl: `${urls.learningResources.items({ id })}?offset=5`,
+      renderInfiniteHook: (wrapper) =>
+        renderHook(
+          () =>
+            useInfiniteLearningResourceItems(id, { learning_resource_id: id }),
+          { wrapper },
+        ),
+    })
   })
 })
 
