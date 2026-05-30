@@ -1,7 +1,9 @@
 import { queryOptions } from "@tanstack/react-query"
 import type {
   B2bApiB2bContractsRetrieveRequest,
+  B2bApiB2bManagerOrganizationsContractsCodesRetrieveRequest,
   ContractPage,
+  ManagerContractDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 
 import { b2bApi } from "../../clients"
@@ -14,6 +16,9 @@ const contractKeys = {
     "detail",
     opts,
   ],
+  managerContractCodes: (
+    opts: B2bApiB2bManagerOrganizationsContractsCodesRetrieveRequest,
+  ) => [...contractKeys.root, "manager", "codes", opts],
 }
 
 const contractQueries = {
@@ -29,6 +34,17 @@ const contractQueries = {
       queryKey: contractKeys.contractDetail(opts),
       queryFn: async (): Promise<ContractPage> => {
         return b2bApi.b2bContractsRetrieve(opts).then((res) => res.data)
+      },
+    }),
+  managerContractCodes: (
+    opts: B2bApiB2bManagerOrganizationsContractsCodesRetrieveRequest,
+  ) =>
+    queryOptions({
+      queryKey: contractKeys.managerContractCodes(opts),
+      queryFn: async (): Promise<ManagerContractDetail> => {
+        return b2bApi
+          .b2bManagerOrganizationsContractsCodesRetrieve(opts)
+          .then((res) => res.data)
       },
     }),
 }
