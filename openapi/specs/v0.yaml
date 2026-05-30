@@ -486,6 +486,7 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/ProfileRequest'
+        required: true
       responses:
         '200':
           content:
@@ -504,6 +505,66 @@ paths:
           description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
             only.
         required: true
+      tags:
+      - profiles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+          description: ''
+  /api/v0/profiles/me/:
+    get:
+      operationId: profiles_me_retrieve
+      description: Profile retrieve and update viewsets for the current user
+      tags:
+      - profiles
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+          description: ''
+    put:
+      operationId: profiles_me_update
+      description: Profile retrieve and update viewsets for the current user
+      tags:
+      - profiles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProfileRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+          description: ''
+    patch:
+      operationId: profiles_me_partial_update
+      description: Profile retrieve and update viewsets for the current user
       tags:
       - profiles
       requestBody:
@@ -669,45 +730,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/RetrieveProblemResponse'
           description: ''
-  /api/v0/users/:
-    get:
-      operationId: users_list
-      description: View for users
-      tags:
-      - users
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/User'
-          description: ''
-    post:
-      operationId: users_create
-      description: View for users
-      tags:
-      - users
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-        required: true
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-          description: ''
   /api/v0/users/{username}/:
     get:
       operationId: users_retrieve
@@ -792,22 +814,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
           description: ''
-    delete:
-      operationId: users_destroy
-      description: View for users
-      parameters:
-      - in: path
-        name: username
-        schema:
-          type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-        required: true
-      tags:
-      - users
-      responses:
-        '204':
-          description: No response body
   /api/v0/users/me/:
     get:
       operationId: users_me_retrieve
@@ -4276,6 +4282,9 @@ components:
       type: object
       description: Serializer for Profile
       properties:
+        name:
+          type: string
+          description: Get the user's name
         image:
           type: string
           nullable: true
@@ -5138,7 +5147,6 @@ components:
         name:
           type: string
           description: Get the user's name
-          readOnly: true
         image:
           type: string
           nullable: true
@@ -5231,6 +5239,9 @@ components:
       type: object
       description: Serializer for Profile
       properties:
+        name:
+          type: string
+          description: Get the user's name
         image:
           type: string
           nullable: true
@@ -5286,6 +5297,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DeliveryEnum'
+      required:
+      - name
     Program:
       type: object
       description: Serializer for the Program model
@@ -6822,6 +6835,7 @@ components:
           description: Renders the widget to json based on configuration
           readOnly: true
       required:
+      - configuration
       - id
       - json
       - title

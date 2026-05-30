@@ -13,8 +13,8 @@
   "channels/serializers.py:433:16:ORM001",
   "channels/serializers.py:501:12:ORM001",
   "channels/serializers.py:509:12:ORM001",
-  "profiles/serializers.py:132:31:ORM002",
-  "profiles/serializers.py:169:16:ORM002",
-  "profiles/serializers.py:391:15:ORM001",
-  "profiles/serializers.py:392:27:ORM001"
+  "profiles/serializers.py:137:31:ORM002",
+  "profiles/serializers.py:176:16:ORM002",
+  "profiles/serializers.py:398:15:ORM001",
+  "profiles/serializers.py:399:27:ORM001"
 ]

@@ -3672,6 +3672,12 @@ export interface PatchedChannelWriteRequest {
  */
 export interface PatchedProfileRequest {
   /**
+   * Get the user\'s name
+   * @type {string}
+   * @memberof PatchedProfileRequest
+   */
+  name?: string
+  /**
    *
    * @type {string}
    * @memberof PatchedProfileRequest
@@ -4847,6 +4853,12 @@ export interface Profile {
  * @interface ProfileRequest
  */
 export interface ProfileRequest {
+  /**
+   * Get the user\'s name
+   * @type {string}
+   * @memberof ProfileRequest
+   */
+  name: string
   /**
    *
    * @type {string}
@@ -6863,7 +6875,7 @@ export interface WidgetInstance {
    * @type {{ [key: string]: any; }}
    * @memberof WidgetInstance
    */
-  configuration?: { [key: string]: any }
+  configuration: { [key: string]: any }
   /**
    * Renders the widget to json based on configuration
    * @type {{ [key: string]: any; }}
@@ -9363,6 +9375,140 @@ export const ProfilesApiAxiosParamCreator = function (
 ) {
   return {
     /**
+     * Profile retrieve and update viewsets for the current user
+     * @param {PatchedProfileRequest} [PatchedProfileRequest]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    profilesMePartialUpdate: async (
+      PatchedProfileRequest?: PatchedProfileRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v0/profiles/me/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "PATCH",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      localVarHeaderParameter["Content-Type"] = "application/json"
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        PatchedProfileRequest,
+        localVarRequestOptions,
+        configuration,
+      )
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * Profile retrieve and update viewsets for the current user
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    profilesMeRetrieve: async (
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v0/profiles/me/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * Profile retrieve and update viewsets for the current user
+     * @param {ProfileRequest} ProfileRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    profilesMeUpdate: async (
+      ProfileRequest: ProfileRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'ProfileRequest' is not null or undefined
+      assertParamExists("profilesMeUpdate", "ProfileRequest", ProfileRequest)
+      const localVarPath = `/api/v0/profiles/me/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "PUT",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      localVarHeaderParameter["Content-Type"] = "application/json"
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        ProfileRequest,
+        localVarRequestOptions,
+        configuration,
+      )
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
      * View for profile
      * @param {string} user__username
      * @param {PatchedProfileRequest} [PatchedProfileRequest]
@@ -9468,17 +9614,19 @@ export const ProfilesApiAxiosParamCreator = function (
     /**
      * View for profile
      * @param {string} user__username
-     * @param {ProfileRequest} [ProfileRequest]
+     * @param {ProfileRequest} ProfileRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     profilesUpdate: async (
       user__username: string,
-      ProfileRequest?: ProfileRequest,
+      ProfileRequest: ProfileRequest,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'user__username' is not null or undefined
       assertParamExists("profilesUpdate", "user__username", user__username)
+      // verify required parameter 'ProfileRequest' is not null or undefined
+      assertParamExists("profilesUpdate", "ProfileRequest", ProfileRequest)
       const localVarPath = `/api/v0/profiles/{user__username}/`.replace(
         `{${"user__username"}}`,
         encodeURIComponent(String(user__username)),
@@ -9529,6 +9677,85 @@ export const ProfilesApiAxiosParamCreator = function (
 export const ProfilesApiFp = function (configuration?: Configuration) {
   const localVarAxiosParamCreator = ProfilesApiAxiosParamCreator(configuration)
   return {
+    /**
+     * Profile retrieve and update viewsets for the current user
+     * @param {PatchedProfileRequest} [PatchedProfileRequest]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async profilesMePartialUpdate(
+      PatchedProfileRequest?: PatchedProfileRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<Profile>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.profilesMePartialUpdate(
+          PatchedProfileRequest,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ProfilesApi.profilesMePartialUpdate"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * Profile retrieve and update viewsets for the current user
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async profilesMeRetrieve(
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<Profile>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.profilesMeRetrieve(options)
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ProfilesApi.profilesMeRetrieve"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * Profile retrieve and update viewsets for the current user
+     * @param {ProfileRequest} ProfileRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async profilesMeUpdate(
+      ProfileRequest: ProfileRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<Profile>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.profilesMeUpdate(
+          ProfileRequest,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ProfilesApi.profilesMeUpdate"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
     /**
      * View for profile
      * @param {string} user__username
@@ -9591,13 +9818,13 @@ export const ProfilesApiFp = function (configuration?: Configuration) {
     /**
      * View for profile
      * @param {string} user__username
-     * @param {ProfileRequest} [ProfileRequest]
+     * @param {ProfileRequest} ProfileRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async profilesUpdate(
       user__username: string,
-      ProfileRequest?: ProfileRequest,
+      ProfileRequest: ProfileRequest,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (axios?: AxiosInstance, basePath?: string) => AxiosPromise<Profile>
@@ -9632,6 +9859,47 @@ export const ProfilesApiFactory = function (
 ) {
   const localVarFp = ProfilesApiFp(configuration)
   return {
+    /**
+     * Profile retrieve and update viewsets for the current user
+     * @param {ProfilesApiProfilesMePartialUpdateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    profilesMePartialUpdate(
+      requestParameters: ProfilesApiProfilesMePartialUpdateRequest = {},
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<Profile> {
+      return localVarFp
+        .profilesMePartialUpdate(
+          requestParameters.PatchedProfileRequest,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * Profile retrieve and update viewsets for the current user
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    profilesMeRetrieve(options?: RawAxiosRequestConfig): AxiosPromise<Profile> {
+      return localVarFp
+        .profilesMeRetrieve(options)
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * Profile retrieve and update viewsets for the current user
+     * @param {ProfilesApiProfilesMeUpdateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    profilesMeUpdate(
+      requestParameters: ProfilesApiProfilesMeUpdateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<Profile> {
+      return localVarFp
+        .profilesMeUpdate(requestParameters.ProfileRequest, options)
+        .then((request) => request(axios, basePath))
+    },
     /**
      * View for profile
      * @param {ProfilesApiProfilesPartialUpdateRequest} requestParameters Request parameters.
@@ -9683,6 +9951,34 @@ export const ProfilesApiFactory = function (
         .then((request) => request(axios, basePath))
     },
   }
+}
+
+/**
+ * Request parameters for profilesMePartialUpdate operation in ProfilesApi.
+ * @export
+ * @interface ProfilesApiProfilesMePartialUpdateRequest
+ */
+export interface ProfilesApiProfilesMePartialUpdateRequest {
+  /**
+   *
+   * @type {PatchedProfileRequest}
+   * @memberof ProfilesApiProfilesMePartialUpdate
+   */
+  readonly PatchedProfileRequest?: PatchedProfileRequest
+}
+
+/**
+ * Request parameters for profilesMeUpdate operation in ProfilesApi.
+ * @export
+ * @interface ProfilesApiProfilesMeUpdateRequest
+ */
+export interface ProfilesApiProfilesMeUpdateRequest {
+  /**
+   *
+   * @type {ProfileRequest}
+   * @memberof ProfilesApiProfilesMeUpdate
+   */
+  readonly ProfileRequest: ProfileRequest
 }
 
 /**
@@ -9738,7 +10034,7 @@ export interface ProfilesApiProfilesUpdateRequest {
    * @type {ProfileRequest}
    * @memberof ProfilesApiProfilesUpdate
    */
-  readonly ProfileRequest?: ProfileRequest
+  readonly ProfileRequest: ProfileRequest
 }
 
 /**
@@ -9748,6 +10044,50 @@ export interface ProfilesApiProfilesUpdateRequest {
  * @extends {BaseAPI}
  */
 export class ProfilesApi extends BaseAPI {
+  /**
+   * Profile retrieve and update viewsets for the current user
+   * @param {ProfilesApiProfilesMePartialUpdateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProfilesApi
+   */
+  public profilesMePartialUpdate(
+    requestParameters: ProfilesApiProfilesMePartialUpdateRequest = {},
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ProfilesApiFp(this.configuration)
+      .profilesMePartialUpdate(requestParameters.PatchedProfileRequest, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
+
+  /**
+   * Profile retrieve and update viewsets for the current user
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProfilesApi
+   */
+  public profilesMeRetrieve(options?: RawAxiosRequestConfig) {
+    return ProfilesApiFp(this.configuration)
+      .profilesMeRetrieve(options)
+      .then((request) => request(this.axios, this.basePath))
+  }
+
+  /**
+   * Profile retrieve and update viewsets for the current user
+   * @param {ProfilesApiProfilesMeUpdateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProfilesApi
+   */
+  public profilesMeUpdate(
+    requestParameters: ProfilesApiProfilesMeUpdateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ProfilesApiFp(this.configuration)
+      .profilesMeUpdate(requestParameters.ProfileRequest, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
+
   /**
    * View for profile
    * @param {ProfilesApiProfilesPartialUpdateRequest} requestParameters Request parameters.
@@ -10686,138 +11026,6 @@ export const UsersApiAxiosParamCreator = function (
 ) {
   return {
     /**
-     * View for users
-     * @param {UserRequest} UserRequest
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    usersCreate: async (
-      UserRequest: UserRequest,
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
-      // verify required parameter 'UserRequest' is not null or undefined
-      assertParamExists("usersCreate", "UserRequest", UserRequest)
-      const localVarPath = `/api/v0/users/`
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
-      let baseOptions
-      if (configuration) {
-        baseOptions = configuration.baseOptions
-      }
-
-      const localVarRequestOptions = {
-        method: "POST",
-        ...baseOptions,
-        ...options,
-      }
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
-
-      localVarHeaderParameter["Content-Type"] = "application/json"
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter)
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {}
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      }
-      localVarRequestOptions.data = serializeDataIfNeeded(
-        UserRequest,
-        localVarRequestOptions,
-        configuration,
-      )
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      }
-    },
-    /**
-     * View for users
-     * @param {string} username
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    usersDestroy: async (
-      username: string,
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
-      // verify required parameter 'username' is not null or undefined
-      assertParamExists("usersDestroy", "username", username)
-      const localVarPath = `/api/v0/users/{username}/`.replace(
-        `{${"username"}}`,
-        encodeURIComponent(String(username)),
-      )
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
-      let baseOptions
-      if (configuration) {
-        baseOptions = configuration.baseOptions
-      }
-
-      const localVarRequestOptions = {
-        method: "DELETE",
-        ...baseOptions,
-        ...options,
-      }
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter)
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {}
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      }
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      }
-    },
-    /**
-     * View for users
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    usersList: async (
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
-      const localVarPath = `/api/v0/users/`
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
-      let baseOptions
-      if (configuration) {
-        baseOptions = configuration.baseOptions
-      }
-
-      const localVarRequestOptions = {
-        method: "GET",
-        ...baseOptions,
-        ...options,
-      }
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter)
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {}
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      }
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      }
-    },
-    /**
      * User retrieve and update viewsets for the current user
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -11021,83 +11229,6 @@ export const UsersApiFp = function (configuration?: Configuration) {
   const localVarAxiosParamCreator = UsersApiAxiosParamCreator(configuration)
   return {
     /**
-     * View for users
-     * @param {UserRequest} UserRequest
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async usersCreate(
-      UserRequest: UserRequest,
-      options?: RawAxiosRequestConfig,
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>
-    > {
-      const localVarAxiosArgs = await localVarAxiosParamCreator.usersCreate(
-        UserRequest,
-        options,
-      )
-      const index = configuration?.serverIndex ?? 0
-      const operationBasePath =
-        operationServerMap["UsersApi.usersCreate"]?.[index]?.url
-      return (axios, basePath) =>
-        createRequestFunction(
-          localVarAxiosArgs,
-          globalAxios,
-          BASE_PATH,
-          configuration,
-        )(axios, operationBasePath || basePath)
-    },
-    /**
-     * View for users
-     * @param {string} username
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async usersDestroy(
-      username: string,
-      options?: RawAxiosRequestConfig,
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>
-    > {
-      const localVarAxiosArgs = await localVarAxiosParamCreator.usersDestroy(
-        username,
-        options,
-      )
-      const index = configuration?.serverIndex ?? 0
-      const operationBasePath =
-        operationServerMap["UsersApi.usersDestroy"]?.[index]?.url
-      return (axios, basePath) =>
-        createRequestFunction(
-          localVarAxiosArgs,
-          globalAxios,
-          BASE_PATH,
-          configuration,
-        )(axios, operationBasePath || basePath)
-    },
-    /**
-     * View for users
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async usersList(
-      options?: RawAxiosRequestConfig,
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<User>>
-    > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.usersList(options)
-      const index = configuration?.serverIndex ?? 0
-      const operationBasePath =
-        operationServerMap["UsersApi.usersList"]?.[index]?.url
-      return (axios, basePath) =>
-        createRequestFunction(
-          localVarAxiosArgs,
-          globalAxios,
-          BASE_PATH,
-          configuration,
-        )(axios, operationBasePath || basePath)
-    },
-    /**
      * User retrieve and update viewsets for the current user
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -11223,44 +11354,6 @@ export const UsersApiFactory = function (
   const localVarFp = UsersApiFp(configuration)
   return {
     /**
-     * View for users
-     * @param {UsersApiUsersCreateRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    usersCreate(
-      requestParameters: UsersApiUsersCreateRequest,
-      options?: RawAxiosRequestConfig,
-    ): AxiosPromise<User> {
-      return localVarFp
-        .usersCreate(requestParameters.UserRequest, options)
-        .then((request) => request(axios, basePath))
-    },
-    /**
-     * View for users
-     * @param {UsersApiUsersDestroyRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    usersDestroy(
-      requestParameters: UsersApiUsersDestroyRequest,
-      options?: RawAxiosRequestConfig,
-    ): AxiosPromise<void> {
-      return localVarFp
-        .usersDestroy(requestParameters.username, options)
-        .then((request) => request(axios, basePath))
-    },
-    /**
-     * View for users
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    usersList(options?: RawAxiosRequestConfig): AxiosPromise<Array<User>> {
-      return localVarFp
-        .usersList(options)
-        .then((request) => request(axios, basePath))
-    },
-    /**
      * User retrieve and update viewsets for the current user
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -11321,34 +11414,6 @@ export const UsersApiFactory = function (
         .then((request) => request(axios, basePath))
     },
   }
-}
-
-/**
- * Request parameters for usersCreate operation in UsersApi.
- * @export
- * @interface UsersApiUsersCreateRequest
- */
-export interface UsersApiUsersCreateRequest {
-  /**
-   *
-   * @type {UserRequest}
-   * @memberof UsersApiUsersCreate
-   */
-  readonly UserRequest: UserRequest
-}
-
-/**
- * Request parameters for usersDestroy operation in UsersApi.
- * @export
- * @interface UsersApiUsersDestroyRequest
- */
-export interface UsersApiUsersDestroyRequest {
-  /**
-   *
-   * @type {string}
-   * @memberof UsersApiUsersDestroy
-   */
-  readonly username: string
 }
 
 /**
@@ -11414,50 +11479,6 @@ export interface UsersApiUsersUpdateRequest {
  * @extends {BaseAPI}
  */
 export class UsersApi extends BaseAPI {
-  /**
-   * View for users
-   * @param {UsersApiUsersCreateRequest} requestParameters Request parameters.
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   * @memberof UsersApi
-   */
-  public usersCreate(
-    requestParameters: UsersApiUsersCreateRequest,
-    options?: RawAxiosRequestConfig,
-  ) {
-    return UsersApiFp(this.configuration)
-      .usersCreate(requestParameters.UserRequest, options)
-      .then((request) => request(this.axios, this.basePath))
-  }
-
-  /**
-   * View for users
-   * @param {UsersApiUsersDestroyRequest} requestParameters Request parameters.
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   * @memberof UsersApi
-   */
-  public usersDestroy(
-    requestParameters: UsersApiUsersDestroyRequest,
-    options?: RawAxiosRequestConfig,
-  ) {
-    return UsersApiFp(this.configuration)
-      .usersDestroy(requestParameters.username, options)
-      .then((request) => request(this.axios, this.basePath))
-  }
-
-  /**
-   * View for users
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   * @memberof UsersApi
-   */
-  public usersList(options?: RawAxiosRequestConfig) {
-    return UsersApiFp(this.configuration)
-      .usersList(options)
-      .then((request) => request(this.axios, this.basePath))
-  }
-
   /**
    * User retrieve and update viewsets for the current user
    * @param {*} [options] Override http request option.

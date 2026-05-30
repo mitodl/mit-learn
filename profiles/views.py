@@ -18,7 +18,6 @@ from main.permissions import (
     AnonymousAccessReadonlyPermission,
     IsStaffPermission,
 )
-from profiles.api import ensure_profile
 from profiles.models import Profile, ProgramCertificate, ProgramLetter, UserWebsite
 from profiles.permissions import HasEditPermission, HasSiteEditPermission
 from profiles.serializers import (
@@ -34,7 +33,9 @@ from profiles.utils import (
 )
 
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(
+    mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
+):
     """View for users"""
 
     permission_classes = (IsAuthenticated, IsStaffPermission)
@@ -46,7 +47,9 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 @method_decorator(ensure_csrf_cookie, name="retrieve")
-class CurrentUserRetrieveViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+class CurrentUserRetrieveViewSet(
+    mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
+):
     """User retrieve and update viewsets for the current user"""
 
     serializer_class = UserSerializer
@@ -73,18 +76,19 @@ class ProfileViewSet(
     )
     lookup_field = "user__username"
 
-    def get_object(self):
-        """Get the profile"""
-
-        if self.kwargs["user__username"] == "me":
-            ensure_profile(self.request.user)
-            return self.request.user.profile
-        else:
-            return super().get_object()
-
     def get_serializer_context(self):
         """Get the serializer context"""
         return {"include_user_websites": True}
+
+
+class CurrentUserProfileViewSet(ProfileViewSet):
+    """Profile retrieve and update viewsets for the current user"""
+
+    permission_classes = (IsAuthenticated,)
+
+    def get_object(self):
+        """Return the current request user"""
+        return self.request.user.profile
 
 
 class UserWebsiteViewSet(

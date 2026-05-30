@@ -121,23 +121,23 @@ def get_user_from_apisix_headers(request, decoded_headers, original_header):
         user.set_unusable_password()
         user.is_active = True
         user.save()
+
+        profile_data = decode_apisix_headers(
+            request, original_header, model="profiles.Profile"
+        )
+        if profile_data:
+            log.debug(
+                "get_user_from_apisix_headers: Setting up additional profile for %s",
+                global_id,
+            )
+        user_created_actions(user=user, is_new=created, details=profile_data)
+        user.refresh_from_db()
     else:
         log.debug(
             "get_user_from_apisix_headers: Found existing user for %s: %s",
             global_id,
             user,
         )
-
-    profile_data = decode_apisix_headers(
-        request, original_header, model="profiles.Profile"
-    )
-    if profile_data:
-        log.debug(
-            "get_user_from_apisix_headers: Setting up additional profile for %s",
-            global_id,
-        )
-    user_created_actions(user=user, is_new=created, details=profile_data)
-    user.refresh_from_db()
 
     return user
 

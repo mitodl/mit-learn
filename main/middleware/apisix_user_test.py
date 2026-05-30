@@ -106,7 +106,7 @@ def test_get_request_existing_user_no_globalid(mocker, mock_login):
 
 @pytest.mark.django_db(transaction=True)
 def test_get_request_existing_user_with_global_id_diff_email(mocker, mock_login):
-    """Test that a valid request updates email of user with same global_id"""
+    """Test that a valid request updates user but not profile data of user with same global_id"""
     close_old_connections()
     user = UserFactory.create(
         email="old_email@test.edu", global_id=apisix_user_info["sub"]
@@ -119,10 +119,11 @@ def test_get_request_existing_user_with_global_id_diff_email(mocker, mock_login)
     )
     apisix_middleware = ApisixUserMiddleware(mocker.Mock())
     apisix_middleware.process_request(mock_request)
-    user.refresh_from_db()
-    assert user.username == apisix_user_info["preferred_username"]
-    assert user.global_id == apisix_user_info["sub"]
-    assert user.email == apisix_user_info["email"]
+    updated_user = User.objects.get(id=user.id)
+    assert updated_user.username == apisix_user_info["preferred_username"]
+    assert updated_user.global_id == apisix_user_info["sub"]
+    assert updated_user.email == apisix_user_info["email"]
+    assert updated_user.profile.name == user.profile.name
 
 
 @pytest.mark.django_db(transaction=True)

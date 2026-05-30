@@ -28,66 +28,6 @@ pytestmark = [pytest.mark.django_db]
 User = get_user_model()
 
 
-def test_list_users(staff_client, staff_user):
-    """
-    List users
-    """
-    url = reverse("profile:v0:user_api-list")
-    resp = staff_client.get(url)
-    assert resp.status_code == 200
-    assert resp.json() == [
-        {
-            "id": staff_user.id,
-            "username": staff_user.username,
-            "first_name": staff_user.first_name,
-            "last_name": staff_user.last_name,
-            "is_learning_path_editor": True,
-            "is_article_editor": True,
-            "profile": ProfileSerializer(staff_user.profile).data,
-            "is_authenticated": True,
-        }
-    ]
-
-
-# These can be removed once all clients have been updated and are sending both these fields
-@pytest.mark.parametrize("email_optin", [None, True, False])
-@pytest.mark.parametrize("toc_optin", [None, True, False])
-def test_create_user(staff_client, staff_user, email_optin, toc_optin):  # pylint: disable=too-many-arguments
-    """
-    Create a user and assert the response
-    """
-    staff_user.email = ""
-    staff_user.profile.email_optin = None
-    staff_user.profile.save()
-    staff_user.save()
-    url = reverse("profile:v0:user_api-list")
-    email = "test.email@example.com"
-    payload = {
-        "email": email,
-        "profile": {
-            "name": "name",
-            "image": "image",
-            "image_small": "image_small",
-            "image_medium": "image_medium",
-            "bio": "bio",
-            "headline": "headline",
-            "placename": "",
-        },
-    }
-    if email_optin is not None:
-        payload["profile"]["email_optin"] = email_optin
-    if toc_optin is not None:
-        payload["profile"]["toc_optin"] = toc_optin
-
-    resp = staff_client.post(url, data=payload)
-    user = User.objects.get(username=resp.json()["username"])
-    assert resp.status_code == 201
-    assert resp.json()["profile"] == ProfileSerializer(user.profile).data
-    assert user.email == email
-    assert user.profile.email_optin is email_optin
-    assert user.profile.toc_optin is toc_optin
-
-
 def test_get_user(staff_client, user):
     """
     Get a user
@@ -150,16 +90,6 @@ def test_get_profile(logged_in, user, user_client):
     }
 
 
-def test_get_profile_automatically_creates_profile(user, user_client):
-    """Profiles should automatically get created for users without one"""
-    user.profile.delete()
-    url = reverse("profile:v0:profile_api-detail", kwargs={"user__username": "me"})
-    resp = user_client.get(url)
-    assert resp.status_code == 200
-    user.refresh_from_db()
-    assert user.profile is not None
-
-
 @pytest.mark.parametrize("email", ["", "test.email@example.com"])
 @pytest.mark.parametrize("email_optin", [None, True, False])
 @pytest.mark.parametrize("toc_optin", [None, True, False])
@@ -211,10 +141,11 @@ def test_patch_username(staff_client, user):
     assert resp.json()["username"] == user.username
 
 
-def test_patch_profile_by_user(client, logged_in_profile):
+def test_patch_profile_by_user(mocker, client, logged_in_profile):
     """
     Test that users can update their profiles, including profile images
     """
+    mock_sync_to_keycloak = mocker.patch("profiles.serializers.sync_to_keycloak")
     url = reverse(
         "profile:v0:profile_api-detail",
         kwargs={"user__username": logged_in_profile.user.username},
@@ -224,17 +155,24 @@ def test_patch_profile_by_user(client, logged_in_profile):
     resp = client.patch(
         url,
         data={
+            "name": "new name",
             "bio": "updated_bio_value",
             "location": json.dumps(location_json),
         },
         format="multipart",
     )
     assert resp.status_code == 200
+    assert resp.json()["name"] == "new name"
     assert resp.json()["bio"] == "updated_bio_value"
     assert resp.json()["placename"] == "Boston"
 
     logged_in_profile.refresh_from_db()
     assert logged_in_profile.location == location_json
+    assert logged_in_profile.name == "new name"
+    assert logged_in_profile.bio == "updated_bio_value"
+    mock_sync_to_keycloak.assert_called_once_with(
+        logged_in_profile, {"name", "bio", "location"}
+    )
 
 
 @pytest.mark.skip_nplusone_check

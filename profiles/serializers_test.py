@@ -8,18 +8,12 @@ import pytest
 from rest_framework.exceptions import ValidationError
 
 from learning_resources.factories import LearningResourceTopicFactory
-from learning_resources.serializers import LearningResourceTopicSerializer
 from profiles.factories import UserWebsiteFactory
 from profiles.models import FACEBOOK_DOMAIN, PERSONAL_SITE_TYPE, Profile
 from profiles.serializers import (
     ProfileSerializer,
     UserSerializer,
     UserWebsiteSerializer,
-)
-from profiles.utils import (
-    IMAGE_MEDIUM,
-    IMAGE_SMALL,
-    image_uri,
 )
 
 small_gif = (
@@ -46,59 +40,6 @@ def test_serialize_user(user):
     }
 
 
-def test_serialize_create_user(db, mocker):
-    """
-    Test creating a user
-    """
-    profile = {
-        "email_optin": True,
-        "toc_optin": True,
-        "bio": "bio",
-        "headline": "headline",
-        "placename": "",
-    }
-
-    serializer = UserSerializer(data={"email": "test@localhost", "profile": profile})
-    serializer.is_valid(raise_exception=True)
-    user = serializer.save()
-
-    del profile["email_optin"]  # is write-only
-    del profile["toc_optin"]  # is write-only
-
-    profile.update(
-        {
-            "name": "",
-            "image": None,
-            "image_small": None,
-            "image_medium": None,
-            "image_file": None,
-            "image_small_file": None,
-            "image_medium_file": None,
-            "profile_image_small": image_uri(user.profile, IMAGE_SMALL),
-            "profile_image_medium": image_uri(user.profile, IMAGE_MEDIUM),
-            "username": user.username,
-            "topic_interests": LearningResourceTopicSerializer(
-                user.profile.topic_interests, many=True
-            ).data,
-            "goals": user.profile.goals,
-            "current_education": user.profile.current_education,
-            "certificate_desired": user.profile.certificate_desired,
-            "time_commitment": user.profile.time_commitment,
-            "delivery": user.profile.delivery,
-        }
-    )
-    assert UserSerializer(instance=user).data == {
-        "id": user.id,
-        "username": user.username,
-        "first_name": user.first_name,
-        "last_name": user.last_name,
-        "is_learning_path_editor": False,
-        "is_article_editor": False,
-        "profile": {**profile, "preference_search_filters": {}},
-        "is_authenticated": True,
-    }
-
-
 @pytest.mark.parametrize(
     ("key", "value"),
     [
@@ -110,7 +51,7 @@ def test_serialize_create_user(db, mocker):
         ("toc_optin", False),
     ],
 )
-def test_update_user_profile(mocker, user, key, value):
+def test_update_user_profile(user, key, value):
     """
     Test updating a profile via the UserSerializer
     """

@@ -4,6 +4,7 @@ from django.urls import include, re_path
 from rest_framework.routers import DefaultRouter
 
 from profiles.views import (
+    CurrentUserProfileViewSet,
     CurrentUserRetrieveViewSet,
     ProfileViewSet,
     ProgramLetterInterceptView,
@@ -29,6 +30,13 @@ v0_urls = [
         r"^users/me/$",
         CurrentUserRetrieveViewSet.as_view({"get": "retrieve"}),
         name="users_api-me",
+    ),
+    re_path(
+        r"^profiles/me/$",
+        CurrentUserProfileViewSet.as_view(
+            {"get": "retrieve", "put": "update", "patch": "partial_update"}
+        ),
+        name="profiles_api-me",
     ),
     *v0_router.urls,
 ]
