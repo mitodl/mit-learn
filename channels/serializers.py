@@ -6,6 +6,7 @@ import logging
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from drf_spectacular.utils import extend_schema_field, inline_serializer
+from mitol.api_versioning.mixins import VersionedSerializerMixin
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -58,7 +59,9 @@ class WriteableSerializerMethodField(serializers.SerializerMethodField):
         return data
 
 
-class LearningPathPreviewSerializer(serializers.ModelSerializer):
+class LearningPathPreviewSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """Serializer for a minimal preview of Learning Paths"""
 
     class Meta:
@@ -114,7 +117,7 @@ class ChannelAppearanceMixin(serializers.Serializer):
         return {"banner": value}
 
 
-class SubChannelSerializer(serializers.ModelSerializer):
+class SubChannelSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """Serializer for SubChannels"""
 
     parent_channel = serializers.SlugRelatedField(
@@ -160,7 +163,7 @@ class ChannelBaseSerializer(ChannelAppearanceMixin, serializers.ModelSerializer)
         exclude = ["published"]
 
 
-class ChannelCountsSerializer(serializers.ModelSerializer):
+class ChannelCountsSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """
     Serializer for resource counts associated with Channel
     """
@@ -207,7 +210,9 @@ class ChannelCountsSerializer(serializers.ModelSerializer):
         ]
 
 
-class ChannelTopicDetailSerializer(serializers.ModelSerializer):
+class ChannelTopicDetailSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """Serializer for the ChannelTopicDetail model"""
 
     class Meta:
@@ -222,7 +227,9 @@ class TopicChannelSerializer(ChannelBaseSerializer):
     topic_detail = ChannelTopicDetailSerializer()
 
 
-class ChannelDepartmentDetailSerializer(serializers.ModelSerializer):
+class ChannelDepartmentDetailSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """Serializer for the ChannelDepartmentDetail model"""
 
     class Meta:
@@ -238,7 +245,9 @@ class DepartmentChannelSerializer(ChannelBaseSerializer):
     department_detail = ChannelDepartmentDetailSerializer()
 
 
-class ChannelUnitDetailSerializer(serializers.ModelSerializer):
+class ChannelUnitDetailSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """Serializer for the ChannelOfferorDetail model"""
 
     unit = LearningResourceOfferorDetailSerializer(read_only=True)
@@ -256,7 +265,9 @@ class UnitChannelSerializer(ChannelBaseSerializer):
     unit_detail = ChannelUnitDetailSerializer()
 
 
-class ChannelPathwayDetailSerializer(serializers.ModelSerializer):
+class ChannelPathwayDetailSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """Serializer for the ChannelPathwayDetail model"""
 
     class Meta:
@@ -292,7 +303,7 @@ class ChannelSerializer(serializers.Serializer):
         return serializer_cls(instance=instance, context=self.context).data
 
 
-class ChannelCreateSerializer(serializers.ModelSerializer):
+class ChannelCreateSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """
     Write serializer for Channel. Uses primary keys for referenced objects
     during requests, and delegates to ChannelSerializer for responses.

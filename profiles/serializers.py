@@ -9,6 +9,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.urls import reverse
 from drf_spectacular.utils import extend_schema_field
+from mitol.api_versioning.mixins import VersionedSerializerMixin
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -80,7 +81,7 @@ class PreferencesSearchSerializer(serializers.Serializer):
     delivery = serializers.ListField(child=serializers.CharField(), required=False)
 
 
-class ProfileSerializer(serializers.ModelSerializer):
+class ProfileSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """Serializer for Profile"""
 
     name = serializers.SerializerMethodField(read_only=True)
@@ -209,7 +210,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         extra_kwargs = {"location": {"write_only": True}}
 
 
-class UserWebsiteSerializer(serializers.ModelSerializer):
+class UserWebsiteSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """Serializer for UserWebsite"""
 
     def validate_url(self, value):
@@ -298,7 +299,7 @@ class UserWebsiteSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "site_type")
 
 
-class UserSerializer(serializers.ModelSerializer):
+class UserSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """Serializer for User"""
 
     # username cannot be set but a default is generated on create using ulid.new
@@ -367,7 +368,9 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "username", "is_authenticated")
 
 
-class ProgramCertificateSerializer(serializers.ModelSerializer):
+class ProgramCertificateSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """
     Serializer for Program Certificates
     """
@@ -420,7 +423,7 @@ class ProgramLetterTemplateFieldSerializer(serializers.Serializer):
     program_letter_signatories = serializers.ListField(child=serializers.JSONField())
 
 
-class ProgramLetterSerializer(serializers.ModelSerializer):
+class ProgramLetterSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """
     Serializer for Program Letters
     """
