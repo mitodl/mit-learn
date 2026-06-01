@@ -67,11 +67,8 @@ def validate_podcast_config(podcast_config):
         errors.append("Podcast data should be a dict")
         return errors
 
-    for required_key in ["rss_url", "website"]:
-        if required_key not in podcast_config:
-            errors.append(  # noqa: PERF401
-                f"Required key '{required_key}' is not present"
-            )
+    if "rss_url" not in podcast_config:
+        errors.append("Required key 'rss_url' is not present")
 
     return errors
 
@@ -138,7 +135,8 @@ def extract():
 
             feed = bs(response.content, "xml")
             yield (feed, playlist_config)
-
+        except ConnectionResetError:
+            log.warning("Connection reset error for rss url %s", rss_url)
         except (ConnectionError, HTTPError):
             log.exception("Invalid rss url %s", rss_url)
 
@@ -234,7 +232,7 @@ def transform(extracted_podcasts):
                 "description": clean_data(rss_data.channel.description.text),
                 "image": image,
                 "published": True,
-                "url": config_data["website"],
+                "url": config_data.get("website", None),
                 "topics": topics,
                 "episodes": (
                     transform_episode(episode_rss, offered_by, topics, image)
