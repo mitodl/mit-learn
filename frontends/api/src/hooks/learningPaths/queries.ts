@@ -6,6 +6,7 @@ import type {
   PaginatedLearningPathRelationshipList,
 } from "../../generated/v1"
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query"
+import { toRelativeApiUrl } from "../../runtime/urls"
 
 const learningPathKeys = {
   root: ["learningPaths"],
@@ -42,7 +43,7 @@ const learningPathQueries = {
         const request = pageParam
           ? axiosInstance.request<PaginatedLearningPathRelationshipList>({
               method: "get",
-              url: pageParam,
+              url: toRelativeApiUrl(pageParam),
             })
           : learningPathsApi.learningpathsItemsList(listingParams)
         const { data } = await request

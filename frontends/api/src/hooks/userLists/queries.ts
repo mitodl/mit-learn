@@ -6,6 +6,7 @@ import type {
 } from "../../generated/v1"
 import { userListsApi } from "../../clients"
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query"
+import { toRelativeApiUrl } from "../../runtime/urls"
 
 const userlistKeys = {
   root: ["userLists"],
@@ -43,7 +44,7 @@ const userlistQueries = {
         const request = pageParam
           ? axiosInstance.request<PaginatedUserListRelationshipList>({
               method: "get",
-              url: pageParam,
+              url: toRelativeApiUrl(pageParam),
             })
           : userListsApi.userlistsItemsList(listingParams)
         const { data } = await request

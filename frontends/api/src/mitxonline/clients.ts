@@ -15,19 +15,9 @@ import {
   VerifiedProgramEnrollmentsApi,
   OrdersApi,
 } from "@mitodl/mitxonline-api-axios/v2"
-import axios from "axios"
+import axiosInstance from "./axios"
 
-const axiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL,
-  xsrfCookieName: process.env.NEXT_PUBLIC_MITX_ONLINE_CSRF_COOKIE_NAME,
-  xsrfHeaderName: "X-CSRFToken",
-  withXSRFToken: true,
-  withCredentials:
-    process.env.NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS === "true",
-})
-
-const BASE_PATH =
-  process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL?.replace(/\/+$/, "") ?? ""
+const BASE_PATH = ""
 
 const usersApi = new UsersApi(undefined, BASE_PATH, axiosInstance)
 const countriesApi = new CountriesApi(undefined, BASE_PATH, axiosInstance)
