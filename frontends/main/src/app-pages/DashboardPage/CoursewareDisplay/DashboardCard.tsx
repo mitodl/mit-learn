@@ -39,7 +39,6 @@ import { useQuery } from "@tanstack/react-query"
 import { coursePageView, programPageView, programView } from "@/common/urls"
 import {
   getCourseEnrollmentAction,
-  getEnrollmentType,
   isVerifiedEnrollmentMode,
   mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
@@ -336,7 +335,6 @@ const useEnrollmentHandler = () => {
     ({
       course,
       readableId,
-      selectedRunId,
       href,
       selectedCoursewareUrl,
       isB2B,
@@ -345,7 +343,6 @@ const useEnrollmentHandler = () => {
     }: {
       course: CourseWithCourseRunsSerializerV2
       readableId?: string
-      selectedRunId?: number
       href?: string
       selectedCoursewareUrl?: string
       isB2B?: boolean
@@ -413,72 +410,7 @@ const useEnrollmentHandler = () => {
           },
         )
       } else {
-        // Use the explicitly provided run_id when available (e.g., language
-        // picker selects a variant run that may not appear in course.courseruns).
-        // Fall back to searching course.courseruns by courseware_id, then to
-        // getCourseEnrollmentAction for the default run.
-        const directRequestedRun = selectedRunId
-          ? course.courseruns.find(
-              (r) => r.id === selectedRunId && r.is_enrollable,
-            )
-          : undefined
-        const isSyntheticRequestedRun =
-          !directRequestedRun && Boolean(selectedRunId && readableId)
-        const requestedRun = directRequestedRun
-          ? directRequestedRun
-          : isSyntheticRequestedRun
-            ? // Variant run not in courseruns: build a minimal run descriptor so
-              // we can still call createEnrollment with the correct id.
-              ({
-                id: selectedRunId!,
-                courseware_id: readableId!,
-              } as CourseRunV2)
-            : undefined
-        const requestedRunFromReadableId = readableId
-          ? course.courseruns.find(
-              (r) => r.courseware_id === readableId && r.is_enrollable,
-            )
-          : undefined
-        const enrollableRuns = (course.courseruns ?? []).filter(
-          (r) => r.is_enrollable,
-        )
-
-        const enrollmentAction =
-          // Preserve existing dashboard behavior: when a course has multiple
-          // enrollable runs, users should pick a run in the enrollment dialog.
-          // Exception: synthetic language-only runs are explicit selections
-          // derived from language options and should still allow direct action.
-          enrollableRuns.length > 1 && !isSyntheticRequestedRun
-            ? getCourseEnrollmentAction(course)
-            : (requestedRun ?? requestedRunFromReadableId)
-              ? (() => {
-                  const chosenRun = requestedRun ?? requestedRunFromReadableId!
-                  const enrollmentType = getEnrollmentType(
-                    course.courseruns.find((r) => r.id === chosenRun.id)
-                      ?.enrollment_modes,
-                  )
-                  if (enrollmentType === "free") {
-                    return { type: "audit" as const, run: chosenRun }
-                  }
-                  if (enrollmentType === "none") {
-                    // For synthetic language-only runs we don't have enrollment_modes,
-                    // so attempt an audit enrollment by run id. For normal runs,
-                    // defer to the default action picker.
-                    return isSyntheticRequestedRun
-                      ? { type: "audit" as const, run: chosenRun }
-                      : getCourseEnrollmentAction(course)
-                  }
-                  if (enrollmentType === "paid") {
-                    const product = course.courseruns.find(
-                      (r) => r.id === chosenRun.id,
-                    )?.products?.[0]
-                    return product
-                      ? { type: "checkout" as const, run: chosenRun, product }
-                      : { type: "none" as const }
-                  }
-                  return getCourseEnrollmentAction(course)
-                })()
-              : getCourseEnrollmentAction(course)
+        const enrollmentAction = getCourseEnrollmentAction(course)
 
         if (enrollmentAction.type === "audit") {
           createEnrollment.mutate(
@@ -898,7 +830,6 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       enrollment.enroll({
         course: resource.data,
         readableId: readableId,
-        selectedRunId: courseRun?.id,
         href: buttonHref ?? coursewareUrl ?? undefined,
         selectedCoursewareUrl: coursewareUrl ?? undefined,
         isB2B: !!b2bContractId,
@@ -909,7 +840,6 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   }, [
     isCourse,
     resource,
-    courseRun?.id,
     readableId,
     coursewareUrl,
     b2bContractId,
