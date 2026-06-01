@@ -25,6 +25,10 @@ function extractMediaEmbedUrl(text: string): string | null {
 function extractMITLearnVideoId(url: string): number | null {
   try {
     const parsed = new URL(url.trim())
+    const hostname = parsed.hostname.replace("www.", "")
+    if (hostname !== "learn.mit.edu" && hostname !== "rc.learn.mit.edu") {
+      return null
+    }
     const match = parsed.pathname.match(/^\/video\/(\d+)\/embed$/)
     if (!match) return null
     return Number(match[1])
@@ -87,6 +91,7 @@ function createMITLearnHandler(queryClient: QueryClient) {
 
         const embedNode = currentState.schema.nodes["mediaEmbed"].create({
           mitLearnVideoId: videoId,
+          src: text,
         })
         const tr = currentState.tr.replaceWith(foundStart, foundEnd, embedNode)
         tr.setSelection(NodeSelection.create(tr.doc, foundStart))

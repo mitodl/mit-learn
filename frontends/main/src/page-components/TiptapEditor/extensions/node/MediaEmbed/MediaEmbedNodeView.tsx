@@ -156,9 +156,11 @@ const OVSVideoPlayer = ({
   title: string
 }) => {
   const { data: resource, isLoading } = useLearningResourcesDetail(videoId)
+  const video: VideoResource | undefined =
+    resource?.resource_type === "video" ? resource : undefined
   return (
     <VideoResourcePlayer
-      video={resource as VideoResource}
+      video={video}
       videoId={videoId}
       isLoading={isLoading}
       videoTitleLabel={title || "Video"}
