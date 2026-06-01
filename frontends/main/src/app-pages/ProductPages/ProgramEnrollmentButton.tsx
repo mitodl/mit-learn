@@ -20,11 +20,11 @@ import { userQueries } from "api/hooks/user"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 import { programView } from "@/common/urls"
 import { usePostHog } from "posthog-js/react"
+import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import {
   enrollmentAlertSuccessUrl,
   getEnrollmentType,
 } from "@/common/mitxonline"
-import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
 import { PostHogEvents } from "@/common/constants"
 

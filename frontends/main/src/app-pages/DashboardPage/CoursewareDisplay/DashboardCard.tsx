@@ -42,7 +42,7 @@ import {
   isVerifiedEnrollmentMode,
   mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
-import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
+import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import {
   CourseWithCourseRunsSerializerV2,

@@ -100,6 +100,7 @@ module.exports = {
           "**/jest-shared-setup.ts",
           "**/jsdom-extended.ts",
           "**/test-utils.ts",
+          "**/test-utils.tsx",
           "**/test-utils/**",
           "**/webpack.config.js",
           "**/webpack.exports.js",

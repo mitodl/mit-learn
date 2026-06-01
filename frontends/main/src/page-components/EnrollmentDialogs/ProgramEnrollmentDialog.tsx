@@ -2,8 +2,8 @@ import React from "react"
 import { Stack, Typography } from "ol-components"
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
+import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { useCreateProgramEnrollment } from "api/mitxonline-hooks/enrollment"
-import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
 import {
   enrollmentAlertSuccessUrl,

@@ -1,9 +1,11 @@
 import { renderHook, waitFor } from "@testing-library/react"
-import { faker } from "@faker-js/faker/locale/en"
 import { UseQueryResult } from "@tanstack/react-query"
 import { LearningResource } from "../../generated/v1"
 import * as factories from "../../test-utils/factories"
-import { setupReactQueryTest } from "../test-utils"
+import {
+  setupReactQueryTest,
+  assertNormalizesPaginationNext,
+} from "../test-utils"
 import { setMockResponse, urls, makeRequest } from "../../test-utils"
 import { learningResourceKeys } from "../learningResources/queries"
 import {
@@ -53,46 +55,23 @@ describe("useLearningPathsList", () => {
 })
 
 describe("useInfiniteLearningPathItems", () => {
-  it("Calls the correct API and can fetch next page", async () => {
-    const parentId = faker.number.int()
-    const url1 = urls.learningPaths.resources({
-      learning_resource_id: parentId,
+  it("normalizes absolute next URLs to relative API requests", async () => {
+    const parentId = 3
+    await assertNormalizesPaginationNext({
+      firstUrl: urls.learningPaths.resources({
+        learning_resource_id: parentId,
+      }),
+      secondUrl: urls.learningPaths.resources({
+        learning_resource_id: parentId,
+        offset: 5,
+      }),
+      renderInfiniteHook: (wrapper) =>
+        renderHook(
+          () =>
+            useInfiniteLearningPathItems({ learning_resource_id: parentId }),
+          { wrapper },
+        ),
     })
-    const url2 = urls.learningPaths.resources({
-      learning_resource_id: parentId,
-      offset: 5,
-    })
-    const response1 = factory.learningPathRelationships({
-      count: 7,
-      parent: parentId,
-      next: url2,
-      pageSize: 5,
-    })
-    const response2 = factory.learningPathRelationships({
-      count: 7,
-      pageSize: 2,
-      parent: parentId,
-    })
-    setMockResponse.get(url1, response1)
-    setMockResponse.get(url2, response2)
-    const useTestHook = () =>
-      useInfiniteLearningPathItems({ learning_resource_id: parentId })
-
-    const { wrapper } = setupReactQueryTest()
-
-    // First page
-    const { result } = renderHook(useTestHook, { wrapper })
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(makeRequest).toHaveBeenCalledWith(
-      expect.objectContaining({ method: "get", url: url1 }),
-    )
-
-    // Second page
-    result.current.fetchNextPage()
-    await waitFor(() => expect(result.current.isFetching).toBe(false))
-    expect(makeRequest).toHaveBeenCalledWith(
-      expect.objectContaining({ method: "get", url: url2 }),
-    )
   })
 })
 
