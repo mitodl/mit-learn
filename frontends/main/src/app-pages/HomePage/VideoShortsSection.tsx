@@ -51,19 +51,19 @@ const CardContent = styled.div<{ width: number; height: number }>(
 
 const ASPECT_RATIO = 9 / 16
 
-const CarouselSlide = styled.div<{ width: number; height: number }>(
-  ({ width, height }) => ({
-    flex: "0 0 100%",
-    width,
-    maxWidth: width,
-    height,
-    cursor: "pointer",
-    "&:focus-visible": {
-      outline: "2px solid AccentColor",
-      borderRadius: "8px",
-    },
-  }),
-)
+const CarouselSlide = styled("div", {
+  shouldForwardProp: (prop) => prop !== "width" && prop !== "height",
+})<{ width: number; height: number }>(({ width, height }) => ({
+  flex: "0 0 100%",
+  width,
+  maxWidth: width,
+  height,
+  cursor: "pointer",
+  "&:focus-visible": {
+    outline: "2px solid AccentColor",
+    borderRadius: "8px",
+  },
+}))
 
 const ImagePlaceholder = styled.div(({ theme }) => ({
   width: "100%",

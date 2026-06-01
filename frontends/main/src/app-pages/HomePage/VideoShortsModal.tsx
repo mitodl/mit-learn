@@ -145,22 +145,8 @@ const Placeholder = styled.div(({ theme }) => ({
 }))
 
 const playerPaused = (player: Player): boolean => player.paused()
-const playerEnded = (player: Player): boolean => player.ended()
-const playerCurrentTime = (player: Player): number => player.currentTime() ?? 0
-const playerReadyState = (player: Player): number => player.readyState()
-const playerDuration = (player: Player): number => player.duration() ?? 0
 const playerMuted = (player: Player): boolean => player.muted() ?? true
 
-const isPlaying = (player: Player | null): boolean => {
-  if (!player) return false
-  return (
-    !playerPaused(player) &&
-    !playerEnded(player) &&
-    playerCurrentTime(player) > 0 &&
-    playerReadyState(player) >= 2 &&
-    playerDuration(player) > 0
-  )
-}
 
 const isIOS = () => {
   return /iPad|iPhone|iPod/.test(navigator.userAgent)
@@ -393,21 +379,23 @@ const VideoShortsModal = ({
                 }
               }}
             >
-              <PlayPauseButton
-                className={PLAYPAUSE_CLASS}
-                size="large"
-                edge="rounded"
-                variant="text"
-                tabIndex={index === selectedIndex ? 0 : -1}
-                onClick={handleVideoClick}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") e.stopPropagation()
-                }}
-                aria-label={playing ? "Pause" : "Play"}
-                aria-pressed={playing}
-              >
-                {playing ? <RiPauseLine /> : <RiPlayLine />}
-              </PlayPauseButton>
+              {index === selectedIndex ? (
+                <PlayPauseButton
+                  className={PLAYPAUSE_CLASS}
+                  size="large"
+                  edge="rounded"
+                  variant="text"
+                  tabIndex={0}
+                  onClick={handleVideoClick}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.stopPropagation()
+                  }}
+                  aria-label={playing ? "Pause" : "Play"}
+                  aria-pressed={playing}
+                >
+                  {playing ? <RiPauseLine /> : <RiPlayLine />}
+                </PlayPauseButton>
+              ) : null}
               {selectedIndex !== null && Math.abs(selectedIndex - index) < 2 ? (
                 videoErrors[index] ? (
                   <Placeholder>

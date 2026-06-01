@@ -200,6 +200,85 @@ describe("VideoShortsModal", () => {
     expect(slides.length).toBe(defaultProps.videoData.length)
   })
 
+  test("overlay has dialog role and aria-modal attributes", () => {
+    renderWithProviders(<VideoShortsModal {...defaultProps} />)
+
+    const dialog = screen.getByRole("dialog")
+    expect(dialog).toHaveAttribute("aria-modal", "true")
+    expect(dialog).toHaveAttribute("aria-label", "Video Shorts")
+  })
+
+  test("close button has aria-label Close", () => {
+    renderWithProviders(<VideoShortsModal {...defaultProps} />)
+
+    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument()
+  })
+
+  test("mute button has correct aria-label and aria-pressed reflecting muted state", async () => {
+    renderWithProviders(<VideoShortsModal {...defaultProps} />)
+
+    const muteButton = screen.getByRole("button", { name: "Unmute" })
+    expect(muteButton).toHaveAttribute("aria-pressed", "true")
+
+    await user.click(muteButton)
+
+    expect(screen.getByRole("button", { name: "Mute" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    )
+  })
+
+  test("play/pause button renders only for the selected slide", () => {
+    renderWithProviders(<VideoShortsModal {...defaultProps} />)
+
+    // Only one play/pause button should exist — for the selected (first) slide
+    const playButtons = screen.getAllByRole("button", { name: /play|pause/i })
+    expect(playButtons).toHaveLength(1)
+    expect(playButtons[0]).toHaveAttribute("aria-label", "Play")
+    expect(playButtons[0]).toHaveAttribute("aria-pressed", "false")
+  })
+
+  test("play/pause button updates aria-label when clicked", async () => {
+    const videoData = [makeVideoResource({ title: "Test Video" })]
+    renderWithProviders(
+      <VideoShortsModal
+        startIndex={0}
+        videoData={videoData}
+        onClose={jest.fn()}
+      />,
+    )
+
+    await act(async () => {
+      mockHandles[0]?.triggerReady()
+    })
+
+    // Simulate the player being in a playing state so handleVideoClick pauses it
+    const handle = mockHandles[0]
+    handle.player.paused.mockReturnValue(false)
+
+    const playButton = screen.getByRole("button", { name: "Play" })
+    await user.click(playButton)
+
+    expect(handle.player.pause).toHaveBeenCalled()
+    expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument()
+  })
+
+  test("Enter key on selected slide triggers play/pause", async () => {
+    renderWithProviders(<VideoShortsModal {...defaultProps} />)
+
+    await act(async () => {
+      mockHandles[0]?.triggerReady()
+    })
+
+    const handle = mockHandles[0]
+    handle.player.paused.mockReturnValue(true)
+
+    const slide = document.querySelector("[data-index='0']")!
+    fireEvent.keyDown(slide, { key: "Enter" })
+
+    expect(handle.player.play).toHaveBeenCalled()
+  })
+
   test("handles empty videoData gracefully", () => {
     renderWithProviders(
       <VideoShortsModal startIndex={0} videoData={[]} onClose={jest.fn()} />,
