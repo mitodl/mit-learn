@@ -162,7 +162,7 @@ const useContractDashboardData = (
           ancestorContext: programEnrollment
             ? { programEnrollment }
             : undefined,
-          variant: isDefaultVariantSelection ? undefined : selectedVariant!,
+          variant: isDefaultVariantSelection ? undefined : selectedVariant,
           variantCandidateRuns: isDefaultVariantSelection
             ? undefined
             : variantRunsByCourseId[course.id],
