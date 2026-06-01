@@ -224,7 +224,7 @@ describe("VideoShortsModal", () => {
     expect(screen.getByRole("button", { name: "Unmute" })).toHaveFocus()
   })
 
-  test("mute button has correct aria-label and aria-pressed reflecting muted state", async () => {
+  test("mute button has correct aria-label reflecting muted state", async () => {
     renderWithProviders(<VideoShortsModal {...defaultProps} />)
 
     expect(screen.getByRole("button", { name: "Unmute" })).toBeInTheDocument()
