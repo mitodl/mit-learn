@@ -54,6 +54,7 @@ const v1Course: PartialFactory<V1CourseWithCourseRuns> = (overrides = {}) => {
     courseruns: [
       {
         id: uniqueCourseRunId.enforce(() => faker.number.int()),
+        course_id: faker.number.int(),
         title: faker.lorem.words(3),
         start_date: faker.date.future().toISOString(),
         end_date: faker.date.future().toISOString(),
@@ -71,6 +72,7 @@ const v1Course: PartialFactory<V1CourseWithCourseRuns> = (overrides = {}) => {
         run_tag: faker.lorem.word(),
         live: faker.datatype.boolean(),
         course_number: faker.lorem.word(),
+        language_label: "",
         products: [
           {
             id: faker.number.int(),
@@ -105,6 +107,7 @@ const product: Factory<ProductFlexibilePrice> = (overrides = {}) => {
 const courseRun: PartialFactory<CourseRunV2> = (overrides = {}) => {
   const defaults: CourseRunV2 = {
     id: uniqueCourseRunId.enforce(() => faker.number.int()),
+    course_id: faker.number.int(),
     title: faker.lorem.words(3),
     start_date: faker.date.future().toISOString(),
     end_date: faker.date.future().toISOString(),
@@ -121,6 +124,7 @@ const courseRun: PartialFactory<CourseRunV2> = (overrides = {}) => {
     run_tag: faker.lorem.word(),
     live: faker.datatype.boolean(),
     course_number: faker.lorem.word(),
+    language_label: "",
     products: [product()],
     approved_flexible_price_exists: faker.datatype.boolean(),
     enrollment_modes: Array.from({
@@ -200,6 +204,7 @@ const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
     max_price: faker.number.int({ min: 1000, max: 2000 }),
     include_in_learn_catalog: faker.datatype.boolean(),
     ingest_content_files_for_ai: faker.datatype.boolean(),
+    possible_variant_sets: [],
   }
 
   return mergeOverrides<CourseWithCourseRunsSerializerV2>(defaults, overrides)

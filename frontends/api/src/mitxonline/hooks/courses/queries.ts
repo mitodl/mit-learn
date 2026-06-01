@@ -2,6 +2,8 @@ import { queryOptions } from "@tanstack/react-query"
 import type {
   CourseOutlineResponse as GeneratedCourseOutlineResponse,
   CoursesApiApiV2CoursesListRequest,
+  CoursesApiCourseVariantRunsV3Request,
+  CourseVariantRunsResponse,
   PaginatedCourseWithCourseRunsSerializerV2List,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { coursesApi } from "../../clients"
@@ -21,6 +23,11 @@ const coursesKeys = {
     ...coursesKeys.root,
     "outline",
     coursewareId,
+  ],
+  courseVariantRunsList: (opts: CoursesApiCourseVariantRunsV3Request) => [
+    ...coursesKeys.root,
+    "variant-runs",
+    opts,
   ],
 }
 
@@ -42,6 +49,13 @@ const coursesQueries = {
           .then((res) => res.data)
       },
     }),
+  courseVariantRunsList: (opts: CoursesApiCourseVariantRunsV3Request) =>
+    queryOptions({
+      queryKey: coursesKeys.courseVariantRunsList(opts),
+      queryFn: async (): Promise<CourseVariantRunsResponse[]> => {
+        return coursesApi.courseVariantRunsV3(opts).then((res) => res.data)
+      },
+    }),
 }
 
 export { coursesQueries, coursesKeys }
@@ -49,4 +63,5 @@ export type {
   CourseOutlineResponse,
   CourseOutlineModule,
   CourseOutlineModuleCounts,
+  CourseVariantRunsResponse,
 }
