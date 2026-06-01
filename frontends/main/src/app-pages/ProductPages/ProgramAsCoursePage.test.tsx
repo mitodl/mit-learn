@@ -382,4 +382,15 @@ describe("ProgramAsCoursePage", () => {
       ).not.toBeInTheDocument()
     })
   })
+
+  test("Renders without crashing when program_details.page is null", async () => {
+    const program = makeProgramAsCourse({ page: null })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+    renderWithProviders(
+      <ProgramAsCoursePage readableId={program.readable_id} />,
+    )
+
+    await screen.findByRole("heading", { name: page.title })
+  })
 })

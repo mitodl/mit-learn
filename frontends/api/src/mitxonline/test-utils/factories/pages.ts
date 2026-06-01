@@ -111,6 +111,7 @@ const v2Course: PartialFactory<V2Course> = (overrides = {}) => {
     include_in_learn_catalog: faker.datatype.boolean(),
     ingest_content_files_for_ai: faker.datatype.boolean(),
     next_run_id: faker.number.int(),
+    possible_variant_sets: [],
   }
   return mergeOverrides<V2Course>(defaults, overrides)
 }

@@ -9,13 +9,12 @@ import {
   Link,
   PlainList,
   Skeleton,
-  SimpleSelectField,
   Stack,
   styled,
   Typography,
 } from "ol-components"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
-import {
+import type {
   ContractPage,
   OrganizationPage,
   V2ProgramCollection,
@@ -35,6 +34,7 @@ import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
 import type { DashboardCourseEntry } from "./CoursewareDisplay/model/dashboardViewModel"
 import { useContractDashboardData } from "./CoursewareDisplay/hooks/useContractDashboardData"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
+import { VariantPicker } from "./CoursewareDisplay/VariantPicker"
 
 const HeaderRoot = styled.div(({ theme }) => ({
   display: "flex",
@@ -243,34 +243,6 @@ const ProgramControls = styled.div(({ theme }) => ({
   },
 }))
 
-const ProgramLanguageSelect = styled(SimpleSelectField)(({ theme }) => ({
-  display: "inline-flex",
-  flexDirection: "row",
-  alignItems: "center",
-  padding: "10px",
-  gap: "8px",
-  width: "auto",
-  "> *:not(:last-child)": {
-    marginBottom: "0",
-  },
-  "> label": {
-    ...theme.typography.body3,
-    color: theme.custom.colors.silverGrayDark,
-    marginBottom: "0",
-    whiteSpace: "nowrap",
-  },
-  [theme.breakpoints.down("sm")]: {
-    width: "100%",
-    padding: "12px 16px",
-    borderRadius: "0 0 8px 8px",
-    justifyContent: "space-between",
-    ".MuiInputBase-root": {
-      width: "100%",
-    },
-    backgroundColor: theme.custom.colors.lightGray1,
-  },
-})) as typeof SimpleSelectField
-
 const OrgProgramCollectionDisplay: React.FC<{
   collection: V2ProgramCollection
   entries: DashboardCourseEntry[]
@@ -375,7 +347,7 @@ const ContractHeaderSection = styled.div(({ theme }) => ({
   gap: "24px",
   borderRadius: "8px",
   backgroundColor: theme.custom.colors.white,
-  boxShadow: "0 1px 3px 0 rgba(120, 147, 172, 0.40)",
+  boxShadow: "0 1px 6px 0 rgba(3, 21, 45, 0.05)",
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
     alignItems: "flex-start",
@@ -405,9 +377,9 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
   const {
     isLoading,
     showNoPrograms,
-    languageOptions,
-    selectedLanguageKey,
-    setSelectedLanguageKey,
+    variantOptions,
+    selectedVariant,
+    setSelectedVariant,
     programs,
     collections,
   } = useContractDashboardData(org, contract)
@@ -450,7 +422,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
           <ContractHeaderSection>
             <ContractHeader org={org} contract={contract} />
           </ContractHeaderSection>
-          <WelcomeMessage contract={contract} />
+          <WelcomeMessage key="welcome" contract={contract} />
         </Stack>
         {skeleton}
       </>
@@ -475,27 +447,16 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
               </ButtonLink>
             </ManageButtonWrapper>
           )}
-          {languageOptions.length > 1 && (
-            <ProgramLanguageSelect
-              size="small"
-              label="Learning Language:"
-              value={selectedLanguageKey}
-              onChange={(e) => setSelectedLanguageKey(String(e.target.value))}
-              options={languageOptions}
-              renderValue={(value) => {
-                const selected = languageOptions.find(
-                  (opt) => opt.value === value,
-                )
-                return (
-                  <Typography variant="subtitle3" marginRight="16px">
-                    {selected?.label ?? ""}
-                  </Typography>
-                )
-              }}
-            />
-          )}
         </ContractHeaderSection>
-        <WelcomeMessage contract={contract} />
+        {variantOptions.length > 1 && (
+          <VariantPicker
+            variantOptions={variantOptions}
+            selectedVariant={selectedVariant}
+            setSelectedVariant={setSelectedVariant}
+            description={`${org.name} provides multiple ways to learn this material. Choose the version that best fits your goals.`}
+          />
+        )}
+        <WelcomeMessage key="welcome" contract={contract} />
       </Stack>
       <ContractRoot>
         {programs.map(({ program, entries, programEnrollment }) => (

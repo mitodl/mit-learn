@@ -4,6 +4,7 @@ import { BannerNode } from "../../extensions/node/Banner/BannerNode"
 import { ByLineInfoBarNode } from "../../extensions/node/ByLineInfoBar/ByLineInfoBarNode"
 import { createBaseExtensions } from "../../extensions/baseExtensions"
 import type { CreateExtensionsFn } from "../../core/WebsiteContentEditor"
+import type { QueryClient } from "@tanstack/react-query"
 
 export const NewsDocument = Document.extend({
   content: "banner byline block+",
@@ -41,9 +42,10 @@ export const newNewsDocument = {
 export const createNewsExtensions: CreateExtensionsFn = (
   uploadHandler,
   setUploadError,
+  queryClient?: QueryClient | null,
 ): (Extension | Node | Mark)[] => [
   NewsDocument,
-  ...createBaseExtensions(uploadHandler, setUploadError),
+  ...createBaseExtensions(uploadHandler, setUploadError, queryClient),
   BannerNode,
   ByLineInfoBarNode,
 ]

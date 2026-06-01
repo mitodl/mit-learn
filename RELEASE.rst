@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.69.0 (Released June 01, 2026)
+--------------
+
+- upgrade qdrant client (#3389)
+- feat: Handle nullable page field from MITx Online client update (#3349)
+- refactor test mock: use axios adapter instead of hand-rolled wrapper (#3383)
+
 Version 0.68.8 (Released May 28, 2026)
 --------------
 

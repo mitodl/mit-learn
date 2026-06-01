@@ -1,5 +1,6 @@
 import type {
   CoursesApiApiV2CoursesListRequest,
+  CoursesApiCourseVariantRunsV3Request,
   CourseCertificatesApiCourseCertificatesRetrieveRequest,
   ProgramCertificatesApiProgramCertificatesRetrieveRequest,
   ProgramCollectionsApiProgramCollectionsListRequest,
@@ -53,6 +54,8 @@ const courses = {
     `${API_BASE_URL}/api/v2/courses/${queryify(opts, { explode: false })}`,
   courseOutline: (coursewareId: string) =>
     `${API_BASE_URL}/api/v3/courses/${encodeURIComponent(coursewareId)}/ol_openedx_outline/`,
+  courseVariantRuns: (opts: CoursesApiCourseVariantRunsV3Request) =>
+    `${API_BASE_URL}/api/v3/courses/variant_runs/${queryify(opts)}`,
 }
 
 const pages = {
