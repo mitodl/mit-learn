@@ -509,7 +509,7 @@ const Certificate = ({
   userName,
   ceus,
   signatories,
-  validFrom,
+  issueDate,
   uuid,
 }: {
   title: string
@@ -517,7 +517,7 @@ const Certificate = ({
   userName?: string
   ceus?: string
   signatories: SignatoryItem[]
-  validFrom?: string | null
+  issueDate?: string | null
   uuid: string
 }) => {
   return (
@@ -542,9 +542,9 @@ const Certificate = ({
               Awarded {ceus} Continuing Education Units (CEUs)
             </Typography>
           ) : null}
-          {validFrom && (
+          {issueDate && (
             <Typography variant="h4">
-              <NoSSR>{formatDate(validFrom)}</NoSSR>
+              <NoSSR>{formatDate(issueDate)}</NoSSR>
             </Typography>
           )}
           {ceus ? null : <Spacer />}
@@ -590,7 +590,9 @@ const Certificate = ({
 const CourseCertificate = ({
   certificate,
 }: {
-  certificate: V2CourseRunCertificate
+  certificate: V2CourseRunCertificate & {
+    issue_date?: string | null
+  }
 }) => {
   const title = certificate.course_run.course.title
 
@@ -598,7 +600,7 @@ const CourseCertificate = ({
 
   const { displayType } = getCertificateInfo()
   const signatories = certificate.certificate_page.signatory_items
-  const validFrom = certificate?.verifiable_credential_json?.validFrom
+  const issueDate = certificate?.issue_date
 
   return (
     <Certificate
@@ -606,7 +608,7 @@ const CourseCertificate = ({
       displayType={displayType}
       userName={userName}
       signatories={signatories}
-      validFrom={validFrom}
+      issueDate={issueDate}
       uuid={certificate.uuid}
     />
   )
@@ -615,7 +617,9 @@ const CourseCertificate = ({
 const ProgramCertificate = ({
   certificate,
 }: {
-  certificate: V2ProgramCertificate
+  certificate: V2ProgramCertificate & {
+    issue_date?: string | null
+  }
 }) => {
   const title = certificate.program.title
 
@@ -627,7 +631,7 @@ const ProgramCertificate = ({
 
   const signatories = certificate.certificate_page.signatory_items
 
-  const validFrom = certificate?.verifiable_credential_json?.validFrom
+  const issueDate = certificate?.issue_date
 
   return (
     <Certificate
@@ -636,7 +640,7 @@ const ProgramCertificate = ({
       userName={userName}
       ceus={ceus}
       signatories={signatories}
-      validFrom={validFrom}
+      issueDate={issueDate}
       uuid={certificate.uuid}
     />
   )

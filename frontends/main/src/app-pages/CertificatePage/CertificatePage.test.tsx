@@ -38,9 +38,7 @@ describe("CertificatePage", () => {
     await screen.findAllByText("Certificate")
     await screen.findAllByText(certificate.user.name!)
     await screen.findAllByText(
-      moment(certificate.verifiable_credential_json.validFrom).format(
-        "MMM D, YYYY",
-      ),
+      moment(certificate.issue_date).format("MMM D, YYYY"),
     )
 
     await screen.findAllByText(
@@ -110,9 +108,7 @@ describe("CertificatePage", () => {
       `Awarded ${certificate.certificate_page.CEUs} Continuing Education Units (CEUs)`,
     )
     await screen.findAllByText(
-      moment(certificate.verifiable_credential_json.validFrom).format(
-        "MMM D, YYYY",
-      ),
+      moment(certificate.issue_date).format("MMM D, YYYY"),
     )
 
     await screen.findAllByText(certificate.uuid)
