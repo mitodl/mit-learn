@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.69.0
+Version 0.69.0 (Released June 01, 2026)
 --------------
 
 - upgrade qdrant client (#3389)
