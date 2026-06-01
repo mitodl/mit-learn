@@ -11,7 +11,6 @@ import type {
   BaseProgramDisplayMode,
   ContractPage,
   CourseRunEnrollmentV3,
-  CourseRunV2,
   CourseWithCourseRunsSerializerV2,
   SupportedVariant,
   V2Program,
@@ -344,87 +343,21 @@ const assembleHomeCardList = ({
   }
 }
 
-/**
- * Build the displayed run for a course entry by merging the enrollment's
- * run data (V3) onto a CourseRunV2 template, or returning the selected run
- * directly when the user has no enrollment.
- *
- * With a contract constraint, the selected run is scoped to that contract
- * before the merge; if it doesn't belong to the contract a fresh best-run
- * lookup is used as the template instead.
- */
-const synthesizeDisplayedRun = (
-  course: CourseWithCourseRunsSerializerV2,
-  selectedRun: CourseRunV2 | null,
-  enrollment: CourseRunEnrollmentV3 | null,
-  contractId?: number,
-): BaseCourseRun | null => {
-  // Apply contract scope to the selected run.
-  let scopedSelectedRun = selectedRun
-  if (
-    typeof contractId === "number" &&
-    selectedRun &&
-    "b2b_contract" in selectedRun &&
-    (selectedRun as { b2b_contract?: number | null }).b2b_contract !==
-      contractId
-  ) {
-    scopedSelectedRun = null
-  }
-
-  let templateRun = scopedSelectedRun
-  if (!templateRun) {
-    templateRun =
-      (typeof contractId === "number"
-        ? getBestRun(course, { contractId })
-        : getBestRun(course)) ?? null
-  }
-
-  const enrollmentRun = enrollment?.run
-  if (enrollmentRun) {
-    if (!templateRun) {
-      return null
-    }
-    return {
-      ...templateRun,
-      id: enrollmentRun.id,
-      title: enrollmentRun.title,
-      courseware_id: enrollmentRun.courseware_id,
-      courseware_url: enrollmentRun.courseware_url,
-      run_tag: enrollmentRun.run_tag,
-      start_date: enrollmentRun.start_date,
-      end_date: enrollmentRun.end_date,
-      is_enrollable: enrollmentRun.is_enrollable,
-      is_upgradable: enrollmentRun.is_upgradable,
-      is_archived: enrollmentRun.is_archived,
-      is_self_paced: enrollmentRun.is_self_paced,
-      upgrade_deadline: enrollmentRun.upgrade_deadline,
-      certificate_available_date: enrollmentRun.certificate_available_date,
-      course_number: enrollmentRun.course_number,
-    }
-  }
-
-  return scopedSelectedRun
+const filterEnrollmentsForContract = (contractId?: number) => {
+  if (typeof contractId !== "number") return isNonContractEnrollment
+  return (enrollment: CourseRunEnrollmentV3) =>
+    enrollment.b2b_contract_id === contractId
 }
 
 /**
  * Resolve the `displayedEnrollment` and `displayedRun` for a dashboard course
  * entry.
  *
- * Options:
- *  - `contractId`: when present, scopes enrollment lookups to that contract.
- *  - `variant` + `variantCandidateRuns`: when a non-default variant is
- *    selected, the function first looks for an existing enrollment whose run
- *    already matches the variant (preferred — the user is already enrolled).
- *    If none is found, it picks the best session from `variantCandidateRuns`
- *    via `selectVariantRunForCourse`. If that also returns nothing, it falls
- *    through to the default resolution below.
- *
- * Default resolution (no variant, or variant with no matching run):
- *  - Contract path: picks the best contract enrollment (by certificate then
- *    grade) and resolves its run.
- *  - Non-contract path: picks the best enrollment via the legacy display
- *    policy (certificate → grade → first match) and resolves the default next
- *    run.
+ * Filters enrollments to the relevant scope (contract or non-contract) and
+ * variant (when a non-default variant is selected), then picks the best
+ * enrollment via `selectBestEnrollment`. If the user is not enrolled, falls
+ * back to the best run from `getBestRun` (or `selectVariantRunForCourse` when
+ * a variant is active).
  */
 const resolveDisplayedRunAndEnrollment = (
   course: CourseWithCourseRunsSerializerV2,
@@ -438,81 +371,35 @@ const resolveDisplayedRunAndEnrollment = (
   displayedEnrollment: CourseRunEnrollmentV3 | null
   displayedRun: BaseCourseRun | null
 } => {
-  const scopedEnrollments =
-    typeof opts?.contractId === "number"
-      ? enrollments.filter((e) => e.b2b_contract_id === opts.contractId)
-      : enrollments
+  const variantFilter = opts?.variant
+    ? runMatchesVariant(opts.variant)
+    : () => true
+  const relevantEnrollments = enrollments
+    .filter(filterEnrollmentsForContract(opts?.contractId))
+    .filter((e) => variantFilter(e.run))
 
-  if (opts?.variant) {
-    const matchesVariant = runMatchesVariant(opts.variant)
-
-    // Prefer an existing enrollment whose run already matches the variant.
-    const variantEnrollment =
-      scopedEnrollments.find((e) => matchesVariant(e.run)) ?? null
-    if (variantEnrollment) {
-      const displayedRun =
-        course.courseruns.find((r) => r.id === variantEnrollment.run.id) ??
-        variantEnrollment.run
-      return { displayedEnrollment: variantEnrollment, displayedRun }
-    }
-
-    // Not enrolled: pick the best candidate run from the API results.
-    const bestRun = selectVariantRunForCourse(
-      opts.variantCandidateRuns ?? [],
-      opts.variant,
-    )
-    if (bestRun) {
-      const displayedRun =
-        course.courseruns.find((r) => r.id === bestRun.id) ?? bestRun
-      return { displayedEnrollment: null, displayedRun }
-    }
-
-    // No matching run at all — fall through to default resolution.
-  }
-
-  if (typeof opts?.contractId === "number") {
-    const defaultRun =
-      getBestRun(course, { enrollableOnly: true }) ??
-      course.courseruns[0] ??
-      null
-    const displayedEnrollment = selectBestEnrollment(course, scopedEnrollments)
-    const runForResolution = displayedEnrollment
-      ? ((course.courseruns ?? []).find(
-          (run) => run.id === displayedEnrollment.run.id,
-        ) ?? null)
-      : defaultRun
-
-    const displayedRun = synthesizeDisplayedRun(
-      course,
-      runForResolution,
-      displayedEnrollment,
-      opts.contractId,
-    )
-
+  const displayedEnrollment = selectBestEnrollment(course, relevantEnrollments)
+  if (displayedEnrollment) {
+    const displayedRun =
+      course.courseruns.find((r) => r.id === displayedEnrollment.run.id) ??
+      displayedEnrollment.run
     return { displayedEnrollment, displayedRun }
   }
 
   const defaultRun =
-    getBestRun(course, { enrollableOnly: true }) ?? course.courseruns[0] ?? null
-  const matchedEnrollment =
-    enrollments.find(
-      (e) =>
-        e.run &&
-        (e.run.id === defaultRun?.id ||
-          e.run.courseware_id === defaultRun?.courseware_id),
-    ) ?? null
-  const displayedEnrollment = pickDisplayedEnrollmentForLegacyDashboard(
-    course,
-    enrollments,
-  )
-
-  const displayedRun = synthesizeDisplayedRun(
-    course,
-    defaultRun,
-    matchedEnrollment,
-  )
-
-  return { displayedEnrollment, displayedRun }
+    getBestRun(course, {
+      enrollableOnly: true,
+      contractId: opts?.contractId,
+    }) ??
+    course.courseruns[0] ??
+    null
+  const displayedRun = opts?.variant
+    ? (selectVariantRunForCourse(
+        opts.variantCandidateRuns ?? [],
+        opts.variant,
+      ) ?? defaultRun)
+    : defaultRun
+  return { displayedEnrollment: null, displayedRun }
 }
 
 /**
