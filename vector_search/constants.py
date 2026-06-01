@@ -165,7 +165,7 @@ QDRANT_OPTIMIZER_FLUSH_INTERVAL_XLARGE = 30
 QDRANT_OPTIMIZER_INDEXING_THRESHOLD_RATIO = 0.4
 
 # the minimum similarity score for dense only search
-DENSE_VECTOR_SEARCH_MIN_SCORE = 0.6
+DENSE_VECTOR_SEARCH_MIN_SCORE = 0.5
 
 # the minimum similarity score for hybrid search (Reciprocal Rank Fusion)
 HYBRID_VECTOR_SEARCH_MIN_SCORE = 0.1
