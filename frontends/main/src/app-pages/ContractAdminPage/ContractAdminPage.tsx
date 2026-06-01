@@ -534,7 +534,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
               />
             </ControlsLeft>
             <ExportButtonWrapper>
-              <Button variant="bordered">Export CSV</Button>
+              <Button variant="bordered"> Export CSV (coming soon)</Button>
             </ExportButtonWrapper>
           </SeatAssignmentsControls>
           <VisuallyHidden aria-live="polite" aria-atomic="true">
