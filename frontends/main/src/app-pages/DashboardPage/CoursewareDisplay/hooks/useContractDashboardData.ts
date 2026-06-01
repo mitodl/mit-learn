@@ -165,7 +165,7 @@ const useContractDashboardData = (
           ancestorContext: programEnrollment
             ? { programEnrollment }
             : undefined,
-          variant: isDefaultVariantSelection ? undefined : selectedVariant,
+          variant: selectedVariant ?? undefined,
           variantCandidateRuns: isDefaultVariantSelection
             ? undefined
             : variantRunsByCourseId[course.id],
@@ -186,7 +186,7 @@ const useContractDashboardData = (
       entries: firstCourses.map((course) =>
         buildCourseEntry(course, enrollmentsByCourseId[course.id] ?? [], {
           contractId: contract.id,
-          variant: isDefaultVariantSelection ? undefined : selectedVariant!,
+          variant: selectedVariant ?? undefined,
           variantCandidateRuns: isDefaultVariantSelection
             ? undefined
             : variantRunsByCourseId[course.id],
