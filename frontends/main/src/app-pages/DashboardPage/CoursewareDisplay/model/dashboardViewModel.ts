@@ -470,10 +470,9 @@ type RequirementSection = {
  *
  * This is a pure constructor — it assembles the entry from caller-supplied
  * metadata and delegates all display-resolution to
- * `resolveDisplayedRunAndEnrollment`. The caller is responsible for:
- *  - pre-filtering `enrollments` to this course (e.g. `enrollmentsByCourseId[course.id] ?? []`)
- *  - computing `availableVariants` once at the composer level (NOT re-derived here)
- *  - supplying the effective `selectedVariantKey` (a valid option or fallback)
+ * `resolveDisplayedRunAndEnrollment`. The caller is responsible for
+ * pre-filtering `enrollments` to this course (e.g.
+ * `enrollmentsByCourseId[course.id] ?? []`).
  *
  * `enrollments` is stored uncollapsed on the entry — the full list, never
  * filtered to the displayed choice.
