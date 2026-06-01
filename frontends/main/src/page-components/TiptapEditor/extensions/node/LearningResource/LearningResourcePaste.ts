@@ -3,9 +3,19 @@ import { Plugin } from "@tiptap/pm/state"
 import { createURLToNodeHandler } from "../shared/createURLToNodeHandler"
 
 function extractResourceId(url: string): number | null {
-  const match = url.match(/resource=(\d+)/)
-  if (!match) return null
-  return Number(match[1])
+  const resourceParamMatch = url.match(/[?&]resource=(\d+)\b/)
+  if (resourceParamMatch) {
+    return Number(resourceParamMatch[1])
+  }
+
+  // Support MIT Learn video URLs like:
+  // https://rc.learn.mit.edu/video/135366?playlist=128974
+  const videoPathMatch = url.match(/\/video\/(\d+)(?:[/?#]|$)/)
+  if (videoPathMatch) {
+    return Number(videoPathMatch[1])
+  }
+
+  return null
 }
 
 export const LearningResourceURLHandler = Extension.create({
