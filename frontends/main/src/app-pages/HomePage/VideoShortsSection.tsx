@@ -53,14 +53,15 @@ const ASPECT_RATIO = 9 / 16
 
 const CarouselSlide = styled("div", {
   shouldForwardProp: (prop) => prop !== "width" && prop !== "height",
-})<{ width: number; height: number }>(({ width, height }) => ({
+})<{ width: number; height: number }>(({ width, height, theme }) => ({
   flex: "0 0 100%",
   width,
   maxWidth: width,
   height,
   cursor: "pointer",
   "&:focus-visible": {
-    outline: "2px solid AccentColor",
+    outline: `2px solid ${theme.custom.colors.darkGray2}`,
+    outlineOffset: "2px",
     borderRadius: "8px",
   },
 }))
