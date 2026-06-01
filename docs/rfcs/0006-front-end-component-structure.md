@@ -795,10 +795,6 @@ The current structure as of November 2023, for reference:
 │ ├── README.md
 │ ├── src
 │ │ ├── components
-│ │ │ ├── embedly
-│ │ │ │ ├── EmbedlyCard.tsx
-│ │ │ │ ├── index.ts
-│ │ │ │ └── util.ts
 │ │ │ ├── index.ts
 │ │ │ ├── MetaTags.tsx
 │ │ │ ├── MITLogoLink.tsx

@@ -151,7 +151,6 @@ jobs:
           MITX_ONLINE_LEGACY_BASE_URL: https://cifake.mitxonline.mit.edu
           SITE_NAME: MIT Learn
           SUPPORT_EMAIL: mitlearn-support@mit.edu
-          EMBEDLY_KEY: fake-embedly-key
           MITOL_AXIOS_WITH_CREDENTIALS: true
           CSRF_COOKIE_NAME: learn_csrftoken_ci
           POSTHOG_API_HOST: https://app.posthog.com
@@ -174,7 +173,6 @@ jobs:
             --build-arg NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL=$MITX_ONLINE_LEGACY_BASE_URL \
             --build-arg NEXT_PUBLIC_SITE_NAME="$SITE_NAME" \
             --build-arg NEXT_PUBLIC_MITOL_SUPPORT_EMAIL=$SUPPORT_EMAIL \
-            --build-arg NEXT_PUBLIC_EMBEDLY_KEY=$EMBEDLY_KEY \
             --build-arg NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS=$MITOL_AXIOS_WITH_CREDENTIALS \
             --build-arg NEXT_PUBLIC_CSRF_COOKIE_NAME=$CSRF_COOKIE_NAME \
             --build-arg NEXT_PUBLIC_POSTHOG_API_HOST=$POSTHOG_API_HOST \

@@ -7,7 +7,7 @@ import {
   user,
   waitFor,
 } from "@/test-utils"
-import { mockAxiosInstance, makeRequest, urls, factories } from "api/test-utils"
+import { makeRequest, urls, factories } from "api/test-utils"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
 import {
   urls as mitxUrls,
@@ -34,7 +34,8 @@ const makeUser = factories.user.user
 
 describe("ProgramEnrollmentButton", () => {
   const ENROLLED = "Enrolled"
-  const ENROLL_FREE = "Enroll for Free"
+  const ENROLL_FREE = "Enroll in Program"
+  const ENROLL_PROGRAM = "Enroll in Program"
 
   setupLocationMock()
 
@@ -94,7 +95,7 @@ describe("ProgramEnrollmentButton", () => {
     expect(enrolledLink).toHaveAttribute("href", programView(program.id))
   })
 
-  test("Free-only: clicking 'Enroll for Free' enrolls and redirects to the dashboard success URL with title in params", async () => {
+  test("Free-only: clicking 'Enroll in Program' enrolls and redirects to the dashboard success URL with title in params", async () => {
     const program = makeProgram({
       enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
     })
@@ -116,11 +117,11 @@ describe("ProgramEnrollmentButton", () => {
     await user.click(enrollButton)
 
     await waitFor(() => {
-      expect(makeRequest).toHaveBeenCalledWith(
-        "post",
-        mitxUrls.programEnrollments.enrollmentsListV3(),
-        { program_id: program.id },
-      )
+      expect(makeRequest).toHaveBeenCalledWith({
+        method: "post",
+        url: mitxUrls.programEnrollments.enrollmentsListV3(),
+        body: { program_id: program.id },
+      })
     })
     await waitFor(() => {
       expect(location.current.pathname).toBe(routes.DASHBOARD_HOME)
@@ -134,7 +135,7 @@ describe("ProgramEnrollmentButton", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
-  test("Both: clicking 'Enroll for Free' opens enrollment dialog", async () => {
+  test("Both: clicking 'Enroll in Program' opens enrollment dialog", async () => {
     const program = makeProgram({
       enrollment_modes: [
         makeEnrollmentMode({ requires_payment: false }),
@@ -157,7 +158,7 @@ describe("ProgramEnrollmentButton", () => {
     await screen.findByRole("dialog", { name: program.title })
   })
 
-  test("Paid-only: clicking 'Enroll Now' clears basket, adds product, and redirects", async () => {
+  test("Paid-only: clicking 'Enroll in Program' clears basket, adds product, and redirects", async () => {
     const assign = jest.mocked(window.location.assign)
     const product = makeProduct({ price: "500" })
     const program = makeProgram({
@@ -177,17 +178,17 @@ describe("ProgramEnrollmentButton", () => {
     )
 
     const enrollButton = await screen.findByRole("button", {
-      name: /Enroll Now/,
+      name: ENROLL_PROGRAM,
     })
     await user.click(enrollButton)
 
     await waitFor(() => {
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-        expect.objectContaining({ method: "DELETE", url: clearUrl }),
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "delete", url: clearUrl }),
       )
     })
-    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-      expect.objectContaining({ method: "POST", url: basketUrl }),
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "post", url: basketUrl }),
     )
     expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
   })
@@ -208,12 +209,88 @@ describe("ProgramEnrollmentButton", () => {
       <ProgramEnrollmentButton program={program} variant="primary" />,
     )
 
-    const button = await screen.findByRole("button", { name: /Enroll Now/ })
+    const button = await screen.findByRole("button", { name: ENROLL_PROGRAM })
     await user.click(button)
 
     await screen.findByRole("progressbar", { name: "Loading" })
     expect(button).toBeDisabled()
-    expect(button).toHaveTextContent("Enroll Now—$500")
+    expect(button).toHaveTextContent(ENROLL_PROGRAM)
+  })
+
+  test("Hides arrow icon when showArrowIcon is false", async () => {
+    const program = makeProgram({
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: true })],
+      products: [makeProduct({ price: "500" })],
+    })
+
+    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
+    setMockResponse.get(
+      urls.userMe.get(),
+      makeUser({ is_authenticated: false }),
+    )
+
+    renderWithProviders(
+      <ProgramEnrollmentButton
+        program={program}
+        variant="primary"
+        showArrowIcon={false}
+      />,
+    )
+
+    await screen.findByRole("button", { name: ENROLL_PROGRAM })
+    expect(screen.queryByTestId("program-enroll-arrow-icon")).toBeNull()
+  })
+
+  test("Still shows loading spinner when showArrowIcon is false", async () => {
+    const product = makeProduct({ price: "500" })
+    const program = makeProgram({
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: true })],
+      products: [product],
+    })
+
+    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
+    const { promise } = Promise.withResolvers()
+    setMockResponse.delete(mitxUrls.baskets.clear(), promise)
+
+    renderWithProviders(
+      <ProgramEnrollmentButton
+        program={program}
+        variant="primary"
+        showArrowIcon={false}
+      />,
+    )
+
+    const button = await screen.findByRole("button", { name: ENROLL_PROGRAM })
+    await user.click(button)
+
+    await screen.findByRole("progressbar", { name: "Loading" })
+    expect(screen.queryByTestId("program-enroll-arrow-icon")).toBeNull()
+  })
+
+  test("Still shows loading spinner during initial loading when showArrowIcon is false", async () => {
+    const program = makeProgram({
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
+    })
+    const enrollmentResponse = Promise.withResolvers()
+    const userResponse = Promise.withResolvers()
+
+    setMockResponse.get(
+      mitxUrls.programEnrollments.enrollmentsListV3(),
+      enrollmentResponse.promise,
+    )
+    setMockResponse.get(urls.userMe.get(), userResponse.promise)
+
+    renderWithProviders(
+      <ProgramEnrollmentButton
+        program={program}
+        variant="primary"
+        showArrowIcon={false}
+      />,
+    )
+
+    await screen.findByRole("progressbar", { name: "Loading" })
+    expect(screen.queryByTestId("program-enroll-arrow-icon")).toBeNull()
   })
 
   test("Shows error alert when basket operation fails (paid)", async () => {
@@ -231,7 +308,7 @@ describe("ProgramEnrollmentButton", () => {
       <ProgramEnrollmentButton program={program} variant="primary" />,
     )
 
-    const button = await screen.findByRole("button", { name: /Enroll Now/ })
+    const button = await screen.findByRole("button", { name: ENROLL_PROGRAM })
     await user.click(button)
 
     await screen.findByText(
@@ -281,7 +358,7 @@ describe("ProgramEnrollmentButton", () => {
     )
 
     const button = await screen.findByRole("button", {
-      name: "Enroll Now—$1,500",
+      name: ENROLL_PROGRAM,
     })
     expect(button).toBeInTheDocument()
     expect(button).not.toBeDisabled()
@@ -319,7 +396,7 @@ describe("ProgramEnrollmentButton", () => {
       <ProgramEnrollmentButton program={program} variant="primary" />,
     )
 
-    const button = await screen.findByRole("button", { name: "Enroll Now" })
+    const button = await screen.findByRole("button", { name: ENROLL_PROGRAM })
     expect(button).toBeDisabled()
   })
 
@@ -398,9 +475,7 @@ describe("ProgramEnrollmentButton", () => {
       renderWithProviders(
         <ProgramEnrollmentButton program={program} variant="primary" />,
       )
-      await user.click(
-        await screen.findByRole("button", { name: "Enroll for Free" }),
-      )
+      await user.click(await screen.findByRole("button", { name: ENROLL_FREE }))
 
       expect(mockCapture).toHaveBeenCalledWith(
         PostHogEvents.CallToActionClicked,
@@ -426,9 +501,7 @@ describe("ProgramEnrollmentButton", () => {
       renderWithProviders(
         <ProgramEnrollmentButton program={program} variant="primary" />,
       )
-      await user.click(
-        await screen.findByRole("button", { name: "Enroll for Free" }),
-      )
+      await user.click(await screen.findByRole("button", { name: ENROLL_FREE }))
 
       expect(mockCapture).toHaveBeenCalledWith(
         PostHogEvents.CallToActionClicked,

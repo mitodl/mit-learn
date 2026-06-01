@@ -182,8 +182,8 @@ docker compose run --rm web python manage.py loaddata platforms departments offe
 :warning: **NOTE: Article cover image thumbnails will be broken unless this is configured** :warning:
 
 Article posts give users the option to upload a cover image, and we show a thumbnail for that
-image in post listings. We use Embedly to generate that thumbnail, so they will appear as
-broken images unless you configure your app to upload to S3. Steps:
+image in post listings, so they will appear as broken images unless you configure your app to
+upload to S3. Steps:
 
 1. Set `MITOL_USE_S3=True` in `.env`
 1. Also in `.env`, set these AWS variables: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,

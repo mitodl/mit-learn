@@ -17,7 +17,9 @@ const assertApiCalled = async (
   data: unknown,
 ) => {
   await waitFor(() => expect(result.current.isLoading).toBe(false))
-  expect(makeRequest).toHaveBeenCalledWith(method, url, expect.anything())
+  expect(makeRequest).toHaveBeenCalledWith(
+    expect.objectContaining({ method: method.toLowerCase(), url }),
+  )
   expect(result.current.data).toEqual(data)
 }
 
@@ -32,7 +34,7 @@ describe("useTestimonialList", () => {
       setMockResponse.get(url, data)
       const useTestHook = () => useTestimonialList(params)
       const { result } = renderHook(useTestHook, { wrapper })
-      assertApiCalled(result, url, "GET", data)
+      await assertApiCalled(result, url, "GET", data)
     },
   )
 })
@@ -47,6 +49,6 @@ describe("useTestimonialDetail", () => {
     const useTestHook = () => useTestimonialDetail(data.id)
     const { result } = renderHook(useTestHook, { wrapper })
 
-    assertApiCalled(result, url, "GET", data)
+    await assertApiCalled(result, url, "GET", data)
   })
 })

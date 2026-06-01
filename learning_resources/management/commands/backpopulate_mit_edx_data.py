@@ -51,7 +51,9 @@ class Command(ConfirmDeleteMixin, TestResourceConfigurationMixin, BaseCommand):
                 resource_delete_actions(learning_resource)
         else:
             task = get_mit_edx_data.delay(
-                options["api_course_datafile"], options["api_program_datafile"]
+                options["api_course_datafile"],
+                options["api_program_datafile"],
+                _cooldown_force=True,
             )
             self.stdout.write(f"Started task {task} to get MIT edX course data")
             self.stdout.write("Waiting on task...")

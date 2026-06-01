@@ -1,6 +1,37 @@
 Release Notes
 =============
 
+Version 0.68.8 (Released May 28, 2026)
+--------------
+
+- feat: migrate video shorts to learning resources API (#3361)
+- chore: Remove embedly (#3377)
+- remove authentication requirement from hybrid search  (#3371)
+
+Version 0.68.7 (Released May 28, 2026)
+--------------
+
+- Send rejected event so Leek picks it up (#3374)
+- Update styled enrolled button not to show arrow (#3372)
+- Add authentication to load tests (#3246)
+- refactor: make internal editor code more generic (#3344)
+- Update dependency pyarrow to v23 [SECURITY] (#3358)
+- Task rate limits (#3363)
+- [pre-commit.ci] pre-commit autoupdate (#3370)
+- Product page: list prices and actual prices (#3346)
+- [pre-commit.ci] pre-commit autoupdate (#3352)
+
+Version 0.68.5 (Released May 26, 2026)
+--------------
+
+- dashboard refactor phase 5 - extract b2b contract dashboard hooks (#3355)
+- Fix ordering for mitxonline programs (#3360)
+- fix run matching (#3365)
+- feat: add PostHog tracking for onboarding CTA interactions (#3362)
+- Dashboard Refactor, useProgramDashboardData (#3356)
+- Fix eslint config to ignore node_modules (#3359)
+- refactor: make our internally-authored content editing more generic ( First Part) (#3332)
+
 Version 0.68.3 (Released May 19, 2026)
 --------------
 

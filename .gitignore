@@ -147,3 +147,5 @@ backups/
 /playwright/.cache/
 
 .claude
+
+load_testing/data/

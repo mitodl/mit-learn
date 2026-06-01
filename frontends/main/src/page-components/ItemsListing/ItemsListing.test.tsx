@@ -282,13 +282,13 @@ describe.each([ListType.LearningPath, ListType.UserList])(
       act(() => simulateDrag(from, to))
 
       await waitFor(() => {
-        expect(makeRequest).toHaveBeenCalledWith(
-          "patch",
-          patchUrl(listType, active.id),
-          {
+        expect(makeRequest).toHaveBeenCalledWith({
+          method: "patch",
+          url: patchUrl(listType, active.id),
+          body: {
             position: over.position,
           },
-        )
+        })
       })
     })
 
@@ -302,11 +302,11 @@ describe.each([ListType.LearningPath, ListType.UserList])(
 
       act(() => simulateDrag(from, to))
       await waitFor(() => {
-        expect(makeRequest).toHaveBeenCalledWith(
-          "patch",
-          patchUrl(listType, active.id),
-          expect.anything(),
-        )
+        expect(makeRequest).toHaveBeenCalledWith({
+          method: "patch",
+          url: patchUrl(listType, active.id),
+          body: expect.anything(),
+        })
       })
 
       expectProps(spySortableItem, { disabled: true })

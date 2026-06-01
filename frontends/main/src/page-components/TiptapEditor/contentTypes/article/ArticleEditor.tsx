@@ -82,8 +82,6 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       onSave={onSave}
       readOnly={readOnly}
       contentItem={article}
-      backgroundColor="lightGray1"
-      applyViewerTopSpacing
       bannerViewer={ArticleBannerViewer}
     />
   )

@@ -24,7 +24,9 @@ const assertApiCalled = async (
   data: unknown,
 ) => {
   await waitFor(() => expect(result.current.isLoading).toBe(false))
-  expect(makeRequest).toHaveBeenCalledWith(method, url, expect.anything())
+  expect(makeRequest).toHaveBeenCalledWith(
+    expect.objectContaining({ method: method.toLowerCase(), url }),
+  )
   expect(result.current.data).toEqual(data)
 }
 
@@ -38,7 +40,7 @@ describe("useWebsiteContentList", () => {
       setMockResponse.get(url, data)
       const useTestHook = () => useWebsiteContentList(params)
       const { result } = renderHook(useTestHook, { wrapper })
-      assertApiCalled(result, url, "GET", data)
+      await assertApiCalled(result, url, "GET", data)
     },
   )
 })
@@ -53,7 +55,7 @@ describe("useWebsiteContentDetail", () => {
     const useTestHook = () => useWebsiteContentDetail(data.id)
     const { result } = renderHook(useTestHook, { wrapper })
 
-    assertApiCalled(result, url, "GET", data)
+    await assertApiCalled(result, url, "GET", data)
   })
 })
 
@@ -70,7 +72,11 @@ describe("Website Content CRUD", () => {
     result.current.mutate(requestData)
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(makeRequest).toHaveBeenCalledWith("post", url, requestData)
+    expect(makeRequest).toHaveBeenCalledWith({
+      method: "post",
+      url,
+      body: requestData,
+    })
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: websiteContentKeys.listRoot(),
     })
@@ -88,7 +94,11 @@ describe("Website Content CRUD", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     const { id, ...patchData } = article
-    expect(makeRequest).toHaveBeenCalledWith("patch", url, patchData)
+    expect(makeRequest).toHaveBeenCalledWith({
+      method: "patch",
+      url,
+      body: patchData,
+    })
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: websiteContentKeys.detail(article.id),
     })
@@ -105,7 +115,9 @@ describe("Website Content CRUD", () => {
     result.current.mutate(id)
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(makeRequest).toHaveBeenCalledWith("delete", url, undefined)
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "delete", url }),
+    )
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: websiteContentKeys.listRoot(),
     })

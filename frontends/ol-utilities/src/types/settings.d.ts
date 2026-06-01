@@ -11,7 +11,6 @@ export declare global {
     MITOL_AXIOS_WITH_CREDENTIALS?: boolean
     MITOL_API_BASE_URL: string
     CSRF_COOKIE_NAME: string
-    EMBEDLY_KEY: string
     CKEDITOR_UPLOAD_URL?: string
     SENTRY_DSN?: string
     SENTRY_ENV?: string

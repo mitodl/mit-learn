@@ -134,10 +134,10 @@ const ArticleBannerWrapper = (props?: { node?: ProseMirrorNode }) => {
       <BreadcrumbBar>
         <BreadcrumContainer className="breadcrum">
           <Breadcrumbs
-            variant="dark"
+            variant="light"
             ancestors={[
               { href: "/", label: "Home" },
-              { href: "/articles", label: "MIT Learn Articles" },
+              { href: "/articles", label: "Articles" },
             ]}
             current={getTitle(props?.node || ({} as ProseMirrorNode))}
           />

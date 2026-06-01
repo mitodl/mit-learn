@@ -46,7 +46,6 @@ urlpatterns = (
         re_path(r"", include("authentication.urls")),
         re_path(r"", include("channels.urls")),
         re_path(r"", include("profiles.urls")),
-        re_path(r"", include("embedly.urls")),
         re_path(r"", include("learning_resources_search.urls")),
         re_path(r"", include("vector_search.urls")),
         re_path(r"", include("ckeditor.urls")),

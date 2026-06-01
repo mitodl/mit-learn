@@ -20,7 +20,6 @@ import dynamic from "next/dynamic"
 import { Toolbar } from "../vendor/components/tiptap-ui-primitive/toolbar"
 import { TiptapEditor, MainToolbarContent, TipTapViewer } from "../TiptapEditor"
 import { BannerViewer } from "../extensions/node/Banner/BannerNode"
-import { ByLineInfoBarViewer } from "../extensions/node/ByLineInfoBar/ByLineInfoBarViewer"
 import { Spacer } from "../vendor/components/tiptap-ui-primitive/spacer"
 import { handleImageUpload } from "../vendor/lib/tiptap-utils"
 import { useSchema } from "../useSchema"
@@ -39,15 +38,10 @@ const TOOLBAR_HEIGHT = 43
 
 const ViewContainer = styled.div<{
   toolbarVisible: boolean
-  backgroundColor?: string
-  readOnly?: boolean
-}>(({ toolbarVisible, backgroundColor, readOnly, theme }) => ({
+}>(({ toolbarVisible, theme }) => ({
   width: "100vw",
   marginTop: toolbarVisible ? TOOLBAR_HEIGHT : 0,
-  backgroundColor:
-    readOnly && backgroundColor
-      ? theme.custom.colors[backgroundColor as keyof typeof theme.custom.colors]
-      : theme.custom.colors.white,
+  backgroundColor: theme.custom.colors.white,
 }))
 
 const StyledToolbar = styled(Toolbar)(({ theme }) => ({
@@ -182,10 +176,7 @@ export interface WebsiteContentEditorProps {
   onSave?: (contentItem: WebsiteContent) => void
   readOnly?: boolean
   contentItem?: WebsiteContent
-  backgroundColor?: string
   bannerViewer?: typeof BannerViewer
-  bylineViewer?: typeof ByLineInfoBarViewer
-  applyViewerTopSpacing?: boolean
 }
 
 const WebsiteContentEditor = ({
@@ -200,9 +191,6 @@ const WebsiteContentEditor = ({
   readOnly,
   contentItem,
   bannerViewer,
-  bylineViewer,
-  applyViewerTopSpacing,
-  backgroundColor,
 }: WebsiteContentEditorProps) => {
   const [isPublishing, setIsPublishing] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -410,12 +398,7 @@ const WebsiteContentEditor = ({
   )
 
   return (
-    <ViewContainer
-      toolbarVisible={!!isArticleEditor}
-      backgroundColor={backgroundColor}
-      readOnly={readOnly}
-      className={className}
-    >
+    <ViewContainer toolbarVisible={!!isArticleEditor} className={className}>
       <WebsiteContentProvider value={{ contentItem }}>
         <LearningResourceProvider resourceIds={resourceIds}>
           <EditorContext.Provider value={{ editor }}>
@@ -504,8 +487,6 @@ const WebsiteContentEditor = ({
                   content={content}
                   extensions={extensions}
                   bannerViewer={bannerViewer}
-                  bylineViewer={bylineViewer}
-                  applyViewerTopSpacing={applyViewerTopSpacing}
                 />
               </>
             ) : (

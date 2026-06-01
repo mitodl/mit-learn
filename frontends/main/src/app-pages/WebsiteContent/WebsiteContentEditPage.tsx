@@ -9,7 +9,7 @@ import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 import { styled, LoadingSpinner } from "ol-components"
 import { ArticleEditor } from "@/page-components/TiptapEditor/contentTypes/article/ArticleEditor"
 import { NewsEditor } from "@/page-components/TiptapEditor/contentTypes/news/NewsEditor"
-import { articleView, websiteContentEditView } from "@/common/urls"
+import { articleView, newsView, websiteContentEditView } from "@/common/urls"
 import invariant from "tiny-invariant"
 import type { WebsiteContent } from "api/v1"
 
@@ -29,7 +29,7 @@ const Spinner = styled(LoadingSpinner)({
 
 const PUBLISHED_VIEW_URL: Record<string, (slug: string) => string> = {
   article: (slug) => articleView(slug),
-  news: (slug) => `/news/${slug}`,
+  news: (slug) => newsView(slug),
 }
 
 const EDITORS: Record<
@@ -57,11 +57,7 @@ const WebsiteContentEditPage = ({
   type,
   idOrSlug,
 }: WebsiteContentEditPageProps) => {
-  const {
-    data: article,
-    isLoading,
-    isFetching,
-  } = useWebsiteContentDetailRetrieve(idOrSlug)
+  const { data: article, isLoading } = useWebsiteContentDetailRetrieve(idOrSlug)
   const router = useRouter()
 
   const Editor = EDITORS[type]
@@ -71,7 +67,7 @@ const WebsiteContentEditPage = ({
     notFound()
   }
 
-  if (isLoading || isFetching) {
+  if (isLoading) {
     return <Spinner color="inherit" loading={isLoading} size={32} />
   }
   if (!article) {

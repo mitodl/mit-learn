@@ -51,6 +51,6 @@ describe("ArticleEditor", () => {
   test("renders the article breadcrumb bar in edit mode", async () => {
     renderArticleEditor()
 
-    await screen.findByText("MIT Learn Articles")
+    await screen.findByText("Articles")
   })
 })
