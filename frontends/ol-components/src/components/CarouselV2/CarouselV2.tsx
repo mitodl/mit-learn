@@ -185,6 +185,7 @@ const CarouselV2: React.FC<CarouselV2Props> = ({
     const handleSettle = () => {
       onSettle?.(emblaApi.slidesInView())
     }
+    handleSettle()
     emblaApi.on("select", updateCanScroll)
     emblaApi.on("reInit", updateCanScroll)
     emblaApi.on("scroll", updateCanScroll)
