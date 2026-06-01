@@ -1552,6 +1552,58 @@ describe("dashboardViewModel", () => {
       expect(resolved.displayedEnrollment).toBeNull()
       expect(resolved.displayedRun?.id).toBe(enrollableRun.id)
     })
+
+    test("does not surface a variant enrollment when the default variant is active", () => {
+      // Regression: user enrolls in Spanish run, then switches picker back to
+      // English default variant. The Spanish enrollment must be excluded and
+      // the English run must be the displayedRun.
+      const englishRun = factories.courses.courseRun({
+        id: 41,
+        language: LanguageEnum.En,
+        variant_industry: "",
+        variant_length: "",
+        is_enrollable: true,
+        b2b_contract: 5,
+      })
+      const spanishRun = factories.courses.courseRun({
+        id: 42,
+        language: LanguageEnum.EsEs,
+        variant_industry: "",
+        variant_length: "",
+        is_enrollable: true,
+        b2b_contract: 5,
+      })
+      const course = factories.courses.course({
+        id: 4,
+        courseruns: [englishRun, spanishRun],
+        next_run_id: englishRun.id,
+      })
+      const spanishEnrollment = factories.enrollment.courseEnrollment({
+        b2b_contract_id: 5,
+        run: {
+          ...spanishRun,
+          language: LanguageEnum.EsEs,
+          course: { id: course.id, title: course.title },
+        },
+      })
+      const defaultEnglishVariant: SupportedVariant = {
+        language: LanguageEnum.En,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: true,
+      }
+
+      const resolved = resolveDisplayedRunAndEnrollment(
+        course,
+        [spanishEnrollment],
+        { contractId: 5, variant: defaultEnglishVariant },
+      )
+
+      expect(resolved.displayedEnrollment).toBeNull()
+      expect(resolved.displayedRun?.id).toBe(englishRun.id)
+    })
   })
 })
 
