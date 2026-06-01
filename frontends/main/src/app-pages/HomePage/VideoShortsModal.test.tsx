@@ -257,15 +257,14 @@ describe("VideoShortsModal", () => {
       mockHandles[0]?.triggerReady()
     })
 
-    // Simulate the player being in a playing state so handleVideoClick pauses it
     const handle = mockHandles[0]
-    handle.player.paused.mockReturnValue(false)
+    handle.player.paused.mockReturnValue(true)
 
     const playButton = screen.getByRole("button", { name: "Play" })
     await user.click(playButton)
 
-    expect(handle.player.pause).toHaveBeenCalled()
-    expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument()
+    expect(handle.player.play).toHaveBeenCalled()
+    await screen.findByRole("button", { name: "Pause" })
   })
 
   test("Enter key on selected slide triggers play/pause", async () => {
