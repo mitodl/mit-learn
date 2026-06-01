@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.70.0
+--------------
+
+- contract variants UI (#3379)
+- feat: providing support for learn url embed (#3366)
+
 Version 0.69.0 (Released June 01, 2026)
 --------------
 
