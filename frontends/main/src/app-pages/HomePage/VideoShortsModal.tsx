@@ -147,7 +147,6 @@ const Placeholder = styled.div(({ theme }) => ({
 const playerPaused = (player: Player): boolean => player.paused()
 const playerMuted = (player: Player): boolean => player.muted() ?? true
 
-
 const isIOS = () => {
   return /iPad|iPhone|iPod/.test(navigator.userAgent)
 }
