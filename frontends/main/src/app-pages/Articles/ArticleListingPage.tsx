@@ -1,33 +1,35 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from "react"
+import React, { useEffect, useState } from "react"
+import Image from "next/image"
+import { useSearchParams } from "@mitodl/course-search-utils/next"
 import {
   Container,
   styled,
   theme,
+  Typography,
   Grid2,
-  Card,
   Pagination,
   PaginationItem,
+  css,
   LoadingSpinner,
-  Typography,
+  PlainList,
 } from "ol-components"
-import { ButtonLink } from "@mitodl/smoot-design"
+import Link from "next/link"
+import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
+import {
+  useNewsEventsList,
+  NewsEventsListFeedTypeEnum,
+} from "api/hooks/newsEvents"
+import type { NewsFeedItem } from "api/v0"
+import { LocalDate } from "ol-utilities"
+import { linkifyText } from "@/common/utils"
+import { NewsBanner } from "./ArticleBanner"
 import { useWebsiteContentList } from "api/hooks/website_content"
 import { useUserHasPermission, Permission } from "api/hooks/user"
-import type { WebsiteContent } from "api/v1"
-import { LocalDate } from "ol-utilities"
-import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
-import { extractFirstImage } from "@/common/websiteContentUtils"
-import {
-  articleView,
-  ARTICLES_LISTING,
-  websiteContentCreateView,
-} from "@/common/urls"
 
 const PAGE_SIZE = 20
 const MAX_PAGE = 50
-const ARTICLE_CREATE_URL = websiteContentCreateView("article")
 
 export const DEFAULT_BACKGROUND_IMAGE_URL =
   "/images/backgrounds/banner_background.webp"
@@ -37,68 +39,350 @@ const getLastPage = (count: number): number => {
   return pages > MAX_PAGE ? MAX_PAGE : pages
 }
 
-const PageHeader = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 32px;
-`
-
 const Section = styled.section`
   background: ${theme.custom.colors.white};
   padding: 80px 0;
   ${theme.breakpoints.down("sm")} {
-    padding: 40px 0;
+    padding: 0;
   }
 `
 
-const ArticleCardWrapper = styled(Card)`
+const RegularStoryTitleWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  height: 100%;
+  gap: 10px;
+
+  ${theme.breakpoints.down("sm")} {
+    gap: 8px;
+  }
 `
+
+
+
+
+
+// Regular story card for grid
+const StoryCard = styled.div`
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  background: white;
+  border-radius: 8px;
+  padding: 16px 16px 16px 24px;
+  overflow: hidden;
+  border: 1px solid transparent;
+
+  &:hover {
+    border-radius: 8px;
+    border: 1px solid ${theme.custom.colors.lightGray2};
+    background: ${theme.custom.colors.white};
+    box-shadow: 0 8px 20px 0 rgb(120 147 172 / 10%);
+
+    h2 {
+      color: ${theme.custom.colors.red};
+    }
+  }
+
+  ${theme.breakpoints.down("sm")} {
+    flex-direction: row;
+    gap: 12px;
+    padding: 16px 0;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid ${theme.custom.colors.lightGray2};
+    border-radius: 0;
+
+    &:hover {
+      border: none;
+      border-bottom: 1px solid ${theme.custom.colors.lightGray2};
+      box-shadow: none;
+    }
+  }
+`
+
+const StoryImage = styled.div`
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
+  height: 180px;
+  flex-shrink: 0;
+  background-color: ${theme.custom.colors.lightGray1};
+  border-radius: 8px;
+  order: 2;
+  align-self: flex-end;
+  overflow: hidden;
+  position: relative;
+
+  ${theme.breakpoints.down("sm")} {
+    width: 100px;
+    min-width: 100px;
+    max-width: 100px;
+    height: 80px;
+    order: 2;
+    align-self: flex-start;
+    border-radius: 4px;
+  }
+`
+
+const StoryContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  order: 1;
+  min-height: 180px;
+  min-width: 0;
+  overflow: hidden;
+
+  ${theme.breakpoints.down("sm")} {
+    order: 1;
+    min-height: auto;
+    min-width: 0;
+    justify-content: space-between;
+    gap: 8px;
+  }
+`
+
+const StoryTitle = styled.h2`
+  color: ${theme.custom.colors.darkGray2};
+  ${{ ...theme.typography.h5 }}
+  margin: 0;
+  margin-top: 16px;
+
+  a {
+    color: ${theme.custom.colors.darkGray2};
+    text-decoration: none;
+    cursor: pointer;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+
+    &:hover {
+      color: ${theme.custom.colors.red};
+    }
+  }
+
+  ${theme.breakpoints.down("md")} {
+    ${{ ...theme.typography.subtitle1 }}
+  }
+
+  ${theme.breakpoints.down("sm")} {
+    ${{ ...theme.typography.subtitle2 }}
+    margin-top: 0;
+    -webkit-line-clamp: 3;
+  }
+`
+
+const StorySummary = styled.p`
+  color: ${theme.custom.colors.darkGray2};
+  ${{ ...theme.typography.body2 }}
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+
+  a {
+    color: ${theme.custom.colors.red};
+    text-decoration: underline;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+
+  ${theme.breakpoints.down("sm")} {
+    ${{ ...theme.typography.body3 }}
+    -webkit-line-clamp: 2;
+    margin-top: 0;
+    color: ${theme.custom.colors.black};
+  }
+`
+
+const StoryDate = styled(Typography)`
+  color: ${theme.custom.colors.silverGrayDark};
+  ${{ ...theme.typography.body3 }}
+  margin-bottom: 16px;
+
+  ${theme.breakpoints.down("sm")} {
+    margin-bottom: 0;
+    margin-top: 0;
+  }
+`
+
+const StyledSection = styled(Section)`
+  background: ${theme.custom.colors.lightGray1};
+
+  ul {
+    list-style: none;
+  }
+`
+
+const GridContainer = styled.div`
+  max-width: 800px;
+  margin: 0 auto;
+
+  ${theme.breakpoints.down("sm")} {
+    max-width: 100%;
+  }
+`
+
+const MobileContent = styled.div`
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 40px;
+  margin: 40px 0;
+
+  ${theme.breakpoints.down("sm")} {
+    margin: 0;
+  }
+`
+
+const MobileContainer = styled.section`
+  width: 100%;
+  margin: 0 -16px;
+
+  h3 {
+    margin: 0 16px 12px;
+  }
+`
+
+const AboveMdOnly = styled.div(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    display: "none",
+  },
+}))
+
+const BelowMdOnly = styled.div(({ theme }) => ({
+  [theme.breakpoints.up("sm")]: {
+    display: "none",
+  },
+}))
 
 const PaginationContainer = styled.div`
   display: flex;
   justify-content: center;
-  margin-top: 40px;
+  margin-top: 24px;
+
+  ${({ theme }) => theme.breakpoints.down("md")} {
+    margin-top: 16px;
+    margin-bottom: 24px;
+  }
+
+  ul li button.Mui-selected {
+    ${({ theme }) => css({ ...theme.typography.subtitle1 })}
+    background-color: inherit;
+  }
+
+  ul li button svg {
+    background-color: ${({ theme }) => theme.custom.colors.lightGray2};
+    border-radius: 4px;
+    width: 1.5em;
+    height: 1.5em;
+    padding: 0.25em;
+  }
+`
+
+const LoadingContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  width: 100%;
 `
 
 const EmptyState = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   min-height: 400px;
+  width: 100%;
   gap: 16px;
+  text-align: center;
+  padding: 40px 20px;
+
+  ${theme.breakpoints.down("sm")} {
+    min-height: 300px;
+    padding: 24px 16px;
+  }
 `
+const NewsBannerStyled = styled(NewsBanner)<{ page: number }>(
+  ({ page, theme }) => ({
+    padding: "48px 0",
+    paddingBottom: page === 1 ? "250px" : undefined,
+    position: "relative",
+    backgroundSize: "150% !important",
+    backgroundPosition: "center !important",
 
-const ArticleCard: React.FC<{ article: WebsiteContent }> = ({ article }) => {
-  const articleUrl = article.is_published
-    ? articleView(article.slug || String(article.id))
-    : `${ARTICLES_LISTING}${article.id}/draft`
+    "&::before": {
+      content: '""',
+      position: "absolute",
+      inset: 0,
+      background: "rgb(0 0 0 / 85%)",
+      zIndex: 1,
+    },
 
-  const imageUrl = extractFirstImage(article.content)
+    "& > *": {
+      position: "relative",
+      zIndex: 2,
+    },
 
+    [theme.breakpoints.down("md")]: {
+      paddingBottom: page === 1 ? "198px" : undefined,
+    },
+
+    [theme.breakpoints.down("sm")]: {
+      padding: "32px 0",
+      marginBottom: 0,
+    },
+  }),
+)
+
+const RegularStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
+  const [imageError, setImageError] = React.useState(false)
+  console.log("Rendering RegularStory for item:", item) // Debug log to check the item data 
   return (
-    <ArticleCardWrapper forwardClicksToLink>
-      <Card.Image
-        src={imageUrl || DEFAULT_BACKGROUND_IMAGE_URL}
-        alt={article.title}
-      />
-      <Card.Title href={articleUrl} lines={2}>
-        {article.title}
-      </Card.Title>
-      <Card.Footer>
-        <LocalDate date={article.created_on} />
-      </Card.Footer>
-    </ArticleCardWrapper>
+    <StoryCard>
+      <StoryContent>
+        <RegularStoryTitleWrapper>
+          <StoryTitle>
+            <Link href={item.url}>{item.title}</Link>
+          </StoryTitle>
+          {item.summary && (
+            <StorySummary
+              dangerouslySetInnerHTML={{ __html: linkifyText(item.summary) }}
+            />
+          )}
+        </RegularStoryTitleWrapper>
+        <StoryDate variant="body3">
+          <LocalDate date={item.news_details?.publish_date} />
+        </StoryDate>
+      </StoryContent>
+      <Link href={item.url} style={{ textDecoration: "none", order: 2 }}>
+        <StoryImage>
+          {item.image?.url && !imageError && (
+            <Image
+              src={item.image.url}
+              alt={item.image.alt || item.title}
+              fill
+              style={{ objectFit: "cover" }}
+              onError={() => setImageError(true)}
+            />
+          )}
+        </StoryImage>
+      </Link>
+    </StoryCard>
   )
 }
 
 const ArticleListingPage: React.FC = () => {
-  const [page, setPage] = useState(1)
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const page = parseInt(searchParams.get("page") ?? "1", 10)
   const canCreateArticle = useUserHasPermission(Permission.ArticleEditor)
 
   const { data: articles, isLoading } = useWebsiteContentList({
@@ -106,77 +390,102 @@ const ArticleListingPage: React.FC = () => {
     offset: (page - 1) * PAGE_SIZE,
     content_type: "article",
   })
-
-  useEffect(() => {
-    if (page > 1 && scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
-    }
-  }, [page])
-
-  const results = articles?.results
+  console.log("Articles data:", articles)
+  const gridStories = articles?.results ?? []
   const totalPages = articles?.count ? getLastPage(articles.count) : 0
 
+
   return (
-    <Section ref={scrollRef}>
-      <Container>
-        <PageHeader>
-          <Typography variant="h3">Articles</Typography>
-          {canCreateArticle ? (
-            <ButtonLink variant="primary" href={ARTICLE_CREATE_URL}>
-              New Article
-            </ButtonLink>
-          ) : null}
-        </PageHeader>
+    <>
+      <NewsBannerStyled
+        page={page}
+        title="News"
+        description="Insights, ideas, and stories from the world of learning at MIT."
+        currentBreadcrumb="News"
+        backgroundUrl={DEFAULT_BACKGROUND_IMAGE_URL}
+      />
 
-        {isLoading ? (
-          <LoadingSpinner loading size={48} />
-        ) : results && results.length > 0 ? (
-          <>
-            <Grid2 container columnSpacing="24px" rowSpacing="28px">
-              {results.map((article) => (
-                <Grid2
-                  key={article.id}
-                  size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 3 }}
-                >
-                  <ArticleCard article={article} />
-                </Grid2>
-              ))}
-            </Grid2>
+      <StyledSection>
+        <Container>
+          {isLoading ? (
+            <LoadingContainer>
+              <LoadingSpinner loading={isLoading} />
+            </LoadingContainer>
+          ) : gridStories.length === 0 ? (
+            <EmptyState>
+              <Typography variant="h4">No News Available</Typography>
+              <Typography variant="body1" color="textSecondary">
+                There are no news to display at this time. Please check back
+                later.
+              </Typography>
+            </EmptyState>
+          ) : (
+            <>
+              <BelowMdOnly>
+                <MobileContent>
+                  <MobileContainer>
+                    <PlainList>
+                      {gridStories.map((item) => (
+                        <li key={item.id}>
+                          <RegularStory item={item} />
+                        </li>
+                      ))}
+                    </PlainList>
+                  </MobileContainer>
+                </MobileContent>
+              </BelowMdOnly>
 
-            {totalPages > 1 && (
-              <PaginationContainer>
-                <Pagination
-                  count={totalPages}
-                  page={page}
-                  onChange={(_, newPage) => setPage(newPage)}
-                  renderItem={(item) => (
-                    <PaginationItem
-                      slots={{
-                        previous: RiArrowLeftLine,
-                        next: RiArrowRightLine,
-                      }}
-                      {...item}
-                    />
-                  )}
-                />
-              </PaginationContainer>
-            )}
-          </>
-        ) : (
-          <EmptyState>
-            <Typography variant="h4">No Articles Yet</Typography>
-            <Typography variant="body1" color="textSecondary">
-              Get started by creating your first article.
-            </Typography>
-            {canCreateArticle ? (
-              <ButtonLink variant="primary" href={ARTICLE_CREATE_URL}>
-                New Article
-              </ButtonLink>
-            ) : null}
-          </EmptyState>
+              <AboveMdOnly>
+
+                {/* Grid Section: Other news */}
+                {gridStories.length > 0 ? (
+                  <GridContainer>
+                    <Grid2 container rowSpacing="16px" component={PlainList}>
+                      {gridStories.map((item) => (
+                        <Grid2 key={item.id} size={12} component="li">
+                          <RegularStory item={item} />
+                        </Grid2>
+                      ))}
+                    </Grid2>
+                  </GridContainer>
+                ) : null}
+              </AboveMdOnly>
+            </>
+          )}
+        </Container>
+
+        {!isLoading && gridStories.length > 0 && (
+          <Container>
+            <PaginationContainer>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={(_, newPage) => {
+                  setSearchParams((current) => {
+                    const copy = new URLSearchParams(current)
+                    if (newPage === 1) {
+                      copy.delete("page")
+                    } else {
+                      copy.set("page", newPage.toString())
+                    }
+                    return copy
+                  })
+                }}
+                renderItem={(item) => (
+                  <PaginationItem
+                    slots={{
+                      previous: RiArrowLeftLine,
+                      next: RiArrowRightLine,
+                    }}
+                    {...item}
+                  />
+                )}
+              />
+            </PaginationContainer>
+          </Container>
         )}
-      </Container>
-    </Section>
+      </StyledSection>
+    </>
   )
 }
 
