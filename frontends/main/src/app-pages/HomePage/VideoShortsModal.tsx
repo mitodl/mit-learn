@@ -9,7 +9,7 @@ import {
   RiPlayLine,
   RiPauseLine,
 } from "@remixicon/react"
-import { ActionButton } from "@mitodl/smoot-design"
+import { ActionButton, VisuallyHidden } from "@mitodl/smoot-design"
 import { useWindowDimensions } from "ol-utilities"
 import type { VideoResource } from "api/v1"
 import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
@@ -248,6 +248,7 @@ const VideoShortsModal = ({
   const [playing, setPlaying] = useState(false)
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
   const [videoErrors, setVideoErrors] = useState<Record<number, unknown>>({})
+  const [announcement, setAnnouncement] = useState("")
 
   const playersRef = useRef<(Player | null)[]>([])
   const muteButtonRef = useRef<HTMLButtonElement>(null)
@@ -291,6 +292,9 @@ const VideoShortsModal = ({
         .forEach((player) => player.pause())
       setSelectedIndex(inView[0])
       setPlaying(false)
+      setAnnouncement(
+        `${inView[0] + 1} of ${videoData.length}: ${videoData[inView[0]].title}`,
+      )
       const player = playersRef.current[inView[0]]
       if (player) {
         player.muted(muted)
@@ -345,6 +349,9 @@ const VideoShortsModal = ({
         aria-modal="true"
         aria-label="Video Shorts"
       >
+        <VisuallyHidden aria-live="polite" aria-atomic="true">
+          {announcement}
+        </VisuallyHidden>
         <CloseButton
           size="large"
           edge="rounded"
