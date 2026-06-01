@@ -155,8 +155,6 @@ const useProgramDashboardData = (programId: number): ProgramDashboardData => {
     programEnrollmentsById,
     requiredPrograms: requiredProgramList,
     requiredProgramModuleCoursesByProgramId,
-    selectedVariantKey: "",
-    availableVariants: [],
     ancestorProgramEnrollment: programEnrollment,
   })
 

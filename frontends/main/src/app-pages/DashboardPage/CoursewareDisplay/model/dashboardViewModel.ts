@@ -52,8 +52,6 @@ import {
 export type DashboardCourseEntry = {
   course: CourseWithCourseRunsSerializerV2
   enrollments: CourseRunEnrollmentV3[]
-  selectedVariantKey: string
-  availableVariants: SupportedVariant[]
   contractId?: number
   isContractPageResource?: boolean
   ancestorContext?: {
@@ -600,9 +598,7 @@ type RequirementSection = {
 const buildCourseEntry = (
   course: CourseWithCourseRunsSerializerV2,
   enrollments: CourseRunEnrollmentV3[],
-  selectedVariantKey: string,
   opts: {
-    availableVariants: SupportedVariant[]
     contractId?: number
     isContractPageResource?: boolean
     ancestorContext?: DashboardCourseEntry["ancestorContext"]
@@ -622,8 +618,6 @@ const buildCourseEntry = (
   return {
     course,
     enrollments,
-    selectedVariantKey,
-    availableVariants: opts.availableVariants,
     contractId: opts.contractId,
     isContractPageResource: opts.isContractPageResource,
     ancestorContext: opts.ancestorContext,
@@ -657,13 +651,6 @@ type BuildRequirementSectionsArgs = {
     number,
     CourseWithCourseRunsSerializerV2[]
   >
-  /** Effective variant key (valid option or fallback ""). */
-  selectedVariantKey: string
-  /**
-   * Dashboard-wide variant options list, computed once by the composer.
-   * Stored as-is on each course entry — NOT recomputed here.
-   */
-  availableVariants: SupportedVariant[]
   /**
    * The top-level program's own enrollment (from `programEnrollmentsById`).
    * When present, placed on every course arm's `ancestorContext.programEnrollment`.
@@ -695,8 +682,6 @@ const buildRequirementSections = ({
   programEnrollmentsById,
   requiredPrograms,
   requiredProgramModuleCoursesByProgramId,
-  selectedVariantKey,
-  availableVariants,
   ancestorProgramEnrollment,
 }: BuildRequirementSectionsArgs): {
   sections: RequirementSection[]
@@ -721,9 +706,7 @@ const buildRequirementSections = ({
               entry: buildCourseEntry(
                 course,
                 enrollmentsByCourseId[course.id] ?? [],
-                selectedVariantKey,
                 {
-                  availableVariants,
                   ancestorContext: ancestorProgramEnrollment
                     ? { programEnrollment: ancestorProgramEnrollment }
                     : undefined,

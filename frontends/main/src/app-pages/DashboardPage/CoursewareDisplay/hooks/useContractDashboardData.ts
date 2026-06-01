@@ -151,35 +151,22 @@ const useContractDashboardData = (
   const enrollmentsByCourseId =
     groupCourseRunEnrollmentsByCourseId(courseRunEnrollments)
 
-  // Derive per-course language key from the selected variant for enrollment
-  // matching in the language-based resolution path.
-  const selectedVariantKey =
-    selectedVariant?.language && !selectedVariant.default_variant
-      ? `language:${selectedVariant.language}`
-      : ""
-
   const programRows = sortedPrograms.map((program) => {
     const courses = getProgramCoursesInContractOrder(program, contractCourses)
     const programEnrollment = programEnrollmentsById[program.id]
     return {
       program,
       entries: courses.map((course) =>
-        buildCourseEntry(
-          course,
-          enrollmentsByCourseId[course.id] ?? [],
-          selectedVariantKey,
-          {
-            availableVariants: variantOptions,
-            contractId: contract.id,
-            ancestorContext: programEnrollment
-              ? { programEnrollment }
-              : undefined,
-            variant: isDefaultVariantSelection ? undefined : selectedVariant!,
-            variantCandidateRuns: isDefaultVariantSelection
-              ? undefined
-              : variantRunsByCourseId[course.id],
-          },
-        ),
+        buildCourseEntry(course, enrollmentsByCourseId[course.id] ?? [], {
+          contractId: contract.id,
+          ancestorContext: programEnrollment
+            ? { programEnrollment }
+            : undefined,
+          variant: isDefaultVariantSelection ? undefined : selectedVariant!,
+          variantCandidateRuns: isDefaultVariantSelection
+            ? undefined
+            : variantRunsByCourseId[course.id],
+        }),
       ),
       programEnrollment,
     }
@@ -194,19 +181,13 @@ const useContractDashboardData = (
     return {
       collection,
       entries: firstCourses.map((course) =>
-        buildCourseEntry(
-          course,
-          enrollmentsByCourseId[course.id] ?? [],
-          selectedVariantKey,
-          {
-            availableVariants: variantOptions,
-            contractId: contract.id,
-            variant: isDefaultVariantSelection ? undefined : selectedVariant!,
-            variantCandidateRuns: isDefaultVariantSelection
-              ? undefined
-              : variantRunsByCourseId[course.id],
-          },
-        ),
+        buildCourseEntry(course, enrollmentsByCourseId[course.id] ?? [], {
+          contractId: contract.id,
+          variant: isDefaultVariantSelection ? undefined : selectedVariant!,
+          variantCandidateRuns: isDefaultVariantSelection
+            ? undefined
+            : variantRunsByCourseId[course.id],
+        }),
       ),
     }
   })

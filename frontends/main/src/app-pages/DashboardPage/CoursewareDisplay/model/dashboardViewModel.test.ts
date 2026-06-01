@@ -768,9 +768,7 @@ describe("dashboardViewModel", () => {
         courseruns: [run],
         next_run_id: run.id,
       })
-      const entry = buildCourseEntry(course, [], "language:en", {
-        availableVariants: [],
-      })
+      const entry = buildCourseEntry(course, [], {})
 
       expect(entry.displayedEnrollment).toBeNull()
       expect(entry.displayedRun).not.toBeNull()
@@ -801,9 +799,7 @@ describe("dashboardViewModel", () => {
         },
       })
 
-      const entry = buildCourseEntry(course, [enrollment], "language:en", {
-        availableVariants: [],
-      })
+      const entry = buildCourseEntry(course, [enrollment], {})
 
       expect(entry.displayedEnrollment).toBe(enrollment)
       expect(entry.displayedRun?.id).toBe(run.id)
@@ -824,73 +820,9 @@ describe("dashboardViewModel", () => {
       })
 
       // no selectedLanguageKey → legacy path
-      const entry = buildCourseEntry(course, [noCert, withCert], "", {
-        availableVariants: [],
-      })
+      const entry = buildCourseEntry(course, [noCert, withCert], {})
 
       expect(entry.displayedEnrollment).toBe(withCert)
-    })
-
-    test("selectedVariantKey is stored verbatim and does not affect enrollment selection", () => {
-      const enRun = factories.courses.courseRun({
-        id: 401,
-        language: LanguageEnum.En,
-        courseware_id: "cw-en-401",
-        courseware_url: "https://example.com/en-401",
-        is_enrollable: true,
-      })
-      const esRun = factories.courses.courseRun({
-        id: 402,
-        language: LanguageEnum.EsEs,
-        courseware_id: "cw-es-402",
-        courseware_url: "https://example.com/es-402",
-        is_enrollable: true,
-      })
-      const course = factories.courses.course({
-        courseruns: [enRun, esRun],
-        next_run_id: enRun.id,
-        language_options: [
-          {
-            id: enRun.id,
-            courseware_id: enRun.courseware_id,
-            courseware_url: enRun.courseware_url ?? "",
-            language: LanguageEnum.En,
-            title: enRun.title,
-            run_tag: enRun.run_tag,
-          },
-          {
-            id: esRun.id,
-            courseware_id: esRun.courseware_id,
-            courseware_url: esRun.courseware_url ?? "",
-            language: LanguageEnum.EsEs,
-            title: esRun.title,
-            run_tag: esRun.run_tag,
-          },
-        ],
-      })
-      const enEnrollment = factories.enrollment.courseEnrollment({
-        run: {
-          ...enRun,
-          language: LanguageEnum.En,
-          course: { id: course.id, title: course.title },
-        },
-      })
-      const esEnrollment = factories.enrollment.courseEnrollment({
-        run: {
-          ...esRun,
-          language: LanguageEnum.EsEs,
-          course: { id: course.id, title: course.title },
-        },
-      })
-      const entry = buildCourseEntry(
-        course,
-        [enEnrollment, esEnrollment],
-        "language:es-es",
-        { availableVariants: [] },
-      )
-
-      expect(entry.displayedEnrollment?.run.id).toBe(enRun.id)
-      expect(entry.displayedRun?.id).toBe(enRun.id)
     })
 
     test("contract-scoped: does not pick an enrollment from a different contract", () => {
@@ -925,15 +857,9 @@ describe("dashboardViewModel", () => {
         },
       })
 
-      const entry = buildCourseEntry(
-        course,
-        [otherContractEnrollment],
-        "language:en",
-        {
-          availableVariants: [],
-          contractId: 10,
-        },
-      )
+      const entry = buildCourseEntry(course, [otherContractEnrollment], {
+        contractId: 10,
+      })
 
       expect(entry.displayedEnrollment).toBeNull()
     })
@@ -971,9 +897,7 @@ describe("dashboardViewModel", () => {
       const entry = buildCourseEntry(
         course,
         [otherContractEnrollment, selectedContractEnrollment],
-        "language:en",
         {
-          availableVariants: [],
           contractId: 1,
         },
       )
@@ -993,39 +917,25 @@ describe("dashboardViewModel", () => {
         certificate: { uuid: "cert-xyz" },
       })
 
-      const entry = buildCourseEntry(course, [e1, e2], "", {
-        availableVariants: [],
-      })
+      const entry = buildCourseEntry(course, [e1, e2], {})
 
       // displayedEnrollment picks best one (e2), but all remain on entry
       expect(entry.enrollments).toEqual([e1, e2])
       expect(entry.displayedEnrollment).toBe(e2)
     })
 
-    test("passthrough: course, availableVariants, contractId, and ancestorContext are stored verbatim", () => {
+    test("passthrough: course, contractId, and ancestorContext are stored verbatim", () => {
       const run = factories.courses.courseRun({ id: 701 })
       const course = factories.courses.course({ courseruns: [run] })
-      const availableVariants: SupportedVariant[] = [
-        {
-          language: LanguageEnum.En,
-          variant_industry: "",
-          variant_length: "",
-          active: true,
-          default_variant: false,
-          b2b_only: false,
-        },
-      ]
       const programEnrollment = factories.enrollment.programEnrollmentV3()
       const ancestorContext = { programEnrollment }
 
-      const entry = buildCourseEntry(course, [], "language:en", {
-        availableVariants,
+      const entry = buildCourseEntry(course, [], {
         contractId: 42,
         ancestorContext,
       })
 
       expect(entry.course).toBe(course)
-      expect(entry.availableVariants).toBe(availableVariants)
       expect(entry.contractId).toBe(42)
       expect(entry.ancestorContext).toBe(ancestorContext)
     })
@@ -1033,8 +943,7 @@ describe("dashboardViewModel", () => {
     test("isContractPageResource is stored verbatim", () => {
       const course = factories.courses.course()
 
-      const entry = buildCourseEntry(course, [], "", {
-        availableVariants: [],
+      const entry = buildCourseEntry(course, [], {
         isContractPageResource: true,
       })
 
@@ -1065,8 +974,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedVariantKey: "",
-        availableVariants: [],
       })
 
       expect(sections).toHaveLength(1)
@@ -1087,8 +994,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedVariantKey: "",
-        availableVariants: [],
       })
 
       // Section has no items → filtered out
@@ -1122,8 +1027,6 @@ describe("dashboardViewModel", () => {
         requiredProgramModuleCoursesByProgramId: {
           [requiredProgram.id]: [moduleCourse],
         },
-        selectedVariantKey: "",
-        availableVariants: [],
       })
 
       expect(sections).toHaveLength(1)
@@ -1157,8 +1060,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: { [requiredProgram.id]: programEnrollment },
         requiredPrograms: [requiredProgram],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedVariantKey: "",
-        availableVariants: [],
       })
 
       expect(sections).toHaveLength(1)
@@ -1185,8 +1086,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {}, // no enrollment for this program
         requiredPrograms: [requiredProgram],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedVariantKey: "",
-        availableVariants: [],
       })
 
       expect(sections).toHaveLength(0)
@@ -1205,8 +1104,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [], // 9999 not present
         requiredProgramModuleCoursesByProgramId: {},
-        selectedVariantKey: "",
-        availableVariants: [],
       })
 
       expect(sections).toHaveLength(0)
@@ -1230,8 +1127,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedVariantKey: "",
-        availableVariants: [],
       })
 
       expect(sections).toHaveLength(1)
@@ -1258,8 +1153,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedVariantKey: "",
-        availableVariants: [],
       })
 
       expect(sections.map((s) => s.title)).toEqual(["First", "Second", "Third"])
@@ -1284,8 +1177,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedVariantKey: "",
-        availableVariants: [],
       })
 
       expect(sections[0].completed).toBe(1)
@@ -1326,8 +1217,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedVariantKey: "",
-        availableVariants: [],
       })
 
       // Only the "Kept" section survives; the ghost section is dropped.
@@ -1357,8 +1246,6 @@ describe("dashboardViewModel", () => {
           programEnrollmentsById: {},
           requiredPrograms: [],
           requiredProgramModuleCoursesByProgramId: {},
-          selectedVariantKey: "",
-          availableVariants: [],
         })
 
         expect(sections[0].title).toBe("Custom Section Title")
@@ -1384,8 +1271,6 @@ describe("dashboardViewModel", () => {
           programEnrollmentsById: {},
           requiredPrograms: [],
           requiredProgramModuleCoursesByProgramId: {},
-          selectedVariantKey: "",
-          availableVariants: [],
         })
 
         expect(sections[0].title).toBe("Electives (Complete 3)")
@@ -1429,8 +1314,6 @@ describe("dashboardViewModel", () => {
           programEnrollmentsById: {},
           requiredPrograms: [],
           requiredProgramModuleCoursesByProgramId: {},
-          selectedVariantKey: "",
-          availableVariants: [],
         })
 
         expect(sections[0].title).toBe("Elective Courses")
@@ -1473,8 +1356,6 @@ describe("dashboardViewModel", () => {
           programEnrollmentsById: {},
           requiredPrograms: [],
           requiredProgramModuleCoursesByProgramId: {},
-          selectedVariantKey: "",
-          availableVariants: [],
         })
 
         expect(sections[0].title).toBe("Core Courses")
@@ -1493,8 +1374,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedVariantKey: "",
-        availableVariants: [],
         ancestorProgramEnrollment: programEnrollment,
       })
 
@@ -1544,8 +1423,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedVariantKey: "",
-        availableVariants: [],
       })
 
       expect(sections[0].key).toBe(opNode.id)
