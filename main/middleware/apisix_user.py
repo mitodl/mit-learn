@@ -3,12 +3,16 @@
 import base64
 import json
 import logging
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any
 
 from django.conf import settings
 from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.middleware import RemoteUserMiddleware
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
+from django.http import HttpRequest
+from django.http.response import HttpResponseBase
 from posthog import Posthog
 
 from authentication.api import user_created_actions
@@ -17,11 +21,20 @@ from profiles.models import filter_profile_props
 
 log = logging.getLogger(__name__)
 
+if TYPE_CHECKING:
+    from users.models import User
+
 # User fields synced from the APISIX user headers (defaults match update_or_create).
-USER_SYNC_FIELDS = ("global_id", "email", "username", "first_name", "last_name")
+USER_SYNC_FIELDS = (
+    "global_id",
+    "email",
+    "username",
+    "first_name",
+    "last_name",
+)
 
 
-def user_fields_from_headers(decoded_headers):
+def user_fields_from_headers(decoded_headers: Mapping[str, Any]) -> dict[str, Any]:
     """Map the decoded user headers to the synced User fields."""
     return {
         "global_id": decoded_headers.get("global_id"),
@@ -32,12 +45,12 @@ def user_fields_from_headers(decoded_headers):
     }
 
 
-def user_needs_update(user, user_fields):
+def user_needs_update(user: "User", user_fields: Mapping[str, Any]) -> bool:
     """Return True if any synced User field differs from the headers."""
     return any(getattr(user, field) != user_fields[field] for field in USER_SYNC_FIELDS)
 
 
-def profile_needs_update(user, profile_data):
+def profile_needs_update(user: "User", profile_data: Mapping[str, Any] | None) -> bool:
     """Return True if the profile is missing or any synced field differs."""
     try:
         profile = user.profile
@@ -47,7 +60,9 @@ def profile_needs_update(user, profile_data):
     return any(getattr(profile, key) != value for key, value in props.items())
 
 
-def decode_apisix_headers(request, header, model=settings.AUTH_USER_MODEL):
+def decode_apisix_headers(
+    request: HttpRequest, header: str, model: str = settings.AUTH_USER_MODEL
+) -> dict[str, Any] | None:
     """
     Decode APISIX-specific headers and return the username as a dict.
 
@@ -91,8 +106,10 @@ def decode_apisix_headers(request, header, model=settings.AUTH_USER_MODEL):
 
 
 def get_user_from_apisix_headers(  # noqa: C901
-    request, decoded_headers, original_header
-):
+    request: HttpRequest,
+    decoded_headers: Mapping[str, Any] | None,
+    original_header: str,
+) -> "User | None":
     """
     Get a user based on the APISIX headers, create user/profile if needed.
 
@@ -102,7 +119,7 @@ def get_user_from_apisix_headers(  # noqa: C901
         original_header: Original header
 
     Returns:
-        User object
+        User object, or None if no valid user could be resolved
 
     """
 
@@ -195,7 +212,7 @@ class ApisixUserMiddleware(RemoteUserMiddleware):
 
     header = "HTTP_X_USERINFO"
 
-    def process_request(self, request):
+    def process_request(self, request: HttpRequest) -> HttpResponseBase | None:
         """
         Modify the header to contain username, pass off to RemoteUserMiddleware
         """
