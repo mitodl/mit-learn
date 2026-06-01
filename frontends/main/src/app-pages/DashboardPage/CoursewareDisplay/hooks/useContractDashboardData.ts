@@ -83,7 +83,10 @@ const useContractDashboardData = (
     () => coursesQuery.data?.results ?? [],
     [coursesQuery.data?.results],
   )
-  const courseRunEnrollments = courseRunEnrollmentsQuery.data ?? []
+  const courseRunEnrollments = React.useMemo(
+    () => courseRunEnrollmentsQuery.data ?? [],
+    [courseRunEnrollmentsQuery.data],
+  )
 
   const variantOptions = React.useMemo(
     () => contract.variant_options ?? [],

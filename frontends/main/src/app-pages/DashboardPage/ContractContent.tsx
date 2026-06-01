@@ -22,10 +22,14 @@ import type {
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
+import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiAwardFill } from "@remixicon/react"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { matchOrganizationBySlug } from "@/common/utils"
+import { FeatureFlags } from "@/common/feature_flags"
+import { contractAdminView } from "@/common/urls"
 import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
 import type { DashboardCourseEntry } from "./CoursewareDisplay/model/dashboardViewModel"
 import { useContractDashboardData } from "./CoursewareDisplay/hooks/useContractDashboardData"
@@ -346,8 +350,19 @@ const ContractHeaderSection = styled.div(({ theme }) => ({
   boxShadow: "0 1px 6px 0 rgba(3, 21, 45, 0.05)",
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
+    alignItems: "flex-start",
     gap: "16px",
     padding: "16px 0 0 0",
+  },
+}))
+
+const ManageButtonWrapper = styled.div(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+    padding: "0 16px 16px",
+    "> a": {
+      width: "100%",
+    },
   },
 }))
 
@@ -368,6 +383,17 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
     programs,
     collections,
   } = useContractDashboardData(org, contract)
+
+  const managerDashboardFlag = useFeatureFlagEnabled(
+    FeatureFlags.B2BContractManagerDashboard,
+  )
+  const { data: managerOrgs } = useQuery({
+    ...managerOrganizationQueries.managerOrganizationsList(),
+    enabled: managerDashboardFlag === true,
+  })
+  const isManager =
+    managerOrgs?.some(matchOrganizationBySlug(org.slug.replace(/^org-/, ""))) ??
+    false
 
   const skeleton = (
     <Stack gap="16px">
@@ -408,6 +434,19 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
       <Stack>
         <ContractHeaderSection>
           <ContractHeader org={org} contract={contract} />
+          {managerDashboardFlag && isManager && (
+            <ManageButtonWrapper>
+              <ButtonLink
+                size="small"
+                href={contractAdminView(
+                  org.slug.replace(/^org-/, ""),
+                  contract.slug,
+                )}
+              >
+                Manage
+              </ButtonLink>
+            </ManageButtonWrapper>
+          )}
         </ContractHeaderSection>
         {variantOptions.length > 1 && (
           <VariantPicker

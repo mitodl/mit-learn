@@ -10,7 +10,7 @@ const isInEnum = <T extends string>(
 
 const matchOrganizationBySlug =
   (orgSlug: string) => (organization: OrganizationPage) => {
-    return organization.slug.replace("org-", "") === orgSlug
+    return organization.slug.replace(/^org-/, "") === orgSlug
   }
 
 // Utility function to collapse whitespace
