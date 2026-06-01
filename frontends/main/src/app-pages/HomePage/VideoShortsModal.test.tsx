@@ -214,6 +214,16 @@ describe("VideoShortsModal", () => {
     expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument()
   })
 
+  test("mute button receives focus on open", async () => {
+    renderWithProviders(<VideoShortsModal {...defaultProps} />)
+
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+    })
+
+    expect(screen.getByRole("button", { name: "Unmute" })).toHaveFocus()
+  })
+
   test("mute button has correct aria-label and aria-pressed reflecting muted state", async () => {
     renderWithProviders(<VideoShortsModal {...defaultProps} />)
 

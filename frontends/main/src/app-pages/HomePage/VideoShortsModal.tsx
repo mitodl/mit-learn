@@ -250,6 +250,14 @@ const VideoShortsModal = ({
   const [videoErrors, setVideoErrors] = useState<Record<number, unknown>>({})
 
   const playersRef = useRef<(Player | null)[]>([])
+  const muteButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      muteButtonRef.current?.focus()
+    })
+    return () => cancelAnimationFrame(id)
+  }, [])
 
   const onVideoError = useCallback((index: number, e: Event) => {
     setVideoErrors((prev) => ({ ...prev, [index]: e }))
@@ -347,8 +355,7 @@ const VideoShortsModal = ({
           <RiCloseLine />
         </CloseButton>
         <MuteButton
-          // eslint-disable-next-line jsx-a11y/no-autofocus
-          autoFocus
+          ref={muteButtonRef}
           size="large"
           edge="rounded"
           variant="text"

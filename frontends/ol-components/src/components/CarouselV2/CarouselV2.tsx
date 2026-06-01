@@ -97,6 +97,11 @@ type CarouselV2Props = {
    * Gutter size used when applying mobile bleed styles. Defaults to 16px.
    */
   mobileGutter?: number
+  /**
+   * Called after the scroll animation settles with the indices of all slides
+   * currently in view. Use to drive live-region announcements and roving tabindex.
+   */
+  onSettle?: (slidesInView: number[]) => void
 }
 
 /**
@@ -131,6 +136,7 @@ const CarouselV2: React.FC<CarouselV2Props> = ({
   mobileBleed = "symmetric",
   mobileGutter = 16,
   "data-testid": testId,
+  onSettle,
 }) => {
   const [emblaRef, emblaApi] = useEmblaCarousel(
     {
@@ -176,16 +182,21 @@ const CarouselV2: React.FC<CarouselV2Props> = ({
     }
 
     updateCanScroll()
+    const handleSettle = () => {
+      onSettle?.(emblaApi.slidesInView())
+    }
     emblaApi.on("select", updateCanScroll)
     emblaApi.on("reInit", updateCanScroll)
     emblaApi.on("scroll", updateCanScroll)
+    emblaApi.on("settle", handleSettle)
 
     return () => {
       emblaApi.off("select", updateCanScroll)
       emblaApi.off("reInit", updateCanScroll)
       emblaApi.off("scroll", updateCanScroll)
+      emblaApi.off("settle", handleSettle)
     }
-  }, [emblaApi, updateCanScroll])
+  }, [emblaApi, updateCanScroll, onSettle])
 
   const arrows = (
     <>

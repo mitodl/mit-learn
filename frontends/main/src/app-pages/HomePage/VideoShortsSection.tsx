@@ -1,6 +1,7 @@
 import React, { useState } from "react"
 import Image from "next/image"
 import { Container, Typography, Card, styled } from "ol-components"
+import { VisuallyHidden } from "@mitodl/smoot-design"
 import { CarouselV2 } from "ol-components/CarouselV2"
 import { useQuery } from "@tanstack/react-query"
 import { learningResourceQueries } from "api/hooks/learningResources"
@@ -102,6 +103,8 @@ const VideoShortsSection = () => {
 
   const [showModal, setShowModal] = useState(false)
   const [videoIndex, setVideoIndex] = useState(0)
+  const [announcement, setAnnouncement] = useState("")
+  const [visibleSlides, setVisibleSlides] = useState<number[]>([])
 
   if (isLoading || !data?.length) return null
 
@@ -123,14 +126,30 @@ const VideoShortsSection = () => {
             Learn something new in less than 60 seconds.
           </Typography>
         </Header>
-        <StyledCarouselV2>
+        <VisuallyHidden aria-live="polite" aria-atomic="true">
+          {announcement}
+        </VisuallyHidden>
+        <StyledCarouselV2
+          onSettle={(inView) => {
+            setVisibleSlides(inView)
+            if (inView.length > 0) {
+              setAnnouncement(
+                `${inView[0] + 1} of ${data.length}: ${data[inView[0]].title}`,
+              )
+            }
+          }}
+        >
           {data?.map((video: VideoResource, index: number) => (
             <CarouselSlide
               width={235}
               height={235 / ASPECT_RATIO}
               key={video.id}
               role="button"
-              tabIndex={0}
+              tabIndex={
+                visibleSlides.length === 0 || visibleSlides.includes(index)
+                  ? 0
+                  : -1
+              }
               aria-label={`Play ${video.title}`}
               onClick={() => {
                 setShowModal(true)
