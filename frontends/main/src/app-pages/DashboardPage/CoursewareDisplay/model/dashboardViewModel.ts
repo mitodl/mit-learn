@@ -919,7 +919,10 @@ const getFallbackNativeLanguageName = (languageCode: string): string | null => {
 
 const getNativeLanguageName = (languageCode: string): string => {
   ensureNativeLanguageNameCacheIsFresh()
-  const normalizedLanguageCode = languageCode.trim().toLowerCase()
+  const normalizedLanguageCode = languageCode
+    .trim()
+    .toLowerCase()
+    .replace("_", "-")
   const baseLanguageSubtag = normalizedLanguageCode.split("-")[0]
   const cachedLabel = nativeLanguageNameCache.get(normalizedLanguageCode)
   if (cachedLabel) {
@@ -962,7 +965,7 @@ const buildVariantKey = (variant: SupportedVariant): string =>
 
 const buildVariantLabel = (variant: SupportedVariant): string => {
   const langLabel = variant.language
-    ? getNativeLanguageName(variant.language.replace("_", "-"))
+    ? getNativeLanguageName(variant.language)
     : ""
   const modifiers: string[] = []
   if (variant.variant_industry) {
