@@ -5,7 +5,7 @@ import {
   ManagerContractDetail,
   B2bApiB2bOrganizationsRetrieveRequest,
   B2bApiB2bManagerOrganizationsContractsRetrieveRequest,
-  B2bApiB2bManagerOrganizationsContractsCodesRetrieveRequest,
+  B2bApiB2bManagerOrganizationsContractsCodesListRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
 
 type ContractCode = {
@@ -49,7 +49,7 @@ const managerOrganizationKeys = {
       opts,
     ] as const,
   contractCodes: (
-    opts: B2bApiB2bManagerOrganizationsContractsCodesRetrieveRequest,
+    opts: B2bApiB2bManagerOrganizationsContractsCodesListRequest,
   ) =>
     [
       "mitxonline",
@@ -79,16 +79,14 @@ const managerOrganizationQueries = {
           .then((res) => res.data),
     }),
   managerContractCodes: (
-    opts: B2bApiB2bManagerOrganizationsContractsCodesRetrieveRequest,
+    opts: B2bApiB2bManagerOrganizationsContractsCodesListRequest,
   ) =>
     queryOptions({
       queryKey: managerOrganizationKeys.contractCodes(opts),
       queryFn: async (): Promise<ContractCode[]> =>
         b2bApi
-          .b2bManagerOrganizationsContractsCodesRetrieve(opts)
-          // The generated client types this endpoint as returning ManagerContractDetail,
-          // but the actual API returns ContractCode[]. Cast until the package is updated.
-          .then((res) => res.data as unknown as ContractCode[]),
+          .b2bManagerOrganizationsContractsCodesList(opts)
+          .then((res) => res.data),
     }),
 }
 
