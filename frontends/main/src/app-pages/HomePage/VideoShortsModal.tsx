@@ -354,7 +354,6 @@ const VideoShortsModal = ({
           variant="text"
           onClick={onClickMute}
           aria-label={muted ? "Unmute" : "Mute"}
-          aria-pressed={muted}
         >
           {muted ? <RiVolumeMuteLine /> : <RiVolumeUpLine />}
         </MuteButton>
@@ -390,7 +389,6 @@ const VideoShortsModal = ({
                     if (e.key === "Enter") e.stopPropagation()
                   }}
                   aria-label={playing ? "Pause" : "Play"}
-                  aria-pressed={playing}
                 >
                   {playing ? <RiPauseLine /> : <RiPlayLine />}
                 </PlayPauseButton>

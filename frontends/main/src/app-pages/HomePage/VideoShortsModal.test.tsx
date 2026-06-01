@@ -217,15 +217,11 @@ describe("VideoShortsModal", () => {
   test("mute button has correct aria-label and aria-pressed reflecting muted state", async () => {
     renderWithProviders(<VideoShortsModal {...defaultProps} />)
 
-    const muteButton = screen.getByRole("button", { name: "Unmute" })
-    expect(muteButton).toHaveAttribute("aria-pressed", "true")
+    expect(screen.getByRole("button", { name: "Unmute" })).toBeInTheDocument()
 
-    await user.click(muteButton)
+    await user.click(screen.getByRole("button", { name: "Unmute" }))
 
-    expect(screen.getByRole("button", { name: "Mute" })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    )
+    expect(screen.getByRole("button", { name: "Mute" })).toBeInTheDocument()
   })
 
   test("play/pause button renders only for the selected slide", () => {
@@ -235,7 +231,6 @@ describe("VideoShortsModal", () => {
     const playButtons = screen.getAllByRole("button", { name: /play|pause/i })
     expect(playButtons).toHaveLength(1)
     expect(playButtons[0]).toHaveAttribute("aria-label", "Play")
-    expect(playButtons[0]).toHaveAttribute("aria-pressed", "false")
   })
 
   test("play/pause button updates aria-label when clicked", async () => {
