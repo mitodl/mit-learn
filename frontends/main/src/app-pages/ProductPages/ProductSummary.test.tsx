@@ -1185,6 +1185,13 @@ describe("ProgramSummary", () => {
         }
       },
     )
+
+    test("Does not crash and hides duration row when program page is null", () => {
+      const program = factories.programs.program({ page: null })
+      renderWithProviders(<ProgramSummary program={program} />)
+
+      expect(screen.queryByTestId(TestIds.DurationRow)).toBeNull()
+    })
   })
 
   describe("Pacing Row", () => {
