@@ -3,20 +3,66 @@
 import base64
 import json
 import logging
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any
 
 from django.conf import settings
 from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.middleware import RemoteUserMiddleware
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
+from django.http import HttpRequest
+from django.http.response import HttpResponseBase
 from posthog import Posthog
 
 from authentication.api import user_created_actions
 from main.constants import PostHogEvents
+from profiles.models import filter_profile_props
 
 log = logging.getLogger(__name__)
 
+if TYPE_CHECKING:
+    from users.models import User
 
-def decode_apisix_headers(request, header, model=settings.AUTH_USER_MODEL):
+# User fields synced from the APISIX user headers (defaults match update_or_create).
+USER_SYNC_FIELDS = (
+    "global_id",
+    "email",
+    "username",
+    "first_name",
+    "last_name",
+)
+
+
+def user_fields_from_headers(decoded_headers: Mapping[str, Any]) -> dict[str, Any]:
+    """Map the decoded user headers to the synced User fields."""
+    return {
+        "global_id": decoded_headers.get("global_id"),
+        "email": decoded_headers.get("email", ""),
+        "username": decoded_headers.get("username", ""),
+        "first_name": decoded_headers.get("first_name", ""),
+        "last_name": decoded_headers.get("last_name", ""),
+    }
+
+
+def user_needs_update(user: "User", user_fields: Mapping[str, Any]) -> bool:
+    """Return True if any synced User field differs from the headers."""
+    return any(getattr(user, field) != user_fields[field] for field in USER_SYNC_FIELDS)
+
+
+def profile_needs_update(user: "User", profile_data: Mapping[str, Any] | None) -> bool:
+    """Return True if the profile is missing or any synced field differs."""
+    try:
+        profile = user.profile
+    except ObjectDoesNotExist:
+        return True
+    props = filter_profile_props(profile_data) if profile_data else {}
+    return any(getattr(profile, key) != value for key, value in props.items())
+
+
+def decode_apisix_headers(
+    request: HttpRequest, header: str, model: str = settings.AUTH_USER_MODEL
+) -> dict[str, Any] | None:
     """
     Decode APISIX-specific headers and return the username as a dict.
 
@@ -59,7 +105,11 @@ def decode_apisix_headers(request, header, model=settings.AUTH_USER_MODEL):
     }
 
 
-def get_user_from_apisix_headers(request, decoded_headers, original_header):
+def get_user_from_apisix_headers(  # noqa: C901
+    request: HttpRequest,
+    decoded_headers: Mapping[str, Any] | None,
+    original_header: str,
+) -> "User | None":
     """
     Get a user based on the APISIX headers, create user/profile if needed.
 
@@ -69,7 +119,7 @@ def get_user_from_apisix_headers(request, decoded_headers, original_header):
         original_header: Original header
 
     Returns:
-        User object
+        User object, or None if no valid user could be resolved
 
     """
 
@@ -84,17 +134,34 @@ def get_user_from_apisix_headers(request, decoded_headers, original_header):
         return None
     email = decoded_headers.get("email", "")
 
-    user, created = User.objects.filter(
-        Q(global_id=global_id) | Q(global_id__isnull=True, email=email)
-    ).update_or_create(
-        defaults={
-            "global_id": global_id,
-            "email": email,
-            "username": decoded_headers.get("username", ""),
-            "first_name": decoded_headers.get("first_name", ""),
-            "last_name": decoded_headers.get("last_name", ""),
-        }
+    profile_data = decode_apisix_headers(
+        request, original_header, model="profiles.Profile"
     )
+    user_fields = user_fields_from_headers(decoded_headers)
+
+    if (
+        request.user
+        and request.user.is_authenticated
+        and request.user.global_id == global_id
+    ):
+        user = request.user
+        created = False
+    else:
+        try:
+            user, created = (
+                User.objects.filter(
+                    Q(global_id=global_id) | Q(global_id__isnull=True, email=email)
+                )
+                .select_related("profile")
+                .get_or_create(defaults=user_fields)
+            )
+        except User.MultipleObjectsReturned:
+            log.exception(
+                "Ambiguous APISIX user identity for global_id=%s and email=%s",
+                global_id,
+                email,
+            )
+            return None
 
     if created:
         log.info(
@@ -121,23 +188,21 @@ def get_user_from_apisix_headers(request, decoded_headers, original_header):
         user.set_unusable_password()
         user.is_active = True
         user.save()
-    else:
-        log.debug(
-            "get_user_from_apisix_headers: Found existing user for %s: %s",
-            global_id,
-            user,
-        )
+    elif user_needs_update(user, user_fields):
+        for field, value in user_fields.items():
+            setattr(user, field, value)
+        user.save(update_fields=[*user_fields, "updated_on"])
 
-    profile_data = decode_apisix_headers(
-        request, original_header, model="profiles.Profile"
-    )
-    if profile_data:
+    if created:
+        user_created_actions(user=user, is_new=True, details=profile_data)
+        user = User.objects.select_related("profile").get(pk=user.pk)
+    elif profile_needs_update(user, profile_data):
         log.debug(
-            "get_user_from_apisix_headers: Setting up additional profile for %s",
+            "get_user_from_apisix_headers: Updating profile for %s",
             global_id,
         )
-    user_created_actions(user=user, is_new=created, details=profile_data)
-    user.refresh_from_db()
+        user_created_actions(user=user, is_new=False, details=profile_data)
+        user = User.objects.select_related("profile").get(pk=user.pk)
 
     return user
 
@@ -147,7 +212,7 @@ class ApisixUserMiddleware(RemoteUserMiddleware):
 
     header = "HTTP_X_USERINFO"
 
-    def process_request(self, request):
+    def process_request(self, request: HttpRequest) -> HttpResponseBase | None:
         """
         Modify the header to contain username, pass off to RemoteUserMiddleware
         """
@@ -170,6 +235,12 @@ class ApisixUserMiddleware(RemoteUserMiddleware):
                     logout(request)
                 return None
         if apisix_user:
+            if request.user.is_authenticated and request.user == apisix_user:
+                # Already logged in as this user: skip login() so we don't cycle
+                # the session and write last_login on every request.
+                request.user = apisix_user
+                return self.get_response(request)
+
             if request.user.is_authenticated and request.user != apisix_user:
                 # The user is authenticated, but doesn't match the user we got
                 # from APISIX. So, log them out so the APISIX user takes
