@@ -1,9 +1,15 @@
 import type { WebsiteContent } from "api/v1"
+type ProseMirrorMark = {
+  type: string
+  attrs?: Record<string, unknown>
+}
+
 type ProseMirrorNode = {
   type: string
   content?: ProseMirrorNode[]
   attrs?: Record<string, unknown>
   text?: string
+  marks?: ProseMirrorMark[]
 }
 
 type ArticleContent = {
@@ -23,11 +29,55 @@ type ArticleSummary = {
   image: ArticleImage | null
 }
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+}
+
 function extractText(nodes: ProseMirrorNode[] | undefined): string {
   if (!nodes) return ""
   return nodes
     .filter((n) => n.type === "text" && typeof n.text === "string")
     .map((n) => n.text as string)
+    .join("")
+}
+
+function nodesToHtml(nodes: ProseMirrorNode[] | undefined): string {
+  if (!nodes) return ""
+  return nodes
+    .filter((n) => n.type === "text" && typeof n.text === "string")
+    .map((n) => {
+      let html = escapeHtml(n.text as string)
+      for (const mark of n.marks ?? []) {
+        if (mark.type === "bold") {
+          html = `<strong>${html}</strong>`
+        } else if (mark.type === "italic") {
+          html = `<em>${html}</em>`
+        } else if (mark.type === "underline") {
+          html = `<u>${html}</u>`
+        } else if (mark.type === "strike") {
+          html = `<s>${html}</s>`
+        } else if (mark.type === "code") {
+          html = `<code>${html}</code>`
+        } else if (mark.type === "link") {
+          const href =
+            typeof mark.attrs?.href === "string" ? mark.attrs.href : "#"
+          const target =
+            typeof mark.attrs?.target === "string"
+              ? ` target="${escapeHtml(mark.attrs.target)}"`
+              : ""
+          const rel =
+            typeof mark.attrs?.rel === "string"
+              ? ` rel="${escapeHtml(mark.attrs.rel)}"`
+              : ""
+          html = `<a href="${escapeHtml(href)}"${target}${rel}>${html}</a>`
+        }
+      }
+      return html
+    })
     .join("")
 }
 
@@ -58,7 +108,7 @@ export function extractArticleContent(
 
   return {
     heading: extractText(headingNode?.content) || null,
-    paragraph: extractText(paragraphNode?.content) || null,
+    paragraph: nodesToHtml(paragraphNode?.content) || null,
     image,
   }
 }

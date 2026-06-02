@@ -397,11 +397,11 @@ const RegularStory: React.FC<{ item: WebsiteContent }> = ({ item }) => {
           <LocalDate date={item?.publish_date || item?.updated_on} />
         </StoryDate>
       </StoryContent>
-      <Link
-        href={articleView(item.slug ?? String(item.id))}
-        style={{ textDecoration: "none", order: 2 }}
-      >
-        {articleContent?.image?.src && !imageError && (
+      {articleContent?.image?.src && !imageError && (
+        <Link
+          href={articleView(item.slug ?? String(item.id))}
+          style={{ textDecoration: "none", order: 2 }}
+        >
           <StoryImage>
             <Image
               src={articleContent.image.src}
@@ -411,15 +411,16 @@ const RegularStory: React.FC<{ item: WebsiteContent }> = ({ item }) => {
               onError={() => setImageError(true)}
             />
           </StoryImage>
-        )}
-      </Link>
+        </Link>
+      )}
     </StoryCard>
   )
 }
 
 const ArticleListingPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
-  const page = parseInt(searchParams.get("page") ?? "1", 10)
+  const parsedPage = Number.parseInt(searchParams.get("page") ?? "1", 10)
+  const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1
 
   const { data: articles, isLoading } = useWebsiteContentList({
     limit: PAGE_SIZE,
