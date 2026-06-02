@@ -27,6 +27,7 @@ import { AssignSeatsSection } from "./AssignSeatsSection"
 import { RowActionMenu } from "./RowActionMenu"
 import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
 import type { ContractCode } from "api/mitxonline-hooks/organizations"
+import type { AxiosError } from "axios"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -346,6 +347,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     data: managerOrgs,
     isLoading: isLoadingOrgs,
     isError: isOrgsError,
+    error: orgsError,
   } = useQuery(managerOrganizationQueries.managerOrganizationsList())
 
   const org = managerOrgs?.find(matchOrganizationBySlug(orgSlug))
@@ -363,6 +365,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     data: codes,
     isLoading: isLoadingCodes,
     isError: isCodesError,
+    error: codesError,
   } = useQuery({
     ...managerOrganizationQueries.managerContractCodes({
       id: contract?.id ?? 0,
@@ -379,12 +382,24 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     )
   }
 
-  if (isOrgsError || isCodesError) {
+  if (isOrgsError) {
+    const status = (orgsError as AxiosError)?.response?.status
+    if (status === 403 || status === 401) {
+      return <ErrorContent title="Access denied" timSays="403" />
+    }
+    return <ErrorContent title="Something went wrong" timSays="Oops!" />
+  }
+
+  if (isCodesError) {
+    const status = (codesError as AxiosError)?.response?.status
+    if (status === 403 || status === 401 || status === 404) {
+      return <ErrorContent title="Access denied" timSays="403" />
+    }
     return <ErrorContent title="Something went wrong" timSays="Oops!" />
   }
 
   if (!org) {
-    return <ErrorContent title="Organization not found" timSays="404" />
+    return <ErrorContent title="Access denied" timSays="403" />
   }
 
   if (!contract) {

@@ -1,5 +1,5 @@
 import React from "react"
-import { act, renderWithTheme, screen, user } from "@/test-utils"
+import { renderWithTheme, screen, user } from "@/test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import { RowActionMenu } from "./RowActionMenu"
 import type { ContractCode } from "api/mitxonline-hooks/organizations"
@@ -72,14 +72,12 @@ describe("RowActionMenu", () => {
       await user.click(
         screen.getByRole("menuitem", { name: "Copy claim link" }),
       )
-      // Flush the async clipboard write so setCopied(true) fires
-      await act(async () => {})
 
       expect(writeText).toHaveBeenCalledWith(
         expect.stringContaining(`/enrollmentcode/${code.code}`),
       )
       expect(
-        screen.getByRole("menuitem", { name: "Link copied to clipboard" }),
+        await screen.findByRole("menuitem", { name: "Link copied to clipboard" }),
       ).toBeInTheDocument()
     })
 
@@ -100,8 +98,8 @@ describe("RowActionMenu", () => {
       await user.click(
         screen.getByRole("menuitem", { name: "Copy claim link" }),
       )
-      await act(async () => {})
 
+      expect(await screen.findByRole("menuitem", { name: "Link copied to clipboard" })).toBeInTheDocument()
       expect(liveRegion).toHaveTextContent("Link copied to clipboard")
     })
 
@@ -128,11 +126,10 @@ describe("RowActionMenu", () => {
       await user.click(
         screen.getByRole("menuitem", { name: "Copy claim link" }),
       )
-      await act(async () => {})
 
       expect(document.execCommand).toHaveBeenCalledWith("copy")
       expect(
-        screen.getByRole("menuitem", { name: "Link copied to clipboard" }),
+        await screen.findByRole("menuitem", { name: "Link copied to clipboard" }),
       ).toBeInTheDocument()
     })
   })

@@ -85,7 +85,7 @@ describe("ContractAdminPage", () => {
     await screen.findByRole("heading", { name: "Something went wrong" })
   })
 
-  test("shows 'Organization not found' when user is not a manager for the requested org", async () => {
+  test("shows 'Access denied' when user is not a manager for the requested org", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
@@ -96,7 +96,7 @@ describe("ContractAdminPage", () => {
       <ContractAdminPage orgSlug="not-my-org" contractSlug="some-contract" />,
     )
 
-    await screen.findByRole("heading", { name: "Organization not found" })
+    await screen.findByRole("heading", { name: "Access denied" })
   })
 
   test("shows 'Contract not found' when org is found but contract slug does not match", async () => {
