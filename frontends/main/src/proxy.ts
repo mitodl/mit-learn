@@ -27,15 +27,15 @@ function isPageRoute(pathname: string): boolean {
 }
 
 /**
- * Next.js middleware: sets the Cache-Control header at request time so that
- * NEXT_CACHE_S_MAXAGE_SECONDS is read from the Kubernetes environment rather
- * than baked into the Docker image at build time.
+ * Next.js proxy (formerly "middleware"): sets the Cache-Control header at
+ * request time so that NEXT_CACHE_S_MAXAGE_SECONDS is read from the Kubernetes
+ * environment rather than baked into the Docker image at build time.
  *
- * next.config.js `headers()` runs at build time and cannot read env vars
- * that vary across environments (QA vs production). Middleware runs in the
- * Edge Runtime on every request, so process.env is always the live value.
+ * next.config.js `headers()` runs at build time and cannot read env vars that
+ * vary across environments (QA vs production). Proxy runs on the Node.js
+ * runtime on every request, so process.env is always the live value.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   if (!isPageRoute(request.nextUrl.pathname)) {
     return NextResponse.next()
   }
@@ -52,7 +52,7 @@ export const config = {
   matcher: [
     /*
      * Run on all paths except Next.js internals (_next/static, _next/image)
-     * which are handled before middleware by the Next.js router. Static file
+     * which are handled before proxy by the Next.js router. Static file
      * requests that slip through are filtered by isPageRoute() above.
      */
     "/((?!_next/).*)",

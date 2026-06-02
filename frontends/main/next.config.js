@@ -12,10 +12,13 @@ if (!process.env.NEXT_BUILD_CI) {
 const IS_LOCAL_DEV = process.env.NODE_ENV === "development"
 
 // Dev-server-only: allow cross-origin requests to internal dev endpoints (HMR,
-const allowedDevOrigins =
-  IS_LOCAL_DEV && process.env.NEXT_PUBLIC_ORIGIN
-    ? [new URL(process.env.NEXT_PUBLIC_ORIGIN).hostname]
-    : undefined
+// etc.). Reading NEXT_PUBLIC_ORIGIN from process.env is safe here — unlike app
+// code, this config path only runs when NODE_ENV==="development", never in a
+// production build where NEXT_PUBLIC_* are absent.
+// eslint-disable-next-line no-restricted-syntax -- dev-only; see comment above
+const devOrigin = IS_LOCAL_DEV ? process.env.NEXT_PUBLIC_ORIGIN : undefined
+const allowedDevOrigins = devOrigin ? [new URL(devOrigin).hostname] : undefined
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   productionBrowserSourceMaps: true,
@@ -131,47 +134,21 @@ const nextConfig = {
   },
 
   /**
-   * Stable, deterministic build ID based on the git SHA / version tag.
+   * Pin the build ID to the git SHA / version tag for traceability — the
+   * BUILD_ID embedded in manifests and page-data paths then identifies which
+   * commit a running pod was built from.
    *
-   * Next.js embeds the build ID in manifest filenames (_buildManifest.js,
-   * _ssgManifest.js) and in page-data paths. Using the same ID across
-   * rebuilds of the same commit reduces inter-build hash drift.
-   *
-   * NEXT_PUBLIC_VERSION is set as a Kubernetes env var (and as a Docker
-   * build arg in future standalone builds). GIT_REF is the full commit SHA
-   * passed by Concourse. The 'dev' fallback is for local builds.
+   * NEXT_PUBLIC_VERSION is set as a Kubernetes env var (and as a Docker build
+   * arg for the standalone build). GIT_REF is the full commit SHA passed by
+   * Concourse. The 'dev' fallback is for local builds.
    */
   generateBuildId: async () =>
+    // eslint-disable-next-line no-restricted-syntax -- NEXT_PUBLIC_VERSION is guaranteed present at build time by devops (set as a Docker build arg); other NEXT_PUBLIC_* are not
     process.env.NEXT_PUBLIC_VERSION || process.env.GIT_REF || "dev",
-
-  /**
-   * Replace webpack's [chunkhash] with [contenthash].
-   *
-   * [chunkhash] is influenced by module ordering and internal IDs, so two
-   * builds of identical code can produce different filenames. [contenthash]
-   * is derived purely from the file's content, making chunk names stable
-   * across rebuilds when code is unchanged.
-   *
-   * See: https://github.com/vercel/next.js/discussions/65856
-   */
-  webpack: (config) => {
-    if (config.output.filename) {
-      config.output.filename = config.output.filename.replace(
-        "[chunkhash]",
-        "[contenthash]",
-      )
-    }
-    if (config.output.chunkFilename) {
-      config.output.chunkFilename = config.output.chunkFilename.replace(
-        "[chunkhash]",
-        "[contenthash]",
-      )
-    }
-    return config
-  },
 }
 
 const { withSentryConfig } = require("@sentry/nextjs")
+/** @param {import('next').NextConfig} config */
 const withSentry = (config) =>
   withSentryConfig(config, {
     // For all available options, see:

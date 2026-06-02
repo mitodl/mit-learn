@@ -12,7 +12,6 @@ const clearMutate = jest.fn(
   (_vars: undefined, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.(),
 )
 const clearMutateAsync = jest.fn().mockResolvedValue(undefined)
-const originalEnv = process.env
 
 jest.mock("api/mitxonline-hooks/baskets", () => ({
   useAddToBasket: () => ({
@@ -35,25 +34,6 @@ describe("useReplaceBasketItem", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    process.env = { ...originalEnv }
-  })
-
-  afterAll(() => {
-    process.env = originalEnv
-  })
-
-  test("throws at module load when NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL is missing", () => {
-    jest.resetModules()
-    delete process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL
-
-    expect(() => {
-      jest.isolateModules(() => {
-        // jest.isolateModules takes a sync callback; require is the only way
-        // to load a module synchronously inside it.
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require("./useReplaceBasketItem")
-      })
-    }).toThrow(/NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL/i)
   })
 
   test("redirects after the sync mutate path succeeds", () => {

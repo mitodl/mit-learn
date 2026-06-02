@@ -1,5 +1,6 @@
 "use client"
 
+import { env } from "@/env"
 import React, { useEffect, useId, useMemo } from "react"
 import { useRouter } from "next-nprogress-bar"
 import { usePostHog } from "posthog-js/react"
@@ -173,7 +174,7 @@ const OnboardingPage: React.FC = () => {
         })
       }
       const label = activeStep < NUM_STEPS - 1 ? "Next" : "Finish"
-      if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+      if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
         posthog.capture(PostHogEvents.CallToActionClicked, {
           label,
           step: activeStep + 1,

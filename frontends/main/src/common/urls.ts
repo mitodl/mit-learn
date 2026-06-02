@@ -1,4 +1,4 @@
-import { env } from "@/env"
+import { env, requiredEnv } from "@/env"
 import type { BaseProgramDisplayMode } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 
@@ -140,7 +140,7 @@ export const RESOURCE_DRAWER_PARAMS = {
 } as const
 
 export const canonicalResourceDrawerUrl = (resourceId: number) =>
-  `${env("NEXT_PUBLIC_ORIGIN")}/search?${RESOURCE_DRAWER_PARAMS.resource}=${resourceId}`
+  `${requiredEnv("NEXT_PUBLIC_ORIGIN")}/search?${RESOURCE_DRAWER_PARAMS.resource}=${resourceId}`
 
 export const querifiedSearchUrl = (
   params:
@@ -200,7 +200,9 @@ export type LoginUrlOpts = {
 const stringifyUrlDescriptor = (val: UrlDescriptor) => {
   // ORIGIN is read at call time (request time) so NEXT_PUBLIC_ORIGIN is
   // available — it is not set at build time in the standalone Docker image.
-  const url = new URL(env("NEXT_PUBLIC_ORIGIN") ?? "")
+  // requiredEnv() is safe here: stringifyUrlDescriptor only runs when building
+  // login/signup URLs at request time, never during `next build`.
+  const url = new URL(requiredEnv("NEXT_PUBLIC_ORIGIN"))
   url.pathname = val.pathname
   if (val.searchParams) {
     val.searchParams.forEach((v, k) => url.searchParams.set(k, v))
