@@ -171,7 +171,9 @@ describe("ChannelSearch", () => {
         }),
       )
     })
-  })
+
+    const apiSearchParams = getLastApiSearchParams()
+    expect(apiSearchParams.get("hybrid_search")).toBe("true")
 
   test.each([
     {
