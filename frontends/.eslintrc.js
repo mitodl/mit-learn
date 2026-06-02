@@ -5,7 +5,10 @@ module.exports = {
     "plugin:styled-components-a11y/recommended",
     "plugin:import/typescript",
     "plugin:mdx/recommended",
-    "plugin:@next/next/recommended",
+    // The default `recommended`/`core-web-vitals` configs are flat-config shaped
+    // (they carry a top-level `name`), which ESLint 8's legacy .eslintrc loader
+    // rejects. The plugin dual-publishes eslintrc-compatible `-legacy` variants.
+    "plugin:@next/next/recommended-legacy",
     "prettier",
   ],
   plugins: ["testing-library", "import", "styled-components-a11y"],
