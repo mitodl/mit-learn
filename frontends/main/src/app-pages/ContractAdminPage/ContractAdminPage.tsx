@@ -260,6 +260,7 @@ const StatusBadge = styled(Chip, {
   "& .MuiChip-label": {
     padding: "0 8px",
   },
+  // alpha() matches Figma spec which uses opacity on base colors
   ...($status === "redeemed" && {
     backgroundColor: alpha(theme.custom.colors.green, 0.2),
     color: theme.custom.colors.darkGreen,
@@ -393,16 +394,18 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const totalPurchased = contractDetail?.total_codes
   const totalRedeemed = contractDetail?.total_enrollments
 
-  const filteredCodes = (codes ?? []).filter((code) => {
+  const tabFilteredCodes = (codes ?? []).filter((code) => {
     const redeemed = isRedeemed(code)
-    const matchesFilter =
+    return (
       statusFilter === "all" ||
       (statusFilter === "redeemed" && redeemed) ||
       (statusFilter === "pending" && !redeemed)
+    )
+  })
+
+  const filteredCodes = tabFilteredCodes.filter((code) => {
     const email = code.redeemed_by ?? ""
-    const matchesSearch =
-      !searchQuery || email.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesFilter && matchesSearch
+    return !searchQuery || email.toLowerCase().includes(searchQuery.toLowerCase())
   })
 
   const totalPages = Math.ceil(filteredCodes.length / PAGE_SIZE)
@@ -503,17 +506,9 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                 size="medium"
                 onChange={handleSearchChange}
                 onClear={() => {
-                  const count = (codes ?? []).filter((code) => {
-                    const redeemed = isRedeemed(code)
-                    return (
-                      statusFilter === "all" ||
-                      (statusFilter === "redeemed" && redeemed) ||
-                      (statusFilter === "pending" && !redeemed)
-                    )
-                  }).length
                   setSearchQuery("")
                   setPage(1)
-                  announceSearchCount(count)
+                  announceSearchCount(tabFilteredCodes.length)
                 }}
                 onSubmit={() => announceSearchCount(filteredCodes.length)}
               />
