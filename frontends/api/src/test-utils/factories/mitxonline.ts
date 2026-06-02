@@ -72,6 +72,7 @@ export const courseCertificate: PartialFactory<V2CourseRunCertificate> = (
       name: faker.person.fullName(),
     },
     uuid: faker.string.uuid(),
+    issue_date: faker.date.past().toISOString(),
     course_run: {
       id: faker.number.int(),
       course: {
@@ -129,6 +130,7 @@ export const programCertificate: PartialFactory<V2ProgramCertificate> = (
       name: faker.person.fullName(),
     },
     uuid: faker.string.uuid(),
+    issue_date: faker.date.past().toISOString(),
     program: {
       id: faker.number.int(),
       title: faker.lorem.words(),
