@@ -654,7 +654,7 @@ const ProgramCertificate = ({
   return (
     <Certificate
       title={title}
-      badgeProgramType={certificate.program.program_type}
+      badgeProgramType={certificate?.program?.program_type}
       userName={userName}
       ceus={ceus}
       signatories={signatories}

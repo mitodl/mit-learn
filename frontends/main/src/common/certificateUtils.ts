@@ -12,63 +12,81 @@ export type CertificateBadgeLines = {
   registeredMark?: boolean
 }
 
+type ProgramTypeLabelKey = "micromasters" | "series" | "program"
+
+type CertificateLabel = {
+  displayType: string
+  badgeLines: CertificateBadgeLines
+}
+
+const PROGRAM_TYPE_LABELS: Record<ProgramTypeLabelKey, CertificateLabel> = {
+  micromasters: {
+    displayType: "MicroMasters\u00ae Certificate",
+    badgeLines: {
+      primary: "MicroMasters",
+      secondary: "Certificate",
+      registeredMark: true,
+    },
+  },
+  series: {
+    displayType: "Series Certificate",
+    badgeLines: { primary: "Series", secondary: "Certificate" },
+  },
+  program: {
+    displayType: "Program Certificate",
+    badgeLines: { primary: "Program", secondary: "Certificate" },
+  },
+}
+
+const DEFAULT_LABEL: CertificateLabel = {
+  displayType: "Certificate",
+  badgeLines: { primary: "Certificate" },
+}
+
+const normalizeProgramType = (programType?: string | null): string =>
+  (programType ?? "").trim().toLowerCase().replace(/®/g, "").replace(/\s+/g, "")
+
+const resolveKey = (
+  programType?: string | null,
+): ProgramTypeLabelKey | undefined => {
+  const normalized = normalizeProgramType(programType)
+  if (!normalized) {
+    return undefined
+  }
+  if (normalized === "series") {
+    return "series"
+  }
+  if (normalized === "program") {
+    return "program"
+  }
+  if (normalized === "micromasters" || normalized.startsWith("micromasters")) {
+    return "micromasters"
+  }
+  return undefined
+}
+
+const resolveCertificateLabel = (
+  programType?: string | null,
+): CertificateLabel => {
+  const key = resolveKey(programType)
+  return key ? PROGRAM_TYPE_LABELS[key] : DEFAULT_LABEL
+}
+
 /**
  * Returns common display info for a certificate.
  */
 export const getCertificateInfo = (
   programType?: string | null,
-): { displayType: string } => {
-  const normalizedProgramType = (programType ?? "").trim().toLowerCase()
-  if (
-    normalizedProgramType.includes("micro") &&
-    normalizedProgramType.includes("master")
-  ) {
-    return {
-      displayType: "MicroMasters\u00ae Certificate",
-    }
-  }
-  if (normalizedProgramType === "series") {
-    return {
-      displayType: "Series Certificate",
-    }
-  }
-  if (normalizedProgramType === "program") {
-    return {
-      displayType: "Program Certificate",
-    }
-  }
-  return {
-    displayType: "Certificate",
-  }
-}
+): { displayType: string } => ({
+  displayType: resolveCertificateLabel(programType).displayType,
+})
 
+/**
+ * Badge label lines for the certificate seal (Figma: 18px bold, two lines).
+ */
 export const getCertificateBadgeLines = (
   programType?: string | null,
-): CertificateBadgeLines => {
-  const { displayType } = getCertificateInfo(programType)
-
-  if (displayType === "Certificate") {
-    return { primary: "Certificate" }
-  }
-
-  if (displayType === "MicroMasters\u00ae Certificate") {
-    return {
-      primary: "MicroMasters",
-      secondary: "Certificate",
-      registeredMark: true,
-    }
-  }
-
-  const descriptorMatch = /^(.+) Certificate$/.exec(displayType)
-  if (descriptorMatch) {
-    return {
-      primary: descriptorMatch[1],
-      secondary: "Certificate",
-    }
-  }
-
-  return { primary: displayType }
-}
+): CertificateBadgeLines => resolveCertificateLabel(programType).badgeLines
 
 export enum CertificateType {
   Course = "course",

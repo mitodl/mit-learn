@@ -12,6 +12,18 @@ describe("getCertificateInfo", () => {
     expect(getCertificateInfo("MicroMasters®").displayType).toBe(
       "MicroMasters® Certificate",
     )
+    expect(getCertificateInfo("  MicroMasters®  ").displayType).toBe(
+      "MicroMasters® Certificate",
+    )
+    expect(getCertificateInfo("MicroMasters Credential").displayType).toBe(
+      "MicroMasters® Certificate",
+    )
+  })
+
+  it("does not match unrelated program types containing micro and master substrings", () => {
+    expect(getCertificateInfo("Microbiology Masters").displayType).toBe(
+      "Certificate",
+    )
   })
 
   it("returns series badge label for series program types", () => {
@@ -50,6 +62,18 @@ describe("getCertificateBadgeLines", () => {
     expect(getCertificateBadgeLines("Program")).toEqual({
       primary: "Program",
       secondary: "Certificate",
+    })
+  })
+
+  it("keeps display type and badge lines in sync for the same program type", () => {
+    const programType = "MicroMasters®"
+    expect(getCertificateInfo(programType).displayType).toBe(
+      "MicroMasters® Certificate",
+    )
+    expect(getCertificateBadgeLines(programType)).toEqual({
+      primary: "MicroMasters",
+      secondary: "Certificate",
+      registeredMark: true,
     })
   })
 })
