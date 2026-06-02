@@ -1,8 +1,16 @@
 "use client"
 
 import React, { useState } from "react"
-import { Divider, IconButton, Menu, MenuItem, Tooltip, styled } from "ol-components"
+import {
+  Divider,
+  IconButton,
+  Menu,
+  MenuItem,
+  Tooltip,
+  styled,
+} from "ol-components"
 import { RiMoreLine } from "@remixicon/react"
+import { VisuallyHidden } from "@mitodl/smoot-design"
 import { b2bAttachView } from "@/common/urls"
 import type { ContractCode } from "api/mitxonline-hooks/organizations"
 
@@ -128,7 +136,7 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({ code }) => {
         <ActionMenuItem disabled>Resend claim email</ActionMenuItem>
       </Tooltip>,
       copied ? (
-        <CopiedMenuItem key="copied" onClick={handleClose}>
+        <CopiedMenuItem key="copy-link" disabled>
           Link copied to clipboard
         </CopiedMenuItem>
       ) : (
@@ -145,6 +153,9 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({ code }) => {
 
   return (
     <>
+      <VisuallyHidden aria-live="polite">
+        {copied ? "Link copied to clipboard" : ""}
+      </VisuallyHidden>
       <TriggerButton
         onClick={handleOpen}
         aria-label={`More actions for ${assignedTo}`}

@@ -79,12 +79,12 @@ const AssignSeatsSection: React.FC = () => {
       <Stack direction="row" gap="4px" alignItems="center" flexWrap="wrap">
         <MutedText>Paste multiple emails or</MutedText>
         <Tooltip title="Coming soon">
-          <DisabledLink role="link" aria-disabled="true">
+          <DisabledLink role="button" aria-disabled="true" tabIndex={0}>
             import from CSV
           </DisabledLink>
         </Tooltip>
         <Tooltip title="Coming soon">
-          <DisabledLink role="link" aria-disabled="true">
+          <DisabledLink role="button" aria-disabled="true" tabIndex={0}>
             (download sample CSV)
           </DisabledLink>
         </Tooltip>
