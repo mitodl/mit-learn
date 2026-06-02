@@ -8,6 +8,12 @@ const NEXT_PUBLIC_OPTIMIZE_IMAGES = Boolean(
 )
 const IS_LOCAL_DEV = process.env.NODE_ENV === "development"
 
+// Dev-server-only: allow cross-origin requests to internal dev endpoints (HMR,
+const allowedDevOrigins =
+  IS_LOCAL_DEV && process.env.NEXT_PUBLIC_ORIGIN
+    ? [new URL(process.env.NEXT_PUBLIC_ORIGIN).hostname]
+    : undefined
+
 const NEXT_CACHE_S_MAXAGE_SECONDS =
   process.env.NEXT_CACHE_S_MAXAGE_SECONDS || "1800"
 const PAGE_CACHE_CONTROL = `s-maxage=${NEXT_CACHE_S_MAXAGE_SECONDS}, stale-if-error=86400, stale-while-revalidate=86400`
@@ -31,6 +37,7 @@ const processFeatureFlags = () => {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   productionBrowserSourceMaps: true,
+  allowedDevOrigins,
   async rewrites() {
     return [
       /* Static assets moved from /static, though image paths are sometimes
