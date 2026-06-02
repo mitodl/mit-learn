@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import {
   canonicalResourceDrawerUrl,
   RESOURCE_DRAWER_PARAMS,
@@ -117,13 +118,13 @@ export const standardizeMetadata = ({
   social = true,
   ...otherMeta
 }: MetadataProps = {}): Metadata => {
-  title = `${title} | ${process.env.NEXT_PUBLIC_SITE_NAME}`
+  title = `${title} | ${env("NEXT_PUBLIC_SITE_NAME")}`
   const socialMetadata = social
     ? {
         openGraph: {
           title,
           description,
-          siteName: process.env.NEXT_PUBLIC_SITE_NAME,
+          siteName: env("NEXT_PUBLIC_SITE_NAME"),
           images: [
             {
               url: image,

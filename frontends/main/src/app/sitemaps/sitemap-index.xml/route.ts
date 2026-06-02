@@ -1,13 +1,10 @@
+import { requiredEnv } from "@/env"
 import { NextResponse } from "next/server"
-import invariant from "tiny-invariant"
 import * as resourceSitemap from "../resources/sitemap"
 import * as channelsSitemap from "../channels/sitemap"
 import * as productsSitemap from "../products/sitemap"
 import * as videoSitemap from "../video/sitemap"
 import * as podcastSitemap from "../podcast/sitemap"
-
-invariant(process.env.NEXT_PUBLIC_ORIGIN, "NEXT_PUBLIC_ORIGIN must be defined")
-const BASE_URL: string = process.env.NEXT_PUBLIC_ORIGIN
 
 export async function GET() {
   const content = await buildSitemapIndex()
@@ -20,6 +17,9 @@ export async function GET() {
 }
 
 async function buildSitemapIndex(): Promise<string> {
+  // Read at request time so this works in the standalone Docker image where
+  // NEXT_PUBLIC_ORIGIN is injected by Kubernetes, not baked at build time.
+  const BASE_URL = requiredEnv("NEXT_PUBLIC_ORIGIN")
   const sitemaps = await Promise.all([
     resourceSitemap.generateSitemaps(),
     channelsSitemap.generateSitemaps(),
@@ -54,6 +54,7 @@ function formatSitemapIndex(sitemapUrls: string[]) {
 /**
  * By default in NextJS, this route would be statically generated at build time
  * since it does not access a [dynamic api](https://nextjs.org/docs/app/guides/caching#dynamic-apis)
- * We force it to be rendered for each request; caching headers are set in next.config.js
+ * We force it to be rendered for each request; caching headers (Cache-Control
+ * and the "html-pages" Surrogate-Key) are set at runtime in src/proxy.ts.
  */
 export const dynamic = "force-dynamic"

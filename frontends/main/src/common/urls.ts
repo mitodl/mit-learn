@@ -1,6 +1,6 @@
+import { env, requiredEnv } from "@/env"
 import type { BaseProgramDisplayMode } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import invariant from "tiny-invariant"
 
 // matches ! $ & ' ( ) * + , ; = : @ ~
 const SAFE_IN_PATH_SEGMENT =
@@ -88,13 +88,7 @@ export const makeChannelManageWidgetsPath = (
   name: string,
 ) => generatePath(CHANNEL_EDIT_WIDGETS, { channelType, name })
 
-const ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
-invariant(ORIGIN, "NEXT_PUBLIC_ORIGIN must be set")
-if (process.env.NODE_ENV !== "production") {
-  invariant(!ORIGIN?.endsWith("/"), "NEXT_PUBLIC_ORIGIN should not end with /")
-}
-
-const MITOL_API_BASE_URL = process.env.NEXT_PUBLIC_MITOL_API_BASE_URL
+const MITOL_API_BASE_URL = env("NEXT_PUBLIC_MITOL_API_BASE_URL")
 
 export const DASHBOARD_VIEW = "/dashboard/[tab]"
 const dashboardView = (tab: string) => generatePath(DASHBOARD_VIEW, { tab })
@@ -146,7 +140,7 @@ export const RESOURCE_DRAWER_PARAMS = {
 } as const
 
 export const canonicalResourceDrawerUrl = (resourceId: number) =>
-  `${process.env.NEXT_PUBLIC_ORIGIN}/search?${RESOURCE_DRAWER_PARAMS.resource}=${resourceId}`
+  `${requiredEnv("NEXT_PUBLIC_ORIGIN")}/search?${RESOURCE_DRAWER_PARAMS.resource}=${resourceId}`
 
 export const querifiedSearchUrl = (
   params:
@@ -204,7 +198,11 @@ export type LoginUrlOpts = {
 }
 
 const stringifyUrlDescriptor = (val: UrlDescriptor) => {
-  const url = new URL(ORIGIN)
+  // ORIGIN is read at call time (request time) so NEXT_PUBLIC_ORIGIN is
+  // available — it is not set at build time in the standalone Docker image.
+  // requiredEnv() is safe here: stringifyUrlDescriptor only runs when building
+  // login/signup URLs at request time, never during `next build`.
+  const url = new URL(requiredEnv("NEXT_PUBLIC_ORIGIN"))
   url.pathname = val.pathname
   if (val.searchParams) {
     val.searchParams.forEach((v, k) => url.searchParams.set(k, v))

@@ -3,11 +3,34 @@ import posthog from "posthog-js"
 import { PostHogProvider, usePostHog } from "posthog-js/react"
 import { useUserMe } from "api/hooks/user"
 import { INTERNAL_BOOTSTRAPPING_FLAG } from "@/common/feature_flags"
+import { env } from "@/env"
 
-const POSTHOG_API_KEY = process.env.NEXT_PUBLIC_POSTHOG_API_KEY
-const POSTHOG_API_HOST = process.env.NEXT_PUBLIC_POSTHOG_API_HOST
-const POSTHOG_UI_HOST = process.env.NEXT_PUBLIC_POSTHOG_UI_HOST
-const FEATURE_FLAGS = process.env.FEATURE_FLAGS
+/**
+ * Compute PostHog bootstrap feature flags from window.__ENV at runtime.
+ * Previously this was computed at build time from process.env in next.config.js
+ * (as FEATURE_FLAGS), but that approach bakes empty values when the Docker
+ * image is built in CI without per-environment values. Reading from
+ * window.__ENV gives the correct per-env flags injected by PublicEnvScript.
+ */
+const getBootstrapFeatureFlags = (): Record<
+  string,
+  boolean | string
+> | null => {
+  if (typeof window === "undefined") return null
+  const envSource = window.__ENV ?? {}
+  const prefix = envSource["NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX"] ?? "FEATURE_"
+  const fullPrefix = `NEXT_PUBLIC_${prefix}`
+  const flags: Record<string, boolean | string> = {}
+
+  for (const [key, value] of Object.entries(envSource)) {
+    if (value !== undefined && key.startsWith(fullPrefix)) {
+      const flagName = key.replace(fullPrefix, "").replaceAll("_", "-")
+      flags[flagName] = value === "True" ? true : JSON.stringify(value)
+    }
+  }
+
+  return Object.keys(flags).length > 0 ? flags : null
+}
 
 const PosthogIdentifier = () => {
   const { data: user } = useUserMe()
@@ -39,23 +62,27 @@ const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   useEffect(() => {
+    const POSTHOG_API_KEY = env("NEXT_PUBLIC_POSTHOG_API_KEY")
+    const POSTHOG_API_HOST = env("NEXT_PUBLIC_POSTHOG_API_HOST")
+    const POSTHOG_UI_HOST = env("NEXT_PUBLIC_POSTHOG_UI_HOST")
     if (POSTHOG_API_KEY) {
+      const featureFlags = getBootstrapFeatureFlags()
       posthog.init(POSTHOG_API_KEY, {
         api_host: POSTHOG_API_HOST,
         ui_host: POSTHOG_UI_HOST,
         bootstrap: {
-          featureFlags: FEATURE_FLAGS
+          featureFlags: featureFlags
             ? {
-                ...JSON.parse(FEATURE_FLAGS),
+                ...featureFlags,
                 [INTERNAL_BOOTSTRAPPING_FLAG]: true,
               }
-            : null,
+            : undefined,
         },
       })
     }
   }, [])
 
-  if (!POSTHOG_API_KEY) {
+  if (!env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
     return children
   }
 

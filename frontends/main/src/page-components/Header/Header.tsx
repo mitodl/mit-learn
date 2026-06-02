@@ -1,5 +1,6 @@
 "use client"
 
+import { env } from "@/env"
 import React, { FunctionComponent } from "react"
 import type { NavData } from "ol-components"
 import {
@@ -286,7 +287,7 @@ const Header: FunctionComponent = () => {
     ? PostHogEvents.ClosedNavDrawer
     : PostHogEvents.OpenedNavDrawer
   const posthogCapture = (event: string) => {
-    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
       posthog.capture(event)
     }
   }

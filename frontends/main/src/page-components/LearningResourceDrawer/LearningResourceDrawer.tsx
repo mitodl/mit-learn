@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React, { Suspense, useEffect, useId, useMemo } from "react"
 import { RoutedDrawer, imgConfigs } from "ol-components"
 import { LearningResourceExpanded } from "../LearningResourceExpanded/LearningResourceExpanded"
@@ -35,7 +36,7 @@ const ALL_PARAMS = [
 const useCapturePageView = (resourceId: number) => {
   const { data, isSuccess } = useLearningResourcesDetail(Number(resourceId))
   const posthog = usePostHog()
-  const apiKey = process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+  const apiKey = env("NEXT_PUBLIC_POSTHOG_API_KEY")
 
   useEffect(() => {
     if (!apiKey || apiKey.length < 1) return
@@ -72,7 +73,7 @@ const DrawerContent: React.FC<{
    */
   const posthog = usePostHog()
   const resource = useLearningResourcesDetail(Number(resourceId))
-  if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+  if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
     posthog.capture(PostHogEvents.LearningResourceDrawerOpen, {
       resource: resource?.data,
     })

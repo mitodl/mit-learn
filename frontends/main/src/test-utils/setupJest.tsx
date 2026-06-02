@@ -17,18 +17,28 @@ jest.mock("axios", () => mockAxiosFactory())
 
 const { configureApiClients } = jest.requireActual("api/runtime")
 
+// NEXT_PUBLIC_* test values live here (the main workspace setup) rather than the
+// shared setup: only main's app code reads them, via the env() helper which
+// falls back to process.env under jsdom. The api workspace and ol-* packages
+// don't need them.
+const LEARN_BASE_URL = "http://api.test.learn.odl.local:8065"
+const MITX_ONLINE_BASE_URL = "http://api.test.learn.odl.local:8065/mitxonline"
+
+process.env.NEXT_PUBLIC_ORIGIN = "http://test.learn.odl.local:8062"
+process.env.NEXT_PUBLIC_VERSION = "test-version"
+process.env.NEXT_PUBLIC_MITOL_API_BASE_URL = LEARN_BASE_URL
+process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL = MITX_ONLINE_BASE_URL
+process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL =
+  "http://mitxonline.odl.local:8065"
+
 configureApiClients({
   learn: {
-    baseUrl:
-      process.env.NEXT_PUBLIC_MITOL_API_BASE_URL ??
-      "http://api.test.learn.odl.local:8065",
+    baseUrl: LEARN_BASE_URL,
     csrfCookieName: "csrftoken",
     withCredentials: false,
   },
   mitxonline: {
-    baseUrl:
-      process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL ??
-      "http://api.test.learn.odl.local:8065/mitxonline",
+    baseUrl: MITX_ONLINE_BASE_URL,
     csrfCookieName: "mitxcsrftoken",
     withCredentials: false,
   },

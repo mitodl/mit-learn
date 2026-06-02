@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React, { useState, useRef, useEffect } from "react"
 import { NodeViewWrapper } from "@tiptap/react"
 import type { ReactNodeViewProps } from "@tiptap/react"
@@ -10,7 +11,7 @@ import { useWebsiteContent } from "../../../WebsiteContentContext"
 import { calculateReadTime } from "../../utils"
 import SharePopover from "@/components/SharePopover/SharePopover"
 
-const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
+const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 const StyledWrapper = styled.div(({ theme }) => ({
   width: "100vw",
