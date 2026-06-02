@@ -61,37 +61,13 @@ const nextConfig = {
 
   async headers() {
     return [
-      {
-        source: "/sitemaps/:path*.xml",
-        headers: [
-          // Tag sitemaps with "html-pages" so Fastly can purge them on deploy
-          // without also purging immutable /_next/static/ chunks.
-          // Cache-Control is set at runtime in src/middleware.ts so that
-          // NEXT_CACHE_S_MAXAGE_SECONDS is read from the Kubernetes env
-          // rather than baked in at Docker build time.
-          { key: "Surrogate-Key", value: "html-pages" },
-        ],
-      },
-      /* This is intended to target the base HTML responses and streamed RSC
-       * content. Some routes are dynamically rendered, so NextJS by default
-       * sets no-cache. However we are currently serving public content that is
-       * cacheable.
-       *
-       * Excludes everything with a file extension (so /_next/static/*.js is
-       * never matched) and also excludes /healthcheck, which returns JSON and
-       * should not be tagged as an HTML page for Fastly surrogate-key purges.
+      /* The "html-pages" Surrogate-Key tag (for HTML/page routes and sitemaps)
+       * is set at runtime in src/proxy.ts, alongside Cache-Control and driven
+       * by the same isPageRoute() test, so the tag and the cache policy can
+       * never diverge. It cannot live here because page detection (and the
+       * Cache-Control value) depend on runtime state that is unavailable at
+       * build time. The rules below are genuinely static and immutable.
        */
-      {
-        source: "/((?!.*\\.[a-zA-Z0-9]+$)(?!healthcheck$).*)",
-        headers: [
-          // Tag all HTML/page routes so Fastly can purge them on deploy
-          // without also purging immutable /_next/static/ chunks.
-          // Cache-Control is set at runtime in src/middleware.ts so that
-          // NEXT_CACHE_S_MAXAGE_SECONDS is read from the Kubernetes env
-          // rather than baked in at Docker build time.
-          { key: "Surrogate-Key", value: "html-pages" },
-        ],
-      },
 
       /* Images rendered with the Next.js Image component have the cache header
        * set on them, but CSS background images do not.

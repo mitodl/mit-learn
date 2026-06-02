@@ -54,6 +54,7 @@ function formatSitemapIndex(sitemapUrls: string[]) {
 /**
  * By default in NextJS, this route would be statically generated at build time
  * since it does not access a [dynamic api](https://nextjs.org/docs/app/guides/caching#dynamic-apis)
- * We force it to be rendered for each request; caching headers are set in next.config.js
+ * We force it to be rendered for each request; caching headers (Cache-Control
+ * and the "html-pages" Surrogate-Key) are set at runtime in src/proxy.ts.
  */
 export const dynamic = "force-dynamic"

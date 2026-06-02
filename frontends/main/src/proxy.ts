@@ -1,27 +1,35 @@
 import { type NextRequest, NextResponse } from "next/server"
 
 /**
- * Matches paths that have a file extension (e.g. .js, .css, .woff2).
- * These are static assets that should NOT receive page-level Cache-Control
- * or Surrogate-Key headers — they are served from /_next/static/ with
- * content-addressed filenames and are cached immutably by Fastly.
+ * Matches paths ending in a known static-asset extension (e.g. .js, .css,
+ * .woff2). These are served as immutable files (from /_next/static/, /images/,
+ * the /static rewrite, or public/) and must NOT receive page-level
+ * Cache-Control or Surrogate-Key headers.
+ *
+ * This is an allowlist of asset extensions rather than "any path ending in a
+ * dot + chars", because page slugs legitimately contain dots — e.g. course
+ * readable ids like /courses/course-v1:MITxT+5.601x. Matching "any extension"
+ * wrongly classified those pages as static assets and stripped their caching.
  */
-const STATIC_FILE_EXT = /\.[a-zA-Z0-9]+$/
+const STATIC_FILE_EXT =
+  /\.(js|mjs|css|map|json|txt|xml|ico|png|jpe?g|gif|svg|webp|avif|woff2?|ttf|otf|eot|webmanifest|wasm)$/i
 
 /**
- * Returns true if the path should receive page-level caching headers
- * (Cache-Control with s-maxage). This mirrors the exclusion logic in the
- * next.config.js `headers()` rules for Surrogate-Key.
+ * Returns true if the path is an HTML/page route that should receive
+ * page-level caching headers (Cache-Control with s-maxage and the "html-pages"
+ * Surrogate-Key). Both headers in proxy() are gated on this single test.
  *
  * Sitemaps are explicitly included despite having an .xml extension because
  * they are dynamically generated HTML-adjacent content, not static assets.
  */
-function isPageRoute(pathname: string): boolean {
+export function isPageRoute(pathname: string): boolean {
+  // Next.js internals (static chunks, image optimizer, ...)
+  if (pathname.startsWith("/_next/")) return false
   // JSON healthcheck — exclude from page cache headers
   if (pathname === "/healthcheck") return false
   // Sitemaps are dynamically generated; treat them as page content
   if (pathname.startsWith("/sitemaps/")) return true
-  // Everything with a file extension is a static asset
+  // Known static-asset extensions are served as immutable files
   if (STATIC_FILE_EXT.test(pathname)) return false
   return true
 }
@@ -45,6 +53,10 @@ export function proxy(request: NextRequest) {
 
   const response = NextResponse.next()
   response.headers.set("Cache-Control", cacheControl)
+  // Tag all HTML/page routes so Fastly can purge them on deploy without also
+  // purging immutable /_next/static/ chunks. Driven by the same isPageRoute()
+  // test as Cache-Control above, so the tag and the cache policy never diverge.
+  response.headers.set("Surrogate-Key", "html-pages")
   return response
 }
 
