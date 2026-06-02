@@ -515,11 +515,17 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
             </ControlsLeft>
             <ExportButtonWrapper>
               <Tooltip title="Coming soon">
-                <span>
+                <Stack
+                  component="span"
+                  sx={{
+                    width: { xs: "100%", md: "auto" },
+                    "& > button": { width: { xs: "100%", md: "auto" } },
+                  }}
+                >
                   <Button variant="bordered" disabled>
                     Export CSV
                   </Button>
-                </span>
+                </Stack>
               </Tooltip>
             </ExportButtonWrapper>
           </SeatAssignmentsControls>
