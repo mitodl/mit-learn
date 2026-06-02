@@ -405,7 +405,9 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
 
   const filteredCodes = tabFilteredCodes.filter((code) => {
     const email = code.redeemed_by ?? ""
-    return !searchQuery || email.toLowerCase().includes(searchQuery.toLowerCase())
+    return (
+      !searchQuery || email.toLowerCase().includes(searchQuery.toLowerCase())
+    )
   })
 
   const totalPages = Math.ceil(filteredCodes.length / PAGE_SIZE)
