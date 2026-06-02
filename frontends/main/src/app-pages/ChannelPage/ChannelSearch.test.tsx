@@ -154,6 +154,24 @@ describe("ChannelSearch", () => {
     }
   }, 10000)
 
+  test("Topic channel pages load hybrid search", async () => {
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Topic },
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await waitFor(() => {
+      const vectorSearchCall = makeRequest.mock.calls.find(
+        ([method, url]) =>
+          method === "get" && url.startsWith(urls.search.vectorResources()),
+      )
+      expect(vectorSearchCall).toBeDefined()
+    })
+  })
+
   test.each([
     {
       searchFilter: "offered_by=ocw",
