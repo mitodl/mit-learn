@@ -59,15 +59,19 @@ const AssignSeatsSection: React.FC = () => {
         gap="24px"
         alignItems="flex-start"
       >
-        <StyledTextField
-          name="emails"
-          label={<VisuallyHidden>Employee emails</VisuallyHidden>}
-          multiline
-          minRows={2}
-          disabled
-          placeholder="Enter employee emails (one per line or comma-separated)"
-          fullWidth
-        />
+        <Tooltip title="Coming soon">
+          <span style={{ flex: 1, width: "100%", display: "block" }}>
+            <StyledTextField
+              name="emails"
+              label={<VisuallyHidden>Employee emails</VisuallyHidden>}
+              multiline
+              minRows={2}
+              disabled
+              placeholder="Enter employee emails (one per line or comma-separated)"
+              fullWidth
+            />
+          </span>
+        </Tooltip>
         <Tooltip title="Coming soon">
           <span>
             <Button variant="primary" disabled>
