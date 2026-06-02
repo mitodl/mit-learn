@@ -840,7 +840,7 @@ VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = get_int(
 
 # the minimum similarity score for dense only search
 DENSE_VECTOR_SEARCH_MIN_SCORE = get_float(
-    name="DENSE_VECTOR_SEARCH_MIN_SCORE", default=0.5
+    name="DENSE_VECTOR_SEARCH_MIN_SCORE", default=0.4
 )
 
 # the minimum similarity score for hybrid search (Reciprocal Rank Fusion)
