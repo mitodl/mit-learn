@@ -465,9 +465,7 @@ const CertificateDoc = ({
 const CourseCertificate = ({
   certificate,
 }: {
-  certificate: V2CourseRunCertificate & {
-    issue_date?: string | null
-  }
+  certificate: V2CourseRunCertificate
 }) => {
   const { displayType } = getCertificateInfo()
   const title = certificate?.course_run?.course?.title
@@ -496,9 +494,7 @@ const CourseCertificate = ({
 const ProgramCertificate = ({
   certificate,
 }: {
-  certificate: V2ProgramCertificate & {
-    issue_date?: string | null
-  }
+  certificate: V2ProgramCertificate
 }) => {
   const title = certificate?.program?.title
 

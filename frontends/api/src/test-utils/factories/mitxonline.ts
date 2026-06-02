@@ -63,11 +63,9 @@ export interface VerifiableCredential {
   }
 }
 
-export const courseCertificate: PartialFactory<
-  V2CourseRunCertificate & {
-    issue_date?: string | null
-  }
-> = (overrides = {}) => {
+export const courseCertificate: PartialFactory<V2CourseRunCertificate> = (
+  overrides = {},
+) => {
   const base = {
     user: {
       id: faker.number.int(),
@@ -120,16 +118,12 @@ export const courseCertificate: PartialFactory<
     verifiable_credential_json: verifiableCredential(),
   }
 
-  return { ...base, ...overrides } as V2CourseRunCertificate & {
-    issue_date?: string | null
-  }
+  return { ...base, ...overrides } as V2CourseRunCertificate
 }
 
-export const programCertificate: PartialFactory<
-  V2ProgramCertificate & {
-    issue_date?: string | null
-  }
-> = (overrides = {}) => {
+export const programCertificate: PartialFactory<V2ProgramCertificate> = (
+  overrides = {},
+) => {
   const base = {
     user: {
       id: faker.number.int(),
@@ -175,9 +169,7 @@ export const programCertificate: PartialFactory<
     verifiable_credential_json: verifiableCredential(),
   }
 
-  return { ...base, ...overrides } as V2ProgramCertificate & {
-    issue_date?: string | null
-  }
+  return { ...base, ...overrides } as V2ProgramCertificate
 }
 
 export const verifiableCredential: PartialFactory<VerifiableCredential> = (
