@@ -86,6 +86,7 @@ describe("CertificatePage", () => {
 
   it("renders a program certificate", async () => {
     const certificate = factories.mitxonline.programCertificate()
+    certificate.program.program_type = "Program"
     setMockResponse.get(
       mitxonline.urls.certificates.programCertificatesRetrieve({
         cert_uuid: certificate.uuid,
@@ -101,7 +102,7 @@ describe("CertificatePage", () => {
     )
 
     await screen.findAllByText(certificate.program.title)
-    await screen.findAllByText("Certificate")
+    await screen.findAllByText("Program Certificate")
     await screen.findAllByText(certificate.user.name!)
 
     await screen.findAllByText(

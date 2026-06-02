@@ -620,7 +620,7 @@ const ProgramCertificate = ({
 }) => {
   const title = certificate.program.title
 
-  const { displayType } = getCertificateInfo()
+  const { displayType } = getCertificateInfo(certificate.program.program_type)
 
   const userName = certificate.user.name
 
@@ -736,7 +736,9 @@ const CertificatePage: React.FC<{
       ? courseCertificateData?.course_run.course.title
       : programCertificateData?.program.title
 
-  const { displayType } = getCertificateInfo()
+  const { displayType } = getCertificateInfo(
+    programCertificateData?.program?.program_type,
+  )
 
   const certificateData =
     certificateType === CertificateType.Course

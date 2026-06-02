@@ -8,7 +8,28 @@ import { LINKEDIN_ADD_TO_PROFILE_BASE_URL } from "@/common/urls"
 /**
  * Returns common display info for a certificate.
  */
-export const getCertificateInfo = (): { displayType: string } => {
+export const getCertificateInfo = (
+  programType?: string | null,
+): { displayType: string } => {
+  const normalizedProgramType = (programType ?? "").trim().toLowerCase()
+  if (
+    normalizedProgramType.includes("micro") &&
+    normalizedProgramType.includes("master")
+  ) {
+    return {
+      displayType: "MicroMasters\u00ae Certificate",
+    }
+  }
+  if (normalizedProgramType === "series") {
+    return {
+      displayType: "Series Certificate",
+    }
+  }
+  if (normalizedProgramType === "program") {
+    return {
+      displayType: "Program Certificate",
+    }
+  }
   return {
     displayType: "Certificate",
   }

@@ -499,7 +499,7 @@ const ProgramCertificate = ({
 }) => {
   const title = certificate?.program?.title
 
-  const { displayType } = getCertificateInfo()
+  const { displayType } = getCertificateInfo(certificate.program.program_type)
 
   const userName = certificate?.user?.name
 
