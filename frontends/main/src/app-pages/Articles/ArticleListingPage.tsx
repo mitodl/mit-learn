@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React from "react"
 import Image from "next/image"
 import { useSearchParams } from "@mitodl/course-search-utils/next"
 import {
@@ -14,25 +14,19 @@ import {
   css,
   LoadingSpinner,
   PlainList,
+  Breadcrumbs,
 } from "ol-components"
 import Link from "next/link"
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
-import {
-  useNewsEventsList,
-  NewsEventsListFeedTypeEnum,
-} from "api/hooks/newsEvents"
-import type { NewsFeedItem } from "api/v0"
+import type { WebsiteContent } from "api/v1"
 import { LocalDate } from "ol-utilities"
 import { linkifyText } from "@/common/utils"
-import { NewsBanner } from "./ArticleBanner"
 import { useWebsiteContentList } from "api/hooks/website_content"
-import { useUserHasPermission, Permission } from "api/hooks/user"
+import { extractArticleContent } from "@/common/websiteContentUtils"
+import { articleView } from "@/common/urls"
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 10
 const MAX_PAGE = 50
-
-export const DEFAULT_BACKGROUND_IMAGE_URL =
-  "/images/backgrounds/banner_background.webp"
 
 const getLastPage = (count: number): number => {
   const pages = Math.ceil(count / PAGE_SIZE)
@@ -41,7 +35,7 @@ const getLastPage = (count: number): number => {
 
 const Section = styled.section`
   background: ${theme.custom.colors.white};
-  padding: 80px 0;
+  padding: 64px 0;
   ${theme.breakpoints.down("sm")} {
     padding: 0;
   }
@@ -56,10 +50,6 @@ const RegularStoryTitleWrapper = styled.div`
     gap: 8px;
   }
 `
-
-
-
-
 
 // Regular story card for grid
 const StoryCard = styled.div`
@@ -130,7 +120,6 @@ const StoryContent = styled.div`
   justify-content: space-between;
   flex: 1;
   order: 1;
-  min-height: 180px;
   min-width: 0;
   overflow: hidden;
 
@@ -206,6 +195,7 @@ const StoryDate = styled(Typography)`
   color: ${theme.custom.colors.silverGrayDark};
   ${{ ...theme.typography.body3 }}
   margin-bottom: 16px;
+  margin-top: 16px;
 
   ${theme.breakpoints.down("sm")} {
     margin-bottom: 0;
@@ -222,8 +212,18 @@ const StyledSection = styled(Section)`
 `
 
 const GridContainer = styled.div`
-  max-width: 800px;
+  max-width: 842px;
   margin: 0 auto;
+
+  ${theme.breakpoints.down("sm")} {
+    max-width: 100%;
+  }
+`
+
+const BannerGridContainer = styled.div`
+  max-width: 842px;
+  margin: 0 auto;
+  padding: 64px 0;
 
   ${theme.breakpoints.down("sm")} {
     max-width: 100%;
@@ -295,6 +295,11 @@ const LoadingContainer = styled.div`
   width: 100%;
 `
 
+const BannerSection = styled.div`
+  background: ${theme.custom.colors.white};
+  border-bottom: 1px solid ${theme.custom.colors.lightGray2};
+`
+
 const EmptyState = styled.div`
   display: flex;
   flex-direction: column;
@@ -311,70 +316,102 @@ const EmptyState = styled.div`
     padding: 24px 16px;
   }
 `
-const NewsBannerStyled = styled(NewsBanner)<{ page: number }>(
-  ({ page, theme }) => ({
-    padding: "48px 0",
-    paddingBottom: page === 1 ? "250px" : undefined,
-    position: "relative",
-    backgroundSize: "150% !important",
-    backgroundPosition: "center !important",
 
-    "&::before": {
-      content: '""',
-      position: "absolute",
-      inset: 0,
-      background: "rgb(0 0 0 / 85%)",
-      zIndex: 1,
-    },
+const BannerTitle = styled(Typography)`
+  color: ${theme.custom.colors.black};
+  margin-top: 8px;
+  ${theme.breakpoints.down("md")} {
+    ${{ ...theme.typography.h2 }}
+  }
+  ${theme.breakpoints.down("sm")} {
+    ${{ ...theme.typography.h3 }}
+  }
+` as typeof Typography
 
-    "& > *": {
-      position: "relative",
-      zIndex: 2,
-    },
+const BannerDescription = styled(Typography)`
+  color: ${theme.custom.colors.black};
+  margin-top: 16px;
+  font-size: 20px;
+  line-height: 32px;
+  ${theme.breakpoints.down("sm")} {
+    ${{ ...theme.typography.body2 }}
+  }
+`
 
-    [theme.breakpoints.down("md")]: {
-      paddingBottom: page === 1 ? "198px" : undefined,
-    },
+const BreadcrumbBar = styled.div(({ theme }) => ({
+  position: "relative",
+  left: "50%",
+  right: "50%",
+  marginLeft: "-50vw",
+  marginRight: "-50vw",
+  width: "100vw",
+  padding: "18px 0 2px 0",
+  backgroundColor: theme.custom.colors.white,
+  borderBottom: `1px solid ${theme.custom.colors.red}`,
+  textDecoration: "none",
+  "&& .breadcrum span span a": {
+    textDecoration: "none !important",
+  },
+  "&& .breadcrum span span a span": {
+    textDecoration: "none !important",
+  },
+  [theme.breakpoints.down("sm")]: {
+    padding: "12px 0 0px 0",
+  },
+}))
+const BreadcrumContainer = styled(Container)(({ theme }) => ({
+  maxWidth: "1080px !important",
+  padding: "0 !important",
+  [theme.breakpoints.down("lg")]: {
+    padding: "0 16px !important",
+  },
+  [theme.breakpoints.down("md")]: {
+    padding: "0 16px !important",
+  },
+  [theme.breakpoints.down("sm")]: {
+    padding: "0 16px !important",
+  },
+})) as typeof Container
 
-    [theme.breakpoints.down("sm")]: {
-      padding: "32px 0",
-      marginBottom: 0,
-    },
-  }),
-)
-
-const RegularStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
+const RegularStory: React.FC<{ item: WebsiteContent }> = ({ item }) => {
+  const articleContent = extractArticleContent(item)
   const [imageError, setImageError] = React.useState(false)
-  console.log("Rendering RegularStory for item:", item) // Debug log to check the item data 
   return (
     <StoryCard>
       <StoryContent>
         <RegularStoryTitleWrapper>
           <StoryTitle>
-            <Link href={item.url}>{item.title}</Link>
+            <Link href={articleView(item.slug ?? String(item.id))}>
+              {item.title}
+            </Link>
           </StoryTitle>
-          {item.summary && (
+          {articleContent.paragraph && (
             <StorySummary
-              dangerouslySetInnerHTML={{ __html: linkifyText(item.summary) }}
+              dangerouslySetInnerHTML={{
+                __html: linkifyText(articleContent.paragraph),
+              }}
             />
           )}
         </RegularStoryTitleWrapper>
         <StoryDate variant="body3">
-          <LocalDate date={item.news_details?.publish_date} />
+          <LocalDate date={item?.publish_date || item?.updated_on} />
         </StoryDate>
       </StoryContent>
-      <Link href={item.url} style={{ textDecoration: "none", order: 2 }}>
-        <StoryImage>
-          {item.image?.url && !imageError && (
+      <Link
+        href={articleView(item.slug ?? String(item.id))}
+        style={{ textDecoration: "none", order: 2 }}
+      >
+        {articleContent?.image?.src && !imageError && (
+          <StoryImage>
             <Image
-              src={item.image.url}
-              alt={item.image.alt || item.title}
+              src={articleContent.image.src}
+              alt={articleContent.image.alt || item?.title}
               fill
               style={{ objectFit: "cover" }}
               onError={() => setImageError(true)}
             />
-          )}
-        </StoryImage>
+          </StoryImage>
+        )}
       </Link>
     </StoryCard>
   )
@@ -383,28 +420,41 @@ const RegularStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
 const ArticleListingPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = parseInt(searchParams.get("page") ?? "1", 10)
-  const canCreateArticle = useUserHasPermission(Permission.ArticleEditor)
 
   const { data: articles, isLoading } = useWebsiteContentList({
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
     content_type: "article",
   })
-  console.log("Articles data:", articles)
+
   const gridStories = articles?.results ?? []
   const totalPages = articles?.count ? getLastPage(articles.count) : 0
 
-
   return (
     <>
-      <NewsBannerStyled
-        page={page}
-        title="News"
-        description="Insights, ideas, and stories from the world of learning at MIT."
-        currentBreadcrumb="News"
-        backgroundUrl={DEFAULT_BACKGROUND_IMAGE_URL}
-      />
-
+      <BannerSection>
+        <Container>
+          <BreadcrumbBar>
+            <BreadcrumContainer className="breadcrum">
+              <Breadcrumbs
+                variant="light"
+                ancestors={[{ href: "/", label: "Home" }]}
+                current="Articles"
+              />
+            </BreadcrumContainer>
+          </BreadcrumbBar>
+          <BannerGridContainer>
+            <BannerTitle component="h1" variant="h1">
+              Articles
+            </BannerTitle>
+            <BannerDescription variant="body1">
+              Dive into articles covering emerging technologies, global
+              challenges, and creative thinking. Stay connected with the latest
+              insights and discoveries from MIT.
+            </BannerDescription>
+          </BannerGridContainer>
+        </Container>
+      </BannerSection>
       <StyledSection>
         <Container>
           {isLoading ? (
@@ -436,7 +486,6 @@ const ArticleListingPage: React.FC = () => {
               </BelowMdOnly>
 
               <AboveMdOnly>
-
                 {/* Grid Section: Other news */}
                 {gridStories.length > 0 ? (
                   <GridContainer>

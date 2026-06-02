@@ -1,3 +1,68 @@
+import type { WebsiteContent } from "api/v1"
+type ProseMirrorNode = {
+  type: string
+  content?: ProseMirrorNode[]
+  attrs?: Record<string, unknown>
+  text?: string
+}
+
+type ArticleContent = {
+  type: string
+  content?: ProseMirrorNode[]
+}
+
+type ArticleImage = {
+  src: string
+  alt: string | null
+  caption: string | null
+}
+
+type ArticleSummary = {
+  heading: string | null
+  paragraph: string | null
+  image: ArticleImage | null
+}
+
+function extractText(nodes: ProseMirrorNode[] | undefined): string {
+  if (!nodes) return ""
+  return nodes
+    .filter((n) => n.type === "text" && typeof n.text === "string")
+    .map((n) => n.text as string)
+    .join("")
+}
+
+/**
+ * Extracts heading, paragraph (from banner), and first image from an article's content.
+ */
+export function extractArticleContent(
+  article: WebsiteContent | null | undefined,
+): ArticleSummary {
+  const articleContent = article?.content as ArticleContent | undefined
+  const topLevel = articleContent?.content ?? []
+
+  const banner = topLevel.find((n) => n.type === "banner")
+  const headingNode = banner?.content?.find((n) => n.type === "heading")
+  const paragraphNode = banner?.content?.find((n) => n.type === "paragraph")
+
+  const imageNode = topLevel.find((n) => n.type === "imageWithCaption")
+  const imageAttrs = imageNode?.attrs
+  const image =
+    imageAttrs?.src && typeof imageAttrs.src === "string"
+      ? {
+          src: imageAttrs.src,
+          alt: typeof imageAttrs.alt === "string" ? imageAttrs.alt : null,
+          caption:
+            typeof imageAttrs.caption === "string" ? imageAttrs.caption : null,
+        }
+      : null
+
+  return {
+    heading: extractText(headingNode?.content) || null,
+    paragraph: extractText(paragraphNode?.content) || null,
+    image,
+  }
+}
+
 /**
  * Recursively traverses a ProseMirror JSON content structure to find the first image.
  *

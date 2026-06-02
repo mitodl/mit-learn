@@ -64,7 +64,7 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
         if not (is_admin_user(self.request) or is_website_content_editor(self.request)):
             qs = qs.filter(is_published=True)
 
-        return qs
+        return qs.order_by("-publish_date")
 
     @method_decorator(
         cache_page_per_user(
