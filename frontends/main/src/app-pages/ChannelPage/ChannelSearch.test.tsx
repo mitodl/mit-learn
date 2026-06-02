@@ -164,11 +164,12 @@ describe("ChannelSearch", () => {
     })
 
     await waitFor(() => {
-      const vectorSearchCall = makeRequest.mock.calls.find(
-        ([method, url]) =>
-          method === "get" && url.startsWith(urls.search.vectorResources()),
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "get",
+          url: expect.stringContaining(urls.search.vectorResources()),
+        }),
       )
-      expect(vectorSearchCall).toBeDefined()
     })
   })
 
