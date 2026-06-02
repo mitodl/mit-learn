@@ -526,7 +526,11 @@ export interface SearchDisplayProps {
   setSearchParams: UseResourceSearchParamsProps["setSearchParams"]
   resultsHeadingEl: "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
   filterHeadingEl: React.ElementType
-  getQueryOptions?: (params: ReturnType<typeof getSearchParams>) => unknown
+  getQueryOptions?: (
+    params: ReturnType<typeof getSearchParams>,
+  ) =>
+    | ReturnType<typeof learningResourceQueries.search>
+    | ReturnType<typeof learningResourceQueries.vectorSearch>
   getDisplayData?: (
     data: LearningResourcesSearchResponse | undefined,
     params: ReturnType<typeof getSearchParams>,
