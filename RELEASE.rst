@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.70.1
+Version 0.70.1 (Released June 02, 2026)
 --------------
 
 - fix a bug with filtering out variant runs when the default is selected (#3394)
