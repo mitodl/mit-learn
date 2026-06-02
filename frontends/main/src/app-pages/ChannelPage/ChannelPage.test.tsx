@@ -101,6 +101,17 @@ const setupApis = (
     },
     ...search,
   })
+  setMockResponse.get(expect.stringContaining(urls.search.vectorResources()), {
+    count: 0,
+    next: null,
+    previous: null,
+    results: [],
+    metadata: {
+      aggregations: {},
+      suggestions: [],
+    },
+    ...search,
+  })
 
   setMockResponse.get(expect.stringContaining(urls.testimonials.list({})), {
     results: [],
