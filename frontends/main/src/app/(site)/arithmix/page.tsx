@@ -1,14 +1,14 @@
 import React from "react"
 import { Metadata } from "next"
 import { standardizeMetadata } from "@/common/metadata"
-import { Arithmix } from "numbers-puzzle-game"
+import ArithmixClient from "./ArithmixClient"
 
 export const metadata: Metadata = standardizeMetadata({
-  title: "Arythmix",
+  title: "Arithmix",
 })
 
-const Page: React.FC<PageProps<"/arythmix">> = () => {
-  return <Arithmix />
+const Page: React.FC<PageProps<"/arithmix">> = () => {
+  return <ArithmixClient />
 }
 
 export default Page
