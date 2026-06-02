@@ -22,8 +22,6 @@ from vector_search.constants import (
     COLLECTION_PARAM_MAP,
     CONTENT_FILES_COLLECTION_NAME,
     CONTENT_FILES_RETRIEVE_PAYLOAD,
-    DENSE_VECTOR_SEARCH_MIN_SCORE,
-    HYBRID_VECTOR_SEARCH_MIN_SCORE,
     QDRANT_RESOURCE_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
     RESOURCES_RETRIEVE_PAYLOAD,
@@ -54,9 +52,9 @@ def _normalize_score_cutoff(value, hybrid_search_enabled):
     except (TypeError, ValueError):
         return None
     min_score_cutoff = (
-        HYBRID_VECTOR_SEARCH_MIN_SCORE
+        settings.HYBRID_VECTOR_SEARCH_MIN_SCORE
         if hybrid_search_enabled
-        else DENSE_VECTOR_SEARCH_MIN_SCORE
+        else settings.DENSE_VECTOR_SEARCH_MIN_SCORE
     )
     return max(value, min_score_cutoff)
 

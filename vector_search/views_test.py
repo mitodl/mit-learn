@@ -8,10 +8,6 @@ from qdrant_client.http.models.models import CountResult
 from rest_framework.exceptions import NotAuthenticated, PermissionDenied
 
 from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
-from vector_search.constants import (
-    DENSE_VECTOR_SEARCH_MIN_SCORE,
-    HYBRID_VECTOR_SEARCH_MIN_SCORE,
-)
 from vector_search.encoders.utils import dense_encoder, sparse_encoder
 from vector_search.views import QdrantView
 
@@ -775,9 +771,9 @@ def test_vector_search_with_score_cutoff_enforces_min_score(
     assert call_kwargs["limit"] == 5
     assert call_kwargs["offset"] == 0
     if hybrid_search:
-        assert call_kwargs["score_threshold"] == HYBRID_VECTOR_SEARCH_MIN_SCORE
+        assert call_kwargs["score_threshold"] == settings.HYBRID_VECTOR_SEARCH_MIN_SCORE
     else:
-        assert call_kwargs["score_threshold"] == DENSE_VECTOR_SEARCH_MIN_SCORE
+        assert call_kwargs["score_threshold"] == settings.DENSE_VECTOR_SEARCH_MIN_SCORE
 
 
 @pytest.mark.parametrize("query_string", ["", "test"])
@@ -818,9 +814,9 @@ def test_build_search_params_sort_with_cutoff_score(
             assert isinstance(search_params["query"], models.FusionQuery)
 
         assert search_params["score_threshold"] == (
-            HYBRID_VECTOR_SEARCH_MIN_SCORE
+            settings.HYBRID_VECTOR_SEARCH_MIN_SCORE
             if hybrid_search
-            else DENSE_VECTOR_SEARCH_MIN_SCORE
+            else settings.DENSE_VECTOR_SEARCH_MIN_SCORE
         )
 
     if sortby and min_score is None:
