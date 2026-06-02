@@ -4,6 +4,7 @@
 
 export { default as styled } from "@emotion/styled"
 export { css, Global } from "@emotion/react"
+export { alpha } from "@mui/material/styles"
 
 /**
  * Re-exports from MUI.
@@ -55,6 +56,9 @@ export type { GridProps } from "@mui/material/Grid"
 export { default as Grid2 } from "@mui/material/Grid2"
 export type { Grid2Props } from "@mui/material/Grid2"
 
+export { default as IconButton } from "@mui/material/IconButton"
+export type { IconButtonProps } from "@mui/material/IconButton"
+
 export { default as List } from "@mui/material/List"
 export type { ListProps } from "@mui/material/List"
 export { default as ListItem } from "@mui/material/ListItem"
@@ -83,6 +87,11 @@ export type { TabPanelProps } from "@mui/lab/TabPanel"
 
 export { default as Toolbar } from "@mui/material/Toolbar"
 export type { ToolbarProps } from "@mui/material/Toolbar"
+
+export { default as Menu } from "@mui/material/Menu"
+export type { MenuProps } from "@mui/material/Menu"
+export { default as Tooltip } from "@mui/material/Tooltip"
+export type { TooltipProps } from "@mui/material/Tooltip"
 
 export { default as Avatar } from "@mui/material/Avatar"
 

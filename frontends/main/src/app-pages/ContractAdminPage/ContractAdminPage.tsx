@@ -4,8 +4,8 @@ import React, { useState } from "react"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
 import { useFeatureFlagEnabled } from "posthog-js/react"
-import { RiMoreLine } from "@remixicon/react"
 import {
+  alpha,
   Chip,
   Container,
   Pagination,
@@ -13,6 +13,7 @@ import {
   Skeleton,
   Stack,
   TabContext,
+  Tooltip,
   Typography,
   styled,
 } from "ol-components"
@@ -22,6 +23,8 @@ import {
   TabButtonList,
   VisuallyHidden,
 } from "@mitodl/smoot-design"
+import { AssignSeatsSection } from "./AssignSeatsSection"
+import { RowActionMenu } from "./RowActionMenu"
 import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
 import type { ContractCode } from "api/mitxonline-hooks/organizations"
 import { matchOrganizationBySlug } from "@/common/utils"
@@ -167,8 +170,8 @@ const ControlsLeft = styled.div(({ theme }) => ({
 const TableCard = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
   border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "4px",
-  padding: "32px",
+  borderRadius: "8px",
+  padding: "24px",
   [theme.breakpoints.down("md")]: {
     padding: "16px",
   },
@@ -179,7 +182,7 @@ const TableHeaderRow = styled.div(({ theme }) => ({
   gap: "16px",
   alignItems: "center",
   paddingBottom: "16px",
-  borderBottom: `2px solid ${theme.custom.colors.silverGrayDark}`,
+  borderBottom: `1px solid ${theme.custom.colors.silverGrayDark}`,
   [theme.breakpoints.down("md")]: {
     display: "none",
   },
@@ -252,18 +255,17 @@ const StatusBadge = styled(Chip, {
 })<{ $status: "redeemed" | "pending" }>(({ $status, theme }) => ({
   height: "20px",
   borderRadius: "4px",
-  fontSize: "12px",
+  ...theme.typography.body3,
   fontWeight: theme.typography.fontWeightBold as number,
-  lineHeight: "16px",
   "& .MuiChip-label": {
     padding: "0 8px",
   },
   ...($status === "redeemed" && {
-    backgroundColor: `${theme.custom.colors.green}33`,
+    backgroundColor: alpha(theme.custom.colors.green, 0.2),
     color: theme.custom.colors.darkGreen,
   }),
   ...($status === "pending" && {
-    backgroundColor: `${theme.custom.colors.blue}33`,
+    backgroundColor: alpha(theme.custom.colors.blue, 0.2),
     color: theme.custom.colors.darkBlue,
   }),
 }))
@@ -277,25 +279,6 @@ const ActionCell = styled.div(({ theme }) => ({
     position: "absolute",
     top: "16px",
     right: 0,
-  },
-}))
-
-const IconButton = styled.button(({ theme }) => ({
-  background: "none",
-  border: "none",
-  padding: "4px",
-  cursor: "pointer",
-  borderRadius: "4px",
-  color: theme.custom.colors.silverGrayDark,
-  display: "flex",
-  alignItems: "center",
-  "&:hover": {
-    backgroundColor: theme.custom.colors.lightGray2,
-    color: theme.custom.colors.darkGray2,
-  },
-  "&:focus-visible": {
-    outline: `2px solid ${theme.custom.colors.darkGray2}`,
-    outlineOffset: "2px",
   },
 }))
 
@@ -500,6 +483,8 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
           </StatsSide>
         </HeaderSection>
 
+        <AssignSeatsSection />
+
         {/* Seat Assignments */}
         <SeatAssignmentsSection>
           <SectionTitle component="h2">Seat Assignments</SectionTitle>
@@ -534,7 +519,13 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
               />
             </ControlsLeft>
             <ExportButtonWrapper>
-              <Button variant="bordered"> Export CSV (coming soon)</Button>
+              <Tooltip title="Coming soon">
+                <span>
+                  <Button variant="bordered" disabled>
+                    Export CSV
+                  </Button>
+                </span>
+              </Tooltip>
             </ExportButtonWrapper>
           </SeatAssignmentsControls>
           <VisuallyHidden aria-live="polite" aria-atomic="true">
@@ -647,12 +638,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                           {STUB}
                         </TableCell>
                         <ActionCell role="cell">
-                          <IconButton
-                            type="button"
-                            aria-label={`More actions for ${code.redeemed_by ?? "unassigned seat"}`}
-                          >
-                            <RiMoreLine size={16} />
-                          </IconButton>
+                          <RowActionMenu code={code} />
                         </ActionCell>
                       </TableRow>
                     )

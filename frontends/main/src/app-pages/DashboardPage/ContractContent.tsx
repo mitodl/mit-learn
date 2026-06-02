@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query"
 import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
 import { adaptCourseEntryToLegacyDashboardCardProps } from "./CoursewareDisplay/model/dashboardAdapters"
 import {
+  alpha,
   Link,
   PlainList,
   Skeleton,
@@ -27,7 +28,7 @@ import { ButtonLink } from "@mitodl/smoot-design"
 import { RiAwardFill } from "@remixicon/react"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
-import { matchOrganizationBySlug } from "@/common/utils"
+import { matchOrganizationBySlug, stripOrgPrefix } from "@/common/utils"
 import { FeatureFlags } from "@/common/feature_flags"
 import { contractAdminView } from "@/common/urls"
 import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
@@ -56,7 +57,7 @@ const ImageContainer = styled.div(({ theme }) => ({
   justifyContent: "center",
   borderRadius: "8px",
   backgroundColor: theme.custom.colors.white,
-  boxShadow: "0px 1px 3px 0px rgba(120, 147, 172, 0.40)",
+  boxShadow: `0px 1px 3px 0px ${alpha(theme.custom.colors.silverGray, 0.4)}`,
   "> img": {
     width: "100%",
     height: "auto",
@@ -179,7 +180,7 @@ const DashboardCardStyled = styled(DashboardCard)({
 
 const ProgramRoot = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
-  boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.08)",
+  boxShadow: `0px 4px 8px 0px ${alpha(theme.custom.colors.darkGray2, 0.08)}`,
   backgroundColor: theme.custom.colors.white,
   borderRadius: "8px",
 }))
@@ -347,7 +348,7 @@ const ContractHeaderSection = styled.div(({ theme }) => ({
   gap: "24px",
   borderRadius: "8px",
   backgroundColor: theme.custom.colors.white,
-  boxShadow: "0 1px 6px 0 rgba(3, 21, 45, 0.05)",
+  boxShadow: `0 1px 6px 0 ${alpha(theme.custom.colors.darkGray2, 0.05)}`,
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
     alignItems: "flex-start",
@@ -392,7 +393,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
     enabled: managerDashboardFlag === true,
   })
   const isManager =
-    managerOrgs?.some(matchOrganizationBySlug(org.slug.replace(/^org-/, ""))) ??
+    managerOrgs?.some(matchOrganizationBySlug(stripOrgPrefix(org.slug))) ??
     false
 
   const skeleton = (
@@ -439,7 +440,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
               <ButtonLink
                 size="small"
                 href={contractAdminView(
-                  org.slug.replace(/^org-/, ""),
+                  stripOrgPrefix(org.slug),
                   contract.slug,
                 )}
               >

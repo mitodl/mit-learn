@@ -8,9 +8,11 @@ const isInEnum = <T extends string>(
   return Object.values(enumObject).includes(value as T)
 }
 
+const stripOrgPrefix = (slug: string): string => slug.replace(/^org-/, "")
+
 const matchOrganizationBySlug =
   (orgSlug: string) => (organization: OrganizationPage) => {
-    return organization.slug.replace(/^org-/, "") === orgSlug
+    return stripOrgPrefix(organization.slug) === orgSlug
   }
 
 // Utility function to collapse whitespace
@@ -168,6 +170,7 @@ function externalLinkProps(href: string, extra?: Record<string, unknown>) {
 
 export {
   isInEnum,
+  stripOrgPrefix,
   matchOrganizationBySlug,
   collapseWhitespace,
   linkifyText,
