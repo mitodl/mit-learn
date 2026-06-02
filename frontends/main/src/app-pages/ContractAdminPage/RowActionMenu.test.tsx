@@ -77,7 +77,9 @@ describe("RowActionMenu", () => {
         expect.stringContaining(`/enrollmentcode/${code.code}`),
       )
       expect(
-        await screen.findByRole("menuitem", { name: "Link copied to clipboard" }),
+        await screen.findByRole("menuitem", {
+          name: "Link copied to clipboard",
+        }),
       ).toBeInTheDocument()
     })
 
@@ -99,7 +101,11 @@ describe("RowActionMenu", () => {
         screen.getByRole("menuitem", { name: "Copy claim link" }),
       )
 
-      expect(await screen.findByRole("menuitem", { name: "Link copied to clipboard" })).toBeInTheDocument()
+      expect(
+        await screen.findByRole("menuitem", {
+          name: "Link copied to clipboard",
+        }),
+      ).toBeInTheDocument()
       expect(liveRegion).toHaveTextContent("Link copied to clipboard")
     })
 
@@ -129,7 +135,9 @@ describe("RowActionMenu", () => {
 
       expect(document.execCommand).toHaveBeenCalledWith("copy")
       expect(
-        await screen.findByRole("menuitem", { name: "Link copied to clipboard" }),
+        await screen.findByRole("menuitem", {
+          name: "Link copied to clipboard",
+        }),
       ).toBeInTheDocument()
     })
   })
