@@ -184,7 +184,11 @@ describe.each([ListType.LearningPath, ListType.UserList])(
       const saveButton = await screen.findByRole("button", { name: "Save" })
       await user.click(saveButton)
 
-      expect(makeRequest).toHaveBeenCalledWith("patch", setRelationshipsUrl, {})
+      expect(makeRequest).toHaveBeenCalledWith({
+        method: "patch",
+        url: setRelationshipsUrl,
+        body: {},
+      })
     })
 
     test("Clicking a checked list and clicking save removes item from that list", async () => {
@@ -239,7 +243,11 @@ describe.each([ListType.LearningPath, ListType.UserList])(
       const saveButton = await screen.findByRole("button", { name: "Save" })
       await user.click(saveButton)
 
-      expect(makeRequest).toHaveBeenCalledWith("patch", setRelationshipUrl, {})
+      expect(makeRequest).toHaveBeenCalledWith({
+        method: "patch",
+        url: setRelationshipUrl,
+        body: {},
+      })
     })
 
     test("Clicking 'Create New list' opens the create list dialog", async () => {

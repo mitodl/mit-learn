@@ -1,14 +1,17 @@
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import { styled, Typography } from "ol-components"
 import { CarouselV2Vertical } from "ol-components/CarouselV2Vertical"
 import { RiCloseLine, RiVolumeMuteLine, RiVolumeUpLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
 import { useWindowDimensions } from "ol-utilities"
-import type { VideoShort } from "api/v0"
+import type { VideoResource } from "api/v1"
 import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
+import VideoJsPlayer from "@/app-pages/VideoPlaylistCollectionPage/VideoJsPlayer"
+import type Player from "video.js/dist/types/player"
 
-const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
+const MODAL_VERTICAL_PADDING = 60
+const PORTRAIT_ASPECT_RATIO = 9 / 16
 
 const Overlay = styled.div(({ theme }) => ({
   position: "fixed",
@@ -59,28 +62,33 @@ const MuteButton = styled(BaseButton)(({ theme }) => ({
   },
 }))
 
-const CarouselSlide = styled.div<{ width: number }>(({ width, theme }) => ({
+const CarouselSlide = styled("div", {
+  shouldForwardProp: (prop) => prop !== "width" && prop !== "height",
+})<{ width: number; height: number }>(({ width, height, theme }) => ({
   width,
+  height,
   overflow: "hidden",
   borderRadius: "12px",
-  flex: "0 0 calc(100% - 60px)",
+  flex: "0 0 auto",
   margin: "30px 0",
   position: "relative",
   [theme.breakpoints.down("md")]: {
-    width: "100%",
+    maxWidth: "100%",
+    height: "100%",
     margin: "10px 0",
     flex: "0 0 calc(100% - 20px)",
     borderRadius: 0,
   },
 }))
 
-const Video = styled.video(({ height, width, theme }) => ({
-  width,
-  height,
+const VideoPlayerContainer = styled("div")(({ theme }) => ({
+  width: "100%",
+  height: "100%",
   backgroundColor: theme.custom.colors.black,
-  [theme.breakpoints.down("md")]: {
-    width: "100%",
-    height: "100%",
+  cursor: "pointer",
+  // Target the actual <video> element rendered by the video.js html5 tech
+  "& .vjs-tech": {
+    objectFit: "cover",
   },
 }))
 
@@ -108,17 +116,22 @@ const Placeholder = styled.div(({ theme }) => ({
   },
 }))
 
-const isPlaying = (videoElement: HTMLVideoElement | null): boolean => {
-  if (!videoElement) return false
+const playerPaused = (player: Player): boolean => player.paused()
+const playerEnded = (player: Player): boolean => player.ended()
+const playerCurrentTime = (player: Player): number => player.currentTime() ?? 0
+const playerReadyState = (player: Player): number => player.readyState()
+const playerDuration = (player: Player): number => player.duration() ?? 0
+const playerMuted = (player: Player): boolean => player.muted() ?? true
 
-  const isPlaying =
-    !videoElement.paused && !videoElement.ended && videoElement.currentTime > 0
-
-  const isReady = videoElement.readyState >= 2
-
-  const hasDuration = videoElement.duration > 0
-
-  return isPlaying && isReady && hasDuration
+const isPlaying = (player: Player | null): boolean => {
+  if (!player) return false
+  return (
+    !playerPaused(player) &&
+    !playerEnded(player) &&
+    playerCurrentTime(player) > 0 &&
+    playerReadyState(player) >= 2 &&
+    playerDuration(player) > 0
+  )
 }
 
 const isIOS = () => {
@@ -127,69 +140,86 @@ const isIOS = () => {
 
 type VideoWithErrorHandlerProps = {
   index: number
-  video: VideoShort
-  videosRef: React.MutableRefObject<(HTMLVideoElement | null)[]>
+  video: VideoResource
+  playersRef: React.RefObject<(Player | null)[]>
   onError: (index: number, e: Event) => void
   onVideoClick: () => void
-  videoWidth: number
-  videoHeight: number
 }
 
 const VideoWithErrorHandler = ({
   index,
   video,
-  videosRef,
+  playersRef,
   onError,
   onVideoClick,
-  videoWidth,
-  videoHeight,
 }: VideoWithErrorHandlerProps) => {
-  const handlerRef = useRef<((e: Event) => void) | null>(null)
-
-  const refCallback = useCallback(
-    (el: HTMLVideoElement | null) => {
-      if (!el) {
-        const currentEl = videosRef.current[index]
-        if (currentEl && handlerRef.current) {
-          currentEl.removeEventListener("error", handlerRef.current)
-        }
-        videosRef.current[index] = null
-        return
-      }
-      videosRef.current[index] = el
-
-      const handler = (e: Event) => {
-        console.error("Video errored", index, e)
-        onError(index, e)
-      }
-      handlerRef.current = handler
-      el.addEventListener("error", handler)
-    },
-    [index, onError, videosRef],
+  const src = video.video?.streaming_url ?? undefined
+  const sourceType = src?.includes(".m3u8")
+    ? "application/x-mpegURL"
+    : "video/mp4"
+  // Memoize so the array reference only changes when `src` actually changes.
+  // Without this, every parent re-render (e.g. selectedIndex update) creates a
+  // new array, which triggers VideoJsPlayer's sources update effect and calls
+  // player.src() — reloading the video and causing a black flash mid-playback.
+  const sources = useMemo(
+    () => (src ? [{ src, type: sourceType }] : []),
+    [src, sourceType],
   )
 
+  useEffect(() => {
+    if (!src) {
+      onError(index, new Event("missingsource"))
+    }
+  }, [src, index, onError])
+
+  const handleReady = useCallback(
+    (player: Player) => {
+      playersRef.current[index] = player
+      player.muted(true)
+
+      // Hide the player until the first frame is decoded to avoid a flash of
+      // the default video.js background. Reveal as soon as the frame is ready
+      // (loadeddata), not when playback starts — this means adjacent
+      // pre-initialized slides already show a still frame before the user
+      // navigates to them, so there is no black flash during navigation.
+      const el = player.el() as HTMLElement
+      el.style.opacity = "0"
+      player.one("loadeddata", () => {
+        el.style.opacity = "1"
+      })
+
+      player.on("error", (e: Event) => {
+        console.error("Video errored", index, e)
+        onError(index, e)
+      })
+      player.on("dispose", () => {
+        playersRef.current[index] = null
+      })
+    },
+    [index, onError, playersRef],
+  )
+
+  if (!src) return null
+
   return (
-    <Video
-      ref={refCallback}
-      onClick={onVideoClick}
-      src={`${NEXT_PUBLIC_ORIGIN}${video.video_url}`}
-      autoPlay
-      muted
-      playsInline
-      webkit-playsinline="true"
-      controlsList="nofullscreen"
-      disablePictureInPicture
-      width={videoWidth}
-      height={videoHeight}
-      preload="metadata"
-      loop
-    />
+    <VideoPlayerContainer onClick={onVideoClick}>
+      <VideoJsPlayer
+        sources={sources}
+        autoplay={true}
+        controls={false}
+        fluid={false}
+        loop={true}
+        bigPlayButton={false}
+        playsinline={true}
+        onReady={handleReady}
+      />
+    </VideoPlayerContainer>
   )
 }
 
 type VideoShortsModalProps = {
   startIndex: number
-  videoData: VideoShort[]
+  videoData: VideoResource[]
   onClose: () => void
 }
 const VideoShortsModal = ({
@@ -198,19 +228,20 @@ const VideoShortsModal = ({
   onClose,
 }: VideoShortsModalProps) => {
   const { height } = useWindowDimensions()
+  const videoHeight = Math.max(height - MODAL_VERTICAL_PADDING, 0)
   const [selectedIndex, setSelectedIndex] = useState<number | null>(startIndex)
   const [muted, setMuted] = useState(true)
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
   const [videoErrors, setVideoErrors] = useState<Record<number, unknown>>({})
 
-  const videosRef = useRef<(HTMLVideoElement | null)[]>([])
+  const playersRef = useRef<(Player | null)[]>([])
 
   const onVideoError = useCallback((index: number, e: Event) => {
     setVideoErrors((prev) => ({ ...prev, [index]: e }))
   }, [])
 
   useEffect(() => {
-    videosRef.current = videosRef.current.slice(0, videoData.length)
+    playersRef.current = playersRef.current.slice(0, videoData.length)
   }, [videoData])
 
   useEffect(() => {
@@ -219,11 +250,14 @@ const VideoShortsModal = ({
         onClose()
       }
 
-      if (event.key === "Space" && selectedIndex !== null) {
-        if (isPlaying(videosRef.current[selectedIndex])) {
-          videosRef.current[selectedIndex]?.pause()
-        } else {
-          videosRef.current[selectedIndex]?.play().catch(() => {})
+      if (event.key === " " && selectedIndex !== null) {
+        const player = playersRef.current[selectedIndex]
+        if (player) {
+          if (isPlaying(player)) {
+            player.pause()
+          } else {
+            player.play()?.catch(() => {})
+          }
         }
       }
 
@@ -238,48 +272,48 @@ const VideoShortsModal = ({
 
   const onSlidesInView = (inView: number[]) => {
     if (inView.length === 1) {
-      videosRef.current
-        .filter((video, index) => video && index !== inView[0])
-        .forEach((video) => {
-          video!.pause()
-        })
+      playersRef.current
+        .filter(
+          (player, index): player is Player =>
+            player !== null && index !== inView[0],
+        )
+        .forEach((player) => player.pause())
       setSelectedIndex(inView[0])
-      if (videosRef.current[inView[0]]) {
-        const video = videosRef.current[inView[0]]!
-        video.muted = muted
-
+      const player = playersRef.current[inView[0]]
+      if (player) {
+        player.muted(muted)
         // On iOS, only autoplay if muted or if user has interacted
         if (!isIOS() || muted || hasUserInteracted) {
-          video.play().catch(() => {})
+          player.play()?.catch(() => {})
         }
       }
     }
   }
 
   const onClickMute = () => {
-    if (selectedIndex !== null && videosRef.current[selectedIndex]) {
-      const video = videosRef.current[selectedIndex]!
-      const wasMuted = video.muted
-      video.muted = !wasMuted
+    if (selectedIndex !== null && playersRef.current[selectedIndex]) {
+      const player = playersRef.current[selectedIndex]!
+      const wasMuted = playerMuted(player)
+      player.muted(!wasMuted)
 
       setHasUserInteracted(true)
 
-      if (wasMuted && !video.paused) {
-        video.play().catch(() => {})
+      if (wasMuted && !playerPaused(player)) {
+        player.play()?.catch(() => {})
       }
     }
     setMuted(!muted)
   }
 
   const handleVideoClick = () => {
-    if (selectedIndex !== null && videosRef.current[selectedIndex]) {
-      const video = videosRef.current[selectedIndex]!
+    if (selectedIndex !== null && playersRef.current[selectedIndex]) {
+      const player = playersRef.current[selectedIndex]!
       setHasUserInteracted(true)
 
-      if (video.paused) {
-        video.play().catch(() => {})
+      if (playerPaused(player)) {
+        player.play()?.catch(() => {})
       } else {
-        video.pause()
+        player.pause()
       }
     }
   }
@@ -301,10 +335,11 @@ const VideoShortsModal = ({
         initialSlide={startIndex}
         onSlidesInView={onSlidesInView}
       >
-        {videoData?.map((video: VideoShort, index: number) => (
+        {videoData?.map((video: VideoResource, index: number) => (
           <CarouselSlide
-            key={index}
-            width={(height - 60) * (9 / 16)}
+            key={video.id}
+            width={videoHeight * PORTRAIT_ASPECT_RATIO}
+            height={videoHeight}
             data-index={index}
           >
             {selectedIndex !== null && Math.abs(selectedIndex - index) < 2 ? (
@@ -325,11 +360,9 @@ const VideoShortsModal = ({
                 <VideoWithErrorHandler
                   index={index}
                   video={video}
-                  videosRef={videosRef}
+                  playersRef={playersRef}
                   onError={onVideoError}
                   onVideoClick={handleVideoClick}
-                  videoWidth={(height - 60) * (9 / 16)}
-                  videoHeight={height - 60}
                 />
               )
             ) : (

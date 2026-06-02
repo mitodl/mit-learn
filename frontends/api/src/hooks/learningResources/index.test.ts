@@ -1,7 +1,11 @@
 import { renderHook, waitFor } from "@testing-library/react"
-import { setupReactQueryTest } from "../test-utils"
+import {
+  setupReactQueryTest,
+  assertNormalizesPaginationNext,
+} from "../test-utils"
 import {
   useLearningResourcesDetail,
+  useInfiniteLearningResourceItems,
   useLearningResourcesList,
   useLearningResourceTopics,
 } from "./index"
@@ -22,12 +26,9 @@ const assertApiCalled = async (
   data: unknown,
 ) => {
   await waitFor(() => expect(result.current.isLoading).toBe(false))
-  expect(
-    makeRequest.mock.calls.some((args) => {
-      // Don't use toHaveBeenCalledWith. It doesn't handle undefined 3rd arg.
-      return args[0].toUpperCase() === method && args[1] === url
-    }),
-  ).toBe(true)
+  expect(makeRequest).toHaveBeenCalledWith(
+    expect.objectContaining({ method: method.toLowerCase(), url }),
+  )
   expect(result.current.data).toEqual(data)
 }
 
@@ -58,6 +59,22 @@ describe("useLearningResourcesRetrieve", () => {
     const { result } = renderHook(useTestHook, { wrapper })
 
     await assertApiCalled(result, url, "GET", data)
+  })
+})
+
+describe("useInfiniteLearningResourceItems", () => {
+  it("normalizes absolute next URLs to relative API requests", async () => {
+    const id = 99
+    await assertNormalizesPaginationNext({
+      firstUrl: urls.learningResources.items({ id }),
+      secondUrl: `${urls.learningResources.items({ id })}?offset=5`,
+      renderInfiniteHook: (wrapper) =>
+        renderHook(
+          () =>
+            useInfiniteLearningResourceItems(id, { learning_resource_id: id }),
+          { wrapper },
+        ),
+    })
   })
 })
 

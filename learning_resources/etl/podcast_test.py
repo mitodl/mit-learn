@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup as bs  # noqa: N813
 from dateutil.tz import tzutc
 from django.conf import settings
 from freezegun import freeze_time
+from requests.exceptions import HTTPError
 
 from learning_resources.constants import Availability, LearningResourceType, OfferedBy
 from learning_resources.etl.constants import ETLSource
@@ -230,6 +231,47 @@ def test_transform_with_error(mocker, mock_github_client):
 
     assert len(results) == 1
     assert results[0]["url"] == "http://website.url/podcast"
+
+
+def test_extract_connection_reset_error(mocker, mock_github_client):
+    """Test extract handles ConnectionResetError gracefully"""
+    mock_warning_log = mocker.patch("learning_resources.etl.podcast.log.warning")
+    mocker.patch(
+        "learning_resources.etl.podcast.requests.get",
+        side_effect=ConnectionResetError,
+    )
+    podcast_list = [mock_podcast_file()]
+    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = (
+        podcast_list
+    )
+
+    results = list(extract())
+
+    assert results == []
+    mock_warning_log.assert_called_once_with(
+        "Connection reset error for rss url %s", "http://website.url/podcast/rss.xml"
+    )
+
+
+@pytest.mark.parametrize("exception_cls", [ConnectionError, HTTPError])
+def test_extract_connection_error(mocker, mock_github_client, exception_cls):
+    """Test extract handles ConnectionError and HTTPError gracefully"""
+    mock_exception_log = mocker.patch("learning_resources.etl.podcast.log.exception")
+    mocker.patch(
+        "learning_resources.etl.podcast.requests.get",
+        side_effect=exception_cls,
+    )
+    podcast_list = [mock_podcast_file()]
+    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = (
+        podcast_list
+    )
+
+    results = list(extract())
+
+    assert results == []
+    mock_exception_log.assert_called_once_with(
+        "Invalid rss url %s", "http://website.url/podcast/rss.xml"
+    )
 
 
 @pytest.mark.django_db

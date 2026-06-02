@@ -85,10 +85,10 @@ const TermsPage: React.FC = () => {
             single online platform for accessing all of MIT's non-degree
             learning resources. Through MIT Learn, learners across the globe can
             search and browse courses, programs, and various educational
-            materials from across MIT, including Universal AI, MITx, MIT
-            OpenCourseWare, MIT Professional Education, MIT Sloan Executive
-            Education, MIT xPRO, and other departments across the Institute
-            ("Offerings").
+            materials from across MIT, including Universal AI, MITx, MITx
+            MicroMasters®, MIT OpenCourseWare, MIT Professional Education, MIT
+            Sloan Executive Education, MIT xPRO, and other departments across
+            the Institute ("Offerings").
           </BodyText>
           <BodyText variant="body1">
             Please read these Terms of Service ("TOS") and the MIT Learn{" "}
@@ -550,7 +550,9 @@ const TermsPage: React.FC = () => {
           <BodyText variant="body1">
             All trademarks not owned by MIT that appear on the Site or through
             the services made available on or through the Site are the property
-            of their respective owners.
+            of their respective owners. For example, MIT is an authorized
+            Licensee of the MicroMasters mark, which is a registered trademark
+            of Axim Collaborative, Inc. All rights reserved worldwide.
           </BodyText>
           <BodyText variant="body1">
             Nothing contained on the Site should be construed as granting, by
@@ -782,7 +784,7 @@ const TermsPage: React.FC = () => {
             inconvenience of forum).
           </BodyText>
           <BodyText variant="body1">
-            These terms of service were last updated on April 14, 2026.
+            These terms of service were last updated on June 1, 2026.
           </BodyText>
         </BodyContainer>
       </PageContainer>

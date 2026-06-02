@@ -428,9 +428,13 @@ describe("Channel Pages, Unit only", () => {
 
     await waitFor(() => {
       expect(makeRequest).toHaveBeenCalledWith(
-        "get",
-        urls.learningResources.featured({ limit: 12, offered_by: ["ocw"] }),
-        undefined,
+        expect.objectContaining({
+          method: "get",
+          url: urls.learningResources.featured({
+            limit: 12,
+            offered_by: ["ocw"],
+          }),
+        }),
       )
     })
   })

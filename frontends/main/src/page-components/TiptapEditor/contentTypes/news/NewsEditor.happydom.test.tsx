@@ -140,16 +140,16 @@ describe("NewsEditor - Content Editing and Saving", () => {
 
       await userEvent.click(updateButton)
 
-      expect(makeRequest).toHaveBeenCalledWith(
-        "patch",
-        urls.websiteContent.details(article.id),
-        expect.objectContaining({
+      expect(makeRequest).toHaveBeenCalledWith({
+        method: "patch",
+        url: urls.websiteContent.details(article.id),
+        body: expect.objectContaining({
           content: updatedArticle.content,
           is_published: true,
           title: updatedArticle.title,
           author_name: "",
         }),
-      )
+      })
 
       expect(mockOnSave).toHaveBeenCalled()
     })
@@ -249,16 +249,16 @@ describe("NewsEditor - Content Editing and Saving", () => {
 
       await userEvent.click(updateButton)
 
-      expect(makeRequest).toHaveBeenCalledWith(
-        "patch",
-        urls.websiteContent.details(article.id),
-        expect.objectContaining({
+      expect(makeRequest).toHaveBeenCalledWith({
+        method: "patch",
+        url: urls.websiteContent.details(article.id),
+        body: expect.objectContaining({
           content: updatedArticle.content,
           is_published: true,
           title: updatedArticle.title,
           author_name: "",
         }),
-      )
+      })
     })
   })
 
@@ -434,14 +434,14 @@ describe("NewsEditor - Content Editing and Saving", () => {
 
       await userEvent.click(saveDraftButton)
 
-      expect(makeRequest).toHaveBeenCalledWith(
-        "patch",
-        urls.websiteContent.details(newsItem.id),
-        expect.objectContaining({
+      expect(makeRequest).toHaveBeenCalledWith({
+        method: "patch",
+        url: urls.websiteContent.details(newsItem.id),
+        body: expect.objectContaining({
           is_published: false,
           author_name: "",
         }),
-      )
+      })
     })
   })
 
@@ -552,10 +552,10 @@ describe("NewsEditor - Content Editing and Saving", () => {
 
       await waitFor(
         () => {
-          expect(makeRequest).toHaveBeenCalledWith(
-            "post",
-            urls.websiteContent.list(),
-            expect.objectContaining({
+          expect(makeRequest).toHaveBeenCalledWith({
+            method: "post",
+            url: urls.websiteContent.list(),
+            body: expect.objectContaining({
               title: "My Article",
               author_name: "",
               content: {
@@ -588,7 +588,7 @@ describe("NewsEditor - Content Editing and Saving", () => {
               },
               is_published: true,
             }),
-          )
+          })
         },
         { timeout: 5000 },
       )

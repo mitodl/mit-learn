@@ -15,6 +15,7 @@ import {
   V2ProgramDetail,
   V3UserProgramEnrollment,
   DisplayModeEnum,
+  LanguageEnum,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { getIdsFromReqTree } from "@/common/mitxonline"
 
@@ -404,7 +405,7 @@ const createCoursesWithContractRuns = (contracts: ContractPage[]) => {
           id: contractRun.id,
           courseware_id: contractRun.courseware_id,
           courseware_url: contractRun.courseware_url ?? "",
-          language: "en",
+          language: LanguageEnum.En,
           title: contractRun.title,
           run_tag: contractRun.run_tag,
         },

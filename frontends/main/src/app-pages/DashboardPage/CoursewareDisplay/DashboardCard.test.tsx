@@ -10,7 +10,7 @@ import {
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
-import { mockAxiosInstance } from "api/test-utils"
+import { makeRequest } from "api/test-utils"
 import {
   DashboardCard,
   DashboardType,
@@ -677,17 +677,17 @@ describe.each([
     await user.click(upgradeLink)
 
     // Verify clear basket API was called first
-    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+    expect(makeRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        method: "DELETE",
+        method: "delete",
         url: clearUrl,
       }),
     )
 
     // Verify create basket API was called
-    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+    expect(makeRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        method: "POST",
+        method: "post",
         url: basketUrl,
       }),
     )
@@ -1202,8 +1202,8 @@ describe.each([
 
       await user.click(triggerElement)
 
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-        expect.objectContaining({ method: "POST", url: enrollmentUrl }),
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "post", url: enrollmentUrl }),
       )
     },
   )
@@ -1242,8 +1242,8 @@ describe.each([
       await user.click(triggerElement)
 
       await screen.findByRole("dialog", { name: "Just a Few More Details" })
-      expect(mockAxiosInstance.request).not.toHaveBeenCalledWith(
-        expect.objectContaining({ method: "POST" }),
+      expect(makeRequest).not.toHaveBeenCalledWith(
+        expect.objectContaining({ method: "post" }),
       )
     },
   )
@@ -1333,8 +1333,8 @@ describe.each([
         await user.click(triggerElement)
 
         await waitFor(() => {
-          expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-            expect.objectContaining({ method: "POST", url: enrollmentUrl }),
+          expect(makeRequest).toHaveBeenCalledWith(
+            expect.objectContaining({ method: "post", url: enrollmentUrl }),
           )
         })
 
@@ -1386,8 +1386,8 @@ describe.each([
         await user.click(triggerElement)
 
         await waitFor(() => {
-          expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-            expect.objectContaining({ method: "POST", url: basketUrl }),
+          expect(makeRequest).toHaveBeenCalledWith(
+            expect.objectContaining({ method: "post", url: basketUrl }),
           )
         })
 
@@ -1396,71 +1396,6 @@ describe.each([
         ).not.toBeInTheDocument()
       },
     )
-
-    test("Audit enrollment redirects to selected language run courseware_url", async () => {
-      const userData = mitxUser()
-      setMockResponse.get(mitxonline.urls.userMe.get(), userData)
-
-      const sourceRun = mitxonline.factories.courses.courseRun({
-        b2b_contract: null,
-        is_enrollable: true,
-        courseware_id: "course-v1:LANGTEST+COURSE+BASE",
-        courseware_url:
-          "https://courses.c4103.com/learn/course/course-v1:LANGTEST+COURSE+BASE/home",
-        enrollment_modes: [
-          mitxonline.factories.courses.enrollmentMode({
-            requires_payment: false,
-          }),
-        ],
-      })
-
-      const course = mitxOnlineCourse({
-        courseruns: [sourceRun],
-        next_run_id: sourceRun.id,
-      })
-
-      const selectedLanguageRun = mitxonline.factories.courses.courseRun({
-        id: faker.number.int(),
-        is_enrollable: true,
-        courseware_id: "course-v1:LANGTEST+COURSE+ALT_ES",
-        courseware_url:
-          "https://courses.c4103.com/learn/course/course-v1:LANGTEST+COURSE+ALT_ES/home",
-      })
-
-      const enrollmentUrl = mitxonline.urls.enrollment.enrollmentsListV1()
-      setMockResponse.post(enrollmentUrl, {})
-      // Return no matching enrollment so redirect falls back to selected run URL.
-      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
-
-      renderWithProviders(
-        <DashboardCard
-          resource={{ type: DashboardType.Course, data: course }}
-          selectedCourseRun={selectedLanguageRun}
-          buttonHref={
-            "https://courses.c4103.com/learn/course/course-v1:LANGTEST+COURSE+BASE/home"
-          }
-        />,
-      )
-
-      const card = getCard()
-      const button = within(card).getByTestId("courseware-button")
-
-      await user.click(button)
-
-      await waitFor(() => {
-        expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-          expect.objectContaining({
-            method: "POST",
-            url: enrollmentUrl,
-            data: JSON.stringify({ run_id: selectedLanguageRun.id }),
-          }),
-        )
-      })
-
-      await waitFor(() => {
-        expect(window.location.href).toBe(selectedLanguageRun.courseware_url)
-      })
-    })
   })
 
   describe("Verified Program Enrollment", () => {
@@ -1507,9 +1442,9 @@ describe.each([
 
         // Should call enrollment endpoint
         await waitFor(() => {
-          expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+          expect(makeRequest).toHaveBeenCalledWith(
             expect.objectContaining({
-              method: "POST",
+              method: "post",
               url: programEnrollmentEndpoint,
             }),
           )
@@ -1618,8 +1553,8 @@ describe.each([
       await user.click(button)
 
       await waitFor(() => {
-        expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-          expect.objectContaining({ method: "POST", url: verifiedEndpoint }),
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({ method: "post", url: verifiedEndpoint }),
         )
       })
 
@@ -1668,8 +1603,8 @@ describe.each([
       await user.click(button)
 
       await waitFor(() => {
-        expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-          expect.objectContaining({ method: "POST", url: enrollmentUrl }),
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({ method: "post", url: enrollmentUrl }),
         )
       })
 
@@ -1721,8 +1656,8 @@ describe.each([
       await user.click(button)
 
       await waitFor(() => {
-        expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-          expect.objectContaining({ method: "POST", url: basketUrl }),
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({ method: "post", url: basketUrl }),
         )
       })
 

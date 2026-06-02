@@ -483,4 +483,13 @@ describe("CoursePage", () => {
       ).not.toBeInTheDocument()
     })
   })
+
+  test("Renders without crashing when course_details.page is null", async () => {
+    const course = makeCourse({ page: null })
+    const page = makePage({ course_details: course })
+    setupApis({ course, page })
+    renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+    await screen.findByRole("heading", { name: page.title })
+  })
 })

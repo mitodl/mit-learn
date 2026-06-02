@@ -6,7 +6,7 @@ import {
   user,
   setupLocationMock,
 } from "@/test-utils"
-import { mockAxiosInstance, setMockResponse } from "api/test-utils"
+import { makeRequest, setMockResponse } from "api/test-utils"
 import {
   urls as mitxUrls,
   factories as mitxFactories,
@@ -100,12 +100,12 @@ describe("ProgramEnrollmentDialog", () => {
     await user.click(addToCartButton)
 
     await waitFor(() => {
-      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-        expect.objectContaining({ method: "DELETE", url: clearUrl }),
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "delete", url: clearUrl }),
       )
     })
-    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
-      expect.objectContaining({ method: "POST", url: basketUrl }),
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "post", url: basketUrl }),
     )
     const expectedCartUrl = mitxonlineLegacyUrl("/cart/")
     expect(assign).toHaveBeenCalledWith(expectedCartUrl)

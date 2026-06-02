@@ -128,7 +128,7 @@ describe("ResourceCarousel", () => {
   )
 
   it.each([{ isLoading: true }, { isLoading: false }])(
-    "Makes no API calls in loading state (isLoading=$isLoading)",
+    "Hits the carousel endpoint iff not in loading state (isLoading=$isLoading)",
     async ({ isLoading }) => {
       const config: ResourceCarouselProps["config"] = [
         {
@@ -151,23 +151,16 @@ describe("ResourceCarousel", () => {
         return new Promise((resolve) => setTimeout(resolve, 0))
       })
 
+      const carouselCall = expect.objectContaining({
+        method: "get",
+        url: expect.stringContaining(urls.search.resources()),
+      })
       if (isLoading) {
-        /**
-         * makeRequest is actually called, just not with the carousel URL.
-         * The ResourceCard components call `useUserMe` regardless of their
-         * loading state.
-         */
-        expect(makeRequest).not.toHaveBeenCalledWith([
-          "get",
-          expect.stringContaining(urls.search.resources()),
-          undefined,
-        ])
+        // Other requests (e.g. useUserMe from ResourceCard) may fire, but the
+        // carousel endpoint specifically should not.
+        expect(makeRequest).not.toHaveBeenCalledWith(carouselCall)
       } else {
-        expect(makeRequest).not.toHaveBeenCalledWith([
-          "get",
-          expect.stringContaining(urls.search.resources()),
-          undefined,
-        ])
+        expect(makeRequest).toHaveBeenCalledWith(carouselCall)
       }
     },
   )
@@ -230,15 +223,16 @@ describe("ResourceCarousel", () => {
     )
     await waitFor(() => {
       expect(makeRequest).toHaveBeenCalledWith(
-        "get",
-        expect.stringContaining(urls.learningResources.list()),
-        undefined,
+        expect.objectContaining({
+          method: "get",
+          url: expect.stringContaining(urls.learningResources.list()),
+        }),
       )
     })
-    const [_method, url] =
-      makeRequest.mock.calls.find(([_method, url]) => {
-        return url.includes(urls.learningResources.list())
-      }) ?? []
+    const call = makeRequest.mock.calls.find(([args]) => {
+      return args.url.includes(urls.learningResources.list())
+    })
+    const url = call?.[0].url
     invariant(url)
     const urlParams = new URLSearchParams(url.split("?")[1])
     expect(urlParams.getAll("resource_type")).toEqual(["course", "program"])

@@ -109,16 +109,15 @@ const setMockApiResponses = ({
 }
 
 const getLastApiSearchParams = () => {
-  const call = makeRequest.mock.calls.find(([method, url]) => {
-    if (method !== "get") return false
+  const call = makeRequest.mock.calls.find(([args]) => {
+    if (args.method !== "get") return false
     return (
-      url.startsWith(urls.search.resources()) ||
-      url.startsWith(urls.search.vectorResources())
+      args.url.startsWith(urls.search.resources()) ||
+      args.url.startsWith(urls.search.vectorResources())
     )
   })
   invariant(call)
-  const [_method, url] = call
-  const fullUrl = new URL(url, "http://mit.edu")
+  const fullUrl = new URL(call[0].url, "http://mit.edu")
   return fullUrl.searchParams
 }
 
