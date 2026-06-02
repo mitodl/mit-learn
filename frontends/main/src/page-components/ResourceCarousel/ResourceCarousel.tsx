@@ -235,20 +235,22 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
     }),
   })
 
-  const getCount = (
+  const getVisibleCount = (
     data: PaginatedLearningResourceList | LearningResource[] | undefined,
   ) => {
     if (!data) {
       return 0
     }
-    if ("count" in data) {
-      return data.count
+    const resources = "results" in data ? data.results : data
+    if (excludeResourceId !== undefined) {
+      return resources.filter((resource) => resource.id !== excludeResourceId)
+        .length
     }
-    return data.length
+    return resources.length
   }
 
   const allChildrenLoaded = queries.every(({ isLoading }) => !isLoading)
-  const allChildrenEmpty = queries.every(({ data }) => !getCount(data))
+  const allChildrenEmpty = queries.every(({ data }) => !getVisibleCount(data))
   if (!isLoading && allChildrenLoaded && allChildrenEmpty) {
     return null
   }
@@ -277,7 +279,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
                     shouldShow:
                       isLoading ||
                       queries[index].isLoading ||
-                      getCount(queries[index].data) > 0,
+                      getVisibleCount(queries[index].data) > 0,
                   }))
                   .filter(({ shouldShow }) => shouldShow)
                   .map(({ tabConfig, index }) => (
