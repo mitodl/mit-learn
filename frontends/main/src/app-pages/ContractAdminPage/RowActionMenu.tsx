@@ -157,15 +157,23 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({ code }) => {
         {copied ? "Link copied to clipboard" : ""}
       </VisuallyHidden>
       <TriggerButton
+        id={`row-action-trigger-${code.id}`}
         onClick={handleOpen}
         aria-label={`More actions for ${assignedTo}`}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-controls={open ? `row-action-menu-${code.id}` : undefined}
         size="small"
       >
         <RiMoreLine size={16} />
       </TriggerButton>
-      <Menu open={open} anchorEl={anchorEl} onClose={handleClose}>
+      <Menu
+        id={`row-action-menu-${code.id}`}
+        open={open}
+        anchorEl={anchorEl}
+        onClose={handleClose}
+        MenuListProps={{ "aria-labelledby": `row-action-trigger-${code.id}` }}
+      >
         {menuItems}
       </Menu>
     </>
