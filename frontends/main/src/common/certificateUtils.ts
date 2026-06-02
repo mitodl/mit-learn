@@ -44,7 +44,11 @@ const DEFAULT_LABEL: CertificateLabel = {
 }
 
 const normalizeProgramType = (programType?: string | null): string =>
-  (programType ?? "").trim().toLowerCase().replace(/®/g, "").replace(/\s+/g, "")
+  (programType ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/®/g, "")
+    .replace(/\s+/g, "")
 
 const resolveKey = (
   programType?: string | null,
