@@ -1,7 +1,7 @@
 import React from "react"
 import moment from "moment"
 import { factories, setMockResponse } from "api/test-utils"
-import { screen, renderWithProviders, user } from "@/test-utils"
+import { screen, renderWithProviders, user, within } from "@/test-utils"
 import CertificatePage from "./CertificatePage"
 import { CertificateType } from "@/common/certificateUtils"
 import SharePopover from "@/components/SharePopover/SharePopover"
@@ -102,7 +102,9 @@ describe("CertificatePage", () => {
     )
 
     await screen.findAllByText(certificate.program.title)
-    await screen.findAllByText("Program Certificate")
+    const badge = await screen.findByTestId("certificate-badge-label")
+    expect(within(badge).getByText("Program")).toBeInTheDocument()
+    expect(within(badge).getByText("Certificate")).toBeInTheDocument()
     await screen.findAllByText(certificate.user.name!)
 
     await screen.findAllByText(

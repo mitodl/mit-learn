@@ -1,4 +1,7 @@
-import { getCertificateInfo } from "./certificateUtils"
+import {
+  getCertificateBadgeLines,
+  getCertificateInfo,
+} from "./certificateUtils"
 
 describe("getCertificateInfo", () => {
   it("returns default certificate label when no program type is provided", () => {
@@ -23,5 +26,30 @@ describe("getCertificateInfo", () => {
 
   it("falls back to default label for unrecognized program types", () => {
     expect(getCertificateInfo("Degree").displayType).toBe("Certificate")
+  })
+})
+
+describe("getCertificateBadgeLines", () => {
+  it("returns a single line for course certificates", () => {
+    expect(getCertificateBadgeLines()).toEqual({ primary: "Certificate" })
+  })
+
+  it("splits MicroMasters into two lines with a registered mark", () => {
+    expect(getCertificateBadgeLines("MicroMasters®")).toEqual({
+      primary: "MicroMasters",
+      secondary: "Certificate",
+      registeredMark: true,
+    })
+  })
+
+  it("splits series and program descriptors across two lines", () => {
+    expect(getCertificateBadgeLines("Series")).toEqual({
+      primary: "Series",
+      secondary: "Certificate",
+    })
+    expect(getCertificateBadgeLines("Program")).toEqual({
+      primary: "Program",
+      secondary: "Certificate",
+    })
   })
 })

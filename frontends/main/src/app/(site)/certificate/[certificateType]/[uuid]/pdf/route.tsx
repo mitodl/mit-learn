@@ -26,7 +26,7 @@ import {
 } from "@react-pdf/renderer"
 import { redirect } from "next/navigation"
 import { pxToPt, getNameStyles } from "./utils"
-import { getCertificateInfo } from "@/common/certificateUtils"
+import { getCertificateBadgeLines } from "@/common/certificateUtils"
 
 // https://use.typekit.net/lbk1xay.css
 Font.register({
@@ -87,6 +87,14 @@ const typography = {
     fontFamily: "Neue Haas Grotesk Text 400",
     fontSize: pxToPt(16),
     lineHeight: pxToPt(2),
+  },
+  badge: {
+    fontFamily: "Neue Haas Grotesk Text 700",
+    fontSize: pxToPt(18),
+    lineHeight: pxToPt(26),
+  },
+  badgeMark: {
+    fontSize: pxToPt(11.61),
   },
 }
 
@@ -162,65 +170,88 @@ const OpenLearningLogo = () => (
   </Svg>
 )
 
-const Badge = ({ displayType }: { displayType: string }) => (
-  <View
-    style={{
-      position: "absolute",
-      top: pxToPt(0),
-      right: pxToPt(67),
-    }}
-  >
-    <Svg
-      viewBox="0 0 230 391"
-      fill="none"
+const Badge = ({ programType }: { programType?: string | null }) => {
+  const lines = getCertificateBadgeLines(programType)
+
+  return (
+    <View
       style={{
-        width: pxToPt(230),
-        height: pxToPt(391),
-      }}
-    >
-      <Path
-        d="M183.001 391L114.501 349.587L46.0015 391V0H183.001V391Z"
-        fill="#DDE1E6"
-      />
-      <Path
-        d="M230.001 198.963C230.001 211.203 221.176 221.735 217.476 232.552C214.06 243.938 214.914 257.886 208.082 267.28C201.251 276.673 188.156 280.089 178.763 286.921C169.369 293.752 162.253 305.708 151.152 309.408C140.335 313.109 127.525 307.701 115.855 307.701C103.899 307.701 91.0897 313.109 80.5575 309.408C69.1714 305.708 62.055 293.752 52.9461 286.921C43.5525 280.089 30.1739 276.673 23.3422 267.28C16.5105 257.886 17.6491 243.938 13.9486 232.552C10.5328 221.735 1.42383 211.203 1.42383 198.963C1.42383 186.723 10.5328 176.191 13.9486 165.374C17.6491 153.988 16.5105 140.04 23.3422 130.646C30.1739 121.253 43.5525 117.837 52.9461 111.005C62.055 104.173 69.1714 92.2178 80.5575 88.5173C91.0897 84.8168 103.899 90.2253 115.855 90.2253C127.525 90.2253 140.335 84.8168 151.152 88.5173C162.253 92.2178 169.369 104.173 178.763 111.005C188.156 117.837 201.251 121.253 208.082 130.646C214.914 140.04 214.06 153.988 217.476 165.374C221.176 176.191 230.001 186.723 230.001 198.963Z"
-        fill="#750014"
-      />
-      <Path
-        d="M228.578 200.102C228.578 212.057 219.753 222.589 216.053 233.406C212.352 244.507 213.491 258.171 206.659 267.28C199.828 276.673 186.449 280.089 177.34 286.921C167.947 293.468 160.83 305.139 149.729 308.839C138.912 312.255 126.102 307.131 114.147 307.131C102.476 307.131 89.6668 312.255 78.85 308.839C67.7485 305.139 60.6321 293.468 51.2386 286.921C41.845 280.089 28.751 276.673 21.9193 267.28C15.0876 258.171 15.9416 244.507 12.5258 233.406C8.8253 222.589 0.000976562 212.057 0.000976562 200.102C0.000976562 188.146 8.8253 177.899 12.5258 167.082C15.9416 155.98 15.0876 142.317 21.9193 132.923C28.751 123.814 41.845 120.399 51.2386 113.567C60.6321 106.735 67.7485 95.0644 78.85 91.6486C89.6668 87.9481 102.476 93.0718 114.147 93.0718C126.102 93.0718 138.912 87.9481 149.729 91.6486C160.83 95.0644 167.947 106.735 177.34 113.567C186.449 120.399 199.828 123.814 206.659 132.923C213.491 142.317 212.352 155.98 216.053 167.082C219.753 177.899 228.578 188.146 228.578 200.102Z"
-        fill="#750014"
-      />
-      <Path
-        d="M200.967 197.255C200.967 246.785 160.547 287.206 111.017 287.206C61.4871 287.206 21.0664 246.785 21.0664 197.255C21.0664 147.725 61.4871 107.305 111.017 107.305C160.547 107.305 200.967 147.725 200.967 197.255Z"
-        fill="#212326"
-        fillOpacity="0.2"
-      />
-      <Path
-        d="M205.806 203.233C205.806 252.763 165.67 292.899 116.14 292.899C66.3256 292.899 26.1895 252.763 26.1895 203.233C26.1895 153.419 66.3256 113.283 116.14 113.283C165.67 113.283 205.806 153.419 205.806 203.233Z"
-        fill="#212326"
-        fillOpacity="0.2"
-      />
-      <Path
-        d="M204.098 200.387C204.098 250.201 163.962 290.337 114.147 290.337C64.6176 290.337 24.4814 250.201 24.4814 200.387C24.4814 150.857 64.6176 110.721 114.147 110.721C163.962 110.721 204.098 150.857 204.098 200.387Z"
-        fill="#83192A"
-      />
-    </Svg>
-    <Text
-      style={{
-        color: colors.white,
         position: "absolute",
-        top: pxToPt(185),
-        right: pxToPt(26),
-        width: pxToPt(175),
-        textAlign: "center",
-        ...typography.h4,
-        fontFamily: "Neue Haas Grotesk Text 700",
+        top: pxToPt(0),
+        right: pxToPt(67),
       }}
     >
-      {displayType}
-    </Text>
-  </View>
-)
+      <Svg
+        viewBox="0 0 230 391"
+        fill="none"
+        style={{
+          width: pxToPt(230),
+          height: pxToPt(391),
+        }}
+      >
+        <Path
+          d="M183.001 391L114.501 349.587L46.0015 391V0H183.001V391Z"
+          fill="#DDE1E6"
+        />
+        <Path
+          d="M230.001 198.963C230.001 211.203 221.176 221.735 217.476 232.552C214.06 243.938 214.914 257.886 208.082 267.28C201.251 276.673 188.156 280.089 178.763 286.921C169.369 293.752 162.253 305.708 151.152 309.408C140.335 313.109 127.525 307.701 115.855 307.701C103.899 307.701 91.0897 313.109 80.5575 309.408C69.1714 305.708 62.055 293.752 52.9461 286.921C43.5525 280.089 30.1739 276.673 23.3422 267.28C16.5105 257.886 17.6491 243.938 13.9486 232.552C10.5328 221.735 1.42383 211.203 1.42383 198.963C1.42383 186.723 10.5328 176.191 13.9486 165.374C17.6491 153.988 16.5105 140.04 23.3422 130.646C30.1739 121.253 43.5525 117.837 52.9461 111.005C62.055 104.173 69.1714 92.2178 80.5575 88.5173C91.0897 84.8168 103.899 90.2253 115.855 90.2253C127.525 90.2253 140.335 84.8168 151.152 88.5173C162.253 92.2178 169.369 104.173 178.763 111.005C188.156 117.837 201.251 121.253 208.082 130.646C214.914 140.04 214.06 153.988 217.476 165.374C221.176 176.191 230.001 186.723 230.001 198.963Z"
+          fill="#750014"
+        />
+        <Path
+          d="M228.578 200.102C228.578 212.057 219.753 222.589 216.053 233.406C212.352 244.507 213.491 258.171 206.659 267.28C199.828 276.673 186.449 280.089 177.34 286.921C167.947 293.468 160.83 305.139 149.729 308.839C138.912 312.255 126.102 307.131 114.147 307.131C102.476 307.131 89.6668 312.255 78.85 308.839C67.7485 305.139 60.6321 293.468 51.2386 286.921C41.845 280.089 28.751 276.673 21.9193 267.28C15.0876 258.171 15.9416 244.507 12.5258 233.406C8.8253 222.589 0.000976562 212.057 0.000976562 200.102C0.000976562 188.146 8.8253 177.899 12.5258 167.082C15.9416 155.98 15.0876 142.317 21.9193 132.923C28.751 123.814 41.845 120.399 51.2386 113.567C60.6321 106.735 67.7485 95.0644 78.85 91.6486C89.6668 87.9481 102.476 93.0718 114.147 93.0718C126.102 93.0718 138.912 87.9481 149.729 91.6486C160.83 95.0644 167.947 106.735 177.34 113.567C186.449 120.399 199.828 123.814 206.659 132.923C213.491 142.317 212.352 155.98 216.053 167.082C219.753 177.899 228.578 188.146 228.578 200.102Z"
+          fill="#750014"
+        />
+        <Path
+          d="M200.967 197.255C200.967 246.785 160.547 287.206 111.017 287.206C61.4871 287.206 21.0664 246.785 21.0664 197.255C21.0664 147.725 61.4871 107.305 111.017 107.305C160.547 107.305 200.967 147.725 200.967 197.255Z"
+          fill="#212326"
+          fillOpacity="0.2"
+        />
+        <Path
+          d="M205.806 203.233C205.806 252.763 165.67 292.899 116.14 292.899C66.3256 292.899 26.1895 252.763 26.1895 203.233C26.1895 153.419 66.3256 113.283 116.14 113.283C165.67 113.283 205.806 153.419 205.806 203.233Z"
+          fill="#212326"
+          fillOpacity="0.2"
+        />
+        <Path
+          d="M204.098 200.387C204.098 250.201 163.962 290.337 114.147 290.337C64.6176 290.337 24.4814 250.201 24.4814 200.387C24.4814 150.857 64.6176 110.721 114.147 110.721C163.962 110.721 204.098 150.857 204.098 200.387Z"
+          fill="#83192A"
+        />
+      </Svg>
+      <View
+        style={{
+          position: "absolute",
+          top: pxToPt(177),
+          left: pxToPt(0),
+          width: pxToPt(230),
+          alignItems: "center",
+        }}
+      >
+        <Text
+          style={{
+            ...typography.badge,
+            color: colors.white,
+            textAlign: "center",
+          }}
+        >
+          {lines.primary}
+          {lines.registeredMark ? (
+            <Text style={typography.badgeMark}>®</Text>
+          ) : null}
+        </Text>
+        {lines.secondary ? (
+          <Text
+            style={{
+              ...typography.badge,
+              color: colors.white,
+              textAlign: "center",
+            }}
+          >
+            {lines.secondary}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  )
+}
 
 enum CertificateType {
   Course = "course",
@@ -230,7 +261,7 @@ enum CertificateType {
 const CertificateDoc = ({
   uuid,
   title,
-  displayType,
+  badgeProgramType,
   userName,
   ceus,
   signatories,
@@ -238,7 +269,7 @@ const CertificateDoc = ({
 }: {
   uuid: string
   title: string
-  displayType: string
+  badgeProgramType?: string | null
   userName: string
   ceus?: string | null
   signatories: SignatoryItem[]
@@ -282,7 +313,7 @@ const CertificateDoc = ({
             }}
           >
             <OpenLearningLogo />
-            <Badge displayType={displayType} />
+            <Badge programType={badgeProgramType} />
 
             <Text
               style={{
@@ -468,7 +499,6 @@ const CourseCertificate = ({
 }: {
   certificate: V2CourseRunCertificate
 }) => {
-  const { displayType } = getCertificateInfo()
   const title = certificate?.course_run?.course?.title
 
   const userName = certificate?.user?.name
@@ -482,7 +512,6 @@ const CourseCertificate = ({
   return (
     <CertificateDoc
       title={title}
-      displayType={displayType}
       userName={userName!}
       ceus={ceus}
       signatories={signatories}
@@ -499,8 +528,6 @@ const ProgramCertificate = ({
 }) => {
   const title = certificate?.program?.title
 
-  const { displayType } = getCertificateInfo(certificate.program.program_type)
-
   const userName = certificate?.user?.name
 
   const ceus = certificate?.certificate_page?.CEUs
@@ -513,7 +540,7 @@ const ProgramCertificate = ({
     <CertificateDoc
       uuid={certificate.uuid}
       title={title}
-      displayType={displayType}
+      badgeProgramType={certificate.program.program_type}
       userName={userName!}
       ceus={ceus}
       signatories={signatories}

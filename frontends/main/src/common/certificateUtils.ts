@@ -5,6 +5,13 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 
 import { LINKEDIN_ADD_TO_PROFILE_BASE_URL } from "@/common/urls"
+
+export type CertificateBadgeLines = {
+  primary: string
+  secondary?: string
+  registeredMark?: boolean
+}
+
 /**
  * Returns common display info for a certificate.
  */
@@ -33,6 +40,34 @@ export const getCertificateInfo = (
   return {
     displayType: "Certificate",
   }
+}
+
+export const getCertificateBadgeLines = (
+  programType?: string | null,
+): CertificateBadgeLines => {
+  const { displayType } = getCertificateInfo(programType)
+
+  if (displayType === "Certificate") {
+    return { primary: "Certificate" }
+  }
+
+  if (displayType === "MicroMasters\u00ae Certificate") {
+    return {
+      primary: "MicroMasters",
+      secondary: "Certificate",
+      registeredMark: true,
+    }
+  }
+
+  const descriptorMatch = /^(.+) Certificate$/.exec(displayType)
+  if (descriptorMatch) {
+    return {
+      primary: descriptorMatch[1],
+      secondary: "Certificate",
+    }
+  }
+
+  return { primary: displayType }
 }
 
 export enum CertificateType {
