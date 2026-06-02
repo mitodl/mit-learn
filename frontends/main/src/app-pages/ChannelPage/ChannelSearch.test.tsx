@@ -72,6 +72,17 @@ const setMockApiResponses = ({
     },
     ...search,
   })
+  setMockResponse.get(expect.stringContaining(urls.search.vectorResources()), {
+    count: 0,
+    next: null,
+    previous: null,
+    results: [],
+    metadata: {
+      aggregations: {},
+      suggestions: [],
+    },
+    ...search,
+  })
 
   setMockResponse.get(expect.stringContaining(urls.testimonials.list({})), {
     results: [],
@@ -100,7 +111,10 @@ const setMockApiResponses = ({
 const getLastApiSearchParams = () => {
   const call = makeRequest.mock.calls.find(([method, url]) => {
     if (method !== "get") return false
-    return url.startsWith(urls.search.resources())
+    return (
+      url.startsWith(urls.search.resources()) ||
+      url.startsWith(urls.search.vectorResources())
+    )
   })
   invariant(call)
   const [_method, url] = call
