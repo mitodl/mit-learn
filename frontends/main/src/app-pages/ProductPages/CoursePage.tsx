@@ -75,13 +75,13 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   }
 
   const imageSrc =
-    page.course_details.page.feature_image_src || DEFAULT_RESOURCE_IMG
+    page.course_details.page?.feature_image_src || DEFAULT_RESOURCE_IMG
 
   return (
     <ProductPageTemplate
       currentBreadcrumbLabel="Course"
       title={page.title}
-      shortDescription={page.course_details.page.description}
+      shortDescription={page.course_details.page?.description}
       imageSrc={imageSrc}
       videoUrl={page.video_url}
       infoBox={<CourseInfoBox course={course} />}

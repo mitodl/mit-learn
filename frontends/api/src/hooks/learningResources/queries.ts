@@ -8,7 +8,6 @@ import {
   featuredApi,
   videoPlaylistsApi,
   vectorLearningResourcesSearchApi,
-  BASE_PATH,
 } from "../../clients"
 
 import type {
@@ -27,6 +26,7 @@ import type {
 import type { VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorLearningResourcesSearchRetrieveRequest } from "../../generated/v0"
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query"
 import axiosInstance from "../../axios"
+import { toRelativeApiUrl } from "../../runtime/urls"
 import { hasPosition, randomizeGroups } from "./util"
 
 const timedPromise = async <T>(
@@ -147,17 +147,10 @@ const learningResourceQueries = {
         params as ItemsListRequest,
       ),
       queryFn: async ({ pageParam }) => {
-        // We need to investigate why pageParam is always null and that make
-        // infinite query not working properly also the api call has port
-        // being add into the url for RC and PROD.
-        // https://github.com/mitodl/hq/issues/10999
         const request = pageParam
           ? axiosInstance.request<PaginatedLearningResourceRelationshipList>({
               method: "get",
-              url:
-                BASE_PATH +
-                new URL(pageParam, "https://x").pathname +
-                new URL(pageParam, "https://x").search,
+              url: toRelativeApiUrl(pageParam),
             })
           : learningResourcesApi.learningResourcesItemsList(params)
         const { data } = await request

@@ -1,12 +1,5 @@
 import React from "react"
-import {
-  SimpleSelectField,
-  Skeleton,
-  Stack,
-  Typography,
-  styled,
-  theme,
-} from "ol-components"
+import { Skeleton, Stack, Typography, styled, theme } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { getKey, ResourceType } from "./helpers"
 import { DashboardCard, DashboardType } from "./DashboardCard"
@@ -20,31 +13,6 @@ const DashboardCardStyled = styled(DashboardCard)({
   borderRadius: "8px",
   boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
 })
-
-const ProgramLanguageSelect = styled(SimpleSelectField)(({ theme }) => ({
-  display: "inline-flex",
-  flexDirection: "row",
-  alignItems: "center",
-  gap: "8px",
-  width: "auto",
-  "> *:not(:last-child)": {
-    marginBottom: "0",
-  },
-  "> label": {
-    marginBottom: "0",
-    whiteSpace: "nowrap",
-  },
-  "> .MuiInputBase-root": {
-    width: "fit-content",
-    maxWidth: "100%",
-  },
-  [theme.breakpoints.down("sm")]: {
-    "> .MuiInputBase-root": {
-      width: "fit-content",
-      maxWidth: "100%",
-    },
-  },
-})) as typeof SimpleSelectField
 
 export const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
   color: theme.custom.colors.red,
@@ -91,23 +59,6 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
             Program
             {data.programType ? `: ${data.programType}` : ""}
           </Typography>
-          {data.availableLanguages.length > 1 && (
-            <ProgramLanguageSelect
-              size="small"
-              label="Learning Language:"
-              value={data.selectedLanguageKey}
-              onChange={(e) =>
-                data.setSelectedLanguageKey(String(e.target.value))
-              }
-              options={data.availableLanguages}
-              renderValue={(value) => {
-                const selected = data.availableLanguages.find(
-                  (opt) => opt.value === value,
-                )
-                return String(selected?.label ?? "")
-              }}
-            />
-          )}
         </Stack>
         <Typography component="h1" variant="h3" paddingBottom="32px">
           {data.programTitle}

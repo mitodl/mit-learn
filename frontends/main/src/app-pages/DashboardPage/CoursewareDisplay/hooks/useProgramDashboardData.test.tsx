@@ -1,4 +1,4 @@
-import React, { act } from "react"
+import React from "react"
 import { renderHook, waitFor } from "@/test-utils"
 import { QueryClientProvider } from "@tanstack/react-query"
 import { makeBrowserQueryClient } from "@/app/getQueryClient"
@@ -6,6 +6,7 @@ import * as mitxonline from "api/mitxonline-test-utils"
 import { useProgramDashboardData } from "./useProgramDashboardData"
 import { buildProgramScenario } from "../test-utils"
 import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
+import { LanguageEnum } from "@mitodl/mitxonline-api-axios/v2"
 
 const makeProgramEnrollment = (
   program: V2ProgramDetail,
@@ -328,137 +329,10 @@ describe("useProgramDashboardData", () => {
     expect(result.current.ancestorProgramEnrollment).toBeUndefined()
   })
 
-  test("availableLanguages reflects distinct languages across program courses", async () => {
-    const englishRun = mitxonline.factories.courses.courseRun({
-      language: "en",
-    })
-    const spanishRun = mitxonline.factories.courses.courseRun({
-      language: "es",
-    })
-    const course = mitxonline.factories.courses.course({
-      id: 40,
-      courseruns: [englishRun, spanishRun],
-      language_options: [
-        {
-          id: englishRun.id,
-          courseware_id: englishRun.courseware_id,
-          courseware_url: englishRun.courseware_url ?? "",
-          language: "en",
-          title: englishRun.title,
-          run_tag: englishRun.run_tag,
-        },
-        {
-          id: spanishRun.id,
-          courseware_id: spanishRun.courseware_id,
-          courseware_url: spanishRun.courseware_url ?? "",
-          language: "es",
-          title: spanishRun.title,
-          run_tag: spanishRun.run_tag,
-        },
-      ],
-    })
-
-    const reqTree =
-      new mitxonline.factories.requirements.RequirementTreeBuilder()
-    const section = reqTree.addOperator({
-      operator: "all_of",
-      title: "Core",
-    })
-    section.addCourse({ course: course.id })
-
-    const program = mitxonline.factories.programs.program({
-      id: 800,
-      courses: [course.id],
-      req_tree: reqTree.serialize(),
-    })
-    const programEnrollment = makeProgramEnrollment(program)
-
-    const { mockAll } = buildProgramScenario({
-      programId: program.id,
-      program,
-      programCourses: [course],
-      programEnrollments: [programEnrollment],
-    })
-    mockAll()
-
-    const { result } = renderUseProgramDashboardData(program.id)
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-
-    expect(result.current.availableLanguages).toHaveLength(2)
-    const langValues = result.current.availableLanguages.map((o) => o.value)
-    expect(langValues).toContain("language:en")
-    expect(langValues).toContain("language:es")
-  })
-
-  test("selectedLanguageKey defaults to first (alphabetical) option, setSelectedLanguageKey changes it", async () => {
-    const englishRun = mitxonline.factories.courses.courseRun({
-      language: "en",
-    })
-    const spanishRun = mitxonline.factories.courses.courseRun({
-      language: "es",
-    })
-    const course = mitxonline.factories.courses.course({
-      id: 41,
-      courseruns: [englishRun, spanishRun],
-      language_options: [
-        {
-          id: englishRun.id,
-          courseware_id: englishRun.courseware_id,
-          courseware_url: englishRun.courseware_url ?? "",
-          language: "en",
-          title: "English Run",
-          run_tag: englishRun.run_tag,
-        },
-        {
-          id: spanishRun.id,
-          courseware_id: spanishRun.courseware_id,
-          courseware_url: spanishRun.courseware_url ?? "",
-          language: "es",
-          title: "Spanish Run",
-          run_tag: spanishRun.run_tag,
-        },
-      ],
-    })
-
-    const reqTree =
-      new mitxonline.factories.requirements.RequirementTreeBuilder()
-    const section = reqTree.addOperator({ operator: "all_of", title: "Core" })
-    section.addCourse({ course: course.id })
-
-    const program = mitxonline.factories.programs.program({
-      id: 801,
-      courses: [course.id],
-      req_tree: reqTree.serialize(),
-    })
-    const programEnrollment = makeProgramEnrollment(program)
-
-    const { mockAll } = buildProgramScenario({
-      programId: program.id,
-      program,
-      programCourses: [course],
-      programEnrollments: [programEnrollment],
-    })
-    mockAll()
-
-    const { result } = renderUseProgramDashboardData(program.id)
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-
-    // Options are sorted alphabetically by label; "English" comes before "español"
-    expect(result.current.selectedLanguageKey).toBe("language:en")
-
-    // Changing to Spanish updates the key
-    act(() => {
-      result.current.setSelectedLanguageKey("language:es")
-    })
-    await waitFor(() =>
-      expect(result.current.selectedLanguageKey).toBe("language:es"),
-    )
-  })
-
   test("representative displayedEnrollment/displayedRun wiring: enrolled course entry resolves displayed run", async () => {
     const run = mitxonline.factories.courses.courseRun({
       id: 90,
-      language: "en",
+      language: LanguageEnum.En,
     })
     const course = mitxonline.factories.courses.course({
       id: 50,
@@ -469,7 +343,7 @@ describe("useProgramDashboardData", () => {
           id: run.id,
           courseware_id: run.courseware_id,
           courseware_url: run.courseware_url ?? "",
-          language: "en",
+          language: LanguageEnum.En,
           title: run.title,
           run_tag: run.run_tag,
         },
@@ -519,91 +393,6 @@ describe("useProgramDashboardData", () => {
       // displayedRun resolves to the enrolled run
       expect(entry.displayedRun?.id).toBe(run.id)
     }
-  })
-
-  test("language selection changes displayedRun on course entry", async () => {
-    const englishRun = mitxonline.factories.courses.courseRun({
-      id: 91,
-      language: "en",
-      is_enrollable: true,
-    })
-    const spanishRun = mitxonline.factories.courses.courseRun({
-      id: 92,
-      language: "es",
-      is_enrollable: true,
-    })
-    const course = mitxonline.factories.courses.course({
-      id: 51,
-      courseruns: [englishRun, spanishRun],
-      next_run_id: englishRun.id,
-      language_options: [
-        {
-          id: englishRun.id,
-          courseware_id: englishRun.courseware_id,
-          courseware_url: englishRun.courseware_url ?? "",
-          language: "en",
-          title: "English Module",
-          run_tag: englishRun.run_tag,
-        },
-        {
-          id: spanishRun.id,
-          courseware_id: spanishRun.courseware_id,
-          courseware_url: spanishRun.courseware_url ?? "",
-          language: "es",
-          title: "Spanish Module",
-          run_tag: spanishRun.run_tag,
-        },
-      ],
-    })
-
-    const reqTree =
-      new mitxonline.factories.requirements.RequirementTreeBuilder()
-    const section = reqTree.addOperator({
-      operator: "all_of",
-      title: "Core Courses",
-    })
-    section.addCourse({ course: course.id })
-
-    const program = mitxonline.factories.programs.program({
-      id: 901,
-      courses: [course.id],
-      req_tree: reqTree.serialize(),
-    })
-    const programEnrollment = makeProgramEnrollment(program)
-
-    const { mockAll } = buildProgramScenario({
-      programId: program.id,
-      program,
-      programCourses: [course],
-      programEnrollments: [programEnrollment],
-    })
-    mockAll()
-
-    const { result } = renderUseProgramDashboardData(program.id)
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-
-    // Default language: English (alphabetically first) → English run
-    expect(result.current.selectedLanguageKey).toBe("language:en")
-    if (result.current.sections[0].items[0].kind === "course") {
-      expect(result.current.sections[0].items[0].entry.displayedRun?.id).toBe(
-        englishRun.id,
-      )
-    }
-
-    // Switch to Spanish → Spanish run
-    act(() => {
-      result.current.setSelectedLanguageKey("language:es")
-    })
-    await waitFor(() =>
-      expect(result.current.selectedLanguageKey).toBe("language:es"),
-    )
-    // After key change is confirmed, sections should reflect the Spanish run
-    await waitFor(() => {
-      const item = result.current.sections[0]?.items[0]
-      if (item?.kind === "course") {
-        expect(item.entry.displayedRun?.id).toBe(spanishRun.id)
-      }
-    })
   })
 
   test("program-as-course arm is correctly identified in sections", async () => {

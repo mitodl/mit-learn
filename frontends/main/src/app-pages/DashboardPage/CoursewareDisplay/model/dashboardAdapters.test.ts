@@ -1,4 +1,5 @@
 import { factories } from "api/mitxonline-test-utils"
+import { LanguageEnum } from "@mitodl/mitxonline-api-axios/v2"
 import {
   adaptCourseEntryToLegacyDashboardCardProps,
   type LegacyDashboardCardAdapterOutput,
@@ -23,8 +24,6 @@ const makeEntry = (
   return {
     course: defaultCourse,
     enrollments: [],
-    selectedLanguageKey: "",
-    availableLanguages: [],
     displayedEnrollment: null,
     displayedRun: defaultRun,
     ...overrides,
@@ -132,12 +131,12 @@ describe("dashboardAdapters", () => {
   test("selected-language enrollment: adapter prefers selected enrollment", () => {
     const enRun = factories.courses.courseRun({
       id: 5,
-      language: "en",
+      language: LanguageEnum.En,
       courseware_url: "/courseware/en/",
     })
     const esRun = factories.courses.courseRun({
       id: 6,
-      language: "es",
+      language: LanguageEnum.EsEs,
       courseware_url: "/courseware/es/",
     })
     const course = factories.courses.course({
@@ -151,7 +150,6 @@ describe("dashboardAdapters", () => {
     const entry = makeEntry({
       course,
       enrollments: [selectedLanguageEnrollment],
-      selectedLanguageKey: "language:es",
       displayedEnrollment: selectedLanguageEnrollment,
       displayedRun: esRun,
     })
@@ -176,7 +174,6 @@ describe("dashboardAdapters", () => {
     const entry = makeEntry({
       course,
       enrollments: [contractEnrollment],
-      selectedLanguageKey: "language:es",
       displayedEnrollment: contractEnrollment,
       displayedRun: run,
       contractId: 999,

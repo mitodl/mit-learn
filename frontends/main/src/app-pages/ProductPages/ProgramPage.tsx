@@ -275,7 +275,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   }
 
   const imageSrc =
-    page.program_details.page.feature_image_src || DEFAULT_RESOURCE_IMG
+    page.program_details.page?.feature_image_src || DEFAULT_RESOURCE_IMG
 
   const dataLoading =
     (courseIds.length > 0 && !courses.isSuccess) ||
@@ -289,7 +289,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       shortDescription={
         <DescriptionHTML
           Component="span"
-          html={page.program_details.page.description}
+          html={page.program_details.page?.description ?? ""}
         />
       }
       imageSrc={imageSrc}

@@ -15,7 +15,10 @@ import invariant from "tiny-invariant"
 
 const NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL =
   process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL
-invariant(NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL)
+invariant(
+  NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
+  "NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL must be set",
+)
 
 const upgradeRunUrl = (product: ProductFlexiblePrice): string => {
   try {

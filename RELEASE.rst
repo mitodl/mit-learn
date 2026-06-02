@@ -1,6 +1,22 @@
 Release Notes
 =============
 
+Version 0.70.1 (Released June 02, 2026)
+--------------
+
+- fix a bug with filtering out variant runs when the default is selected (#3394)
+- API Configuration, better support via runtime env vars (#3380)
+- feat: B2B contract admin dashboard with stats cards and seat assignment table (#3369)
+- contract variants UI (#3379)
+- feat: providing support for learn url embed (#3366)
+
+Version 0.69.0 (Released June 01, 2026)
+--------------
+
+- upgrade qdrant client (#3389)
+- feat: Handle nullable page field from MITx Online client update (#3349)
+- refactor test mock: use axios adapter instead of hand-rolled wrapper (#3383)
+
 Version 0.68.8 (Released May 28, 2026)
 --------------
 

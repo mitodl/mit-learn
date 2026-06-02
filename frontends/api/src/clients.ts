@@ -30,15 +30,7 @@ import {
 
 import axiosInstance from "./axios"
 
-const IS_SERVER = typeof window === "undefined"
-const MITOL_API_BASE_URL = IS_SERVER
-  ? // NEXT_SERVER_MITOL_API_BASE_URL is generally only needed for local-dev
-    // in docker, where the client and server make API calls to different hosts
-    (process.env.NEXT_SERVER_MITOL_API_BASE_URL ??
-    process.env.NEXT_PUBLIC_MITOL_API_BASE_URL)
-  : process.env.NEXT_PUBLIC_MITOL_API_BASE_URL
-
-const BASE_PATH = MITOL_API_BASE_URL?.replace(/\/+$/, "") ?? ""
+const BASE_PATH = ""
 
 const learningResourcesApi = new LearningResourcesApi(
   undefined,
@@ -142,5 +134,4 @@ export {
   videoShortsApi,
   videoPlaylistsApi,
   vectorLearningResourcesSearchApi,
-  BASE_PATH,
 }

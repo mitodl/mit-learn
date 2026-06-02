@@ -73,10 +73,6 @@ describe("useContractDashboardData", () => {
       programA.courses[0],
     ])
 
-    if (result.current.languageOptions.length > 0) {
-      expect(result.current.selectedLanguageKey).toBe(
-        String(result.current.languageOptions[0].value),
-      )
-    }
+    expect(result.current.selectedVariant).toBeNull()
   })
 })

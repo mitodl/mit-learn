@@ -26,7 +26,7 @@ import {
   priceWithDiscount,
 } from "@/common/mitxonline"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
-import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
+import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { useRouter } from "next-nprogress-bar"
 import { useQuery } from "@tanstack/react-query"
 import { productQueries } from "api/mitxonline-hooks/products"
