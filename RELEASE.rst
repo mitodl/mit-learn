@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.70.4 (Released June 03, 2026)
+--------------
+
+- Force pytest to render color text on GH actions (#3403)
+- hybrid search sorting and dense-only cutoff score fix (#3386)
+- feat(nextjs): standalone output, deterministic builds, and scoped Fastly purge (#3364)
+- fix: improve keyboard and screenreader accessibility for Video Shorts (#3387)
+- chore: update nextjs to 16.2.7 (#3399)
+
 Version 0.70.2 (Released June 03, 2026)
 --------------
 
