@@ -56,9 +56,6 @@ export type { GridProps } from "@mui/material/Grid"
 export { default as Grid2 } from "@mui/material/Grid2"
 export type { Grid2Props } from "@mui/material/Grid2"
 
-export { default as IconButton } from "@mui/material/IconButton"
-export type { IconButtonProps } from "@mui/material/IconButton"
-
 export { default as List } from "@mui/material/List"
 export type { ListProps } from "@mui/material/List"
 export { default as ListItem } from "@mui/material/ListItem"

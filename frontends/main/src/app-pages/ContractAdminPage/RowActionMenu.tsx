@@ -1,28 +1,11 @@
 "use client"
 
 import React, { useState } from "react"
-import {
-  Divider,
-  IconButton,
-  Menu,
-  MenuItem,
-  Tooltip,
-  styled,
-} from "ol-components"
+import { Divider, Menu, MenuItem, Tooltip, styled } from "ol-components"
 import { RiMoreLine } from "@remixicon/react"
-import { VisuallyHidden } from "@mitodl/smoot-design"
+import { ActionButton, VisuallyHidden } from "@mitodl/smoot-design"
 import { b2bAttachView } from "@/common/urls"
 import type { ContractCode } from "api/mitxonline-hooks/organizations"
-
-const TriggerButton = styled(IconButton)(({ theme }) => ({
-  padding: "4px",
-  borderRadius: "4px",
-  color: theme.custom.colors.silverGrayDark,
-  "&:hover": {
-    backgroundColor: theme.custom.colors.lightGray2,
-    color: theme.custom.colors.darkGray2,
-  },
-}))
 
 const ActionMenuItem = styled(MenuItem)(({ theme }) => ({
   ...theme.typography.body3,
@@ -54,6 +37,9 @@ const DestructiveMenuItem = styled(ActionMenuItem)(({ theme }) => ({
 
 const CopiedMenuItem = styled(ActionMenuItem)(({ theme }) => ({
   color: theme.custom.colors.green,
+  "&.Mui-disabled": {
+    color: theme.custom.colors.green,
+  },
   "&:hover": {
     backgroundColor: theme.custom.colors.white,
     cursor: "default",
@@ -156,17 +142,18 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({ code }) => {
       <VisuallyHidden aria-live="polite">
         {copied ? "Link copied to clipboard" : ""}
       </VisuallyHidden>
-      <TriggerButton
+      <ActionButton
         id={`row-action-trigger-${code.id}`}
         onClick={handleOpen}
         aria-label={`More actions for ${assignedTo}`}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? `row-action-menu-${code.id}` : undefined}
+        variant="text"
         size="small"
       >
         <RiMoreLine size={16} />
-      </TriggerButton>
+      </ActionButton>
       <Menu
         id={`row-action-menu-${code.id}`}
         open={open}
