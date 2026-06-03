@@ -1,17 +1,9 @@
 import React from "react"
 import { renderWithTheme, screen, user } from "@/test-utils"
-import { faker } from "@faker-js/faker/locale/en"
+import { factories } from "api/mitxonline-test-utils"
 import { RowActionMenu } from "./RowActionMenu"
-import type { ContractCode } from "api/mitxonline-hooks/organizations"
 
-const makeCode = (overrides: Partial<ContractCode> = {}): ContractCode => ({
-  id: faker.number.int(),
-  code: faker.string.alphanumeric(12),
-  is_redeemed: false,
-  redeemed_by: null,
-  redeemed_on: null,
-  ...overrides,
-})
+const makeCode = factories.contracts.contractCode
 
 // MUI Tooltip injects aria-label="Coming soon" onto wrapped disabled items,
 // so their accessible name becomes "Coming soon" rather than their text.
