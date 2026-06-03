@@ -246,14 +246,17 @@ const ProgramControls = styled.div(({ theme }) => ({
 const OrgProgramCollectionDisplay: React.FC<{
   collection: V2ProgramCollection
   entries: DashboardCourseEntry[]
-}> = ({ collection, entries }) => {
+  hideDescription?: boolean
+}> = ({ collection, entries, hideDescription }) => {
   const header = (
     <ProgramHeader>
       <ProgramHeaderText>
         <Typography variant="subtitle1" component="h2">
           {collection.title}
         </Typography>
-        <ProgramDescription html={collection.description ?? ""} />
+        {!hideDescription && (
+          <ProgramDescription html={collection.description ?? ""} />
+        )}
       </ProgramHeaderText>
     </ProgramHeader>
   )
@@ -289,7 +292,8 @@ const OrgProgramDisplay: React.FC<{
   program: V2Program
   entries: DashboardCourseEntry[]
   programEnrollment?: V3UserProgramEnrollment
-}> = ({ program, entries, programEnrollment }) => {
+  hideDescription?: boolean
+}> = ({ program, entries, programEnrollment, hideDescription }) => {
   const hasValidCertificate = !!programEnrollment?.certificate
 
   if (entries.length === 0) {
@@ -303,7 +307,9 @@ const OrgProgramDisplay: React.FC<{
           <Typography variant="subtitle1" component="h2">
             {program.title}
           </Typography>
-          <ProgramDescription html={program.page?.description ?? ""} />
+          {!hideDescription && (
+            <ProgramDescription html={program.page?.description ?? ""} />
+          )}
         </ProgramHeaderText>
         {hasValidCertificate && (
           <ProgramControls>
@@ -473,6 +479,9 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
             program={program}
             entries={entries}
             programEnrollment={programEnrollment}
+            hideDescription={
+              selectedVariant !== null && !selectedVariant.default_variant
+            }
           />
         ))}
         <ProgramCollectionsList>
@@ -484,6 +493,9 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
               })}
               collection={collection}
               entries={entries}
+              hideDescription={
+                selectedVariant !== null && !selectedVariant.default_variant
+              }
             />
           ))}
         </ProgramCollectionsList>

@@ -1624,6 +1624,208 @@ describe("ContractContent", () => {
     })
   })
 
+  test("hides program description when a non-default variant is selected", async () => {
+    const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
+    mitxOnlineUser.legal_address = { country: "US" }
+    mitxOnlineUser.user_profile = { year_of_birth: 1988 }
+
+    const program = factories.programs.program({ courses: [] })
+    const programDescription = program.page!.description!
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
+    contracts[0].variant_options = [
+      {
+        language: LanguageEnum.En,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: true,
+      },
+      {
+        language: LanguageEnum.EsEs,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: false,
+      },
+    ]
+
+    const englishRun = factories.courses.courseRun({
+      id: faker.number.int(),
+      b2b_contract: contracts[0].id,
+      is_enrollable: true,
+    })
+    const spanishRun = factories.courses.courseRun({
+      id: faker.number.int(),
+      b2b_contract: contracts[0].id,
+      is_enrollable: true,
+      language: LanguageEnum.EsEs,
+    })
+    const localizedCourse = factories.courses.course({
+      courseruns: [englishRun, spanishRun],
+      next_run_id: englishRun.id,
+    })
+    program.courses = [localizedCourse.id]
+
+    setupOrgDashboardMocks(
+      orgX,
+      userApiPath,
+      mitxOnlineUser,
+      [program],
+      [localizedCourse],
+      contracts,
+    )
+    setMockResponse.get(
+      urls.courses.courseVariantRuns({
+        contract: contracts[0].id,
+        course_id: [localizedCourse.id],
+        language: LanguageEnum.EsEs,
+      }),
+      [{ id: localizedCourse.id, courseruns: [spanishRun] }],
+    )
+
+    renderWithProviders(
+      <ContractContent orgSlug={orgX.slug} contractSlug={contracts[0].slug} />,
+    )
+
+    await screen.findByTestId("org-program-root")
+    await screen.findAllByRole("radio")
+
+    // Description is visible for the default (English) variant
+    expect(screen.getByText(programDescription)).toBeInTheDocument()
+
+    // Switch to the non-default (Spanish) variant
+    await user.click(screen.getByText(/español/i))
+
+    await waitFor(() => {
+      expect(screen.queryByText(programDescription)).not.toBeInTheDocument()
+    })
+
+    // Switch back to default — description reappears
+    await user.click(
+      screen.getByRole("radio", { name: /English.*General.*Full/ }),
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText(programDescription)).toBeInTheDocument()
+    })
+  })
+
+  test("hides collection description when a non-default variant is selected", async () => {
+    const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
+    mitxOnlineUser.legal_address = { country: "US" }
+    mitxOnlineUser.user_profile = { year_of_birth: 1988 }
+
+    const program = factories.programs.program({ courses: [] })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
+    contracts[0].variant_options = [
+      {
+        language: LanguageEnum.En,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: true,
+      },
+      {
+        language: LanguageEnum.EsEs,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: false,
+      },
+    ]
+
+    const englishRun = factories.courses.courseRun({
+      id: faker.number.int(),
+      b2b_contract: contracts[0].id,
+      is_enrollable: true,
+    })
+    const spanishRun = factories.courses.courseRun({
+      id: faker.number.int(),
+      b2b_contract: contracts[0].id,
+      is_enrollable: true,
+      language: LanguageEnum.EsEs,
+    })
+    const localizedCourse = factories.courses.course({
+      courseruns: [englishRun, spanishRun],
+      next_run_id: englishRun.id,
+    })
+    program.courses = [localizedCourse.id]
+
+    setupOrgDashboardMocks(
+      orgX,
+      userApiPath,
+      mitxOnlineUser,
+      [program],
+      [localizedCourse],
+      contracts,
+    )
+    setMockResponse.get(
+      urls.courses.courseVariantRuns({
+        contract: contracts[0].id,
+        course_id: [localizedCourse.id],
+        language: LanguageEnum.EsEs,
+      }),
+      [{ id: localizedCourse.id, courseruns: [spanishRun] }],
+    )
+
+    const programCollection = factories.programs.programCollection({
+      programs: [{ id: program.id, title: program.title, order: 1 }],
+    })
+    const collectionDescription = programCollection.description!
+    setMockResponse.get(urls.programCollections.programCollectionsList(), {
+      results: [programCollection],
+    })
+    setMockResponse.get(
+      urls.programs.programsList({
+        id: [program.id],
+        contract_id: contracts[0].id,
+        page_size: 1,
+      }),
+      { results: [program] },
+    )
+    setMockResponse.get(
+      urls.courses.coursesList({
+        id: [localizedCourse.id],
+        contract_id: contracts[0].id,
+      }),
+      { results: [localizedCourse] },
+    )
+
+    renderWithProviders(
+      <ContractContent orgSlug={orgX.slug} contractSlug={contracts[0].slug} />,
+    )
+
+    await screen.findByTestId("org-program-collection-root")
+    await screen.findAllByRole("radio")
+
+    // Description is visible for the default (English) variant
+    expect(screen.getByText(collectionDescription)).toBeInTheDocument()
+
+    // Switch to the non-default (Spanish) variant
+    await user.click(screen.getByText(/español/i))
+
+    await waitFor(() => {
+      expect(screen.queryByText(collectionDescription)).not.toBeInTheDocument()
+    })
+
+    // Switch back to default — description reappears
+    await user.click(
+      screen.getByRole("radio", { name: /English.*General.*Full/ }),
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText(collectionDescription)).toBeInTheDocument()
+    })
+  })
+
   test("shared contract variant picker switches program collection card title", async () => {
     const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
     mitxOnlineUser.legal_address = { country: "US" }
