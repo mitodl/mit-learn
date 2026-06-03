@@ -35,7 +35,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.69.0"
+VERSION = "0.70.5"
 
 log = logging.getLogger()
 
@@ -830,6 +830,17 @@ VECTOR_HYBRID_SEARCH_PREFETCH_MULTIPLIER = get_int(
 )
 VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = get_int(
     name="VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT", default=500
+)
+
+
+# the minimum similarity score for dense only search
+DENSE_VECTOR_SEARCH_MIN_SCORE = get_float(
+    name="DENSE_VECTOR_SEARCH_MIN_SCORE", default=0.3
+)
+
+# the minimum similarity score for hybrid search (Reciprocal Rank Fusion)
+HYBRID_VECTOR_SEARCH_MIN_SCORE = get_float(
+    name="HYBRID_VECTOR_SEARCH_MIN_SCORE", default=0.1
 )
 
 # hard limit for special cases where we need to return all results without pagination

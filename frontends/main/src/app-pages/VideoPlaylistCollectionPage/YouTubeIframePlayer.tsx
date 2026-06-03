@@ -1,10 +1,7 @@
 "use client"
 
+import { requiredEnv } from "@/env"
 import React from "react"
-import invariant from "tiny-invariant"
-
-const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
-invariant(NEXT_PUBLIC_ORIGIN, "NEXT_PUBLIC_ORIGIN must be defined")
 
 export type YouTubeIframePlayerProps = {
   embedUrl: string
@@ -31,7 +28,7 @@ const YouTubeIframePlayer: React.FC<YouTubeIframePlayerProps> = ({
 }) => {
   const url = new URL(embedUrl)
   url.searchParams.set("rel", "0")
-  url.searchParams.set("origin", NEXT_PUBLIC_ORIGIN)
+  url.searchParams.set("origin", requiredEnv("NEXT_PUBLIC_ORIGIN"))
 
   const src = url.toString()
 

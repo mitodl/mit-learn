@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React from "react"
 
 /**
@@ -9,7 +10,7 @@ import React from "react"
  * See [title](https://react.dev/reference/react-dom/components/title)
  */
 const PrivateTitle: React.FC<{ title: string }> = ({ title }) => {
-  return <title>{[title, process.env.NEXT_PUBLIC_SITE_NAME].join(" | ")}</title>
+  return <title>{[title, env("NEXT_PUBLIC_SITE_NAME")].join(" | ")}</title>
 }
 
 export default PrivateTitle

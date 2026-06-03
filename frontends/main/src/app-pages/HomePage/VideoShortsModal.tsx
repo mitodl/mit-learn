@@ -2,16 +2,24 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import { styled, Typography } from "ol-components"
 import { CarouselV2Vertical } from "ol-components/CarouselV2Vertical"
-import { RiCloseLine, RiVolumeMuteLine, RiVolumeUpLine } from "@remixicon/react"
-import { ActionButton } from "@mitodl/smoot-design"
+import {
+  RiCloseLine,
+  RiVolumeMuteLine,
+  RiVolumeUpLine,
+  RiPlayLine,
+  RiPauseLine,
+} from "@remixicon/react"
+import { ActionButton, VisuallyHidden } from "@mitodl/smoot-design"
 import { useWindowDimensions } from "ol-utilities"
 import type { VideoResource } from "api/v1"
 import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
 import VideoJsPlayer from "@/app-pages/VideoPlaylistCollectionPage/VideoJsPlayer"
 import type Player from "video.js/dist/types/player"
+import { FocusTrap } from "@mui/base/FocusTrap"
 
 const MODAL_VERTICAL_PADDING = 60
 const PORTRAIT_ASPECT_RATIO = 9 / 16
+const PLAYPAUSE_CLASS = "VideoShorts-playPause"
 
 const Overlay = styled.div(({ theme }) => ({
   position: "fixed",
@@ -62,6 +70,19 @@ const MuteButton = styled(BaseButton)(({ theme }) => ({
   },
 }))
 
+const PlayPauseButton = styled(BaseButton)({
+  top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+  opacity: 0,
+  transition: "opacity 0.2s ease-out",
+  "&:focus-visible": {
+    opacity: 1,
+    outline: "3px solid white",
+    outlineOffset: "4px",
+  },
+})
+
 const CarouselSlide = styled("div", {
   shouldForwardProp: (prop) => prop !== "width" && prop !== "height",
 })<{ width: number; height: number }>(({ width, height, theme }) => ({
@@ -72,6 +93,13 @@ const CarouselSlide = styled("div", {
   flex: "0 0 auto",
   margin: "30px 0",
   position: "relative",
+  "&:focus-visible": {
+    outline: "3px solid white",
+    outlineOffset: "4px",
+  },
+  [`&:hover .${PLAYPAUSE_CLASS}`]: {
+    opacity: 1,
+  },
   [theme.breakpoints.down("md")]: {
     maxWidth: "100%",
     height: "100%",
@@ -117,22 +145,7 @@ const Placeholder = styled.div(({ theme }) => ({
 }))
 
 const playerPaused = (player: Player): boolean => player.paused()
-const playerEnded = (player: Player): boolean => player.ended()
-const playerCurrentTime = (player: Player): number => player.currentTime() ?? 0
-const playerReadyState = (player: Player): number => player.readyState()
-const playerDuration = (player: Player): number => player.duration() ?? 0
 const playerMuted = (player: Player): boolean => player.muted() ?? true
-
-const isPlaying = (player: Player | null): boolean => {
-  if (!player) return false
-  return (
-    !playerPaused(player) &&
-    !playerEnded(player) &&
-    playerCurrentTime(player) > 0 &&
-    playerReadyState(player) >= 2 &&
-    playerDuration(player) > 0
-  )
-}
 
 const isIOS = () => {
   return /iPad|iPhone|iPod/.test(navigator.userAgent)
@@ -212,6 +225,7 @@ const VideoWithErrorHandler = ({
         bigPlayButton={false}
         playsinline={true}
         onReady={handleReady}
+        ariaLabel={video.title}
       />
     </VideoPlayerContainer>
   )
@@ -231,10 +245,20 @@ const VideoShortsModal = ({
   const videoHeight = Math.max(height - MODAL_VERTICAL_PADDING, 0)
   const [selectedIndex, setSelectedIndex] = useState<number | null>(startIndex)
   const [muted, setMuted] = useState(true)
+  const [playing, setPlaying] = useState(false)
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
   const [videoErrors, setVideoErrors] = useState<Record<number, unknown>>({})
+  const [announcement, setAnnouncement] = useState("")
 
   const playersRef = useRef<(Player | null)[]>([])
+  const muteButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      muteButtonRef.current?.focus()
+    })
+    return () => cancelAnimationFrame(id)
+  }, [])
 
   const onVideoError = useCallback((index: number, e: Event) => {
     setVideoErrors((prev) => ({ ...prev, [index]: e }))
@@ -247,28 +271,16 @@ const VideoShortsModal = ({
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && onClose) {
+        event.preventDefault()
         onClose()
       }
-
-      if (event.key === " " && selectedIndex !== null) {
-        const player = playersRef.current[selectedIndex]
-        if (player) {
-          if (isPlaying(player)) {
-            player.pause()
-          } else {
-            player.play()?.catch(() => {})
-          }
-        }
-      }
-
-      event.preventDefault()
     }
 
     document.addEventListener("keydown", handleKeyDown)
     return () => {
       document.removeEventListener("keydown", handleKeyDown)
     }
-  }, [onClose, selectedIndex])
+  }, [onClose])
 
   const onSlidesInView = (inView: number[]) => {
     if (inView.length === 1) {
@@ -279,12 +291,19 @@ const VideoShortsModal = ({
         )
         .forEach((player) => player.pause())
       setSelectedIndex(inView[0])
+      setPlaying(false)
+      setAnnouncement(
+        `${inView[0] + 1} of ${videoData.length}: ${videoData[inView[0]].title}`,
+      )
       const player = playersRef.current[inView[0]]
       if (player) {
         player.muted(muted)
         // On iOS, only autoplay if muted or if user has interacted
         if (!isIOS() || muted || hasUserInteracted) {
-          player.play()?.catch(() => {})
+          player.play()?.catch(() => {
+            setPlaying(false)
+          })
+          setPlaying(true)
         }
       }
     }
@@ -311,67 +330,114 @@ const VideoShortsModal = ({
       setHasUserInteracted(true)
 
       if (playerPaused(player)) {
-        player.play()?.catch(() => {})
+        player.play()?.catch(() => {
+          setPlaying(false)
+        })
+        setPlaying(true)
       } else {
         player.pause()
+        setPlaying(false)
       }
     }
   }
 
   return (
-    <Overlay>
-      <CloseButton size="large" edge="rounded" variant="text" onClick={onClose}>
-        <RiCloseLine />
-      </CloseButton>
-      <MuteButton
-        size="large"
-        edge="rounded"
-        variant="text"
-        onClick={onClickMute}
+    <FocusTrap open>
+      <Overlay
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Video Shorts"
       >
-        {muted ? <RiVolumeMuteLine /> : <RiVolumeUpLine />}
-      </MuteButton>
-      <CarouselV2Vertical
-        initialSlide={startIndex}
-        onSlidesInView={onSlidesInView}
-      >
-        {videoData?.map((video: VideoResource, index: number) => (
-          <CarouselSlide
-            key={video.id}
-            width={videoHeight * PORTRAIT_ASPECT_RATIO}
-            height={videoHeight}
-            data-index={index}
-          >
-            {selectedIndex !== null && Math.abs(selectedIndex - index) < 2 ? (
-              videoErrors[index] ? (
-                <Placeholder>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <Image
-                    src={MITOpenLearningLogo.src}
-                    alt="MIT Open Learning Logo"
-                    width={178}
-                    height={47}
-                    style={{ filter: "brightness(0) invert(1)" }}
+        <VisuallyHidden aria-live="polite" aria-atomic="true">
+          {announcement}
+        </VisuallyHidden>
+        <CloseButton
+          size="large"
+          edge="rounded"
+          variant="text"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          <RiCloseLine />
+        </CloseButton>
+        <MuteButton
+          ref={muteButtonRef}
+          size="large"
+          edge="rounded"
+          variant="text"
+          onClick={onClickMute}
+          aria-label={muted ? "Unmute" : "Mute"}
+        >
+          {muted ? <RiVolumeMuteLine /> : <RiVolumeUpLine />}
+        </MuteButton>
+        <CarouselV2Vertical
+          initialSlide={startIndex}
+          onSlidesInView={onSlidesInView}
+        >
+          {videoData?.map((video: VideoResource, index: number) => (
+            <CarouselSlide
+              key={video.id}
+              width={videoHeight * PORTRAIT_ASPECT_RATIO}
+              height={videoHeight}
+              data-index={index}
+              role="group"
+              aria-roledescription="slide"
+              aria-label={`${index + 1} of ${videoData.length}: ${video.title}`}
+              tabIndex={index === selectedIndex ? 0 : -1}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleVideoClick()
+                }
+              }}
+            >
+              {index === selectedIndex ? (
+                <PlayPauseButton
+                  className={PLAYPAUSE_CLASS}
+                  size="large"
+                  edge="rounded"
+                  variant="text"
+                  tabIndex={0}
+                  onClick={handleVideoClick}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.stopPropagation()
+                  }}
+                  aria-label={playing ? "Pause" : "Play"}
+                >
+                  {playing ? <RiPauseLine /> : <RiPlayLine />}
+                </PlayPauseButton>
+              ) : null}
+              {selectedIndex !== null && Math.abs(selectedIndex - index) < 2 ? (
+                videoErrors[index] ? (
+                  <Placeholder>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <Image
+                      src={MITOpenLearningLogo.src}
+                      alt="MIT Open Learning Logo"
+                      width={178}
+                      height={47}
+                      style={{ filter: "brightness(0) invert(1)" }}
+                    />
+                    <Typography variant="h4">Playback errored!</Typography>
+                    <Typography variant="h2">{video.title}</Typography>
+                  </Placeholder>
+                ) : (
+                  <VideoWithErrorHandler
+                    index={index}
+                    video={video}
+                    playersRef={playersRef}
+                    onError={onVideoError}
+                    onVideoClick={handleVideoClick}
                   />
-                  <Typography variant="h4">Playback errored!</Typography>
-                  <Typography variant="h2">{video.title}</Typography>
-                </Placeholder>
+                )
               ) : (
-                <VideoWithErrorHandler
-                  index={index}
-                  video={video}
-                  playersRef={playersRef}
-                  onError={onVideoError}
-                  onVideoClick={handleVideoClick}
-                />
-              )
-            ) : (
-              <Placeholder />
-            )}
-          </CarouselSlide>
-        ))}
-      </CarouselV2Vertical>
-    </Overlay>
+                <Placeholder />
+              )}
+            </CarouselSlide>
+          ))}
+        </CarouselV2Vertical>
+      </Overlay>
+    </FocusTrap>
   )
 }
 

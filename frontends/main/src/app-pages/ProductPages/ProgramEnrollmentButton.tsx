@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React from "react"
 import { LoadingSpinner, Stack, theme } from "ol-components"
 import {
@@ -90,7 +91,7 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
     if (enrollments.isLoading || me.isLoading) {
       return
     }
-    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
       posthog.capture(PostHogEvents.CallToActionClicked, {
         readableId: program.readable_id,
         resourceType: "program",

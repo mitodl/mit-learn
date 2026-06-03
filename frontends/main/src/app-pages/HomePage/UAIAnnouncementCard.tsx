@@ -1,4 +1,5 @@
 "use client"
+import { env } from "@/env"
 import React from "react"
 import { Typography, styled } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
@@ -252,7 +253,7 @@ const UAIAnnouncementCard: React.FC = () => {
   })
 
   const handleCTAClick = () => {
-    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
       posthog.capture(PostHogEvents.CallToActionClicked, {
         label: "Learn about Universal AI",
         readableId: UAI_PROGRAM_READABLE_ID,

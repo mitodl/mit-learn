@@ -292,6 +292,11 @@ const OrgProgramDisplay: React.FC<{
   programEnrollment?: V3UserProgramEnrollment
 }> = ({ program, entries, programEnrollment }) => {
   const hasValidCertificate = !!programEnrollment?.certificate
+
+  if (entries.length === 0) {
+    return null
+  }
+
   return (
     <ProgramRoot data-testid="org-program-root">
       <ProgramHeader>

@@ -1741,6 +1741,182 @@ describe("ContractContent", () => {
     })
   })
 
+  test("hides program section when selected variant has no matching runs", async () => {
+    const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
+    mitxOnlineUser.legal_address = { country: "US" }
+    mitxOnlineUser.user_profile = { year_of_birth: 1988 }
+
+    const program = factories.programs.program({ courses: [] })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
+    contracts[0].variant_options = [
+      {
+        language: LanguageEnum.En,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: true,
+      },
+      {
+        language: LanguageEnum.EsEs,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: false,
+      },
+    ]
+
+    // Course only has an English run — no Spanish variant run
+    const englishRun = factories.courses.courseRun({
+      id: faker.number.int(),
+      title: "English Only Module",
+      b2b_contract: contracts[0].id,
+      is_enrollable: true,
+    })
+    const englishOnlyCourse = factories.courses.course({
+      courseruns: [englishRun],
+      next_run_id: englishRun.id,
+    })
+    program.courses = [englishOnlyCourse.id]
+
+    setupOrgDashboardMocks(
+      orgX,
+      userApiPath,
+      mitxOnlineUser,
+      [program],
+      [englishOnlyCourse],
+      contracts,
+    )
+    // Variant runs endpoint returns no matching runs for this course
+    setMockResponse.get(
+      urls.courses.courseVariantRuns({
+        contract: contracts[0].id,
+        course_id: [englishOnlyCourse.id],
+        language: LanguageEnum.EsEs,
+      }),
+      [],
+    )
+
+    renderWithProviders(
+      <ContractContent orgSlug={orgX.slug} contractSlug={contracts[0].slug} />,
+    )
+
+    await screen.findByTestId("org-program-root")
+    await screen.findAllByRole("radio")
+
+    // Default (English) shows the program
+    expect(screen.getByTestId("org-program-root")).toBeInTheDocument()
+
+    // Switch to Spanish — program has no Spanish run, section should disappear
+    await user.click(screen.getByText(/español/i))
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("org-program-root")).not.toBeInTheDocument()
+    })
+  })
+
+  test("hides collection section when selected variant has no matching runs", async () => {
+    const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
+    mitxOnlineUser.legal_address = { country: "US" }
+    mitxOnlineUser.user_profile = { year_of_birth: 1988 }
+
+    const program = factories.programs.program({ courses: [] })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
+    contracts[0].variant_options = [
+      {
+        language: LanguageEnum.En,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: true,
+      },
+      {
+        language: LanguageEnum.EsEs,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: false,
+      },
+    ]
+
+    const englishRun = factories.courses.courseRun({
+      id: faker.number.int(),
+      title: "Collection English Only",
+      b2b_contract: contracts[0].id,
+      is_enrollable: true,
+    })
+    const englishOnlyCourse = factories.courses.course({
+      courseruns: [englishRun],
+      next_run_id: englishRun.id,
+    })
+    program.courses = [englishOnlyCourse.id]
+
+    setupOrgDashboardMocks(
+      orgX,
+      userApiPath,
+      mitxOnlineUser,
+      [program],
+      [englishOnlyCourse],
+      contracts,
+    )
+    setMockResponse.get(
+      urls.courses.courseVariantRuns({
+        contract: contracts[0].id,
+        course_id: [englishOnlyCourse.id],
+        language: LanguageEnum.EsEs,
+      }),
+      [],
+    )
+
+    const programCollection = factories.programs.programCollection({
+      programs: [{ id: program.id, title: program.title, order: 1 }],
+    })
+    setMockResponse.get(urls.programCollections.programCollectionsList(), {
+      results: [programCollection],
+    })
+    setMockResponse.get(
+      urls.programs.programsList({
+        id: [program.id],
+        contract_id: contracts[0].id,
+        page_size: 1,
+      }),
+      { results: [program] },
+    )
+    setMockResponse.get(
+      urls.courses.coursesList({
+        id: [englishOnlyCourse.id],
+        contract_id: contracts[0].id,
+      }),
+      { results: [englishOnlyCourse] },
+    )
+
+    renderWithProviders(
+      <ContractContent orgSlug={orgX.slug} contractSlug={contracts[0].slug} />,
+    )
+
+    await screen.findByTestId("org-program-collection-root")
+    await screen.findAllByRole("radio")
+
+    expect(
+      screen.getByTestId("org-program-collection-root"),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByText(/español/i))
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("org-program-collection-root"),
+      ).not.toBeInTheDocument()
+    })
+  })
+
   test("shared contract variant picker is hidden when only one variant option is present", async () => {
     const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
     mitxOnlineUser.legal_address = { country: "US" }

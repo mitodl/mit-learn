@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React from "react"
 import Script from "next/script"
 import Header from "@/page-components/Header/Header"
@@ -86,13 +87,13 @@ j=d.createElement(s),dl=l!=='dataLayer'?'&l='+l:'';j.async=true;j.src=
           <Footer />
         </PageWrapper>
       </SiteProviders>
-      {process.env.NEXT_PUBLIC_APPZI_URL ? (
-        <Script async src={process.env.NEXT_PUBLIC_APPZI_URL} />
+      {env("NEXT_PUBLIC_APPZI_URL") ? (
+        <Script async src={env("NEXT_PUBLIC_APPZI_URL")} />
       ) : null}
-      {process.env.NEXT_PUBLIC_HUBSPOT_PORTAL_ID ? (
+      {env("NEXT_PUBLIC_HUBSPOT_PORTAL_ID") ? (
         <Script
           id="hs-script-loader"
-          src={`https://js.hs-scripts.com/${process.env.NEXT_PUBLIC_HUBSPOT_PORTAL_ID}.js`}
+          src={`https://js.hs-scripts.com/${env("NEXT_PUBLIC_HUBSPOT_PORTAL_ID")}.js`}
           strategy="afterInteractive"
         />
       ) : null}

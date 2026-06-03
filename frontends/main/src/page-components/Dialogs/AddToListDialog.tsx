@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React, { useCallback } from "react"
 import {
   LoadingSpinner,
@@ -100,7 +101,7 @@ const AddToListDialogInner: React.FC<AddToListDialogInnerProps> = ({
     },
     onSubmit: async (values) => {
       if (resource) {
-        if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+        if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
           posthog.capture(PostHogEvents.LRAddToList, {
             listType: listType,
             resourceId: resource?.id,

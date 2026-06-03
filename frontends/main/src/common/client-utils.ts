@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import { ChannelCounts } from "api/v0"
 import { auth } from "./urls"
 import { redirect, usePathname, useSearchParams } from "next/navigation"
@@ -46,9 +47,7 @@ function getCookie(name: string) {
  * Returns CsrfToken from cookie if it is present
  */
 const getCsrfToken = () => {
-  return (
-    getCookie(process.env.NEXT_PUBLIC_CSRF_COOKIE_NAME || "csrftoken") ?? ""
-  )
+  return getCookie(env("NEXT_PUBLIC_CSRF_COOKIE_NAME") || "csrftoken") ?? ""
 }
 
 /**

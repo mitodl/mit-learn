@@ -25,7 +25,6 @@ from vector_search.constants import (
     QDRANT_RESOURCE_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
     RESOURCES_RETRIEVE_PAYLOAD,
-    VECTOR_SEARCH_MIN_SCORE,
 )
 from vector_search.serializers import (
     ContentFileVectorSearchRequestSerializer,
@@ -45,6 +44,39 @@ from vector_search.utils import (
 )
 
 log = logging.getLogger(__name__)
+
+
+def _normalize_score_cutoff(value, hybrid_search_enabled):
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return None
+    min_score_cutoff = (
+        settings.HYBRID_VECTOR_SEARCH_MIN_SCORE
+        if hybrid_search_enabled
+        else settings.DENSE_VECTOR_SEARCH_MIN_SCORE
+    )
+    return max(value, min_score_cutoff)
+
+
+def _sort_key(x, field):
+    descending = isinstance(field, str) and field.startswith("-")
+    field_name = field[1:] if descending else field
+    value = x.get(field_name)
+
+    present_bucket = 1 if descending else 0
+    missing_bucket = 0 if descending else 1
+
+    if value is None:
+        return (missing_bucket, 0, 0)
+
+    if isinstance(value, (int, float)):
+        return (present_bucket, 0, value)
+
+    if isinstance(value, str):
+        return (present_bucket, 1, value.lower())
+
+    return (present_bucket, 1, str(value).lower())
 
 
 class QdrantView(APIView):
@@ -130,9 +162,9 @@ class QdrantView(APIView):
             ),
             "limit": limit,
         }
-
-        if type(score_cutoff) is float and score_cutoff >= VECTOR_SEARCH_MIN_SCORE:
-            search_params["score_threshold"] = score_cutoff
+        normalized_score = _normalize_score_cutoff(score_cutoff, hybrid_search)
+        if normalized_score is not None:
+            search_params["score_threshold"] = normalized_score
 
         if hybrid_search:
             sparse_query, dense_query = await asyncio.gather(
@@ -172,7 +204,7 @@ class QdrantView(APIView):
                 search_params["query"] = models.FusionQuery(fusion=models.Fusion.RRF)
         else:
             dense_query = await sync_to_async(encoder_dense.embed_query)(query_string)
-            if order_by:
+            if order_by and "score_threshold" not in search_params:
                 # Nest: dense vector prefetch → order_by query
                 search_params["prefetch"] = models.Prefetch(
                     query=dense_query,
@@ -461,11 +493,8 @@ class QdrantView(APIView):
         *,
         hybrid_search: bool = False,
     ):
-        if (
-            query_string
-            and type(score_cutoff) is float
-            and score_cutoff >= VECTOR_SEARCH_MIN_SCORE
-        ):
+        normalized_score = _normalize_score_cutoff(score_cutoff, hybrid_search)
+        if query_string and normalized_score is not None:
             hits = await self._async_vector_hits(
                 query_string,
                 params,
@@ -473,9 +502,20 @@ class QdrantView(APIView):
                 limit=settings.VECTOR_SEARCH_PAGE_MAX_LIMIT,
                 offset=0,
                 search_collection=search_collection,
-                score_cutoff=score_cutoff,
+                score_cutoff=normalized_score,
                 hybrid_search=hybrid_search,
             )
+            if order_by:
+                # in addition to fetching all results unpaginated,
+                # manually apply the sorting since
+                # Qdrant does not support sorting with score cutoffs
+                descending = order_by.startswith("-")
+                order_by_field = order_by.lstrip("-")
+                hits = sorted(
+                    hits,
+                    key=lambda x: _sort_key(x, order_by_field),
+                    reverse=descending,
+                )
             counts = await self._async_vector_resource_counts(
                 hits, params, search_collection=search_collection
             )
@@ -548,6 +588,8 @@ class LearningResourcesVectorSearchView(QdrantView):
             limit = request_data.data.get("limit", 10)
             offset = request_data.data.get("offset", 0)
             order_by = request_data.data.get("sortby")
+            score_cutoff = request_data.data.get("score_cutoff")
+
             response = await self.async_vector_search(
                 query_text,
                 order_by=order_by,
@@ -555,7 +597,7 @@ class LearningResourcesVectorSearchView(QdrantView):
                 offset=offset,
                 params=request_data.data,
                 hybrid_search=hybrid_search,
-                score_cutoff=request_data.data.get("score_cutoff", 0),
+                score_cutoff=score_cutoff,
             )
             if request_data.data.get("dev_mode"):
                 return Response(response)

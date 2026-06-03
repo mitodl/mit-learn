@@ -1,6 +1,7 @@
 """MicroMasters ETL"""
 
 import logging
+import re
 from decimal import Decimal
 
 import requests
@@ -20,7 +21,7 @@ from learning_resources.models import LearningResource, default_pace
 
 OFFERED_BY = {"code": OfferedBy.mitx.name}
 READABLE_ID_PREFIX = "micromasters-program-"
-DEDP = "/dedp/"
+IGNORE_URLS = re.compile(r"/(dedp|scm)/")
 
 log = logging.getLogger(__name__)
 
@@ -89,6 +90,8 @@ def transform(programs_data):
     programs = []
     for program in programs_data:
         url = program.get("programpage_url")
+        if not url or IGNORE_URLS.search(url):
+            continue
         # need positioning of courses by course_id for course data
         courses = [
             {
@@ -110,51 +113,48 @@ def transform(programs_data):
                 key=lambda course: course["position_in_program"],
             )
         ]
-        if url and DEDP not in url:
-            pace = sorted(
-                {
-                    pace
-                    for course in courses
-                    for pace in course["pace"]
-                    if course["published"]
-                }
-            )
-            programs.append(
-                {
-                    "readable_id": f"{READABLE_ID_PREFIX}{program['id']}",
-                    "etl_source": ETLSource.micromasters.name,
-                    "title": program["title"],
-                    "platform": PlatformType.edx.name,
-                    "offered_by": OFFERED_BY,
-                    "url": program.get("programpage_url"),
-                    "image": _transform_image(program),
-                    "certification": True,
-                    "certification_type": CertificationType.micromasters.name,
-                    "runs": [
-                        {
-                            "run_id": f"{READABLE_ID_PREFIX}{program['id']}",
-                            "title": program["title"],
-                            "instructors": [
-                                {"full_name": instructor["name"]}
-                                for instructor in program["instructors"]
-                            ],
-                            "prices": [
-                                transform_price(Decimal(program["total_price"]))
-                            ],
-                            "start_date": program["start_date"]
-                            or program["enrollment_start"],
-                            "end_date": program["end_date"],
-                            "enrollment_start": program["enrollment_start"],
-                            "availability": Availability.dated.name,
-                            "pace": pace,
-                            "format": [Format.asynchronous.name],
-                        }
-                    ],
-                    "topics": program["topics"],
-                    "availability": Availability.dated.name,
-                    "pace": pace,
-                    "format": [Format.asynchronous.name],
-                    "courses": courses,
-                }
-            )
+        pace = sorted(
+            {
+                pace
+                for course in courses
+                for pace in course["pace"]
+                if course["published"]
+            }
+        )
+        programs.append(
+            {
+                "readable_id": f"{READABLE_ID_PREFIX}{program['id']}",
+                "etl_source": ETLSource.micromasters.name,
+                "title": program["title"],
+                "platform": PlatformType.edx.name,
+                "offered_by": OFFERED_BY,
+                "url": program.get("programpage_url"),
+                "image": _transform_image(program),
+                "certification": True,
+                "certification_type": CertificationType.micromasters.name,
+                "runs": [
+                    {
+                        "run_id": f"{READABLE_ID_PREFIX}{program['id']}",
+                        "title": program["title"],
+                        "instructors": [
+                            {"full_name": instructor["name"]}
+                            for instructor in program["instructors"]
+                        ],
+                        "prices": [transform_price(Decimal(program["total_price"]))],
+                        "start_date": program["start_date"]
+                        or program["enrollment_start"],
+                        "end_date": program["end_date"],
+                        "enrollment_start": program["enrollment_start"],
+                        "availability": Availability.dated.name,
+                        "pace": pace,
+                        "format": [Format.asynchronous.name],
+                    }
+                ],
+                "topics": program["topics"],
+                "availability": Availability.dated.name,
+                "pace": pace,
+                "format": [Format.asynchronous.name],
+                "courses": courses,
+            }
+        )
     return programs

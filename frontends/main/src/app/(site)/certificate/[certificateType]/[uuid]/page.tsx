@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React from "react"
 import { Metadata } from "next"
 import CertificatePage from "@/app-pages/CertificatePage/CertificatePage"
@@ -9,7 +10,7 @@ import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
 import { getQueryClient } from "@/app/getQueryClient"
 import { getCertificateInfo } from "@/common/certificateUtils"
 
-const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
+const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 enum CertificateType {
   Course = "course",

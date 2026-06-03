@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React from "react"
 import {
   styled,
@@ -110,7 +111,7 @@ const TopicChipsInternal: React.FC<TopicChipsInternalProps> = (props) => {
             key={topic.id}
             href={topic.channel_url ?? ""}
             onClick={() => {
-              if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+              if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
                 posthog.capture(posthogEvent, { topic })
               }
             }}

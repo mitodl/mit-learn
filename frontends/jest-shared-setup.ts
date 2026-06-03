@@ -18,15 +18,11 @@ expect.extend(matchers)
 
 setDefaultTimezone("UTC")
 
-// env vars
-process.env.NEXT_PUBLIC_MITOL_API_BASE_URL =
-  "http://api.test.learn.odl.local:8065"
-process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL =
-  "http://api.test.learn.odl.local:8065/mitxonline"
-process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL =
-  "http://mitxonline.odl.local:8065"
-process.env.NEXT_PUBLIC_ORIGIN = "http://test.learn.odl.local:8062"
-process.env.NEXT_PUBLIC_VERSION = "test-version"
+// NEXT_PUBLIC_* test values are NOT set here. Only the `main` workspace's app
+// code reads them (via the env() helper, which falls back to process.env under
+// jsdom), so they live in main/src/test-utils/setupJest.tsx. The api workspace
+// configures its clients with hardcoded test URLs in its own setup, and leaf
+// packages (ol-*) don't read NEXT_PUBLIC_* at all.
 
 // Pulled from the docs - see https://jestjs.io/docs/manual-mocks#mocking-methods-which-are-not-implemented-in-jsdom
 

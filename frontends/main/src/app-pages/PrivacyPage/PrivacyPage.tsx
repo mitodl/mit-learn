@@ -1,5 +1,6 @@
 "use client"
 
+import { env } from "@/env"
 import {
   Breadcrumbs,
   Container,
@@ -64,8 +65,8 @@ const UnorderedList = styled.ul(({ theme }) => ({
   marginTop: "10px",
 }))
 
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME
-const MITOL_SUPPORT_EMAIL = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL
+const SITE_NAME = env("NEXT_PUBLIC_SITE_NAME")
+const MITOL_SUPPORT_EMAIL = env("NEXT_PUBLIC_MITOL_SUPPORT_EMAIL")
 
 const PrivacyPage: React.FC = () => {
   return (

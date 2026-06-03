@@ -1,6 +1,7 @@
 import React, { useState } from "react"
 import Image from "next/image"
 import { Container, Typography, Card, styled } from "ol-components"
+import { VisuallyHidden } from "@mitodl/smoot-design"
 import { CarouselV2 } from "ol-components/CarouselV2"
 import { useQuery } from "@tanstack/react-query"
 import { learningResourceQueries } from "api/hooks/learningResources"
@@ -51,14 +52,20 @@ const CardContent = styled.div<{ width: number; height: number }>(
 
 const ASPECT_RATIO = 9 / 16
 
-const CarouselSlide = styled.div<{ width: number; height: number }>(
-  ({ width, height }) => ({
-    flex: "0 0 100%",
-    width,
-    maxWidth: width,
-    height,
-  }),
-)
+const CarouselSlide = styled("div", {
+  shouldForwardProp: (prop) => prop !== "width" && prop !== "height",
+})<{ width: number; height: number }>(({ width, height, theme }) => ({
+  flex: "0 0 100%",
+  width,
+  maxWidth: width,
+  height,
+  cursor: "pointer",
+  "&:focus-visible": {
+    outline: `2px solid ${theme.custom.colors.darkGray2}`,
+    outlineOffset: "2px",
+    borderRadius: "8px",
+  },
+}))
 
 const ImagePlaceholder = styled.div(({ theme }) => ({
   width: "100%",
@@ -96,6 +103,8 @@ const VideoShortsSection = () => {
 
   const [showModal, setShowModal] = useState(false)
   const [videoIndex, setVideoIndex] = useState(0)
+  const [announcement, setAnnouncement] = useState("")
+  const [visibleSlides, setVisibleSlides] = useState<number[]>([])
 
   if (isLoading || !data?.length) return null
 
@@ -117,20 +126,45 @@ const VideoShortsSection = () => {
             Learn something new in less than 60 seconds.
           </Typography>
         </Header>
-        <StyledCarouselV2>
+        <VisuallyHidden aria-live="polite" aria-atomic="true">
+          {announcement}
+        </VisuallyHidden>
+        <StyledCarouselV2
+          onSettle={(inView) => {
+            setVisibleSlides(inView)
+            if (inView.length > 0) {
+              setAnnouncement(
+                `${inView[0] + 1} of ${data.length}: ${data[inView[0]].title}`,
+              )
+            }
+          }}
+        >
           {data?.map((video: VideoResource, index: number) => (
             <CarouselSlide
               width={235}
               height={235 / ASPECT_RATIO}
               key={video.id}
-            >
-              {/* 235 is our fixed width to ensure slides align with the container edge */}
-              <Card
-                onClick={() => {
+              role="button"
+              tabIndex={
+                visibleSlides.length === 0 || visibleSlides.includes(index)
+                  ? 0
+                  : -1
+              }
+              aria-label={`Play ${video.title}`}
+              onClick={() => {
+                setShowModal(true)
+                setVideoIndex(index)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
                   setShowModal(true)
                   setVideoIndex(index)
-                }}
-              >
+                }
+              }}
+            >
+              {/* 235 is our fixed width to ensure slides align with the container edge */}
+              <Card>
                 <Card.Content>
                   <CardContent width={235} height={235 / ASPECT_RATIO}>
                     {video.image?.url ? (

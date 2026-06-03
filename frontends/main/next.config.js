@@ -1,36 +1,35 @@
 // @ts-check
 const { validateEnv } = require("./validateEnv")
 
-validateEnv()
+// In CI Docker builds (NEXT_BUILD_CI=1), NEXT_PUBLIC_* vars are not available
+// at build time — they are injected at runtime via PublicEnvScript. Skip
+// build-time validation; validateEnv() runs at server startup instead (see
+// src/instrumentation-node.ts).
+if (!process.env.NEXT_BUILD_CI) {
+  validateEnv()
+}
 
-const NEXT_PUBLIC_OPTIMIZE_IMAGES = Boolean(
-  (process.env.NEXT_PUBLIC_OPTIMIZE_IMAGES ?? "true") === "true",
-)
 const IS_LOCAL_DEV = process.env.NODE_ENV === "development"
 
-const NEXT_CACHE_S_MAXAGE_SECONDS =
-  process.env.NEXT_CACHE_S_MAXAGE_SECONDS || "1800"
-const PAGE_CACHE_CONTROL = `s-maxage=${NEXT_CACHE_S_MAXAGE_SECONDS}, stale-if-error=86400, stale-while-revalidate=86400`
-
-const processFeatureFlags = () => {
-  const featureFlagPrefix =
-    process.env.NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX || "FEATURE_"
-  const bootstrapFeatureFlags = {}
-
-  for (const [key, value] of Object.entries(process.env)) {
-    if (key.startsWith(`NEXT_PUBLIC_${featureFlagPrefix}`)) {
-      bootstrapFeatureFlags[
-        key.replace(`NEXT_PUBLIC_${featureFlagPrefix}`, "").replaceAll("_", "-")
-      ] = value === "True" ? true : JSON.stringify(value)
-    }
-  }
-
-  return bootstrapFeatureFlags
-}
+// Dev-server-only: allow cross-origin requests to internal dev endpoints (HMR,
+// etc.). Reading NEXT_PUBLIC_ORIGIN from process.env is safe here — unlike app
+// code, this config path only runs when NODE_ENV==="development", never in a
+// production build where NEXT_PUBLIC_* are absent.
+// eslint-disable-next-line no-restricted-syntax -- dev-only; see comment above
+const devOrigin = IS_LOCAL_DEV ? process.env.NEXT_PUBLIC_ORIGIN : undefined
+const allowedDevOrigins = devOrigin ? [new URL(devOrigin).hostname] : undefined
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   productionBrowserSourceMaps: true,
+  allowedDevOrigins,
+  /**
+   * Standalone output emits a minimal self-contained server at
+   * .next/standalone/ with only the required runtime files. The resulting
+   * Docker image requires no node_modules and no yarn at startup.
+   * See: https://nextjs.org/docs/app/getting-started/deploying#docker
+   */
+  output: "standalone",
   async rewrites() {
     return [
       /* Static assets moved from /static, though image paths are sometimes
@@ -62,31 +61,13 @@ const nextConfig = {
 
   async headers() {
     return [
-      {
-        source: "/sitemaps/:path*.xml",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: PAGE_CACHE_CONTROL,
-          },
-        ],
-      },
-      /* This is intended to target the base HTML responses and streamed RSC
-       * content. Some routes are dynamically rendered, so NextJS by default
-       * sets no-cache. However we are currently serving public content that is
-       * cacheable.
-       *
-       * Excludes everything with a file extension so we're matching only on routes.
+      /* The "html-pages" Surrogate-Key tag (for HTML/page routes and sitemaps)
+       * is set at runtime in src/proxy.ts, alongside Cache-Control and driven
+       * by the same isPageRoute() test, so the tag and the cache policy can
+       * never diverge. It cannot live here because page detection (and the
+       * Cache-Control value) depend on runtime state that is unavailable at
+       * build time. The rules below are genuinely static and immutable.
        */
-      {
-        source: "/((?!.*\\.[a-zA-Z0-9]{2,4}$).*)",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: PAGE_CACHE_CONTROL,
-          },
-        ],
-      },
 
       /* Images rendered with the Next.js Image component have the cache header
        * set on them, but CSS background images do not.
@@ -115,18 +96,11 @@ const nextConfig = {
   transpilePackages: ["@mitodl/smoot-design/ai"],
 
   images: {
-    unoptimized: !NEXT_PUBLIC_OPTIMIZE_IMAGES,
-    dangerouslyAllowLocalIP: IS_LOCAL_DEV,
-    remotePatterns: [
-      {
-        hostname: "**",
-      },
-    ],
-    qualities: [25, 50, 75, 100],
-  },
-
-  env: {
-    FEATURE_FLAGS: JSON.stringify(processFeatureFlags()),
+    // Image optimisation is disabled: the app passes images through as-is.
+    // Production uses Fastly for image transformations. Disabling also avoids
+    // baking a per-environment flag (previously NEXT_PUBLIC_OPTIMIZE_IMAGES)
+    // into the Docker image at build time.
+    unoptimized: true,
   },
 
   experimental: {
@@ -134,9 +108,23 @@ const nextConfig = {
     // Explicitly enable it for clarity (optional - already default)
     turbopackFileSystemCacheForDev: true,
   },
+
+  /**
+   * Pin the build ID to the git SHA / version tag for traceability — the
+   * BUILD_ID embedded in manifests and page-data paths then identifies which
+   * commit a running pod was built from.
+   *
+   * NEXT_PUBLIC_VERSION is set as a Kubernetes env var (and as a Docker build
+   * arg for the standalone build). GIT_REF is the full commit SHA passed by
+   * Concourse. The 'dev' fallback is for local builds.
+   */
+  generateBuildId: async () =>
+    // eslint-disable-next-line no-restricted-syntax -- NEXT_PUBLIC_VERSION is guaranteed present at build time by devops (set as a Docker build arg); other NEXT_PUBLIC_* are not
+    process.env.NEXT_PUBLIC_VERSION || process.env.GIT_REF || "dev",
 }
 
 const { withSentryConfig } = require("@sentry/nextjs")
+/** @param {import('next').NextConfig} config */
 const withSentry = (config) =>
   withSentryConfig(config, {
     // For all available options, see:
