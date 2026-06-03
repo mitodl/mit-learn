@@ -105,13 +105,12 @@ describe("VariantPicker", () => {
       expect(screen.getAllByText("English • General • Full")).toHaveLength(2)
     })
 
-    test("selecting a non-default variant shows its computed label in the Viewing indicator", async () => {
-      const setSelectedVariant = jest.fn()
+    test("shows the computed label for a non-default variant in the Viewing indicator", () => {
       renderWithProviders(
         <VariantPicker
           variantOptions={[enDefault, esVariant]}
           selectedVariant={esVariant}
-          setSelectedVariant={setSelectedVariant}
+          setSelectedVariant={jest.fn()}
           defaultVariantLabel="Universal AI Program"
         />,
       )
@@ -273,12 +272,9 @@ describe("VariantPicker selection", () => {
       />,
     )
 
-    const viewingLabel = screen
-      .getByText("Viewing:")
-      .closest("div")!
-      .querySelector("p:last-child")!
+    const indicator = screen.getByText("Viewing:").closest("div")!
     expect(
-      within(viewingLabel as HTMLElement).getByText(/español.*General.*Full/),
+      within(indicator as HTMLElement).getByText(/español.*General.*Full/),
     ).toBeInTheDocument()
   })
 })
