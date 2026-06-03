@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.70.6
+--------------
+
+- add hybrid search to topic channel pages (#3401)
+
 Version 0.70.5 (Released June 03, 2026)
 --------------
 
