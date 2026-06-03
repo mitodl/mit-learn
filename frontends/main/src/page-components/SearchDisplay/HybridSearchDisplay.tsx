@@ -88,7 +88,7 @@ const toUnfacetedVectorSearchParams = (
     limit: _limit,
     ...vectorParams
   } = toVectorSearchParams(params, cutoffScore)
-  console.log(constantSearchParams)
+
   return Object.fromEntries(
     Object.entries(vectorParams).filter(
       ([key]) =>
