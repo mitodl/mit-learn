@@ -1,6 +1,7 @@
 """MicroMasters ETL"""
 
 import logging
+import re
 from decimal import Decimal
 
 import requests
@@ -20,7 +21,7 @@ from learning_resources.models import LearningResource, default_pace
 
 OFFERED_BY = {"code": OfferedBy.mitx.name}
 READABLE_ID_PREFIX = "micromasters-program-"
-DEDP = "/dedp/"
+IGNORE_URLS = re.compile(r"/(dedp|scm)/")
 
 log = logging.getLogger(__name__)
 
@@ -110,7 +111,7 @@ def transform(programs_data):
                 key=lambda course: course["position_in_program"],
             )
         ]
-        if url and DEDP not in url:
+        if url and not IGNORE_URLS.search(url):
             pace = sorted(
                 {
                     pace

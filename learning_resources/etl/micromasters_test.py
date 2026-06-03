@@ -186,6 +186,26 @@ def test_micromasters_transform(mock_micromasters_data, missing_url):
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
+    ("url", "expected_excluded"),
+    [
+        ("http://example.com/program/1/url", False),
+        ("http://example.com/dedp/program/1/url", True),
+        ("http://example.com/scm/program/1/url", True),
+    ],
+)
+def test_micromasters_transform_ignores_urls(
+    mock_micromasters_data, url, expected_excluded
+):
+    """Programs whose URL contains /dedp/ or /scm/ should be excluded"""
+    # Drop the second program so only the program under test is considered
+    mock_micromasters_data = mock_micromasters_data[:1]
+    mock_micromasters_data[0]["programpage_url"] = url
+    transformed = micromasters.transform(mock_micromasters_data)
+    assert (len(transformed) == 0) is expected_excluded
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
     ("start_dt", "enrollment_dt", "expected_dt"),
     [
         (None, "2019-02-20T15:00:00Z", "2019-02-20T15:00:00Z"),
