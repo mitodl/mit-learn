@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.70.2
+Version 0.70.2 (Released June 03, 2026)
 --------------
 
 - fix: render issue date on certificate pages (#3390)
