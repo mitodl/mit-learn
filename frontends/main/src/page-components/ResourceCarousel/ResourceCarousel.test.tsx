@@ -317,10 +317,9 @@ describe("ResourceCarousel", () => {
         excludeResourceId={resources.list.results[0].id}
       />,
     )
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitFor(() => {
+      expect(view.container.firstChild).toBeNull()
     })
-    expect(view.container.firstChild).toBeNull()
   })
 
   it.each([
