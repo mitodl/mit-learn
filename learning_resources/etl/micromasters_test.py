@@ -201,7 +201,7 @@ def test_micromasters_transform_ignores_urls(
     mock_micromasters_data = mock_micromasters_data[:1]
     mock_micromasters_data[0]["programpage_url"] = url
     transformed = micromasters.transform(mock_micromasters_data)
-    assert (len(transformed) == 0) is expected_excluded
+    assert (len(transformed) == 0) == expected_excluded
 
 
 @pytest.mark.django_db
