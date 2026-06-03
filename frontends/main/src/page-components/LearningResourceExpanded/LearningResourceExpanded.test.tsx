@@ -18,6 +18,10 @@ const mockedUseFeatureFlagEnabled = jest
   .mocked(useFeatureFlagEnabled)
   .mockImplementation(() => false)
 
+jest.mock("next/navigation", () => ({
+  usePathname: jest.fn(() => "/search"),
+}))
+
 const IMG_CONFIG: LearningResourceExpandedProps["imgConfig"] = {
   width: 385,
   height: 200,

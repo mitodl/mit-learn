@@ -7,7 +7,14 @@ import type {
 import { HeadingIds } from "./util"
 import { ProgramSummary } from "./ProductSummary"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
-import { InfoBoxCard, InfoBoxContent, InfoBoxEnrollArea } from "./InfoBoxParts"
+import {
+  InfoBoxActionStack,
+  InfoBoxCard,
+  InfoBoxColumn,
+  InfoBoxContent,
+  InfoBoxEnrollArea,
+} from "./InfoBoxParts"
+import { ProductPageAskTimSection } from "./ProductPageAskTim"
 
 type ProgramInfoBoxProps = {
   program: V2ProgramDetail
@@ -19,17 +26,25 @@ const ProgramInfoBox: React.FC<ProgramInfoBoxProps> = ({
   courses,
 }) => {
   return (
-    <InfoBoxCard as="section" aria-labelledby={HeadingIds.Summary}>
-      <VisuallyHidden>
-        <h2 id={HeadingIds.Summary}>Program Information</h2>
-      </VisuallyHidden>
-      <InfoBoxContent>
-        <ProgramSummary program={program} courses={courses} />
-      </InfoBoxContent>
-      <InfoBoxEnrollArea>
-        <ProgramEnrollmentButton program={program} variant="primary" />
-      </InfoBoxEnrollArea>
-    </InfoBoxCard>
+    <InfoBoxColumn>
+      <InfoBoxCard as="section" aria-labelledby={HeadingIds.Summary}>
+        <VisuallyHidden>
+          <h2 id={HeadingIds.Summary}>Program Information</h2>
+        </VisuallyHidden>
+        <InfoBoxContent>
+          <ProgramSummary program={program} courses={courses} />
+        </InfoBoxContent>
+        <InfoBoxEnrollArea>
+          <InfoBoxActionStack>
+            <ProgramEnrollmentButton program={program} variant="primary" />
+          </InfoBoxActionStack>
+        </InfoBoxEnrollArea>
+      </InfoBoxCard>
+      <ProductPageAskTimSection
+        readableId={program.readable_id}
+        resourceType="program"
+      />
+    </InfoBoxColumn>
   )
 }
 

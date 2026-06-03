@@ -23,15 +23,30 @@ export const InfoBoxContent = styled.div(({ theme }) => ({
   },
 }))
 
+/** Stacks enrollment CTA full-width; Ask TIM sits in a sibling card below (see Figma). */
+export const InfoBoxActionStack = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  width: "100%",
+})
+
+/** Wraps summary card and Ask TIM card with design-system spacing. */
+export const InfoBoxColumn = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "24px",
+  width: "100%",
+  /** Tablet: Ask TIM card is 320px wide, left-aligned below the InfoBox. */
+  [theme.breakpoints.between("sm", "md")]: {
+    alignItems: "flex-start",
+  },
+}))
+
 export const InfoBoxEnrollArea = styled.div(({ theme }) => ({
   padding: "8px 24px 24px",
+  width: "100%",
   [theme.breakpoints.up("md")]: {
     padding: "8px 32px 24px",
-  },
-  [theme.breakpoints.between("sm", "md")]: {
-    display: "flex",
-    justifyContent: "flex-end",
-    "> *": { flex: "0 1 50%" },
   },
   [theme.breakpoints.down("sm")]: {
     padding: "8px 16px 16px",

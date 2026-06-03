@@ -19,6 +19,7 @@ import type {
   FeaturedApiFeaturedListRequest as FeaturedListParams,
   LearningResourcesApiLearningResourcesItemsListRequest as ItemsListRequest,
   LearningResourcesApiLearningResourcesSummaryListRequest as LearningResourcesSummaryListRequest,
+  PaginatedLearningResourceList,
   PaginatedLearningResourceRelationshipList,
   VideoPlaylistResource,
   LearningResourcesApiLearningResourcesVectorSimilarListRequest,
@@ -45,6 +46,11 @@ const learningResourceKeys = {
   list: (params: LearningResourcesListRequest) => [
     ...learningResourceKeys.listsRoot(),
     params,
+  ],
+  byReadableIdRoot: () => [...learningResourceKeys.listsRoot(), "byReadableId"],
+  byReadableId: (readableId: string) => [
+    ...learningResourceKeys.byReadableIdRoot(),
+    readableId,
   ],
   summaryListRoot: () => [...learningResourceKeys.root, "summaryList"],
   summaryList: (params: LearningResourcesSummaryListRequest) => [
@@ -184,6 +190,24 @@ const learningResourceQueries = {
         learningResourcesApi
           .learningResourcesList(params)
           .then((res) => res.data),
+    }),
+  /**
+   * Lookup by readable_id using exploded query params (`readable_id=foo`), not
+   * axios's default array form (`readable_id[]=foo`), which Django's CharInFilter
+   * does not read.
+   */
+  byReadableId: (readableId: string) =>
+    queryOptions({
+      queryKey: learningResourceKeys.byReadableId(readableId),
+      queryFn: async () => {
+        const search = new URLSearchParams()
+        search.append("readable_id", readableId)
+        search.set("limit", "1")
+        const { data } = await axiosInstance.get<PaginatedLearningResourceList>(
+          `/api/v1/learning_resources/?${search.toString()}`,
+        )
+        return data.results[0] ?? null
+      },
     }),
   summaryList: (params: LearningResourcesSummaryListRequest) =>
     queryOptions({

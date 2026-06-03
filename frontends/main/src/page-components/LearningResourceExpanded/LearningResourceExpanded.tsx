@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react"
+import { usePathname } from "next/navigation"
 import styled from "@emotion/styled"
 import type { ImageConfig, LearningResourceCardProps } from "ol-components"
 import { ResourceTypeEnum } from "api"
@@ -15,7 +16,10 @@ import AiSyllabusBotSlideDown, {
   AiChatSyllabusOpener,
   ChatTransitionState,
 } from "./AiChatSyllabusSlideDown"
-import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
+import {
+  isMitxOnlineProductPagePath,
+  RESOURCE_DRAWER_PARAMS,
+} from "@/common/urls"
 
 const Outer = styled.div(({ theme }) => ({
   display: "flex",
@@ -139,6 +143,11 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   closeDrawer,
   chatExpanded: initialChatExpanded,
 }) => {
+  const pathname = usePathname()
+  /** Product-page Ask TIM: drawer opens straight to chat; close exits the drawer entirely. */
+  const syllabusOnlyDrawer =
+    isMitxOnlineProductPagePath(pathname) && initialChatExpanded
+
   const [chatTransitionState, setChatTransitionState] = useState(
     initialChatExpanded ? ChatTransitionState.Open : ChatTransitionState.Closed,
   )
@@ -217,6 +226,8 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
       setChatTransitionState(ChatTransitionState.Opening)
       setScrollPosition(scrollElement?.scrollTop ?? 0)
       openChat()
+    } else if (syllabusOnlyDrawer) {
+      closeDrawer?.()
     } else {
       setChatTransitionState(ChatTransitionState.Closing)
       closeChat()
@@ -239,9 +250,9 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
         titleId={titleId}
         resource={resource}
         onClickClose={
-          chatTransitionState === ChatTransitionState.Open
-            ? () => onChatOpenerToggle(false)
-            : closeDrawer
+          syllabusOnlyDrawer || chatTransitionState !== ChatTransitionState.Open
+            ? closeDrawer
+            : () => onChatOpenerToggle(false)
         }
       />
       {chatEnabled ? (
@@ -263,40 +274,42 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
           />
         </>
       ) : null}
-      <ContentSection chatTransitionState={chatTransitionState}>
-        <TopContainer chatEnabled={!!chatEnabled}>
-          <ContentContainer>
-            <ContentLeft>
-              <ResourceDescription resource={resource} />
-              <InfoSection resource={resource} />
-            </ContentLeft>
-            <ContentRight>
-              <CallToActionSection
-                imgConfig={imgConfig}
-                resource={resource}
-                user={user}
-                shareUrl={shareUrl}
-                inLearningPath={inLearningPath}
-                inUserList={inUserList}
-                onAddToLearningPathClick={onAddToLearningPathClick}
-                onAddToUserListClick={onAddToUserListClick}
-              />
-            </ContentRight>
-          </ContentContainer>
-          {topCarousels && (
-            <TopCarouselContainer>
-              {topCarousels?.map((carousel, index) => (
-                <div key={index}>{carousel}</div>
-              ))}
-            </TopCarouselContainer>
-          )}
-        </TopContainer>
-        <BottomContainer>
-          {bottomCarousels?.map((carousel, index) => (
-            <div key={index}>{carousel}</div>
-          ))}
-        </BottomContainer>
-      </ContentSection>
+      {!syllabusOnlyDrawer ? (
+        <ContentSection chatTransitionState={chatTransitionState}>
+          <TopContainer chatEnabled={!!chatEnabled}>
+            <ContentContainer>
+              <ContentLeft>
+                <ResourceDescription resource={resource} />
+                <InfoSection resource={resource} />
+              </ContentLeft>
+              <ContentRight>
+                <CallToActionSection
+                  imgConfig={imgConfig}
+                  resource={resource}
+                  user={user}
+                  shareUrl={shareUrl}
+                  inLearningPath={inLearningPath}
+                  inUserList={inUserList}
+                  onAddToLearningPathClick={onAddToLearningPathClick}
+                  onAddToUserListClick={onAddToUserListClick}
+                />
+              </ContentRight>
+            </ContentContainer>
+            {topCarousels && (
+              <TopCarouselContainer>
+                {topCarousels?.map((carousel, index) => (
+                  <div key={index}>{carousel}</div>
+                ))}
+              </TopCarouselContainer>
+            )}
+          </TopContainer>
+          <BottomContainer>
+            {bottomCarousels?.map((carousel, index) => (
+              <div key={index}>{carousel}</div>
+            ))}
+          </BottomContainer>
+        </ContentSection>
+      ) : null}
     </Outer>
   )
 }
