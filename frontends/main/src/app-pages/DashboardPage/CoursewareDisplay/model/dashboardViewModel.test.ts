@@ -15,7 +15,6 @@ import {
   buildVariantKey,
   buildVariantLabel,
   enrollmentCourseIsInPrograms,
-  entryMatchesVariant,
   getCollectionFirstCoursesInDisplayOrder,
   getModuleCourseIdsFromPrograms,
   getNonContractProgramEnrollments,
@@ -1639,92 +1638,6 @@ const makeRun = (overrides: Partial<BaseCourseRun> = {}): BaseCourseRun => ({
   is_enrollable: true,
   is_archived: false,
   ...overrides,
-})
-
-describe("entryMatchesVariant", () => {
-  const esVariant: SupportedVariant = {
-    language: LanguageEnum.EsEs,
-    variant_industry: "",
-    variant_length: "",
-    active: true,
-    b2b_only: true,
-    default_variant: false,
-  }
-  const enDefaultVariant: SupportedVariant = {
-    language: LanguageEnum.En,
-    variant_industry: "",
-    variant_length: "",
-    active: true,
-    b2b_only: true,
-    default_variant: true,
-  }
-
-  const makeEntry = (
-    displayedRun: BaseCourseRun | null,
-  ): ReturnType<typeof buildCourseEntry> => {
-    const course = factories.courses.course({ courseruns: [] })
-    return {
-      course,
-      enrollments: [],
-      displayedEnrollment: null,
-      displayedRun,
-    }
-  }
-
-  test("returns true when variant is null", () => {
-    expect(entryMatchesVariant(makeEntry(null), null)).toBe(true)
-  })
-
-  test("returns true when variant is the default variant", () => {
-    expect(entryMatchesVariant(makeEntry(null), enDefaultVariant)).toBe(true)
-  })
-
-  test("returns true when displayedRun matches the variant", () => {
-    const run = makeRun({
-      language: LanguageEnum.EsEs,
-      variant_industry: "",
-      variant_length: "",
-    })
-    expect(entryMatchesVariant(makeEntry(run), esVariant)).toBe(true)
-  })
-
-  test("returns false when displayedRun does not match the variant", () => {
-    // English run shown as fallback when no Spanish variant run exists
-    const englishFallback = makeRun({
-      language: LanguageEnum.En,
-      variant_industry: "",
-      variant_length: "",
-    })
-    expect(entryMatchesVariant(makeEntry(englishFallback), esVariant)).toBe(
-      false,
-    )
-  })
-
-  test("returns false when displayedRun is null and variant is non-default", () => {
-    expect(entryMatchesVariant(makeEntry(null), esVariant)).toBe(false)
-  })
-
-  test("returns true when displayedEnrollment run matches the variant", () => {
-    const course = factories.courses.course({ courseruns: [] })
-    const enrolledRun = makeRun({
-      language: LanguageEnum.EsEs,
-      variant_industry: "",
-      variant_length: "",
-    })
-    const enrollment = factories.enrollment.courseEnrollment({
-      run: {
-        ...enrolledRun,
-        course: { id: course.id, title: course.title },
-      },
-    })
-    const entry: ReturnType<typeof buildCourseEntry> = {
-      course,
-      enrollments: [enrollment],
-      displayedEnrollment: enrollment,
-      displayedRun: enrolledRun,
-    }
-    expect(entryMatchesVariant(entry, esVariant)).toBe(true)
-  })
 })
 
 describe("buildVariantKey", () => {

@@ -19,7 +19,6 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import {
   buildCourseEntry,
-  entryMatchesVariant,
   getCollectionFirstCoursesInDisplayOrder,
   getProgramCoursesInContractOrder,
   getRenderableContractCollections,
@@ -136,8 +135,8 @@ const useContractDashboardData = (
   // query has not yet resolved (status = 'pending', i.e. no data yet).  Using
   // isPending (not isLoading) ensures this is true on the very first render
   // after the picker changes — before React Query has started the fetch and set
-  // isFetching.  Without this guard, entryMatchesVariant would filter away
-  // cards that haven't received their variant run data yet.
+  // isFetching.  While loading, we skip passing the variant to buildCourseEntry
+  // so that entries are not filtered out before the run data arrives.
   const variantRunsLoading =
     !isDefaultVariantSelection && variantRunsQuery.isPending
 
@@ -176,16 +175,16 @@ const useContractDashboardData = (
             ancestorContext: programEnrollment
               ? { programEnrollment }
               : undefined,
-            variant: selectedVariant ?? undefined,
-            variantCandidateRuns: isDefaultVariantSelection
+            variant: variantRunsLoading
               ? undefined
-              : variantRunsByCourseId[course.id],
+              : (selectedVariant ?? undefined),
+            variantCandidateRuns:
+              isDefaultVariantSelection || variantRunsLoading
+                ? undefined
+                : variantRunsByCourseId[course.id],
           }),
         )
-        .filter(
-          (entry) =>
-            variantRunsLoading || entryMatchesVariant(entry, selectedVariant),
-        ),
+        .filter((entry): entry is DashboardCourseEntry => entry !== null),
       programEnrollment,
     }
   })
@@ -202,16 +201,16 @@ const useContractDashboardData = (
         .map((course) =>
           buildCourseEntry(course, enrollmentsByCourseId[course.id] ?? [], {
             contractId: contract.id,
-            variant: selectedVariant ?? undefined,
-            variantCandidateRuns: isDefaultVariantSelection
+            variant: variantRunsLoading
               ? undefined
-              : variantRunsByCourseId[course.id],
+              : (selectedVariant ?? undefined),
+            variantCandidateRuns:
+              isDefaultVariantSelection || variantRunsLoading
+                ? undefined
+                : variantRunsByCourseId[course.id],
           }),
         )
-        .filter(
-          (entry) =>
-            variantRunsLoading || entryMatchesVariant(entry, selectedVariant),
-        ),
+        .filter((entry): entry is DashboardCourseEntry => entry !== null),
     }
   })
 
