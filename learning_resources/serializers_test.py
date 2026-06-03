@@ -302,6 +302,7 @@ def test_learning_resource_serializer(  # noqa: PLR0913
     assert result == {
         "id": resource.id,
         "title": resource.title,
+        "created_on": resource.created_on.isoformat().replace("+00:00", "Z"),
         "description": resource.description,
         "full_description": resource.full_description,
         "languages": resource.languages,
