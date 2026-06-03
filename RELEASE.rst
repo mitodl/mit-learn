@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.70.3
+--------------
+
+- feat(nextjs): standalone output, deterministic builds, and scoped Fastly purge (#3364)
+- fix: improve keyboard and screenreader accessibility for Video Shorts (#3387)
+- chore: update nextjs to 16.2.7 (#3399)
+
 Version 0.70.2 (Released June 03, 2026)
 --------------
 
