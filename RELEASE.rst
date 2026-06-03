@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.70.5
+Version 0.70.5 (Released June 03, 2026)
 --------------
 
 - hide courseware cards in b2b contracts when variant selected if no variant run (#3408)
