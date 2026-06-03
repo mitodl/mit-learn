@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.70.4
+Version 0.70.4 (Released June 03, 2026)
 --------------
 
 - Force pytest to render color text on GH actions (#3403)
