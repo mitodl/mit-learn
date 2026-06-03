@@ -31,6 +31,13 @@ const StyledInput = styled(Input)({
   flex: 1,
 })
 
+const ButtonWrapper = styled.span(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+    "& > button": { width: "100%" },
+  },
+}))
+
 const DisabledLink = styled.span(({ theme }) => ({
   ...theme.typography.subtitle2,
   color: theme.custom.colors.darkRed,
@@ -74,11 +81,11 @@ const AssignSeatsSection: React.FC = () => {
           />
         </Tooltip>
         <Tooltip title="Coming soon">
-          <span>
+          <ButtonWrapper>
             <Button variant="primary" disabled>
               Assign Seats
             </Button>
-          </span>
+          </ButtonWrapper>
         </Tooltip>
       </Stack>
       <Stack direction="row" gap="4px" alignItems="center" flexWrap="wrap">
