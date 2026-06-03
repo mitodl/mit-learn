@@ -26,7 +26,10 @@ import {
 } from "@react-pdf/renderer"
 import { redirect } from "next/navigation"
 import { pxToPt, getNameStyles } from "./utils"
-import { getCertificateBadgeLines } from "@/common/certificateUtils"
+import {
+  getCertificateBadgeLines,
+  getCertificateBadgeTypography,
+} from "@/common/certificateUtils"
 
 // https://use.typekit.net/lbk1xay.css
 Font.register({
@@ -87,14 +90,6 @@ const typography = {
     fontFamily: "Neue Haas Grotesk Text 400",
     fontSize: pxToPt(16),
     lineHeight: pxToPt(2),
-  },
-  badge: {
-    fontFamily: "Neue Haas Grotesk Text 700",
-    fontSize: pxToPt(18),
-    lineHeight: pxToPt(26),
-  },
-  badgeMark: {
-    fontSize: pxToPt(11.61),
   },
 }
 
@@ -172,6 +167,16 @@ const OpenLearningLogo = () => (
 
 const Badge = ({ programType }: { programType?: string | null }) => {
   const lines = getCertificateBadgeLines(programType)
+  const { fontSizePx, lineHeightPx, registeredMarkScale } =
+    getCertificateBadgeTypography(programType)
+  const badgeStyle = {
+    fontFamily: "Neue Haas Grotesk Text 700",
+    fontSize: pxToPt(fontSizePx),
+    lineHeight: pxToPt(lineHeightPx),
+  }
+  const badgeMarkStyle = {
+    fontSize: pxToPt(fontSizePx * registeredMarkScale),
+  }
 
   return (
     <View
@@ -227,20 +232,18 @@ const Badge = ({ programType }: { programType?: string | null }) => {
       >
         <Text
           style={{
-            ...typography.badge,
+            ...badgeStyle,
             color: colors.white,
             textAlign: "center",
           }}
         >
           {lines.primary}
-          {lines.registeredMark ? (
-            <Text style={typography.badgeMark}>®</Text>
-          ) : null}
+          {lines.registeredMark ? <Text style={badgeMarkStyle}>®</Text> : null}
         </Text>
         {lines.secondary ? (
           <Text
             style={{
-              ...typography.badge,
+              ...badgeStyle,
               color: colors.white,
               textAlign: "center",
             }}
@@ -540,7 +543,7 @@ const ProgramCertificate = ({
     <CertificateDoc
       uuid={certificate.uuid}
       title={title}
-      badgeProgramType={certificate.program.program_type}
+      badgeProgramType={certificate?.program?.program_type}
       userName={userName!}
       ceus={ceus}
       signatories={signatories}

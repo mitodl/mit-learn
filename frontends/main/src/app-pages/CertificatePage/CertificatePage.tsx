@@ -25,6 +25,7 @@ import { DigitalCredentialDialog } from "./DigitalCredentialDialog"
 import {
   getCertificateInfo,
   getCertificateBadgeLines,
+  getCertificateBadgeTypography,
   getVerifiableCredentialLinkedInURL,
   getCertificateLinkedInUrl,
   getVerifiableCredentialDownloadAPIURL,
@@ -192,7 +193,10 @@ const Badge = styled.div(({ theme }) => ({
   },
 }))
 
-const BadgeLabelRoot = styled.div(({ theme }) => ({
+const BadgeLabelRoot = styled.div<{
+  $fontSizePx: number
+  $lineHeightPx: number
+}>(({ theme, $fontSizePx, $lineHeightPx }) => ({
   color: theme.custom.colors.white,
   position: "absolute",
   left: "50%",
@@ -201,8 +205,8 @@ const BadgeLabelRoot = styled.div(({ theme }) => ({
   width: "175px",
   textAlign: "center",
   fontWeight: theme.typography.fontWeightBold,
-  fontSize: theme.typography.pxToRem(18),
-  lineHeight: theme.typography.pxToRem(26),
+  fontSize: theme.typography.pxToRem($fontSizePx),
+  lineHeight: theme.typography.pxToRem($lineHeightPx),
   "@media screen": {
     [theme.breakpoints.down("lg")]: {
       fontSize: theme.typography.pxToRem(16),
@@ -216,11 +220,11 @@ const BadgeLabelRoot = styled.div(({ theme }) => ({
   },
 }))
 
-const BadgeRegisteredMark = styled.span({
-  fontSize: "0.645em",
+const BadgeRegisteredMark = styled.span<{ $scale: number }>(({ $scale }) => ({
+  fontSize: `${$scale}em`,
   lineHeight: 1,
   verticalAlign: "super",
-})
+}))
 
 const CertificateBadgeLabel = ({
   programType,
@@ -228,13 +232,20 @@ const CertificateBadgeLabel = ({
   programType?: string | null
 }) => {
   const lines = getCertificateBadgeLines(programType)
+  const typography = getCertificateBadgeTypography(programType)
 
   return (
-    <BadgeLabelRoot data-testid="certificate-badge-label">
+    <BadgeLabelRoot
+      data-testid="certificate-badge-label"
+      $fontSizePx={typography.fontSizePx}
+      $lineHeightPx={typography.lineHeightPx}
+    >
       <div>
         {lines.primary}
         {lines.registeredMark ? (
-          <BadgeRegisteredMark>®</BadgeRegisteredMark>
+          <BadgeRegisteredMark $scale={typography.registeredMarkScale}>
+            ®
+          </BadgeRegisteredMark>
         ) : null}
       </div>
       {lines.secondary ? <div>{lines.secondary}</div> : null}

@@ -85,12 +85,39 @@ export const getCertificateInfo = (
   displayType: resolveCertificateLabel(programType).displayType,
 })
 
-/**
- * Badge label lines for the certificate seal (Figma: 18px bold, two lines).
- */
+const BADGE_REGISTERED_MARK_SCALE = 0.645
+
+export type CertificateBadgeTypography = {
+  fontSizePx: number
+  lineHeightPx: number
+  registeredMarkScale: number
+}
+
+const MICROMASTERS_BADGE_TYPOGRAPHY: CertificateBadgeTypography = {
+  fontSizePx: 18,
+  lineHeightPx: 26,
+  registeredMarkScale: BADGE_REGISTERED_MARK_SCALE,
+}
+
+const DEFAULT_BADGE_TYPOGRAPHY: CertificateBadgeTypography = {
+  fontSizePx: 24,
+  lineHeightPx: 30,
+  registeredMarkScale: BADGE_REGISTERED_MARK_SCALE,
+}
+
 export const getCertificateBadgeLines = (
   programType?: string | null,
 ): CertificateBadgeLines => resolveCertificateLabel(programType).badgeLines
+
+/**
+ * Badge typography for the certificate seal (Figma: 24px bold; MicroMasters 18px).
+ */
+export const getCertificateBadgeTypography = (
+  programType?: string | null,
+): CertificateBadgeTypography =>
+  resolveKey(programType) === "micromasters"
+    ? MICROMASTERS_BADGE_TYPOGRAPHY
+    : DEFAULT_BADGE_TYPOGRAPHY
 
 export enum CertificateType {
   Course = "course",

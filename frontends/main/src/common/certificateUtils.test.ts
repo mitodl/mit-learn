@@ -1,5 +1,6 @@
 import {
   getCertificateBadgeLines,
+  getCertificateBadgeTypography,
   getCertificateInfo,
 } from "./certificateUtils"
 
@@ -75,5 +76,39 @@ describe("getCertificateBadgeLines", () => {
       secondary: "Certificate",
       registeredMark: true,
     })
+  })
+})
+
+describe("getCertificateBadgeTypography", () => {
+  const defaultTypography = {
+    fontSizePx: 24,
+    lineHeightPx: 30,
+    registeredMarkScale: 0.645,
+  }
+
+  const micromastersTypography = {
+    fontSizePx: 18,
+    lineHeightPx: 26,
+    registeredMarkScale: 0.645,
+  }
+
+  it("returns 24px typography for course certificates and unrecognized types", () => {
+    expect(getCertificateBadgeTypography()).toEqual(defaultTypography)
+    expect(getCertificateBadgeTypography(null)).toEqual(defaultTypography)
+    expect(getCertificateBadgeTypography("Degree")).toEqual(defaultTypography)
+  })
+
+  it("returns 24px typography for program and series descriptors", () => {
+    expect(getCertificateBadgeTypography("Program")).toEqual(defaultTypography)
+    expect(getCertificateBadgeTypography("Series")).toEqual(defaultTypography)
+  })
+
+  it("returns 18px typography for micromasters descriptors", () => {
+    expect(getCertificateBadgeTypography("MicroMasters®")).toEqual(
+      micromastersTypography,
+    )
+    expect(getCertificateBadgeTypography("  MicroMasters®  ")).toEqual(
+      micromastersTypography,
+    )
   })
 })
