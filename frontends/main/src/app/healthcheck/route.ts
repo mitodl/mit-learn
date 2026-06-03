@@ -7,6 +7,6 @@ export async function GET() {
       version: VERSION,
       timestamp: new Date().toISOString(), // easily tell if response is cached
     },
-    { status: 200 },
+    { status: 200, headers: { "Cache-Control": "no-store" } },
   )
 }
