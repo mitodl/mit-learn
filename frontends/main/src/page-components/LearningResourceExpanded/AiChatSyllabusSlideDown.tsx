@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React, { useRef, useEffect } from "react"
 import { Typography, styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
@@ -152,7 +153,7 @@ export const AiChatSyllabusOpener = ({
         aria-pressed={open}
         open={open}
         onClick={() => {
-          if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+          if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
             posthog.capture(PostHogEvents.AskTimClicked, {
               type: "syllabus_bot",
               resourceId: resource.id,
@@ -223,9 +224,9 @@ const AiChatSyllabusSlideDown = ({
         topPosition={contentTopPosition}
         scrollElement={scrollElement}
         requestOpts={{
-          apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT!,
+          apiUrl: env("NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT")!,
           csrfCookieName:
-            process.env.NEXT_PUBLIC_LEARN_AI_CSRF_COOKIE_NAME || "csrftoken",
+            env("NEXT_PUBLIC_LEARN_AI_CSRF_COOKIE_NAME") || "csrftoken",
           csrfHeaderName: "X-CSRFToken",
           fetchOpts: {
             credentials: "include",

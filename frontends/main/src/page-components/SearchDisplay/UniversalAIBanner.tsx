@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React, { useMemo } from "react"
 import Link from "next/link"
 import { styled, Typography } from "ol-components"
@@ -111,7 +112,7 @@ const UniversalAIBanner: React.FC<UniversalAIBannerProps> = ({
   })
 
   const handleCTAClick = () => {
-    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
       posthog.capture(PostHogEvents.CallToActionClicked, {
         label: "Learn more about Universal AI",
         readableId: UAI_PROGRAM_READABLE_ID,

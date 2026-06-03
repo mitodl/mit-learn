@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React from "react"
 import Link from "next/link"
 import {
@@ -123,7 +124,7 @@ const BrowseTopicsSection: React.FC = () => {
                   key={id}
                   href={channelUrl ? new URL(channelUrl!).pathname : ""}
                   onClick={() => {
-                    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+                    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
                       posthog.capture(PostHogEvents.HomeTopicClicked, {
                         topic: name,
                       })
@@ -143,7 +144,7 @@ const BrowseTopicsSection: React.FC = () => {
         <SeeAllButton
           href="/topics/"
           onClick={() => {
-            if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+            if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
               posthog.capture(PostHogEvents.HomeSeeAllTopicsClicked)
             }
           }}

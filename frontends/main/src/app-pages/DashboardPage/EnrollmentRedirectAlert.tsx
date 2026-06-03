@@ -1,5 +1,6 @@
 "use client"
 
+import { env } from "@/env"
 import React from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Alert } from "@mitodl/smoot-design"
@@ -170,7 +171,7 @@ const parseAlertRequest = (
 
 const EnrollmentRedirectAlert: React.FC = () => {
   const request = useConsumeSearchParamsOnce(parseAlertRequest)
-  const supportEmail = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL || ""
+  const supportEmail = env("NEXT_PUBLIC_MITOL_SUPPORT_EMAIL") || ""
 
   const mitxOnlineUserQuery = useQuery({
     ...mitxUserQueries.me(),

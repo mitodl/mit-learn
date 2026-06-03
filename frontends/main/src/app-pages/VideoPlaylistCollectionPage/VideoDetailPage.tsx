@@ -1,5 +1,6 @@
 "use client"
 
+import { env } from "@/env"
 import React, { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
@@ -19,7 +20,7 @@ import SharePopover from "@/components/SharePopover/SharePopover"
 import { buildVideoStructuredData } from "./videoStructuredData"
 import VideoResourcePlayer from "./VideoResourcePlayer"
 
-const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
+const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 const PageWrapper = styled.div({
   backgroundColor: "#fff",

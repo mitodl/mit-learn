@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React, { useState } from "react"
 import styled from "@emotion/styled"
 import { default as NextImage } from "next/image"
@@ -17,7 +18,12 @@ import {
   useImageWithFallback,
 } from "ol-utilities"
 import { ResourceTypeEnum, ResourceTypeGroupEnum, PlatformEnum } from "api"
-import { Button, ButtonLink, ButtonProps, Input } from "@mitodl/smoot-design"
+import {
+  Button,
+  ButtonLink,
+  type ButtonProps,
+  Input,
+} from "@mitodl/smoot-design"
 import type { LearningResource } from "api"
 import {
   RiBookmarkFill,
@@ -48,10 +54,8 @@ import {
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { FeatureFlags } from "@/common/feature_flags"
 import { externalLinkProps } from "@/common/utils"
-import invariant from "tiny-invariant"
 
-const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
-invariant(NEXT_PUBLIC_ORIGIN, "NEXT_PUBLIC_ORIGIN must be defined")
+const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 const showChatClass = "show-chat"
 const showChatSelector = `.${showChatClass} &`
@@ -294,7 +298,7 @@ const appendUtmParams = (url?: string | null, resourceTitle?: string) => {
   if (!url) return "#"
   try {
     const parsedUrl = new URL(url, NEXT_PUBLIC_ORIGIN)
-    if (parsedUrl.href.startsWith(NEXT_PUBLIC_ORIGIN)) {
+    if (parsedUrl.href.startsWith(NEXT_PUBLIC_ORIGIN ?? "")) {
       // Do not add UTM params for internal URLs
       return url
     }
@@ -456,7 +460,7 @@ const CallToActionSection = ({
           size="medium"
           href={url}
           onClick={() => {
-            if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+            if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
               posthog.capture(PostHogEvents.CallToActionClicked, {
                 resource,
                 label: cta,

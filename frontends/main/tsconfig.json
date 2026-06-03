@@ -32,6 +32,8 @@
   },
   "include": [
     "next-env.d.ts",
+    "validateEnv.js",
+    "next.config.js",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",

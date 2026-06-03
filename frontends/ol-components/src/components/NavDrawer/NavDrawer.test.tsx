@@ -188,9 +188,6 @@ describe("NavDrawer", () => {
   it.each([{ enablePostHog: true }, { enablePostHog: false }])(
     "posthogCapture callback is called only if passed in",
     async ({ enablePostHog }) => {
-      process.env.NEXT_PUBLIC_POSTHOG_API_KEY = enablePostHog
-        ? "12345abcdef" // pragma: allowlist secret
-        : ""
       renderWithTheme(
         <NavDrawer
           onClose={jest.fn()}

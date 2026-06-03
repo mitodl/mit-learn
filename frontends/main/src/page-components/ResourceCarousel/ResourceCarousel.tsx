@@ -1,5 +1,6 @@
 "use client"
 
+import { env } from "@/env"
 import React from "react"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import {
@@ -326,7 +327,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
                           parentHeadingEl={titleComponent}
                           {...tabConfig.cardProps}
                           onCardClick={() => {
-                            if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+                            if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
                               posthog.capture(PostHogEvents.CourseCardClicked, {
                                 label: title,
                                 resourceId: resource.id,

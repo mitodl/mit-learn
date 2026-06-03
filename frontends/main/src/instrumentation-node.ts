@@ -22,12 +22,37 @@ import {
   hasOtlpEndpointConfig,
 } from "./otel-utils"
 import { parseSampleRate } from "./sentry-utils"
+import { env } from "@/env"
+import { validateEnv } from "../validateEnv"
+import { ValidationError } from "yup"
+
+// Validate the full environment schema once at server startup (Node runtime).
+// validateEnv() is skipped in next.config.js during Docker builds
+// (NEXT_BUILD_CI=1) because NEXT_PUBLIC_* values are injected at runtime, not
+// present at build — so this startup check is where deployed pods get validated
+// (presence AND format). `abortEarly: false` means a single failure reports
+// every bad var at once. On failure we log and exit so the pod crash-loops with
+// a clear message instead of silently serving broken pages — an uncaught throw
+// here is not guaranteed to terminate the process (Next may log and continue),
+// hence the explicit process.exit(1).
+try {
+  validateEnv()
+} catch (err) {
+  const detail =
+    err instanceof ValidationError ? err.errors.join("\n  - ") : String(err)
+  console.error(
+    `[startup] Environment validation failed:\n  - ${detail}\n` +
+      "Exiting to prevent broken deployment.",
+  )
+  process.exit(1)
+}
 
 // Inject service.version into OTEL_RESOURCE_ATTRIBUTES so the OTEL SDK's
 // EnvDetector picks it up alongside any other attributes set via env.
 // Simpler than interpolating OTEL_RESOURCE_ATTRIBUTES in ol-infrastructure.
-if (process.env.NEXT_PUBLIC_VERSION) {
-  const prefix = `service.version=${encodeURIComponent(process.env.NEXT_PUBLIC_VERSION)}`
+const appVersion = env("NEXT_PUBLIC_VERSION")
+if (appVersion) {
+  const prefix = `service.version=${encodeURIComponent(appVersion)}`
   const existing = process.env.OTEL_RESOURCE_ATTRIBUTES
   process.env.OTEL_RESOURCE_ATTRIBUTES = existing
     ? `${prefix},${existing}`
@@ -172,14 +197,14 @@ const otelSampleRate = parseSampleRate(process.env.OTEL_TRACES_SAMPLER_ARG, 1)
 // sent to the Sentry backend. Defaults to 1.0 when unset.
 // This lets you run Alloy at 100% while keeping Sentry costs/quota lower.
 const sentrySampleRate = parseSampleRate(
-  process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE,
+  env("NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE"),
   1,
 )
 
 Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-  release: process.env.NEXT_PUBLIC_VERSION,
-  environment: process.env.NEXT_PUBLIC_SENTRY_ENV,
+  dsn: env("NEXT_PUBLIC_SENTRY_DSN"),
+  release: env("NEXT_PUBLIC_VERSION"),
+  environment: env("NEXT_PUBLIC_SENTRY_ENV"),
 
   // Controls the OTEL sampler — spans not sampled here never reach any
   // processor. Set via OTEL_TRACES_SAMPLER_ARG at runtime (K8s/Helm).

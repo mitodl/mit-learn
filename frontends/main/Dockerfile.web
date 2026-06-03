@@ -2,24 +2,12 @@
 # Build: \
 # docker build \
 #   -f frontends/main/Dockerfile.web \
-#   --build-arg NEXT_PUBLIC_ORIGIN=http://api.open.odl.local:8062 \
-#   --build-arg NEXT_PUBLIC_MITOL_API_BASE_URL=http://open.odl.local:8063 \
-#   --build-arg NEXT_PUBLIC_SITE_NAME="MIT Learn" \
-#   --build-arg NEXT_PUBLIC_MITOL_SUPPORT_EMAIL=mitlearn-support@mit.edu \
-#   --build-arg NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS=true \
-#   --build-arg NEXT_PUBLIC_CSRF_COOKIE_NAME=csrftoken-local \
-#   --build-arg NEXT_PUBLIC_POSTHOG_API_HOST= \
-#   --build-arg NEXT_PUBLIC_POSTHOG_PROJECT_ID= \
-#   --build-arg NEXT_PUBLIC_POSTHOG_API_KEY= \
-#   --build-arg NEXT_PUBLIC_POSTHOG_ENABLE_SESSION_RECORDING= \
-#   --build-arg NEXT_PUBLIC_SENTRY_DSN= \
-#   --build-arg NEXT_PUBLIC_SENTRY_ENV= \
-#   --build-arg NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE= \
-#   --build-arg NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE= \
-#   --build-arg NEXT_PUBLIC_APPZI_URL= \
-#   --build-arg NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT= \
-#   --build-arg NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT= \  --build-arg NEXT_PUBLIC_HUBSPOT_PORTAL_ID= \#   --build-arg NEXT_PUBLIC_VERSION= \
+#   --build-arg GIT_REF=$(git rev-parse HEAD) \
 #   -t mitodl/mit-learn-frontend:latest .
+#
+# NEXT_PUBLIC_* vars are NOT passed as build args — they are injected at
+# runtime by Kubernetes and surfaced to the browser via PublicEnvScript.
+# Only GIT_REF is needed at build time (for generateBuildId in next.config.js).
 
 
 # Run:
@@ -81,107 +69,58 @@ WORKDIR /app/frontends/main
 
 ENV NODE_ENV=production
 
-ARG NEXT_PUBLIC_ORIGIN
-ENV NEXT_PUBLIC_ORIGIN=$NEXT_PUBLIC_ORIGIN
+# GIT_REF is the full commit SHA, passed by Concourse as BUILD_ARG_GIT_REF.
+# It is used by next.config.js generateBuildId to produce a stable, unique
+# build manifest filename that is the same across identical builds.
+# All NEXT_PUBLIC_* vars are injected at runtime — NOT at build time.
+ARG GIT_REF
+ENV GIT_REF=$GIT_REF
 
-ARG NEXT_PUBLIC_MITOL_API_BASE_URL
-ENV NEXT_PUBLIC_MITOL_API_BASE_URL=$NEXT_PUBLIC_MITOL_API_BASE_URL
-
-ARG NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL
-ENV NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL=$NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL
-
-ARG NEXT_PUBLIC_SITE_NAME
-ENV NEXT_PUBLIC_SITE_NAME=$NEXT_PUBLIC_SITE_NAME
-
-ARG NEXT_PUBLIC_MITOL_SUPPORT_EMAIL
-ENV NEXT_PUBLIC_MITOL_SUPPORT_EMAIL=$NEXT_PUBLIC_MITOL_SUPPORT_EMAIL
-
-ARG NEXT_PUBLIC_SENTRY_DSN
-ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
-
-ARG NEXT_PUBLIC_SENTRY_ENV
-ENV NEXT_PUBLIC_SENTRY_ENV=$NEXT_PUBLIC_SENTRY_ENV
-
-ARG NEXT_PUBLIC_VERSION
-ENV NEXT_PUBLIC_VERSION=$NEXT_PUBLIC_VERSION
-
-ARG NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE
-ENV NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE=$NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE
-
-ARG NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE
-ENV NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=$NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE
-
-ARG NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS=true
-ENV NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS=$NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS
-
-ARG NEXT_PUBLIC_CSRF_COOKIE_NAME
-ENV NEXT_PUBLIC_CSRF_COOKIE_NAME=$NEXT_PUBLIC_CSRF_COOKIE_NAME
-
-ARG NEXT_PUBLIC_POSTHOG_API_HOST
-ENV NEXT_PUBLIC_POSTHOG_API_HOST=$NEXT_PUBLIC_POSTHOG_API_HOST
-ARG NEXT_PUBLIC_POSTHOG_UI_HOST
-ENV NEXT_PUBLIC_POSTHOG_UI_HOST=$NEXT_PUBLIC_POSTHOG_UI_HOST
-ARG NEXT_PUBLIC_POSTHOG_PROJECT_ID
-ENV NEXT_PUBLIC_POSTHOG_PROJECT_ID=$NEXT_PUBLIC_POSTHOG_PROJECT_ID
-ARG NEXT_PUBLIC_POSTHOG_API_KEY
-ENV NEXT_PUBLIC_POSTHOG_API_KEY=$NEXT_PUBLIC_POSTHOG_API_KEY
-
-ARG NEXT_PUBLIC_SENTRY_DSN
-ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
-ARG NEXT_PUBLIC_SENTRY_ENV
-ENV NEXT_PUBLIC_SENTRY_ENV=$NEXT_PUBLIC_SENTRY_ENV
-ARG NEXT_PUBLIC_VERSION
-ENV NEXT_PUBLIC_VERSION=$NEXT_PUBLIC_VERSION
-ARG NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE
-ENV NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE=$NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE
-ARG NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE
-ENV NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=$NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE
-
-ARG NEXT_PUBLIC_APPZI_URL
-ENV NEXT_PUBLIC_APPZI_URL=$NEXT_PUBLIC_APPZI_URL
-
-ARG NEXT_PUBLIC_LEARN_AI_CSRF_COOKIE_NAME
-ENV NEXT_PUBLIC_LEARN_AI_CSRF_COOKIE_NAME=$NEXT_PUBLIC_LEARN_AI_CSRF_COOKIE_NAME
-ARG NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT
-ENV NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT=$NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT
-ARG NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT
-ENV NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT=$NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT
-
-ARG NEXT_PUBLIC_HUBSPOT_PORTAL_ID
-ENV NEXT_PUBLIC_HUBSPOT_PORTAL_ID=$NEXT_PUBLIC_HUBSPOT_PORTAL_ID
-
-ENV NEXT_PUBLIC_DEFAULT_SEARCH_MODE="phrase"
-ENV NEXT_PUBLIC_DEFAULT_SEARCH_SLOP="6"
-ENV NEXT_PUBLIC_DEFAULT_SEARCH_STALENESS_PENALTY="2.5"
-ENV NEXT_PUBLIC_DEFAULT_SEARCH_MINIMUM_SCORE_CUTOFF="0"
-ENV NEXT_PUBLIC_DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY="90"
-
-# NEW STAGE: build_skip_yarn
-# This stage is intended for scenarios where the 'yarn build' step
-# is not needed (e.g., build artifacts are provided externally or
-# for a development setup where 'yarn dev' might be used).
-# Note: 'yarn start' in the CMD requires a prior build to have occurred
-# and the '.next' directory to be present.
-FROM base AS build_skip_yarn
-
-EXPOSE 3000
-
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
-CMD ["yarn", "start"]
-
-# DEFAULT STAGE: build
-# This stage performs the 'yarn build' step and is the default target
-# if no --target is specified during the Docker build command.
+# STAGE: build
+# Runs `next build` to compile the application. With output: "standalone" in
+# next.config.js this emits a minimal server at .next/standalone/ that includes
+# only the required runtime files and can be run with plain node.
+#
+# NEXT_BUILD_CI=1 skips validateEnv() in next.config.js, which would fail
+# because NEXT_PUBLIC_* vars are not available at build time — they are
+# injected at runtime by Kubernetes and surfaced to the browser via
+# PublicEnvScript. Validation runs at server startup in instrumentation-node.ts.
 FROM base AS build
+
+ENV NEXT_BUILD_CI=1
 
 RUN yarn build
 
+# STAGE: runner (default)
+# Copies only the standalone server, static assets, and public directory from
+# the build stage into a clean image. No workspace install is needed; the
+# standalone bundle ships with the minimal node_modules required to run the
+# server. No source code or build tooling is included.
+#
+# The standalone server is started directly with node (not `yarn start`), which
+# avoids yarn overhead and is the pattern recommended by Next.js for Docker:
+# https://github.com/vercel/next.js/tree/canary/examples/with-docker
+FROM node:24-alpine AS runner
+
+WORKDIR /app
+
+# sharp (Next.js image optimisation) requires glibc-compatible libs on Alpine.
+RUN apk add --no-cache libc6-compat
+
+# Copy the standalone server (includes a minimal node_modules)
+COPY --from=build /app/frontends/main/.next/standalone ./
+
+# Copy static assets served by the Next.js server under /_next/static/
+COPY --from=build /app/frontends/main/.next/static ./frontends/main/.next/static
+
+# Copy the public directory (robots.txt, favicon.ico, etc.)
+COPY --from=build /app/frontends/main/public ./frontends/main/public
+
 EXPOSE 3000
 
+ENV NODE_ENV=production
+ENV TZ=UTC
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# CMD ["node", "/app/frontends/main/.next/standalone/frontends/main/server.js"]
-CMD ["yarn", "start"]
+CMD ["node", "frontends/main/server.js"]

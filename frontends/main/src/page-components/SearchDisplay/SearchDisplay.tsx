@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import {
   styled,
@@ -660,7 +661,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
 
   const posthog = usePostHog()
 
-  const NEXT_PUBLIC_POSTHOG_API_KEY = process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+  const NEXT_PUBLIC_POSTHOG_API_KEY = env("NEXT_PUBLIC_POSTHOG_API_KEY")
 
   const toggleMobileDrawer = (newOpen: boolean) => () => {
     setMobileDrawerOpen(newOpen)

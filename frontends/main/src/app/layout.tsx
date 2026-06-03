@@ -1,9 +1,11 @@
 import React from "react"
 import Providers from "./providers"
+import { PublicEnvScript } from "./components/PublicEnvScript"
+import { env } from "@/env"
 
 import "./GlobalStyles"
 
-const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
+const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 /**
  * As part of the root layout, this metadata object is site-wide defaults
@@ -42,8 +44,10 @@ export default function RootLayout({
         ></link>
         <meta
           name="application-version"
-          content={process.env.NEXT_PUBLIC_VERSION || "unknown"}
+          content={env("NEXT_PUBLIC_VERSION") || "unknown"}
         />
+        {/* Inject all NEXT_PUBLIC_* env vars for runtime access via env() */}
+        <PublicEnvScript />
       </head>
       <body>
         <Providers>{children}</Providers>

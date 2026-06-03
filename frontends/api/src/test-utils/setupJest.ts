@@ -11,18 +11,18 @@ beforeEach(() => {
   assertMockAdapterInstalled()
 })
 
+// Hardcoded test base URLs are the single source of truth for this workspace:
+// the test URL builders (test-utils/urls.ts) read them back from the configured
+// axios instance, so requests and their expected URLs stay in sync. No env vars
+// are consulted — this workspace has no runtime env injection.
 configureApiClients({
   learn: {
-    baseUrl:
-      process.env.NEXT_PUBLIC_MITOL_API_BASE_URL ??
-      "http://api.test.learn.odl.local:8065",
+    baseUrl: "http://api.test.learn.odl.local:8065",
     csrfCookieName: "csrftoken",
     withCredentials: false,
   },
   mitxonline: {
-    baseUrl:
-      process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL ??
-      "http://api.test.learn.odl.local:8065/mitxonline",
+    baseUrl: "http://api.test.learn.odl.local:8065/mitxonline",
     csrfCookieName: "mitxcsrftoken",
     withCredentials: false,
   },
