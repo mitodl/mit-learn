@@ -393,11 +393,9 @@ const resolveDisplayedRunAndEnrollment = (
     }) ??
     course.courseruns[0] ??
     null
-  const displayedRun = opts?.variant
-    ? (selectVariantRunForCourse(
-        opts.variantCandidateRuns ?? [],
-        opts.variant,
-      ) ?? defaultRun)
+  const isNonDefaultVariant = opts?.variant && !opts.variant.default_variant
+  const displayedRun = isNonDefaultVariant
+    ? selectVariantRunForCourse(opts.variantCandidateRuns ?? [], opts.variant!)
     : defaultRun
   return { displayedEnrollment: null, displayedRun }
 }
@@ -480,6 +478,10 @@ type RequirementSection = {
  * When `opts.variant` and `opts.variantCandidateRuns` are provided,
  * `resolveDisplayedRunAndEnrollment` will prefer any existing enrollment that
  * already matches the variant before falling back to the candidate runs.
+ *
+ * Returns `null` when a non-default variant is active and neither a matching
+ * run nor a matching enrollment could be found for this course. Callers should
+ * filter out null entries to hide courses that have no runs in the variant.
  */
 const buildCourseEntry = (
   course: CourseWithCourseRunsSerializerV2,
@@ -493,13 +495,18 @@ const buildCourseEntry = (
     /** Candidate runs from the variant-runs API for this course. */
     variantCandidateRuns?: BaseCourseRun[]
   },
-): DashboardCourseEntry => {
+): DashboardCourseEntry | null => {
   const { displayedRun, displayedEnrollment } =
     resolveDisplayedRunAndEnrollment(course, enrollments, {
       contractId: opts.contractId,
       variant: opts.variant,
       variantCandidateRuns: opts.variantCandidateRuns,
     })
+
+  const isNonDefaultVariant = opts.variant && !opts.variant.default_variant
+  if (isNonDefaultVariant && !displayedRun && !displayedEnrollment) {
+    return null
+  }
 
   return {
     course,
@@ -587,18 +594,17 @@ const buildRequirementSections = ({
           if (resource.type === "course") {
             const course = coursesById.get(resource.id)
             if (!course) return null
-            return {
-              kind: "course",
-              entry: buildCourseEntry(
-                course,
-                enrollmentsByCourseId[course.id] ?? [],
-                {
-                  ancestorContext: ancestorProgramEnrollment
-                    ? { programEnrollment: ancestorProgramEnrollment }
-                    : undefined,
-                },
-              ),
-            }
+            const entry = buildCourseEntry(
+              course,
+              enrollmentsByCourseId[course.id] ?? [],
+              {
+                ancestorContext: ancestorProgramEnrollment
+                  ? { programEnrollment: ancestorProgramEnrollment }
+                  : undefined,
+              },
+            )
+            if (!entry) return null
+            return { kind: "course", entry }
           }
 
           // resource.type === "program"

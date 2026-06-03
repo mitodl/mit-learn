@@ -131,6 +131,15 @@ const useContractDashboardData = (
     return map
   }, [isDefaultVariantSelection, variantRunsQuery.data])
 
+  // True while a non-default variant is selected but the lazy variant-runs
+  // query has not yet resolved (status = 'pending', i.e. no data yet).  Using
+  // isPending (not isLoading) ensures this is true on the very first render
+  // after the picker changes — before React Query has started the fetch and set
+  // isFetching.  While loading, we skip passing the variant to buildCourseEntry
+  // so that entries are not filtered out before the run data arrives.
+  const variantRunsLoading =
+    !isDefaultVariantSelection && variantRunsQuery.isPending
+
   const programs = programsQuery.data?.results ?? []
   const collections = programCollectionsQuery.data?.results ?? []
   const sortedPrograms = getSortedStandaloneContractPrograms(
@@ -159,18 +168,23 @@ const useContractDashboardData = (
     const programEnrollment = programEnrollmentsById[program.id]
     return {
       program,
-      entries: courses.map((course) =>
-        buildCourseEntry(course, enrollmentsByCourseId[course.id] ?? [], {
-          contractId: contract.id,
-          ancestorContext: programEnrollment
-            ? { programEnrollment }
-            : undefined,
-          variant: selectedVariant ?? undefined,
-          variantCandidateRuns: isDefaultVariantSelection
-            ? undefined
-            : variantRunsByCourseId[course.id],
-        }),
-      ),
+      entries: courses
+        .map((course) =>
+          buildCourseEntry(course, enrollmentsByCourseId[course.id] ?? [], {
+            contractId: contract.id,
+            ancestorContext: programEnrollment
+              ? { programEnrollment }
+              : undefined,
+            variant: variantRunsLoading
+              ? undefined
+              : (selectedVariant ?? undefined),
+            variantCandidateRuns:
+              isDefaultVariantSelection || variantRunsLoading
+                ? undefined
+                : variantRunsByCourseId[course.id],
+          }),
+        )
+        .filter((entry): entry is DashboardCourseEntry => entry !== null),
       programEnrollment,
     }
   })
@@ -183,15 +197,20 @@ const useContractDashboardData = (
     )
     return {
       collection,
-      entries: firstCourses.map((course) =>
-        buildCourseEntry(course, enrollmentsByCourseId[course.id] ?? [], {
-          contractId: contract.id,
-          variant: selectedVariant ?? undefined,
-          variantCandidateRuns: isDefaultVariantSelection
-            ? undefined
-            : variantRunsByCourseId[course.id],
-        }),
-      ),
+      entries: firstCourses
+        .map((course) =>
+          buildCourseEntry(course, enrollmentsByCourseId[course.id] ?? [], {
+            contractId: contract.id,
+            variant: variantRunsLoading
+              ? undefined
+              : (selectedVariant ?? undefined),
+            variantCandidateRuns:
+              isDefaultVariantSelection || variantRunsLoading
+                ? undefined
+                : variantRunsByCourseId[course.id],
+          }),
+        )
+        .filter((entry): entry is DashboardCourseEntry => entry !== null),
     }
   })
 

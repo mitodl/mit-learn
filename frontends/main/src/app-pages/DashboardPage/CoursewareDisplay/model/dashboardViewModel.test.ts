@@ -768,7 +768,7 @@ describe("dashboardViewModel", () => {
         courseruns: [run],
         next_run_id: run.id,
       })
-      const entry = buildCourseEntry(course, [], {})
+      const entry = buildCourseEntry(course, [], {})!
 
       expect(entry.displayedEnrollment).toBeNull()
       expect(entry.displayedRun).not.toBeNull()
@@ -799,7 +799,7 @@ describe("dashboardViewModel", () => {
         },
       })
 
-      const entry = buildCourseEntry(course, [enrollment], {})
+      const entry = buildCourseEntry(course, [enrollment], {})!
 
       expect(entry.displayedEnrollment).toBe(enrollment)
       expect(entry.displayedRun?.id).toBe(run.id)
@@ -820,7 +820,7 @@ describe("dashboardViewModel", () => {
       })
 
       // no selectedLanguageKey → legacy path
-      const entry = buildCourseEntry(course, [noCert, withCert], {})
+      const entry = buildCourseEntry(course, [noCert, withCert], {})!
 
       expect(entry.displayedEnrollment).toBe(withCert)
     })
@@ -859,7 +859,7 @@ describe("dashboardViewModel", () => {
 
       const entry = buildCourseEntry(course, [otherContractEnrollment], {
         contractId: 10,
-      })
+      })!
 
       expect(entry.displayedEnrollment).toBeNull()
     })
@@ -900,7 +900,7 @@ describe("dashboardViewModel", () => {
         {
           contractId: 1,
         },
-      )
+      )!
 
       expect(entry.displayedEnrollment?.b2b_contract_id).toBe(1)
     })
@@ -917,7 +917,7 @@ describe("dashboardViewModel", () => {
         certificate: { uuid: "cert-xyz" },
       })
 
-      const entry = buildCourseEntry(course, [e1, e2], {})
+      const entry = buildCourseEntry(course, [e1, e2], {})!
 
       // displayedEnrollment picks best one (e2), but all remain on entry
       expect(entry.enrollments).toEqual([e1, e2])
@@ -933,7 +933,7 @@ describe("dashboardViewModel", () => {
       const entry = buildCourseEntry(course, [], {
         contractId: 42,
         ancestorContext,
-      })
+      })!
 
       expect(entry.course).toBe(course)
       expect(entry.contractId).toBe(42)
@@ -945,7 +945,7 @@ describe("dashboardViewModel", () => {
 
       const entry = buildCourseEntry(course, [], {
         isContractPageResource: true,
-      })
+      })!
 
       expect(entry.isContractPageResource).toBe(true)
     })
