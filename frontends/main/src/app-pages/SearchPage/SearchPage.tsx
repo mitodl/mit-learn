@@ -5,9 +5,13 @@ import React, { useCallback, useMemo, useEffect, useState } from "react"
 import type { FacetManifest } from "@mitodl/course-search-utils"
 import { useSearchParams } from "@mitodl/course-search-utils/next"
 import { useResourceSearchParams } from "@mitodl/course-search-utils"
-import SearchDisplay from "@/page-components/SearchDisplay/SearchDisplay"
+import SearchDisplay, {
+  AdminTitleContainer,
+  ExplanationContainer,
+} from "@/page-components/SearchDisplay/SearchDisplay"
+import HybridSearchDisplay from "@/page-components/SearchDisplay/HybridSearchDisplay"
 import { styled, Container, theme, Typography } from "ol-components"
-import { VisuallyHidden } from "@mitodl/smoot-design"
+import { Checkbox, VisuallyHidden } from "@mitodl/smoot-design"
 import { SearchField } from "@/page-components/SearchField/SearchField"
 import { useOfferorsList } from "api/hooks/learningResources"
 import { facetNames } from "./searchRequests"
@@ -87,8 +91,33 @@ const SearchPage: React.FC = () => {
   const facetManifest = useFacetManifest(
     searchParams.get("resource_type_group"),
   )
+  const isVectorSearch = searchParams.get("vector_search") === "true"
   const [fetchTime, setFetchTime] = useState<number | null>(null)
   const { data: user } = useUserMe()
+
+  const vectorSearchAdminOption = (
+    <>
+      <AdminTitleContainer>Vector Hybrid Search</AdminTitleContainer>
+      <Checkbox
+        aria-label="Vector Hybrid Search"
+        checked={isVectorSearch}
+        onChange={(e) =>
+          setSearchParams((prev) => {
+            const next = new URLSearchParams(prev)
+            if (e.target.checked) {
+              next.set("vector_search", "true")
+            } else {
+              next.delete("vector_search")
+            }
+            return next
+          })
+        }
+      />
+      <ExplanationContainer>
+        Toggle to use the vector hybrid search endpoint.
+      </ExplanationContainer>
+    </>
+  )
 
   const formatFetchTime = (ms: number) => {
     if (ms > 1000) {
@@ -178,23 +207,45 @@ const SearchPage: React.FC = () => {
           </SearchFieldWrapper>
         </SearchFieldContainer>
       </Header>
-      <SearchDisplay
-        onFetchTimeChange={setFetchTime}
-        filterHeadingEl="h2"
-        resultsHeadingEl="h2"
-        page={page}
-        setSearchParams={setSearchParams}
-        requestParams={params}
-        setPage={setPage}
-        facetManifest={facetManifest as FacetManifest}
-        facetNames={facetNames}
-        constantSearchParams={constantSearchParams}
-        hasFacets={hasFacets}
-        setParamValue={setParamValue}
-        clearAllFacets={clearAllFacets}
-        toggleParamValue={toggleParamValue}
-        showProfessionalToggle
-      />
+      {isVectorSearch ? (
+        <HybridSearchDisplay
+          onFetchTimeChange={setFetchTime}
+          filterHeadingEl="h2"
+          resultsHeadingEl="h2"
+          page={page}
+          setSearchParams={setSearchParams}
+          requestParams={params}
+          setPage={setPage}
+          facetManifest={facetManifest as FacetManifest}
+          facetNames={facetNames}
+          constantSearchParams={constantSearchParams}
+          hasFacets={hasFacets}
+          setParamValue={setParamValue}
+          clearAllFacets={clearAllFacets}
+          toggleParamValue={toggleParamValue}
+          showProfessionalToggle
+          adminOptionsSlot={vectorSearchAdminOption}
+        />
+      ) : (
+        <SearchDisplay
+          onFetchTimeChange={setFetchTime}
+          filterHeadingEl="h2"
+          resultsHeadingEl="h2"
+          page={page}
+          setSearchParams={setSearchParams}
+          requestParams={params}
+          setPage={setPage}
+          facetManifest={facetManifest as FacetManifest}
+          facetNames={facetNames}
+          constantSearchParams={constantSearchParams}
+          hasFacets={hasFacets}
+          setParamValue={setParamValue}
+          clearAllFacets={clearAllFacets}
+          toggleParamValue={toggleParamValue}
+          showProfessionalToggle
+          adminOptionsSlot={vectorSearchAdminOption}
+        />
+      )}
     </Page>
   )
 }

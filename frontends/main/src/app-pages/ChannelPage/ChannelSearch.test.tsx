@@ -72,6 +72,17 @@ const setMockApiResponses = ({
     },
     ...search,
   })
+  setMockResponse.get(expect.stringContaining(urls.search.vectorResources()), {
+    count: 0,
+    next: null,
+    previous: null,
+    results: [],
+    metadata: {
+      aggregations: {},
+      suggestions: [],
+    },
+    ...search,
+  })
 
   setMockResponse.get(expect.stringContaining(urls.testimonials.list({})), {
     results: [],
@@ -100,7 +111,10 @@ const setMockApiResponses = ({
 const getLastApiSearchParams = () => {
   const call = makeRequest.mock.calls.find(([args]) => {
     if (args.method !== "get") return false
-    return args.url.startsWith(urls.search.resources())
+    return (
+      args.url.startsWith(urls.search.resources()) ||
+      args.url.startsWith(urls.search.vectorResources())
+    )
   })
   invariant(call)
   const fullUrl = new URL(call[0].url, "http://mit.edu")
@@ -140,6 +154,27 @@ describe("ChannelSearch", () => {
     }
   }, 10000)
 
+  test("Topic channel pages load hybrid search", async () => {
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Topic },
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "get",
+          url: expect.stringContaining(urls.search.vectorResources()),
+        }),
+      )
+    })
+
+    const apiSearchParams = getLastApiSearchParams()
+    expect(apiSearchParams.get("hybrid_search")).toBe("true")
+  })
   test.each([
     {
       searchFilter: "offered_by=ocw",
