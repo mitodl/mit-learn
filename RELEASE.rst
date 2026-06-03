@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.70.7
+--------------
+
+- Ignore both SCM and DEDP micromasters programs (#3411)
+- add hybrid search to topic channel pages (#3401)
+
 Version 0.70.5 (Released June 03, 2026)
 --------------
 
