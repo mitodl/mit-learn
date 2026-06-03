@@ -8,7 +8,8 @@ import {
   within,
 } from "@/test-utils"
 import { HomeEnrollmentsDisplay } from "./HomeEnrollmentsDisplay"
-import { DashboardCard, DashboardType } from "./DashboardCard"
+import { DashboardCard } from "./DashboardCard"
+import { DashboardType } from "./model/dashboardViewModel"
 import { dashboardCourse, setupEnrollments } from "./test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import {

@@ -46,25 +46,20 @@ import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import {
   CourseWithCourseRunsSerializerV2,
-  CourseRunEnrollmentV3,
   V3UserProgramEnrollment,
   BaseCourseRun,
   CourseRunV2,
   DisplayModeEnum,
 } from "@mitodl/mitxonline-api-axios/v2"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
+import {
+  DashboardType,
+  type DashboardResource,
+} from "./model/dashboardViewModel"
 
-export const DashboardType = {
-  Course: "course",
-  CourseRunEnrollment: "courserun-enrollment",
-  ProgramEnrollment: "program-enrollment",
-} as const
-export type DashboardType = (typeof DashboardType)[keyof typeof DashboardType]
-
-export type DashboardResource =
-  | { type: "course"; data: CourseWithCourseRunsSerializerV2 }
-  | { type: "courserun-enrollment"; data: CourseRunEnrollmentV3 }
-  | { type: "program-enrollment"; data: V3UserProgramEnrollment }
+// Re-exported for consumers that still import from this file.
+export type { DashboardResource }
+export { DashboardType }
 
 /**
  * Gets the certificate link for a dashboard resource based on its type.
