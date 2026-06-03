@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.70.2 (Released June 03, 2026)
+--------------
+
+- fix: render issue date on certificate pages (#3390)
+- [pre-commit.ci] pre-commit autoupdate (#3396)
+- Clarify MIT's trademark relationship with Axim Collaborative (#3175)
+- Cut down on repeated APISIX user DB changes and logins (#3378)
+- podcast etl cleanup (#3381)
+
 Version 0.70.1 (Released June 02, 2026)
 --------------
 
