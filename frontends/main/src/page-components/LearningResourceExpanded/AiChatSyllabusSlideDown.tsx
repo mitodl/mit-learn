@@ -112,8 +112,6 @@ const StyledAiChat = styled(AiChat)<{
   },
 }))
 
-export { SYLLABUS_STARTERS as STARTERS } from "@/page-components/AiChat/syllabusChatConfig"
-
 export const AiChatSyllabusOpener = ({
   open,
   className,

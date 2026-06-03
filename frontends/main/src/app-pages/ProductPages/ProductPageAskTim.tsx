@@ -102,6 +102,7 @@ export const ProductPageAskTimButton: React.FC<
     const params = new URLSearchParams(searchParams)
     params.set(RESOURCE_DRAWER_PARAMS.resource, String(resource.id))
     params.set(RESOURCE_DRAWER_PARAMS.syllabus, "")
+    params.set(RESOURCE_DRAWER_PARAMS.syllabusOnly, "")
     return `?${params.toString()}`
   }, [searchParams, resource.id])
 
@@ -141,11 +142,17 @@ export const ProductPageAskTimSection: React.FC<
 > = ({ readableId, resourceType }) => {
   const courseChatEnabled = useFeatureFlagEnabled(FeatureFlags.LrDrawerChatbot)
   const programChatEnabled = useFeatureFlagEnabled(FeatureFlags.PrDrawerChatbot)
-  const { data: resource, isFetched } =
-    useLearningResourceByReadableId(readableId)
+  const shouldFetch =
+    isSyllabusChatEnabled() &&
+    ((resourceType === "course" && !!courseChatEnabled) ||
+      (resourceType === "program" && !!programChatEnabled))
+  const { data: resource, isSuccess } = useLearningResourceByReadableId(
+    readableId,
+    { enabled: shouldFetch },
+  )
 
   if (
-    !isFetched ||
+    !isSuccess ||
     !resource ||
     !isAskTimVisible(
       resource,

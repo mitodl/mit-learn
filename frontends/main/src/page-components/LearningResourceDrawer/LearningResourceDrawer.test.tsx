@@ -304,4 +304,64 @@ describe("LearningResourceDrawer", () => {
     await user.click(askTimButton)
     expect(location.current.searchParams.has("syllabus")).toBe(false)
   })
+
+  it.each([{ syllabusOnly: false }, { syllabusOnly: true }])(
+    "Derives syllabusOnlyMode from the syllabus_only URL param (=$syllabusOnly)",
+    async ({ syllabusOnly }) => {
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      const { resource } = setupApis({
+        resource: {
+          // Chat is only enabled for courses or programs
+          resource_type: ResourceTypeEnum.Course,
+        },
+      })
+      const extraParams = syllabusOnly
+        ? `&${RESOURCE_DRAWER_PARAMS.syllabus}&${RESOURCE_DRAWER_PARAMS.syllabusOnly}`
+        : ""
+      renderWithProviders(<LearningResourceDrawer />, {
+        url: `?resource=${resource.id}${extraParams}`,
+      })
+
+      await waitFor(() => {
+        expectLastProps(LearningResourceExpanded, {
+          resource,
+          syllabusOnlyMode: syllabusOnly,
+        })
+      })
+
+      // In syllabus-only mode the resource content (CTA section) is not shown.
+      if (syllabusOnly) {
+        expect(screen.queryByTestId("drawer-cta")).not.toBeInTheDocument()
+      } else {
+        await screen.findByTestId("drawer-cta")
+      }
+    },
+  )
+
+  test("Closing in syllabus-only mode strips all drawer params from the URL", async () => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    const { resource } = setupApis({
+      resource: {
+        resource_type: ResourceTypeEnum.Course,
+      },
+    })
+    const { location } = renderWithProviders(<LearningResourceDrawer />, {
+      url: `?resource=${resource.id}&${RESOURCE_DRAWER_PARAMS.syllabus}&${RESOURCE_DRAWER_PARAMS.syllabusOnly}`,
+    })
+
+    const closeButton = await screen.findByRole("button", { name: "Close" })
+    await user.click(closeButton)
+
+    await waitFor(() => {
+      expect(
+        location.current.searchParams.has(RESOURCE_DRAWER_PARAMS.resource),
+      ).toBe(false)
+    })
+    expect(
+      location.current.searchParams.has(RESOURCE_DRAWER_PARAMS.syllabus),
+    ).toBe(false)
+    expect(
+      location.current.searchParams.has(RESOURCE_DRAWER_PARAMS.syllabusOnly),
+    ).toBe(false)
+  })
 })

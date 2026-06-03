@@ -137,6 +137,7 @@ export const RECOMMENDER_QUERY_PARAM = "recommender"
 export const RESOURCE_DRAWER_PARAMS = {
   resource: "resource",
   syllabus: "syllabus",
+  syllabusOnly: "syllabus_only",
 } as const
 
 export const canonicalResourceDrawerUrl = (resourceId: number) =>
@@ -273,11 +274,6 @@ export const videoDetailPageView = (videoId: number, playlistId?: number) => {
 export const PROGRAM_PAGE_VIEW = "/programs/[readableId]"
 export const PROGRAM_AS_COURSE_PAGE_VIEW = "/courses/p/[readableId]"
 
-/** MITx Online product pages where Ask TIM opens the learning resource drawer in syllabus-only mode. */
-export const isMitxOnlineProductPagePath = (pathname: string): boolean =>
-  /^\/courses\/[^/]+$/.test(pathname) ||
-  /^\/courses\/p\/[^/]+$/.test(pathname) ||
-  /^\/programs\/[^/]+$/.test(pathname)
 export const programPageView = (program: {
   readable_id: string
   /**

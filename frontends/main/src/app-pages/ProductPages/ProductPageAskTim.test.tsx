@@ -143,6 +143,28 @@ describe("ProductPageAskTimSection", () => {
     ).not.toBeInTheDocument()
   })
 
+  test("does not fetch the resource when chat is disabled", async () => {
+    delete process.env.NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT
+    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+    const { resource } = setupLearnResource()
+
+    renderWithProviders(
+      <ProductPageAskTimSection
+        readableId={resource.readable_id}
+        resourceType="course"
+      />,
+    )
+
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining("readable_id="),
+      }),
+    )
+    expect(
+      screen.queryByRole("link", { name: /ask tim/i }),
+    ).not.toBeInTheDocument()
+  })
+
   test("clicking Ask TIM sets syllabus query param and fires PostHog", async () => {
     process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
     mockCapture.mockClear()
@@ -163,6 +185,9 @@ describe("ProductPageAskTimSection", () => {
     ).toBe(String(resource.id))
     expect(
       location.current.searchParams.has(RESOURCE_DRAWER_PARAMS.syllabus),
+    ).toBe(true)
+    expect(
+      location.current.searchParams.has(RESOURCE_DRAWER_PARAMS.syllabusOnly),
     ).toBe(true)
     expect(mockCapture).toHaveBeenCalledWith(
       PostHogEvents.AskTimClicked,

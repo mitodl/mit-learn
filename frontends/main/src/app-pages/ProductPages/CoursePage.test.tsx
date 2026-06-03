@@ -492,32 +492,4 @@ describe("CoursePage", () => {
 
     await screen.findByRole("heading", { name: page.title })
   })
-
-  test("shows Ask TIM button when Learn resource exists", async () => {
-    delete window.__ENV
-    process.env.NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT =
-      "https://example.com/syllabus"
-
-    const course = makeCourse()
-    const page = makePage({ course_details: course })
-    const learnResource = learnFactories.learningResources.course({
-      readable_id: course.readable_id,
-      resource_category: "Course",
-    })
-    setMockResponse.get(
-      learnUrls.learningResources.list({
-        readable_id: [course.readable_id],
-        limit: 1,
-      }),
-      { count: 1, next: null, previous: null, results: [learnResource] },
-    )
-    setupApis({ course, page })
-    renderWithProviders(<CoursePage readableId={course.readable_id} />)
-
-    expect(
-      await screen.findByRole("link", { name: /ask tim about this course/i }),
-    ).toBeInTheDocument()
-
-    delete process.env.NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT
-  })
 })

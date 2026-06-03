@@ -251,7 +251,8 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
       />
       {chatEnabled ? (
         <>
-          {chatTransitionState !== ChatTransitionState.Open ? (
+          {chatTransitionState !== ChatTransitionState.Open &&
+          !syllabusOnlyMode ? (
             <AiChatSyllabusOpener
               resource={resource}
               open={chatExpanded}

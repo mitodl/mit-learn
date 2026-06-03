@@ -61,8 +61,15 @@ const useLearningResourcesDetail = (id: number) => {
   return useQuery(learningResourceQueries.detail(id))
 }
 
-const useLearningResourceByReadableId = (readableId: string) =>
-  useQuery(learningResourceQueries.byReadableId(readableId))
+const useLearningResourceByReadableId = (
+  readableId: string,
+  opts?: { enabled?: boolean },
+) =>
+  useQuery({
+    ...learningResourceQueries.list({ readable_id: [readableId], limit: 1 }),
+    select: (data) => data.results[0] ?? null,
+    ...opts,
+  })
 
 const useLearningResourcesBulkList = (ids: number[]) => {
   const queryClient = useQueryClient()

@@ -1,6 +1,5 @@
 import { env } from "@/env"
 import React, { Suspense, useEffect, useId, useMemo } from "react"
-import { usePathname } from "next/navigation"
 import { RoutedDrawer, imgConfigs } from "ol-components"
 import { LearningResourceExpanded } from "../LearningResourceExpanded/LearningResourceExpanded"
 import type {
@@ -11,7 +10,6 @@ import { useLearningResourcesDetail } from "api/hooks/learningResources"
 
 import {
   canonicalResourceDrawerUrl,
-  isMitxOnlineProductPagePath,
   RESOURCE_DRAWER_PARAMS,
 } from "@/common/urls"
 import { useUserMe } from "api/hooks/user"
@@ -33,6 +31,7 @@ const REQUIRED_PARAMS = [RESOURCE_DRAWER_PARAMS.resource] as const
 const ALL_PARAMS = [
   RESOURCE_DRAWER_PARAMS.resource,
   RESOURCE_DRAWER_PARAMS.syllabus,
+  RESOURCE_DRAWER_PARAMS.syllabusOnly,
 ] as const
 
 const useCapturePageView = (resourceId: number) => {
@@ -259,7 +258,6 @@ const PAPER_PROPS: RoutedDrawerProps["PaperProps"] = {
 
 const LearningResourceDrawer = () => {
   const id = useId()
-  const pathname = usePathname()
   return (
     <Suspense>
       <RoutedDrawer
@@ -272,12 +270,12 @@ const LearningResourceDrawer = () => {
       >
         {({ params, closeDrawer }) => {
           const chatExpanded = params[RESOURCE_DRAWER_PARAMS.syllabus] !== null
+          const syllabusOnlyMode =
+            params[RESOURCE_DRAWER_PARAMS.syllabusOnly] !== null
           return (
             <DrawerContent
               chatExpanded={chatExpanded}
-              syllabusOnlyMode={
-                chatExpanded && isMitxOnlineProductPagePath(pathname)
-              }
+              syllabusOnlyMode={syllabusOnlyMode}
               titleId={id}
               resourceId={Number(params[RESOURCE_DRAWER_PARAMS.resource])}
               closeDrawer={closeDrawer}

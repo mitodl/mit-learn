@@ -2,8 +2,8 @@ import React from "react"
 import AiChatSyllabusSlideDown, {
   AiChatSyllabusOpener,
   ChatTransitionState,
-  STARTERS,
 } from "./AiChatSyllabusSlideDown"
+import { SYLLABUS_STARTERS } from "@/page-components/AiChat/syllabusChatConfig"
 import { renderWithProviders, screen, user } from "@/test-utils"
 import { factories } from "api/test-utils"
 import { ResourceTypeEnum, ResourceTypeGroupEnum } from "api"
@@ -97,7 +97,7 @@ describe("AiChatSyllabus", () => {
 
       const call = mockAiChat.mock.calls[0][0] as Record<string, unknown>
       expect(call.conversationStarters).toEqual(
-        STARTERS[overrides.resource_type_group],
+        SYLLABUS_STARTERS[overrides.resource_type_group],
       )
     },
   )
