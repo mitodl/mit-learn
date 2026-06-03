@@ -1709,9 +1709,7 @@ describe("ContractContent", () => {
       screen.getByRole("radio", { name: /English.*General.*Full/ }),
     )
 
-    await waitFor(() => {
-      expect(screen.getByText(programDescription)).toBeInTheDocument()
-    })
+    await screen.findByText(programDescription)
   })
 
   test("hides collection description when a non-default variant is selected", async () => {
@@ -1821,9 +1819,7 @@ describe("ContractContent", () => {
       screen.getByRole("radio", { name: /English.*General.*Full/ }),
     )
 
-    await waitFor(() => {
-      expect(screen.getByText(collectionDescription)).toBeInTheDocument()
-    })
+    await screen.findByText(collectionDescription)
   })
 
   test("shared contract variant picker switches program collection card title", async () => {
