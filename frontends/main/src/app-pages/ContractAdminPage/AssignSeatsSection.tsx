@@ -2,7 +2,7 @@
 
 import React from "react"
 import { Stack, Tooltip, Typography, styled } from "ol-components"
-import { Button, TextField, VisuallyHidden } from "@mitodl/smoot-design"
+import { Button, Input } from "@mitodl/smoot-design"
 
 const SectionCard = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
@@ -27,7 +27,7 @@ const MutedText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 })) as typeof Typography
 
-const StyledTextField = styled(TextField)({
+const StyledInput = styled(Input)({
   flex: 1,
 })
 
@@ -59,10 +59,13 @@ const AssignSeatsSection: React.FC = () => {
         gap="24px"
         alignItems="flex-start"
       >
+        {/* Input instead of TextField: TextField's FormFieldWrapper always renders a label element in
+            normal flow even when visually hidden, pushing the input ~4px below the button. Input is
+            smoot-design's component for unlabelled fields; accessible name is supplied via aria-label. */}
         <Tooltip title="Coming soon">
-          <StyledTextField
+          <StyledInput
             name="emails"
-            label={<VisuallyHidden>Employee emails</VisuallyHidden>}
+            inputProps={{ "aria-label": "Employee emails" }}
             multiline
             minRows={2}
             disabled
