@@ -6,19 +6,17 @@ import { useSearchParams } from "next/navigation"
 import { LinkAdapter, styled } from "ol-components"
 import { styled as smootStyled } from "@mitodl/smoot-design"
 import { RiSparkling2Line } from "@remixicon/react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import { LearningResource, ResourceTypeEnum } from "api"
 import {
-  learningResourceQueries,
-  learningResourceKeys,
+  useLearningResourceByReadableId,
+  useLearningResourceDetailSetCache,
 } from "api/hooks/learningResources"
 import { FeatureFlags } from "@/common/feature_flags"
 import { PostHogEvents } from "@/common/constants"
 import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import { isSyllabusChatEnabled } from "@/page-components/AiChat/syllabusChatConfig"
 
-/** AskTim-Updated card — MIT Design System product page (desktop full-width; tablet 320px). */
 const AskTimCard = styled.div(({ theme }) => ({
   width: "100%",
   padding: "16px",
@@ -57,50 +55,32 @@ const AskTimLink = smootStyled(LinkAdapter)(({ theme }) => ({
   },
 }))
 
-const AskTimText = styled.span({
-  display: "inline",
-  whiteSpace: "pre",
-})
-
-const AskWord = styled.span(({ theme }) => ({
-  ...theme.typography.body2,
-  color: theme.custom.colors.darkGray2,
-}))
-
-const TimWord = styled.span(({ theme }) => ({
-  ...theme.typography.subtitle1,
-  fontSize: "16px",
-  lineHeight: "18px",
-  color: theme.custom.colors.darkGray2,
-}))
-
-const AboutWord = styled.span(({ theme }) => ({
+const AskTimLabel = styled.span(({ theme }) => ({
   ...theme.typography.body1,
   fontSize: "16px",
   lineHeight: "18px",
   color: theme.custom.colors.darkGray2,
+  strong: {
+    ...theme.typography.subtitle1,
+    fontSize: "16px",
+    lineHeight: "18px",
+  },
 }))
 
-export const useLearningResourceByReadableId = (readableId: string) =>
-  useQuery(learningResourceQueries.byReadableId(readableId))
-
-const useProductPageAskTimVisible = (
+const isAskTimVisible = (
   resource: LearningResource | null | undefined,
   resourceType: "course" | "program",
+  courseChatEnabled: boolean | undefined,
+  programChatEnabled: boolean | undefined,
 ) => {
-  const courseChatEnabled = useFeatureFlagEnabled(FeatureFlags.LrDrawerChatbot)
-  const programChatEnabled = useFeatureFlagEnabled(FeatureFlags.PrDrawerChatbot)
-
   if (!isSyllabusChatEnabled() || !resource) {
     return false
   }
-
   if (resourceType === "course") {
     return (
       courseChatEnabled && resource.resource_type === ResourceTypeEnum.Course
     )
   }
-
   return (
     programChatEnabled && resource.resource_type === ResourceTypeEnum.Program
   )
@@ -115,7 +95,7 @@ export const ProductPageAskTimButton: React.FC<
 > = ({ resource }) => {
   const posthog = usePostHog()
   const searchParams = useSearchParams()
-  const queryClient = useQueryClient()
+  const seedDetailCache = useLearningResourceDetailSetCache(resource)
   const categoryLabel = resource.resource_category.toLowerCase()
 
   const syllabusHref = useMemo(() => {
@@ -126,7 +106,7 @@ export const ProductPageAskTimButton: React.FC<
   }, [searchParams, resource.id])
 
   const onClick = useCallback(() => {
-    queryClient.setQueryData(learningResourceKeys.detail(resource.id), resource)
+    seedDetailCache()
     if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
       posthog.capture(PostHogEvents.AskTimClicked, {
         type: "syllabus_bot",
@@ -136,17 +116,16 @@ export const ProductPageAskTimButton: React.FC<
         platformCode: resource.platform?.code,
       })
     }
-  }, [posthog, queryClient, resource])
+  }, [posthog, resource, seedDetailCache])
 
   return (
     <AskTimCard>
       <AskTimLink shallow href={syllabusHref} onClick={onClick}>
         <RiSparkling2Line aria-hidden />
-        <AskTimText>
-          <AskWord>Ask</AskWord>
-          <TimWord>TIM</TimWord>
-          <AboutWord>{` about this ${categoryLabel}`}</AboutWord>
-        </AskTimText>
+        <AskTimLabel>
+          Ask <strong>TIM</strong>
+          {` about this ${categoryLabel}`}
+        </AskTimLabel>
       </AskTimLink>
     </AskTimCard>
   )
@@ -160,11 +139,21 @@ type ProductPageAskTimSectionProps = {
 export const ProductPageAskTimSection: React.FC<
   ProductPageAskTimSectionProps
 > = ({ readableId, resourceType }) => {
+  const courseChatEnabled = useFeatureFlagEnabled(FeatureFlags.LrDrawerChatbot)
+  const programChatEnabled = useFeatureFlagEnabled(FeatureFlags.PrDrawerChatbot)
   const { data: resource, isFetched } =
     useLearningResourceByReadableId(readableId)
-  const visible = useProductPageAskTimVisible(resource, resourceType)
 
-  if (!isFetched || !visible || !resource) {
+  if (
+    !isFetched ||
+    !resource ||
+    !isAskTimVisible(
+      resource,
+      resourceType,
+      courseChatEnabled,
+      programChatEnabled,
+    )
+  ) {
     return null
   }
 

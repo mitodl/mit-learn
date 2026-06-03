@@ -1,5 +1,9 @@
 import { factories } from "api/test-utils"
-import { ResourceTypeEnum, ResourceTypeGroupEnum } from "api"
+import {
+  ResourceTypeEnum,
+  ResourceTypeGroupEnum,
+  type LearningResource,
+} from "api"
 import {
   buildSyllabusChatRequestBody,
   getSyllabusChatProps,
@@ -29,10 +33,12 @@ describe("syllabusChatConfig", () => {
       resource_type: ResourceTypeEnum.Program,
       resource_type_group: ResourceTypeGroupEnum.Program,
       readable_id: "program-v1:MITx+TEST",
+      // The generated schema types `children` as a single object, but the API
+      // returns an array at runtime (serializer uses many=True).
       children: [
         { readable_id: "course-v1:MITx+A" },
         { readable_id: "course-v1:MITx+B" },
-      ],
+      ] as unknown as LearningResource["children"],
     })
 
     const body = buildSyllabusChatRequestBody(resource, [{ content: "hi" }])

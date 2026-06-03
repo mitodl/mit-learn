@@ -1,5 +1,6 @@
 import { env } from "@/env"
 import React, { Suspense, useEffect, useId, useMemo } from "react"
+import { usePathname } from "next/navigation"
 import { RoutedDrawer, imgConfigs } from "ol-components"
 import { LearningResourceExpanded } from "../LearningResourceExpanded/LearningResourceExpanded"
 import type {
@@ -10,6 +11,7 @@ import { useLearningResourcesDetail } from "api/hooks/learningResources"
 
 import {
   canonicalResourceDrawerUrl,
+  isMitxOnlineProductPagePath,
   RESOURCE_DRAWER_PARAMS,
 } from "@/common/urls"
 import { useUserMe } from "api/hooks/user"
@@ -63,7 +65,8 @@ const DrawerContent: React.FC<{
   titleId: string
   closeDrawer: () => void
   chatExpanded: boolean
-}> = ({ resourceId, closeDrawer, titleId, chatExpanded }) => {
+  syllabusOnlyMode: boolean
+}> = ({ resourceId, closeDrawer, titleId, chatExpanded, syllabusOnlyMode }) => {
   /**
    * Ideally the resource data should already exist in the query cache, e.g., by:
    * - a server-side prefetch
@@ -163,49 +166,51 @@ const DrawerContent: React.FC<{
       excludeResourceId={resourceId}
     />
   ))
-  const topCarousels = []
-  if (resource.data?.resource_type === ResourceTypeEnum.Program) {
-    topCarousels.push(
-      itemsCarousel("Courses in this Program", resourceId, resourceId),
-    )
+  const topCarousels: React.ReactNode[] = []
+  const bottomCarousels: React.ReactNode[] = []
+  if (!syllabusOnlyMode) {
+    if (resource.data?.resource_type === ResourceTypeEnum.Program) {
+      topCarousels.push(
+        itemsCarousel("Courses in this Program", resourceId, resourceId),
+      )
+    }
+    if (
+      resource.data?.resource_type === ResourceTypeEnum.Video &&
+      resource.data?.playlists?.length > 0
+    ) {
+      bottomCarousels.push(
+        itemsCarousel(
+          "Other Videos in this Series",
+          parseInt(resource.data.playlists[0]),
+          resourceId,
+        ),
+      )
+    }
+    if (resource.data?.resource_type === ResourceTypeEnum.VideoPlaylist) {
+      bottomCarousels.push(
+        itemsCarousel("Videos in this Series", resourceId, resourceId),
+      )
+    }
+    if (
+      resource.data?.resource_type === ResourceTypeEnum.PodcastEpisode &&
+      resource.data?.podcast_episode?.podcasts?.length > 0
+    ) {
+      bottomCarousels.push(
+        itemsCarousel(
+          "Other Episodes in this Podcast",
+          parseInt(resource.data.podcast_episode.podcasts[0]),
+          resourceId,
+        ),
+      )
+    }
+    if (resource.data?.resource_type === ResourceTypeEnum.Podcast) {
+      bottomCarousels.push(
+        itemsCarousel("Recent Episodes", resourceId, resourceId),
+      )
+    }
+    bottomCarousels.push(similarResourcesCarousel)
+    bottomCarousels.push(...(topicCarousels || []))
   }
-  const bottomCarousels = []
-  if (
-    resource.data?.resource_type === ResourceTypeEnum.Video &&
-    resource.data?.playlists?.length > 0
-  ) {
-    bottomCarousels.push(
-      itemsCarousel(
-        "Other Videos in this Series",
-        parseInt(resource.data.playlists[0]),
-        resourceId,
-      ),
-    )
-  }
-  if (resource.data?.resource_type === ResourceTypeEnum.VideoPlaylist) {
-    bottomCarousels.push(
-      itemsCarousel("Videos in this Series", resourceId, resourceId),
-    )
-  }
-  if (
-    resource.data?.resource_type === ResourceTypeEnum.PodcastEpisode &&
-    resource.data?.podcast_episode?.podcasts?.length > 0
-  ) {
-    bottomCarousels.push(
-      itemsCarousel(
-        "Other Episodes in this Podcast",
-        parseInt(resource.data.podcast_episode.podcasts[0]),
-        resourceId,
-      ),
-    )
-  }
-  if (resource.data?.resource_type === ResourceTypeEnum.Podcast) {
-    bottomCarousels.push(
-      itemsCarousel("Recent Episodes", resourceId, resourceId),
-    )
-  }
-  bottomCarousels.push(similarResourcesCarousel)
-  bottomCarousels.push(...(topicCarousels || []))
 
   return (
     <>
@@ -224,6 +229,7 @@ const DrawerContent: React.FC<{
         onAddToLearningPathClick={handleAddToLearningPathClick}
         onAddToUserListClick={handleAddToUserListClick}
         closeDrawer={closeDrawer}
+        syllabusOnlyMode={syllabusOnlyMode}
       />
       <SignupPopover anchorEl={signupEl} onClose={() => setSignupEl(null)} />
     </>
@@ -253,6 +259,7 @@ const PAPER_PROPS: RoutedDrawerProps["PaperProps"] = {
 
 const LearningResourceDrawer = () => {
   const id = useId()
+  const pathname = usePathname()
   return (
     <Suspense>
       <RoutedDrawer
@@ -264,9 +271,13 @@ const LearningResourceDrawer = () => {
         aria-labelledby={id}
       >
         {({ params, closeDrawer }) => {
+          const chatExpanded = params[RESOURCE_DRAWER_PARAMS.syllabus] !== null
           return (
             <DrawerContent
-              chatExpanded={params[RESOURCE_DRAWER_PARAMS.syllabus] !== null}
+              chatExpanded={chatExpanded}
+              syllabusOnlyMode={
+                chatExpanded && isMitxOnlineProductPagePath(pathname)
+              }
               titleId={id}
               resourceId={Number(params[RESOURCE_DRAWER_PARAMS.resource])}
               closeDrawer={closeDrawer}

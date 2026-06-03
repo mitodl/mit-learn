@@ -4,6 +4,7 @@ import {
   assertNormalizesPaginationNext,
 } from "../test-utils"
 import {
+  useLearningResourceByReadableId,
   useLearningResourcesDetail,
   useInfiniteLearningResourceItems,
   useLearningResourcesList,
@@ -45,6 +46,38 @@ describe("useLearningResourcesList", () => {
       await assertApiCalled(result, url, "GET", data)
     },
   )
+})
+
+describe("useLearningResourceByReadableId", () => {
+  it("returns the first matching learning resource", async () => {
+    const data = factory.course({ readable_id: "course-v1:MITx+TEST" })
+    const url = urls.learningResources.list({
+      readable_id: [data.readable_id],
+      limit: 1,
+    })
+    const listData = {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [data],
+    }
+
+    const { wrapper } = setupReactQueryTest()
+    setMockResponse.get(url, listData)
+    const { result } = renderHook(
+      () => useLearningResourceByReadableId(data.readable_id),
+      { wrapper },
+    )
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "get",
+        url: expect.stringContaining("readable_id=course-v1%3AMITx%2BTEST"),
+      }),
+    )
+    expect(result.current.data).toEqual(data)
+  })
 })
 
 describe("useLearningResourcesRetrieve", () => {

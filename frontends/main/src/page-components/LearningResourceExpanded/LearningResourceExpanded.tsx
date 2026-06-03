@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from "react"
-import { usePathname } from "next/navigation"
 import styled from "@emotion/styled"
 import type { ImageConfig, LearningResourceCardProps } from "ol-components"
 import { ResourceTypeEnum } from "api"
@@ -16,10 +15,7 @@ import AiSyllabusBotSlideDown, {
   AiChatSyllabusOpener,
   ChatTransitionState,
 } from "./AiChatSyllabusSlideDown"
-import {
-  isMitxOnlineProductPagePath,
-  RESOURCE_DRAWER_PARAMS,
-} from "@/common/urls"
+import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 
 const Outer = styled.div(({ theme }) => ({
   display: "flex",
@@ -113,6 +109,8 @@ type LearningResourceExpandedProps = {
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
   closeDrawer?: () => void
+  /** Ask TIM from a product page: chat only, close exits the drawer. */
+  syllabusOnlyMode?: boolean
 }
 
 const closeChat = () => {
@@ -142,12 +140,8 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   onAddToUserListClick,
   closeDrawer,
   chatExpanded: initialChatExpanded,
+  syllabusOnlyMode = false,
 }) => {
-  const pathname = usePathname()
-  /** Product-page Ask TIM: drawer opens straight to chat; close exits the drawer entirely. */
-  const syllabusOnlyDrawer =
-    isMitxOnlineProductPagePath(pathname) && initialChatExpanded
-
   const [chatTransitionState, setChatTransitionState] = useState(
     initialChatExpanded ? ChatTransitionState.Open : ChatTransitionState.Closed,
   )
@@ -226,7 +220,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
       setChatTransitionState(ChatTransitionState.Opening)
       setScrollPosition(scrollElement?.scrollTop ?? 0)
       openChat()
-    } else if (syllabusOnlyDrawer) {
+    } else if (syllabusOnlyMode) {
       closeDrawer?.()
     } else {
       setChatTransitionState(ChatTransitionState.Closing)
@@ -250,7 +244,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
         titleId={titleId}
         resource={resource}
         onClickClose={
-          syllabusOnlyDrawer || chatTransitionState !== ChatTransitionState.Open
+          syllabusOnlyMode || chatTransitionState !== ChatTransitionState.Open
             ? closeDrawer
             : () => onChatOpenerToggle(false)
         }
@@ -274,7 +268,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
           />
         </>
       ) : null}
-      {!syllabusOnlyDrawer ? (
+      {!syllabusOnlyMode ? (
         <ContentSection chatTransitionState={chatTransitionState}>
           <TopContainer chatEnabled={!!chatEnabled}>
             <ContentContainer>

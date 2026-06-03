@@ -1,14 +1,10 @@
 import React from "react"
-import { QueryClientProvider } from "@tanstack/react-query"
 import { setMockResponse, urls, factories, makeRequest } from "api/test-utils"
-import { renderHook, waitFor } from "@testing-library/react"
-import { ThemeProvider } from "ol-components"
-import { makeBrowserQueryClient } from "@/app/getQueryClient"
+import { waitFor } from "@testing-library/react"
 import { renderWithProviders, screen, user } from "@/test-utils"
 import {
   ProductPageAskTimButton,
   ProductPageAskTimSection,
-  useLearningResourceByReadableId,
 } from "./ProductPageAskTim"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -59,27 +55,6 @@ describe("ProductPageAskTimButton", () => {
     expect(
       screen.getByRole("link", { name: /ask tim about this course/i }),
     ).toBeInTheDocument()
-  })
-})
-
-describe("useLearningResourceByReadableId", () => {
-  test("returns the first matching learning resource", async () => {
-    const { resource } = setupLearnResource()
-    const queryClient = makeBrowserQueryClient({ maxRetries: 0 })
-
-    const { result } = renderHook(
-      () => useLearningResourceByReadableId(resource.readable_id),
-      {
-        wrapper: ({ children }) => (
-          <QueryClientProvider client={queryClient}>
-            <ThemeProvider>{children}</ThemeProvider>
-          </QueryClientProvider>
-        ),
-      },
-    )
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.data).toEqual(resource)
   })
 })
 

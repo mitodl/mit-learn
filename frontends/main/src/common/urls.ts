@@ -139,9 +139,6 @@ export const RESOURCE_DRAWER_PARAMS = {
   syllabus: "syllabus",
 } as const
 
-/** Opens Ask TIM in the learning resource drawer; use with `resource` id. */
-export const PRODUCT_SYLLABUS_QUERY_PARAM = RESOURCE_DRAWER_PARAMS.syllabus
-
 export const canonicalResourceDrawerUrl = (resourceId: number) =>
   `${requiredEnv("NEXT_PUBLIC_ORIGIN")}/search?${RESOURCE_DRAWER_PARAMS.resource}=${resourceId}`
 

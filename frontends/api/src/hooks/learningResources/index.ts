@@ -61,6 +61,9 @@ const useLearningResourcesDetail = (id: number) => {
   return useQuery(learningResourceQueries.detail(id))
 }
 
+const useLearningResourceByReadableId = (readableId: string) =>
+  useQuery(learningResourceQueries.byReadableId(readableId))
+
 const useLearningResourcesBulkList = (ids: number[]) => {
   const queryClient = useQueryClient()
 
@@ -208,6 +211,7 @@ export {
   useLearningResourcesList,
   useFeaturedLearningResourcesList,
   useLearningResourcesDetail,
+  useLearningResourceByReadableId,
   useLearningResourcesBulkList,
   useLearningResourceDetailSetCache,
   useLearningResourceTopic,
