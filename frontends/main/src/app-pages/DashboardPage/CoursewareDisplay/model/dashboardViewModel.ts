@@ -977,6 +977,30 @@ const getCollectionFirstCoursesInDisplayOrder = (
   })
 }
 
+/**
+ * Returns true when the entry's resolved display run (or enrolled run) actually
+ * satisfies the selected variant — i.e. the course has a real matching run and
+ * the card should be shown.
+ *
+ * Returns true unconditionally when:
+ *  - `variant` is null/undefined (no variant picker active)
+ *  - `variant.default_variant === true` (all runs belong to the default set)
+ *
+ * This is the single predicate used by `useContractDashboardData` to hide cards
+ * for courses that have no runs in the selected variant.
+ */
+const entryMatchesVariant = (
+  entry: DashboardCourseEntry,
+  variant: SupportedVariant | null | undefined,
+): boolean => {
+  if (!variant || variant.default_variant) return true
+  const matches = runMatchesVariant(variant)
+  if (entry.displayedEnrollment && matches(entry.displayedEnrollment.run)) {
+    return true
+  }
+  return entry.displayedRun !== null && matches(entry.displayedRun)
+}
+
 export {
   pickDisplayedEnrollmentForLegacyDashboard,
   groupCourseRunEnrollmentsByCourseId,
@@ -1001,6 +1025,7 @@ export {
   buildVariantKey,
   buildVariantLabel,
   selectVariantRunForCourse,
+  entryMatchesVariant,
 }
 
 export type { RequirementSectionItem, RequirementSection }
