@@ -175,6 +175,32 @@ describe("ChannelSearch", () => {
     const apiSearchParams = getLastApiSearchParams()
     expect(apiSearchParams.get("hybrid_search")).toBe("true")
   })
+
+  test("Topic channel page with search term preserves constant search parameters in API request", async () => {
+    const { channel } = setMockApiResponses({
+      channelPatch: {
+        channel_type: ChannelTypeEnum.Topic,
+        search_filter: "topic=Economics",
+      },
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}?q=python`,
+    })
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "get",
+          url: expect.stringContaining(urls.search.vectorResources()),
+        }),
+      )
+    })
+
+    const apiSearchParams = getLastApiSearchParams()
+    expect(apiSearchParams.get("q")).toBe("python")
+    expect(apiSearchParams.get("topic")).toBe("Economics")
+  })
   test.each([
     {
       searchFilter: "offered_by=ocw",
