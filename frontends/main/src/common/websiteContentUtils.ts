@@ -63,8 +63,9 @@ function nodesToHtml(nodes: ProseMirrorNode[] | undefined): string {
         } else if (mark.type === "code") {
           html = `<code>${html}</code>`
         } else if (mark.type === "link") {
-          const href =
-            typeof mark.attrs?.href === "string" ? mark.attrs.href : "#"
+          const rawHref =
+            typeof mark.attrs?.href === "string" ? mark.attrs.href : ""
+          const href = /^https?:\/\//i.test(rawHref) ? rawHref : "#"
           const target =
             typeof mark.attrs?.target === "string"
               ? ` target="${escapeHtml(mark.attrs.target)}"`

@@ -227,6 +227,7 @@ const BannerGridContainer = styled.div`
 
   ${theme.breakpoints.down("sm")} {
     max-width: 100%;
+    padding: 32px 0;
   }
 `
 
@@ -431,6 +432,16 @@ const ArticleListingPage: React.FC = () => {
   const gridStories = articles?.results ?? []
   const totalPages = articles?.count ? getLastPage(articles.count) : 0
 
+  React.useEffect(() => {
+    if (!isLoading && totalPages > 0 && page > totalPages) {
+      setSearchParams((current) => {
+        const copy = new URLSearchParams(current)
+        copy.delete("page")
+        return copy
+      })
+    }
+  }, [isLoading, page, totalPages, setSearchParams])
+
   return (
     <>
       <BannerSection>
@@ -504,7 +515,7 @@ const ArticleListingPage: React.FC = () => {
           )}
         </Container>
 
-        {!isLoading && gridStories.length > 0 && (
+        {!isLoading && gridStories.length > 0 && totalPages > 1 && (
           <Container>
             <PaginationContainer>
               <Pagination
