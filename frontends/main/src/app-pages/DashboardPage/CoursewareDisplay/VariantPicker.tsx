@@ -37,15 +37,25 @@ const VariantChoiceBox = styled("label", {
   gap: "4px",
   borderRadius: "4px",
   backgroundColor: theme.custom.colors.white,
-  border: `${checked ? "2px" : "1px"} solid ${checked ? theme.custom.colors.red : theme.custom.colors.silverGrayLight}`,
+  // Keep the border width constant at 1px and thicken the selected/focused
+  // state with an inset box-shadow instead of a 2px border. box-shadow does not
+  // affect layout, so the card content no longer shifts when selected.
+  border: `1px solid ${checked ? theme.custom.colors.red : theme.custom.colors.silverGrayLight}`,
+  boxShadow: checked ? `inset 0 0 0 1px ${theme.custom.colors.red}` : "none",
   cursor: "pointer",
-  "&:focus-within": {
-    border: `2px solid ${theme.custom.colors.red}`,
+  // Focus is a distinct OUTER ring layered on top of the (inset) selected
+  // state, so "selected" and "selected + focused" look different. :has(
+  // :focus-visible) keeps it to keyboard focus — a mouse click to select
+  // won't draw the ring. outline (not box-shadow) also survives forced-colors.
+  "&:has(:focus-visible)": {
+    outline: `2px solid ${theme.custom.colors.red}`,
+    outlineOffset: "2px",
   },
 }))
 
 type VariantCardProps = {
   title: string
+  subtitle?: string
   certEligible: boolean
   selected: boolean
   name: string
@@ -55,6 +65,7 @@ type VariantCardProps = {
 
 const VariantCard: React.FC<VariantCardProps> = ({
   title,
+  subtitle,
   certEligible,
   selected,
   name,
@@ -71,17 +82,17 @@ const VariantCard: React.FC<VariantCardProps> = ({
         onChange={onChange}
       />
       <Typography variant="subtitle1">{title}</Typography>
-      <Stack
-        direction="row"
-        alignItems="center"
-        visibility={certEligible ? "visible" : "hidden"}
-        gap="8px"
-      >
-        <RiCheckboxFill size={20} />
-        <Typography variant="body3" color="darkGray2">
-          Certificate Eligible
-        </Typography>
-      </Stack>
+      {(certEligible || subtitle) && (
+        // Keep both subtext kinds (the certificate badge and the variant
+        // detail) in the same 20px-tall centered row so they align vertically
+        // across cards regardless of whether the checkbox icon is present.
+        <Stack direction="row" alignItems="center" gap="8px" minHeight="20px">
+          {certEligible && <RiCheckboxFill size={20} />}
+          <Typography variant="body3" color="darkGray2">
+            {certEligible ? "Certificate Eligible" : subtitle}
+          </Typography>
+        </Stack>
+      )}
     </VariantChoiceBox>
   )
 }
@@ -90,7 +101,8 @@ type VariantChoiceBoxesProps = {
   variantOptions: SupportedVariant[]
   selectedVariant: SupportedVariant | null
   setSelectedVariant: (variant: SupportedVariant | null) => void
-  defaultVariantLabel?: string
+  defaultVariantLabel: string
+  customizedVariantLabel: string
   "aria-label"?: string
   "aria-labelledby"?: string
 }
@@ -100,6 +112,7 @@ const VariantChoiceBoxes: React.FC<VariantChoiceBoxesProps> = ({
   selectedVariant,
   setSelectedVariant,
   defaultVariantLabel,
+  customizedVariantLabel,
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledby,
 }) => {
@@ -125,16 +138,22 @@ const VariantChoiceBoxes: React.FC<VariantChoiceBoxesProps> = ({
     >
       {variantOptions.map((variant) => {
         const value = buildVariantKey(variant)
-        const label =
-          variant.default_variant && defaultVariantLabel
-            ? defaultVariantLabel
-            : buildVariantLabel(variant)
+        // Default card: large title from defaultVariantLabel, "Certificate
+        // Eligible" badge as subtext. Variant cards: "Customized <Contract>"
+        // title with the language • industry • length detail as subtext.
+        const title = variant.default_variant
+          ? defaultVariantLabel
+          : customizedVariantLabel
+        const subtitle = variant.default_variant
+          ? undefined
+          : buildVariantLabel(variant)
         return (
           <VariantCard
             key={value}
             name={groupName}
             value={value}
-            title={label}
+            title={title}
+            subtitle={subtitle}
             certEligible={variant.default_variant}
             selected={value === selectedValue}
             onChange={() => handleSelectedVariantChange(value)}
@@ -161,7 +180,8 @@ type VariantPickerProps = {
   variantOptions: SupportedVariant[]
   selectedVariant: SupportedVariant | null
   setSelectedVariant: (variant: SupportedVariant | null) => void
-  defaultVariantLabel?: string
+  defaultVariantLabel: string
+  customizedVariantLabel: string
   title?: string
   description?: string
 }
@@ -171,15 +191,17 @@ const VariantPicker: React.FC<VariantPickerProps> = ({
   selectedVariant,
   setSelectedVariant,
   defaultVariantLabel,
+  customizedVariantLabel,
   title = "Available Versions",
   description,
 }) => {
   const titleId = React.useId()
-  const viewingLabel = selectedVariant
-    ? selectedVariant.default_variant && defaultVariantLabel
+  let viewingLabel = ""
+  if (selectedVariant) {
+    viewingLabel = selectedVariant.default_variant
       ? defaultVariantLabel
-      : buildVariantLabel(selectedVariant)
-    : ""
+      : `${customizedVariantLabel} (${buildVariantLabel(selectedVariant)})`
+  }
   return (
     <VariantPickerRoot>
       <Typography id={titleId} variant="h5" component="h2">
@@ -192,6 +214,7 @@ const VariantPicker: React.FC<VariantPickerProps> = ({
         selectedVariant={selectedVariant}
         setSelectedVariant={setSelectedVariant}
         defaultVariantLabel={defaultVariantLabel}
+        customizedVariantLabel={customizedVariantLabel}
       />
       <SelectedVariantIndicator>
         <Typography variant="body2">Viewing:</Typography>

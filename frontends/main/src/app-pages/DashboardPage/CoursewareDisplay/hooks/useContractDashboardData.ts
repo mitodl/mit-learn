@@ -25,6 +25,7 @@ import {
   getSortedStandaloneContractPrograms,
   groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
+  sortVariants,
   type DashboardCourseEntry,
 } from "../model/dashboardViewModel"
 
@@ -89,7 +90,7 @@ const useContractDashboardData = (
   )
 
   const variantOptions = React.useMemo(
-    () => contract.variant_options ?? [],
+    () => sortVariants(contract.variant_options ?? []),
     [contract],
   )
 
