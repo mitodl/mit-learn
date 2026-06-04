@@ -328,6 +328,36 @@ describe("Home Page News and Events", () => {
     expect(links[5]).toHaveAttribute("href", events.results[5].url)
     within(links[5]).getByText(events.results[5].title)
   })
+  test("Hides Events section when events list is empty", async () => {
+    const news = newsEvents.newsItems({ count: 6 })
+    setMockResponse.get(
+      urls.newsEvents.list({
+        feed_type: ["news"],
+        limit: 6,
+        sortby: "-news_date",
+      }),
+      news,
+    )
+
+    setMockResponse.get(
+      urls.newsEvents.list({
+        feed_type: ["events"],
+        limit: 6,
+        sortby: "event_date",
+      }),
+      newsEvents.eventItems({ count: 0 }),
+    )
+
+    renderWithProviders(<NewsEventsSection />)
+
+    await waitFor(() => {
+      screen.getAllByRole("heading", { name: "News" })
+    })
+
+    expect(
+      screen.queryByRole("heading", { name: "Events" }),
+    ).not.toBeInTheDocument()
+  })
 })
 
 describe("Home Page personalize section", () => {

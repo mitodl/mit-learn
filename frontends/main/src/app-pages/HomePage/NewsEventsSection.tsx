@@ -52,12 +52,13 @@ const MobileContent = styled.div`
   margin: 40px 0;
 `
 
-const NewsContainer = styled.section`
+const NewsContainer = styled.section<{ fullWidth?: boolean }>`
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 12px;
   flex: 1 0 0;
+  ${({ fullWidth }) => fullWidth && "flex-basis: 100%;"}
 `
 
 const MobileContainer = styled.section`
@@ -294,22 +295,29 @@ const NewsEventsSection: React.FC = () => {
               </SeeAllButton>
             </HeadingContainer>
           </MobileContainer>
-          <MobileContainer>
-            <Typography component="h3" variant="h4">
-              Events
-            </Typography>
-            <MobileEvents>{EventCards}</MobileEvents>
-          </MobileContainer>
+          {events.results.length > 0 && (
+            <MobileContainer>
+              <Typography component="h3" variant="h4">
+                Events
+              </Typography>
+              <MobileEvents>{EventCards}</MobileEvents>
+            </MobileContainer>
+          )}
         </MobileContent>
       </BelowMdOnly>
       <AboveMdOnly>
         <Container>
           <Content>
-            <NewsContainer>
+            <NewsContainer fullWidth={events.results.length === 0}>
               <Typography component="h3" variant="h4">
                 News
               </Typography>
-              <Grid2 container columnSpacing="24px" rowSpacing="28px">
+              <Grid2
+                container
+                columnSpacing="24px"
+                rowSpacing="28px"
+                sx={{ width: "100%" }}
+              >
                 {newsList.map((item, index) => (
                   <Grid2
                     key={item.id}
@@ -331,12 +339,14 @@ const NewsEventsSection: React.FC = () => {
                 </SeeAllButton>
               </HeadingContainer>
             </NewsContainer>
-            <EventsContainer>
-              <Typography component="h3" variant="h4">
-                Events
-              </Typography>
-              <Events>{EventCards}</Events>
-            </EventsContainer>
+            {events.results.length > 0 && (
+              <EventsContainer>
+                <Typography component="h3" variant="h4">
+                  Events
+                </Typography>
+                <Events>{EventCards}</Events>
+              </EventsContainer>
+            )}
           </Content>
         </Container>
       </AboveMdOnly>
