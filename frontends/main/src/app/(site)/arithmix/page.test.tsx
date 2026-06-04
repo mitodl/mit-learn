@@ -1,3 +1,4 @@
+import React from "react"
 import { renderWithProviders, screen } from "@/test-utils"
 import Page, { metadata } from "./page"
 
