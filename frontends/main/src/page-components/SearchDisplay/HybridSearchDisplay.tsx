@@ -1,6 +1,7 @@
 import React, { useMemo } from "react"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import type { LearningResource } from "api"
+import type { Facets, BooleanFacets } from "@mitodl/course-search-utils"
 import type {
   LearningResourcesVectorSearchResponse,
   VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorSearchRequest,
@@ -79,6 +80,7 @@ type VectorClientFilterFacet = (typeof VECTOR_CLIENT_FILTER_FACETS)[number]
 
 const toUnfacetedVectorSearchParams = (
   params: ReturnType<typeof getSearchParams> & { sortby?: string },
+  constantSearchParams: Facets & BooleanFacets = {},
   cutoffScore?: number,
 ): VectorSearchRequest => {
   const {
@@ -90,7 +92,8 @@ const toUnfacetedVectorSearchParams = (
   return Object.fromEntries(
     Object.entries(vectorParams).filter(
       ([key]) =>
-        !VECTOR_CLIENT_FILTER_FACETS.includes(key as VectorClientFilterFacet),
+        !VECTOR_CLIENT_FILTER_FACETS.includes(key as VectorClientFilterFacet) ||
+        key in constantSearchParams,
     ),
   ) as VectorSearchRequest
 }
@@ -208,11 +211,15 @@ const HybridSearchDisplay: React.FC<HybridSearchDisplayProps> = ({
         typeof params.q === "string" && params.q.trim() !== ""
       return learningResourceQueries.vectorSearch(
         hasSearchTerm
-          ? toUnfacetedVectorSearchParams(params, cutoffScore)
+          ? toUnfacetedVectorSearchParams(
+              params,
+              props.constantSearchParams,
+              cutoffScore,
+            )
           : toVectorSearchParams(params, cutoffScore),
       )
     },
-    [cutoffScore],
+    [cutoffScore, props.constantSearchParams],
   )
 
   const getDisplayData = useMemo(
