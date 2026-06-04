@@ -31,6 +31,7 @@ import {
   programHasContractRuns,
   resolveDisplayedRunAndEnrollment,
   selectVariantRunForCourse,
+  sortVariants,
 } from "./dashboardViewModel"
 
 describe("dashboardViewModel", () => {
@@ -1727,6 +1728,58 @@ describe("buildVariantLabel", () => {
     expect(
       buildVariantLabel(makeVariant({ variant_length: "XZ" as never })),
     ).toBe("English • General • XZ")
+  })
+})
+
+describe("sortVariants", () => {
+  test("groups the default's language first, then orders other languages alphabetically", () => {
+    // French is the default. Its label "Français" sorts alphabetically AFTER
+    // "English" and "Español", so the only reason the French variants lead is
+    // the default-language grouping rule — not alphabetical order.
+    const def = makeVariant({
+      language: LanguageEnum.Fr,
+      default_variant: true,
+    })
+    const frEnergyFull = makeVariant({
+      language: LanguageEnum.Fr,
+      variant_industry: VariantIndustryEnum.E,
+      variant_length: VariantLengthEnum.F,
+    })
+    const frEnergyShort = makeVariant({
+      language: LanguageEnum.Fr,
+      variant_industry: VariantIndustryEnum.E,
+      variant_length: VariantLengthEnum.S,
+    })
+    const frFinance = makeVariant({
+      language: LanguageEnum.Fr,
+      variant_industry: VariantIndustryEnum.F,
+    })
+    const english = makeVariant({ language: LanguageEnum.En })
+    const spanish = makeVariant({ language: LanguageEnum.EsEs })
+
+    const input = [
+      spanish,
+      frFinance,
+      english,
+      def,
+      frEnergyShort,
+      frEnergyFull,
+    ]
+
+    expect(sortVariants(input)).toEqual([
+      // default always first
+      def,
+      // rest of the default's language (French), by industry then length:
+      // Energy < Finance, with Energy's Full < Short tie-break on length
+      frEnergyFull,
+      frEnergyShort,
+      frFinance,
+      // then the other languages alphabetically: English < Español
+      english,
+      spanish,
+    ])
+    // input is not mutated
+    expect(input[0]).toBe(spanish)
   })
 })
 

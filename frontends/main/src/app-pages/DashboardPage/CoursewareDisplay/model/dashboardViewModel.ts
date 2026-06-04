@@ -855,27 +855,62 @@ const getNativeLanguageName = (languageCode: string): string => {
 const buildVariantKey = (variant: SupportedVariant): string =>
   `language:${variant.language ?? ""}|industry:${variant.variant_industry ?? ""}|length:${variant.variant_length ?? ""}`
 
-const buildVariantLabel = (variant: SupportedVariant): string => {
-  const langLabel = variant.language
-    ? getNativeLanguageName(variant.language)
-    : ""
-  const modifiers: string[] = []
-  if (variant.variant_industry) {
-    modifiers.push(
-      VARIANT_INDUSTRY_LABELS[variant.variant_industry] ??
-        variant.variant_industry,
+// Per-dimension display labels. These are the single source of truth shared by
+// both buildVariantLabel (what the picker renders) and sortVariants (the order
+// it renders in) so the sort always matches the visible text.
+const getVariantLanguageLabel = (variant: SupportedVariant): string =>
+  variant.language ? getNativeLanguageName(variant.language) : ""
+
+const getVariantIndustryLabel = (variant: SupportedVariant): string =>
+  variant.variant_industry
+    ? (VARIANT_INDUSTRY_LABELS[variant.variant_industry] ??
+      variant.variant_industry)
+    : "General"
+
+const getVariantLengthLabel = (variant: SupportedVariant): string =>
+  variant.variant_length
+    ? (VARIANT_LENGTH_LABELS[variant.variant_length] ?? variant.variant_length)
+    : "Full"
+
+const buildVariantLabel = (variant: SupportedVariant): string =>
+  [
+    getVariantLanguageLabel(variant),
+    getVariantIndustryLabel(variant),
+    getVariantLengthLabel(variant),
+  ]
+    .filter(Boolean)
+    .join(" • ")
+
+/**
+ * Returns a new array of variants ordered for display in the picker:
+ *   1. the default variant always comes first
+ *   2. then the remaining variants that share the default's language
+ *   3. then the other languages, alphabetically by displayed language name
+ *   4. within a language, ties broken by displayed industry then length label
+ *
+ * Sorting uses the human-readable labels (the same strings buildVariantLabel
+ * renders) so the picker reads alphabetically as the user sees it. Empty
+ * industry/length render as "General"/"Full" and sort among the rest.
+ */
+const sortVariants = (variants: SupportedVariant[]): SupportedVariant[] => {
+  const defaultLanguage = variants.find((v) => v.default_variant)?.language
+  return [...variants].sort((a, b) => {
+    if (a.default_variant !== b.default_variant) {
+      return a.default_variant ? -1 : 1
+    }
+    // Keep the default's language grouped at the top, ahead of other
+    // languages, regardless of where it falls alphabetically.
+    const aIsDefaultLanguage = a.language === defaultLanguage
+    const bIsDefaultLanguage = b.language === defaultLanguage
+    if (aIsDefaultLanguage !== bIsDefaultLanguage) {
+      return aIsDefaultLanguage ? -1 : 1
+    }
+    return (
+      getVariantLanguageLabel(a).localeCompare(getVariantLanguageLabel(b)) ||
+      getVariantIndustryLabel(a).localeCompare(getVariantIndustryLabel(b)) ||
+      getVariantLengthLabel(a).localeCompare(getVariantLengthLabel(b))
     )
-  } else {
-    modifiers.push("General")
-  }
-  if (variant.variant_length) {
-    modifiers.push(
-      VARIANT_LENGTH_LABELS[variant.variant_length] ?? variant.variant_length,
-    )
-  } else {
-    modifiers.push("Full")
-  }
-  return [langLabel, ...modifiers].filter(Boolean).join(" • ")
+  })
 }
 
 /**
@@ -1006,6 +1041,7 @@ export {
   getCollectionFirstCoursesInDisplayOrder,
   buildVariantKey,
   buildVariantLabel,
+  sortVariants,
   selectVariantRunForCourse,
 }
 
