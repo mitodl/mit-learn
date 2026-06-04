@@ -295,12 +295,14 @@ const NewsEventsSection: React.FC = () => {
               </SeeAllButton>
             </HeadingContainer>
           </MobileContainer>
-          <MobileContainer>
-            <Typography component="h3" variant="h4">
-              Events
-            </Typography>
-            <MobileEvents>{EventCards}</MobileEvents>
-          </MobileContainer>
+          {events.results.length > 0 && (
+            <MobileContainer>
+              <Typography component="h3" variant="h4">
+                Events
+              </Typography>
+              <MobileEvents>{EventCards}</MobileEvents>
+            </MobileContainer>
+          )}
         </MobileContent>
       </BelowMdOnly>
       <AboveMdOnly>
