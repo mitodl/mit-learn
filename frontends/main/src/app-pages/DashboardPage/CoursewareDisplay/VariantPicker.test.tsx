@@ -121,6 +121,63 @@ describe("VariantPicker", () => {
   })
 })
 
+describe("customizedVariantLabel", () => {
+  test("non-default variant cards use 'Customized <name>' as the title with the language/industry/length detail as subtext", () => {
+    renderWithProviders(
+      <VariantPicker
+        variantOptions={[enDefault, esVariant]}
+        selectedVariant={esVariant}
+        setSelectedVariant={jest.fn()}
+        defaultVariantLabel="Universal AI Program"
+        customizedVariantLabel="Customized Universal AI"
+      />,
+    )
+
+    const esRadio = screen.getByRole("radio", {
+      name: /Customized Universal AI/,
+    })
+    // the language/industry/length detail moves to the card subtext
+    expect(esRadio).toHaveAccessibleName(/español.*General.*Full/)
+  })
+
+  test("the Viewing indicator shows 'Customized <name> (detail)' for a selected non-default variant", () => {
+    renderWithProviders(
+      <VariantPicker
+        variantOptions={[enDefault, esVariant]}
+        selectedVariant={esVariant}
+        setSelectedVariant={jest.fn()}
+        defaultVariantLabel="Universal AI Program"
+        customizedVariantLabel="Customized Universal AI"
+      />,
+    )
+
+    const indicator = screen.getByText("Viewing:").closest("div")!
+    expect(
+      within(indicator).getByText(
+        /Customized Universal AI \(español.*General.*Full\)/,
+      ),
+    ).toBeInTheDocument()
+  })
+
+  test("does not apply customizedVariantLabel to the default variant card", () => {
+    renderWithProviders(
+      <VariantPicker
+        variantOptions={[enDefault, esVariant]}
+        selectedVariant={enDefault}
+        setSelectedVariant={jest.fn()}
+        defaultVariantLabel="Universal AI Program"
+        customizedVariantLabel="Customized Universal AI"
+      />,
+    )
+
+    const defaultRadio = screen.getByRole("radio", {
+      name: /Universal AI Program/,
+    })
+    expect(defaultRadio).toHaveAccessibleName(/Certificate Eligible/)
+    expect(defaultRadio).not.toHaveAccessibleName(/Customized/)
+  })
+})
+
 describe("VariantPicker rendering", () => {
   test("renders the default title 'Available Versions'", () => {
     renderWithProviders(

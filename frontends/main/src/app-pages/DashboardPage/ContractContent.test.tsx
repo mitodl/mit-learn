@@ -1704,9 +1704,11 @@ describe("ContractContent", () => {
       expect(screen.queryByText(programDescription)).not.toBeInTheDocument()
     })
 
-    // Switch back to default — description reappears
+    // Switch back to default — description reappears. The default card is
+    // identified by its "Certificate Eligible" badge (its title is the
+    // contract-specific defaultVariantLabel, not the computed variant label).
     await user.click(
-      screen.getByRole("radio", { name: /English.*General.*Full/ }),
+      screen.getByRole("radio", { name: /Certificate Eligible/ }),
     )
 
     await screen.findByText(programDescription)
@@ -1814,9 +1816,11 @@ describe("ContractContent", () => {
       expect(screen.queryByText(collectionDescription)).not.toBeInTheDocument()
     })
 
-    // Switch back to default — description reappears
+    // Switch back to default — description reappears. The default card is
+    // identified by its "Certificate Eligible" badge (its title is the
+    // contract-specific defaultVariantLabel, not the computed variant label).
     await user.click(
-      screen.getByRole("radio", { name: /English.*General.*Full/ }),
+      screen.getByRole("radio", { name: /Certificate Eligible/ }),
     )
 
     await screen.findByText(collectionDescription)

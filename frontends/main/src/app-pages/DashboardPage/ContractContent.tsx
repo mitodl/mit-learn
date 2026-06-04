@@ -465,6 +465,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
             selectedVariant={selectedVariant}
             setSelectedVariant={setSelectedVariant}
             defaultVariantLabel={`${contract.name} Program`}
+            customizedVariantLabel={`Customized ${contract.name}`}
             description={`${org.name} provides multiple ways to learn this material. Choose the version that best fits your goals.`}
           />
         )}
