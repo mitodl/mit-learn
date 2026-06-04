@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.70.10
+---------------
+
+- feat(ContractAdminPage): add AssignSeatsSection and row action menu (phase 2 shell) (#3402)
+- hide program descriptions when variant is selected (#3417)
+- set default variant label (#3415)
+- add s-maxage=0, fastly ignores no-store (#3422)
+
 Version 0.70.9 (Released June 04, 2026)
 --------------
 
