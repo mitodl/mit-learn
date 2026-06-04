@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.70.9
+Version 0.70.9 (Released June 04, 2026)
 --------------
 
 - adding fix for topic page search (#3416)
