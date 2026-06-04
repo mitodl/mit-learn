@@ -4,6 +4,7 @@
 
 export { default as styled } from "@emotion/styled"
 export { css, Global } from "@emotion/react"
+export { alpha } from "@mui/material/styles"
 
 /**
  * Re-exports from MUI.
@@ -83,6 +84,11 @@ export type { TabPanelProps } from "@mui/lab/TabPanel"
 
 export { default as Toolbar } from "@mui/material/Toolbar"
 export type { ToolbarProps } from "@mui/material/Toolbar"
+
+export { default as Menu } from "@mui/material/Menu"
+export type { MenuProps } from "@mui/material/Menu"
+export { default as Tooltip } from "@mui/material/Tooltip"
+export type { TooltipProps } from "@mui/material/Tooltip"
 
 export { default as Avatar } from "@mui/material/Avatar"
 

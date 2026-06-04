@@ -1,7 +1,7 @@
 import React from "react"
 import { renderWithProviders, screen } from "@/test-utils"
 import { setMockResponse } from "api/test-utils"
-import { factories } from "api/mitxonline-test-utils"
+import { factories, urls } from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
@@ -16,10 +16,8 @@ jest.mock("@/common/useFeatureFlagsLoaded")
 const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL
-const managerOrgsUrl = `${API_BASE_URL}/api/v0/b2b/manager/organizations/`
-const managerContractDetailUrl = (orgId: number, contractId: number) =>
-  `${API_BASE_URL}/api/v0/b2b/manager/organizations/${orgId}/contracts/${contractId}/`
+const managerOrgsUrl = urls.organization.managerOrganizationsList()
+const managerContractDetailUrl = urls.contracts.managerContractDetail
 
 const makeOrgWithContract = () => {
   const contract = factories.contracts.contract()
@@ -85,7 +83,7 @@ describe("ContractAdminPage", () => {
     await screen.findByRole("heading", { name: "Something went wrong" })
   })
 
-  test("shows 'Organization not found' when user is not a manager for the requested org", async () => {
+  test("shows 'Access denied' when user is not a manager for the requested org", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
@@ -96,7 +94,7 @@ describe("ContractAdminPage", () => {
       <ContractAdminPage orgSlug="not-my-org" contractSlug="some-contract" />,
     )
 
-    await screen.findByRole("heading", { name: "Organization not found" })
+    await screen.findByRole("heading", { name: "Access denied" })
   })
 
   test("shows 'Contract not found' when org is found but contract slug does not match", async () => {
@@ -129,7 +127,7 @@ describe("ContractAdminPage", () => {
       total_codes: 50,
     })
     setMockResponse.get(
-      `${API_BASE_URL}/api/v0/b2b/manager/organizations/${org.id}/contracts/${contract.id}/codes/`,
+      urls.contracts.managerContractCodes(org.id, contract.id),
       [],
     )
 
@@ -154,7 +152,7 @@ describe("ContractAdminPage", () => {
       total_codes: 75,
     })
     setMockResponse.get(
-      `${API_BASE_URL}/api/v0/b2b/manager/organizations/${org.id}/contracts/${contract.id}/codes/`,
+      urls.contracts.managerContractCodes(org.id, contract.id),
       [],
     )
 

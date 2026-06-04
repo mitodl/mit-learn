@@ -77,6 +77,8 @@ const pages = {
 const organization = {
   organizationList: (organizationSlug: string) =>
     `${getApiBaseUrl()}/api/v0/b2b/organizations/${organizationSlug}/`,
+  managerOrganizationsList: () =>
+    `${getApiBaseUrl()}/api/v0/b2b/manager/organizations/`,
 }
 
 const b2bAttach = {
@@ -86,6 +88,10 @@ const b2bAttach = {
 
 const contracts = {
   contractsList: () => `${getApiBaseUrl()}/api/v0/b2b/contracts/`,
+  managerContractDetail: (orgId: number, contractId: number) =>
+    `${getApiBaseUrl()}/api/v0/b2b/manager/organizations/${orgId}/contracts/${contractId}/`,
+  managerContractCodes: (orgId: number, contractId: number) =>
+    `${getApiBaseUrl()}/api/v0/b2b/manager/organizations/${orgId}/contracts/${contractId}/codes/`,
 }
 
 const certificates = {

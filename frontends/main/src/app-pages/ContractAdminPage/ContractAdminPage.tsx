@@ -4,8 +4,8 @@ import React, { useState } from "react"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
 import { useFeatureFlagEnabled } from "posthog-js/react"
-import { RiMoreLine } from "@remixicon/react"
 import {
+  alpha,
   Chip,
   Container,
   Pagination,
@@ -13,6 +13,7 @@ import {
   Skeleton,
   Stack,
   TabContext,
+  Tooltip,
   Typography,
   styled,
 } from "ol-components"
@@ -22,8 +23,11 @@ import {
   TabButtonList,
   VisuallyHidden,
 } from "@mitodl/smoot-design"
+import { AssignSeatsSection } from "./AssignSeatsSection"
+import { RowActionMenu } from "./RowActionMenu"
 import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
 import type { ContractCode } from "api/mitxonline-hooks/organizations"
+import type { AxiosError } from "axios"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -167,8 +171,8 @@ const ControlsLeft = styled.div(({ theme }) => ({
 const TableCard = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
   border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "4px",
-  padding: "32px",
+  borderRadius: "8px",
+  padding: "24px",
   [theme.breakpoints.down("md")]: {
     padding: "16px",
   },
@@ -179,7 +183,7 @@ const TableHeaderRow = styled.div(({ theme }) => ({
   gap: "16px",
   alignItems: "center",
   paddingBottom: "16px",
-  borderBottom: `2px solid ${theme.custom.colors.silverGrayDark}`,
+  borderBottom: `1px solid ${theme.custom.colors.silverGrayDark}`,
   [theme.breakpoints.down("md")]: {
     display: "none",
   },
@@ -252,18 +256,18 @@ const StatusBadge = styled(Chip, {
 })<{ $status: "redeemed" | "pending" }>(({ $status, theme }) => ({
   height: "20px",
   borderRadius: "4px",
-  fontSize: "12px",
+  ...theme.typography.body3,
   fontWeight: theme.typography.fontWeightBold as number,
-  lineHeight: "16px",
   "& .MuiChip-label": {
     padding: "0 8px",
   },
+  // alpha() matches Figma spec which uses opacity on base colors
   ...($status === "redeemed" && {
-    backgroundColor: `${theme.custom.colors.green}33`,
+    backgroundColor: alpha(theme.custom.colors.green, 0.2),
     color: theme.custom.colors.darkGreen,
   }),
   ...($status === "pending" && {
-    backgroundColor: `${theme.custom.colors.blue}33`,
+    backgroundColor: alpha(theme.custom.colors.blue, 0.2),
     color: theme.custom.colors.darkBlue,
   }),
 }))
@@ -277,25 +281,6 @@ const ActionCell = styled.div(({ theme }) => ({
     position: "absolute",
     top: "16px",
     right: 0,
-  },
-}))
-
-const IconButton = styled.button(({ theme }) => ({
-  background: "none",
-  border: "none",
-  padding: "4px",
-  cursor: "pointer",
-  borderRadius: "4px",
-  color: theme.custom.colors.silverGrayDark,
-  display: "flex",
-  alignItems: "center",
-  "&:hover": {
-    backgroundColor: theme.custom.colors.lightGray2,
-    color: theme.custom.colors.darkGray2,
-  },
-  "&:focus-visible": {
-    outline: `2px solid ${theme.custom.colors.darkGray2}`,
-    outlineOffset: "2px",
   },
 }))
 
@@ -362,6 +347,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     data: managerOrgs,
     isLoading: isLoadingOrgs,
     isError: isOrgsError,
+    error: orgsError,
   } = useQuery(managerOrganizationQueries.managerOrganizationsList())
 
   const org = managerOrgs?.find(matchOrganizationBySlug(orgSlug))
@@ -379,6 +365,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     data: codes,
     isLoading: isLoadingCodes,
     isError: isCodesError,
+    error: codesError,
   } = useQuery({
     ...managerOrganizationQueries.managerContractCodes({
       id: contract?.id ?? 0,
@@ -395,12 +382,24 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     )
   }
 
-  if (isOrgsError || isCodesError) {
+  if (isOrgsError) {
+    const status = (orgsError as AxiosError)?.response?.status
+    if (status === 403 || status === 401) {
+      return <ErrorContent title="Access denied" timSays="403" />
+    }
+    return <ErrorContent title="Something went wrong" timSays="Oops!" />
+  }
+
+  if (isCodesError) {
+    const status = (codesError as AxiosError)?.response?.status
+    if (status === 403 || status === 401 || status === 404) {
+      return <ErrorContent title="Access denied" timSays="403" />
+    }
     return <ErrorContent title="Something went wrong" timSays="Oops!" />
   }
 
   if (!org) {
-    return <ErrorContent title="Organization not found" timSays="404" />
+    return <ErrorContent title="Access denied" timSays="403" />
   }
 
   if (!contract) {
@@ -410,16 +409,20 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const totalPurchased = contractDetail?.total_codes
   const totalRedeemed = contractDetail?.total_enrollments
 
-  const filteredCodes = (codes ?? []).filter((code) => {
+  const tabFilteredCodes = (codes ?? []).filter((code) => {
     const redeemed = isRedeemed(code)
-    const matchesFilter =
+    return (
       statusFilter === "all" ||
       (statusFilter === "redeemed" && redeemed) ||
       (statusFilter === "pending" && !redeemed)
+    )
+  })
+
+  const filteredCodes = tabFilteredCodes.filter((code) => {
     const email = code.redeemed_by ?? ""
-    const matchesSearch =
+    return (
       !searchQuery || email.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesFilter && matchesSearch
+    )
   })
 
   const totalPages = Math.ceil(filteredCodes.length / PAGE_SIZE)
@@ -500,6 +503,8 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
           </StatsSide>
         </HeaderSection>
 
+        <AssignSeatsSection />
+
         {/* Seat Assignments */}
         <SeatAssignmentsSection>
           <SectionTitle component="h2">Seat Assignments</SectionTitle>
@@ -518,23 +523,27 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                 size="medium"
                 onChange={handleSearchChange}
                 onClear={() => {
-                  const count = (codes ?? []).filter((code) => {
-                    const redeemed = isRedeemed(code)
-                    return (
-                      statusFilter === "all" ||
-                      (statusFilter === "redeemed" && redeemed) ||
-                      (statusFilter === "pending" && !redeemed)
-                    )
-                  }).length
                   setSearchQuery("")
                   setPage(1)
-                  announceSearchCount(count)
+                  announceSearchCount(tabFilteredCodes.length)
                 }}
                 onSubmit={() => announceSearchCount(filteredCodes.length)}
               />
             </ControlsLeft>
             <ExportButtonWrapper>
-              <Button variant="bordered"> Export CSV (coming soon)</Button>
+              <Tooltip title="Coming soon">
+                <Stack
+                  component="span"
+                  sx={{
+                    width: { xs: "100%", md: "auto" },
+                    "& > button": { width: { xs: "100%", md: "auto" } },
+                  }}
+                >
+                  <Button variant="bordered" disabled>
+                    Export CSV
+                  </Button>
+                </Stack>
+              </Tooltip>
             </ExportButtonWrapper>
           </SeatAssignmentsControls>
           <VisuallyHidden aria-live="polite" aria-atomic="true">
@@ -647,12 +656,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                           {STUB}
                         </TableCell>
                         <ActionCell role="cell">
-                          <IconButton
-                            type="button"
-                            aria-label={`More actions for ${code.redeemed_by ?? "unassigned seat"}`}
-                          >
-                            <RiMoreLine size={16} />
-                          </IconButton>
+                          <RowActionMenu code={code} />
                         </ActionCell>
                       </TableRow>
                     )

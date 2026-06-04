@@ -1,6 +1,7 @@
 import { faker } from "@faker-js/faker/locale/en"
 import type { ContractPage } from "@mitodl/mitxonline-api-axios/v2"
 import { makePaginatedFactory } from "ol-test-utilities"
+import type { ContractCode } from "../../hooks/organizations"
 
 const contract = (overrides: Partial<ContractPage> = {}): ContractPage => ({
   id: faker.number.int(),
@@ -22,4 +23,13 @@ const contract = (overrides: Partial<ContractPage> = {}): ContractPage => ({
 
 const contracts = makePaginatedFactory(contract)
 
-export { contract, contracts }
+const contractCode = (overrides: Partial<ContractCode> = {}): ContractCode => ({
+  id: faker.number.int(),
+  code: faker.string.alphanumeric(12),
+  is_redeemed: false,
+  redeemed_by: null,
+  redeemed_on: null,
+  ...overrides,
+})
+
+export { contract, contracts, contractCode }
