@@ -20,7 +20,6 @@ import Link from "next/link"
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
 import type { WebsiteContent } from "api/v1"
 import { LocalDate } from "ol-utilities"
-import { linkifyText } from "@/common/utils"
 import { useWebsiteContentList } from "api/hooks/website_content"
 import { extractArticleContent } from "@/common/websiteContentUtils"
 import { articleView } from "@/common/urls"
@@ -326,6 +325,7 @@ const BannerTitle = styled(Typography)`
   }
   ${theme.breakpoints.down("sm")} {
     ${{ ...theme.typography.h3 }}
+    margin-top: 0px;
   }
 ` as typeof Typography
 
@@ -340,12 +340,7 @@ const BannerDescription = styled(Typography)`
 `
 
 const BreadcrumbBar = styled.div(({ theme }) => ({
-  position: "relative",
-  left: "50%",
-  right: "50%",
-  marginLeft: "-50vw",
-  marginRight: "-50vw",
-  width: "100vw",
+  width: "100%",
   padding: "18px 0 2px 0",
   backgroundColor: theme.custom.colors.white,
   borderBottom: `1px solid ${theme.custom.colors.red}`,
@@ -389,7 +384,7 @@ const RegularStory: React.FC<{ item: WebsiteContent }> = ({ item }) => {
           {articleContent.paragraph && (
             <StorySummary
               dangerouslySetInnerHTML={{
-                __html: linkifyText(articleContent.paragraph),
+                __html: articleContent.paragraph,
               }}
             />
           )}
@@ -445,16 +440,16 @@ const ArticleListingPage: React.FC = () => {
   return (
     <>
       <BannerSection>
+        <BreadcrumbBar>
+          <BreadcrumContainer className="breadcrum">
+            <Breadcrumbs
+              variant="light"
+              ancestors={[{ href: "/", label: "Home" }]}
+              current="Articles"
+            />
+          </BreadcrumContainer>
+        </BreadcrumbBar>
         <Container>
-          <BreadcrumbBar>
-            <BreadcrumContainer className="breadcrum">
-              <Breadcrumbs
-                variant="light"
-                ancestors={[{ href: "/", label: "Home" }]}
-                current="Articles"
-              />
-            </BreadcrumContainer>
-          </BreadcrumbBar>
           <BannerGridContainer>
             <BannerTitle component="h1" variant="h1">
               Articles
