@@ -9,11 +9,10 @@ import { FormData } from "https://jslib.k6.io/formdata/0.0.2/index.js"
 
 import { URL, URLSearchParams } from "https://jslib.k6.io/url/1.0.0/index.js"
 
-import http from "k6/http"
+import * as http from "k6/http"
 import type { Params, Response } from "k6/http"
 
 import type {
-  ArticleImageUploadRequest,
   ArticlesListParams,
   ContentFile,
   ContentFileSearchResponse,
@@ -34,7 +33,8 @@ import type {
   HubspotFormsDetailRetrieveParams,
   HubspotFormsListParams,
   LearningPathRelationship,
-  LearningPathRelationshipRequest,
+  LearningPathRelationshipCreate,
+  LearningPathRelationshipCreateRequest,
   LearningPathResource,
   LearningPathResourceRequest,
   LearningResource,
@@ -65,6 +65,7 @@ import type {
   MediaUpload201,
   MicroLearningPathRelationship,
   MicroUserListRelationship,
+  OVSVideoWebhookRequestRequest,
   OfferorsListParams,
   PaginatedContentFileList,
   PaginatedCourseResourceList,
@@ -83,17 +84,17 @@ import type {
   PaginatedPodcastEpisodeResourceList,
   PaginatedPodcastResourceList,
   PaginatedProgramResourceList,
-  PaginatedRichTextArticleList,
   PaginatedUserListList,
   PaginatedUserListRelationshipList,
   PaginatedVideoPlaylistResourceList,
   PaginatedVideoResourceList,
-  PatchedLearningPathRelationshipRequest,
+  PaginatedWebsiteContentList,
+  PatchedLearningPathRelationshipCreateRequest,
   PatchedLearningPathResourceRequest,
   PatchedLearningResourceRelationshipRequest,
-  PatchedRichTextArticleRequest,
   PatchedUserListRelationshipRequest,
   PatchedUserListRequest,
+  PatchedWebsiteContentRequest,
   PercolateQuery,
   PercolateQuerySubscriptionRequestRequest,
   PlatformsListParams,
@@ -105,8 +106,6 @@ import type {
   ProgramLetter,
   ProgramResource,
   ProgramsListParams,
-  RichTextArticle,
-  RichTextArticleRequest,
   SchoolsListParams,
   TopicsListParams,
   UserList,
@@ -119,11 +118,13 @@ import type {
   VideoPlaylistsItemsListParams,
   VideoPlaylistsListParams,
   VideoResource,
-  VideoShortWebhookRequestRequest,
   VideosListParams,
   WebhookResponse,
   WebhooksContentFilesCreateParams,
-  WebhooksVideoShortsCreateParams,
+  WebsiteContent,
+  WebsiteContentImageUploadRequest,
+  WebsiteContentListParams,
+  WebsiteContentRequest,
 } from "./api.schemas"
 
 /**
@@ -143,7 +144,7 @@ export class MITLearnAPIClient {
   }
 
   /**
-   * Get a paginated list of articles
+   * Get a paginated list of website content items
    * @summary List
    */
   articlesList(
@@ -151,11 +152,12 @@ export class MITLearnAPIClient {
     requestParameters?: Params,
   ): {
     response: Response
-    data: PaginatedRichTextArticleList
+    data: PaginatedWebsiteContentList
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/articles/` +
+      this.cleanBaseUrl +
+        `/api/v1/articles/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -180,18 +182,18 @@ export class MITLearnAPIClient {
   }
 
   /**
-   * Create a new article
+   * Create a new content item
    * @summary Create
    */
   articlesCreate(
-    richTextArticleRequest: RichTextArticleRequest,
+    websiteContentRequest: WebsiteContentRequest,
     requestParameters?: Params,
   ): {
     response: Response
-    data: RichTextArticle
+    data: WebsiteContent
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/articles/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/articles/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -199,7 +201,7 @@ export class MITLearnAPIClient {
     const response = http.request(
       "POST",
       k6url.toString(),
-      JSON.stringify(richTextArticleRequest),
+      JSON.stringify(websiteContentRequest),
       {
         ...mergedRequestParameters,
         headers: {
@@ -223,7 +225,7 @@ export class MITLearnAPIClient {
   }
 
   /**
-   * Retrieve a single article
+   * Retrieve a single content item
    * @summary Retrieve
    */
   articlesRetrieve(
@@ -231,10 +233,10 @@ export class MITLearnAPIClient {
     requestParameters?: Params,
   ): {
     response: Response
-    data: RichTextArticle
+    data: WebsiteContent
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/articles/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/articles/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -260,19 +262,19 @@ export class MITLearnAPIClient {
   }
 
   /**
-   * Update an article
+   * Update a content item
    * @summary Update
    */
   articlesPartialUpdate(
     id: number,
-    patchedRichTextArticleRequest: PatchedRichTextArticleRequest,
+    patchedWebsiteContentRequest: PatchedWebsiteContentRequest,
     requestParameters?: Params,
   ): {
     response: Response
-    data: RichTextArticle
+    data: WebsiteContent
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/articles/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/articles/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -280,7 +282,7 @@ export class MITLearnAPIClient {
     const response = http.request(
       "PATCH",
       k6url.toString(),
-      JSON.stringify(patchedRichTextArticleRequest),
+      JSON.stringify(patchedWebsiteContentRequest),
       {
         ...mergedRequestParameters,
         headers: {
@@ -304,7 +306,7 @@ export class MITLearnAPIClient {
   }
 
   /**
-   * Delete an article
+   * Delete a content item
    * @summary Destroy
    */
   articlesDestroy(
@@ -315,7 +317,7 @@ export class MITLearnAPIClient {
     data: void
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/articles/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/articles/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -341,19 +343,19 @@ export class MITLearnAPIClient {
   }
 
   /**
-   * If the path parameter is numeric → ID, else → slug.
-   * @summary Retrieve article by ID or slug
+   * Retrieve a content item by numeric ID or slug
+   * @summary Retrieve by ID or slug
    */
   articlesDetailRetrieve(
     identifier: string,
     requestParameters?: Params,
   ): {
     response: Response
-    data: RichTextArticle
+    data: WebsiteContent
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/articles/detail/${identifier}/`,
+      this.cleanBaseUrl + `/api/v1/articles/detail/${identifier}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -392,7 +394,8 @@ export class MITLearnAPIClient {
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/content_file_search/` +
+      this.cleanBaseUrl +
+        `/api/v1/content_file_search/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -429,7 +432,8 @@ export class MITLearnAPIClient {
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/contentfiles/` +
+      this.cleanBaseUrl +
+        `/api/v1/contentfiles/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -465,7 +469,7 @@ export class MITLearnAPIClient {
     data: ContentFile
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/contentfiles/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/contentfiles/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -503,7 +507,8 @@ export class MITLearnAPIClient {
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/course_features/` +
+      this.cleanBaseUrl +
+        `/api/v1/course_features/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -539,7 +544,7 @@ export class MITLearnAPIClient {
     data: LearningResourceContentTag
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/course_features/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/course_features/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -577,7 +582,8 @@ export class MITLearnAPIClient {
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/courses/` +
+      this.cleanBaseUrl +
+        `/api/v1/courses/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -613,7 +619,7 @@ export class MITLearnAPIClient {
     data: CourseResource
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/courses/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/courses/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -652,9 +658,8 @@ export class MITLearnAPIClient {
     operationId: string
   } {
     const k6url = new URL(
-      `${
-        this.cleanBaseUrl
-      }/api/v1/courses/${learningResourceId}/contentfiles/` +
+      this.cleanBaseUrl +
+        `/api/v1/courses/${learningResourceId}/contentfiles/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -692,9 +697,8 @@ export class MITLearnAPIClient {
     operationId: string
   } {
     const k6url = new URL(
-      `${
-        this.cleanBaseUrl
-      }/api/v1/courses/${learningResourceId}/contentfiles/${id}/`,
+      this.cleanBaseUrl +
+        `/api/v1/courses/${learningResourceId}/contentfiles/${id}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -733,7 +737,8 @@ export class MITLearnAPIClient {
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/departments/` +
+      this.cleanBaseUrl +
+        `/api/v1/departments/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -770,7 +775,7 @@ export class MITLearnAPIClient {
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/departments/${departmentId}/`,
+      this.cleanBaseUrl + `/api/v1/departments/${departmentId}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -809,7 +814,8 @@ export class MITLearnAPIClient {
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/featured/` +
+      this.cleanBaseUrl +
+        `/api/v1/featured/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -845,7 +851,7 @@ export class MITLearnAPIClient {
     data: LearningResource
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/featured/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/featured/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -882,7 +888,8 @@ export class MITLearnAPIClient {
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/hubspot/forms/` +
+      this.cleanBaseUrl +
+        `/api/v1/hubspot/forms/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -919,7 +926,8 @@ export class MITLearnAPIClient {
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/hubspot/forms/${formId}/` +
+      this.cleanBaseUrl +
+        `/api/v1/hubspot/forms/${formId}/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -956,7 +964,7 @@ export class MITLearnAPIClient {
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/hubspot/forms/${formId}/submit/`,
+      this.cleanBaseUrl + `/api/v1/hubspot/forms/${formId}/submit/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -1001,7 +1009,8 @@ export class MITLearnAPIClient {
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/learning_resource_display_info/` +
+      this.cleanBaseUrl +
+        `/api/v1/learning_resource_display_info/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -1038,7 +1047,7 @@ export class MITLearnAPIClient {
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/learning_resource_display_info/${id}/`,
+      this.cleanBaseUrl + `/api/v1/learning_resource_display_info/${id}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -1077,7 +1086,8 @@ export class MITLearnAPIClient {
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/learning_resources/` +
+      this.cleanBaseUrl +
+        `/api/v1/learning_resources/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -1114,7 +1124,7 @@ export class MITLearnAPIClient {
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/learning_resources/${id}/`,
+      this.cleanBaseUrl + `/api/v1/learning_resources/${id}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -1141,7 +1151,7 @@ export class MITLearnAPIClient {
   }
 
   /**
- * Fetch similar learning resources
+ * Fetch similar learning resources, optionally narrowed by filters.
 
 Args:
 id (integer): The id of the learning resource
@@ -1160,7 +1170,8 @@ QuerySet of similar LearningResource for the resource matching the id parameter
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/learning_resources/${id}/similar/` +
+      this.cleanBaseUrl +
+        `/api/v1/learning_resources/${id}/similar/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -1185,7 +1196,7 @@ QuerySet of similar LearningResource for the resource matching the id parameter
   }
 
   /**
- * Fetch similar learning resources
+ * Fetch similar learning resources, optionally narrowed by Qdrant filters.
 
 Args:
 id (integer): The id of the learning resource
@@ -1204,7 +1215,8 @@ QuerySet of similar LearningResource for the resource matching the id parameter
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/learning_resources/${id}/vector_similar/` +
+      this.cleanBaseUrl +
+        `/api/v1/learning_resources/${id}/vector_similar/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -1242,9 +1254,8 @@ QuerySet of similar LearningResource for the resource matching the id parameter
     operationId: string
   } {
     const k6url = new URL(
-      `${
-        this.cleanBaseUrl
-      }/api/v1/learning_resources/${learningResourceId}/contentfiles/` +
+      this.cleanBaseUrl +
+        `/api/v1/learning_resources/${learningResourceId}/contentfiles/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -1282,9 +1293,8 @@ QuerySet of similar LearningResource for the resource matching the id parameter
     operationId: string
   } {
     const k6url = new URL(
-      `${
-        this.cleanBaseUrl
-      }/api/v1/learning_resources/${learningResourceId}/contentfiles/${id}/`,
+      this.cleanBaseUrl +
+        `/api/v1/learning_resources/${learningResourceId}/contentfiles/${id}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -1324,9 +1334,8 @@ QuerySet of similar LearningResource for the resource matching the id parameter
     operationId: string
   } {
     const k6url = new URL(
-      `${
-        this.cleanBaseUrl
-      }/api/v1/learning_resources/${learningResourceId}/items/` +
+      this.cleanBaseUrl +
+        `/api/v1/learning_resources/${learningResourceId}/items/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -1364,9 +1373,8 @@ QuerySet of similar LearningResource for the resource matching the id parameter
     operationId: string
   } {
     const k6url = new URL(
-      `${
-        this.cleanBaseUrl
-      }/api/v1/learning_resources/${learningResourceId}/items/${id}/`,
+      this.cleanBaseUrl +
+        `/api/v1/learning_resources/${learningResourceId}/items/${id}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -1407,7 +1415,8 @@ QuerySet of similar LearningResource for the resource matching the id parameter
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/learning_resources/${id}/learning_paths/` +
+      this.cleanBaseUrl +
+        `/api/v1/learning_resources/${id}/learning_paths/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -1455,7 +1464,8 @@ QuerySet of similar LearningResource for the resource matching the id parameter
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/learning_resources/${id}/userlists/` +
+      this.cleanBaseUrl +
+        `/api/v1/learning_resources/${id}/userlists/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -1501,7 +1511,8 @@ QuerySet of similar LearningResource for the resource matching the id parameter
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/learning_resources/summary/` +
+      this.cleanBaseUrl +
+        `/api/v1/learning_resources/summary/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -1538,7 +1549,8 @@ QuerySet of similar LearningResource for the resource matching the id parameter
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/learning_resources_search/` +
+      this.cleanBaseUrl +
+        `/api/v1/learning_resources_search/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -1575,7 +1587,8 @@ QuerySet of similar LearningResource for the resource matching the id parameter
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/learning_resources_user_subscription/` +
+      this.cleanBaseUrl +
+        `/api/v1/learning_resources_user_subscription/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -1618,9 +1631,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${
-        this.cleanBaseUrl
-      }/api/v1/learning_resources_user_subscription/${id}/unsubscribe/`,
+      this.cleanBaseUrl +
+        `/api/v1/learning_resources_user_subscription/${id}/unsubscribe/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -1659,9 +1671,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${
-        this.cleanBaseUrl
-      }/api/v1/learning_resources_user_subscription/check/` +
+      this.cleanBaseUrl +
+        `/api/v1/learning_resources_user_subscription/check/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -1699,9 +1710,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${
-        this.cleanBaseUrl
-      }/api/v1/learning_resources_user_subscription/subscribe/` +
+      this.cleanBaseUrl +
+        `/api/v1/learning_resources_user_subscription/subscribe/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -1747,7 +1757,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/learningpaths/` +
+      this.cleanBaseUrl +
+        `/api/v1/learningpaths/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -1783,7 +1794,7 @@ PercolateQuerySerializer: The percolate query
     data: LearningPathResource
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/learningpaths/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/learningpaths/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -1826,7 +1837,7 @@ PercolateQuerySerializer: The percolate query
     data: LearningPathResource
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/learningpaths/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/learningpaths/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -1864,7 +1875,7 @@ PercolateQuerySerializer: The percolate query
     data: LearningPathResource
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/learningpaths/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/learningpaths/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -1907,7 +1918,7 @@ PercolateQuerySerializer: The percolate query
     data: void
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/learningpaths/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/learningpaths/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -1945,7 +1956,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/learningpaths/${learningResourceId}/items/` +
+      this.cleanBaseUrl +
+        `/api/v1/learningpaths/${learningResourceId}/items/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -1975,7 +1987,7 @@ PercolateQuerySerializer: The percolate query
    */
   learningpathsItemsCreate(
     learningResourceId: number,
-    learningPathRelationshipRequest: LearningPathRelationshipRequest,
+    learningPathRelationshipCreateRequest: LearningPathRelationshipCreateRequest,
     requestParameters?: Params,
   ): {
     response: Response
@@ -1983,7 +1995,7 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/learningpaths/${learningResourceId}/items/`,
+      this.cleanBaseUrl + `/api/v1/learningpaths/${learningResourceId}/items/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -1992,7 +2004,7 @@ PercolateQuerySerializer: The percolate query
     const response = http.request(
       "POST",
       k6url.toString(),
-      JSON.stringify(learningPathRelationshipRequest),
+      JSON.stringify(learningPathRelationshipCreateRequest),
       {
         ...mergedRequestParameters,
         headers: {
@@ -2029,9 +2041,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${
-        this.cleanBaseUrl
-      }/api/v1/learningpaths/${learningResourceId}/items/${id}/`,
+      this.cleanBaseUrl +
+        `/api/v1/learningpaths/${learningResourceId}/items/${id}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -2064,17 +2075,16 @@ PercolateQuerySerializer: The percolate query
   learningpathsItemsPartialUpdate(
     learningResourceId: number,
     id: number,
-    patchedLearningPathRelationshipRequest: PatchedLearningPathRelationshipRequest,
+    patchedLearningPathRelationshipCreateRequest: PatchedLearningPathRelationshipCreateRequest,
     requestParameters?: Params,
   ): {
     response: Response
-    data: LearningPathRelationship
+    data: LearningPathRelationshipCreate
     operationId: string
   } {
     const k6url = new URL(
-      `${
-        this.cleanBaseUrl
-      }/api/v1/learningpaths/${learningResourceId}/items/${id}/`,
+      this.cleanBaseUrl +
+        `/api/v1/learningpaths/${learningResourceId}/items/${id}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -2083,7 +2093,7 @@ PercolateQuerySerializer: The percolate query
     const response = http.request(
       "PATCH",
       k6url.toString(),
-      JSON.stringify(patchedLearningPathRelationshipRequest),
+      JSON.stringify(patchedLearningPathRelationshipCreateRequest),
       {
         ...mergedRequestParameters,
         headers: {
@@ -2120,9 +2130,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${
-        this.cleanBaseUrl
-      }/api/v1/learningpaths/${learningResourceId}/items/${id}/`,
+      this.cleanBaseUrl +
+        `/api/v1/learningpaths/${learningResourceId}/items/${id}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -2158,7 +2167,7 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/learningpaths/membership/`,
+      this.cleanBaseUrl + `/api/v1/learningpaths/membership/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -2197,7 +2206,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/offerors/` +
+      this.cleanBaseUrl +
+        `/api/v1/offerors/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -2233,7 +2243,7 @@ PercolateQuerySerializer: The percolate query
     data: LearningResourceOfferorDetail
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/offerors/${code}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/offerors/${code}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -2271,7 +2281,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/platforms/` +
+      this.cleanBaseUrl +
+        `/api/v1/platforms/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -2307,7 +2318,7 @@ PercolateQuerySerializer: The percolate query
     data: LearningResourcePlatform
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/platforms/${code}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/platforms/${code}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -2345,7 +2356,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/podcast_episodes/` +
+      this.cleanBaseUrl +
+        `/api/v1/podcast_episodes/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -2381,7 +2393,7 @@ PercolateQuerySerializer: The percolate query
     data: PodcastEpisodeResource
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/podcast_episodes/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/podcast_episodes/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -2419,7 +2431,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/podcasts/` +
+      this.cleanBaseUrl +
+        `/api/v1/podcasts/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -2455,7 +2468,7 @@ PercolateQuerySerializer: The percolate query
     data: PodcastResource
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/podcasts/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/podcasts/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -2494,7 +2507,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/podcasts/${learningResourceId}/items/` +
+      this.cleanBaseUrl +
+        `/api/v1/podcasts/${learningResourceId}/items/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -2532,7 +2546,7 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/podcasts/${learningResourceId}/items/${id}/`,
+      this.cleanBaseUrl + `/api/v1/podcasts/${learningResourceId}/items/${id}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -2569,7 +2583,7 @@ PercolateQuerySerializer: The percolate query
     data: ProgramLetter
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/program_letters/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/program_letters/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -2607,7 +2621,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/programs/` +
+      this.cleanBaseUrl +
+        `/api/v1/programs/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -2643,7 +2658,7 @@ PercolateQuerySerializer: The percolate query
     data: ProgramResource
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/programs/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/programs/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -2681,7 +2696,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/schools/` +
+      this.cleanBaseUrl +
+        `/api/v1/schools/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -2717,7 +2733,7 @@ PercolateQuerySerializer: The percolate query
     data: LearningResourceSchool
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/schools/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/schools/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -2755,7 +2771,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/topics/` +
+      this.cleanBaseUrl +
+        `/api/v1/topics/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -2791,7 +2808,7 @@ PercolateQuerySerializer: The percolate query
     data: LearningResourceTopic
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/topics/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/topics/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -2820,7 +2837,7 @@ PercolateQuerySerializer: The percolate query
    * Upload an image (multipart/form-data) and return the storage URL.
    */
   mediaUpload(
-    articleImageUploadRequest: ArticleImageUploadRequest,
+    websiteContentImageUploadRequest: WebsiteContentImageUploadRequest,
     requestParameters?: Params,
   ): {
     response: Response
@@ -2828,9 +2845,9 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const formData = new FormData()
-    formData.append("image_file", articleImageUploadRequest.image_file)
+    formData.append(`image_file`, websiteContentImageUploadRequest.image_file)
 
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/upload-media/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/upload-media/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -2839,7 +2856,7 @@ PercolateQuerySerializer: The percolate query
       ...mergedRequestParameters,
       headers: {
         ...mergedRequestParameters?.headers,
-        "Content-Type": `multipart/form-data; boundary=${formData.boundary}`,
+        "Content-Type": "multipart/form-data; boundary=" + formData.boundary,
       },
     })
     let data
@@ -2869,7 +2886,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/userlists/` +
+      this.cleanBaseUrl +
+        `/api/v1/userlists/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -2905,7 +2923,7 @@ PercolateQuerySerializer: The percolate query
     data: UserList
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/userlists/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/userlists/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -2948,7 +2966,7 @@ PercolateQuerySerializer: The percolate query
     data: UserList
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/userlists/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/userlists/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -2986,7 +3004,7 @@ PercolateQuerySerializer: The percolate query
     data: UserList
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/userlists/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/userlists/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -3029,7 +3047,7 @@ PercolateQuerySerializer: The percolate query
     data: void
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/userlists/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/userlists/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -3068,7 +3086,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/userlists/${userlistId}/items/` +
+      this.cleanBaseUrl +
+        `/api/v1/userlists/${userlistId}/items/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -3106,7 +3125,7 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/userlists/${userlistId}/items/`,
+      this.cleanBaseUrl + `/api/v1/userlists/${userlistId}/items/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -3152,7 +3171,7 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/userlists/${userlistId}/items/${id}/`,
+      this.cleanBaseUrl + `/api/v1/userlists/${userlistId}/items/${id}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -3193,7 +3212,7 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/userlists/${userlistId}/items/${id}/`,
+      this.cleanBaseUrl + `/api/v1/userlists/${userlistId}/items/${id}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -3239,7 +3258,7 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/userlists/${userlistId}/items/${id}/`,
+      this.cleanBaseUrl + `/api/v1/userlists/${userlistId}/items/${id}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -3274,7 +3293,7 @@ PercolateQuerySerializer: The percolate query
     data: MicroUserListRelationship[]
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/userlists/membership/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/userlists/membership/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -3312,7 +3331,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/video_playlists/` +
+      this.cleanBaseUrl +
+        `/api/v1/video_playlists/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -3348,7 +3368,7 @@ PercolateQuerySerializer: The percolate query
     data: VideoPlaylistResource
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/video_playlists/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/video_playlists/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -3387,9 +3407,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${
-        this.cleanBaseUrl
-      }/api/v1/video_playlists/${learningResourceId}/items/` +
+      this.cleanBaseUrl +
+        `/api/v1/video_playlists/${learningResourceId}/items/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -3427,9 +3446,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${
-        this.cleanBaseUrl
-      }/api/v1/video_playlists/${learningResourceId}/items/${id}/`,
+      this.cleanBaseUrl +
+        `/api/v1/video_playlists/${learningResourceId}/items/${id}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -3468,7 +3486,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/videos/` +
+      this.cleanBaseUrl +
+        `/api/v1/videos/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -3504,7 +3523,7 @@ PercolateQuerySerializer: The percolate query
     data: VideoResource
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v1/videos/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/videos/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -3542,7 +3561,8 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/webhooks/content_files/` +
+      this.cleanBaseUrl +
+        `/api/v1/webhooks/content_files/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -3587,7 +3607,7 @@ PercolateQuerySerializer: The percolate query
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/webhooks/content_files/delete/`,
+      this.cleanBaseUrl + `/api/v1/webhooks/content_files/delete/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -3620,21 +3640,17 @@ PercolateQuerySerializer: The percolate query
   }
 
   /**
-   * Webhook handler for VideoShort updates
+   * Webhook handler for OVS video upserts and deletes from the dagster pipeline
    */
-  webhooksVideoShortsCreate(
-    videoShortWebhookRequestRequest: VideoShortWebhookRequestRequest,
-    params: WebhooksVideoShortsCreateParams,
+  webhooksOvsVideosCreate(
+    oVSVideoWebhookRequestRequest: OVSVideoWebhookRequestRequest,
     requestParameters?: Params,
   ): {
     response: Response
     data: WebhookResponse
     operationId: string
   } {
-    const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v1/webhooks/video_shorts/` +
-        `?${new URLSearchParams(params).toString()}`,
-    )
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/webhooks/ovs_videos/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -3642,7 +3658,7 @@ PercolateQuerySerializer: The percolate query
     const response = http.request(
       "POST",
       k6url.toString(),
-      JSON.stringify(videoShortWebhookRequestRequest),
+      JSON.stringify(oVSVideoWebhookRequestRequest),
       {
         ...mergedRequestParameters,
         headers: {
@@ -3661,7 +3677,245 @@ PercolateQuerySerializer: The percolate query
     return {
       response,
       data,
-      operationId: "webhooks_video_shorts_create",
+      operationId: "webhooks_ovs_videos_create",
+    }
+  }
+
+  /**
+   * Get a paginated list of website content items
+   * @summary List
+   */
+  websiteContentList(
+    params?: WebsiteContentListParams,
+    requestParameters?: Params,
+  ): {
+    response: Response
+    data: PaginatedWebsiteContentList
+    operationId: string
+  } {
+    const k6url = new URL(
+      this.cleanBaseUrl +
+        `/api/v1/website_content/` +
+        `?${new URLSearchParams(params).toString()}`,
+    )
+    const mergedRequestParameters = this._mergeRequestParameters(
+      requestParameters || {},
+      this.commonRequestParameters,
+    )
+    const response = http.request("GET", k6url.toString(), undefined, {
+      ...mergedRequestParameters,
+    })
+    let data
+
+    try {
+      data = response.json()
+    } catch {
+      data = response.body
+    }
+    return {
+      response,
+      data,
+      operationId: "website_content_list",
+    }
+  }
+
+  /**
+   * Create a new content item
+   * @summary Create
+   */
+  websiteContentCreate(
+    websiteContentRequest: WebsiteContentRequest,
+    requestParameters?: Params,
+  ): {
+    response: Response
+    data: WebsiteContent
+    operationId: string
+  } {
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/website_content/`)
+    const mergedRequestParameters = this._mergeRequestParameters(
+      requestParameters || {},
+      this.commonRequestParameters,
+    )
+    const response = http.request(
+      "POST",
+      k6url.toString(),
+      JSON.stringify(websiteContentRequest),
+      {
+        ...mergedRequestParameters,
+        headers: {
+          ...mergedRequestParameters?.headers,
+          "Content-Type": "application/json",
+        },
+      },
+    )
+    let data
+
+    try {
+      data = response.json()
+    } catch {
+      data = response.body
+    }
+    return {
+      response,
+      data,
+      operationId: "website_content_create",
+    }
+  }
+
+  /**
+   * Retrieve a single content item
+   * @summary Retrieve
+   */
+  websiteContentRetrieve(
+    id: number,
+    requestParameters?: Params,
+  ): {
+    response: Response
+    data: WebsiteContent
+    operationId: string
+  } {
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/website_content/${id}/`)
+    const mergedRequestParameters = this._mergeRequestParameters(
+      requestParameters || {},
+      this.commonRequestParameters,
+    )
+    const response = http.request(
+      "GET",
+      k6url.toString(),
+      undefined,
+      mergedRequestParameters,
+    )
+    let data
+
+    try {
+      data = response.json()
+    } catch {
+      data = response.body
+    }
+    return {
+      response,
+      data,
+      operationId: "website_content_retrieve",
+    }
+  }
+
+  /**
+   * Update a content item
+   * @summary Update
+   */
+  websiteContentPartialUpdate(
+    id: number,
+    patchedWebsiteContentRequest: PatchedWebsiteContentRequest,
+    requestParameters?: Params,
+  ): {
+    response: Response
+    data: WebsiteContent
+    operationId: string
+  } {
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/website_content/${id}/`)
+    const mergedRequestParameters = this._mergeRequestParameters(
+      requestParameters || {},
+      this.commonRequestParameters,
+    )
+    const response = http.request(
+      "PATCH",
+      k6url.toString(),
+      JSON.stringify(patchedWebsiteContentRequest),
+      {
+        ...mergedRequestParameters,
+        headers: {
+          ...mergedRequestParameters?.headers,
+          "Content-Type": "application/json",
+        },
+      },
+    )
+    let data
+
+    try {
+      data = response.json()
+    } catch {
+      data = response.body
+    }
+    return {
+      response,
+      data,
+      operationId: "website_content_partial_update",
+    }
+  }
+
+  /**
+   * Delete a content item
+   * @summary Destroy
+   */
+  websiteContentDestroy(
+    id: number,
+    requestParameters?: Params,
+  ): {
+    response: Response
+    data: void
+    operationId: string
+  } {
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/website_content/${id}/`)
+    const mergedRequestParameters = this._mergeRequestParameters(
+      requestParameters || {},
+      this.commonRequestParameters,
+    )
+    const response = http.request(
+      "DELETE",
+      k6url.toString(),
+      undefined,
+      mergedRequestParameters,
+    )
+    let data
+
+    try {
+      data = response.json()
+    } catch {
+      data = response.body
+    }
+    return {
+      response,
+      data,
+      operationId: "website_content_destroy",
+    }
+  }
+
+  /**
+   * Retrieve a content item by numeric ID or slug
+   * @summary Retrieve by ID or slug
+   */
+  websiteContentDetailRetrieve(
+    identifier: string,
+    requestParameters?: Params,
+  ): {
+    response: Response
+    data: WebsiteContent
+    operationId: string
+  } {
+    const k6url = new URL(
+      this.cleanBaseUrl + `/api/v1/website_content/detail/${identifier}/`,
+    )
+    const mergedRequestParameters = this._mergeRequestParameters(
+      requestParameters || {},
+      this.commonRequestParameters,
+    )
+    const response = http.request(
+      "GET",
+      k6url.toString(),
+      undefined,
+      mergedRequestParameters,
+    )
+    let data
+
+    try {
+      data = response.json()
+    } catch {
+      data = response.body
+    }
+    return {
+      response,
+      data,
+      operationId: "website_content_detail_retrieve",
     }
   }
 

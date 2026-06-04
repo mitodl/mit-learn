@@ -56,10 +56,6 @@ export const AggregationsEnum = {
   resource_category: "resource_category",
 } as const
 
-export interface ArticleImageUploadRequest {
-  image_file: Blob
-}
-
 /**
  * * `dated` - Dated
  * `anytime` - Anytime
@@ -152,7 +148,7 @@ export interface ContentFile {
   /** @nullable */
   url?: string | null
   content_feature_type: string[]
-  content_type?: ContentTypeEnum
+  content_type?: ContentFileContentTypeEnum
   /** @nullable */
   content?: string | null
   /**
@@ -201,7 +197,33 @@ export interface ContentFile {
   edx_module_id?: string | null
   summary?: string
   flashcards?: unknown
+  /**
+   * @maxLength 32
+   * @nullable
+   */
+  youtube_id?: string | null
 }
+
+/**
+ * * `page` - page
+ * `file` - file
+ * `video` - video
+ * `pdf` - pdf
+ */
+export type ContentFileContentTypeEnum =
+  (typeof ContentFileContentTypeEnum)[keyof typeof ContentFileContentTypeEnum]
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const ContentFileContentTypeEnum = {
+  /** page */
+  page: "page",
+  /** file */
+  file: "file",
+  /** video */
+  video: "video",
+  /** pdf */
+  pdf: "pdf",
+} as const
 
 export type ContentFileSearchResponseMetadataAggregationsItem = {
   key: string
@@ -249,27 +271,6 @@ export interface ContentFileWebHookRequestRequest {
   course_id?: string
   course_readable_id?: string
 }
-
-/**
- * * `page` - page
- * `file` - file
- * `video` - video
- * `pdf` - pdf
- */
-export type ContentTypeEnum =
-  (typeof ContentTypeEnum)[keyof typeof ContentTypeEnum]
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
-export const ContentTypeEnum = {
-  /** page */
-  page: "page",
-  /** file */
-  file: "file",
-  /** video */
-  video: "video",
-  /** pdf */
-  pdf: "pdf",
-} as const
 
 /**
  * Serializer for the Course model
@@ -1480,7 +1481,7 @@ export interface HubspotFormSubmitResponse {
  */
 export interface LearningPath {
   readonly id: number
-  /** Return the number of items in the list */
+  /** Number of published items in the list. */
   readonly item_count: number
 }
 
@@ -1500,15 +1501,33 @@ export interface LearningPathRelationship {
 }
 
 /**
- * Specialized serializer for a LearningPath relationship
+ * Create serializer for nested learning path items.
+
+The parent is derived from the nested route and must not be client-supplied.
  */
-export interface LearningPathRelationshipRequest {
+export interface LearningPathRelationshipCreate {
+  readonly id: number
+  readonly resource: LearningResource
   /**
    * @minimum 0
    * @maximum 2147483647
    */
   position?: number
-  parent: number
+  readonly parent: number
+  child: number
+}
+
+/**
+ * Create serializer for nested learning path items.
+
+The parent is derived from the nested route and must not be client-supplied.
+ */
+export interface LearningPathRelationshipCreateRequest {
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  position?: number
   child: number
 }
 
@@ -2705,6 +2724,21 @@ export type NullEnum = (typeof NullEnum)[keyof typeof NullEnum]
 export const NullEnum = {} as const
 
 /**
+ * Serializer for OVS video webhook requests.
+
+Accepts either an OVS video upsert payload (full result dict from the OVS
+public videos API; `key` is required) or a delete payload (`video_id` plus
+`delete: true`).
+ */
+export interface OVSVideoWebhookRequestRequest {
+  /** @minLength 1 */
+  key?: string
+  /** @minLength 1 */
+  video_id?: string
+  delete?: boolean
+}
+
+/**
  * * `mitx` - MITx
  * `ocw` - MIT OpenCourseWare
  * `bootcamps` - Bootcamps
@@ -2886,15 +2920,6 @@ export interface PaginatedProgramResourceList {
   results: ProgramResource[]
 }
 
-export interface PaginatedRichTextArticleList {
-  count: number
-  /** @nullable */
-  next?: string | null
-  /** @nullable */
-  previous?: string | null
-  results: RichTextArticle[]
-}
-
 export interface PaginatedUserListList {
   count: number
   /** @nullable */
@@ -2931,16 +2956,26 @@ export interface PaginatedVideoResourceList {
   results: VideoResource[]
 }
 
+export interface PaginatedWebsiteContentList {
+  count: number
+  /** @nullable */
+  next?: string | null
+  /** @nullable */
+  previous?: string | null
+  results: WebsiteContent[]
+}
+
 /**
- * Specialized serializer for a LearningPath relationship
+ * Create serializer for nested learning path items.
+
+The parent is derived from the nested route and must not be client-supplied.
  */
-export interface PatchedLearningPathRelationshipRequest {
+export interface PatchedLearningPathRelationshipCreateRequest {
   /**
    * @minimum 0
    * @maximum 2147483647
    */
   position?: number
-  parent?: number
   child?: number
 }
 
@@ -3041,25 +3076,6 @@ export interface PatchedLearningResourceRelationshipRequest {
 }
 
 /**
- * Serializer for LearningResourceInstructor model
- */
-export interface PatchedRichTextArticleRequest {
-  /**
-   * @minLength 1
-   * @maxLength 255
-   */
-  title?: string
-  author_name?: string
-  content?: unknown
-  is_published?: boolean
-  /**
-   * @maxLength 60
-   * @pattern ^[-a-zA-Z0-9_]+$
-   */
-  slug?: string
-}
-
-/**
  * Serializer for UserListRelationship model
  */
 export interface PatchedUserListRelationshipRequest {
@@ -3084,6 +3100,26 @@ export interface PatchedUserListRequest {
   title?: string
   description?: string
   privacy_level?: PrivacyLevelEnum
+}
+
+/**
+ * Serializer for WebsiteContent model.
+ */
+export interface PatchedWebsiteContentRequest {
+  /**
+   * @minLength 1
+   * @maxLength 255
+   */
+  title?: string
+  author_name?: string
+  content?: unknown
+  content_type?: WebsiteContentContentTypeEnum
+  is_published?: boolean
+  /**
+   * @maxLength 60
+   * @pattern ^[-a-zA-Z0-9_]+$
+   */
+  slug?: string
 }
 
 /**
@@ -4695,46 +4731,6 @@ export const ResourceTypeGroupEnum = {
 } as const
 
 /**
- * Serializer for LearningResourceInstructor model
- */
-export interface RichTextArticle {
-  readonly id: number
-  /** @maxLength 255 */
-  title: string
-  author_name?: string
-  content?: unknown
-  readonly user: User
-  readonly created_on: string
-  readonly updated_on: string
-  readonly publish_date: string
-  is_published?: boolean
-  /**
-   * @maxLength 60
-   * @pattern ^[-a-zA-Z0-9_]+$
-   */
-  slug?: string
-}
-
-/**
- * Serializer for LearningResourceInstructor model
- */
-export interface RichTextArticleRequest {
-  /**
-   * @minLength 1
-   * @maxLength 255
-   */
-  title: string
-  author_name?: string
-  content?: unknown
-  is_published?: boolean
-  /**
-   * @maxLength 60
-   * @pattern ^[-a-zA-Z0-9_]+$
-   */
-  slug?: string
-}
-
-/**
  * * `phrase` - phrase
 * `best_fields` - best_fields
 * `most_fields` - most_fields
@@ -4893,7 +4889,7 @@ export type UserListImage = { [key: string]: unknown }
 export interface UserList {
   readonly id: number
   topics?: LearningResourceTopic[]
-  /** Return the number of items in the list */
+  /** Number of published items in the list. */
   readonly item_count: number
   /** Return the image of the first item */
   readonly image: UserListImage
@@ -5664,20 +5660,6 @@ export const VideoResourceResourceTypeEnum = {
   video: "video",
 } as const
 
-export type VideoShortWebhookRequestRequestVideoMetadata = {
-  [key: string]: unknown
-}
-
-/**
- * Serializer for Video Short webhook requests.
- */
-export interface VideoShortWebhookRequestRequest {
-  /** @minLength 1 */
-  video_id: string
-  video_metadata: VideoShortWebhookRequestRequestVideoMetadata
-  source?: string
-}
-
 /**
  * Serializer for webhook responses.
  */
@@ -5687,9 +5669,77 @@ export interface WebhookResponse {
   error?: string
 }
 
+/**
+ * Serializer for WebsiteContent model.
+ */
+export interface WebsiteContent {
+  readonly id: number
+  /** @maxLength 255 */
+  title: string
+  author_name?: string
+  content?: unknown
+  content_type?: WebsiteContentContentTypeEnum
+  readonly user: User
+  readonly created_on: string
+  readonly updated_on: string
+  readonly publish_date: string
+  is_published?: boolean
+  /**
+   * @maxLength 60
+   * @pattern ^[-a-zA-Z0-9_]+$
+   */
+  slug?: string
+}
+
+/**
+ * * `news` - News
+ * `article` - Article
+ */
+export type WebsiteContentContentTypeEnum =
+  (typeof WebsiteContentContentTypeEnum)[keyof typeof WebsiteContentContentTypeEnum]
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const WebsiteContentContentTypeEnum = {
+  /** News */
+  news: "news",
+  /** Article */
+  article: "article",
+} as const
+
+export interface WebsiteContentImageUploadRequest {
+  image_file: Blob
+}
+
+/**
+ * Serializer for WebsiteContent model.
+ */
+export interface WebsiteContentRequest {
+  /**
+   * @minLength 1
+   * @maxLength 255
+   */
+  title: string
+  author_name?: string
+  content?: unknown
+  content_type?: WebsiteContentContentTypeEnum
+  is_published?: boolean
+  /**
+   * @maxLength 60
+   * @pattern ^[-a-zA-Z0-9_]+$
+   */
+  slug?: string
+}
+
 export type ArticlesListParams = {
   /**
-   * Filter to show only draft articles. Only available for admins and article editors. If true, returns unpublished articles. If not specified, returns all articles.
+ * Filter by content type
+
+* `news` - News
+* `article` - Article
+ */
+  content_type?: ArticlesListContentType
+  /**
+   * Filter to show only draft (unpublished) items
    */
   draft?: boolean
   /**
@@ -5701,6 +5751,15 @@ export type ArticlesListParams = {
    */
   offset?: number
 }
+
+export type ArticlesListContentType =
+  (typeof ArticlesListContentType)[keyof typeof ArticlesListContentType]
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const ArticlesListContentType = {
+  article: "article",
+  news: "news",
+} as const
 
 export type ContentFileSearchRetrieveParams = {
   /**
@@ -7601,9 +7660,13 @@ export const LearningResourcesListSortby = {
 } as const
 
 export type LearningResourcesSimilarListParams = {
-  certification?: boolean
   /**
- * The type of certification offered
+   * True if the learning resource offers a certificate
+   * @nullable
+   */
+  certification?: boolean | null
+  /**
+ * The type of certificate
 
 * `micromasters` - MicroMasters Credential
 * `professional` - Professional Certificate
@@ -7612,20 +7675,20 @@ export type LearningResourcesSimilarListParams = {
  */
   certification_type?: LearningResourcesSimilarListCertificationTypeItem[]
   /**
-   * Content feature for the resources. Load the 'api/v1/course_features' endpoint for a list of course features
+   * The course feature. Possible options are at api/v1/course_features/
    */
   course_feature?: string[]
   /**
- * The delivery of course/program resources
+ * The delivery options in which the learning resource is offered
 
 * `online` - Online
 * `hybrid` - Hybrid
 * `in_person` - In person
 * `offline` - Offline
  */
-  delivery?: LearningResourcesSimilarListDeliveryItemItem[][]
+  delivery?: LearningResourcesSimilarListDeliveryItem[]
   /**
- * The department that offers learning resources
+ * The department that offers the learning resource
 
 * `1` - Civil and Environmental Engineering
 * `2` - Mechanical Engineering
@@ -7667,24 +7730,17 @@ export type LearningResourcesSimilarListParams = {
  */
   department?: LearningResourcesSimilarListDepartmentItem[]
   /**
-   * The course/program is offered for free
+   * @nullable
    */
-  free?: boolean
-  /**
- * The academic level of the resources
-
-* `undergraduate` - Undergraduate
-* `graduate` - Graduate
-* `high_school` - High School
-* `noncredit` - Non-Credit
-* `advanced` - Advanced
-* `intermediate` - Intermediate
-* `introductory` - Introductory
- */
+  free?: boolean | null
   level?: LearningResourcesSimilarListLevelItem[]
   limit?: number
   /**
- * The organization that offers a learning resource
+   * The ocw topic name.
+   */
+  ocw_topic?: string[]
+  /**
+ * The organization that offers the learning resource
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -7696,7 +7752,7 @@ export type LearningResourcesSimilarListParams = {
  */
   offered_by?: LearningResourcesSimilarListOfferedByItem[]
   /**
- * The platform on which learning resources are offered
+ * The platform on which the learning resource is offered
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -7721,30 +7777,25 @@ export type LearningResourcesSimilarListParams = {
 * `ovs` - ODL Video Service
  */
   platform?: LearningResourcesSimilarListPlatformItem[]
-  professional?: boolean
   /**
-   * A unique text identifier for the resources
+   * @nullable
    */
-  readable_id?: string[]
-  /**
-   * Comma-separated list of learning resource IDs
-   */
-  resource_id?: number[]
+  professional?: boolean | null
   /**
  * The type of learning resource
 
-* `course` - Course
-* `program` - Program
-* `learning_path` - Learning Path
-* `podcast` - Podcast
-* `podcast_episode` - Podcast Episode
-* `video` - Video
-* `video_playlist` - Video Playlist
-* `document` - Document
+* `course` - course
+* `program` - program
+* `learning_path` - learning path
+* `podcast` - podcast
+* `podcast_episode` - podcast episode
+* `video` - video
+* `video_playlist` - video playlist
+* `document` - document
  */
   resource_type?: LearningResourcesSimilarListResourceTypeItem[]
   /**
- * The resource type group of the learning resources
+ * The category of learning resource
 
 * `course` - Course
 * `program` - Program
@@ -7752,39 +7803,26 @@ export type LearningResourcesSimilarListParams = {
  */
   resource_type_group?: LearningResourcesSimilarListResourceTypeGroupItem[]
   /**
- * Sort By
-
-* `id` - Object ID ascending
-* `-id` - Object ID descending
-* `readable_id` - Readable ID ascending
-* `-readable_id` - Readable ID descending
-* `last_modified` - Last Modified Date ascending
-* `-last_modified` - Last Modified Date descending
-* `new` - Newest resources first
-* `start_date` - Start Date ascending
-* `-start_date` - Start Date descending
-* `mitcoursenumber` - MIT course number ascending
-* `-mitcoursenumber` - MIT course number descending
-* `views` - Popularity ascending
-* `-views` - Popularity descending
-* `upcoming` - Next start date ascending
- */
-  sortby?: LearningResourcesSimilarListSortby
-  /**
-   * Topics covered by the resources. Load the '/api/v1/topics' endpoint for a list of topics
+   * The topic name. To see a list of options go to api/v1/topics/
    */
   topic?: string[]
 }
 
+/**
+ * * `micromasters` - MicroMasters Credential
+ * `professional` - Professional Certificate
+ * `completion` - Certificate of Completion
+ * `none` - No Certificate
+ */
 export type LearningResourcesSimilarListCertificationTypeItem =
   (typeof LearningResourcesSimilarListCertificationTypeItem)[keyof typeof LearningResourcesSimilarListCertificationTypeItem]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const LearningResourcesSimilarListCertificationTypeItem = {
-  completion: "completion",
   micromasters: "micromasters",
-  none: "none",
   professional: "professional",
+  completion: "completion",
+  none: "none",
 } as const
 
 /**
@@ -7793,23 +7831,70 @@ export const LearningResourcesSimilarListCertificationTypeItem = {
  * `in_person` - In person
  * `offline` - Offline
  */
-export type LearningResourcesSimilarListDeliveryItemItem =
-  (typeof LearningResourcesSimilarListDeliveryItemItem)[keyof typeof LearningResourcesSimilarListDeliveryItemItem]
+export type LearningResourcesSimilarListDeliveryItem =
+  (typeof LearningResourcesSimilarListDeliveryItem)[keyof typeof LearningResourcesSimilarListDeliveryItem]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const LearningResourcesSimilarListDeliveryItemItem = {
+export const LearningResourcesSimilarListDeliveryItem = {
   online: "online",
   hybrid: "hybrid",
   in_person: "in_person",
   offline: "offline",
 } as const
 
+/**
+ * * `1` - Civil and Environmental Engineering
+ * `2` - Mechanical Engineering
+ * `3` - Materials Science and Engineering
+ * `4` - Architecture
+ * `5` - Chemistry
+ * `6` - Electrical Engineering and Computer Science
+ * `7` - Biology
+ * `8` - Physics
+ * `9` - Brain and Cognitive Sciences
+ * `10` - Chemical Engineering
+ * `11` - Urban Studies and Planning
+ * `12` - Earth, Atmospheric, and Planetary Sciences
+ * `14` - Economics
+ * `15` - Management
+ * `16` - Aeronautics and Astronautics
+ * `17` - Political Science
+ * `18` - Mathematics
+ * `20` - Biological Engineering
+ * `21A` - Anthropology
+ * `21G` - Global Languages
+ * `21H` - History
+ * `21L` - Literature
+ * `21M` - Music and Theater Arts
+ * `22` - Nuclear Science and Engineering
+ * `24` - Linguistics and Philosophy
+ * `CC` - Concourse
+ * `CMS-W` - Comparative Media Studies/Writing
+ * `EC` - Edgerton Center
+ * `ES` - Experimental Study Group
+ * `ESD` - Engineering Systems Division
+ * `HST` - Medical Engineering and Science
+ * `IDS` - Data, Systems, and Society
+ * `MAS` - Media Arts and Sciences
+ * `PE` - Athletics, Physical Education and Recreation
+ * `SP` - Special Programs
+ * `STS` - Science, Technology, and Society
+ * `WGS` - Women's and Gender Studies
+ */
 export type LearningResourcesSimilarListDepartmentItem =
   (typeof LearningResourcesSimilarListDepartmentItem)[keyof typeof LearningResourcesSimilarListDepartmentItem]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const LearningResourcesSimilarListDepartmentItem = {
   NUMBER_1: "1",
+  NUMBER_2: "2",
+  NUMBER_3: "3",
+  NUMBER_4: "4",
+  NUMBER_5: "5",
+  NUMBER_6: "6",
+  NUMBER_7: "7",
+  NUMBER_8: "8",
+  NUMBER_9: "9",
   NUMBER_10: "10",
   NUMBER_11: "11",
   NUMBER_12: "12",
@@ -7818,7 +7903,6 @@ export const LearningResourcesSimilarListDepartmentItem = {
   NUMBER_16: "16",
   NUMBER_17: "17",
   NUMBER_18: "18",
-  NUMBER_2: "2",
   NUMBER_20: "20",
   "21A": "21A",
   "21G": "21G",
@@ -7827,13 +7911,6 @@ export const LearningResourcesSimilarListDepartmentItem = {
   "21M": "21M",
   NUMBER_22: "22",
   NUMBER_24: "24",
-  NUMBER_3: "3",
-  NUMBER_4: "4",
-  NUMBER_5: "5",
-  NUMBER_6: "6",
-  NUMBER_7: "7",
-  NUMBER_8: "8",
-  NUMBER_9: "9",
   CC: "CC",
   "CMS-W": "CMS-W",
   EC: "EC",
@@ -7848,112 +7925,151 @@ export const LearningResourcesSimilarListDepartmentItem = {
   WGS: "WGS",
 } as const
 
+/**
+ * * `undergraduate` - Undergraduate
+ * `graduate` - Graduate
+ * `high_school` - High School
+ * `noncredit` - Non-Credit
+ * `advanced` - Advanced
+ * `intermediate` - Intermediate
+ * `introductory` - Introductory
+ */
 export type LearningResourcesSimilarListLevelItem =
   (typeof LearningResourcesSimilarListLevelItem)[keyof typeof LearningResourcesSimilarListLevelItem]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const LearningResourcesSimilarListLevelItem = {
-  advanced: "advanced",
+  undergraduate: "undergraduate",
   graduate: "graduate",
   high_school: "high_school",
+  noncredit: "noncredit",
+  advanced: "advanced",
   intermediate: "intermediate",
   introductory: "introductory",
-  noncredit: "noncredit",
-  undergraduate: "undergraduate",
 } as const
 
+/**
+ * * `mitx` - MITx
+ * `ocw` - MIT OpenCourseWare
+ * `bootcamps` - Bootcamps
+ * `xpro` - MIT xPRO
+ * `mitpe` - MIT Professional Education
+ * `see` - MIT Sloan Executive Education
+ * `climate` - MIT Climate
+ */
 export type LearningResourcesSimilarListOfferedByItem =
   (typeof LearningResourcesSimilarListOfferedByItem)[keyof typeof LearningResourcesSimilarListOfferedByItem]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const LearningResourcesSimilarListOfferedByItem = {
-  bootcamps: "bootcamps",
-  climate: "climate",
-  mitpe: "mitpe",
   mitx: "mitx",
   ocw: "ocw",
-  see: "see",
+  bootcamps: "bootcamps",
   xpro: "xpro",
+  mitpe: "mitpe",
+  see: "see",
+  climate: "climate",
 } as const
 
+/**
+ * * `edx` - edX
+ * `ocw` - MIT OpenCourseWare
+ * `oll` - Open Learning Library
+ * `mitxonline` - MITx Online
+ * `bootcamps` - Bootcamps
+ * `xpro` - MIT xPRO
+ * `csail` - CSAIL
+ * `mitpe` - MIT Professional Education
+ * `see` - MIT Sloan Executive Education
+ * `scc` - Schwarzman College of Computing
+ * `ctl` - Center for Transportation & Logistics
+ * `whu` - WHU
+ * `susskind` - Susskind
+ * `globalalumni` - Global Alumni
+ * `simplilearn` - Simplilearn
+ * `emeritus` - Emeritus
+ * `podcast` - Podcast
+ * `youtube` - YouTube
+ * `canvas` - Canvas
+ * `climate` - MIT Climate
+ * `ovs` - ODL Video Service
+ */
 export type LearningResourcesSimilarListPlatformItem =
   (typeof LearningResourcesSimilarListPlatformItem)[keyof typeof LearningResourcesSimilarListPlatformItem]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const LearningResourcesSimilarListPlatformItem = {
-  bootcamps: "bootcamps",
-  canvas: "canvas",
-  climate: "climate",
-  csail: "csail",
-  ctl: "ctl",
   edx: "edx",
-  emeritus: "emeritus",
-  globalalumni: "globalalumni",
-  mitpe: "mitpe",
-  mitxonline: "mitxonline",
   ocw: "ocw",
   oll: "oll",
-  ovs: "ovs",
-  podcast: "podcast",
-  scc: "scc",
-  see: "see",
-  simplilearn: "simplilearn",
-  susskind: "susskind",
-  whu: "whu",
+  mitxonline: "mitxonline",
+  bootcamps: "bootcamps",
   xpro: "xpro",
+  csail: "csail",
+  mitpe: "mitpe",
+  see: "see",
+  scc: "scc",
+  ctl: "ctl",
+  whu: "whu",
+  susskind: "susskind",
+  globalalumni: "globalalumni",
+  simplilearn: "simplilearn",
+  emeritus: "emeritus",
+  podcast: "podcast",
   youtube: "youtube",
+  canvas: "canvas",
+  climate: "climate",
+  ovs: "ovs",
 } as const
 
+/**
+ * * `course` - course
+ * `program` - program
+ * `learning_path` - learning path
+ * `podcast` - podcast
+ * `podcast_episode` - podcast episode
+ * `video` - video
+ * `video_playlist` - video playlist
+ * `document` - document
+ */
 export type LearningResourcesSimilarListResourceTypeItem =
   (typeof LearningResourcesSimilarListResourceTypeItem)[keyof typeof LearningResourcesSimilarListResourceTypeItem]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const LearningResourcesSimilarListResourceTypeItem = {
   course: "course",
-  document: "document",
+  program: "program",
   learning_path: "learning_path",
   podcast: "podcast",
   podcast_episode: "podcast_episode",
-  program: "program",
   video: "video",
   video_playlist: "video_playlist",
+  document: "document",
 } as const
 
+/**
+ * * `course` - Course
+ * `program` - Program
+ * `learning_material` - Learning Material
+ */
 export type LearningResourcesSimilarListResourceTypeGroupItem =
   (typeof LearningResourcesSimilarListResourceTypeGroupItem)[keyof typeof LearningResourcesSimilarListResourceTypeGroupItem]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const LearningResourcesSimilarListResourceTypeGroupItem = {
   course: "course",
-  learning_material: "learning_material",
   program: "program",
-} as const
-
-export type LearningResourcesSimilarListSortby =
-  (typeof LearningResourcesSimilarListSortby)[keyof typeof LearningResourcesSimilarListSortby]
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
-export const LearningResourcesSimilarListSortby = {
-  "-id": "-id",
-  "-last_modified": "-last_modified",
-  "-mitcoursenumber": "-mitcoursenumber",
-  "-readable_id": "-readable_id",
-  "-start_date": "-start_date",
-  "-views": "-views",
-  id: "id",
-  last_modified: "last_modified",
-  mitcoursenumber: "mitcoursenumber",
-  new: "new",
-  readable_id: "readable_id",
-  start_date: "start_date",
-  upcoming: "upcoming",
-  views: "views",
+  learning_material: "learning_material",
 } as const
 
 export type LearningResourcesVectorSimilarListParams = {
-  certification?: boolean
   /**
- * The type of certification offered
+   * True if the learning resource offers a certificate
+   * @nullable
+   */
+  certification?: boolean | null
+  /**
+ * The type of certificate
 
 * `micromasters` - MicroMasters Credential
 * `professional` - Professional Certificate
@@ -7962,20 +8078,20 @@ export type LearningResourcesVectorSimilarListParams = {
  */
   certification_type?: LearningResourcesVectorSimilarListCertificationTypeItem[]
   /**
-   * Content feature for the resources. Load the 'api/v1/course_features' endpoint for a list of course features
+   * The course feature. Possible options are at api/v1/course_features/
    */
   course_feature?: string[]
   /**
- * The delivery of course/program resources
+ * The delivery options in which the learning resource is offered
 
 * `online` - Online
 * `hybrid` - Hybrid
 * `in_person` - In person
 * `offline` - Offline
  */
-  delivery?: LearningResourcesVectorSimilarListDeliveryItemItem[][]
+  delivery?: LearningResourcesVectorSimilarListDeliveryItem[]
   /**
- * The department that offers learning resources
+ * The department that offers the learning resource
 
 * `1` - Civil and Environmental Engineering
 * `2` - Mechanical Engineering
@@ -8017,24 +8133,17 @@ export type LearningResourcesVectorSimilarListParams = {
  */
   department?: LearningResourcesVectorSimilarListDepartmentItem[]
   /**
-   * The course/program is offered for free
+   * @nullable
    */
-  free?: boolean
-  /**
- * The academic level of the resources
-
-* `undergraduate` - Undergraduate
-* `graduate` - Graduate
-* `high_school` - High School
-* `noncredit` - Non-Credit
-* `advanced` - Advanced
-* `intermediate` - Intermediate
-* `introductory` - Introductory
- */
+  free?: boolean | null
   level?: LearningResourcesVectorSimilarListLevelItem[]
   limit?: number
   /**
- * The organization that offers a learning resource
+   * The ocw topic name.
+   */
+  ocw_topic?: string[]
+  /**
+ * The organization that offers the learning resource
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -8046,7 +8155,7 @@ export type LearningResourcesVectorSimilarListParams = {
  */
   offered_by?: LearningResourcesVectorSimilarListOfferedByItem[]
   /**
- * The platform on which learning resources are offered
+ * The platform on which the learning resource is offered
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -8071,30 +8180,25 @@ export type LearningResourcesVectorSimilarListParams = {
 * `ovs` - ODL Video Service
  */
   platform?: LearningResourcesVectorSimilarListPlatformItem[]
-  professional?: boolean
   /**
-   * A unique text identifier for the resources
+   * @nullable
    */
-  readable_id?: string[]
-  /**
-   * Comma-separated list of learning resource IDs
-   */
-  resource_id?: number[]
+  professional?: boolean | null
   /**
  * The type of learning resource
 
-* `course` - Course
-* `program` - Program
-* `learning_path` - Learning Path
-* `podcast` - Podcast
-* `podcast_episode` - Podcast Episode
-* `video` - Video
-* `video_playlist` - Video Playlist
-* `document` - Document
+* `course` - course
+* `program` - program
+* `learning_path` - learning path
+* `podcast` - podcast
+* `podcast_episode` - podcast episode
+* `video` - video
+* `video_playlist` - video playlist
+* `document` - document
  */
   resource_type?: LearningResourcesVectorSimilarListResourceTypeItem[]
   /**
- * The resource type group of the learning resources
+ * The category of learning resource
 
 * `course` - Course
 * `program` - Program
@@ -8102,39 +8206,26 @@ export type LearningResourcesVectorSimilarListParams = {
  */
   resource_type_group?: LearningResourcesVectorSimilarListResourceTypeGroupItem[]
   /**
- * Sort By
-
-* `id` - Object ID ascending
-* `-id` - Object ID descending
-* `readable_id` - Readable ID ascending
-* `-readable_id` - Readable ID descending
-* `last_modified` - Last Modified Date ascending
-* `-last_modified` - Last Modified Date descending
-* `new` - Newest resources first
-* `start_date` - Start Date ascending
-* `-start_date` - Start Date descending
-* `mitcoursenumber` - MIT course number ascending
-* `-mitcoursenumber` - MIT course number descending
-* `views` - Popularity ascending
-* `-views` - Popularity descending
-* `upcoming` - Next start date ascending
- */
-  sortby?: LearningResourcesVectorSimilarListSortby
-  /**
-   * Topics covered by the resources. Load the '/api/v1/topics' endpoint for a list of topics
+   * The topic name. To see a list of options go to api/v1/topics/
    */
   topic?: string[]
 }
 
+/**
+ * * `micromasters` - MicroMasters Credential
+ * `professional` - Professional Certificate
+ * `completion` - Certificate of Completion
+ * `none` - No Certificate
+ */
 export type LearningResourcesVectorSimilarListCertificationTypeItem =
   (typeof LearningResourcesVectorSimilarListCertificationTypeItem)[keyof typeof LearningResourcesVectorSimilarListCertificationTypeItem]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const LearningResourcesVectorSimilarListCertificationTypeItem = {
-  completion: "completion",
   micromasters: "micromasters",
-  none: "none",
   professional: "professional",
+  completion: "completion",
+  none: "none",
 } as const
 
 /**
@@ -8143,23 +8234,70 @@ export const LearningResourcesVectorSimilarListCertificationTypeItem = {
  * `in_person` - In person
  * `offline` - Offline
  */
-export type LearningResourcesVectorSimilarListDeliveryItemItem =
-  (typeof LearningResourcesVectorSimilarListDeliveryItemItem)[keyof typeof LearningResourcesVectorSimilarListDeliveryItemItem]
+export type LearningResourcesVectorSimilarListDeliveryItem =
+  (typeof LearningResourcesVectorSimilarListDeliveryItem)[keyof typeof LearningResourcesVectorSimilarListDeliveryItem]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const LearningResourcesVectorSimilarListDeliveryItemItem = {
+export const LearningResourcesVectorSimilarListDeliveryItem = {
   online: "online",
   hybrid: "hybrid",
   in_person: "in_person",
   offline: "offline",
 } as const
 
+/**
+ * * `1` - Civil and Environmental Engineering
+ * `2` - Mechanical Engineering
+ * `3` - Materials Science and Engineering
+ * `4` - Architecture
+ * `5` - Chemistry
+ * `6` - Electrical Engineering and Computer Science
+ * `7` - Biology
+ * `8` - Physics
+ * `9` - Brain and Cognitive Sciences
+ * `10` - Chemical Engineering
+ * `11` - Urban Studies and Planning
+ * `12` - Earth, Atmospheric, and Planetary Sciences
+ * `14` - Economics
+ * `15` - Management
+ * `16` - Aeronautics and Astronautics
+ * `17` - Political Science
+ * `18` - Mathematics
+ * `20` - Biological Engineering
+ * `21A` - Anthropology
+ * `21G` - Global Languages
+ * `21H` - History
+ * `21L` - Literature
+ * `21M` - Music and Theater Arts
+ * `22` - Nuclear Science and Engineering
+ * `24` - Linguistics and Philosophy
+ * `CC` - Concourse
+ * `CMS-W` - Comparative Media Studies/Writing
+ * `EC` - Edgerton Center
+ * `ES` - Experimental Study Group
+ * `ESD` - Engineering Systems Division
+ * `HST` - Medical Engineering and Science
+ * `IDS` - Data, Systems, and Society
+ * `MAS` - Media Arts and Sciences
+ * `PE` - Athletics, Physical Education and Recreation
+ * `SP` - Special Programs
+ * `STS` - Science, Technology, and Society
+ * `WGS` - Women's and Gender Studies
+ */
 export type LearningResourcesVectorSimilarListDepartmentItem =
   (typeof LearningResourcesVectorSimilarListDepartmentItem)[keyof typeof LearningResourcesVectorSimilarListDepartmentItem]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const LearningResourcesVectorSimilarListDepartmentItem = {
   NUMBER_1: "1",
+  NUMBER_2: "2",
+  NUMBER_3: "3",
+  NUMBER_4: "4",
+  NUMBER_5: "5",
+  NUMBER_6: "6",
+  NUMBER_7: "7",
+  NUMBER_8: "8",
+  NUMBER_9: "9",
   NUMBER_10: "10",
   NUMBER_11: "11",
   NUMBER_12: "12",
@@ -8168,7 +8306,6 @@ export const LearningResourcesVectorSimilarListDepartmentItem = {
   NUMBER_16: "16",
   NUMBER_17: "17",
   NUMBER_18: "18",
-  NUMBER_2: "2",
   NUMBER_20: "20",
   "21A": "21A",
   "21G": "21G",
@@ -8177,13 +8314,6 @@ export const LearningResourcesVectorSimilarListDepartmentItem = {
   "21M": "21M",
   NUMBER_22: "22",
   NUMBER_24: "24",
-  NUMBER_3: "3",
-  NUMBER_4: "4",
-  NUMBER_5: "5",
-  NUMBER_6: "6",
-  NUMBER_7: "7",
-  NUMBER_8: "8",
-  NUMBER_9: "9",
   CC: "CC",
   "CMS-W": "CMS-W",
   EC: "EC",
@@ -8198,106 +8328,141 @@ export const LearningResourcesVectorSimilarListDepartmentItem = {
   WGS: "WGS",
 } as const
 
+/**
+ * * `undergraduate` - Undergraduate
+ * `graduate` - Graduate
+ * `high_school` - High School
+ * `noncredit` - Non-Credit
+ * `advanced` - Advanced
+ * `intermediate` - Intermediate
+ * `introductory` - Introductory
+ */
 export type LearningResourcesVectorSimilarListLevelItem =
   (typeof LearningResourcesVectorSimilarListLevelItem)[keyof typeof LearningResourcesVectorSimilarListLevelItem]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const LearningResourcesVectorSimilarListLevelItem = {
-  advanced: "advanced",
+  undergraduate: "undergraduate",
   graduate: "graduate",
   high_school: "high_school",
+  noncredit: "noncredit",
+  advanced: "advanced",
   intermediate: "intermediate",
   introductory: "introductory",
-  noncredit: "noncredit",
-  undergraduate: "undergraduate",
 } as const
 
+/**
+ * * `mitx` - MITx
+ * `ocw` - MIT OpenCourseWare
+ * `bootcamps` - Bootcamps
+ * `xpro` - MIT xPRO
+ * `mitpe` - MIT Professional Education
+ * `see` - MIT Sloan Executive Education
+ * `climate` - MIT Climate
+ */
 export type LearningResourcesVectorSimilarListOfferedByItem =
   (typeof LearningResourcesVectorSimilarListOfferedByItem)[keyof typeof LearningResourcesVectorSimilarListOfferedByItem]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const LearningResourcesVectorSimilarListOfferedByItem = {
-  bootcamps: "bootcamps",
-  climate: "climate",
-  mitpe: "mitpe",
   mitx: "mitx",
   ocw: "ocw",
-  see: "see",
+  bootcamps: "bootcamps",
   xpro: "xpro",
+  mitpe: "mitpe",
+  see: "see",
+  climate: "climate",
 } as const
 
+/**
+ * * `edx` - edX
+ * `ocw` - MIT OpenCourseWare
+ * `oll` - Open Learning Library
+ * `mitxonline` - MITx Online
+ * `bootcamps` - Bootcamps
+ * `xpro` - MIT xPRO
+ * `csail` - CSAIL
+ * `mitpe` - MIT Professional Education
+ * `see` - MIT Sloan Executive Education
+ * `scc` - Schwarzman College of Computing
+ * `ctl` - Center for Transportation & Logistics
+ * `whu` - WHU
+ * `susskind` - Susskind
+ * `globalalumni` - Global Alumni
+ * `simplilearn` - Simplilearn
+ * `emeritus` - Emeritus
+ * `podcast` - Podcast
+ * `youtube` - YouTube
+ * `canvas` - Canvas
+ * `climate` - MIT Climate
+ * `ovs` - ODL Video Service
+ */
 export type LearningResourcesVectorSimilarListPlatformItem =
   (typeof LearningResourcesVectorSimilarListPlatformItem)[keyof typeof LearningResourcesVectorSimilarListPlatformItem]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const LearningResourcesVectorSimilarListPlatformItem = {
-  bootcamps: "bootcamps",
-  canvas: "canvas",
-  climate: "climate",
-  csail: "csail",
-  ctl: "ctl",
   edx: "edx",
-  emeritus: "emeritus",
-  globalalumni: "globalalumni",
-  mitpe: "mitpe",
-  mitxonline: "mitxonline",
   ocw: "ocw",
   oll: "oll",
-  ovs: "ovs",
-  podcast: "podcast",
-  scc: "scc",
-  see: "see",
-  simplilearn: "simplilearn",
-  susskind: "susskind",
-  whu: "whu",
+  mitxonline: "mitxonline",
+  bootcamps: "bootcamps",
   xpro: "xpro",
+  csail: "csail",
+  mitpe: "mitpe",
+  see: "see",
+  scc: "scc",
+  ctl: "ctl",
+  whu: "whu",
+  susskind: "susskind",
+  globalalumni: "globalalumni",
+  simplilearn: "simplilearn",
+  emeritus: "emeritus",
+  podcast: "podcast",
   youtube: "youtube",
+  canvas: "canvas",
+  climate: "climate",
+  ovs: "ovs",
 } as const
 
+/**
+ * * `course` - course
+ * `program` - program
+ * `learning_path` - learning path
+ * `podcast` - podcast
+ * `podcast_episode` - podcast episode
+ * `video` - video
+ * `video_playlist` - video playlist
+ * `document` - document
+ */
 export type LearningResourcesVectorSimilarListResourceTypeItem =
   (typeof LearningResourcesVectorSimilarListResourceTypeItem)[keyof typeof LearningResourcesVectorSimilarListResourceTypeItem]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const LearningResourcesVectorSimilarListResourceTypeItem = {
   course: "course",
-  document: "document",
+  program: "program",
   learning_path: "learning_path",
   podcast: "podcast",
   podcast_episode: "podcast_episode",
-  program: "program",
   video: "video",
   video_playlist: "video_playlist",
+  document: "document",
 } as const
 
+/**
+ * * `course` - Course
+ * `program` - Program
+ * `learning_material` - Learning Material
+ */
 export type LearningResourcesVectorSimilarListResourceTypeGroupItem =
   (typeof LearningResourcesVectorSimilarListResourceTypeGroupItem)[keyof typeof LearningResourcesVectorSimilarListResourceTypeGroupItem]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const LearningResourcesVectorSimilarListResourceTypeGroupItem = {
   course: "course",
-  learning_material: "learning_material",
   program: "program",
-} as const
-
-export type LearningResourcesVectorSimilarListSortby =
-  (typeof LearningResourcesVectorSimilarListSortby)[keyof typeof LearningResourcesVectorSimilarListSortby]
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
-export const LearningResourcesVectorSimilarListSortby = {
-  "-id": "-id",
-  "-last_modified": "-last_modified",
-  "-mitcoursenumber": "-mitcoursenumber",
-  "-readable_id": "-readable_id",
-  "-start_date": "-start_date",
-  "-views": "-views",
-  id: "id",
-  last_modified: "last_modified",
-  mitcoursenumber: "mitcoursenumber",
-  new: "new",
-  readable_id: "readable_id",
-  start_date: "start_date",
-  upcoming: "upcoming",
-  views: "views",
+  learning_material: "learning_material",
 } as const
 
 export type LearningResourcesContentfilesListParams = {
@@ -13443,11 +13608,33 @@ export const WebhooksContentFilesCreateSource = {
   ovs: "ovs",
 } as const
 
-export type WebhooksVideoShortsCreateParams = {
-  source?: string
+export type WebsiteContentListParams = {
   /**
-   * @minLength 1
+ * Filter by content type
+
+* `news` - News
+* `article` - Article
+ */
+  content_type?: WebsiteContentListContentType
+  /**
+   * Filter to show only draft (unpublished) items
    */
-  video_id: string
-  video_metadata: { [key: string]: unknown }
+  draft?: boolean
+  /**
+   * Number of results to return per page.
+   */
+  limit?: number
+  /**
+   * The initial index from which to return the results.
+   */
+  offset?: number
 }
+
+export type WebsiteContentListContentType =
+  (typeof WebsiteContentListContentType)[keyof typeof WebsiteContentListContentType]
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const WebsiteContentListContentType = {
+  article: "article",
+  news: "news",
+} as const

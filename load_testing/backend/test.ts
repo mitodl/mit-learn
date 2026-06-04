@@ -16,15 +16,6 @@ export function testBackend() {
       exec.vu.metrics.tags.apiVersion = "v0"
 
       const client = createV0Client()
-      group("video shorts", () => {
-        const res = client.videoShortsList({ limit: 50 })
-
-        check(res, {
-          "is status 200": (r) => r.response.status === 200,
-          "has results": (r) => r.response.json("results").length > 0,
-        })
-      })
-
       group("users/me", () => {
         const res = client.usersMeRetrieve()
         check(res, {

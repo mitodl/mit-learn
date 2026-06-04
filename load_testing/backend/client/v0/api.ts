@@ -7,7 +7,7 @@
  */
 import { URL, URLSearchParams } from "https://jslib.k6.io/url/1.0.0/index.js"
 
-import http from "k6/http"
+import * as http from "k6/http"
 import type { Params, Response } from "k6/http"
 
 import type {
@@ -29,7 +29,6 @@ import type {
   PaginatedChannelList,
   PaginatedFeedItemList,
   PaginatedFeedSourceList,
-  PaginatedVideoShortList,
   PatchedChannelWriteRequest,
   PatchedProfileRequest,
   PatchedUserRequest,
@@ -47,8 +46,6 @@ import type {
   UserWebsiteRequest,
   VectorContentFilesSearchRetrieveParams,
   VectorLearningResourcesSearchRetrieveParams,
-  VideoShort,
-  VideoShortsListParams,
   WidgetList,
   WidgetListRequest,
 } from "./api.schemas"
@@ -83,7 +80,8 @@ or organizations at MIT and are a high-level categorization of content.
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/channels/` +
+      this.cleanBaseUrl +
+        `/api/v0/channels/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -120,7 +118,7 @@ or organizations at MIT and are a high-level categorization of content.
     data: Channel
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v0/channels/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/channels/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -164,7 +162,7 @@ or organizations at MIT and are a high-level categorization of content.
     data: Channel
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v0/channels/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/channels/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -203,7 +201,7 @@ or organizations at MIT and are a high-level categorization of content.
     data: Channel
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v0/channels/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/channels/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -247,7 +245,7 @@ or organizations at MIT and are a high-level categorization of content.
     data: void
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v0/channels/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/channels/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -285,7 +283,7 @@ or organizations at MIT and are a high-level categorization of content.
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/channels/${id}/moderators/`,
+      this.cleanBaseUrl + `/api/v0/channels/${id}/moderators/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -325,7 +323,7 @@ or organizations at MIT and are a high-level categorization of content.
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/channels/${id}/moderators/`,
+      this.cleanBaseUrl + `/api/v0/channels/${id}/moderators/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -371,7 +369,7 @@ or organizations at MIT and are a high-level categorization of content.
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/channels/${id}/moderators/${moderatorName}/`,
+      this.cleanBaseUrl + `/api/v0/channels/${id}/moderators/${moderatorName}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -410,7 +408,7 @@ or organizations at MIT and are a high-level categorization of content.
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/channels/counts/${channelType}/`,
+      this.cleanBaseUrl + `/api/v0/channels/counts/${channelType}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -450,7 +448,7 @@ or organizations at MIT and are a high-level categorization of content.
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/channels/type/${channelType}/${name}/`,
+      this.cleanBaseUrl + `/api/v0/channels/type/${channelType}/${name}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -484,7 +482,7 @@ or organizations at MIT and are a high-level categorization of content.
     data: CKEditorSettings
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v0/ckeditor`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/ckeditor`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -518,7 +516,7 @@ or organizations at MIT and are a high-level categorization of content.
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/learning_resources_search_admin_params/`,
+      this.cleanBaseUrl + `/api/v0/learning_resources_search_admin_params/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -556,7 +554,8 @@ or organizations at MIT and are a high-level categorization of content.
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/news_events/` +
+      this.cleanBaseUrl +
+        `/api/v0/news_events/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -591,7 +590,7 @@ or organizations at MIT and are a high-level categorization of content.
     data: FeedItem
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v0/news_events/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/news_events/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -628,7 +627,8 @@ or organizations at MIT and are a high-level categorization of content.
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/news_events_sources/` +
+      this.cleanBaseUrl +
+        `/api/v0/news_events_sources/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -664,7 +664,7 @@ or organizations at MIT and are a high-level categorization of content.
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/news_events_sources/${id}/`,
+      this.cleanBaseUrl + `/api/v0/news_events_sources/${id}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -702,7 +702,7 @@ or organizations at MIT and are a high-level categorization of content.
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/profiles/${userUsername}/`,
+      this.cleanBaseUrl + `/api/v0/profiles/${userUsername}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -741,7 +741,7 @@ or organizations at MIT and are a high-level categorization of content.
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/profiles/${userUsername}/`,
+      this.cleanBaseUrl + `/api/v0/profiles/${userUsername}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -786,7 +786,7 @@ or organizations at MIT and are a high-level categorization of content.
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/profiles/${userUsername}/`,
+      this.cleanBaseUrl + `/api/v0/profiles/${userUsername}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -831,7 +831,8 @@ or organizations at MIT and are a high-level categorization of content.
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/program_certificates/` +
+      this.cleanBaseUrl +
+        `/api/v0/program_certificates/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -868,7 +869,8 @@ or organizations at MIT and are a high-level categorization of content.
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/testimonials/` +
+      this.cleanBaseUrl +
+        `/api/v0/testimonials/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -904,7 +906,7 @@ or organizations at MIT and are a high-level categorization of content.
     data: Attestation
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v0/testimonials/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/testimonials/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -942,7 +944,7 @@ or organizations at MIT and are a high-level categorization of content.
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/tutor/problems/${runReadableId}/`,
+      this.cleanBaseUrl + `/api/v0/tutor/problems/${runReadableId}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -982,9 +984,8 @@ or organizations at MIT and are a high-level categorization of content.
     operationId: string
   } {
     const k6url = new URL(
-      `${
-        this.cleanBaseUrl
-      }/api/v0/tutor/problems/${runReadableId}/${problemTitle}/`,
+      this.cleanBaseUrl +
+        `/api/v0/tutor/problems/${runReadableId}/${problemTitle}/`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
@@ -1018,7 +1019,7 @@ or organizations at MIT and are a high-level categorization of content.
     data: User[]
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v0/users/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/users/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -1054,7 +1055,7 @@ or organizations at MIT and are a high-level categorization of content.
     data: User
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v0/users/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/users/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -1096,7 +1097,7 @@ or organizations at MIT and are a high-level categorization of content.
     data: User
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v0/users/${username}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/users/${username}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -1133,7 +1134,7 @@ or organizations at MIT and are a high-level categorization of content.
     data: User
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v0/users/${username}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/users/${username}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -1176,7 +1177,7 @@ or organizations at MIT and are a high-level categorization of content.
     data: User
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v0/users/${username}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/users/${username}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -1218,7 +1219,7 @@ or organizations at MIT and are a high-level categorization of content.
     data: void
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v0/users/${username}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/users/${username}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -1251,7 +1252,7 @@ or organizations at MIT and are a high-level categorization of content.
     data: User
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v0/users/me/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/users/me/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -1289,7 +1290,8 @@ or organizations at MIT and are a high-level categorization of content.
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/vector_content_files_search/` +
+      this.cleanBaseUrl +
+        `/api/v0/vector_content_files_search/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -1326,7 +1328,8 @@ or organizations at MIT and are a high-level categorization of content.
     operationId: string
   } {
     const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/vector_learning_resources_search/` +
+      this.cleanBaseUrl +
+        `/api/v0/vector_learning_resources_search/` +
         `?${new URLSearchParams(params).toString()}`,
     )
     const mergedRequestParameters = this._mergeRequestParameters(
@@ -1351,80 +1354,6 @@ or organizations at MIT and are a high-level categorization of content.
   }
 
   /**
-   * Get a paginated list of video shorts.
-   */
-  videoShortsList(
-    params?: VideoShortsListParams,
-    requestParameters?: Params,
-  ): {
-    response: Response
-    data: PaginatedVideoShortList
-    operationId: string
-  } {
-    const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/video_shorts/` +
-        `?${new URLSearchParams(params).toString()}`,
-    )
-    const mergedRequestParameters = this._mergeRequestParameters(
-      requestParameters || {},
-      this.commonRequestParameters,
-    )
-    const response = http.request("GET", k6url.toString(), undefined, {
-      ...mergedRequestParameters,
-    })
-    let data
-
-    try {
-      data = response.json()
-    } catch {
-      data = response.body
-    }
-    return {
-      response,
-      data,
-      operationId: "video_shorts_list",
-    }
-  }
-
-  /**
-   * Retrieve a single video short.
-   */
-  videoShortsRetrieve(
-    videoId: string,
-    requestParameters?: Params,
-  ): {
-    response: Response
-    data: VideoShort
-    operationId: string
-  } {
-    const k6url = new URL(
-      `${this.cleanBaseUrl}/api/v0/video_shorts/${videoId}/`,
-    )
-    const mergedRequestParameters = this._mergeRequestParameters(
-      requestParameters || {},
-      this.commonRequestParameters,
-    )
-    const response = http.request(
-      "GET",
-      k6url.toString(),
-      undefined,
-      mergedRequestParameters,
-    )
-    let data
-
-    try {
-      data = response.json()
-    } catch {
-      data = response.body
-    }
-    return {
-      response,
-      data,
-      operationId: "video_shorts_retrieve",
-    }
-  }
-
-  /**
    * View for user websites
    */
   websitesCreate(
@@ -1435,7 +1364,7 @@ or organizations at MIT and are a high-level categorization of content.
     data: UserWebsite
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v0/websites/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/websites/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -1477,7 +1406,7 @@ or organizations at MIT and are a high-level categorization of content.
     data: void
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v0/websites/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/websites/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -1513,7 +1442,7 @@ or organizations at MIT and are a high-level categorization of content.
     data: WidgetList
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v0/widget_lists/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/widget_lists/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -1550,7 +1479,7 @@ or organizations at MIT and are a high-level categorization of content.
     data: WidgetList
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v0/widget_lists/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/widget_lists/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,
@@ -1593,7 +1522,7 @@ or organizations at MIT and are a high-level categorization of content.
     data: WidgetList
     operationId: string
   } {
-    const k6url = new URL(`${this.cleanBaseUrl}/api/v0/widget_lists/${id}/`)
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/widget_lists/${id}/`)
     const mergedRequestParameters = this._mergeRequestParameters(
       requestParameters || {},
       this.commonRequestParameters,

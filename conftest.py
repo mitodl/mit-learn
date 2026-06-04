@@ -39,24 +39,3 @@ def mock_apsisix_auth(mocker):
     mock_login = mocker.patch("main.middleware.apisix_user.login")
     mock_logout = mocker.patch("main.middleware.apisix_user.logout")
     return SimpleNamespace(login=mock_login, logout=mock_logout)
-
-
-@pytest.fixture
-def sample_video_metadata():
-    """Sample metadata for testing video shorts webhook"""
-    return {
-        "video_id": "k_AA4_fQIHc",
-        "published_at": "2025-09-24T15:33:27Z",
-        "title": "How far away is space?",
-        "video_url": "/shorts/k_AA4_fQIHc/k_AA4_fQIHc.mp4",
-        "thumbnail_small": {
-            "url": "/shorts/k_AA4_fQIHc/k_AA4_fQIHc_small.jpg",
-            "height": 480,
-            "width": 270,
-        },
-        "thumbnail_large": {
-            "url": "/shorts/k_AA4_fQIHc/k_AA4_fQIHc_large.jpg",
-            "height": 1920,
-            "width": 1080,
-        },
-    }
