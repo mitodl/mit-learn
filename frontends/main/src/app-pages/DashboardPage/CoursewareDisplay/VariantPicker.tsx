@@ -90,6 +90,7 @@ type VariantChoiceBoxesProps = {
   variantOptions: SupportedVariant[]
   selectedVariant: SupportedVariant | null
   setSelectedVariant: (variant: SupportedVariant | null) => void
+  defaultVariantLabel?: string
   "aria-label"?: string
   "aria-labelledby"?: string
 }
@@ -98,6 +99,7 @@ const VariantChoiceBoxes: React.FC<VariantChoiceBoxesProps> = ({
   variantOptions,
   selectedVariant,
   setSelectedVariant,
+  defaultVariantLabel,
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledby,
 }) => {
@@ -123,7 +125,10 @@ const VariantChoiceBoxes: React.FC<VariantChoiceBoxesProps> = ({
     >
       {variantOptions.map((variant) => {
         const value = buildVariantKey(variant)
-        const label = buildVariantLabel(variant)
+        const label =
+          variant.default_variant && defaultVariantLabel
+            ? defaultVariantLabel
+            : buildVariantLabel(variant)
         return (
           <VariantCard
             key={value}
@@ -156,6 +161,7 @@ type VariantPickerProps = {
   variantOptions: SupportedVariant[]
   selectedVariant: SupportedVariant | null
   setSelectedVariant: (variant: SupportedVariant | null) => void
+  defaultVariantLabel?: string
   title?: string
   description?: string
 }
@@ -164,10 +170,16 @@ const VariantPicker: React.FC<VariantPickerProps> = ({
   variantOptions,
   selectedVariant,
   setSelectedVariant,
+  defaultVariantLabel,
   title = "Available Versions",
   description,
 }) => {
   const titleId = React.useId()
+  const viewingLabel = selectedVariant
+    ? selectedVariant.default_variant && defaultVariantLabel
+      ? defaultVariantLabel
+      : buildVariantLabel(selectedVariant)
+    : ""
   return (
     <VariantPickerRoot>
       <Typography id={titleId} variant="h5" component="h2">
@@ -179,12 +191,11 @@ const VariantPicker: React.FC<VariantPickerProps> = ({
         variantOptions={variantOptions}
         selectedVariant={selectedVariant}
         setSelectedVariant={setSelectedVariant}
+        defaultVariantLabel={defaultVariantLabel}
       />
       <SelectedVariantIndicator>
         <Typography variant="body2">Viewing:</Typography>
-        <Typography variant="subtitle2">
-          {selectedVariant ? buildVariantLabel(selectedVariant) : ""}
-        </Typography>
+        <Typography variant="subtitle2">{viewingLabel}</Typography>
       </SelectedVariantIndicator>
     </VariantPickerRoot>
   )
