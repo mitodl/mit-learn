@@ -97,8 +97,8 @@ type VariantChoiceBoxesProps = {
   variantOptions: SupportedVariant[]
   selectedVariant: SupportedVariant | null
   setSelectedVariant: (variant: SupportedVariant | null) => void
-  defaultVariantLabel?: string
-  customizedVariantLabel?: string
+  defaultVariantLabel: string
+  customizedVariantLabel: string
   "aria-label"?: string
   "aria-labelledby"?: string
 }
@@ -134,17 +134,15 @@ const VariantChoiceBoxes: React.FC<VariantChoiceBoxesProps> = ({
     >
       {variantOptions.map((variant) => {
         const value = buildVariantKey(variant)
-        const detailLabel = buildVariantLabel(variant)
         // Default card: large title from defaultVariantLabel, "Certificate
         // Eligible" badge as subtext. Variant cards: "Customized <Contract>"
         // title with the language • industry • length detail as subtext.
         const title = variant.default_variant
-          ? (defaultVariantLabel ?? detailLabel)
-          : (customizedVariantLabel ?? detailLabel)
-        const subtitle =
-          !variant.default_variant && customizedVariantLabel
-            ? detailLabel
-            : undefined
+          ? defaultVariantLabel
+          : customizedVariantLabel
+        const subtitle = variant.default_variant
+          ? undefined
+          : buildVariantLabel(variant)
         return (
           <VariantCard
             key={value}
@@ -178,8 +176,8 @@ type VariantPickerProps = {
   variantOptions: SupportedVariant[]
   selectedVariant: SupportedVariant | null
   setSelectedVariant: (variant: SupportedVariant | null) => void
-  defaultVariantLabel?: string
-  customizedVariantLabel?: string
+  defaultVariantLabel: string
+  customizedVariantLabel: string
   title?: string
   description?: string
 }
@@ -196,15 +194,9 @@ const VariantPicker: React.FC<VariantPickerProps> = ({
   const titleId = React.useId()
   let viewingLabel = ""
   if (selectedVariant) {
-    const detailLabel = buildVariantLabel(selectedVariant)
-    if (selectedVariant.default_variant) {
-      viewingLabel = defaultVariantLabel ?? detailLabel
-    } else if (customizedVariantLabel) {
-      // e.g. "Customized Universal AI (English • Healthcare • Short)"
-      viewingLabel = `${customizedVariantLabel} (${detailLabel})`
-    } else {
-      viewingLabel = detailLabel
-    }
+    viewingLabel = selectedVariant.default_variant
+      ? defaultVariantLabel
+      : `${customizedVariantLabel} (${buildVariantLabel(selectedVariant)})`
   }
   return (
     <VariantPickerRoot>

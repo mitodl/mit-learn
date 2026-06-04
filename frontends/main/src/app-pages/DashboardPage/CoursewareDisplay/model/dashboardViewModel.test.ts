@@ -1781,6 +1781,21 @@ describe("sortVariants", () => {
     // input is not mutated
     expect(input[0]).toBe(spanish)
   })
+
+  test("with no default variant, orders purely alphabetically by language", () => {
+    // No variant has default_variant: true, so there is no language to hoist
+    // and ordering falls through to the alphabetical language comparison.
+    const french = makeVariant({ language: LanguageEnum.Fr })
+    const english = makeVariant({ language: LanguageEnum.En })
+    const spanish = makeVariant({ language: LanguageEnum.EsEs })
+
+    // English < Español < Français
+    expect(sortVariants([french, spanish, english])).toEqual([
+      english,
+      spanish,
+      french,
+    ])
+  })
 })
 
 describe("selectVariantRunForCourse", () => {
