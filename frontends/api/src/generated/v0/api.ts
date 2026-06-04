@@ -11540,6 +11540,7 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
      * @summary Content File Vector Search
      * @param {Array<VectorContentFilesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;key&#x60; - Key * &#x60;course_number&#x60; - Course Number * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;file_extension&#x60; - File Extension * &#x60;content_feature_type&#x60; - Content Feature Type * &#x60;run_readable_id&#x60; - Run Readable Id * &#x60;resource_readable_id&#x60; - Resource Readable Id * &#x60;run_title&#x60; - Run Title * &#x60;edx_module_id&#x60; - Edx Module Id * &#x60;content_type&#x60; - Content Type * &#x60;description&#x60; - Description * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;file_type&#x60; - File Type * &#x60;summary&#x60; - Summary * &#x60;flashcards&#x60; - Flashcards * &#x60;checksum&#x60; - Checksum
      * @param {string} [collection_name] Manually specify the name of the Qdrant collection to query
+     * @param {Array<string>} [edx_module_id] The edX module id of the content file
      * @param {Array<string>} [file_extension] The extension of the content file.
      * @param {string} [group_by] The attribute to group results by
      * @param {number} [group_size] The number of chunks in each group. Only relevant when group_by is used
@@ -11560,6 +11561,7 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
     vectorContentFilesSearchRetrieve: async (
       aggregations?: Array<VectorContentFilesSearchRetrieveAggregationsEnum>,
       collection_name?: string,
+      edx_module_id?: Array<string>,
       file_extension?: Array<string>,
       group_by?: string,
       group_size?: number,
@@ -11598,6 +11600,10 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
 
       if (collection_name !== undefined) {
         localVarQueryParameter["collection_name"] = collection_name
+      }
+
+      if (edx_module_id) {
+        localVarQueryParameter["edx_module_id"] = edx_module_id
       }
 
       if (file_extension) {
@@ -11688,6 +11694,7 @@ export const VectorContentFilesSearchApiFp = function (
      * @summary Content File Vector Search
      * @param {Array<VectorContentFilesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;key&#x60; - Key * &#x60;course_number&#x60; - Course Number * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;file_extension&#x60; - File Extension * &#x60;content_feature_type&#x60; - Content Feature Type * &#x60;run_readable_id&#x60; - Run Readable Id * &#x60;resource_readable_id&#x60; - Resource Readable Id * &#x60;run_title&#x60; - Run Title * &#x60;edx_module_id&#x60; - Edx Module Id * &#x60;content_type&#x60; - Content Type * &#x60;description&#x60; - Description * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;file_type&#x60; - File Type * &#x60;summary&#x60; - Summary * &#x60;flashcards&#x60; - Flashcards * &#x60;checksum&#x60; - Checksum
      * @param {string} [collection_name] Manually specify the name of the Qdrant collection to query
+     * @param {Array<string>} [edx_module_id] The edX module id of the content file
      * @param {Array<string>} [file_extension] The extension of the content file.
      * @param {string} [group_by] The attribute to group results by
      * @param {number} [group_size] The number of chunks in each group. Only relevant when group_by is used
@@ -11708,6 +11715,7 @@ export const VectorContentFilesSearchApiFp = function (
     async vectorContentFilesSearchRetrieve(
       aggregations?: Array<VectorContentFilesSearchRetrieveAggregationsEnum>,
       collection_name?: string,
+      edx_module_id?: Array<string>,
       file_extension?: Array<string>,
       group_by?: string,
       group_size?: number,
@@ -11733,6 +11741,7 @@ export const VectorContentFilesSearchApiFp = function (
         await localVarAxiosParamCreator.vectorContentFilesSearchRetrieve(
           aggregations,
           collection_name,
+          edx_module_id,
           file_extension,
           group_by,
           group_size,
@@ -11791,6 +11800,7 @@ export const VectorContentFilesSearchApiFactory = function (
         .vectorContentFilesSearchRetrieve(
           requestParameters.aggregations,
           requestParameters.collection_name,
+          requestParameters.edx_module_id,
           requestParameters.file_extension,
           requestParameters.group_by,
           requestParameters.group_size,
@@ -11831,6 +11841,13 @@ export interface VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequ
    * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
    */
   readonly collection_name?: string
+
+  /**
+   * The edX module id of the content file
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly edx_module_id?: Array<string>
 
   /**
    * The extension of the content file.
@@ -11954,6 +11971,7 @@ export class VectorContentFilesSearchApi extends BaseAPI {
       .vectorContentFilesSearchRetrieve(
         requestParameters.aggregations,
         requestParameters.collection_name,
+        requestParameters.edx_module_id,
         requestParameters.file_extension,
         requestParameters.group_by,
         requestParameters.group_size,

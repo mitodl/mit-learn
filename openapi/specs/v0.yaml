@@ -886,6 +886,14 @@ paths:
           minLength: 1
         description: Manually specify the name of the Qdrant collection to query
       - in: query
+        name: edx_module_id
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The edX module id of the content file
+      - in: query
         name: file_extension
         schema:
           type: array
