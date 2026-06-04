@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.70.12
+---------------
+
+- fix: remove event section if no event data available (#3419)
+
 Version 0.70.11 (Released June 04, 2026)
 ---------------
 
