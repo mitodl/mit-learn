@@ -907,7 +907,7 @@ class TutorProblemFileFactory(DjangoModelFactory):
 
     run = None
     problem_title = factory.Faker("sentence")
-    type = FuzzyChoice("problem", "solution")
+    type = FuzzyChoice(["problem", "solution"])
     content = factory.Faker("text")
     source_path = factory.Faker("file_path", extension="txt")
     file_name = factory.LazyAttribute(lambda o: o.source_path.split("/")[-1])

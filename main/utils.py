@@ -3,6 +3,7 @@
 import datetime
 import logging
 import os
+from collections.abc import Callable
 from enum import Flag, auto
 from functools import wraps
 from hashlib import md5
@@ -36,9 +37,21 @@ def _sorted_query_string(query_dict):
     return "&".join(items)
 
 
+def _resolve_cache_timeout(timeout: int | None) -> int:
+    """Resolve a cache timeout, deferring to settings when no timeout is given."""
+    if timeout is None:
+        return settings.REDIS_VIEW_CACHE_DURATION
+    return timeout
+
+
 def _cache_page_ignoring_cookies(  # noqa: C901
-    timeout, cache="default", key_prefix="", *, only_anonymous=False
-):
+    timeout: int | None = None,
+    cache: str = "default",
+    key_prefix: str = "",
+    *,
+    only_anonymous: bool = False,
+    bypass: Callable | None = None,
+) -> Callable:
     """
     Build cache key from URL path + query params only, so users share the same
     cached response regardless of session/auth state.
@@ -47,11 +60,15 @@ def _cache_page_ignoring_cookies(  # noqa: C901
     this decorator creates a consistent cache key regardless of session/auth state.
 
     Args:
-        timeout: Cache timeout in seconds. If <= 0, caching is skipped entirely.
+        timeout: Cache timeout in seconds. If None, settings.REDIS_VIEW_CACHE_DURATION
+            is read at request time. If <= 0, caching is skipped entirely.
         cache: Name of the cache backend to use.
         key_prefix: Prefix for the cache key.
         only_anonymous: If True, only cache for anonymous users; authenticated
             users bypass the cache entirely.
+        bypass: Optional callable(request, *args, **kwargs) -> bool. When it
+            returns True the view runs uncached (e.g. for privileged users who
+            must see live data).
     """
 
     def inner_decorator(func):  # noqa: C901
@@ -61,10 +78,14 @@ def _cache_page_ignoring_cookies(  # noqa: C901
 
             @wraps(func)
             async def inner_function(request, *args, **kwargs):
-                if timeout <= 0:
+                cache_timeout = _resolve_cache_timeout(timeout)
+                if cache_timeout <= 0:
                     return await func(request, *args, **kwargs)
 
                 if only_anonymous and request.user.is_authenticated:
+                    return await func(request, *args, **kwargs)
+
+                if bypass is not None and bypass(request, *args, **kwargs):
                     return await func(request, *args, **kwargs)
 
                 query_string = _sorted_query_string(request.GET)
@@ -83,7 +104,7 @@ def _cache_page_ignoring_cookies(  # noqa: C901
                 response = await func(request, *args, **kwargs)
 
                 if response.status_code == 200:  # noqa: PLR2004
-                    await cache_backend.aset(cache_key, response.data, timeout)
+                    await cache_backend.aset(cache_key, response.data, cache_timeout)
 
                 return response
 
@@ -92,11 +113,16 @@ def _cache_page_ignoring_cookies(  # noqa: C901
         @wraps(func)
         def inner_function(request, *args, **kwargs):
             # Skip caching entirely if timeout is 0 or negative
-            if timeout <= 0:
+            cache_timeout = _resolve_cache_timeout(timeout)
+            if cache_timeout <= 0:
                 return func(request, *args, **kwargs)
 
             # Skip caching for authenticated users if only_anonymous is set
             if only_anonymous and request.user.is_authenticated:
+                return func(request, *args, **kwargs)
+
+            # Skip caching when the bypass predicate opts this request out
+            if bypass is not None and bypass(request, *args, **kwargs):
                 return func(request, *args, **kwargs)
 
             # Build cache key from path + sorted query string (ignore cookies)
@@ -117,7 +143,7 @@ def _cache_page_ignoring_cookies(  # noqa: C901
 
             # Only cache successful responses
             if response.status_code == 200:  # noqa: PLR2004
-                cache_backend.set(cache_key, response.data, timeout)
+                cache_backend.set(cache_key, response.data, cache_timeout)
 
             return response
 
@@ -174,12 +200,15 @@ def call_fastly_purge_api(relative_url, timeout=30):
     return resp.json()
 
 
-def cache_page_for_anonymous_users(timeout, cache="default", key_prefix=""):
+def cache_page_for_anonymous_users(
+    timeout: int | None = None, cache: str = "default", key_prefix: str = ""
+) -> Callable:
     """
     Cache decorator for anonymous users only, ignoring Vary headers.
 
     Args:
-        timeout: Cache timeout in seconds. If <= 0, caching is skipped entirely.
+        timeout: Cache timeout in seconds. If None, settings.REDIS_VIEW_CACHE_DURATION
+            is read at request time. If <= 0, caching is skipped entirely.
         cache: Name of the cache backend to use.
         key_prefix: Prefix for the cache key.
     """
@@ -205,7 +234,12 @@ def cache_page_per_user(*cache_args, **cache_kwargs):
     return inner_decorator
 
 
-def cache_page_for_all_users(timeout, cache="default", key_prefix=""):
+def cache_page_for_all_users(
+    timeout: int | None = None,
+    cache: str = "default",
+    key_prefix: str = "",
+    bypass: Callable | None = None,
+) -> Callable:
     """
     Cache decorator that ignores authentication and Vary headers.
 
@@ -216,12 +250,19 @@ def cache_page_for_all_users(timeout, cache="default", key_prefix=""):
     this decorator creates a consistent cache key regardless of session/auth state.
 
     Args:
-        timeout: Cache timeout in seconds. If <= 0, caching is skipped entirely.
+        timeout: Cache timeout in seconds. If None, settings.REDIS_VIEW_CACHE_DURATION
+            is read at request time. If <= 0, caching is skipped entirely.
         cache: Name of the cache backend to use.
         key_prefix: Prefix for the cache key.
+        bypass: Optional callable(request, *args, **kwargs) -> bool. When it
+            returns True the view runs uncached (e.g. for privileged users).
     """
     return _cache_page_ignoring_cookies(
-        timeout, cache=cache, key_prefix=key_prefix, only_anonymous=False
+        timeout,
+        cache=cache,
+        key_prefix=key_prefix,
+        only_anonymous=False,
+        bypass=bypass,
     )
 
 
@@ -529,15 +570,26 @@ def clean_data(data: str, tags=None) -> str:
     return ""
 
 
-def clear_views_cache():
+def clear_views_cache(key_prefix: str | None = None) -> int:
+    """
+    Clear cached view responses from Redis.
+
+    Args:
+        key_prefix: If given, only clear responses cached under this key_prefix
+            (as passed to the cache_page_* decorators). Otherwise clear all.
+    """
     cache = caches["redis"]
-    cleared = 0
+    pattern = (
+        f"views.decorators.cache.cache_page.{key_prefix}.*" if key_prefix else "views.*"
+    )
 
+    if hasattr(cache, "delete_pattern"):
+        return cache.delete_pattern(pattern)
     if hasattr(cache, "keys"):
-        cache_keys = cache.keys("views.*")
-        cleared += cache.delete_many(cache_keys) or 0
-
-    return cleared
+        return cache.delete_many(cache.keys(pattern)) or 0
+    # Backends without pattern/key enumeration (e.g. LocMemCache) can only flush.
+    cache.clear()
+    return 0
 
 
 def checksum_for_content(content: str) -> str:

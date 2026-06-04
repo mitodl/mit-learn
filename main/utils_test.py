@@ -474,6 +474,47 @@ def test_cache_timeout_zero_skips_caching(mock_caches):
 
 
 @patch("main.utils.caches")
+def test_cache_default_timeout_resolves_at_request_time(mock_caches, settings):
+    """Default timeout is read from settings when the request is handled."""
+    settings.REDIS_VIEW_CACHE_DURATION = 0
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = None
+    mock_caches.__getitem__.return_value = mock_cache
+
+    view = _create_view()
+    decorated = cache_page_for_all_users()(view)
+    settings.REDIS_VIEW_CACHE_DURATION = 300
+
+    request = _create_mock_request()
+    decorated(request)
+
+    assert view.call_count["count"] == 1
+    mock_cache.set.assert_called_once()
+    assert mock_cache.set.call_args.args[2] == 300
+
+
+@patch("main.utils.caches")
+def test_cache_default_timeout_zero_skips_caching(mock_caches, settings):
+    """Default timeout of 0 skips caching when the request is handled."""
+    settings.REDIS_VIEW_CACHE_DURATION = 0
+    mock_cache = MagicMock()
+    mock_caches.__getitem__.return_value = mock_cache
+
+    view = _create_view()
+    decorated = cache_page_for_all_users()(view)
+
+    request = _create_mock_request()
+    response1 = decorated(request)
+    response2 = decorated(request)
+
+    assert view.call_count["count"] == 2
+    mock_cache.get.assert_not_called()
+    mock_cache.set.assert_not_called()
+    assert response1.data["call"] == 1
+    assert response2.data["call"] == 2
+
+
+@patch("main.utils.caches")
 def test_cache_only_caches_200_responses(mock_caches):
     """Non-200 responses are not cached."""
     mock_cache = MagicMock()

@@ -11,7 +11,6 @@ import {
 } from "ol-components"
 import { SearchSubscriptionToggle } from "@/page-components/SearchSubscriptionToggle/SearchSubscriptionToggle"
 import { useChannelDetail } from "api/hooks/channels"
-import ChannelMenu from "@/components/ChannelMenu/ChannelMenu"
 import ChannelAvatar from "@/components/ChannelAvatar/ChannelAvatar"
 import { LearningResourceTopic, SourceTypeEnum } from "api"
 import { HOME as HOME_URL } from "../../common/urls"
@@ -201,7 +200,7 @@ const TopicChannelTemplate: React.FC<TopicChannelTemplateProps> = ({
   const channel = useChannelDetail(String(ChannelTypeEnum.Topic), String(name))
   if (channel.data?.channel_type === ChannelTypeEnum.Topic) {
     return (
-      <TopicChannelTemplateInternal channel={channel.data} name={name}>
+      <TopicChannelTemplateInternal channel={channel.data}>
         {children}
       </TopicChannelTemplateInternal>
     )
@@ -210,13 +209,12 @@ const TopicChannelTemplate: React.FC<TopicChannelTemplateProps> = ({
 
 type TopicChannelTemplateInternalProps = {
   channel: TopicChannel
-  name: string
   children: React.ReactNode
 }
 
 const TopicChannelTemplateInternal: React.FC<
   TopicChannelTemplateInternalProps
-> = ({ channel, name, children }) => {
+> = ({ channel, children }) => {
   invariant(channel.topic_detail.topic, "Topic channel must have a topic")
   const topicQuery = useLearningResourceTopic(channel.topic_detail.topic)
   const topicQueryLoading = topicQuery.isLoading
@@ -267,12 +265,6 @@ const TopicChannelTemplateInternal: React.FC<
                   itemName={channel.title}
                   sourceType={SourceTypeEnum.ChannelSubscriptionType}
                   searchParams={urlParams}
-                />
-              ) : null}
-              {channel.is_moderator ? (
-                <ChannelMenu
-                  channelType={String(ChannelTypeEnum.Topic)}
-                  name={String(name)}
                 />
               ) : null}
             </ChannelControls>
