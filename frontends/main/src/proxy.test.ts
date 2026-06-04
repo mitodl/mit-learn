@@ -34,16 +34,10 @@ describe("isPageRoute", () => {
 })
 
 describe("mitxonlineSurrogateKey", () => {
-  describe("course pages", () => {
-    it("returns mitxonline:course key for /courses/:readable_id", () => {
+  describe("course pages — /courses/:readable_id", () => {
+    it("returns mitxonline:course key", () => {
       expect(
         mitxonlineSurrogateKey("/courses/course-v1:MITx+6.00.1x+3T2019"),
-      ).toBe("mitxonline:course:course-v1:MITx+6.00.1x+3T2019")
-    })
-
-    it("returns mitxonline:course key for /courses/p/:readable_id", () => {
-      expect(
-        mitxonlineSurrogateKey("/courses/p/course-v1:MITx+6.00.1x+3T2019"),
       ).toBe("mitxonline:course:course-v1:MITx+6.00.1x+3T2019")
     })
 
@@ -55,9 +49,18 @@ describe("mitxonlineSurrogateKey", () => {
     })
   })
 
-  describe("program pages", () => {
+  describe("program pages — /programs/:readable_id and /courses/p/:readable_id", () => {
     it("returns mitxonline:program key for /programs/:readable_id", () => {
       expect(mitxonlineSurrogateKey("/programs/program-v1:MITx+SDS")).toBe(
+        "mitxonline:program:program-v1:MITx+SDS",
+      )
+    })
+
+    it("returns mitxonline:program key for /courses/p/:readable_id (ProgramAsCoursePage)", () => {
+      // /courses/p/ renders ProgramAsCoursePage — the readable_id belongs to a
+      // program, so the surrogate key must use the program namespace so that
+      // MITxOnline's program-save signal purges this page correctly.
+      expect(mitxonlineSurrogateKey("/courses/p/program-v1:MITx+SDS")).toBe(
         "mitxonline:program:program-v1:MITx+SDS",
       )
     })
@@ -133,8 +136,15 @@ describe("proxy", () => {
     expect(response.headers.get("Cache-Control")).toContain("s-maxage=")
   })
 
-  test("appends per-item surrogate key for MITxOnline program pages", () => {
+  test("appends per-item surrogate key for MITxOnline program pages (/programs/)", () => {
     const response = proxy(makeRequest("/programs/program-v1:MITxT+18.01x"))
+    expect(response.headers.get("Surrogate-Key")).toBe(
+      "html-pages mitxonline:program:program-v1:MITxT+18.01x",
+    )
+  })
+
+  test("appends mitxonline:program surrogate key for /courses/p/ (ProgramAsCoursePage)", () => {
+    const response = proxy(makeRequest("/courses/p/program-v1:MITxT+18.01x"))
     expect(response.headers.get("Surrogate-Key")).toBe(
       "html-pages mitxonline:program:program-v1:MITxT+18.01x",
     )

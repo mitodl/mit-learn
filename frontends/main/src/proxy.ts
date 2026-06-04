@@ -36,8 +36,9 @@ export function isPageRoute(pathname: string): boolean {
 
 // Matches /courses/<readable_id> — readable_ids contain colons and + but no slashes.
 const COURSE_PATTERN = /^\/courses\/([^/?]+)$/
-// Matches /courses/p/<readable_id>
-const COURSE_P_PATTERN = /^\/courses\/p\/([^/?]+)$/
+// Matches /courses/p/<readable_id> — despite the /courses/ prefix this is a
+// *program* page (ProgramAsCoursePage); the readable_id is a program readable_id.
+const PROGRAM_AS_COURSE_PATTERN = /^\/courses\/p\/([^/?]+)$/
 // Matches /programs/<readable_id>
 const PROGRAM_PATTERN = /^\/programs\/([^/?]+)$/
 
@@ -72,16 +73,17 @@ function safeDecodeSegment(segment: string): string | null {
  *
  * Key format (matches what MITxOnline purges):
  *   mitxonline:course:<readable_id>   — /courses/<readable_id>
- *                                     — /courses/p/<readable_id>
  *   mitxonline:program:<readable_id>  — /programs/<readable_id>
+ *                                     — /courses/p/<readable_id>
+ *                                       (/courses/p/ renders ProgramAsCoursePage;
+ *                                        the readable_id is a program readable_id)
  *
  * NOTE: Surrogate-Key headers must be set here rather than in page.tsx because
  * Next.js commits response headers before any page/layout code runs (to begin
  * streaming). By the time page.tsx executes, headers have already been sent.
  */
 export function mitxonlineSurrogateKey(pathname: string): string | null {
-  const courseMatch =
-    COURSE_P_PATTERN.exec(pathname) ?? COURSE_PATTERN.exec(pathname)
+  const courseMatch = COURSE_PATTERN.exec(pathname)
   if (courseMatch) {
     const readableId = safeDecodeSegment(courseMatch[1])
     if (readableId !== null) {
@@ -89,7 +91,8 @@ export function mitxonlineSurrogateKey(pathname: string): string | null {
     }
   }
 
-  const programMatch = PROGRAM_PATTERN.exec(pathname)
+  const programMatch =
+    PROGRAM_AS_COURSE_PATTERN.exec(pathname) ?? PROGRAM_PATTERN.exec(pathname)
   if (programMatch) {
     const readableId = safeDecodeSegment(programMatch[1])
     if (readableId !== null) {
