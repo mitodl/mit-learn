@@ -117,6 +117,29 @@ describe("CertificatePage", () => {
     await screen.findAllByText(certificate.uuid)
   })
 
+  it("renders a MicroMasters program certificate badge with the registered mark", async () => {
+    const certificate = factories.mitxonline.programCertificate()
+    certificate.program.program_type = "MicroMasters®"
+    setMockResponse.get(
+      mitxonline.urls.certificates.programCertificatesRetrieve({
+        cert_uuid: certificate.uuid,
+      }),
+      certificate,
+    )
+    renderWithProviders(
+      <CertificatePage
+        certificateType={CertificateType.Program}
+        uuid={certificate.uuid}
+        pageUrl={`https://${process.env.NEXT_PUBLIC_ORIGIN}/certificate/program/${certificate.uuid}`}
+      />,
+    )
+
+    const badge = await screen.findByTestId("certificate-badge-label")
+    expect(within(badge).getByText("MicroMasters")).toBeInTheDocument()
+    expect(within(badge).getByText("®")).toBeInTheDocument()
+    expect(within(badge).getByText("Certificate")).toBeInTheDocument()
+  })
+
   it("does not display buttons when certificate belongs to a different user", async () => {
     const certificateOwner = mitxonline.factories.user.user({ id: 1 })
     const loggedInUser = mitxonline.factories.user.user({ id: 2 })

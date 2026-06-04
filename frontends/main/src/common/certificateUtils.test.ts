@@ -16,12 +16,15 @@ describe("getCertificateInfo", () => {
     expect(getCertificateInfo("  MicroMasters®  ").displayType).toBe(
       "MicroMasters® Certificate",
     )
-    expect(getCertificateInfo("MicroMasters Credential").displayType).toBe(
+    expect(getCertificateInfo("MicroMasters").displayType).toBe(
       "MicroMasters® Certificate",
     )
   })
 
-  it("does not match unrelated program types containing micro and master substrings", () => {
+  it("falls back to default for micromasters-prefixed values that are not the exact descriptor", () => {
+    expect(getCertificateInfo("MicroMasters Professional").displayType).toBe(
+      "Certificate",
+    )
     expect(getCertificateInfo("Microbiology Masters").displayType).toBe(
       "Certificate",
     )

@@ -50,23 +50,20 @@ const normalizeProgramType = (programType?: string | null): string =>
     .replace(/®/g, "")
     .replace(/\s+/g, "")
 
+/*
+ * program_type is a free-form string on the client (`string | null`); the
+ * canonical enum is owned by MITx Online. Match the normalized value exactly
+ * against the known descriptors so unexpected values fall back to the plain
+ * "Certificate" label instead of being silently coerced (e.g. a prefix match
+ * on "micromasters" would swallow data issues).
+ */
 const resolveKey = (
   programType?: string | null,
 ): ProgramTypeLabelKey | undefined => {
   const normalized = normalizeProgramType(programType)
-  if (!normalized) {
-    return undefined
-  }
-  if (normalized === "series") {
-    return "series"
-  }
-  if (normalized === "program") {
-    return "program"
-  }
-  if (normalized === "micromasters" || normalized.startsWith("micromasters")) {
-    return "micromasters"
-  }
-  return undefined
+  return Object.hasOwn(PROGRAM_TYPE_LABELS, normalized)
+    ? (normalized as ProgramTypeLabelKey)
+    : undefined
 }
 
 const resolveCertificateLabel = (
