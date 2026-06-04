@@ -325,7 +325,7 @@ const BannerTitle = styled(Typography)`
   }
   ${theme.breakpoints.down("sm")} {
     ${{ ...theme.typography.h3 }}
-    margin-top: 0px;
+    margin-top: 0;
   }
 ` as typeof Typography
 
