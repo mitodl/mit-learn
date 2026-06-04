@@ -141,6 +141,7 @@ def test_content_file_vector_search_filters(
         "offered_by": ["ocw"],
         "platform": ["edx"],
         "key": ["testfilename.pdf"],
+        "edx_module_id": ["test_module_id"],
         "course_number": ["test"],
         "content_feature_type": ["test_feature"],
         "run_readable_id": ["test_run_id"],
@@ -172,6 +173,9 @@ def test_content_file_vector_search_filters(
                 ),
                 models.FieldCondition(
                     key="platform.code", match=models.MatchAny(any=["edx"])
+                ),
+                models.FieldCondition(
+                    key="edx_module_id", match=models.MatchAny(any=["test_module_id"])
                 ),
                 models.FieldCondition(
                     key="run_readable_id", match=models.MatchAny(any=["test_run_id"])
@@ -218,6 +222,7 @@ def test_content_file_vector_search_filters_empty_query(
         "offered_by": ["ocw"],
         "platform": ["edx"],
         "key": ["testfilename.pdf"],
+        "edx_module_id": ["test_module_id"],
         "course_number": ["test"],
         "content_feature_type": ["test_feature"],
         "run_readable_id": ["test_run_id"],
@@ -238,6 +243,9 @@ def test_content_file_vector_search_filters_empty_query(
             ),
             models.FieldCondition(
                 key="platform.code", match=models.MatchAny(any=["edx"])
+            ),
+            models.FieldCondition(
+                key="edx_module_id", match=models.MatchAny(any=["test_module_id"])
             ),
             models.FieldCondition(
                 key="run_readable_id", match=models.MatchAny(any=["test_run_id"])

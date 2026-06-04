@@ -292,6 +292,11 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
         child=serializers.CharField(),
         help_text="The filename of the content file",
     )
+    edx_module_id = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="The edX module id of the content file",
+    )
     offered_by = serializers.ListField(
         required=False,
         child=serializers.CharField(),
