@@ -5,6 +5,10 @@ import { styled } from "@mitodl/smoot-design"
  * their own insets so that elements like the bundle upsell can span edge-to-edge.
  */
 export const InfoBoxCard = styled.div(({ theme }) => ({
+  // Fill the column. Required because InfoBoxColumn uses `align-items:
+  // flex-start` on tablet (to left-align the 320px Ask TIM card), which would
+  // otherwise shrink this width-less flex child to its content.
+  width: "100%",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   backgroundColor: theme.custom.colors.white,
   borderRadius: "4px",
@@ -23,14 +27,12 @@ export const InfoBoxContent = styled.div(({ theme }) => ({
   },
 }))
 
-/** Stacks enrollment CTA full-width; Ask TIM sits in a sibling card below (see Figma). */
 export const InfoBoxActionStack = styled.div({
   display: "flex",
   flexDirection: "column",
   width: "100%",
 })
 
-/** Wraps summary card and Ask TIM card with design-system spacing. */
 export const InfoBoxColumn = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",

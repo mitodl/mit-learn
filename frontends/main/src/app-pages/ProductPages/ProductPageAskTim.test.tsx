@@ -10,7 +10,7 @@ import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { PostHogEvents } from "@/common/constants"
 import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
-import { ResourceTypeEnum } from "api"
+import { ResourceTypeEnum, type LearningResource } from "api"
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
@@ -25,7 +25,7 @@ jest.mocked(usePostHog).mockReturnValue(
 )
 
 const setupLearnResource = (
-  resource = factories.learningResources.course({
+  resource: LearningResource = factories.learningResources.course({
     readable_id: "course-v1:MITx+TEST",
     resource_category: "Course",
   }),
@@ -106,7 +106,9 @@ describe("ProductPageAskTimSection", () => {
     ).toBeInTheDocument()
   })
 
-  test("hides button when feature flag is off", async () => {
+  test("hides button and skips fetch when the flag is off (env still on)", async () => {
+    // beforeEach leaves NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT set, so this
+    // isolates the per-type flag as the gate that suppresses the network call.
     mockedUseFeatureFlagEnabled.mockReturnValue(false)
     const { resource } = setupLearnResource()
 
@@ -120,6 +122,55 @@ describe("ProductPageAskTimSection", () => {
     expect(
       screen.queryByRole("link", { name: /ask tim/i }),
     ).not.toBeInTheDocument()
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining("readable_id="),
+      }),
+    )
+  })
+
+  test("renders Ask TIM button for a program resource", async () => {
+    const program = factories.learningResources.program({
+      readable_id: "program-v1:MITx+PROG",
+      resource_category: "Program",
+    })
+    setupLearnResource(program)
+
+    renderWithProviders(
+      <ProductPageAskTimSection
+        readableId={program.readable_id}
+        resourceType="program"
+      />,
+    )
+
+    expect(
+      await screen.findByRole("link", {
+        name: /ask tim about this program/i,
+      }),
+    ).toBeInTheDocument()
+  })
+
+  test("labels by resource_category for a program shown as a course", async () => {
+    // A "program as course" page renders a program (resource_type=program) with
+    // resource_category overridden to "Course"; resourceType stays "program".
+    const programAsCourse = factories.learningResources.program({
+      readable_id: "program-v1:MITx+PAC",
+      resource_category: "Course",
+    })
+    setupLearnResource(programAsCourse)
+
+    renderWithProviders(
+      <ProductPageAskTimSection
+        readableId={programAsCourse.readable_id}
+        resourceType="program"
+      />,
+    )
+
+    expect(
+      await screen.findByRole("link", {
+        name: /ask tim about this course/i,
+      }),
+    ).toBeInTheDocument()
   })
 
   test("hides button when Learn resource is not found", () => {

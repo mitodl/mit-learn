@@ -67,24 +67,8 @@ const AskTimLabel = styled.span(({ theme }) => ({
   },
 }))
 
-const isAskTimVisible = (
-  resource: LearningResource | null | undefined,
-  resourceType: "course" | "program",
-  courseChatEnabled: boolean | undefined,
-  programChatEnabled: boolean | undefined,
-) => {
-  if (!isSyllabusChatEnabled() || !resource) {
-    return false
-  }
-  if (resourceType === "course") {
-    return (
-      courseChatEnabled && resource.resource_type === ResourceTypeEnum.Course
-    )
-  }
-  return (
-    programChatEnabled && resource.resource_type === ResourceTypeEnum.Program
-  )
-}
+const expectedResourceType = (resourceType: "course" | "program") =>
+  resourceType === "course" ? ResourceTypeEnum.Course : ResourceTypeEnum.Program
 
 type ProductPageAskTimButtonProps = {
   resource: LearningResource
@@ -142,25 +126,19 @@ export const ProductPageAskTimSection: React.FC<
 > = ({ readableId, resourceType }) => {
   const courseChatEnabled = useFeatureFlagEnabled(FeatureFlags.LrDrawerChatbot)
   const programChatEnabled = useFeatureFlagEnabled(FeatureFlags.PrDrawerChatbot)
-  const shouldFetch =
-    isSyllabusChatEnabled() &&
-    ((resourceType === "course" && !!courseChatEnabled) ||
-      (resourceType === "program" && !!programChatEnabled))
+  const flagEnabled =
+    resourceType === "course" ? courseChatEnabled : programChatEnabled
+  const chatEnabledForType = isSyllabusChatEnabled() && !!flagEnabled
+
   const { data: resource, isSuccess } = useLearningResourceByReadableId(
     readableId,
-    { enabled: shouldFetch },
+    { enabled: chatEnabledForType },
   )
 
-  if (
-    !isSuccess ||
-    !resource ||
-    !isAskTimVisible(
-      resource,
-      resourceType,
-      courseChatEnabled,
-      programChatEnabled,
-    )
-  ) {
+  if (!chatEnabledForType || !isSuccess || !resource) {
+    return null
+  }
+  if (resource.resource_type !== expectedResourceType(resourceType)) {
     return null
   }
 

@@ -486,3 +486,39 @@ describe.each([true, false])(
     })
   },
 )
+
+describe("LearningResourceExpanded syllabus-only mode", () => {
+  beforeEach(() => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+  })
+
+  test("shows only the chat, hides resource content, and Close exits the drawer", async () => {
+    const closeDrawer = jest.fn()
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Course,
+    })
+
+    setup({
+      resource,
+      chatExpanded: true,
+      syllabusOnlyMode: true,
+      closeDrawer,
+    })
+
+    // Chat is shown.
+    expect(screen.getByTestId("ai-chat-entry-screen")).toBeInTheDocument()
+
+    // Resource content (CTA + info) is suppressed in syllabus-only mode.
+    expect(screen.queryByTestId("drawer-cta")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("drawer-info-items")).not.toBeInTheDocument()
+
+    // The "back to resource" opener toggle is not rendered.
+    expect(
+      screen.queryByRole("button", { name: /Ask\sTIM/ }),
+    ).not.toBeInTheDocument()
+
+    // Closing exits the whole drawer rather than returning to resource details.
+    await user.click(screen.getByRole("button", { name: "Close" }))
+    expect(closeDrawer).toHaveBeenCalledTimes(1)
+  })
+})

@@ -78,6 +78,21 @@ describe("useLearningResourceByReadableId", () => {
     )
     expect(result.current.data).toEqual(data)
   })
+
+  it("does not fetch when disabled", () => {
+    const { wrapper } = setupReactQueryTest()
+    const { result } = renderHook(
+      () =>
+        useLearningResourceByReadableId("course-v1:MITx+TEST", {
+          enabled: false,
+        }),
+      { wrapper },
+    )
+
+    expect(makeRequest).not.toHaveBeenCalled()
+    expect(result.current.fetchStatus).toBe("idle")
+    expect(result.current.isPending).toBe(true)
+  })
 })
 
 describe("useLearningResourcesRetrieve", () => {
