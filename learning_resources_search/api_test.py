@@ -25,10 +25,12 @@ from learning_resources_search.api import (
     percolate_matches_for_document,
     relevant_indexes,
 )
+from learning_resources_search.connection import get_default_alias_name
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
     LEARNING_RESOURCE,
+    PROGRAM_TYPE,
 )
 from learning_resources_search.factories import PercolateQueryFactory
 from learning_resources_search.models import PercolateQuery
@@ -1942,7 +1944,8 @@ def test_generate_aggregation_clauses_with_same_filters_as_aggregation():
     assert generate_aggregation_clauses(params, filters) == result
 
 
-def test_execute_learn_search_for_learning_resource_query(opensearch):
+def test_execute_learn_search_for_learning_resource_query(settings, opensearch):
+    settings.SEARCH_PROGRAM_INDEX_BOOST = 1
     opensearch.conn.search.return_value = {
         "hits": {"total": {"value": 10, "relation": "eq"}}
     }
@@ -2424,11 +2427,14 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
     )
 
 
-def test_execute_learn_search_for_learning_resource_query_filter_ocw_files(opensearch):
+def test_execute_learn_search_for_learning_resource_query_filter_ocw_files(
+    settings, opensearch
+):
     """
     Test that when show_ocw_files is False, non-course ocw resources are
     filtered out in the search query
     """
+    settings.SEARCH_PROGRAM_INDEX_BOOST = 1
     opensearch.conn.search.return_value = {
         "hits": {"total": {"value": 10, "relation": "eq"}}
     }
@@ -2530,6 +2536,7 @@ def test_execute_learn_search_with_script_score(
     settings.DEFAULT_SEARCH_MODE = "phrase"
     settings.DEFAULT_SEARCH_SLOP = 0
     settings.DEFAULT_SEARCH_MINIMUM_SCORE_CUTOFF = 0
+    settings.SEARCH_PROGRAM_INDEX_BOOST = 1
 
     opensearch.conn.search.return_value = {
         "hits": {"total": {"value": 10, "relation": "eq"}}
@@ -3576,6 +3583,7 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
     settings.DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY = 0
     settings.DEFAULT_SEARCH_STALENESS_PENALTY = 0
     settings.DEFAULT_SEARCH_MODE = "best_fields"
+    settings.SEARCH_PROGRAM_INDEX_BOOST = 1
 
     search_params = {
         "aggregations": ["offered_by"],
@@ -4425,6 +4433,50 @@ def test_dfs_search_type(q, sortby, expect_dfs):
         assert search._params.get("search_type") == "dfs_query_then_fetch"  # noqa: SLF001
     else:
         assert "search_type" not in search._params  # noqa: SLF001
+
+
+@pytest.mark.parametrize("boost", [1, 1.5, 3])
+def test_program_index_boost(settings, boost):
+    """
+    indices_boost should boost the programs index when SEARCH_PROGRAM_INDEX_BOOST
+    is greater than 1, and be omitted when it equals the no-op value of 1.
+    """
+    settings.SEARCH_PROGRAM_INDEX_BOOST = boost
+    search_params = {
+        "aggregations": [],
+        "q": "math",
+        "endpoint": LEARNING_RESOURCE,
+    }
+
+    indices_boost = construct_search(search_params).to_dict().get("indices_boost")
+
+    if boost == 1:
+        assert indices_boost is None
+    else:
+        assert indices_boost == [{get_default_alias_name(PROGRAM_TYPE): boost}]
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "search_mode", "q"),
+    [
+        (CONTENT_FILE_TYPE, None, "math"),
+        (LEARNING_RESOURCE, "hybrid", None),
+    ],
+)
+def test_program_index_boost_not_applied(settings, endpoint, search_mode, q):
+    """
+    indices_boost should not be applied for content file searches or hybrid
+    search (which queries a single combined index).
+    """
+    settings.SEARCH_PROGRAM_INDEX_BOOST = 1.5
+    search_params = {
+        "aggregations": [],
+        "q": q,
+        "endpoint": endpoint,
+        "search_mode": search_mode,
+    }
+
+    assert construct_search(search_params).to_dict().get("indices_boost") is None
 
 
 @pytest.mark.django_db
