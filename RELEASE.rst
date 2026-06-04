@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.70.10
+Version 0.70.10 (Released June 04, 2026)
 ---------------
 
 - feat(ContractAdminPage): add AssignSeatsSection and row action menu (phase 2 shell) (#3402)
