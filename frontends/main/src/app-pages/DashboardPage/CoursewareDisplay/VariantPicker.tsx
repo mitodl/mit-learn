@@ -43,9 +43,13 @@ const VariantChoiceBox = styled("label", {
   border: `1px solid ${checked ? theme.custom.colors.red : theme.custom.colors.silverGrayLight}`,
   boxShadow: checked ? `inset 0 0 0 1px ${theme.custom.colors.red}` : "none",
   cursor: "pointer",
-  "&:focus-within": {
-    borderColor: theme.custom.colors.red,
-    boxShadow: `inset 0 0 0 1px ${theme.custom.colors.red}`,
+  // Focus is a distinct OUTER ring layered on top of the (inset) selected
+  // state, so "selected" and "selected + focused" look different. :has(
+  // :focus-visible) keeps it to keyboard focus — a mouse click to select
+  // won't draw the ring. outline (not box-shadow) also survives forced-colors.
+  "&:has(:focus-visible)": {
+    outline: `2px solid ${theme.custom.colors.red}`,
+    outlineOffset: "2px",
   },
 }))
 
