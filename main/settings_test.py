@@ -3,11 +3,12 @@ Validate that our settings functions work
 """
 
 import importlib
+import re
 import sys
+import tomllib
 from unittest import mock
 
 import pytest
-import semantic_version
 from django.conf import settings
 from django.core import mail
 from django.core.exceptions import ImproperlyConfigured
@@ -162,12 +163,17 @@ class TestSettings(TestCase):
             settings_vars = self.reload_settings()
             assert settings_vars["OPENSEARCH_INDEX"] == index_name
 
-    @staticmethod
-    def test_semantic_version():
-        """
-        Verify that we have a semantic compatible version.
-        """
-        semantic_version.Version(settings.VERSION)
+    def test_bump_my_version_format(self):
+        """Verify VERSION is in sync with pyproject.toml and matches a version format."""
+        with open("pyproject.toml", "rb") as f:  # noqa: PTH123
+            pyproject = tomllib.load(f)
+        version_pattern = pyproject["tool"]["bumpversion"]["parse"]
+        package_version = pyproject["project"]["version"]
+        assert package_version == settings.VERSION
+        semver_pattern = r"[0-9]+\.[0-9]+\.[0-9]+"
+        assert re.fullmatch(version_pattern, settings.VERSION) or re.fullmatch(
+            semver_pattern, settings.VERSION
+        ), f'VERSION "{settings.VERSION}" does not match calver or semver format'
 
     def test_required_settings(self):
         """
