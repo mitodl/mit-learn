@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+Version 0.70.9 (Released June 04, 2026)
+--------------
+
+- adding fix for topic page search (#3416)
+- add edx_module_id back into the vector content file serializer (#3418)
+- Fix for empty "Other videos in this Series" section (#3404)
+- Remove video_shorts app (Phase 1) (#3384)
+- feat: article listing page design implementation (#3397)
+- make healthcheck route nocache (#3413)
+- Ignore both SCM and DEDP micromasters programs (#3411)
+- add hybrid search to topic channel pages (#3401)
+
 Version 0.70.5 (Released June 03, 2026)
 --------------
 
