@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.70.11
+---------------
+
+- Sort variants + Variant Picker UI Updates (#3424)
+
 Version 0.70.10 (Released June 04, 2026)
 ---------------
 
