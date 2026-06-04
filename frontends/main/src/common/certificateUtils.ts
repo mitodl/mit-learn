@@ -1,11 +1,10 @@
+import { env } from "@/env"
 import type {
   V2ProgramCertificate,
   V2CourseRunCertificate,
 } from "@mitodl/mitxonline-api-axios/v2"
 
 import { LINKEDIN_ADD_TO_PROFILE_BASE_URL } from "@/common/urls"
-import invariant from "tiny-invariant"
-
 /**
  * Returns common display info for a certificate.
  */
@@ -24,8 +23,7 @@ export enum CertificateType {
  * The below matches my naive expectations but we need to confirm that since we need unauthenticated access
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL
-invariant(API_BASE_URL, "NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL must be set")
+const API_BASE_URL = env("NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL")
 
 /* This is the Organization ID for MIT OpenLearning on LinkedIn as far as I can tell. We could parameterize this if needed */
 const ORG_ID = 74540637

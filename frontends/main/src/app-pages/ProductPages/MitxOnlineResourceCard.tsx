@@ -1,5 +1,6 @@
 "use client"
 
+import { env } from "@/env"
 import React from "react"
 import { usePostHog } from "posthog-js/react"
 import { BaseLearningResourceCard } from "ol-components"
@@ -217,7 +218,7 @@ const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
       ariaLabel={`${data.displayType}: ${data.title}`}
       list={list}
       onClick={() => {
-        if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+        if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
           posthog.capture(PostHogEvents.CourseCardClicked, {
             label,
             resourceId: props.resource?.id,

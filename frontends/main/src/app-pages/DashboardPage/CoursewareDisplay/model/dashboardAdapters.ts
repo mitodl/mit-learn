@@ -1,6 +1,6 @@
 import type {
+  BaseCourseRun,
   CourseRunEnrollmentV3,
-  CourseRunV2,
   CourseWithCourseRunsSerializerV2,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -12,7 +12,7 @@ export type LegacyDashboardCardResource =
 
 export type LegacyDashboardCardAdapterOutput = {
   resource: LegacyDashboardCardResource
-  selectedCourseRun: CourseRunV2 | null
+  selectedCourseRun: BaseCourseRun | null
   buttonHref: string | null
   contractId?: number
   programEnrollment?: V3UserProgramEnrollment

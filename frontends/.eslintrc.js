@@ -5,7 +5,10 @@ module.exports = {
     "plugin:styled-components-a11y/recommended",
     "plugin:import/typescript",
     "plugin:mdx/recommended",
-    "plugin:@next/next/recommended",
+    // The default `recommended`/`core-web-vitals` configs are flat-config shaped
+    // (they carry a top-level `name`), which ESLint 8's legacy .eslintrc loader
+    // rejects. The plugin dual-publishes eslintrc-compatible `-legacy` variants.
+    "plugin:@next/next/recommended-legacy",
     "prettier",
   ],
   plugins: ["testing-library", "import", "styled-components-a11y"],
@@ -100,6 +103,7 @@ module.exports = {
           "**/jest-shared-setup.ts",
           "**/jsdom-extended.ts",
           "**/test-utils.ts",
+          "**/test-utils.tsx",
           "**/test-utils/**",
           "**/webpack.config.js",
           "**/webpack.exports.js",
@@ -131,39 +135,29 @@ module.exports = {
       },
     ],
     quotes: ["error", "double", { avoidEscape: true }],
-    "no-restricted-syntax": [
-      "error",
-      /**
-       * See https://eslint.org/docs/latest/rules/no-restricted-syntax
-       *
-       * The selectors use "ES Query", a css-like syntax for AST querying. A
-       * useful tool is  https://estools.github.io/esquery/
-       */
-      {
-        selector:
-          "Property[key.name=fontWeight][value.raw=/\\d+/], TemplateElement[value.raw=/font-weight: \\d+/]",
-        message:
-          "Do not specify `fontWeight` manually. Prefer spreading `theme.typography.subtitle1` or similar. If you MUST use a fontWeight, refer to `fontWeights` theme object.",
-      },
-      {
-        selector:
-          "Property[key.name=fontFamily][value.raw=/Neue Haas/], TemplateElement[value.raw=/Neue Haas/]",
-        message:
-          "Do not specify `fontFamily` manually. Prefer spreading `theme.typography.subtitle1` or similar. If using neue-haas-grotesk-text, this is ThemeProvider's default fontFamily.",
-      },
-      {
-        selector:
-          "FunctionDeclaration[id.name='generateMetadata'] > BlockStatement > ReturnStatement[argument.type!='CallExpression'], FunctionDeclaration[id.name='generateMetadata'] > BlockStatement > ReturnStatement[argument.callee.name!='safeGenerateMetadata']",
-        message:
-          "generateMetadata functions must return safeGenerateMetadata() to ensure proper error handling and fallback metadata.",
-      },
-    ],
+    ...restrictedSyntax(),
   },
   overrides: [
     {
       files: ["./**/ol-components/**/*.ts", "./**/ol-components/**/*.tsx"],
       rules: {
         ...restrictedImports(),
+      },
+    },
+    {
+      // Tests/setup legitimately set & read process.env.NEXT_PUBLIC_* directly
+      // (jsdom). Lift only the NEXT_PUBLIC_* ban for these; keep other selectors.
+      // next.config.js is intentionally NOT exempt: NEXT_PUBLIC_* are absent at
+      // build time, so reads there are bugs except for a couple of justified
+      // cases (NEXT_PUBLIC_VERSION, dev-only NEXT_PUBLIC_ORIGIN) allowed inline.
+      files: [
+        "./**/*.test.{ts,tsx}",
+        "./**/test-utils/**",
+        "./**/setupJest.{ts,tsx}",
+        "./**/jest-shared-setup.ts",
+      ],
+      rules: {
+        ...restrictedSyntax({ allowPublicEnv: true }),
       },
     },
     {
@@ -226,4 +220,49 @@ function restrictedImports({ paths = [], patterns = [] } = {}) {
       },
     ],
   }
+}
+
+function restrictedSyntax({ allowPublicEnv = false } = {}) {
+  /**
+   * Shared no-restricted-syntax config. Factored into a helper (like
+   * restrictedImports above) so the NEXT_PUBLIC_* process.env ban can be lifted
+   * for tests/setup (which read process.env directly under jsdom) via an
+   * override without losing the other selectors.
+   *
+   * The selectors use "ES Query", a css-like syntax for AST querying. A useful
+   * tool is https://estools.github.io/esquery/
+   * See https://eslint.org/docs/latest/rules/no-restricted-syntax
+   */
+  const selectors = [
+    {
+      selector:
+        "Property[key.name=fontWeight][value.raw=/\\d+/], TemplateElement[value.raw=/font-weight: \\d+/]",
+      message:
+        "Do not specify `fontWeight` manually. Prefer spreading `theme.typography.subtitle1` or similar. If you MUST use a fontWeight, refer to `fontWeights` theme object.",
+    },
+    {
+      selector:
+        "Property[key.name=fontFamily][value.raw=/Neue Haas/], TemplateElement[value.raw=/Neue Haas/]",
+      message:
+        "Do not specify `fontFamily` manually. Prefer spreading `theme.typography.subtitle1` or similar. If using neue-haas-grotesk-text, this is ThemeProvider's default fontFamily.",
+    },
+    {
+      selector:
+        "FunctionDeclaration[id.name='generateMetadata'] > BlockStatement > ReturnStatement[argument.type!='CallExpression'], FunctionDeclaration[id.name='generateMetadata'] > BlockStatement > ReturnStatement[argument.callee.name!='safeGenerateMetadata']",
+      message:
+        "generateMetadata functions must return safeGenerateMetadata() to ensure proper error handling and fallback metadata.",
+    },
+  ]
+  if (!allowPublicEnv) {
+    selectors.push({
+      // Matches `process.env.NEXT_PUBLIC_*` (dot) and
+      // `process.env["NEXT_PUBLIC_*"]` (string-literal bracket). Does NOT match
+      // `process.env[key]` with a variable key (e.g. the env() helper itself).
+      selector:
+        "MemberExpression[object.object.name='process'][object.property.name='env'][property.name=/^NEXT_PUBLIC_/], MemberExpression[object.object.name='process'][object.property.name='env'][property.value=/^NEXT_PUBLIC_/]",
+      message:
+        "Do not read NEXT_PUBLIC_* from process.env directly: values are inlined at build time and are empty in the standalone Docker image. Use env() or requiredEnv() from @/env instead.",
+    })
+  }
+  return { "no-restricted-syntax": ["error", ...selectors] }
 }

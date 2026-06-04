@@ -14,6 +14,7 @@ import {
 } from "ol-components"
 import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import { useUserHasPermission, Permission } from "api/hooks/user"
+import { useQueryClient, type QueryClient } from "@tanstack/react-query"
 import dynamic from "next/dynamic"
 
 import { Toolbar } from "../vendor/components/tiptap-ui-primitive/toolbar"
@@ -137,6 +138,7 @@ export interface SaveMutations {
 export type CreateExtensionsFn = (
   uploadHandler: UploadHandler,
   setUploadError: (error: string | null) => void,
+  queryClient?: QueryClient | null,
 ) => (Extension | Node | Mark)[]
 
 export interface WebsiteContentEditorProps {
@@ -207,6 +209,7 @@ const WebsiteContentEditor = ({
   const uploadImageRef = useRef(uploadImage)
   uploadImageRef.current = uploadImage
 
+  const queryClient = useQueryClient()
   const isArticleEditor = useUserHasPermission(Permission.ArticleEditor)
 
   const uploadHandler = useCallback<UploadHandler>(
@@ -240,8 +243,8 @@ const WebsiteContentEditor = ({
   )
 
   const extensions = useMemo(
-    () => createExtensions(uploadHandler, setUploadError),
-    [createExtensions, uploadHandler],
+    () => createExtensions(uploadHandler, setUploadError, queryClient),
+    [createExtensions, uploadHandler, queryClient],
   )
 
   const schema = useMemo(() => getSchema(extensions), [extensions])

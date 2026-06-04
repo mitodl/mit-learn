@@ -1,14 +1,20 @@
-import {
-  queryOptions,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query"
+import { queryOptions } from "@tanstack/react-query"
 import { b2bApi } from "../../clients"
 import {
   OrganizationPage,
-  B2bApiB2bAttachCreateRequest,
+  ManagerContractDetail,
   B2bApiB2bOrganizationsRetrieveRequest,
+  B2bApiB2bManagerOrganizationsContractsRetrieveRequest,
+  B2bApiB2bManagerOrganizationsContractsCodesListRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
+
+type ContractCode = {
+  id: number
+  code: string
+  is_redeemed: boolean
+  redeemed_by: string | null
+  redeemed_on: string | null
+}
 
 const organizationKeys = {
   root: ["mitxonline", "organizations"],
@@ -29,20 +35,66 @@ const organizationQueries = {
     }),
 }
 
-const useB2BAttachMutation = (opts: B2bApiB2bAttachCreateRequest) => {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async () => {
-      const response = await b2bApi.b2bAttachCreate(opts)
-      // 200 (already attached) indicates user already attached to all contracts
-      // 201 (successfully attached) is success
-      // 404 (invalid or expired code) will be thrown as error by axios
-      return response
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["mitxonline"] })
-    },
-  })
+const managerOrganizationKeys = {
+  list: () => ["mitxonline", "manager", "organizations", "list"] as const,
+  contractDetail: (
+    opts: B2bApiB2bManagerOrganizationsContractsRetrieveRequest,
+  ) =>
+    [
+      "mitxonline",
+      "manager",
+      "organizations",
+      "contracts",
+      "detail",
+      opts,
+    ] as const,
+  contractCodes: (
+    opts: B2bApiB2bManagerOrganizationsContractsCodesListRequest,
+  ) =>
+    [
+      "mitxonline",
+      "manager",
+      "organizations",
+      "contracts",
+      "codes",
+      opts,
+    ] as const,
 }
 
-export { organizationQueries, organizationKeys, useB2BAttachMutation }
+const managerOrganizationQueries = {
+  managerOrganizationsList: () =>
+    queryOptions({
+      queryKey: managerOrganizationKeys.list(),
+      queryFn: async (): Promise<OrganizationPage[]> =>
+        b2bApi.b2bManagerOrganizationsList().then((res) => res.data),
+    }),
+  managerContractDetail: (
+    opts: B2bApiB2bManagerOrganizationsContractsRetrieveRequest,
+  ) =>
+    queryOptions({
+      queryKey: managerOrganizationKeys.contractDetail(opts),
+      queryFn: async (): Promise<ManagerContractDetail> =>
+        b2bApi
+          .b2bManagerOrganizationsContractsRetrieve(opts)
+          .then((res) => res.data),
+    }),
+  managerContractCodes: (
+    opts: B2bApiB2bManagerOrganizationsContractsCodesListRequest,
+  ) =>
+    queryOptions({
+      queryKey: managerOrganizationKeys.contractCodes(opts),
+      queryFn: async (): Promise<ContractCode[]> =>
+        b2bApi
+          .b2bManagerOrganizationsContractsCodesList(opts)
+          .then((res) => res.data),
+    }),
+}
+
+export {
+  organizationQueries,
+  organizationKeys,
+  managerOrganizationQueries,
+  managerOrganizationKeys,
+}
+
+export type { ContractCode }

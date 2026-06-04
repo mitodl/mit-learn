@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React from "react"
 import type { OfferedByEnum } from "api"
 import type { UnitChannel } from "api/v0"
@@ -98,7 +99,7 @@ const UnitCard: React.FC<UnitCardProps> = (props) => {
               <Link
                 href={href}
                 onClick={() => {
-                  if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+                  if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
                     posthog.capture(PostHogEvents.ProviderLinkClicked, {
                       provider: unit,
                     })

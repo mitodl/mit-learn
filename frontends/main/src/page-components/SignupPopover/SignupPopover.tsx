@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React from "react"
 import { Popover, Typography, styled } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
@@ -25,7 +26,7 @@ const Footer = styled.div({
   justifyContent: "end",
 })
 
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME
+const SITE_NAME = env("NEXT_PUBLIC_SITE_NAME")
 
 type SignupPopoverProps = Pick<
   PopoverProps,

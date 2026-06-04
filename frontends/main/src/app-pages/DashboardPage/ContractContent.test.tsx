@@ -16,9 +16,24 @@ import {
   setupProgramsAndCourses,
   setupOrgDashboardMocks,
 } from "./CoursewareDisplay/test-utils"
-import { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
+import {
+  CourseWithCourseRunsSerializerV2,
+  LanguageEnum,
+} from "@mitodl/mitxonline-api-axios/v2"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
+import { contractAdminView } from "@/common/urls"
+
+jest.mock("posthog-js/react", () => ({
+  ...jest.requireActual("posthog-js/react"),
+  useFeatureFlagEnabled: jest.fn(),
+}))
+const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL
+const managerOrganizationsUrl = `${API_BASE_URL}/api/v0/b2b/manager/organizations/`
 
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
@@ -56,6 +71,7 @@ describe("ContractContent", () => {
     setMockResponse.get(urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsListV3(), [])
     setMockResponse.get(urls.contracts.contractsList(), [])
+    mockedUseFeatureFlagEnabled.mockReturnValue(undefined)
   })
 
   it("displays a header for each program returned and cards for courses in program", async () => {
@@ -1318,7 +1334,7 @@ describe("ContractContent", () => {
 
     await user.click(showMoreLink)
 
-    expect(screen.getByText("Extra content with")).toBeInTheDocument()
+    expect(screen.getByText(/Extra content with/)).toBeInTheDocument()
     expect(screen.getByText("emphasis")).toBeInTheDocument()
 
     expect(screen.getByText("Show less")).toBeInTheDocument()
@@ -1326,7 +1342,7 @@ describe("ContractContent", () => {
 
     await user.click(screen.getByText("Show less"))
 
-    expect(screen.queryByText("Extra content with")).toBeNull()
+    expect(screen.queryByText(/Extra content with/)).toBeNull()
 
     expect(screen.getByText("Show more")).toBeInTheDocument()
     expect(screen.queryByText("Show less")).toBeNull()
@@ -1394,6 +1410,70 @@ describe("ContractContent", () => {
     await screen.findByRole("heading", { name: "Contract not found" })
   })
 
+  test("does not render the Manage button when the feature flag is off", async () => {
+    mockedUseFeatureFlagEnabled.mockImplementation(() => false)
+    const { orgX } = setupProgramsAndCourses()
+
+    setMockResponse.get(managerOrganizationsUrl, [orgX])
+
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
+
+    await screen.findByRole("heading", { name: orgX.name })
+    expect(
+      screen.queryByRole("link", { name: "Manage" }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("does not render the Manage button when flag is on but user is not a manager for this org", async () => {
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag === FeatureFlags.B2BContractManagerDashboard,
+    )
+    const { orgX } = setupProgramsAndCourses()
+
+    // Return a different org — user is a manager elsewhere, not for orgX
+    const otherOrg = factories.organizations.organization({})
+    setMockResponse.get(managerOrganizationsUrl, [otherOrg])
+
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
+
+    await screen.findByRole("heading", { name: orgX.name })
+    expect(
+      screen.queryByRole("link", { name: "Manage" }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("renders the Manage button with correct href when flag is on and user is a manager", async () => {
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag === FeatureFlags.B2BContractManagerDashboard,
+    )
+    const { orgX } = setupProgramsAndCourses()
+
+    setMockResponse.get(managerOrganizationsUrl, [orgX])
+
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
+
+    const manageButton = await screen.findByRole("link", { name: "Manage" })
+    expect(manageButton).toHaveAttribute(
+      "href",
+      contractAdminView(orgX.slug, orgX.contracts[0].slug),
+    )
+  })
+
   test("sanitizes HTML content in welcome_message_extra", async () => {
     const { orgX } = setupProgramsAndCourses()
 
@@ -1453,7 +1533,7 @@ describe("ContractContent", () => {
     expect(screen.queryByText("Second extra content")).toBeNull()
   })
 
-  test("shared contract language picker switches top-level program card title", async () => {
+  test("shared contract variant picker switches top-level program card title", async () => {
     const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
     mitxOnlineUser.legal_address = { country: "US" }
     mitxOnlineUser.user_profile = { year_of_birth: 1988 }
@@ -1462,6 +1542,24 @@ describe("ContractContent", () => {
     const contracts = createTestContracts(orgX.id, 1, [program.id])
     orgX.contracts = contracts
     mitxOnlineUser.b2b_organizations[0].contracts = contracts
+    contracts[0].variant_options = [
+      {
+        language: LanguageEnum.En,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: true,
+      },
+      {
+        language: LanguageEnum.EsEs,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: false,
+      },
+    ]
 
     const englishRun = factories.courses.courseRun({
       id: faker.number.int(),
@@ -1478,28 +1576,11 @@ describe("ContractContent", () => {
       courseware_url: "https://openedx.example.com/program-spanish",
       b2b_contract: contracts[0].id,
       is_enrollable: true,
+      language: LanguageEnum.EsEs,
     })
     const localizedCourse = factories.courses.course({
       courseruns: [englishRun, spanishRun],
       next_run_id: englishRun.id,
-      language_options: [
-        {
-          id: englishRun.id,
-          courseware_id: englishRun.courseware_id,
-          courseware_url: englishRun.courseware_url ?? "",
-          language: "en",
-          title: englishRun.title,
-          run_tag: englishRun.run_tag,
-        },
-        {
-          id: spanishRun.id,
-          courseware_id: spanishRun.courseware_id,
-          courseware_url: spanishRun.courseware_url ?? "",
-          language: "es",
-          title: spanishRun.title,
-          run_tag: spanishRun.run_tag,
-        },
-      ],
     })
     program.courses = [localizedCourse.id]
 
@@ -1511,20 +1592,30 @@ describe("ContractContent", () => {
       [localizedCourse],
       contracts,
     )
+    // Mock the variant runs endpoint for the Spanish selection
+    setMockResponse.get(
+      urls.courses.courseVariantRuns({
+        contract: contracts[0].id,
+        course_id: [localizedCourse.id],
+        language: LanguageEnum.EsEs,
+      }),
+      [{ id: localizedCourse.id, courseruns: [spanishRun] }],
+    )
+
     renderWithProviders(
       <ContractContent orgSlug={orgX.slug} contractSlug={contracts[0].slug} />,
     )
 
     const root = within(await screen.findByTestId("org-program-root"))
-    expect(await screen.findAllByRole("combobox")).toHaveLength(1)
-    const languageSelect = await screen.findByRole("combobox")
-    expect(languageSelect).toHaveTextContent("English")
+    // Wait for variant picker to appear with English and Spanish radio options
+    await screen.findAllByRole("radio")
 
     const card = await root.findByTestId("enrollment-card-desktop")
+    // Default run is the English run (next_run_id)
     expect(card).toHaveTextContent("Module in English")
 
-    await user.click(languageSelect)
-    await user.click(await screen.findByRole("option", { name: "español" }))
+    // Click the Spanish variant card to switch
+    await user.click(screen.getByText(/español/i))
 
     await waitFor(() => {
       expect(root.getByTestId("enrollment-card-desktop")).toHaveTextContent(
@@ -1533,7 +1624,7 @@ describe("ContractContent", () => {
     })
   })
 
-  test("shared contract language picker switches program collection card title", async () => {
+  test("shared contract variant picker switches program collection card title", async () => {
     const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
     mitxOnlineUser.legal_address = { country: "US" }
     mitxOnlineUser.user_profile = { year_of_birth: 1988 }
@@ -1542,6 +1633,24 @@ describe("ContractContent", () => {
     const contracts = createTestContracts(orgX.id, 1, [program.id])
     orgX.contracts = contracts
     mitxOnlineUser.b2b_organizations[0].contracts = contracts
+    contracts[0].variant_options = [
+      {
+        language: LanguageEnum.En,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: true,
+      },
+      {
+        language: LanguageEnum.EsEs,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: false,
+      },
+    ]
 
     const englishRun = factories.courses.courseRun({
       id: faker.number.int(),
@@ -1558,28 +1667,11 @@ describe("ContractContent", () => {
       courseware_url: "https://openedx.example.com/collection-spanish",
       b2b_contract: contracts[0].id,
       is_enrollable: true,
+      language: LanguageEnum.EsEs,
     })
     const localizedCourse = factories.courses.course({
       courseruns: [englishRun, spanishRun],
       next_run_id: englishRun.id,
-      language_options: [
-        {
-          id: englishRun.id,
-          courseware_id: englishRun.courseware_id,
-          courseware_url: englishRun.courseware_url ?? "",
-          language: "en",
-          title: englishRun.title,
-          run_tag: englishRun.run_tag,
-        },
-        {
-          id: spanishRun.id,
-          courseware_id: spanishRun.courseware_id,
-          courseware_url: spanishRun.courseware_url ?? "",
-          language: "es",
-          title: spanishRun.title,
-          run_tag: spanishRun.run_tag,
-        },
-      ],
     })
     program.courses = [localizedCourse.id]
 
@@ -1591,6 +1683,16 @@ describe("ContractContent", () => {
       [localizedCourse],
       contracts,
     )
+    // Mock the variant runs endpoint for the Spanish selection
+    setMockResponse.get(
+      urls.courses.courseVariantRuns({
+        contract: contracts[0].id,
+        course_id: [localizedCourse.id],
+        language: LanguageEnum.EsEs,
+      }),
+      [{ id: localizedCourse.id, courseruns: [spanishRun] }],
+    )
+
     const programCollection = factories.programs.programCollection({
       programs: [{ id: program.id, title: program.title, order: 1 }],
     })
@@ -1622,15 +1724,15 @@ describe("ContractContent", () => {
     )
     const collection = within(collectionRoot)
 
-    expect(await screen.findAllByRole("combobox")).toHaveLength(1)
-    const languageSelect = await screen.findByRole("combobox")
-    expect(languageSelect).toHaveTextContent("English")
+    // Wait for variant picker to appear with English and Spanish radio options
+    await screen.findAllByRole("radio")
 
     const card = await collection.findByTestId("enrollment-card-desktop")
+    // Default run is the English run (next_run_id)
     expect(card).toHaveTextContent("Collection English")
 
-    await user.click(languageSelect)
-    await user.click(await screen.findByRole("option", { name: "español" }))
+    // Click the Spanish variant card to switch
+    await user.click(screen.getByText(/español/i))
 
     await waitFor(() => {
       expect(
@@ -1639,7 +1741,183 @@ describe("ContractContent", () => {
     })
   })
 
-  test("shared contract language picker is hidden when only one language option is present", async () => {
+  test("hides program section when selected variant has no matching runs", async () => {
+    const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
+    mitxOnlineUser.legal_address = { country: "US" }
+    mitxOnlineUser.user_profile = { year_of_birth: 1988 }
+
+    const program = factories.programs.program({ courses: [] })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
+    contracts[0].variant_options = [
+      {
+        language: LanguageEnum.En,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: true,
+      },
+      {
+        language: LanguageEnum.EsEs,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: false,
+      },
+    ]
+
+    // Course only has an English run — no Spanish variant run
+    const englishRun = factories.courses.courseRun({
+      id: faker.number.int(),
+      title: "English Only Module",
+      b2b_contract: contracts[0].id,
+      is_enrollable: true,
+    })
+    const englishOnlyCourse = factories.courses.course({
+      courseruns: [englishRun],
+      next_run_id: englishRun.id,
+    })
+    program.courses = [englishOnlyCourse.id]
+
+    setupOrgDashboardMocks(
+      orgX,
+      userApiPath,
+      mitxOnlineUser,
+      [program],
+      [englishOnlyCourse],
+      contracts,
+    )
+    // Variant runs endpoint returns no matching runs for this course
+    setMockResponse.get(
+      urls.courses.courseVariantRuns({
+        contract: contracts[0].id,
+        course_id: [englishOnlyCourse.id],
+        language: LanguageEnum.EsEs,
+      }),
+      [],
+    )
+
+    renderWithProviders(
+      <ContractContent orgSlug={orgX.slug} contractSlug={contracts[0].slug} />,
+    )
+
+    await screen.findByTestId("org-program-root")
+    await screen.findAllByRole("radio")
+
+    // Default (English) shows the program
+    expect(screen.getByTestId("org-program-root")).toBeInTheDocument()
+
+    // Switch to Spanish — program has no Spanish run, section should disappear
+    await user.click(screen.getByText(/español/i))
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("org-program-root")).not.toBeInTheDocument()
+    })
+  })
+
+  test("hides collection section when selected variant has no matching runs", async () => {
+    const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
+    mitxOnlineUser.legal_address = { country: "US" }
+    mitxOnlineUser.user_profile = { year_of_birth: 1988 }
+
+    const program = factories.programs.program({ courses: [] })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
+    contracts[0].variant_options = [
+      {
+        language: LanguageEnum.En,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: true,
+      },
+      {
+        language: LanguageEnum.EsEs,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: false,
+      },
+    ]
+
+    const englishRun = factories.courses.courseRun({
+      id: faker.number.int(),
+      title: "Collection English Only",
+      b2b_contract: contracts[0].id,
+      is_enrollable: true,
+    })
+    const englishOnlyCourse = factories.courses.course({
+      courseruns: [englishRun],
+      next_run_id: englishRun.id,
+    })
+    program.courses = [englishOnlyCourse.id]
+
+    setupOrgDashboardMocks(
+      orgX,
+      userApiPath,
+      mitxOnlineUser,
+      [program],
+      [englishOnlyCourse],
+      contracts,
+    )
+    setMockResponse.get(
+      urls.courses.courseVariantRuns({
+        contract: contracts[0].id,
+        course_id: [englishOnlyCourse.id],
+        language: LanguageEnum.EsEs,
+      }),
+      [],
+    )
+
+    const programCollection = factories.programs.programCollection({
+      programs: [{ id: program.id, title: program.title, order: 1 }],
+    })
+    setMockResponse.get(urls.programCollections.programCollectionsList(), {
+      results: [programCollection],
+    })
+    setMockResponse.get(
+      urls.programs.programsList({
+        id: [program.id],
+        contract_id: contracts[0].id,
+        page_size: 1,
+      }),
+      { results: [program] },
+    )
+    setMockResponse.get(
+      urls.courses.coursesList({
+        id: [englishOnlyCourse.id],
+        contract_id: contracts[0].id,
+      }),
+      { results: [englishOnlyCourse] },
+    )
+
+    renderWithProviders(
+      <ContractContent orgSlug={orgX.slug} contractSlug={contracts[0].slug} />,
+    )
+
+    await screen.findByTestId("org-program-collection-root")
+    await screen.findAllByRole("radio")
+
+    expect(
+      screen.getByTestId("org-program-collection-root"),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByText(/español/i))
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("org-program-collection-root"),
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  test("shared contract variant picker is hidden when only one variant option is present", async () => {
     const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
     mitxOnlineUser.legal_address = { country: "US" }
     mitxOnlineUser.user_profile = { year_of_birth: 1988 }
@@ -1656,7 +1934,7 @@ describe("ContractContent", () => {
           id: run.id,
           courseware_id: run.courseware_id,
           courseware_url: run.courseware_url ?? "",
-          language: "en",
+          language: LanguageEnum.En,
           title: run.title,
           run_tag: run.run_tag,
         },
@@ -1681,11 +1959,13 @@ describe("ContractContent", () => {
     )
 
     await screen.findByTestId("org-program-root")
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
-    expect(screen.queryByText("Learning Language:")).not.toBeInTheDocument()
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("heading", { name: "Available Versions" }),
+    ).not.toBeInTheDocument()
   })
 
-  test("shared contract language picker stays hidden for single-language program collections", async () => {
+  test("shared contract variant picker stays hidden for single-variant program collections", async () => {
     const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
     mitxOnlineUser.legal_address = { country: "US" }
     mitxOnlineUser.user_profile = { year_of_birth: 1988 }
@@ -1711,7 +1991,7 @@ describe("ContractContent", () => {
           id: run.id,
           courseware_id: run.courseware_id,
           courseware_url: run.courseware_url ?? "",
-          language: "en",
+          language: LanguageEnum.En,
           title: run.title,
           run_tag: run.run_tag,
         },
@@ -1754,8 +2034,10 @@ describe("ContractContent", () => {
     )
 
     await screen.findByTestId("org-program-collection-root")
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
-    expect(screen.queryByText("Learning Language:")).not.toBeInTheDocument()
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("heading", { name: "Available Versions" }),
+    ).not.toBeInTheDocument()
   })
 
   test("disables CTA for non-enrolled B2B course when no translations and no enrollable runs", async () => {
@@ -1771,7 +2053,7 @@ describe("ContractContent", () => {
 
     const contractRun = factories.courses.courseRun({
       b2b_contract: contracts[0].id,
-      language: "en",
+      language: LanguageEnum.En,
       run_tag: undefined,
       is_enrollable: false,
       courseware_url: "https://openedx.example.com/unenrollable-run",
@@ -1828,7 +2110,7 @@ describe("ContractContent", () => {
     const runs = [
       factories.courses.courseRun({
         b2b_contract: contracts[0].id,
-        language: "en",
+        language: LanguageEnum.En,
         run_tag: undefined,
         courseware_url: "https://openedx.example.com/course-run-1",
         is_enrollable: true,
@@ -1836,7 +2118,7 @@ describe("ContractContent", () => {
       }),
       factories.courses.courseRun({
         b2b_contract: contracts[0].id,
-        language: "en",
+        language: LanguageEnum.En,
         run_tag: undefined,
         courseware_url: "https://openedx.example.com/course-run-2",
         is_enrollable: true,
@@ -1844,7 +2126,7 @@ describe("ContractContent", () => {
       }),
       factories.courses.courseRun({
         b2b_contract: contracts[0].id,
-        language: "en",
+        language: LanguageEnum.En,
         run_tag: undefined,
         courseware_url: "https://openedx.example.com/course-run-3",
         is_enrollable: true,
@@ -1909,5 +2191,31 @@ describe("ContractContent", () => {
     // Verify the courseware button has the correct href from the enrolled run
     const coursewareButton = within(card).getByTestId("courseware-button")
     expect(coursewareButton).toHaveAttribute("href", enrolledRun.courseware_url)
+  })
+
+  it("renders without crashing when program.page is null", async () => {
+    const { orgX, programA, programB } = setupProgramsAndCourses()
+    const contract = orgX.contracts[0]
+
+    setMockResponse.get(
+      urls.programs.programsList({
+        org_id: orgX.id,
+        contract_id: contract.id,
+        page_size: 30,
+      }),
+      {
+        results: [
+          { ...programA, page: null },
+          { ...programB, page: null },
+        ],
+      },
+    )
+
+    renderWithProviders(
+      <ContractContent orgSlug={orgX.slug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText(programA.title)
+    await screen.findByText(programB.title)
   })
 })

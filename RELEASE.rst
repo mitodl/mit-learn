@@ -1,6 +1,45 @@
 Release Notes
 =============
 
+Version 0.70.5 (Released June 03, 2026)
+--------------
+
+- hide courseware cards in b2b contracts when variant selected if no variant run (#3408)
+
+Version 0.70.4 (Released June 03, 2026)
+--------------
+
+- Force pytest to render color text on GH actions (#3403)
+- hybrid search sorting and dense-only cutoff score fix (#3386)
+- feat(nextjs): standalone output, deterministic builds, and scoped Fastly purge (#3364)
+- fix: improve keyboard and screenreader accessibility for Video Shorts (#3387)
+- chore: update nextjs to 16.2.7 (#3399)
+
+Version 0.70.2 (Released June 03, 2026)
+--------------
+
+- fix: render issue date on certificate pages (#3390)
+- [pre-commit.ci] pre-commit autoupdate (#3396)
+- Clarify MIT's trademark relationship with Axim Collaborative (#3175)
+- Cut down on repeated APISIX user DB changes and logins (#3378)
+- podcast etl cleanup (#3381)
+
+Version 0.70.1 (Released June 02, 2026)
+--------------
+
+- fix a bug with filtering out variant runs when the default is selected (#3394)
+- API Configuration, better support via runtime env vars (#3380)
+- feat: B2B contract admin dashboard with stats cards and seat assignment table (#3369)
+- contract variants UI (#3379)
+- feat: providing support for learn url embed (#3366)
+
+Version 0.69.0 (Released June 01, 2026)
+--------------
+
+- upgrade qdrant client (#3389)
+- feat: Handle nullable page field from MITx Online client update (#3349)
+- refactor test mock: use axios adapter instead of hand-rolled wrapper (#3383)
+
 Version 0.68.8 (Released May 28, 2026)
 --------------
 

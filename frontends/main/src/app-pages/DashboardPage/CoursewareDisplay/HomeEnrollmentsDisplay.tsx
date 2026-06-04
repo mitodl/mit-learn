@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React from "react"
 import {
   Collapse,
@@ -89,7 +90,7 @@ const ShowAllContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL || ""
+const SUPPORT_EMAIL = env("NEXT_PUBLIC_MITOL_SUPPORT_EMAIL") || ""
 
 const getResourceKey = (resource: DashboardResource): string => {
   if (resource.type === DashboardType.ProgramEnrollment) {

@@ -1,3 +1,4 @@
+import { env } from "@/env"
 /* eslint-disable no-restricted-syntax */
 import React from "react"
 import type { AxiosError } from "axios"
@@ -233,7 +234,7 @@ const CertificateDoc = ({
   userName,
   ceus,
   signatories,
-  validFrom,
+  issueDate,
 }: {
   uuid: string
   title: string
@@ -241,7 +242,7 @@ const CertificateDoc = ({
   userName: string
   ceus?: string | null
   signatories: SignatoryItem[]
-  validFrom?: string | null
+  issueDate?: string | null
 }) => {
   return (
     <Document
@@ -333,7 +334,7 @@ const CertificateDoc = ({
             >
               {title}
             </Text>
-            {validFrom && (
+            {issueDate && (
               <Text
                 style={{
                   position: "absolute",
@@ -344,7 +345,7 @@ const CertificateDoc = ({
                   fontFamily: "Neue Haas Grotesk Text 400",
                 }}
               >
-                {moment(validFrom).format("MMM D, YYYY")}
+                {moment(issueDate).format("MMM D, YYYY")}
               </Text>
             )}
             {ceus ? (
@@ -384,7 +385,7 @@ const CertificateDoc = ({
                     source={
                       signatory.signature_image.startsWith("http")
                         ? signatory.signature_image
-                        : `${process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL}${signatory.signature_image}`
+                        : `${env("NEXT_PUBLIC_MITX_ONLINE_BASE_URL")}${signatory.signature_image}`
                     }
                     style={{
                       width: "100px",
@@ -476,7 +477,7 @@ const CourseCertificate = ({
 
   const signatories = certificate?.certificate_page?.signatory_items
 
-  const validFrom = certificate?.verifiable_credential_json?.validFrom
+  const issueDate = certificate?.issue_date
 
   return (
     <CertificateDoc
@@ -485,7 +486,7 @@ const CourseCertificate = ({
       userName={userName!}
       ceus={ceus}
       signatories={signatories}
-      validFrom={validFrom}
+      issueDate={issueDate}
       uuid={certificate.uuid}
     />
   )
@@ -506,7 +507,7 @@ const ProgramCertificate = ({
 
   const signatories = certificate?.certificate_page?.signatory_items
 
-  const validFrom = certificate?.verifiable_credential_json?.validFrom
+  const issueDate = certificate?.issue_date
 
   return (
     <CertificateDoc
@@ -516,7 +517,7 @@ const ProgramCertificate = ({
       userName={userName!}
       ceus={ceus}
       signatories={signatories}
-      validFrom={validFrom}
+      issueDate={issueDate}
     />
   )
 }

@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http"
 import type { ReadableSpan } from "@opentelemetry/sdk-trace-base"
 import { envDetector } from "@opentelemetry/resources"
 import type { DetectedResourceAttributes } from "@opentelemetry/resources"
+import { env } from "@/env"
 
 export type RequestLogEntry = {
   message: "next_request"
@@ -16,7 +17,7 @@ export type RequestLogEntry = {
   version: string | null
 }
 
-const APP_VERSION = process.env.NEXT_PUBLIC_VERSION ?? null
+const APP_VERSION = env("NEXT_PUBLIC_VERSION") ?? null
 
 type OtelEnvSubset = Readonly<Record<string, string | undefined>>
 

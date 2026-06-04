@@ -16,6 +16,7 @@ import { Typography as TiptapTypography } from "@tiptap/extension-typography"
 import { Subscript } from "@tiptap/extension-subscript"
 import { Superscript } from "@tiptap/extension-superscript"
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
+import type { QueryClient } from "@tanstack/react-query"
 import { HorizontalRule } from "../vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 import { ImageNode } from "./node/Image/ImageNode"
 import { ImageWithCaptionNode } from "./node/Image/ImageWithCaptionNode"
@@ -33,6 +34,7 @@ import type { UploadHandler } from "../core/WebsiteContentEditor"
 export const createBaseExtensions = (
   uploadHandler: UploadHandler,
   setUploadError: (error: string | null) => void,
+  queryClient?: QueryClient | null,
 ): (Extension | Node | Mark)[] => [
   StarterKit.configure({
     document: false,
@@ -110,7 +112,7 @@ export const createBaseExtensions = (
   MediaEmbedInputNode,
   DividerNode,
   ImageWithCaptionNode,
-  MediaEmbedURLHandler,
+  MediaEmbedURLHandler.configure({ queryClient: queryClient ?? null }),
   ImageNode.configure({
     accept: "image/*",
     maxSize: MAX_FILE_SIZE,

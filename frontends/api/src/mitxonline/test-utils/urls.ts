@@ -1,112 +1,121 @@
 import type {
   CoursesApiApiV2CoursesListRequest,
+  CoursesApiCourseVariantRunsV3Request,
   CourseCertificatesApiCourseCertificatesRetrieveRequest,
   ProgramCertificatesApiProgramCertificatesRetrieveRequest,
   ProgramCollectionsApiProgramCollectionsListRequest,
   ProgramsApiProgramsListV2Request,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { queryify } from "ol-test-utilities"
+import mitxAxios from "../axios"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL
+// Keep these helpers absolute so the shared request mock can distinguish Learn
+// and MITx requests by origin; switching to path-only URLs would reintroduce
+// cross-backend collisions in tests. The base URL is read from the configured
+// axios instance (the single source of truth).
+const getApiBaseUrl = () => mitxAxios.defaults.baseURL
 
 const userMe = {
-  get: () => `${API_BASE_URL}/api/v0/users/me`,
+  get: () => `${getApiBaseUrl()}/api/v0/users/me`,
 }
 
 const countries = {
-  list: () => `${API_BASE_URL}/api/v0/countries/`,
+  list: () => `${getApiBaseUrl()}/api/v0/countries/`,
 }
 
 const enrollment = {
   courseEnrollment: (id?: number) =>
-    `${API_BASE_URL}/api/v1/enrollments/${id ? `${id}/` : ""}`,
-  enrollmentsListV1: () => `${API_BASE_URL}/api/v1/enrollments/`,
-  enrollmentsListV2: () => `${API_BASE_URL}/api/v2/enrollments/`,
-  enrollmentsListV3: () => `${API_BASE_URL}/api/v3/enrollments/`,
+    `${getApiBaseUrl()}/api/v1/enrollments/${id ? `${id}/` : ""}`,
+  enrollmentsListV1: () => `${getApiBaseUrl()}/api/v1/enrollments/`,
+  enrollmentsListV2: () => `${getApiBaseUrl()}/api/v2/enrollments/`,
+  enrollmentsListV3: () => `${getApiBaseUrl()}/api/v3/enrollments/`,
 }
 
 const programEnrollments = {
-  enrollmentsListV3: () => `${API_BASE_URL}/api/v3/program_enrollments/`,
+  enrollmentsListV3: () => `${getApiBaseUrl()}/api/v3/program_enrollments/`,
   programEnrollment: (programId: number) =>
-    `${API_BASE_URL}/api/v3/program_enrollments/${programId}/`,
+    `${getApiBaseUrl()}/api/v3/program_enrollments/${programId}/`,
 }
 
 const b2b = {
   courseEnrollment: (readableId?: string) =>
-    `${API_BASE_URL}/api/v0/b2b/enroll/${readableId}/`,
+    `${getApiBaseUrl()}/api/v0/b2b/enroll/${readableId}/`,
 }
 
 const programs = {
   programsList: (opts?: ProgramsApiProgramsListV2Request) =>
-    `${API_BASE_URL}/api/v2/programs/${queryify(opts, { explode: false })}`,
-  programDetail: (id: number) => `${API_BASE_URL}/api/v2/programs/${id}/`,
+    `${getApiBaseUrl()}/api/v2/programs/${queryify(opts, { explode: false })}`,
+  programDetail: (id: number) => `${getApiBaseUrl()}/api/v2/programs/${id}/`,
 }
 
 const programCollections = {
   programCollectionsList: (
     opts?: ProgramCollectionsApiProgramCollectionsListRequest,
-  ) => `${API_BASE_URL}/api/v2/program-collections/${queryify(opts)}`,
+  ) => `${getApiBaseUrl()}/api/v2/program-collections/${queryify(opts)}`,
 }
 
 const courses = {
   coursesList: (opts?: CoursesApiApiV2CoursesListRequest) =>
-    `${API_BASE_URL}/api/v2/courses/${queryify(opts, { explode: false })}`,
+    `${getApiBaseUrl()}/api/v2/courses/${queryify(opts, { explode: false })}`,
   courseOutline: (coursewareId: string) =>
-    `${API_BASE_URL}/api/v3/courses/${encodeURIComponent(coursewareId)}/ol_openedx_outline/`,
+    `${getApiBaseUrl()}/api/v3/courses/${encodeURIComponent(coursewareId)}/ol_openedx_outline/`,
+  courseVariantRuns: (opts: CoursesApiCourseVariantRunsV3Request) =>
+    `${getApiBaseUrl()}/api/v3/courses/variant_runs/${queryify(opts)}`,
 }
 
 const pages = {
   coursePages: (readableId: string) =>
-    `${API_BASE_URL}/api/v2/pages/?fields=*&type=cms.coursepage&readable_id=${encodeURIComponent(
+    `${getApiBaseUrl()}/api/v2/pages/?fields=*&type=cms.coursepage&readable_id=${encodeURIComponent(
       readableId,
     )}`,
   programPages: (readableId: string) =>
-    `${API_BASE_URL}/api/v2/pages/?fields=*&type=cms.programpage&readable_id=${encodeURIComponent(
+    `${getApiBaseUrl()}/api/v2/pages/?fields=*&type=cms.programpage&readable_id=${encodeURIComponent(
       readableId,
     )}`,
 }
 
 const organization = {
   organizationList: (organizationSlug: string) =>
-    `${API_BASE_URL}/api/v0/b2b/organizations/${organizationSlug}/`,
+    `${getApiBaseUrl()}/api/v0/b2b/organizations/${organizationSlug}/`,
 }
 
 const b2bAttach = {
-  b2bAttachView: (code: string) => `${API_BASE_URL}/api/v0/b2b/attach/${code}/`,
+  b2bAttachView: (code: string) =>
+    `${getApiBaseUrl()}/api/v0/b2b/attach/${code}/`,
 }
 
 const contracts = {
-  contractsList: () => `${API_BASE_URL}/api/v0/b2b/contracts/`,
+  contractsList: () => `${getApiBaseUrl()}/api/v0/b2b/contracts/`,
 }
 
 const certificates = {
   courseCertificatesRetrieve: (
     params: CourseCertificatesApiCourseCertificatesRetrieveRequest,
-  ) => `${API_BASE_URL}/api/v2/course_certificates/${params.cert_uuid}/`,
+  ) => `${getApiBaseUrl()}/api/v2/course_certificates/${params.cert_uuid}/`,
   programCertificatesRetrieve: (
     params: ProgramCertificatesApiProgramCertificatesRetrieveRequest,
-  ) => `${API_BASE_URL}/api/v2/program_certificates/${params.cert_uuid}/`,
+  ) => `${getApiBaseUrl()}/api/v2/program_certificates/${params.cert_uuid}/`,
 }
 
 const products = {
   userFlexiblePriceDetail: (productId: number) =>
-    `${API_BASE_URL}/api/v0/products/${productId}/user_flexible_price/`,
+    `${getApiBaseUrl()}/api/v0/products/${productId}/user_flexible_price/`,
 }
 
 const baskets = {
   createFromProduct: (productId: number) =>
-    `${API_BASE_URL}/api/v0/baskets/create_from_product/${productId}/`,
-  clear: () => `${API_BASE_URL}/api/v0/baskets/clear/`,
+    `${getApiBaseUrl()}/api/v0/baskets/create_from_product/${productId}/`,
+  clear: () => `${getApiBaseUrl()}/api/v0/baskets/clear/`,
 }
 
 const orders = {
   receipt: (orderId: number) =>
-    `${API_BASE_URL}/api/v0/orders/receipt/${orderId}/`,
+    `${getApiBaseUrl()}/api/v0/orders/receipt/${orderId}/`,
 }
 
 const verifiedProgramEnrollments = {
   create: (courserunId: string) =>
-    `${API_BASE_URL}/api/v2/verified_program_enrollments/${encodeURIComponent(courserunId)}/`,
+    `${getApiBaseUrl()}/api/v2/verified_program_enrollments/${encodeURIComponent(courserunId)}/`,
 }
 
 export {

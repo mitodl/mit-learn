@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React from "react"
 import { SearchInput } from "ol-components"
 import type { SearchInputProps, SearchSubmissionEvent } from "ol-components"
@@ -26,7 +27,7 @@ const SearchField: React.FC<SearchFieldProps> = ({
   ) => {
     onSubmit(event)
     setPage?.(1)
-    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
       posthog.capture(PostHogEvents.SearchUpdate, { isEnter: isEnter })
     }
   }

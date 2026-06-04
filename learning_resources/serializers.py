@@ -11,7 +11,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import F, Max, Prefetch, Q
-from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 from isodate import parse_duration
 from langchain_text_splitters import RecursiveJsonSplitter
 from rest_framework import serializers
@@ -1123,6 +1123,7 @@ class LearningResourceRelationshipChildField(serializers.ModelSerializer):
         )
 
 
+@extend_schema_serializer(exclude_fields=COMMON_IGNORED_FIELDS)
 class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopicsMixin):
     """Serializer for LearningResource, minus program"""
 
@@ -1227,7 +1228,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
             "resources",
             "etl_source",
             "view_count",
-            *COMMON_IGNORED_FIELDS,
+            "updated_on",
         ]
 
 

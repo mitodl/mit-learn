@@ -3,25 +3,19 @@ import { useQuery } from "@tanstack/react-query"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
-import type { SimpleSelectOption } from "ol-components"
 import type { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { getIdsFromReqTree } from "@/common/mitxonline"
 import {
   groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
-  getDistinctDashboardLanguageOptions,
   groupModuleCoursesByProgramId,
   buildRequirementSections,
 } from "../model/dashboardViewModel"
 import type { RequirementSection } from "../model/dashboardViewModel"
-import { useDashboardLanguagePicker } from "./useDashboardLanguagePicker"
 
 export type ProgramDashboardData = {
   sections: RequirementSection[]
-  availableLanguages: SimpleSelectOption[]
-  selectedLanguageKey: string
-  setSelectedLanguageKey: (key: string) => void
   programTitle: string | undefined
   programType: string | null | undefined
   programCertificateUrl: string | null
@@ -149,14 +143,6 @@ const useProgramDashboardData = (programId: number): ProgramDashboardData => {
 
   const allProgramCourses = programCourses?.results ?? []
 
-  const availableLanguages = getDistinctDashboardLanguageOptions(
-    allProgramCourses,
-    rawEnrollments ?? [],
-  )
-
-  const { selectedLanguageKey, setSelectedLanguageKey } =
-    useDashboardLanguagePicker(availableLanguages)
-
   const requiredProgramModuleCoursesByProgramId = groupModuleCoursesByProgramId(
     requiredProgramList,
     requiredProgramCourses?.results ?? [],
@@ -169,8 +155,6 @@ const useProgramDashboardData = (programId: number): ProgramDashboardData => {
     programEnrollmentsById,
     requiredPrograms: requiredProgramList,
     requiredProgramModuleCoursesByProgramId,
-    selectedLanguageKey,
-    availableLanguages,
     ancestorProgramEnrollment: programEnrollment,
   })
 
@@ -188,9 +172,6 @@ const useProgramDashboardData = (programId: number): ProgramDashboardData => {
 
   return {
     sections,
-    availableLanguages,
-    selectedLanguageKey,
-    setSelectedLanguageKey,
     programTitle: program?.title,
     programType: program?.program_type,
     programCertificateUrl,

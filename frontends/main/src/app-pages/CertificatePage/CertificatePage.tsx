@@ -1,5 +1,6 @@
 "use client"
 
+import { env } from "@/env"
 import React, { useRef, useEffect, useCallback, useState } from "react"
 import { notFound } from "next/navigation"
 import Image from "next/image"
@@ -509,7 +510,7 @@ const Certificate = ({
   userName,
   ceus,
   signatories,
-  validFrom,
+  issueDate,
   uuid,
 }: {
   title: string
@@ -517,7 +518,7 @@ const Certificate = ({
   userName?: string
   ceus?: string
   signatories: SignatoryItem[]
-  validFrom?: string | null
+  issueDate?: string | null
   uuid: string
 }) => {
   return (
@@ -542,9 +543,9 @@ const Certificate = ({
               Awarded {ceus} Continuing Education Units (CEUs)
             </Typography>
           ) : null}
-          {validFrom && (
+          {issueDate && (
             <Typography variant="h4">
-              <NoSSR>{formatDate(validFrom)}</NoSSR>
+              <NoSSR>{formatDate(issueDate)}</NoSSR>
             </Typography>
           )}
           {ceus ? null : <Spacer />}
@@ -556,7 +557,7 @@ const Certificate = ({
                 src={
                   signatory.signature_image.startsWith("http")
                     ? signatory.signature_image
-                    : `${process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL}${signatory.signature_image}`
+                    : `${env("NEXT_PUBLIC_MITX_ONLINE_BASE_URL")}${signatory.signature_image}`
                 }
                 alt={signatory.name}
                 crossOrigin="anonymous"
@@ -598,7 +599,7 @@ const CourseCertificate = ({
 
   const { displayType } = getCertificateInfo()
   const signatories = certificate.certificate_page.signatory_items
-  const validFrom = certificate?.verifiable_credential_json?.validFrom
+  const issueDate = certificate?.issue_date
 
   return (
     <Certificate
@@ -606,7 +607,7 @@ const CourseCertificate = ({
       displayType={displayType}
       userName={userName}
       signatories={signatories}
-      validFrom={validFrom}
+      issueDate={issueDate}
       uuid={certificate.uuid}
     />
   )
@@ -627,7 +628,7 @@ const ProgramCertificate = ({
 
   const signatories = certificate.certificate_page.signatory_items
 
-  const validFrom = certificate?.verifiable_credential_json?.validFrom
+  const issueDate = certificate?.issue_date
 
   return (
     <Certificate
@@ -636,7 +637,7 @@ const ProgramCertificate = ({
       userName={userName}
       ceus={ceus}
       signatories={signatories}
-      validFrom={validFrom}
+      issueDate={issueDate}
       uuid={certificate.uuid}
     />
   )

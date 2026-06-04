@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 import type { VideoPlaylistResource } from "api/v1"
 
@@ -10,7 +11,7 @@ const isInEnum = <T extends string>(
 
 const matchOrganizationBySlug =
   (orgSlug: string) => (organization: OrganizationPage) => {
-    return organization.slug.replace("org-", "") === orgSlug
+    return organization.slug.replace(/^org-/, "") === orgSlug
   }
 
 // Utility function to collapse whitespace
@@ -136,7 +137,7 @@ function hexToRgba(hex: string, alpha: number): string | undefined {
 const isOcwPlaylist = (resource: VideoPlaylistResource | undefined) =>
   resource?.offered_by?.code === "ocw" ? true : false
 
-const ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
+const ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 /**
  * Returns `{ target: "_blank", rel: "noopener noreferrer", ...extra }` for URLs

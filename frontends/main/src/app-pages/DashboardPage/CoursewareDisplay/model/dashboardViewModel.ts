@@ -6,14 +6,13 @@
  * render-ready shapes. No React, no queries; everything is synchronous and
  * unit-testable in isolation.
  */
-import type { SimpleSelectOption } from "ol-components"
 import type {
+  BaseCourseRun,
   BaseProgramDisplayMode,
   ContractPage,
   CourseRunEnrollmentV3,
-  CourseRunLanguageOption,
-  CourseRunV2,
   CourseWithCourseRunsSerializerV2,
+  SupportedVariant,
   V2Program,
   V2ProgramCollection,
   V2ProgramDetail,
@@ -27,6 +26,7 @@ import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 // cards are removed (Phase 7).
 import type { DashboardResource } from "../DashboardCard"
 import {
+  getBestRun,
   getIdsFromReqTree,
   parseProgramRequirementSections,
 } from "@/common/mitxonline"
@@ -35,16 +35,8 @@ import {
   EnrollmentStatus,
   getEnrollmentStatus,
   getRequirementsProgress,
+  selectBestEnrollment,
 } from "../helpers"
-import {
-  getNativeLanguageName,
-  // below five are used only for resolveCourseEntryForLanguage
-  getCourseRunForSelectedLanguage,
-  getEnrollmentForSelectedLanguage,
-  getResolvedRunForSelectedLanguage,
-  getSelectedLanguageOption,
-  selectBestContractEnrollmentForLanguage,
-} from "../languageOptions"
 
 /**
  * A program/contract dashboard's view of a course: every enrollment whose run
@@ -52,16 +44,13 @@ import {
  * single-enrollment card UI.
  *
  * `enrollments` must be course-matched (by run id) with no language filter —
- * language is a display selection (`selectedLanguageKey` → `displayedEnrollment`
- * / `displayedRun`), not a filter on the underlying list. Contract scoping,
- * when applicable, must be applied by the entry constructor before the list
- * reaches the entry.
+ * `displayedEnrollment` and `displayedRun` are the resolved display choice for
+ * the legacy single-enrollment card UI. Contract scoping, when applicable,
+ * must be applied by the entry constructor before the list reaches the entry.
  */
 export type DashboardCourseEntry = {
   course: CourseWithCourseRunsSerializerV2
   enrollments: CourseRunEnrollmentV3[]
-  selectedLanguageKey: string
-  availableLanguages: SimpleSelectOption[]
   contractId?: number
   isContractPageResource?: boolean
   ancestorContext?: {
@@ -72,7 +61,7 @@ export type DashboardCourseEntry = {
   // Whether these fields survive past the legacy-card removal is an open
   // question tied to new card UX (run selection controlled by card or parent).
   displayedEnrollment: CourseRunEnrollmentV3 | null
-  displayedRun: CourseRunV2 | null
+  displayedRun: BaseCourseRun | null
 }
 
 const getMaxEnrollmentGrade = (enrollment: CourseRunEnrollmentV3): number => {
@@ -354,157 +343,61 @@ const assembleHomeCardList = ({
   }
 }
 
-/**
- * The mitxonline API emits language codes in POSIX form (`de_de`,
- * `pt_br`, `zh_hans`); convert to BCP 47 (`de-de`, `pt-br`, `zh-hans`)
- * so `Intl.DisplayNames` can resolve them, and to give picker options a
- * canonical key shape.
- */
-const getLanguageCodeFromText = (language: string): string => {
-  return language.trim().toLowerCase().replace(/_/g, "-")
-}
-
-const filterEnrollmentsToCourses = (
-  enrollments: CourseRunEnrollmentV3[],
-  courses: CourseWithCourseRunsSerializerV2[],
-) => {
-  const courseIds = new Set(courses.map((course) => course.id))
-  return enrollments.filter((enrollment) =>
-    courseIds.has(enrollment.run.course.id),
-  )
+const filterEnrollmentsForContract = (contractId?: number) => {
+  if (typeof contractId !== "number") return isNonContractEnrollment
+  return (enrollment: CourseRunEnrollmentV3) =>
+    enrollment.b2b_contract_id === contractId
 }
 
 /**
- * Filter enrollments to exclusively those matching the given contractId.
- * If no contractId is given, filter to enrollments with no contract.
+ * Resolve the `displayedEnrollment` and `displayedRun` for a dashboard course
+ * entry.
+ *
+ * Filters enrollments to the relevant scope (contract or non-contract) and
+ * variant (when a non-default variant is selected), then picks the best
+ * enrollment via `selectBestEnrollment`. If the user is not enrolled, falls
+ * back to the best run from `getBestRun` (or `selectVariantRunForCourse` when
+ * a variant is active).
  */
-const enrollmentMatchesContract =
-  (contractId?: number | null) => (enrollment: CourseRunEnrollmentV3) => {
-    if (typeof contractId !== "number") {
-      return enrollment.b2b_contract_id === null
-    }
-    return enrollment.b2b_contract_id === contractId
-  }
-
-type LanguageOptionScope = {
-  contractId?: number
-}
-
-const getDistinctDashboardLanguageOptions = (
-  courses: CourseWithCourseRunsSerializerV2[],
-  enrollments: CourseRunEnrollmentV3[],
-  opts?: LanguageOptionScope,
-): SimpleSelectOption[] => {
-  const coursesLanguages = courses.flatMap((c) =>
-    c.language_options
-      .map((opt) => opt.language)
-      .filter((lang): lang is string => !!lang),
-  )
-  const enrollmentLanguages = filterEnrollmentsToCourses(enrollments, courses)
-    .filter(enrollmentMatchesContract(opts?.contractId))
-    .map((e) => e.run.language)
-    .filter((lang): lang is string => !!lang)
-  const distinctCodes = Array.from(
-    new Set(
-      [...coursesLanguages, ...enrollmentLanguages].map(
-        getLanguageCodeFromText,
-      ),
-    ),
-  )
-  const options: SimpleSelectOption[] = distinctCodes.map((code) => {
-    return {
-      value: `language:${code}`,
-      label: getNativeLanguageName(code),
-    }
-  })
-  options.sort((a, b) =>
-    String(a.label).localeCompare(String(b.label), undefined, {
-      sensitivity: "base",
-    }),
-  )
-  return options
-}
-
-type ResolveCourseEntryForLanguageOpts = {
-  contractId?: number
-}
-
-type ResolveCourseEntryForLanguageResult = {
-  displayedEnrollment: CourseRunEnrollmentV3 | null
-  displayedRun: CourseRunV2 | null
-  selectedLanguageOption: CourseRunLanguageOption | null
-}
-
-/**
- * Given a language selection and course/enrollment data, pick the
- * `displayedEnrollment` and `displayedRun` for a dashboard course entry.
- */
-const resolveCourseEntryForLanguage = (
+const resolveDisplayedRunAndEnrollment = (
   course: CourseWithCourseRunsSerializerV2,
   enrollments: CourseRunEnrollmentV3[],
-  selectedLanguageKey: string,
-  opts?: ResolveCourseEntryForLanguageOpts,
-): ResolveCourseEntryForLanguageResult => {
-  const selectedLanguageOption = getSelectedLanguageOption(
-    course,
-    selectedLanguageKey,
-  )
-  const selectedRun = getCourseRunForSelectedLanguage(
-    course,
-    selectedLanguageKey,
-  )
+  opts?: {
+    contractId?: number
+    variant?: SupportedVariant
+    variantCandidateRuns?: BaseCourseRun[]
+  },
+): {
+  displayedEnrollment: CourseRunEnrollmentV3 | null
+  displayedRun: BaseCourseRun | null
+} => {
+  const variantFilter = opts?.variant
+    ? runMatchesVariant(opts.variant)
+    : () => true
+  const relevantEnrollments = enrollments
+    .filter(filterEnrollmentsForContract(opts?.contractId))
+    .filter((e) => variantFilter(e.run))
 
-  if (typeof opts?.contractId === "number") {
-    const contractEnrollments = enrollments.filter(
-      (enrollment) => enrollment.b2b_contract_id === opts.contractId,
-    )
-    const displayedEnrollment = selectBestContractEnrollmentForLanguage(
-      course,
-      contractEnrollments,
-      selectedLanguageKey,
-    )
-    const selectedRunForResolution = displayedEnrollment
-      ? ((course.courseruns ?? []).find(
-          (run) => run.id === displayedEnrollment.run.id,
-        ) ?? null)
-      : selectedRun
-
-    const displayedRun = getResolvedRunForSelectedLanguage(
-      course,
-      selectedLanguageOption,
-      selectedRunForResolution,
-      displayedEnrollment,
-      opts.contractId,
-    )
-
-    return {
-      displayedEnrollment,
-      displayedRun,
-      selectedLanguageOption,
-    }
+  const displayedEnrollment = selectBestEnrollment(course, relevantEnrollments)
+  if (displayedEnrollment) {
+    const displayedRun =
+      course.courseruns.find((r) => r.id === displayedEnrollment.run.id) ??
+      displayedEnrollment.run
+    return { displayedEnrollment, displayedRun }
   }
 
-  const selectedLanguageEnrollment = getEnrollmentForSelectedLanguage(
-    enrollments,
-    selectedLanguageOption,
-    selectedRun,
-  )
-  const displayedEnrollment = selectedLanguageKey
-    ? selectedLanguageEnrollment
-    : pickDisplayedEnrollmentForLegacyDashboard(course, enrollments)
-
-  const displayedRun = getResolvedRunForSelectedLanguage(
-    course,
-    selectedLanguageOption,
-    selectedRun,
-    selectedLanguageEnrollment,
-  )
-
-  return {
-    displayedEnrollment,
-    displayedRun,
-    selectedLanguageOption,
-  }
+  const defaultRun =
+    getBestRun(course, {
+      enrollableOnly: true,
+      contractId: opts?.contractId,
+    }) ??
+    course.courseruns[0] ??
+    null
+  const isNonDefaultVariant = opts?.variant && !opts.variant.default_variant
+  const displayedRun = isNonDefaultVariant
+    ? selectVariantRunForCourse(opts.variantCandidateRuns ?? [], opts.variant!)
+    : defaultRun
+  return { displayedEnrollment: null, displayedRun }
 }
 
 /**
@@ -573,39 +466,51 @@ type RequirementSection = {
 /**
  * Build a fully-resolved `DashboardCourseEntry` for a single course.
  *
- * This is a pure constructor — it delegates display-resolution to
- * `resolveCourseEntryForLanguage` and assembles the result with the
- * caller-supplied metadata. The caller is responsible for:
- *  - pre-filtering `enrollments` to this course (e.g. `enrollmentsByCourseId[course.id] ?? []`)
- *  - computing `availableLanguages` once at the composer level (NOT re-derived here)
- *  - supplying the effective `selectedLanguageKey` (a valid option or fallback)
+ * This is a pure constructor — it assembles the entry from caller-supplied
+ * metadata and delegates all display-resolution to
+ * `resolveDisplayedRunAndEnrollment`. The caller is responsible for
+ * pre-filtering `enrollments` to this course (e.g.
+ * `enrollmentsByCourseId[course.id] ?? []`).
  *
  * `enrollments` is stored uncollapsed on the entry — the full list, never
- * filtered to the displayed choice. The `displayedEnrollment`/`displayedRun`
- * pair is derived by `resolveCourseEntryForLanguage` for the legacy card UI.
+ * filtered to the displayed choice.
+ *
+ * When `opts.variant` and `opts.variantCandidateRuns` are provided,
+ * `resolveDisplayedRunAndEnrollment` will prefer any existing enrollment that
+ * already matches the variant before falling back to the candidate runs.
+ *
+ * Returns `null` when a non-default variant is active and neither a matching
+ * run nor a matching enrollment could be found for this course. Callers should
+ * filter out null entries to hide courses that have no runs in the variant.
  */
 const buildCourseEntry = (
   course: CourseWithCourseRunsSerializerV2,
   enrollments: CourseRunEnrollmentV3[],
-  selectedLanguageKey: string,
   opts: {
-    availableLanguages: SimpleSelectOption[]
     contractId?: number
     isContractPageResource?: boolean
     ancestorContext?: DashboardCourseEntry["ancestorContext"]
+    /** Active variant selection, when a non-default variant is chosen. */
+    variant?: SupportedVariant
+    /** Candidate runs from the variant-runs API for this course. */
+    variantCandidateRuns?: BaseCourseRun[]
   },
-): DashboardCourseEntry => {
-  const { displayedEnrollment, displayedRun } = resolveCourseEntryForLanguage(
-    course,
-    enrollments,
-    selectedLanguageKey,
-    opts.contractId !== undefined ? { contractId: opts.contractId } : undefined,
-  )
+): DashboardCourseEntry | null => {
+  const { displayedRun, displayedEnrollment } =
+    resolveDisplayedRunAndEnrollment(course, enrollments, {
+      contractId: opts.contractId,
+      variant: opts.variant,
+      variantCandidateRuns: opts.variantCandidateRuns,
+    })
+
+  const isNonDefaultVariant = opts.variant && !opts.variant.default_variant
+  if (isNonDefaultVariant && !displayedRun && !displayedEnrollment) {
+    return null
+  }
+
   return {
     course,
     enrollments,
-    selectedLanguageKey,
-    availableLanguages: opts.availableLanguages,
     contractId: opts.contractId,
     isContractPageResource: opts.isContractPageResource,
     ancestorContext: opts.ancestorContext,
@@ -639,13 +544,6 @@ type BuildRequirementSectionsArgs = {
     number,
     CourseWithCourseRunsSerializerV2[]
   >
-  /** Effective language key (valid option or fallback ""). */
-  selectedLanguageKey: string
-  /**
-   * Dashboard-wide language options list, computed once by the composer.
-   * Stored as-is on each course entry — NOT recomputed here.
-   */
-  availableLanguages: SimpleSelectOption[]
   /**
    * The top-level program's own enrollment (from `programEnrollmentsById`).
    * When present, placed on every course arm's `ancestorContext.programEnrollment`.
@@ -677,8 +575,6 @@ const buildRequirementSections = ({
   programEnrollmentsById,
   requiredPrograms,
   requiredProgramModuleCoursesByProgramId,
-  selectedLanguageKey,
-  availableLanguages,
   ancestorProgramEnrollment,
 }: BuildRequirementSectionsArgs): {
   sections: RequirementSection[]
@@ -698,20 +594,17 @@ const buildRequirementSections = ({
           if (resource.type === "course") {
             const course = coursesById.get(resource.id)
             if (!course) return null
-            return {
-              kind: "course",
-              entry: buildCourseEntry(
-                course,
-                enrollmentsByCourseId[course.id] ?? [],
-                selectedLanguageKey,
-                {
-                  availableLanguages,
-                  ancestorContext: ancestorProgramEnrollment
-                    ? { programEnrollment: ancestorProgramEnrollment }
-                    : undefined,
-                },
-              ),
-            }
+            const entry = buildCourseEntry(
+              course,
+              enrollmentsByCourseId[course.id] ?? [],
+              {
+                ancestorContext: ancestorProgramEnrollment
+                  ? { programEnrollment: ancestorProgramEnrollment }
+                  : undefined,
+              },
+            )
+            if (!entry) return null
+            return { kind: "course", entry }
           }
 
           // resource.type === "program"
@@ -857,6 +750,186 @@ const getRenderableContractCollections = (
   })
 }
 
+// ---------------------------------------------------------------------------
+// Variant picker model
+// ---------------------------------------------------------------------------
+
+const VARIANT_INDUSTRY_LABELS: Record<string, string> = {
+  E: "Energy",
+  F: "Finance",
+  HC: "Healthcare",
+}
+
+const VARIANT_LENGTH_LABELS: Record<string, string> = {
+  S: "Short",
+  F: "Full",
+}
+
+const FALLBACK_NATIVE_LANGUAGE_NAMES: Record<string, string> = {
+  ar: "العربية",
+  de: "Deutsch",
+  en: "English",
+  es: "español",
+  "es-419": "español (Latinoamérica)",
+  fr: "français",
+  hi: "हिन्दी",
+  it: "italiano",
+  ja: "日本語",
+  ko: "한국어",
+  pt: "português",
+  "pt-br": "português (Brasil)",
+  ru: "русский",
+  zh: "中文",
+  "zh-cn": "简体中文",
+  "zh-tw": "繁體中文",
+}
+
+const nativeLanguageNameCache = new Map<string, string>()
+let cachedDisplayNamesRef: typeof Intl.DisplayNames | undefined =
+  Intl.DisplayNames
+
+const ensureNativeLanguageNameCacheIsFresh = (): void => {
+  if (Intl.DisplayNames !== cachedDisplayNamesRef) {
+    cachedDisplayNamesRef = Intl.DisplayNames
+    nativeLanguageNameCache.clear()
+  }
+}
+
+const getFallbackNativeLanguageName = (languageCode: string): string | null => {
+  const exactMatch = FALLBACK_NATIVE_LANGUAGE_NAMES[languageCode]
+  if (exactMatch) {
+    return exactMatch
+  }
+  const baseLanguageSubtag = languageCode.split("-")[0]
+  if (!baseLanguageSubtag) {
+    return null
+  }
+  return (
+    FALLBACK_NATIVE_LANGUAGE_NAMES[baseLanguageSubtag] ?? baseLanguageSubtag
+  )
+}
+
+const getNativeLanguageName = (languageCode: string): string => {
+  ensureNativeLanguageNameCacheIsFresh()
+  const normalizedLanguageCode = languageCode
+    .trim()
+    .toLowerCase()
+    .replace("_", "-")
+  const baseLanguageSubtag = normalizedLanguageCode.split("-")[0]
+  const cachedLabel = nativeLanguageNameCache.get(normalizedLanguageCode)
+  if (cachedLabel) {
+    return cachedLabel
+  }
+  let resolvedLabel: string | null = null
+  try {
+    if (typeof Intl.DisplayNames === "function") {
+      const displayNames = new Intl.DisplayNames([normalizedLanguageCode], {
+        type: "language",
+      })
+      const label = displayNames.of(normalizedLanguageCode)
+      if (label && label.toLowerCase() !== normalizedLanguageCode) {
+        resolvedLabel = label
+      }
+      if (
+        !resolvedLabel &&
+        baseLanguageSubtag &&
+        baseLanguageSubtag !== normalizedLanguageCode
+      ) {
+        const baseLabel = displayNames.of(baseLanguageSubtag)
+        if (baseLabel && baseLabel.toLowerCase() !== baseLanguageSubtag) {
+          resolvedLabel = baseLabel
+        }
+      }
+    }
+  } catch {
+    // Fall through to static fallback labels.
+  }
+  const finalLabel =
+    resolvedLabel ??
+    getFallbackNativeLanguageName(normalizedLanguageCode) ??
+    normalizedLanguageCode
+  nativeLanguageNameCache.set(normalizedLanguageCode, finalLabel)
+  return finalLabel
+}
+
+const buildVariantKey = (variant: SupportedVariant): string =>
+  `language:${variant.language ?? ""}|industry:${variant.variant_industry ?? ""}|length:${variant.variant_length ?? ""}`
+
+const buildVariantLabel = (variant: SupportedVariant): string => {
+  const langLabel = variant.language
+    ? getNativeLanguageName(variant.language)
+    : ""
+  const modifiers: string[] = []
+  if (variant.variant_industry) {
+    modifiers.push(
+      VARIANT_INDUSTRY_LABELS[variant.variant_industry] ??
+        variant.variant_industry,
+    )
+  } else {
+    modifiers.push("General")
+  }
+  if (variant.variant_length) {
+    modifiers.push(
+      VARIANT_LENGTH_LABELS[variant.variant_length] ?? variant.variant_length,
+    )
+  } else {
+    modifiers.push("Full")
+  }
+  return [langLabel, ...modifiers].filter(Boolean).join(" • ")
+}
+
+/**
+ * Returns true when a run exactly matches all three fields of a variant.
+ * Empty string is treated as a literal value (not a wildcard): a run with
+ * `variant_industry = null` maps to `""` (general), so selecting
+ * `(de, "", "")` matches only general-industry runs, not healthcare ones.
+ */
+const runMatchesVariant =
+  (variant: SupportedVariant) =>
+  (run: BaseCourseRun): boolean =>
+    variant.language === (run.language ?? "") &&
+    variant.variant_industry === (run.variant_industry ?? "") &&
+    variant.variant_length === (run.variant_length ?? "")
+
+/**
+ * Given the list of runs returned by `api/v3/courses/variant_runs/` for one
+ * course, return the single best run that exactly matches the selected variant
+ * combination (language, industry, length). All three fields are matched
+ * literally — `""` means "general/unset", not wildcard.
+ *
+ * If no run matches, returns `null`, signalling to the caller that it should
+ * fall back to the course's `next_run_id`-based default.
+ *
+ * Among matching runs, enrollable runs are preferred first; within each
+ * tier, runs are sorted by start date descending (most recent first); runs
+ * with no start date are last.
+ */
+const selectVariantRunForCourse = (
+  runs: BaseCourseRun[],
+  selectedVariant: SupportedVariant,
+): BaseCourseRun | null => {
+  const matching = runs.filter(runMatchesVariant(selectedVariant))
+
+  if (matching.length === 0) return null
+
+  return (
+    [...matching].sort((a, b) => {
+      // Enrollable runs first
+      const aEnrollable = a.is_enrollable ? 0 : 1
+      const bEnrollable = b.is_enrollable ? 0 : 1
+      if (aEnrollable !== bEnrollable) return aEnrollable - bEnrollable
+
+      // Within each tier: descending by start date, nulls last
+      const aMs = a.start_date ? new Date(a.start_date).getTime() : null
+      const bMs = b.start_date ? new Date(b.start_date).getTime() : null
+      if (aMs !== null && bMs !== null) return bMs - aMs
+      if (aMs !== null) return -1
+      if (bMs !== null) return 1
+      return 0
+    })[0] ?? null
+  )
+}
+
 const getProgramCoursesInContractOrder = (
   program: V2Program,
   contractCourses: CourseWithCourseRunsSerializerV2[],
@@ -914,8 +987,7 @@ export {
   pickDisplayedEnrollmentForLegacyDashboard,
   groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
-  resolveCourseEntryForLanguage,
-  getDistinctDashboardLanguageOptions,
+  resolveDisplayedRunAndEnrollment,
   isProgramAsCourse,
   isNonContractEnrollment,
   enrollmentCourseIsInPrograms,
@@ -932,6 +1004,9 @@ export {
   getRenderableContractCollections,
   getProgramCoursesInContractOrder,
   getCollectionFirstCoursesInDisplayOrder,
+  buildVariantKey,
+  buildVariantLabel,
+  selectVariantRunForCourse,
 }
 
 export type { RequirementSectionItem, RequirementSection }

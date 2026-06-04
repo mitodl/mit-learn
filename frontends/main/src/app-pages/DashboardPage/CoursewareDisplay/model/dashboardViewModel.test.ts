@@ -1,13 +1,21 @@
-import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import {
+  DisplayModeEnum,
+  LanguageEnum,
+  VariantIndustryEnum,
+  VariantLengthEnum,
+  type BaseCourseRun,
+  type SupportedVariant,
+} from "@mitodl/mitxonline-api-axios/v2"
 import { factories, RequirementTreeBuilder } from "api/mitxonline-test-utils"
 import {
   assembleHomeCardList,
   bucketAndSortHomeEnrollments,
   buildCourseEntry,
   buildRequirementSections,
+  buildVariantKey,
+  buildVariantLabel,
   enrollmentCourseIsInPrograms,
   getCollectionFirstCoursesInDisplayOrder,
-  getDistinctDashboardLanguageOptions,
   getModuleCourseIdsFromPrograms,
   getNonContractProgramEnrollments,
   getProgramCoursesInContractOrder,
@@ -21,7 +29,8 @@ import {
   isProgramAsCourse,
   pickDisplayedEnrollmentForLegacyDashboard,
   programHasContractRuns,
-  resolveCourseEntryForLanguage,
+  resolveDisplayedRunAndEnrollment,
+  selectVariantRunForCourse,
 } from "./dashboardViewModel"
 
 describe("dashboardViewModel", () => {
@@ -557,129 +566,6 @@ describe("dashboardViewModel", () => {
     })
   })
 
-  describe("getDistinctDashboardLanguageOptions", () => {
-    test("includes enrollment language not present in enrollable language options", () => {
-      const englishRun = factories.courses.courseRun({
-        id: 101,
-        language: "en",
-        courseware_id: "cw-en-101",
-        courseware_url: "https://example.com/en-101",
-        is_enrollable: true,
-      })
-
-      const course = factories.courses.course({
-        id: 1,
-        courseruns: [englishRun],
-        next_run_id: englishRun.id,
-        language_options: [
-          {
-            id: englishRun.id,
-            courseware_id: englishRun.courseware_id,
-            courseware_url: englishRun.courseware_url ?? "",
-            language: "en",
-            title: englishRun.title,
-            run_tag: englishRun.run_tag,
-          },
-        ],
-      })
-
-      const esEnrollment = factories.enrollment.courseEnrollment({
-        run: { id: 999, language: "es", course: { id: course.id } },
-      })
-
-      const options = getDistinctDashboardLanguageOptions(
-        [course],
-        [esEnrollment],
-      )
-
-      expect(options.map((option) => option.value)).toEqual([
-        "language:en",
-        "language:es",
-      ])
-    })
-
-    test("adds only relevant enrollment languages for the provided course set", () => {
-      const courseA = factories.courses.course({ id: 10, language_options: [] })
-      const courseB = factories.courses.course({ id: 20, language_options: [] })
-
-      const enrollmentA = factories.enrollment.courseEnrollment({
-        run: { language: "fr", course: { id: 10 } },
-      })
-      const enrollmentOtherCourse = factories.enrollment.courseEnrollment({
-        run: { language: "de", course: { id: 999 } },
-      })
-
-      const options = getDistinctDashboardLanguageOptions(
-        [courseA, courseB],
-        [enrollmentA, enrollmentOtherCourse],
-      )
-
-      expect(options.map((option) => option.value)).toEqual(["language:fr"])
-    })
-
-    test("sorts enrollment-derived language options by label", () => {
-      const course = factories.courses.course({
-        id: 50,
-        language_options: [],
-        courseruns: [],
-      })
-      const frenchEnrollment = factories.enrollment.courseEnrollment({
-        run: { language: "fr", course: { id: 50 } },
-      })
-      const spanishEnrollment = factories.enrollment.courseEnrollment({
-        run: { language: "es", course: { id: 50 } },
-      })
-
-      const options = getDistinctDashboardLanguageOptions(
-        [course],
-        [frenchEnrollment, spanishEnrollment],
-      )
-
-      expect(options.map((option) => option.value)).toEqual([
-        "language:es",
-        "language:fr",
-      ])
-    })
-
-    test("uses the shared native language fallback label for enrollment-derived options", () => {
-      const originalDisplayNames = Intl.DisplayNames
-      Object.defineProperty(Intl, "DisplayNames", {
-        value: undefined,
-        configurable: true,
-        writable: true,
-      })
-
-      try {
-        const course = factories.courses.course({
-          id: 40,
-          language_options: [],
-          courseruns: [],
-        })
-        const enrollment = factories.enrollment.courseEnrollment({
-          run: { language: "es", course: { id: 40 } },
-        })
-
-        const options = getDistinctDashboardLanguageOptions(
-          [course],
-          [enrollment],
-        )
-
-        expect(options).toEqual([
-          {
-            value: "language:es",
-            label: "español",
-          },
-        ])
-      } finally {
-        Object.defineProperty(Intl, "DisplayNames", {
-          value: originalDisplayNames,
-          configurable: true,
-          writable: true,
-        })
-      }
-    })
-  })
-
   describe("contract dashboard helpers", () => {
     test("programHasContractRuns checks course membership in contract course ids", () => {
       const program = factories.programs.program({ courses: [10, 20] })
@@ -882,11 +768,7 @@ describe("dashboardViewModel", () => {
         courseruns: [run],
         next_run_id: run.id,
       })
-      const availableLanguages = [{ value: "language:en", label: "English" }]
-
-      const entry = buildCourseEntry(course, [], "language:en", {
-        availableLanguages,
-      })
+      const entry = buildCourseEntry(course, [], {})!
 
       expect(entry.displayedEnrollment).toBeNull()
       expect(entry.displayedRun).not.toBeNull()
@@ -903,7 +785,7 @@ describe("dashboardViewModel", () => {
             id: run.id,
             courseware_id: run.courseware_id,
             courseware_url: run.courseware_url ?? "",
-            language: "en",
+            language: LanguageEnum.En,
             title: run.title,
             run_tag: run.run_tag,
           },
@@ -912,15 +794,12 @@ describe("dashboardViewModel", () => {
       const enrollment = factories.enrollment.courseEnrollment({
         run: {
           ...run,
-          language: "en",
+          language: LanguageEnum.En,
           course: { id: course.id, title: course.title },
         },
       })
-      const availableLanguages = [{ value: "language:en", label: "English" }]
 
-      const entry = buildCourseEntry(course, [enrollment], "language:en", {
-        availableLanguages,
-      })
+      const entry = buildCourseEntry(course, [enrollment], {})!
 
       expect(entry.displayedEnrollment).toBe(enrollment)
       expect(entry.displayedRun?.id).toBe(run.id)
@@ -941,78 +820,9 @@ describe("dashboardViewModel", () => {
       })
 
       // no selectedLanguageKey → legacy path
-      const entry = buildCourseEntry(course, [noCert, withCert], "", {
-        availableLanguages: [],
-      })
+      const entry = buildCourseEntry(course, [noCert, withCert], {})!
 
       expect(entry.displayedEnrollment).toBe(withCert)
-    })
-
-    test("selected-language key prefers matching language enrollment", () => {
-      const enRun = factories.courses.courseRun({
-        id: 401,
-        language: "en",
-        courseware_id: "cw-en-401",
-        courseware_url: "https://example.com/en-401",
-        is_enrollable: true,
-      })
-      const esRun = factories.courses.courseRun({
-        id: 402,
-        language: "es",
-        courseware_id: "cw-es-402",
-        courseware_url: "https://example.com/es-402",
-        is_enrollable: true,
-      })
-      const course = factories.courses.course({
-        courseruns: [enRun, esRun],
-        next_run_id: enRun.id,
-        language_options: [
-          {
-            id: enRun.id,
-            courseware_id: enRun.courseware_id,
-            courseware_url: enRun.courseware_url ?? "",
-            language: "en",
-            title: enRun.title,
-            run_tag: enRun.run_tag,
-          },
-          {
-            id: esRun.id,
-            courseware_id: esRun.courseware_id,
-            courseware_url: esRun.courseware_url ?? "",
-            language: "es",
-            title: esRun.title,
-            run_tag: esRun.run_tag,
-          },
-        ],
-      })
-      const enEnrollment = factories.enrollment.courseEnrollment({
-        run: {
-          ...enRun,
-          language: "en",
-          course: { id: course.id, title: course.title },
-        },
-      })
-      const esEnrollment = factories.enrollment.courseEnrollment({
-        run: {
-          ...esRun,
-          language: "es",
-          course: { id: course.id, title: course.title },
-        },
-      })
-      const availableLanguages = [
-        { value: "language:en", label: "English" },
-        { value: "language:es", label: "Spanish" },
-      ]
-
-      const entry = buildCourseEntry(
-        course,
-        [enEnrollment, esEnrollment],
-        "language:es",
-        { availableLanguages },
-      )
-
-      expect(entry.displayedEnrollment?.run.id).toBe(esRun.id)
-      expect(entry.displayedRun?.id).toBe(esRun.id)
     })
 
     test("contract-scoped: does not pick an enrollment from a different contract", () => {
@@ -1031,7 +841,7 @@ describe("dashboardViewModel", () => {
             id: run.id,
             courseware_id: run.courseware_id,
             courseware_url: run.courseware_url ?? "",
-            language: "en",
+            language: LanguageEnum.En,
             title: run.title,
             run_tag: run.run_tag,
           },
@@ -1042,20 +852,14 @@ describe("dashboardViewModel", () => {
         b2b_contract_id: 99,
         run: {
           ...run,
-          language: "en",
+          language: LanguageEnum.En,
           course: { id: course.id, title: course.title },
         },
       })
 
-      const entry = buildCourseEntry(
-        course,
-        [otherContractEnrollment],
-        "language:en",
-        {
-          availableLanguages: [{ value: "language:en", label: "English" }],
-          contractId: 10,
-        },
-      )
+      const entry = buildCourseEntry(course, [otherContractEnrollment], {
+        contractId: 10,
+      })!
 
       expect(entry.displayedEnrollment).toBeNull()
     })
@@ -1075,7 +879,7 @@ describe("dashboardViewModel", () => {
             id: run.id,
             courseware_id: run.courseware_id,
             courseware_url: run.courseware_url ?? "",
-            language: "en",
+            language: LanguageEnum.En,
             title: run.title,
             run_tag: run.run_tag,
           },
@@ -1093,12 +897,10 @@ describe("dashboardViewModel", () => {
       const entry = buildCourseEntry(
         course,
         [otherContractEnrollment, selectedContractEnrollment],
-        "language:en",
         {
-          availableLanguages: [{ value: "language:en", label: "English" }],
           contractId: 1,
         },
-      )
+      )!
 
       expect(entry.displayedEnrollment?.b2b_contract_id).toBe(1)
     })
@@ -1115,33 +917,25 @@ describe("dashboardViewModel", () => {
         certificate: { uuid: "cert-xyz" },
       })
 
-      const entry = buildCourseEntry(course, [e1, e2], "", {
-        availableLanguages: [],
-      })
+      const entry = buildCourseEntry(course, [e1, e2], {})!
 
       // displayedEnrollment picks best one (e2), but all remain on entry
       expect(entry.enrollments).toEqual([e1, e2])
       expect(entry.displayedEnrollment).toBe(e2)
     })
 
-    test("passthrough: course, availableLanguages, contractId, and ancestorContext are stored verbatim", () => {
+    test("passthrough: course, contractId, and ancestorContext are stored verbatim", () => {
       const run = factories.courses.courseRun({ id: 701 })
       const course = factories.courses.course({ courseruns: [run] })
-      const availableLanguages = [
-        { value: "language:en", label: "English" },
-        { value: "language:de", label: "German" },
-      ]
       const programEnrollment = factories.enrollment.programEnrollmentV3()
       const ancestorContext = { programEnrollment }
 
-      const entry = buildCourseEntry(course, [], "language:en", {
-        availableLanguages,
+      const entry = buildCourseEntry(course, [], {
         contractId: 42,
         ancestorContext,
-      })
+      })!
 
       expect(entry.course).toBe(course)
-      expect(entry.availableLanguages).toBe(availableLanguages)
       expect(entry.contractId).toBe(42)
       expect(entry.ancestorContext).toBe(ancestorContext)
     })
@@ -1149,10 +943,9 @@ describe("dashboardViewModel", () => {
     test("isContractPageResource is stored verbatim", () => {
       const course = factories.courses.course()
 
-      const entry = buildCourseEntry(course, [], "", {
-        availableLanguages: [],
+      const entry = buildCourseEntry(course, [], {
         isContractPageResource: true,
-      })
+      })!
 
       expect(entry.isContractPageResource).toBe(true)
     })
@@ -1181,8 +974,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedLanguageKey: "",
-        availableLanguages: [],
       })
 
       expect(sections).toHaveLength(1)
@@ -1203,8 +994,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedLanguageKey: "",
-        availableLanguages: [],
       })
 
       // Section has no items → filtered out
@@ -1238,8 +1027,6 @@ describe("dashboardViewModel", () => {
         requiredProgramModuleCoursesByProgramId: {
           [requiredProgram.id]: [moduleCourse],
         },
-        selectedLanguageKey: "",
-        availableLanguages: [],
       })
 
       expect(sections).toHaveLength(1)
@@ -1273,8 +1060,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: { [requiredProgram.id]: programEnrollment },
         requiredPrograms: [requiredProgram],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedLanguageKey: "",
-        availableLanguages: [],
       })
 
       expect(sections).toHaveLength(1)
@@ -1301,8 +1086,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {}, // no enrollment for this program
         requiredPrograms: [requiredProgram],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedLanguageKey: "",
-        availableLanguages: [],
       })
 
       expect(sections).toHaveLength(0)
@@ -1321,8 +1104,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [], // 9999 not present
         requiredProgramModuleCoursesByProgramId: {},
-        selectedLanguageKey: "",
-        availableLanguages: [],
       })
 
       expect(sections).toHaveLength(0)
@@ -1346,8 +1127,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedLanguageKey: "",
-        availableLanguages: [],
       })
 
       expect(sections).toHaveLength(1)
@@ -1374,8 +1153,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedLanguageKey: "",
-        availableLanguages: [],
       })
 
       expect(sections.map((s) => s.title)).toEqual(["First", "Second", "Third"])
@@ -1400,8 +1177,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedLanguageKey: "",
-        availableLanguages: [],
       })
 
       expect(sections[0].completed).toBe(1)
@@ -1442,8 +1217,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedLanguageKey: "",
-        availableLanguages: [],
       })
 
       // Only the "Kept" section survives; the ghost section is dropped.
@@ -1473,8 +1246,6 @@ describe("dashboardViewModel", () => {
           programEnrollmentsById: {},
           requiredPrograms: [],
           requiredProgramModuleCoursesByProgramId: {},
-          selectedLanguageKey: "",
-          availableLanguages: [],
         })
 
         expect(sections[0].title).toBe("Custom Section Title")
@@ -1500,8 +1271,6 @@ describe("dashboardViewModel", () => {
           programEnrollmentsById: {},
           requiredPrograms: [],
           requiredProgramModuleCoursesByProgramId: {},
-          selectedLanguageKey: "",
-          availableLanguages: [],
         })
 
         expect(sections[0].title).toBe("Electives (Complete 3)")
@@ -1545,8 +1314,6 @@ describe("dashboardViewModel", () => {
           programEnrollmentsById: {},
           requiredPrograms: [],
           requiredProgramModuleCoursesByProgramId: {},
-          selectedLanguageKey: "",
-          availableLanguages: [],
         })
 
         expect(sections[0].title).toBe("Elective Courses")
@@ -1589,8 +1356,6 @@ describe("dashboardViewModel", () => {
           programEnrollmentsById: {},
           requiredPrograms: [],
           requiredProgramModuleCoursesByProgramId: {},
-          selectedLanguageKey: "",
-          availableLanguages: [],
         })
 
         expect(sections[0].title).toBe("Core Courses")
@@ -1609,8 +1374,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedLanguageKey: "",
-        availableLanguages: [],
         ancestorProgramEnrollment: programEnrollment,
       })
 
@@ -1660,181 +1423,412 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
-        selectedLanguageKey: "",
-        availableLanguages: [],
       })
 
       expect(sections[0].key).toBe(opNode.id)
     })
   })
 
-  describe("resolveCourseEntryForLanguage", () => {
-    test("prefers selected-language enrollment", () => {
-      const enRun = factories.courses.courseRun({
+  describe("resolveDisplayedRunAndEnrollment", () => {
+    test("variant path: prefers an enrolled run matching the variant over candidate runs", () => {
+      // User is enrolled in an older run matching the variant. A newer
+      // enrollable candidate also matches. The enrolled run must win.
+      const enrolledRun = factories.courses.courseRun({
         id: 11,
-        language: "en",
-        courseware_id: "cw-en-11",
-        courseware_url: "https://example.com/en-11",
-        is_enrollable: true,
+        language: LanguageEnum.En,
+        variant_industry: VariantIndustryEnum.E,
+        variant_length: "",
+        is_enrollable: false,
+        start_date: "2024-01-01T00:00:00Z",
       })
-      const esRun = factories.courses.courseRun({
+      const newerCandidateRun = factories.courses.courseRun({
         id: 12,
-        language: "es",
-        courseware_id: "cw-es-12",
-        courseware_url: "https://example.com/es-12",
+        language: LanguageEnum.En,
+        variant_industry: VariantIndustryEnum.E,
+        variant_length: "",
         is_enrollable: true,
+        start_date: "2025-06-01T00:00:00Z",
       })
       const course = factories.courses.course({
         id: 1,
-        courseruns: [enRun, esRun],
-        next_run_id: enRun.id,
-        language_options: [
-          {
-            id: enRun.id,
-            courseware_id: enRun.courseware_id,
-            courseware_url: enRun.courseware_url ?? "",
-            language: "en",
-            title: enRun.title,
-            run_tag: enRun.run_tag,
-          },
-          {
-            id: esRun.id,
-            courseware_id: esRun.courseware_id,
-            courseware_url: esRun.courseware_url ?? "",
-            language: "es",
-            title: esRun.title,
-            run_tag: esRun.run_tag,
-          },
-        ],
+        courseruns: [enrolledRun, newerCandidateRun],
+        next_run_id: newerCandidateRun.id,
       })
-
-      const englishEnrollment = factories.enrollment.courseEnrollment({
+      const variant: SupportedVariant = {
+        language: LanguageEnum.En,
+        variant_industry: VariantIndustryEnum.E,
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: false,
+      }
+      const enrollment = factories.enrollment.courseEnrollment({
         run: {
-          ...enRun,
-          language: "en",
-          course: { id: course.id, title: course.title },
-        },
-      })
-      const spanishEnrollment = factories.enrollment.courseEnrollment({
-        run: {
-          ...esRun,
-          language: "es",
+          ...enrolledRun,
+          language: LanguageEnum.En,
+          variant_industry: VariantIndustryEnum.E,
+          variant_length: "",
           course: { id: course.id, title: course.title },
         },
       })
 
-      const resolved = resolveCourseEntryForLanguage(
-        course,
-        [englishEnrollment, spanishEnrollment],
-        "language:es",
-      )
+      const resolved = resolveDisplayedRunAndEnrollment(course, [enrollment], {
+        variant,
+        variantCandidateRuns: [enrolledRun, newerCandidateRun],
+      })
 
-      expect(resolved.displayedEnrollment?.run.id).toBe(esRun.id)
-      expect(resolved.displayedRun?.id).toBe(esRun.id)
+      expect(resolved.displayedEnrollment?.run.id).toBe(enrolledRun.id)
+      expect(resolved.displayedRun?.id).toBe(enrolledRun.id)
     })
 
     test("does not pick enrollment from another contract", () => {
-      const enRun = factories.courses.courseRun({
+      const run = factories.courses.courseRun({
         id: 21,
         b2b_contract: 1,
-        courseware_id: "cw-en-21",
-        courseware_url: "https://example.com/en-21",
-        is_enrollable: true,
-      })
-      const esRun = factories.courses.courseRun({
-        id: 22,
-        b2b_contract: 2,
-        courseware_id: "cw-es-22",
-        courseware_url: "https://example.com/es-22",
+        courseware_id: "cw-21",
+        courseware_url: "https://example.com/21",
         is_enrollable: true,
       })
       const course = factories.courses.course({
         id: 2,
-        courseruns: [enRun, esRun],
-        next_run_id: enRun.id,
-        language_options: [
-          {
-            id: enRun.id,
-            courseware_id: enRun.courseware_id,
-            courseware_url: enRun.courseware_url ?? "",
-            language: "en",
-            title: enRun.title,
-            run_tag: enRun.run_tag,
-          },
-          {
-            id: esRun.id,
-            courseware_id: esRun.courseware_id,
-            courseware_url: esRun.courseware_url ?? "",
-            language: "es",
-            title: esRun.title,
-            run_tag: esRun.run_tag,
-          },
-        ],
+        courseruns: [run],
+        next_run_id: run.id,
       })
-
       const otherContractEnrollment = factories.enrollment.courseEnrollment({
         b2b_contract_id: 2,
         run: {
-          ...esRun,
-          language: "es",
+          ...run,
           course: { id: course.id, title: course.title },
         },
       })
 
-      const resolved = resolveCourseEntryForLanguage(
+      const resolved = resolveDisplayedRunAndEnrollment(
         course,
         [otherContractEnrollment],
-        "language:es",
         { contractId: 1 },
       )
 
       expect(resolved.displayedEnrollment).toBeNull()
     })
 
-    test("keeps fallback synthesized run for unenrolled selected language", () => {
-      const templateRun = factories.courses.courseRun({
+    test("variant path: returns best candidate run when user is not enrolled", () => {
+      // No enrollment; the enrollable candidate should be picked over the
+      // unenrollable one (enrollable-first sort in selectVariantRunForCourse).
+      const unenrollableRun = factories.courses.courseRun({
         id: 31,
-        b2b_contract: 1,
-        courseware_id: "cw-en-31",
-        courseware_url: "https://example.com/en-31",
+        language: LanguageEnum.En,
+        variant_industry: VariantIndustryEnum.F,
+        variant_length: "",
+        is_enrollable: false,
+        start_date: "2025-01-01T00:00:00Z",
+      })
+      const enrollableRun = factories.courses.courseRun({
+        id: 32,
+        language: LanguageEnum.En,
+        variant_industry: VariantIndustryEnum.F,
+        variant_length: "",
         is_enrollable: true,
+        start_date: "2024-06-01T00:00:00Z",
       })
       const course = factories.courses.course({
         id: 3,
-        courseruns: [templateRun],
-        next_run_id: templateRun.id,
-        language_options: [
-          {
-            id: templateRun.id,
-            courseware_id: templateRun.courseware_id,
-            courseware_url: templateRun.courseware_url ?? "",
-            language: "en",
-            title: templateRun.title,
-            run_tag: templateRun.run_tag,
-          },
-          {
-            id: 32,
-            courseware_id: "cw-es-32",
-            courseware_url: "https://example.com/es-32",
-            language: "es",
-            title: "Modulo Espanol",
-            run_tag: "ES-32",
-          },
-        ],
+        courseruns: [unenrollableRun, enrollableRun],
+        next_run_id: enrollableRun.id,
+      })
+      const variant: SupportedVariant = {
+        language: LanguageEnum.En,
+        variant_industry: VariantIndustryEnum.F,
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: false,
+      }
+
+      const resolved = resolveDisplayedRunAndEnrollment(course, [], {
+        variant,
+        variantCandidateRuns: [unenrollableRun, enrollableRun],
       })
 
-      const resolved = resolveCourseEntryForLanguage(
-        course,
-        [],
-        "language:es",
-        {
-          contractId: 1,
+      expect(resolved.displayedEnrollment).toBeNull()
+      expect(resolved.displayedRun?.id).toBe(enrollableRun.id)
+    })
+
+    test("does not surface a variant enrollment when the default variant is active", () => {
+      // Regression: user enrolls in Spanish run, then switches picker back to
+      // English default variant. The Spanish enrollment must be excluded and
+      // the English run must be the displayedRun.
+      const englishRun = factories.courses.courseRun({
+        id: 41,
+        language: LanguageEnum.En,
+        variant_industry: "",
+        variant_length: "",
+        is_enrollable: true,
+        b2b_contract: 5,
+      })
+      const spanishRun = factories.courses.courseRun({
+        id: 42,
+        language: LanguageEnum.EsEs,
+        variant_industry: "",
+        variant_length: "",
+        is_enrollable: true,
+        b2b_contract: 5,
+      })
+      const course = factories.courses.course({
+        id: 4,
+        courseruns: [englishRun, spanishRun],
+        next_run_id: englishRun.id,
+      })
+      const spanishEnrollment = factories.enrollment.courseEnrollment({
+        b2b_contract_id: 5,
+        run: {
+          ...spanishRun,
+          language: LanguageEnum.EsEs,
+          course: { id: course.id, title: course.title },
         },
+      })
+      const defaultEnglishVariant: SupportedVariant = {
+        language: LanguageEnum.En,
+        variant_industry: "",
+        variant_length: "",
+        active: true,
+        b2b_only: true,
+        default_variant: true,
+      }
+
+      const resolved = resolveDisplayedRunAndEnrollment(
+        course,
+        [spanishEnrollment],
+        { contractId: 5, variant: defaultEnglishVariant },
       )
 
       expect(resolved.displayedEnrollment).toBeNull()
-      expect(resolved.displayedRun?.id).toBe(32)
-      expect(resolved.displayedRun?.courseware_id).toBe("cw-es-32")
+      expect(resolved.displayedRun?.id).toBe(englishRun.id)
     })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Variant picker model helpers
+// ---------------------------------------------------------------------------
+
+const makeVariant = (
+  overrides: Partial<SupportedVariant> = {},
+): SupportedVariant => ({
+  language: LanguageEnum.En,
+  variant_industry: "",
+  variant_length: "",
+  active: true,
+  b2b_only: true,
+  default_variant: false,
+  ...overrides,
+})
+
+const makeRun = (overrides: Partial<BaseCourseRun> = {}): BaseCourseRun => ({
+  id: 1,
+  course_id: 1,
+  title: "Test Run",
+  courseware_id: "course-v1:test+run",
+  courseware_url: "https://example.com",
+  run_tag: "R1",
+  course_number: "T101",
+  language: LanguageEnum.En,
+  language_label: "",
+  enrollment_modes: [],
+  is_upgradable: false,
+  is_enrollable: true,
+  is_archived: false,
+  ...overrides,
+})
+
+describe("buildVariantKey", () => {
+  test("encodes language, industry, and length into a stable string", () => {
+    expect(
+      buildVariantKey(
+        makeVariant({
+          language: LanguageEnum.En,
+          variant_industry: "",
+          variant_length: "",
+        }),
+      ),
+    ).toBe("language:en|industry:|length:")
+  })
+
+  test("includes a non-empty industry value", () => {
+    expect(
+      buildVariantKey(makeVariant({ variant_industry: VariantIndustryEnum.E })),
+    ).toBe("language:en|industry:E|length:")
+  })
+
+  test("includes a non-empty length value", () => {
+    expect(
+      buildVariantKey(makeVariant({ variant_length: VariantLengthEnum.S })),
+    ).toBe("language:en|industry:|length:S")
+  })
+
+  test("encodes all three dimensions together", () => {
+    expect(
+      buildVariantKey(
+        makeVariant({
+          language: LanguageEnum.EsEs,
+          variant_industry: VariantIndustryEnum.Hc,
+          variant_length: VariantLengthEnum.F,
+        }),
+      ),
+    ).toBe("language:es_ES|industry:HC|length:F")
+  })
+})
+
+describe("buildVariantLabel", () => {
+  test("returns language name with General and Full defaults when no modifiers set", () => {
+    expect(buildVariantLabel(makeVariant({ language: LanguageEnum.En }))).toBe(
+      "English • General • Full",
+    )
+  })
+
+  test("uses the Spanish native name for es_ES", () => {
+    expect(
+      buildVariantLabel(makeVariant({ language: LanguageEnum.EsEs })),
+    ).toMatch(/español/i)
+  })
+
+  test("includes the industry label when variant_industry is set", () => {
+    expect(
+      buildVariantLabel(
+        makeVariant({ variant_industry: VariantIndustryEnum.F }),
+      ),
+    ).toBe("English • Finance • Full")
+  })
+
+  test("includes the length label when variant_length is set", () => {
+    expect(
+      buildVariantLabel(makeVariant({ variant_length: VariantLengthEnum.S })),
+    ).toBe("English • General • Short")
+  })
+
+  test("combines all three when all dimensions are set", () => {
+    expect(
+      buildVariantLabel(
+        makeVariant({
+          language: LanguageEnum.En,
+          variant_industry: VariantIndustryEnum.Hc,
+          variant_length: VariantLengthEnum.F,
+        }),
+      ),
+    ).toBe("English • Healthcare • Full")
+  })
+
+  test("falls back to raw value for an unknown industry code", () => {
+    expect(
+      buildVariantLabel(makeVariant({ variant_industry: "XY" as never })),
+    ).toBe("English • XY • Full")
+  })
+
+  test("falls back to raw value for an unknown length code", () => {
+    expect(
+      buildVariantLabel(makeVariant({ variant_length: "XZ" as never })),
+    ).toBe("English • General • XZ")
+  })
+})
+
+describe("selectVariantRunForCourse", () => {
+  test("returns null for an empty runs list", () => {
+    expect(selectVariantRunForCourse([], makeVariant())).toBeNull()
+  })
+
+  test("returns null when no run matches the selected language", () => {
+    const run = makeRun({ language: LanguageEnum.EsEs })
+    expect(
+      selectVariantRunForCourse(
+        [run],
+        makeVariant({ language: LanguageEnum.Fr }),
+      ),
+    ).toBeNull()
+  })
+
+  test("returns the run that matches the selected language", () => {
+    const enRun = makeRun({ id: 1, language: LanguageEnum.En })
+    const esRun = makeRun({ id: 2, language: LanguageEnum.EsEs })
+    expect(
+      selectVariantRunForCourse(
+        [enRun, esRun],
+        makeVariant({ language: LanguageEnum.EsEs }),
+      ),
+    ).toBe(esRun)
+  })
+
+  test("returns null when no run matches the selected industry", () => {
+    const run = makeRun({
+      language: LanguageEnum.En,
+      variant_industry: VariantIndustryEnum.E,
+    })
+    expect(
+      selectVariantRunForCourse(
+        [run],
+        makeVariant({ variant_industry: VariantIndustryEnum.F }),
+      ),
+    ).toBeNull()
+  })
+
+  test("does not match a run with a non-empty industry when variant_industry is empty (exact match)", () => {
+    const run = makeRun({
+      id: 5,
+      language: LanguageEnum.En,
+      variant_industry: VariantIndustryEnum.E,
+    })
+    expect(
+      selectVariantRunForCourse([run], makeVariant({ variant_industry: "" })),
+    ).toBeNull()
+  })
+
+  test("returns null when no run matches the selected length", () => {
+    const run = makeRun({
+      language: LanguageEnum.En,
+      variant_length: VariantLengthEnum.F,
+    })
+    expect(
+      selectVariantRunForCourse(
+        [run],
+        makeVariant({ variant_length: VariantLengthEnum.S }),
+      ),
+    ).toBeNull()
+  })
+
+  test("does not match a run with a non-empty length when variant_length is empty (exact match)", () => {
+    const run = makeRun({
+      id: 7,
+      language: LanguageEnum.En,
+      variant_length: VariantLengthEnum.S,
+    })
+    expect(
+      selectVariantRunForCourse([run], makeVariant({ variant_length: "" })),
+    ).toBeNull()
+  })
+
+  test("among same-enrollability runs, prefers the latest start date", () => {
+    const nearFuture = makeRun({ id: 1, start_date: "2099-01-01T00:00:00Z" })
+    const farFuture = makeRun({ id: 2, start_date: "2099-12-31T00:00:00Z" })
+    expect(
+      selectVariantRunForCourse([farFuture, nearFuture], makeVariant()),
+    ).toBe(farFuture)
+  })
+
+  test("prefers any upcoming date over any past date", () => {
+    const past = makeRun({ id: 1, start_date: "2020-01-01T00:00:00Z" })
+    const future = makeRun({ id: 2, start_date: "2099-01-01T00:00:00Z" })
+    expect(selectVariantRunForCourse([past, future], makeVariant())).toBe(
+      future,
+    )
+  })
+
+  test("among past-only runs, picks the most recent", () => {
+    const older = makeRun({ id: 1, start_date: "2020-01-01T00:00:00Z" })
+    const newer = makeRun({ id: 2, start_date: "2023-06-15T00:00:00Z" })
+    expect(selectVariantRunForCourse([older, newer], makeVariant())).toBe(newer)
+  })
+
+  test("runs with no start date are ranked last", () => {
+    const noDate = makeRun({ id: 1, start_date: null })
+    const past = makeRun({ id: 2, start_date: "2020-01-01T00:00:00Z" })
+    expect(selectVariantRunForCourse([noDate, past], makeVariant())).toBe(past)
   })
 })

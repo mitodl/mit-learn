@@ -1,3 +1,4 @@
+import { env } from "@/env"
 import React from "react"
 import { LoadingSpinner, Stack, theme } from "ol-components"
 import {
@@ -20,11 +21,11 @@ import { userQueries } from "api/hooks/user"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 import { programView } from "@/common/urls"
 import { usePostHog } from "posthog-js/react"
+import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import {
   enrollmentAlertSuccessUrl,
   getEnrollmentType,
 } from "@/common/mitxonline"
-import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
 import { PostHogEvents } from "@/common/constants"
 
@@ -90,7 +91,7 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
     if (enrollments.isLoading || me.isLoading) {
       return
     }
-    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
       posthog.capture(PostHogEvents.CallToActionClicked, {
         readableId: program.readable_id,
         resourceType: "program",
