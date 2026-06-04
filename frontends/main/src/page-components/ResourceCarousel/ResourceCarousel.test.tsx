@@ -298,6 +298,30 @@ describe("ResourceCarousel", () => {
     expect(screen.queryByText(resources.list.results[1].title)).toBeNull()
   })
 
+  it("Does not render if all resources are excluded by excludeResourceId", async () => {
+    const config: ResourceCarouselProps["config"] = [
+      {
+        label: "Resources",
+        data: {
+          type: "resources",
+          params: { resource_type: ["course", "program"], professional: true },
+        },
+      },
+    ]
+    const { resources } = setupApis({ count: 1 })
+    const { view } = renderWithProviders(
+      <ResourceCarousel
+        titleComponent="h1"
+        title="My Carousel"
+        config={config}
+        excludeResourceId={resources.list.results[0].id}
+      />,
+    )
+    await waitFor(() => {
+      expect(view.container.firstChild).toBeNull()
+    })
+  })
+
   it.each([
     { titleComponent: "h1", expectedLevel: 2 },
     { titleComponent: "h2", expectedLevel: 3 },
