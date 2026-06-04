@@ -235,6 +235,11 @@ describe("LearningResourceDrawer", () => {
       extraQueryParams: `&${RESOURCE_DRAWER_PARAMS.syllabus}`,
       expectChat: true,
     },
+    {
+      // syllabus_only (product-page Ask TIM) implies the chat is expanded.
+      extraQueryParams: `&${RESOURCE_DRAWER_PARAMS.syllabusOnly}`,
+      expectChat: true,
+    },
   ])(
     "Renders drawer with chatExpanded based on URL",
     async ({ extraQueryParams, expectChat }) => {
@@ -316,7 +321,7 @@ describe("LearningResourceDrawer", () => {
         },
       })
       const extraParams = syllabusOnly
-        ? `&${RESOURCE_DRAWER_PARAMS.syllabus}&${RESOURCE_DRAWER_PARAMS.syllabusOnly}`
+        ? `&${RESOURCE_DRAWER_PARAMS.syllabusOnly}`
         : ""
       renderWithProviders(<LearningResourceDrawer />, {
         url: `?resource=${resource.id}${extraParams}`,
@@ -346,7 +351,7 @@ describe("LearningResourceDrawer", () => {
       },
     })
     const { location } = renderWithProviders(<LearningResourceDrawer />, {
-      url: `?resource=${resource.id}&${RESOURCE_DRAWER_PARAMS.syllabus}&${RESOURCE_DRAWER_PARAMS.syllabusOnly}`,
+      url: `?resource=${resource.id}&${RESOURCE_DRAWER_PARAMS.syllabusOnly}`,
     })
 
     const closeButton = await screen.findByRole("button", { name: "Close" })

@@ -269,9 +269,12 @@ const LearningResourceDrawer = () => {
         aria-labelledby={id}
       >
         {({ params, closeDrawer }) => {
-          const chatExpanded = params[RESOURCE_DRAWER_PARAMS.syllabus] !== null
           const syllabusOnlyMode =
             params[RESOURCE_DRAWER_PARAMS.syllabusOnly] !== null
+          // Syllabus-only entry (e.g. product-page "Ask TIM") implies the chat
+          // is open, so it doesn't need to also set the `syllabus` param.
+          const chatExpanded =
+            syllabusOnlyMode || params[RESOURCE_DRAWER_PARAMS.syllabus] !== null
           return (
             <DrawerContent
               chatExpanded={chatExpanded}

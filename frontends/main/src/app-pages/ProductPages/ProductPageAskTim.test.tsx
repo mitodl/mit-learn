@@ -216,7 +216,7 @@ describe("ProductPageAskTimSection", () => {
     ).not.toBeInTheDocument()
   })
 
-  test("clicking Ask TIM sets syllabus query param and fires PostHog", async () => {
+  test("clicking Ask TIM sets syllabus_only query param and fires PostHog", async () => {
     process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
     mockCapture.mockClear()
     const { resource } = setupLearnResource()
@@ -234,12 +234,13 @@ describe("ProductPageAskTimSection", () => {
     expect(
       location.current.searchParams.get(RESOURCE_DRAWER_PARAMS.resource),
     ).toBe(String(resource.id))
-    expect(
-      location.current.searchParams.has(RESOURCE_DRAWER_PARAMS.syllabus),
-    ).toBe(true)
+    // syllabus_only alone is enough; the drawer treats it as chat-open.
     expect(
       location.current.searchParams.has(RESOURCE_DRAWER_PARAMS.syllabusOnly),
     ).toBe(true)
+    expect(
+      location.current.searchParams.has(RESOURCE_DRAWER_PARAMS.syllabus),
+    ).toBe(false)
     expect(mockCapture).toHaveBeenCalledWith(
       PostHogEvents.AskTimClicked,
       expect.objectContaining({

@@ -85,7 +85,8 @@ export const ProductPageAskTimButton: React.FC<
   const syllabusHref = useMemo(() => {
     const params = new URLSearchParams(searchParams)
     params.set(RESOURCE_DRAWER_PARAMS.resource, String(resource.id))
-    params.set(RESOURCE_DRAWER_PARAMS.syllabus, "")
+    // syllabus_only opens the drawer in chat-only mode; the drawer treats it as
+    // implying the chat is expanded, so we don't also set `syllabus`.
     params.set(RESOURCE_DRAWER_PARAMS.syllabusOnly, "")
     return `?${params.toString()}`
   }, [searchParams, resource.id])
