@@ -1336,6 +1336,16 @@ describe("ProgramSummary", () => {
           enrollment_modes: bothModes(),
           page: { financial_assistance_form_url: financialAidUrl },
         })
+
+        if (hasFinancialAid) {
+          const product = program.products[0]
+          invariant(product)
+          setMockResponse.get(
+            urls.products.userFlexiblePriceDetail(product.id),
+            makeFlexiblePrice({ id: product.id, price: product.price }),
+          )
+        }
+
         renderWithProviders(<ProgramSummary program={program} />)
 
         const priceRow = screen.getByTestId(TestIds.PriceRow)
