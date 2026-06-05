@@ -269,7 +269,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
           />
         </>
       ) : null}
-      {!syllabusOnlyMode ? (
+      {!(syllabusOnlyMode && chatEnabled) ? (
         <ContentSection chatTransitionState={chatTransitionState}>
           <TopContainer chatEnabled={!!chatEnabled}>
             <ContentContainer>
