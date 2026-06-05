@@ -929,10 +929,25 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
   ...others
 }) => {
   const enrollmentType = getEnrollmentType(program.enrollment_modes)
-  if (enrollmentType === "none") return null
 
-  const currentPrice = program.products[0]?.price
+  const product = program.products[0]
+  const currentPrice = product?.price
   const listPrice = program.page?.list_price
+  const financialAidUrl = program.page?.financial_assistance_form_url
+  const hasFinancialAid = !!(financialAidUrl && product)
+  const userFlexiblePrice = useQuery({
+    ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
+    enabled: hasFinancialAid,
+  })
+
+  if (enrollmentType === "none") return null
+  const price = product
+    ? priceWithDiscount({
+        product,
+        flexiblePrice: userFlexiblePrice.data,
+        avoidCents: true,
+      })
+    : null
 
   const currentAmount = toNumericPrice(currentPrice)
   const listAmount = toNumericPrice(listPrice)
@@ -948,7 +963,14 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
       <ProgramPriceRowInner>
         <ProgramCurrentPriceBlock>
           <ProgramPriceAmount>
-            {formatPrice(currentPrice, { avoidCents: true })}
+            {price?.isDiscounted ? (
+              <>
+                {price.finalPrice}{" "}
+                <StrickenText>{price.originalPrice}</StrickenText>
+              </>
+            ) : (
+              formatPrice(currentPrice, { avoidCents: true })
+            )}
           </ProgramPriceAmount>
           <ProgramPriceSuffix>full program</ProgramPriceSuffix>
         </ProgramCurrentPriceBlock>
@@ -980,17 +1002,17 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
           </ProgramSavingsDetailText>
         </ProgramDiscountRow>
       ) : null}
-      {program.page?.financial_assistance_form_url ? (
+      {hasFinancialAid ? (
         <SecondaryUnderlinedLink
           color="black"
-          href={mitxonlineLegacyUrl(
-            program.page?.financial_assistance_form_url,
-          )}
+          href={mitxonlineLegacyUrl(financialAidUrl!)}
           target="_blank"
           rel="noopener noreferrer"
           style={{ minWidth: "fit-content" }}
         >
-          Financial assistance available
+          {price?.approvedFinancialAid
+            ? "Financial assistance applied"
+            : "Financial assistance available"}
         </SecondaryUnderlinedLink>
       ) : null}
       {enrollmentType === "both" ? (
