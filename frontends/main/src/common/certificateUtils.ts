@@ -5,14 +5,116 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 
 import { LINKEDIN_ADD_TO_PROFILE_BASE_URL } from "@/common/urls"
+
+export type CertificateBadgeLines = {
+  primary: string
+  secondary?: string
+  registeredMark?: boolean
+}
+
+type ProgramTypeLabelKey = "micromasters" | "series" | "program"
+
+type CertificateLabel = {
+  displayType: string
+  badgeLines: CertificateBadgeLines
+}
+
+const PROGRAM_TYPE_LABELS: Record<ProgramTypeLabelKey, CertificateLabel> = {
+  micromasters: {
+    displayType: "MicroMasters\u00ae Certificate",
+    badgeLines: {
+      primary: "MicroMasters",
+      secondary: "Certificate",
+      registeredMark: true,
+    },
+  },
+  series: {
+    displayType: "Series Certificate",
+    badgeLines: { primary: "Series", secondary: "Certificate" },
+  },
+  program: {
+    displayType: "Program Certificate",
+    badgeLines: { primary: "Program", secondary: "Certificate" },
+  },
+}
+
+const DEFAULT_LABEL: CertificateLabel = {
+  displayType: "Certificate",
+  badgeLines: { primary: "Certificate" },
+}
+
+const normalizeProgramType = (programType?: string | null): string =>
+  (programType ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/®/g, "")
+    .replace(/\s+/g, "")
+
+/*
+ * program_type is a free-form string on the client (`string | null`); the
+ * canonical enum is owned by MITx Online. Match the normalized value exactly
+ * against the known descriptors so unexpected values fall back to the plain
+ * "Certificate" label instead of being silently coerced (e.g. a prefix match
+ * on "micromasters" would swallow data issues).
+ */
+const resolveKey = (
+  programType?: string | null,
+): ProgramTypeLabelKey | undefined => {
+  const normalized = normalizeProgramType(programType)
+  return Object.hasOwn(PROGRAM_TYPE_LABELS, normalized)
+    ? (normalized as ProgramTypeLabelKey)
+    : undefined
+}
+
+const resolveCertificateLabel = (
+  programType?: string | null,
+): CertificateLabel => {
+  const key = resolveKey(programType)
+  return key ? PROGRAM_TYPE_LABELS[key] : DEFAULT_LABEL
+}
+
 /**
  * Returns common display info for a certificate.
  */
-export const getCertificateInfo = (): { displayType: string } => {
-  return {
-    displayType: "Certificate",
-  }
+export const getCertificateInfo = (
+  programType?: string | null,
+): { displayType: string } => ({
+  displayType: resolveCertificateLabel(programType).displayType,
+})
+
+const BADGE_REGISTERED_MARK_SCALE = 0.645
+
+export type CertificateBadgeTypography = {
+  fontSizePx: number
+  lineHeightPx: number
+  registeredMarkScale: number
 }
+
+const MICROMASTERS_BADGE_TYPOGRAPHY: CertificateBadgeTypography = {
+  fontSizePx: 18,
+  lineHeightPx: 26,
+  registeredMarkScale: BADGE_REGISTERED_MARK_SCALE,
+}
+
+const DEFAULT_BADGE_TYPOGRAPHY: CertificateBadgeTypography = {
+  fontSizePx: 24,
+  lineHeightPx: 30,
+  registeredMarkScale: BADGE_REGISTERED_MARK_SCALE,
+}
+
+export const getCertificateBadgeLines = (
+  programType?: string | null,
+): CertificateBadgeLines => resolveCertificateLabel(programType).badgeLines
+
+/**
+ * Badge typography for the certificate seal (Figma: 24px bold; MicroMasters 18px).
+ */
+export const getCertificateBadgeTypography = (
+  programType?: string | null,
+): CertificateBadgeTypography =>
+  resolveKey(programType) === "micromasters"
+    ? MICROMASTERS_BADGE_TYPOGRAPHY
+    : DEFAULT_BADGE_TYPOGRAPHY
 
 export enum CertificateType {
   Course = "course",

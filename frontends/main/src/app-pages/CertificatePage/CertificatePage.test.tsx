@@ -1,7 +1,7 @@
 import React from "react"
 import moment from "moment"
 import { factories, setMockResponse } from "api/test-utils"
-import { screen, renderWithProviders, user } from "@/test-utils"
+import { screen, renderWithProviders, user, within } from "@/test-utils"
 import CertificatePage from "./CertificatePage"
 import { CertificateType } from "@/common/certificateUtils"
 import SharePopover from "@/components/SharePopover/SharePopover"
@@ -86,6 +86,7 @@ describe("CertificatePage", () => {
 
   it("renders a program certificate", async () => {
     const certificate = factories.mitxonline.programCertificate()
+    certificate.program.program_type = "Program"
     setMockResponse.get(
       mitxonline.urls.certificates.programCertificatesRetrieve({
         cert_uuid: certificate.uuid,
@@ -101,7 +102,9 @@ describe("CertificatePage", () => {
     )
 
     await screen.findAllByText(certificate.program.title)
-    await screen.findAllByText("Certificate")
+    const badge = await screen.findByTestId("certificate-badge-label")
+    expect(within(badge).getByText("Program")).toBeInTheDocument()
+    expect(within(badge).getByText("Certificate")).toBeInTheDocument()
     await screen.findAllByText(certificate.user.name!)
 
     await screen.findAllByText(
@@ -112,6 +115,29 @@ describe("CertificatePage", () => {
     )
 
     await screen.findAllByText(certificate.uuid)
+  })
+
+  it("renders a MicroMasters program certificate badge with the registered mark", async () => {
+    const certificate = factories.mitxonline.programCertificate()
+    certificate.program.program_type = "MicroMasters®"
+    setMockResponse.get(
+      mitxonline.urls.certificates.programCertificatesRetrieve({
+        cert_uuid: certificate.uuid,
+      }),
+      certificate,
+    )
+    renderWithProviders(
+      <CertificatePage
+        certificateType={CertificateType.Program}
+        uuid={certificate.uuid}
+        pageUrl={`https://${process.env.NEXT_PUBLIC_ORIGIN}/certificate/program/${certificate.uuid}`}
+      />,
+    )
+
+    const badge = await screen.findByTestId("certificate-badge-label")
+    expect(within(badge).getByText("MicroMasters")).toBeInTheDocument()
+    expect(within(badge).getByText("®")).toBeInTheDocument()
+    expect(within(badge).getByText("Certificate")).toBeInTheDocument()
   })
 
   it("does not display buttons when certificate belongs to a different user", async () => {

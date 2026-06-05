@@ -24,6 +24,8 @@ import SharePopover from "@/components/SharePopover/SharePopover"
 import { DigitalCredentialDialog } from "./DigitalCredentialDialog"
 import {
   getCertificateInfo,
+  getCertificateBadgeLines,
+  getCertificateBadgeTypography,
   getVerifiableCredentialLinkedInURL,
   getCertificateLinkedInUrl,
   getVerifiableCredentialDownloadAPIURL,
@@ -191,31 +193,65 @@ const Badge = styled.div(({ theme }) => ({
   },
 }))
 
-const BadgeText = styled(Typography)(({ theme }) => ({
+const BadgeLabelRoot = styled.div<{
+  $fontSizePx: number
+  $lineHeightPx: number
+}>(({ theme, $fontSizePx, $lineHeightPx }) => ({
   color: theme.custom.colors.white,
   position: "absolute",
-  top: "185px",
-  right: "26px",
+  left: "50%",
+  top: "203px",
+  transform: "translate(-50%, -50%)",
   width: "175px",
   textAlign: "center",
+  fontWeight: theme.typography.fontWeightBold,
+  fontSize: theme.typography.pxToRem($fontSizePx),
+  lineHeight: theme.typography.pxToRem($lineHeightPx),
   "@media screen": {
     [theme.breakpoints.down("lg")]: {
       fontSize: theme.typography.pxToRem(16),
-      lineHeight: "150%",
-      fontWeight: theme.typography.fontWeightMedium,
-      top: "53px",
-      right: "18px",
+      lineHeight: theme.typography.pxToRem(24),
+      top: "77px",
       width: "119px",
     },
     [theme.breakpoints.down("md")]: {
       width: "130px",
-      position: "absolute",
-      top: "50px",
-      right: "50%",
-      transform: "translateX(50%)",
     },
   },
 }))
+
+const BadgeRegisteredMark = styled.span<{ $scale: number }>(({ $scale }) => ({
+  fontSize: `${$scale}em`,
+  lineHeight: 1,
+  verticalAlign: "super",
+}))
+
+const CertificateBadgeLabel = ({
+  programType,
+}: {
+  programType?: string | null
+}) => {
+  const lines = getCertificateBadgeLines(programType)
+  const typography = getCertificateBadgeTypography(programType)
+
+  return (
+    <BadgeLabelRoot
+      data-testid="certificate-badge-label"
+      $fontSizePx={typography.fontSizePx}
+      $lineHeightPx={typography.lineHeightPx}
+    >
+      <div>
+        {lines.primary}
+        {lines.registeredMark ? (
+          <BadgeRegisteredMark $scale={typography.registeredMarkScale}>
+            ®
+          </BadgeRegisteredMark>
+        ) : null}
+      </div>
+      {lines.secondary ? <div>{lines.secondary}</div> : null}
+    </BadgeLabelRoot>
+  )
+}
 
 const Certification = styled.div(({ theme }) => ({
   display: "flex",
@@ -506,7 +542,7 @@ const PrintContainer = styled.div({
 
 const Certificate = ({
   title,
-  displayType,
+  badgeProgramType,
   userName,
   ceus,
   signatories,
@@ -514,7 +550,7 @@ const Certificate = ({
   uuid,
 }: {
   title: string
-  displayType: string
+  badgeProgramType?: string | null
   userName?: string
   ceus?: string
   signatories: SignatoryItem[]
@@ -526,8 +562,8 @@ const Certificate = ({
       <Inner>
         <Logo src={OpenLearningLogo} alt="MIT Open Learning" />
         <PrintLogo src={OpenLearningLogo.src} alt="MIT Open Learning" />
-        <Badge>
-          <BadgeText variant="h4">{displayType}</BadgeText>
+        <Badge data-testid="certificate-badge">
+          <CertificateBadgeLabel programType={badgeProgramType} />
         </Badge>
         <Certification>
           <Typography variant="h4">This is to certify that</Typography>
@@ -597,14 +633,12 @@ const CourseCertificate = ({
 
   const userName = certificate.user.name
 
-  const { displayType } = getCertificateInfo()
   const signatories = certificate.certificate_page.signatory_items
   const issueDate = certificate?.issue_date
 
   return (
     <Certificate
       title={title}
-      displayType={displayType}
       userName={userName}
       signatories={signatories}
       issueDate={issueDate}
@@ -620,8 +654,6 @@ const ProgramCertificate = ({
 }) => {
   const title = certificate.program.title
 
-  const { displayType } = getCertificateInfo()
-
   const userName = certificate.user.name
 
   const ceus = certificate.certificate_page.CEUs
@@ -633,7 +665,7 @@ const ProgramCertificate = ({
   return (
     <Certificate
       title={title}
-      displayType={displayType}
+      badgeProgramType={certificate?.program?.program_type}
       userName={userName}
       ceus={ceus}
       signatories={signatories}
@@ -736,7 +768,9 @@ const CertificatePage: React.FC<{
       ? courseCertificateData?.course_run.course.title
       : programCertificateData?.program.title
 
-  const { displayType } = getCertificateInfo()
+  const { displayType } = getCertificateInfo(
+    programCertificateData?.program?.program_type,
+  )
 
   const certificateData =
     certificateType === CertificateType.Course
