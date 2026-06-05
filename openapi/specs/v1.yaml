@@ -14718,7 +14718,7 @@ components:
         podcasts:
           type: array
           items:
-            type: string
+            type: integer
           description: Get the podcast id(s) the episode belongs to
           readOnly: true
         transcript:

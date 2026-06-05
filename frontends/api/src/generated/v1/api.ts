@@ -6674,10 +6674,10 @@ export interface PodcastEpisode {
   id: number
   /**
    * Get the podcast id(s) the episode belongs to
-   * @type {Array<string>}
+   * @type {Array<number>}
    * @memberof PodcastEpisode
    */
-  podcasts: Array<string>
+  podcasts: Array<number>
   /**
    *
    * @type {string}
