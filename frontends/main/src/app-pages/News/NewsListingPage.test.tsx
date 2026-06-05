@@ -23,6 +23,7 @@ describe("NewsListingPage", () => {
   beforeEach(() => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    setMockResponse.get(urls.userMe.get(), { is_authenticated: false })
   })
 
   afterEach(() => {

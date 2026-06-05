@@ -7,6 +7,10 @@ import {
   Breadcrumbs,
   BannerBackground,
 } from "ol-components"
+import { Button } from "@mitodl/smoot-design"
+import { useRouter } from "next-nprogress-bar"
+import { Permission, useUserHasPermission } from "api/hooks/user"
+import { websiteContentCreateView } from "@/common/urls"
 
 export const DEFAULT_BACKGROUND_IMAGE_URL =
   "/images/backgrounds/backgroung_steps.jpg"
@@ -30,7 +34,17 @@ const BannerSection = styled(BannerBackground)`
     z-index: 2;
   }
 `
-
+const NewArticleLink = styled(Button)`
+  display: flex;
+  justify-content: end;
+`
+const InfoContainer = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+`
 const BannerTitle = styled(Typography)`
   color: ${theme.custom.colors.white};
   margin-top: 8px;
@@ -65,6 +79,8 @@ const NewsBanner: React.FC<NewsBannerProps> = ({
   backgroundUrl = DEFAULT_BACKGROUND_IMAGE_URL,
   className,
 }) => {
+  const router = useRouter()
+  const isArticleEditor = useUserHasPermission(Permission.ArticleEditor)
   return (
     <BannerSection
       className={className}
@@ -78,10 +94,22 @@ const NewsBanner: React.FC<NewsBannerProps> = ({
           ancestors={[{ href: "/", label: "Home" }]}
           current={currentBreadcrumb}
         />
-        <BannerTitle component="h1" variant="h1">
-          {title}
-        </BannerTitle>
-        <BannerDescription variant="body1">{description}</BannerDescription>
+        <InfoContainer>
+          <div>
+            <BannerTitle component="h1" variant="h1">
+              {title}
+            </BannerTitle>
+            <BannerDescription variant="body1">{description}</BannerDescription>
+          </div>
+          {isArticleEditor && (
+            <NewArticleLink
+              variant="tertiary"
+              onClick={() => router.push(websiteContentCreateView("news"))}
+            >
+              <Typography variant="body1">Add news</Typography>
+            </NewArticleLink>
+          )}
+        </InfoContainer>
       </Container>
     </BannerSection>
   )
