@@ -590,6 +590,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
               },
             },
           )
+          if (!entry) return null
 
           return (
             <CoursewareCard
