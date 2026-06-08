@@ -36,6 +36,7 @@ class WebsiteContentSerializer(serializers.ModelSerializer):
     content = serializers.JSONField(default=dict)
     slug = serializers.SlugField(max_length=60, required=False, allow_blank=True)
     title = serializers.CharField(max_length=255)
+    cover_image = serializers.URLField(max_length=2083, allow_blank=True, default="")
     author_name = serializers.CharField(required=False, allow_blank=True, default="")
     user = UserSerializer(read_only=True)
     content_type = serializers.ChoiceField(
@@ -58,6 +59,7 @@ class WebsiteContentSerializer(serializers.ModelSerializer):
             "publish_date",
             "is_published",
             "slug",
+            "cover_image",
         ]
 
 

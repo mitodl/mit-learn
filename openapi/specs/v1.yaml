@@ -14327,6 +14327,11 @@ components:
           type: string
           maxLength: 60
           pattern: ^[-a-zA-Z0-9_]+$
+        cover_image:
+          type: string
+          format: uri
+          default: ''
+          maxLength: 2083
     PercolateQuery:
       type: object
       description: Serializer for PercolateQuery objects
@@ -17402,6 +17407,11 @@ components:
           type: string
           maxLength: 60
           pattern: ^[-a-zA-Z0-9_]+$
+        cover_image:
+          type: string
+          format: uri
+          default: ''
+          maxLength: 2083
       required:
       - created_on
       - id
@@ -17450,5 +17460,10 @@ components:
           type: string
           maxLength: 60
           pattern: ^[-a-zA-Z0-9_]+$
+        cover_image:
+          type: string
+          format: uri
+          default: ''
+          maxLength: 2083
       required:
       - title

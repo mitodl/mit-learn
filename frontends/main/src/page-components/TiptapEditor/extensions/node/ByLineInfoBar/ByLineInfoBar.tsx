@@ -34,8 +34,9 @@ const InnerContainer = styled(Container, {
   shouldForwardProp: (prop) => prop !== "noAuthor",
 })<{ noAuthor?: boolean }>(({ noAuthor }) => ({
   display: "flex",
-  justifyContent: noAuthor ? "flex-end" : "space-between",
+  justifyContent: noAuthor ? "space-between" : "space-between",
   alignItems: "center",
+  gap: "8px",
   "&&": {
     maxWidth: "890px",
   },
@@ -126,38 +127,38 @@ export const ByLineInfoBarContent = ({
         onClose={() => setShareOpen(false)}
         pageUrl={`${NEXT_PUBLIC_ORIGIN}/${article?.content_type === "article" ? "articles" : "news"}/${article?.slug}`}
       />
-      <InnerContainer noAuthor={!displayAuthorName && !isEditable}>
-        {(displayAuthorName || isEditable) && (
-          <InfoContainer>
-            {isEditable ? (
-              <AuthorInput
-                name="authorName"
-                label=""
-                size="small"
-                placeholder="Add author name(s)"
-                value={authorName || ""}
-                onChange={(e) => onAuthorNameChange?.(e.target.value)}
-              />
-            ) : (
-              <NameText>By {displayAuthorName}</NameText>
-            )}
-            {readTime ? <InfoText>{readTime} min read</InfoText> : null}
-            {readTime && publishedDate ? (
-              <Separator className="byline-info-bar__separator" />
-            ) : null}
-            <InfoText>
-              {publishedDate
-                ? new Date(publishedDate).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })
-                : isEditable
-                  ? null
-                  : "Draft"}
-            </InfoText>
-          </InfoContainer>
-        )}
+      <InnerContainer noAuthor={!isEditable}>
+        <InfoContainer>
+          {isEditable ? (
+            <AuthorInput
+              name="authorName"
+              label=""
+              size="small"
+              placeholder="Add author name(s)"
+              value={authorName || ""}
+              onChange={(e) => onAuthorNameChange?.(e.target.value)}
+            />
+          ) : (
+            <>
+              {displayAuthorName && <NameText>By {displayAuthorName}</NameText>}
+            </>
+          )}
+          {readTime ? <InfoText>{readTime} min read</InfoText> : null}
+          {readTime && publishedDate ? (
+            <Separator className="byline-info-bar__separator" />
+          ) : null}
+          <InfoText>
+            {publishedDate
+              ? new Date(publishedDate).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : isEditable
+                ? null
+                : "Draft"}
+          </InfoText>
+        </InfoContainer>
         <div ref={shareButtonRef}>
           <ActionButton
             size="small"

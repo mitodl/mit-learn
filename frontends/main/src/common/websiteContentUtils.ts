@@ -97,7 +97,7 @@ export function extractArticleContent(
 
   const imageNode = topLevel.find((n) => n.type === "imageWithCaption")
   const imageAttrs = imageNode?.attrs
-  const image =
+  let image =
     imageAttrs?.src && typeof imageAttrs.src === "string"
       ? {
           src: imageAttrs.src,
@@ -106,7 +106,13 @@ export function extractArticleContent(
             typeof imageAttrs.caption === "string" ? imageAttrs.caption : null,
         }
       : null
-
+  if (image === null && article?.cover_image) {
+    image = {
+      src: article?.cover_image || "",
+      alt: "",
+      caption: "",
+    }
+  }
   return {
     heading: extractText(headingNode?.content) || null,
     paragraph: nodesToHtml(paragraphNode?.content) || null,

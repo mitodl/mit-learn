@@ -6209,6 +6209,12 @@ export interface PatchedWebsiteContentRequest {
    * @memberof PatchedWebsiteContentRequest
    */
   slug?: string
+  /**
+   *
+   * @type {string}
+   * @memberof PatchedWebsiteContentRequest
+   */
+  cover_image?: string
 }
 
 /**
@@ -10129,6 +10135,12 @@ export interface WebsiteContent {
    * @memberof WebsiteContent
    */
   slug?: string
+  /**
+   *
+   * @type {string}
+   * @memberof WebsiteContent
+   */
+  cover_image?: string
 }
 
 /**
@@ -10198,6 +10210,12 @@ export interface WebsiteContentRequest {
    * @memberof WebsiteContentRequest
    */
   slug?: string
+  /**
+   *
+   * @type {string}
+   * @memberof WebsiteContentRequest
+   */
+  cover_image?: string
 }
 
 /**
