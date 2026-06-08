@@ -939,7 +939,10 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
   const hasFinancialAid = !!(financialAidUrl && product)
   const userFlexiblePrice = useQuery({
     ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
-    enabled: isAuthenticated && hasFinancialAid,
+    enabled:
+      (enrollmentType === "paid" || enrollmentType === "both") &&
+      isAuthenticated &&
+      hasFinancialAid,
   })
 
   if (enrollmentType === "none") return null
