@@ -96,7 +96,8 @@ const ProgramCertificateUpsell: React.FC<{
                   aria-label={`Discounted price: ${price.finalPrice}, was ${price.originalPrice}`}
                 >
                   <span aria-hidden="true">
-                    {price.finalPrice} <StrickenText>{price.originalPrice}</StrickenText>
+                    {price.finalPrice}{" "}
+                    <StrickenText>{price.originalPrice}</StrickenText>
                   </span>
                 </span>
               ) : product ? (
