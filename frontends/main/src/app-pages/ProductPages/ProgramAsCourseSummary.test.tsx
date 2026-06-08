@@ -1,11 +1,19 @@
 import React from "react"
 import { renderWithProviders, screen } from "@/test-utils"
 import { factories } from "api/mitxonline-test-utils"
+import { setMockResponse, urls as apiUrls, factories as apiFactories } from "api/test-utils"
 import { ProgramAsCourseSummary, TestIds } from "./ProductSummary"
 
 const makeProgram = factories.programs.program
 
 describe("ProgramAsCourseSummary", () => {
+  beforeEach(() => {
+    setMockResponse.get(
+      apiUrls.userMe.get(),
+      apiFactories.user.user({ is_authenticated: false }),
+    )
+  })
+
   test("Renders duration and price rows", () => {
     const program = makeProgram()
     renderWithProviders(<ProgramAsCourseSummary program={program} />)

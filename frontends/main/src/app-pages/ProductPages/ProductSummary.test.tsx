@@ -1,6 +1,6 @@
 import React from "react"
 import { factories, urls } from "api/mitxonline-test-utils"
-import { setMockResponse } from "api/test-utils"
+import { setMockResponse, urls as apiUrls, factories as apiFactories } from "api/test-utils"
 import { renderWithProviders, screen, within, user } from "@/test-utils"
 import { CourseSummary, ProgramSummary, TestIds } from "./ProductSummary"
 import { formatDate } from "ol-utilities"
@@ -1077,6 +1077,13 @@ describe("CourseSummary", () => {
 })
 
 describe("ProgramSummary", () => {
+  beforeEach(() => {
+    setMockResponse.get(
+      apiUrls.userMe.get(),
+      apiFactories.user.user({ is_authenticated: false }),
+    )
+  })
+
   test("renders program summary rows", async () => {
     const program = factories.programs.program({
       enrollment_modes: bothModes(),
