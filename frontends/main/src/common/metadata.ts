@@ -3,6 +3,7 @@ import {
   canonicalResourceDrawerUrl,
   RESOURCE_DRAWER_PARAMS,
 } from "@/common/urls"
+import { parseResourceId } from "@/common/slugs"
 import type { AxiosError } from "axios"
 import type { Metadata } from "next"
 import * as Sentry from "@sentry/nextjs"
@@ -72,13 +73,11 @@ export const getMetadataAsync = async ({
   alternates,
   ...otherMeta
 }: MetadataAsyncProps) => {
-  // The learning resource drawer is open
-  const learningResourceIds = (await searchParams)?.[
-    RESOURCE_DRAWER_PARAMS.resource
-  ]
-  const learningResourceId = Array.isArray(learningResourceIds)
-    ? Number(learningResourceIds[0])
-    : Number(learningResourceIds)
+  // The learning resource drawer is open. `resource` must be a bare positive
+  // integer; a non-integer or repeated/array value opens no drawer and adds no
+  // canonical override (criterion 11). The cosmetic resource_title is ignored.
+  const rawResource = (await searchParams)?.[RESOURCE_DRAWER_PARAMS.resource]
+  const learningResourceId = parseResourceId(rawResource)
   const alts = alternates ?? {}
 
   if (learningResourceId) {
@@ -90,7 +89,7 @@ export const getMetadataAsync = async ({
     description = data?.description?.replace(/<\/[^>]+(>|$)/g, "") ?? ""
     image = data?.image?.url || image
     imageAlt = image === data?.image?.url ? imageAlt : data?.image?.alt || ""
-    alts.canonical = canonicalResourceDrawerUrl(learningResourceId)
+    alts.canonical = canonicalResourceDrawerUrl(learningResourceId, data?.title)
   }
 
   return standardizeMetadata({

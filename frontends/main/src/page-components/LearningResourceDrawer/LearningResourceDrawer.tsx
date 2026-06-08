@@ -12,6 +12,8 @@ import {
   canonicalResourceDrawerUrl,
   RESOURCE_DRAWER_PARAMS,
 } from "@/common/urls"
+import { parseResourceId } from "@/common/slugs"
+import { useCanonicalizeResourceParam } from "./useCanonicalizeResourceParam"
 import { useUserMe } from "api/hooks/user"
 import NiceModal from "@ebay/nice-modal-react"
 import {
@@ -30,6 +32,7 @@ import { PostHogEvents } from "@/common/constants"
 const REQUIRED_PARAMS = [RESOURCE_DRAWER_PARAMS.resource] as const
 const ALL_PARAMS = [
   RESOURCE_DRAWER_PARAMS.resource,
+  RESOURCE_DRAWER_PARAMS.resource_title,
   RESOURCE_DRAWER_PARAMS.syllabus,
   RESOURCE_DRAWER_PARAMS.syllabusOnly,
 ] as const
@@ -75,6 +78,9 @@ const DrawerContent: React.FC<{
    */
   const posthog = usePostHog()
   const resource = useLearningResourcesDetail(Number(resourceId))
+  // Once the title is known, canonicalize the cosmetic resource_title param in
+  // place (never touches `resource`). No-op until known / when already canonical.
+  useCanonicalizeResourceParam(resource.data?.id, resource.data?.title)
   if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
     posthog.capture(PostHogEvents.LearningResourceDrawerOpen, {
       resource: resource?.data,
@@ -222,7 +228,7 @@ const DrawerContent: React.FC<{
         bottomCarousels={bottomCarousels}
         chatExpanded={chatExpanded}
         user={user}
-        shareUrl={canonicalResourceDrawerUrl(resourceId)}
+        shareUrl={canonicalResourceDrawerUrl(resourceId, resource.data?.title)}
         inLearningPath={inLearningPath}
         inUserList={inUserList}
         onAddToLearningPathClick={handleAddToLearningPathClick}
@@ -264,6 +270,9 @@ const LearningResourceDrawer = () => {
         anchor="right"
         requiredParams={REQUIRED_PARAMS}
         params={ALL_PARAMS}
+        validateRequiredParams={(p) =>
+          parseResourceId(p[RESOURCE_DRAWER_PARAMS.resource]) !== null
+        }
         PaperProps={PAPER_PROPS}
         hideCloseButton={true}
         aria-labelledby={id}
@@ -275,12 +284,16 @@ const LearningResourceDrawer = () => {
           // is open, so it doesn't need to also set the `syllabus` param.
           const chatExpanded =
             syllabusOnlyMode || params[RESOURCE_DRAWER_PARAMS.syllabus] !== null
+          // Non-null because validateRequiredParams gated the open state above.
+          const resourceId = parseResourceId(
+            params[RESOURCE_DRAWER_PARAMS.resource],
+          )!
           return (
             <DrawerContent
               chatExpanded={chatExpanded}
               syllabusOnlyMode={syllabusOnlyMode}
               titleId={id}
-              resourceId={Number(params[RESOURCE_DRAWER_PARAMS.resource])}
+              resourceId={resourceId}
               closeDrawer={closeDrawer}
             />
           )
