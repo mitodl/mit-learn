@@ -25,6 +25,7 @@ import type {
   LearningResourcesUserSubscriptionApi as SubscriptionApi,
   DepartmentsApi,
   SchoolsApi,
+  VideoPlaylistsApi,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LearningResourcesSearchRequest,
 } from "../generated/v1"
 import type { BaseAPI } from "../generated/v1/base"
@@ -79,6 +80,8 @@ const learningResources = {
     `${getApiBaseUrl()}/api/v1/learning_resources/summary/${query(params)}`,
   items: (params: Params<LRApi, "learningResourcesRetrieve">) =>
     `${getApiBaseUrl()}/api/v1/learning_resources/${params.id}/items/`,
+  // Note: video playlist DETAIL goes through a different endpoint — see
+  // `videoPlaylists.details` below (/api/v1/video_playlists/{id}/).
   featured: (params?: Params<FeaturedApi, "featuredList">) =>
     `${getApiBaseUrl()}/api/v1/featured/${query(params)}`,
   similar: (params: Params<LRApi, "learningResourcesSimilarList">) =>
@@ -252,8 +255,14 @@ const newsEvents = {
     `${getApiBaseUrl()}/api/v0/news_events/${query(params)}`,
 }
 
+const videoPlaylists = {
+  details: (params: Params<VideoPlaylistsApi, "videoPlaylistsRetrieve">) =>
+    `${getApiBaseUrl()}/api/v1/video_playlists/${params.id}/`,
+}
+
 export {
   learningResources,
+  videoPlaylists,
   topics,
   learningPaths,
   articles,
