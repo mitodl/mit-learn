@@ -7,70 +7,84 @@ import {
 } from "api/hooks/learningResources"
 import { getQueryClient } from "@/app/getQueryClient"
 import VideoDetailPageRouter from "@/app-pages/VideoPlaylistCollectionPage/VideoDetailPageRouter"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import type { VideoResource } from "api/v1"
+import { parseResourceId, resolveVideoPlaylist } from "@/common/slugs"
+import { absoluteUrl, videoDetailPageView } from "@/common/urls"
 
-export const generateMetadata = async (props: PageProps<"/video/[id]">) => {
+type Props = {
+  params: Promise<{ id: string; slug: string }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}
+
+const videoPlaylistIds = (video: VideoResource): number[] =>
+  (video.playlists ?? [])
+    .map(Number)
+    .filter((n) => Number.isInteger(n) && n > 0)
+
+export const generateMetadata = async (props: Props) => {
   const { id } = await props.params
-  const videoId = Number(id)
-  if (!Number.isInteger(videoId) || videoId <= 0) {
+  const searchParams = await props.searchParams
+  const videoId = parseResourceId(id)
+  if (videoId === null) {
     notFound()
   }
   const queryClient = getQueryClient()
 
   return safeGenerateMetadata(async () => {
-    const resource = await queryClient.fetchQuery(
+    const resource = (await queryClient.fetchQuery(
       learningResourceQueries.detail(videoId),
+    )) as VideoResource
+    const playlistId = resolveVideoPlaylist(
+      videoPlaylistIds(resource),
+      searchParams?.playlist,
     )
     return standardizeMetadata({
       title: resource.title,
       description: resource.description ?? undefined,
       image: resource.image?.url,
       imageAlt: resource.image?.alt ?? undefined,
+      alternates: {
+        canonical: absoluteUrl(
+          videoDetailPageView(videoId, playlistId ?? undefined, resource.title),
+        ),
+      },
     })
   })
 }
 
-const Page: React.FC<PageProps<"/video/[id]">> = async ({
-  params,
-  searchParams,
-}) => {
-  const { id } = await params
+const Page: React.FC<Props> = async ({ params, searchParams }) => {
+  const { id, slug } = await params
   const resolvedSearchParams = await searchParams
-  const videoId = Number(id)
-  if (!Number.isInteger(videoId) || videoId <= 0) {
+  const videoId = parseResourceId(id)
+  if (videoId === null) {
     notFound()
   }
 
   const queryClient = getQueryClient()
-
   const video = (await queryClient.fetchQueryOr404(
     learningResourceQueries.detail(videoId),
   )) as VideoResource
 
-  // Resolve playlistId: prefer explicit ?playlist= param, fall back to video.playlists[0]
-  let playlistId: number | null = null
   const rawPlaylist = resolvedSearchParams?.playlist
+  const playlistId = resolveVideoPlaylist(videoPlaylistIds(video), rawPlaylist)
 
-  if (rawPlaylist !== undefined) {
-    // searchParams values can be string | string[]; treat array as invalid
-    if (Array.isArray(rawPlaylist)) {
-      notFound()
-    }
-    const parsed = Number(rawPlaylist)
-    if (!Number.isInteger(parsed) || parsed <= 0) {
-      notFound()
-    }
-    playlistId = parsed
-  } else {
-    // Use the first playlist the video belongs to, if any
-    const firstPlaylist = video.playlists?.[0]
-    if (firstPlaylist !== undefined) {
-      const parsed = Number(firstPlaylist)
-      if (Number.isInteger(parsed) && parsed > 0) {
-        playlistId = parsed
-      }
-    }
+  // Canonical (slug + resolved playlist) is whatever the builder emits; redirect
+  // if we're not on it. NOTE: when a redirect fires, only `?playlist` is carried
+  // onto the canonical — any other incoming query params are intentionally
+  // dropped (the spec promises query-param preservation only for the drawer).
+  const canonical = videoDetailPageView(
+    videoId,
+    playlistId ?? undefined,
+    video.title,
+  )
+  const incomingBase = `/video/${id}/${slug}`
+  const incoming =
+    typeof rawPlaylist === "string"
+      ? `${incomingBase}?playlist=${rawPlaylist}`
+      : incomingBase
+  if (incoming !== canonical) {
+    redirect(canonical)
   }
 
   if (playlistId !== null) {
