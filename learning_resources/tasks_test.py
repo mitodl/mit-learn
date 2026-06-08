@@ -17,7 +17,6 @@ from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
-    LearningResourcePlatformFactory,
     LearningResourceRunFactory,
 )
 from learning_resources.models import ContentFile, LearningResource
@@ -27,7 +26,6 @@ from learning_resources.tasks import (
     get_youtube_data,
     get_youtube_transcripts,
     marketing_page_for_resources,
-    remove_duplicate_resources,
     scrape_marketing_pages,
     sync_canvas_courses,
     update_next_start_date_and_prices,
@@ -837,37 +835,6 @@ def test_sync_canvas_courses(settings, mocker, django_assert_num_queries, canvas
         assert mock_ingest_course.call_count == 1
     else:
         assert mock_ingest_course.call_count == 2
-
-
-def test_remove_duplicate_resources(mocker, mocked_celery):
-    """
-    Test that remove_duplicate_resources removes duplicate unpublished resources
-    while keeping the most recently created resource.
-    """
-    duplicate_id = "duplicate_id"
-
-    for platform_type in [PlatformType.edx, PlatformType.xpro, PlatformType.youtube]:
-        LearningResourceFactory.create(
-            readable_id=duplicate_id,
-            published=False,
-            platform=LearningResourcePlatformFactory.create(code=platform_type.name),
-        )
-
-    published_reasource = LearningResourceFactory.create(
-        readable_id=duplicate_id,
-        published=True,
-        platform=LearningResourcePlatformFactory.create(
-            code=platform_type.mitxonline.name
-        ),
-    )
-    generate_embeddings_mock = mocker.patch(
-        "vector_search.tasks.generate_embeddings", autospec=True
-    )
-    assert LearningResource.objects.filter(readable_id=duplicate_id).count() == 4
-    with pytest.raises(mocked_celery.replace_exception_class):
-        remove_duplicate_resources()
-    assert generate_embeddings_mock.mock_calls[0].args[0] == [published_reasource.id]
-    assert LearningResource.objects.filter(readable_id=duplicate_id).count() == 1
 
 
 @pytest.mark.parametrize(
