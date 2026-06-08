@@ -2,6 +2,7 @@ import { faker } from "@faker-js/faker/locale/en"
 import { generateSitemaps, default as sitemap } from "./sitemap"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { ResourceTypeEnum } from "api"
+import { podcastPageView, podcastEpisodePageView } from "@/common/urls"
 
 const RESOURCE_TYPES = [
   ResourceTypeEnum.Podcast,
@@ -53,7 +54,10 @@ describe("Podcast Sitemaps", () => {
     const sitemapPage = await sitemap({ id: Promise.resolve(String(page)) })
     expect(sitemapPage).toEqual(
       podcastList.results.map((resource) => ({
-        url: `http://test.learn.odl.local:8062/podcast/${resource.id}`,
+        url: `http://test.learn.odl.local:8062${podcastPageView(
+          String(resource.id),
+          resource.title,
+        )}`,
         lastModified: resource.last_modified ?? undefined,
       })),
     )
@@ -92,17 +96,30 @@ describe("Podcast Sitemaps", () => {
 
     const sitemapPage = await sitemap({ id: Promise.resolve(String(page)) })
     // episodeWithoutParent should be excluded; episodeWithMultipleParents emits one entry per parent
+    const base = "http://test.learn.odl.local:8062"
     expect(sitemapPage).toEqual([
       {
-        url: `http://test.learn.odl.local:8062/podcast/${podcastId1}/podcast_episode/${episodeWithMultipleParents.id}`,
+        url: `${base}${podcastEpisodePageView(
+          String(episodeWithMultipleParents.id),
+          String(podcastId1),
+          episodeWithMultipleParents.title,
+        )}`,
         lastModified: episodeWithMultipleParents.last_modified ?? undefined,
       },
       {
-        url: `http://test.learn.odl.local:8062/podcast/${podcastId2}/podcast_episode/${episodeWithMultipleParents.id}`,
+        url: `${base}${podcastEpisodePageView(
+          String(episodeWithMultipleParents.id),
+          String(podcastId2),
+          episodeWithMultipleParents.title,
+        )}`,
         lastModified: episodeWithMultipleParents.last_modified ?? undefined,
       },
       {
-        url: `http://test.learn.odl.local:8062/podcast/${podcastId1}/podcast_episode/${episodeWithOneParent.id}`,
+        url: `${base}${podcastEpisodePageView(
+          String(episodeWithOneParent.id),
+          String(podcastId1),
+          episodeWithOneParent.title,
+        )}`,
         lastModified: episodeWithOneParent.last_modified ?? undefined,
       },
     ])

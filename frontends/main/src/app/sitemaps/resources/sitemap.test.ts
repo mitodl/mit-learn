@@ -1,6 +1,7 @@
 import { faker } from "@faker-js/faker/locale/en"
 import { generateSitemaps, default as sitemap } from "./sitemap"
 import { setMockResponse, urls, factories } from "api/test-utils"
+import { resourceDrawerSearch } from "@/common/urls"
 
 const { resourceSummaries } = factories.learningResources
 
@@ -47,7 +48,10 @@ describe("Resource Sitemaps", () => {
     const sitemapPage = await sitemap({ id: Promise.resolve(String(page)) })
     expect(sitemapPage).toEqual(
       summaries.results.map((resource) => ({
-        url: `http://test.learn.odl.local:8062/search?resource=${resource.id}`,
+        url: `http://test.learn.odl.local:8062${resourceDrawerSearch(
+          resource.id,
+          resource.title,
+        )}`,
         lastModified: resource.last_modified ?? undefined,
       })),
     )
