@@ -26,9 +26,12 @@ const contracts = makePaginatedFactory(contract)
 const contractCode = (overrides: Partial<ContractCode> = {}): ContractCode => ({
   id: faker.number.int(),
   code: faker.string.alphanumeric(12),
-  is_redeemed: false,
+  redemption_status: "assigned",
+  assigned_to: faker.internet.email(),
+  assigned_on: faker.date.past().toISOString(),
   redeemed_by: null,
   redeemed_on: null,
+  last_sent: null,
   ...overrides,
 })
 

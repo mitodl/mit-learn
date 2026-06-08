@@ -107,9 +107,9 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({ code }) => {
     }
   }
 
-  const assignedTo = code.redeemed_by ?? "unassigned seat"
+  const assignedTo = code.assigned_to ?? "unassigned seat"
 
-  const menuItems = code.is_redeemed ? (
+  const menuItems = code.redemption_status === "redeemed" ? (
     <Tooltip title={COMING_SOON} placement="right">
       <DestructiveMenuItem disabled>Uninvite</DestructiveMenuItem>
     </Tooltip>

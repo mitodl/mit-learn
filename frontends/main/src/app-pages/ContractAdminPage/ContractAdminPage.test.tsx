@@ -1,5 +1,5 @@
 import React from "react"
-import { renderWithProviders, screen } from "@/test-utils"
+import { renderWithProviders, screen, user } from "@/test-utils"
 import { setMockResponse } from "api/test-utils"
 import { factories, urls } from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -161,5 +161,159 @@ describe("ContractAdminPage", () => {
     )
 
     await screen.findByText("75 seats")
+  })
+
+  test("derives Unassigned and Pending claim summary stats from codes", async () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+    const { org, contract } = makeOrgWithContract()
+    setMockResponse.get(managerOrgsUrl, [org])
+    setMockResponse.get(managerContractDetailUrl(org.id, contract.id), {
+      ...contract,
+      attachment_percentage: null,
+      total_enrollments: 1,
+      total_codes: 5,
+    })
+    setMockResponse.get(urls.contracts.managerContractCodes(org.id, contract.id), [
+      factories.contracts.contractCode({ redemption_status: "unassigned" }),
+      factories.contracts.contractCode({ redemption_status: "unassigned" }),
+      factories.contracts.contractCode({ redemption_status: "assigned" }),
+      factories.contracts.contractCode({ redemption_status: "redeemed", redeemed_by: "a@example.com", redeemed_on: new Date().toISOString() }),
+    ])
+
+    renderWithProviders(
+      <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+    )
+
+    const unassignedStat = await screen.findByRole("group", { name: "Unassigned" })
+    expect(unassignedStat).toHaveTextContent("2")
+
+    const pendingStat = screen.getByRole("group", { name: "Pending claim" })
+    expect(pendingStat).toHaveTextContent("1")
+  })
+
+  test("hides unassigned codes from the table and shows assigned and redeemed", async () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+    const { org, contract } = makeOrgWithContract()
+    setMockResponse.get(managerOrgsUrl, [org])
+    setMockResponse.get(managerContractDetailUrl(org.id, contract.id), {
+      ...contract,
+      attachment_percentage: null,
+      total_enrollments: 1,
+      total_codes: 3,
+    })
+
+    const assignedCode = factories.contracts.contractCode({
+      redemption_status: "assigned",
+      assigned_to: "pending@example.com",
+    })
+    const redeemedCode = factories.contracts.contractCode({
+      redemption_status: "redeemed",
+      assigned_to: "redeemed@example.com",
+      redeemed_by: "redeemed@example.com",
+      redeemed_on: new Date().toISOString(),
+    })
+    const unassignedCode = factories.contracts.contractCode({
+      redemption_status: "unassigned",
+      assigned_to: null,
+    })
+
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id),
+      [assignedCode, redeemedCode, unassignedCode],
+    )
+
+    renderWithProviders(
+      <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText("pending@example.com")
+    expect(screen.getByText("redeemed@example.com")).toBeInTheDocument()
+    expect(screen.queryByText(unassignedCode.code)).not.toBeInTheDocument()
+  })
+
+  test("Redeemed tab filters to redeemed codes only", async () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+    const { org, contract } = makeOrgWithContract()
+    setMockResponse.get(managerOrgsUrl, [org])
+    setMockResponse.get(managerContractDetailUrl(org.id, contract.id), {
+      ...contract,
+      attachment_percentage: null,
+      total_enrollments: 1,
+      total_codes: 2,
+    })
+
+    const assignedCode = factories.contracts.contractCode({
+      redemption_status: "assigned",
+      assigned_to: "pending@example.com",
+    })
+    const redeemedCode = factories.contracts.contractCode({
+      redemption_status: "redeemed",
+      assigned_to: "redeemed@example.com",
+      redeemed_by: "redeemed@example.com",
+      redeemed_on: new Date().toISOString(),
+    })
+
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id),
+      [assignedCode, redeemedCode],
+    )
+
+    renderWithProviders(
+      <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText("pending@example.com")
+
+    await user.click(screen.getByRole("tab", { name: "Redeemed" }))
+
+    expect(screen.getByText("redeemed@example.com")).toBeInTheDocument()
+    expect(screen.queryByText("pending@example.com")).not.toBeInTheDocument()
+  })
+
+  test("Pending claim tab filters to assigned codes only", async () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+    const { org, contract } = makeOrgWithContract()
+    setMockResponse.get(managerOrgsUrl, [org])
+    setMockResponse.get(managerContractDetailUrl(org.id, contract.id), {
+      ...contract,
+      attachment_percentage: null,
+      total_enrollments: 1,
+      total_codes: 2,
+    })
+
+    const assignedCode = factories.contracts.contractCode({
+      redemption_status: "assigned",
+      assigned_to: "pending@example.com",
+    })
+    const redeemedCode = factories.contracts.contractCode({
+      redemption_status: "redeemed",
+      assigned_to: "redeemed@example.com",
+      redeemed_by: "redeemed@example.com",
+      redeemed_on: new Date().toISOString(),
+    })
+
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id),
+      [assignedCode, redeemedCode],
+    )
+
+    renderWithProviders(
+      <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText("pending@example.com")
+
+    await user.click(screen.getByRole("tab", { name: "Pending claim" }))
+
+    expect(screen.getByText("pending@example.com")).toBeInTheDocument()
+    expect(screen.queryByText("redeemed@example.com")).not.toBeInTheDocument()
   })
 })
