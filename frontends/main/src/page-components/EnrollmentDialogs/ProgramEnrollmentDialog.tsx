@@ -91,9 +91,13 @@ const ProgramCertificateUpsell: React.FC<{
             <strong>
               Get Certificate{" "}
               {price?.isDiscounted ? (
-                <span>
-                  {price.finalPrice}{" "}
-                  <StrickenText>{price.originalPrice}</StrickenText>
+                <span
+                  role="group"
+                  aria-label={`Discounted price: ${price.finalPrice}, was ${price.originalPrice}`}
+                >
+                  <span aria-hidden="true">
+                    {price.finalPrice} <StrickenText>{price.originalPrice}</StrickenText>
+                  </span>
                 </span>
               ) : product ? (
                 formatPrice(product.price, { avoidCents: true })
