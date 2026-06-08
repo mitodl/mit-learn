@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.71.1
+--------------
+
+- move video/{id}/embed -> video/embed/{id} (#3437)
+
 Version 0.71.0 (Released June 08, 2026)
 --------------
 
