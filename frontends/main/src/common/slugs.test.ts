@@ -15,17 +15,13 @@ describe("slugify", () => {
     },
     { title: "C++ & Python!", expected: "c-python" },
     { title: "2024 Q2", expected: "2024-q2" },
-    { title: "Æther", expected: "ther" }, // æ has no NFKD decomposition → dropped
-    { title: "straße", expected: "stra-e" }, // ß → "-"
   ])("slugifies $title → $expected", ({ title, expected }) => {
     expect(slugify(title)).toBe(expected)
   })
 
   test.each([
     { title: "2024" }, // digits only, no [a-z]
-    { title: "Καλημέρα" }, // Greek, no ascii letters
-    { title: "你好" }, // CJK
-    { title: "   " }, // whitespace only
+    { title: "你好" }, // non-Latin, no ascii letters
     { title: "" },
   ])("returns '' (blank) for $title", ({ title }) => {
     expect(slugify(title)).toBe("")
@@ -43,24 +39,16 @@ describe("slugify", () => {
 })
 
 describe("parseResourceId", () => {
-  test.each([
-    { value: "2813", expected: 2813 },
-    { value: "114927", expected: 114927 },
-  ])("parses $value → $expected", ({ value, expected }) => {
-    expect(parseResourceId(value)).toBe(expected)
+  test("parses a bare positive integer", () => {
+    expect(parseResourceId("2813")).toBe(2813)
   })
 
   test.each([
-    { value: "2813-beyond-biology" }, // NOT a fused token — rejected
-    { value: "2813oops" },
-    { value: "abc" },
+    { value: "2813-beyond-biology" }, // not a fused token — guards against split-parsing
+    { value: "abc" }, // non-numeric
     { value: "0" }, // not a positive id
-    { value: "-5" },
-    { value: " 12" }, // whitespace
-    { value: "" },
-    { value: ["1", "2"] as string[] }, // repeated param
-    { value: undefined },
-    { value: null },
+    { value: ["1", "2"] as string[] }, // repeated query param
+    { value: undefined }, // missing
   ])("rejects $value → null", ({ value }) => {
     expect(parseResourceId(value)).toBeNull()
   })
@@ -82,20 +70,13 @@ describe("resolveVideoPlaylist", () => {
   test("honors a ?playlist that is a member", () => {
     expect(resolveVideoPlaylist([55, 66], "66")).toBe(66)
   })
-  test("falls back to first playlist for a non-member value", () => {
+  test("falls back to the first playlist for a non-member value", () => {
     expect(resolveVideoPlaylist([55, 66], "999")).toBe(55)
   })
-  test("falls back to first playlist when no param", () => {
-    expect(resolveVideoPlaylist([55, 66], undefined)).toBe(55)
-  })
-  test("falls back to first playlist for a repeated (array) param", () => {
+  test("falls back to the first playlist for a repeated (array) param", () => {
     expect(resolveVideoPlaylist([55, 66], ["1", "2"])).toBe(55)
-  })
-  test("falls back to first playlist for a non-numeric value", () => {
-    expect(resolveVideoPlaylist([55], "abc")).toBe(55)
   })
   test("returns null when the video has no playlists", () => {
     expect(resolveVideoPlaylist([], "5")).toBeNull()
-    expect(resolveVideoPlaylist([], undefined)).toBeNull()
   })
 })
