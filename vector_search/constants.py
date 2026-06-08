@@ -167,6 +167,6 @@ QDRANT_OPTIMIZER_INDEXING_THRESHOLD_RATIO = 0.4
 
 VECTOR_SEARCH_SCORE_BOOST = {
     RESOURCES_COLLECTION_NAME: [
-        {"boost": 0.2, "params": {"resource_type_group": ["program"]}}
+        {"boost": 0.8, "params": {"resource_type_group": ["program"]}}
     ],
 }
