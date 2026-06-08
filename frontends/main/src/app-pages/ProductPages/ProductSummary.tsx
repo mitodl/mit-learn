@@ -26,6 +26,7 @@ import {
   priceWithDiscount,
 } from "@/common/mitxonline"
 import { useQuery } from "@tanstack/react-query"
+import { useUserIsAuthenticated } from "api/hooks/user"
 
 const ResponsiveLink = styled(Link)(({ theme }) => ({
   ...theme.typography.body2, // override default for "black" color is subtitle2
@@ -929,6 +930,7 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
   ...others
 }) => {
   const enrollmentType = getEnrollmentType(program.enrollment_modes)
+  const isAuthenticated = useUserIsAuthenticated()
 
   const product = program.products[0]
   const currentPrice = product?.price
@@ -937,7 +939,7 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
   const hasFinancialAid = !!(financialAidUrl && product)
   const userFlexiblePrice = useQuery({
     ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
-    enabled: hasFinancialAid,
+    enabled: isAuthenticated && hasFinancialAid,
   })
 
   if (enrollmentType === "none") return null
@@ -961,8 +963,15 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
     <ProgramPaySection>
       <ProgramPayLabel>Price</ProgramPayLabel>
       <ProgramPriceRowInner>
-        <ProgramCurrentPriceBlock>
-          <ProgramPriceAmount>
+        <ProgramCurrentPriceBlock
+          {...(price?.isDiscounted
+            ? {
+                role: "group",
+                "aria-label": `Discounted price: ${price.finalPrice}, was ${price.originalPrice}`,
+              }
+            : {})}
+        >
+          <ProgramPriceAmount aria-hidden={price?.isDiscounted || undefined}>
             {price?.isDiscounted ? (
               <>
                 {price.finalPrice}{" "}

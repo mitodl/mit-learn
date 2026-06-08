@@ -26,6 +26,7 @@ import { RiArrowRightLine, RiAwardFill, RiCheckLine } from "@remixicon/react"
 import { Alert } from "@mitodl/smoot-design"
 import { useQuery } from "@tanstack/react-query"
 import { productQueries } from "api/mitxonline-hooks/products"
+import { useUserIsAuthenticated } from "api/hooks/user"
 
 interface ProgramEnrollmentDialogProps {
   program: V2ProgramDetail
@@ -56,10 +57,11 @@ const ProgramCertificateUpsell: React.FC<{
   const product = program.products[0]
   const financialAidUrl = program.page?.financial_assistance_form_url ?? ""
   const hasFinancialAid = !!(financialAidUrl && product)
+  const isAuthenticated = useUserIsAuthenticated()
   const replaceBasketItem = useReplaceBasketItem()
   const userFlexiblePrice = useQuery({
     ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
-    enabled: hasFinancialAid,
+    enabled: isAuthenticated && hasFinancialAid,
   })
   const price = product
     ? priceWithDiscount({
