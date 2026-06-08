@@ -4,6 +4,7 @@ import type { EditorView } from "@tiptap/pm/view"
 import type { QueryClient } from "@tanstack/react-query"
 
 import { convertToEmbedUrl } from "@/common/utils"
+import { requiredEnv } from "@/env"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { createURLToNodeHandler } from "../shared/createURLToNodeHandler"
 
@@ -17,17 +18,18 @@ function extractMediaEmbedUrl(text: string): string | null {
 }
 
 /**
- * Matches MIT Learn video embed URLs:
+ * Matches video embed URLs on this app's own origin (NEXT_PUBLIC_ORIGIN), e.g.
  *   https://learn.mit.edu/video/embed/123
- *   https://rc.learn.mit.edu/video/embed/123
  * A trailing slash is allowed. Returns the numeric video ID, or null if not
  * matched.
  */
 function extractMITLearnVideoId(url: string): number | null {
   try {
     const parsed = new URL(url.trim())
-    const hostname = parsed.hostname.replace("www.", "")
-    if (hostname !== "learn.mit.edu" && hostname !== "rc.learn.mit.edu") {
+    const appHostname = new URL(
+      requiredEnv("NEXT_PUBLIC_ORIGIN"),
+    ).hostname.replace(/^www\./, "")
+    if (parsed.hostname.replace(/^www\./, "") !== appHostname) {
       return null
     }
     const match = parsed.pathname.match(/^\/video\/embed\/(\d+)\/?$/)
