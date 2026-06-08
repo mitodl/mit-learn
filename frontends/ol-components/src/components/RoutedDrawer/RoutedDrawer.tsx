@@ -20,6 +20,11 @@ type ChildParams<K extends string, R extends K> = Record<K, string | null> &
 type RoutedDrawerProps<K extends string = string, R extends K = K> = {
   params?: readonly K[]
   requiredParams: readonly R[]
+  /**
+   * Extra gate beyond presence: when provided, the drawer opens only if this
+   * also returns true (e.g. the resource id must parse as a positive integer).
+   */
+  validateRequiredParams?: (params: Record<K, string | null>) => boolean
   onView?: () => void
   hideCloseButton?: boolean
   children: (childProps: {
@@ -38,7 +43,14 @@ type RoutedDrawerProps<K extends string = string, R extends K = K> = {
 const RoutedDrawer = <K extends string, R extends K = K>(
   props: RoutedDrawerProps<K, R>,
 ) => {
-  const { requiredParams, children, onView, hideCloseButton, ...others } = props
+  const {
+    requiredParams,
+    children,
+    onView,
+    hideCloseButton,
+    validateRequiredParams,
+    ...others
+  } = props
   const { params = requiredParams } = props
 
   const [open, setOpen] = useToggle(false)
@@ -60,9 +72,9 @@ const RoutedDrawer = <K extends string, R extends K = K>(
    * This means that if content within the drawer depends on the search params,
    * then the content will remain visible during the closing animation.
    */
-  const requiredArePresent = requiredParams.every(
-    (name) => childParams[name] !== null,
-  )
+  const requiredArePresent =
+    requiredParams.every((name) => childParams[name] !== null) &&
+    (validateRequiredParams?.(childParams) ?? true)
 
   useEffect(() => {
     if (requiredArePresent) {
