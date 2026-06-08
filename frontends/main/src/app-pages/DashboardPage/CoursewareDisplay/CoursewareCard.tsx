@@ -14,10 +14,7 @@
 import React from "react"
 import type { SimpleMenuItem } from "ol-components"
 import { adaptCourseEntryToLegacyDashboardCardProps } from "./model/dashboardAdapters"
-import type {
-  DashboardCourseEntry,
-  DashboardResource,
-} from "./model/dashboardViewModel"
+import type { DashboardCourseEntry } from "./model/dashboardViewModel"
 import { DashboardCard } from "./DashboardCard"
 import { DashboardCard as ModuleCardInner } from "./ModuleCard"
 
@@ -72,9 +69,12 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
   if (props.variant === "moduleRow") {
     const { headingLevel } = props
 
-    const resource: DashboardResource = entry.displayedEnrollment
-      ? { type: "courserun-enrollment", data: entry.displayedEnrollment }
-      : { type: "course", data: entry.course }
+    const resource = entry.displayedEnrollment
+      ? {
+          type: "courserun-enrollment" as const,
+          data: entry.displayedEnrollment,
+        }
+      : { type: "course" as const, data: entry.course }
 
     return (
       <ModuleCardInner
