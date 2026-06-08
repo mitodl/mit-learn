@@ -6,7 +6,12 @@ import {
   user,
   setupLocationMock,
 } from "@/test-utils"
-import { makeRequest, setMockResponse, urls as apiUrls, factories as apiFactories } from "api/test-utils"
+import {
+  makeRequest,
+  setMockResponse,
+  urls as apiUrls,
+  factories as apiFactories,
+} from "api/test-utils"
 import {
   urls as mitxUrls,
   factories as mitxFactories,

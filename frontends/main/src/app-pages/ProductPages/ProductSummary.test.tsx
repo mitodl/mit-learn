@@ -1,6 +1,10 @@
 import React from "react"
 import { factories, urls } from "api/mitxonline-test-utils"
-import { setMockResponse, urls as apiUrls, factories as apiFactories } from "api/test-utils"
+import {
+  setMockResponse,
+  urls as apiUrls,
+  factories as apiFactories,
+} from "api/test-utils"
 import { renderWithProviders, screen, within, user } from "@/test-utils"
 import { CourseSummary, ProgramSummary, TestIds } from "./ProductSummary"
 import { formatDate } from "ol-utilities"

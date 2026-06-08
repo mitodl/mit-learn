@@ -1,7 +1,11 @@
 import React from "react"
 import { renderWithProviders, screen } from "@/test-utils"
 import { factories } from "api/mitxonline-test-utils"
-import { setMockResponse, urls as apiUrls, factories as apiFactories } from "api/test-utils"
+import {
+  setMockResponse,
+  urls as apiUrls,
+  factories as apiFactories,
+} from "api/test-utils"
 import { ProgramAsCourseSummary, TestIds } from "./ProductSummary"
 
 const makeProgram = factories.programs.program
