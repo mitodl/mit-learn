@@ -18,9 +18,10 @@ function extractMediaEmbedUrl(text: string): string | null {
 
 /**
  * Matches MIT Learn video embed URLs:
- *   https://learn.mit.edu/video/123/embed
- *   https://rc.learn.mit.edu/video/123/embed
- * Returns the numeric video ID, or null if not matched.
+ *   https://learn.mit.edu/video/embed/123
+ *   https://rc.learn.mit.edu/video/embed/123
+ * A trailing slash is allowed. Returns the numeric video ID, or null if not
+ * matched.
  */
 function extractMITLearnVideoId(url: string): number | null {
   try {
@@ -29,7 +30,7 @@ function extractMITLearnVideoId(url: string): number | null {
     if (hostname !== "learn.mit.edu" && hostname !== "rc.learn.mit.edu") {
       return null
     }
-    const match = parsed.pathname.match(/^\/video\/(\d+)\/embed$/)
+    const match = parsed.pathname.match(/^\/video\/embed\/(\d+)\/?$/)
     if (!match) return null
     return Number(match[1])
   } catch {
