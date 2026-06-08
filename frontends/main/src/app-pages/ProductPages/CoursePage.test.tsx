@@ -91,6 +91,15 @@ const setupApis = ({
     learnFactories.user.user({ is_authenticated: false }),
   )
 
+  // ProductPageAskTimSection calls this when the chat feature flag is enabled
+  setMockResponse.get(
+    learnUrls.learningResources.list({
+      readable_id: [course.readable_id],
+      limit: 1,
+    }),
+    { count: 0, next: null, previous: null, results: [] },
+  )
+
   const stayUpdatedFormId =
     process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID?.trim()
   if (stayUpdatedFormId) {
