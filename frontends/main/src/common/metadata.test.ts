@@ -79,7 +79,7 @@ describe("getMetadataAsync drawer canonical", () => {
       searchParams: Promise.resolve({ resource: String(resource.id) }),
     })
     expect(meta.alternates?.canonical).toContain(`resource=${resource.id}`)
-    expect(meta.alternates?.canonical).toContain("resource_title=")
+    expect(meta.alternates?.canonical).toMatch(/resource_title=[a-z0-9-]+/)
   })
 
   test("no canonical override when ?resource= is not a valid id", async () => {

@@ -68,6 +68,21 @@ test("notFound for a non-numeric id", async () => {
   ).rejects.toThrow("NEXT_NOT_FOUND")
 })
 
+test("a blank-slug title canonicalizes to the literal 'resource' segment", async () => {
+  // Digits-only title → slugify() is blank → path uses the "resource" segment.
+  const podcast = factories.learningResources.podcast({ title: "2024" })
+  setMockResponse.get(
+    urls.learningResources.details({ id: podcast.id }),
+    podcast,
+  )
+  await expect(
+    Page({
+      params: Promise.resolve({ podcastId: String(podcast.id), slug: "wrong" }),
+    }),
+  ).rejects.toThrow("NEXT_REDIRECT")
+  expect(mockRedirect).toHaveBeenCalledWith(`/podcast/${podcast.id}/resource`)
+})
+
 test("generateMetadata sets the slugged canonical tag", async () => {
   const podcast = mockPodcast()
   const meta = await generateMetadata({
