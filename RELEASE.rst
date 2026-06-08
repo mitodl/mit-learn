@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.70.14
+---------------
+
+- boost programs index in search results (#3428)
+
 Version 0.70.13 (Released June 08, 2026)
 ---------------
 
