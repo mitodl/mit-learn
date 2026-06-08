@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.71.0
+Version 0.71.0 (Released June 08, 2026)
 --------------
 
 - fix podcasts type (#3432)
