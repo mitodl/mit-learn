@@ -351,18 +351,22 @@ const getResourceUrl = (
     }
   }
   if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
-    return videoPlaylistPageView(resource.id.toString())
+    return videoPlaylistPageView(resource.id.toString(), resource.title)
   }
   if (
     resource.resource_type === ResourceTypeEnum.Video &&
     resource?.playlists?.length > 0
   ) {
-    return videoDetailPageView(resource.id, Number(resource.playlists[0]))
+    return videoDetailPageView(
+      resource.id,
+      Number(resource.playlists[0]),
+      resource.title,
+    )
   }
 
   if (showPodcastPage) {
     if (resource.resource_type === ResourceTypeEnum.Podcast) {
-      return podcastPageView(resource.id.toString())
+      return podcastPageView(resource.id.toString(), resource.title)
     }
     if (
       resource.resource_type === ResourceTypeEnum.PodcastEpisode &&
@@ -371,6 +375,7 @@ const getResourceUrl = (
       return podcastEpisodePageView(
         resource.id.toString(),
         resource?.podcast_episode?.podcasts[0].toString(),
+        resource.title,
       )
     }
   }

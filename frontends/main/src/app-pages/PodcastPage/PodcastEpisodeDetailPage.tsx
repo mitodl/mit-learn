@@ -289,7 +289,9 @@ export const PodcastEpisodeDetailPage: React.FC<
     }
   }, [currentTrack, isMobile])
 
-  const podcastHref = podcastId ? podcastPageView(podcastId) : "/"
+  const podcastHref = podcastId
+    ? podcastPageView(podcastId, podcast?.title)
+    : "/"
 
   if (!showPodcastDetailPage) {
     return flagsLoaded ? notFound() : null
@@ -360,7 +362,11 @@ export const PodcastEpisodeDetailPage: React.FC<
                   episode={episode}
                   href={
                     podcastId
-                      ? podcastEpisodePageView(String(episode.id), podcastId)
+                      ? podcastEpisodePageView(
+                          String(episode.id),
+                          podcastId,
+                          episode.title,
+                        )
                       : ""
                   }
                   isPlaying={

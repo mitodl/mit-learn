@@ -1,5 +1,15 @@
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import { auth, coursePageView, programPageView } from "./urls"
+import {
+  auth,
+  coursePageView,
+  programPageView,
+  podcastPageView,
+  podcastEpisodePageView,
+  videoDetailPageView,
+  videoPlaylistPageView,
+  canonicalResourceDrawerUrl,
+  resourceDrawerSearch,
+} from "./urls"
 
 const MITOL_API_BASE_URL = process.env.NEXT_PUBLIC_MITOL_API_BASE_URL
 
@@ -112,4 +122,66 @@ test("programPageView falls back to /programs/ for unknown display_mode values",
       display_mode: "unknown-future-value" as never,
     }),
   ).toBe("/programs/some-slug")
+})
+
+describe("slug-aware path builders", () => {
+  test("podcastPageView appends a slug segment; blank → 'resource'; no title → bare", () => {
+    expect(podcastPageView("123", "Beyond Biology")).toBe(
+      "/podcast/123/beyond-biology",
+    )
+    expect(podcastPageView("123", "2024")).toBe("/podcast/123/resource") // blank slug
+    expect(podcastPageView("123")).toBe("/podcast/123") // no title → bare (redirects)
+  })
+
+  test("podcastEpisodePageView slugs the episode, keeps podcast id bare", () => {
+    expect(podcastEpisodePageView("55", "123", "Episode One")).toBe(
+      "/podcast/123/podcast_episode/55/episode-one",
+    )
+    expect(podcastEpisodePageView("55", "123", "你好")).toBe(
+      "/podcast/123/podcast_episode/55/resource",
+    )
+  })
+
+  test("videoDetailPageView slugs the video and keeps ?playlist", () => {
+    expect(videoDetailPageView(16765, 13798, "Beyond Biology")).toBe(
+      "/video/16765/beyond-biology?playlist=13798",
+    )
+    expect(videoDetailPageView(16765, undefined, "Beyond Biology")).toBe(
+      "/video/16765/beyond-biology",
+    )
+    expect(videoDetailPageView(16765, 13798)).toBe(
+      "/video/16765?playlist=13798",
+    )
+  })
+
+  test("videoDetailPageView allows a slug equal to 'embed' (embed route moved out)", () => {
+    expect(videoDetailPageView(16765, undefined, "Embed")).toBe(
+      "/video/16765/embed",
+    )
+  })
+
+  test("videoPlaylistPageView appends a slug segment", () => {
+    expect(videoPlaylistPageView("13798", "Great Talks")).toBe(
+      "/video-playlist/13798/great-talks",
+    )
+  })
+})
+
+describe("separate-param drawer builders", () => {
+  test("resourceDrawerSearch emits resource + optional resource_title (relative)", () => {
+    expect(resourceDrawerSearch(114927, "Beyond Biology")).toBe(
+      "/search?resource=114927&resource_title=beyond-biology",
+    )
+    expect(resourceDrawerSearch(114927, "2024")).toBe("/search?resource=114927") // blank → omit
+    expect(resourceDrawerSearch(114927)).toBe("/search?resource=114927")
+  })
+
+  test("canonicalResourceDrawerUrl is the absolute form", () => {
+    expect(canonicalResourceDrawerUrl(114927, "Beyond Biology")).toMatch(
+      /\/search\?resource=114927&resource_title=beyond-biology$/,
+    )
+    expect(canonicalResourceDrawerUrl(114927, "2024")).toMatch(
+      /\/search\?resource=114927$/,
+    )
+  })
 })
