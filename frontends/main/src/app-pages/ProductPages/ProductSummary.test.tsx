@@ -1346,7 +1346,9 @@ describe("ProgramSummary", () => {
           )
         }
 
-        renderWithProviders(<ProgramSummary program={program} />)
+        renderWithProviders(<ProgramSummary program={program} />, {
+          user: { is_authenticated: true },
+        })
 
         const priceRow = screen.getByTestId(TestIds.PriceRow)
 
