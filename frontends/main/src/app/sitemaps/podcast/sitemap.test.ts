@@ -63,8 +63,8 @@ describe("Podcast Sitemaps", () => {
     // Use a non-overlapping range from the podcast test (which uses { min: 5, max: 10 })
     // to avoid query cache collisions on the same list URL.
     const page = faker.number.int({ min: 11, max: 20 })
-    const podcastId1 = String(faker.number.int())
-    const podcastId2 = String(faker.number.int())
+    const podcastId1 = faker.number.int()
+    const podcastId2 = faker.number.int()
     const episodeWithMultipleParents =
       factories.learningResources.podcastEpisode({
         podcast_episode: { podcasts: [podcastId1, podcastId2] },
