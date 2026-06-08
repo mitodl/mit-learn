@@ -9,7 +9,7 @@ import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import { RiAwardFill } from "@remixicon/react"
 import { useProgramDashboardData } from "./hooks/useProgramDashboardData"
 
-const DashboardCardStyled = styled(CoursewareCard)({
+const CourseEntryCardStyled = styled(CoursewareCard)({
   borderRadius: "8px",
   boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
 })
@@ -121,7 +121,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
               {section.items.map((item) => {
                 if (item.kind === "course") {
                   return (
-                    <DashboardCardStyled
+                    <CourseEntryCardStyled
                       key={getKey({
                         resourceType: ResourceType.Course,
                         id: item.entry.course.id,
