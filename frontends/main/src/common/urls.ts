@@ -137,6 +137,7 @@ export const RECOMMENDER_QUERY_PARAM = "recommender"
 export const RESOURCE_DRAWER_PARAMS = {
   resource: "resource",
   syllabus: "syllabus",
+  syllabusOnly: "syllabus_only",
 } as const
 
 export const canonicalResourceDrawerUrl = (resourceId: number) =>
@@ -272,6 +273,7 @@ export const videoDetailPageView = (videoId: number, playlistId?: number) => {
 }
 export const PROGRAM_PAGE_VIEW = "/programs/[readableId]"
 export const PROGRAM_AS_COURSE_PAGE_VIEW = "/courses/p/[readableId]"
+
 export const programPageView = (program: {
   readable_id: string
   /**
