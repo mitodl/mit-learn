@@ -1,64 +1,44 @@
-import React from "react"
-import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
-import { PodcastEpisodeDetailPage } from "@/app-pages/PodcastPage/PodcastEpisodeDetailPage"
 import { getQueryClient } from "@/app/getQueryClient"
 import { ResourceTypeEnum } from "api"
-import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
 import { learningResourceQueries } from "api/hooks/learningResources"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
+import { parseResourceId, resolveEpisodeParent } from "@/common/slugs"
+import { podcastEpisodePageView } from "@/common/urls"
+import type { PodcastEpisodeResource } from "api/v1"
 
-export const generateMetadata = async (
-  props: PageProps<"/podcast/[podcastId]/podcast_episode/[episodeId]">,
-) => {
-  const { episodeId } = await props.params
+/**
+ * Bare /podcast/{podcastId}/podcast_episode/{episodeId} is never canonical →
+ * 307-redirect to the slugged form, correcting the parent podcast id.
+ */
+const Page = async (props: {
+  params: Promise<{ podcastId: string; episodeId: string }>
+}) => {
+  const { podcastId, episodeId } = await props.params
+  const epId = parseResourceId(episodeId)
+  const incomingPodcastId = parseResourceId(podcastId)
+  if (epId === null || incomingPodcastId === null) {
+    notFound()
+  }
   const queryClient = getQueryClient()
-
-  return safeGenerateMetadata(async () => {
-    const resource = await queryClient.fetchQuery(
-      learningResourceQueries.detail(Number(episodeId)),
-    )
-    return standardizeMetadata({
-      title: resource.title,
-      description: resource.description ?? undefined,
-      image: resource.image?.url,
-      imageAlt: resource.image?.alt ?? undefined,
-    })
-  })
-}
-
-const Page: React.FC<
-  PageProps<"/podcast/[podcastId]/podcast_episode/[episodeId]">
-> = async (props) => {
-  const { episodeId, podcastId } = await props.params
-  const episodeIdNumber = Number(episodeId)
-
-  if (Number.isNaN(episodeIdNumber)) {
+  const episode = (await queryClient.fetchQueryOr404(
+    learningResourceQueries.detail(epId),
+  )) as PodcastEpisodeResource
+  if (episode.resource_type !== ResourceTypeEnum.PodcastEpisode) {
     notFound()
   }
-
-  const queryClient = getQueryClient()
-
-  const resource = await queryClient.fetchQueryOr404(
-    learningResourceQueries.detail(episodeIdNumber),
+  const canonicalPodcastId = resolveEpisodeParent(
+    (episode.podcast_episode?.podcasts ?? []).map(Number),
+    incomingPodcastId,
   )
-  if (resource.resource_type !== ResourceTypeEnum.PodcastEpisode) {
+  if (canonicalPodcastId === null) {
     notFound()
   }
-
-  const podcastResource = await queryClient.fetchQueryOr404(
-    learningResourceQueries.detail(Number(podcastId)),
-  )
-  if (podcastResource.resource_type !== ResourceTypeEnum.Podcast) {
-    notFound()
-  }
-
-  return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
-      <PodcastEpisodeDetailPage
-        episodeId={episodeId}
-        podcastId={typeof podcastId === "string" ? podcastId : null}
-      />
-    </HydrationBoundary>
+  redirect(
+    podcastEpisodePageView(
+      String(epId),
+      String(canonicalPodcastId),
+      episode.title,
+    ),
   )
 }
 

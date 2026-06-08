@@ -1,0 +1,38 @@
+import { redirect } from "next/navigation"
+import { factories, setMockResponse, urls } from "api/test-utils"
+import type { PodcastEpisodeResource } from "api/v1"
+import Page from "./page"
+
+jest.mock("@/app/getQueryClient", () => {
+  const { makeBrowserQueryClient } = jest.requireActual("@/app/getQueryClient")
+  return { getQueryClient: () => makeBrowserQueryClient({ maxRetries: 0 }) }
+})
+
+const mockRedirect = jest.mocked(redirect)
+beforeEach(() => {
+  mockRedirect.mockImplementation(() => {
+    throw new Error("NEXT_REDIRECT")
+  })
+})
+
+test("bare episode URL redirects to the slugged canonical with corrected parent", async () => {
+  const episode = factories.learningResources.podcastEpisode({
+    title: "Episode One",
+  }) as PodcastEpisodeResource
+  episode.podcast_episode = { ...episode.podcast_episode, podcasts: [10] }
+  setMockResponse.get(
+    urls.learningResources.details({ id: episode.id }),
+    episode,
+  )
+  await expect(
+    Page({
+      params: Promise.resolve({
+        podcastId: "999", // not a member → corrected to 10
+        episodeId: String(episode.id),
+      }),
+    }),
+  ).rejects.toThrow("NEXT_REDIRECT")
+  expect(mockRedirect).toHaveBeenCalledWith(
+    `/podcast/10/podcast_episode/${episode.id}/episode-one`,
+  )
+})
