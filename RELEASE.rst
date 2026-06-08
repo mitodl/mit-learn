@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.70.13
+---------------
+
+- feat: Added Ask TIM to product pages (#3406)
+- feat: type-aware certificate descriptor badges on Learn certificate pages (#3398)
+
 Version 0.70.12 (Released June 04, 2026)
 ---------------
 
