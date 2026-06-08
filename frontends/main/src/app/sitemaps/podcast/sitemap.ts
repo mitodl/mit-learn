@@ -3,6 +3,7 @@ import type { MetadataRoute } from "next"
 import { getQueryClient } from "@/app/getQueryClient"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { ResourceTypeEnum } from "api"
+import { podcastPageView, podcastEpisodePageView } from "@/common/urls"
 import type { GenerateSitemapResult, GeneratedSitemapArgs } from "../types"
 import { dangerouslyDetectProductionBuildPhase } from "../util"
 
@@ -62,7 +63,7 @@ export default async function sitemap({
     if (resource.resource_type === ResourceTypeEnum.Podcast) {
       return [
         {
-          url: `${BASE_URL}/podcast/${resource.id}`,
+          url: `${BASE_URL}${podcastPageView(String(resource.id), resource.title)}`,
           lastModified: resource.last_modified ?? undefined,
         },
       ]
@@ -70,7 +71,11 @@ export default async function sitemap({
     if (resource.resource_type === ResourceTypeEnum.PodcastEpisode) {
       const parentPodcastIds = resource.podcast_episode?.podcasts ?? []
       return parentPodcastIds.map((parentPodcastId) => ({
-        url: `${BASE_URL}/podcast/${parentPodcastId}/podcast_episode/${resource.id}`,
+        url: `${BASE_URL}${podcastEpisodePageView(
+          String(resource.id),
+          String(parentPodcastId),
+          resource.title,
+        )}`,
         lastModified: resource.last_modified ?? undefined,
       }))
     }

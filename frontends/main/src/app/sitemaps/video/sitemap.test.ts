@@ -2,6 +2,7 @@ import { faker } from "@faker-js/faker/locale/en"
 import { generateSitemaps, default as sitemap } from "./sitemap"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { ResourceTypeEnum } from "api"
+import { videoDetailPageView, videoPlaylistPageView } from "@/common/urls"
 
 const RESOURCE_TYPES = [ResourceTypeEnum.Video, ResourceTypeEnum.VideoPlaylist]
 
@@ -55,14 +56,25 @@ describe("Video Sitemaps", () => {
     const sitemapPage = await sitemap({ id: Promise.resolve(String(page)) })
     expect(sitemapPage).toEqual(
       results.map((resource) => {
+        const base = "http://test.learn.odl.local:8062"
         if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
           return {
-            url: `http://test.learn.odl.local:8062/video-playlist/${resource.id}`,
+            url: `${base}${videoPlaylistPageView(
+              String(resource.id),
+              resource.title,
+            )}`,
             lastModified: resource.last_modified ?? undefined,
           }
         }
+        const firstPlaylist = resource.playlists?.length
+          ? Number(resource.playlists[0])
+          : undefined
         return {
-          url: `http://test.learn.odl.local:8062/video/${resource.id}`,
+          url: `${base}${videoDetailPageView(
+            resource.id,
+            firstPlaylist,
+            resource.title,
+          )}`,
           lastModified: resource.last_modified ?? undefined,
         }
       }),

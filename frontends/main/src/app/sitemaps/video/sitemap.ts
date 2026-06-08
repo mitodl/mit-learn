@@ -3,6 +3,7 @@ import type { MetadataRoute } from "next"
 import { getQueryClient } from "@/app/getQueryClient"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { ResourceTypeEnum } from "api"
+import { videoDetailPageView, videoPlaylistPageView } from "@/common/urls"
 import type { GenerateSitemapResult, GeneratedSitemapArgs } from "../types"
 import { dangerouslyDetectProductionBuildPhase } from "../util"
 
@@ -57,9 +58,19 @@ export default async function sitemap({
 
   return data.results.flatMap((resource) => {
     if (resource.resource_type === ResourceTypeEnum.Video) {
+      // Emit the true canonical: a video with playlists redirects bare →
+      // playlists[0], so include it (couples to playlists[0] ordering, same as
+      // the canonical tag + page redirect — no new coupling).
+      const firstPlaylist = resource.playlists?.length
+        ? Number(resource.playlists[0])
+        : undefined
       return [
         {
-          url: `${BASE_URL}/video/${resource.id}`,
+          url: `${BASE_URL}${videoDetailPageView(
+            resource.id,
+            firstPlaylist,
+            resource.title,
+          )}`,
           lastModified: resource.last_modified ?? undefined,
         },
       ]
@@ -67,7 +78,10 @@ export default async function sitemap({
     if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
       return [
         {
-          url: `${BASE_URL}/video-playlist/${resource.id}`,
+          url: `${BASE_URL}${videoPlaylistPageView(
+            String(resource.id),
+            resource.title,
+          )}`,
           lastModified: resource.last_modified ?? undefined,
         },
       ]
