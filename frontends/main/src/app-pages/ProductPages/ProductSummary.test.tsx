@@ -1367,5 +1367,83 @@ describe("ProgramSummary", () => {
         }
       },
     )
+
+    test("Displays discounted price with strikethrough original when approved financial aid exists", async () => {
+      const originalPrice = "200.00"
+      const discountedAmount = "75.00"
+      const product = makeProduct({ price: originalPrice })
+      const financialAidUrl = `/financial-aid/${faker.string.alphanumeric(10)}`
+      const program = factories.programs.program({
+        enrollment_modes: bothModes(),
+        products: [product],
+        page: { financial_assistance_form_url: financialAidUrl },
+      })
+      const flexiblePrice = makeFlexiblePrice({
+        id: product.id,
+        price: originalPrice,
+        product_flexible_price: {
+          id: faker.number.int(),
+          amount: discountedAmount,
+          discount_type: "dollars-off" as const,
+          discount_code: faker.string.alphanumeric(8),
+          redemption_type: "one-time" as const,
+          is_redeemed: false,
+          automatic: true,
+          max_redemptions: 1,
+          payment_type: null,
+          activation_date: faker.date.past().toISOString(),
+          expiration_date: faker.date.future().toISOString(),
+        },
+      })
+
+      setMockResponse.get(
+        urls.products.userFlexiblePriceDetail(product.id),
+        flexiblePrice,
+      )
+
+      renderWithProviders(<ProgramSummary program={program} />, {
+        user: { is_authenticated: true },
+      })
+
+      const priceRow = screen.getByTestId(TestIds.PriceRow)
+
+      // Wait for flexible price API response and label update
+      // Discounted price: $200 - $75 = $125
+      await within(priceRow).findByText("Financial assistance applied")
+      expect(priceRow).toHaveTextContent("$125")
+      expect(priceRow).toHaveTextContent("$200")
+    })
+
+    test("Shows 'Financial assistance available' when financial aid URL exists but no discount is applied", async () => {
+      const product = makeProduct({ price: "300.00" })
+      const financialAidUrl = `/financial-aid/${faker.string.alphanumeric(10)}`
+      const program = factories.programs.program({
+        enrollment_modes: bothModes(),
+        products: [product],
+        page: { financial_assistance_form_url: financialAidUrl },
+      })
+
+      setMockResponse.get(
+        urls.products.userFlexiblePriceDetail(product.id),
+        makeFlexiblePrice({
+          id: product.id,
+          price: product.price,
+          product_flexible_price: null,
+        }),
+      )
+
+      renderWithProviders(<ProgramSummary program={program} />, {
+        user: { is_authenticated: true },
+      })
+
+      const priceRow = screen.getByTestId(TestIds.PriceRow)
+      const link = await within(priceRow).findByRole("link", {
+        name: /financial assistance/i,
+      })
+      expect(link).toHaveTextContent("Financial assistance available")
+      expect(priceRow).toHaveTextContent(
+        formatPrice(product.price, { avoidCents: true }),
+      )
+    })
   })
 })
