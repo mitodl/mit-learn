@@ -17,7 +17,6 @@ import {
   Breadcrumbs,
 } from "ol-components"
 import Link from "next/link"
-import { useRouter } from "next-nprogress-bar"
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
 import type { WebsiteContent } from "api/v1"
 import { LocalDate } from "ol-utilities"
@@ -25,7 +24,7 @@ import { useWebsiteContentList } from "api/hooks/website_content"
 import { extractArticleContent } from "@/common/websiteContentUtils"
 import { articleView, websiteContentCreateView } from "@/common/urls"
 import { Permission, useUserHasPermission } from "api/hooks/user"
-import { Button } from "@mitodl/smoot-design"
+import { ButtonLink } from "@mitodl/smoot-design"
 
 const PAGE_SIZE = 10
 const MAX_PAGE = 50
@@ -306,7 +305,7 @@ const BannerSection = styled.div`
   background: ${theme.custom.colors.white};
   border-bottom: 1px solid ${theme.custom.colors.lightGray2};
 `
-const NewArticleLink = styled(Button)`
+const NewArticleLink = styled(ButtonLink)`
   display: flex;
   justify-content: end;
 `
@@ -418,7 +417,6 @@ const ArticleListingPage: React.FC = () => {
   const parsedPage = Number.parseInt(searchParams.get("page") ?? "1", 10)
   const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1
 
-  const router = useRouter()
   const isArticleEditor = useUserHasPermission(Permission.ArticleEditor)
 
   const { data: articles, isLoading } = useWebsiteContentList({
@@ -460,7 +458,7 @@ const ArticleListingPage: React.FC = () => {
             {isArticleEditor && (
               <NewArticleLink
                 variant="primary"
-                onClick={() => router.push(websiteContentCreateView("article"))}
+                href={websiteContentCreateView("article")}
               >
                 <Typography variant="body1" color="white">
                   New Article

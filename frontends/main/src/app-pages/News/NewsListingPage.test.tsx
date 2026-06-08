@@ -83,6 +83,34 @@ describe("NewsListingPage", () => {
     })
   })
 
+  test("shows 'Add news' button in banner when user is an article editor", async () => {
+    setMockResponse.get(urls.userMe.get(), {
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setupAPI(21)
+    renderWithProviders(<NewsListingPage />)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("link", { name: /add news/i }),
+      ).toBeInTheDocument()
+    })
+  })
+
+  test("hides 'Add news' button in banner when user is not an article editor", async () => {
+    setupAPI(21)
+    renderWithProviders(<NewsListingPage />)
+
+    await waitFor(() => {
+      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
+    })
+
+    expect(
+      screen.queryByRole("link", { name: /add news/i }),
+    ).not.toBeInTheDocument()
+  })
+
   test("displays News images when available", async () => {
     const news = setupAPI(21)
     renderWithProviders(<NewsListingPage />)

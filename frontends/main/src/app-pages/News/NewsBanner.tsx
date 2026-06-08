@@ -7,8 +7,7 @@ import {
   Breadcrumbs,
   BannerBackground,
 } from "ol-components"
-import { Button } from "@mitodl/smoot-design"
-import { useRouter } from "next-nprogress-bar"
+import { ButtonLink } from "@mitodl/smoot-design"
 import { Permission, useUserHasPermission } from "api/hooks/user"
 import { websiteContentCreateView } from "@/common/urls"
 
@@ -34,7 +33,7 @@ const BannerSection = styled(BannerBackground)`
     z-index: 2;
   }
 `
-const NewArticleLink = styled(Button)`
+const NewArticleLink = styled(ButtonLink)`
   display: flex;
   justify-content: end;
 `
@@ -79,7 +78,6 @@ const NewsBanner: React.FC<NewsBannerProps> = ({
   backgroundUrl = DEFAULT_BACKGROUND_IMAGE_URL,
   className,
 }) => {
-  const router = useRouter()
   const isArticleEditor = useUserHasPermission(Permission.ArticleEditor)
   return (
     <BannerSection
@@ -104,7 +102,7 @@ const NewsBanner: React.FC<NewsBannerProps> = ({
           {isArticleEditor && (
             <NewArticleLink
               variant="tertiary"
-              onClick={() => router.push(websiteContentCreateView("news"))}
+              href={websiteContentCreateView("news")}
             >
               <Typography variant="body1">Add news</Typography>
             </NewArticleLink>
