@@ -14,11 +14,20 @@ import {
   VerifiedProgramEnrollmentsApiVerifiedProgramEnrollmentsCreateRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
 
+type B2bEnrollCreateRequest = B2bApiB2bEnrollCreateRequest & {
+  program_id?: string
+}
+
 const useCreateB2bEnrollment = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (opts: B2bApiB2bEnrollCreateRequest) =>
-      b2bApi.b2bEnrollCreate(opts),
+    mutationFn: (opts: B2bEnrollCreateRequest) => {
+      const { readable_id, program_id } = opts
+      return b2bApi.b2bEnrollCreate({
+        readable_id,
+        B2BEnrollRequestRequest: program_id ? { program_id } : undefined,
+      })
+    },
     onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: enrollmentKeys.courseRunEnrollmentsList(),

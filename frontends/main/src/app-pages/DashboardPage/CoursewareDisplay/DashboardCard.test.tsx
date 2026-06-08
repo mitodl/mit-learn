@@ -1208,6 +1208,55 @@ describe.each([
     },
   )
 
+  test.each(ENROLLMENT_TRIGGERS)(
+    "B2B enrollment sends program_id when parentProgramReadableIds is provided",
+    async ({ trigger }) => {
+      const userData = mitxUser({
+        legal_address: { country: "US" },
+        user_profile: { year_of_birth: 1988 },
+      })
+      const b2bContractId = faker.number.int()
+      const run = mitxonline.factories.courses.courseRun({
+        b2b_contract: b2bContractId,
+        is_enrollable: true,
+      })
+      const course = mitxOnlineCourse({
+        courseruns: [run],
+        next_run_id: run.id,
+      })
+      const parentProgramReadableIds = ["program-v1:MITx+DEDP"]
+      const { enrollmentUrl } = setupEnrollmentApis({
+        user: userData,
+        course,
+        run,
+      })
+      renderWithProviders(
+        <DashboardCard
+          resource={{ type: DashboardType.Course, data: course }}
+          contractId={b2bContractId}
+          parentProgramReadableIds={parentProgramReadableIds}
+        />,
+      )
+      const card = getCard()
+      const triggerElement =
+        trigger === "button"
+          ? within(card).getByTestId("courseware-button")
+          : within(card).getByText(course.title)
+
+      await user.click(triggerElement)
+
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "post",
+          url: enrollmentUrl,
+          data: expect.objectContaining({
+            program_id: "program-v1:MITx+DEDP",
+          }),
+        }),
+      )
+    },
+  )
+
   test.each(
     cartesianProduct(ENROLLMENT_TRIGGERS, [
       { userData: mitxUser({ legal_address: { country: "" } }) },
