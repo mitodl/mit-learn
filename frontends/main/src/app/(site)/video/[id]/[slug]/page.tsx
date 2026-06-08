@@ -8,6 +8,7 @@ import {
 import { getQueryClient } from "@/app/getQueryClient"
 import VideoDetailPageRouter from "@/app-pages/VideoPlaylistCollectionPage/VideoDetailPageRouter"
 import { notFound, redirect } from "next/navigation"
+import { ResourceTypeEnum } from "api"
 import type { VideoResource } from "api/v1"
 import { parseResourceId, resolveVideoPlaylist } from "@/common/slugs"
 import { absoluteUrl, videoDetailPageView } from "@/common/urls"
@@ -65,6 +66,9 @@ const Page: React.FC<Props> = async ({ params, searchParams }) => {
   const video = (await queryClient.fetchQueryOr404(
     learningResourceQueries.detail(videoId),
   )) as VideoResource
+  if (video.resource_type !== ResourceTypeEnum.Video) {
+    notFound()
+  }
 
   const rawPlaylist = resolvedSearchParams?.playlist
   const playlistId = resolveVideoPlaylist(videoPlaylistIds(video), rawPlaylist)

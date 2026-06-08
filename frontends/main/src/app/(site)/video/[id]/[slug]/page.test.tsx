@@ -71,11 +71,13 @@ test("redirects to the first playlist when ?playlist isn't canonical", async () 
   )
 })
 
-test("renders a video with no playlists (canonical slug, no param)", async () => {
+test("a no-playlist video's canonical has no ?playlist param", async () => {
   const video = mockVideo([])
-  await Page({
-    params: Promise.resolve({ id: String(video.id), slug: "beyond-biology" }),
-    searchParams: Promise.resolve({}),
-  })
-  expect(mockRedirect).not.toHaveBeenCalled()
+  await expect(
+    Page({
+      params: Promise.resolve({ id: String(video.id), slug: "stale" }),
+      searchParams: Promise.resolve({}),
+    }),
+  ).rejects.toThrow("NEXT_REDIRECT")
+  expect(mockRedirect).toHaveBeenCalledWith(`/video/${video.id}/beyond-biology`)
 })
