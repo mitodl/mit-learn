@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.71.2
+--------------
+
+- fix: add link to the creation page of article and news (#3430)
+- Remove video shorts app (Phase 2) (#3385)
+
 Version 0.71.1 (Released June 08, 2026)
 --------------
 

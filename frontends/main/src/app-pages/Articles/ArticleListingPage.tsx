@@ -22,7 +22,9 @@ import type { WebsiteContent } from "api/v1"
 import { LocalDate } from "ol-utilities"
 import { useWebsiteContentList } from "api/hooks/website_content"
 import { extractArticleContent } from "@/common/websiteContentUtils"
-import { articleView } from "@/common/urls"
+import { articleView, websiteContentCreateView } from "@/common/urls"
+import { Permission, useUserHasPermission } from "api/hooks/user"
+import { ButtonLink } from "@mitodl/smoot-design"
 
 const PAGE_SIZE = 10
 const MAX_PAGE = 50
@@ -223,6 +225,10 @@ const BannerGridContainer = styled.div`
   max-width: 842px;
   margin: 0 auto;
   padding: 64px 0;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
 
   ${theme.breakpoints.down("sm")} {
     max-width: 100%;
@@ -299,6 +305,10 @@ const BannerSection = styled.div`
   background: ${theme.custom.colors.white};
   border-bottom: 1px solid ${theme.custom.colors.lightGray2};
 `
+const NewArticleLink = styled(ButtonLink)`
+  display: flex;
+  justify-content: end;
+`
 
 const EmptyState = styled.div`
   display: flex;
@@ -319,7 +329,6 @@ const EmptyState = styled.div`
 
 const BannerTitle = styled(Typography)`
   color: ${theme.custom.colors.black};
-  margin-top: 8px;
   ${theme.breakpoints.down("md")} {
     ${{ ...theme.typography.h2 }}
   }
@@ -328,16 +337,6 @@ const BannerTitle = styled(Typography)`
     margin-top: 0;
   }
 ` as typeof Typography
-
-const BannerDescription = styled(Typography)`
-  color: ${theme.custom.colors.black};
-  margin-top: 16px;
-  font-size: 20px;
-  line-height: 32px;
-  ${theme.breakpoints.down("sm")} {
-    ${{ ...theme.typography.body2 }}
-  }
-`
 
 const BreadcrumbBar = styled.div(({ theme }) => ({
   width: "100%",
@@ -418,6 +417,8 @@ const ArticleListingPage: React.FC = () => {
   const parsedPage = Number.parseInt(searchParams.get("page") ?? "1", 10)
   const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1
 
+  const isArticleEditor = useUserHasPermission(Permission.ArticleEditor)
+
   const { data: articles, isLoading } = useWebsiteContentList({
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
@@ -454,11 +455,16 @@ const ArticleListingPage: React.FC = () => {
             <BannerTitle component="h1" variant="h1">
               Articles
             </BannerTitle>
-            <BannerDescription variant="body1">
-              Dive into articles covering emerging technologies, global
-              challenges, and creative thinking. Stay connected with the latest
-              insights and discoveries from MIT.
-            </BannerDescription>
+            {isArticleEditor && (
+              <NewArticleLink
+                variant="primary"
+                href={websiteContentCreateView("article")}
+              >
+                <Typography variant="body1" color="white">
+                  New Article
+                </Typography>
+              </NewArticleLink>
+            )}
           </BannerGridContainer>
         </Container>
       </BannerSection>
