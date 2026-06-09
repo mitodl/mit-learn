@@ -22,10 +22,12 @@ const useCreateB2bEnrollment = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (opts: B2bEnrollCreateRequest) => {
-      const { readable_id, program_id } = opts
+      const { readable_id: readableId, program_id: programId } = opts
       return b2bApi.b2bEnrollCreate({
-        readable_id,
-        B2BEnrollRequestRequest: program_id ? { program_id } : undefined,
+        readable_id: readableId,
+        B2BEnrollRequestRequest: programId
+          ? { program_id: programId }
+          : undefined,
       })
     },
     onSettled: () => {
