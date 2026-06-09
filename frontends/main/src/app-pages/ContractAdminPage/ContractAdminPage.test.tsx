@@ -1,5 +1,5 @@
 import React from "react"
-import { renderWithProviders, screen, user } from "@/test-utils"
+import { renderWithProviders, screen, user, waitFor } from "@/test-utils"
 import { setMockResponse } from "api/test-utils"
 import { factories, urls } from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -7,6 +7,14 @@ import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import ContractAdminPage from "./ContractAdminPage"
+
+jest.mock("next/image", () => ({
+  __esModule: true,
+  default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => {
+    // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+    return <img {...props} />
+  },
+}))
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
@@ -153,7 +161,9 @@ describe("ContractAdminPage", () => {
     })
     setMockResponse.get(
       urls.contracts.managerContractCodes(org.id, contract.id),
-      [],
+      Array.from({ length: 75 }, () =>
+        factories.contracts.contractCode({ redemption_status: "unassigned" }),
+      ),
     )
 
     renderWithProviders(
@@ -193,10 +203,11 @@ describe("ContractAdminPage", () => {
       <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
     )
 
+    // findByRole waits for the org to load; then waitFor waits for codes to load
     const unassignedStat = await screen.findByRole("group", {
       name: "Unassigned",
     })
-    expect(unassignedStat).toHaveTextContent("2")
+    await waitFor(() => expect(unassignedStat).toHaveTextContent("2"))
 
     const pendingStat = screen.getByRole("group", { name: "Pending claim" })
     expect(pendingStat).toHaveTextContent("1")
@@ -222,7 +233,7 @@ describe("ContractAdminPage", () => {
     const redeemedCode = factories.contracts.contractCode({
       redemption_status: "redeemed",
       assigned_to: "redeemed@example.com",
-      redeemed_by: "redeemed@example.com",
+      redeemed_by: "claimer@example.com",
       redeemed_on: new Date().toISOString(),
     })
     const unassignedCode = factories.contracts.contractCode({
@@ -264,7 +275,7 @@ describe("ContractAdminPage", () => {
     const redeemedCode = factories.contracts.contractCode({
       redemption_status: "redeemed",
       assigned_to: "redeemed@example.com",
-      redeemed_by: "redeemed@example.com",
+      redeemed_by: "claimer@example.com",
       redeemed_on: new Date().toISOString(),
     })
 
