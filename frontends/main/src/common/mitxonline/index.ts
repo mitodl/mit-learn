@@ -320,18 +320,21 @@ const getBestRun = (
   let runs = course.courseruns ?? []
   if (enrollableOnly) runs = runs.filter((run) => run.is_enrollable)
   if (contractId) runs = runs.filter((run) => run.b2b_contract === contractId)
-  const byStartDateDesc = [...runs].sort((a, b) => {
-    const aMs = a.start_date ? new Date(a.start_date).getTime() : null
-    const bMs = b.start_date ? new Date(b.start_date).getTime() : null
-    if (aMs !== null && bMs !== null) return bMs - aMs
-    if (aMs !== null) return -1
-    if (bMs !== null) return 1
-    return 0
-  })
-  return (
-    byStartDateDesc.find((run) => run.id === course.next_run_id) ??
-    byStartDateDesc[0]
-  )
+
+  if (course.next_run_id !== null && course.next_run_id !== undefined) {
+    const next = runs.find((run) => run.id === course.next_run_id)
+    if (next) return next
+  }
+
+  return runs.reduce<CourseRunV2 | undefined>((best, run) => {
+    if (!best) return run
+    const bestMs = best.start_date ? new Date(best.start_date).getTime() : NaN
+    const runMs = run.start_date ? new Date(run.start_date).getTime() : NaN
+    // Prefer a run with a valid date over one without; among valid dates prefer later.
+    if (isNaN(bestMs) && !isNaN(runMs)) return run
+    if (!isNaN(bestMs) && isNaN(runMs)) return best
+    return runMs > bestMs ? run : best
+  }, undefined)
 }
 
 const isVerifiedEnrollmentMode = (mode?: string | null) => {
