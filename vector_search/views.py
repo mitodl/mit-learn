@@ -176,22 +176,28 @@ class QdrantView(APIView):
                     query_string
                 ),
             )
+            custom_formula_query = models.FormulaQuery(
+                formula=models.SumExpression(
+                    sum=[
+                        "$score",
+                        *custom_score_formula(search_collection),
+                    ]
+                )
+            )
             prefetch_params = [
                 models.Prefetch(
-                    filter=search_filter,
-                    query=sparse_query,
-                    using=encoder_sparse.model_short_name(),
-                    limit=prefetch_limit,
+                    query=custom_formula_query,
+                    prefetch=[
+                        models.Prefetch(
+                            filter=search_filter,
+                            query=sparse_query,
+                            using=encoder_sparse.model_short_name(),
+                            limit=prefetch_limit,
+                        )
+                    ],
                 ),
                 models.Prefetch(
-                    query=models.FormulaQuery(
-                        formula=models.SumExpression(
-                            sum=[
-                                "$score",
-                                *custom_score_formula(search_collection),
-                            ]
-                        )
-                    ),
+                    query=custom_formula_query,
                     prefetch=[
                         models.Prefetch(
                             filter=search_filter,

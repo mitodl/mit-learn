@@ -1302,7 +1302,7 @@ def custom_score_formula(collection_name):
                 gauss_decay=models.DecayParamsExpression(
                     x="$score",  # decay over the relevance score itself
                     target=1.0,  # cosine "perfect match" — boost is full here
-                    scale=0.3,
+                    scale=0.5,
                     midpoint=0.5,
                 )
             )
