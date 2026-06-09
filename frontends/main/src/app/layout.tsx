@@ -41,9 +41,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  if (process.env.GLOBAL_ERROR === "true") {
-    throw new Error("This is a test error on root layout")
-  }
   return (
     <html lang="en">
       <head>

@@ -28,10 +28,6 @@ export async function generateMetadata({
 const Page: React.FC<PageProps<"/">> = async () => {
   const queryClient = getQueryClient()
 
-  if (process.env.PAGE_ERROR === "true") {
-    throw new Error("This is a test error on home page.")
-  }
-
   await Promise.all([
     // Featured Courses carousel "All"
     queryClient.prefetchQuery(
