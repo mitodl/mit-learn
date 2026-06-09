@@ -103,9 +103,13 @@ describe("AssignSeatsSection", () => {
     await user.type(textarea, "alice@example.com, bad-email")
 
     const liveRegion = document.querySelector("[aria-live='polite']")
+    expect(liveRegion).not.toBeNull()
     // Announcement is debounced — wait for the timeout to fire
     await waitFor(
-      () => expect(liveRegion).toHaveTextContent("1 valid email, 1 invalid"),
+      () =>
+        expect(liveRegion as HTMLElement).toHaveTextContent(
+          "1 valid email, 1 invalid",
+        ),
       { timeout: 1000 },
     )
   })
