@@ -268,9 +268,6 @@ const AssignSeatsSection: React.FC = () => {
             )}
             <EmailTextarea
               aria-label="Employee emails"
-              aria-describedby={
-                hasEmails ? "assign-seats-validation" : undefined
-              }
               placeholder="Enter employee emails (one per line or comma-separated)"
               value={emailInput}
               onChange={(e) => setEmailInput(e.target.value)}
