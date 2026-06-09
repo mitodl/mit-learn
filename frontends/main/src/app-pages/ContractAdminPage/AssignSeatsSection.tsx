@@ -165,13 +165,14 @@ const EmailTextarea = styled("textarea")<{ $transparent: boolean }>(
  * neutral, avoiding red-on-first-keypress.
  */
 const tokenizeInput = (input: string, allCommitted: boolean) => {
-  const parts = input.split(/([\n,]+)/)
+  const parts = input.split(/([\r\n,]+)/)
   return parts.map((part, i) => {
-    if (/^[\n,]+$/.test(part) || !part.trim())
+    if (/^[\r\n,]+$/.test(part) || !part.trim()) {
       return { text: part, valid: null }
+    }
     const nextPart = parts[i + 1]
     const committed =
-      allCommitted || (nextPart !== undefined && /^[\n,]+$/.test(nextPart))
+      allCommitted || (nextPart !== undefined && /^[\r\n,]+$/.test(nextPart))
     return { text: part, valid: committed ? isValidEmail(part.trim()) : null }
   })
 }
