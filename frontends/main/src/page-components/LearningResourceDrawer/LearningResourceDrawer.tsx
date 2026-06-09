@@ -31,6 +31,7 @@ const REQUIRED_PARAMS = [RESOURCE_DRAWER_PARAMS.resource] as const
 const ALL_PARAMS = [
   RESOURCE_DRAWER_PARAMS.resource,
   RESOURCE_DRAWER_PARAMS.syllabus,
+  RESOURCE_DRAWER_PARAMS.syllabusOnly,
 ] as const
 
 const useCapturePageView = (resourceId: number) => {
@@ -63,7 +64,8 @@ const DrawerContent: React.FC<{
   titleId: string
   closeDrawer: () => void
   chatExpanded: boolean
-}> = ({ resourceId, closeDrawer, titleId, chatExpanded }) => {
+  syllabusOnlyMode: boolean
+}> = ({ resourceId, closeDrawer, titleId, chatExpanded, syllabusOnlyMode }) => {
   /**
    * Ideally the resource data should already exist in the query cache, e.g., by:
    * - a server-side prefetch
@@ -163,49 +165,51 @@ const DrawerContent: React.FC<{
       excludeResourceId={resourceId}
     />
   ))
-  const topCarousels = []
-  if (resource.data?.resource_type === ResourceTypeEnum.Program) {
-    topCarousels.push(
-      itemsCarousel("Courses in this Program", resourceId, resourceId),
-    )
+  const topCarousels: React.ReactNode[] = []
+  const bottomCarousels: React.ReactNode[] = []
+  if (!syllabusOnlyMode) {
+    if (resource.data?.resource_type === ResourceTypeEnum.Program) {
+      topCarousels.push(
+        itemsCarousel("Courses in this Program", resourceId, resourceId),
+      )
+    }
+    if (
+      resource.data?.resource_type === ResourceTypeEnum.Video &&
+      resource.data?.playlists?.length > 0
+    ) {
+      bottomCarousels.push(
+        itemsCarousel(
+          "Other Videos in this Series",
+          parseInt(resource.data.playlists[0]),
+          resourceId,
+        ),
+      )
+    }
+    if (resource.data?.resource_type === ResourceTypeEnum.VideoPlaylist) {
+      bottomCarousels.push(
+        itemsCarousel("Videos in this Series", resourceId, resourceId),
+      )
+    }
+    if (
+      resource.data?.resource_type === ResourceTypeEnum.PodcastEpisode &&
+      resource.data?.podcast_episode?.podcasts?.length > 0
+    ) {
+      bottomCarousels.push(
+        itemsCarousel(
+          "Other Episodes in this Podcast",
+          resource.data.podcast_episode.podcasts[0],
+          resourceId,
+        ),
+      )
+    }
+    if (resource.data?.resource_type === ResourceTypeEnum.Podcast) {
+      bottomCarousels.push(
+        itemsCarousel("Recent Episodes", resourceId, resourceId),
+      )
+    }
+    bottomCarousels.push(similarResourcesCarousel)
+    bottomCarousels.push(...(topicCarousels || []))
   }
-  const bottomCarousels = []
-  if (
-    resource.data?.resource_type === ResourceTypeEnum.Video &&
-    resource.data?.playlists?.length > 0
-  ) {
-    bottomCarousels.push(
-      itemsCarousel(
-        "Other Videos in this Series",
-        parseInt(resource.data.playlists[0]),
-        resourceId,
-      ),
-    )
-  }
-  if (resource.data?.resource_type === ResourceTypeEnum.VideoPlaylist) {
-    bottomCarousels.push(
-      itemsCarousel("Videos in this Series", resourceId, resourceId),
-    )
-  }
-  if (
-    resource.data?.resource_type === ResourceTypeEnum.PodcastEpisode &&
-    resource.data?.podcast_episode?.podcasts?.length > 0
-  ) {
-    bottomCarousels.push(
-      itemsCarousel(
-        "Other Episodes in this Podcast",
-        parseInt(resource.data.podcast_episode.podcasts[0]),
-        resourceId,
-      ),
-    )
-  }
-  if (resource.data?.resource_type === ResourceTypeEnum.Podcast) {
-    bottomCarousels.push(
-      itemsCarousel("Recent Episodes", resourceId, resourceId),
-    )
-  }
-  bottomCarousels.push(similarResourcesCarousel)
-  bottomCarousels.push(...(topicCarousels || []))
 
   return (
     <>
@@ -224,6 +228,7 @@ const DrawerContent: React.FC<{
         onAddToLearningPathClick={handleAddToLearningPathClick}
         onAddToUserListClick={handleAddToUserListClick}
         closeDrawer={closeDrawer}
+        syllabusOnlyMode={syllabusOnlyMode}
       />
       <SignupPopover anchorEl={signupEl} onClose={() => setSignupEl(null)} />
     </>
@@ -264,9 +269,16 @@ const LearningResourceDrawer = () => {
         aria-labelledby={id}
       >
         {({ params, closeDrawer }) => {
+          const syllabusOnlyMode =
+            params[RESOURCE_DRAWER_PARAMS.syllabusOnly] !== null
+          // Syllabus-only entry (e.g. product-page "Ask TIM") implies the chat
+          // is open, so it doesn't need to also set the `syllabus` param.
+          const chatExpanded =
+            syllabusOnlyMode || params[RESOURCE_DRAWER_PARAMS.syllabus] !== null
           return (
             <DrawerContent
-              chatExpanded={params[RESOURCE_DRAWER_PARAMS.syllabus] !== null}
+              chatExpanded={chatExpanded}
+              syllabusOnlyMode={syllabusOnlyMode}
               titleId={id}
               resourceId={Number(params[RESOURCE_DRAWER_PARAMS.resource])}
               closeDrawer={closeDrawer}

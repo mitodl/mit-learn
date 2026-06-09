@@ -3,11 +3,11 @@ import React, { useRef, useEffect } from "react"
 import { Typography, styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import { RiSparkling2Line, RiArrowDownSLine } from "@remixicon/react"
-import type { AiChatProps } from "@mitodl/smoot-design/ai"
-import { LearningResource, ResourceTypeGroupEnum } from "api"
+import { LearningResource } from "api"
 import { AiChat } from "@mitodl/smoot-design/ai"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
+import { getSyllabusChatProps } from "@/page-components/AiChat/syllabusChatConfig"
 
 export enum ChatTransitionState {
   Closed = "Closed",
@@ -112,26 +112,6 @@ const StyledAiChat = styled(AiChat)<{
   },
 }))
 
-export const STARTERS: Partial<
-  Record<ResourceTypeGroupEnum, AiChatProps["conversationStarters"]>
-> = {
-  [ResourceTypeGroupEnum.Course]: [
-    { content: "What is this course about?" },
-    { content: "What are the prerequisites for this course?" },
-    { content: "How will this course be graded?" },
-  ],
-  [ResourceTypeGroupEnum.Program]: [
-    { content: "What is this program about?" },
-    { content: "What are the prerequisites for this program?" },
-    { content: "How will this program be graded?" },
-  ],
-}
-type ChatParams = {
-  collection_name: string
-  message: string
-  course_id: string
-  related_courses?: string[]
-}
 export const AiChatSyllabusOpener = ({
   open,
   className,
@@ -218,33 +198,9 @@ const AiChatSyllabusSlideDown = ({
     >
       <StyledAiChat
         key={resource.readable_id}
-        chatId={resource.readable_id}
-        entryScreenTitle={`What do you want to know about this ${resource.resource_category.toLocaleLowerCase()}?`}
-        conversationStarters={STARTERS[resource.resource_type_group]}
+        {...getSyllabusChatProps(resource)}
         topPosition={contentTopPosition}
         scrollElement={scrollElement}
-        requestOpts={{
-          apiUrl: env("NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT")!,
-          csrfCookieName:
-            env("NEXT_PUBLIC_LEARN_AI_CSRF_COOKIE_NAME") || "csrftoken",
-          csrfHeaderName: "X-CSRFToken",
-          fetchOpts: {
-            credentials: "include",
-          },
-          transformBody: (messages) => {
-            const params: ChatParams = {
-              collection_name: "content_files",
-              message: messages[messages.length - 1].content,
-              course_id: resource.readable_id,
-            }
-            if (Array.isArray(resource.children)) {
-              params.related_courses = resource.children.map(
-                (child: { readable_id: string }) => child.readable_id,
-              )
-            }
-            return params
-          },
-        }}
       />
     </SlideDown>
   )

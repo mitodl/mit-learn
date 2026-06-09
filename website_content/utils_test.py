@@ -99,12 +99,12 @@ class TestExtractImageFromContentMediaEmbed:
         return {"type": "mediaEmbed", "attrs": attrs}
 
     def test_returns_cover_image_from_mit_learn_video_id(self, mocker):
-        """Looks up cover_image_url from LearningResource when mitLearnVideoId is set."""
-        mock_resource = mocker.Mock()
-        mock_resource.video.cover_image_url = "https://cdn.example.com/thumb.png"
+        """Looks up cover_image_url from the Video record when mitLearnVideoId is set."""
+        mock_video = mocker.Mock()
+        mock_video.cover_image_url = "https://cdn.example.com/thumb.png"
         mocker.patch(
-            "learning_resources.models.LearningResource.objects.get",
-            return_value=mock_resource,
+            "learning_resources.models.Video.objects.filter",
+            return_value=mocker.Mock(first=mocker.Mock(return_value=mock_video)),
         )
         content = self._doc(
             self._media_embed(mitLearnVideoId=123, src=MIT_LEARN_EMBED_URL)
@@ -118,13 +118,11 @@ class TestExtractImageFromContentMediaEmbed:
             "description": "",
         }
 
-    def test_returns_none_when_resource_not_found(self, mocker):
-        """Returns None gracefully when the LearningResource no longer exists."""
-        from learning_resources.models import LearningResource
-
+    def test_returns_none_when_video_not_found(self, mocker):
+        """Returns None gracefully when no Video record exists for the given ID."""
         mocker.patch(
-            "learning_resources.models.LearningResource.objects.get",
-            side_effect=LearningResource.DoesNotExist,
+            "learning_resources.models.Video.objects.filter",
+            return_value=mocker.Mock(first=mocker.Mock(return_value=None)),
         )
         content = self._doc(
             self._media_embed(mitLearnVideoId=999, src=MIT_LEARN_EMBED_URL)
@@ -139,11 +137,11 @@ class TestExtractImageFromContentMediaEmbed:
 
     def test_finds_media_embed_nested_inside_content(self, mocker):
         """Finds a mediaEmbed node even when it is nested inside another container node."""
-        mock_resource = mocker.Mock()
-        mock_resource.video.cover_image_url = "https://cdn.example.com/deep-thumb.png"
+        mock_video = mocker.Mock()
+        mock_video.cover_image_url = "https://cdn.example.com/deep-thumb.png"
         mocker.patch(
-            "learning_resources.models.LearningResource.objects.get",
-            return_value=mock_resource,
+            "learning_resources.models.Video.objects.filter",
+            return_value=mocker.Mock(first=mocker.Mock(return_value=mock_video)),
         )
         content = {
             "type": "doc",

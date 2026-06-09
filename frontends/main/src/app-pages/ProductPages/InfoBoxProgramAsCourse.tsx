@@ -8,7 +8,14 @@ import { HeadingIds } from "./util"
 import { ProgramAsCourseSummary } from "./ProductSummary"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
 import ProgramBundleUpsell from "./ProgramBundleUpsell"
-import { InfoBoxCard, InfoBoxContent, InfoBoxEnrollArea } from "./InfoBoxParts"
+import {
+  InfoBoxActionStack,
+  InfoBoxCard,
+  InfoBoxColumn,
+  InfoBoxContent,
+  InfoBoxEnrollArea,
+} from "./InfoBoxParts"
+import { ProductPageAskTimSection } from "./ProductPageAskTim"
 
 type ProgramAsCourseInfoBoxProps = {
   program: V2ProgramDetail
@@ -20,20 +27,28 @@ const ProgramAsCourseInfoBox: React.FC<ProgramAsCourseInfoBoxProps> = ({
   courses,
 }) => {
   return (
-    <InfoBoxCard as="section" aria-labelledby={HeadingIds.Summary}>
-      <VisuallyHidden>
-        <h2 id={HeadingIds.Summary}>Course Information</h2>
-      </VisuallyHidden>
-      <InfoBoxContent>
-        <ProgramAsCourseSummary program={program} courses={courses} />
-      </InfoBoxContent>
-      <InfoBoxEnrollArea>
-        <ProgramEnrollmentButton program={program} displayAsCourse />
-      </InfoBoxEnrollArea>
-      {program.programs?.length ? (
-        <ProgramBundleUpsell programs={program.programs} />
-      ) : null}
-    </InfoBoxCard>
+    <InfoBoxColumn>
+      <InfoBoxCard as="section" aria-labelledby={HeadingIds.Summary}>
+        <VisuallyHidden>
+          <h2 id={HeadingIds.Summary}>Course Information</h2>
+        </VisuallyHidden>
+        <InfoBoxContent>
+          <ProgramAsCourseSummary program={program} courses={courses} />
+        </InfoBoxContent>
+        <InfoBoxEnrollArea>
+          <InfoBoxActionStack>
+            <ProgramEnrollmentButton program={program} displayAsCourse />
+          </InfoBoxActionStack>
+        </InfoBoxEnrollArea>
+        {program.programs?.length ? (
+          <ProgramBundleUpsell programs={program.programs} />
+        ) : null}
+      </InfoBoxCard>
+      <ProductPageAskTimSection
+        readableId={program.readable_id}
+        resourceType="program"
+      />
+    </InfoBoxColumn>
   )
 }
 

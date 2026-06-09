@@ -1,6 +1,28 @@
 Release Notes
 =============
 
+Version 0.71.1 (Released June 08, 2026)
+--------------
+
+- move video/{id}/embed -> video/embed/{id} (#3437)
+
+Version 0.71.0 (Released June 08, 2026)
+--------------
+
+- fix podcasts type (#3432)
+- make selected vs selected+focus-visible different (#3427)
+
+Version 0.70.14 (Released June 08, 2026)
+---------------
+
+- boost programs index in search results (#3428)
+
+Version 0.70.13 (Released June 08, 2026)
+---------------
+
+- feat: Added Ask TIM to product pages (#3406)
+- feat: type-aware certificate descriptor badges on Learn certificate pages (#3398)
+
 Version 0.70.12 (Released June 04, 2026)
 ---------------
 

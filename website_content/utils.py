@@ -61,15 +61,18 @@ def _image_from_media_embed(attrs: dict) -> dict | None:
     if not mit_learn_id:
         return None
 
-    from learning_resources.models import LearningResource
+    from learning_resources.models import Video
 
-    try:
-        resource = LearningResource.objects.get(id=mit_learn_id)
-        url = resource.video and resource.video.cover_image_url
-        if url:
-            return {"url": url, "alt": "", "description": ""}
-    except LearningResource.DoesNotExist:
-        pass
+    video = Video.objects.filter(learning_resource_id=mit_learn_id).first()
+    if video is None:
+        log.warning(
+            "mediaEmbed references mitLearnVideoId=%s but no Video was found",
+            mit_learn_id,
+        )
+        return None
+
+    if video.cover_image_url:
+        return {"url": video.cover_image_url, "alt": "", "description": ""}
 
     return None
 

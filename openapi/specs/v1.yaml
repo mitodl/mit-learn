@@ -14327,11 +14327,6 @@ components:
           type: string
           maxLength: 60
           pattern: ^[-a-zA-Z0-9_]+$
-        cover_image:
-          type: string
-          format: uri
-          default: ''
-          maxLength: 2083
     PercolateQuery:
       type: object
       description: Serializer for PercolateQuery objects
@@ -14723,7 +14718,7 @@ components:
         podcasts:
           type: array
           items:
-            type: string
+            type: integer
           description: Get the podcast id(s) the episode belongs to
           readOnly: true
         transcript:
@@ -17410,9 +17405,11 @@ components:
         cover_image:
           type: string
           format: uri
+          readOnly: true
           default: ''
           maxLength: 2083
       required:
+      - cover_image
       - created_on
       - id
       - publish_date
@@ -17460,10 +17457,5 @@ components:
           type: string
           maxLength: 60
           pattern: ^[-a-zA-Z0-9_]+$
-        cover_image:
-          type: string
-          format: uri
-          default: ''
-          maxLength: 2083
       required:
       - title

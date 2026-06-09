@@ -1,6 +1,7 @@
 "use client"
 
 import { env } from "@/env"
+import dynamic from "next/dynamic"
 import React from "react"
 import {
   Container,
@@ -25,6 +26,11 @@ import { getStayUpdatedHubspotFormId } from "@/common/config"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 import { PlatformEnum } from "api"
+
+const LearningResourceDrawer = dynamic(
+  () =>
+    import("@/page-components/LearningResourceDrawer/LearningResourceDrawer"),
+)
 
 const GradientBanner = styled(BannerBackground)(({ theme }) => ({
   background:
@@ -412,6 +418,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
           <SectionsWrapper>{children}</SectionsWrapper>
         </MainCol>
       </BottomContainer>
+      <LearningResourceDrawer />
     </Page>
   )
 }

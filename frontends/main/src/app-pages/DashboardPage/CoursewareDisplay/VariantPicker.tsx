@@ -43,13 +43,20 @@ const VariantChoiceBox = styled("label", {
   border: `1px solid ${checked ? theme.custom.colors.red : theme.custom.colors.silverGrayLight}`,
   boxShadow: checked ? `inset 0 0 0 1px ${theme.custom.colors.red}` : "none",
   cursor: "pointer",
-  // Focus is a distinct OUTER ring layered on top of the (inset) selected
-  // state, so "selected" and "selected + focused" look different. :has(
-  // :focus-visible) keeps it to keyboard focus — a mouse click to select
-  // won't draw the ring. outline (not box-shadow) also survives forced-colors.
+  // The focusable element is the visually-hidden radio, so its native focus
+  // ring never shows; draw one on the card instead, using the browser's native
+  // focus-ring color so it honors the user's OS/browser setting. The array is a
+  // progressive-enhancement fallback chain (each browser keeps the last value
+  // it understands). The ring layers outside the inset selected border so
+  // "selected" and "selected + focused" stay distinct. :has(:focus-visible)
+  // limits it to keyboard focus — a mouse click to select won't draw it.
   "&:has(:focus-visible)": {
-    outline: `2px solid ${theme.custom.colors.red}`,
-    outlineOffset: "2px",
+    outline: [
+      "2px auto rgb(0, 95, 204)", // fallback
+      "2px auto Highlight", // firefox
+      "2px auto -webkit-focus-ring-color", // webkit
+    ],
+    outlineOffset: "3px",
   },
 }))
 
