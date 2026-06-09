@@ -647,12 +647,8 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                       <TableCell role="cell" $flex={COLUMN_FLEX.status}>
                         <MobileLabel>Status</MobileLabel>
                         <StatusBadge
-                          $status={code.redemption_status as "assigned" | "redeemed"}
-                          label={
-                            code.redemption_status === "redeemed"
-                              ? "Redeemed"
-                              : "Pending claim"
-                          }
+                          $status={code.redemption_status === "assigned" ? "assigned" : "redeemed"}
+                          label={code.redemption_status === "redeemed" ? "Redeemed" : "Pending claim"}
                         />
                       </TableCell>
                       <TableCell role="cell" $flex={COLUMN_FLEX.assignedOn}>

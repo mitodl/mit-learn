@@ -1,5 +1,5 @@
 import React from "react"
-import { renderWithTheme, screen, user } from "@/test-utils"
+import { renderWithTheme, screen, user, waitFor } from "@/test-utils"
 import { AssignSeatsSection } from "./AssignSeatsSection"
 
 // MUI Tooltip injects aria-label="Coming soon" onto the wrapped disabled spans,
@@ -96,14 +96,18 @@ describe("AssignSeatsSection", () => {
     expect(screen.queryByText(/valid/i)).not.toBeInTheDocument()
   })
 
-  test("live region announces email validation summary", async () => {
+  test("live region announces email validation summary after debounce", async () => {
     renderWithTheme(<AssignSeatsSection />)
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "alice@example.com, bad-email")
 
     const liveRegion = document.querySelector("[aria-live='polite']")
-    expect(liveRegion).toHaveTextContent("1 valid email, 1 invalid")
+    // Announcement is debounced — wait for the timeout to fire
+    await waitFor(
+      () => expect(liveRegion).toHaveTextContent("1 valid email, 1 invalid"),
+      { timeout: 1000 },
+    )
   })
 
   test("importing a CSV file populates the email textarea", async () => {

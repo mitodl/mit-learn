@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { Stack, Tooltip, Typography, styled } from "ol-components"
 import { Button, VisuallyHidden } from "@mitodl/smoot-design"
 import { isValidEmail, parseCsvToEmails, parseEmails } from "ol-utilities"
@@ -178,6 +178,8 @@ const tokenizeInput = (input: string, allCommitted: boolean) => {
 const AssignSeatsSection: React.FC = () => {
   const [emailInput, setEmailInput] = useState("")
   const [focused, setFocused] = useState(false)
+  const [csvError, setCsvError] = useState<string | null>(null)
+  const [debouncedAnnouncement, setDebouncedAnnouncement] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const parsed = useMemo(() => parseEmails(emailInput), [emailInput])
@@ -198,14 +200,25 @@ const AssignSeatsSection: React.FC = () => {
     ? `${validCount} valid email${validCount !== 1 ? "s" : ""}${invalidCount > 0 ? `, ${invalidCount} invalid` : ""}`
     : ""
 
+  // Debounce the live-region text so screen readers aren't spammed on every keystroke.
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedAnnouncement(announcement), 600)
+    return () => clearTimeout(id)
+  }, [announcement])
+
   const handleCsvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    setCsvError(null)
     const reader = new FileReader()
     reader.onload = (event) => {
       const text = event.target?.result as string
       setEmailInput(parseCsvToEmails(text))
       // Reset so the same file can be re-imported
+      e.target.value = ""
+    }
+    reader.onerror = () => {
+      setCsvError("Could not read the file. Please try again.")
       e.target.value = ""
     }
     reader.readAsText(file)
@@ -220,16 +233,16 @@ const AssignSeatsSection: React.FC = () => {
           access the program.
         </MutedText>
       </div>
-      {/* Always-mounted live region so screen readers hear validation updates as the user types */}
+      {/* Always-mounted live region — debounced so screen readers aren't spammed on every keystroke */}
       <VisuallyHidden aria-live="polite" aria-atomic="true">
-        {announcement}
+        {debouncedAnnouncement}
       </VisuallyHidden>
       <Stack
         direction={{ xs: "column", sm: "row" }}
         gap="24px"
         alignItems="flex-start"
       >
-        <Stack flex={1} gap="8px" minWidth={0} alignItems="flex-start">
+        <Stack flex={1} gap="8px" minWidth={0} alignItems="flex-start" width="100%">
           <EmailInputRoot $focused={focused}>
             {showOverlay && (
               <EmailHighlightLayer aria-hidden="true">
@@ -302,6 +315,11 @@ const AssignSeatsSection: React.FC = () => {
         >
           import from CSV
         </ActiveLink>
+        {csvError && (
+          <MutedText role="alert" style={{ color: "inherit", width: "100%" }}>
+            {csvError}
+          </MutedText>
+        )}
         <Tooltip title="Coming soon">
           <DisabledLink role="button" aria-disabled="true" tabIndex={0}>
             (download sample CSV)
