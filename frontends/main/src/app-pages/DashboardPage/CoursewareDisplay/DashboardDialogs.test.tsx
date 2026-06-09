@@ -616,4 +616,60 @@ describe("JustInTimeDialog", () => {
     await expect(spies.createEnrollment).toHaveBeenCalled()
     expect(window.location.assign).toHaveBeenCalledWith(run.courseware_url)
   })
+
+  // TODO: Un-skip once @mitodl/mitxonline-api-axios is updated with B2BEnrollRequestRequest
+  // (depends on https://github.com/mitodl/mitxonline/pull/3650 being merged and a new package release)
+  test.skip("Submitting just-in-time dialog includes program_id when parentProgramReadableIds is provided", async () => {
+    const { course, run } = setupJustInTimeTest({
+      userOverrides: { user_profile: { year_of_birth: 1988 } },
+    })
+    const parentProgramReadableIds = ["program-v1:MITx+DEDP"]
+
+    renderWithProviders(
+      <DashboardCard
+        resource={{ type: DashboardType.Course, data: course }}
+        parentProgramReadableIds={parentProgramReadableIds}
+      />,
+    )
+    const enrollButtons = await screen.findAllByTestId("courseware-button")
+    await user.click(enrollButtons[0])
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+    const fields = getFields(dialog)
+    await user.click(fields.country)
+
+    const option = screen.getByRole("option", { name: "Canada" })
+    await user.click(option)
+
+    setMockResponse.patch(mitxonline.urls.userMe.get(), null)
+    setMockResponse.post(
+      mitxonline.urls.b2b.courseEnrollment(run.courseware_id),
+      null,
+    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      mitxonline.factories.enrollment.courseEnrollment({
+        run: {
+          courseware_id: run.courseware_id,
+          courseware_url: run.courseware_url,
+        },
+      }),
+    ])
+
+    const submitButton = within(dialog).getByRole("button", {
+      name: "Submit",
+    })
+    await user.click(submitButton)
+
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "post",
+        url: mitxonline.urls.b2b.courseEnrollment(run.courseware_id),
+        body: expect.objectContaining({
+          program_id: "program-v1:MITx+DEDP",
+        }),
+      }),
+    )
+  })
 })
