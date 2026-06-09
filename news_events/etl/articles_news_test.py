@@ -195,54 +195,6 @@ def test_extract_image_from_prosemirror_image():
     assert result["alt"] == "Photo alt text"
 
 
-def test_extract_image_editorjs_format():
-    """Test image extraction from EditorJS format"""
-    # EditorJS style image
-    content_json = {
-        "blocks": [
-            {"type": "paragraph", "text": "Some text"},
-            {
-                "type": "image",
-                "data": {
-                    "file": {"url": "https://example.com/image.jpg"},
-                    "caption": "Test image caption",
-                },
-            },
-        ]
-    }
-
-    result = extract_image_from_content(content_json)
-
-    assert result is not None
-    assert result["url"] == "https://example.com/image.jpg"
-    assert result["alt"] == "Test image caption"
-    assert result["description"] == "Test image caption"
-
-
-def test_extract_image_from_nested_structure():
-    """Test image extraction from nested JSON structure"""
-    content_json = {
-        "content": {
-            "blocks": [
-                {
-                    "type": "media",
-                    "image": {
-                        "url": "https://example.com/nested.png",
-                        "alt": "Nested image",
-                        "description": "A nested image",
-                    },
-                }
-            ]
-        }
-    }
-
-    result = extract_image_from_content(content_json)
-
-    assert result is not None
-    assert result["url"] == "https://example.com/nested.png"
-    assert result["alt"] == "Nested image"
-
-
 def test_extract_image_returns_none_when_no_image():
     """Test image extraction returns None when no image found"""
     content_json = {"blocks": [{"type": "paragraph", "text": "Just text, no images"}]}

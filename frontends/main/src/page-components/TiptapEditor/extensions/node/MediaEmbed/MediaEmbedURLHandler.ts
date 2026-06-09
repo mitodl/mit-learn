@@ -92,7 +92,6 @@ function createMITLearnHandler(queryClient: QueryClient) {
         const embedNode = currentState.schema.nodes["mediaEmbed"].create({
           mitLearnVideoId: videoId,
           src: text,
-          coverImageUrl: resource.video?.cover_image_url ?? null,
         })
         const tr = currentState.tr.replaceWith(foundStart, foundEnd, embedNode)
         tr.setSelection(NodeSelection.create(tr.doc, foundStart))

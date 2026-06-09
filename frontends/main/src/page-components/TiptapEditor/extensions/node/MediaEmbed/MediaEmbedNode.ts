@@ -47,15 +47,6 @@ export const MediaEmbedNode = Node.create({
             ? { "data-mit-learn-video-id": String(attrs.mitLearnVideoId) }
             : {},
       },
-      coverImageUrl: {
-        default: null,
-        parseHTML: (element) =>
-          element.getAttribute("data-cover-image-url") || null,
-        renderHTML: (attrs) =>
-          attrs.coverImageUrl
-            ? { "data-cover-image-url": attrs.coverImageUrl }
-            : {},
-      },
     }
   },
 

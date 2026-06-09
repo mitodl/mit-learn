@@ -30,11 +30,9 @@ const StyledWrapper = styled.div(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
 }))
 
-const InnerContainer = styled(Container, {
-  shouldForwardProp: (prop) => prop !== "noAuthor",
-})<{ noAuthor?: boolean }>(({ noAuthor }) => ({
+const InnerContainer = styled(Container)(() => ({
   display: "flex",
-  justifyContent: noAuthor ? "space-between" : "space-between",
+  justifyContent: "space-between",
   alignItems: "center",
   gap: "8px",
   "&&": {
@@ -127,7 +125,7 @@ export const ByLineInfoBarContent = ({
         onClose={() => setShareOpen(false)}
         pageUrl={`${NEXT_PUBLIC_ORIGIN}/${article?.content_type === "article" ? "articles" : "news"}/${article?.slug}`}
       />
-      <InnerContainer noAuthor={!isEditable}>
+      <InnerContainer>
         <InfoContainer>
           {isEditable ? (
             <AuthorInput

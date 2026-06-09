@@ -94,24 +94,29 @@ export function extractArticleContent(
   const banner = topLevel.find((n) => n.type === "banner")
   const headingNode = banner?.content?.find((n) => n.type === "heading")
   const paragraphNode = banner?.content?.find((n) => n.type === "paragraph")
-
-  const imageNode = topLevel.find((n) => n.type === "imageWithCaption")
-  const imageAttrs = imageNode?.attrs
-  let image =
-    imageAttrs?.src && typeof imageAttrs.src === "string"
-      ? {
-          src: imageAttrs.src,
-          alt: typeof imageAttrs.alt === "string" ? imageAttrs.alt : null,
-          caption:
-            typeof imageAttrs.caption === "string" ? imageAttrs.caption : null,
-        }
-      : null
-  if (image === null && article?.cover_image) {
+  let image = null
+  if (article?.cover_image) {
     image = {
       src: article?.cover_image || "",
       alt: "",
       caption: "",
     }
+  }
+  if (image === null) {
+    const imageNode = topLevel.find((n) => n.type === "imageWithCaption")
+    const imageAttrs = imageNode?.attrs
+
+    image =
+      imageAttrs?.src && typeof imageAttrs.src === "string"
+        ? {
+            src: imageAttrs.src,
+            alt: typeof imageAttrs.alt === "string" ? imageAttrs.alt : null,
+            caption:
+              typeof imageAttrs.caption === "string"
+                ? imageAttrs.caption
+                : null,
+          }
+        : null
   }
   return {
     heading: extractText(headingNode?.content) || null,

@@ -114,3 +114,110 @@ class TestWebsiteContentModel:
         )
 
         assert content.content_type == WebsiteContentType.news.name
+
+    def test_cover_image_set_from_content_on_create(
+        self,
+        _mock_queue_purge_delay,  # noqa: PT019
+        _mock_purge_url,  # noqa: PT019
+        _mock_queue_list,  # noqa: PT019
+    ):
+        """cover_image is derived from the first image node when the record is created."""
+        user = User.objects.create_user(username="testuser6", email="test6@example.com")
+        content = WebsiteContent.objects.create(
+            title="Has Image",
+            content={
+                "type": "doc",
+                "content": [
+                    {
+                        "type": "imageWithCaption",
+                        "attrs": {"src": "https://example.com/first.jpg", "alt": ""},
+                    }
+                ],
+            },
+            user=user,
+        )
+
+        assert content.cover_image == "https://example.com/first.jpg"
+
+    def test_cover_image_empty_when_no_image_in_content(
+        self,
+        _mock_queue_purge_delay,  # noqa: PT019
+        _mock_purge_url,  # noqa: PT019
+        _mock_queue_list,  # noqa: PT019
+    ):
+        """cover_image is empty string when the content contains no image nodes."""
+        user = User.objects.create_user(username="testuser7", email="test7@example.com")
+        content = WebsiteContent.objects.create(
+            title="No Image",
+            content={"type": "doc", "content": []},
+            user=user,
+        )
+
+        assert content.cover_image == ""
+
+    def test_cover_image_updates_when_content_image_changes(
+        self,
+        _mock_queue_purge_delay,  # noqa: PT019
+        _mock_purge_url,  # noqa: PT019
+        _mock_queue_list,  # noqa: PT019
+    ):
+        """cover_image is re-derived on every save, so swapping the image is reflected."""
+        user = User.objects.create_user(username="testuser8", email="test8@example.com")
+        content = WebsiteContent.objects.create(
+            title="Changing Image",
+            content={
+                "type": "doc",
+                "content": [
+                    {
+                        "type": "imageWithCaption",
+                        "attrs": {"src": "https://example.com/original.jpg", "alt": ""},
+                    }
+                ],
+            },
+            user=user,
+        )
+        assert content.cover_image == "https://example.com/original.jpg"
+
+        content.content = {
+            "type": "doc",
+            "content": [
+                {
+                    "type": "imageWithCaption",
+                    "attrs": {"src": "https://example.com/updated.jpg", "alt": ""},
+                }
+            ],
+        }
+        content.save()
+
+        assert content.cover_image == "https://example.com/updated.jpg"
+
+    def test_cover_image_cleared_when_image_removed_from_content(
+        self,
+        _mock_queue_purge_delay,  # noqa: PT019
+        _mock_purge_url,  # noqa: PT019
+        _mock_queue_list,  # noqa: PT019
+    ):
+        """cover_image is cleared to '' when the author removes all images from content."""
+        user = User.objects.create_user(username="testuser9", email="test9@example.com")
+        content = WebsiteContent.objects.create(
+            title="Image Removed",
+            content={
+                "type": "doc",
+                "content": [
+                    {
+                        "type": "imageWithCaption",
+                        "attrs": {
+                            "src": "https://example.com/soon-gone.jpg",
+                            "alt": "",
+                        },
+                    }
+                ],
+            },
+            user=user,
+        )
+        assert content.cover_image == "https://example.com/soon-gone.jpg"
+
+        content.content = {"type": "doc", "content": []}
+        content.save()
+
+        assert content.cover_image == ""
