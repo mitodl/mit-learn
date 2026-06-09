@@ -1511,9 +1511,8 @@ def test_vector_search_hybrid(mocker, client):
     assert isinstance(sparse_prefetch.query, models.SparseVector)
     assert sparse_prefetch.query.indices == [1, 2]
     assert sparse_prefetch.query.values == [0.5, 0.6]
-
-    assert dense_prefetch.using == "dense-test-encoder"
-    assert dense_prefetch.query == [0.1, 0.2, 0.3]
+    assert dense_prefetch.prefetch[0].using == "dense-test-encoder"
+    assert dense_prefetch.prefetch[0].query == [0.1, 0.2, 0.3]
 
 
 @pytest.mark.parametrize("use_group_by", [True, False])
