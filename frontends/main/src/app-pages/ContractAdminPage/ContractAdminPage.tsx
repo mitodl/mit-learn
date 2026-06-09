@@ -26,7 +26,6 @@ import {
 import { AssignSeatsSection } from "./AssignSeatsSection"
 import { RowActionMenu } from "./RowActionMenu"
 import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
-import type { ContractCode } from "api/mitxonline-hooks/organizations"
 import type { AxiosError } from "axios"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError } from "@/common/errors"
@@ -307,7 +306,6 @@ const STUB = "—"
 
 type StatusFilter = "all" | "pending" | "redeemed"
 
-
 const COLUMN_FLEX = {
   assignedTo: 2,
   redeemedBy: 2,
@@ -414,8 +412,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const tabFilteredCodes = visibleCodes.filter((code) => {
     return (
       statusFilter === "all" ||
-      (statusFilter === "redeemed" &&
-        code.redemption_status === "redeemed") ||
+      (statusFilter === "redeemed" && code.redemption_status === "redeemed") ||
       (statusFilter === "pending" && code.redemption_status === "assigned")
     )
   })
@@ -647,7 +644,9 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                       <TableCell role="cell" $flex={COLUMN_FLEX.status}>
                         <MobileLabel>Status</MobileLabel>
                         <StatusBadge
-                          $status={code.redemption_status as "assigned" | "redeemed"}
+                          $status={
+                            code.redemption_status as "assigned" | "redeemed"
+                          }
                           label={
                             code.redemption_status === "redeemed"
                               ? "Redeemed"

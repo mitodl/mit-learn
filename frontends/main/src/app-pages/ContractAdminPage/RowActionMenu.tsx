@@ -109,33 +109,34 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({ code }) => {
 
   const assignedTo = code.assigned_to ?? "unassigned seat"
 
-  const menuItems = code.redemption_status === "redeemed" ? (
-    <Tooltip title={COMING_SOON} placement="right">
-      <DestructiveMenuItem disabled>Uninvite</DestructiveMenuItem>
-    </Tooltip>
-  ) : (
-    [
-      <Tooltip key="change-email" title={COMING_SOON} placement="right">
-        <ActionMenuItem disabled>Change assigned email</ActionMenuItem>
-      </Tooltip>,
-      <Tooltip key="resend-email" title={COMING_SOON} placement="right">
-        <ActionMenuItem disabled>Resend claim email</ActionMenuItem>
-      </Tooltip>,
-      copied ? (
-        <CopiedMenuItem key="copy-link" disabled>
-          Link copied to clipboard
-        </CopiedMenuItem>
-      ) : (
-        <ActionMenuItem key="copy-link" onClick={handleCopyClaimLink}>
-          Copy claim link
-        </ActionMenuItem>
-      ),
-      <Divider key="divider" />,
-      <Tooltip key="release-seat" title={COMING_SOON} placement="right">
-        <DestructiveMenuItem disabled>Release seat</DestructiveMenuItem>
-      </Tooltip>,
-    ]
-  )
+  const menuItems =
+    code.redemption_status === "redeemed" ? (
+      <Tooltip title={COMING_SOON} placement="right">
+        <DestructiveMenuItem disabled>Uninvite</DestructiveMenuItem>
+      </Tooltip>
+    ) : (
+      [
+        <Tooltip key="change-email" title={COMING_SOON} placement="right">
+          <ActionMenuItem disabled>Change assigned email</ActionMenuItem>
+        </Tooltip>,
+        <Tooltip key="resend-email" title={COMING_SOON} placement="right">
+          <ActionMenuItem disabled>Resend claim email</ActionMenuItem>
+        </Tooltip>,
+        copied ? (
+          <CopiedMenuItem key="copy-link" disabled>
+            Link copied to clipboard
+          </CopiedMenuItem>
+        ) : (
+          <ActionMenuItem key="copy-link" onClick={handleCopyClaimLink}>
+            Copy claim link
+          </ActionMenuItem>
+        ),
+        <Divider key="divider" />,
+        <Tooltip key="release-seat" title={COMING_SOON} placement="right">
+          <DestructiveMenuItem disabled>Release seat</DestructiveMenuItem>
+        </Tooltip>,
+      ]
+    )
 
   return (
     <>

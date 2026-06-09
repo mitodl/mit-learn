@@ -175,18 +175,27 @@ describe("ContractAdminPage", () => {
       total_enrollments: 1,
       total_codes: 5,
     })
-    setMockResponse.get(urls.contracts.managerContractCodes(org.id, contract.id), [
-      factories.contracts.contractCode({ redemption_status: "unassigned" }),
-      factories.contracts.contractCode({ redemption_status: "unassigned" }),
-      factories.contracts.contractCode({ redemption_status: "assigned" }),
-      factories.contracts.contractCode({ redemption_status: "redeemed", redeemed_by: "a@example.com", redeemed_on: new Date().toISOString() }),
-    ])
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id),
+      [
+        factories.contracts.contractCode({ redemption_status: "unassigned" }),
+        factories.contracts.contractCode({ redemption_status: "unassigned" }),
+        factories.contracts.contractCode({ redemption_status: "assigned" }),
+        factories.contracts.contractCode({
+          redemption_status: "redeemed",
+          redeemed_by: "a@example.com",
+          redeemed_on: new Date().toISOString(),
+        }),
+      ],
+    )
 
     renderWithProviders(
       <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
     )
 
-    const unassignedStat = await screen.findByRole("group", { name: "Unassigned" })
+    const unassignedStat = await screen.findByRole("group", {
+      name: "Unassigned",
+    })
     expect(unassignedStat).toHaveTextContent("2")
 
     const pendingStat = screen.getByRole("group", { name: "Pending claim" })
