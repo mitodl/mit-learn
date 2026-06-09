@@ -287,7 +287,11 @@ const AssignSeatsSection: React.FC = () => {
         >
           <EmailInputRoot $focused={focused}>
             {showOverlay && (
-              <EmailHighlightLayer aria-hidden="true">
+              <EmailHighlightLayer
+                aria-hidden="true"
+                data-email-overlay
+                style={{ overflow: "auto" }}
+              >
                 {tokens.map((token, i) =>
                   token.valid === false ? (
                     <InvalidEmailSegment key={`${i}-${token.text}`}>
@@ -306,6 +310,15 @@ const AssignSeatsSection: React.FC = () => {
               onChange={(e) => setEmailInput(e.target.value)}
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
+              onScroll={(e) => {
+                const overlay = e.currentTarget.parentElement?.querySelector(
+                  "[data-email-overlay]",
+                ) as HTMLDivElement | null
+                if (overlay) {
+                  overlay.scrollTop = e.currentTarget.scrollTop
+                  overlay.scrollLeft = e.currentTarget.scrollLeft
+                }
+              }}
               $transparent={showOverlay}
             />
           </EmailInputRoot>
