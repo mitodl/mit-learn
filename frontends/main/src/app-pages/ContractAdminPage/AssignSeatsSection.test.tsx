@@ -130,7 +130,7 @@ describe("AssignSeatsSection", () => {
     await user.paste("alice@example.com\nbadtoken")
     await user.click(screen.getByRole("button", { name: "Assign Seats" }))
 
-    expect(await screen.findByText("badtoken")).toBeInTheDocument()
+    expect(await screen.findAllByText("badtoken")).not.toHaveLength(0)
   })
 
   test("modal shows duplicate count when textarea has repeated emails", async () => {

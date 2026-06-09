@@ -39,9 +39,7 @@ export const extractEmailsFromCsvRows = (
     if (!emailCol) continue
     if (EMAIL_REGEX.test(emailCol)) {
       valid.push(emailCol)
-    } else if (/\S@\S/.test(emailCol)) {
-      // Only flag as invalid if it looks email-shaped (non-whitespace on both
-      // sides of @) — avoids surfacing unrelated cells like "$10@qty" as errors.
+    } else {
       invalid.push(emailCol)
     }
   }
