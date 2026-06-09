@@ -3,22 +3,20 @@ import posthog from "posthog-js"
 import { PostHogProvider, usePostHog } from "posthog-js/react"
 import { useUserMe } from "api/hooks/user"
 import { INTERNAL_BOOTSTRAPPING_FLAG } from "@/common/feature_flags"
-import { env } from "@/env"
+import { env, fullEnv } from "@/env"
 
 /**
- * Compute PostHog bootstrap feature flags from window.__ENV at runtime.
- * Previously this was computed at build time from process.env in next.config.js
- * (as FEATURE_FLAGS), but that approach bakes empty values when the Docker
- * image is built in CI without per-environment values. Reading from
- * window.__ENV gives the correct per-env flags injected by PublicEnvScript.
+ * Compute PostHog bootstrap feature flags from the runtime env (fullEnv()).
+ * Previously computed at build time from process.env in next.config.js, which
+ * bakes empty values when the image is built in CI without per-env values.
  */
 const getBootstrapFeatureFlags = (): Record<
   string,
   boolean | string
 > | null => {
   if (typeof window === "undefined") return null
-  const envSource = window.__ENV ?? {}
-  const prefix = envSource["NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX"] ?? "FEATURE_"
+  const prefix = env("NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX") ?? "FEATURE_"
+  const envSource = fullEnv()
   const fullPrefix = `NEXT_PUBLIC_${prefix}`
   const flags: Record<string, boolean | string> = {}
 

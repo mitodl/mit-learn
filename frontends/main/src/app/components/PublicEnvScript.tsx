@@ -18,19 +18,16 @@
  */
 import React from "react"
 import { connection } from "next/server"
+import { publicEnvObject } from "@/env"
 
 export async function PublicEnvScript() {
   // `connection()` opts this route out of static prerendering so that
   // process.env is read fresh on every request (not baked at build time).
   await connection()
 
-  const publicEnv = Object.fromEntries(
-    Object.entries(process.env).filter(([k]) => k.startsWith("NEXT_PUBLIC_")),
-  )
-
   // Escape `<` to prevent a value like `</script><script>...` from breaking
   // out of the script tag.
-  const json = JSON.stringify(publicEnv).replace(/</g, "\\u003c")
+  const json = JSON.stringify(publicEnvObject()).replace(/</g, "\\u003c")
 
   return (
     <script dangerouslySetInnerHTML={{ __html: `window.__ENV=${json};` }} />
