@@ -305,7 +305,6 @@ const STUB = "—"
 
 type StatusFilter = "all" | "pending" | "redeemed"
 
-
 const COLUMN_FLEX = {
   assignedTo: 2,
   redeemedBy: 2,
@@ -412,8 +411,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const tabFilteredCodes = visibleCodes.filter((code) => {
     return (
       statusFilter === "all" ||
-      (statusFilter === "redeemed" &&
-        code.redemption_status === "redeemed") ||
+      (statusFilter === "redeemed" && code.redemption_status === "redeemed") ||
       (statusFilter === "pending" && code.redemption_status === "assigned")
     )
   })
@@ -647,8 +645,16 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                       <TableCell role="cell" $flex={COLUMN_FLEX.status}>
                         <MobileLabel>Status</MobileLabel>
                         <StatusBadge
-                          $status={code.redemption_status === "assigned" ? "assigned" : "redeemed"}
-                          label={code.redemption_status === "redeemed" ? "Redeemed" : "Pending claim"}
+                          $status={
+                            code.redemption_status === "assigned"
+                              ? "assigned"
+                              : "redeemed"
+                          }
+                          label={
+                            code.redemption_status === "redeemed"
+                              ? "Redeemed"
+                              : "Pending claim"
+                          }
                         />
                       </TableCell>
                       <TableCell role="cell" $flex={COLUMN_FLEX.assignedOn}>

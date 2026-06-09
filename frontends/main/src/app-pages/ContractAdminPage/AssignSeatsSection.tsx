@@ -129,7 +129,9 @@ const EmailTextarea = styled("textarea")<{ $transparent: boolean }>(
     // `color` keeps the placeholder visible; `-webkit-text-fill-color` makes
     // only the typed text transparent so the overlay shows through.
     color: theme.custom.colors.darkGray2,
-    WebkitTextFillColor: $transparent ? "transparent" : theme.custom.colors.darkGray2,
+    WebkitTextFillColor: $transparent
+      ? "transparent"
+      : theme.custom.colors.darkGray2,
     caretColor: theme.custom.colors.darkGray2,
     background: "transparent",
     border: "none",
@@ -159,7 +161,8 @@ const EmailTextarea = styled("textarea")<{ $transparent: boolean }>(
 const tokenizeInput = (input: string, allCommitted: boolean) => {
   const parts = input.split(/([\n,]+)/)
   return parts.map((part, i) => {
-    if (/^[\n,]+$/.test(part) || !part.trim()) return { text: part, valid: null }
+    if (/^[\n,]+$/.test(part) || !part.trim())
+      return { text: part, valid: null }
     const nextPart = parts[i + 1]
     const committed =
       allCommitted || (nextPart !== undefined && /^[\n,]+$/.test(nextPart))
@@ -242,7 +245,13 @@ const AssignSeatsSection: React.FC = () => {
         gap="24px"
         alignItems="flex-start"
       >
-        <Stack flex={1} gap="8px" minWidth={0} alignItems="flex-start" width="100%">
+        <Stack
+          flex={1}
+          gap="8px"
+          minWidth={0}
+          alignItems="flex-start"
+          width="100%"
+        >
           <EmailInputRoot $focused={focused}>
             {showOverlay && (
               <EmailHighlightLayer aria-hidden="true">
