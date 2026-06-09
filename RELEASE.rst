@@ -1,6 +1,17 @@
 Release Notes
 =============
 
+Version 0.71.1 (Released June 08, 2026)
+--------------
+
+- move video/{id}/embed -> video/embed/{id} (#3437)
+
+Version 0.71.0 (Released June 08, 2026)
+--------------
+
+- fix podcasts type (#3432)
+- make selected vs selected+focus-visible different (#3427)
+
 Version 0.70.14 (Released June 08, 2026)
 ---------------
 

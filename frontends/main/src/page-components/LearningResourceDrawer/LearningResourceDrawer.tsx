@@ -197,7 +197,7 @@ const DrawerContent: React.FC<{
       bottomCarousels.push(
         itemsCarousel(
           "Other Episodes in this Podcast",
-          parseInt(resource.data.podcast_episode.podcasts[0]),
+          resource.data.podcast_episode.podcasts[0],
           resourceId,
         ),
       )

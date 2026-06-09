@@ -148,4 +148,31 @@ describe("UserMenu", () => {
     })
     expect(link).toBe(null)
   })
+
+  test("Article editors see 'Article' and 'News' links in the user menu", async () => {
+    setMockResponse.get(urls.userMe.get(), {
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    renderWithProviders(<Header />)
+    const menu = await findUserMenu()
+
+    const articleLink = within(menu).getByRole("menuitem", { name: "Article" })
+    expect(articleLink).toHaveAttribute("href", "/website_content/article/new")
+
+    const newsLink = within(menu).getByRole("menuitem", { name: "News" })
+    expect(newsLink).toHaveAttribute("href", "/website_content/news/new")
+  })
+
+  test("Users WITHOUT ArticleEditor permission do not see 'Article' or 'News' links", async () => {
+    setMockResponse.get(urls.userMe.get(), {
+      is_authenticated: true,
+      is_article_editor: false,
+    })
+    renderWithProviders(<Header />)
+    const menu = await findUserMenu()
+
+    expect(within(menu).queryByRole("menuitem", { name: "Article" })).toBe(null)
+    expect(within(menu).queryByRole("menuitem", { name: "News" })).toBe(null)
+  })
 })

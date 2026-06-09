@@ -13,6 +13,7 @@ import {
 } from "@remixicon/react"
 import { useUserMe, User } from "api/hooks/user"
 import MITLogoLink from "@/components/MITLogoLink/MITLogoLink"
+import { websiteContentCreateView } from "@/common/urls"
 
 const FlexContainer = styled.div({
   display: "flex",
@@ -157,6 +158,18 @@ const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
       key: "learningpaths",
       allow: !!user?.is_learning_path_editor,
       href: urls.LEARNINGPATH_LISTING,
+    },
+    {
+      label: "Article",
+      key: "articles",
+      allow: !!user?.is_article_editor,
+      href: websiteContentCreateView("article"),
+    },
+    {
+      label: "News",
+      key: "news",
+      allow: !!user?.is_article_editor,
+      href: websiteContentCreateView("news"),
     },
     {
       label: "Log Out",

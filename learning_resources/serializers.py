@@ -448,7 +448,7 @@ class PodcastEpisodeSerializer(serializers.ModelSerializer):
 
     podcasts = serializers.SerializerMethodField()
 
-    def get_podcasts(self, instance) -> list[str]:
+    def get_podcasts(self, instance) -> list[int]:
         """Get the podcast id(s) the episode belongs to"""
         return [podcast.parent_id for podcast in instance.learning_resource.podcasts]
 

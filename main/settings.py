@@ -35,7 +35,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.70.14"
+VERSION = "0.71.1"
 
 log = logging.getLogger()
 
@@ -137,7 +137,6 @@ INSTALLED_APPS = (
     "testimonials",
     "data_fixtures",
     "vector_search",
-    "video_shorts",
     "ol_hubspot",
     "mitol.scim.apps.ScimApp",
     "health_check",
