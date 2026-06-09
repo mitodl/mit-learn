@@ -513,4 +513,5 @@ SYNONYMS = [
     "natural language processing, nlp",
     "large language model, llm",
     "micromasters, micro masters",
+    "scm, supply chain management",
 ]
