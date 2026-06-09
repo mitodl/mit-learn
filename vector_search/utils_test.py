@@ -7,6 +7,7 @@ import pytest
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.urls import reverse
+from langchain.schema import Document
 from qdrant_client import models
 from qdrant_client.models import PointStruct
 
@@ -57,6 +58,7 @@ from vector_search.utils import (
     _get_text_splitter,
     _is_markdown_content,
     _resource_vector_hits,
+    _set_payload,
     async_qdrant_aggregations,
     compute_optimizer_settings,
     create_qdrant_collections,
@@ -695,7 +697,6 @@ def test_chunk_markdown_documents_without_headers(mocker):
 
 def test_generate_content_points_uses_markdown_chunking_for_marketing_pages(mocker):
     """marketing_page files use _chunk_markdown_documents instead of _chunk_documents"""
-    from langchain.schema import Document
 
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 500
     settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 50
@@ -736,7 +737,6 @@ def test_generate_content_points_uses_markdown_chunking_for_marketing_pages(mock
 
 def test_generate_content_points_uses_standard_chunking_for_non_markdown(mocker):
     """Non-markdown files use _chunk_documents"""
-    from langchain.schema import Document
 
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 500
     settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 50
@@ -1402,8 +1402,6 @@ def test_set_payload_batched(mocker):
     param_map = {"key1": "payload_key1", "key2": "payload_key2"}
     collection_name = "test_collection"
 
-    from vector_search.utils import _set_payload
-
     _set_payload(points, document, param_map, collection_name)
 
     assert mock_client.set_payload.call_count == 3
@@ -1484,8 +1482,6 @@ def test_vector_search_hybrid(mocker, client):
     mock_sparse_encoder.embed.return_value = {"indices": [1, 2], "values": [0.5, 0.6]}
     mock_sparse_encoder.model_short_name.return_value = "sparse-test-encoder"
 
-    from django.urls import reverse
-
     params = {
         "q": "test hybrid query",
         "hybrid_search": True,
@@ -1545,16 +1541,10 @@ def test_vector_search_group_by_offset_behavior(
     mocker.patch("vector_search.views._content_file_vector_hits", return_value=[])
 
     # Content files endpoint requires authentication
-    from django.contrib.auth.models import Group
-
-    from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
-
     user = django_user_model.objects.create()
     group, _ = Group.objects.get_or_create(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS)
     group.user_set.add(user)
     client.force_login(user)
-
-    from django.urls import reverse
 
     params = {"q": "test query", "offset": 15}
     if use_group_by:
