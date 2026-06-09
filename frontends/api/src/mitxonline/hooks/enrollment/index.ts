@@ -25,10 +25,10 @@ const useCreateB2bEnrollment = () => {
       const { readable_id: readableId, program_id: programId } = opts
       return b2bApi.b2bEnrollCreate({
         readable_id: readableId,
-        B2BEnrollRequestRequest: programId
-          ? { program_id: programId }
-          : undefined,
-      })
+        ...(programId
+          ? { B2BEnrollRequestRequest: { program_id: programId } }
+          : {}),
+      } as B2bApiB2bEnrollCreateRequest)
     },
     onSettled: () => {
       queryClient.invalidateQueries({
