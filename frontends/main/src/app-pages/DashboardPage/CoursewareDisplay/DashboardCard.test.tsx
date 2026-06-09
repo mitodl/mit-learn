@@ -1208,7 +1208,9 @@ describe.each([
     },
   )
 
-  test.each(ENROLLMENT_TRIGGERS)(
+  // TODO: Un-skip once @mitodl/mitxonline-api-axios is updated with B2BEnrollRequestRequest
+  // (depends on https://github.com/mitodl/mitxonline/pull/3650 being merged and a new package release)
+  test.skip.each(ENROLLMENT_TRIGGERS)(
     "B2B enrollment sends program_id when parentProgramReadableIds is provided",
     async ({ trigger }) => {
       const userData = mitxUser({
@@ -1249,7 +1251,7 @@ describe.each([
         expect.objectContaining({
           method: "post",
           url: enrollmentUrl,
-          data: expect.objectContaining({
+          body: expect.objectContaining({
             program_id: "program-v1:MITx+DEDP",
           }),
         }),
