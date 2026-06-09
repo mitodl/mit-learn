@@ -38,6 +38,7 @@ from vector_search.utils import (
     _resource_vector_hits,
     async_qdrant_aggregations,
     async_qdrant_client,
+    custom_score_formula,
     dense_encoder,
     qdrant_query_conditions,
     sparse_encoder,
@@ -177,17 +178,27 @@ class QdrantView(APIView):
             )
             prefetch_params = [
                 models.Prefetch(
-                    filter=search_filter,
-                    query=sparse_query,
-                    using=encoder_sparse.model_short_name(),
+                    prefetch=[
+                        models.Prefetch(
+                            filter=search_filter,
+                            query=sparse_query,
+                            using=encoder_sparse.model_short_name(),
+                            limit=prefetch_limit,
+                        ),
+                        models.Prefetch(
+                            filter=search_filter,
+                            query=dense_query,
+                            using=encoder_dense.model_short_name(),
+                            limit=prefetch_limit,
+                        ),
+                    ],
+                    query=models.FormulaQuery(
+                        formula=models.SumExpression(
+                            sum=["$score", *custom_score_formula(search_collection)]
+                        )
+                    ),
                     limit=prefetch_limit,
-                ),
-                models.Prefetch(
-                    filter=search_filter,
-                    query=dense_query,
-                    using=encoder_dense.model_short_name(),
-                    limit=prefetch_limit,
-                ),
+                )
             ]
             if order_by and "score_threshold" not in search_params:
                 # Nest: vector prefetches → fusion prefetch → order_by query

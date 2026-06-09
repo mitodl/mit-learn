@@ -1282,7 +1282,10 @@ def retrieve_points_matching_params(
             break
 
 
-def score_boost_expressions(collection_name):
+def custom_score_formula(collection_name):
+    """
+    Boost scores based on params defined in VECTOR_SEARCH_SCORE_BOOST
+    """
     score_params = VECTOR_SEARCH_SCORE_BOOST.get(collection_name)
     score_expressions = []
     if score_params:
