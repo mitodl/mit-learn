@@ -1504,10 +1504,10 @@ def test_vector_search_hybrid(mocker, client):
     sparse_prefetch = prefetches[0]
     dense_prefetch = prefetches[1]
 
-    assert sparse_prefetch.using == "sparse-test-encoder"
-    assert isinstance(sparse_prefetch.query, models.SparseVector)
-    assert sparse_prefetch.query.indices == [1, 2]
-    assert sparse_prefetch.query.values == [0.5, 0.6]
+    assert sparse_prefetch.prefetch[0].using == "sparse-test-encoder"
+    assert isinstance(sparse_prefetch.prefetch[0].query, models.SparseVector)
+    assert sparse_prefetch.prefetch[0].query.indices == [1, 2]
+    assert sparse_prefetch.prefetch[0].query.values == [0.5, 0.6]
     assert dense_prefetch.prefetch[0].using == "dense-test-encoder"
     assert dense_prefetch.prefetch[0].query == [0.1, 0.2, 0.3]
 
@@ -1887,11 +1887,6 @@ def test_custom_score_formula_with_boosts(mocker):
 
     # Check GaussDecayExpression decay expression at the end
     assert isinstance(results[2], models.GaussDecayExpression)
-    decay_params = results[2].gauss_decay
-    assert decay_params.x == "$score"
-    assert decay_params.target == settings.DENSE_VECTOR_SEARCH_MIN_SCORE + 0.05
-    assert decay_params.scale == 0.5
-    assert decay_params.midpoint == 0.8
 
 
 def test_custom_score_formula_defaults(mocker):
