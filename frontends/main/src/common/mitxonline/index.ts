@@ -304,7 +304,9 @@ export * from "./enrollmentAlert"
  * Returns the best run for a course.
  *
  * Prefers the run matching `next_run_id` among candidates; falls back to the
- * first candidate.
+ * candidate with the most recent start date (runs without a start date sort
+ * last). This ensures that when `next_run_id` is unset (e.g. non-enrollable
+ * capstone exams), the newest run is shown rather than an arbitrary one.
  *
  * @param opts.enrollableOnly - only consider runs where `is_enrollable` is true
  *   (use this on the dashboard where enrollment is the goal)
@@ -318,7 +320,18 @@ const getBestRun = (
   let runs = course.courseruns ?? []
   if (enrollableOnly) runs = runs.filter((run) => run.is_enrollable)
   if (contractId) runs = runs.filter((run) => run.b2b_contract === contractId)
-  return runs.find((run) => run.id === course.next_run_id) ?? runs[0]
+  const byStartDateDesc = [...runs].sort((a, b) => {
+    const aMs = a.start_date ? new Date(a.start_date).getTime() : null
+    const bMs = b.start_date ? new Date(b.start_date).getTime() : null
+    if (aMs !== null && bMs !== null) return bMs - aMs
+    if (aMs !== null) return -1
+    if (bMs !== null) return 1
+    return 0
+  })
+  return (
+    byStartDateDesc.find((run) => run.id === course.next_run_id) ??
+    byStartDateDesc[0]
+  )
 }
 
 const isVerifiedEnrollmentMode = (mode?: string | null) => {
