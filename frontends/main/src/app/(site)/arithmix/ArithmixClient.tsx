@@ -24,7 +24,7 @@ const ArithmixClient: React.FC = () => {
     return flagsLoaded ? notFound() : null
   }
 
-  return arithmixEnabled ? <Arithmix /> : null
+  return <Arithmix />
 }
 
 export default ArithmixClient
