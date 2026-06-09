@@ -2,8 +2,14 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { Stack, Tooltip, Typography, styled } from "ol-components"
-import { Button, VisuallyHidden } from "@mitodl/smoot-design"
-import { isValidEmail, parseCsvToEmails, parseEmails } from "ol-utilities"
+import { Alert, Button, VisuallyHidden } from "@mitodl/smoot-design"
+import {
+  isValidEmail,
+  extractEmailsFromCsvRows,
+  parseEmailsForSubmit,
+} from "ol-utilities"
+import Papa from "papaparse"
+import { AssignSeatsConfirmModal } from "./AssignSeatsConfirmModal"
 
 // Shared metrics — must be identical between EmailHighlightLayer and EmailTextarea
 // so the overlay and the real textarea render text in exactly the same position.
@@ -170,25 +176,28 @@ const tokenizeInput = (input: string, allCommitted: boolean) => {
   })
 }
 
-/**
- * Assign Seats form section.
- *
- * Email validation and CSV import are client-side only. The overlay technique
- * makes invalid emails appear in darkRed within the input while preserving
- * full textarea keyboard/screen-reader accessibility. The submit handler is a
- * placeholder pending backend write API availability.
- */
+type ModalData = {
+  validEmails: string[]
+  invalidEmails: string[]
+  duplicateCount: number
+}
+
 const AssignSeatsSection: React.FC = () => {
   const [emailInput, setEmailInput] = useState("")
   const [focused, setFocused] = useState(false)
-  const [csvError, setCsvError] = useState<string | null>(null)
+  const [csvReadError, setCsvReadError] = useState(false)
+  const [csvNoValid, setCsvNoValid] = useState(false)
+  const [modalData, setModalData] = useState<ModalData | null>(null)
   const [debouncedAnnouncement, setDebouncedAnnouncement] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const parsed = useMemo(() => parseEmails(emailInput), [emailInput])
-  const validCount = parsed.filter((e) => e.valid).length
-  const invalidCount = parsed.filter((e) => !e.valid).length
-  const hasEmails = parsed.length > 0
+  const submitResult = useMemo(
+    () => parseEmailsForSubmit(emailInput),
+    [emailInput],
+  )
+  const validCount = submitResult.valid.length
+  const invalidCount = submitResult.invalid.length
+  const hasEmails = emailInput.trim().length > 0
   const canSubmit = validCount > 0
 
   // Overlay is always visible when there is content. Tokens are colored as soon
@@ -212,19 +221,42 @@ const AssignSeatsSection: React.FC = () => {
   const handleCsvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setCsvError(null)
+    if (fileInputRef.current) fileInputRef.current.value = ""
+    setCsvReadError(false)
+    setCsvNoValid(false)
+    setModalData(null)
     const reader = new FileReader()
     reader.onload = (event) => {
       const text = event.target?.result as string
-      setEmailInput(parseCsvToEmails(text))
-      // Reset so the same file can be re-imported
-      e.target.value = ""
+      const { data } = Papa.parse<string[]>(text, { skipEmptyLines: true })
+      const { valid, invalid, duplicateCount } = extractEmailsFromCsvRows(data)
+      if (valid.length === 0) {
+        setCsvNoValid(true)
+        return
+      }
+      setModalData({
+        validEmails: valid,
+        invalidEmails: invalid,
+        duplicateCount,
+      })
     }
-    reader.onerror = () => {
-      setCsvError("Could not read the file. Please try again.")
-      e.target.value = ""
-    }
+    reader.onerror = () => setCsvReadError(true)
     reader.readAsText(file)
+  }
+
+  const handleAssignSeats = () => {
+    setModalData({
+      validEmails: submitResult.valid,
+      invalidEmails: submitResult.invalid,
+      duplicateCount: submitResult.duplicateCount,
+    })
+  }
+
+  const handleModalClose = () => setModalData(null)
+
+  const handleModalConfirm = () => {
+    // TODO: implement send when API is available
+    setModalData(null)
   }
 
   return (
@@ -257,11 +289,11 @@ const AssignSeatsSection: React.FC = () => {
               <EmailHighlightLayer aria-hidden="true">
                 {tokens.map((token, i) =>
                   token.valid === false ? (
-                    <InvalidEmailSegment key={i}>
+                    <InvalidEmailSegment key={`${i}-${token.text}`}>
                       {token.text}
                     </InvalidEmailSegment>
                   ) : (
-                    <span key={i}>{token.text}</span>
+                    <span key={`${i}-${token.text}`}>{token.text}</span>
                   ),
                 )}
               </EmailHighlightLayer>
@@ -289,9 +321,7 @@ const AssignSeatsSection: React.FC = () => {
           <Button
             variant="primary"
             disabled={!canSubmit}
-            onClick={() => {
-              // TODO: implement submit handler when API is available
-            }}
+            onClick={handleAssignSeats}
           >
             Assign Seats
           </Button>
@@ -322,17 +352,32 @@ const AssignSeatsSection: React.FC = () => {
         >
           import from CSV
         </ActiveLink>
-        {csvError && (
-          <MutedText role="alert" style={{ color: "inherit", width: "100%" }}>
-            {csvError}
-          </MutedText>
-        )}
         <Tooltip title="Coming soon">
           <DisabledLink role="button" aria-disabled="true" tabIndex={0}>
             (download sample CSV)
           </DisabledLink>
         </Tooltip>
       </Stack>
+      {csvReadError && (
+        <Alert severity="error" closable onClose={() => setCsvReadError(false)}>
+          Could not read the file. Please try again.
+        </Alert>
+      )}
+      {csvNoValid && (
+        <Alert severity="error" closable onClose={() => setCsvNoValid(false)}>
+          No valid email addresses found in this file.
+        </Alert>
+      )}
+      {modalData && (
+        <AssignSeatsConfirmModal
+          open
+          onClose={handleModalClose}
+          onConfirm={handleModalConfirm}
+          validCount={modalData.validEmails.length}
+          invalidEmails={modalData.invalidEmails}
+          duplicateCount={modalData.duplicateCount}
+        />
+      )}
     </SectionCard>
   )
 }

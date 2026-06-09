@@ -110,10 +110,63 @@ describe("AssignSeatsSection", () => {
     )
   })
 
-  test("importing a CSV file populates the email textarea", async () => {
+  test("clicking Assign Seats opens the confirm modal", async () => {
     renderWithTheme(<AssignSeatsSection />)
 
-    const csvContent = "email\nalice@example.com\nbob@example.com\nnotanemail"
+    const textarea = screen.getByPlaceholderText(/enter employee emails/i)
+    await user.type(textarea, "alice@example.com")
+    await user.click(screen.getByRole("button", { name: "Assign Seats" }))
+
+    expect(
+      await screen.findByRole("heading", { name: /email.*ready to assign/i }),
+    ).toBeInTheDocument()
+  })
+
+  test("modal shows invalid emails when textarea has mixed input", async () => {
+    renderWithTheme(<AssignSeatsSection />)
+
+    const textarea = screen.getByPlaceholderText(/enter employee emails/i)
+    await user.click(textarea)
+    await user.paste("alice@example.com\nbadtoken")
+    await user.click(screen.getByRole("button", { name: "Assign Seats" }))
+
+    expect(await screen.findByText("badtoken")).toBeInTheDocument()
+  })
+
+  test("modal shows duplicate count when textarea has repeated emails", async () => {
+    renderWithTheme(<AssignSeatsSection />)
+
+    const textarea = screen.getByPlaceholderText(/enter employee emails/i)
+    await user.click(textarea)
+    await user.paste("alice@example.com\nalice@example.com\nbob@example.com")
+    await user.click(screen.getByRole("button", { name: "Assign Seats" }))
+
+    expect(await screen.findByText(/1 duplicate.*removed/i)).toBeInTheDocument()
+  })
+
+  test("closing the modal hides it", async () => {
+    renderWithTheme(<AssignSeatsSection />)
+
+    const textarea = screen.getByPlaceholderText(/enter employee emails/i)
+    await user.type(textarea, "alice@example.com")
+    await user.click(screen.getByRole("button", { name: "Assign Seats" }))
+    await screen.findByRole("heading", { name: /email.*ready to assign/i })
+
+    await user.click(screen.getByRole("button", { name: /cancel/i }))
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("heading", { name: /email.*ready to assign/i }),
+      ).not.toBeInTheDocument(),
+    )
+  })
+
+  // CSV import tests
+
+  test("importing a valid CSV opens the modal without populating the textarea", async () => {
+    renderWithTheme(<AssignSeatsSection />)
+
+    const csvContent = "email\nalice@example.com\nbob@example.com"
     const file = new File([csvContent], "emails.csv", { type: "text/csv" })
 
     const fileInput = document.querySelector(
@@ -121,9 +174,60 @@ describe("AssignSeatsSection", () => {
     ) as HTMLInputElement
     await user.upload(fileInput, file)
 
-    // FileReader.onload is async — wait for state update
-    expect(await screen.findByText("2 valid")).toBeInTheDocument()
-    expect(screen.queryByText(/invalid/i)).not.toBeInTheDocument()
+    expect(
+      await screen.findByRole("heading", { name: /2 emails ready to assign/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/enter employee emails/i)).toHaveValue(
+      "",
+    )
+  })
+
+  test("importing a CSV with invalid emails shows them in the modal", async () => {
+    renderWithTheme(<AssignSeatsSection />)
+
+    const csvContent = "alice@example.com\nbad@\nnot-quite@.com"
+    const file = new File([csvContent], "emails.csv", { type: "text/csv" })
+
+    const fileInput = document.querySelector(
+      "input[type='file']",
+    ) as HTMLInputElement
+    await user.upload(fileInput, file)
+
+    expect(await screen.findByText("bad@")).toBeInTheDocument()
+    expect(screen.getByText("not-quite@.com")).toBeInTheDocument()
+  })
+
+  test("importing a CSV with duplicates shows duplicate count in modal", async () => {
+    renderWithTheme(<AssignSeatsSection />)
+
+    const csvContent = "alice@example.com\nbob@example.com\nalice@example.com"
+    const file = new File([csvContent], "emails.csv", { type: "text/csv" })
+
+    const fileInput = document.querySelector(
+      "input[type='file']",
+    ) as HTMLInputElement
+    await user.upload(fileInput, file)
+
+    expect(await screen.findByText(/1 duplicate.*removed/i)).toBeInTheDocument()
+  })
+
+  test("importing a CSV with no valid emails shows inline error", async () => {
+    renderWithTheme(<AssignSeatsSection />)
+
+    const csvContent = "Email\nNot An Email\nbad@"
+    const file = new File([csvContent], "emails.csv", { type: "text/csv" })
+
+    const fileInput = document.querySelector(
+      "input[type='file']",
+    ) as HTMLInputElement
+    await user.upload(fileInput, file)
+
+    expect(
+      await screen.findByText(/no valid email addresses found in this file/i),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("heading", { name: /ready to assign/i }),
+    ).not.toBeInTheDocument()
   })
 
   test("accepts newline-separated emails", async () => {
