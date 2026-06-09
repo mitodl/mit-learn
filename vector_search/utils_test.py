@@ -62,6 +62,7 @@ from vector_search.utils import (
     async_qdrant_aggregations,
     compute_optimizer_settings,
     create_qdrant_collections,
+    custom_score_formula,
     embed_learning_resources,
     embed_topics,
     filter_existing_qdrant_points,
@@ -1826,3 +1827,86 @@ def test_async_qdrant_aggregations_uses_content_file_param_map(mocker):
     assert call_kwargs["collection_name"] == CONTENT_FILES_COLLECTION_NAME
     # The Qdrant field for 'file_extension' should come from the content-file map
     assert call_kwargs["key"] == QDRANT_CONTENT_FILE_PARAM_MAP["file_extension"]
+
+
+def test_custom_score_formula_empty(mocker):
+    """
+    If there are no score_params for the collection in VECTOR_SEARCH_SCORE_BOOST,
+    custom_score_formula must return an empty list.
+    """
+
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+    assert custom_score_formula("non_existent_collection") == []
+
+
+def test_custom_score_formula_with_boosts(mocker):
+    """
+    custom_score_formula must boost scores based on VECTOR_SEARCH_SCORE_BOOST
+    and append a GaussDecayExpression at the end.
+    """
+
+    mock_boosts = {
+        "test_collection": [
+            {"boost": 0.5, "params": {"resource_type": ["course"]}},
+            {"boost": 0.2, "params": {"offered_by": ["ocw"]}},
+        ]
+    }
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", mock_boosts)
+
+    results = custom_score_formula("test_collection")
+
+    # We expect 3 expressions: 2 MultExpressions and 1 GaussDecayExpression
+    assert len(results) == 3
+
+    # Check first boost expression
+    assert isinstance(results[0], models.MultExpression)
+    assert results[0].mult[0] == 0.5
+    # The second element in mult should be the Filter for resource_type=course
+    filter_1 = results[0].mult[1]
+    assert isinstance(filter_1, models.Filter)
+    assert any(
+        isinstance(c, models.FieldCondition)
+        and c.key == "resource_type"
+        and isinstance(c.match, models.MatchAny)
+        and c.match.any == ["course"]
+        for c in filter_1.must
+    )
+
+    # Check second boost expression
+    assert isinstance(results[1], models.MultExpression)
+    assert results[1].mult[0] == 0.2
+    filter_2 = results[1].mult[1]
+    assert isinstance(filter_2, models.Filter)
+    assert any(
+        isinstance(c, models.FieldCondition)
+        and c.key == "offered_by.code"
+        and isinstance(c.match, models.MatchAny)
+        and c.match.any == ["ocw"]
+        for c in filter_2.must
+    )
+
+    # Check GaussDecayExpression decay expression at the end
+    assert isinstance(results[2], models.GaussDecayExpression)
+    decay_params = results[2].gauss_decay
+    assert decay_params.x == "$score"
+    assert decay_params.target == settings.DENSE_VECTOR_SEARCH_MIN_SCORE + 0.05
+    assert decay_params.scale == 0.5
+    assert decay_params.midpoint == 0.8
+
+
+def test_custom_score_formula_defaults(mocker):
+    """
+    If the boost key is missing, custom_score_formula should default the boost amount to 0.
+    """
+
+    mock_boosts = {"test_collection": [{"params": {"resource_type": ["course"]}}]}
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", mock_boosts)
+
+    results = custom_score_formula("test_collection")
+    assert len(results) == 2
+
+    assert isinstance(results[0], models.MultExpression)
+    assert results[0].mult[0] == 0
+    assert isinstance(results[0].mult[1], models.Filter)
+
+    assert isinstance(results[1], models.GaussDecayExpression)
