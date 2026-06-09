@@ -23,9 +23,6 @@ const useCreateB2bEnrollment = () => {
   return useMutation({
     mutationFn: (opts: B2bEnrollCreateRequest) => {
       const { readable_id: readableId, program_id: programId } = opts
-      // TODO: Remove @ts-expect-error once https://github.com/mitodl/mitxonline/pull/3650 is merged
-      // and @mitodl/mitxonline-api-axios is updated with the B2BEnrollRequestRequest type.
-      // @ts-expect-error B2BEnrollRequestRequest will exist after @mitodl/mitxonline-api-axios is updated
       return b2bApi.b2bEnrollCreate({
         readable_id: readableId,
         B2BEnrollRequestRequest: programId
