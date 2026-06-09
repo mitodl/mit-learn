@@ -1,9 +1,8 @@
 import React from "react"
 import { Skeleton, Stack, Typography, styled, theme } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
-import { DashboardType, ResourceType, getKey } from "./model/dashboardViewModel"
+import { ResourceType, getKey } from "./model/dashboardViewModel"
 import { CoursewareCard } from "./CoursewareCard"
-import { DashboardCard } from "./DashboardCard"
 import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import { RiAwardFill } from "@remixicon/react"
@@ -14,8 +13,7 @@ const CourseEntryCardStyled = styled(CoursewareCard)({
   boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
 })
 
-// Program-enrollment arm still uses DashboardCard directly (Phase 7b migration).
-const ProgramEnrollmentCard = styled(DashboardCard)({
+const ProgramEnrollmentCard = styled(CoursewareCard)({
   borderRadius: "8px",
   boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
 })
@@ -158,10 +156,8 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                       resourceType: ResourceType.Program,
                       id: item.enrollment.program.id,
                     })}
-                    resource={{
-                      type: DashboardType.ProgramEnrollment,
-                      data: item.enrollment,
-                    }}
+                    variant="program"
+                    programEnrollment={item.enrollment}
                     showNotComplete={false}
                   />
                 )

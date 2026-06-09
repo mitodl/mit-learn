@@ -14,9 +14,13 @@
 import React from "react"
 import type { SimpleMenuItem } from "ol-components"
 import { adaptCourseEntryToLegacyDashboardCardProps } from "./model/dashboardAdapters"
-import type { DashboardCourseEntry } from "./model/dashboardViewModel"
+import {
+  DashboardType,
+  type DashboardCourseEntry,
+} from "./model/dashboardViewModel"
 import { DashboardCard } from "./DashboardCard"
 import { DashboardCard as ModuleCardInner } from "./ModuleCard"
+import { V3UserProgramEnrollment } from "@mitodl/mitxonline-api-axios/v2"
 
 // Re-export the card root so OrganizationCards.tsx can migrate in Phase 7c.
 export { DashboardCardRoot as CoursewareCardRoot } from "./DashboardCard"
@@ -25,8 +29,7 @@ export { DashboardCardRoot as CoursewareCardRoot } from "./DashboardCard"
 // Prop types
 // ---------------------------------------------------------------------------
 
-type CoursewareCardBaseProps = {
-  entry: DashboardCourseEntry
+type StyledComponentBaseProps = {
   className?: string
   Component?: React.ElementType
 }
@@ -54,17 +57,39 @@ type CoursewareCardModuleRowProps = CoursewareCardBaseProps & {
   headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
 }
 
+/** Props for program card display. */
+type CoursewareCardProgramProps = StyledComponentBaseProps & {
+  variant: "program"
+  programEnrollment: V3UserProgramEnrollment
+  showNotComplete?: boolean
+}
+
 export type CoursewareCardProps =
   | CoursewareCardDefaultProps
   | CoursewareCardModuleRowProps
-
+  | CoursewareCardProgramProps
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
-  const { entry, Component, className } = props
+  // ── program arm ──────────────────────────────────────────────────────────
+  if (props.variant === "program") {
+    const { programEnrollment, Component, className } = props
+    return (
+      <DashboardCard
+        resource={{
+          type: DashboardType.ProgramEnrollment,
+          data: programEnrollment,
+        }}
+        showNotComplete={props.showNotComplete}
+        Component={Component}
+        className={className}
+      />
+    )
+  }
 
+  const { entry, Component, className } = props
   // ── moduleRow arm ────────────────────────────────────────────────────────
   if (props.layout === "moduleRow") {
     const { headingLevel } = props
