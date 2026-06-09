@@ -315,6 +315,7 @@ const AssignSeatsSection: React.FC = () => {
           onClick={() => fileInputRef.current?.click()}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault()
               fileInputRef.current?.click()
             }
           }}
