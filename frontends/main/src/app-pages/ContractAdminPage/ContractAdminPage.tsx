@@ -255,11 +255,10 @@ const StatusBadge = styled(Chip, {
 })<{ $status: "assigned" | "redeemed" }>(({ $status, theme }) => ({
   height: "20px",
   borderRadius: "4px",
+  paddingRight: "8px",
+  paddingLeft: "8px",
   ...theme.typography.body3,
   fontWeight: theme.typography.fontWeightBold as number,
-  "& .MuiChip-label": {
-    padding: "0 8px",
-  },
   // alpha() matches Figma spec which uses opacity on base colors
   ...($status === "redeemed" && {
     backgroundColor: alpha(theme.custom.colors.green, 0.2),
@@ -305,6 +304,7 @@ const EmptyTableMessage = styled(Typography)(({ theme }) => ({
 const STUB = "—"
 
 type StatusFilter = "all" | "pending" | "redeemed"
+
 
 const COLUMN_FLEX = {
   assignedTo: 2,
@@ -412,15 +412,18 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const tabFilteredCodes = visibleCodes.filter((code) => {
     return (
       statusFilter === "all" ||
-      (statusFilter === "redeemed" && code.redemption_status === "redeemed") ||
+      (statusFilter === "redeemed" &&
+        code.redemption_status === "redeemed") ||
       (statusFilter === "pending" && code.redemption_status === "assigned")
     )
   })
 
   const filteredCodes = tabFilteredCodes.filter((code) => {
-    const email = code.assigned_to ?? ""
+    if (!searchQuery) return true
+    const q = searchQuery.toLowerCase()
     return (
-      !searchQuery || email.toLowerCase().includes(searchQuery.toLowerCase())
+      (code.assigned_to ?? "").toLowerCase().includes(q) ||
+      (code.assigned_name ?? "").toLowerCase().includes(q)
     )
   })
 
@@ -525,7 +528,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                 </TabButtonList>
               </TabContext>
               <StyledSearchInput
-                placeholder="Search by email..."
+                placeholder="Search by name or email..."
                 value={searchQuery}
                 size="medium"
                 onChange={handleSearchChange}
@@ -644,9 +647,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                       <TableCell role="cell" $flex={COLUMN_FLEX.status}>
                         <MobileLabel>Status</MobileLabel>
                         <StatusBadge
-                          $status={
-                            code.redemption_status as "assigned" | "redeemed"
-                          }
+                          $status={code.redemption_status as "assigned" | "redeemed"}
                           label={
                             code.redemption_status === "redeemed"
                               ? "Redeemed"

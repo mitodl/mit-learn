@@ -14,6 +14,7 @@ type ContractCode = {
   redemption_status: "unassigned" | "assigned" | "redeemed"
   assigned_to: string | null
   assigned_on: string | null
+  assigned_name: string | null
   redeemed_by: string | null
   redeemed_on: string | null
   last_sent: string | null

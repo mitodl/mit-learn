@@ -29,6 +29,7 @@ const contractCode = (overrides: Partial<ContractCode> = {}): ContractCode => ({
   redemption_status: "assigned",
   assigned_to: faker.internet.email(),
   assigned_on: faker.date.past().toISOString(),
+  assigned_name: faker.person.fullName(),
   redeemed_by: null,
   redeemed_on: null,
   last_sent: null,
