@@ -30,6 +30,7 @@ import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { useRouter } from "next-nprogress-bar"
 import { useQuery } from "@tanstack/react-query"
 import { productQueries } from "api/mitxonline-hooks/products"
+import { trackCourseEnrolled } from "@/common/analytics/gtm"
 
 interface CourseEnrollmentDialogProps {
   course: CourseWithCourseRunsSerializerV2
@@ -343,6 +344,7 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
           },
           {
             onSuccess: () => {
+              trackCourseEnrolled(course.title)
               if (onCourseEnroll) {
                 onCourseEnroll(run)
               } else {

@@ -44,6 +44,7 @@ import {
 } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
+import { trackCourseEnrolled } from "@/common/analytics/gtm"
 import {
   CourseWithCourseRunsSerializerV2,
   CourseRunEnrollmentV3,
@@ -417,6 +418,7 @@ const useEnrollmentHandler = () => {
             { run_id: enrollmentAction.run.id },
             {
               onSuccess: () => {
+                trackCourseEnrolled(course.title)
                 const destination =
                   selectedCoursewareUrl ??
                   enrollmentAction.run.courseware_url ??
