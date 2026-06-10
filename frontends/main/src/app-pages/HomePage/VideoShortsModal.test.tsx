@@ -356,38 +356,7 @@ describe("VideoShortsModal", () => {
     afterEach(() => {
       delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
     })
-    test("captures VideoShortViewed without timeOnVideoMs for the initial slide", async () => {
-      const videoData = [
-        makeVideoResource({ title: "First Video" }),
-        makeVideoResource({ title: "Second Video" }),
-      ]
-
-      renderWithProviders(
-        <VideoShortsModal
-          startIndex={0}
-          videoData={videoData}
-          onClose={jest.fn()}
-        />,
-      )
-
-      act(() => {
-        triggerSlidesInView([0])
-      })
-
-      const call = mockedPostHogCapture.mock.calls.find(
-        ([event]) => event === "video_short_viewed",
-      )
-      expect(call?.[1]).toMatchObject({
-        videoId: videoData[0].id,
-        videoTitle: "First Video",
-        position: 0,
-      })
-      expect(call?.[1]).not.toHaveProperty("timeOnVideoMs")
-      expect(call?.[1]).not.toHaveProperty("videoDurationMs")
-      expect(call?.[1]).not.toHaveProperty("percentageWatched")
-    })
-
-    test("captures VideoShortViewed with timeOnVideoMs and videoDurationMs on subsequent slides", async () => {
+    test("captures VideoShortViewed with timeOnPrevVideoMs on every scroll", async () => {
       const videoData = [
         makeVideoResource({ title: "First Video" }),
         makeVideoResource({
@@ -410,10 +379,6 @@ describe("VideoShortsModal", () => {
         />,
       )
 
-      act(() => {
-        triggerSlidesInView([0])
-      })
-
       // Simulate player ready with a valid duration for slide 0
       await act(async () => {
         mockHandles[0]?.triggerReady()
@@ -424,18 +389,19 @@ describe("VideoShortsModal", () => {
         triggerSlidesInView([1])
       })
 
-      const calls = mockedPostHogCapture.mock.calls.filter(
+      const call = mockedPostHogCapture.mock.calls.find(
         ([event]) => event === "video_short_viewed",
       )
-      const secondCall = calls[1]
-      expect(secondCall?.[1]).toMatchObject({
+      expect(call?.[1]).toMatchObject({
         videoId: videoData[1].id,
         videoTitle: "Second Video",
         position: 0,
       })
-      expect(secondCall?.[1]).toHaveProperty("timeOnVideoMs")
-      expect(secondCall?.[1].videoDurationMs).toBe(30000)
-      expect(secondCall?.[1]).not.toHaveProperty("percentageWatched")
+      expect(call?.[1]).toHaveProperty("timeOnPrevVideoMs")
+      expect(call?.[1].prevVideoDurationMs).toBe(30000)
+      expect(call?.[1]).not.toHaveProperty("percentageWatched")
+      expect(call?.[1]).not.toHaveProperty("timeOnVideoMs")
+      expect(call?.[1]).not.toHaveProperty("videoDurationMs")
     })
 
     test("totalVideosViewed is 1 when closing without scrolling", async () => {

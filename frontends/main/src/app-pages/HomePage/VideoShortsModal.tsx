@@ -257,7 +257,6 @@ const VideoShortsModal = ({
   const muteButtonRef = useRef<HTMLButtonElement>(null)
   const sessionStartedAtRef = useRef<number>(Date.now())
   const currentVideoStartedAtRef = useRef<number>(Date.now())
-  const isInitialSlideRef = useRef<boolean>(true)
   const sessionPositionRef = useRef<number>(0)
   const viewedIndicesRef = useRef<Set<number>>(new Set([startIndex]))
   const selectedIndexRef = useRef<number | null>(startIndex)
@@ -325,16 +324,14 @@ const VideoShortsModal = ({
       setAnnouncement(
         `${inView[0] + 1} of ${videoData.length}: ${videoData[inView[0]].title}`,
       )
-      const isInitial = isInitialSlideRef.current
-
       const prevIndex = selectedIndexRef.current
       const prevPlayer =
         prevIndex !== null ? playersRef.current[prevIndex] : null
-      let videoDurationMs: number | undefined
-      if (!isInitial && prevPlayer) {
+      let prevVideoDurationMs: number | undefined
+      if (prevPlayer) {
         const duration = prevPlayer.duration()
         if (duration && isFinite(duration) && duration > 0) {
-          videoDurationMs = Math.round(duration * 1000)
+          prevVideoDurationMs = Math.round(duration * 1000)
         }
       }
 
@@ -343,14 +340,9 @@ const VideoShortsModal = ({
         videoTitle: videoData[inView[0]].title,
         position: sessionPositionRef.current,
         totalVideos: videoData.length,
-        ...(isInitial
-          ? {}
-          : {
-              timeOnVideoMs: Date.now() - currentVideoStartedAtRef.current,
-              ...(videoDurationMs !== undefined ? { videoDurationMs } : {}),
-            }),
+        timeOnPrevVideoMs: Date.now() - currentVideoStartedAtRef.current,
+        ...(prevVideoDurationMs !== undefined ? { prevVideoDurationMs } : {}),
       })
-      isInitialSlideRef.current = false
       if (!viewedIndicesRef.current.has(inView[0])) {
         viewedIndicesRef.current.add(inView[0])
         sessionPositionRef.current += 1
