@@ -106,7 +106,7 @@ const StyledNodeViewContent = styled(NodeViewContent)(({ theme }) => ({
   },
   ".is-empty:not(.with-slash)[data-placeholder]:has(> .ProseMirror-trailingBreak:only-child)::before":
     {
-      color: theme.custom.colors.silverGrayLight,
+      color: theme.custom.colors.darkGray2,
       opacity: 0.4,
     },
   '[contenteditable="true"] &': {
