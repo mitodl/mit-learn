@@ -70,6 +70,7 @@ type DialogProps = {
   disabled?: boolean
   scroll?: MuiDialogProps["scroll"]
   TransitionProps?: NonNullable<MuiDialogProps["slotProps"]>["transition"]
+  "aria-describedby"?: string
 }
 
 /**
@@ -99,6 +100,7 @@ const Dialog: React.FC<DialogProps> = ({
   disabled = false,
   scroll,
   TransitionProps,
+  "aria-describedby": ariaDescribedBy,
 }) => {
   const [confirming, setConfirming] = useState(isSubmitting)
   const titleId = useId()
@@ -127,6 +129,7 @@ const Dialog: React.FC<DialogProps> = ({
         transition: TransitionProps,
       }}
       aria-labelledby={titleId}
+      aria-describedby={ariaDescribedBy}
       transitionDuration={process.env.NODE_ENV === "test" ? 0 : undefined}
       maxWidth={maxWidth}
       scroll={scroll}

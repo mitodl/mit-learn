@@ -190,6 +190,7 @@ const AssignSeatsSection: React.FC = () => {
   const [csvNoValid, setCsvNoValid] = useState(false)
   const [modalData, setModalData] = useState<ModalData | null>(null)
   const [debouncedAnnouncement, setDebouncedAnnouncement] = useState("")
+  const [errorAnnouncement, setErrorAnnouncement] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const submitResult = useMemo(
@@ -219,6 +220,16 @@ const AssignSeatsSection: React.FC = () => {
     return () => clearTimeout(id)
   }, [announcement])
 
+  useEffect(() => {
+    if (csvReadError) {
+      setErrorAnnouncement("Could not read the file. Please try again.")
+    } else if (csvNoValid) {
+      setErrorAnnouncement("No valid email addresses found in this file.")
+    } else {
+      setErrorAnnouncement("")
+    }
+  }, [csvReadError, csvNoValid])
+
   const handleCsvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -229,18 +240,15 @@ const AssignSeatsSection: React.FC = () => {
     const reader = new FileReader()
     reader.onload = (event) => {
       const text = event.target?.result as string
-      const { data, errors } = Papa.parse<string[]>(text, {
+      const { data } = Papa.parse<string[]>(text, {
         skipEmptyLines: true,
       })
-      if (errors.length > 0) {
-        setCsvReadError(true)
-        return
-      }
       const { valid, invalid, duplicateCount } = extractEmailsFromCsvRows(data)
       if (valid.length === 0) {
         setCsvNoValid(true)
         return
       }
+      setEmailInput("")
       setModalData({
         validEmails: valid,
         invalidEmails: invalid,
@@ -278,6 +286,10 @@ const AssignSeatsSection: React.FC = () => {
       {/* Always-mounted live region — debounced so screen readers aren't spammed on every keystroke */}
       <VisuallyHidden aria-live="polite" aria-atomic="true">
         {debouncedAnnouncement}
+      </VisuallyHidden>
+      {/* Always-mounted so NVDA reliably announces dynamically injected errors */}
+      <VisuallyHidden aria-live="assertive" aria-atomic="true">
+        {errorAnnouncement}
       </VisuallyHidden>
       <Stack
         direction={{ xs: "column", sm: "row" }}

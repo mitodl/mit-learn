@@ -1,7 +1,8 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useId, useState } from "react"
 import { Dialog, Stack, Typography, styled } from "ol-components"
+import { VisuallyHidden } from "@mitodl/smoot-design"
 import { pluralize } from "ol-utilities"
 
 const SHOW_MORE_THRESHOLD = 10
@@ -76,8 +77,12 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   invalidEmails,
   duplicateCount,
 }) => {
+  const descriptionId = useId()
   const hasIssues = invalidEmails.length > 0 || duplicateCount > 0
   const confirmText = `Send ${validCount} ${pluralize("email", validCount)}`
+  const descriptionText = hasIssues
+    ? `${validCount} ${pluralize("email", validCount)} imported and ready to assign.${duplicateCount > 0 ? ` ${duplicateCount} ${pluralize("duplicate", duplicateCount)} removed — only 1 instance kept per address.` : ""}`
+    : `Are you sure you want to send invitations to ${validCount} ${pluralize("recipient", validCount)}?`
 
   return (
     <Dialog
@@ -89,7 +94,9 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
       cancelText="Cancel"
       fullWidth
       maxWidth="sm"
+      aria-describedby={descriptionId}
     >
+      <VisuallyHidden id={descriptionId}>{descriptionText}</VisuallyHidden>
       <Stack gap="16px">
         <Typography variant="body1">
           {hasIssues

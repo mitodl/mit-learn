@@ -2,12 +2,51 @@ import React from "react"
 import { renderWithTheme, screen, user, waitFor } from "@/test-utils"
 import { AssignSeatsSection } from "./AssignSeatsSection"
 
-// MUI Tooltip injects aria-label="Coming soon" onto the wrapped disabled spans,
-// so their accessible name becomes "Coming soon" rather than their visible text.
-// Use getAllByRole(..., { name: "Coming soon" }) to target them, and getByText
-// for asserting visible text content separately.
+// jsdom's File/Blob has no .text() or .arrayBuffer(), so FileReader.readAsText
+// always fires onerror. Tests set mockFileContent before each upload so the mock
+// can return the expected text.
+let mockFileContent: string | null = null
 
 describe("AssignSeatsSection", () => {
+  let originalFileReader: typeof FileReader
+
+  beforeAll(() => {
+    originalFileReader = window.FileReader
+
+    class FileReaderMock {
+      result: string | null = null
+      onload: ((e: { target: FileReaderMock }) => void) | null = null
+      onerror: (() => void) | null = null
+
+      readAsText(_file: File): void {
+        const content = mockFileContent
+        mockFileContent = null
+        if (content !== null) {
+          Promise.resolve().then(() => {
+            this.result = content
+            this.onload?.({ target: this })
+          })
+        } else {
+          Promise.resolve().then(() => this.onerror?.())
+        }
+      }
+    }
+
+    Object.defineProperty(window, "FileReader", {
+      value: FileReaderMock,
+      writable: true,
+      configurable: true,
+    })
+  })
+
+  afterAll(() => {
+    Object.defineProperty(window, "FileReader", {
+      value: originalFileReader,
+      writable: true,
+      configurable: true,
+    })
+  })
+
   test("renders section title and key UI elements", () => {
     renderWithTheme(<AssignSeatsSection />)
 
@@ -145,7 +184,9 @@ describe("AssignSeatsSection", () => {
     await user.paste("alice@example.com\nalice@example.com\nbob@example.com")
     await user.click(screen.getByRole("button", { name: "Assign Seats" }))
 
-    expect(await screen.findByText(/1 duplicate.*removed/i)).toBeInTheDocument()
+    expect(await screen.findByRole("dialog")).toHaveTextContent(
+      /1 duplicate.*removed/i,
+    )
   })
 
   test("closing the modal hides it", async () => {
@@ -171,6 +212,7 @@ describe("AssignSeatsSection", () => {
     renderWithTheme(<AssignSeatsSection />)
 
     const csvContent = "email\nalice@example.com\nbob@example.com"
+    mockFileContent = csvContent
     const file = new File([csvContent], "emails.csv", { type: "text/csv" })
 
     const fileInput = document.querySelector(
@@ -190,6 +232,7 @@ describe("AssignSeatsSection", () => {
     renderWithTheme(<AssignSeatsSection />)
 
     const csvContent = "alice@example.com\nbad@\nnot-quite@.com"
+    mockFileContent = csvContent
     const file = new File([csvContent], "emails.csv", { type: "text/csv" })
 
     const fileInput = document.querySelector(
@@ -205,6 +248,7 @@ describe("AssignSeatsSection", () => {
     renderWithTheme(<AssignSeatsSection />)
 
     const csvContent = "alice@example.com\nbob@example.com\nalice@example.com"
+    mockFileContent = csvContent
     const file = new File([csvContent], "emails.csv", { type: "text/csv" })
 
     const fileInput = document.querySelector(
@@ -212,13 +256,16 @@ describe("AssignSeatsSection", () => {
     ) as HTMLInputElement
     await user.upload(fileInput, file)
 
-    expect(await screen.findByText(/1 duplicate.*removed/i)).toBeInTheDocument()
+    expect(await screen.findByRole("dialog")).toHaveTextContent(
+      /1 duplicate.*removed/i,
+    )
   })
 
   test("importing a CSV with no valid emails shows inline error", async () => {
     renderWithTheme(<AssignSeatsSection />)
 
     const csvContent = "Email\nNot An Email\nbad@"
+    mockFileContent = csvContent
     const file = new File([csvContent], "emails.csv", { type: "text/csv" })
 
     const fileInput = document.querySelector(
@@ -227,8 +274,8 @@ describe("AssignSeatsSection", () => {
     await user.upload(fileInput, file)
 
     expect(
-      await screen.findByText(/no valid email addresses found in this file/i),
-    ).toBeInTheDocument()
+      await screen.findByRole("alert"),
+    ).toHaveTextContent(/no valid email addresses found in this file/i)
     expect(
       screen.queryByRole("heading", { name: /ready to assign/i }),
     ).not.toBeInTheDocument()
