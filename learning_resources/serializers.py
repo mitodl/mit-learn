@@ -513,10 +513,43 @@ class VideoPlaylistSerializer(serializers.ModelSerializer):
 
     video_count = serializers.IntegerField()
 
+    parent_learning_resource_id = serializers.IntegerField(
+        read_only=True, allow_null=True
+    )
+
+    parent_title = serializers.SerializerMethodField()
+
+    parent_url = serializers.SerializerMethodField()
+
+    parent_course_numbers = serializers.SerializerMethodField()
+
+    @extend_schema_field({"type": "string"})
+    def get_parent_title(self, instance) -> str | None:
+        """Return the title of the parent learning resource, if any"""
+        parent = instance.parent_learning_resource
+        return parent.title if parent else None
+
+    def get_parent_course_numbers(self, instance) -> list[str]:
+        """Extract the course number(s) from the parent course, if any"""
+        parent = instance.parent_learning_resource
+        if parent and hasattr(parent, LearningResourceType.course.name):
+            return [coursenum["value"] for coursenum in parent.course.course_numbers]
+        return []
+
+    @extend_schema_field({"type": "string"})
+    def get_parent_url(self, instance) -> str | None:
+        """Return the URL of the parent learning resource, if any"""
+        parent = instance.parent_learning_resource
+        return parent.url if parent else None
+
     class Meta:
         model = models.VideoPlaylist
         include = ("video_count",)
-        exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
+        exclude = (
+            "learning_resource",
+            "parent_learning_resource",
+            *COMMON_IGNORED_FIELDS,
+        )
 
 
 class MicroLearningPathRelationshipSerializer(serializers.ModelSerializer):

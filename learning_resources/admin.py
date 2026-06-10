@@ -167,9 +167,19 @@ class VideoPlaylistInline(TabularInline):
     """Inline VideoPlaylist objects"""
 
     model = models.VideoPlaylist
+    fk_name = "learning_resource"
     extra = 0
     show_change_link = True
     fields = ("channel",)
+
+
+class VideoChannelPlaylistInline(TabularInline):
+    """Inline VideoPlaylist objects for a VideoChannel"""
+
+    model = models.VideoPlaylist
+    fk_name = "channel"
+    extra = 0
+    show_change_link = True
 
 
 class ProgramInline(TabularInline):
@@ -242,7 +252,7 @@ class VideoChannelAdmin(admin.ModelAdmin):
     list_display = ("title", "channel_id", "published")
     search_fields = ("title", "channel_id")
     list_filter = ("published",)
-    inlines = (VideoPlaylistInline,)
+    inlines = (VideoChannelPlaylistInline,)
 
 
 class ContentSummarizerConfigurationAdmin(admin.ModelAdmin):
