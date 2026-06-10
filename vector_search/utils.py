@@ -1302,8 +1302,8 @@ def custom_score_formula(collection_name):
                         amount,
                         conditions,
                         # add a decay based on score to normalize
-                        models.ExpDecayExpression(
-                            exp_decay=models.DecayParamsExpression(
+                        models.GaussDecayExpression(
+                            gauss_decay=models.DecayParamsExpression(
                                 x="$score",  # decay over the relevance score itself
                                 target=1.0,  # cosine "perfect match" — full boost
                                 scale=0.2,

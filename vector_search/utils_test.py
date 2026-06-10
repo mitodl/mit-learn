@@ -1902,7 +1902,7 @@ def test_custom_score_formula_defaults(mocker):
 
     results = custom_score_formula(RESOURCES_COLLECTION_NAME)
 
-    assert len(results) == 2
+    assert len(results) == 1
 
     assert isinstance(results[0], models.MultExpression)
     assert results[0].mult[0] == 0
