@@ -6,6 +6,7 @@ import type { WebsiteContent } from "../../generated/v1"
 const websiteContent: Factory<WebsiteContent> = (overrides = {}) => ({
   id: faker.number.int(),
   title: faker.lorem.sentence(),
+  cover_image: faker.image.url(),
   content: {
     type: "doc",
     content: [

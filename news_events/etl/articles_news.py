@@ -20,6 +20,7 @@ def extract_single_website_content(article: WebsiteContent) -> dict:
         "title": article.title,
         "slug": article.slug,
         "content": article.content,
+        "cover_image": article.cover_image,
         "user": article.user,
         "created_on": article.created_on,
         "updated_on": article.updated_on,
@@ -83,6 +84,7 @@ def extract() -> list[dict]:
             "title": article.title,
             "slug": article.slug,
             "content": article.content,
+            "cover_image": article.cover_image,
             "user": article.user,
             "created_on": article.created_on,
             "updated_on": article.updated_on,
@@ -114,10 +116,13 @@ def transform_items(articles_data: list[dict]) -> list[dict]:
         # Convert JSON content to plain text for full content
         content_text = extract_text_from_content(content_json)
 
-        # Extract first image from content
-        image_data = extract_image_from_content(content_json)
+        cover_image_url = article.get("cover_image", "")
+        image_data = (
+            {"url": cover_image_url, "alt": "", "description": ""}
+            if cover_image_url
+            else None
+        )
 
-        # Debug logging
         log.info(
             "Article %s: Extracted image: %s",
             article.get("id"),
@@ -266,104 +271,6 @@ def extract_summary_from_banner(content_json: dict) -> str:
 
     # Fallback to first non-empty paragraph
     return _find_first_paragraph(content_array)
-
-
-def extract_image_from_content(content_json: dict) -> dict | None:  # noqa: C901
-    """
-    Extract the first image from JSON content structure.
-
-    Args:
-        content_json (dict): The JSON content from Article
-
-    Returns:
-        dict | None: Image data dict with url, alt, description or None
-    """
-    if not content_json:
-        return None
-
-    def traverse_for_image(node):  # noqa: C901, PLR0911, PLR0912
-        """Recursively traverse JSON structure to find first image"""
-        if not node:
-            return None
-
-        # Handle dict nodes
-        if isinstance(node, dict):
-            # Check if this node is an image node (common patterns)
-
-            # ProseMirror imageWithCaption (your format)
-            if node.get("type") == "imageWithCaption":
-                attrs = node.get("attrs", {})
-                if attrs.get("src"):
-                    return {
-                        "url": attrs["src"],
-                        "alt": attrs.get("alt", attrs.get("title", "")),
-                        "description": attrs.get(
-                            "caption", attrs.get("alt", attrs.get("title", ""))
-                        ),
-                    }
-
-            # ProseMirror image node
-            if node.get("type") == "image":
-                attrs = node.get("attrs", {})
-                if attrs.get("src"):
-                    return {
-                        "url": attrs["src"],
-                        "alt": attrs.get("alt", attrs.get("title", "")),
-                        "description": attrs.get("alt", attrs.get("title", "")),
-                    }
-                # EditorJS image block
-                data = node.get("data", {})
-                if data.get("file", {}).get("url"):
-                    return {
-                        "url": data["file"]["url"],
-                        "alt": data.get("caption", ""),
-                        "description": data.get("caption", ""),
-                    }
-
-            # Direct image node with url
-            if "image" in node or "img" in node:
-                img_data = node.get("image") or node.get("img")
-                if isinstance(img_data, dict) and img_data.get("url"):
-                    return {
-                        "url": img_data["url"],
-                        "alt": img_data.get("alt", ""),
-                        "description": img_data.get(
-                            "description", img_data.get("alt", "")
-                        ),
-                    }
-                elif isinstance(img_data, str):
-                    return {
-                        "url": img_data,
-                        "alt": "",
-                        "description": "",
-                    }
-
-            # Check for url field that might be an image
-            if node.get("url") and any(
-                ext in str(node.get("url", "")).lower()
-                for ext in [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"]
-            ):
-                return {
-                    "url": node["url"],
-                    "alt": node.get("alt", ""),
-                    "description": node.get("description", node.get("caption", "")),
-                }
-
-            # Traverse nested dict values
-            for value in node.values():
-                result = traverse_for_image(value)
-                if result:
-                    return result
-        # Handle list nodes
-        elif isinstance(node, list):
-            for item in node:
-                result = traverse_for_image(item)
-                if result:
-                    return result
-
-        return None
-
-    return traverse_for_image(content_json)
 
 
 def extract_text_from_content(content_json: dict) -> str:  # noqa: C901
