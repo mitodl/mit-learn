@@ -311,6 +311,33 @@ export const videoDetailPageView = (
   }
   return base
 }
+/**
+ * Append a request's incoming search params to a canonical URL so redirects
+ * preserve tracking params (e.g. utm_*). Params the canonical already sets
+ * win, and `omit` lists params the canonical builder owns (always dropped
+ * from the incoming set so a rejected value — e.g. a non-member `playlist` —
+ * can't be re-forwarded and redirect again).
+ */
+export const carrySearchParams = (
+  canonical: string,
+  incoming: Record<string, string | string[] | undefined>,
+  omit: string[] = [],
+): string => {
+  const [path, query] = canonical.split("?")
+  const params = new URLSearchParams()
+  Object.entries(incoming).forEach(([key, value]) => {
+    if (omit.includes(key) || value === undefined) return
+    const values = Array.isArray(value) ? value : [value]
+    values.forEach((v) => params.append(key, v))
+  })
+  new URLSearchParams(query).forEach((value, key) => {
+    params.delete(key)
+    params.append(key, value)
+  })
+  const qs = params.toString()
+  return qs ? `${path}?${qs}` : path
+}
+
 export const PROGRAM_PAGE_VIEW = "/programs/[readableId]"
 export const PROGRAM_AS_COURSE_PAGE_VIEW = "/courses/p/[readableId]"
 

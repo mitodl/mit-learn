@@ -11,7 +11,11 @@ import { notFound, redirect } from "next/navigation"
 import { ResourceTypeEnum } from "api"
 import type { VideoResource } from "api/v1"
 import { parseResourceId, resolveVideoPlaylist } from "@/common/slugs"
-import { absoluteUrl, videoDetailPageView } from "@/common/urls"
+import {
+  absoluteUrl,
+  carrySearchParams,
+  videoDetailPageView,
+} from "@/common/urls"
 
 type Props = PageProps<"/video/[id]/[slug]">
 
@@ -71,9 +75,8 @@ const Page: React.FC<Props> = async ({ params, searchParams }) => {
   const playlistId = resolveVideoPlaylist(videoPlaylistIds(video), rawPlaylist)
 
   // Canonical (slug + resolved playlist) is whatever the builder emits; redirect
-  // if we're not on it. NOTE: when a redirect fires, only `?playlist` is carried
-  // onto the canonical — any other incoming query params are intentionally
-  // dropped (the spec promises query-param preservation only for the drawer).
+  // if we're not on it, carrying incoming params except `playlist` (the builder
+  // owns it — re-forwarding a rejected value would redirect again).
   const canonical = videoDetailPageView(
     videoId,
     playlistId ?? undefined,
@@ -85,7 +88,7 @@ const Page: React.FC<Props> = async ({ params, searchParams }) => {
       ? `${incomingBase}?playlist=${rawPlaylist}`
       : incomingBase
   if (incoming !== canonical) {
-    redirect(canonical)
+    redirect(carrySearchParams(canonical, resolvedSearchParams, ["playlist"]))
   }
 
   if (playlistId !== null) {
