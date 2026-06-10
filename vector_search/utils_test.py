@@ -1846,14 +1846,14 @@ def test_custom_score_formula_with_boosts(mocker):
     """
 
     mock_boosts = {
-        "test_collection": [
+        RESOURCES_COLLECTION_NAME: [
             {"boost": 0.5, "params": {"resource_type": ["course"]}},
             {"boost": 0.2, "params": {"offered_by": ["ocw"]}},
         ]
     }
     mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", mock_boosts)
 
-    results = custom_score_formula("test_collection")
+    results = custom_score_formula(RESOURCES_COLLECTION_NAME)
 
     # We expect 3 expressions: 2 MultExpressions and 1 GaussDecayExpression
     assert len(results) == 3
