@@ -21,7 +21,7 @@ from learning_resources.models import LearningResource, default_pace
 
 OFFERED_BY = {"code": OfferedBy.mitx.name}
 READABLE_ID_PREFIX = "micromasters-program-"
-IGNORE_URLS = re.compile(r"/(dedp|scm)/")
+IGNORE_URLS = re.compile(r"/(dedp|scm|fin)/")
 
 log = logging.getLogger(__name__)
 
