@@ -24,7 +24,13 @@ const trackCourseEnrolled = (courseName?: string | null) => {
 
 const trackCourseUnenrolled = (courseName?: string | null) => {
   pushGtmEvent("course-unenrolled", {
-    ...(courseName ? { "course-enrolled-name": courseName } : {}),
+    ...(courseName
+      ? {
+          "course-unenrolled-name": courseName,
+          // Backward compatibility for any existing GTM variables.
+          "course-enrolled-name": courseName,
+        }
+      : {}),
   })
 }
 

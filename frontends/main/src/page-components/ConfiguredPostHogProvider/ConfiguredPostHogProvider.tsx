@@ -2,8 +2,14 @@ import React, { useEffect } from "react"
 import posthog from "posthog-js"
 import { PostHogProvider, usePostHog } from "posthog-js/react"
 import { useUserMe } from "api/hooks/user"
-import { INTERNAL_BOOTSTRAPPING_FLAG } from "@/common/feature_flags"
+import { FeatureFlags, INTERNAL_BOOTSTRAPPING_FLAG } from "@/common/feature_flags"
 import { env } from "@/env"
+
+// LOCAL DEV OVERRIDE: force-enable feature flags without a PostHog account.
+// Remove entries here when done testing locally.
+const LOCAL_FLAG_OVERRIDES: Partial<Record<FeatureFlags, boolean>> = {
+  [FeatureFlags.MitxOnlineProductPages]: true,
+}
 
 /**
  * Compute PostHog bootstrap feature flags from window.__ENV at runtime.
@@ -28,6 +34,9 @@ const getBootstrapFeatureFlags = (): Record<
       flags[flagName] = value === "True" ? true : JSON.stringify(value)
     }
   }
+
+
+  Object.assign(flags, LOCAL_FLAG_OVERRIDES)
 
   return Object.keys(flags).length > 0 ? flags : null
 }
@@ -62,7 +71,11 @@ const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   useEffect(() => {
-    const POSTHOG_API_KEY = env("NEXT_PUBLIC_POSTHOG_API_KEY")
+    const POSTHOG_API_KEY =
+      env("NEXT_PUBLIC_POSTHOG_API_KEY") ||
+      (Object.keys(LOCAL_FLAG_OVERRIDES).length > 0
+        ? "local-dev-override"
+        : undefined)
     const POSTHOG_API_HOST = env("NEXT_PUBLIC_POSTHOG_API_HOST")
     const POSTHOG_UI_HOST = env("NEXT_PUBLIC_POSTHOG_UI_HOST")
     if (POSTHOG_API_KEY) {
@@ -82,7 +95,7 @@ const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [])
 
-  if (!env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
+  if (!env("NEXT_PUBLIC_POSTHOG_API_KEY") && !Object.keys(LOCAL_FLAG_OVERRIDES).length) {
     return children
   }
 
