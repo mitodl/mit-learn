@@ -146,6 +146,15 @@ describe("RoutedDrawer", () => {
     expect(screen.queryByRole("heading", { name: "DrawerContent" })).toBeNull()
   })
 
+  it("Does not open when a required param is repeated", () => {
+    const { childFn } = renderRoutedDrawer(
+      { params: ["resource"], requiredParams: ["resource"] },
+      "resource=1&resource=2",
+      "",
+    )
+    expect(childFn).not.toHaveBeenCalled()
+  })
+
   it("Opens when validateRequiredParams returns true", () => {
     const { childFn } = renderRoutedDrawer(
       {

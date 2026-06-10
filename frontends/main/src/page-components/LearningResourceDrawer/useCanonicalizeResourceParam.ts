@@ -22,6 +22,10 @@ export const useCanonicalizeResourceParam = (
     const slug = slugify(title)
     const key = RESOURCE_DRAWER_PARAMS.resource_title
     const params = new URLSearchParams(window.location.search)
+    // The resource may have left the URL before its fetch resolved (drawer
+    // closed mid-fetch, or switched to another resource) — don't write a
+    // resource_title that matches nothing.
+    if (params.get(RESOURCE_DRAWER_PARAMS.resource) !== String(id)) return
     const current = params.get(key)
 
     if (slug) {
