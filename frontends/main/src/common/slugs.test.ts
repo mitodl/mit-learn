@@ -32,11 +32,13 @@ describe("slugify", () => {
   test("truncates at 60 chars, backing off to last hyphen (no partial word)", () => {
     const title =
       "the quick brown fox jumps over the lazy dog and then keeps running far"
-    const result = slugify(title)
-    expect(result.length).toBeLessThanOrEqual(60)
-    expect(result.endsWith("-")).toBe(false)
-    // backs off to a word boundary at or before 60
-    expect(title.toLowerCase().replace(/ /g, "-")).toContain(result)
+    expect(slugify(title)).toBe(
+      "the-quick-brown-fox-jumps-over-the-lazy-dog-and-then-keeps",
+    )
+  })
+
+  test("hard-cuts an unbroken 60+ char token", () => {
+    expect(slugify("a".repeat(70))).toBe("a".repeat(60))
   })
 })
 
