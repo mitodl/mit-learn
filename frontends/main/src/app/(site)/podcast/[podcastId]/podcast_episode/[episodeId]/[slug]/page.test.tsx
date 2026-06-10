@@ -44,16 +44,16 @@ const mockEpisode = (parentIds: number[]) => {
   return episode
 }
 
+const pageProps = (podcastId: string, episodeId: string, slug: string) => ({
+  params: Promise.resolve({ podcastId, episodeId, slug }),
+  searchParams: Promise.resolve({}),
+})
+
 test("redirects a wrong parent podcast id to the episode's actual podcast", async () => {
   const episode = mockEpisode([10, 20])
   await expect(
-    Page({
-      params: Promise.resolve({
-        podcastId: "999", // not a member
-        episodeId: String(episode.id),
-        slug: "episode-one",
-      }),
-    }),
+    // podcast 999 is not a member
+    Page(pageProps("999", String(episode.id), "episode-one")),
   ).rejects.toThrow("NEXT_REDIRECT")
   expect(mockRedirect).toHaveBeenCalledWith(
     `/podcast/10/podcast_episode/${episode.id}/episode-one`,
@@ -63,13 +63,7 @@ test("redirects a wrong parent podcast id to the episode's actual podcast", asyn
 test("keeps a valid member parent id, redirects only the stale slug", async () => {
   const episode = mockEpisode([10, 20])
   await expect(
-    Page({
-      params: Promise.resolve({
-        podcastId: "20",
-        episodeId: String(episode.id),
-        slug: "stale",
-      }),
-    }),
+    Page(pageProps("20", String(episode.id), "stale")),
   ).rejects.toThrow("NEXT_REDIRECT")
   expect(mockRedirect).toHaveBeenCalledWith(
     `/podcast/20/podcast_episode/${episode.id}/episode-one`,
@@ -78,25 +72,13 @@ test("keeps a valid member parent id, redirects only the stale slug", async () =
 
 test("renders when parent id and slug are already canonical", async () => {
   const episode = mockEpisode([10, 20])
-  await Page({
-    params: Promise.resolve({
-      podcastId: "10",
-      episodeId: String(episode.id),
-      slug: "episode-one",
-    }),
-  })
+  await Page(pageProps("10", String(episode.id), "episode-one"))
   expect(mockRedirect).not.toHaveBeenCalled()
 })
 
 test("notFound when the episode has no parent podcasts", async () => {
   const episode = mockEpisode([])
   await expect(
-    Page({
-      params: Promise.resolve({
-        podcastId: "10",
-        episodeId: String(episode.id),
-        slug: "episode-one",
-      }),
-    }),
+    Page(pageProps("10", String(episode.id), "episode-one")),
   ).rejects.toThrow("NEXT_NOT_FOUND")
 })

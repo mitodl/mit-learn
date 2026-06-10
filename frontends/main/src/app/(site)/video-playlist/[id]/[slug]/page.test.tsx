@@ -42,21 +42,22 @@ const mockPlaylist = () => {
   return playlist
 }
 
+const pageProps = (id: string, slug: string) => ({
+  params: Promise.resolve({ id, slug }),
+  searchParams: Promise.resolve({}),
+})
+
 test("renders when the slug is already canonical", async () => {
   const playlist = mockPlaylist()
-  await Page({
-    params: Promise.resolve({ id: String(playlist.id), slug: "great-talks" }),
-  })
+  await Page(pageProps(String(playlist.id), "great-talks"))
   expect(mockRedirect).not.toHaveBeenCalled()
 })
 
 test("redirects a stale slug to the canonical", async () => {
   const playlist = mockPlaylist()
-  await expect(
-    Page({
-      params: Promise.resolve({ id: String(playlist.id), slug: "stale" }),
-    }),
-  ).rejects.toThrow("NEXT_REDIRECT")
+  await expect(Page(pageProps(String(playlist.id), "stale"))).rejects.toThrow(
+    "NEXT_REDIRECT",
+  )
   expect(mockRedirect).toHaveBeenCalledWith(
     `/video-playlist/${playlist.id}/great-talks`,
   )

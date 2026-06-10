@@ -10,9 +10,8 @@ import { parseResourceId, resolveEpisodeParent } from "@/common/slugs"
 import { absoluteUrl, podcastEpisodePageView } from "@/common/urls"
 import type { PodcastEpisodeResource } from "api/v1"
 
-type Props = {
-  params: Promise<{ podcastId: string; episodeId: string; slug: string }>
-}
+type Props =
+  PageProps<"/podcast/[podcastId]/podcast_episode/[episodeId]/[slug]">
 
 const parentPodcastIds = (episode: PodcastEpisodeResource): number[] =>
   (episode.podcast_episode?.podcasts ?? []).map(Number)

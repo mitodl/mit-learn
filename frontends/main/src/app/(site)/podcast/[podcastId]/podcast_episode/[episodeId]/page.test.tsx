@@ -25,11 +25,13 @@ test("bare episode URL redirects to the slugged canonical with corrected parent"
     episode,
   )
   await expect(
+    // podcast 999 is not a member → corrected to 10
     Page({
       params: Promise.resolve({
-        podcastId: "999", // not a member → corrected to 10
+        podcastId: "999",
         episodeId: String(episode.id),
       }),
+      searchParams: Promise.resolve({}),
     }),
   ).rejects.toThrow("NEXT_REDIRECT")
   expect(mockRedirect).toHaveBeenCalledWith(

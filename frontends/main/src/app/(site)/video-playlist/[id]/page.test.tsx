@@ -23,7 +23,10 @@ test("bare /video-playlist/{id} redirects to the slugged canonical", async () =>
     playlist,
   )
   await expect(
-    Page({ params: Promise.resolve({ id: String(playlist.id) }) }),
+    Page({
+      params: Promise.resolve({ id: String(playlist.id) }),
+      searchParams: Promise.resolve({}),
+    }),
   ).rejects.toThrow("NEXT_REDIRECT")
   expect(mockRedirect).toHaveBeenCalledWith(
     `/video-playlist/${playlist.id}/great-talks`,

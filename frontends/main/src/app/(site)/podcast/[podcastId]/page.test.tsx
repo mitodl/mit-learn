@@ -18,6 +18,11 @@ beforeEach(() => {
   })
 })
 
+const pageProps = (podcastId: string) => ({
+  params: Promise.resolve({ podcastId }),
+  searchParams: Promise.resolve({}),
+})
+
 test("bare podcast id redirects to the slugged canonical", async () => {
   const podcast = factories.learningResources.podcast({
     title: "Beyond Biology",
@@ -26,16 +31,14 @@ test("bare podcast id redirects to the slugged canonical", async () => {
     urls.learningResources.details({ id: podcast.id }),
     podcast,
   )
-  await expect(
-    Page({ params: Promise.resolve({ podcastId: String(podcast.id) }) }),
-  ).rejects.toThrow("NEXT_REDIRECT")
+  await expect(Page(pageProps(String(podcast.id)))).rejects.toThrow(
+    "NEXT_REDIRECT",
+  )
   expect(mockRedirect).toHaveBeenCalledWith(
     `/podcast/${podcast.id}/beyond-biology`,
   )
 })
 
 test("notFound for a non-numeric id", async () => {
-  await expect(
-    Page({ params: Promise.resolve({ podcastId: "abc" }) }),
-  ).rejects.toThrow("NEXT_NOT_FOUND")
+  await expect(Page(pageProps("abc"))).rejects.toThrow("NEXT_NOT_FOUND")
 })
