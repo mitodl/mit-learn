@@ -27,6 +27,9 @@ export const PostHogEvents = {
   ClickedNavBrowsePopular: "clicked_nav_browse_popular",
   ClickedNavBrowseFree: "clicked_nav_browse_free",
   ClickedNavBrowseCertificate: "clicked_nav_browse_certificate",
+  VideoShortsOpened: "video_shorts_opened",
+  VideoShortViewed: "video_short_viewed",
+  VideoShortsClosed: "video_shorts_closed",
 } as const
 
 export const DigitalCredentialsFAQLink =

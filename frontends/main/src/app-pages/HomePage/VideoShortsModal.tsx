@@ -16,6 +16,9 @@ import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
 import VideoJsPlayer from "@/app-pages/VideoPlaylistCollectionPage/VideoJsPlayer"
 import type Player from "video.js/dist/types/player"
 import { FocusTrap } from "@mui/base/FocusTrap"
+import { usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
+import { env } from "@/env"
 
 const MODAL_VERTICAL_PADDING = 60
 const PORTRAIT_ASPECT_RATIO = 9 / 16
@@ -252,6 +255,21 @@ const VideoShortsModal = ({
 
   const playersRef = useRef<(Player | null)[]>([])
   const muteButtonRef = useRef<HTMLButtonElement>(null)
+  const sessionStartedAtRef = useRef<number>(Date.now())
+  const currentVideoStartedAtRef = useRef<number>(Date.now())
+  const isInitialSlideRef = useRef<boolean>(true)
+  const sessionPositionRef = useRef<number>(0)
+  const viewedIndicesRef = useRef<Set<number>>(new Set([startIndex]))
+  const selectedIndexRef = useRef<number | null>(startIndex)
+  const posthog = usePostHog()
+  const capture = useCallback(
+    (event: string, properties?: Record<string, unknown>) => {
+      if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
+        posthog.capture(event, properties)
+      }
+    },
+    [posthog],
+  )
 
   useEffect(() => {
     const id = requestAnimationFrame(() => {
@@ -268,11 +286,19 @@ const VideoShortsModal = ({
     playersRef.current = playersRef.current.slice(0, videoData.length)
   }, [videoData])
 
+  const handleClose = useCallback(() => {
+    capture(PostHogEvents.VideoShortsClosed, {
+      sessionDurationMs: Date.now() - sessionStartedAtRef.current,
+      totalVideosViewed: viewedIndicesRef.current.size,
+    })
+    onClose()
+  }, [onClose, capture])
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && onClose) {
+      if (event.key === "Escape") {
         event.preventDefault()
-        onClose()
+        handleClose()
       }
     }
 
@@ -280,10 +306,14 @@ const VideoShortsModal = ({
     return () => {
       document.removeEventListener("keydown", handleKeyDown)
     }
-  }, [onClose])
+  }, [handleClose])
 
-  const onSlidesInView = (inView: number[]) => {
-    if (inView.length === 1) {
+  // Keep a ref to the latest implementation so the stable wrapper below never
+  // changes identity, preventing CarouselV2Vertical from stacking duplicate
+  // Embla listeners on every mute/interaction state change.
+  const onSlidesInViewRef = useRef<(inView: number[]) => void>(() => {})
+  onSlidesInViewRef.current = (inView: number[]) => {
+    if (inView.length === 1 && videoData[inView[0]]) {
       playersRef.current
         .filter(
           (player, index): player is Player =>
@@ -295,6 +325,38 @@ const VideoShortsModal = ({
       setAnnouncement(
         `${inView[0] + 1} of ${videoData.length}: ${videoData[inView[0]].title}`,
       )
+      const isInitial = isInitialSlideRef.current
+
+      const prevIndex = selectedIndexRef.current
+      const prevPlayer =
+        prevIndex !== null ? playersRef.current[prevIndex] : null
+      let videoDurationMs: number | undefined
+      if (!isInitial && prevPlayer) {
+        const duration = prevPlayer.duration()
+        if (duration && isFinite(duration) && duration > 0) {
+          videoDurationMs = Math.round(duration * 1000)
+        }
+      }
+
+      capture(PostHogEvents.VideoShortViewed, {
+        videoId: videoData[inView[0]].id,
+        videoTitle: videoData[inView[0]].title,
+        position: sessionPositionRef.current,
+        totalVideos: videoData.length,
+        ...(isInitial
+          ? {}
+          : {
+              timeOnVideoMs: Date.now() - currentVideoStartedAtRef.current,
+              ...(videoDurationMs !== undefined ? { videoDurationMs } : {}),
+            }),
+      })
+      isInitialSlideRef.current = false
+      if (!viewedIndicesRef.current.has(inView[0])) {
+        viewedIndicesRef.current.add(inView[0])
+        sessionPositionRef.current += 1
+      }
+      selectedIndexRef.current = inView[0]
+      currentVideoStartedAtRef.current = Date.now()
       const player = playersRef.current[inView[0]]
       if (player) {
         player.muted(muted)
@@ -308,6 +370,11 @@ const VideoShortsModal = ({
       }
     }
   }
+
+  const onSlidesInView = useCallback(
+    (inView: number[]) => onSlidesInViewRef.current(inView),
+    [],
+  )
 
   const onClickMute = () => {
     if (selectedIndex !== null && playersRef.current[selectedIndex]) {
@@ -356,7 +423,7 @@ const VideoShortsModal = ({
           size="large"
           edge="rounded"
           variant="text"
-          onClick={onClose}
+          onClick={handleClose}
           aria-label="Close"
         >
           <RiCloseLine />

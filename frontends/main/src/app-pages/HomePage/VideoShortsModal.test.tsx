@@ -5,6 +5,14 @@ import { ResourceTypeEnum } from "api/v1"
 import { factories } from "api/test-utils"
 import { renderWithProviders, screen, user, fireEvent, act } from "@/test-utils"
 import type Player from "video.js/dist/types/player"
+import { usePostHog } from "posthog-js/react"
+import type { PostHog } from "posthog-js"
+
+jest.mock("posthog-js/react")
+const mockedPostHogCapture = jest.fn()
+jest.mocked(usePostHog).mockReturnValue({
+  capture: mockedPostHogCapture,
+} as unknown as PostHog)
 
 // Stub VideoJsPlayer to avoid loading video.js in the test environment.
 // Captures the onReady callback so tests can simulate the player being ready,
@@ -63,6 +71,29 @@ jest.mock("@/app-pages/VideoPlaylistCollectionPage/VideoJsPlayer", () => ({
   },
 }))
 
+// CarouselV2Vertical uses Embla scroll APIs unavailable in JSDOM; render
+// children directly and expose triggerSlidesInView so tests can simulate
+// scroll events on demand (matching Embla's behavior: no fire on initial mount).
+let triggerSlidesInView: (inView: number[]) => void = () => {}
+jest.mock("ol-components/CarouselV2Vertical", () => ({
+  CarouselV2Vertical: ({
+    children,
+    onSlidesInView,
+  }: {
+    children: React.ReactNode
+    onSlidesInView?: (inView: number[]) => void
+    initialSlide?: number
+  }) => {
+    React.useEffect(() => {
+      triggerSlidesInView = (inView) => onSlidesInView?.(inView)
+      return () => {
+        triggerSlidesInView = () => {}
+      }
+    }, [onSlidesInView])
+    return <div>{children}</div>
+  },
+}))
+
 const makeVideoResource = (
   overrides: Partial<VideoResource> = {},
 ): VideoResource =>
@@ -81,6 +112,7 @@ const makeVideoResource = (
 describe("VideoShortsModal", () => {
   beforeEach(() => {
     mockHandles.length = 0
+    mockedPostHogCapture.mockClear()
   })
 
   const defaultProps = {
@@ -315,5 +347,178 @@ describe("VideoShortsModal", () => {
 
     // No VideoJsPlayer rendered — no <video> element in the DOM
     expect(document.querySelector("video")).toBeNull()
+  })
+
+  describe("PostHog tracking", () => {
+    beforeEach(() => {
+      process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+    })
+    afterEach(() => {
+      delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+    })
+    test("captures VideoShortViewed without timeOnVideoMs for the initial slide", async () => {
+      const videoData = [
+        makeVideoResource({ title: "First Video" }),
+        makeVideoResource({ title: "Second Video" }),
+      ]
+
+      renderWithProviders(
+        <VideoShortsModal
+          startIndex={0}
+          videoData={videoData}
+          onClose={jest.fn()}
+        />,
+      )
+
+      act(() => {
+        triggerSlidesInView([0])
+      })
+
+      const call = mockedPostHogCapture.mock.calls.find(
+        ([event]) => event === "video_short_viewed",
+      )
+      expect(call?.[1]).toMatchObject({
+        videoId: videoData[0].id,
+        videoTitle: "First Video",
+        position: 0,
+      })
+      expect(call?.[1]).not.toHaveProperty("timeOnVideoMs")
+      expect(call?.[1]).not.toHaveProperty("videoDurationMs")
+      expect(call?.[1]).not.toHaveProperty("percentageWatched")
+    })
+
+    test("captures VideoShortViewed with timeOnVideoMs and videoDurationMs on subsequent slides", async () => {
+      const videoData = [
+        makeVideoResource({ title: "First Video" }),
+        makeVideoResource({
+          title: "Second Video",
+          video: {
+            id: 2,
+            streaming_url: "https://example.com/video2.mp4",
+            duration: "PT1M",
+            caption_urls: [],
+            cover_image_url: null,
+          },
+        }),
+      ]
+
+      renderWithProviders(
+        <VideoShortsModal
+          startIndex={0}
+          videoData={videoData}
+          onClose={jest.fn()}
+        />,
+      )
+
+      act(() => {
+        triggerSlidesInView([0])
+      })
+
+      // Simulate player ready with a valid duration for slide 0
+      await act(async () => {
+        mockHandles[0]?.triggerReady()
+        mockHandles[0]?.player.duration.mockReturnValue(30)
+      })
+
+      act(() => {
+        triggerSlidesInView([1])
+      })
+
+      const calls = mockedPostHogCapture.mock.calls.filter(
+        ([event]) => event === "video_short_viewed",
+      )
+      const secondCall = calls[1]
+      expect(secondCall?.[1]).toMatchObject({
+        videoId: videoData[1].id,
+        videoTitle: "Second Video",
+        position: 1,
+      })
+      expect(secondCall?.[1]).toHaveProperty("timeOnVideoMs")
+      expect(secondCall?.[1].videoDurationMs).toBe(30000)
+      expect(secondCall?.[1]).not.toHaveProperty("percentageWatched")
+    })
+
+    test("totalVideosViewed is 1 when closing without scrolling", async () => {
+      renderWithProviders(<VideoShortsModal {...defaultProps} />)
+
+      await user.click(screen.getByRole("button", { name: "Close" }))
+
+      const call = mockedPostHogCapture.mock.calls.find(
+        ([event]) => event === "video_shorts_closed",
+      )
+      expect(call?.[1].totalVideosViewed).toBe(1)
+    })
+
+    test("totalVideosViewed increments as user scrolls through videos", async () => {
+      renderWithProviders(<VideoShortsModal {...defaultProps} />)
+
+      act(() => {
+        triggerSlidesInView([1])
+      })
+
+      await user.click(screen.getByRole("button", { name: "Close" }))
+
+      const call = mockedPostHogCapture.mock.calls.find(
+        ([event]) => event === "video_shorts_closed",
+      )
+      expect(call?.[1].totalVideosViewed).toBe(2)
+    })
+
+    test("totalVideosViewed does not double-count when scrolling back to a previous video", async () => {
+      renderWithProviders(<VideoShortsModal {...defaultProps} />)
+
+      // Simulate scrolling away from the initial video then back (Embla never
+      // fires slidesInView on mount, so index 0 is seeded but not scroll-fired)
+      act(() => {
+        triggerSlidesInView([1])
+      })
+      act(() => {
+        triggerSlidesInView([0]) // scroll back to initial video
+      })
+
+      await user.click(screen.getByRole("button", { name: "Close" }))
+
+      const call = mockedPostHogCapture.mock.calls.find(
+        ([event]) => event === "video_shorts_closed",
+      )
+      expect(call?.[1].totalVideosViewed).toBe(2) // 2 unique videos, no double-count
+    })
+
+    test("captures VideoShortsClosed with sessionDurationMs when close button is clicked", async () => {
+      renderWithProviders(<VideoShortsModal {...defaultProps} />)
+
+      await user.click(screen.getByRole("button", { name: "Close" }))
+
+      expect(mockedPostHogCapture).toHaveBeenCalledWith(
+        "video_shorts_closed",
+        expect.objectContaining({
+          sessionDurationMs: expect.any(Number),
+        }),
+      )
+    })
+
+    test("captures VideoShortsClosed with sessionDurationMs when Escape key is pressed", () => {
+      renderWithProviders(<VideoShortsModal {...defaultProps} />)
+
+      fireEvent.keyDown(document, { key: "Escape" })
+
+      expect(mockedPostHogCapture).toHaveBeenCalledWith(
+        "video_shorts_closed",
+        expect.objectContaining({
+          sessionDurationMs: expect.any(Number),
+        }),
+      )
+    })
+
+    test("sessionDurationMs is non-negative", async () => {
+      renderWithProviders(<VideoShortsModal {...defaultProps} />)
+
+      await user.click(screen.getByRole("button", { name: "Close" }))
+
+      const call = mockedPostHogCapture.mock.calls.find(
+        ([event]) => event === "video_shorts_closed",
+      )
+      expect(call?.[1].sessionDurationMs).toBeGreaterThanOrEqual(0)
+    })
   })
 })
