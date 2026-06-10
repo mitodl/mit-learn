@@ -33,21 +33,6 @@ def _create_channel_type_enum_component(prefix, channel_types, auto_schema):
     return channel_type_enum
 
 
-class ChannelTypeChoiceFieldExtension(OpenApiSerializerFieldExtension):
-    target_class = "channels.serializers.ChannelTypeChoiceField"
-    priority = 100
-
-    def map_serializer_field(self, auto_schema, direction):  # noqa: ARG002
-        channel_type_enum = _create_channel_type_enum_component(
-            "", constants.ChannelType.as_tuple(), auto_schema
-        )
-
-        return {
-            "type": "string",
-            "allOf": [channel_type_enum.ref],
-        }
-
-
 class ChannelTypeConstantFieldExtension(OpenApiSerializerFieldExtension):
     target_class = "channels.serializers.ChannelTypeConstantField"
     priority = 100

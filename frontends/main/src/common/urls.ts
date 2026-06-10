@@ -76,17 +76,8 @@ export const DEPARTMENTS = "/departments/"
 export const TOPICS = "/topics/"
 
 export const CHANNEL_VIEW = "/c/[channelType]/[name]" as const
-export const CHANNEL_EDIT = "/c/[channelType]/[name]/manage/" as const
-export const CHANNEL_EDIT_WIDGETS =
-  "/c/[channelType]/[name]/manage/widgets/" as const
 export const makeChannelViewPath = (channelType: string, name: string) =>
   generatePath(CHANNEL_VIEW, { channelType, name })
-export const makeChannelEditPath = (channelType: string, name: string) =>
-  generatePath(CHANNEL_EDIT, { channelType, name })
-export const makeChannelManageWidgetsPath = (
-  channelType: string,
-  name: string,
-) => generatePath(CHANNEL_EDIT_WIDGETS, { channelType, name })
 
 const MITOL_API_BASE_URL = env("NEXT_PUBLIC_MITOL_API_BASE_URL")
 

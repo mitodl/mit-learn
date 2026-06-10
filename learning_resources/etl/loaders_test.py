@@ -81,6 +81,7 @@ from learning_resources.factories import (
     PodcastEpisodeFactory,
     PodcastFactory,
     ProgramFactory,
+    TutorProblemFileFactory,
     VideoChannelFactory,
     VideoFactory,
     VideoPlaylistFactory,
@@ -1952,7 +1953,7 @@ def test_load_problem_files(mocker):
     )
     assert course.runs.count() == 2
 
-    deleted_problem_file = ContentFileFactory.create(run=course_run)
+    deleted_problem_file = TutorProblemFileFactory.create(run=course_run)
 
     content_data = [
         {
