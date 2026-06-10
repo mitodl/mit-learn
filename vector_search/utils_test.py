@@ -1894,10 +1894,13 @@ def test_custom_score_formula_defaults(mocker):
     If the boost key is missing, custom_score_formula should default the boost amount to 0.
     """
 
-    mock_boosts = {"test_collection": [{"params": {"resource_type": ["course"]}}]}
+    mock_boosts = {
+        RESOURCES_COLLECTION_NAME: [{"params": {"resource_type": ["course"]}}]
+    }
     mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", mock_boosts)
 
-    results = custom_score_formula("test_collection")
+    results = custom_score_formula(RESOURCES_COLLECTION_NAME)
+
     assert len(results) == 2
 
     assert isinstance(results[0], models.MultExpression)
