@@ -107,7 +107,6 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
       selectedCourseRun={adapted.selectedCourseRun}
       contractId={adapted.contractId}
       programEnrollment={adapted.programEnrollment}
-      buttonHref={adapted.buttonHref}
       showNotComplete={showNotComplete}
       offerUpgrade={offerUpgrade}
       isLoading={isLoading}
