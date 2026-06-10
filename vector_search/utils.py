@@ -1296,17 +1296,21 @@ def custom_score_formula(collection_name):
             )
             if conditions is None:
                 continue
-            score_expressions.append(models.MultExpression(mult=[amount, conditions]))
-
-        # add a decay based on score to normalize
-        score_expressions.append(
-            models.GaussDecayExpression(
-                gauss_decay=models.DecayParamsExpression(
-                    x="$score",  # decay over the relevance score itself
-                    target=1.0,  # cosine "perfect match" — boost is full here
-                    scale=0.2,
-                    midpoint=0.5,
+            score_expressions.append(
+                models.MultExpression(
+                    mult=[
+                        amount,
+                        conditions,
+                        # add a decay based on score to normalize
+                        models.ExpDecayExpression(
+                            exp_decay=models.DecayParamsExpression(
+                                x="$score",  # decay over the relevance score itself
+                                target=1.0,  # cosine "perfect match" — full boost
+                                scale=0.2,
+                                midpoint=0.5,
+                            )
+                        ),
+                    ]
                 )
             )
-        )
     return score_expressions

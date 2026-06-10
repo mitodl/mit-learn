@@ -1856,7 +1856,7 @@ def test_custom_score_formula_with_boosts(mocker):
     results = custom_score_formula(RESOURCES_COLLECTION_NAME)
 
     # We expect 3 expressions: 2 MultExpressions and 1 GaussDecayExpression
-    assert len(results) == 3
+    assert len(results) == 2
 
     # Check first boost expression
     assert isinstance(results[0], models.MultExpression)
@@ -1886,7 +1886,8 @@ def test_custom_score_formula_with_boosts(mocker):
     )
 
     # Check GaussDecayExpression decay expression at the end
-    assert isinstance(results[2], models.GaussDecayExpression)
+    assert isinstance(results[0].mult[2], models.GaussDecayExpression)
+    assert isinstance(results[1].mult[2], models.GaussDecayExpression)
 
 
 def test_custom_score_formula_defaults(mocker):
@@ -1907,4 +1908,4 @@ def test_custom_score_formula_defaults(mocker):
     assert results[0].mult[0] == 0
     assert isinstance(results[0].mult[1], models.Filter)
 
-    assert isinstance(results[1], models.GaussDecayExpression)
+    assert isinstance(results[0].mult[2], models.GaussDecayExpression)
