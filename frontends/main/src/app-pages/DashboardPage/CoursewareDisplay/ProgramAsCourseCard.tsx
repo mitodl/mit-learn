@@ -23,10 +23,8 @@ import {
   selectBestEnrollment,
 } from "./helpers"
 import { ProgressBadge } from "./ProgressBadge"
-import {
-  DashboardCard as ModuleCard,
-  DashboardType as ModuleCardType,
-} from "./ModuleCard"
+import { CoursewareCard } from "./CoursewareCard"
+import { buildCourseEntry } from "./model/dashboardViewModel"
 import { formatDate } from "ol-utilities"
 import {
   getIdsFromReqTree,
@@ -582,28 +580,27 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
       </ProgramCardSubHeader>
       <ProgramCardBody>
         {displayedModuleCourses.map((course) => {
-          const bestEnrollment = selectBestEnrollment(
+          const entry = buildCourseEntry(
             course,
             moduleEnrollmentsByCourseId[course.id] || [],
+            {
+              ancestorContext: {
+                useVerifiedEnrollment,
+                parentProgramReadableIds: parentProgramIds,
+              },
+            },
           )
-          const resource = bestEnrollment
-            ? {
-                type: ModuleCardType.CourseRunEnrollment,
-                data: bestEnrollment,
-              }
-            : { type: ModuleCardType.Course, data: course }
+          if (!entry) return null
 
           return (
-            <ModuleCard
+            <CoursewareCard
               key={getKey({
                 resourceType: ResourceType.Course,
                 id: course.id,
-                runId: bestEnrollment?.run.id,
+                runId: entry.displayedEnrollment?.run.id,
               })}
-              resource={resource}
-              useVerifiedEnrollment={useVerifiedEnrollment}
-              parentProgramIds={parentProgramIds}
-              variant="stacked"
+              entry={entry}
+              layout="moduleRow"
               headingLevel="h4"
             />
           )

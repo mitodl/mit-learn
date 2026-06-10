@@ -17,14 +17,15 @@ import {
   V2ProgramDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DASHBOARD_MY_LEARNING_ID } from "@/common/urls"
-import { getKey, ResourceType } from "./helpers"
 import {
-  DashboardCard,
-  DashboardResource,
+  isProgramAsCourse,
   DashboardType,
-} from "./DashboardCard"
+  ResourceType,
+  getKey,
+  type DashboardResource,
+} from "./model/dashboardViewModel"
+import { DashboardCard } from "./DashboardCard"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
-import { isProgramAsCourse } from "./model/dashboardViewModel"
 import { useHomeDashboardData } from "./hooks/useHomeDashboardData"
 
 const Wrapper = styled.div(({ theme }) => ({

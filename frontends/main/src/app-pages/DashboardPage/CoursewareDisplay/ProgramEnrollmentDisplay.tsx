@@ -1,15 +1,21 @@
 import React from "react"
 import { Skeleton, Stack, Typography, styled, theme } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
-import { getKey, ResourceType } from "./helpers"
-import { DashboardCard, DashboardType } from "./DashboardCard"
+import { DashboardType, ResourceType, getKey } from "./model/dashboardViewModel"
+import { CoursewareCard } from "./CoursewareCard"
+import { DashboardCard } from "./DashboardCard"
 import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import { RiAwardFill } from "@remixicon/react"
 import { useProgramDashboardData } from "./hooks/useProgramDashboardData"
-import { adaptCourseEntryToLegacyDashboardCardProps } from "./model/dashboardAdapters"
 
-const DashboardCardStyled = styled(DashboardCard)({
+const CourseEntryCardStyled = styled(CoursewareCard)({
+  borderRadius: "8px",
+  boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
+})
+
+// Program-enrollment arm still uses DashboardCard directly (Phase 7b migration).
+const ProgramEnrollmentCard = styled(DashboardCard)({
   borderRadius: "8px",
   boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
 })
@@ -114,13 +120,8 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
             <Stack direction="column" gap="16px">
               {section.items.map((item) => {
                 if (item.kind === "course") {
-                  // buttonHref and contractId are also returned but not used here
-                  // (not applicable inside the program/B2C dashboard)
-                  const adapted = adaptCourseEntryToLegacyDashboardCardProps(
-                    item.entry,
-                  )
                   return (
-                    <DashboardCardStyled
+                    <CourseEntryCardStyled
                       key={getKey({
                         resourceType: ResourceType.Course,
                         id: item.entry.course.id,
@@ -128,10 +129,8 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                           item.entry.displayedEnrollment?.run.id ??
                           item.entry.displayedRun?.id,
                       })}
-                      resource={adapted.resource}
-                      programEnrollment={adapted.programEnrollment}
+                      entry={item.entry}
                       showNotComplete={false}
-                      selectedCourseRun={adapted.selectedCourseRun}
                     />
                   )
                 }
@@ -152,8 +151,9 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                   )
                 }
 
+                // program-enrollment arm: still uses legacy DashboardCard until Phase 7b
                 return (
-                  <DashboardCardStyled
+                  <ProgramEnrollmentCard
                     key={getKey({
                       resourceType: ResourceType.Program,
                       id: item.enrollment.program.id,

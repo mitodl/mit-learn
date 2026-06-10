@@ -96,6 +96,7 @@ const setupApis = ({
     learnUrls.userMe.get(),
     learnFactories.user.user({ is_authenticated: false }),
   )
+
   const stayUpdatedFormId =
     process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID?.trim()
   if (stayUpdatedFormId) {
