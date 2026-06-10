@@ -213,6 +213,19 @@ describe("separate-param drawer builders", () => {
   })
 })
 
+test("INVARIANT: canonical paths round-trip URL decoding byte-identically", () => {
+  // The [slug] pages compare Next's *decoded* route params against builder
+  // output; if a builder ever emits a percent-encodable character, a URL
+  // could redirect to a spelling of itself and loop. See pathSlug in urls.ts.
+  const paths = [
+    podcastPageView("123", "Beyond Biology!"),
+    podcastEpisodePageView("55", "123", "Épisode #1"),
+    videoDetailPageView(16765, 13798, "你好"),
+    videoPlaylistPageView("9", "a".repeat(70)),
+  ]
+  paths.forEach((p) => expect(decodeURIComponent(p)).toBe(p))
+})
+
 describe("carrySearchParams", () => {
   test("appends incoming params to the canonical", () => {
     expect(
