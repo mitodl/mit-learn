@@ -33,7 +33,7 @@ type CoursewareCardBaseProps = {
 
 /** Props for the default course / enrollment card display. */
 type CoursewareCardDefaultProps = CoursewareCardBaseProps & {
-  variant?: "default" | "stacked"
+  layout?: "default" | "stacked"
   showNotComplete?: boolean
   offerUpgrade?: boolean
   isLoading?: boolean
@@ -50,7 +50,7 @@ type CoursewareCardDefaultProps = CoursewareCardBaseProps & {
  * `buildCourseEntry`).
  */
 type CoursewareCardModuleRowProps = CoursewareCardBaseProps & {
-  variant: "moduleRow"
+  layout: "moduleRow"
   headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
 }
 
@@ -66,7 +66,7 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
   const { entry, Component, className } = props
 
   // ── moduleRow arm ────────────────────────────────────────────────────────
-  if (props.variant === "moduleRow") {
+  if (props.layout === "moduleRow") {
     const { headingLevel } = props
 
     const resource = entry.displayedEnrollment
@@ -96,7 +96,7 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
     isLoading,
     onUpgradeError,
     contextMenuItems,
-    variant,
+    layout,
   } = props
 
   const adapted = adaptCourseEntryToLegacyDashboardCardProps(entry)
@@ -113,7 +113,7 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
       isLoading={isLoading}
       onUpgradeError={onUpgradeError}
       contextMenuItems={contextMenuItems}
-      variant={variant}
+      variant={layout}
       Component={Component}
       className={className}
     />

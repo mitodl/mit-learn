@@ -600,7 +600,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
                 runId: entry.displayedEnrollment?.run.id,
               })}
               entry={entry}
-              variant="moduleRow"
+              layout="moduleRow"
               headingLevel="h4"
             />
           )
