@@ -504,6 +504,28 @@ describe("Learning resource info section parent course", () => {
     invariant(resource.url)
     expect(link).toHaveAttribute("href", expectedHref(resource.url))
   })
+
+  test("Links a video playlist to its parent course URL", () => {
+    const resource = factories.learningResources.videoPlaylist({
+      video_playlist: {
+        parent_title: "Test Course Title",
+        parent_url: "https://ocw.mit.edu/courses/test-course",
+        parent_course_numbers: ["TEST-101"],
+      },
+    })
+
+    renderWithTheme(<InfoSection resource={resource} />)
+
+    const section = screen.getByTestId("drawer-info-items")
+    within(section).getByText("Parent Course:")
+    const link = screen.getByRole("link", {
+      name: "TEST-101: Test Course Title",
+    })
+    expect(link).toHaveAttribute(
+      "href",
+      "https://ocw.mit.edu/courses/test-course",
+    )
+  })
 })
 
 describe("Offered by section", () => {

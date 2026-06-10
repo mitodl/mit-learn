@@ -536,7 +536,7 @@ const INFO_ITEMS: InfoItemConfig = [
     Icon: RiBookLine,
     selector: (resource: LearningResource, ocwProductPages?: boolean) => {
       const name = formattedParentCourseName(resource)
-      if (!name) return name
+      if (!name) return null
 
       const url =
         resource.resource_type === ResourceTypeEnum.VideoPlaylist
