@@ -14,6 +14,7 @@ export enum FeatureFlags {
   VideoPlaylistPage = "video-playlist-page",
   B2BContractManagerDashboard = "b2b-contract-manager-dashboard",
   Arithmix = "arithmix",
+  Hacksnack = "hacksnack",
 }
 
 /**
