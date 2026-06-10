@@ -58,7 +58,12 @@ const RoutedDrawer = <K extends string, R extends K = K>(
 
   const childParams = useMemo(() => {
     return Object.fromEntries(
-      params.map((name) => [name, searchParams.get(name)] as const),
+      params.map((name) => {
+        // A repeated param (?x=1&x=2) is ambiguous — treat it as absent rather
+        // than silently using the first value.
+        const values = searchParams.getAll(name)
+        return [name, values.length === 1 ? values[0] : null] as const
+      }),
     ) as Record<K, string | null>
   }, [searchParams, params])
 

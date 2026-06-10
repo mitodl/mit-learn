@@ -55,6 +55,14 @@ describe("useCanonicalizeResourceParam", () => {
     expect(spy).not.toHaveBeenCalled()
   })
 
+  test("does not write resource_title when the resource has left the URL", () => {
+    // e.g. drawer closed (params removed) before the detail fetch resolved
+    setUrl("?syllabus=")
+    spy.mockClear()
+    renderHook(() => useCanonicalizeResourceParam(114927, "Beyond Biology"))
+    expect(spy).not.toHaveBeenCalled()
+  })
+
   test("does nothing until the resource (title) is known", () => {
     setUrl("?resource=114927")
     spy.mockClear()
