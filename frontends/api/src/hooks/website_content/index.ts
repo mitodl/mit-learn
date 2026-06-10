@@ -42,7 +42,12 @@ const useWebsiteContentCreate = () => {
     mutationFn: (
       data: Omit<
         WebsiteContent,
-        "id" | "user" | "created_on" | "updated_on" | "publish_date"
+        | "id"
+        | "user"
+        | "created_on"
+        | "updated_on"
+        | "publish_date"
+        | "cover_image"
       >,
     ) =>
       websiteContentApi

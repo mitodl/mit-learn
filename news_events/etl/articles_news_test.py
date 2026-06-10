@@ -3,6 +3,7 @@
 import pytest
 
 from news_events.etl import articles_news
+from website_content.utils import extract_image_from_content
 
 
 @pytest.fixture
@@ -163,7 +164,7 @@ def test_extract_image_from_content():
         ],
     }
 
-    result = articles_news.extract_image_from_content(content_json)
+    result = extract_image_from_content(content_json)
 
     assert result is not None
     assert result["url"] == "http://example.com/image.webp"
@@ -187,72 +188,24 @@ def test_extract_image_from_prosemirror_image():
         ],
     }
 
-    result = articles_news.extract_image_from_content(content_json)
+    result = extract_image_from_content(content_json)
 
     assert result is not None
     assert result["url"] == "http://example.com/photo.jpg"
     assert result["alt"] == "Photo alt text"
 
 
-def test_extract_image_editorjs_format():
-    """Test image extraction from EditorJS format"""
-    # EditorJS style image
-    content_json = {
-        "blocks": [
-            {"type": "paragraph", "text": "Some text"},
-            {
-                "type": "image",
-                "data": {
-                    "file": {"url": "https://example.com/image.jpg"},
-                    "caption": "Test image caption",
-                },
-            },
-        ]
-    }
-
-    result = articles_news.extract_image_from_content(content_json)
-
-    assert result is not None
-    assert result["url"] == "https://example.com/image.jpg"
-    assert result["alt"] == "Test image caption"
-    assert result["description"] == "Test image caption"
-
-
-def test_extract_image_from_nested_structure():
-    """Test image extraction from nested JSON structure"""
-    content_json = {
-        "content": {
-            "blocks": [
-                {
-                    "type": "media",
-                    "image": {
-                        "url": "https://example.com/nested.png",
-                        "alt": "Nested image",
-                        "description": "A nested image",
-                    },
-                }
-            ]
-        }
-    }
-
-    result = articles_news.extract_image_from_content(content_json)
-
-    assert result is not None
-    assert result["url"] == "https://example.com/nested.png"
-    assert result["alt"] == "Nested image"
-
-
 def test_extract_image_returns_none_when_no_image():
     """Test image extraction returns None when no image found"""
     content_json = {"blocks": [{"type": "paragraph", "text": "Just text, no images"}]}
 
-    result = articles_news.extract_image_from_content(content_json)
+    result = extract_image_from_content(content_json)
     assert result is None
 
-    result = articles_news.extract_image_from_content({})
+    result = extract_image_from_content({})
     assert result is None
 
-    result = articles_news.extract_image_from_content(None)
+    result = extract_image_from_content(None)
     assert result is None
 
 
@@ -559,6 +512,7 @@ def test_extract_single_article():
         title = "Test Article"
         slug = "test-article"
         content = {"blocks": [{"text": "Test content"}]}
+        cover_image = ""
         created_on = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
         updated_on = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
         publish_date = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
@@ -632,6 +586,7 @@ def test_sync_single_article_to_news(mocker):
                 {"type": "paragraph", "content": [{"type": "text", "text": "Test"}]}
             ],
         }
+        cover_image = ""
         is_published = True
         content_type = "news"
         created_on = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)

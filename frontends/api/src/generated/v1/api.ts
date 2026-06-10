@@ -10129,6 +10129,12 @@ export interface WebsiteContent {
    * @memberof WebsiteContent
    */
   slug?: string
+  /**
+   *
+   * @type {string}
+   * @memberof WebsiteContent
+   */
+  cover_image: string
 }
 
 /**

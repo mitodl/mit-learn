@@ -7,7 +7,10 @@ from django.utils.text import slugify
 
 from main.models import TimestampedModel
 from website_content.constants import WebsiteContentType
-from website_content.utils import website_content_image_upload_uri
+from website_content.utils import (
+    extract_image_from_content,
+    website_content_image_upload_uri,
+)
 
 
 class WebsiteContent(TimestampedModel):
@@ -35,8 +38,10 @@ class WebsiteContent(TimestampedModel):
         choices=WebsiteContentType.as_tuple(),
         default=WebsiteContentType.news.name,
     )
+    cover_image = models.URLField(max_length=2083, blank=True, default="")
 
     def save(self, *args, **kwargs):
+        """Auto-populate slug and cover_image before persisting."""
         previous = WebsiteContent.objects.get(pk=self.pk) if self.pk else None
         was_published = getattr(previous, "is_published", None)
 
@@ -58,6 +63,9 @@ class WebsiteContent(TimestampedModel):
                 counter += 1
 
         self.slug = slug
+        image_data = extract_image_from_content(self.content)
+        self.cover_image = image_data.get("url", "") if image_data else ""
+
         super().save(*args, **kwargs)
 
     def get_url(self):
@@ -72,6 +80,8 @@ class WebsiteContent(TimestampedModel):
 
 
 class WebsiteContentImageUpload(models.Model):
+    """Tracks image files uploaded through the website content editor."""
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     image_file = models.ImageField(
         null=True,
@@ -82,4 +92,5 @@ class WebsiteContentImageUpload(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
+        """Return a string representation."""
         return f"WebsiteContentImageUpload({self.user_id})"
