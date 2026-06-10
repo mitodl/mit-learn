@@ -1297,7 +1297,6 @@ def custom_score_formula(collection_name):
             if conditions is None:
                 continue
             score_expressions.append(models.MultExpression(mult=[amount, conditions]))
-            )
 
         # add a decay based on score to normalize
         score_expressions.append(
