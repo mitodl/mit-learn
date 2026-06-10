@@ -75,7 +75,7 @@ export const getMetadataAsync = async ({
 }: MetadataAsyncProps) => {
   // The learning resource drawer is open. `resource` must be a bare positive
   // integer; a non-integer or repeated/array value opens no drawer and adds no
-  // canonical override (criterion 11). The cosmetic resource_title is ignored.
+  // canonical override. The cosmetic resource_title is ignored.
   const rawResource = (await searchParams)?.[RESOURCE_DRAWER_PARAMS.resource]
   const learningResourceId = parseResourceId(rawResource)
   const alts = alternates ?? {}

@@ -1,8 +1,10 @@
 import {
   slugify,
   parseResourceId,
+  parentPodcastIds,
   resolveEpisodeParent,
   resolveVideoPlaylist,
+  videoPlaylistIds,
 } from "./slugs"
 
 describe("slugify", () => {
@@ -78,5 +80,16 @@ describe("resolveVideoPlaylist", () => {
   })
   test("returns null when the video has no playlists", () => {
     expect(resolveVideoPlaylist([], "5")).toBeNull()
+  })
+})
+
+describe("id extractors", () => {
+  test("keep API order and drop invalid entries", () => {
+    expect(videoPlaylistIds({ playlists: ["55", "abc", "0", "66"] })).toEqual([
+      55, 66,
+    ])
+    expect(
+      parentPodcastIds({ podcast_episode: { podcasts: ["10", "x", "20"] } }),
+    ).toEqual([10, 20])
   })
 })

@@ -135,8 +135,14 @@ export const RESOURCE_DRAWER_PARAMS = {
 
 /**
  * Path slug segment from a title: the slug, or the literal "resource" when the
- * slug is blank (the canonical path's slug segment is mandatory — see
- * feature_work/hq_11210/spec.md). The slug is cosmetic and ignored on lookup.
+ * slug is blank (the canonical path's slug segment is mandatory — see the
+ * readable-URLs spec, mitodl/hq#11210). The slug is cosmetic and ignored on
+ * lookup.
+ *
+ * INVARIANT: canonical paths must round-trip Next's URL decoding
+ * byte-identically — keep the slug charset to [a-z0-9-] and ids numeric, or
+ * the [slug] pages' incoming-vs-canonical string compares could redirect a
+ * URL to a spelling of itself and loop.
  */
 const pathSlug = (title: string): string => slugify(title) || "resource"
 

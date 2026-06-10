@@ -1,6 +1,10 @@
 import React from "react"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
-import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
+import {
+  MetadataNotFound,
+  safeGenerateMetadata,
+  standardizeMetadata,
+} from "@/common/metadata"
 import {
   learningResourceQueries,
   videoPlaylistQueries,
@@ -9,8 +13,11 @@ import { getQueryClient } from "@/app/getQueryClient"
 import VideoDetailPageRouter from "@/app-pages/VideoPlaylistCollectionPage/VideoDetailPageRouter"
 import { notFound, redirect } from "next/navigation"
 import { ResourceTypeEnum } from "api"
-import type { VideoResource } from "api/v1"
-import { parseResourceId, resolveVideoPlaylist } from "@/common/slugs"
+import {
+  parseResourceId,
+  resolveVideoPlaylist,
+  videoPlaylistIds,
+} from "@/common/slugs"
 import {
   absoluteUrl,
   carrySearchParams,
@@ -18,11 +25,6 @@ import {
 } from "@/common/urls"
 
 type Props = PageProps<"/video/[id]/[slug]">
-
-const videoPlaylistIds = (video: VideoResource): number[] =>
-  (video.playlists ?? [])
-    .map(Number)
-    .filter((n) => Number.isInteger(n) && n > 0)
 
 export const generateMetadata = async (props: Props) => {
   const { id } = await props.params
@@ -34,9 +36,12 @@ export const generateMetadata = async (props: Props) => {
   const queryClient = getQueryClient()
 
   return safeGenerateMetadata(async () => {
-    const resource = (await queryClient.fetchQuery(
+    const resource = await queryClient.fetchQuery(
       learningResourceQueries.detail(videoId),
-    )) as VideoResource
+    )
+    if (resource.resource_type !== ResourceTypeEnum.Video) {
+      throw new MetadataNotFound()
+    }
     const playlistId = resolveVideoPlaylist(
       videoPlaylistIds(resource),
       searchParams?.playlist,
@@ -64,9 +69,9 @@ const Page: React.FC<Props> = async ({ params, searchParams }) => {
   }
 
   const queryClient = getQueryClient()
-  const video = (await queryClient.fetchQueryOr404(
+  const video = await queryClient.fetchQueryOr404(
     learningResourceQueries.detail(videoId),
-  )) as VideoResource
+  )
   if (video.resource_type !== ResourceTypeEnum.Video) {
     notFound()
   }

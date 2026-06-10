@@ -3,22 +3,26 @@ import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { PodcastEpisodeDetailPage } from "@/app-pages/PodcastPage/PodcastEpisodeDetailPage"
 import { getQueryClient } from "@/app/getQueryClient"
 import { ResourceTypeEnum } from "api"
-import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
+import {
+  MetadataNotFound,
+  safeGenerateMetadata,
+  standardizeMetadata,
+} from "@/common/metadata"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { notFound, redirect } from "next/navigation"
-import { parseResourceId, resolveEpisodeParent } from "@/common/slugs"
+import {
+  parentPodcastIds,
+  parseResourceId,
+  resolveEpisodeParent,
+} from "@/common/slugs"
 import {
   absoluteUrl,
   carrySearchParams,
   podcastEpisodePageView,
 } from "@/common/urls"
-import type { PodcastEpisodeResource } from "api/v1"
 
 type Props =
   PageProps<"/podcast/[podcastId]/podcast_episode/[episodeId]/[slug]">
-
-const parentPodcastIds = (episode: PodcastEpisodeResource): number[] =>
-  (episode.podcast_episode?.podcasts ?? []).map(Number)
 
 export const generateMetadata = async (props: Props) => {
   const { podcastId, episodeId } = await props.params
@@ -30,9 +34,12 @@ export const generateMetadata = async (props: Props) => {
   const queryClient = getQueryClient()
 
   return safeGenerateMetadata(async () => {
-    const resource = (await queryClient.fetchQuery(
+    const resource = await queryClient.fetchQuery(
       learningResourceQueries.detail(epId),
-    )) as PodcastEpisodeResource
+    )
+    if (resource.resource_type !== ResourceTypeEnum.PodcastEpisode) {
+      throw new MetadataNotFound()
+    }
     // Best-effort: if there's no actual parent, fall back to the incoming id
     // (the Page itself 404s that case, so this canonical is moot).
     const canonicalPodcastId =
@@ -65,9 +72,9 @@ const Page: React.FC<Props> = async (props) => {
   }
 
   const queryClient = getQueryClient()
-  const episode = (await queryClient.fetchQueryOr404(
+  const episode = await queryClient.fetchQueryOr404(
     learningResourceQueries.detail(epId),
-  )) as PodcastEpisodeResource
+  )
   if (episode.resource_type !== ResourceTypeEnum.PodcastEpisode) {
     notFound()
   }
