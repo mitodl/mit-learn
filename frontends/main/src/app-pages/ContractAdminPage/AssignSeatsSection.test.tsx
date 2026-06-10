@@ -273,9 +273,9 @@ describe("AssignSeatsSection", () => {
     ) as HTMLInputElement
     await user.upload(fileInput, file)
 
-    expect(
-      await screen.findByRole("alert"),
-    ).toHaveTextContent(/no valid email addresses found in this file/i)
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /no valid email addresses found in this file/i,
+    )
     expect(
       screen.queryByRole("heading", { name: /ready to assign/i }),
     ).not.toBeInTheDocument()
