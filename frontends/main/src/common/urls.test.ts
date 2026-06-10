@@ -156,7 +156,8 @@ describe("slug-aware path builders", () => {
       "/podcast/123/beyond-biology",
     )
     expect(podcastPageView("123", "2024")).toBe("/podcast/123/resource") // blank slug
-    expect(podcastPageView("123")).toBe("/podcast/123") // no title → bare (redirects)
+    // explicit undefined title → bare (redirects)
+    expect(podcastPageView("123", undefined)).toBe("/podcast/123")
   })
 
   test("podcastEpisodePageView slugs the episode, keeps podcast id bare", () => {
@@ -175,7 +176,7 @@ describe("slug-aware path builders", () => {
     expect(videoDetailPageView(16765, undefined, "Beyond Biology")).toBe(
       "/video/16765/beyond-biology",
     )
-    expect(videoDetailPageView(16765, 13798)).toBe(
+    expect(videoDetailPageView(16765, 13798, undefined)).toBe(
       "/video/16765?playlist=13798",
     )
   })

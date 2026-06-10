@@ -167,7 +167,7 @@ export const resourceDrawerSearch = (resourceId: number, title?: string) => {
 
 export const canonicalResourceDrawerUrl = (
   resourceId: number,
-  title?: string,
+  title: string | undefined,
 ) => absoluteUrl(resourceDrawerSearch(resourceId, title))
 
 export const querifiedSearchUrl = (
@@ -275,16 +275,22 @@ export const COURSE_PAGE_VIEW = "/courses/[readableId]"
 export const coursePageView = (readableId: string) =>
   generatePath(COURSE_PAGE_VIEW, { readableId })
 // Each page-view builder appends a mandatory slug segment when a title is given
-// (the slug, or the literal "resource" when blank). With no title it emits the
-// bare path, which still resolves and 307-redirects to canonical. Id and slug
-// are separate segments; the slug is cosmetic and ignored on lookup.
+// (the slug, or the literal "resource" when blank). With an undefined title it
+// emits the bare path, which still resolves and 307-redirects to canonical.
+// `title` is required-but-undefinable so a call site can't silently omit it —
+// passing undefined (e.g. a title still in flight) is a visible opt-in to the
+// redirecting bare form. Id and slug are separate segments; the slug is
+// cosmetic and ignored on lookup.
 export const VIDEO_PLAYLIST_PAGE_VIEW = "/video-playlist/[id]"
-export const videoPlaylistPageView = (id: string, title?: string) => {
+export const videoPlaylistPageView = (
+  id: string,
+  title: string | undefined,
+) => {
   const base = generatePath(VIDEO_PLAYLIST_PAGE_VIEW, { id })
   return title === undefined ? base : `${base}/${pathSlug(title)}`
 }
 export const PODCAST_PAGE_VIEW = "/podcast/[podcastId]"
-export const podcastPageView = (id: string, title?: string) => {
+export const podcastPageView = (id: string, title: string | undefined) => {
   const base = generatePath(PODCAST_PAGE_VIEW, { podcastId: id })
   return title === undefined ? base : `${base}/${pathSlug(title)}`
 }
@@ -293,7 +299,7 @@ export const PODCAST_EPISODE_PAGE_VIEW =
 export const podcastEpisodePageView = (
   id: string,
   podcastId: string,
-  title?: string,
+  title: string | undefined,
 ) => {
   const base = generatePath(PODCAST_EPISODE_PAGE_VIEW, {
     podcastId: String(podcastId), // bare context id
@@ -304,8 +310,8 @@ export const podcastEpisodePageView = (
 export const VIDEO_DETAIL_PAGE_VIEW = "/video/[videoId]"
 export const videoDetailPageView = (
   videoId: number,
-  playlistId?: number,
-  title?: string,
+  playlistId: number | undefined,
+  title: string | undefined,
 ) => {
   const path = generatePath(VIDEO_DETAIL_PAGE_VIEW, {
     videoId: String(videoId),
