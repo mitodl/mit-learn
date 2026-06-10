@@ -3,7 +3,6 @@ import { styled, Breadcrumbs, Banner } from "ol-components"
 import { backgroundSrcSetCSS } from "ol-utilities"
 import { SearchSubscriptionToggle } from "@/page-components/SearchSubscriptionToggle/SearchSubscriptionToggle"
 import { useChannelDetail } from "api/hooks/channels"
-import ChannelMenu from "@/components/ChannelMenu/ChannelMenu"
 import ChannelAvatar from "@/components/ChannelAvatar/ChannelAvatar"
 import { SourceTypeEnum } from "api"
 import { HOME as HOME_URL } from "../../common/urls"
@@ -102,12 +101,6 @@ const DefaultChannelTemplate: React.FC<DefaultChannelTemplateProps> = ({
                   itemName={channel.data?.title}
                   sourceType={SourceTypeEnum.ChannelSubscriptionType}
                   searchParams={urlParams}
-                />
-              ) : null}
-              {channel.data?.is_moderator ? (
-                <ChannelMenu
-                  channelType={String(channelType)}
-                  name={String(name)}
                 />
               ) : null}
             </ChannelControls>
