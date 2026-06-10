@@ -22,6 +22,7 @@ import {
   canPurchaseRun,
   formatPrice,
   getEnrollmentType,
+  getFlexiblePriceForProduct,
   mitxonlineLegacyUrl,
   priceWithDiscount,
 } from "@/common/mitxonline"
@@ -954,7 +955,10 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
       })
     : null
 
-  const currentAmount = toNumericPrice(currentPrice)
+  const currentAmount =
+    userFlexiblePrice.data && price?.isDiscounted
+      ? getFlexiblePriceForProduct(userFlexiblePrice.data)
+      : toNumericPrice(currentPrice)
   const listAmount = toNumericPrice(listPrice)
   const hasSavings =
     currentAmount !== null && listAmount !== null && listAmount > currentAmount
