@@ -7,7 +7,11 @@ import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { notFound, redirect } from "next/navigation"
 import { parseResourceId, resolveEpisodeParent } from "@/common/slugs"
-import { absoluteUrl, podcastEpisodePageView } from "@/common/urls"
+import {
+  absoluteUrl,
+  carrySearchParams,
+  podcastEpisodePageView,
+} from "@/common/urls"
 import type { PodcastEpisodeResource } from "api/v1"
 
 type Props =
@@ -88,7 +92,7 @@ const Page: React.FC<Props> = async (props) => {
   if (
     `/podcast/${podcastId}/podcast_episode/${episodeId}/${slug}` !== canonical
   ) {
-    redirect(canonical)
+    redirect(carrySearchParams(canonical, await props.searchParams))
   }
 
   // Hydrate the parent podcast (breadcrumb/header read its title client-side).

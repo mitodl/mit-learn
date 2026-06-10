@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation"
 import { ResourceTypeEnum } from "api"
 import type { VideoResource } from "api/v1"
 import { parseResourceId, resolveVideoPlaylist } from "@/common/slugs"
-import { videoDetailPageView } from "@/common/urls"
+import { carrySearchParams, videoDetailPageView } from "@/common/urls"
 
 /** Bare /video/{id} is never canonical → 307-redirect to slug + resolved playlist. */
 const Page = async ({ params, searchParams }: PageProps<"/video/[id]">) => {
@@ -28,7 +28,13 @@ const Page = async ({ params, searchParams }: PageProps<"/video/[id]">) => {
     playlistIds,
     resolvedSearchParams?.playlist,
   )
-  redirect(videoDetailPageView(videoId, playlistId ?? undefined, video.title))
+  redirect(
+    carrySearchParams(
+      videoDetailPageView(videoId, playlistId ?? undefined, video.title),
+      resolvedSearchParams,
+      ["playlist"],
+    ),
+  )
 }
 
 export default Page

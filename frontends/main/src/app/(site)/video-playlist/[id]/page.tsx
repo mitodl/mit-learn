@@ -2,7 +2,7 @@ import { videoPlaylistQueries } from "api/hooks/learningResources"
 import { getQueryClient } from "@/app/getQueryClient"
 import { notFound, redirect } from "next/navigation"
 import { parseResourceId } from "@/common/slugs"
-import { videoPlaylistPageView } from "@/common/urls"
+import { carrySearchParams, videoPlaylistPageView } from "@/common/urls"
 
 /** Bare /video-playlist/{id} is never canonical → 307-redirect to slugged form. */
 const Page = async (props: PageProps<"/video-playlist/[id]">) => {
@@ -15,7 +15,12 @@ const Page = async (props: PageProps<"/video-playlist/[id]">) => {
   const playlist = await queryClient.fetchQueryOr404(
     videoPlaylistQueries.detail(playlistId),
   )
-  redirect(videoPlaylistPageView(String(playlistId), playlist.title))
+  redirect(
+    carrySearchParams(
+      videoPlaylistPageView(String(playlistId), playlist.title),
+      await props.searchParams,
+    ),
+  )
 }
 
 export default Page

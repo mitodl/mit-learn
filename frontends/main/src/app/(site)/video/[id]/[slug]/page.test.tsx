@@ -58,16 +58,17 @@ test("honors a member ?playlist and renders when canonical", async () => {
   expect(mockRedirect).not.toHaveBeenCalled()
 })
 
-test("redirects to the first playlist when ?playlist isn't canonical", async () => {
+test("redirects to the first playlist when ?playlist isn't canonical, carrying other params", async () => {
   const video = mockVideo(["55", "66"])
   await expect(
     Page({
       params: Promise.resolve({ id: String(video.id), slug: "beyond-biology" }),
-      searchParams: Promise.resolve({ playlist: "999" }), // not a member
+      // playlist 999 is not a member; utm should survive the redirect
+      searchParams: Promise.resolve({ playlist: "999", utm_source: "x" }),
     }),
   ).rejects.toThrow("NEXT_REDIRECT")
   expect(mockRedirect).toHaveBeenCalledWith(
-    `/video/${video.id}/beyond-biology?playlist=55`,
+    `/video/${video.id}/beyond-biology?utm_source=x&playlist=55`,
   )
 })
 

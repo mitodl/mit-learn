@@ -7,7 +7,7 @@ import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { notFound, redirect } from "next/navigation"
 import { parseResourceId } from "@/common/slugs"
-import { absoluteUrl, podcastPageView } from "@/common/urls"
+import { absoluteUrl, carrySearchParams, podcastPageView } from "@/common/urls"
 
 type Props = PageProps<"/podcast/[podcastId]/[slug]">
 
@@ -53,7 +53,7 @@ const Page: React.FC<Props> = async (props) => {
   // (stale/uppercase slug, or a non-normalized id segment).
   const canonical = podcastPageView(String(id), resource.title)
   if (`/podcast/${podcastId}/${slug}` !== canonical) {
-    redirect(canonical)
+    redirect(carrySearchParams(canonical, await props.searchParams))
   }
 
   return (

@@ -9,6 +9,7 @@ import {
   videoDetailPageView,
   videoPlaylistPageView,
   canonicalResourceDrawerUrl,
+  carrySearchParams,
   resourceDrawerSearch,
 } from "./urls"
 
@@ -208,5 +209,24 @@ describe("separate-param drawer builders", () => {
     expect(canonicalResourceDrawerUrl(114927, "2024")).toMatch(
       /\/search\?resource=114927$/,
     )
+  })
+})
+
+describe("carrySearchParams", () => {
+  test("appends incoming params to the canonical", () => {
+    expect(
+      carrySearchParams("/podcast/1/slug", { utm_source: "newsletter" }),
+    ).toBe("/podcast/1/slug?utm_source=newsletter")
+    expect(carrySearchParams("/podcast/1/slug", {})).toBe("/podcast/1/slug")
+  })
+
+  test("canonical-owned params win and omitted params are dropped", () => {
+    expect(
+      carrySearchParams(
+        "/video/1/slug?playlist=10",
+        { playlist: "999", utm_source: "x" },
+        ["playlist"],
+      ),
+    ).toBe("/video/1/slug?utm_source=x&playlist=10")
   })
 })

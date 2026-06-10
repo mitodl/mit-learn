@@ -9,7 +9,11 @@ import { getQueryClient } from "@/app/getQueryClient"
 import VideoPlaylistCollectionPage from "@/app-pages/VideoPlaylistCollectionPage/VideoPlaylistCollectionPage"
 import { notFound, redirect } from "next/navigation"
 import { parseResourceId } from "@/common/slugs"
-import { absoluteUrl, videoPlaylistPageView } from "@/common/urls"
+import {
+  absoluteUrl,
+  carrySearchParams,
+  videoPlaylistPageView,
+} from "@/common/urls"
 
 type Props = PageProps<"/video-playlist/[id]/[slug]">
 
@@ -51,7 +55,7 @@ export const generateMetadata = async (props: Props) => {
   })
 }
 
-const Page: React.FC<Props> = async ({ params }) => {
+const Page: React.FC<Props> = async ({ params, searchParams }) => {
   const { id, slug } = await params
   const playlistId = parseResourceId(id)
   if (playlistId === null) {
@@ -66,7 +70,7 @@ const Page: React.FC<Props> = async ({ params }) => {
 
   const canonical = videoPlaylistPageView(String(playlistId), playlist.title)
   if (`/video-playlist/${id}/${slug}` !== canonical) {
-    redirect(canonical)
+    redirect(carrySearchParams(canonical, await searchParams))
   }
 
   await queryClient.prefetchQuery(

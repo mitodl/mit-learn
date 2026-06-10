@@ -18,9 +18,12 @@ beforeEach(() => {
   })
 })
 
-const pageProps = (podcastId: string) => ({
+const pageProps = (
+  podcastId: string,
+  searchParams: Record<string, string> = {},
+) => ({
   params: Promise.resolve({ podcastId }),
-  searchParams: Promise.resolve({}),
+  searchParams: Promise.resolve(searchParams),
 })
 
 test("bare podcast id redirects to the slugged canonical", async () => {
@@ -36,6 +39,22 @@ test("bare podcast id redirects to the slugged canonical", async () => {
   )
   expect(mockRedirect).toHaveBeenCalledWith(
     `/podcast/${podcast.id}/beyond-biology`,
+  )
+})
+
+test("redirect carries incoming query params (e.g. utm)", async () => {
+  const podcast = factories.learningResources.podcast({
+    title: "Beyond Biology",
+  })
+  setMockResponse.get(
+    urls.learningResources.details({ id: podcast.id }),
+    podcast,
+  )
+  await expect(
+    Page(pageProps(String(podcast.id), { utm_source: "newsletter" })),
+  ).rejects.toThrow("NEXT_REDIRECT")
+  expect(mockRedirect).toHaveBeenCalledWith(
+    `/podcast/${podcast.id}/beyond-biology?utm_source=newsletter`,
   )
 })
 

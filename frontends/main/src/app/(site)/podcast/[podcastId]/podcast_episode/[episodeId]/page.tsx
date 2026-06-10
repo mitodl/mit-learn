@@ -3,7 +3,7 @@ import { ResourceTypeEnum } from "api"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { notFound, redirect } from "next/navigation"
 import { parseResourceId, resolveEpisodeParent } from "@/common/slugs"
-import { podcastEpisodePageView } from "@/common/urls"
+import { carrySearchParams, podcastEpisodePageView } from "@/common/urls"
 import type { PodcastEpisodeResource } from "api/v1"
 
 /**
@@ -34,10 +34,13 @@ const Page = async (
     notFound()
   }
   redirect(
-    podcastEpisodePageView(
-      String(epId),
-      String(canonicalPodcastId),
-      episode.title,
+    carrySearchParams(
+      podcastEpisodePageView(
+        String(epId),
+        String(canonicalPodcastId),
+        episode.title,
+      ),
+      await props.searchParams,
     ),
   )
 }
