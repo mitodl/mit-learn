@@ -229,7 +229,9 @@ const AssignSeatsSection: React.FC = () => {
     const reader = new FileReader()
     reader.onload = (event) => {
       const text = event.target?.result as string
-      const { data, errors } = Papa.parse<string[]>(text, { skipEmptyLines: true })
+      const { data, errors } = Papa.parse<string[]>(text, {
+        skipEmptyLines: true,
+      })
       if (errors.length > 0) {
         setCsvReadError(true)
         return
