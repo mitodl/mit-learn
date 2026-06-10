@@ -20,7 +20,7 @@ import {
 } from "./model/dashboardViewModel"
 import { DashboardCard } from "./DashboardCard"
 import { DashboardCard as ModuleCardInner } from "./ModuleCard"
-import { V3UserProgramEnrollment } from "@mitodl/mitxonline-api-axios/v2"
+import type { V3UserProgramEnrollment } from "@mitodl/mitxonline-api-axios/v2"
 
 // Re-export the card root so OrganizationCards.tsx can migrate in Phase 7c.
 export { DashboardCardRoot as CoursewareCardRoot } from "./DashboardCard"
