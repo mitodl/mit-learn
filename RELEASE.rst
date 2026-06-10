@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.71.3
+Version 0.71.3 (Released June 10, 2026)
 --------------
 
 - Fix error pages after swap to runtime env vars (#3448)
