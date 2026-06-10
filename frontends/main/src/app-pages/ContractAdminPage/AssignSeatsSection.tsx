@@ -312,6 +312,8 @@ const AssignSeatsSection: React.FC = () => {
             <EmailTextarea
               aria-label="Employee emails"
               placeholder="Enter employee emails (one per line or comma-separated)"
+              autoComplete="off"
+              spellCheck={false}
               value={emailInput}
               onChange={(e) => setEmailInput(e.target.value)}
               onFocus={() => setFocused(true)}
