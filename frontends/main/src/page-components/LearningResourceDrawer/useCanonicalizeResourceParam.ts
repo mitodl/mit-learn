@@ -8,7 +8,7 @@ import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
  * the current slug, correct a stale one, or remove it when the slug is blank.
  * `resource` (the authoritative id) is never touched; the host pathname and all
  * other query params are preserved. No-op until the title is known and when
- * already canonical (see feature_work/hq_11210/spec.md criterion 13).
+ * already canonical (see the readable-URLs spec, mitodl/hq#11210).
  *
  * Takes primitive (id, title) rather than an object so the effect deps are
  * stable — it won't re-fire on every render from a fresh object reference.

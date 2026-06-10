@@ -4,6 +4,7 @@ import { getQueryClient } from "@/app/getQueryClient"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { ResourceTypeEnum } from "api"
 import { videoDetailPageView, videoPlaylistPageView } from "@/common/urls"
+import { videoPlaylistIds } from "@/common/slugs"
 import type { GenerateSitemapResult, GeneratedSitemapArgs } from "../types"
 import { dangerouslyDetectProductionBuildPhase } from "../util"
 
@@ -61,9 +62,7 @@ export default async function sitemap({
       // Emit the true canonical: a video with playlists redirects bare →
       // playlists[0], so include it (couples to playlists[0] ordering, same as
       // the canonical tag + page redirect — no new coupling).
-      const firstPlaylist = resource.playlists?.length
-        ? Number(resource.playlists[0])
-        : undefined
+      const [firstPlaylist] = videoPlaylistIds(resource)
       return [
         {
           url: `${BASE_URL}${videoDetailPageView(

@@ -6,7 +6,7 @@ const SLUG_MAX_LENGTH = 60
  * literal "resource" segment, the drawer omits the resource_title param).
  * The slug is NEVER used for lookup — the numeric id is authoritative.
  *
- * Steps (see feature_work/hq_11210/spec.md "Slug generation"):
+ * Steps (see the readable-URLs spec, mitodl/hq#11210):
  *  1. NFKD-normalize, strip combining marks (accented Latin → ascii).
  *  2. lowercase.
  *  3. each run of non-[a-z0-9] → single "-".
@@ -80,3 +80,23 @@ export const resolveVideoPlaylist = (
   }
   return playlists[0] ?? null
 }
+
+/**
+ * A video's valid playlist ids (positive integers, API order). The single
+ * rule for "which playlist is canonical" — pages, sitemap, and link builders
+ * must agree on [0] or sitemap/link URLs won't match the page's canonical.
+ */
+export const videoPlaylistIds = (video: {
+  playlists?: Array<string | number> | null
+}): number[] =>
+  (video.playlists ?? [])
+    .map(Number)
+    .filter((n) => Number.isInteger(n) && n > 0)
+
+/** An episode's valid parent podcast ids (positive integers, API order). */
+export const parentPodcastIds = (episode: {
+  podcast_episode?: { podcasts?: Array<string | number> | null } | null
+}): number[] =>
+  (episode.podcast_episode?.podcasts ?? [])
+    .map(Number)
+    .filter((n) => Number.isInteger(n) && n > 0)

@@ -2,9 +2,12 @@ import { getQueryClient } from "@/app/getQueryClient"
 import { ResourceTypeEnum } from "api"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { notFound, redirect } from "next/navigation"
-import { parseResourceId, resolveEpisodeParent } from "@/common/slugs"
+import {
+  parentPodcastIds,
+  parseResourceId,
+  resolveEpisodeParent,
+} from "@/common/slugs"
 import { carrySearchParams, podcastEpisodePageView } from "@/common/urls"
-import type { PodcastEpisodeResource } from "api/v1"
 
 /**
  * Bare /podcast/{podcastId}/podcast_episode/{episodeId} is never canonical →
@@ -20,14 +23,14 @@ const Page = async (
     notFound()
   }
   const queryClient = getQueryClient()
-  const episode = (await queryClient.fetchQueryOr404(
+  const episode = await queryClient.fetchQueryOr404(
     learningResourceQueries.detail(epId),
-  )) as PodcastEpisodeResource
+  )
   if (episode.resource_type !== ResourceTypeEnum.PodcastEpisode) {
     notFound()
   }
   const canonicalPodcastId = resolveEpisodeParent(
-    (episode.podcast_episode?.podcasts ?? []).map(Number),
+    parentPodcastIds(episode),
     incomingPodcastId,
   )
   if (canonicalPodcastId === null) {
