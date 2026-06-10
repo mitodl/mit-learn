@@ -319,7 +319,6 @@ Run [learn-ai](https://github.com/mitodl/learn-ai) locally, then point the Learn
 # MIT Learn, frontend.local.env
 NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT=http://open.odl.local:8065/ai/http/recommendation_agent/
 NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT=http://open.odl.local:8065/ai/http/syllabus_agent/
-NEXT_PUBLIC_LEARN_AI_LOGIN_ENDPOINT=http://open.odl.local:8065/ai/http/login/
 ```
 
 On the learn-ai side, add the Learn gateway origin to its trusted origins so

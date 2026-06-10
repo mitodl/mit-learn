@@ -216,6 +216,7 @@ routes:
           - "^/ai/(.*)"
           - "/$1"
     uris:
+      - "/ai/http/login"
       - "/ai/http/login/"
       - "/ai/admin/login/*"
     hosts:
