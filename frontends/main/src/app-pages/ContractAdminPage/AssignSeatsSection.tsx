@@ -134,7 +134,7 @@ const EmailTextarea = styled("textarea")<{ $transparent: boolean }>(
     padding: TA_PADDING,
     // `color` keeps the placeholder visible; `-webkit-text-fill-color` makes
     // only the typed text transparent so the overlay shows through.
-    color: theme.custom.colors.darkGray2,
+    color: $transparent ? "transparent" : theme.custom.colors.darkGray2,
     WebkitTextFillColor: $transparent
       ? "transparent"
       : theme.custom.colors.darkGray2,
