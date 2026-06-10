@@ -149,7 +149,6 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                   )
                 }
 
-                // program-enrollment arm: still uses legacy DashboardCard until Phase 7b
                 return (
                   <ProgramEnrollmentCard
                     key={getKey({
