@@ -431,7 +431,7 @@ describe("VideoShortsModal", () => {
       expect(secondCall?.[1]).toMatchObject({
         videoId: videoData[1].id,
         videoTitle: "Second Video",
-        position: 1,
+        position: 0,
       })
       expect(secondCall?.[1]).toHaveProperty("timeOnVideoMs")
       expect(secondCall?.[1].videoDurationMs).toBe(30000)
