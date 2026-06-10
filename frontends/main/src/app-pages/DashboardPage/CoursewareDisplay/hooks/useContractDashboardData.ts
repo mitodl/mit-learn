@@ -173,9 +173,10 @@ const useContractDashboardData = (
         .map((course) =>
           buildCourseEntry(course, enrollmentsByCourseId[course.id] ?? [], {
             contractId: contract.id,
-            ancestorContext: programEnrollment
-              ? { programEnrollment }
-              : undefined,
+            ancestorContext: {
+              programEnrollment,
+              parentProgramReadableIds: [program.readable_id],
+            },
             variant: variantRunsLoading
               ? undefined
               : (selectedVariant ?? undefined),

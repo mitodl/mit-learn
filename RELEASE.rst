@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.71.3 (Released June 10, 2026)
+--------------
+
+- Fix error pages after swap to runtime env vars (#3448)
+- add scm as synonym to search (#3449)
+- remove duplicate resource task (#3436)
+- fix: add link to the creation page of article and news (#3430)
+- Remove video shorts app (Phase 2) (#3385)
+
 Version 0.71.1 (Released June 08, 2026)
 --------------
 
