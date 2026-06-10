@@ -1291,10 +1291,12 @@ def custom_score_formula(collection_name):
     if score_params:
         for score_param in score_params:
             amount = score_param.get("boost", 0)
-            score_expressions.append(
-                models.MultExpression(
-                    mult=[amount, qdrant_query_conditions(score_param.get("params"))]
-                )
+            conditions = qdrant_query_conditions(
+                score_param.get("params"), collection_name=collection_name
+            )
+            if conditions is None:
+                continue
+            score_expressions.append(models.MultExpression(mult=[amount, conditions]))
             )
 
         # add a decay based on score to normalize
