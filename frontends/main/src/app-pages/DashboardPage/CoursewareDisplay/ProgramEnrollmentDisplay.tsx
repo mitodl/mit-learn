@@ -156,7 +156,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                       resourceType: ResourceType.Program,
                       id: item.enrollment.program.id,
                     })}
-                    variant="program"
+                    layout="program"
                     programEnrollment={item.enrollment}
                     showNotComplete={false}
                   />

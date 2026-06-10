@@ -35,8 +35,9 @@ type StyledComponentBaseProps = {
 }
 
 /** Props for the default course / enrollment card display. */
-type CoursewareCardDefaultProps = CoursewareCardBaseProps & {
+type CoursewareCardDefaultProps = StyledComponentBaseProps & {
   layout?: "default" | "stacked"
+  entry: DashboardCourseEntry
   showNotComplete?: boolean
   offerUpgrade?: boolean
   isLoading?: boolean
@@ -52,14 +53,15 @@ type CoursewareCardDefaultProps = CoursewareCardBaseProps & {
  * `entry.ancestorContext` so callers only need to embed them there (via
  * `buildCourseEntry`).
  */
-type CoursewareCardModuleRowProps = CoursewareCardBaseProps & {
+type CoursewareCardModuleRowProps = StyledComponentBaseProps & {
   layout: "moduleRow"
+  entry: DashboardCourseEntry
   headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
 }
 
 /** Props for program card display. */
 type CoursewareCardProgramProps = StyledComponentBaseProps & {
-  variant: "program"
+  layout: "program"
   programEnrollment: V3UserProgramEnrollment
   showNotComplete?: boolean
 }
@@ -74,7 +76,7 @@ export type CoursewareCardProps =
 
 const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
   // ── program arm ──────────────────────────────────────────────────────────
-  if (props.variant === "program") {
+  if (props.layout === "program") {
     const { programEnrollment, Component, className } = props
     return (
       <DashboardCard
