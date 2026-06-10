@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation"
 import { factories, setMockResponse, urls } from "api/test-utils"
 import type { VideoResource } from "api/v1"
-import Page from "./page"
+import Page, { generateMetadata } from "./page"
 
 jest.mock("@/app/getQueryClient", () => {
   const { makeBrowserQueryClient } = jest.requireActual("@/app/getQueryClient")
@@ -70,6 +70,28 @@ test("redirects to the first playlist when ?playlist isn't canonical, carrying o
   expect(mockRedirect).toHaveBeenCalledWith(
     `/video/${video.id}/beyond-biology?utm_source=x&playlist=55`,
   )
+})
+
+test("generateMetadata canonical includes the playlist (criterion 5's SEO half)", async () => {
+  const video = mockVideo(["55", "66"])
+  const meta = await generateMetadata({
+    params: Promise.resolve({ id: String(video.id), slug: "beyond-biology" }),
+    searchParams: Promise.resolve({ playlist: "66" }),
+  })
+  expect(meta.alternates?.canonical).toMatch(
+    new RegExp(`/video/${video.id}/beyond-biology\\?playlist=66$`),
+  )
+})
+
+test("notFound for a resource that is not a video", async () => {
+  const course = factories.learningResources.course()
+  setMockResponse.get(urls.learningResources.details({ id: course.id }), course)
+  await expect(
+    Page({
+      params: Promise.resolve({ id: String(course.id), slug: "x" }),
+      searchParams: Promise.resolve({}),
+    }),
+  ).rejects.toThrow("NEXT_NOT_FOUND")
 })
 
 test("a no-playlist video's canonical has no ?playlist param", async () => {

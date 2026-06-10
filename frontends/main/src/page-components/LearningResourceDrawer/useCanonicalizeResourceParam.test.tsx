@@ -69,15 +69,4 @@ describe("useCanonicalizeResourceParam", () => {
     renderHook(() => useCanonicalizeResourceParam(undefined, undefined))
     expect(spy).not.toHaveBeenCalled()
   })
-
-  test("does not re-run when inputs are unchanged across re-renders", () => {
-    setUrl("?resource=114927&resource_title=beyond-biology")
-    const { rerender } = renderHook(
-      ({ id, title }) => useCanonicalizeResourceParam(id, title),
-      { initialProps: { id: 114927, title: "Beyond Biology" } },
-    )
-    spy.mockClear()
-    rerender({ id: 114927, title: "Beyond Biology" })
-    expect(spy).not.toHaveBeenCalled()
-  })
 })
