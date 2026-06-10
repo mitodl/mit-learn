@@ -726,7 +726,6 @@ type DashboardCardProps = {
   noun?: string
   contextMenuItems?: SimpleMenuItem[]
   isLoading?: boolean
-  buttonHref?: string | null
   buttonClick?: React.MouseEventHandler<HTMLButtonElement>
   Component?: React.ElementType
   className?: string
@@ -746,7 +745,6 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   noun,
   contextMenuItems = [],
   isLoading = false,
-  buttonHref,
   buttonClick,
   Component,
   className,
@@ -830,7 +828,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       enrollment.enroll({
         course: resource.data,
         readableId: readableId,
-        href: buttonHref ?? coursewareUrl ?? undefined,
+        href: coursewareUrl ?? undefined,
         selectedCoursewareUrl: coursewareUrl ?? undefined,
         isB2B: !!b2bContractId,
         isVerifiedProgram: isVerifiedProgramEnrollment,
@@ -846,7 +844,6 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     readableId,
     coursewareUrl,
     b2bContractId,
-    buttonHref,
     enrollment,
     programEnrollment?.enrollment_mode,
     programEnrollment?.program.readable_id,
@@ -855,7 +852,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
 
   // Determine title behavior (link vs clickable text vs plain text)
   const titleHref = isCourseRunEnrollment
-    ? (buttonHref ?? coursewareUrl)
+    ? coursewareUrl
     : isProgramEnrollment
       ? programView(resource.data.program.id)
       : undefined
@@ -937,7 +934,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         data-testid="courseware-button"
         startDate={isCourse ? courseRun?.start_date : enrollmentRun?.start_date}
         enrollmentStatus={enrollmentStatus}
-        href={buttonHref ?? coursewareUrl}
+        href={coursewareUrl ?? undefined}
         endDate={isCourse ? courseRun?.end_date : enrollmentRun?.end_date}
         noun={displayNoun}
         isProgram={false}
@@ -953,7 +950,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       noun={displayNoun}
       isProgram={true}
       enrollmentStatus={enrollmentStatus}
-      href={buttonHref ?? programView(resource.data.program.id)}
+      href={programView(resource.data.program.id)}
     />
   ) : null
 

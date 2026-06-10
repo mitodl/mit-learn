@@ -1591,9 +1591,6 @@ describe.each([
         <DashboardCard
           resource={{ type: DashboardType.Course, data: course }}
           selectedCourseRun={selectedLanguageRun}
-          buttonHref={
-            "https://courses.c4103.com/learn/course/course-v1:VERIFYTEST+COURSE+BASE/home"
-          }
           programEnrollment={programEnrollment}
         />,
       )
