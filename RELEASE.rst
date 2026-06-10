@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.71.4
+--------------
+
+- Exclude MicroMasters FIN programs from ETL ingestion (#3458)
+- feat: add surrogate-key in the header for Fastly (#3393)
+- fix: pick cover image of video if no image is inserted in article content (#3433)
+
 Version 0.71.3 (Released June 10, 2026)
 --------------
 
