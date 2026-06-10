@@ -170,6 +170,7 @@ describe("dashboardAdapters", () => {
       b2b_contract_id: 999,
     })
     const programEnrollment = factories.enrollment.programEnrollmentV3()
+    const parentProgramReadableIds = ["program-v1:MITx+TestProgram"]
 
     const entry = makeEntry({
       course,
@@ -177,12 +178,13 @@ describe("dashboardAdapters", () => {
       displayedEnrollment: contractEnrollment,
       displayedRun: run,
       contractId: 999,
-      ancestorContext: { programEnrollment },
+      ancestorContext: { programEnrollment, parentProgramReadableIds },
     })
     const adapted = adaptCourseEntryToLegacyDashboardCardProps(entry)
 
     expectEnrollmentResource(adapted, run.id)
     expect(adapted.contractId).toBe(999)
     expect(adapted.programEnrollment).toEqual(programEnrollment)
+    expect(adapted.parentProgramReadableIds).toEqual(parentProgramReadableIds)
   })
 })

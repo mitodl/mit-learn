@@ -35,7 +35,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.70.11"
+VERSION = "0.71.3"
 
 log = logging.getLogger()
 
@@ -137,7 +137,6 @@ INSTALLED_APPS = (
     "testimonials",
     "data_fixtures",
     "vector_search",
-    "video_shorts",
     "ol_hubspot",
     "mitol.scim.apps.ScimApp",
     "health_check",
@@ -768,6 +767,9 @@ DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY = get_float(
 DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT = get_float(
     name="DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT", default=1
 )
+
+
+SEARCH_PROGRAM_INDEX_BOOST = get_float(name="SEARCH_PROGRAM_INDEX_BOOST", default=3)
 """
 the schedule (in minutes) for the embeddings task
 the lookback window for getting items to embed

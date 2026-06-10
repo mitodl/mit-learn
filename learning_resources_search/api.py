@@ -34,6 +34,7 @@ from learning_resources_search.constants import (
     LEARNING_RESOURCE_QUERY_FIELDS,
     LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS,
     LEARNING_RESOURCE_TYPES,
+    PROGRAM_TYPE,
     RUN_INSTRUCTORS_QUERY_FIELDS,
     RUN_LEVEL_QUERY_FIELDS,
     RUNS_QUERY_FIELDS,
@@ -773,7 +774,7 @@ def add_text_query_to_search(
     return search
 
 
-def construct_search(search_params):  # noqa: C901
+def construct_search(search_params):  # noqa: C901, PLR0912
     """
     Construct a learning resources search based on the query
 
@@ -804,6 +805,20 @@ def construct_search(search_params):  # noqa: C901
     search = Search(index=",".join(indexes))
 
     search = search.source(fields={"excludes": SOURCE_EXCLUDED_FIELDS})
+
+    program_index_boost = settings.SEARCH_PROGRAM_INDEX_BOOST
+
+    if (
+        program_index_boost
+        and program_index_boost != 1
+        and search_params.get("endpoint") != CONTENT_FILE_TYPE
+        and not use_hybrid_search
+        and search_params.get("q")
+    ):
+        search = search.extra(
+            indices_boost=[{get_default_alias_name(PROGRAM_TYPE): program_index_boost}]
+        )
+
     if (
         search_params.get("q")
         and not search_params.get("sortby")

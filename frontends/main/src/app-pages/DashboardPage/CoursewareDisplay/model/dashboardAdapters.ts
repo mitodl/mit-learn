@@ -16,6 +16,7 @@ export type LegacyDashboardCardAdapterOutput = {
   buttonHref: string | null
   contractId?: number
   programEnrollment?: V3UserProgramEnrollment
+  parentProgramReadableIds?: string[]
 }
 
 const adaptCourseEntryToLegacyDashboardCardProps = (
@@ -38,6 +39,7 @@ const adaptCourseEntryToLegacyDashboardCardProps = (
       null,
     contractId: entry.contractId,
     programEnrollment: entry.ancestorContext?.programEnrollment,
+    parentProgramReadableIds: entry.ancestorContext?.parentProgramReadableIds,
   }
 }
 

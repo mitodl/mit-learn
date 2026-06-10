@@ -9,8 +9,5 @@ class ChannelsConfig(AppConfig):
     name = "channels"
 
     def ready(self):
-        """
-        Ready handler. Import signals.
-        """
-        import channels.signals  # noqa: F401
+        """Ready handler."""
         from channels import schema  # noqa: F401

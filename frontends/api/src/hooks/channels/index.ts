@@ -1,11 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 
-import { channelsApi } from "../../clients"
-import type {
-  ChannelsApiChannelsListRequest,
-  PatchedChannelWriteRequest,
-} from "../../generated/v0"
-import { channelKeys, channelQueries } from "./queries"
+import type { ChannelsApiChannelsListRequest } from "../../generated/v0"
+import { channelQueries } from "./queries"
 
 const useChannelsList = (
   params: ChannelsApiChannelsListRequest = {},
@@ -29,26 +25,4 @@ const useChannelCounts = (channelType: string) => {
   })
 }
 
-const useChannelPartialUpdate = () => {
-  const client = useQueryClient()
-  return useMutation({
-    mutationFn: (data: PatchedChannelWriteRequest & { id: number }) =>
-      channelsApi
-        .channelsPartialUpdate({
-          id: data.id,
-          PatchedChannelWriteRequest: data,
-        })
-        .then((response) => response.data),
-    onSuccess: (_data) => {
-      client.invalidateQueries({ queryKey: channelKeys.root })
-    },
-  })
-}
-
-export {
-  useChannelDetail,
-  useChannelsList,
-  useChannelPartialUpdate,
-  useChannelCounts,
-  channelQueries,
-}
+export { useChannelDetail, useChannelsList, useChannelCounts, channelQueries }

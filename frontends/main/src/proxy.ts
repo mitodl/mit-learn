@@ -34,6 +34,75 @@ export function isPageRoute(pathname: string): boolean {
   return true
 }
 
+// Matches /courses/<readable_id> — readable_ids contain colons and + but no slashes.
+const COURSE_PATTERN = /^\/courses\/([^/?]+)$/
+// Matches /courses/p/<readable_id> — despite the /courses/ prefix this is a
+// *program* page (ProgramAsCoursePage); the readable_id is a program readable_id.
+const PROGRAM_AS_COURSE_PATTERN = /^\/courses\/p\/([^/?]+)$/
+// Matches /programs/<readable_id>
+const PROGRAM_PATTERN = /^\/programs\/([^/?]+)$/
+
+/**
+ * Safely decode a URL path segment for use in a response header value.
+ *
+ * Returns null instead of throwing when:
+ *   - percent-encoding is malformed (decodeURIComponent would throw URIError)
+ *   - the decoded value contains characters invalid in HTTP header values
+ *     (control characters, \r, \n, \0) which would cause Headers.set() to throw
+ */
+function safeDecodeSegment(segment: string): string | null {
+  let decoded: string
+  try {
+    decoded = decodeURIComponent(segment)
+  } catch {
+    return null
+  }
+  // HTTP header values must only contain visible ASCII + SP + HT (RFC 7230 §3.2.6).
+  // Reject anything with control chars (\x00-\x1F except \x09, or \x7F) to prevent
+  // header injection and avoid Headers.set() throwing.
+  // eslint-disable-next-line no-control-regex
+  if (/[\x00-\x08\x0A-\x1F\x7F]/.test(decoded)) {
+    return null
+  }
+  return decoded
+}
+
+/**
+ * Derives a per-item MITxOnline Surrogate-Key tag from the request path, or
+ * returns null if the path is not a MITxOnline course or program page.
+ *
+ * Key format (matches what MITxOnline purges):
+ *   mitxonline:course:<readable_id>   — /courses/<readable_id>
+ *   mitxonline:program:<readable_id>  — /programs/<readable_id>
+ *                                     — /courses/p/<readable_id>
+ *                                       (/courses/p/ renders ProgramAsCoursePage;
+ *                                        the readable_id is a program readable_id)
+ *
+ * NOTE: Surrogate-Key headers must be set here rather than in page.tsx because
+ * Next.js commits response headers before any page/layout code runs (to begin
+ * streaming). By the time page.tsx executes, headers have already been sent.
+ */
+export function mitxonlineSurrogateKey(pathname: string): string | null {
+  const courseMatch = COURSE_PATTERN.exec(pathname)
+  if (courseMatch) {
+    const readableId = safeDecodeSegment(courseMatch[1])
+    if (readableId !== null) {
+      return `mitxonline:course:${readableId}`
+    }
+  }
+
+  const programMatch =
+    PROGRAM_AS_COURSE_PATTERN.exec(pathname) ?? PROGRAM_PATTERN.exec(pathname)
+  if (programMatch) {
+    const readableId = safeDecodeSegment(programMatch[1])
+    if (readableId !== null) {
+      return `mitxonline:program:${readableId}`
+    }
+  }
+
+  return null
+}
+
 /**
  * Next.js proxy (formerly "middleware"): sets the Cache-Control header at
  * request time so that NEXT_CACHE_S_MAXAGE_SECONDS is read from the Kubernetes
@@ -53,10 +122,14 @@ export function proxy(request: NextRequest) {
 
   const response = NextResponse.next()
   response.headers.set("Cache-Control", cacheControl)
-  // Tag all HTML/page routes so Fastly can purge them on deploy without also
-  // purging immutable /_next/static/ chunks. Driven by the same isPageRoute()
-  // test as Cache-Control above, so the tag and the cache policy never diverge.
-  response.headers.set("Surrogate-Key", "html-pages")
+
+  // All page routes share the html-pages tag so Fastly can purge them on
+  // deploy. MITxOnline course/program pages additionally carry a per-item tag
+  // so MITxOnline can invalidate individual product pages on data change.
+  const itemKey = mitxonlineSurrogateKey(request.nextUrl.pathname)
+  const surrogateKey = itemKey ? `html-pages ${itemKey}` : "html-pages"
+  response.headers.set("Surrogate-Key", surrogateKey)
+
   return response
 }
 

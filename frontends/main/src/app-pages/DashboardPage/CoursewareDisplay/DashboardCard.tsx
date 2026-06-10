@@ -340,6 +340,7 @@ const useEnrollmentHandler = () => {
       isB2B,
       isVerifiedProgram,
       programCoursewareId,
+      b2bProgramId,
     }: {
       course: CourseWithCourseRunsSerializerV2
       readableId?: string
@@ -348,6 +349,7 @@ const useEnrollmentHandler = () => {
       isB2B?: boolean
       isVerifiedProgram?: boolean
       programCoursewareId?: string
+      b2bProgramId?: string
     }) => {
       if (isB2B) {
         if (!readableId) {
@@ -376,10 +378,11 @@ const useEnrollmentHandler = () => {
           NiceModal.show(JustInTimeDialog, {
             href: destinationUrl,
             readableId,
+            programId: b2bProgramId,
           })
         } else {
           createB2bEnrollment.mutate(
-            { readable_id: readableId },
+            { readable_id: readableId, program_id: b2bProgramId },
             {
               onSuccess: () => {
                 window.location.href = destinationUrl
@@ -735,6 +738,7 @@ type DashboardCardProps = {
   variant?: "default" | "stacked"
   contractId?: number
   programEnrollment?: V3UserProgramEnrollment
+  parentProgramReadableIds?: string[]
   onUpgradeError?: (error: string) => void
   selectedCourseRun?: BaseCourseRun | CourseRunV2 | null
   uiLanguageCode?: string
@@ -754,6 +758,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   variant = "default",
   contractId,
   programEnrollment,
+  parentProgramReadableIds,
   onUpgradeError,
   selectedCourseRun,
   uiLanguageCode: _uiLanguageCode = "en",
@@ -835,6 +840,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         isB2B: !!b2bContractId,
         isVerifiedProgram: isVerifiedProgramEnrollment,
         programCoursewareId: programEnrollment?.program.readable_id,
+        b2bProgramId:
+          parentProgramReadableIds?.[0] ??
+          programEnrollment?.program.readable_id,
       })
     }
   }, [
@@ -847,6 +855,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     enrollment,
     programEnrollment?.enrollment_mode,
     programEnrollment?.program.readable_id,
+    parentProgramReadableIds,
   ])
 
   // Determine title behavior (link vs clickable text vs plain text)

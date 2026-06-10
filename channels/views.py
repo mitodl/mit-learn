@@ -1,35 +1,35 @@
 """Views for channels"""
 
 import logging
+from collections.abc import Callable
 
-from django.conf import settings
-from django.contrib.auth import get_user_model
-from django.db.models import Prefetch
+from django.db.models import QuerySet
 from django.utils.decorators import method_decorator
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import mixins, viewsets
-from rest_framework.generics import ListCreateAPIView, get_object_or_404
+from rest_framework.generics import get_object_or_404
+from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.status import HTTP_204_NO_CONTENT
-from rest_framework.views import APIView
 
-from channels.api import get_group_role_name, remove_user_role
-from channels.constants import CHANNEL_ROLE_MODERATORS
-from channels.models import Channel, ChannelGroupRole, ChannelList
-from channels.permissions import ChannelModeratorPermissions, HasChannelPermission
+from channels.constants import ChannelType
+from channels.models import Channel
 from channels.serializers import (
     ChannelCountsSerializer,
-    ChannelCreateSerializer,
-    ChannelModeratorSerializer,
     ChannelSerializer,
-    ChannelWriteSerializer,
 )
-from main.constants import VALID_HTTP_METHODS
 from main.permissions import AnonymousAccessReadonlyPermission
 from main.utils import cache_page_for_all_users
 
 log = logging.getLogger(__name__)
+
+
+def cache_channel_response() -> Callable:
+    """Cache shared channel payloads."""
+    return cache_page_for_all_users(
+        cache="redis",
+        key_prefix="channels",
+    )
 
 
 def extend_schema_responses(serializer):
@@ -42,9 +42,6 @@ def extend_schema_responses(serializer):
         extend_schema_view(
             list=extend_schema(responses={200: serializer}),
             retrieve=extend_schema(responses={200: serializer}),
-            create=extend_schema(responses={201: serializer}),
-            update=extend_schema(responses={200: serializer}),
-            partial_update=extend_schema(responses={200: serializer}),
         )(view)
         return view
 
@@ -55,77 +52,38 @@ def extend_schema_responses(serializer):
 @extend_schema_view(
     list=extend_schema(summary="List"),
     retrieve=extend_schema(summary="Retrieve"),
-    create=extend_schema(summary="Create"),
-    destroy=extend_schema(summary="Destroy"),
-    partial_update=extend_schema(summary="Update"),
 )
-class ChannelViewSet(
-    viewsets.ModelViewSet,
-):
+class ChannelViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    CRUD Operations related to Channels. Channels may represent groups
-    or organizations at MIT and are a high-level categorization of content.
+    Read-only operations for channels.
+
+    Channels may represent groups or organizations at MIT and are a high-level
+    categorization of content.
     """
 
-    permission_classes = (HasChannelPermission,)
-    http_method_names = VALID_HTTP_METHODS
+    permission_classes = (AnonymousAccessReadonlyPermission,)
+    serializer_class = ChannelSerializer
+    http_method_names = ["get", "head", "options"]
     lookup_field = "id"
     lookup_url_kwarg = "id"
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["channel_type"]
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        """Return the context data"""
-        moderated_channel_ids = []
-        if self.request.user and self.request.user.is_authenticated:
-            moderated_channel_ids = (
-                ChannelGroupRole.objects.select_related("group")
-                .filter(role=CHANNEL_ROLE_MODERATORS, group__user=self.request.user)
-                .values_list("channel_id", flat=True)
-            )
-        context["moderated_channel_ids"] = moderated_channel_ids
-        return context
-
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Channel]:
         """Return a queryset"""
-        return (
-            Channel.objects.filter(published=True)
-            .prefetch_related(
-                Prefetch(
-                    "lists",
-                    queryset=ChannelList.objects.prefetch_related(
-                        "channel_list", "channel__lists", "channel__featured_list"
-                    ).order_by("position"),
-                ),
-                "sub_channels",
-                Prefetch(
-                    "sub_channels__channel",
-                    queryset=Channel.objects.annotate_channel_url(),
-                ),
-            )
-            .annotate_channel_url()
-            .select_related(
-                "featured_list",
-                "topic_detail",
-                "department_detail",
-                "unit_detail",
-                "pathway_detail",
-            )
-            .all()
-        )
+        return Channel.objects.filter(published=True).with_detail_relations()
 
-    def get_serializer_class(self):
-        if self.action in ("retrieve", "list"):
-            return ChannelSerializer
-        elif self.action == "create":
-            return ChannelCreateSerializer
-        return ChannelWriteSerializer
+    @method_decorator(cache_channel_response())
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        """
+        List published channels.
+        """
+        return super().list(request, *args, **kwargs)
 
-    def perform_destroy(self, instance):
-        """Remove the channel"""
-        instance.delete()
-        return Response(status=HTTP_204_NO_CONTENT)
+    @method_decorator(cache_channel_response())
+    def retrieve(self, request: Request, *args, **kwargs) -> Response:
+        """Retrieve a single channel by id."""
+        return super().retrieve(request, *args, **kwargs)
 
 
 @extend_schema_view(
@@ -139,92 +97,57 @@ class ChannelByTypeNameDetailView(mixins.RetrieveModelMixin, viewsets.GenericVie
     serializer_class = ChannelSerializer
     permission_classes = (AnonymousAccessReadonlyPermission,)
 
-    def get_object(self):
+    def get_queryset(self) -> QuerySet[Channel]:
+        """Return a queryset"""
+        return Channel.objects.filter(published=True).with_detail_relations()
+
+    def get_object(self) -> Channel:
         """
         Return the channel by type and name
         """
         return get_object_or_404(
-            Channel,
+            self.get_queryset(),
             channel_type=self.kwargs["channel_type"],
             name=self.kwargs["name"],
-            published=True,
         )
+
+    @method_decorator(cache_channel_response())
+    def retrieve(self, request: Request, *args, **kwargs) -> Response:
+        """View for retrieving an individual channel by type and name"""
+        return super().retrieve(request, *args, **kwargs)
 
 
 @extend_schema_view(
-    get=extend_schema(summary="Channel Moderators List"),
-    post=extend_schema(summary="Channel Moderators Create"),
-)
-class ChannelModeratorListView(ListCreateAPIView):
-    """
-    View for listing and adding moderators
-    """
-
-    permission_classes = (ChannelModeratorPermissions,)
-    serializer_class = ChannelModeratorSerializer
-    pagination_class = None
-
-    def get_queryset(self):
-        """
-        Build a queryset of relevant users with moderator permissions for this channel
-        """
-        User = get_user_model()
-
-        channel_group_name = get_group_role_name(
-            self.kwargs["id"],
-            CHANNEL_ROLE_MODERATORS,
-        )
-
-        return User.objects.filter(groups__name=channel_group_name)
-
-
-@extend_schema_view(
-    delete=extend_schema(summary="Channel Moderators Destroy"),
-)
-class ChannelModeratorDetailView(APIView):
-    """
-    View to retrieve and remove channel moderators
-    """
-
-    permission_classes = (ChannelModeratorPermissions,)
-    serializer_class = ChannelModeratorSerializer
-
-    def delete(self, request, *args, **kwargs):  # noqa: ARG002
-        """Remove the user from the moderator groups for this website"""
-        User = get_user_model()
-
-        user = User.objects.get(username=self.kwargs["moderator_name"])
-        remove_user_role(
-            Channel.objects.get(id=self.kwargs["id"]), CHANNEL_ROLE_MODERATORS, user
-        )
-        return Response(status=HTTP_204_NO_CONTENT)
-
-
-@extend_schema_view(
-    list=extend_schema(summary="Channel Detail Lookup by channel type and name"),
+    list=extend_schema(summary="Channel Counts by channel type"),
 )
 class ChannelCountsView(mixins.ListModelMixin, viewsets.GenericViewSet):
     """
-    View for retrieving an individual channel by type and name
+    View for retrieving channel resource counts by channel type
     """
 
     serializer_class = ChannelCountsSerializer
     permission_classes = (AnonymousAccessReadonlyPermission,)
     pagination_class = None
 
-    def get_queryset(self):
-        """
-        Return the channel by type and name
-        """
-        return Channel.objects.filter(
-            channel_type=self.kwargs["channel_type"],
+    def get_queryset(self) -> QuerySet[Channel]:
+        """Channels of the given type, joined to the relation get_counts walks."""
+        channel_type = self.kwargs["channel_type"]
+        # Each request is scoped to a single channel_type, so only that type's
+        # detail relation needs joining (pathway channels have nothing to count).
+        detail_relation = {
+            ChannelType.topic.name: "topic_detail__topic",
+            ChannelType.department.name: "department_detail__department",
+            ChannelType.unit.name: "unit_detail__unit",
+        }.get(channel_type)
+        queryset = Channel.objects.filter(
+            channel_type=channel_type,
             published=True,
         )
+        if detail_relation:
+            queryset = queryset.select_related(detail_relation)
+        return queryset
 
-    @method_decorator(
-        cache_page_for_all_users(
-            settings.REDIS_VIEW_CACHE_DURATION, cache="redis", key_prefix="channels"
-        )
-    )
-    def list(self, request, *args, **kwargs):
+    @method_decorator(cache_channel_response())
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        """List channel counts by resource type."""
         return super().list(request, *args, **kwargs)

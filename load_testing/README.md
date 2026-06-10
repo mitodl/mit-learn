@@ -3,7 +3,7 @@
 ### Usage (Docker)
 
 ```shell
-./scripts/k6.sh run /app/learn.smoke.ts -e BACKEND_BASE_URL=#### -e FRONTEND_BASE_URL=####
+./scripts/k6.sh /app/learn.smoke.ts -e BACKEND_BASE_URL=#### -e FRONTEND_BASE_URL=####
 ```
 
 ### Usage (local k6)
@@ -33,3 +33,9 @@ k6 run learn.smoke.ts -e BACKEND_BASE_URL=#### -e FRONTEND_BASE_URL=####
 | `SSO_BASE_URL`        | The base url to the keycloak service.                                                                                                                                                       | `https://keycloak.odl.local`  |
 | `IGNORE_HTTPS_ERRORS` | Ignore https certificate errors. Only recommemded for local test certificates.                                                                                                              | `true`                        |
 | `USERS_JSON_FILE`     | Data file for users auth info. Expected to be in the format `[{"email": "<EMAIL>", "password": "<PASSWORD>"}, ...]`. Put this is the `data/` subdirectory as files in there are gitignored. | `data/users.json`             |
+
+### channels.compare.ts
+
+- `CHANNEL_NAME_PREFIX` (optional): if set, the channels load test only targets
+  channels whose names start with this prefix.
+  Example: `CHANNEL_NAME_PREFIX=loadtest-`

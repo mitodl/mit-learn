@@ -23,8 +23,7 @@ export async function generateMetadata({
   const { certificateType, uuid } = await params
 
   return safeGenerateMetadata(async () => {
-    let title, userName
-    const { displayType } = getCertificateInfo()
+    let title, userName, displayType
 
     const queryClient = getQueryClient()
 
@@ -38,6 +37,7 @@ export async function generateMetadata({
       title = data.course_run.course.title
 
       userName = data?.user?.name
+      displayType = getCertificateInfo().displayType
     } else {
       const data = await queryClient.fetchQueryOr404(
         certificateQueries.programCertificatesRetrieve({
@@ -48,6 +48,7 @@ export async function generateMetadata({
       title = data.program.title
 
       userName = data.user.name
+      displayType = getCertificateInfo(data.program.program_type).displayType
     }
 
     return standardizeMetadata({

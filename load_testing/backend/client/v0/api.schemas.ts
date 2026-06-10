@@ -150,62 +150,6 @@ export interface ChannelCounts {
 }
 
 /**
- * @nullable
- */
-export type ChannelCreateRequestAbout = unknown | null
-
-/**
- * @nullable
- */
-export type ChannelCreateRequestTopicDetail = ChannelTopicDetailRequest | null
-
-/**
- * @nullable
- */
-export type ChannelCreateRequestDepartmentDetail =
-  ChannelDepartmentDetailRequest | null
-
-/**
- * Write serializer for Channel. Uses primary keys for referenced objects
-during requests, and delegates to ChannelSerializer for responses.
- */
-export interface ChannelCreateRequest {
-  /**
-   * @minLength 1
-   * @maxLength 100
-   * @pattern ^[A-Za-z0-9_-]+$
-   */
-  name: string
-  /**
-   * @minLength 1
-   * @maxLength 100
-   */
-  title: string
-  public_description?: string
-  sub_channels?: string[]
-  /**
-   * Learning path featured in this channel.
-   * @nullable
-   */
-  featured_list?: number | null
-  /** Learning paths in this channel. */
-  lists?: (number | null)[]
-  /** @nullable */
-  avatar?: Blob | null
-  /** @nullable */
-  banner?: Blob | null
-  /** @nullable */
-  about?: ChannelCreateRequestAbout
-  channel_type: string
-  /** @maxLength 2048 */
-  search_filter?: string
-  /** @nullable */
-  topic_detail?: ChannelCreateRequestTopicDetail
-  /** @nullable */
-  department_detail?: ChannelCreateRequestDepartmentDetail
-}
-
-/**
  * Serializer for the ChannelDepartmentDetail model
  */
 export interface ChannelDepartmentDetail {
@@ -214,50 +158,9 @@ export interface ChannelDepartmentDetail {
 }
 
 /**
- * Serializer for the ChannelDepartmentDetail model
- */
-export interface ChannelDepartmentDetailRequest {
-  /**
-   * @minLength 1
-   * @nullable
-   */
-  department?: string | null
-}
-
-/**
- * Serializer for moderators
- */
-export interface ChannelModerator {
-  /** Returns the name for the moderator */
-  moderator_name?: string
-  /** Get the email from the associated user */
-  email?: string
-  /** Get the full name of the associated user */
-  readonly full_name: string
-}
-
-/**
- * Serializer for moderators
- */
-export interface ChannelModeratorRequest {
-  /** Returns the name for the moderator */
-  moderator_name?: string
-  /** Get the email from the associated user */
-  email?: string
-}
-
-/**
  * Serializer for the ChannelTopicDetail model
  */
 export interface ChannelTopicDetail {
-  /** @nullable */
-  topic?: number | null
-}
-
-/**
- * Serializer for the ChannelTopicDetail model
- */
-export interface ChannelTopicDetailRequest {
   /** @nullable */
   topic?: number | null
 }
@@ -779,8 +682,6 @@ export interface DepartmentChannel {
    * @nullable
    */
   banner?: string | null
-  /** Return true if user is a moderator for the channel */
-  readonly is_moderator: boolean
   readonly lists: readonly LearningPathPreview[]
   /** Get the URL for the channel */
   readonly channel_url: string
@@ -1538,33 +1439,6 @@ export interface LearningResourceOfferorDetail {
 }
 
 /**
- * Serializer for LearningResourceOfferor with all details
- */
-export interface LearningResourceOfferorDetailRequest {
-  /**
-   * @minLength 1
-   * @maxLength 12
-   */
-  code: string
-  /**
-   * @minLength 1
-   * @maxLength 256
-   */
-  name: string
-  professional?: boolean
-  offerings?: string[]
-  audience?: string[]
-  formats?: string[]
-  fee?: string[]
-  certifications?: string[]
-  content_types?: string[]
-  /** @maxLength 200 */
-  more_information?: string
-  value_prop?: string
-  display_facet?: boolean
-}
-
-/**
  * Serializer for LearningResourcePlatform
  */
 export interface LearningResourcePlatform {
@@ -1902,68 +1776,6 @@ export interface PaginatedFeedSourceList {
 /**
  * @nullable
  */
-export type PatchedChannelWriteRequestAbout = unknown | null
-
-/**
- * @nullable
- */
-export type PatchedChannelWriteRequestTopicDetail =
-  ChannelTopicDetailRequest | null
-
-/**
- * @nullable
- */
-export type PatchedChannelWriteRequestDepartmentDetail =
-  ChannelDepartmentDetailRequest | null
-
-/**
- * Similar to ChannelCreateSerializer, with read-only name
- */
-export interface PatchedChannelWriteRequest {
-  /**
-   * @minLength 1
-   * @maxLength 100
-   * @pattern ^[A-Za-z0-9_-]+$
-   */
-  name?: string
-  /**
-   * @minLength 1
-   * @maxLength 100
-   */
-  title?: string
-  public_description?: string
-  sub_channels?: string[]
-  /**
-   * Learning path featured in this channel.
-   * @nullable
-   */
-  featured_list?: number | null
-  /** Learning paths in this channel. */
-  lists?: (number | null)[]
-  /**
-   * Get the avatar image URL
-   * @nullable
-   */
-  avatar?: string | null
-  /**
-   * Get the banner image URL
-   * @nullable
-   */
-  banner?: string | null
-  /** @nullable */
-  about?: PatchedChannelWriteRequestAbout
-  channel_type?: string
-  /** @maxLength 2048 */
-  search_filter?: string
-  /** @nullable */
-  topic_detail?: PatchedChannelWriteRequestTopicDetail
-  /** @nullable */
-  department_detail?: PatchedChannelWriteRequestDepartmentDetail
-}
-
-/**
- * @nullable
- */
 export type PatchedProfileRequestLocation = unknown | null
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
@@ -2088,8 +1900,6 @@ export interface PathwayChannel {
    * @nullable
    */
   banner?: string | null
-  /** Return true if user is a moderator for the channel */
-  readonly is_moderator: boolean
   readonly lists: readonly LearningPathPreview[]
   /** Get the URL for the channel */
   readonly channel_url: string
@@ -3262,8 +3072,6 @@ export interface TopicChannel {
    * @nullable
    */
   banner?: string | null
-  /** Return true if user is a moderator for the channel */
-  readonly is_moderator: boolean
   readonly lists: readonly LearningPathPreview[]
   /** Get the URL for the channel */
   readonly channel_url: string
@@ -3358,8 +3166,6 @@ export interface UnitChannel {
    * @nullable
    */
   banner?: string | null
-  /** Return true if user is a moderator for the channel */
-  readonly is_moderator: boolean
   readonly lists: readonly LearningPathPreview[]
   /** Get the URL for the channel */
   readonly channel_url: string
@@ -4188,6 +3994,10 @@ export type VectorContentFilesSearchRetrieveParams = {
    */
   collection_name?: string
   /**
+   * The edX module id of the content file
+   */
+  edx_module_id?: string[]
+  /**
    * The extension of the content file.
    */
   file_extension?: string[]
@@ -4498,8 +4308,7 @@ export type VectorLearningResourcesSearchRetrieveParams = {
  */
   resource_type_group?: VectorLearningResourcesSearchRetrieveResourceTypeGroupItem[]
   /**
-   * The minimum score a result must have to be returned
-   * @minimum 0
+   * The minimum score a result must have to be returned. Defaults to 0.0 when omitted, but the server clamps the effective cutoff to the minimum allowed for the selected search mode (dense or hybrid).
    */
   score_cutoff?: number
   /**

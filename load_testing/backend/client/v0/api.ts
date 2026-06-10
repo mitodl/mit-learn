@@ -15,9 +15,6 @@ import type {
   CKEditorSettings,
   Channel,
   ChannelCounts,
-  ChannelCreateRequest,
-  ChannelModerator,
-  ChannelModeratorRequest,
   ChannelsListParams,
   ContentFileVectorSearchResponse,
   FeedItem,
@@ -29,7 +26,6 @@ import type {
   PaginatedChannelList,
   PaginatedFeedItemList,
   PaginatedFeedSourceList,
-  PatchedChannelWriteRequest,
   PatchedProfileRequest,
   PatchedUserRequest,
   PatchedWidgetListRequest,
@@ -106,54 +102,9 @@ or organizations at MIT and are a high-level categorization of content.
   }
 
   /**
- * CRUD Operations related to Channels. Channels may represent groups
-or organizations at MIT and are a high-level categorization of content.
- * @summary Create
- */
-  channelsCreate(
-    channelCreateRequest: ChannelCreateRequest,
-    requestParameters?: Params,
-  ): {
-    response: Response
-    data: Channel
-    operationId: string
-  } {
-    const k6url = new URL(this.cleanBaseUrl + `/api/v0/channels/`)
-    const mergedRequestParameters = this._mergeRequestParameters(
-      requestParameters || {},
-      this.commonRequestParameters,
-    )
-    const response = http.request(
-      "POST",
-      k6url.toString(),
-      JSON.stringify(channelCreateRequest),
-      {
-        ...mergedRequestParameters,
-        headers: {
-          ...mergedRequestParameters?.headers,
-          "Content-Type": "application/json",
-        },
-      },
-    )
-    let data
-
-    try {
-      data = response.json()
-    } catch {
-      data = response.body
-    }
-    return {
-      response,
-      data,
-      operationId: "channels_create",
-    }
-  }
-
-  /**
- * CRUD Operations related to Channels. Channels may represent groups
-or organizations at MIT and are a high-level categorization of content.
- * @summary Retrieve
- */
+   * Retrieve a single channel by id.
+   * @summary Retrieve
+   */
   channelsRetrieve(
     id: number,
     requestParameters?: Params,
@@ -188,216 +139,8 @@ or organizations at MIT and are a high-level categorization of content.
   }
 
   /**
- * CRUD Operations related to Channels. Channels may represent groups
-or organizations at MIT and are a high-level categorization of content.
- * @summary Update
- */
-  channelsPartialUpdate(
-    id: number,
-    patchedChannelWriteRequest: PatchedChannelWriteRequest,
-    requestParameters?: Params,
-  ): {
-    response: Response
-    data: Channel
-    operationId: string
-  } {
-    const k6url = new URL(this.cleanBaseUrl + `/api/v0/channels/${id}/`)
-    const mergedRequestParameters = this._mergeRequestParameters(
-      requestParameters || {},
-      this.commonRequestParameters,
-    )
-    const response = http.request(
-      "PATCH",
-      k6url.toString(),
-      JSON.stringify(patchedChannelWriteRequest),
-      {
-        ...mergedRequestParameters,
-        headers: {
-          ...mergedRequestParameters?.headers,
-          "Content-Type": "application/json",
-        },
-      },
-    )
-    let data
-
-    try {
-      data = response.json()
-    } catch {
-      data = response.body
-    }
-    return {
-      response,
-      data,
-      operationId: "channels_partial_update",
-    }
-  }
-
-  /**
- * CRUD Operations related to Channels. Channels may represent groups
-or organizations at MIT and are a high-level categorization of content.
- * @summary Destroy
- */
-  channelsDestroy(
-    id: number,
-    requestParameters?: Params,
-  ): {
-    response: Response
-    data: void
-    operationId: string
-  } {
-    const k6url = new URL(this.cleanBaseUrl + `/api/v0/channels/${id}/`)
-    const mergedRequestParameters = this._mergeRequestParameters(
-      requestParameters || {},
-      this.commonRequestParameters,
-    )
-    const response = http.request(
-      "DELETE",
-      k6url.toString(),
-      undefined,
-      mergedRequestParameters,
-    )
-    let data
-
-    try {
-      data = response.json()
-    } catch {
-      data = response.body
-    }
-    return {
-      response,
-      data,
-      operationId: "channels_destroy",
-    }
-  }
-
-  /**
-   * View for listing and adding moderators
-   * @summary Channel Moderators List
-   */
-  channelsModeratorsList(
-    id: string,
-    requestParameters?: Params,
-  ): {
-    response: Response
-    data: ChannelModerator[]
-    operationId: string
-  } {
-    const k6url = new URL(
-      this.cleanBaseUrl + `/api/v0/channels/${id}/moderators/`,
-    )
-    const mergedRequestParameters = this._mergeRequestParameters(
-      requestParameters || {},
-      this.commonRequestParameters,
-    )
-    const response = http.request(
-      "GET",
-      k6url.toString(),
-      undefined,
-      mergedRequestParameters,
-    )
-    let data
-
-    try {
-      data = response.json()
-    } catch {
-      data = response.body
-    }
-    return {
-      response,
-      data,
-      operationId: "channels_moderators_list",
-    }
-  }
-
-  /**
-   * View for listing and adding moderators
-   * @summary Channel Moderators Create
-   */
-  channelsModeratorsCreate(
-    id: string,
-    channelModeratorRequest: ChannelModeratorRequest,
-    requestParameters?: Params,
-  ): {
-    response: Response
-    data: ChannelModerator
-    operationId: string
-  } {
-    const k6url = new URL(
-      this.cleanBaseUrl + `/api/v0/channels/${id}/moderators/`,
-    )
-    const mergedRequestParameters = this._mergeRequestParameters(
-      requestParameters || {},
-      this.commonRequestParameters,
-    )
-    const response = http.request(
-      "POST",
-      k6url.toString(),
-      JSON.stringify(channelModeratorRequest),
-      {
-        ...mergedRequestParameters,
-        headers: {
-          ...mergedRequestParameters?.headers,
-          "Content-Type": "application/json",
-        },
-      },
-    )
-    let data
-
-    try {
-      data = response.json()
-    } catch {
-      data = response.body
-    }
-    return {
-      response,
-      data,
-      operationId: "channels_moderators_create",
-    }
-  }
-
-  /**
-   * Remove the user from the moderator groups for this website
-   * @summary Channel Moderators Destroy
-   */
-  channelsModeratorsDestroy(
-    id: string,
-    moderatorName: string,
-    requestParameters?: Params,
-  ): {
-    response: Response
-    data: void
-    operationId: string
-  } {
-    const k6url = new URL(
-      this.cleanBaseUrl + `/api/v0/channels/${id}/moderators/${moderatorName}/`,
-    )
-    const mergedRequestParameters = this._mergeRequestParameters(
-      requestParameters || {},
-      this.commonRequestParameters,
-    )
-    const response = http.request(
-      "DELETE",
-      k6url.toString(),
-      undefined,
-      mergedRequestParameters,
-    )
-    let data
-
-    try {
-      data = response.json()
-    } catch {
-      data = response.body
-    }
-    return {
-      response,
-      data,
-      operationId: "channels_moderators_destroy",
-    }
-  }
-
-  /**
-   * View for retrieving an individual channel by type and name
-   * @summary Channel Detail Lookup by channel type and name
+   * List channel counts by resource type.
+   * @summary Channel Counts by channel type
    */
   channelsCountsList(
     channelType: string,

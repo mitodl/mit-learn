@@ -76,17 +76,8 @@ export const DEPARTMENTS = "/departments/"
 export const TOPICS = "/topics/"
 
 export const CHANNEL_VIEW = "/c/[channelType]/[name]" as const
-export const CHANNEL_EDIT = "/c/[channelType]/[name]/manage/" as const
-export const CHANNEL_EDIT_WIDGETS =
-  "/c/[channelType]/[name]/manage/widgets/" as const
 export const makeChannelViewPath = (channelType: string, name: string) =>
   generatePath(CHANNEL_VIEW, { channelType, name })
-export const makeChannelEditPath = (channelType: string, name: string) =>
-  generatePath(CHANNEL_EDIT, { channelType, name })
-export const makeChannelManageWidgetsPath = (
-  channelType: string,
-  name: string,
-) => generatePath(CHANNEL_EDIT_WIDGETS, { channelType, name })
 
 const MITOL_API_BASE_URL = env("NEXT_PUBLIC_MITOL_API_BASE_URL")
 
@@ -137,6 +128,7 @@ export const RECOMMENDER_QUERY_PARAM = "recommender"
 export const RESOURCE_DRAWER_PARAMS = {
   resource: "resource",
   syllabus: "syllabus",
+  syllabusOnly: "syllabus_only",
 } as const
 
 export const canonicalResourceDrawerUrl = (resourceId: number) =>
@@ -272,6 +264,7 @@ export const videoDetailPageView = (videoId: number, playlistId?: number) => {
 }
 export const PROGRAM_PAGE_VIEW = "/programs/[readableId]"
 export const PROGRAM_AS_COURSE_PAGE_VIEW = "/courses/p/[readableId]"
+
 export const programPageView = (program: {
   readable_id: string
   /**

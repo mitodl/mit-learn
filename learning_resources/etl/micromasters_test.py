@@ -191,6 +191,8 @@ def test_micromasters_transform(mock_micromasters_data, missing_url):
         ("http://example.com/program/1/url", False),
         ("http://example.com/dedp/program/1/url", True),
         ("http://example.com/scm/program/1/url", True),
+        ("http://example.com/fin/program/1/url", True),
+        ("http://example.com/finis/program/1/url", False),
     ],
 )
 def test_micromasters_transform_ignores_urls(

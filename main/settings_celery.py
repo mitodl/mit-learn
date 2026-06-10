@@ -169,10 +169,6 @@ CELERY_BEAT_SCHEDULE = (
                 "SCRAPE_MARKETING_PAGES_SCHEDULE_SECONDS", 60 * 60 * 12
             ),  # default is every 12 hours
         },
-        "remove-duplicate-courses-every-6-hours": {
-            "task": "learning_resources.tasks.remove_duplicate_resources",
-            "schedule": crontab(minute=0, hour=9),  # 5:00am EST
-        },
         "daily_embed_new_learning_resources": {
             "task": "vector_search.tasks.embed_new_learning_resources",
             "schedule": get_int(
