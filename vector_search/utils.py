@@ -1282,7 +1282,7 @@ def retrieve_points_matching_params(
             break
 
 
-def custom_score_formula(collection_name: str):
+def custom_score_formula(collection_name: str) -> list[models.MultExpression]:
     """
     Boost scores based on params defined in VECTOR_SEARCH_SCORE_BOOST
     """
