@@ -11,7 +11,7 @@ import { notFound, redirect } from "next/navigation"
 import { parseResourceId } from "@/common/slugs"
 import { absoluteUrl, videoPlaylistPageView } from "@/common/urls"
 
-type Props = { params: Promise<{ id: string; slug: string }> }
+type Props = PageProps<"/video-playlist/[id]/[slug]">
 
 export const generateMetadata = async (props: Props) => {
   const { id } = await props.params

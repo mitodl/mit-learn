@@ -9,7 +9,7 @@ import { notFound, redirect } from "next/navigation"
 import { parseResourceId } from "@/common/slugs"
 import { absoluteUrl, podcastPageView } from "@/common/urls"
 
-type Props = { params: Promise<{ podcastId: string; slug: string }> }
+type Props = PageProps<"/podcast/[podcastId]/[slug]">
 
 export const generateMetadata = async (props: Props) => {
   const { podcastId } = await props.params

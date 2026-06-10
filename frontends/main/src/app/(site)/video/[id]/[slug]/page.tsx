@@ -13,10 +13,7 @@ import type { VideoResource } from "api/v1"
 import { parseResourceId, resolveVideoPlaylist } from "@/common/slugs"
 import { absoluteUrl, videoDetailPageView } from "@/common/urls"
 
-type Props = {
-  params: Promise<{ id: string; slug: string }>
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}
+type Props = PageProps<"/video/[id]/[slug]">
 
 const videoPlaylistIds = (video: VideoResource): number[] =>
   (video.playlists ?? [])

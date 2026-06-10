@@ -5,7 +5,7 @@ import { parseResourceId } from "@/common/slugs"
 import { videoPlaylistPageView } from "@/common/urls"
 
 /** Bare /video-playlist/{id} is never canonical → 307-redirect to slugged form. */
-const Page = async (props: { params: Promise<{ id: string }> }) => {
+const Page = async (props: PageProps<"/video-playlist/[id]">) => {
   const { id } = await props.params
   const playlistId = parseResourceId(id)
   if (playlistId === null) {

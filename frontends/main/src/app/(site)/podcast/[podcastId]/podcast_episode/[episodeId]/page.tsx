@@ -10,9 +10,9 @@ import type { PodcastEpisodeResource } from "api/v1"
  * Bare /podcast/{podcastId}/podcast_episode/{episodeId} is never canonical →
  * 307-redirect to the slugged form, correcting the parent podcast id.
  */
-const Page = async (props: {
-  params: Promise<{ podcastId: string; episodeId: string }>
-}) => {
+const Page = async (
+  props: PageProps<"/podcast/[podcastId]/podcast_episode/[episodeId]">,
+) => {
   const { podcastId, episodeId } = await props.params
   const epId = parseResourceId(episodeId)
   const incomingPodcastId = parseResourceId(podcastId)

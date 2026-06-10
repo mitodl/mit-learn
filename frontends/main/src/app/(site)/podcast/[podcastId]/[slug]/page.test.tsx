@@ -36,26 +36,21 @@ const mockPodcast = () => {
   return podcast
 }
 
+const pageProps = (podcastId: string, slug: string) => ({
+  params: Promise.resolve({ podcastId, slug }),
+  searchParams: Promise.resolve({}),
+})
+
 test("renders (no redirect) when the slug is already canonical", async () => {
   const podcast = mockPodcast()
-  await Page({
-    params: Promise.resolve({
-      podcastId: String(podcast.id),
-      slug: "beyond-biology",
-    }),
-  })
+  await Page(pageProps(String(podcast.id), "beyond-biology"))
   expect(mockRedirect).not.toHaveBeenCalled()
 })
 
 test("redirects a stale/wrong slug to the canonical", async () => {
   const podcast = mockPodcast()
   await expect(
-    Page({
-      params: Promise.resolve({
-        podcastId: String(podcast.id),
-        slug: "old-title",
-      }),
-    }),
+    Page(pageProps(String(podcast.id), "old-title")),
   ).rejects.toThrow("NEXT_REDIRECT")
   expect(mockRedirect).toHaveBeenCalledWith(
     `/podcast/${podcast.id}/beyond-biology`,
@@ -63,9 +58,7 @@ test("redirects a stale/wrong slug to the canonical", async () => {
 })
 
 test("notFound for a non-numeric id", async () => {
-  await expect(
-    Page({ params: Promise.resolve({ podcastId: "abc", slug: "x" }) }),
-  ).rejects.toThrow("NEXT_NOT_FOUND")
+  await expect(Page(pageProps("abc", "x"))).rejects.toThrow("NEXT_NOT_FOUND")
 })
 
 test("a blank-slug title canonicalizes to the literal 'resource' segment", async () => {
@@ -75,22 +68,17 @@ test("a blank-slug title canonicalizes to the literal 'resource' segment", async
     urls.learningResources.details({ id: podcast.id }),
     podcast,
   )
-  await expect(
-    Page({
-      params: Promise.resolve({ podcastId: String(podcast.id), slug: "wrong" }),
-    }),
-  ).rejects.toThrow("NEXT_REDIRECT")
+  await expect(Page(pageProps(String(podcast.id), "wrong"))).rejects.toThrow(
+    "NEXT_REDIRECT",
+  )
   expect(mockRedirect).toHaveBeenCalledWith(`/podcast/${podcast.id}/resource`)
 })
 
 test("generateMetadata sets the slugged canonical tag", async () => {
   const podcast = mockPodcast()
-  const meta = await generateMetadata({
-    params: Promise.resolve({
-      podcastId: String(podcast.id),
-      slug: "beyond-biology",
-    }),
-  })
+  const meta = await generateMetadata(
+    pageProps(String(podcast.id), "beyond-biology"),
+  )
   expect(meta.alternates?.canonical).toMatch(
     new RegExp(`/podcast/${podcast.id}/beyond-biology$`),
   )

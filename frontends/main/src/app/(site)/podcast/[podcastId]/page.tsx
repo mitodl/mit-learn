@@ -6,7 +6,7 @@ import { parseResourceId } from "@/common/slugs"
 import { podcastPageView } from "@/common/urls"
 
 /** Bare /podcast/{id} is never canonical → 307-redirect to the slugged form. */
-const Page = async (props: { params: Promise<{ podcastId: string }> }) => {
+const Page = async (props: PageProps<"/podcast/[podcastId]">) => {
   const { podcastId } = await props.params
   const id = parseResourceId(podcastId)
   if (id === null) {

@@ -7,13 +7,7 @@ import { parseResourceId, resolveVideoPlaylist } from "@/common/slugs"
 import { videoDetailPageView } from "@/common/urls"
 
 /** Bare /video/{id} is never canonical → 307-redirect to slug + resolved playlist. */
-const Page = async ({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}) => {
+const Page = async ({ params, searchParams }: PageProps<"/video/[id]">) => {
   const { id } = await params
   const resolvedSearchParams = await searchParams
   const videoId = parseResourceId(id)
