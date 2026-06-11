@@ -3,8 +3,7 @@
 import React, { useEffect } from "react"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
-import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
-import { adaptCourseEntryToLegacyDashboardCardProps } from "./CoursewareDisplay/model/dashboardAdapters"
+import { CoursewareCard } from "./CoursewareDisplay/CoursewareCard"
 import {
   alpha,
   Link,
@@ -170,7 +169,7 @@ const WelcomeMessage: React.FC<{ contract?: ContractPage }> = ({
   )
 }
 
-const DashboardCardStyled = styled(DashboardCard)({
+const DashboardCardStyled = styled(CoursewareCard)({
   borderRadius: "0px",
   borderTop: "none",
   "&:last-of-type": {
@@ -279,7 +278,7 @@ const OrgProgramCollectionDisplay: React.FC<{
               runId:
                 entry.displayedEnrollment?.run.id ?? entry.displayedRun?.id,
             })}
-            {...adaptCourseEntryToLegacyDashboardCardProps(entry)}
+            entry={entry}
             noun="Module"
             offerUpgrade={false}
           />
@@ -335,7 +334,7 @@ const OrgProgramDisplay: React.FC<{
               runId:
                 entry.displayedEnrollment?.run.id ?? entry.displayedRun?.id,
             })}
-            {...adaptCourseEntryToLegacyDashboardCardProps(entry)}
+            entry={entry}
             noun="Module"
             offerUpgrade={false}
           />
