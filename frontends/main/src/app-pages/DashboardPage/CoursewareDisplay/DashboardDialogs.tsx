@@ -191,10 +191,11 @@ const jitSchema = Yup.object().shape({
   year_of_birth: Yup.string().required("Year of birth is required"),
 })
 
-const JustInTimeDialogInner: React.FC<{ href: string; readableId: string }> = ({
-  href,
-  readableId,
-}) => {
+const JustInTimeDialogInner: React.FC<{
+  href: string
+  readableId: string
+  programId?: string
+}> = ({ href, readableId, programId }) => {
   const { data: countries } = useQuery(mitxUserQueries.countries())
   const updateUser = useUpdateUserMutation()
   const createEnrollment = useCreateB2bEnrollment()
@@ -232,6 +233,7 @@ const JustInTimeDialogInner: React.FC<{ href: string; readableId: string }> = ({
       })
       await createEnrollment.mutateAsync({
         readable_id: readableId,
+        program_id: programId,
       })
       window.location.assign(href)
       modal.hide()

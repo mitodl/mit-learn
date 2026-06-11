@@ -8,6 +8,9 @@
  *  - does NOT use root layout (since error occurred there!)
  *  - therefore, must define its own HTML tags and providers
  *    Must define its own HTML tag
+ *  - root layout metadata still emits here, so the x-public-env <meta> and env()
+ *    usually work (also how Sentry inits) — but prefer env() over requiredEnv()
+ *    in this subtree; there's no boundary below to catch a throw.
  *  - NOT used in development mode
  *
  * https://nextjs.org/docs/app/building-your-application/routing/error-handling#handling-errors-in-root-layouts

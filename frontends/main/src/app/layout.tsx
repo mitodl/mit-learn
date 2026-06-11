@@ -1,17 +1,29 @@
 import React from "react"
 import Providers from "./providers"
 import { PublicEnvScript } from "./components/PublicEnvScript"
-import { env } from "@/env"
+import { env, publicEnvObject } from "@/env"
 
 import "./GlobalStyles"
+import { Metadata } from "next"
 
 const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 /**
- * As part of the root layout, this metadata object is site-wide defaults
+ * Site-wide metadata defaults plus an x-public-env meta tag carrying all
+ * NEXT_PUBLIC_* values as JSON. NOTES:
+ *  1. This delivery mechanism for NEXT_PUBLIC_* facilitates runtime env vars (not buildtime)
+ *  2. Delivery via metadata works even when errors are thrown server-side,
+ *     in which case React SSR is aborted and rendering falls back to a client-side render
+ *  3. Available to synchronous scripts below <meta x-public-env> or async scripts
+ *     above it, as long as this tag is delivered in the same HTML chunk as the async
+ *     scripts above it. (In practice, this is true for metadata + HTML content
+ *     down to the first suspense boundary.)
  */
-export const metadata = {
+export const metadata: Metadata = {
   metadataBase: NEXT_PUBLIC_ORIGIN ? new URL(NEXT_PUBLIC_ORIGIN) : null,
+  // raw JSON is fine: the attribute is HTML-escaped when rendered and
+  // getAttribute() returns it decoded, so JSON.parse round-trips.
+  other: { "x-public-env": JSON.stringify(publicEnvObject()) },
 }
 
 /**

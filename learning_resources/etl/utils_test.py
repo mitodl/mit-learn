@@ -3,7 +3,6 @@
 import datetime
 import pathlib
 from decimal import Decimal
-from random import randrange
 from subprocess import check_call
 from tempfile import TemporaryDirectory
 
@@ -364,22 +363,21 @@ def test_extract_valid_department_from_id(readable_id, is_ocw, dept_ids):
 def test_most_common_topics():
     """Test that most_common_topics returns the correct topics"""
     max_topics = 4
-    common_topics = LearningResourceTopicFactory.create_batch(max_topics)
+    common_topics = [
+        LearningResourceTopicFactory.create(name=f"Topic {number}")
+        for number in range(997, 1001)
+    ]
     uncommon_topics = LearningResourceTopicFactory.create_batch(3)
     resources = []
     for topic in common_topics:
-        resources.extend(
-            LearningResourceFactory.create_batch(randrange(2, 4), topics=[topic])  # noqa: S311
-        )
+        resources.extend(LearningResourceFactory.create_batch(2, topics=[topic]))
     resources.extend(
         [LearningResourceFactory.create(topics=[topic]) for topic in uncommon_topics]
     )
-    assert sorted(
-        [
-            topic["name"]
-            for topic in utils.most_common_topics(resources, max_topics=max_topics)
-        ]
-    ) == [topic.name for topic in common_topics]
+    assert {
+        topic["name"]
+        for topic in utils.most_common_topics(resources, max_topics=max_topics)
+    } == {topic.name for topic in common_topics}
 
 
 @pytest.mark.parametrize(

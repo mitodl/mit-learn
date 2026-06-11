@@ -13,9 +13,9 @@ export type LegacyDashboardCardResource =
 export type LegacyDashboardCardAdapterOutput = {
   resource: LegacyDashboardCardResource
   selectedCourseRun: BaseCourseRun | null
-  buttonHref: string | null
   contractId?: number
   programEnrollment?: V3UserProgramEnrollment
+  parentProgramReadableIds?: string[]
 }
 
 const adaptCourseEntryToLegacyDashboardCardProps = (
@@ -32,12 +32,9 @@ const adaptCourseEntryToLegacyDashboardCardProps = (
           data: entry.course,
         },
     selectedCourseRun: entry.displayedRun,
-    buttonHref:
-      entry.displayedEnrollment?.run.courseware_url ??
-      entry.displayedRun?.courseware_url ??
-      null,
     contractId: entry.contractId,
     programEnrollment: entry.ancestorContext?.programEnrollment,
+    parentProgramReadableIds: entry.ancestorContext?.parentProgramReadableIds,
   }
 }
 

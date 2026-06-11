@@ -47,25 +47,20 @@ import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import { trackCourseEnrolled } from "@/common/analytics/gtm"
 import {
   CourseWithCourseRunsSerializerV2,
-  CourseRunEnrollmentV3,
   V3UserProgramEnrollment,
   BaseCourseRun,
   CourseRunV2,
   DisplayModeEnum,
 } from "@mitodl/mitxonline-api-axios/v2"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
+import {
+  DashboardType,
+  type DashboardResource,
+} from "./model/dashboardViewModel"
 
-export const DashboardType = {
-  Course: "course",
-  CourseRunEnrollment: "courserun-enrollment",
-  ProgramEnrollment: "program-enrollment",
-} as const
-export type DashboardType = (typeof DashboardType)[keyof typeof DashboardType]
-
-export type DashboardResource =
-  | { type: "course"; data: CourseWithCourseRunsSerializerV2 }
-  | { type: "courserun-enrollment"; data: CourseRunEnrollmentV3 }
-  | { type: "program-enrollment"; data: V3UserProgramEnrollment }
+// Re-exported for consumers that still import from this file.
+export type { DashboardResource }
+export { DashboardType }
 
 /**
  * Gets the certificate link for a dashboard resource based on its type.
@@ -341,6 +336,7 @@ const useEnrollmentHandler = () => {
       isB2B,
       isVerifiedProgram,
       programCoursewareId,
+      b2bProgramId,
     }: {
       course: CourseWithCourseRunsSerializerV2
       readableId?: string
@@ -349,6 +345,7 @@ const useEnrollmentHandler = () => {
       isB2B?: boolean
       isVerifiedProgram?: boolean
       programCoursewareId?: string
+      b2bProgramId?: string
     }) => {
       if (isB2B) {
         if (!readableId) {
@@ -377,10 +374,11 @@ const useEnrollmentHandler = () => {
           NiceModal.show(JustInTimeDialog, {
             href: destinationUrl,
             readableId,
+            programId: b2bProgramId,
           })
         } else {
           createB2bEnrollment.mutate(
-            { readable_id: readableId },
+            { readable_id: readableId, program_id: b2bProgramId },
             {
               onSuccess: () => {
                 window.location.href = destinationUrl
@@ -730,13 +728,13 @@ type DashboardCardProps = {
   noun?: string
   contextMenuItems?: SimpleMenuItem[]
   isLoading?: boolean
-  buttonHref?: string | null
   buttonClick?: React.MouseEventHandler<HTMLButtonElement>
   Component?: React.ElementType
   className?: string
   variant?: "default" | "stacked"
   contractId?: number
   programEnrollment?: V3UserProgramEnrollment
+  parentProgramReadableIds?: string[]
   onUpgradeError?: (error: string) => void
   selectedCourseRun?: BaseCourseRun | CourseRunV2 | null
   uiLanguageCode?: string
@@ -749,13 +747,13 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   noun,
   contextMenuItems = [],
   isLoading = false,
-  buttonHref,
   buttonClick,
   Component,
   className,
   variant = "default",
   contractId,
   programEnrollment,
+  parentProgramReadableIds,
   onUpgradeError,
   selectedCourseRun,
   uiLanguageCode: _uiLanguageCode = "en",
@@ -832,11 +830,14 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       enrollment.enroll({
         course: resource.data,
         readableId: readableId,
-        href: buttonHref ?? coursewareUrl ?? undefined,
+        href: coursewareUrl ?? undefined,
         selectedCoursewareUrl: coursewareUrl ?? undefined,
         isB2B: !!b2bContractId,
         isVerifiedProgram: isVerifiedProgramEnrollment,
         programCoursewareId: programEnrollment?.program.readable_id,
+        b2bProgramId:
+          parentProgramReadableIds?.[0] ??
+          programEnrollment?.program.readable_id,
       })
     }
   }, [
@@ -845,15 +846,15 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     readableId,
     coursewareUrl,
     b2bContractId,
-    buttonHref,
     enrollment,
     programEnrollment?.enrollment_mode,
     programEnrollment?.program.readable_id,
+    parentProgramReadableIds,
   ])
 
   // Determine title behavior (link vs clickable text vs plain text)
   const titleHref = isCourseRunEnrollment
-    ? (buttonHref ?? coursewareUrl)
+    ? coursewareUrl
     : isProgramEnrollment
       ? programView(resource.data.program.id)
       : undefined
@@ -935,7 +936,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         data-testid="courseware-button"
         startDate={isCourse ? courseRun?.start_date : enrollmentRun?.start_date}
         enrollmentStatus={enrollmentStatus}
-        href={buttonHref ?? coursewareUrl}
+        href={coursewareUrl ?? undefined}
         endDate={isCourse ? courseRun?.end_date : enrollmentRun?.end_date}
         noun={displayNoun}
         isProgram={false}
@@ -951,7 +952,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       noun={displayNoun}
       isProgram={true}
       enrollmentStatus={enrollmentStatus}
-      href={buttonHref ?? programView(resource.data.program.id)}
+      href={programView(resource.data.program.id)}
     />
   ) : null
 

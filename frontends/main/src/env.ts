@@ -45,6 +45,23 @@ type RequiredPublicEnvVar = Extract<
   `NEXT_PUBLIC_${string}`
 >
 
+// Populate window.__ENV from the x-public-env <meta> on first read. Error/
+// not-found pages are a client-rendered shell where PublicEnvScript never runs,
+// so window.__ENV is otherwise unset there. Shared by env() and fullEnv().
+const bootstrapClientEnv = (): void => {
+  if (window.__ENV) return
+  const content = document
+    .querySelector('meta[name="x-public-env"]')
+    ?.getAttribute("content")
+  if (content) {
+    try {
+      window.__ENV = JSON.parse(content)
+    } catch {
+      /* malformed; leave unset and fall through to process.env */
+    }
+  }
+}
+
 /**
  * Get the value of an environment variable at runtime.
  * NOTES:
@@ -54,12 +71,11 @@ type RequiredPublicEnvVar = Extract<
  */
 export const env = (key: PublicEnvVar): string | undefined => {
   if (typeof window !== "undefined") {
-    // Browser: read from server-injected window.__ENV. Fall back to process.env
-    // only when a `process` global actually exists (jsdom/test environments that
-    // set process.env directly). Webpack provides no `process` global for
-    // dynamic `process.env[key]` access, so an unguarded read would throw
-    // `ReferenceError: process is not defined` for any key absent from __ENV
-    // (e.g. an optional NEXT_PUBLIC_* var unset in the pod).
+    bootstrapClientEnv()
+    // Fall back to process.env only when a `process` global exists (jsdom/test
+    // environments that set it directly). Webpack provides no `process` global,
+    // so an unguarded read would throw ReferenceError for any key absent from
+    // __ENV (e.g. an optional NEXT_PUBLIC_* var unset in the pod).
     return (
       window.__ENV?.[key] ??
       (typeof process !== "undefined" ? process.env[key] : undefined)
@@ -68,6 +84,19 @@ export const env = (key: PublicEnvVar): string | undefined => {
   // Server: dynamic bracket access is NOT replaced by DefinePlugin, so this
   // reads the actual Kubernetes env var at request time.
   return process.env[key]
+}
+
+/**
+ * The full { NEXT_PUBLIC_*: value } map (vs env()'s single key). Uses the same
+ * client bootstrap as env() — window.__ENV, populated from the x-public-env
+ * <meta> if needed; on the server reads process.env.
+ */
+export const fullEnv = (): Record<string, string | undefined> => {
+  if (typeof window !== "undefined") {
+    bootstrapClientEnv()
+    return window.__ENV ?? {}
+  }
+  return publicEnvObject()
 }
 
 /**
@@ -82,3 +111,12 @@ export const requiredEnv = (key: RequiredPublicEnvVar): string => {
   invariant(value, `${key} must be defined`)
   return value
 }
+
+/**
+ * Server-side { NEXT_PUBLIC_*: value } map from process.env. Shared by
+ * PublicEnvScript and the x-public-env <meta> so the two can't drift.
+ */
+export const publicEnvObject = (): Record<string, string | undefined> =>
+  Object.fromEntries(
+    Object.entries(process.env).filter(([k]) => k.startsWith("NEXT_PUBLIC_")),
+  )
