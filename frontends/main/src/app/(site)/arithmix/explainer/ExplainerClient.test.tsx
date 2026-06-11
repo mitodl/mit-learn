@@ -49,4 +49,47 @@ describe("ExplainerClient", () => {
     )
     expect(mockNotFound).toHaveBeenCalled()
   })
+
+  test("calls notFound when the mynumbers package fails to load", async () => {
+    allowConsoleErrors()
+    mockNotFound.mockImplementation(() => {
+      throw new Error("NEXT_NOT_FOUND")
+    })
+
+    jest.doMock("mynumbers", () => ({
+      __esModule: true,
+      get ExplainerPage() {
+        throw new Error("Failed to load dynamically imported module")
+      },
+    }))
+    jest.doMock("posthog-js/react", () => ({
+      useFeatureFlagEnabled: () => true,
+    }))
+    jest.doMock("@/common/useFeatureFlagsLoaded", () => ({
+      useFeatureFlagsLoaded: () => true,
+    }))
+
+    await jest.isolateModulesAsync(async () => {
+      // Disable Testing Library's auto-cleanup so importing it here does not
+      // register an `afterEach` hook (hooks cannot be defined inside a test).
+      // Import `@testing-library/react` directly rather than `@/test-utils`,
+      // which also pulls in `user-event` and registers an `afterAll` hook.
+      process.env.RTL_SKIP_AUTO_CLEANUP = "true"
+      const { render, act: isolatedAct } = await import(
+        "@testing-library/react"
+      )
+      delete process.env.RTL_SKIP_AUTO_CLEANUP
+
+      const { default: ExplainerClientWithFailedImport } = await import(
+        "./ExplainerClient"
+      )
+
+      await expect(
+        isolatedAct(async () => {
+          render(<ExplainerClientWithFailedImport />)
+          await new Promise((resolve) => setTimeout(resolve, 0))
+        }),
+      ).rejects.toThrow("NEXT_NOT_FOUND")
+    })
+  })
 })
