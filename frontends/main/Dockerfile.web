@@ -43,7 +43,7 @@
 # heroku container:release --app mitopen-rc-nextjs frontend
 
 
-FROM node:24-alpine AS base
+FROM node:24-alpine@sha256:fb71d01345f11b708a3553c66e7c74074f2d506400ea81973343d915cb64eef0 AS base
 
 RUN apk update
 RUN apk add --no-cache libc6-compat && \
@@ -100,7 +100,7 @@ RUN yarn build
 # The standalone server is started directly with node (not `yarn start`), which
 # avoids yarn overhead and is the pattern recommended by Next.js for Docker:
 # https://github.com/vercel/next.js/tree/canary/examples/with-docker
-FROM node:24-alpine AS runner
+FROM node:24-alpine@sha256:fb71d01345f11b708a3553c66e7c74074f2d506400ea81973343d915cb64eef0 AS runner
 
 WORKDIR /app
 
