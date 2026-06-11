@@ -3,6 +3,7 @@ import { generateSitemaps, default as sitemap } from "./sitemap"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { ResourceTypeEnum } from "api"
 import { videoDetailPageView, videoPlaylistPageView } from "@/common/urls"
+import { videoPlaylistIds } from "@/common/slugs"
 
 const RESOURCE_TYPES = [ResourceTypeEnum.Video, ResourceTypeEnum.VideoPlaylist]
 
@@ -66,9 +67,7 @@ describe("Video Sitemaps", () => {
             lastModified: resource.last_modified ?? undefined,
           }
         }
-        const firstPlaylist = resource.playlists?.length
-          ? Number(resource.playlists[0])
-          : undefined
+        const [firstPlaylist] = videoPlaylistIds(resource)
         return {
           url: `${base}${videoDetailPageView(
             resource.id,
