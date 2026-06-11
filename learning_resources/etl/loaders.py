@@ -1757,8 +1757,8 @@ def load_playlist(
                 ).values_list("run__learning_resource_id", flat=True)
             )
 
-            video_playlist_data["parent_learning_resource_id"] = (
-                list(parent_ids)[0] if len(parent_ids) > 0 else None
+            video_playlist_data["parent_learning_resource_id"] = next(
+                iter(parent_ids), None
             )
 
             for parent in LearningResource.objects.filter(id__in=parent_ids):
