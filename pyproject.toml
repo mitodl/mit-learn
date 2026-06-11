@@ -91,7 +91,7 @@ dependencies = [
     "python-rapidjson>=1.8,<2",
     "pyyaml>=6.0.0,<7",
     "qdrant-client[fastembed]==1.18.0,<2",
-    "redis>=7.0.0,<8",
+    "redis>=8,<9",
     "requests>=2.31.0,<3",
     "retry2>=0.9.5,<0.10",
     "selenium>=4.30.0,<5",
