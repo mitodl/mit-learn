@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.71.4
+Version 0.71.4 (Released June 11, 2026)
 --------------
 
 - Exclude MicroMasters FIN programs from ETL ingestion (#3458)
