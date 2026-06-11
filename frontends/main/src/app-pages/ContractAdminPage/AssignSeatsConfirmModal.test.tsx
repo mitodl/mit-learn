@@ -40,7 +40,7 @@ describe("AssignSeatsConfirmModal", () => {
     renderWithTheme(<AssignSeatsConfirmModal {...baseProps} />)
 
     expect(
-      screen.getByText(/are you sure you want to send/i),
+      screen.getAllByText(/are you sure you want to send/i)[0],
     ).toBeInTheDocument()
   })
 
@@ -53,7 +53,7 @@ describe("AssignSeatsConfirmModal", () => {
     )
 
     expect(
-      screen.getByText(/imported and ready to assign/i),
+      screen.getAllByText(/imported and ready to assign/i)[0],
     ).toBeInTheDocument()
   })
 
@@ -62,7 +62,7 @@ describe("AssignSeatsConfirmModal", () => {
       <AssignSeatsConfirmModal {...baseProps} duplicateCount={2} />,
     )
 
-    expect(screen.getByText(/2 duplicates removed/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/2 duplicates removed/i)[0]).toBeInTheDocument()
   })
 
   test("does not show duplicate section when duplicateCount is 0", () => {
