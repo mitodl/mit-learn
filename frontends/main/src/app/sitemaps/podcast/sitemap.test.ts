@@ -50,7 +50,7 @@ describe("Podcast Sitemaps", () => {
       podcastList,
     )
 
-    const sitemapPage = await sitemap({ id: String(page) })
+    const sitemapPage = await sitemap({ id: Promise.resolve(String(page)) })
     expect(sitemapPage).toEqual(
       podcastList.results.map((resource) => ({
         url: `http://test.learn.odl.local:8062/podcast/${resource.id}`,
@@ -90,7 +90,7 @@ describe("Podcast Sitemaps", () => {
       { count: results.length, next: null, previous: null, results },
     )
 
-    const sitemapPage = await sitemap({ id: String(page) })
+    const sitemapPage = await sitemap({ id: Promise.resolve(String(page)) })
     // episodeWithoutParent should be excluded; episodeWithMultipleParents emits one entry per parent
     expect(sitemapPage).toEqual([
       {

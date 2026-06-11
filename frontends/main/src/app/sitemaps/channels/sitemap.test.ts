@@ -39,7 +39,7 @@ describe("Resource Sitemaps", () => {
     )
 
     const sitemapPage = await sitemap({
-      id: String(page),
+      id: Promise.resolve(String(page)),
     })
     expect(sitemapPage).toEqual(
       channels.results.map((channel) => ({

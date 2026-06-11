@@ -52,7 +52,7 @@ describe("Video Sitemaps", () => {
       { count: results.length, next: null, previous: null, results },
     )
 
-    const sitemapPage = await sitemap({ id: String(page) })
+    const sitemapPage = await sitemap({ id: Promise.resolve(String(page)) })
     expect(sitemapPage).toEqual(
       results.map((resource) => {
         if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
