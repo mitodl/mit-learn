@@ -2,32 +2,21 @@ import React, { useEffect } from "react"
 import posthog from "posthog-js"
 import { PostHogProvider, usePostHog } from "posthog-js/react"
 import { useUserMe } from "api/hooks/user"
-import {
-  FeatureFlags,
-  INTERNAL_BOOTSTRAPPING_FLAG,
-} from "@/common/feature_flags"
-import { env } from "@/env"
-
-// LOCAL DEV OVERRIDE: force-enable feature flags without a PostHog account.
-// Remove entries here when done testing locally.
-const LOCAL_FLAG_OVERRIDES: Partial<Record<FeatureFlags, boolean>> = {
-  [FeatureFlags.MitxOnlineProductPages]: true,
-}
+import { INTERNAL_BOOTSTRAPPING_FLAG } from "@/common/feature_flags"
+import { env, fullEnv } from "@/env"
 
 /**
- * Compute PostHog bootstrap feature flags from window.__ENV at runtime.
- * Previously this was computed at build time from process.env in next.config.js
- * (as FEATURE_FLAGS), but that approach bakes empty values when the Docker
- * image is built in CI without per-environment values. Reading from
- * window.__ENV gives the correct per-env flags injected by PublicEnvScript.
+ * Compute PostHog bootstrap feature flags from the runtime env (fullEnv()).
+ * Previously computed at build time from process.env in next.config.js, which
+ * bakes empty values when the image is built in CI without per-env values.
  */
 const getBootstrapFeatureFlags = (): Record<
   string,
   boolean | string
 > | null => {
   if (typeof window === "undefined") return null
-  const envSource = window.__ENV ?? {}
-  const prefix = envSource["NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX"] ?? "FEATURE_"
+  const prefix = env("NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX") ?? "FEATURE_"
+  const envSource = fullEnv()
   const fullPrefix = `NEXT_PUBLIC_${prefix}`
   const flags: Record<string, boolean | string> = {}
 
@@ -37,8 +26,6 @@ const getBootstrapFeatureFlags = (): Record<
       flags[flagName] = value === "True" ? true : JSON.stringify(value)
     }
   }
-
-  Object.assign(flags, LOCAL_FLAG_OVERRIDES)
 
   return Object.keys(flags).length > 0 ? flags : null
 }
@@ -73,11 +60,7 @@ const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   useEffect(() => {
-    const POSTHOG_API_KEY =
-      env("NEXT_PUBLIC_POSTHOG_API_KEY") ||
-      (Object.keys(LOCAL_FLAG_OVERRIDES).length > 0
-        ? "local-dev-override"
-        : undefined)
+    const POSTHOG_API_KEY = env("NEXT_PUBLIC_POSTHOG_API_KEY")
     const POSTHOG_API_HOST = env("NEXT_PUBLIC_POSTHOG_API_HOST")
     const POSTHOG_UI_HOST = env("NEXT_PUBLIC_POSTHOG_UI_HOST")
     if (POSTHOG_API_KEY) {
@@ -97,10 +80,7 @@ const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [])
 
-  if (
-    !env("NEXT_PUBLIC_POSTHOG_API_KEY") &&
-    !Object.keys(LOCAL_FLAG_OVERRIDES).length
-  ) {
+  if (!env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
     return children
   }
 
