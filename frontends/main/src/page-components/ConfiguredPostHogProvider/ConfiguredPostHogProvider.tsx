@@ -2,7 +2,10 @@ import React, { useEffect } from "react"
 import posthog from "posthog-js"
 import { PostHogProvider, usePostHog } from "posthog-js/react"
 import { useUserMe } from "api/hooks/user"
-import { FeatureFlags, INTERNAL_BOOTSTRAPPING_FLAG } from "@/common/feature_flags"
+import {
+  FeatureFlags,
+  INTERNAL_BOOTSTRAPPING_FLAG,
+} from "@/common/feature_flags"
 import { env } from "@/env"
 
 // LOCAL DEV OVERRIDE: force-enable feature flags without a PostHog account.
@@ -34,7 +37,6 @@ const getBootstrapFeatureFlags = (): Record<
       flags[flagName] = value === "True" ? true : JSON.stringify(value)
     }
   }
-
 
   Object.assign(flags, LOCAL_FLAG_OVERRIDES)
 
@@ -95,7 +97,10 @@ const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [])
 
-  if (!env("NEXT_PUBLIC_POSTHOG_API_KEY") && !Object.keys(LOCAL_FLAG_OVERRIDES).length) {
+  if (
+    !env("NEXT_PUBLIC_POSTHOG_API_KEY") &&
+    !Object.keys(LOCAL_FLAG_OVERRIDES).length
+  ) {
     return children
   }
 
