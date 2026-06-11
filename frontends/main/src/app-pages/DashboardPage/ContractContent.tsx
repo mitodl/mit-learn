@@ -169,7 +169,7 @@ const WelcomeMessage: React.FC<{ contract?: ContractPage }> = ({
   )
 }
 
-const DashboardCardStyled = styled(CoursewareCard)({
+const CoursewareCardStyled = styled(CoursewareCard)({
   borderRadius: "0px",
   borderTop: "none",
   "&:last-of-type": {
@@ -270,7 +270,7 @@ const OrgProgramCollectionDisplay: React.FC<{
       {header}
       <PlainList>
         {entries.map((entry) => (
-          <DashboardCardStyled
+          <CoursewareCardStyled
             Component="li"
             key={getKey({
               resourceType: ResourceType.Course,
@@ -326,7 +326,7 @@ const OrgProgramDisplay: React.FC<{
       </ProgramHeader>
       <PlainList>
         {entries.map((entry) => (
-          <DashboardCardStyled
+          <CoursewareCardStyled
             Component="li"
             key={getKey({
               resourceType: ResourceType.Course,
