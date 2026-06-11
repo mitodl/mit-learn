@@ -257,9 +257,13 @@ const VideoShortsModal = ({
   const muteButtonRef = useRef<HTMLButtonElement>(null)
   const sessionStartedAtRef = useRef<number>(Date.now())
   const currentVideoStartedAtRef = useRef<number>(Date.now())
-  const sessionPositionRef = useRef<number>(0)
-  const viewedIndicesRef = useRef<Set<number>>(new Set([startIndex]))
+  const viewedIndicesRef = useRef<Set<number>>(new Set())
   const selectedIndexRef = useRef<number | null>(startIndex)
+  // For startIndex > 0, Embla animates from slide 0 to startIndex on mount,
+  // firing slidesInView for each intermediate slide. hasSettledRef suppresses
+  // all analytics until Embla fires for startIndex itself.
+  const hasSettledRef = useRef<boolean>(startIndex === 0)
+  const sessionEndedRef = useRef<boolean>(false)
   const posthog = usePostHog()
   const capture = useCallback(
     (event: string, properties?: Record<string, unknown>) => {
@@ -285,13 +289,40 @@ const VideoShortsModal = ({
     playersRef.current = playersRef.current.slice(0, videoData.length)
   }, [videoData])
 
-  const handleClose = useCallback(() => {
+  // Fires the final analytics for the session. Guarded so it only runs once,
+  // since it can be triggered by an explicit close, the tab being hidden, or
+  // the page being unloaded — whichever happens first.
+  const captureSessionEnd = useCallback(() => {
+    if (sessionEndedRef.current) return
+    sessionEndedRef.current = true
+    const currentIndex = selectedIndexRef.current
+    if (currentIndex !== null && videoData[currentIndex]) {
+      const player = playersRef.current[currentIndex]
+      let videoDurationMs: number | undefined
+      if (player) {
+        const duration = player.duration()
+        if (duration && isFinite(duration) && duration > 0) {
+          videoDurationMs = Math.round(duration * 1000)
+        }
+      }
+      capture(PostHogEvents.VideoShortViewed, {
+        videoId: videoData[currentIndex].id,
+        videoTitle: videoData[currentIndex].title,
+        timeOnVideoMs: Date.now() - currentVideoStartedAtRef.current,
+        ...(videoDurationMs !== undefined ? { videoDurationMs } : {}),
+      })
+      viewedIndicesRef.current.add(currentIndex)
+    }
     capture(PostHogEvents.VideoShortsClosed, {
       sessionDurationMs: Date.now() - sessionStartedAtRef.current,
       totalVideosViewed: viewedIndicesRef.current.size,
     })
+  }, [capture, videoData])
+
+  const handleClose = useCallback(() => {
+    captureSessionEnd()
     onClose()
-  }, [onClose, capture])
+  }, [onClose, captureSessionEnd])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -307,11 +338,63 @@ const VideoShortsModal = ({
     }
   }, [handleClose])
 
-  // Keep a ref to the latest implementation so the stable wrapper below never
-  // changes identity, preventing CarouselV2Vertical from stacking duplicate
-  // Embla listeners on every mute/interaction state change.
-  const onSlidesInViewRef = useRef<(inView: number[]) => void>(() => {})
-  onSlidesInViewRef.current = (inView: number[]) => {
+  // Flush session analytics when the user leaves without an explicit close
+  // (closing/refreshing the tab, navigating away, or backgrounding the page),
+  // otherwise the final video_short_viewed and video_shorts_closed events would
+  // be lost — which is the most common way a session actually ends.
+  useEffect(() => {
+    const handlePageHide = () => captureSessionEnd()
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") captureSessionEnd()
+    }
+    window.addEventListener("pagehide", handlePageHide)
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    return () => {
+      window.removeEventListener("pagehide", handlePageHide)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
+  }, [captureSessionEnd])
+
+  // Analytics only; intentionally separate from the playback logic below so it
+  // can be added/removed without touching existing behavior. The prevIndex
+  // guard also makes it safe against CarouselV2Vertical firing the same event
+  // on duplicate listeners.
+  const trackSlideViewed = (newIndex: number) => {
+    const prevIndex = selectedIndexRef.current
+    // During Embla's init animation, slidesInView fires for each intermediate
+    // slide; suppress analytics until it settles on startIndex.
+    if (!hasSettledRef.current) {
+      if (newIndex === startIndex) {
+        hasSettledRef.current = true
+        currentVideoStartedAtRef.current = Date.now()
+      }
+      selectedIndexRef.current = newIndex
+      return
+    }
+    if (prevIndex === newIndex) return
+    // Fire an event for the video being left.
+    if (prevIndex !== null && videoData[prevIndex]) {
+      const prevPlayer = playersRef.current[prevIndex]
+      let videoDurationMs: number | undefined
+      if (prevPlayer) {
+        const duration = prevPlayer.duration()
+        if (duration && isFinite(duration) && duration > 0) {
+          videoDurationMs = Math.round(duration * 1000)
+        }
+      }
+      capture(PostHogEvents.VideoShortViewed, {
+        videoId: videoData[prevIndex].id,
+        videoTitle: videoData[prevIndex].title,
+        timeOnVideoMs: Date.now() - currentVideoStartedAtRef.current,
+        ...(videoDurationMs !== undefined ? { videoDurationMs } : {}),
+      })
+      viewedIndicesRef.current.add(prevIndex)
+    }
+    selectedIndexRef.current = newIndex
+    currentVideoStartedAtRef.current = Date.now()
+  }
+
+  const onSlidesInView = (inView: number[]) => {
     if (inView.length === 1 && videoData[inView[0]]) {
       playersRef.current
         .filter(
@@ -324,31 +407,6 @@ const VideoShortsModal = ({
       setAnnouncement(
         `${inView[0] + 1} of ${videoData.length}: ${videoData[inView[0]].title}`,
       )
-      const prevIndex = selectedIndexRef.current
-      const prevPlayer =
-        prevIndex !== null ? playersRef.current[prevIndex] : null
-      let prevVideoDurationMs: number | undefined
-      if (prevPlayer) {
-        const duration = prevPlayer.duration()
-        if (duration && isFinite(duration) && duration > 0) {
-          prevVideoDurationMs = Math.round(duration * 1000)
-        }
-      }
-
-      capture(PostHogEvents.VideoShortViewed, {
-        videoId: videoData[inView[0]].id,
-        videoTitle: videoData[inView[0]].title,
-        position: sessionPositionRef.current,
-        totalVideos: videoData.length,
-        timeOnPrevVideoMs: Date.now() - currentVideoStartedAtRef.current,
-        ...(prevVideoDurationMs !== undefined ? { prevVideoDurationMs } : {}),
-      })
-      if (!viewedIndicesRef.current.has(inView[0])) {
-        viewedIndicesRef.current.add(inView[0])
-        sessionPositionRef.current += 1
-      }
-      selectedIndexRef.current = inView[0]
-      currentVideoStartedAtRef.current = Date.now()
       const player = playersRef.current[inView[0]]
       if (player) {
         player.muted(muted)
@@ -360,13 +418,10 @@ const VideoShortsModal = ({
           setPlaying(true)
         }
       }
+
+      trackSlideViewed(inView[0])
     }
   }
-
-  const onSlidesInView = useCallback(
-    (inView: number[]) => onSlidesInViewRef.current(inView),
-    [],
-  )
 
   const onClickMute = () => {
     if (selectedIndex !== null && playersRef.current[selectedIndex]) {

@@ -356,19 +356,10 @@ describe("VideoShortsModal", () => {
     afterEach(() => {
       delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
     })
-    test("captures VideoShortViewed with timeOnPrevVideoMs on every scroll", async () => {
+    test("captures VideoShortViewed for the video being left when scrolling", async () => {
       const videoData = [
         makeVideoResource({ title: "First Video" }),
-        makeVideoResource({
-          title: "Second Video",
-          video: {
-            id: 2,
-            streaming_url: "https://example.com/video2.mp4",
-            duration: "PT1M",
-            caption_urls: [],
-            cover_image_url: null,
-          },
-        }),
+        makeVideoResource({ title: "Second Video" }),
       ]
 
       renderWithProviders(
@@ -392,16 +383,29 @@ describe("VideoShortsModal", () => {
       const call = mockedPostHogCapture.mock.calls.find(
         ([event]) => event === "video_short_viewed",
       )
+      // Event describes the video being LEFT (slide 0), not the one arrived at
       expect(call?.[1]).toMatchObject({
-        videoId: videoData[1].id,
-        videoTitle: "Second Video",
-        position: 0,
+        videoId: videoData[0].id,
+        videoTitle: "First Video",
       })
-      expect(call?.[1]).toHaveProperty("timeOnPrevVideoMs")
-      expect(call?.[1].prevVideoDurationMs).toBe(30000)
+      expect(call?.[1]).toHaveProperty("timeOnVideoMs")
+      expect(call?.[1].videoDurationMs).toBe(30000)
       expect(call?.[1]).not.toHaveProperty("percentageWatched")
-      expect(call?.[1]).not.toHaveProperty("timeOnVideoMs")
-      expect(call?.[1]).not.toHaveProperty("videoDurationMs")
+    })
+
+    test("captures VideoShortViewed for the current video on close", async () => {
+      renderWithProviders(<VideoShortsModal {...defaultProps} />)
+
+      await user.click(screen.getByRole("button", { name: "Close" }))
+
+      const call = mockedPostHogCapture.mock.calls.find(
+        ([event]) => event === "video_short_viewed",
+      )
+      expect(call?.[1]).toMatchObject({
+        videoId: defaultProps.videoData[0].id,
+        videoTitle: "First Video",
+      })
+      expect(call?.[1]).toHaveProperty("timeOnVideoMs")
     })
 
     test("totalVideosViewed is 1 when closing without scrolling", async () => {
@@ -433,8 +437,7 @@ describe("VideoShortsModal", () => {
     test("totalVideosViewed does not double-count when scrolling back to a previous video", async () => {
       renderWithProviders(<VideoShortsModal {...defaultProps} />)
 
-      // Simulate scrolling away from the initial video then back (Embla never
-      // fires slidesInView on mount, so index 0 is seeded but not scroll-fired)
+      // Scroll away then back — neither should double-count
       act(() => {
         triggerSlidesInView([1])
       })
@@ -485,6 +488,113 @@ describe("VideoShortsModal", () => {
         ([event]) => event === "video_shorts_closed",
       )
       expect(call?.[1].sessionDurationMs).toBeGreaterThanOrEqual(0)
+    })
+
+    test("flushes session analytics on pagehide", () => {
+      renderWithProviders(<VideoShortsModal {...defaultProps} />)
+
+      act(() => {
+        window.dispatchEvent(new Event("pagehide"))
+      })
+
+      expect(mockedPostHogCapture).toHaveBeenCalledWith(
+        "video_shorts_closed",
+        expect.objectContaining({
+          sessionDurationMs: expect.any(Number),
+          totalVideosViewed: 1,
+        }),
+      )
+    })
+
+    test("flushes session analytics when the page is hidden", () => {
+      renderWithProviders(<VideoShortsModal {...defaultProps} />)
+
+      act(() => {
+        Object.defineProperty(document, "visibilityState", {
+          value: "hidden",
+          configurable: true,
+        })
+        document.dispatchEvent(new Event("visibilitychange"))
+      })
+
+      expect(mockedPostHogCapture).toHaveBeenCalledWith(
+        "video_shorts_closed",
+        expect.objectContaining({ sessionDurationMs: expect.any(Number) }),
+      )
+
+      Object.defineProperty(document, "visibilityState", {
+        value: "visible",
+        configurable: true,
+      })
+    })
+
+    test("does not emit duplicate close events when pagehide follows an explicit close", async () => {
+      renderWithProviders(<VideoShortsModal {...defaultProps} />)
+
+      await user.click(screen.getByRole("button", { name: "Close" }))
+      act(() => {
+        window.dispatchEvent(new Event("pagehide"))
+      })
+
+      const closeCalls = mockedPostHogCapture.mock.calls.filter(
+        ([event]) => event === "video_shorts_closed",
+      )
+      expect(closeCalls).toHaveLength(1)
+    })
+  })
+
+  describe("playback", () => {
+    test("autoplays the selected video after Embla settles when startIndex > 0", async () => {
+      const videoData = [
+        makeVideoResource({ title: "First" }),
+        makeVideoResource({ title: "Second" }),
+        makeVideoResource({ title: "Third" }),
+      ]
+      renderWithProviders(
+        <VideoShortsModal
+          startIndex={2}
+          videoData={videoData}
+          onClose={jest.fn()}
+        />,
+      )
+
+      await act(async () => {
+        mockHandles.forEach((handle) => {
+          handle.triggerReady()
+          handle.player.paused.mockReturnValue(true)
+        })
+      })
+
+      // Embla animates from slide 0 to startIndex, firing intermediate events.
+      act(() => triggerSlidesInView([0]))
+      act(() => triggerSlidesInView([1]))
+      act(() => triggerSlidesInView([2]))
+
+      // The selected video should be playing (button reflects "Pause").
+      expect(
+        await screen.findByRole("button", { name: "Pause" }),
+      ).toBeInTheDocument()
+    })
+
+    test("keeps the playing state on same-slide re-emit", async () => {
+      const videoData = [makeVideoResource({ title: "Only" })]
+      renderWithProviders(
+        <VideoShortsModal
+          startIndex={0}
+          videoData={videoData}
+          onClose={jest.fn()}
+        />,
+      )
+
+      await act(async () => {
+        mockHandles[0]?.triggerReady()
+        mockHandles[0]?.player.paused.mockReturnValue(true)
+      })
+
+      act(() => triggerSlidesInView([0]))
+      act(() => triggerSlidesInView([0]))
+
+      expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument()
     })
   })
 })
