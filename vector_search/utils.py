@@ -936,7 +936,7 @@ def _resource_vector_hits(search_result):
     keys = [
         key
         for key in (
-            f"{hit.payload.get('platform', {}).get('code')}:"
+            f"{(hit.payload.get('platform') or {}).get('code', '')}:"
             f"{hit.payload.get('readable_id')}"
             for hit in search_result
         )
@@ -948,7 +948,7 @@ def _resource_vector_hits(search_result):
     in case we load points from external systems
     """
     resources_by_id = {
-        f"{r.platform.code}:{r.readable_id}": r
+        f"{(r.platform.code if r.platform else '')}:{r.readable_id}": r
         for r in LearningResource.objects.for_serialization().filter(
             readable_id__in=readable_ids
         )
