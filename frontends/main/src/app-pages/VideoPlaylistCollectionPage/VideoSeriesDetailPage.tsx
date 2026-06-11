@@ -7,6 +7,7 @@ import { useLearningResourcesDetail } from "api/hooks/learningResources"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { formatDurationClockTime } from "ol-utilities"
 import { useSeriesNavigation } from "./useSeriesNavigation"
+import { videoPlaylistPageView } from "@/common/urls"
 import SeriesNavBar from "./SeriesNavBar"
 import UpNextSection from "./UpNextSection"
 import * as Styled from "./VideoSeriesDetailPage.styled"
@@ -114,7 +115,10 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               ...(playlist && playlistId
                 ? [
                     {
-                      href: `/video-playlist/${playlistId}`,
+                      href: videoPlaylistPageView(
+                        String(playlist.id),
+                        playlist.title,
+                      ),
                       label: playlistLabel,
                     },
                   ]
@@ -128,7 +132,10 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
       {/* Series navigation bar */}
       {playlistId && (
         <SeriesNavBar
-          playlistId={playlistId}
+          playlistHref={videoPlaylistPageView(
+            String(playlistId),
+            playlist?.title,
+          )}
           playlistLabel={playlistLabel}
           videoId={videoId}
           isLoading={isLoading}

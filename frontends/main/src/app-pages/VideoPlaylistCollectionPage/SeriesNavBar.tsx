@@ -6,7 +6,7 @@ import type { SeriesNavigation } from "./useSeriesNavigation"
 import * as Styled from "./VideoSeriesDetailPage.styled"
 
 type SeriesNavBarProps = {
-  playlistId: number
+  playlistHref: string
   playlistLabel: string
   videoId: number
   isLoading: boolean
@@ -21,7 +21,7 @@ type SeriesNavBarProps = {
 >
 
 const SeriesNavBar: React.FC<SeriesNavBarProps> = ({
-  playlistId,
+  playlistHref,
   playlistLabel,
   videoId,
   isLoading,
@@ -36,7 +36,7 @@ const SeriesNavBar: React.FC<SeriesNavBarProps> = ({
     <Styled.SeriesNavBar>
       {/* Top row: series title + video position */}
       <Styled.SeriesNavTopRow>
-        <Styled.SeriesNavTitle href={`/video-playlist/${playlistId}`}>
+        <Styled.SeriesNavTitle href={playlistHref}>
           {isLoading ? <Skeleton width={200} height={20} /> : playlistLabel}
         </Styled.SeriesNavTitle>
         {!isLoading && videoPosition !== null && videoItems.length > 0 && (
