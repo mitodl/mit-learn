@@ -2970,6 +2970,7 @@ def test_load_youtube_video_channels():
         del playlist_data["id"]
         del playlist_data["channel"]
         del playlist_data["learning_resource"]
+        del playlist_data["parent_learning_resource"]
 
         channel_data["playlists"] = [playlist_data]
         channels_data.append(channel_data)
