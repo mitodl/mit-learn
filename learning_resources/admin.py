@@ -170,7 +170,7 @@ class VideoPlaylistInline(TabularInline):
     fk_name = "learning_resource"
     extra = 0
     show_change_link = True
-    fields = ("channel",)
+    fields = ("channel", "parent_learning_resource")
 
 
 class VideoChannelPlaylistInline(TabularInline):
@@ -180,6 +180,7 @@ class VideoChannelPlaylistInline(TabularInline):
     fk_name = "channel"
     extra = 0
     show_change_link = True
+    fields = ("channel",)
 
 
 class ProgramInline(TabularInline):
