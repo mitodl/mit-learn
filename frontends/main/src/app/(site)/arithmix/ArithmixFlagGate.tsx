@@ -1,45 +1,67 @@
 "use client"
 
-import React from "react"
+import React, { useEffect, useState } from "react"
 import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 
-class NotFoundOnError extends React.Component<
-  { children: React.ReactNode },
-  { hasError: boolean }
-> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props)
-    this.state = { hasError: false }
-  }
-
-  static getDerivedStateFromError() {
-    return { hasError: true }
-  }
-
-  render() {
-    if (this.state.hasError) {
-      // notFound() throws NEXT_NOT_FOUND, which propagates to Next's route-level
-      // not-found boundary and renders the 404 page.
-      return notFound()
-    }
-    return this.props.children
-  }
+type ArithmixFlagGateProps<P extends object = Record<string, never>> = {
+  load: () => Promise<React.ComponentType<P>>
+  componentProps?: P
 }
 
-const ArithmixFlagGate: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+function ArithmixFlagGate<P extends object = Record<string, never>>({
+  load,
+  componentProps,
+}: ArithmixFlagGateProps<P>) {
   const arithmixEnabled = useFeatureFlagEnabled(FeatureFlags.Arithmix)
   const flagsLoaded = useFeatureFlagsLoaded()
 
+  const [Component, setComponent] = useState<React.ComponentType<P> | null>(
+    null,
+  )
+  const [loadFailed, setLoadFailed] = useState(false)
+
+  useEffect(() => {
+    if (!arithmixEnabled) {
+      return undefined
+    }
+    let active = true
+    load()
+      .then((mod) => {
+        if (!active) {
+          return
+        }
+        if (!mod) {
+          setLoadFailed(true)
+          return
+        }
+        setComponent(() => mod)
+      })
+      .catch(() => {
+        if (active) {
+          setLoadFailed(true)
+        }
+      })
+    return () => {
+      active = false
+    }
+  }, [arithmixEnabled, load])
+
   if (!arithmixEnabled) {
-    return flagsLoaded ? notFound() : null
+    if (flagsLoaded) {
+      notFound()
+    }
+    return null
   }
 
-  return <NotFoundOnError>{children}</NotFoundOnError>
+  if (loadFailed) {
+    notFound()
+    return null
+  }
+
+  return Component ? <Component {...(componentProps ?? ({} as P))} /> : null
 }
 
 export default ArithmixFlagGate
