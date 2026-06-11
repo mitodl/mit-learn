@@ -1570,7 +1570,8 @@ def test_vector_search_group_by_offset_behavior(
 
 def test_resource_vector_hits_preserves_qdrant_score_order():
     """Results should be returned in the same order as the search_result (qdrant score order)."""
-    resources = LearningResourceFactory.create_batch(5)
+    resources = LearningResourceFactory.create_batch(4)
+    resources.append(LearningResourceFactory.create(platform=None))
     # Shuffle to create a non-alphabetical, non-pk order (simulating qdrant ranking)
     shuffled = random.sample(resources, len(resources))
 
@@ -1579,7 +1580,7 @@ def test_resource_vector_hits_preserves_qdrant_score_order():
         MagicMock(
             payload={
                 "readable_id": r.readable_id,
-                "platform": {"code": r.platform.code},
+                "platform": {"code": r.platform.code} if r.platform else None,
             }
         )
         for r in shuffled
