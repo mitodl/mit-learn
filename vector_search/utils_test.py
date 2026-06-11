@@ -1585,7 +1585,13 @@ def test_resource_vector_hits_preserves_qdrant_score_order():
 
     # Build mock ScoredPoints with readable_ids in the shuffled order
     search_result = [
-        MagicMock(payload={"readable_id": r.readable_id}) for r in shuffled
+        MagicMock(
+            payload={
+                "readable_id": r.readable_id,
+                "platform": {"code": r.platform.code},
+            }
+        )
+        for r in shuffled
     ]
 
     result = _resource_vector_hits(search_result)
