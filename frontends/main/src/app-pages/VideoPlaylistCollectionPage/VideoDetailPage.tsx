@@ -16,7 +16,7 @@ import {
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { VideoResourceResourceTypeEnum } from "api/v1"
 import { formatDurationClockTime } from "ol-utilities"
-import SharePopover from "@/components/SharePopover/SharePopover"
+import VideoShareDialog from "./VideoShareDialog"
 import { buildVideoStructuredData } from "./videoStructuredData"
 import VideoResourcePlayer from "./VideoResourcePlayer"
 
@@ -498,13 +498,12 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                 <RiShareForwardFill size={16} />
                 Share
               </ShareButton>
-              <SharePopover
+              <VideoShareDialog
                 open={shareOpen}
                 title={video?.title ?? ""}
-                anchorEl={
-                  shareButtonRef.current as unknown as HTMLDivElement | null
-                }
+                anchorEl={shareButtonRef.current}
                 onClose={() => setShareOpen(false)}
+                video={video}
                 pageUrl={`${NEXT_PUBLIC_ORIGIN}/video/${video?.id}?playlist=${playlistId}`}
               />
             </ShareRow>
