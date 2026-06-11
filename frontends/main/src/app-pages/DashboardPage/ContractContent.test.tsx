@@ -32,6 +32,18 @@ jest.mock("posthog-js/react", () => ({
 }))
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
+// The generated b2bEnrollCreate client does not yet accept a request body, so
+// program_id never reaches the network layer (see the skipped DashboardCard
+// test). Spy on the hook's mutate to assert program_id is forwarded.
+const mockB2bEnrollMutate = jest.fn()
+jest.mock("api/mitxonline-hooks/enrollment", () => ({
+  ...jest.requireActual("api/mitxonline-hooks/enrollment"),
+  useCreateB2bEnrollment: () => ({
+    mutate: mockB2bEnrollMutate,
+    isPending: false,
+  }),
+}))
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL
 const managerOrganizationsUrl = `${API_BASE_URL}/api/v0/b2b/manager/organizations/`
 
@@ -2419,5 +2431,62 @@ describe("ContractContent", () => {
 
     await screen.findByText(programA.title)
     await screen.findByText(programB.title)
+  })
+
+  test("unenrolled B2B course row forwards the program's readable_id when enrolling", async () => {
+    const { orgX, mitxOnlineUser, programA, coursesA, coursesB } =
+      setupProgramsAndCourses()
+
+    // Normalize first course so it has a single run with a known courseware_id
+    // and next_run_id is set. Override BOTH the per-program and the all-courses
+    // queries so that useContractDashboardData builds the entry from the same data.
+    const normalizedCourse = normalizeCourseForCardAssertions(coursesA[0])
+    const normalizedCoursesA = [normalizedCourse, ...coursesA.slice(1)]
+    setMockResponse.get(
+      urls.courses.coursesList({
+        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
+        page_size: 200,
+      }),
+      { results: [...normalizedCoursesA, ...coursesB] },
+    )
+    setMockResponse.get(
+      urls.courses.coursesList({
+        id: programA.courses,
+        contract_id: orgX.contracts[0].id,
+        page_size: 30,
+      }),
+      { results: normalizedCoursesA },
+    )
+
+    // Complete profile so enrollment bypasses the JustInTimeDialog
+    setMockResponse.get(urls.userMe.get(), {
+      ...mitxOnlineUser,
+      legal_address: { country: "US" },
+      user_profile: { year_of_birth: 1988 },
+    })
+
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
+
+    const [programAEl] = await screen.findAllByTestId("org-program-root")
+    const cards = await within(programAEl).findAllByTestId(
+      "enrollment-card-desktop",
+    )
+    await user.click(within(cards[0]).getByTestId("courseware-button"))
+
+    await waitFor(() =>
+      expect(mockB2bEnrollMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          readable_id: normalizedCourse.courseruns[0].courseware_id,
+          program_id: programA.readable_id,
+        }),
+        expect.anything(),
+      ),
+    )
   })
 })

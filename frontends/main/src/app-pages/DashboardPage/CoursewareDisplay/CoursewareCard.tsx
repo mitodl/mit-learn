@@ -131,10 +131,7 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
 
   return (
     <DashboardCard
-      resource={adapted.resource}
-      selectedCourseRun={adapted.selectedCourseRun}
-      contractId={adapted.contractId}
-      programEnrollment={adapted.programEnrollment}
+      {...adapted}
       showNotComplete={showNotComplete}
       offerUpgrade={offerUpgrade}
       isLoading={isLoading}
