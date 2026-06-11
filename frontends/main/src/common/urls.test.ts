@@ -175,7 +175,9 @@ describe("separate-param drawer builders", () => {
       "/search?resource=114927&resource_title=beyond-biology",
     )
     expect(resourceDrawerSearch(114927, "2024")).toBe("/search?resource=114927") // blank → omit
-    expect(resourceDrawerSearch(114927)).toBe("/search?resource=114927")
+    expect(resourceDrawerSearch(114927, undefined)).toBe(
+      "/search?resource=114927",
+    )
   })
 
   test("canonicalResourceDrawerUrl is the absolute form", () => {

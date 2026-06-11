@@ -36,8 +36,7 @@ const mockVideo = (playlists: string[]) => {
   })
   setMockResponse.get(urls.learningResources.details({ id: video.id }), video)
   playlists.forEach((pid) => {
-    const pl = factories.learningResources.videoPlaylist()
-    pl.id = Number(pid)
+    const pl = factories.learningResources.videoPlaylist({ id: Number(pid) })
     // Playlist detail is a different endpoint from learningResources.details.
     setMockResponse.get(urls.videoPlaylists.details({ id: Number(pid) }), pl)
     setMockResponse.get(
