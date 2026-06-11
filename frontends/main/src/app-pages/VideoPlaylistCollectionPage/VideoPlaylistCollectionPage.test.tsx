@@ -212,7 +212,7 @@ describe("VideoPage", () => {
       const titleEl = await screen.findByText(collection.title)
       expect(titleEl.closest("a")).toHaveAttribute(
         "href",
-        `/video/${collection.id}?playlist=${playlist.id}`,
+        `/video/${collection.id}/collection-video?playlist=${playlist.id}`,
       )
     })
 
@@ -230,7 +230,7 @@ describe("VideoPage", () => {
       const titleEls = await screen.findAllByText(featured.title)
       expect(titleEls[0].closest("a")).toHaveAttribute(
         "href",
-        `/video/${featured.id}?playlist=${playlist.id}`,
+        `/video/${featured.id}/quantum-computing-and-the-future?playlist=${playlist.id}`,
       )
     })
   })
@@ -304,13 +304,13 @@ describe("VideoPage", () => {
       const ep1Title = await screen.findByText(ep1.title)
       expect(ep1Title.closest("a")).toHaveAttribute(
         "href",
-        `/video/${ep1.id}?playlist=${playlist.id}`,
+        `/video/${ep1.id}/episode-alpha?playlist=${playlist.id}`,
       )
 
       const ep2Title = screen.getByText(ep2.title)
       expect(ep2Title.closest("a")).toHaveAttribute(
         "href",
-        `/video/${ep2.id}?playlist=${playlist.id}`,
+        `/video/${ep2.id}/episode-beta?playlist=${playlist.id}`,
       )
     })
   })

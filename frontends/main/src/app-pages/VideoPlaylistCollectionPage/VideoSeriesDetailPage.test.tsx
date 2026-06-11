@@ -132,7 +132,7 @@ describe("VideoSeriesDetailPage", () => {
       expect(playlistLinks.length).toBeGreaterThanOrEqual(1)
       expect(playlistLinks[0]).toHaveAttribute(
         "href",
-        `/video-playlist/${playlist.id}`,
+        `/video-playlist/${playlist.id}/neural-networks-series`,
       )
     })
 
@@ -206,7 +206,7 @@ describe("VideoSeriesDetailPage", () => {
       })
       expect(prevLink).toHaveAttribute(
         "href",
-        `/video/${prev.id}?playlist=${playlist.id}`,
+        `/video/${prev.id}/part-1?playlist=${playlist.id}`,
       )
     })
 
@@ -226,7 +226,7 @@ describe("VideoSeriesDetailPage", () => {
       })
       expect(nextLink).toHaveAttribute(
         "href",
-        `/video/${next.id}?playlist=${playlist.id}`,
+        `/video/${next.id}/part-2?playlist=${playlist.id}`,
       )
     })
 
