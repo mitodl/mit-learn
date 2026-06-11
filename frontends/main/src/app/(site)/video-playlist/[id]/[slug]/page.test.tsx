@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation"
 import { factories, setMockResponse, urls } from "api/test-utils"
-import Page from "./page"
+import Page, { generateMetadata } from "./page"
 
 jest.mock("@/app/getQueryClient", () => {
   const { makeBrowserQueryClient } = jest.requireActual("@/app/getQueryClient")
@@ -51,6 +51,21 @@ test("renders when the slug is already canonical", async () => {
   const playlist = mockPlaylist()
   await Page(pageProps(String(playlist.id), "great-talks"))
   expect(mockRedirect).not.toHaveBeenCalled()
+})
+
+test("generateMetadata sets the slugged canonical tag", async () => {
+  const playlist = mockPlaylist()
+  // generateMetadata fetches a single item for the social image.
+  setMockResponse.get(
+    `${urls.learningResources.items({ id: playlist.id })}?limit=1`,
+    factories.learningResources.resources({ count: 0 }),
+  )
+  const meta = await generateMetadata(
+    pageProps(String(playlist.id), "great-talks"),
+  )
+  expect(meta.alternates?.canonical).toMatch(
+    new RegExp(`/video-playlist/${playlist.id}/great-talks$`),
+  )
 })
 
 test("redirects a stale slug to the canonical", async () => {

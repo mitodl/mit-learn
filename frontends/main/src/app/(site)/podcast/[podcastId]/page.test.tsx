@@ -61,3 +61,12 @@ test("redirect carries incoming query params (e.g. utm)", async () => {
 test("notFound for a non-numeric id", async () => {
   await expect(Page(pageProps("abc"))).rejects.toThrow("NEXT_NOT_FOUND")
 })
+
+// The bare-id pages share this guard structurally; one representative case.
+test("notFound for a resource that is not a podcast", async () => {
+  const course = factories.learningResources.course()
+  setMockResponse.get(urls.learningResources.details({ id: course.id }), course)
+  await expect(Page(pageProps(String(course.id)))).rejects.toThrow(
+    "NEXT_NOT_FOUND",
+  )
+})
