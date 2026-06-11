@@ -93,6 +93,17 @@ test("notFound for a resource that is not a video", async () => {
   ).rejects.toThrow("NEXT_NOT_FOUND")
 })
 
+test("strips a repeated ?playlist from a playlist-less video", async () => {
+  const video = mockVideo([])
+  await expect(
+    Page({
+      params: Promise.resolve({ id: String(video.id), slug: "beyond-biology" }),
+      searchParams: Promise.resolve({ playlist: ["1", "2"] }),
+    }),
+  ).rejects.toThrow("NEXT_REDIRECT")
+  expect(mockRedirect).toHaveBeenCalledWith(`/video/${video.id}/beyond-biology`)
+})
+
 test("a no-playlist video's canonical has no ?playlist param", async () => {
   const video = mockVideo([])
   await expect(
