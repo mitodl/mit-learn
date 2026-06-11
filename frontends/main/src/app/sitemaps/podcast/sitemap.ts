@@ -4,6 +4,7 @@ import { getQueryClient } from "@/app/getQueryClient"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { ResourceTypeEnum } from "api"
 import { podcastPageView, podcastEpisodePageView } from "@/common/urls"
+import { parentPodcastIds } from "@/common/slugs"
 import type { GenerateSitemapResult, GeneratedSitemapArgs } from "../types"
 import { dangerouslyDetectProductionBuildPhase } from "../util"
 
@@ -69,8 +70,7 @@ export default async function sitemap({
       ]
     }
     if (resource.resource_type === ResourceTypeEnum.PodcastEpisode) {
-      const parentPodcastIds = resource.podcast_episode?.podcasts ?? []
-      return parentPodcastIds.map((parentPodcastId) => ({
+      return parentPodcastIds(resource).map((parentPodcastId) => ({
         url: `${BASE_URL}${podcastEpisodePageView(
           String(resource.id),
           String(parentPodcastId),
