@@ -560,7 +560,7 @@ const resolveDisplayedRunAndEnrollment = (
       enrollableOnly: true,
       contractId: opts?.contractId,
     }) ??
-    course.courseruns[0] ??
+    getBestRun(course, { contractId: opts?.contractId }) ??
     null
   const isNonDefaultVariant = opts?.variant && !opts.variant.default_variant
   const displayedRun = isNonDefaultVariant

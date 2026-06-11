@@ -121,14 +121,16 @@ describe("helpers", () => {
       expect(result).toBeUndefined()
     })
 
-    test("returns first run if no next_run_id specified", () => {
+    test("returns run with most recent start date when no next_run_id specified", () => {
       const run1 = factories.courses.courseRun({
         id: 1,
         is_enrollable: true,
+        start_date: "2025-01-01T00:00:00Z",
       })
       const run2 = factories.courses.courseRun({
         id: 2,
         is_enrollable: true,
+        start_date: "2026-01-01T00:00:00Z",
       })
       const course = factories.courses.course({
         courseruns: [run1, run2],
@@ -136,7 +138,7 @@ describe("helpers", () => {
       })
 
       const result = getBestRun(course)
-      expect(result).toEqual(run1)
+      expect(result).toEqual(run2)
     })
 
     test("returns next_run_id run when specified", () => {
@@ -163,24 +165,29 @@ describe("helpers", () => {
         id: 1,
         b2b_contract: null,
         is_enrollable: true,
+        start_date: "2026-06-01T00:00:00Z",
       })
       const run2 = factories.courses.courseRun({
         id: 2,
         b2b_contract: contractId,
         is_enrollable: true,
+        start_date: "2025-01-01T00:00:00Z",
       })
       const run3 = factories.courses.courseRun({
         id: 3,
         b2b_contract: contractId,
         is_enrollable: true,
+        start_date: "2026-01-01T00:00:00Z",
       })
       const course = factories.courses.course({
         courseruns: [run1, run2, run3],
         next_run_id: null,
       })
 
+      // run1 is filtered out (wrong contract); run3 has the most recent start
+      // date among contract runs, so it wins.
       const result = getBestRun(course, { contractId })
-      expect(result).toEqual(run2)
+      expect(result).toEqual(run3)
     })
 
     test("prefers next_run_id within contract runs", () => {
