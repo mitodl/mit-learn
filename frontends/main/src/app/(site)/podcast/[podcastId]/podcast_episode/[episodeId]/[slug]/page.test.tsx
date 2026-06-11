@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation"
 import { factories, setMockResponse, urls } from "api/test-utils"
-import Page from "./page"
+import Page, { generateMetadata } from "./page"
 
 jest.mock("@/app/getQueryClient", () => {
   const { makeBrowserQueryClient } = jest.requireActual("@/app/getQueryClient")
@@ -72,6 +72,24 @@ test("renders when parent id and slug are already canonical", async () => {
   const episode = mockEpisode([10, 20])
   await Page(pageProps("10", String(episode.id), "episode-one"))
   expect(mockRedirect).not.toHaveBeenCalled()
+})
+
+test("generateMetadata canonical corrects a non-member parent podcast id", async () => {
+  const episode = mockEpisode([10, 20])
+  const meta = await generateMetadata(
+    pageProps("999", String(episode.id), "episode-one"),
+  )
+  expect(meta.alternates?.canonical).toMatch(
+    new RegExp(`/podcast/10/podcast_episode/${episode.id}/episode-one$`),
+  )
+})
+
+test("generateMetadata 404s for a resource that is not a podcast episode", async () => {
+  const course = factories.learningResources.course()
+  setMockResponse.get(urls.learningResources.details({ id: course.id }), course)
+  await expect(
+    generateMetadata(pageProps("10", String(course.id), "x")),
+  ).rejects.toThrow("NEXT_NOT_FOUND")
 })
 
 test("notFound when the episode has no parent podcasts", async () => {

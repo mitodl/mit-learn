@@ -211,7 +211,7 @@ describe("carrySearchParams", () => {
     expect(carrySearchParams("/podcast/1/slug", {})).toBe("/podcast/1/slug")
   })
 
-  test("canonical-owned params win and omitted params are dropped", () => {
+  test("canonical-owned params win", () => {
     expect(
       carrySearchParams(
         "/video/1/slug?playlist=10",
@@ -219,5 +219,15 @@ describe("carrySearchParams", () => {
         ["playlist"],
       ),
     ).toBe("/video/1/slug?utm_source=x&playlist=10")
+  })
+
+  test("omit drops a rejected param the canonical doesn't own (loop safety)", () => {
+    // Without omit, the rejected playlist would be forwarded onto the bare
+    // canonical, differ from it on the next request, and redirect forever.
+    expect(
+      carrySearchParams("/video/1/slug", { playlist: "999", utm_source: "x" }, [
+        "playlist",
+      ]),
+    ).toBe("/video/1/slug?utm_source=x")
   })
 })
