@@ -307,10 +307,11 @@ const useEnrollmentHandler = () => {
           NiceModal.show(JustInTimeDialog, {
             href,
             readableId,
+            programId: parentProgramIds?.[0],
           })
         } else {
           createB2bEnrollment.mutate(
-            { readable_id: readableId },
+            { readable_id: readableId, program_id: parentProgramIds?.[0] },
             {
               onSuccess: () => {
                 window.location.href = href

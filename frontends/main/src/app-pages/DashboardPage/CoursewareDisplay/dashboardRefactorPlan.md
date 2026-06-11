@@ -158,11 +158,7 @@ A **course entry** is the per-course data shape the dashboard arranges into its 
 ```ts
 type DashboardCourseEntry = {
   course: CourseWithCourseRunsSerializerV2
-  enrollments: CourseRunEnrollmentV3[]
-  selectedLanguageKey: string
-  availableLanguages: SimpleSelectOption[]
-  displayedEnrollment: CourseRunEnrollmentV3 | null
-  displayedRun: CourseRunV2 | null
+  enrollments: CourseRunEnrollmentV3[] // full list — all variants
   contractId?: number
   isContractPageResource?: boolean
   ancestorContext?: {
@@ -170,26 +166,31 @@ type DashboardCourseEntry = {
     parentProgramReadableIds?: string[]
     useVerifiedEnrollment?: boolean
   }
+  displayedEnrollment: CourseRunEnrollmentV3 | null // variant-scoped
+  displayedRun: BaseCourseRun | null // variant-scoped
 }
 ```
 
+> **Note (as shipped):** The original design included `selectedLanguageKey` and `availableLanguages` on the entry. These were not shipped — variant selection is resolved by the hook before entry construction and is not carried on the entry type. Variant state (`selectedVariant`, `setSelectedVariant`, `variantOptions`) lives on the hook's returned contract and is consumed by `ContractContent`'s `VariantPicker` UI — not by the card.
+
 Rules:
 
-- `enrollments` is the source of truth.
-- `displayedEnrollment` and `displayedRun` are derived compatibility/display values.
-- The initial derivation should preserve existing behavior. If this seems impossible or unreasonable/undesirable, raise attention.
-- `displayedRun` is V2-shaped only because legacy `DashboardCard` requires `selectedCourseRun`. It is produced by the existing V3→V2 synthesis (Case 1 of `getResolvedRunForSelectedLanguage`).
-- When legacy cards are replaced (Phase 8), enrolled cards consume V3 enrollment data from `enrollments[]` directly and Case 1 of the synthesis can be deleted.
-- Cases 2 and 3 of `getResolvedRunForSelectedLanguage` remain. Case 2 is a trivial passthrough (the selected language has a real `CourseRunV2` in `course.courseruns`). Case 3 (pre-enrollment, no real `CourseRunV2` for the selected language) is a load-bearing workaround for an API gap: mitxonline does not surface per-language run metadata pre-enrollment. Case 3 is removable only if/when that API gap closes.
+- `enrollments` is the source of truth — the full list for this course across all variants.
+- `displayedEnrollment` and `displayedRun` are **variant-scoped** derived values. When the contract-level variant picker is at variant V, `displayedEnrollment` is the user's enrollment in a run that matches V (or null if none), and `displayedRun` is the run for V.
+- **Variant model:** A variant is an alternate course run identified by any combination of language, industry focus, and length. These three axes are all independent; a course may have e.g. `(en, healthcare, 8-week)` and `(en, general, 8-week)` as distinct variants. At the contract level, the unique supported variants are surfaced in the `VariantPicker` UI. When the user changes the active variant, the hook rebuilds entries with the new variant arg — no variant state is threaded into the card.
+- **Variant independence:** Enrolling in variant run A does not affect enrollment in variant run B. If the user is enrolled in variant A and the picker switches to variant B, `displayedEnrollment` becomes null — the card renders the unenrolled state for variant B — even though `entry.enrollments` still carries the variant A enrollment.
+- `displayedRun` is `BaseCourseRun | null` (as shipped; the V2-specific synthesis detail of the original design was resolved during Phase 2).
 
 ### Open question: are display fields permanent on the entry?
 
-`displayedEnrollment` and `displayedRun` are not strictly necessary on the entry — the legacy adapter could compute them inline from `enrollments` + `selectedLanguageKey`. They are on the entry for convenience: the hook is computing them anyway (Phase 2's composite resolver), caching the result keeps the adapter as pure shape-conversion, and entry construction becomes unit-testable in isolation ("given course X, enrollments [A, B], lang Y → entry.displayedEnrollment = A").
+`displayedEnrollment` and `displayedRun` are not strictly necessary on the entry — `CoursewareCard` could re-derive them inline from `enrollments` + the variant. They are on the entry for convenience: the hook is computing them anyway (inside `buildCourseEntry` → `resolveDisplayedRunAndEnrollment`), caching the result keeps the card as pure presentation, and entry construction is unit-testable in isolation ("given course X, enrollments [A, B], variant V → entry.displayedEnrollment = A").
+
 Whether these fields survive past Phase 7 hinges on multi-run UX direction:
 
-- **Parent-owned selection** (parent picks which enrollment to display, card receives `displayedEnrollment` as a controlled prop) → fields stay on the entry, expressing the parent's chosen display.
-- **Card-owned selection** (card has internal state for enrollment selection) → fields are deleted with the legacy adapter; entry becomes purer (`course`, `enrollments`, `selectedLanguageKey`, `availableLanguages`, contract/ancestor).
-  Recommendation: parent-owned (consistency with `selectedLanguageKey`, no prop-to-state sync, URL-deep-linkable). But this is not blocking Phases 1–6; decide when multi-run UX lands.
+- **Parent-owned selection** (hook resolves which enrollment to display; card is purely presentational) → fields stay on the entry. This is the current shipped design.
+- **Card-owned selection** (card holds its own enrollment-picker state) → fields are deleted; the card derives `displayedEnrollment` internally from `entry.enrollments` + a local variant key.
+
+Recommendation: keep parent-owned — the hook already has the variant context at entry-build time, and the `VariantPicker` → hook → entries → cards flow is clean without introducing prop-to-state sync. Revisit when multi-run UX direction is decided.
 
 ## Proposed file structure
 
@@ -613,12 +614,12 @@ This is a structural unification, not a redesign. Each variant must reproduce to
 
 **Hypothesised approach** (verify before executing):
 
-- [ ] Create `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/CoursewareCard.tsx`. Props use a discriminated union over a `variant` field. Suggested variants — confirm by walking the existing render sites:
-  - `courseEnrollment` — user is enrolled (today: `DashboardCard` with a `CourseRunEnrollmentV3`-derived run).
-  - `unenrolledCourse` — user not yet enrolled (today: `DashboardCard` with a V2 course run / product).
-  - `program` — program enrollment row (today: `DashboardCard` with `program` resource type).
+- [ ] Create `frontends/main/src/app-pages/DashboardPage/CoursewareDisplay/CoursewareCard.tsx`. For course arms the component accepts `entry: DashboardCourseEntry` and dispatches internally on `entry.displayedEnrollment`. For the `program` and `moduleRow` arms, which are not entry-shaped, props are drawn from their respective `RequirementSectionItem` arm fields. Confirmed variants (by walking all render callsites):
+  - `courseEnrollment` — `entry.displayedEnrollment !== null`. User has an enrollment for the currently selected variant's run. At the contract level this co-exists with other-variant enrollments in `entry.enrollments` — those are invisible to the card.
+  - `unenrolledCourse` — `entry.displayedEnrollment === null`. No enrollment for the active variant's run. `entry.enrollments` may still contain enrollments for other variants; the card shows the unenrolled CTA for the active variant run only.
+  - `program` — program enrollment row (today: `DashboardCard` with `program` resource type). Not entry-shaped; comes from the `program-enrollment` arm of `RequirementSectionItem`.
   - `moduleRow` — compact program-as-course row (today: `ModuleCard`).
-  - `contractCourse` — only if contract-specific behavior cannot be expressed via existing variant inputs (`contractId`, `useVerifiedEnrollment`); prefer to fold this into `courseEnrollment` / `unenrolledCourse` rather than add a variant.
+  - No `contractCourse` variant: B2B-specific behavior is fully expressed through `entry.contractId` and `entry.ancestorContext.useVerifiedEnrollment`. The `courseEnrollment`/`unenrolledCourse` arms handle both B2C and B2B paths.
 - [ ] For each variant, write a test that asserts byte-for-byte rendering parity with the corresponding case in today's `DashboardCard.test.tsx` / `ModuleCard.test.tsx`. Port — don't rewrite — these tests against `CoursewareCard`.
 - [ ] Migrate callsites in this order, with the prior step verified before moving on:
   1. Home dashboard (`HomeEnrollmentsDisplay`) — lowest risk; one card per enrollment, V3 data.

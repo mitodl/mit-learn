@@ -137,7 +137,6 @@ const _channelShared = (): Partial<Omit<Channel, "channel_type">> => {
     avatar_small: new URL(faker.internet.url()).toString(),
     avatar_medium: new URL(faker.internet.url()).toString(),
     avatar: new URL(faker.internet.url()).toString(),
-    is_moderator: faker.datatype.boolean(),
     widget_list: faker.number.int(),
     sub_channels: [],
     featured_list: null,

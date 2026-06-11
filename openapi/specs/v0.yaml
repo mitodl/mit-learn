@@ -7,9 +7,7 @@ paths:
   /api/v0/channels/:
     get:
       operationId: channels_list
-      description: |-
-        CRUD Operations related to Channels. Channels may represent groups
-        or organizations at MIT and are a high-level categorization of content.
+      description: List published channels.
       summary: List
       parameters:
       - in: query
@@ -47,39 +45,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedChannelList'
           description: ''
-    post:
-      operationId: channels_create
-      description: |-
-        CRUD Operations related to Channels. Channels may represent groups
-        or organizations at MIT and are a high-level categorization of content.
-      summary: Create
-      tags:
-      - channels
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ChannelCreateRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ChannelCreateRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ChannelCreateRequest'
-        required: true
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Channel'
-          description: ''
   /api/v0/channels/{id}/:
     get:
       operationId: channels_retrieve
-      description: |-
-        CRUD Operations related to Channels. Channels may represent groups
-        or organizations at MIT and are a high-level categorization of content.
+      description: Retrieve a single channel by id.
       summary: Retrieve
       parameters:
       - in: path
@@ -97,139 +66,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Channel'
           description: ''
-    patch:
-      operationId: channels_partial_update
-      description: |-
-        CRUD Operations related to Channels. Channels may represent groups
-        or organizations at MIT and are a high-level categorization of content.
-      summary: Update
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this channel.
-        required: true
-      tags:
-      - channels
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedChannelWriteRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedChannelWriteRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedChannelWriteRequest'
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Channel'
-          description: ''
-    delete:
-      operationId: channels_destroy
-      description: |-
-        CRUD Operations related to Channels. Channels may represent groups
-        or organizations at MIT and are a high-level categorization of content.
-      summary: Destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this channel.
-        required: true
-      tags:
-      - channels
-      responses:
-        '204':
-          description: No response body
-  /api/v0/channels/{id}/moderators/:
-    get:
-      operationId: channels_moderators_list
-      description: View for listing and adding moderators
-      summary: Channel Moderators List
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          pattern: ^\d+$
-        required: true
-      tags:
-      - channels
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ChannelModerator'
-          description: ''
-    post:
-      operationId: channels_moderators_create
-      description: View for listing and adding moderators
-      summary: Channel Moderators Create
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          pattern: ^\d+$
-        required: true
-      tags:
-      - channels
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ChannelModeratorRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ChannelModeratorRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ChannelModeratorRequest'
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ChannelModerator'
-          description: ''
-  /api/v0/channels/{id}/moderators/{moderator_name}/:
-    delete:
-      operationId: channels_moderators_destroy
-      description: Remove the user from the moderator groups for this website
-      summary: Channel Moderators Destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          pattern: ^\d+$
-        required: true
-      - in: path
-        name: moderator_name
-        schema:
-          type: string
-          pattern: ^[A-Za-z0-9_]+$
-        required: true
-      tags:
-      - channels
-      responses:
-        '204':
-          description: No response body
   /api/v0/channels/counts/{channel_type}/:
     get:
       operationId: channels_counts_list
-      description: View for retrieving an individual channel by type and name
-      summary: Channel Detail Lookup by channel type and name
+      description: List channel counts by resource type.
+      summary: Channel Counts by channel type
       parameters:
       - in: path
         name: channel_type
@@ -1799,67 +1640,6 @@ components:
       - name
       - title
       - updated_on
-    ChannelCreateRequest:
-      type: object
-      description: |-
-        Write serializer for Channel. Uses primary keys for referenced objects
-        during requests, and delegates to ChannelSerializer for responses.
-      properties:
-        name:
-          type: string
-          minLength: 1
-          pattern: ^[A-Za-z0-9_-]+$
-          maxLength: 100
-        title:
-          type: string
-          minLength: 1
-          maxLength: 100
-        public_description:
-          type: string
-        sub_channels:
-          type: array
-          items:
-            type: string
-            minLength: 1
-        featured_list:
-          type: integer
-          nullable: true
-          description: Learning path featured in this channel.
-        lists:
-          type: array
-          items:
-            type: integer
-            nullable: true
-          description: Learning paths in this channel.
-        avatar:
-          type: string
-          format: binary
-          nullable: true
-        banner:
-          type: string
-          format: binary
-          nullable: true
-        about:
-          nullable: true
-        channel_type:
-          type: string
-          allOf:
-          - $ref: '#/components/schemas/ChannelTypeEnum'
-        search_filter:
-          type: string
-          maxLength: 2048
-        topic_detail:
-          allOf:
-          - $ref: '#/components/schemas/ChannelTopicDetailRequest'
-          nullable: true
-        department_detail:
-          allOf:
-          - $ref: '#/components/schemas/ChannelDepartmentDetailRequest'
-          nullable: true
-      required:
-      - channel_type
-      - name
-      - title
     ChannelDepartmentDetail:
       type: object
       description: Serializer for the ChannelDepartmentDetail model
@@ -1867,48 +1647,7 @@ components:
         department:
           type: string
           nullable: true
-    ChannelDepartmentDetailRequest:
-      type: object
-      description: Serializer for the ChannelDepartmentDetail model
-      properties:
-        department:
-          type: string
-          minLength: 1
-          nullable: true
-    ChannelModerator:
-      type: object
-      description: Serializer for moderators
-      properties:
-        moderator_name:
-          type: string
-          description: Returns the name for the moderator
-        email:
-          type: string
-          description: Get the email from the associated user
-        full_name:
-          type: string
-          description: Get the full name of the associated user
-          readOnly: true
-      required:
-      - full_name
-    ChannelModeratorRequest:
-      type: object
-      description: Serializer for moderators
-      properties:
-        moderator_name:
-          type: string
-          description: Returns the name for the moderator
-        email:
-          type: string
-          description: Get the email from the associated user
     ChannelTopicDetail:
-      type: object
-      description: Serializer for the ChannelTopicDetail model
-      properties:
-        topic:
-          type: integer
-          nullable: true
-    ChannelTopicDetailRequest:
       type: object
       description: Serializer for the ChannelTopicDetail model
       properties:
@@ -2532,6 +2271,7 @@ components:
           type: string
           nullable: true
           description: Get the avatar image URL
+          readOnly: true
         avatar_small:
           type: string
           nullable: true
@@ -2546,9 +2286,6 @@ components:
           type: string
           nullable: true
           description: Get the banner image URL
-        is_moderator:
-          type: boolean
-          description: Return true if user is a moderator for the channel
           readOnly: true
         lists:
           type: array
@@ -2609,15 +2346,16 @@ components:
           type: integer
           nullable: true
       required:
+      - avatar
       - avatar_medium
       - avatar_small
+      - banner
       - channel_type
       - channel_url
       - created_on
       - department_detail
       - featured_list
       - id
-      - is_moderator
       - lists
       - name
       - sub_channels
@@ -3624,67 +3362,6 @@ components:
       - channel_url
       - code
       - name
-    LearningResourceOfferorDetailRequest:
-      type: object
-      description: Serializer for LearningResourceOfferor with all details
-      properties:
-        code:
-          type: string
-          minLength: 1
-          maxLength: 12
-        name:
-          type: string
-          minLength: 1
-          maxLength: 256
-        professional:
-          type: boolean
-        offerings:
-          type: array
-          items:
-            type: string
-            minLength: 1
-            maxLength: 128
-        audience:
-          type: array
-          items:
-            type: string
-            minLength: 1
-            maxLength: 128
-        formats:
-          type: array
-          items:
-            type: string
-            minLength: 1
-            maxLength: 128
-        fee:
-          type: array
-          items:
-            type: string
-            minLength: 1
-            maxLength: 128
-        certifications:
-          type: array
-          items:
-            type: string
-            minLength: 1
-            maxLength: 128
-        content_types:
-          type: array
-          items:
-            type: string
-            minLength: 1
-            maxLength: 128
-        more_information:
-          type: string
-          format: uri
-          maxLength: 200
-        value_prop:
-          type: string
-        display_facet:
-          type: boolean
-      required:
-      - code
-      - name
     LearningResourcePlatform:
       type: object
       description: Serializer for LearningResourcePlatform
@@ -4157,61 +3834,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FeedSource'
-    PatchedChannelWriteRequest:
-      type: object
-      description: Similar to ChannelCreateSerializer, with read-only name
-      properties:
-        name:
-          type: string
-          minLength: 1
-          pattern: ^[A-Za-z0-9_-]+$
-          maxLength: 100
-        title:
-          type: string
-          minLength: 1
-          maxLength: 100
-        public_description:
-          type: string
-        sub_channels:
-          type: array
-          items:
-            type: string
-            minLength: 1
-        featured_list:
-          type: integer
-          nullable: true
-          description: Learning path featured in this channel.
-        lists:
-          type: array
-          items:
-            type: integer
-            nullable: true
-          description: Learning paths in this channel.
-        avatar:
-          type: string
-          nullable: true
-          description: Get the avatar image URL
-        banner:
-          type: string
-          nullable: true
-          description: Get the banner image URL
-        about:
-          nullable: true
-        channel_type:
-          type: string
-          allOf:
-          - $ref: '#/components/schemas/ChannelTypeEnum'
-        search_filter:
-          type: string
-          maxLength: 2048
-        topic_detail:
-          allOf:
-          - $ref: '#/components/schemas/ChannelTopicDetailRequest'
-          nullable: true
-        department_detail:
-          allOf:
-          - $ref: '#/components/schemas/ChannelDepartmentDetailRequest'
-          nullable: true
     PatchedProfileRequest:
       type: object
       description: Serializer for Profile
@@ -4301,6 +3923,7 @@ components:
           type: string
           nullable: true
           description: Get the avatar image URL
+          readOnly: true
         avatar_small:
           type: string
           nullable: true
@@ -4315,9 +3938,6 @@ components:
           type: string
           nullable: true
           description: Get the banner image URL
-        is_moderator:
-          type: boolean
-          description: Return true if user is a moderator for the channel
           readOnly: true
         lists:
           type: array
@@ -4376,14 +3996,15 @@ components:
           type: integer
           nullable: true
       required:
+      - avatar
       - avatar_medium
       - avatar_small
+      - banner
       - channel_type
       - channel_url
       - created_on
       - featured_list
       - id
-      - is_moderator
       - lists
       - name
       - sub_channels
@@ -5748,6 +5369,7 @@ components:
           type: string
           nullable: true
           description: Get the avatar image URL
+          readOnly: true
         avatar_small:
           type: string
           nullable: true
@@ -5762,9 +5384,6 @@ components:
           type: string
           nullable: true
           description: Get the banner image URL
-        is_moderator:
-          type: boolean
-          description: Return true if user is a moderator for the channel
           readOnly: true
         lists:
           type: array
@@ -5825,14 +5444,15 @@ components:
           type: integer
           nullable: true
       required:
+      - avatar
       - avatar_medium
       - avatar_small
+      - banner
       - channel_type
       - channel_url
       - created_on
       - featured_list
       - id
-      - is_moderator
       - lists
       - name
       - sub_channels
@@ -5857,6 +5477,7 @@ components:
           type: string
           nullable: true
           description: Get the avatar image URL
+          readOnly: true
         avatar_small:
           type: string
           nullable: true
@@ -5871,9 +5492,6 @@ components:
           type: string
           nullable: true
           description: Get the banner image URL
-        is_moderator:
-          type: boolean
-          description: Return true if user is a moderator for the channel
           readOnly: true
         lists:
           type: array
@@ -5934,14 +5552,15 @@ components:
           type: integer
           nullable: true
       required:
+      - avatar
       - avatar_medium
       - avatar_small
+      - banner
       - channel_type
       - channel_url
       - created_on
       - featured_list
       - id
-      - is_moderator
       - lists
       - name
       - sub_channels

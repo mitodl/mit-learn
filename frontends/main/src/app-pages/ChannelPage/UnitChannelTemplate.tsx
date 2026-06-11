@@ -13,7 +13,6 @@ import { OfferedByEnum, SourceTypeEnum } from "api"
 import { SearchSubscriptionToggle } from "@/page-components/SearchSubscriptionToggle/SearchSubscriptionToggle"
 import { ChannelDetails } from "@/page-components/ChannelDetails/ChannelDetails"
 import { useChannelDetail } from "api/hooks/channels"
-import ChannelMenu from "@/components/ChannelMenu/ChannelMenu"
 import ResourceCarousel, {
   ResourceCarouselProps,
 } from "@/page-components/ResourceCarousel/ResourceCarousel"
@@ -161,12 +160,6 @@ const UnitChannelTemplate: React.FC<UnitChannelTemplateProps> = ({
                       itemName={channel.data?.title}
                       sourceType={SourceTypeEnum.ChannelSubscriptionType}
                       searchParams={urlParams}
-                    />
-                  ) : null}
-                  {channel.data?.is_moderator ? (
-                    <ChannelMenu
-                      channelType={ChannelTypeEnum.Unit}
-                      name={String(name)}
                     />
                   ) : null}
                 </ChannelControls>

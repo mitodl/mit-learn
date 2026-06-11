@@ -5,7 +5,7 @@ from functools import cached_property
 from django.contrib.auth.models import Group
 from django.core.validators import RegexValidator
 from django.db import models
-from django.db.models import Case, JSONField, When, deletion
+from django.db.models import Case, JSONField, Prefetch, When, deletion
 from django.db.models.functions import Concat
 from imagekit.models import ImageSpecField, ProcessedImageField
 from imagekit.processors import ResizeToFit
@@ -44,6 +44,40 @@ class ChannelQuerySet(TimestampedModelQuerySet):
                     ),
                 ),
                 default=None,
+            )
+        )
+
+    def with_detail_relations(self) -> "ChannelQuerySet":
+        """
+        Apply the prefetch/select_related/annotate chain needed to serialize
+        a full ChannelSerializer without N+1 queries.
+        """
+        return (
+            self.prefetch_related(
+                Prefetch(
+                    "lists",
+                    queryset=ChannelList.objects.select_related(
+                        "channel_list"
+                    ).order_by("position"),
+                ),
+                Prefetch(
+                    "sub_channels",
+                    queryset=SubChannel.objects.select_related(
+                        "parent_channel"
+                    ).order_by("position"),
+                ),
+                Prefetch(
+                    "sub_channels__channel",
+                    queryset=Channel.objects.annotate_channel_url(),
+                ),
+            )
+            .annotate_channel_url()
+            .select_related(
+                "featured_list",
+                "topic_detail",
+                "department_detail",
+                "unit_detail",
+                "pathway_detail",
             )
         )
 
@@ -131,6 +165,16 @@ class Channel(TimestampedModel):
         if self.published:
             return frontend_absolute_url(f"/c/{self.channel_type}/{self.name}/")
         return None
+
+    @property
+    def ordered_lists(self) -> list[LearningResource]:
+        """The channel's LearningPaths, ordered by position.
+
+        Resolves through the prefetched ``lists`` relation when available
+        (see ``ChannelQuerySet.with_detail_relations``) so serializing a
+        channel does not trigger an extra query per list.
+        """
+        return [channel_list.channel_list for channel_list in self.lists.all()]
 
     class Meta:
         unique_together = ("name", "channel_type")
