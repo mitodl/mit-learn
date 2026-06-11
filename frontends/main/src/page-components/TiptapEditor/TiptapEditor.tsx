@@ -119,17 +119,40 @@ const Container = styled.div<{
     a: {
       color: theme.custom.colors.darkGray2,
     },
-    ul: {
+    "ul:not([data-style-boundary] *)": {
       ...theme.typography.body1,
     },
-    ol: {
+    "ol:not([data-style-boundary] *)": {
       ...theme.typography.body1,
     },
-    li: {
+    "li:not([data-style-boundary] *)": {
       ...theme.typography.body1,
       lineHeight: pxToRem(54),
       p: {
         marginBottom: 0,
+      },
+    },
+    // [data-style-boundary] marks embedded third-party components (e.g. video player)
+    // that must not inherit editor typography.
+    "& [data-style-boundary] ul, & [data-style-boundary] ol": {
+      marginTop: "revert",
+      marginBottom: "unset",
+      paddingLeft: "unset",
+      listStyle: "revert",
+      fontFamily: "revert",
+      fontSize: "revert",
+      fontWeight: "revert",
+      lineHeight: "revert",
+      letterSpacing: "revert",
+    },
+    "& [data-style-boundary] li": {
+      lineHeight: "revert",
+      fontFamily: "revert",
+      fontSize: "revert",
+      fontWeight: "revert",
+      letterSpacing: "revert",
+      p: {
+        marginTop: "revert",
       },
     },
     blockquote: {

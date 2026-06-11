@@ -403,4 +403,6 @@ export {
   CertificatePriceRoot,
   CertificateReasonItem,
   CertificateReasonsList,
+  StrickenText,
+  UnderlinedLink,
 }

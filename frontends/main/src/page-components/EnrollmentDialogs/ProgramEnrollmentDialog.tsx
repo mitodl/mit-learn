@@ -9,6 +9,8 @@ import {
   enrollmentAlertSuccessUrl,
   formatPrice,
   getEnrollmentType,
+  mitxonlineLegacyUrl,
+  priceWithDiscount,
 } from "@/common/mitxonline"
 import { trackProgramEnrolled } from "@/common/analytics/gtm"
 import {
@@ -18,9 +20,14 @@ import {
   CertificateReasonItem,
   CertificateReasonsList,
   StyledFormDialog,
+  StrickenText,
+  UnderlinedLink,
 } from "./CourseEnrollmentDialog"
 import { RiArrowRightLine, RiAwardFill, RiCheckLine } from "@remixicon/react"
 import { Alert } from "@mitodl/smoot-design"
+import { useQuery } from "@tanstack/react-query"
+import { productQueries } from "api/mitxonline-hooks/products"
+import { useUserIsAuthenticated } from "api/hooks/user"
 
 interface ProgramEnrollmentDialogProps {
   program: V2ProgramDetail
@@ -49,7 +56,21 @@ const ProgramCertificateUpsell: React.FC<{
   resourceType: string
 }> = ({ program, resourceType }) => {
   const product = program.products[0]
+  const financialAidUrl = program.page?.financial_assistance_form_url ?? ""
+  const hasFinancialAid = !!(financialAidUrl && product)
+  const isAuthenticated = useUserIsAuthenticated()
   const replaceBasketItem = useReplaceBasketItem()
+  const userFlexiblePrice = useQuery({
+    ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
+    enabled: isAuthenticated && hasFinancialAid,
+  })
+  const price = product
+    ? priceWithDiscount({
+        product,
+        flexiblePrice: userFlexiblePrice.data,
+        avoidCents: true,
+      })
+    : null
 
   return (
     <Stack gap="32px" alignItems="flex-start">
@@ -70,10 +91,32 @@ const ProgramCertificateUpsell: React.FC<{
           <Stack gap="4px">
             <strong>
               Get Certificate{" "}
-              {product
-                ? formatPrice(product.price, { avoidCents: true })
-                : null}
+              {price?.isDiscounted ? (
+                <span
+                  role="group"
+                  aria-label={`Discounted price: ${price.finalPrice}, was ${price.originalPrice}`}
+                >
+                  <span aria-hidden="true">
+                    {price.finalPrice}{" "}
+                    <StrickenText>{price.originalPrice}</StrickenText>
+                  </span>
+                </span>
+              ) : product ? (
+                formatPrice(product.price, { avoidCents: true })
+              ) : null}
             </strong>
+            {hasFinancialAid && price ? (
+              <UnderlinedLink
+                color="black"
+                href={mitxonlineLegacyUrl(financialAidUrl)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {price.approvedFinancialAid
+                  ? "Financial assistance applied"
+                  : "Financial assistance available"}
+              </UnderlinedLink>
+            ) : null}
           </Stack>
         </CertificatePriceRoot>
         <BigButton
