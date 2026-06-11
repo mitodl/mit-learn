@@ -17,6 +17,11 @@ import ProgramEnrollmentDialog from "./ProgramEnrollmentDialog"
 import invariant from "tiny-invariant"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import * as routes from "@/common/urls"
+import { trackProgramEnrolled } from "@/common/analytics/gtm"
+
+jest.mock("@/common/analytics/gtm", () => ({
+  trackProgramEnrolled: jest.fn(),
+}))
 
 describe("ProgramEnrollmentDialog", () => {
   setupLocationMock()
@@ -153,6 +158,7 @@ describe("ProgramEnrollmentDialog", () => {
     await waitFor(() => {
       expect(location.current.pathname).toBe(routes.DASHBOARD_HOME)
     })
+    expect(trackProgramEnrolled).toHaveBeenCalledWith(program.title)
     expect(location.current.searchParams.get("enrollment_status")).toBe(
       "success",
     )

@@ -26,7 +26,10 @@ import {
 } from "api/mitxonline-hooks/user"
 import * as Yup from "yup"
 import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
-import { trackCourseUnenrolled } from "@/common/analytics/gtm"
+import {
+  trackCourseUnenrolled,
+  trackProgramUnenrolled,
+} from "@/common/analytics/gtm"
 
 const BoldText = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
@@ -341,7 +344,7 @@ const UnenrollProgramDialogInner: React.FC<UnenrollProgramDialogProps> = ({
     initialValues: {},
     onSubmit: async () => {
       await destroyProgramEnrollment.mutateAsync(programId)
-      trackCourseUnenrolled(title)
+      trackProgramUnenrolled(title)
       modal.hide()
     },
   })

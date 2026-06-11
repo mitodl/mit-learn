@@ -11,14 +11,20 @@ const pushGtmEvent = (event: string, payload: DataLayerPayload = {}) => {
 
   window.dataLayer = window.dataLayer || []
   window.dataLayer.push({
-    event,
     ...payload,
+    event,
   })
 }
 
 const trackCourseEnrolled = (courseName?: string | null) => {
   pushGtmEvent("course-enrolled", {
     ...(courseName ? { "course-enrolled-name": courseName } : {}),
+  })
+}
+
+const trackProgramEnrolled = (programName?: string | null) => {
+  pushGtmEvent("program-enrolled", {
+    ...(programName ? { "program-enrolled-name": programName } : {}),
   })
 }
 
@@ -34,4 +40,22 @@ const trackCourseUnenrolled = (courseName?: string | null) => {
   })
 }
 
-export { pushGtmEvent, trackCourseEnrolled, trackCourseUnenrolled }
+const trackProgramUnenrolled = (programName?: string | null) => {
+  pushGtmEvent("program-unenrolled", {
+    ...(programName
+      ? {
+          "program-unenrolled-name": programName,
+          // Backward compatibility for any existing GTM variables.
+          "program-enrolled-name": programName,
+        }
+      : {}),
+  })
+}
+
+export {
+  pushGtmEvent,
+  trackCourseEnrolled,
+  trackProgramEnrolled,
+  trackCourseUnenrolled,
+  trackProgramUnenrolled,
+}

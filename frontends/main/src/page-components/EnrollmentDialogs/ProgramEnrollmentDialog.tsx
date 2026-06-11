@@ -10,7 +10,7 @@ import {
   formatPrice,
   getEnrollmentType,
 } from "@/common/mitxonline"
-import { trackCourseEnrolled } from "@/common/analytics/gtm"
+import { trackProgramEnrolled } from "@/common/analytics/gtm"
 import {
   BigButton,
   CertificateBox,
@@ -113,7 +113,7 @@ const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
       { V3ProgramEnrollmentRequestRequest: { program_id: program.id } },
       {
         onSuccess: () => {
-          trackCourseEnrolled(program.title)
+          trackProgramEnrolled(program.title)
           if (onProgramEnroll) {
             onProgramEnroll()
           } else {
