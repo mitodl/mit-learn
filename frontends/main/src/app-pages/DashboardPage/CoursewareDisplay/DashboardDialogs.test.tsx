@@ -618,9 +618,7 @@ describe("JustInTimeDialog", () => {
     expect(window.location.assign).toHaveBeenCalledWith(run.courseware_url)
   })
 
-  // TODO: Un-skip once @mitodl/mitxonline-api-axios is updated with B2BEnrollRequestRequest
-  // (depends on https://github.com/mitodl/mitxonline/pull/3650 being merged and a new package release)
-  test.skip("Submitting just-in-time dialog includes program_id when parentProgramReadableIds is provided", async () => {
+  test("Submitting just-in-time dialog includes program_id when parentProgramReadableIds is provided", async () => {
     const { course, run } = setupJustInTimeTest({
       userOverrides: { user_profile: { year_of_birth: 1988 } },
     })

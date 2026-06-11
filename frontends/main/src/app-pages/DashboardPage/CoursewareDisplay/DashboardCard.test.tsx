@@ -1208,9 +1208,7 @@ describe.each([
     },
   )
 
-  // TODO: Un-skip once @mitodl/mitxonline-api-axios is updated with B2BEnrollRequestRequest
-  // (depends on https://github.com/mitodl/mitxonline/pull/3650 being merged and a new package release)
-  test.skip.each(ENROLLMENT_TRIGGERS)(
+  test.each(ENROLLMENT_TRIGGERS)(
     "B2B enrollment sends program_id when parentProgramReadableIds is provided",
     async ({ trigger }) => {
       const userData = mitxUser({
