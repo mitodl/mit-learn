@@ -7,6 +7,7 @@ import pytest
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.urls import reverse
+from langchain.schema import Document
 from qdrant_client import models
 from qdrant_client.models import PointStruct
 
@@ -57,9 +58,11 @@ from vector_search.utils import (
     _get_text_splitter,
     _is_markdown_content,
     _resource_vector_hits,
+    _set_payload,
     async_qdrant_aggregations,
     compute_optimizer_settings,
     create_qdrant_collections,
+    custom_score_formula,
     embed_learning_resources,
     embed_topics,
     filter_existing_qdrant_points,
@@ -695,7 +698,6 @@ def test_chunk_markdown_documents_without_headers(mocker):
 
 def test_generate_content_points_uses_markdown_chunking_for_marketing_pages(mocker):
     """marketing_page files use _chunk_markdown_documents instead of _chunk_documents"""
-    from langchain.schema import Document
 
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 500
     settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 50
@@ -736,7 +738,6 @@ def test_generate_content_points_uses_markdown_chunking_for_marketing_pages(mock
 
 def test_generate_content_points_uses_standard_chunking_for_non_markdown(mocker):
     """Non-markdown files use _chunk_documents"""
-    from langchain.schema import Document
 
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 500
     settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 50
@@ -1402,8 +1403,6 @@ def test_set_payload_batched(mocker):
     param_map = {"key1": "payload_key1", "key2": "payload_key2"}
     collection_name = "test_collection"
 
-    from vector_search.utils import _set_payload
-
     _set_payload(points, document, param_map, collection_name)
 
     assert mock_client.set_payload.call_count == 3
@@ -1484,8 +1483,6 @@ def test_vector_search_hybrid(mocker, client):
     mock_sparse_encoder.embed.return_value = {"indices": [1, 2], "values": [0.5, 0.6]}
     mock_sparse_encoder.model_short_name.return_value = "sparse-test-encoder"
 
-    from django.urls import reverse
-
     params = {
         "q": "test hybrid query",
         "hybrid_search": True,
@@ -1507,13 +1504,12 @@ def test_vector_search_hybrid(mocker, client):
     sparse_prefetch = prefetches[0]
     dense_prefetch = prefetches[1]
 
-    assert sparse_prefetch.using == "sparse-test-encoder"
-    assert isinstance(sparse_prefetch.query, models.SparseVector)
-    assert sparse_prefetch.query.indices == [1, 2]
-    assert sparse_prefetch.query.values == [0.5, 0.6]
-
-    assert dense_prefetch.using == "dense-test-encoder"
-    assert dense_prefetch.query == [0.1, 0.2, 0.3]
+    assert sparse_prefetch.prefetch[0].using == "sparse-test-encoder"
+    assert isinstance(sparse_prefetch.prefetch[0].query, models.SparseVector)
+    assert sparse_prefetch.prefetch[0].query.indices == [1, 2]
+    assert sparse_prefetch.prefetch[0].query.values == [0.5, 0.6]
+    assert dense_prefetch.prefetch[0].using == "dense-test-encoder"
+    assert dense_prefetch.prefetch[0].query == [0.1, 0.2, 0.3]
 
 
 @pytest.mark.parametrize("use_group_by", [True, False])
@@ -1546,16 +1542,10 @@ def test_vector_search_group_by_offset_behavior(
     mocker.patch("vector_search.views._content_file_vector_hits", return_value=[])
 
     # Content files endpoint requires authentication
-    from django.contrib.auth.models import Group
-
-    from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
-
     user = django_user_model.objects.create()
     group, _ = Group.objects.get_or_create(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS)
     group.user_set.add(user)
     client.force_login(user)
-
-    from django.urls import reverse
 
     params = {"q": "test query", "offset": 15}
     if use_group_by:
@@ -1843,3 +1833,85 @@ def test_async_qdrant_aggregations_uses_content_file_param_map(mocker):
     assert call_kwargs["collection_name"] == CONTENT_FILES_COLLECTION_NAME
     # The Qdrant field for 'file_extension' should come from the content-file map
     assert call_kwargs["key"] == QDRANT_CONTENT_FILE_PARAM_MAP["file_extension"]
+
+
+def test_custom_score_formula_empty(mocker):
+    """
+    If there are no score_params for the collection in VECTOR_SEARCH_SCORE_BOOST,
+    custom_score_formula must return an empty list.
+    """
+
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+    assert custom_score_formula("non_existent_collection") == []
+
+
+def test_custom_score_formula_with_boosts(mocker):
+    """
+    custom_score_formula must boost scores based on VECTOR_SEARCH_SCORE_BOOST
+    and append a GaussDecayExpression at the end.
+    """
+
+    mock_boosts = {
+        RESOURCES_COLLECTION_NAME: [
+            {"boost": 0.5, "params": {"resource_type": ["course"]}},
+            {"boost": 0.2, "params": {"offered_by": ["ocw"]}},
+        ]
+    }
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", mock_boosts)
+
+    results = custom_score_formula(RESOURCES_COLLECTION_NAME)
+
+    # We expect 3 expressions: 2 MultExpressions and 1 GaussDecayExpression
+    assert len(results) == 2
+
+    # Check first boost expression
+    assert isinstance(results[0], models.MultExpression)
+    assert results[0].mult[0] == 0.5
+    # The second element in mult should be the Filter for resource_type=course
+    filter_1 = results[0].mult[1]
+    assert isinstance(filter_1, models.Filter)
+    assert any(
+        isinstance(c, models.FieldCondition)
+        and c.key == "resource_type"
+        and isinstance(c.match, models.MatchAny)
+        and c.match.any == ["course"]
+        for c in filter_1.must
+    )
+
+    # Check second boost expression
+    assert isinstance(results[1], models.MultExpression)
+    assert results[1].mult[0] == 0.2
+    filter_2 = results[1].mult[1]
+    assert isinstance(filter_2, models.Filter)
+    assert any(
+        isinstance(c, models.FieldCondition)
+        and c.key == "offered_by.code"
+        and isinstance(c.match, models.MatchAny)
+        and c.match.any == ["ocw"]
+        for c in filter_2.must
+    )
+
+    # Check GaussDecayExpression decay expression at the end
+    assert isinstance(results[0].mult[2], models.GaussDecayExpression)
+    assert isinstance(results[1].mult[2], models.GaussDecayExpression)
+
+
+def test_custom_score_formula_defaults(mocker):
+    """
+    If the boost key is missing, custom_score_formula should default the boost amount to 0.
+    """
+
+    mock_boosts = {
+        RESOURCES_COLLECTION_NAME: [{"params": {"resource_type": ["course"]}}]
+    }
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", mock_boosts)
+
+    results = custom_score_formula(RESOURCES_COLLECTION_NAME)
+
+    assert len(results) == 1
+
+    assert isinstance(results[0], models.MultExpression)
+    assert results[0].mult[0] == 0
+    assert isinstance(results[0].mult[1], models.Filter)
+
+    assert isinstance(results[0].mult[2], models.GaussDecayExpression)

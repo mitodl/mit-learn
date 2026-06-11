@@ -54,6 +54,7 @@ from vector_search.constants import (
     QDRANT_TOPIC_INDEXES,
     RESOURCES_COLLECTION_NAME,
     TOPICS_COLLECTION_NAME,
+    VECTOR_SEARCH_SCORE_BOOST,
 )
 from vector_search.encoders.utils import dense_encoder, sparse_encoder
 
@@ -1287,3 +1288,37 @@ def retrieve_points_matching_params(
 
         if not next_page_offset:
             break
+
+
+def custom_score_formula(collection_name: str) -> list[models.MultExpression]:
+    """
+    Boost scores based on params defined in VECTOR_SEARCH_SCORE_BOOST
+    """
+    score_params = VECTOR_SEARCH_SCORE_BOOST.get(collection_name)
+    score_expressions = []
+    if score_params:
+        for score_param in score_params:
+            amount = score_param.get("boost", 0)
+            conditions = qdrant_query_conditions(
+                score_param.get("params"), collection_name=collection_name
+            )
+            if conditions is None:
+                continue
+            score_expressions.append(
+                models.MultExpression(
+                    mult=[
+                        amount,
+                        conditions,
+                        # add a decay based on score to normalize
+                        models.GaussDecayExpression(
+                            gauss_decay=models.DecayParamsExpression(
+                                x="$score",  # decay over the relevance score itself
+                                target=1.0,  # cosine "perfect match" — full boost
+                                scale=0.2,
+                                midpoint=0.5,
+                            )
+                        ),
+                    ]
+                )
+            )
+    return score_expressions

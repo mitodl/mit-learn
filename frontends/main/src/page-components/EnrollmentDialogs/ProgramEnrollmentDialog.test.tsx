@@ -6,7 +6,12 @@ import {
   user,
   setupLocationMock,
 } from "@/test-utils"
-import { makeRequest, setMockResponse } from "api/test-utils"
+import {
+  makeRequest,
+  setMockResponse,
+  urls as apiUrls,
+  factories as apiFactories,
+} from "api/test-utils"
 import {
   urls as mitxUrls,
   factories as mitxFactories,
@@ -17,9 +22,17 @@ import ProgramEnrollmentDialog from "./ProgramEnrollmentDialog"
 import invariant from "tiny-invariant"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import * as routes from "@/common/urls"
+import { faker } from "@faker-js/faker/locale/en"
 
 describe("ProgramEnrollmentDialog", () => {
   setupLocationMock()
+
+  beforeEach(() => {
+    setMockResponse.get(
+      apiUrls.userMe.get(),
+      apiFactories.user.user({ is_authenticated: false }),
+    )
+  })
 
   const makeProgram = mitxFactories.programs.program
   const makeProduct = mitxFactories.courses.product
@@ -249,6 +262,77 @@ describe("ProgramEnrollmentDialog", () => {
         /Would you like to get a certificate for this program\?/,
       ),
     ).toBeInTheDocument()
+  })
+
+  test("Displays discounted price with strikethrough and 'Financial assistance applied' when approved flexible pricing exists", async () => {
+    const originalPrice = "500"
+    const discountedAmount = "100.00"
+    const product = makeProduct({ price: originalPrice })
+    const financialAidUrl = `/financial-aid/${faker.string.alphanumeric(10)}`
+    const program = makeProgram({
+      products: [product],
+      enrollment_modes: bothEnrollmentModes(),
+      page: { financial_assistance_form_url: financialAidUrl },
+    })
+
+    setMockResponse.get(
+      mitxUrls.products.userFlexiblePriceDetail(product.id),
+      mitxFactories.products.flexiblePrice({
+        id: product.id,
+        price: originalPrice,
+        product_flexible_price: {
+          id: faker.number.int(),
+          amount: discountedAmount,
+          discount_type: "dollars-off" as const,
+          discount_code: faker.string.alphanumeric(8),
+          redemption_type: "one-time" as const,
+          is_redeemed: false,
+          automatic: true,
+          max_redemptions: 1,
+          payment_type: null,
+          activation_date: faker.date.past().toISOString(),
+          expiration_date: faker.date.future().toISOString(),
+        },
+      }),
+    )
+
+    renderWithProviders(null, { user: { is_authenticated: true } })
+    await openDialog(program)
+
+    // Discounted price: $500 - $100 = $400
+    await screen.findByText("Financial assistance applied")
+    expect(screen.getByText(/Get Certificate/)).toBeInTheDocument()
+    expect(screen.getByText("$400")).toBeInTheDocument()
+    expect(screen.getByText("$500")).toBeInTheDocument()
+  })
+
+  test("Shows 'Financial assistance available' when financial aid URL exists but no approved discount", async () => {
+    const product = makeProduct({ price: "300" })
+    const financialAidUrl = `/financial-aid/${faker.string.alphanumeric(10)}`
+    const program = makeProgram({
+      products: [product],
+      enrollment_modes: bothEnrollmentModes(),
+      page: { financial_assistance_form_url: financialAidUrl },
+    })
+
+    setMockResponse.get(
+      mitxUrls.products.userFlexiblePriceDetail(product.id),
+      mitxFactories.products.flexiblePrice({
+        id: product.id,
+        price: product.price,
+        product_flexible_price: null,
+      }),
+    )
+
+    renderWithProviders(null, { user: { is_authenticated: true } })
+    await openDialog(program)
+
+    const link = await screen.findByRole("link", {
+      name: /financial assistance/i,
+    })
+    expect(link).toHaveTextContent("Financial assistance available")
+    expect(link).toHaveAttribute("href", mitxonlineLegacyUrl(financialAidUrl))
+    expect(screen.getByText(/\$300/)).toBeInTheDocument()
   })
 
   test("Hides certificate upsell for free-only programs", async () => {

@@ -20,23 +20,29 @@ import type {
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-// Type-only import: erased at compile time, so this line adds no runtime
-// dependency on the DashboardCard component. DashboardResource is the durable
-// enrollment-flat home contract; it moves into this file when the legacy
-// cards are removed (Phase 7).
-import type { DashboardResource } from "../DashboardCard"
 import {
   getBestRun,
   getIdsFromReqTree,
   parseProgramRequirementSections,
 } from "@/common/mitxonline"
 import type { ProgramRequirementSection } from "@/common/mitxonline"
-import {
-  EnrollmentStatus,
-  getEnrollmentStatus,
-  getRequirementsProgress,
-  selectBestEnrollment,
-} from "../helpers"
+
+/**
+ * Discriminant constants identifying the three home-dashboard resource shapes.
+ * Moved here from DashboardCard.tsx in Phase 7.
+ */
+export const DashboardType = {
+  Course: "course",
+  CourseRunEnrollment: "courserun-enrollment",
+  ProgramEnrollment: "program-enrollment",
+} as const
+export type DashboardType = (typeof DashboardType)[keyof typeof DashboardType]
+
+/** Discriminated union over the three home-dashboard resource shapes. */
+export type DashboardResource =
+  | { type: "course"; data: CourseWithCourseRunsSerializerV2 }
+  | { type: "courserun-enrollment"; data: CourseRunEnrollmentV3 }
+  | { type: "program-enrollment"; data: V3UserProgramEnrollment }
 
 /**
  * A program/contract dashboard's view of a course: every enrollment whose run
@@ -63,6 +69,169 @@ export type DashboardCourseEntry = {
   displayedEnrollment: CourseRunEnrollmentV3 | null
   displayedRun: BaseCourseRun | null
 }
+
+// ---------------------------------------------------------------------------
+// Helpers absorbed from helpers.ts (Phase 7)
+// ---------------------------------------------------------------------------
+
+export const ResourceType = {
+  Contract: "contract",
+  Course: "course",
+  Program: "program",
+  ProgramCollection: "program_collection",
+} as const
+export type ResourceType = (typeof ResourceType)[keyof typeof ResourceType]
+
+export const EnrollmentStatus = {
+  NotEnrolled: "not_enrolled",
+  Enrolled: "enrolled",
+  Completed: "completed",
+} as const
+export type EnrollmentStatus =
+  (typeof EnrollmentStatus)[keyof typeof EnrollmentStatus]
+
+type KeyOpts = {
+  resourceType: ResourceType
+  id: number
+  runId?: number
+}
+export const getKey = ({ resourceType, id, runId }: KeyOpts) => {
+  const base = `${resourceType}-${id}`
+  return runId ? `${base}-${runId}` : base
+}
+
+export const filterEnrollmentsByOrganization = (
+  enrollments: CourseRunEnrollmentV3[],
+  organizationId: number,
+): CourseRunEnrollmentV3[] => {
+  return enrollments.filter(
+    (enrollment) => enrollment.b2b_organization_id === organizationId,
+  )
+}
+
+/**
+ * Selects the best enrollment from multiple enrollments for the same course.
+ * Priority:
+ * 1. Prefer enrollment with a certificate
+ * 2. If tied, prefer highest grade
+ * 3. Otherwise take first match
+ *
+ * Delegates to `pickDisplayedEnrollmentForLegacyDashboard`.
+ */
+export const selectBestEnrollment = (
+  course: CourseWithCourseRunsSerializerV2,
+  enrollments: CourseRunEnrollmentV3[],
+): CourseRunEnrollmentV3 | null => {
+  return pickDisplayedEnrollmentForLegacyDashboard(course, enrollments)
+}
+
+export const getEnrollmentStatus = (
+  enrollment: CourseRunEnrollmentV3 | null,
+): EnrollmentStatus => {
+  if (!enrollment) {
+    return EnrollmentStatus.NotEnrolled
+  }
+  const hasCompleted = enrollment.grades.some((grade) => grade.passed)
+  return hasCompleted ? EnrollmentStatus.Completed : EnrollmentStatus.Enrolled
+}
+
+export const getProgramEnrollmentStatus = (
+  programEnrollment: V3UserProgramEnrollment | undefined,
+  enrolledCourseCount: number,
+  completedCourseCount = 0,
+): EnrollmentStatus => {
+  if (!programEnrollment) {
+    return EnrollmentStatus.NotEnrolled
+  }
+  if (programEnrollment.certificate) {
+    return EnrollmentStatus.Completed
+  }
+  if (completedCourseCount > 0 || enrolledCourseCount > 0) {
+    return EnrollmentStatus.Enrolled
+  }
+  return EnrollmentStatus.NotEnrolled
+}
+
+const isLeafRequirementNodeCompleted = (
+  node: V2ProgramRequirement,
+  courseEnrollments: Record<number, CourseRunEnrollmentV3[]>,
+  programEnrollments: Record<number, V3UserProgramEnrollment>,
+): boolean => {
+  if (
+    node.data.node_type === "course" &&
+    typeof node.data.course === "number"
+  ) {
+    const enrollments = courseEnrollments[node.data.course] ?? []
+    return enrollments.some((e) => e.grades.some((g) => g.passed))
+  }
+  if (node.data.node_type === "program" && node.data.required_program) {
+    return !!programEnrollments[node.data.required_program]?.certificate
+  }
+  return false
+}
+
+/**
+ * Computes `{ completed, total }` across the given operator nodes.
+ *
+ * Assumes a flat req_tree: each operator's direct children are leaves
+ * (`node_type: "course"` or `"program"`). Nesting operators inside
+ * operators is not supported.
+ *
+ * For `min_number_of` operators, `completed` is capped at `operator_value`
+ * so extra electives don't inflate the overall total.
+ */
+export const getRequirementsProgress = (
+  nodes: V2ProgramRequirement[],
+  courseEnrollments: Record<number, CourseRunEnrollmentV3[]>,
+  programEnrollments: Record<number, V3UserProgramEnrollment>,
+): { completed: number; total: number } => {
+  return nodes.reduce(
+    (acc, node) => {
+      if (node.data.node_type !== "operator") return acc
+      const children = node.children ?? []
+      if (children.some((c) => c.data.node_type === "operator")) {
+        console.warn(
+          "getRequirementsProgress: nested operators are not supported and will be skipped",
+        )
+      }
+      const leaves = children.filter(
+        (c) => c.data.node_type === "course" || c.data.node_type === "program",
+      )
+      const completed = leaves.filter((leaf) =>
+        isLeafRequirementNodeCompleted(
+          leaf,
+          courseEnrollments,
+          programEnrollments,
+        ),
+      ).length
+
+      if (node.data.operator === "all_of") {
+        return {
+          completed: acc.completed + completed,
+          total: acc.total + leaves.length,
+        }
+      }
+      if (node.data.operator === "min_number_of") {
+        const minRequired = parseInt(node.data.operator_value ?? "", 10)
+        if (!isNaN(minRequired)) {
+          return {
+            completed: acc.completed + Math.min(completed, minRequired),
+            total: acc.total + minRequired,
+          }
+        }
+      }
+      console.warn(
+        `getRequirementsProgress: unsupported operator "${node.data.operator}" (operator_value=${JSON.stringify(node.data.operator_value)}); skipping.`,
+      )
+      return acc
+    },
+    { completed: 0, total: 0 },
+  )
+}
+
+// ---------------------------------------------------------------------------
+// End of absorbed helpers
+// ---------------------------------------------------------------------------
 
 const getMaxEnrollmentGrade = (enrollment: CourseRunEnrollmentV3): number => {
   return Math.max(0, ...enrollment.grades.map((grade) => grade.grade ?? 0))
@@ -391,7 +560,7 @@ const resolveDisplayedRunAndEnrollment = (
       enrollableOnly: true,
       contractId: opts?.contractId,
     }) ??
-    course.courseruns[0] ??
+    getBestRun(course, { contractId: opts?.contractId }) ??
     null
   const isNonDefaultVariant = opts?.variant && !opts.variant.default_variant
   const displayedRun = isNonDefaultVariant

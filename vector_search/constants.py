@@ -163,3 +163,10 @@ QDRANT_OPTIMIZER_FLUSH_INTERVAL_XLARGE = 30
 
 # Indexing threshold ratio
 QDRANT_OPTIMIZER_INDEXING_THRESHOLD_RATIO = 0.4
+
+
+VECTOR_SEARCH_SCORE_BOOST = {
+    RESOURCES_COLLECTION_NAME: [
+        {"boost": 0.15, "params": {"resource_type_group": ["program"]}}
+    ],
+}

@@ -3,7 +3,6 @@
 import factory
 from factory.django import DjangoModelFactory
 
-from channels.api import create_channel_groups_and_roles
 from channels.constants import ChannelType
 from channels.models import (
     Channel,
@@ -69,19 +68,6 @@ class ChannelFactory(DjangoModelFactory):
             factory_related_name="channel",
         ),
     )
-
-    @factory.post_generation
-    def create_roles(
-        self,
-        create,
-        extracted,  # noqa: ARG002
-        **kwargs,  # noqa: ARG002
-    ):  # pylint: disable=unused-argument
-        """Create the channel groups and roles after the channel is created"""
-        if not create:
-            return
-
-        create_channel_groups_and_roles(self)
 
     class Meta:
         model = Channel

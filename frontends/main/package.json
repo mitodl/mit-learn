@@ -6,7 +6,8 @@
     "dev": "PORT=${PORT:-8062} TZ=UTC next dev",
     "build": "next build",
     "start": "TZ=UTC next start",
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "typegen": "NEXT_BUILD_CI=1 next typegen"
   },
   "dependencies": {
     "@ebay/nice-modal-react": "^1.2.13",
