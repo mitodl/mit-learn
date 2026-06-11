@@ -6,7 +6,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@grafana/openapi-to-k6": "^0.4.1",
-    "@types/k6": "^1.7.0"
+    "@grafana/openapi-to-k6": "0.4.1",
+    "@types/k6": "1.7.0"
   }
 }
