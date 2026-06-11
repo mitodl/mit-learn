@@ -3,7 +3,11 @@ import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { PodcastDetailPage } from "@/app-pages/PodcastPage/PodcastDetailPage"
 import { getQueryClient } from "@/app/getQueryClient"
 import { ResourceTypeEnum } from "api"
-import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
+import {
+  MetadataNotFound,
+  safeGenerateMetadata,
+  standardizeMetadata,
+} from "@/common/metadata"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { notFound, redirect } from "next/navigation"
 import { parseResourceId } from "@/common/slugs"
@@ -23,6 +27,9 @@ export const generateMetadata = async (props: Props) => {
     const resource = await queryClient.fetchQuery(
       learningResourceQueries.detail(id),
     )
+    if (resource.resource_type !== ResourceTypeEnum.Podcast) {
+      throw new MetadataNotFound()
+    }
     return standardizeMetadata({
       title: resource.title,
       description: resource.description ?? undefined,
