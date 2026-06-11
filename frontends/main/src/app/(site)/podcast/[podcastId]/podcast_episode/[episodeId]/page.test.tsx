@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation"
 import { factories, setMockResponse, urls } from "api/test-utils"
-import type { PodcastEpisodeResource } from "api/v1"
 import Page from "./page"
 
 jest.mock("@/app/getQueryClient", () => {
@@ -18,8 +17,8 @@ beforeEach(() => {
 test("bare episode URL redirects to the slugged canonical with corrected parent", async () => {
   const episode = factories.learningResources.podcastEpisode({
     title: "Episode One",
-  }) as PodcastEpisodeResource
-  episode.podcast_episode = { ...episode.podcast_episode, podcasts: [10] }
+    podcast_episode: { podcasts: [10] },
+  })
   setMockResponse.get(
     urls.learningResources.details({ id: episode.id }),
     episode,

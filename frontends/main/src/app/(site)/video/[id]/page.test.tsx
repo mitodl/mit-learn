@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation"
 import { factories, setMockResponse, urls } from "api/test-utils"
-import type { VideoResource } from "api/v1"
 import Page from "./page"
 
 jest.mock("@/app/getQueryClient", () => {
@@ -18,8 +17,8 @@ beforeEach(() => {
 test("bare /video/{id} redirects to the slug + first playlist", async () => {
   const video = factories.learningResources.video({
     title: "Beyond Biology",
-  }) as VideoResource
-  video.playlists = ["55", "66"]
+    playlists: ["55", "66"],
+  })
   setMockResponse.get(urls.learningResources.details({ id: video.id }), video)
   await expect(
     Page({

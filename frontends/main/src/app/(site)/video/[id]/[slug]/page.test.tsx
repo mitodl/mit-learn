@@ -1,6 +1,5 @@
 import { notFound, redirect } from "next/navigation"
 import { factories, setMockResponse, urls } from "api/test-utils"
-import type { VideoResource } from "api/v1"
 import Page, { generateMetadata } from "./page"
 
 jest.mock("@/app/getQueryClient", () => {
@@ -33,8 +32,8 @@ beforeEach(() => {
 const mockVideo = (playlists: string[]) => {
   const video = factories.learningResources.video({
     title: "Beyond Biology",
-  }) as VideoResource
-  video.playlists = playlists
+    playlists,
+  })
   setMockResponse.get(urls.learningResources.details({ id: video.id }), video)
   playlists.forEach((pid) => {
     const pl = factories.learningResources.videoPlaylist()

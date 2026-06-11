@@ -1,6 +1,5 @@
 import { notFound, redirect } from "next/navigation"
 import { factories, setMockResponse, urls } from "api/test-utils"
-import type { PodcastEpisodeResource } from "api/v1"
 import Page from "./page"
 
 jest.mock("@/app/getQueryClient", () => {
@@ -30,8 +29,8 @@ beforeEach(() => {
 const mockEpisode = (parentIds: number[]) => {
   const episode = factories.learningResources.podcastEpisode({
     title: "Episode One",
-  }) as PodcastEpisodeResource
-  episode.podcast_episode = { ...episode.podcast_episode, podcasts: parentIds }
+    podcast_episode: { podcasts: parentIds },
+  })
   setMockResponse.get(
     urls.learningResources.details({ id: episode.id }),
     episode,
