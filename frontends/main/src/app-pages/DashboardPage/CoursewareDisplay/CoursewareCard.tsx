@@ -43,6 +43,7 @@ type CoursewareCardDefaultProps = StyledComponentBaseProps & {
   isLoading?: boolean
   onUpgradeError?: (error: string) => void
   contextMenuItems?: SimpleMenuItem[]
+  noun?: string
 }
 
 /**
@@ -140,6 +141,7 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
       onUpgradeError={onUpgradeError}
       contextMenuItems={contextMenuItems}
       variant={layout}
+      noun={props.noun}
       Component={Component}
       className={className}
     />
