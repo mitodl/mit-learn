@@ -53,16 +53,6 @@ const normalizeCourseForCardAssertions = (
     ...course,
     courseruns: [normalizedRun],
     next_run_id: normalizedRun.id,
-    language_options: [
-      {
-        id: normalizedRun.id,
-        language: normalizedRun.language ?? "en",
-        title: normalizedRun.title ?? course.title,
-        run_tag: normalizedRun.run_tag,
-        courseware_id: normalizedRun.courseware_id,
-        courseware_url: normalizedRun.courseware_url ?? "",
-      },
-    ],
   }
 }
 
@@ -2131,16 +2121,6 @@ describe("ContractContent", () => {
     const course = factories.courses.course({
       courseruns: [run],
       next_run_id: run.id,
-      language_options: [
-        {
-          id: run.id,
-          courseware_id: run.courseware_id,
-          courseware_url: run.courseware_url ?? "",
-          language: LanguageEnum.En,
-          title: run.title,
-          run_tag: run.run_tag,
-        },
-      ],
     })
     const program = factories.programs.program({ courses: [course.id] })
     const contracts = createTestContracts(orgX.id, 1, [program.id])
@@ -2188,16 +2168,6 @@ describe("ContractContent", () => {
     const course = factories.courses.course({
       courseruns: [run],
       next_run_id: run.id,
-      language_options: [
-        {
-          id: run.id,
-          courseware_id: run.courseware_id,
-          courseware_url: run.courseware_url ?? "",
-          language: LanguageEnum.En,
-          title: run.title,
-          run_tag: run.run_tag,
-        },
-      ],
     })
     program.courses = [course.id]
 
@@ -2264,7 +2234,6 @@ describe("ContractContent", () => {
     const courseWithoutTranslations = {
       ...course,
       courseruns: [contractRun],
-      language_options: [],
       next_run_id: contractRun.id,
       next_run: null,
     }
@@ -2339,14 +2308,6 @@ describe("ContractContent", () => {
     const courseWithMultipleRuns = {
       ...course,
       courseruns: runs,
-      language_options: runs.map((run) => ({
-        id: run.id,
-        language: run.language,
-        title: run.title,
-        run_tag: run.run_tag,
-        courseware_id: run.courseware_id,
-        courseware_url: run.courseware_url ?? "",
-      })),
       next_run_id: runs[0].id,
       next_run: null, // Clear any factory-generated next_run reference
     }
