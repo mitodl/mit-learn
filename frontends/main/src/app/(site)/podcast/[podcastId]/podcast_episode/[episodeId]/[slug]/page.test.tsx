@@ -36,8 +36,7 @@ const mockEpisode = (parentIds: number[]) => {
     episode,
   )
   parentIds.forEach((pid) => {
-    const parent = factories.learningResources.podcast()
-    parent.id = pid
+    const parent = factories.learningResources.podcast({ id: pid })
     setMockResponse.get(urls.learningResources.details({ id: pid }), parent)
   })
   return episode

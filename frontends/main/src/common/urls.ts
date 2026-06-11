@@ -156,7 +156,10 @@ export const absoluteUrl = (path: string): string =>
  * `resource` is the authoritative id; `resource_title` is a cosmetic slug,
  * omitted when blank and ignored on lookup.
  */
-export const resourceDrawerSearch = (resourceId: number, title?: string) => {
+export const resourceDrawerSearch = (
+  resourceId: number,
+  title: string | undefined,
+) => {
   const slug = title ? slugify(title) : ""
   const params = new URLSearchParams({
     [RESOURCE_DRAWER_PARAMS.resource]: String(resourceId),
