@@ -88,8 +88,11 @@ const Page: React.FC<Props> = async ({ params, searchParams }) => {
     video.title,
   )
   const incomingBase = `/video/${id}/${slug}`
-  const incoming =
-    typeof rawPlaylist === "string"
+  // A repeated ?playlist (array) resolves as no-playlist but is never the
+  // canonical form, so it always redirects (which strips it).
+  const incoming = Array.isArray(rawPlaylist)
+    ? null
+    : typeof rawPlaylist === "string"
       ? `${incomingBase}?playlist=${rawPlaylist}`
       : incomingBase
   if (incoming !== canonical) {
