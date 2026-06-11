@@ -1484,20 +1484,18 @@ class VideoPlaylistQuerySet(LearningResourceDetailQuerySet):
 
     def for_serialization(self):
         """Return queryset for serialization"""
-        return (
-            self.annotate(
-                video_count=Count(
-                    "learning_resource__children",
-                    filter=Q(
-                        learning_resource__children__relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
-                        learning_resource__children__child__published=True,
-                    ),
-                )
+        return self.annotate(
+            video_count=Count(
+                "learning_resource__children",
+                filter=Q(
+                    learning_resource__children__relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+                    learning_resource__children__child__published=True,
+                ),
             )
-            .select_related(
-                "parent_learning_resource", "parent_learning_resource__course"
-            )
-            .prefetch_related("channel")
+        ).select_related(
+            "parent_learning_resource",
+            "parent_learning_resource__course",
+            "channel",
         )
 
 

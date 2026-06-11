@@ -523,7 +523,7 @@ class VideoPlaylistSerializer(serializers.ModelSerializer):
 
     parent_course_numbers = serializers.SerializerMethodField()
 
-    @extend_schema_field({"type": "string"})
+    @extend_schema_field({"type": "string", "nullable": True})
     def get_parent_title(self, instance) -> str | None:
         """Return the title of the parent learning resource, if any"""
         parent = instance.parent_learning_resource
@@ -536,7 +536,7 @@ class VideoPlaylistSerializer(serializers.ModelSerializer):
             return [coursenum["value"] for coursenum in parent.course.course_numbers]
         return []
 
-    @extend_schema_field({"type": "string"})
+    @extend_schema_field({"type": "string", "nullable": True})
     def get_parent_url(self, instance) -> str | None:
         """Return the URL of the parent learning resource, if any"""
         parent = instance.parent_learning_resource

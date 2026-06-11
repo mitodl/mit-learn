@@ -16540,9 +16540,11 @@ components:
           nullable: true
         parent_title:
           type: string
+          nullable: true
           readOnly: true
         parent_url:
           type: string
+          nullable: true
           readOnly: true
         parent_course_numbers:
           type: array

@@ -5775,13 +5775,13 @@ export interface VideoPlaylist {
    * @type {string}
    * @memberof VideoPlaylist
    */
-  parent_title: string
+  parent_title: string | null
   /**
    *
    * @type {string}
    * @memberof VideoPlaylist
    */
-  parent_url: string
+  parent_url: string | null
   /**
    * Extract the course number(s) from the parent course, if any
    * @type {Array<string>}
