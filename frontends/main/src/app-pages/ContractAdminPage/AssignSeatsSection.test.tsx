@@ -261,6 +261,24 @@ describe("AssignSeatsSection", () => {
     )
   })
 
+  test("importing a CSV with no-@ rows shows skipped count in modal", async () => {
+    renderWithTheme(<AssignSeatsSection />)
+
+    const csvContent =
+      "alice@example.com\nnoatsymbol\nalso-no-at\nalice@example.com"
+    mockFileContent = csvContent
+    const file = new File([csvContent], "emails.csv", { type: "text/csv" })
+
+    const fileInput = document.querySelector(
+      "input[type='file']",
+    ) as HTMLInputElement
+    await user.upload(fileInput, file)
+
+    expect(await screen.findByRole("dialog")).toHaveTextContent(
+      /2 rows skipped.*no email address found/i,
+    )
+  })
+
   test("importing a CSV with no valid emails shows inline error", async () => {
     renderWithTheme(<AssignSeatsSection />)
 

@@ -18,25 +18,31 @@ export type EmailParseResult = {
   valid: string[]
   invalid: string[]
   duplicateCount: number
+  skippedCount: number
 }
 
 /**
  * Extract email addresses from pre-parsed CSV rows from PapaParse.
  * Scans all columns per row for the first value containing "@".
  *
- * Silently skips rows with no "@" (header rows, name columns, empty fields).
- * Values containing "@" that fail email validation are collected in `invalid`.
- * Duplicate emails (case-insensitive) within the rows are removed and counted.
+ * Skips rows with no "@" (header rows, name columns, empty fields) and counts
+ * them as `skippedCount`. Values containing "@" that fail email validation are
+ * collected in `invalid`. Duplicate emails (case-insensitive) are removed and
+ * counted in `duplicateCount`.
  */
 export const extractEmailsFromCsvRows = (
   rows: string[][],
 ): EmailParseResult => {
   const valid: string[] = []
   const invalid: string[] = []
+  let skippedCount = 0
 
   for (const cols of rows) {
     const emailCol = cols.map((c) => c.trim()).find((c) => c.includes("@"))
-    if (!emailCol) continue
+    if (!emailCol) {
+      skippedCount++
+      continue
+    }
     if (EMAIL_REGEX.test(emailCol)) {
       valid.push(emailCol)
     } else {
@@ -58,7 +64,7 @@ export const extractEmailsFromCsvRows = (
     }
   }
 
-  return { valid: deduped, invalid, duplicateCount }
+  return { valid: deduped, invalid, duplicateCount, skippedCount }
 }
 
 /**
@@ -96,7 +102,7 @@ export const parseEmailsForSubmit = (input: string): EmailParseResult => {
     }
   }
 
-  return { valid: deduped, invalid, duplicateCount }
+  return { valid: deduped, invalid, duplicateCount, skippedCount: 0 }
 }
 
 export const initials = (title: string): string => {

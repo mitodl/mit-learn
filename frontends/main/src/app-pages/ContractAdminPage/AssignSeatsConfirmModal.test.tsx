@@ -9,6 +9,7 @@ const baseProps = {
   validCount: 3,
   invalidEmails: [],
   duplicateCount: 0,
+  skippedCount: 0,
 }
 
 describe("AssignSeatsConfirmModal", () => {
@@ -71,6 +72,25 @@ describe("AssignSeatsConfirmModal", () => {
     )
 
     expect(screen.queryByText(/duplicate/i)).not.toBeInTheDocument()
+  })
+
+  test("shows skipped row count when rows were skipped", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal {...baseProps} skippedCount={3} />,
+    )
+
+    expect(screen.getAllByText(/3 rows skipped/i)[0]).toBeInTheDocument()
+    expect(
+      screen.getAllByText(/no email address found/i)[0],
+    ).toBeInTheDocument()
+  })
+
+  test("does not show skipped section when skippedCount is 0", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal {...baseProps} skippedCount={0} />,
+    )
+
+    expect(screen.queryByText(/skipped/i)).not.toBeInTheDocument()
   })
 
   test("lists invalid emails", () => {

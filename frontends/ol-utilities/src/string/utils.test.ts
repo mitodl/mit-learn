@@ -8,14 +8,15 @@ describe("extractEmailsFromCsvRows", () => {
     expect(valid).toEqual(["alice@example.com", "bob@example.com"])
   })
 
-  test("silently skips rows with no @ in any column", () => {
-    const { valid, invalid } = extract([
+  test("skips rows with no @ in any column and counts them", () => {
+    const { valid, invalid, skippedCount } = extract([
       ["Email"],
       ["alice@example.com"],
       ["bob@example.com"],
     ])
     expect(valid).toEqual(["alice@example.com", "bob@example.com"])
     expect(invalid).toEqual([])
+    expect(skippedCount).toBe(1)
   })
 
   test("finds email in any column, not just the first", () => {
@@ -62,6 +63,7 @@ describe("extractEmailsFromCsvRows", () => {
       valid: ["alice@example.com", "bob@example.com"],
       invalid: [],
       duplicateCount: 0,
+      skippedCount: 0,
     })
   })
 
@@ -104,6 +106,7 @@ describe("parseEmailsForSubmit", () => {
       valid: ["alice@example.com", "bob@example.com"],
       invalid: [],
       duplicateCount: 0,
+      skippedCount: 0,
     })
   })
 
@@ -128,7 +131,7 @@ describe("parseEmailsForSubmit", () => {
 
   test("returns empty arrays for blank input", () => {
     const result = parse("")
-    expect(result).toEqual({ valid: [], invalid: [], duplicateCount: 0 })
+    expect(result).toEqual({ valid: [], invalid: [], duplicateCount: 0, skippedCount: 0 })
   })
 })
 

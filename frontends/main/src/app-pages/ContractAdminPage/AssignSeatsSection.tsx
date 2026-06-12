@@ -182,6 +182,7 @@ type ModalData = {
   validEmails: string[]
   invalidEmails: string[]
   duplicateCount: number
+  skippedCount: number
 }
 
 const AssignSeatsSection: React.FC = () => {
@@ -244,7 +245,7 @@ const AssignSeatsSection: React.FC = () => {
       const { data } = Papa.parse<string[]>(text, {
         skipEmptyLines: true,
       })
-      const { valid, invalid, duplicateCount } = extractEmailsFromCsvRows(data)
+      const { valid, invalid, duplicateCount, skippedCount } = extractEmailsFromCsvRows(data)
       if (valid.length === 0) {
         setCsvNoValid(true)
         return
@@ -254,6 +255,7 @@ const AssignSeatsSection: React.FC = () => {
         validEmails: valid,
         invalidEmails: invalid,
         duplicateCount,
+        skippedCount,
       })
     }
     reader.onerror = () => setCsvReadError(true)
@@ -265,6 +267,7 @@ const AssignSeatsSection: React.FC = () => {
       validEmails: submitResult.valid,
       invalidEmails: submitResult.invalid,
       duplicateCount: submitResult.duplicateCount,
+      skippedCount: submitResult.skippedCount,
     })
   }
 
@@ -411,6 +414,7 @@ const AssignSeatsSection: React.FC = () => {
           validCount={modalData.validEmails.length}
           invalidEmails={modalData.invalidEmails}
           duplicateCount={modalData.duplicateCount}
+          skippedCount={modalData.skippedCount}
         />
       )}
     </SectionCard>

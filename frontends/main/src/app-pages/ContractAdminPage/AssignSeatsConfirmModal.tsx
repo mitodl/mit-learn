@@ -67,6 +67,7 @@ type AssignSeatsConfirmModalProps = {
   validCount: number
   invalidEmails: string[]
   duplicateCount: number
+  skippedCount: number
 }
 
 const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
@@ -76,12 +77,13 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   validCount,
   invalidEmails,
   duplicateCount,
+  skippedCount,
 }) => {
   const descriptionId = useId()
-  const hasIssues = invalidEmails.length > 0 || duplicateCount > 0
+  const hasIssues = invalidEmails.length > 0 || duplicateCount > 0 || skippedCount > 0
   const confirmText = `Send ${validCount} ${pluralize("email", validCount)}`
   const descriptionText = hasIssues
-    ? `${validCount} ${pluralize("email", validCount)} imported and ready to assign.${duplicateCount > 0 ? ` ${duplicateCount} ${pluralize("duplicate", duplicateCount)} removed — only 1 instance kept per address.` : ""}`
+    ? `${validCount} ${pluralize("email", validCount)} imported and ready to assign.${duplicateCount > 0 ? ` ${duplicateCount} ${pluralize("duplicate", duplicateCount)} removed — only 1 instance kept per address.` : ""}${skippedCount > 0 ? ` ${skippedCount} ${pluralize("row", skippedCount)} skipped — no email address found.` : ""}`
     : `Are you sure you want to send invitations to ${validCount} ${pluralize("recipient", validCount)}?`
 
   return (
@@ -107,6 +109,12 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
           <DuplicateNotice>
             {duplicateCount} {pluralize("duplicate", duplicateCount)} removed —
             only 1 instance kept per address.
+          </DuplicateNotice>
+        )}
+        {skippedCount > 0 && (
+          <DuplicateNotice>
+            {skippedCount} {pluralize("row", skippedCount)} skipped — no email
+            address found.
           </DuplicateNotice>
         )}
         {invalidEmails.length > 0 && (
