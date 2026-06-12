@@ -16,7 +16,7 @@ const Arithmix = dynamic(
 const ArithmixClient: React.FC = () => {
   return (
     <ArithmixFlagGate>
-      <Arithmix basename="/arithmix" />
+      <Arithmix basename="/games/arithmix" />
     </ArithmixFlagGate>
   )
 }
