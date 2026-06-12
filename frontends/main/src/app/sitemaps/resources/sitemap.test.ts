@@ -48,12 +48,15 @@ describe("Resource Sitemaps", () => {
     const sitemapPage = await sitemap({ id: Promise.resolve(String(page)) })
     expect(sitemapPage).toEqual(
       summaries.results.map((resource) => ({
+        // "&" must be pre-escaped: NextJS inserts urls into <loc> tags verbatim
         url: `http://test.learn.odl.local:8062${resourceDrawerSearch(
           resource.id,
           resource.title,
-        )}`,
+        )}`.replaceAll("&", "&amp;"),
         lastModified: resource.last_modified ?? undefined,
       })),
     )
+    // guard against the escape being vacuous (no multi-param urls generated)
+    expect(sitemapPage[0].url).toContain("&amp;resource_title=")
   })
 })
