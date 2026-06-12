@@ -1,8 +1,8 @@
 import React from "react"
-import { Link, styled } from "ol-components"
+import { Link, Stack, styled } from "ol-components"
 import NextLink from "next/link"
 import { EnrollmentStatus } from "./helpers"
-import { ActionButton } from "@mitodl/smoot-design"
+import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
 import {
   DashboardResource,
   DashboardType,
@@ -88,25 +88,35 @@ const TitleText = styled.h3<{ clickable?: boolean }>(
   }),
 )
 
-const SubtitleLinkRoot = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-  flex: 1,
-  color: theme.custom.colors.darkGray2,
-  ...theme.typography.subtitle3,
-}))
+const SubtitleLinkRoot = styled.div<{ layout?: "default" | "compact" }>(
+  ({ theme, layout = "default" }) => ({
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    flex: 1,
+    color:
+      layout === "compact"
+        ? theme.custom.colors.silverGrayDark
+        : theme.custom.colors.darkGray2,
+    ...theme.typography.subtitle3,
+  }),
+)
 
-const SubtitleLink = styled(NextLink)(({ theme }) => ({
-  ...theme.typography.subtitle3,
-  color: theme.custom.colors.mitRed,
-  display: "flex",
-  alignItems: "center",
-  gap: "4px",
-  ":hover": {
-    textDecoration: "underline",
-  },
-}))
+const SubtitleLink = styled(NextLink)<{ layout?: "default" | "compact" }>(
+  ({ theme, layout = "default" }) => ({
+    ...theme.typography.subtitle3,
+    color:
+      layout === "compact"
+        ? theme.custom.colors.silverGrayDark
+        : theme.custom.colors.mitRed,
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    ":hover": {
+      textDecoration: "underline",
+    },
+  }),
+)
 
 const MenuButton = styled(ActionButton)<{
   status: EnrollmentStatus
@@ -125,16 +135,53 @@ const MenuButton = styled(ActionButton)<{
     },
 ])
 
-const CountdownRoot = styled.div(({ theme }) => ({
-  width: "100%",
-  paddingRight: "32px",
-  display: "flex",
-  justifyContent: "center",
-  alignSelf: "end",
-  [theme.breakpoints.down("md")]: {
-    marginRight: "0px",
-    justifyContent: "flex-start",
-  },
+const CountdownRoot = styled.div<{ layout?: "default" | "compact" }>(
+  ({ theme, layout = "default" }) => ({
+    width: layout === "compact" ? "88px" : "100%",
+    paddingRight: layout === "compact" ? "0px" : "32px",
+    display: "flex",
+    justifyContent: "center",
+    alignSelf: "end",
+    whiteSpace: layout === "compact" ? "nowrap" : "normal",
+    [theme.breakpoints.down("md")]: {
+      marginRight: "0px",
+      justifyContent: "flex-start",
+    },
+  }),
+)
+
+const COURSEWARE_BUTTON_WIDTH = "88px"
+
+// Thin vertical divider shown between the certificate/upgrade links and the
+// courseware action button in the compact (module row) layout.
+const HorizontalSeparator = styled.div(({ theme }) => ({
+  width: "1px",
+  height: "12px",
+  backgroundColor: theme.custom.colors.lightGray2,
+}))
+
+// Fixed-width column that keeps the courseware button (and countdown) aligned
+// in the compact (module row) layout.
+const CoursewareActionColumn = styled(Stack)({
+  width: COURSEWARE_BUTTON_WIDTH,
+  flexShrink: 0,
+})
+
+// Compact-layout courseware buttons are fixed width and use the text variant.
+const CoursewareButton = styled(Button)(({ theme, variant }) => ({
+  width: COURSEWARE_BUTTON_WIDTH,
+  minWidth: COURSEWARE_BUTTON_WIDTH,
+  ...(variant === "text" && {
+    color: theme.custom.colors.silverGrayDark,
+  }),
+}))
+
+const CoursewareButtonLink = styled(ButtonLink)(({ theme, variant }) => ({
+  width: COURSEWARE_BUTTON_WIDTH,
+  minWidth: COURSEWARE_BUTTON_WIDTH,
+  ...(variant === "text" && {
+    color: theme.custom.colors.silverGrayDark,
+  }),
 }))
 
 /**
@@ -196,7 +243,8 @@ const getDashboardEnrollmentStatus = (
 const CourseStartCountdown: React.FC<{
   startDate: string
   className?: string
-}> = ({ startDate, className }) => {
+  layout?: "default" | "compact"
+}> = ({ startDate, className, layout = "default" }) => {
   const calendarDays = calendarDaysUntil(startDate)
 
   let value
@@ -209,13 +257,8 @@ const CourseStartCountdown: React.FC<{
     value = `Starts in ${calendarDays} days`
   }
   return (
-    <CountdownRoot>
-      <Link
-        color="black"
-        size="small"
-        className={className}
-        onClick={console.log}
-      >
+    <CountdownRoot layout={layout}>
+      <Link color="black" size="small" className={className}>
         {value}
       </Link>
     </CountdownRoot>
@@ -232,6 +275,10 @@ export {
   MenuButton,
   CountdownRoot,
   CourseStartCountdown,
+  HorizontalSeparator,
+  CoursewareActionColumn,
+  CoursewareButton,
+  CoursewareButtonLink,
   getTitle,
   getCertificateLink,
   getDashboardEnrollmentStatus,

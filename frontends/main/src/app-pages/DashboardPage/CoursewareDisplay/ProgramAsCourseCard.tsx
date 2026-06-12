@@ -376,6 +376,7 @@ interface ProgramAsCourseCardProps {
   Component?: React.ElementType
   contextMenuItems?: SimpleMenuItem[]
   className?: string
+  onUpgradeError?: (error: string) => void
 }
 
 /**
@@ -401,6 +402,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   Component,
   contextMenuItems = [],
   className,
+  onUpgradeError,
 }) => {
   const useProductPages = useFeatureFlagEnabled(
     FeatureFlags.MitxOnlineProductPages,
@@ -602,6 +604,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
               entry={entry}
               layout="moduleRow"
               headingLevel="h4"
+              onUpgradeError={onUpgradeError}
             />
           )
         })}

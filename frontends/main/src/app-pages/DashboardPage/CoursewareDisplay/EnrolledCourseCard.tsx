@@ -3,6 +3,10 @@ import { SimpleMenu, Stack } from "ol-components"
 import {
   CardRoot,
   CourseStartCountdown,
+  CoursewareActionColumn,
+  CoursewareButton,
+  CoursewareButtonLink,
+  HorizontalSeparator,
   MenuButton,
   SubtitleLink,
   SubtitleLinkRoot,
@@ -43,6 +47,7 @@ const UpgradeBanner: React.FC<
     certificateUpgradePrice?: string | null
     productId?: number | null
     onError?: (error: Error) => void
+    layout?: "default" | "compact"
   } & React.HTMLAttributes<HTMLDivElement>
 > = ({
   canUpgrade,
@@ -50,6 +55,7 @@ const UpgradeBanner: React.FC<
   certificateUpgradePrice,
   productId,
   onError,
+  layout = "default",
   ...others
 }) => {
   const replaceBasketItem = useReplaceBasketItem()
@@ -80,8 +86,8 @@ const UpgradeBanner: React.FC<
     : null
 
   return (
-    <SubtitleLinkRoot {...others}>
-      <SubtitleLink href="#" onClick={handleUpgradeClick}>
+    <SubtitleLinkRoot layout={layout} {...others}>
+      <SubtitleLink layout={layout} href="#" onClick={handleUpgradeClick}>
         <RiAddLine size="16px" />
         {`Add a certificate for ${formattedPrice}`}
       </SubtitleLink>
@@ -98,6 +104,7 @@ const UpgradeBanner: React.FC<
 type EnrolledCourseCardProps = {
   enrollment: CourseRunEnrollmentV3
   layout?: "default" | "compact"
+  headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
   onUpgradeError?: (error: string) => void
   Component?: React.ElementType
   className?: string
@@ -106,6 +113,7 @@ type EnrolledCourseCardProps = {
 export const EnrolledCourseCard = ({
   enrollment,
   layout = "default",
+  headingLevel,
   onUpgradeError,
   Component,
   className,
@@ -115,7 +123,7 @@ export const EnrolledCourseCard = ({
   const isContractPageResource = Boolean(enrollment.b2b_contract_id)
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const isStaff = mitxOnlineUser.data?.is_staff
-  const title = run?.title || course.title
+  const title = layout === "compact" ? course.title : run?.title || course.title
   const coursewareUrl = run?.courseware_url
   const certificateLink = enrollment?.certificate?.link
   const enrollmentMode = enrollment?.enrollment_mode
@@ -129,30 +137,26 @@ export const EnrolledCourseCard = ({
   const enrollmentStatus = enrollment?.certificate?.uuid
     ? EnrollmentStatus.Completed
     : EnrollmentStatus.Enrolled
-  const titleSection = (
+  const isCompact = layout === "compact"
+  const showUpgradeLink =
+    !isVerifiedEnrollmentMode(enrollmentMode) && offerUpgrade
+  const showCertificateSection = Boolean(certificateLink) || showUpgradeLink
+  const certificateAndUpgrade = (
     <>
-      {coursewareUrl ? (
-        <TitleHeading>
-          <TitleLink size="medium" color="black" href={coursewareUrl}>
-            {title}
-          </TitleLink>
-        </TitleHeading>
-      ) : (
-        <TitleText>{title}</TitleText>
-      )}
       {certificateLink ? (
-        <SubtitleLink href={certificateLink}>
+        <SubtitleLink href={certificateLink} layout={layout}>
           <RiAwardLine size="16px" />
-          View Certificate
+          {isCompact ? "Certificate" : "View Certificate"}
         </SubtitleLink>
       ) : null}
-      {!isVerifiedEnrollmentMode(enrollmentMode) && offerUpgrade ? (
+      {showUpgradeLink ? (
         <UpgradeBanner
           data-testid="upgrade-root"
           canUpgrade={canUpgrade}
           certificateUpgradeDeadline={run?.upgrade_deadline}
           certificateUpgradePrice={run?.upgrade_product_price}
           productId={run?.upgrade_product_id}
+          layout={layout}
           onError={() => {
             onUpgradeError?.(
               "There was a problem adding the certificate to your cart.",
@@ -160,6 +164,20 @@ export const EnrolledCourseCard = ({
           }}
         />
       ) : null}
+    </>
+  )
+  const titleSection = (
+    <>
+      {coursewareUrl ? (
+        <TitleHeading as={headingLevel}>
+          <TitleLink size="medium" color="black" href={coursewareUrl}>
+            {title}
+          </TitleLink>
+        </TitleHeading>
+      ) : (
+        <TitleText as={headingLevel}>{title}</TitleText>
+      )}
+      {isCompact ? null : certificateAndUpgrade}
     </>
   )
   // Determine if button should be disabled
@@ -173,33 +191,73 @@ export const EnrolledCourseCard = ({
     enrollmentStatus === EnrollmentStatus.Completed || courseHasEnded
       ? "View"
       : "Continue"
-  const buttonSection = (
+  const ctaButton = isCompact ? (
+    isDisabled ? (
+      <CoursewareButton
+        size="small"
+        variant="text"
+        disabled
+        data-testid="courseware-button"
+      >
+        {buttonText}
+      </CoursewareButton>
+    ) : (
+      <CoursewareButtonLink
+        size="small"
+        variant="text"
+        href={coursewareUrl ?? ""}
+        data-testid="courseware-button"
+      >
+        {buttonText}
+      </CoursewareButtonLink>
+    )
+  ) : isDisabled ? (
+    <Button
+      size="small"
+      variant="primary"
+      disabled
+      className={className}
+      data-testid="courseware-button"
+    >
+      {buttonText}
+    </Button>
+  ) : (
+    <ButtonLink
+      size="small"
+      variant="primary"
+      href={coursewareUrl ?? ""}
+      className={className}
+      data-testid="courseware-button"
+    >
+      {buttonText}
+    </ButtonLink>
+  )
+  const buttonSection = isCompact ? (
+    <Stack direction="column" gap="4px" alignItems="stretch">
+      <Stack direction="row" gap="8px" alignItems="center">
+        {certificateAndUpgrade}
+        {showCertificateSection ? <HorizontalSeparator /> : null}
+        <CoursewareActionColumn direction="row" justifyContent="center">
+          {ctaButton}
+        </CoursewareActionColumn>
+      </Stack>
+      {startDate && !hasStarted ? (
+        <CoursewareActionColumn
+          direction="row"
+          justifyContent="center"
+          alignSelf="flex-end"
+        >
+          <CourseStartCountdown startDate={startDate} layout={layout} />
+        </CoursewareActionColumn>
+      ) : null}
+    </Stack>
+  ) : (
     <>
       <EnrollmentStatusIndicator
         status={enrollmentStatus}
         showNotComplete={Boolean(isContractPageResource)}
       />
-      {isDisabled ? (
-        <Button
-          size="small"
-          variant="primary"
-          disabled
-          className={className}
-          data-testid="courseware-button"
-        >
-          {buttonText}
-        </Button>
-      ) : (
-        <ButtonLink
-          size="small"
-          variant="primary"
-          href={coursewareUrl ?? ""}
-          className={className}
-          data-testid="courseware-button"
-        >
-          {buttonText}
-        </ButtonLink>
-      )}
+      {ctaButton}
     </>
   )
   const menuItems = []
@@ -260,8 +318,8 @@ export const EnrolledCourseCard = ({
     />
   )
   const startDateSection =
-    startDate && !hasStarted ? (
-      <CourseStartCountdown startDate={startDate} />
+    !isCompact && startDate && !hasStarted ? (
+      <CourseStartCountdown startDate={startDate} layout={layout} />
     ) : null
 
   return (
