@@ -27,6 +27,7 @@ import {
 import { DashboardCard } from "./DashboardCard"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import { useHomeDashboardData } from "./hooks/useHomeDashboardData"
+import { ProgramEnrollmentCard } from "./ProgramEnrollmentCard"
 
 const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
@@ -161,13 +162,9 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
       const courseProgram = courseProgramsById.get(resource.data.program.id)
       if (!courseProgram) {
         return (
-          <DashboardCardStyled
+          <ProgramEnrollmentCard
             key={getResourceKey(resource)}
-            Component="li"
-            resource={resource}
-            showNotComplete={false}
-            isLoading={isLoading}
-            onUpgradeError={onUpgradeError}
+            programEnrollment={resource.data}
           />
         )
       }
