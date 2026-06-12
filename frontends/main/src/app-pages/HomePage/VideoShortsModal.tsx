@@ -363,69 +363,76 @@ const VideoShortsModal = ({
   // can be added/removed without touching existing behavior. The prevIndex
   // guard also makes it safe against CarouselV2Vertical firing the same event
   // on duplicate listeners.
-  const trackSlideViewed = (newIndex: number) => {
-    const prevIndex = selectedIndexRef.current
-    // During Embla's init animation, slidesInView fires for each intermediate
-    // slide; suppress analytics until it settles on startIndex.
-    if (!hasSettledRef.current) {
-      if (newIndex === startIndex) {
-        hasSettledRef.current = true
-        currentVideoStartedAtRef.current = Date.now()
+  const trackSlideViewed = useCallback(
+    (newIndex: number) => {
+      if (sessionEndedRef.current) return
+      const prevIndex = selectedIndexRef.current
+      // During Embla's init animation, slidesInView fires for each intermediate
+      // slide; suppress analytics until it settles on startIndex.
+      if (!hasSettledRef.current) {
+        if (newIndex === startIndex) {
+          hasSettledRef.current = true
+          currentVideoStartedAtRef.current = Date.now()
+        }
+        selectedIndexRef.current = newIndex
+        return
+      }
+      if (prevIndex === newIndex) return
+      // Fire an event for the video being left.
+      if (prevIndex !== null && videoData[prevIndex]) {
+        const prevPlayer = playersRef.current[prevIndex]
+        let videoDurationMs: number | undefined
+        if (prevPlayer) {
+          const duration = prevPlayer.duration()
+          if (duration && isFinite(duration) && duration > 0) {
+            videoDurationMs = Math.round(duration * 1000)
+          }
+        }
+        capture(PostHogEvents.VideoShortViewed, {
+          videoId: videoData[prevIndex].id,
+          videoTitle: videoData[prevIndex].title,
+          timeOnVideoMs: Date.now() - currentVideoStartedAtRef.current,
+          ...(videoDurationMs !== undefined ? { videoDurationMs } : {}),
+        })
+        viewedIndicesRef.current.add(prevIndex)
       }
       selectedIndexRef.current = newIndex
-      return
-    }
-    if (prevIndex === newIndex) return
-    // Fire an event for the video being left.
-    if (prevIndex !== null && videoData[prevIndex]) {
-      const prevPlayer = playersRef.current[prevIndex]
-      let videoDurationMs: number | undefined
-      if (prevPlayer) {
-        const duration = prevPlayer.duration()
-        if (duration && isFinite(duration) && duration > 0) {
-          videoDurationMs = Math.round(duration * 1000)
-        }
-      }
-      capture(PostHogEvents.VideoShortViewed, {
-        videoId: videoData[prevIndex].id,
-        videoTitle: videoData[prevIndex].title,
-        timeOnVideoMs: Date.now() - currentVideoStartedAtRef.current,
-        ...(videoDurationMs !== undefined ? { videoDurationMs } : {}),
-      })
-      viewedIndicesRef.current.add(prevIndex)
-    }
-    selectedIndexRef.current = newIndex
-    currentVideoStartedAtRef.current = Date.now()
-  }
+      currentVideoStartedAtRef.current = Date.now()
+    },
+    [videoData, startIndex, capture],
+  )
 
-  const onSlidesInView = (inView: number[]) => {
-    if (inView.length === 1 && videoData[inView[0]]) {
-      playersRef.current
-        .filter(
-          (player, index): player is Player =>
-            player !== null && index !== inView[0],
+  const onSlidesInView = useCallback(
+    (inView: number[]) => {
+      if (inView.length === 1 && videoData[inView[0]]) {
+        playersRef.current
+          .filter(
+            (player, index): player is Player =>
+              player !== null && index !== inView[0],
+          )
+          .forEach((player) => player.pause())
+        setSelectedIndex(inView[0])
+        setPlaying(false)
+        setAnnouncement(
+          `${inView[0] + 1} of ${videoData.length}: ${videoData[inView[0]].title}`,
         )
-        .forEach((player) => player.pause())
-      setSelectedIndex(inView[0])
-      setPlaying(false)
-      setAnnouncement(
-        `${inView[0] + 1} of ${videoData.length}: ${videoData[inView[0]].title}`,
-      )
-      const player = playersRef.current[inView[0]]
-      if (player) {
-        player.muted(muted)
-        // On iOS, only autoplay if muted or if user has interacted
-        if (!isIOS() || muted || hasUserInteracted) {
-          player.play()?.catch(() => {
-            setPlaying(false)
-          })
-          setPlaying(true)
+        const player = playersRef.current[inView[0]]
+        if (player) {
+          player.muted(muted)
+          // On iOS, only autoplay if muted or if user has interacted
+          if (!isIOS() || muted || hasUserInteracted) {
+            player.play()?.catch(() => {
+              setPlaying(false)
+            })
+            setPlaying(true)
+          }
         }
-      }
 
-      trackSlideViewed(inView[0])
-    }
-  }
+        trackSlideViewed(inView[0])
+      }
+    },
+    [videoData, muted, hasUserInteracted, trackSlideViewed],
+  )
 
   const onClickMute = () => {
     if (selectedIndex !== null && playersRef.current[selectedIndex]) {
