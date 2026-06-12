@@ -14,7 +14,6 @@
 import React from "react"
 import type { SimpleMenuItem } from "ol-components"
 import { type DashboardCourseEntry } from "./model/dashboardViewModel"
-import { DashboardCard as ModuleCardInner } from "./ModuleCard"
 import type { V3UserProgramEnrollment } from "@mitodl/mitxonline-api-axios/v2"
 import { ProgramEnrollmentCard } from "./ProgramEnrollmentCard"
 import { EnrolledCourseCard } from "./EnrolledCourseCard"
@@ -55,6 +54,7 @@ type CoursewareCardModuleRowProps = StyledComponentBaseProps & {
   layout: "moduleRow"
   entry: DashboardCourseEntry
   headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
+  onUpgradeError?: (error: string) => void
 }
 
 /** Props for program card display. */
@@ -101,17 +101,32 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
 
     if (!resource) return null
 
-    return (
-      <ModuleCardInner
-        resource={resource}
-        useVerifiedEnrollment={entry.ancestorContext?.useVerifiedEnrollment}
-        parentProgramIds={entry.ancestorContext?.parentProgramReadableIds}
-        variant="stacked"
-        headingLevel={headingLevel}
-        Component={Component}
-        className={className}
-      />
-    )
+    if (resource.type === "course") {
+      return (
+        <UnenrolledCourseCard
+          course={resource.data}
+          displayedRun={entry.displayedRun ?? undefined}
+          contractId={entry.contractId}
+          ancestorContext={entry.ancestorContext}
+          layout="compact"
+          headingLevel={headingLevel}
+          Component={Component}
+          className={className}
+        />
+      )
+    } else if (resource.type === "courserun-enrollment") {
+      return (
+        <EnrolledCourseCard
+          enrollment={resource.data}
+          layout="compact"
+          headingLevel={headingLevel}
+          onUpgradeError={props.onUpgradeError}
+          Component={Component}
+          className={className}
+        />
+      )
+    }
+    return null
   }
 
   // ── default / stacked arm ────────────────────────────────────────────────

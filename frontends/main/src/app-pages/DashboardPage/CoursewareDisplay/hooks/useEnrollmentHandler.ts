@@ -32,6 +32,7 @@ export const useEnrollmentHandler = () => {
       isB2B,
       isVerifiedProgram,
       programCoursewareId,
+      programReadableIds,
       b2bProgramId,
     }: {
       course: CourseWithCourseRunsSerializerV2
@@ -41,6 +42,7 @@ export const useEnrollmentHandler = () => {
       isB2B?: boolean
       isVerifiedProgram?: boolean
       programCoursewareId?: string
+      programReadableIds?: string[]
       b2bProgramId?: string
     }) => {
       if (isB2B) {
@@ -82,7 +84,11 @@ export const useEnrollmentHandler = () => {
             },
           )
         }
-      } else if (isVerifiedProgram && programCoursewareId && readableId) {
+      } else if (
+        isVerifiedProgram &&
+        readableId &&
+        (programReadableIds?.length || programCoursewareId)
+      ) {
         if (!href) {
           console.warn(
             "Cannot enroll in verified program course: missing href",
@@ -96,8 +102,13 @@ export const useEnrollmentHandler = () => {
             (run) => run.courseware_id === readableId,
           )?.courseware_url ??
           href
+        const requestBody = programReadableIds?.length
+          ? programReadableIds
+          : programCoursewareId
+            ? [programCoursewareId]
+            : []
         createVerifiedProgramEnrollment.mutate(
-          { courserun_id: readableId, request_body: [programCoursewareId] },
+          { courserun_id: readableId, request_body: requestBody },
           {
             onSuccess: () => {
               window.location.href = verifiedDestination ?? href
