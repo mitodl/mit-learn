@@ -636,7 +636,7 @@ describe("ProgramEnrollmentDisplay", () => {
     expect(titles.length).toBeGreaterThanOrEqual(1)
   })
 
-  test("Shows 'Continue' button for enrolled courses and 'Start Course' for unenrolled", async () => {
+  test("Shows 'Continue' button for enrolled courses and 'Start' for unenrolled", async () => {
     const mitxOnlineUser = mitxonline.factories.user.user()
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
@@ -753,9 +753,9 @@ describe("ProgramEnrollmentDisplay", () => {
     expect(continueButton).toHaveTextContent("Continue")
     expect(continueButton.tagName).toBe("A") // Should be a link
 
-    // Unenrolled course should show "Start Course" button
+    // Unenrolled course should show "Start" button
     const startButton = within(unenrolledCard!).getByTestId("courseware-button")
-    expect(startButton).toHaveTextContent("Start Course")
+    expect(startButton).toHaveTextContent("Start")
     expect(startButton.tagName).toBe("BUTTON") // Should be a button
   })
 
@@ -1349,7 +1349,7 @@ describe("ProgramEnrollmentDisplay", () => {
     }
   }
 
-  test("Clicking 'Start Course' on a regular course in a verified program does one-click enrollment", async () => {
+  test("Clicking 'Start' on a regular course in a verified program does one-click enrollment", async () => {
     const {
       parentProgram,
       parentProgramEnrollment,
@@ -1390,7 +1390,7 @@ describe("ProgramEnrollmentDisplay", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
-  test("Clicking 'Start Course' on a module in a program-as-course sends both parent and grandparent program IDs", async () => {
+  test("Clicking 'Start' on a module in a program-as-course sends both parent and grandparent program IDs", async () => {
     const {
       parentProgram,
       parentProgramEnrollment,
