@@ -9,11 +9,15 @@ declare global {
 const pushGtmEvent = (event: string, payload: DataLayerPayload = {}) => {
   if (typeof window === "undefined") return
 
-  window.dataLayer = window.dataLayer || []
-  window.dataLayer.push({
-    ...payload,
-    event,
-  })
+  try {
+    window.dataLayer = window.dataLayer || []
+    window.dataLayer.push({
+      ...payload,
+      event,
+    })
+  } catch {
+    // Prevent analytics failures from impacting the app flow.
+  }
 }
 
 const trackCourseEnrolled = (courseName?: string | null) => {
