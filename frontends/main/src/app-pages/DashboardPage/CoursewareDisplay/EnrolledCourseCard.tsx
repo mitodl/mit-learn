@@ -216,7 +216,6 @@ export const EnrolledCourseCard = ({
       size="small"
       variant="primary"
       disabled
-      className={className}
       data-testid="courseware-button"
     >
       {buttonText}
@@ -226,7 +225,6 @@ export const EnrolledCourseCard = ({
       size="small"
       variant="primary"
       href={coursewareUrl ?? ""}
-      className={className}
       data-testid="courseware-button"
     >
       {buttonText}
