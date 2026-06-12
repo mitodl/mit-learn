@@ -781,16 +781,6 @@ describe("dashboardViewModel", () => {
       const course = factories.courses.course({
         courseruns: [run],
         next_run_id: run.id,
-        language_options: [
-          {
-            id: run.id,
-            courseware_id: run.courseware_id,
-            courseware_url: run.courseware_url ?? "",
-            language: LanguageEnum.En,
-            title: run.title,
-            run_tag: run.run_tag,
-          },
-        ],
       })
       const enrollment = factories.enrollment.courseEnrollment({
         run: {
@@ -837,16 +827,6 @@ describe("dashboardViewModel", () => {
       const course = factories.courses.course({
         courseruns: [run],
         next_run_id: run.id,
-        language_options: [
-          {
-            id: run.id,
-            courseware_id: run.courseware_id,
-            courseware_url: run.courseware_url ?? "",
-            language: LanguageEnum.En,
-            title: run.title,
-            run_tag: run.run_tag,
-          },
-        ],
       })
       // enrollment belongs to contract 99, not contract 10
       const otherContractEnrollment = factories.enrollment.courseEnrollment({
@@ -875,16 +855,6 @@ describe("dashboardViewModel", () => {
       const course = factories.courses.course({
         courseruns: [run],
         next_run_id: run.id,
-        language_options: [
-          {
-            id: run.id,
-            courseware_id: run.courseware_id,
-            courseware_url: run.courseware_url ?? "",
-            language: LanguageEnum.En,
-            title: run.title,
-            run_tag: run.run_tag,
-          },
-        ],
       })
       const otherContractEnrollment = factories.enrollment.courseEnrollment({
         b2b_contract_id: 2,
@@ -1700,10 +1670,10 @@ describe("buildVariantKey", () => {
         makeVariant({
           language: LanguageEnum.EsEs,
           variant_industry: VariantIndustryEnum.Hc,
-          variant_length: VariantLengthEnum.F,
+          variant_length: "",
         }),
       ),
-    ).toBe("language:es_ES|industry:HC|length:F")
+    ).toBe("language:es_ES|industry:HC|length:")
   })
 })
 
@@ -1740,7 +1710,7 @@ describe("buildVariantLabel", () => {
         makeVariant({
           language: LanguageEnum.En,
           variant_industry: VariantIndustryEnum.Hc,
-          variant_length: VariantLengthEnum.F,
+          variant_length: "",
         }),
       ),
     ).toBe("English • Healthcare • Full")
@@ -1771,7 +1741,7 @@ describe("sortVariants", () => {
     const frEnergyFull = makeVariant({
       language: LanguageEnum.Fr,
       variant_industry: VariantIndustryEnum.E,
-      variant_length: VariantLengthEnum.F,
+      variant_length: "",
     })
     const frEnergyShort = makeVariant({
       language: LanguageEnum.Fr,
@@ -1879,7 +1849,7 @@ describe("selectVariantRunForCourse", () => {
   test("returns null when no run matches the selected length", () => {
     const run = makeRun({
       language: LanguageEnum.En,
-      variant_length: VariantLengthEnum.F,
+      variant_length: "",
     })
     expect(
       selectVariantRunForCourse(
