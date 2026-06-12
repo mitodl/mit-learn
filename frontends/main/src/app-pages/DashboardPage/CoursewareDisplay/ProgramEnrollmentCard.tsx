@@ -26,10 +26,14 @@ import { EnrollmentStatus } from "./helpers"
 
 type ProgramEnrollmentCardProps = {
   programEnrollment: V3UserProgramEnrollment
+  Component?: React.ElementType
+  className?: string
 }
 
 export const ProgramEnrollmentCard = ({
   programEnrollment,
+  Component,
+  className,
 }: ProgramEnrollmentCardProps) => {
   const program = programEnrollment.program
   const programId = program.id
@@ -124,7 +128,12 @@ export const ProgramEnrollmentCard = ({
 
   return (
     <>
-      <CardRoot screenSize="desktop" data-testid="enrollment-card-desktop">
+      <CardRoot
+        screenSize="desktop"
+        data-testid="enrollment-card-desktop"
+        as={Component}
+        className={className}
+      >
         <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
           {titleSection}
         </Stack>
@@ -136,7 +145,12 @@ export const ProgramEnrollmentCard = ({
         </Stack>
       </CardRoot>
 
-      <CardRoot screenSize="mobile" data-testid="enrollment-card-mobile">
+      <CardRoot
+        screenSize="mobile"
+        data-testid="enrollment-card-mobile"
+        as={Component}
+        className={className}
+      >
         <Stack
           direction="row"
           justifyContent="space-between"

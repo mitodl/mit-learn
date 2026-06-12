@@ -2274,7 +2274,7 @@ describe("ContractContent", () => {
     )
 
     const coursewareButton = within(card).getByTestId("courseware-button")
-    expect(coursewareButton).toHaveTextContent("Start Module")
+    expect(coursewareButton).toHaveTextContent("Start")
     expect(coursewareButton).toBeDisabled()
   })
 
