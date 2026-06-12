@@ -1,3 +1,4 @@
+import React from "react"
 import { Link, styled } from "ol-components"
 import NextLink from "next/link"
 import { EnrollmentStatus } from "./helpers"
@@ -8,11 +9,12 @@ import {
   getEnrollmentStatus,
 } from "./model/dashboardViewModel"
 import { BaseCourseRun, CourseRunV2 } from "@mitodl/mitxonline-api-axios/v2"
+import { calendarDaysUntil } from "ol-utilities"
 
 const CardRoot = styled.div<{
   screenSize: "desktop" | "mobile"
-  variant?: "default" | "stacked"
-}>(({ theme, screenSize, variant = "default" }) => [
+  layout?: "default" | "compact"
+}>(({ theme, screenSize, layout = "default" }) => [
   {
     position: "relative",
     border: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -22,8 +24,8 @@ const CardRoot = styled.div<{
     gap: "8px",
     alignItems: "center",
   },
-  // Mobile styles for default variant
-  variant === "default" && {
+  // Mobile styles for default layout
+  layout === "default" && {
     [theme.breakpoints.down("md")]: {
       border: "none",
       borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -33,8 +35,8 @@ const CardRoot = styled.div<{
       gap: "16px",
     },
   },
-  // Stacked variant styles
-  variant === "stacked" && {
+  // Compact layout styles
+  layout === "compact" && {
     border: "none",
     borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
     borderRadius: "0px !important",
@@ -191,6 +193,35 @@ const getDashboardEnrollmentStatus = (
     : EnrollmentStatus.Enrolled
 }
 
+const CourseStartCountdown: React.FC<{
+  startDate: string
+  className?: string
+}> = ({ startDate, className }) => {
+  const calendarDays = calendarDaysUntil(startDate)
+
+  let value
+  if (calendarDays === null || calendarDays < 0) return null
+  if (calendarDays === 0) {
+    value = "Starts Today"
+  } else if (calendarDays === 1) {
+    value = "Starts Tomorrow"
+  } else {
+    value = `Starts in ${calendarDays} days`
+  }
+  return (
+    <CountdownRoot>
+      <Link
+        color="black"
+        size="small"
+        className={className}
+        onClick={console.log}
+      >
+        {value}
+      </Link>
+    </CountdownRoot>
+  )
+}
+
 export {
   CardRoot,
   TitleHeading,
@@ -200,6 +231,7 @@ export {
   SubtitleLink,
   MenuButton,
   CountdownRoot,
+  CourseStartCountdown,
   getTitle,
   getCertificateLink,
   getDashboardEnrollmentStatus,
