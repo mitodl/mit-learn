@@ -9,6 +9,9 @@ import { ResourceTypeEnum } from "api"
 import VideoShortsModal from "./VideoShortsModal"
 import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
 import type { VideoResource } from "api/v1"
+import { usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
+import { env } from "@/env"
 
 const Section = styled.section(({ theme }) => ({
   padding: "80px 0",
@@ -105,8 +108,21 @@ const VideoShortsSection = () => {
   const [videoIndex, setVideoIndex] = useState(0)
   const [announcement, setAnnouncement] = useState("")
   const [visibleSlides, setVisibleSlides] = useState<number[]>([])
+  const posthog = usePostHog()
 
   if (isLoading || !data?.length) return null
+
+  const openModal = (video: VideoResource, index: number) => {
+    setShowModal(true)
+    setVideoIndex(index)
+    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
+      posthog.capture(PostHogEvents.VideoShortsOpened, {
+        videoId: video.id,
+        videoTitle: video.title,
+        position: index,
+      })
+    }
+  }
 
   return (
     <Section>
@@ -152,14 +168,12 @@ const VideoShortsSection = () => {
               }
               aria-label={`Play ${video.title}`}
               onClick={() => {
-                setShowModal(true)
-                setVideoIndex(index)
+                openModal(video, index)
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault()
-                  setShowModal(true)
-                  setVideoIndex(index)
+                  openModal(video, index)
                 }
               }}
             >
