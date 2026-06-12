@@ -5,7 +5,13 @@ import {
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { LoadingSpinner, Stack } from "ol-components"
-import { CardRoot, CourseStartCountdown, TitleText } from "./CardShared"
+import {
+  CardRoot,
+  CourseStartCountdown,
+  CoursewareActionColumn,
+  CoursewareButton,
+  TitleText,
+} from "./CardShared"
 import { EnrollmentStatus, getBestRun } from "./helpers"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { useEnrollmentHandler } from "./hooks/useEnrollmentHandler"
@@ -22,6 +28,7 @@ type UnenenrolledCourseCardProps = {
     useVerifiedEnrollment?: boolean
   }
   layout?: "default" | "compact"
+  headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
   Component?: React.ElementType
   className?: string
 }
@@ -32,6 +39,7 @@ export const UnenrolledCourseCard = ({
   contractId,
   ancestorContext,
   layout = "default",
+  headingLevel,
   Component,
   className,
 }: UnenenrolledCourseCardProps) => {
@@ -41,14 +49,17 @@ export const UnenrolledCourseCard = ({
     displayedRunProp ?? getBestRun(course, { enrollableOnly: true, contractId })
   const enrollableRun = getBestRun(course, { enrollableOnly: true, contractId })
   const isDisabled = !enrollableRun
-  const title = courseRun?.title || course.title
+  const title =
+    layout === "compact" ? course.title : courseRun?.title || course.title
   const coursewareUrl = enrollableRun?.courseware_url || "#"
   const isContractPageResource = Boolean(contractId)
   const readableId = enrollableRun?.courseware_id
   const handleEnrollmentClick = React.useCallback(() => {
-    const isVerifiedProgramEnrollment = isVerifiedEnrollmentMode(
-      ancestorContext?.programEnrollment?.enrollment_mode,
-    )
+    const isVerifiedProgramEnrollment =
+      Boolean(ancestorContext?.useVerifiedEnrollment) ||
+      isVerifiedEnrollmentMode(
+        ancestorContext?.programEnrollment?.enrollment_mode,
+      )
 
     enrollment.enroll({
       course: course,
@@ -59,6 +70,7 @@ export const UnenrolledCourseCard = ({
       isVerifiedProgram: isVerifiedProgramEnrollment,
       programCoursewareId:
         ancestorContext?.programEnrollment?.program.readable_id,
+      programReadableIds: ancestorContext?.parentProgramReadableIds,
       b2bProgramId:
         ancestorContext?.parentProgramReadableIds?.[0] ??
         ancestorContext?.programEnrollment?.program.readable_id,
@@ -76,39 +88,83 @@ export const UnenrolledCourseCard = ({
     e.preventDefault()
     handleEnrollmentClick()
   }
+  const isCompact = layout === "compact"
   const titleSection = (
     <TitleText
+      as={headingLevel}
       clickable={!isDisabled}
       onClick={isDisabled ? undefined : enrollClick}
     >
       {title}
     </TitleText>
   )
-  const buttonSection = (
+  const startButton = isCompact ? (
+    <CoursewareButton
+      size="small"
+      variant="text"
+      data-testid="courseware-button"
+      onClick={isDisabled ? undefined : enrollClick}
+      disabled={isDisabled}
+      endIcon={
+        isPending ? (
+          <LoadingSpinner color="inherit" loading={isPending} size={16} />
+        ) : null
+      }
+    >
+      Start
+    </CoursewareButton>
+  ) : (
+    <Button
+      size="small"
+      variant="primary"
+      data-testid="courseware-button"
+      onClick={isDisabled ? undefined : enrollClick}
+      disabled={isDisabled}
+      endIcon={
+        isPending ? (
+          <LoadingSpinner color="inherit" loading={isPending} size={16} />
+        ) : null
+      }
+    >
+      Start
+    </Button>
+  )
+  const buttonSection = isCompact ? (
+    <Stack direction="column" gap="4px" alignItems="stretch">
+      <Stack direction="row" gap="8px" alignItems="center">
+        <CoursewareActionColumn direction="row" justifyContent="center">
+          {startButton}
+        </CoursewareActionColumn>
+      </Stack>
+      {courseRun?.start_date ? (
+        <CoursewareActionColumn
+          direction="row"
+          justifyContent="center"
+          alignSelf="flex-end"
+        >
+          <CourseStartCountdown
+            startDate={courseRun?.start_date as string}
+            layout={layout}
+          />
+        </CoursewareActionColumn>
+      ) : null}
+    </Stack>
+  ) : (
     <>
       <EnrollmentStatusIndicator
         status={EnrollmentStatus.NotEnrolled}
         showNotComplete={Boolean(isContractPageResource)}
       />
-      <Button
-        size="small"
-        variant="primary"
-        data-testid="courseware-button"
-        onClick={isDisabled ? undefined : enrollClick}
-        disabled={isDisabled}
-        endIcon={
-          isPending ? (
-            <LoadingSpinner color="inherit" loading={isPending} size={16} />
-          ) : null
-        }
-      >
-        Start
-      </Button>
+      {startButton}
     </>
   )
-  const startDateSection = courseRun?.start_date ? (
-    <CourseStartCountdown startDate={courseRun?.start_date as string} />
-  ) : null
+  const startDateSection =
+    !isCompact && courseRun?.start_date ? (
+      <CourseStartCountdown
+        startDate={courseRun?.start_date as string}
+        layout={layout}
+      />
+    ) : null
 
   return (
     <>
