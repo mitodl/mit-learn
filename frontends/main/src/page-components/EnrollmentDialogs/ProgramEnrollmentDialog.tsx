@@ -12,6 +12,7 @@ import {
   mitxonlineLegacyUrl,
   priceWithDiscount,
 } from "@/common/mitxonline"
+import { trackProgramEnrolled } from "@/common/analytics/gtm"
 import {
   BigButton,
   CertificateBox,
@@ -155,6 +156,7 @@ const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
       { V3ProgramEnrollmentRequestRequest: { program_id: program.id } },
       {
         onSuccess: () => {
+          trackProgramEnrolled(program.title)
           if (onProgramEnroll) {
             onProgramEnroll()
           } else {

@@ -23,8 +23,17 @@ import invariant from "tiny-invariant"
 import { getDescriptionFor } from "ol-test-utilities"
 import type { User as MitxUser } from "@mitodl/mitxonline-api-axios/v2"
 import type { PartialDeep } from "type-fest"
+import {
+  trackCourseUnenrolled,
+  trackProgramUnenrolled,
+} from "@/common/analytics/gtm"
 
 jest.mock("posthog-js/react")
+jest.mock("@/common/analytics/gtm", () => ({
+  trackCourseUnenrolled: jest.fn(),
+  trackProgramUnenrolled: jest.fn(),
+}))
+
 const mockedUseFeatureFlagEnabled = jest
   .mocked(useFeatureFlagEnabled)
   .mockImplementation(() => false)
@@ -279,6 +288,10 @@ describe("UnenrollProgramDialog", () => {
         ),
       }),
     )
+    expect(trackProgramUnenrolled).toHaveBeenCalledWith(
+      programEnrollment.program.title,
+    )
+    expect(trackCourseUnenrolled).not.toHaveBeenCalled()
   })
 
   test("Cancelling the dialog does not fire the API call", async () => {
