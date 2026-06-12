@@ -99,19 +99,23 @@ type EnrolledCourseCardProps = {
   enrollment: CourseRunEnrollmentV3
   layout?: "default" | "compact"
   onUpgradeError?: (error: string) => void
+  Component?: React.ElementType
+  className?: string
 }
 
 export const EnrolledCourseCard = ({
   enrollment,
   layout = "default",
   onUpgradeError,
+  Component,
+  className,
 }: EnrolledCourseCardProps) => {
   const course = enrollment.run.course
   const run = enrollment.run
   const isContractPageResource = Boolean(enrollment.b2b_contract_id)
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const isStaff = mitxOnlineUser.data?.is_staff
-  const title = course.title
+  const title = run?.title || course.title
   const coursewareUrl = run?.courseware_url
   const certificateLink = enrollment?.certificate?.link
   const enrollmentMode = enrollment?.enrollment_mode
@@ -125,9 +129,6 @@ export const EnrolledCourseCard = ({
   const enrollmentStatus = enrollment?.certificate?.uuid
     ? EnrollmentStatus.Completed
     : EnrollmentStatus.Enrolled
-  const showNotComplete = isContractPageResource ?? false
-  const Component = layout === "compact" ? "div" : "li"
-  const className = layout === "compact" ? "enrolled-course-card-compact" : ""
   const titleSection = (
     <>
       {coursewareUrl ? (
@@ -176,7 +177,7 @@ export const EnrolledCourseCard = ({
     <>
       <EnrollmentStatusIndicator
         status={enrollmentStatus}
-        showNotComplete={showNotComplete}
+        showNotComplete={Boolean(isContractPageResource)}
       />
       {isDisabled ? (
         <Button
