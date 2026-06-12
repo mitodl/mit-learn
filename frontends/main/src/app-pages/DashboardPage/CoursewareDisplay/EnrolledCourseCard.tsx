@@ -139,7 +139,7 @@ export const EnrolledCourseCard = ({
     : EnrollmentStatus.Enrolled
   const isCompact = layout === "compact"
   const showUpgradeLink =
-    !isVerifiedEnrollmentMode(enrollmentMode) && offerUpgrade
+    !isVerifiedEnrollmentMode(enrollmentMode) && offerUpgrade && canUpgrade
   const showCertificateSection = Boolean(certificateLink) || showUpgradeLink
   const certificateAndUpgrade = (
     <>
