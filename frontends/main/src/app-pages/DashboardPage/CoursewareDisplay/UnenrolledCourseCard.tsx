@@ -48,12 +48,12 @@ export const UnenrolledCourseCard = ({
   const courseRun =
     displayedRunProp ?? getBestRun(course, { enrollableOnly: true, contractId })
   const enrollableRun = getBestRun(course, { enrollableOnly: true, contractId })
-  const isDisabled = !enrollableRun
+  const coursewareUrl = enrollableRun?.courseware_url || undefined
+  const readableId = enrollableRun?.courseware_id
+  const isDisabled = !enrollableRun || !coursewareUrl || !readableId
   const title =
     layout === "compact" ? course.title : courseRun?.title || course.title
-  const coursewareUrl = enrollableRun?.courseware_url || "#"
   const isContractPageResource = Boolean(contractId)
-  const readableId = enrollableRun?.courseware_id
   const handleEnrollmentClick = React.useCallback(() => {
     const isVerifiedProgramEnrollment =
       Boolean(ancestorContext?.useVerifiedEnrollment) ||
