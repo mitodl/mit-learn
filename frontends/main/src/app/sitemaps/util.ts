@@ -14,3 +14,20 @@ import { PHASE_PRODUCTION_BUILD } from "next/constants"
 export const dangerouslyDetectProductionBuildPhase = () => {
   return process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD
 }
+
+/**
+ * NextJS serializes sitemap entries verbatim into <loc> tags with no XML
+ * escaping, so a URL containing "&" (e.g. one with multiple query params)
+ * produces invalid XML. Escape XML special characters ourselves; crawlers
+ * decode entities, so <loc>a&amp;b</loc> round-trips back to "a&b".
+ *
+ * NOTE: this relies on NextJS emitting the url verbatim. If NextJS ever
+ * starts escaping <loc> itself, this would double-escape.
+ */
+export const escapeSitemapUrl = (url: string) =>
+  url
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;")

@@ -4,7 +4,10 @@ import { getQueryClient } from "@/app/getQueryClient"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { resourceDrawerSearch } from "@/common/urls"
 import type { GenerateSitemapResult, GeneratedSitemapArgs } from "../types"
-import { dangerouslyDetectProductionBuildPhase } from "../util"
+import {
+  dangerouslyDetectProductionBuildPhase,
+  escapeSitemapUrl,
+} from "../util"
 
 const PAGE_SIZE = 1_000
 
@@ -52,7 +55,9 @@ export default async function sitemap({
   )
 
   return data.results.map((resource) => ({
-    url: `${BASE_URL}${resourceDrawerSearch(resource.id, resource.title)}`,
+    url: escapeSitemapUrl(
+      `${BASE_URL}${resourceDrawerSearch(resource.id, resource.title)}`,
+    ),
     lastModified: resource.last_modified ?? undefined,
   }))
 }
