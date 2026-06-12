@@ -13460,8 +13460,12 @@ components:
           format: uri
           nullable: true
           maxLength: 2048
+        title:
+          type: string
+          maxLength: 256
       required:
       - id
+      - title
     LearningResourceTopic:
       type: object
       description: Serializer for LearningResourceTopic model

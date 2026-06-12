@@ -4960,6 +4960,12 @@ export interface LearningResourceSummary {
    * @memberof LearningResourceSummary
    */
   url?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceSummary
+   */
+  title: string
 }
 /**
  * Serializer for LearningResourceTopic model

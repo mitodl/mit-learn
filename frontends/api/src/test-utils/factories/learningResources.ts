@@ -370,6 +370,7 @@ const learningResourceSummary: LearningResourceFactory<
     id: uniqueEnforcerId.enforce(() => faker.number.int()),
     last_modified: faker.date.recent().toISOString(),
     url: faker.internet.url(),
+    title: faker.lorem.words(3),
     ...overrides,
   }
 }
