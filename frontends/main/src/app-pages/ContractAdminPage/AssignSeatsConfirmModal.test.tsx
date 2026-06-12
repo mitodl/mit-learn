@@ -75,9 +75,7 @@ describe("AssignSeatsConfirmModal", () => {
   })
 
   test("shows skipped row count when rows were skipped", () => {
-    renderWithTheme(
-      <AssignSeatsConfirmModal {...baseProps} skippedCount={3} />,
-    )
+    renderWithTheme(<AssignSeatsConfirmModal {...baseProps} skippedCount={3} />)
 
     expect(screen.getAllByText(/3 rows skipped/i)[0]).toBeInTheDocument()
     expect(
@@ -86,9 +84,7 @@ describe("AssignSeatsConfirmModal", () => {
   })
 
   test("does not show skipped section when skippedCount is 0", () => {
-    renderWithTheme(
-      <AssignSeatsConfirmModal {...baseProps} skippedCount={0} />,
-    )
+    renderWithTheme(<AssignSeatsConfirmModal {...baseProps} skippedCount={0} />)
 
     expect(screen.queryByText(/skipped/i)).not.toBeInTheDocument()
   })

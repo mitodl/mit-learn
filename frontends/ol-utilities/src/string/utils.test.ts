@@ -131,7 +131,12 @@ describe("parseEmailsForSubmit", () => {
 
   test("returns empty arrays for blank input", () => {
     const result = parse("")
-    expect(result).toEqual({ valid: [], invalid: [], duplicateCount: 0, skippedCount: 0 })
+    expect(result).toEqual({
+      valid: [],
+      invalid: [],
+      duplicateCount: 0,
+      skippedCount: 0,
+    })
   })
 })
 

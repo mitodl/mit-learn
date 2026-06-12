@@ -245,7 +245,8 @@ const AssignSeatsSection: React.FC = () => {
       const { data } = Papa.parse<string[]>(text, {
         skipEmptyLines: true,
       })
-      const { valid, invalid, duplicateCount, skippedCount } = extractEmailsFromCsvRows(data)
+      const { valid, invalid, duplicateCount, skippedCount } =
+        extractEmailsFromCsvRows(data)
       if (valid.length === 0) {
         setCsvNoValid(true)
         return
