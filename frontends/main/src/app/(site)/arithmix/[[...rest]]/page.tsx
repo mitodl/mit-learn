@@ -7,7 +7,7 @@ export const metadata: Metadata = standardizeMetadata({
   title: "Arithmix",
 })
 
-const Page: React.FC<PageProps<"/arithmix">> = () => {
+const Page: React.FC<PageProps<"/arithmix/[[...rest]]">> = () => {
   return <ArithmixClient />
 }
 
