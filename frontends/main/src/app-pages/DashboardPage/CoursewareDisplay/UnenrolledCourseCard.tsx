@@ -18,7 +18,7 @@ import { useEnrollmentHandler } from "./hooks/useEnrollmentHandler"
 import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
 import { Button } from "@mitodl/smoot-design"
 
-type UnenenrolledCourseCardProps = {
+type UnenrolledCourseCardProps = {
   course: CourseWithCourseRunsSerializerV2
   displayedRun?: BaseCourseRun
   contractId?: number
@@ -42,7 +42,7 @@ export const UnenrolledCourseCard = ({
   headingLevel,
   Component,
   className,
-}: UnenenrolledCourseCardProps) => {
+}: UnenrolledCourseCardProps) => {
   const enrollment = useEnrollmentHandler()
   const isPending = enrollment.isPending
   const courseRun =
