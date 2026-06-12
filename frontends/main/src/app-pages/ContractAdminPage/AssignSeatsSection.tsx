@@ -7,6 +7,7 @@ import {
   isValidEmail,
   extractEmailsFromCsvRows,
   parseEmailsForSubmit,
+  pluralize,
 } from "ol-utilities"
 import Papa from "papaparse"
 import { AssignSeatsConfirmModal } from "./AssignSeatsConfirmModal"
@@ -211,7 +212,7 @@ const AssignSeatsSection: React.FC = () => {
   const showOverlay = hasEmails
 
   const announcement = hasEmails
-    ? `${validCount} valid email${validCount !== 1 ? "s" : ""}${invalidCount > 0 ? `, ${invalidCount} invalid` : ""}`
+    ? `${validCount} valid ${pluralize("email", validCount)}${invalidCount > 0 ? `, ${invalidCount} invalid` : ""}`
     : ""
 
   // Debounce the live-region text so screen readers aren't spammed on every keystroke.
