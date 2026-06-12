@@ -296,7 +296,11 @@ const VideoShortsModal = ({
     if (sessionEndedRef.current) return
     sessionEndedRef.current = true
     const currentIndex = selectedIndexRef.current
-    if (currentIndex !== null && videoData[currentIndex]) {
+    if (
+      hasSettledRef.current &&
+      currentIndex !== null &&
+      videoData[currentIndex]
+    ) {
       const player = playersRef.current[currentIndex]
       let videoDurationMs: number | undefined
       if (player) {
