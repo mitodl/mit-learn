@@ -22,7 +22,7 @@
     "test-watch": "yarn global:test-watch",
     "style-lint": "yarn in-workspaces run global:style-lint",
     "style-lint-fix": "yarn in-workspaces run global:style-lint-fix",
-    "typecheck": "yarn in-workspaces run global:typecheck",
+    "typecheck": "yarn workspace main run typegen && yarn in-workspaces run global:typecheck",
     "global:style-lint": "cd $INIT_CWD && stylelint '**/*.{css,scss,ts,tsx}' --allow-empty-input",
     "global:style-lint-fix": "cd $INIT_CWD && stylelint '**/*.{css,scss,ts,tsx}' --allow-empty-input --fix",
     "global:test": "cd $INIT_CWD && NODE_ENV=test jest",

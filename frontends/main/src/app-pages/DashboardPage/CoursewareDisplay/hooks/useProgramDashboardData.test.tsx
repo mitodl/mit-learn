@@ -338,16 +338,6 @@ describe("useProgramDashboardData", () => {
       id: 50,
       courseruns: [run],
       next_run_id: run.id,
-      language_options: [
-        {
-          id: run.id,
-          courseware_id: run.courseware_id,
-          courseware_url: run.courseware_url ?? "",
-          language: LanguageEnum.En,
-          title: run.title,
-          run_tag: run.run_tag,
-        },
-      ],
     })
 
     const reqTree =

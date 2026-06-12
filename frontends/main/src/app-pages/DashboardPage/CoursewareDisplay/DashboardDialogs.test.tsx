@@ -8,7 +8,8 @@ import {
   within,
 } from "@/test-utils"
 import { HomeEnrollmentsDisplay } from "./HomeEnrollmentsDisplay"
-import { DashboardCard, DashboardType } from "./DashboardCard"
+import { DashboardCard } from "./DashboardCard"
+import { DashboardType } from "./model/dashboardViewModel"
 import { dashboardCourse, setupEnrollments } from "./test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import {
@@ -22,8 +23,17 @@ import invariant from "tiny-invariant"
 import { getDescriptionFor } from "ol-test-utilities"
 import type { User as MitxUser } from "@mitodl/mitxonline-api-axios/v2"
 import type { PartialDeep } from "type-fest"
+import {
+  trackCourseUnenrolled,
+  trackProgramUnenrolled,
+} from "@/common/analytics/gtm"
 
 jest.mock("posthog-js/react")
+jest.mock("@/common/analytics/gtm", () => ({
+  trackCourseUnenrolled: jest.fn(),
+  trackProgramUnenrolled: jest.fn(),
+}))
+
 const mockedUseFeatureFlagEnabled = jest
   .mocked(useFeatureFlagEnabled)
   .mockImplementation(() => false)
@@ -278,6 +288,10 @@ describe("UnenrollProgramDialog", () => {
         ),
       }),
     )
+    expect(trackProgramUnenrolled).toHaveBeenCalledWith(
+      programEnrollment.program.title,
+    )
+    expect(trackCourseUnenrolled).not.toHaveBeenCalled()
   })
 
   test("Cancelling the dialog does not fire the API call", async () => {
@@ -617,9 +631,7 @@ describe("JustInTimeDialog", () => {
     expect(window.location.assign).toHaveBeenCalledWith(run.courseware_url)
   })
 
-  // TODO: Un-skip once @mitodl/mitxonline-api-axios is updated with B2BEnrollRequestRequest
-  // (depends on https://github.com/mitodl/mitxonline/pull/3650 being merged and a new package release)
-  test.skip("Submitting just-in-time dialog includes program_id when parentProgramReadableIds is provided", async () => {
+  test("Submitting just-in-time dialog includes program_id when parentProgramReadableIds is provided", async () => {
     const { course, run } = setupJustInTimeTest({
       userOverrides: { user_profile: { year_of_birth: 1988 } },
     })

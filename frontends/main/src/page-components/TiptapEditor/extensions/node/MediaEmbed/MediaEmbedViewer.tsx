@@ -60,13 +60,15 @@ const OVSVideoPlayer = ({
   const video: VideoResource | undefined =
     resource?.resource_type === "video" ? resource : undefined
   return (
-    <VideoResourcePlayer
-      video={video}
-      videoId={videoId}
-      isLoading={isLoading}
-      videoTitleLabel={title || "Video"}
-      videoThumbnailAlt={title || "Video thumbnail"}
-    />
+    <div data-style-boundary>
+      <VideoResourcePlayer
+        video={video}
+        videoId={videoId}
+        isLoading={isLoading}
+        videoTitleLabel={title || "Video"}
+        videoThumbnailAlt={title || "Video thumbnail"}
+      />
+    </div>
   )
 }
 

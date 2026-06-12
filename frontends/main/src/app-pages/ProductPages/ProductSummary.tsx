@@ -22,10 +22,12 @@ import {
   canPurchaseRun,
   formatPrice,
   getEnrollmentType,
+  getFlexiblePriceForProduct,
   mitxonlineLegacyUrl,
   priceWithDiscount,
 } from "@/common/mitxonline"
 import { useQuery } from "@tanstack/react-query"
+import { useUserIsAuthenticated } from "api/hooks/user"
 
 const ResponsiveLink = styled(Link)(({ theme }) => ({
   ...theme.typography.body2, // override default for "black" color is subtitle2
@@ -929,12 +931,34 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
   ...others
 }) => {
   const enrollmentType = getEnrollmentType(program.enrollment_modes)
-  if (enrollmentType === "none") return null
+  const isAuthenticated = useUserIsAuthenticated()
 
-  const currentPrice = program.products[0]?.price
+  const product = program.products[0]
+  const currentPrice = product?.price
   const listPrice = program.page?.list_price
+  const financialAidUrl = program.page?.financial_assistance_form_url
+  const hasFinancialAid = !!(financialAidUrl && product)
+  const userFlexiblePrice = useQuery({
+    ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
+    enabled:
+      (enrollmentType === "paid" || enrollmentType === "both") &&
+      isAuthenticated &&
+      hasFinancialAid,
+  })
 
-  const currentAmount = toNumericPrice(currentPrice)
+  if (enrollmentType === "none") return null
+  const price = product
+    ? priceWithDiscount({
+        product,
+        flexiblePrice: userFlexiblePrice.data,
+        avoidCents: true,
+      })
+    : null
+
+  const currentAmount =
+    userFlexiblePrice.data && price?.isDiscounted
+      ? getFlexiblePriceForProduct(userFlexiblePrice.data)
+      : toNumericPrice(currentPrice)
   const listAmount = toNumericPrice(listPrice)
   const hasSavings =
     currentAmount !== null && listAmount !== null && listAmount > currentAmount
@@ -946,9 +970,23 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
     <ProgramPaySection>
       <ProgramPayLabel>Price</ProgramPayLabel>
       <ProgramPriceRowInner>
-        <ProgramCurrentPriceBlock>
-          <ProgramPriceAmount>
-            {formatPrice(currentPrice, { avoidCents: true })}
+        <ProgramCurrentPriceBlock
+          {...(price?.isDiscounted
+            ? {
+                role: "group",
+                "aria-label": `Discounted price: ${price.finalPrice}, was ${price.originalPrice}`,
+              }
+            : {})}
+        >
+          <ProgramPriceAmount aria-hidden={price?.isDiscounted || undefined}>
+            {price?.isDiscounted ? (
+              <>
+                {price.finalPrice}{" "}
+                <StrickenText>{price.originalPrice}</StrickenText>
+              </>
+            ) : (
+              formatPrice(currentPrice, { avoidCents: true })
+            )}
           </ProgramPriceAmount>
           <ProgramPriceSuffix>full program</ProgramPriceSuffix>
         </ProgramCurrentPriceBlock>
@@ -980,17 +1018,17 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
           </ProgramSavingsDetailText>
         </ProgramDiscountRow>
       ) : null}
-      {program.page?.financial_assistance_form_url ? (
+      {hasFinancialAid ? (
         <SecondaryUnderlinedLink
           color="black"
-          href={mitxonlineLegacyUrl(
-            program.page?.financial_assistance_form_url,
-          )}
+          href={mitxonlineLegacyUrl(financialAidUrl!)}
           target="_blank"
           rel="noopener noreferrer"
           style={{ minWidth: "fit-content" }}
         >
-          Financial assistance available
+          {price?.approvedFinancialAid
+            ? "Financial assistance applied"
+            : "Financial assistance available"}
         </SecondaryUnderlinedLink>
       ) : null}
       {enrollmentType === "both" ? (

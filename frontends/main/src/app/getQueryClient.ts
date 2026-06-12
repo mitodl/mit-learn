@@ -4,6 +4,7 @@ import { QueryClient, isServer, focusManager } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
 import { cache } from "react"
 import { notFound } from "next/navigation"
+import { bootstrapApiClients } from "@/bootstrap/api"
 
 /** Max retries after first failure */
 const MAX_RETRIES = 3
@@ -73,6 +74,10 @@ class AugmentedQueryClient extends QueryClient {
  * readiness for the dehydrated state to be sent to the client.
  */
 export const getServerQueryClient = cache(() => {
+  // Bootstrap client here, in addition to instrumentation.ts
+  // At least in development, sitemaps run in a separate worker process that
+  // doesn't execute instrumentation.ts. This seems NOT to be true in production.
+  bootstrapApiClients()
   return new AugmentedQueryClient({
     defaultOptions: {
       queries: {

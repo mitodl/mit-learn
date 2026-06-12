@@ -32,6 +32,7 @@ import {
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import { getReceiptMenuItem } from "./receiptMenuItem"
+import { trackCourseEnrolled } from "@/common/analytics/gtm"
 import {
   CourseWithCourseRunsSerializerV2,
   CourseRunEnrollmentV3,
@@ -339,6 +340,7 @@ const useEnrollmentHandler = () => {
             { run_id: enrollmentDecision.run.id },
             {
               onSuccess: () => {
+                trackCourseEnrolled(course.title)
                 const destination =
                   enrollmentDecision.run.courseware_url ?? href
                 if (destination) {

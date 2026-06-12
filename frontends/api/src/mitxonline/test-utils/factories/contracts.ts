@@ -5,7 +5,6 @@ import type { ContractCode } from "../../hooks/organizations"
 
 const contract = (overrides: Partial<ContractPage> = {}): ContractPage => ({
   id: faker.number.int(),
-  active: true,
   contract_end: faker.date.future().toISOString(),
   contract_start: faker.date.past().toISOString(),
   description: faker.lorem.sentence(),

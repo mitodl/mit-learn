@@ -8,9 +8,9 @@ import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { programsQueries } from "api/mitxonline-hooks/programs"
-import type { DashboardResource } from "../DashboardCard"
 import {
   assembleHomeCardList,
+  type DashboardResource,
   bucketAndSortHomeEnrollments,
   enrollmentCourseIsInPrograms,
   getModuleCourseIdsFromPrograms,

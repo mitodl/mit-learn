@@ -6,7 +6,8 @@
     "dev": "PORT=${PORT:-8062} TZ=UTC next dev",
     "build": "next build",
     "start": "TZ=UTC next start",
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "typegen": "NEXT_BUILD_CI=1 next typegen"
   },
   "dependencies": {
     "@ebay/nice-modal-react": "^1.2.13",
@@ -14,7 +15,7 @@
     "@emotion/styled": "^11.11.0",
     "@floating-ui/react": "^0.27.16",
     "@mitodl/course-search-utils": "^3.5.2",
-    "@mitodl/mitxonline-api-axios": "2026.5.28-1",
+    "@mitodl/mitxonline-api-axios": "2026.6.10",
     "@mitodl/smoot-design": "^6.27.0",
     "@mui/base": "5.0.0-beta.70",
     "@mui/material": "^6.4.5",

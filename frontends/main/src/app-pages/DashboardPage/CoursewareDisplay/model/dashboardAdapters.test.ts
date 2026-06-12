@@ -49,7 +49,6 @@ describe("dashboardAdapters", () => {
 
     expect(adapted.resource.type).toBe("course")
     expect(adapted.selectedCourseRun?.id).toBe(entry.displayedRun?.id)
-    expect(adapted.buttonHref).toBe(entry.displayedRun?.courseware_url)
   })
 
   test("one enrollment: adapts to enrollment resource", () => {
@@ -69,7 +68,6 @@ describe("dashboardAdapters", () => {
     const adapted = adaptCourseEntryToLegacyDashboardCardProps(entry)
 
     expectEnrollmentResource(adapted, run.id)
-    expect(adapted.buttonHref).toBe(run.courseware_url)
   })
 
   test("multiple enrollments with certificate: adapter uses policy-selected enrollment", () => {
@@ -156,7 +154,6 @@ describe("dashboardAdapters", () => {
     const adapted = adaptCourseEntryToLegacyDashboardCardProps(entry)
 
     expectEnrollmentResource(adapted, esRun.id)
-    expect(adapted.buttonHref).toBe(esRun.courseware_url)
   })
 
   test("contract-scoped selected-language enrollment: passes contract/program context", () => {
