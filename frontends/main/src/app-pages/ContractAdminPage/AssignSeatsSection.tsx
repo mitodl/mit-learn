@@ -1,8 +1,23 @@
 "use client"
 
-import React from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { Stack, Tooltip, Typography, styled } from "ol-components"
-import { Button, Input } from "@mitodl/smoot-design"
+import { Alert, Button, VisuallyHidden } from "@mitodl/smoot-design"
+import {
+  isValidEmail,
+  extractEmailsFromCsvRows,
+  parseEmailsForSubmit,
+  pluralize,
+} from "ol-utilities"
+import Papa from "papaparse"
+import { AssignSeatsConfirmModal } from "./AssignSeatsConfirmModal"
+
+// Shared metrics — must be identical between EmailHighlightLayer and EmailTextarea
+// so the overlay and the real textarea render text in exactly the same position.
+const TA_PADDING = "16px"
+const TA_FONT_SIZE = "14px"
+const TA_LINE_HEIGHT = "22px"
+const TA_MIN_HEIGHT = "80px"
 
 const SectionCard = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
@@ -27,15 +42,19 @@ const MutedText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 })) as typeof Typography
 
-const StyledInput = styled(Input)({
-  flex: 1,
-})
-
 const ButtonWrapper = styled.span(({ theme }) => ({
   [theme.breakpoints.down("sm")]: {
     width: "100%",
     "& > button": { width: "100%" },
   },
+}))
+
+const ActiveLink = styled.span(({ theme }) => ({
+  ...theme.typography.subtitle2,
+  color: theme.custom.colors.darkRed,
+  textDecoration: "underline",
+  cursor: "pointer",
+  "&:hover": { opacity: 0.8 },
 }))
 
 const DisabledLink = styled.span(({ theme }) => ({
@@ -46,12 +65,220 @@ const DisabledLink = styled.span(({ theme }) => ({
   opacity: 0.5,
 }))
 
+const ValidationBadge = styled.div(({ theme }) => ({
+  display: "inline-flex",
+  gap: "24px",
+  backgroundColor: theme.custom.colors.lightGray1,
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  borderRadius: "4px",
+  padding: "8px 16px",
+  ...theme.typography.body3,
+  fontWeight: theme.typography.fontWeightMedium as number,
+}))
+
+const ValidCount = styled.span(({ theme }) => ({
+  color: theme.custom.colors.darkGreen,
+}))
+
+const InvalidCount = styled.span(({ theme }) => ({
+  color: theme.custom.colors.darkRed,
+}))
+
 /**
- * Assign Seats form section.
- *
- * Fully disabled pending backend write API availability.
+ * Wrapper for the textarea + highlight overlay. We use a custom textarea here
+ * rather than smoot-design's Input because rendering per-token colors requires
+ * an absolutely-positioned overlay that must share exact metrics with the
+ * underlying textarea — something the smoot Input wrapper doesn't expose.
  */
+const EmailInputRoot = styled.div<{ $focused: boolean }>(
+  ({ theme, $focused }) => ({
+    position: "relative",
+    border: `1px solid ${theme.custom.colors.silverGrayLight}`,
+    borderRadius: "4px",
+    backgroundColor: theme.custom.colors.white,
+    width: "100%",
+    ...($focused && {
+      // outline draws outside the border box so there's no layout shift
+      outline: `1px solid ${theme.custom.colors.darkGray2}`,
+      borderColor: theme.custom.colors.darkGray2,
+    }),
+  }),
+)
+
+/** Absolutely-positioned div that renders colored email tokens behind the textarea. */
+const EmailHighlightLayer = styled.div({
+  position: "absolute",
+  inset: 0,
+  padding: TA_PADDING,
+  fontSize: TA_FONT_SIZE,
+  lineHeight: TA_LINE_HEIGHT,
+  fontFamily: "inherit",
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
+  overflowWrap: "break-word",
+  pointerEvents: "none",
+  userSelect: "none",
+  overflow: "hidden",
+  boxSizing: "border-box",
+})
+
+const InvalidEmailSegment = styled.span(({ theme }) => ({
+  color: theme.custom.colors.darkRed,
+}))
+
+const EmailTextarea = styled("textarea")<{ $transparent: boolean }>(
+  ({ theme, $transparent }) => ({
+    display: "block",
+    position: "relative",
+    width: "100%",
+    minHeight: TA_MIN_HEIGHT,
+    padding: TA_PADDING,
+    // `color` keeps the placeholder visible; `-webkit-text-fill-color` makes
+    // only the typed text transparent so the overlay shows through.
+    color: $transparent ? "transparent" : theme.custom.colors.darkGray2,
+    WebkitTextFillColor: $transparent
+      ? "transparent"
+      : theme.custom.colors.darkGray2,
+    caretColor: theme.custom.colors.darkGray2,
+    background: "transparent",
+    border: "none",
+    outline: "none",
+    resize: "none",
+    fontFamily: "inherit",
+    fontSize: TA_FONT_SIZE,
+    lineHeight: TA_LINE_HEIGHT,
+    boxSizing: "border-box",
+    "&::placeholder": {
+      color: theme.custom.colors.silverGrayDark,
+      WebkitTextFillColor: theme.custom.colors.silverGrayDark,
+    },
+  }),
+)
+
+/**
+ * Split input into segments preserving the original text (including delimiters
+ * and whitespace) so each segment can be colored independently in the overlay.
+ *
+ * A token is "committed" (and therefore colored) when a delimiter follows it
+ * in the string — i.e., the user has moved on to the next email. If
+ * `allCommitted` is true (e.g. on blur) every token is colored regardless.
+ * The token currently being typed has no trailing delimiter yet, so it stays
+ * neutral, avoiding red-on-first-keypress.
+ */
+const tokenizeInput = (input: string, allCommitted: boolean) => {
+  const parts = input.split(/([\r\n,]+)/)
+  return parts.map((part, i) => {
+    if (/^[\r\n,]+$/.test(part) || !part.trim()) {
+      return { text: part, valid: null }
+    }
+    const nextPart = parts[i + 1]
+    const committed =
+      allCommitted || (nextPart !== undefined && /^[\r\n,]+$/.test(nextPart))
+    return { text: part, valid: committed ? isValidEmail(part.trim()) : null }
+  })
+}
+
+type ModalData = {
+  validEmails: string[]
+  invalidEmails: string[]
+  duplicateCount: number
+  skippedCount: number
+}
+
 const AssignSeatsSection: React.FC = () => {
+  const [emailInput, setEmailInput] = useState("")
+  const [focused, setFocused] = useState(false)
+  const [csvReadError, setCsvReadError] = useState(false)
+  const [csvNoValid, setCsvNoValid] = useState(false)
+  const [modalData, setModalData] = useState<ModalData | null>(null)
+  const [debouncedAnnouncement, setDebouncedAnnouncement] = useState("")
+  const [errorAnnouncement, setErrorAnnouncement] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const submitResult = useMemo(
+    () => parseEmailsForSubmit(emailInput),
+    [emailInput],
+  )
+  const validCount = submitResult.valid.length
+  const invalidCount = submitResult.invalid.length
+  const hasEmails = emailInput.trim().length > 0
+  const canSubmit = validCount > 0
+
+  // Overlay is always visible when there is content. Tokens are colored as soon
+  // as a delimiter follows them (commit-on-delimiter); on blur all tokens commit.
+  const tokens = useMemo(
+    () => tokenizeInput(emailInput, !focused),
+    [emailInput, focused],
+  )
+  const showOverlay = hasEmails
+
+  const announcement = hasEmails
+    ? `${validCount} valid ${pluralize("email", validCount)}${invalidCount > 0 ? `, ${invalidCount} invalid` : ""}`
+    : ""
+
+  // Debounce the live-region text so screen readers aren't spammed on every keystroke.
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedAnnouncement(announcement), 600)
+    return () => clearTimeout(id)
+  }, [announcement])
+
+  useEffect(() => {
+    if (csvReadError) {
+      setErrorAnnouncement("Could not read the file. Please try again.")
+    } else if (csvNoValid) {
+      setErrorAnnouncement("No valid email addresses found in this file.")
+    } else {
+      setErrorAnnouncement("")
+    }
+  }, [csvReadError, csvNoValid])
+
+  const handleCsvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (fileInputRef.current) fileInputRef.current.value = ""
+    setCsvReadError(false)
+    setCsvNoValid(false)
+    setModalData(null)
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const text = event.target?.result as string
+      const { data } = Papa.parse<string[]>(text, {
+        skipEmptyLines: true,
+      })
+      const { valid, invalid, duplicateCount, skippedCount } =
+        extractEmailsFromCsvRows(data)
+      if (valid.length === 0) {
+        setCsvNoValid(true)
+        return
+      }
+      setEmailInput("")
+      setModalData({
+        validEmails: valid,
+        invalidEmails: invalid,
+        duplicateCount,
+        skippedCount,
+      })
+    }
+    reader.onerror = () => setCsvReadError(true)
+    reader.readAsText(file)
+  }
+
+  const handleAssignSeats = () => {
+    setModalData({
+      validEmails: submitResult.valid,
+      invalidEmails: submitResult.invalid,
+      duplicateCount: submitResult.duplicateCount,
+      skippedCount: submitResult.skippedCount,
+    })
+  }
+
+  const handleModalClose = () => setModalData(null)
+
+  const handleModalConfirm = () => {
+    // TODO: implement send when API is available
+    setModalData(null)
+  }
+
   return (
     <SectionCard>
       <div>
@@ -61,46 +288,136 @@ const AssignSeatsSection: React.FC = () => {
           access the program.
         </MutedText>
       </div>
+      {/* Always-mounted live region — debounced so screen readers aren't spammed on every keystroke */}
+      <VisuallyHidden aria-live="polite" aria-atomic="true">
+        {debouncedAnnouncement}
+      </VisuallyHidden>
+      {/* Always-mounted so NVDA reliably announces dynamically injected errors */}
+      <VisuallyHidden aria-live="assertive" aria-atomic="true">
+        {errorAnnouncement}
+      </VisuallyHidden>
       <Stack
         direction={{ xs: "column", sm: "row" }}
         gap="24px"
         alignItems="flex-start"
       >
-        {/* Input instead of TextField: TextField's FormFieldWrapper always renders a label element in
-            normal flow even when visually hidden, pushing the input ~4px below the button. Input is
-            smoot-design's component for unlabelled fields; accessible name is supplied via aria-label. */}
-        <Tooltip title="Coming soon">
-          <StyledInput
-            name="emails"
-            inputProps={{ "aria-label": "Employee emails" }}
-            multiline
-            minRows={2}
-            disabled
-            placeholder="Enter employee emails (one per line or comma-separated)"
-            fullWidth
-          />
-        </Tooltip>
-        <Tooltip title="Coming soon">
-          <ButtonWrapper>
-            <Button variant="primary" disabled>
-              Assign Seats
-            </Button>
-          </ButtonWrapper>
-        </Tooltip>
+        <Stack
+          flex={1}
+          gap="8px"
+          minWidth={0}
+          alignItems="flex-start"
+          width="100%"
+        >
+          <EmailInputRoot $focused={focused}>
+            {showOverlay && (
+              <EmailHighlightLayer
+                aria-hidden="true"
+                data-email-overlay
+                style={{ overflow: "auto" }}
+              >
+                {tokens.map((token, i) =>
+                  token.valid === false ? (
+                    <InvalidEmailSegment key={`${i}-${token.text}`}>
+                      {token.text}
+                    </InvalidEmailSegment>
+                  ) : (
+                    <span key={`${i}-${token.text}`}>{token.text}</span>
+                  ),
+                )}
+              </EmailHighlightLayer>
+            )}
+            <EmailTextarea
+              aria-label="Employee emails"
+              placeholder="Enter employee emails (one per line or comma-separated)"
+              autoComplete="off"
+              spellCheck={false}
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              onScroll={(e) => {
+                const overlay = e.currentTarget.parentElement?.querySelector(
+                  "[data-email-overlay]",
+                ) as HTMLDivElement | null
+                if (overlay) {
+                  overlay.scrollTop = e.currentTarget.scrollTop
+                  overlay.scrollLeft = e.currentTarget.scrollLeft
+                }
+              }}
+              $transparent={showOverlay}
+            />
+          </EmailInputRoot>
+          {hasEmails && (
+            <ValidationBadge id="assign-seats-validation" aria-hidden="true">
+              <ValidCount>{validCount} valid</ValidCount>
+              {invalidCount > 0 && (
+                <InvalidCount>{invalidCount} invalid</InvalidCount>
+              )}
+            </ValidationBadge>
+          )}
+        </Stack>
+        <ButtonWrapper>
+          <Button
+            variant="primary"
+            disabled={!canSubmit}
+            onClick={handleAssignSeats}
+          >
+            Assign Seats
+          </Button>
+        </ButtonWrapper>
       </Stack>
       <Stack direction="row" gap="4px" alignItems="center" flexWrap="wrap">
         <MutedText>Paste multiple emails or</MutedText>
-        <Tooltip title="Coming soon">
-          <DisabledLink role="button" aria-disabled="true" tabIndex={0}>
-            import from CSV
-          </DisabledLink>
-        </Tooltip>
+        {/* Hidden file input triggered by the button below */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          aria-hidden="true"
+          tabIndex={-1}
+          style={{ display: "none" }}
+          onChange={handleCsvChange}
+        />
+        <ActiveLink
+          role="button"
+          tabIndex={0}
+          onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault()
+              fileInputRef.current?.click()
+            }
+          }}
+        >
+          import from CSV
+        </ActiveLink>
         <Tooltip title="Coming soon">
           <DisabledLink role="button" aria-disabled="true" tabIndex={0}>
             (download sample CSV)
           </DisabledLink>
         </Tooltip>
       </Stack>
+      {csvReadError && (
+        <Alert severity="error" closable onClose={() => setCsvReadError(false)}>
+          Could not read the file. Please try again.
+        </Alert>
+      )}
+      {csvNoValid && (
+        <Alert severity="error" closable onClose={() => setCsvNoValid(false)}>
+          No valid email addresses found in this file.
+        </Alert>
+      )}
+      {modalData && (
+        <AssignSeatsConfirmModal
+          open
+          onClose={handleModalClose}
+          onConfirm={handleModalConfirm}
+          validCount={modalData.validEmails.length}
+          invalidEmails={modalData.invalidEmails}
+          duplicateCount={modalData.duplicateCount}
+          skippedCount={modalData.skippedCount}
+        />
+      )}
     </SectionCard>
   )
 }

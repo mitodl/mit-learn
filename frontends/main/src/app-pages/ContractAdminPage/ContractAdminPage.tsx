@@ -26,7 +26,6 @@ import {
 import { AssignSeatsSection } from "./AssignSeatsSection"
 import { RowActionMenu } from "./RowActionMenu"
 import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
-import type { ContractCode } from "api/mitxonline-hooks/organizations"
 import type { AxiosError } from "axios"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError } from "@/common/errors"
@@ -253,20 +252,19 @@ const TableCell = styled("div", {
 
 const StatusBadge = styled(Chip, {
   shouldForwardProp: (prop) => prop !== "$status",
-})<{ $status: "redeemed" | "pending" }>(({ $status, theme }) => ({
+})<{ $status: "assigned" | "redeemed" }>(({ $status, theme }) => ({
   height: "20px",
   borderRadius: "4px",
+  paddingRight: "8px",
+  paddingLeft: "8px",
   ...theme.typography.body3,
   fontWeight: theme.typography.fontWeightBold as number,
-  "& .MuiChip-label": {
-    padding: "0 8px",
-  },
   // alpha() matches Figma spec which uses opacity on base colors
   ...($status === "redeemed" && {
     backgroundColor: alpha(theme.custom.colors.green, 0.2),
     color: theme.custom.colors.darkGreen,
   }),
-  ...($status === "pending" && {
+  ...($status === "assigned" && {
     backgroundColor: alpha(theme.custom.colors.blue, 0.2),
     color: theme.custom.colors.darkBlue,
   }),
@@ -325,10 +323,6 @@ function formatDate(iso: string | null | undefined): string {
   })
 }
 
-function isRedeemed(code: ContractCode): boolean {
-  return code.is_redeemed
-}
-
 type ContractAdminPageInternalProps = {
   orgSlug: string
   contractSlug: string
@@ -352,14 +346,6 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
 
   const org = managerOrgs?.find(matchOrganizationBySlug(orgSlug))
   const contract = org?.contracts.find((c) => c.slug === contractSlug)
-
-  const { data: contractDetail, isLoading: isLoadingDetail } = useQuery({
-    ...managerOrganizationQueries.managerContractDetail({
-      id: contract?.id ?? 0,
-      parent_lookup_organization: org?.id ?? 0,
-    }),
-    enabled: !!org && !!contract,
-  })
 
   const {
     data: codes,
@@ -406,22 +392,36 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     return <ErrorContent title="Contract not found" timSays="404" />
   }
 
-  const totalPurchased = contractDetail?.total_codes
-  const totalRedeemed = contractDetail?.total_enrollments
+  const allCodes = codes ?? []
+  const totalPurchased = isLoadingCodes ? undefined : allCodes.length
+  const totalUnassigned = allCodes.filter(
+    (code) => code.redemption_status === "unassigned",
+  ).length
+  const totalPendingClaim = allCodes.filter(
+    (code) => code.redemption_status === "assigned",
+  ).length
+  const totalRedeemed = allCodes.filter(
+    (code) => code.redemption_status === "redeemed",
+  ).length
 
-  const tabFilteredCodes = (codes ?? []).filter((code) => {
-    const redeemed = isRedeemed(code)
+  const visibleCodes = (codes ?? []).filter(
+    (code) => code.redemption_status !== "unassigned",
+  )
+
+  const tabFilteredCodes = visibleCodes.filter((code) => {
     return (
       statusFilter === "all" ||
-      (statusFilter === "redeemed" && redeemed) ||
-      (statusFilter === "pending" && !redeemed)
+      (statusFilter === "redeemed" && code.redemption_status === "redeemed") ||
+      (statusFilter === "pending" && code.redemption_status === "assigned")
     )
   })
 
   const filteredCodes = tabFilteredCodes.filter((code) => {
-    const email = code.redeemed_by ?? ""
+    if (!searchQuery) return true
+    const q = searchQuery.toLowerCase()
     return (
-      !searchQuery || email.toLowerCase().includes(searchQuery.toLowerCase())
+      (code.assigned_to ?? "").toLowerCase().includes(q) ||
+      (code.assigned_name ?? "").toLowerCase().includes(q)
     )
   })
 
@@ -466,7 +466,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
               <OrgName component="h1">{org.name}</OrgName>
               <ContractSubtitle>
                 <span>{contract.name}</span>
-                {isLoadingDetail ? null : totalPurchased !== undefined ? (
+                {!isLoadingCodes && totalPurchased !== undefined ? (
                   <>
                     {" "}
                     · <span>{totalPurchased} seats</span>
@@ -477,7 +477,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
           </OrgDetailsContainer>
           <StatsSide>
             <StatBlock role="group" aria-label="Total purchased">
-              {isLoadingDetail ? (
+              {isLoadingCodes ? (
                 <Skeleton width="48px" height="36px" />
               ) : (
                 <StatValue>{totalPurchased ?? STUB}</StatValue>
@@ -485,18 +485,26 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
               <StatLabel>Total purchased</StatLabel>
             </StatBlock>
             <StatBlock role="group" aria-label="Unassigned">
-              <StatValue>{STUB}</StatValue>
+              {isLoadingCodes ? (
+                <Skeleton width="48px" height="36px" />
+              ) : (
+                <StatValue>{totalUnassigned}</StatValue>
+              )}
               <StatLabel>Unassigned</StatLabel>
             </StatBlock>
             <StatBlock role="group" aria-label="Pending claim">
-              <StatValue>{STUB}</StatValue>
+              {isLoadingCodes ? (
+                <Skeleton width="48px" height="36px" />
+              ) : (
+                <StatValue>{totalPendingClaim}</StatValue>
+              )}
               <StatLabel>Pending claim</StatLabel>
             </StatBlock>
             <StatBlock role="group" aria-label="Redeemed">
-              {isLoadingDetail ? (
+              {isLoadingCodes ? (
                 <Skeleton width="48px" height="36px" />
               ) : (
-                <StatValue>{totalRedeemed ?? STUB}</StatValue>
+                <StatValue>{totalRedeemed}</StatValue>
               )}
               <StatLabel>Redeemed</StatLabel>
             </StatBlock>
@@ -518,7 +526,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                 </TabButtonList>
               </TabContext>
               <StyledSearchInput
-                placeholder="Search by email..."
+                placeholder="Search by name or email..."
                 value={searchQuery}
                 size="medium"
                 onChange={handleSearchChange}
@@ -621,46 +629,51 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                     </EmptyTableMessage>
                   </TableRow>
                 ) : (
-                  pagedCodes.map((code) => {
-                    const redeemed = isRedeemed(code)
-                    return (
-                      <TableRow role="row" key={code.id}>
-                        <TableCell
-                          role="cell"
-                          $flex={COLUMN_FLEX.assignedTo}
-                          $primary
-                        >
-                          {STUB}
-                        </TableCell>
-                        <TableCell role="cell" $flex={COLUMN_FLEX.redeemedBy}>
-                          <MobileLabel>Redeemed by</MobileLabel>
-                          {code.redeemed_by ?? STUB}
-                        </TableCell>
-                        <TableCell role="cell" $flex={COLUMN_FLEX.status}>
-                          <MobileLabel>Status</MobileLabel>
-                          <StatusBadge
-                            $status={redeemed ? "redeemed" : "pending"}
-                            label={redeemed ? "Redeemed" : "Pending claim"}
-                          />
-                        </TableCell>
-                        <TableCell role="cell" $flex={COLUMN_FLEX.assignedOn}>
-                          <MobileLabel>Assigned on</MobileLabel>
-                          {STUB}
-                        </TableCell>
-                        <TableCell role="cell" $flex={COLUMN_FLEX.redeemedOn}>
-                          <MobileLabel>Redeemed on</MobileLabel>
-                          {formatDate(code.redeemed_on)}
-                        </TableCell>
-                        <TableCell role="cell" $flex={COLUMN_FLEX.lastSent}>
-                          <MobileLabel>Last sent</MobileLabel>
-                          {STUB}
-                        </TableCell>
-                        <ActionCell role="cell">
-                          <RowActionMenu code={code} />
-                        </ActionCell>
-                      </TableRow>
-                    )
-                  })
+                  pagedCodes.map((code) => (
+                    <TableRow role="row" key={code.id}>
+                      <TableCell
+                        role="cell"
+                        $flex={COLUMN_FLEX.assignedTo}
+                        $primary
+                      >
+                        {code.assigned_to ?? STUB}
+                      </TableCell>
+                      <TableCell role="cell" $flex={COLUMN_FLEX.redeemedBy}>
+                        <MobileLabel>Redeemed by</MobileLabel>
+                        {code.redeemed_by ?? STUB}
+                      </TableCell>
+                      <TableCell role="cell" $flex={COLUMN_FLEX.status}>
+                        <MobileLabel>Status</MobileLabel>
+                        <StatusBadge
+                          $status={
+                            code.redemption_status === "assigned"
+                              ? "assigned"
+                              : "redeemed"
+                          }
+                          label={
+                            code.redemption_status === "redeemed"
+                              ? "Redeemed"
+                              : "Pending claim"
+                          }
+                        />
+                      </TableCell>
+                      <TableCell role="cell" $flex={COLUMN_FLEX.assignedOn}>
+                        <MobileLabel>Assigned on</MobileLabel>
+                        {formatDate(code.assigned_on)}
+                      </TableCell>
+                      <TableCell role="cell" $flex={COLUMN_FLEX.redeemedOn}>
+                        <MobileLabel>Redeemed on</MobileLabel>
+                        {formatDate(code.redeemed_on)}
+                      </TableCell>
+                      <TableCell role="cell" $flex={COLUMN_FLEX.lastSent}>
+                        <MobileLabel>Last sent</MobileLabel>
+                        {formatDate(code.last_sent)}
+                      </TableCell>
+                      <ActionCell role="cell">
+                        <RowActionMenu code={code} />
+                      </ActionCell>
+                    </TableRow>
+                  ))
                 )}
               </div>
             </div>

@@ -20,7 +20,7 @@ afterEach(() => {
 describe("RowActionMenu", () => {
   describe("pending code", () => {
     test("opens menu with correct items on trigger click", async () => {
-      const code = makeCode({ is_redeemed: false })
+      const code = makeCode({ redemption_status: "assigned" })
       renderWithTheme(<RowActionMenu code={code} />)
 
       await user.click(screen.getByRole("button", { name: /more actions/i }))
@@ -37,8 +37,9 @@ describe("RowActionMenu", () => {
   describe("redeemed code", () => {
     test("opens menu with only Uninvite item", async () => {
       const code = makeCode({
-        is_redeemed: true,
+        redemption_status: "redeemed",
         redeemed_by: "user@example.com",
+        redeemed_on: new Date().toISOString(),
       })
       renderWithTheme(<RowActionMenu code={code} />)
 
@@ -51,7 +52,7 @@ describe("RowActionMenu", () => {
 
   describe("Copy claim link", () => {
     test("writes the enrollment URL to clipboard and shows confirmation", async () => {
-      const code = makeCode({ is_redeemed: false, code: "ABC123" })
+      const code = makeCode({ redemption_status: "assigned", code: "ABC123" })
       const writeText = jest.fn().mockResolvedValue(undefined)
       Object.defineProperty(navigator, "clipboard", {
         value: { writeText },
@@ -76,7 +77,7 @@ describe("RowActionMenu", () => {
     })
 
     test("announces the copy to screen readers via aria-live region", async () => {
-      const code = makeCode({ is_redeemed: false })
+      const code = makeCode({ redemption_status: "assigned" })
       Object.defineProperty(navigator, "clipboard", {
         value: { writeText: jest.fn().mockResolvedValue(undefined) },
         configurable: true,
@@ -102,7 +103,7 @@ describe("RowActionMenu", () => {
     })
 
     test("falls back to execCommand when clipboard API is unavailable", async () => {
-      const code = makeCode({ is_redeemed: false, code: "XYZ789" })
+      const code = makeCode({ redemption_status: "assigned", code: "XYZ789" })
       Object.defineProperty(navigator, "clipboard", {
         value: undefined,
         configurable: true,

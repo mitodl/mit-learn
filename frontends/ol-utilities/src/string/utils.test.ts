@@ -1,5 +1,145 @@
 import * as u from "./utils"
 
+describe("extractEmailsFromCsvRows", () => {
+  const extract = u.extractEmailsFromCsvRows
+
+  test("returns valid emails from single-column rows", () => {
+    const { valid } = extract([["alice@example.com"], ["bob@example.com"]])
+    expect(valid).toEqual(["alice@example.com", "bob@example.com"])
+  })
+
+  test("skips rows with no @ in any column and counts them", () => {
+    const { valid, invalid, skippedCount } = extract([
+      ["Email"],
+      ["alice@example.com"],
+      ["bob@example.com"],
+    ])
+    expect(valid).toEqual(["alice@example.com", "bob@example.com"])
+    expect(invalid).toEqual([])
+    expect(skippedCount).toBe(1)
+  })
+
+  test("finds email in any column, not just the first", () => {
+    const { valid } = extract([
+      ["1", "Alice Smith", "alice@example.com"],
+      ["2", "Bob Jones", "bob@example.com"],
+    ])
+    expect(valid).toEqual(["alice@example.com", "bob@example.com"])
+  })
+
+  test("handles quoted fields with commas correctly when rows are pre-parsed", () => {
+    // PapaParse handles quoting; by the time rows reach this function
+    // each cell is already unquoted and clean.
+    const { valid } = extract([
+      ['"Smith, John"', "alice@example.com"],
+      ["Bob Jones", "bob@example.com"],
+    ])
+    expect(valid).toEqual(["alice@example.com", "bob@example.com"])
+  })
+
+  test("collects values with @ that fail validation into invalid array", () => {
+    const { valid, invalid } = extract([
+      ["alice@example.com"],
+      ["bad@"],
+      ["not-quite@.com"],
+    ])
+    expect(valid).toEqual(["alice@example.com"])
+    expect(invalid).toEqual(["bad@", "not-quite@.com"])
+  })
+
+  test("deduplicates emails case-insensitively and counts duplicates", () => {
+    const { valid, duplicateCount } = extract([
+      ["alice@example.com"],
+      ["Alice@Example.COM"],
+      ["bob@example.com"],
+    ])
+    expect(valid).toEqual(["alice@example.com", "bob@example.com"])
+    expect(duplicateCount).toBe(1)
+  })
+
+  test("returns clean result with empty arrays for valid input", () => {
+    const result = extract([["alice@example.com"], ["bob@example.com"]])
+    expect(result).toEqual({
+      valid: ["alice@example.com", "bob@example.com"],
+      invalid: [],
+      duplicateCount: 0,
+      skippedCount: 0,
+    })
+  })
+
+  test("returns empty valid array for empty input", () => {
+    const { valid } = extract([])
+    expect(valid).toEqual([])
+  })
+
+  test("returns empty valid and populates invalid when all rows fail", () => {
+    const { valid, invalid } = extract([["bad@"], ["not-quite@.com"]])
+    expect(valid).toEqual([])
+    expect(invalid).toEqual(["bad@", "not-quite@.com"])
+  })
+
+  test("rejects single-label domains (no TLD)", () => {
+    const { valid, invalid } = extract([
+      ["alice@example.com"],
+      ["emma@university"],
+    ])
+    expect(valid).toEqual(["alice@example.com"])
+    expect(invalid).toContain("emma@university")
+  })
+
+  test("rejects leading dot in local part", () => {
+    const { valid, invalid } = extract([
+      ["alice@example.com"],
+      [".leo@valid.com"],
+    ])
+    expect(valid).toEqual(["alice@example.com"])
+    expect(invalid).toContain(".leo@valid.com")
+  })
+})
+
+describe("parseEmailsForSubmit", () => {
+  const parse = u.parseEmailsForSubmit
+
+  test("returns valid and empty invalid for clean input", () => {
+    const result = parse("alice@example.com, bob@example.com")
+    expect(result).toEqual({
+      valid: ["alice@example.com", "bob@example.com"],
+      invalid: [],
+      duplicateCount: 0,
+      skippedCount: 0,
+    })
+  })
+
+  test("separates invalid tokens into invalid array", () => {
+    const { valid, invalid } = parse("alice@example.com\nbadtoken\nnot@valid@")
+    expect(valid).toEqual(["alice@example.com"])
+    expect(invalid).toContain("badtoken")
+  })
+
+  test("deduplicates valid emails case-insensitively", () => {
+    const { valid, duplicateCount } = parse(
+      "alice@example.com\nAlice@Example.COM\nbob@example.com",
+    )
+    expect(valid).toEqual(["alice@example.com", "bob@example.com"])
+    expect(duplicateCount).toBe(1)
+  })
+
+  test("handles newline-separated input", () => {
+    const { valid } = parse("alice@example.com\nbob@example.com")
+    expect(valid).toEqual(["alice@example.com", "bob@example.com"])
+  })
+
+  test("returns empty arrays for blank input", () => {
+    const result = parse("")
+    expect(result).toEqual({
+      valid: [],
+      invalid: [],
+      duplicateCount: 0,
+      skippedCount: 0,
+    })
+  })
+})
+
 describe("capitalize", () => {
   it("Capitalizes the first letter of the the string", () => {
     expect(u.capitalize("hello world")).toBe("Hello world")
