@@ -15,7 +15,7 @@
  * (hooks/useHomeDashboardData.test.tsx), NOT here.
  */
 import React from "react"
-import { act } from "@testing-library/react"
+import { act, waitFor } from "@testing-library/react"
 import {
   renderWithProviders,
   screen,
@@ -378,7 +378,9 @@ describe("HomeEnrollmentsDisplay", () => {
     await screen.findByRole("heading", { name: "My Learning" })
 
     expect((await screen.findAllByText("My Program")).length).toBeGreaterThan(0)
-    expect(screen.queryByText("Covered Course")).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryAllByText("Covered Course")).toHaveLength(0)
+    })
     expect(
       (await screen.findAllByText("Standalone Course Run")).length,
     ).toBeGreaterThan(0)
@@ -483,7 +485,11 @@ describe("HomeEnrollmentsDisplay", () => {
 
     await screen.findByRole("heading", { name: "My Learning" })
 
-    expect(screen.queryByText("Covered Active Course")).not.toBeInTheDocument()
+    // Wait for the visible course to appear (ensures dedup has resolved)
+    await screen.findAllByText("Visible Active Course")
+    await waitFor(() => {
+      expect(screen.queryAllByText("Covered Active Course")).toHaveLength(0)
+    })
     expect(
       (await screen.findAllByText("Visible Active Course")).length,
     ).toBeGreaterThan(0)

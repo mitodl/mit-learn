@@ -13,17 +13,11 @@
  */
 import React from "react"
 import type { SimpleMenuItem } from "ol-components"
-import { adaptCourseEntryToLegacyDashboardCardProps } from "./model/dashboardAdapters"
-import {
-  DashboardType,
-  type DashboardCourseEntry,
-} from "./model/dashboardViewModel"
-import { DashboardCard } from "./DashboardCard"
-import { DashboardCard as ModuleCardInner } from "./ModuleCard"
+import { type DashboardCourseEntry } from "./model/dashboardViewModel"
 import type { V3UserProgramEnrollment } from "@mitodl/mitxonline-api-axios/v2"
-
-// Re-export the card root so OrganizationCards.tsx can migrate in Phase 7c.
-export { DashboardCardRoot as CoursewareCardRoot } from "./DashboardCard"
+import { ProgramEnrollmentCard } from "./ProgramEnrollmentCard"
+import { EnrolledCourseCard } from "./EnrolledCourseCard"
+import { UnenrolledCourseCard } from "./UnenrolledCourseCard"
 
 // ---------------------------------------------------------------------------
 // Prop types
@@ -36,8 +30,10 @@ type StyledComponentBaseProps = {
 
 /** Props for the default course / enrollment card display. */
 type CoursewareCardDefaultProps = StyledComponentBaseProps & {
-  layout?: "default" | "stacked"
-  entry: DashboardCourseEntry
+  layout?: "default" | "compact"
+  entry: {
+    displayedEnrollment: DashboardCourseEntry["displayedEnrollment"]
+  } & Partial<DashboardCourseEntry>
   showNotComplete?: boolean
   offerUpgrade?: boolean
   isLoading?: boolean
@@ -58,6 +54,7 @@ type CoursewareCardModuleRowProps = StyledComponentBaseProps & {
   layout: "moduleRow"
   entry: DashboardCourseEntry
   headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
+  onUpgradeError?: (error: string) => void
 }
 
 /** Props for program card display. */
@@ -80,12 +77,8 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
   if (props.layout === "program") {
     const { programEnrollment, Component, className } = props
     return (
-      <DashboardCard
-        resource={{
-          type: DashboardType.ProgramEnrollment,
-          data: programEnrollment,
-        }}
-        showNotComplete={props.showNotComplete}
+      <ProgramEnrollmentCard
+        programEnrollment={programEnrollment}
         Component={Component}
         className={className}
       />
@@ -102,47 +95,68 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
           type: "courserun-enrollment" as const,
           data: entry.displayedEnrollment,
         }
-      : { type: "course" as const, data: entry.course }
+      : entry.course
+        ? { type: "course" as const, data: entry.course }
+        : null
 
+    if (!resource) return null
+
+    if (resource.type === "course") {
+      return (
+        <UnenrolledCourseCard
+          course={resource.data}
+          displayedRun={entry.displayedRun ?? undefined}
+          contractId={entry.contractId}
+          ancestorContext={entry.ancestorContext}
+          layout="compact"
+          headingLevel={headingLevel}
+          Component={Component}
+          className={className}
+        />
+      )
+    } else if (resource.type === "courserun-enrollment") {
+      return (
+        <EnrolledCourseCard
+          enrollment={resource.data}
+          layout="compact"
+          headingLevel={headingLevel}
+          onUpgradeError={props.onUpgradeError}
+          Component={Component}
+          className={className}
+        />
+      )
+    }
+    return null
+  }
+
+  // ── default / stacked arm ────────────────────────────────────────────────
+  const { onUpgradeError, layout } = props
+
+  if (entry.displayedEnrollment) {
     return (
-      <ModuleCardInner
-        resource={resource}
-        useVerifiedEnrollment={entry.ancestorContext?.useVerifiedEnrollment}
-        parentProgramIds={entry.ancestorContext?.parentProgramReadableIds}
-        variant="stacked"
-        headingLevel={headingLevel}
+      <EnrolledCourseCard
+        enrollment={entry.displayedEnrollment}
+        layout={layout}
+        onUpgradeError={onUpgradeError}
         Component={Component}
         className={className}
       />
     )
   }
 
-  // ── default / stacked arm ────────────────────────────────────────────────
-  const {
-    showNotComplete,
-    offerUpgrade,
-    isLoading,
-    onUpgradeError,
-    contextMenuItems,
-    layout,
-  } = props
-
-  const adapted = adaptCourseEntryToLegacyDashboardCardProps(entry)
-
-  return (
-    <DashboardCard
-      {...adapted}
-      showNotComplete={showNotComplete}
-      offerUpgrade={offerUpgrade}
-      isLoading={isLoading}
-      onUpgradeError={onUpgradeError}
-      contextMenuItems={contextMenuItems}
-      variant={layout}
-      noun={props.noun}
-      Component={Component}
-      className={className}
-    />
-  )
+  if (!entry.displayedEnrollment && entry.course) {
+    return (
+      <UnenrolledCourseCard
+        course={entry.course}
+        displayedRun={entry.displayedRun ?? undefined}
+        contractId={entry.contractId}
+        ancestorContext={entry.ancestorContext}
+        layout={layout}
+        Component={Component}
+        className={className}
+      />
+    )
+  }
 }
 
 export { CoursewareCard }
