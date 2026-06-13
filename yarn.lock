@@ -16214,6 +16214,7 @@ __metadata:
     lodash: "npm:^4.17.21"
     lodash.throttle: "npm:^4.1.1"
     moment: "npm:^2.30.1"
+    mynumbers: "https://github.com/mitodl/mynumbers.git#ab/make-it-react"
     next: "npm:^16.2.7"
     next-nprogress-bar: "npm:^2.4.2"
     next-router-mock: "npm:^1.0.2"
@@ -17258,6 +17259,18 @@ __metadata:
   bin:
     muxjs-transmux: bin/transmux.js
   checksum: 10/843edc7c18b6c3366281cfea786d7d9b36d5a3c42c463c18aed9f8ac15bdd5b84b4e1e025371b047be778cc54fd83b3f447da8a624ccd7529a310d3a65e7b99e
+  languageName: node
+  linkType: hard
+
+"mynumbers@https://github.com/mitodl/mynumbers.git#ab/make-it-react":
+  version: 0.2.0
+  resolution: "mynumbers@https://github.com/mitodl/mynumbers.git#commit=7220eda9478e4f98490d4b33487517c066000096"
+  peerDependencies:
+    "@emotion/react": ">=11"
+    "@emotion/styled": ">=11"
+    react: ">=18"
+    react-dom: ">=18"
+  checksum: 10/511bf81fa929f836ed27e25fe9e479cf0ac46de2384edf7fffbf2ce2ab4cae1b013821d804babd5febb006294ada35996aad477a48af9205d85f8aacde581a5d
   languageName: node
   linkType: hard
 
