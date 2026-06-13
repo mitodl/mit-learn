@@ -17,6 +17,7 @@ import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { VideoResourceResourceTypeEnum } from "api/v1"
 import { formatDurationClockTime } from "ol-utilities"
 import SharePopover from "@/components/SharePopover/SharePopover"
+import { videoDetailPageView, videoPlaylistPageView } from "@/common/urls"
 import { buildVideoStructuredData } from "./videoStructuredData"
 import VideoResourcePlayer from "./VideoResourcePlayer"
 
@@ -424,7 +425,10 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
               ...(playlist
                 ? [
                     {
-                      href: `/video-playlist/${playlistId}`,
+                      href: videoPlaylistPageView(
+                        String(playlist.id),
+                        playlist.title,
+                      ),
                       label: playlistLabel,
                     },
                   ]
@@ -440,7 +444,9 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
           {isLoading ? (
             <Skeleton width={120} height={18} style={{ marginBottom: 8 }} />
           ) : playlist ? (
-            <CategoryLabel href={`/video-playlist/${playlistId}`}>
+            <CategoryLabel
+              href={videoPlaylistPageView(String(playlist.id), playlist.title)}
+            >
               {playlistLabel}
             </CategoryLabel>
           ) : null}
@@ -505,7 +511,11 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                   shareButtonRef.current as unknown as HTMLDivElement | null
                 }
                 onClose={() => setShareOpen(false)}
-                pageUrl={`${NEXT_PUBLIC_ORIGIN}/video/${video?.id}?playlist=${playlistId}`}
+                pageUrl={`${NEXT_PUBLIC_ORIGIN}${videoDetailPageView(
+                  video.id,
+                  playlistId ?? undefined,
+                  video.title,
+                )}`}
               />
             </ShareRow>
           )}
@@ -555,7 +565,11 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                       return (
                         <React.Fragment key={item.id}>
                           <MoreFromItem
-                            href={`/video/${item.id}?playlist=${playlistId}`}
+                            href={videoDetailPageView(
+                              item.id,
+                              playlistId,
+                              item.title,
+                            )}
                             aria-label={`Open video ${item.title}`}
                           >
                             <MoreFromThumbnailWrapper>
@@ -595,7 +609,10 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                   </MoreFromList>
                   {totalPlaylistVideos > otherVideos.length + 1 && (
                     <SeeAllLink
-                      href={`/video-playlist/${playlistId}`}
+                      href={videoPlaylistPageView(
+                        String(playlistId),
+                        playlist?.title,
+                      )}
                       aria-label={`View all videos in ${playlistLabel}`}
                     >
                       View all in {playlistLabel} →

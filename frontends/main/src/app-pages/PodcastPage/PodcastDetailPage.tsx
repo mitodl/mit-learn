@@ -596,6 +596,7 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
                     href={podcastEpisodePageView(
                       String(episode.id),
                       String(id),
+                      episode.title,
                     )}
                     onPlayClick={handlePlayClick}
                     onPauseClick={() => playerRef.current?.pause()}
