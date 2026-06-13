@@ -511,7 +511,11 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                   shareButtonRef.current as unknown as HTMLDivElement | null
                 }
                 onClose={() => setShareOpen(false)}
-                pageUrl={`${NEXT_PUBLIC_ORIGIN}/video/${video?.id}?playlist=${playlistId}`}
+                pageUrl={`${NEXT_PUBLIC_ORIGIN}${videoDetailPageView(
+                  video.id,
+                  playlistId ?? undefined,
+                  video.title,
+                )}`}
               />
             </ShareRow>
           )}
