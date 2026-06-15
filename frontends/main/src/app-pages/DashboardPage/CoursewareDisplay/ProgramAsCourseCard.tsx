@@ -604,8 +604,9 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
                 id: course.id,
                 runId: entry.displayedEnrollment?.run.id,
               })}
+              kind="course"
               entry={entry}
-              layout="moduleRow"
+              layout="compact"
               headingLevel="h4"
               onUpgradeError={onUpgradeError}
             />

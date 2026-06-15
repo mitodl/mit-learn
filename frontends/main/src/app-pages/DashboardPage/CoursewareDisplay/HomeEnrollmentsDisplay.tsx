@@ -178,7 +178,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
         <CoursewareCardStyled
           key={getResourceKey(resource)}
           Component="li"
-          layout="program"
+          kind="program-enrollment"
           programEnrollment={resource.data}
         />
       )
@@ -187,7 +187,8 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
         <CoursewareCardStyled
           key={getResourceKey(resource)}
           Component="li"
-          entry={{ displayedEnrollment: resource.data }}
+          kind="enrollment"
+          enrollment={resource.data}
           onUpgradeError={onUpgradeError}
         />
       )
