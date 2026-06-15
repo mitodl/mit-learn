@@ -1,6 +1,21 @@
 Release Notes
 =============
 
+Version 0.71.6
+--------------
+
+- show ocw course for video playlists (#3462)
+- fix: Add Article model to Django Admin (#3471)
+- fix vector resource serialization (#3468)
+- feat: implement PostHog tracking for video shorts interactions (#3456)
+- Add course enrollment gtm (#3461)
+- feat: add title to learning resource summary endpoint (#3472)
+- dashboard refactor phase 7c (#3469)
+- Route /ai/* through the APISIX gateway to local learn-ai (#3451)
+- Fix sitemap pagination (#3470)
+- chore: bump @mitodl/mitxonline-api-axios to 2026.6.10 (#3464)
+- dashboard refactor phase 7b (#3463)
+
 Version 0.71.5 (Released June 15, 2026)
 --------------
 
