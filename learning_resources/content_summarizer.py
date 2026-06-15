@@ -126,8 +126,8 @@ class ContentSummarizer:
                     run__learning_resource__id__in=learning_resource_ids
                 )
 
-            unprocessed_content_file_ids = list(
-                unprocessed_content.values_list("id", flat=True)
+            unprocessed_content_file_ids.extend(
+                list(unprocessed_content.values_list("id", flat=True))
             )
 
         return unprocessed_content_file_ids
