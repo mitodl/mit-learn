@@ -30,7 +30,7 @@ export type EmailParseResult = {
  * collected in `invalid`. Duplicate emails (case-insensitive) are removed and
  * counted in `duplicateCount`.
  */
-const EMAIL_HEADER_RE = /^e-?mail(\s*_?\s*address)?$/i
+const EMAIL_HEADER_RE = /^e-?mail([ _]address)?$/i
 
 const isHeaderRow = (cols: string[]): boolean => {
   const trimmed = cols.map((c) => c.trim())
