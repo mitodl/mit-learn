@@ -448,6 +448,30 @@ describe("ProgramEnrollmentButton", () => {
     screen.getByTestId("signup-popover")
   })
 
+  test("Shows 'Enroll' label when displayAsCourse is true", async () => {
+    const program = makeProgram({
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
+    })
+
+    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
+    setMockResponse.get(
+      urls.userMe.get(),
+      makeUser({ is_authenticated: false }),
+    )
+
+    renderWithProviders(
+      <ProgramEnrollmentButton
+        program={program}
+        variant="primary"
+        displayAsCourse
+      />,
+    )
+
+    expect(
+      await screen.findByRole("button", { name: "Enroll" }),
+    ).toBeInTheDocument()
+  })
+
   describe("PostHog tracking", () => {
     beforeEach(() => {
       process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
