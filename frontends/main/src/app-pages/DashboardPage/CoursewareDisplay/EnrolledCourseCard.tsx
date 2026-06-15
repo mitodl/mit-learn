@@ -6,6 +6,7 @@ import {
   CoursewareActionColumn,
   CoursewareButton,
   CoursewareButtonLink,
+  getCertificateLink,
   HorizontalSeparator,
   MenuButton,
   SubtitleLink,
@@ -125,7 +126,10 @@ export const EnrolledCourseCard = ({
   const isStaff = mitxOnlineUser.data?.is_staff
   const title = layout === "compact" ? course.title : run?.title || course.title
   const coursewareUrl = run?.courseware_url
-  const certificateLink = enrollment?.certificate?.link
+  const certificateLink = getCertificateLink(
+    enrollment?.certificate?.link,
+    "course",
+  )
   const enrollmentMode = enrollment?.enrollment_mode
   const canUpgrade =
     !isVerifiedEnrollmentMode(enrollmentMode) &&

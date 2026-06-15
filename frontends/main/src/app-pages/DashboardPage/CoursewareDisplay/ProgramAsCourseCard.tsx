@@ -24,6 +24,7 @@ import {
 } from "./helpers"
 import { ProgressBadge } from "./ProgressBadge"
 import { CoursewareCard } from "./CoursewareCard"
+import { getCertificateLink } from "./CardShared"
 import { buildCourseEntry } from "./model/dashboardViewModel"
 import { formatDate } from "ol-utilities"
 import {
@@ -476,8 +477,10 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
     ancestorProgramEnrollment?.enrollment_mode,
   ].some(isVerifiedEnrollmentMode)
 
-  const programCertificateUrl =
-    courseProgramEnrollment?.certificate?.link ?? null
+  const programCertificateUrl = getCertificateLink(
+    courseProgramEnrollment?.certificate?.link,
+    "program",
+  )
 
   // Build context menu
   const menuItems = getContextMenuItems(

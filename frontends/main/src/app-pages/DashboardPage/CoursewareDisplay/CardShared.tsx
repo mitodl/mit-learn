@@ -201,22 +201,16 @@ const getTitle = (
 }
 
 /**
- * Gets the certificate link for a dashboard resource based on its type.
+ * Rewrites a raw mitxonline certificate link (`/certificate/{uuid}/`) to MIT
+ * Learn's own certificate route (`/certificate/{certificateType}/{uuid}/`).
  */
-const getCertificateLink = (resource: DashboardResource): string | null => {
-  if (resource.type === DashboardType.CourseRunEnrollment) {
-    const link = resource.data.certificate?.link
-    if (!link) return null
-    const pattern = /\/certificate\/([^/]+)\/?$/
-    return link.replace(pattern, "/certificate/course/$1/")
-  }
-  if (resource.type === DashboardType.ProgramEnrollment) {
-    const link = resource.data.certificate?.link
-    if (!link) return null
-    const pattern = /\/certificate\/([^/]+)\/?$/
-    return link.replace(pattern, "/certificate/program/$1/")
-  }
-  return null
+const getCertificateLink = (
+  link: string | null | undefined,
+  certificateType: "course" | "program",
+): string | null => {
+  if (!link) return null
+  const pattern = /\/certificate\/([^/]+)\/?$/
+  return link.replace(pattern, `/certificate/${certificateType}/$1/`)
 }
 
 const getDashboardEnrollmentStatus = (

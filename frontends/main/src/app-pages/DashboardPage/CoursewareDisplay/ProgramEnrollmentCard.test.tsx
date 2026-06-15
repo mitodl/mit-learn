@@ -57,7 +57,7 @@ describe.each([
   })
 
   test("shows View Certificate link when certificate is present", () => {
-    const certLink = "https://courses.example.com/certificate/program/abc/"
+    const certLink = "https://courses.example.com/certificate/abc/"
     const programEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
         certificate: { uuid: "abc", link: certLink },
@@ -68,7 +68,10 @@ describe.each([
     const link = within(getCard()).getByRole("link", {
       name: /View Certificate/,
     })
-    expect(link).toHaveAttribute("href", certLink)
+    expect(link).toHaveAttribute(
+      "href",
+      "https://courses.example.com/certificate/program/abc/",
+    )
   })
 
   test("does not show View Certificate when certificate is absent", () => {

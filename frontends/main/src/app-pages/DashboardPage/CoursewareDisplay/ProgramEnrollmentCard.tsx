@@ -6,6 +6,7 @@ import {
 } from "@mitodl/mitxonline-api-axios/v2"
 import {
   CardRoot,
+  getCertificateLink,
   MenuButton,
   SubtitleLink,
   TitleHeading,
@@ -40,7 +41,10 @@ export const ProgramEnrollmentCard = ({
   const readableId = program.readable_id
   const titleHref = programView(program.id)
   const title = program.title
-  const certificateLink = programEnrollment.certificate?.link
+  const certificateLink = getCertificateLink(
+    programEnrollment.certificate?.link,
+    "program",
+  )
   const enrollmentStatus = programEnrollment.certificate?.uuid
     ? EnrollmentStatus.Completed
     : EnrollmentStatus.Enrolled

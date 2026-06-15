@@ -1556,7 +1556,7 @@ describe("ProgramEnrollmentDisplay", () => {
         },
         certificate: {
           uuid: certUuid,
-          link: `/certificate/program/${certUuid}/`,
+          link: `/certificate/${certUuid}/`,
         },
       })
     const courses = mitxonline.factories.courses.courses({ count: 2 })
@@ -1580,10 +1580,7 @@ describe("ProgramEnrollmentDisplay", () => {
 
     await screen.findByText("Program With Certificate")
     const certButton = screen.getByRole("link", { name: "Certificate" })
-    const expectedCertHref = programEnrollment.certificate?.link?.replace(
-      /\/$/,
-      "",
-    )
+    const expectedCertHref = `/certificate/program/${certUuid}`
     expect(certButton).toBeInTheDocument()
     expect(certButton).toHaveAttribute("href", expectedCertHref)
     expect(certButton).not.toHaveAttribute("target")
