@@ -110,6 +110,40 @@ describe("AssignSeatsSection", () => {
     expect(screen.getByRole("button", { name: "Assign Seats" })).toBeDisabled()
   })
 
+  test("sole invalid token is not highlighted while focused (no preceding comma)", async () => {
+    renderWithTheme(<AssignSeatsSection />)
+
+    const textarea = screen.getByPlaceholderText(/enter employee emails/i)
+    await user.type(textarea, "notvalid")
+
+    // User is still typing their first token — don't highlight yet
+    expect(screen.getByText("1 invalid")).toBeInTheDocument()
+    expect(document.querySelector("[data-invalid-email]")).toBeNull()
+  })
+
+  test("last invalid token is highlighted while focused when preceded by a comma", async () => {
+    renderWithTheme(<AssignSeatsSection />)
+
+    const textarea = screen.getByPlaceholderText(/enter employee emails/i)
+    await user.type(textarea, "alice@example.com, notvalid")
+
+    const invalidSegment = document.querySelector("[data-invalid-email]")
+    expect(invalidSegment).not.toBeNull()
+    expect(invalidSegment?.textContent).toContain("notvalid")
+  })
+
+  test("last invalid token is highlighted after blur (no trailing comma)", async () => {
+    renderWithTheme(<AssignSeatsSection />)
+
+    const textarea = screen.getByPlaceholderText(/enter employee emails/i)
+    await user.type(textarea, "notvalid")
+    await user.click(document.body) // blur
+
+    const invalidSegment = document.querySelector("[data-invalid-email]")
+    expect(invalidSegment).not.toBeNull()
+    expect(invalidSegment?.textContent).toContain("notvalid")
+  })
+
   test("shows valid/invalid counts after entering emails", async () => {
     renderWithTheme(<AssignSeatsSection />)
 

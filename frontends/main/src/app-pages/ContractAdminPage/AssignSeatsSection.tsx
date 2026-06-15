@@ -171,9 +171,15 @@ const tokenizeInput = (input: string, allCommitted: boolean) => {
     if (/^[\r\n,]+$/.test(part) || !part.trim()) {
       return { text: part, valid: null }
     }
+    const prevPart = parts[i - 1]
     const nextPart = parts[i + 1]
+    const isLastToken = parts
+      .slice(i + 1)
+      .every((p) => /^[\r\n,]+$/.test(p) || !p.trim())
     const committed =
-      allCommitted || (nextPart !== undefined && /^[\r\n,]+$/.test(nextPart))
+      allCommitted ||
+      (nextPart !== undefined && /^[\r\n,]+$/.test(nextPart)) ||
+      (isLastToken && prevPart !== undefined && /^[\r\n,]+$/.test(prevPart))
     return { text: part, valid: committed ? isValidEmail(part.trim()) : null }
   })
 }
@@ -317,7 +323,10 @@ const AssignSeatsSection: React.FC = () => {
               >
                 {tokens.map((token, i) =>
                   token.valid === false ? (
-                    <InvalidEmailSegment key={`${i}-${token.text}`}>
+                    <InvalidEmailSegment
+                      key={`${i}-${token.text}`}
+                      data-invalid-email
+                    >
                       {token.text}
                     </InvalidEmailSegment>
                   ) : (
