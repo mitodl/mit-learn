@@ -8,7 +8,6 @@ import {
   DashboardType,
   getEnrollmentStatus,
 } from "./model/dashboardViewModel"
-import { BaseCourseRun, CourseRunV2 } from "@mitodl/mitxonline-api-axios/v2"
 import { calendarDaysUntil } from "ol-utilities"
 
 const CardRoot = styled.div<{
@@ -185,22 +184,6 @@ const CoursewareButtonLink = styled(ButtonLink)(({ theme, variant }) => ({
 }))
 
 /**
- * Gets the title for a dashboard resource based on its type.
- */
-const getTitle = (
-  resource: DashboardResource,
-  selectedCourseRun?: BaseCourseRun | CourseRunV2 | null,
-): string => {
-  if (resource.type === DashboardType.Course) {
-    return selectedCourseRun?.title ?? resource.data.title
-  }
-  if (resource.type === DashboardType.CourseRunEnrollment) {
-    return resource.data.run.title
-  }
-  return resource.data.program.title
-}
-
-/**
  * Rewrites a raw mitxonline certificate link (`/certificate/{uuid}/`) to MIT
  * Learn's own certificate route (`/certificate/{certificateType}/{uuid}/`).
  */
@@ -273,7 +256,6 @@ export {
   CoursewareActionColumn,
   CoursewareButton,
   CoursewareButtonLink,
-  getTitle,
   getCertificateLink,
   getDashboardEnrollmentStatus,
 }
