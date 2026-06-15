@@ -127,7 +127,7 @@ class ContentSummarizer:
                 )
 
             unprocessed_content_file_ids.extend(
-                list(unprocessed_content.values_list("id", flat=True))
+                unprocessed_content.values_list("id", flat=True)
             )
 
         return unprocessed_content_file_ids
