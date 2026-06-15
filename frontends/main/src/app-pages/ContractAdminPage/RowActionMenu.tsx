@@ -131,7 +131,7 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({ code }) => {
             Copy claim link
           </ActionMenuItem>
         ),
-        <Divider key="divider" />,
+        <Divider component="li" role="separator" key="divider" />
         <Tooltip key="release-seat" title={COMING_SOON} placement="right">
           <DestructiveMenuItem disabled>Release seat</DestructiveMenuItem>
         </Tooltip>,
