@@ -9,6 +9,7 @@ import {
 } from "@/test-utils"
 import { HomeEnrollmentsDisplay } from "./HomeEnrollmentsDisplay"
 import { CoursewareCard } from "./CoursewareCard"
+import { buildCourseEntry } from "./model/dashboardViewModel"
 import { dashboardCourse, setupEnrollments } from "./test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import {
@@ -177,7 +178,10 @@ describe("UnenrollProgramDialog", () => {
     const { programEnrollment } = setupProgramCard("audit", null)
 
     renderWithProviders(
-      <CoursewareCard layout="program" programEnrollment={programEnrollment} />,
+      <CoursewareCard
+        kind="program-enrollment"
+        programEnrollment={programEnrollment}
+      />,
     )
 
     const desktopCard = await screen.findByTestId("enrollment-card-desktop")
@@ -193,7 +197,10 @@ describe("UnenrollProgramDialog", () => {
     const { programEnrollment } = setupProgramCard("verified", null)
 
     renderWithProviders(
-      <CoursewareCard layout="program" programEnrollment={programEnrollment} />,
+      <CoursewareCard
+        kind="program-enrollment"
+        programEnrollment={programEnrollment}
+      />,
     )
 
     const desktopCard = await screen.findByTestId("enrollment-card-desktop")
@@ -209,7 +216,10 @@ describe("UnenrollProgramDialog", () => {
     const { programEnrollment } = setupProgramCard("audit", "course")
 
     renderWithProviders(
-      <CoursewareCard layout="program" programEnrollment={programEnrollment} />,
+      <CoursewareCard
+        kind="program-enrollment"
+        programEnrollment={programEnrollment}
+      />,
     )
 
     const desktopCard = await screen.findByTestId("enrollment-card-desktop")
@@ -232,7 +242,10 @@ describe("UnenrollProgramDialog", () => {
     )
 
     renderWithProviders(
-      <CoursewareCard layout="program" programEnrollment={programEnrollment} />,
+      <CoursewareCard
+        kind="program-enrollment"
+        programEnrollment={programEnrollment}
+      />,
     )
 
     const desktopCard = await screen.findByTestId("enrollment-card-desktop")
@@ -277,7 +290,10 @@ describe("UnenrollProgramDialog", () => {
     const { programEnrollment } = setupProgramCard("audit", null)
 
     renderWithProviders(
-      <CoursewareCard layout="program" programEnrollment={programEnrollment} />,
+      <CoursewareCard
+        kind="program-enrollment"
+        programEnrollment={programEnrollment}
+      />,
     )
 
     const desktopCard = await screen.findByTestId("enrollment-card-desktop")
@@ -303,7 +319,7 @@ describe("UnenrollProgramDialog", () => {
 
       renderWithProviders(
         <CoursewareCard
-          layout="program"
+          kind="program-enrollment"
           programEnrollment={programEnrollment}
         />,
       )
@@ -383,15 +399,11 @@ describe("JustInTimeDialog", () => {
   test("Opens just-in-time dialog when enrolling with incomplete mitxonline user data", async () => {
     const { course, run } = setupJustInTimeTest()
 
-    renderWithProviders(
-      <CoursewareCard
-        entry={{
-          displayedEnrollment: null,
-          course,
-          contractId: run.b2b_contract ?? undefined,
-        }}
-      />,
-    )
+    const entry = buildCourseEntry(course, [], {
+      contractId: run.b2b_contract ?? undefined,
+    })
+    invariant(entry)
+    renderWithProviders(<CoursewareCard kind="course" entry={entry} />)
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
     await user.click(enrollButtons[0]) // Use the first (desktop) button
@@ -426,15 +438,11 @@ describe("JustInTimeDialog", () => {
     "Dialog pre-populates with user data if available",
     async ({ userOverrides, expectCountry, expectYob }) => {
       const { course, run } = setupJustInTimeTest({ userOverrides })
-      renderWithProviders(
-        <CoursewareCard
-          entry={{
-            displayedEnrollment: null,
-            course,
-            contractId: run.b2b_contract ?? undefined,
-          }}
-        />,
-      )
+      const entry = buildCourseEntry(course, [], {
+        contractId: run.b2b_contract ?? undefined,
+      })
+      invariant(entry)
+      renderWithProviders(<CoursewareCard kind="course" entry={entry} />)
       const enrollButtons = await screen.findAllByTestId("courseware-button")
       await user.click(enrollButtons[0]) // Use the first (desktop) button
       const dialog = await screen.findByRole("dialog", {
@@ -449,15 +457,11 @@ describe("JustInTimeDialog", () => {
   test("Validates required fields in just-in-time dialog", async () => {
     const { course, run } = setupJustInTimeTest()
 
-    renderWithProviders(
-      <CoursewareCard
-        entry={{
-          displayedEnrollment: null,
-          course,
-          contractId: run.b2b_contract ?? undefined,
-        }}
-      />,
-    )
+    const entry = buildCourseEntry(course, [], {
+      contractId: run.b2b_contract ?? undefined,
+    })
+    invariant(entry)
+    renderWithProviders(<CoursewareCard kind="course" entry={entry} />)
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
     await user.click(enrollButtons[0]) // Use the first (desktop) button
@@ -488,15 +492,11 @@ describe("JustInTimeDialog", () => {
   test("Generates correct year of birth options (minimum age 13)", async () => {
     const { course, run } = setupJustInTimeTest()
 
-    renderWithProviders(
-      <CoursewareCard
-        entry={{
-          displayedEnrollment: null,
-          course,
-          contractId: run.b2b_contract ?? undefined,
-        }}
-      />,
-    )
+    const entry = buildCourseEntry(course, [], {
+      contractId: run.b2b_contract ?? undefined,
+    })
+    invariant(entry)
+    renderWithProviders(<CoursewareCard kind="course" entry={entry} />)
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
     await user.click(enrollButtons[0]) // Use the first (desktop) button
@@ -521,15 +521,11 @@ describe("JustInTimeDialog", () => {
   test("Shows expected countries in country dropdown", async () => {
     const { course, countries, run } = setupJustInTimeTest()
 
-    renderWithProviders(
-      <CoursewareCard
-        entry={{
-          displayedEnrollment: null,
-          course,
-          contractId: run.b2b_contract ?? undefined,
-        }}
-      />,
-    )
+    const entry = buildCourseEntry(course, [], {
+      contractId: run.b2b_contract ?? undefined,
+    })
+    invariant(entry)
+    renderWithProviders(<CoursewareCard kind="course" entry={entry} />)
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
     await user.click(enrollButtons[0]) // Use the first (desktop) button
@@ -552,15 +548,11 @@ describe("JustInTimeDialog", () => {
   test("Cancels just-in-time dialog without making API calls", async () => {
     const { course, run } = setupJustInTimeTest()
 
-    renderWithProviders(
-      <CoursewareCard
-        entry={{
-          displayedEnrollment: null,
-          course,
-          contractId: run.b2b_contract ?? undefined,
-        }}
-      />,
-    )
+    const entry = buildCourseEntry(course, [], {
+      contractId: run.b2b_contract ?? undefined,
+    })
+    invariant(entry)
+    renderWithProviders(<CoursewareCard kind="course" entry={entry} />)
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
     await user.click(enrollButtons[0]) // Use the first (desktop) button
@@ -588,15 +580,11 @@ describe("JustInTimeDialog", () => {
       userOverrides: { user_profile: { year_of_birth: 1988 } },
     })
 
-    renderWithProviders(
-      <CoursewareCard
-        entry={{
-          displayedEnrollment: null,
-          course,
-          contractId: run.b2b_contract ?? undefined,
-        }}
-      />,
-    )
+    const entry = buildCourseEntry(course, [], {
+      contractId: run.b2b_contract ?? undefined,
+    })
+    invariant(entry)
+    renderWithProviders(<CoursewareCard kind="course" entry={entry} />)
     const enrollButtons = await screen.findAllByTestId("courseware-button")
     await user.click(enrollButtons[0]) // Use the first (desktop) button
 
@@ -649,16 +637,12 @@ describe("JustInTimeDialog", () => {
     })
     const parentProgramReadableIds = ["program-v1:MITx+DEDP"]
 
-    renderWithProviders(
-      <CoursewareCard
-        entry={{
-          displayedEnrollment: null,
-          course,
-          contractId: run.b2b_contract ?? undefined,
-          ancestorContext: { parentProgramReadableIds },
-        }}
-      />,
-    )
+    const entry = buildCourseEntry(course, [], {
+      contractId: run.b2b_contract ?? undefined,
+      ancestorContext: { parentProgramReadableIds },
+    })
+    invariant(entry)
+    renderWithProviders(<CoursewareCard kind="course" entry={entry} />)
     const enrollButtons = await screen.findAllByTestId("courseware-button")
     await user.click(enrollButtons[0])
 

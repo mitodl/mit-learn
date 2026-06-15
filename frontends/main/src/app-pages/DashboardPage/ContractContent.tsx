@@ -277,6 +277,8 @@ const OrgProgramCollectionDisplay: React.FC<{
                 id: entry.course.id,
                 runId: entry.displayedRun?.id,
               })}
+              Component="li"
+              kind="course"
               entry={entry}
             />
           )
@@ -331,6 +333,8 @@ const OrgProgramDisplay: React.FC<{
                 id: entry.course.id,
                 runId: entry.displayedRun?.id,
               })}
+              Component="li"
+              kind="course"
               entry={entry}
             />
           )

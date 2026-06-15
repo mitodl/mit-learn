@@ -127,8 +127,8 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                           item.entry.displayedEnrollment?.run.id ??
                           item.entry.displayedRun?.id,
                       })}
+                      kind="course"
                       entry={item.entry}
-                      showNotComplete={false}
                     />
                   )
                 }
@@ -155,9 +155,8 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                       resourceType: ResourceType.Program,
                       id: item.enrollment.program.id,
                     })}
-                    layout="program"
+                    kind="program-enrollment"
                     programEnrollment={item.enrollment}
-                    showNotComplete={false}
                   />
                 )
               })}

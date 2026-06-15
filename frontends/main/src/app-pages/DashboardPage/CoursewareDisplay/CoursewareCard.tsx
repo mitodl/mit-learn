@@ -1,20 +1,22 @@
 /**
- * CoursewareCard — unified dashboard course card (Phase 7).
+ * CoursewareCard — unified dashboard course card.
  *
- * Replaces the `DashboardCard`+adapter pattern for consumers that hold a
- * `DashboardCourseEntry` (program dashboard, contract content).  For the
- * `moduleRow` variant it also replaces the `ModuleCard` usage in
- * `ProgramAsCourseCard`.
- *
- * Internal delegation: this component remains a thin facade over the legacy
- * `DashboardCard` / `ModuleCard` implementations during Phase 7a–7c.  The
- * legacy card rendering logic is moved here in Phase 7d when those files are
- * deleted.
+ * A thin router that dispatches on `kind` (the resource identity) to one of
+ * three isolated cards. `layout` carries presentation density only and is
+ * always orthogonal to `kind`:
+ *   - "course"             → a course row from a program/contract dashboard;
+ *                            the entry's `displayedEnrollment` decides whether
+ *                            it renders as enrolled or unenrolled.
+ *   - "enrollment"         → a single course-run enrollment (home "My Learning"
+ *                            rows, which cannot build a full entry).
+ *   - "program-enrollment" → a program enrollment.
  */
 import React from "react"
-import type { SimpleMenuItem } from "ol-components"
 import { type DashboardCourseEntry } from "./model/dashboardViewModel"
-import type { V3UserProgramEnrollment } from "@mitodl/mitxonline-api-axios/v2"
+import type {
+  CourseRunEnrollmentV3,
+  V3UserProgramEnrollment,
+} from "@mitodl/mitxonline-api-axios/v2"
 import { ProgramEnrollmentCard } from "./ProgramEnrollmentCard"
 import { EnrolledCourseCard } from "./EnrolledCourseCard"
 import { UnenrolledCourseCard } from "./UnenrolledCourseCard"
@@ -28,115 +30,71 @@ type StyledComponentBaseProps = {
   Component?: React.ElementType
 }
 
-/** Props for the default course / enrollment card display. */
-type CoursewareCardDefaultProps = StyledComponentBaseProps & {
-  layout?: "default" | "compact"
-  entry: {
-    displayedEnrollment: DashboardCourseEntry["displayedEnrollment"]
-  } & Partial<DashboardCourseEntry>
-  showNotComplete?: boolean
-  offerUpgrade?: boolean
-  isLoading?: boolean
-  onUpgradeError?: (error: string) => void
-  contextMenuItems?: SimpleMenuItem[]
-  noun?: string
-}
-
 /**
- * Props for the `moduleRow` variant — a compact stacked card used as a row
- * inside a `ProgramAsCourseCard` module list.
- *
- * `useVerifiedEnrollment` and `parentProgramIds` are read from
- * `entry.ancestorContext` so callers only need to embed them there (via
- * `buildCourseEntry`).
+ * Presentation props shared by the two course-display arms. The program arm
+ * has no density/heading/upgrade concerns, so it does not include these.
  */
-type CoursewareCardModuleRowProps = StyledComponentBaseProps & {
-  layout: "moduleRow"
-  entry: DashboardCourseEntry
+type CourseDisplayProps = {
+  /** Visual density only. Identity is carried by `kind`, never by `layout`. */
+  layout?: "default" | "compact"
   headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
   onUpgradeError?: (error: string) => void
 }
 
-/** Props for program card display. */
-type CoursewareCardProgramProps = StyledComponentBaseProps & {
-  layout: "program"
+/** A course row from a program/contract dashboard (full entry available). */
+type CoursewareCardCourseProps = StyledComponentBaseProps &
+  CourseDisplayProps & {
+    kind: "course"
+    entry: DashboardCourseEntry
+  }
+
+/**
+ * A single course-run enrollment — home "My Learning" rows. Home cannot build
+ * an honest `DashboardCourseEntry` (its V3 payload embeds only a thin course,
+ * not the full course-with-courseruns), so the enrollment is passed directly.
+ */
+type CoursewareCardEnrollmentProps = StyledComponentBaseProps &
+  CourseDisplayProps & {
+    kind: "enrollment"
+    enrollment: CourseRunEnrollmentV3
+  }
+
+/** A program enrollment. */
+type CoursewareCardProgramEnrollmentProps = StyledComponentBaseProps & {
+  kind: "program-enrollment"
   programEnrollment: V3UserProgramEnrollment
-  showNotComplete?: boolean
 }
 
 export type CoursewareCardProps =
-  | CoursewareCardDefaultProps
-  | CoursewareCardModuleRowProps
-  | CoursewareCardProgramProps
+  | CoursewareCardCourseProps
+  | CoursewareCardEnrollmentProps
+  | CoursewareCardProgramEnrollmentProps
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
-  // ── program arm ──────────────────────────────────────────────────────────
-  if (props.layout === "program") {
-    const { programEnrollment, Component, className } = props
+  const { Component, className } = props
+
+  if (props.kind === "program-enrollment") {
     return (
       <ProgramEnrollmentCard
-        programEnrollment={programEnrollment}
+        programEnrollment={props.programEnrollment}
         Component={Component}
         className={className}
       />
     )
   }
 
-  const { entry, Component, className } = props
-  // ── moduleRow arm ────────────────────────────────────────────────────────
-  if (props.layout === "moduleRow") {
-    const { headingLevel } = props
+  const { layout, headingLevel, onUpgradeError } = props
 
-    const resource = entry.displayedEnrollment
-      ? {
-          type: "courserun-enrollment" as const,
-          data: entry.displayedEnrollment,
-        }
-      : entry.course
-        ? { type: "course" as const, data: entry.course }
-        : null
-
-    if (!resource) return null
-
-    if (resource.type === "course") {
-      return (
-        <UnenrolledCourseCard
-          course={resource.data}
-          displayedRun={entry.displayedRun ?? undefined}
-          contractId={entry.contractId}
-          ancestorContext={entry.ancestorContext}
-          layout="compact"
-          headingLevel={headingLevel}
-          Component={Component}
-          className={className}
-        />
-      )
-    } else if (resource.type === "courserun-enrollment") {
-      return (
-        <EnrolledCourseCard
-          enrollment={resource.data}
-          layout="compact"
-          headingLevel={headingLevel}
-          onUpgradeError={props.onUpgradeError}
-          Component={Component}
-          className={className}
-        />
-      )
-    }
-    return null
-  }
-
-  // ── default / stacked arm ────────────────────────────────────────────────
-  const { onUpgradeError, layout } = props
-
-  if (entry.displayedEnrollment) {
+  if (props.kind === "enrollment") {
     return (
       <EnrolledCourseCard
-        enrollment={entry.displayedEnrollment}
+        enrollment={props.enrollment}
         layout={layout}
+        headingLevel={headingLevel}
         onUpgradeError={onUpgradeError}
         Component={Component}
         className={className}
@@ -144,19 +102,30 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
     )
   }
 
-  if (!entry.displayedEnrollment && entry.course) {
-    return (
-      <UnenrolledCourseCard
-        course={entry.course}
-        displayedRun={entry.displayedRun ?? undefined}
-        contractId={entry.contractId}
-        ancestorContext={entry.ancestorContext}
-        layout={layout}
-        Component={Component}
-        className={className}
-      />
-    )
-  }
+  const { entry } = props
+  return entry.displayedEnrollment ? (
+    // Happens to be the same as the enrollment branch above, for now.
+    // Will likely diverge with multiple enrollment display.
+    <EnrolledCourseCard
+      enrollment={entry.displayedEnrollment}
+      layout={layout}
+      headingLevel={headingLevel}
+      onUpgradeError={onUpgradeError}
+      Component={Component}
+      className={className}
+    />
+  ) : (
+    <UnenrolledCourseCard
+      course={entry.course}
+      displayedRun={entry.displayedRun ?? undefined}
+      contractId={entry.contractId}
+      ancestorContext={entry.ancestorContext}
+      layout={layout}
+      headingLevel={headingLevel}
+      Component={Component}
+      className={className}
+    />
+  )
 }
 
 export { CoursewareCard }
