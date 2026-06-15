@@ -15,6 +15,7 @@ import { JustInTimeDialog } from "../DashboardDialogs"
 import NiceModal from "@ebay/nice-modal-react"
 import { getCourseEnrollmentAction } from "@/common/mitxonline"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
+import { trackCourseEnrolled } from "@/common/analytics/gtm"
 
 export const useEnrollmentHandler = () => {
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
@@ -123,6 +124,7 @@ export const useEnrollmentHandler = () => {
             { run_id: enrollmentAction.run.id },
             {
               onSuccess: () => {
+                trackCourseEnrolled(course.title)
                 const destination =
                   selectedCoursewareUrl ??
                   enrollmentAction.run.courseware_url ??
