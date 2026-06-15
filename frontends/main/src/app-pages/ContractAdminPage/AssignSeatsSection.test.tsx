@@ -68,10 +68,11 @@ describe("AssignSeatsSection", () => {
     renderWithTheme(<AssignSeatsSection />)
 
     // Only the download link is still disabled — import from CSV is now active
-    const downloadLink = screen.getByRole("button", { name: "Coming soon" })
+    const downloadLink = screen.getByRole("button", {
+      name: "(download sample CSV)",
+    })
     expect(downloadLink).toHaveAttribute("tabindex", "0")
     expect(downloadLink).toHaveAttribute("aria-disabled", "true")
-    expect(screen.getByText("(download sample CSV)")).toBeInTheDocument()
   })
 
   test("import from CSV button is active and in the tab order", () => {

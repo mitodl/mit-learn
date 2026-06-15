@@ -5,10 +5,6 @@ import { RowActionMenu } from "./RowActionMenu"
 
 const makeCode = factories.contracts.contractCode
 
-// MUI Tooltip injects aria-label="Coming soon" onto wrapped disabled items,
-// so their accessible name becomes "Coming soon" rather than their text.
-// Use getByText for those items and getByRole only for non-tooltip items.
-
 afterEach(() => {
   // Restore clipboard so Object.defineProperty calls don't leak between tests
   Object.defineProperty(navigator, "clipboard", {
@@ -25,12 +21,18 @@ describe("RowActionMenu", () => {
 
       await user.click(screen.getByRole("button", { name: /more actions/i }))
 
-      expect(screen.getByText("Change assigned email")).toBeInTheDocument()
-      expect(screen.getByText("Resend claim email")).toBeInTheDocument()
+      expect(
+        screen.getByRole("menuitem", { name: "Change assigned email" }),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("menuitem", { name: "Resend claim email" }),
+      ).toBeInTheDocument()
       expect(
         screen.getByRole("menuitem", { name: "Copy claim link" }),
       ).toBeInTheDocument()
-      expect(screen.getByText("Release seat")).toBeInTheDocument()
+      expect(
+        screen.getByRole("menuitem", { name: "Release seat" }),
+      ).toBeInTheDocument()
     })
   })
 
@@ -45,7 +47,9 @@ describe("RowActionMenu", () => {
 
       await user.click(screen.getByRole("button", { name: /more actions/i }))
 
-      expect(screen.getByText("Uninvite")).toBeInTheDocument()
+      expect(
+        screen.getByRole("menuitem", { name: "Uninvite" }),
+      ).toBeInTheDocument()
       expect(screen.queryByText("Copy claim link")).not.toBeInTheDocument()
     })
   })

@@ -111,15 +111,25 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({ code }) => {
 
   const menuItems =
     code.redemption_status === "redeemed" ? (
-      <Tooltip title={COMING_SOON} placement="right">
+      <Tooltip title={COMING_SOON} placement="right" describeChild>
         <DestructiveMenuItem disabled>Uninvite</DestructiveMenuItem>
       </Tooltip>
     ) : (
       [
-        <Tooltip key="change-email" title={COMING_SOON} placement="right">
+        <Tooltip
+          key="change-email"
+          title={COMING_SOON}
+          placement="right"
+          describeChild
+        >
           <ActionMenuItem disabled>Change assigned email</ActionMenuItem>
         </Tooltip>,
-        <Tooltip key="resend-email" title={COMING_SOON} placement="right">
+        <Tooltip
+          key="resend-email"
+          title={COMING_SOON}
+          placement="right"
+          describeChild
+        >
           <ActionMenuItem disabled>Resend claim email</ActionMenuItem>
         </Tooltip>,
         copied ? (
@@ -131,8 +141,13 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({ code }) => {
             Copy claim link
           </ActionMenuItem>
         ),
-        <Divider component="li" role="separator" key="divider" />
-        <Tooltip key="release-seat" title={COMING_SOON} placement="right">
+        <Divider component="li" role="separator" key="divider" />,
+        <Tooltip
+          key="release-seat"
+          title={COMING_SOON}
+          placement="right"
+          describeChild
+        >
           <DestructiveMenuItem disabled>Release seat</DestructiveMenuItem>
         </Tooltip>,
       ]

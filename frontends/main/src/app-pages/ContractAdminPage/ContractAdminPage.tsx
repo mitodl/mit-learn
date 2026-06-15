@@ -539,7 +539,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
               />
             </ControlsLeft>
             <ExportButtonWrapper>
-              <Tooltip title="Coming soon">
+              <Tooltip title="Coming soon" describeChild>
                 <Stack
                   component="span"
                   sx={{

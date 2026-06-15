@@ -391,7 +391,7 @@ const AssignSeatsSection: React.FC = () => {
         >
           import from CSV
         </ActiveLink>
-        <Tooltip title="Coming soon">
+        <Tooltip title="Coming soon" describeChild>
           <DisabledLink role="button" aria-disabled="true" tabIndex={0}>
             (download sample CSV)
           </DisabledLink>
