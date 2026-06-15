@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.71.5
+Version 0.71.5 (Released June 15, 2026)
 --------------
 
 - fix ordering of course runs when none of them are enrollable (#3454)
