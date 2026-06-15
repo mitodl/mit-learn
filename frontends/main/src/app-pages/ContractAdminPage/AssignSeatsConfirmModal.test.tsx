@@ -7,6 +7,7 @@ const baseProps = {
   onClose: jest.fn(),
   onConfirm: jest.fn(),
   validCount: 3,
+  availableSeats: 10,
   invalidEmails: [],
   duplicateCount: 0,
   skippedCount: 0,
@@ -137,6 +138,34 @@ describe("AssignSeatsConfirmModal", () => {
     expect(screen.getByText("bad14@")).toBeInTheDocument()
     expect(
       screen.queryByRole("button", { name: /more/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("shows over-capacity warning when validCount exceeds availableSeats", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...baseProps}
+        validCount={15}
+        availableSeats={10}
+      />,
+    )
+
+    expect(
+      screen.getAllByText(/only 10 unassigned seats available\./i).length,
+    ).toBeGreaterThan(0)
+  })
+
+  test("does not show over-capacity warning when validCount is within availableSeats", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...baseProps}
+        validCount={3}
+        availableSeats={10}
+      />,
+    )
+
+    expect(
+      screen.queryByText(/only \d+ unassigned seat/i),
     ).not.toBeInTheDocument()
   })
 

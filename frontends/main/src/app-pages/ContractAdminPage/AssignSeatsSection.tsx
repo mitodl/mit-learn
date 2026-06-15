@@ -191,7 +191,13 @@ type ModalData = {
   skippedCount: number
 }
 
-const AssignSeatsSection: React.FC = () => {
+type AssignSeatsSectionProps = {
+  availableSeats: number
+}
+
+const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
+  availableSeats,
+}) => {
   const [emailInput, setEmailInput] = useState("")
   const [focused, setFocused] = useState(false)
   const [csvReadError, setCsvReadError] = useState(false)
@@ -364,6 +370,12 @@ const AssignSeatsSection: React.FC = () => {
               )}
             </ValidationBadge>
           )}
+          {validCount > availableSeats && (
+            <InvalidCount>
+              Only {availableSeats} unassigned{" "}
+              {pluralize("seat", availableSeats)} available.
+            </InvalidCount>
+          )}
         </Stack>
         <ButtonWrapper>
           <Button
@@ -422,6 +434,7 @@ const AssignSeatsSection: React.FC = () => {
           onClose={handleModalClose}
           onConfirm={handleModalConfirm}
           validCount={modalData.validEmails.length}
+          availableSeats={availableSeats}
           invalidEmails={modalData.invalidEmails}
           duplicateCount={modalData.duplicateCount}
           skippedCount={modalData.skippedCount}

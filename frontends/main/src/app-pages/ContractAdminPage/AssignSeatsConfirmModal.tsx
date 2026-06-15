@@ -35,6 +35,11 @@ const DuplicateNotice = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
 })) as typeof Typography
 
+const OverCapacityWarning = styled(Typography)(({ theme }) => ({
+  ...theme.typography.body2,
+  color: theme.custom.colors.darkRed,
+})) as typeof Typography
+
 type InvalidEmailListProps = {
   emails: string[]
 }
@@ -65,6 +70,7 @@ type AssignSeatsConfirmModalProps = {
   onClose: () => void
   onConfirm: () => void
   validCount: number
+  availableSeats: number
   invalidEmails: string[]
   duplicateCount: number
   skippedCount: number
@@ -75,6 +81,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   onClose,
   onConfirm,
   validCount,
+  availableSeats,
   invalidEmails,
   duplicateCount,
   skippedCount,
@@ -82,10 +89,14 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   const descriptionId = useId()
   const hasIssues =
     invalidEmails.length > 0 || duplicateCount > 0 || skippedCount > 0
+  const overCapacity = validCount > availableSeats
   const confirmText = `Send ${validCount} ${pluralize("email", validCount)}`
+  const overCapacityText = overCapacity
+    ? ` Warning: only ${availableSeats} unassigned ${pluralize("seat", availableSeats)} available.`
+    : ""
   const descriptionText = hasIssues
-    ? `${validCount} ${pluralize("email", validCount)} imported and ready to assign.${duplicateCount > 0 ? ` ${duplicateCount} ${pluralize("duplicate", duplicateCount)} removed — only 1 instance kept per address.` : ""}${skippedCount > 0 ? ` ${skippedCount} ${pluralize("row", skippedCount)} skipped — no email address found.` : ""}`
-    : `Are you sure you want to send invitations to ${validCount} ${pluralize("recipient", validCount)}?`
+    ? `${validCount} ${pluralize("email", validCount)} imported and ready to assign.${duplicateCount > 0 ? ` ${duplicateCount} ${pluralize("duplicate", duplicateCount)} removed — only 1 instance kept per address.` : ""}${skippedCount > 0 ? ` ${skippedCount} ${pluralize("row", skippedCount)} skipped — no email address found.` : ""}${overCapacityText}`
+    : `Are you sure you want to send invitations to ${validCount} ${pluralize("recipient", validCount)}?${overCapacityText}`
 
   return (
     <Dialog
@@ -117,6 +128,12 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
             {skippedCount} {pluralize("row", skippedCount)} skipped — no email
             address found.
           </DuplicateNotice>
+        )}
+        {overCapacity && (
+          <OverCapacityWarning>
+            Only {availableSeats} unassigned {pluralize("seat", availableSeats)}{" "}
+            available.
+          </OverCapacityWarning>
         )}
         {invalidEmails.length > 0 && (
           <Stack gap="4px">

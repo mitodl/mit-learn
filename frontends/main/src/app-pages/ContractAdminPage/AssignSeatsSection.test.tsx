@@ -48,7 +48,7 @@ describe("AssignSeatsSection", () => {
   })
 
   test("renders section title and key UI elements", () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     expect(
       screen.getByRole("heading", { name: "Assign Seats" }),
@@ -65,7 +65,7 @@ describe("AssignSeatsSection", () => {
   })
 
   test("download sample CSV pseudo-link is in the tab order and disabled", () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     // Only the download link is still disabled — import from CSV is now active
     const downloadLink = screen.getByRole("button", {
@@ -76,7 +76,7 @@ describe("AssignSeatsSection", () => {
   })
 
   test("import from CSV button is active and in the tab order", () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     const importButton = screen.getByRole("button", { name: "import from CSV" })
     expect(importButton).toBeInTheDocument()
@@ -85,13 +85,13 @@ describe("AssignSeatsSection", () => {
   })
 
   test("Assign Seats button is disabled when textarea is empty", () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     expect(screen.getByRole("button", { name: "Assign Seats" })).toBeDisabled()
   })
 
   test("Assign Seats button enables when at least one valid email is entered", async () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "alice@example.com")
@@ -102,7 +102,7 @@ describe("AssignSeatsSection", () => {
   })
 
   test("Assign Seats button stays disabled when only invalid emails are entered", async () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "notanemail")
@@ -111,7 +111,7 @@ describe("AssignSeatsSection", () => {
   })
 
   test("sole invalid token is not highlighted while focused (no preceding comma)", async () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "notvalid")
@@ -122,7 +122,7 @@ describe("AssignSeatsSection", () => {
   })
 
   test("last invalid token is highlighted while focused when preceded by a comma", async () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "alice@example.com, notvalid")
@@ -133,7 +133,7 @@ describe("AssignSeatsSection", () => {
   })
 
   test("last invalid token is highlighted after blur (no trailing comma)", async () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "notvalid")
@@ -145,7 +145,7 @@ describe("AssignSeatsSection", () => {
   })
 
   test("shows valid/invalid counts after entering emails", async () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "alice@example.com, bob@example.com, notvalid")
@@ -155,7 +155,7 @@ describe("AssignSeatsSection", () => {
   })
 
   test("shows only valid count when all emails are valid", async () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "alice@example.com, bob@example.com")
@@ -165,13 +165,13 @@ describe("AssignSeatsSection", () => {
   })
 
   test("validation badge is not shown when textarea is empty", () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     expect(screen.queryByText(/valid/i)).not.toBeInTheDocument()
   })
 
   test("live region announces email validation summary after debounce", async () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "alice@example.com, bad-email")
@@ -189,7 +189,7 @@ describe("AssignSeatsSection", () => {
   })
 
   test("clicking Assign Seats opens the confirm modal", async () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "alice@example.com")
@@ -201,7 +201,7 @@ describe("AssignSeatsSection", () => {
   })
 
   test("modal shows invalid emails when textarea has mixed input", async () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.click(textarea)
@@ -212,7 +212,7 @@ describe("AssignSeatsSection", () => {
   })
 
   test("modal shows duplicate count when textarea has repeated emails", async () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.click(textarea)
@@ -225,7 +225,7 @@ describe("AssignSeatsSection", () => {
   })
 
   test("closing the modal hides it", async () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "alice@example.com")
@@ -244,7 +244,7 @@ describe("AssignSeatsSection", () => {
   // CSV import tests
 
   test("importing a valid CSV opens the modal without populating the textarea", async () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     const csvContent = "email\nalice@example.com\nbob@example.com"
     mockFileContent = csvContent
@@ -264,7 +264,7 @@ describe("AssignSeatsSection", () => {
   })
 
   test("importing a CSV with invalid emails shows them in the modal", async () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     const csvContent = "alice@example.com\nbad@\nnot-quite@.com"
     mockFileContent = csvContent
@@ -280,7 +280,7 @@ describe("AssignSeatsSection", () => {
   })
 
   test("importing a CSV with duplicates shows duplicate count in modal", async () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     const csvContent = "alice@example.com\nbob@example.com\nalice@example.com"
     mockFileContent = csvContent
@@ -297,7 +297,7 @@ describe("AssignSeatsSection", () => {
   })
 
   test("importing a CSV with no-@ rows shows skipped count in modal", async () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     const csvContent =
       "alice@example.com\nnoatsymbol\nalso-no-at\nalice@example.com"
@@ -315,7 +315,7 @@ describe("AssignSeatsSection", () => {
   })
 
   test("importing a CSV with no valid emails shows inline error", async () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     const csvContent = "Email\nNot An Email\nbad@"
     mockFileContent = csvContent
@@ -335,7 +335,7 @@ describe("AssignSeatsSection", () => {
   })
 
   test("accepts newline-separated emails", async () => {
-    renderWithTheme(<AssignSeatsSection />)
+    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     // Simulate pasting newline-separated emails

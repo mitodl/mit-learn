@@ -511,7 +511,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
           </StatsSide>
         </HeaderSection>
 
-        <AssignSeatsSection />
+        <AssignSeatsSection availableSeats={totalUnassigned} />
 
         {/* Seat Assignments */}
         <SeatAssignmentsSection>
