@@ -8,6 +8,7 @@ import {
   setMockResponse,
   urls as learnUrls,
   factories as learnFactories,
+  makeRequest,
 } from "api/test-utils"
 import type {
   V2ProgramDetail,
@@ -15,7 +16,7 @@ import type {
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
+import { renderWithProviders, waitFor, screen, within, user } from "@/test-utils"
 import { assertHeadings } from "ol-test-utilities"
 import ProgramAsCoursePage from "./ProgramAsCoursePage"
 import { notFound } from "next/navigation"
@@ -393,5 +394,43 @@ describe("ProgramAsCoursePage", () => {
     )
 
     await screen.findByRole("heading", { name: page.title })
+  })
+
+  test("Enroll CTA posts program enrollment from ProgramAsCoursePage", async () => {
+    const program = makeProgramAsCourse({
+      enrollment_modes: [
+        factories.courses.enrollmentMode({ requires_payment: false }),
+      ],
+    })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+    setMockResponse.get(
+      learnUrls.userMe.get(),
+      learnFactories.user.user({ is_authenticated: true }),
+    )
+
+    const enrollUrl = urls.programEnrollments.enrollmentsListV3()
+    setMockResponse.post(enrollUrl, {})
+
+    renderWithProviders(
+      <ProgramAsCoursePage readableId={program.readable_id} />,
+    )
+
+    const [enrollButton] = await screen.findAllByRole("button", {
+      name: "Enroll",
+    })
+    await user.click(enrollButton)
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "post", url: enrollUrl }),
+      )
+    })
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "post",
+        url: urls.enrollment.enrollmentsListV1(),
+      }),
+    )
   })
 })

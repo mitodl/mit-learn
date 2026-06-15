@@ -80,7 +80,7 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
   const enrollmentType = getEnrollmentType(program.enrollment_modes)
   const isPaidWithoutPrice =
     enrollmentType === "paid" && !program.products[0]?.price
-  const enrollButtonLabel = "Enroll in Program"
+  const enrollButtonLabel = displayAsCourse ? "Enroll" : "Enroll in Program"
 
   const isLoading = enrollments.isLoading || me.isLoading
   const isPending =
