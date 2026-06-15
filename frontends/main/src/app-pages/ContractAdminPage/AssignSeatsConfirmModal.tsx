@@ -90,7 +90,9 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   const hasIssues =
     invalidEmails.length > 0 || duplicateCount > 0 || skippedCount > 0
   const overCapacity = validCount > availableSeats
-  const confirmText = `Send ${validCount} ${pluralize("email", validCount)}`
+  const confirmText = overCapacity
+    ? "Review Learner List"
+    : `Send ${validCount} ${pluralize("email", validCount)}`
   const overCapacityText = overCapacity
     ? ` Warning: only ${availableSeats} unassigned ${pluralize("seat", availableSeats)} available.`
     : ""
@@ -102,10 +104,10 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
     <Dialog
       open={open}
       onClose={onClose}
-      onConfirm={onConfirm}
+      onConfirm={overCapacity ? () => {} : onConfirm}
       title={`${validCount} ${pluralize("email", validCount)} ready to assign`}
       confirmText={confirmText}
-      cancelText="Cancel"
+      cancelText={overCapacity ? null : "Cancel"}
       fullWidth
       maxWidth="sm"
       aria-describedby={descriptionId}

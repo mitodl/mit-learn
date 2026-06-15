@@ -169,6 +169,55 @@ describe("AssignSeatsConfirmModal", () => {
     ).not.toBeInTheDocument()
   })
 
+  test("CSV over-capacity: shows Review Learner List button and no Cancel button", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...baseProps}
+        validCount={15}
+        availableSeats={10}
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Review Learner List" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /cancel/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("CSV over-capacity: Review Learner List button closes the dialog", async () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...baseProps}
+        validCount={15}
+        availableSeats={10}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "Review Learner List" }),
+    )
+
+    expect(baseProps.onClose).toHaveBeenCalledTimes(1)
+    expect(baseProps.onConfirm).not.toHaveBeenCalled()
+  })
+
+  test("CSV within capacity: shows normal Send button and Cancel button", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...baseProps}
+        validCount={5}
+        availableSeats={10}
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", { name: /send 5 emails/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument()
+  })
+
   test("calls onClose when Cancel is clicked", async () => {
     renderWithTheme(<AssignSeatsConfirmModal {...baseProps} />)
 

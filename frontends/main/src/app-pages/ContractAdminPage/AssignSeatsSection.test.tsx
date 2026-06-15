@@ -90,6 +90,15 @@ describe("AssignSeatsSection", () => {
     expect(screen.getByRole("button", { name: "Assign Seats" })).toBeDisabled()
   })
 
+  test("Assign Seats button is disabled when valid email count exceeds available seats", async () => {
+    renderWithTheme(<AssignSeatsSection availableSeats={1} />)
+
+    const textarea = screen.getByPlaceholderText(/enter employee emails/i)
+    await user.type(textarea, "alice@example.com, bob@example.com")
+
+    expect(screen.getByRole("button", { name: "Assign Seats" })).toBeDisabled()
+  })
+
   test("Assign Seats button enables when at least one valid email is entered", async () => {
     renderWithTheme(<AssignSeatsSection availableSeats={50} />)
 

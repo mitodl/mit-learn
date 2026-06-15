@@ -30,6 +30,16 @@ export type EmailParseResult = {
  * collected in `invalid`. Duplicate emails (case-insensitive) are removed and
  * counted in `duplicateCount`.
  */
+const EMAIL_HEADER_RE = /^e-?mail(\s*_?\s*address)?$/i
+
+const isHeaderRow = (cols: string[]): boolean => {
+  const trimmed = cols.map((c) => c.trim())
+  return (
+    trimmed.some((c) => EMAIL_HEADER_RE.test(c)) &&
+    !trimmed.some((c) => c.includes("@"))
+  )
+}
+
 export const extractEmailsFromCsvRows = (
   rows: string[][],
 ): EmailParseResult => {
@@ -37,7 +47,10 @@ export const extractEmailsFromCsvRows = (
   const invalid: string[] = []
   let skippedCount = 0
 
-  for (const cols of rows) {
+  const dataRows =
+    rows.length > 0 && isHeaderRow(rows[0]) ? rows.slice(1) : rows
+
+  for (const cols of dataRows) {
     const emailCol = cols.map((c) => c.trim()).find((c) => c.includes("@"))
     if (!emailCol) {
       skippedCount++

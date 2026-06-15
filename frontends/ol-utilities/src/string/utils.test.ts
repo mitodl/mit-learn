@@ -8,14 +8,43 @@ describe("extractEmailsFromCsvRows", () => {
     expect(valid).toEqual(["alice@example.com", "bob@example.com"])
   })
 
-  test("skips rows with no @ in any column and counts them", () => {
+  test("silently skips a header row with an 'email' column label", () => {
     const { valid, invalid, skippedCount } = extract([
+      ["id", "name", "email"],
+      ["1", "Alice", "alice@example.com"],
+      ["2", "Bob", "bob@example.com"],
+    ])
+    expect(valid).toEqual(["alice@example.com", "bob@example.com"])
+    expect(invalid).toEqual([])
+    expect(skippedCount).toBe(0)
+  })
+
+  test("silently skips a single-column 'Email' header", () => {
+    const { valid, skippedCount } = extract([
       ["Email"],
       ["alice@example.com"],
       ["bob@example.com"],
     ])
     expect(valid).toEqual(["alice@example.com", "bob@example.com"])
-    expect(invalid).toEqual([])
+    expect(skippedCount).toBe(0)
+  })
+
+  test.each(["Email Address", "email_address", "e-mail", "E-Mail"])(
+    "silently skips a header row with column label %s",
+    (label) => {
+      const { valid, skippedCount } = extract([[label], ["alice@example.com"]])
+      expect(valid).toEqual(["alice@example.com"])
+      expect(skippedCount).toBe(0)
+    },
+  )
+
+  test("counts data rows with no @ as skipped (not header rows)", () => {
+    const { valid, skippedCount } = extract([
+      ["alice@example.com"],
+      ["no-email-here"],
+      ["bob@example.com"],
+    ])
+    expect(valid).toEqual(["alice@example.com", "bob@example.com"])
     expect(skippedCount).toBe(1)
   })
 

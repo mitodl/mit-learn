@@ -380,7 +380,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
         <ButtonWrapper>
           <Button
             variant="primary"
-            disabled={!canSubmit}
+            disabled={!canSubmit || validCount > availableSeats}
             onClick={handleAssignSeats}
           >
             Assign Seats
