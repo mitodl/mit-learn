@@ -72,7 +72,7 @@ const ValidationBadge = styled.div(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   borderRadius: "4px",
   padding: "8px 16px",
-  ...theme.typography.body3,
+  ...theme.typography.subtitle3,
   fontWeight: theme.typography.fontWeightMedium as number,
 }))
 

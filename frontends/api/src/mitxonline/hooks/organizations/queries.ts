@@ -3,21 +3,14 @@ import { b2bApi } from "../../clients"
 import {
   OrganizationPage,
   ManagerContractDetail,
+  ManagerEnrollmentCode,
   B2bApiB2bOrganizationsRetrieveRequest,
   B2bApiB2bManagerOrganizationsContractsRetrieveRequest,
   B2bApiB2bManagerOrganizationsContractsCodesListRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
 
-type ContractCode = {
-  id: number
-  code: string
+type ContractCode = ManagerEnrollmentCode & {
   redemption_status: "unassigned" | "assigned" | "redeemed"
-  assigned_to: string | null
-  assigned_on: string | null
-  assigned_name: string | null
-  redeemed_by: string | null
-  redeemed_on: string | null
-  last_sent: string | null
 }
 
 const organizationKeys = {
@@ -87,13 +80,10 @@ const managerOrganizationQueries = {
   ) =>
     queryOptions({
       queryKey: managerOrganizationKeys.contractCodes(opts),
-      // Double cast needed until @mitodl/mitxonline-api-axios is regenerated
-      // to include the new redemption_status shape from mitodl/mitxonline#3625.
-      // The generated ManagerEnrollmentCode type is the old is_redeemed shape.
       queryFn: async (): Promise<ContractCode[]> =>
         b2bApi
           .b2bManagerOrganizationsContractsCodesList(opts)
-          .then((res) => res.data as unknown as ContractCode[]),
+          .then((res) => res.data as ContractCode[]),
     }),
 }
 
