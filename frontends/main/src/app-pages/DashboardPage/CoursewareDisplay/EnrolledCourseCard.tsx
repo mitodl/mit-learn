@@ -7,6 +7,7 @@ import {
   CoursewareButton,
   CoursewareButtonLink,
   getCertificateLink,
+  getDashboardEnrollmentStatus,
   HorizontalSeparator,
   MenuButton,
   SubtitleLink,
@@ -15,7 +16,7 @@ import {
   TitleLink,
   TitleText,
 } from "./CardShared"
-import { EnrollmentStatus } from "./model/dashboardViewModel"
+import { EnrollmentStatus, DashboardType } from "./model/dashboardViewModel"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { RiAddLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
@@ -138,9 +139,10 @@ export const EnrolledCourseCard = ({
   const offerUpgrade = !enrollment?.b2b_contract_id
   const startDate = run?.start_date
   const hasStarted = startDate ? isInPast(startDate) : true
-  const enrollmentStatus = enrollment?.certificate?.uuid
-    ? EnrollmentStatus.Completed
-    : EnrollmentStatus.Enrolled
+  const enrollmentStatus = getDashboardEnrollmentStatus({
+    type: DashboardType.CourseRunEnrollment,
+    data: enrollment,
+  })
   const isCompact = layout === "compact"
   const showUpgradeLink =
     !isVerifiedEnrollmentMode(enrollmentMode) && offerUpgrade && canUpgrade

@@ -108,6 +108,7 @@ describe.each([
     {
       runDates: currentRunDates,
       certificate: null,
+      grades: [],
       expectedText: "Continue",
       case: "active enrolled",
     },
@@ -117,21 +118,30 @@ describe.each([
         uuid: faker.string.uuid(),
         link: faker.internet.url(),
       },
+      grades: [],
       expectedText: "View",
       case: "completed",
     },
     {
       runDates: pastRunDates,
       certificate: null,
+      grades: [],
       expectedText: "View",
       case: "ended not completed",
     },
+    {
+      runDates: currentRunDates,
+      certificate: null,
+      grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+      expectedText: "View",
+      case: "passing grade, no certificate",
+    },
   ])(
     "Courseware button text is '$expectedText' for $case",
-    ({ runDates, certificate, expectedText }) => {
+    ({ runDates, certificate, grades, expectedText }) => {
       setupUserApis()
       const enrollment = mitxonline.factories.enrollment.courseEnrollment({
-        grades: [],
+        grades,
         certificate,
         run: runDates,
       })
@@ -205,6 +215,14 @@ describe.each([
           link: faker.internet.url(),
         },
         b2b_contract_id: null,
+      },
+      expectedLabel: "Completed",
+    },
+    {
+      enrollmentData: {
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+        certificate: null,
+        b2b_contract_id: faker.number.int(), // B2B so indicator is visible
       },
       expectedLabel: "Completed",
     },
