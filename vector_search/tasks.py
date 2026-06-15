@@ -407,24 +407,28 @@ def embed_run_content_files(self, run_id):
     )
 
 
-@app.task
-def remove_run_content_files(run_id):
+@app.task(bind=True)
+def remove_run_content_files(self, run_id):
     """
     Remove content files associated with a run from Qdrant
     """
     content_file_ids = list(
         ContentFile.objects.filter(run__id=run_id).values_list("id", flat=True)
     )
-    return celery.group(
-        [
-            remove_embeddings.si(ids, CONTENT_FILE_TYPE)
-            for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
-        ]
+    return self.replace(
+        celery.group(
+            [
+                remove_embeddings.si(ids, CONTENT_FILE_TYPE)
+                for ids in chunks(
+                    content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE
+                )
+            ]
+        )
     )
 
 
-@app.task
-def remove_unpublished_run_content_files(run_id):
+@app.task(bind=True)
+def remove_unpublished_run_content_files(self, run_id):
     """
     Remove unpublished content files associated with a run from Qdrant
     """
@@ -433,11 +437,15 @@ def remove_unpublished_run_content_files(run_id):
             "id", flat=True
         )
     )
-    return celery.group(
-        [
-            remove_embeddings.si(ids, CONTENT_FILE_TYPE)
-            for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
-        ]
+    return self.replace(
+        celery.group(
+            [
+                remove_embeddings.si(ids, CONTENT_FILE_TYPE)
+                for ids in chunks(
+                    content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE
+                )
+            ]
+        )
     )
 
 

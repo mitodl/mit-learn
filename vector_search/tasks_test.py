@@ -30,6 +30,8 @@ from vector_search.tasks import (
     embed_new_content_files,
     embed_new_learning_resources,
     embeddings_healthcheck,
+    remove_run_content_files,
+    remove_unpublished_run_content_files,
     start_embed_resources,
 )
 from vector_search.utils import vector_point_id
@@ -214,6 +216,64 @@ def test_embed_new_content_files(mocker, mocked_celery):
 
     embedded_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
     assert sorted(new_content_file_ids) == sorted(embedded_ids)
+
+
+def test_remove_run_content_files(mocker, mocked_celery, settings):
+    """
+    remove_run_content_files should replace itself with removal tasks for all
+    content files associated with the run.
+    """
+    settings.QDRANT_CHUNK_SIZE = 2
+    run = LearningResourceRunFactory.create()
+    content_file_ids = [
+        content_file.id for content_file in ContentFileFactory.create_batch(3, run=run)
+    ]
+    ContentFileFactory.create()
+    remove_embeddings_mock = mocker.patch(
+        "vector_search.tasks.remove_embeddings", autospec=True
+    )
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        remove_run_content_files.delay(run.id)
+
+    removed_ids = [
+        content_file_id
+        for mock_call in remove_embeddings_mock.si.mock_calls
+        for content_file_id in mock_call.args[0]
+    ]
+    assert sorted(removed_ids) == sorted(content_file_ids)
+    assert all(
+        mock_call.args[1] == CONTENT_FILE_TYPE
+        for mock_call in remove_embeddings_mock.si.mock_calls
+    )
+    assert mocked_celery.group.call_count == 1
+    assert mocked_celery.replace.call_count == 1
+    assert mocked_celery.replace.call_args[0][1] == mocked_celery.group.return_value
+
+
+def test_remove_unpublished_run_content_files(mocker, mocked_celery):
+    """
+    remove_unpublished_run_content_files should only remove unpublished content
+    files associated with the run.
+    """
+    run = LearningResourceRunFactory.create()
+    unpublished_content_file = ContentFileFactory.create(run=run, published=False)
+    ContentFileFactory.create(run=run, published=True)
+    ContentFileFactory.create(published=False)
+    remove_embeddings_mock = mocker.patch(
+        "vector_search.tasks.remove_embeddings", autospec=True
+    )
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        remove_unpublished_run_content_files.delay(run.id)
+
+    remove_embeddings_mock.si.assert_called_once_with(
+        [unpublished_content_file.id],
+        CONTENT_FILE_TYPE,
+    )
+    assert mocked_celery.group.call_count == 1
+    assert mocked_celery.replace.call_count == 1
+    assert mocked_celery.replace.call_args[0][1] == mocked_celery.group.return_value
 
 
 def test_embed_learning_resources_by_id(mocker, mocked_celery):
