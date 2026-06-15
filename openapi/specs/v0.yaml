@@ -5714,9 +5714,31 @@ components:
           nullable: true
         video_count:
           type: integer
+        parent_learning_resource_id:
+          type: integer
+          readOnly: true
+          nullable: true
+        parent_title:
+          type: string
+          nullable: true
+          readOnly: true
+        parent_url:
+          type: string
+          nullable: true
+          readOnly: true
+        parent_course_numbers:
+          type: array
+          items:
+            type: string
+          description: Extract the course number(s) from the parent course, if any
+          readOnly: true
       required:
       - channel
       - id
+      - parent_course_numbers
+      - parent_learning_resource_id
+      - parent_title
+      - parent_url
       - video_count
     VideoPlaylistResource:
       type: object

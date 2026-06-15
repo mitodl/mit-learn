@@ -1492,7 +1492,11 @@ class VideoPlaylistQuerySet(LearningResourceDetailQuerySet):
                     learning_resource__children__child__published=True,
                 ),
             )
-        ).prefetch_related("channel")
+        ).select_related(
+            "parent_learning_resource",
+            "parent_learning_resource__course",
+            "channel",
+        )
 
 
 class VideoPlaylist(LearningResourceDetailModel):
@@ -1510,6 +1514,13 @@ class VideoPlaylist(LearningResourceDetailModel):
 
     channel = models.ForeignKey(
         VideoChannel, on_delete=models.CASCADE, related_name="playlists"
+    )
+    parent_learning_resource = models.ForeignKey(
+        LearningResource,
+        on_delete=models.SET_NULL,
+        related_name="child_video_playlists",
+        null=True,
+        blank=True,
     )
 
     @cached_property

@@ -127,6 +127,16 @@ const formattedParentCourseName = (resource: LearningResource) => {
       return `${courseId}: ${courseTitle}`
     }
   }
+  if (
+    resource.resource_type === ResourceTypeEnum.VideoPlaylist &&
+    resource.video_playlist
+  ) {
+    const courseTitle = resource.video_playlist.parent_title
+    const courseId = resource.video_playlist.parent_course_numbers?.[0]
+    if (courseTitle && courseId) {
+      return `${courseId}: ${courseTitle}`
+    }
+  }
   return null
 }
 
