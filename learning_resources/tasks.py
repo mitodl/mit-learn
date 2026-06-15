@@ -475,7 +475,7 @@ def get_ocw_data(  # noqa: PLR0913
     return self.replace(ocw_tasks)
 
 
-@app.task
+@app.task(acks_late=True)
 def get_youtube_data(*, channel_ids=None):
     """
     Execute the YouTube ETL pipeline

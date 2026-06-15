@@ -1729,8 +1729,11 @@ def load_playlist(
     offered_bys_data = playlist_data.pop("offered_by", None)
     create_videos = playlist_data.pop("create_videos", True)
 
+    video_playlist_data = {"channel": video_channel}
+
     if create_videos:
         video_resources = load_videos(videos_data)
+        video_playlist_data["parent_learning_resource_id"] = None
     else:
         video_resources = load_videos_from_content_files(videos_data)
 
@@ -1753,6 +1756,11 @@ def load_playlist(
                     direct_learning_resource__in=video_resources
                 ).values_list("run__learning_resource_id", flat=True)
             )
+
+            video_playlist_data["parent_learning_resource_id"] = (
+                next(iter(parent_ids)) if len(parent_ids) == 1 else None
+            )
+
             for parent in LearningResource.objects.filter(id__in=parent_ids):
                 update_index(parent, newly_created=False)
 
@@ -1774,7 +1782,7 @@ def load_playlist(
         )
         VideoPlaylist.objects.update_or_create(
             learning_resource=playlist_resource,
-            defaults={"channel": video_channel},
+            defaults=video_playlist_data,
         )
         load_offered_by(playlist_resource, offered_bys_data)
 

@@ -536,12 +536,18 @@ const INFO_ITEMS: InfoItemConfig = [
     Icon: RiBookLine,
     selector: (resource: LearningResource, ocwProductPages?: boolean) => {
       const name = formattedParentCourseName(resource)
-      if (!name || !resource.url) return name
+      if (!name) return null
+
+      const url =
+        resource.resource_type === ResourceTypeEnum.VideoPlaylist
+          ? resource.video_playlist?.parent_url
+          : resource.url
+      if (!url) return name
 
       const href =
         ocwProductPages && resource.platform?.code === PlatformEnum.Ocw
-          ? ocwLearnPageView(resource.url)
-          : resource.url
+          ? ocwLearnPageView(url)
+          : url
 
       return (
         <Link href={href} color="red" hovercolor="red" size="small">

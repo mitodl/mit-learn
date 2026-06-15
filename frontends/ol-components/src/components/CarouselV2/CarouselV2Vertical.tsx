@@ -139,14 +139,21 @@ const CarouselV2Vertical: React.FC<CarouselV2VerticalProps> = ({
   }, [emblaApi])
 
   useEffect(() => {
-    emblaApi?.on("slidesInView", (event) => {
-      const inView = event.slidesInView()
+    if (!emblaApi) {
+      return
+    }
+    const handleSlidesInView = () => {
+      const inView = emblaApi.slidesInView()
       if (inView.length === 1) {
         setCanScrollPrev(emblaApi.canScrollPrev())
         setCanScrollNext(emblaApi.canScrollNext())
       }
       onSlidesInView?.(inView)
-    })
+    }
+    emblaApi.on("slidesInView", handleSlidesInView)
+    return () => {
+      emblaApi.off("slidesInView", handleSlidesInView)
+    }
   }, [emblaApi, onSlidesInView])
 
   const handleWheelGesture = useCallback(
