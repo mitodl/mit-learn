@@ -248,6 +248,59 @@ def test_get_unprocessed_content_files_with_platform_and_config(
     )
 
 
+def test_get_unprocessed_content_file_ids_with_multiple_configs():
+    """Test that get_unprocessed_content_file_ids returns IDs from multiple active configurations"""
+    from learning_resources.models import ContentSummarizerConfiguration
+
+    ContentFile.objects.all().delete()
+    ContentSummarizerConfiguration.objects.all().delete()
+
+    summarizer = ContentSummarizer()
+    allowed_types = [CONTENT_TYPE_FILE]
+    allowed_extensions = [".srt"]
+
+    config1 = ContentSummarizerConfigurationFactory.create(
+        allowed_extensions=allowed_extensions,
+        allowed_content_types=allowed_types,
+        is_active=True,
+        llm_model="test",
+        platform__code=PlatformType.edx.name,
+    )
+    config2 = ContentSummarizerConfigurationFactory.create(
+        allowed_extensions=allowed_extensions,
+        allowed_content_types=allowed_types,
+        is_active=True,
+        llm_model="test",
+        platform__code=PlatformType.xpro.name,
+    )
+
+    run1 = LearningResourceRunFactory.create(
+        learning_resource__platform=config1.platform
+    )
+    file1 = ContentFileFactory.create(
+        content="Test content 1",
+        file_extension=allowed_extensions[0],
+        content_type=allowed_types[0],
+        run=run1,
+    )
+
+    run2 = LearningResourceRunFactory.create(
+        learning_resource__platform=config2.platform
+    )
+    file2 = ContentFileFactory.create(
+        content="Test content 2",
+        file_extension=allowed_extensions[0],
+        content_type=allowed_types[0],
+        run=run2,
+    )
+
+    unprocessed_file_ids = summarizer.get_unprocessed_content_file_ids(overwrite=False)
+
+    assert len(unprocessed_file_ids) == 2
+    assert file1.id in unprocessed_file_ids
+    assert file2.id in unprocessed_file_ids
+
+
 def test_summarize_content_files_by_ids(
     processable_content_files, mock_summarize_single_content_file
 ):
