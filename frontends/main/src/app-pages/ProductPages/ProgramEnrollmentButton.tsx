@@ -28,6 +28,7 @@ import {
 } from "@/common/mitxonline"
 import { useRouter } from "next-nprogress-bar"
 import { PostHogEvents } from "@/common/constants"
+import { trackCourseEnrolled } from "@/common/analytics/gtm"
 
 const ButtonLinkWithDisabled = styled(ButtonLink)(({ href }) => [
   !href && {
@@ -106,6 +107,7 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
           { V3ProgramEnrollmentRequestRequest: { program_id: program.id } },
           {
             onSuccess: () => {
+              trackCourseEnrolled(program.title)
               router.push(
                 enrollmentAlertSuccessUrl({
                   title: program.title ?? "your enrollment",

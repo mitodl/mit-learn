@@ -1539,6 +1539,7 @@ def test_learning_resources_summary_listing_endpoint(django_assert_num_queries, 
             "id": lr.id,
             "last_modified": lr.last_modified.isoformat().replace("+00:00", "Z"),
             "url": lr.url,
+            "title": lr.title,
         }
         for lr in published
     ] == sorted(resp.data.get("results"), key=lambda x: int(x["id"]))

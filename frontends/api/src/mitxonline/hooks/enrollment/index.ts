@@ -28,7 +28,7 @@ const useCreateB2bEnrollment = () => {
         ...(programId
           ? { B2BEnrollRequestRequest: { program_id: programId } }
           : {}),
-      } as B2bApiB2bEnrollCreateRequest)
+      })
     },
     onSettled: () => {
       queryClient.invalidateQueries({

@@ -2344,6 +2344,7 @@ def test_load_playlist(mocker, playlist_exists, mock_get_similar_topics_qdrant):
 
     assert result.resources.count() == len(video_resources)
     assert result.video_playlist.channel == channel
+    assert result.video_playlist.parent_learning_resource is None
     assert list(result.topics.values_list("name", flat=True).order_by("name")) == [
         topic["name"] for topic in expected_topics
     ]
@@ -2470,6 +2471,15 @@ def test_load_playlist_create_videos_false(
 
     if all_videos_exist:
         video_resource = VideoFactory.create().learning_resource
+        parent_course = LearningResourceFactory.create(
+            is_course=True,
+            published=True,
+        )
+        parent_run = LearningResourceRunFactory.create(learning_resource=parent_course)
+        ContentFileFactory.create(
+            run=parent_run,
+            direct_learning_resource=video_resource,
+        )
         mock_load_from_cf = mocker.patch(
             "learning_resources.etl.loaders.load_videos_from_content_files",
             return_value=[video_resource],
@@ -2507,6 +2517,7 @@ def test_load_playlist_create_videos_false(
         assert isinstance(result, LearningResource)
         assert result.resources.count() == 1
         assert result.video_playlist.channel == channel
+        assert result.video_playlist.parent_learning_resource == parent_course
     else:
         assert result is None
         mock_update_index.assert_not_called()
@@ -2959,6 +2970,7 @@ def test_load_youtube_video_channels():
         del playlist_data["id"]
         del playlist_data["channel"]
         del playlist_data["learning_resource"]
+        del playlist_data["parent_learning_resource"]
 
         channel_data["playlists"] = [playlist_data]
         channels_data.append(channel_data)

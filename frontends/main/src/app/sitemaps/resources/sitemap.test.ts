@@ -44,7 +44,7 @@ describe("Resource Sitemaps", () => {
       summaries,
     )
 
-    const sitemapPage = await sitemap({ id: String(page) })
+    const sitemapPage = await sitemap({ id: Promise.resolve(String(page)) })
     expect(sitemapPage).toEqual(
       summaries.results.map((resource) => ({
         url: `http://test.learn.odl.local:8062/search?resource=${resource.id}`,

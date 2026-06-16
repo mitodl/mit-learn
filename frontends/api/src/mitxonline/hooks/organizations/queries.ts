@@ -86,7 +86,7 @@ const managerOrganizationQueries = {
       queryFn: async (): Promise<ContractCode[]> =>
         b2bApi
           .b2bManagerOrganizationsContractsCodesList(opts)
-          .then((res) => res.data),
+          .then((res) => res.data as unknown as ContractCode[]),
     }),
 }
 

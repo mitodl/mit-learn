@@ -1,6 +1,26 @@
 Release Notes
 =============
 
+Version 0.71.5 (Released June 15, 2026)
+--------------
+
+- fix ordering of course runs when none of them are enrollable (#3454)
+- fix: fix the caption controls breaking on video player (#3457)
+- feat: display financial aid status and discounted pricing on program pages (#3431)
+- ci: run next typegen before typecheck; drop redundant CI build step (#3459)
+- dashboard refactor phase 7a (#3443)
+- clear out env vars before running jest tests (#3455)
+- vector search program boost (#3453)
+- Channels API: improver performance, remove CRUD (#3388)
+- fix: create program enrollment on B2B course enrollment (#3439)
+
+Version 0.71.4 (Released June 11, 2026)
+--------------
+
+- Exclude MicroMasters FIN programs from ETL ingestion (#3458)
+- feat: add surrogate-key in the header for Fastly (#3393)
+- fix: pick cover image of video if no image is inserted in article content (#3433)
+
 Version 0.71.3 (Released June 10, 2026)
 --------------
 

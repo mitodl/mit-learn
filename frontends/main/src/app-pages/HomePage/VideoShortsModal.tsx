@@ -16,6 +16,9 @@ import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
 import VideoJsPlayer from "@/app-pages/VideoPlaylistCollectionPage/VideoJsPlayer"
 import type Player from "video.js/dist/types/player"
 import { FocusTrap } from "@mui/base/FocusTrap"
+import { usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
+import { env } from "@/env"
 
 const MODAL_VERTICAL_PADDING = 60
 const PORTRAIT_ASPECT_RATIO = 9 / 16
@@ -252,6 +255,24 @@ const VideoShortsModal = ({
 
   const playersRef = useRef<(Player | null)[]>([])
   const muteButtonRef = useRef<HTMLButtonElement>(null)
+  const sessionStartedAtRef = useRef<number>(Date.now())
+  const currentVideoStartedAtRef = useRef<number>(Date.now())
+  const viewedIndicesRef = useRef<Set<number>>(new Set())
+  const selectedIndexRef = useRef<number | null>(startIndex)
+  // For startIndex > 0, Embla animates from slide 0 to startIndex on mount,
+  // firing slidesInView for each intermediate slide. hasSettledRef suppresses
+  // all analytics until Embla fires for startIndex itself.
+  const hasSettledRef = useRef<boolean>(startIndex === 0)
+  const sessionEndedRef = useRef<boolean>(false)
+  const posthog = usePostHog()
+  const capture = useCallback(
+    (event: string, properties?: Record<string, unknown>) => {
+      if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
+        posthog.capture(event, properties)
+      }
+    },
+    [posthog],
+  )
 
   useEffect(() => {
     const id = requestAnimationFrame(() => {
@@ -268,11 +289,50 @@ const VideoShortsModal = ({
     playersRef.current = playersRef.current.slice(0, videoData.length)
   }, [videoData])
 
+  // Fires the final analytics for the session. Guarded so it only runs once,
+  // since it can be triggered by an explicit close, the tab being hidden, or
+  // the page being unloaded — whichever happens first.
+  const captureSessionEnd = useCallback(() => {
+    if (sessionEndedRef.current) return
+    sessionEndedRef.current = true
+    const currentIndex = selectedIndexRef.current
+    if (
+      hasSettledRef.current &&
+      currentIndex !== null &&
+      videoData[currentIndex]
+    ) {
+      const player = playersRef.current[currentIndex]
+      let videoDurationMs: number | undefined
+      if (player) {
+        const duration = player.duration()
+        if (duration && isFinite(duration) && duration > 0) {
+          videoDurationMs = Math.round(duration * 1000)
+        }
+      }
+      capture(PostHogEvents.VideoShortViewed, {
+        videoId: videoData[currentIndex].id,
+        videoTitle: videoData[currentIndex].title,
+        timeOnVideoMs: Date.now() - currentVideoStartedAtRef.current,
+        ...(videoDurationMs !== undefined ? { videoDurationMs } : {}),
+      })
+      viewedIndicesRef.current.add(currentIndex)
+    }
+    capture(PostHogEvents.VideoShortsClosed, {
+      sessionDurationMs: Date.now() - sessionStartedAtRef.current,
+      totalVideosViewed: viewedIndicesRef.current.size,
+    })
+  }, [capture, videoData])
+
+  const handleClose = useCallback(() => {
+    captureSessionEnd()
+    onClose()
+  }, [onClose, captureSessionEnd])
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && onClose) {
+      if (event.key === "Escape") {
         event.preventDefault()
-        onClose()
+        handleClose()
       }
     }
 
@@ -280,34 +340,99 @@ const VideoShortsModal = ({
     return () => {
       document.removeEventListener("keydown", handleKeyDown)
     }
-  }, [onClose])
+  }, [handleClose])
 
-  const onSlidesInView = (inView: number[]) => {
-    if (inView.length === 1) {
-      playersRef.current
-        .filter(
-          (player, index): player is Player =>
-            player !== null && index !== inView[0],
-        )
-        .forEach((player) => player.pause())
-      setSelectedIndex(inView[0])
-      setPlaying(false)
-      setAnnouncement(
-        `${inView[0] + 1} of ${videoData.length}: ${videoData[inView[0]].title}`,
-      )
-      const player = playersRef.current[inView[0]]
-      if (player) {
-        player.muted(muted)
-        // On iOS, only autoplay if muted or if user has interacted
-        if (!isIOS() || muted || hasUserInteracted) {
-          player.play()?.catch(() => {
-            setPlaying(false)
-          })
-          setPlaying(true)
-        }
-      }
+  // Flush session analytics when the user leaves without an explicit close
+  // (closing/refreshing the tab, navigating away, or backgrounding the page),
+  // otherwise the final video_short_viewed and video_shorts_closed events would
+  // be lost — which is the most common way a session actually ends.
+  useEffect(() => {
+    const handlePageHide = () => captureSessionEnd()
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") captureSessionEnd()
     }
-  }
+    window.addEventListener("pagehide", handlePageHide)
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    return () => {
+      window.removeEventListener("pagehide", handlePageHide)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
+  }, [captureSessionEnd])
+
+  // Analytics only; intentionally separate from the playback logic below so it
+  // can be added/removed without touching existing behavior. The prevIndex
+  // guard also makes it safe against CarouselV2Vertical firing the same event
+  // on duplicate listeners.
+  const trackSlideViewed = useCallback(
+    (newIndex: number) => {
+      if (sessionEndedRef.current) return
+      const prevIndex = selectedIndexRef.current
+      // During Embla's init animation, slidesInView fires for each intermediate
+      // slide; suppress analytics until it settles on startIndex.
+      if (!hasSettledRef.current) {
+        if (newIndex === startIndex) {
+          hasSettledRef.current = true
+          currentVideoStartedAtRef.current = Date.now()
+        }
+        selectedIndexRef.current = newIndex
+        return
+      }
+      if (prevIndex === newIndex) return
+      // Fire an event for the video being left.
+      if (prevIndex !== null && videoData[prevIndex]) {
+        const prevPlayer = playersRef.current[prevIndex]
+        let videoDurationMs: number | undefined
+        if (prevPlayer) {
+          const duration = prevPlayer.duration()
+          if (duration && isFinite(duration) && duration > 0) {
+            videoDurationMs = Math.round(duration * 1000)
+          }
+        }
+        capture(PostHogEvents.VideoShortViewed, {
+          videoId: videoData[prevIndex].id,
+          videoTitle: videoData[prevIndex].title,
+          timeOnVideoMs: Date.now() - currentVideoStartedAtRef.current,
+          ...(videoDurationMs !== undefined ? { videoDurationMs } : {}),
+        })
+        viewedIndicesRef.current.add(prevIndex)
+      }
+      selectedIndexRef.current = newIndex
+      currentVideoStartedAtRef.current = Date.now()
+    },
+    [videoData, startIndex, capture],
+  )
+
+  const onSlidesInView = useCallback(
+    (inView: number[]) => {
+      if (inView.length === 1 && videoData[inView[0]]) {
+        playersRef.current
+          .filter(
+            (player, index): player is Player =>
+              player !== null && index !== inView[0],
+          )
+          .forEach((player) => player.pause())
+        setSelectedIndex(inView[0])
+        setPlaying(false)
+        setAnnouncement(
+          `${inView[0] + 1} of ${videoData.length}: ${videoData[inView[0]].title}`,
+        )
+        const player = playersRef.current[inView[0]]
+        if (player) {
+          player.muted(muted)
+          // On iOS, only autoplay if muted or if user has interacted
+          if (!isIOS() || muted || hasUserInteracted) {
+            player.play()?.catch(() => {
+              setPlaying(false)
+            })
+            setPlaying(true)
+          }
+        }
+
+        trackSlideViewed(inView[0])
+      }
+    },
+    [videoData, muted, hasUserInteracted, trackSlideViewed],
+  )
 
   const onClickMute = () => {
     if (selectedIndex !== null && playersRef.current[selectedIndex]) {
@@ -356,7 +481,7 @@ const VideoShortsModal = ({
           size="large"
           edge="rounded"
           variant="text"
-          onClick={onClose}
+          onClick={handleClose}
           aria-label="Close"
         >
           <RiCloseLine />

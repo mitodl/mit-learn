@@ -24,6 +24,7 @@ import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { useRouter } from "next-nprogress-bar"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
+import { trackCourseEnrolled } from "@/common/analytics/gtm"
 
 const DiscountedPriceContent = styled.span({
   display: "inline-flex",
@@ -112,6 +113,7 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
           { run_id: enrollmentDecision.run.id },
           {
             onSuccess: () => {
+              trackCourseEnrolled(course.title)
               router.push(
                 enrollmentAlertSuccessUrl({
                   title: course.title ?? "your enrollment",

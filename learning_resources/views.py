@@ -351,8 +351,11 @@ class LearningResourceViewSet(
             # we don't use `self.get_queryset()` here because there are incomplatible
             # `select_related()` invocations and we don't need related data anyway
             LearningResource.objects.filter(published=True)
-            .only("id", "last_modified", "url")
+            .only("id", "last_modified", "url", "title")
             .distinct()
+            # Deterministic order so offset pagination has stable page
+            # boundaries.
+            .order_by("id")
         )
         page = self.paginate_queryset(queryset)
 

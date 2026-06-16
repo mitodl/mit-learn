@@ -223,19 +223,22 @@ function escapeHtmlAttr(value: string): string {
     .replace(/</g, "&lt;")
 }
 
-function buildEmbedHtml(video: VideoResource, title: string): string {
+function buildEmbedHtml(
+  video: VideoResource,
+  title: string,
+  embedPageUrl: string,
+): string {
   const isOvs = video.platform?.code === "ovs"
   const escapedTitle = escapeHtmlAttr(title)
 
   if (isOvs) {
-    const src = video.video?.streaming_url
-    if (!src) return ""
-    return `<iframe width="560" height="315" src="${src}" title="${escapedTitle}" frameborder="0" allowfullscreen></iframe>`
+    if (!embedPageUrl) return ""
+    return `<iframe width="560" height="315" src="${embedPageUrl}" title="${escapedTitle}" frameborder="0" allowfullscreen></iframe>`
   }
 
   const youtubeId = getYouTubeVideoId(video.url)
   if (!youtubeId) return ""
-  return `<iframe width="560" height="315" src="https://www.youtube.com/embed/${youtubeId}" title=${escapedTitle}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`
+  return `<iframe width="560" height="315" src="https://www.youtube.com/embed/${youtubeId}" title="${escapedTitle}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────
@@ -262,7 +265,7 @@ const VideoShareDialog = ({
   const [copyEmbedText, setCopyEmbedText] = useState("Copy")
 
   const embedPageUrl = `${NEXT_PUBLIC_ORIGIN}/video/embed/${video.id}`
-  const embedHtml = buildEmbedHtml(video, title)
+  const embedHtml = buildEmbedHtml(video, title, embedPageUrl)
 
   return (
     <StyledPopover open={open} onClose={onClose} anchorEl={anchorEl}>

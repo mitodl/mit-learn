@@ -129,15 +129,13 @@ describe("VideoShareDialog", () => {
       },
     })
 
-    test("Embed HTML uses the OVS streaming_url", async () => {
+    test("Embed HTML uses the MIT Learn embed URL for OVS videos", async () => {
       renderDialog(ovsVideo)
       await user.click(await screen.findByRole("tab", { name: /embed/i }))
       const textarea = screen.getByRole("textbox", {
         name: "Embed HTML",
       }) as HTMLTextAreaElement
-      expect(textarea.value).toContain(
-        "https://cdn.odl.mit.edu/video/stream.m3u8",
-      )
+      expect(textarea.value).toContain(`/video/embed/${ovsVideo.id}`)
     })
 
     test("Embed HTML does not contain a YouTube URL for OVS videos", async () => {

@@ -29,7 +29,7 @@ const InnerContainer = styled(Container)({
     maxWidth: "890px",
   },
 
-  "& span a, & span a:hover": {
+  "& a, & a:hover": {
     color: "#fff !important",
   },
 })

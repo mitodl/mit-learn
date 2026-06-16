@@ -3,7 +3,7 @@ import Image from "next/image"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import { Stack, Typography, styled, theme, Link } from "ol-components"
 import { useQuery } from "@tanstack/react-query"
-import { DashboardCardRoot } from "./DashboardCard"
+import { CoursewareCardRoot } from "./CoursewareCard"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { contractView } from "@/common/urls"
@@ -43,7 +43,7 @@ const ContractCard = styled.div({
   },
 })
 
-const CardRootStyled = styled(DashboardCardRoot)({
+const CardRootStyled = styled(CoursewareCardRoot)({
   display: "flex",
   flexDirection: "column",
   padding: 0,

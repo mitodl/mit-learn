@@ -781,16 +781,6 @@ describe("dashboardViewModel", () => {
       const course = factories.courses.course({
         courseruns: [run],
         next_run_id: run.id,
-        language_options: [
-          {
-            id: run.id,
-            courseware_id: run.courseware_id,
-            courseware_url: run.courseware_url ?? "",
-            language: LanguageEnum.En,
-            title: run.title,
-            run_tag: run.run_tag,
-          },
-        ],
       })
       const enrollment = factories.enrollment.courseEnrollment({
         run: {
@@ -837,16 +827,6 @@ describe("dashboardViewModel", () => {
       const course = factories.courses.course({
         courseruns: [run],
         next_run_id: run.id,
-        language_options: [
-          {
-            id: run.id,
-            courseware_id: run.courseware_id,
-            courseware_url: run.courseware_url ?? "",
-            language: LanguageEnum.En,
-            title: run.title,
-            run_tag: run.run_tag,
-          },
-        ],
       })
       // enrollment belongs to contract 99, not contract 10
       const otherContractEnrollment = factories.enrollment.courseEnrollment({
@@ -875,16 +855,6 @@ describe("dashboardViewModel", () => {
       const course = factories.courses.course({
         courseruns: [run],
         next_run_id: run.id,
-        language_options: [
-          {
-            id: run.id,
-            courseware_id: run.courseware_id,
-            courseware_url: run.courseware_url ?? "",
-            language: LanguageEnum.En,
-            title: run.title,
-            run_tag: run.run_tag,
-          },
-        ],
       })
       const otherContractEnrollment = factories.enrollment.courseEnrollment({
         b2b_contract_id: 2,
@@ -1605,6 +1575,34 @@ describe("dashboardViewModel", () => {
       expect(resolved.displayedEnrollment).toBeNull()
       expect(resolved.displayedRun?.id).toBe(englishRun.id)
     })
+
+    test("non-enrollable fallback: picks the run with the most recent start_date when no runs are enrollable and next_run_id is null", () => {
+      // Regression: capstone exams have next_run_id=null and is_enrollable=false
+      // on all runs. The stale (older) run must NOT be picked just because it
+      // appears first in the courseruns array.
+      const staleRun = factories.courses.courseRun({
+        id: 563,
+        title: "[WRONG] Supply Chain Exam - Stale 2023 Run",
+        is_enrollable: false,
+        start_date: "2023-09-01T00:00:00Z",
+      })
+      const currentRun = factories.courses.courseRun({
+        id: 564,
+        title: "[CORRECT] Supply Chain Exam - Current 2026 Run",
+        is_enrollable: false,
+        start_date: "2026-03-01T00:00:00Z",
+      })
+      const course = factories.courses.course({
+        // API returns stale run first — our fix must ignore array order
+        courseruns: [staleRun, currentRun],
+        next_run_id: null,
+      })
+
+      const resolved = resolveDisplayedRunAndEnrollment(course, [])
+
+      expect(resolved.displayedEnrollment).toBeNull()
+      expect(resolved.displayedRun?.id).toBe(currentRun.id)
+    })
   })
 })
 
@@ -1672,10 +1670,10 @@ describe("buildVariantKey", () => {
         makeVariant({
           language: LanguageEnum.EsEs,
           variant_industry: VariantIndustryEnum.Hc,
-          variant_length: VariantLengthEnum.F,
+          variant_length: "",
         }),
       ),
-    ).toBe("language:es_ES|industry:HC|length:F")
+    ).toBe("language:es_ES|industry:HC|length:")
   })
 })
 
@@ -1712,7 +1710,7 @@ describe("buildVariantLabel", () => {
         makeVariant({
           language: LanguageEnum.En,
           variant_industry: VariantIndustryEnum.Hc,
-          variant_length: VariantLengthEnum.F,
+          variant_length: "",
         }),
       ),
     ).toBe("English • Healthcare • Full")
@@ -1743,7 +1741,7 @@ describe("sortVariants", () => {
     const frEnergyFull = makeVariant({
       language: LanguageEnum.Fr,
       variant_industry: VariantIndustryEnum.E,
-      variant_length: VariantLengthEnum.F,
+      variant_length: "",
     })
     const frEnergyShort = makeVariant({
       language: LanguageEnum.Fr,
@@ -1851,7 +1849,7 @@ describe("selectVariantRunForCourse", () => {
   test("returns null when no run matches the selected length", () => {
     const run = makeRun({
       language: LanguageEnum.En,
-      variant_length: VariantLengthEnum.F,
+      variant_length: "",
     })
     expect(
       selectVariantRunForCourse(
