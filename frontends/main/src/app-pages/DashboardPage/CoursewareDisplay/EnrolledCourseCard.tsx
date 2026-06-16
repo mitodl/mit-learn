@@ -193,15 +193,15 @@ export const EnrolledCourseCard = ({
     !coursewareUrl || // Enrolled but no action available
       (!!startDate && !hasStarted && !isStaff), // Enrolled but course hasn't started yet
   )
-  const buttonText =
+  const isCompleted =
     enrollmentStatus === EnrollmentStatus.Completed || courseHasEnded
-      ? "View"
-      : "Continue"
+  const buttonText = isCompleted ? "View" : "Continue"
+  const compactVariant = isCompleted ? "text" : "primary"
   const ctaButton = isCompact ? (
     isDisabled ? (
       <CoursewareButton
         size="small"
-        variant="text"
+        variant={compactVariant}
         disabled
         data-testid="courseware-button"
       >
@@ -210,7 +210,7 @@ export const EnrolledCourseCard = ({
     ) : (
       <CoursewareButtonLink
         size="small"
-        variant="text"
+        variant={compactVariant}
         href={coursewareUrl ?? ""}
         data-testid="courseware-button"
       >
