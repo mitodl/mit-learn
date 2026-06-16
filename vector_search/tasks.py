@@ -338,7 +338,9 @@ def embed_new_learning_resources(self):
     ).exclude(resource_type=CONTENT_FILE_TYPE)
 
     resource_types = list(
-        new_learning_resources.values_list("resource_type", flat=True)
+        new_learning_resources.order_by("resource_type")
+        .values_list("resource_type", flat=True)
+        .distinct()
     )
     tasks = []
     for resource_type in resource_types:
