@@ -544,10 +544,7 @@ const INFO_ITEMS: InfoItemConfig = [
           : resource.url
       if (!url) return name
 
-      const href =
-        ocwProductPages && resource.platform?.code === PlatformEnum.Ocw
-          ? ocwLearnPageView(url)
-          : url
+      const href = ocwProductPages ? ocwLearnPageView(url) : url
 
       return (
         <Link href={href} color="red" hovercolor="red" size="small">
