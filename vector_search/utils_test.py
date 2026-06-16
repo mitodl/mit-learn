@@ -74,6 +74,7 @@ from vector_search.utils import (
     update_learning_resource_payload,
     update_qdrant_indexes,
     vector_point_id,
+    vector_point_key,
 )
 from vector_search.utils import qdrant_client as vector_qdrant_client
 
@@ -912,9 +913,7 @@ def test_update_payload_learning_resource(mocker):
     mock_qdrant.overwrite_payload.assert_called_once()
     call_args = mock_qdrant.overwrite_payload.call_args[1]
     assert call_args["collection_name"] == RESOURCES_COLLECTION_NAME
-    assert call_args["points"] == [
-        vector_point_id(f"{doc['platform']['code']}.{doc['readable_id']}")
-    ]
+    assert call_args["points"] == [vector_point_id(vector_point_key(doc))]
     # The whole serialized doc is written. Topics in particular must propagate;
     # the old param-map projection keyed on `topic` (not `topics`) silently
     # dropped them, hiding resources from topic filters (mitodl/hq#11786).
