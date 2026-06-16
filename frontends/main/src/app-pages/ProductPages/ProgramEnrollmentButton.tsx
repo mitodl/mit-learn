@@ -37,20 +37,6 @@ const ButtonLinkWithDisabled = styled(ButtonLink)(({ href }) => [
   },
 ])
 
-const EnrollButtonIcon = styled.span({
-  width: "24px",
-  height: "24px",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flexShrink: 0,
-  color: theme.custom.colors.white,
-  "> svg": {
-    width: "24px",
-    height: "24px",
-  },
-})
-
 type ProgramEnrollmentButtonProps = {
   program: V2ProgramDetail
   variant?: ButtonProps["variant"]
