@@ -187,6 +187,7 @@ class QdrantView(APIView):
             prefetch_params = [
                 models.Prefetch(
                     query=custom_formula_query,
+                    limit=prefetch_limit,
                     prefetch=[
                         models.Prefetch(
                             filter=search_filter,
@@ -198,6 +199,7 @@ class QdrantView(APIView):
                 ),
                 models.Prefetch(
                     query=custom_formula_query,
+                    limit=prefetch_limit,
                     prefetch=[
                         models.Prefetch(
                             filter=search_filter,
