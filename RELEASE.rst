@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.71.6
+Version 0.71.6 (Released June 16, 2026)
 --------------
 
 - show ocw course for video playlists (#3462)
