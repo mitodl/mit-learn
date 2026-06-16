@@ -77,7 +77,12 @@ export const useEnrollmentHandler = () => {
           })
         } else {
           createB2bEnrollment.mutate(
-            { readable_id: readableId, program_id: b2bProgramId },
+            {
+              readable_id: readableId,
+              B2BEnrollRequestRequest: b2bProgramId
+                ? { program_id: b2bProgramId }
+                : undefined,
+            },
             {
               onSuccess: () => {
                 window.location.href = destinationUrl

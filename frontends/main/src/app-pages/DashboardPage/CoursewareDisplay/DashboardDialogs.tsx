@@ -236,7 +236,9 @@ const JustInTimeDialogInner: React.FC<{
       })
       await createEnrollment.mutateAsync({
         readable_id: readableId,
-        program_id: programId,
+        B2BEnrollRequestRequest: programId
+          ? { program_id: programId }
+          : undefined,
       })
       window.location.assign(href)
       modal.hide()

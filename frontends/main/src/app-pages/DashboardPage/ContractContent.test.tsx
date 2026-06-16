@@ -32,9 +32,6 @@ jest.mock("posthog-js/react", () => ({
 }))
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
-// The generated b2bEnrollCreate client does not yet accept a request body, so
-// program_id never reaches the network layer (see the skipped DashboardCard
-// test). Spy on the hook's mutate to assert program_id is forwarded.
 const mockB2bEnrollMutate = jest.fn()
 jest.mock("api/mitxonline-hooks/enrollment", () => ({
   ...jest.requireActual("api/mitxonline-hooks/enrollment"),
@@ -2444,7 +2441,7 @@ describe("ContractContent", () => {
       expect(mockB2bEnrollMutate).toHaveBeenCalledWith(
         expect.objectContaining({
           readable_id: normalizedCourse.courseruns[0].courseware_id,
-          program_id: programA.readable_id,
+          B2BEnrollRequestRequest: { program_id: programA.readable_id },
         }),
         expect.anything(),
       ),
