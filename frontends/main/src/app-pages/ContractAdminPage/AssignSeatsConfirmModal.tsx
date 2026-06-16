@@ -35,11 +35,6 @@ const DuplicateNotice = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
 })) as typeof Typography
 
-const OverCapacityWarning = styled(Typography)(({ theme }) => ({
-  ...theme.typography.body2,
-  color: theme.custom.colors.darkRed,
-})) as typeof Typography
-
 type InvalidEmailListProps = {
   emails: string[]
 }
@@ -91,21 +86,27 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
     invalidEmails.length > 0 || duplicateCount > 0 || skippedCount > 0
   const overCapacity = validCount > availableSeats
   const confirmText = overCapacity
-    ? "Review Learner List"
+    ? "Ok"
     : `Send ${validCount} ${pluralize("email", validCount)}`
-  const overCapacityText = overCapacity
-    ? ` Warning: only ${availableSeats} unassigned ${pluralize("seat", availableSeats)} available.`
+  const overCapacityBody = overCapacity
+    ? `${validCount} ${pluralize("email", validCount)} entered, only ${availableSeats} ${pluralize("seat", availableSeats)} remaining. Please enter fewer emails.`
     : ""
-  const descriptionText = hasIssues
-    ? `${validCount} ${pluralize("email", validCount)} imported and ready to assign.${duplicateCount > 0 ? ` ${duplicateCount} ${pluralize("duplicate", duplicateCount)} removed — only 1 instance kept per address.` : ""}${skippedCount > 0 ? ` ${skippedCount} ${pluralize("row", skippedCount)} skipped — no email address found.` : ""}${overCapacityText}`
-    : `Are you sure you want to send invitations to ${validCount} ${pluralize("recipient", validCount)}?${overCapacityText}`
+  const descriptionText = overCapacity
+    ? overCapacityBody
+    : hasIssues
+      ? `${validCount} ${pluralize("email", validCount)} imported and ready to assign.${duplicateCount > 0 ? ` ${duplicateCount} ${pluralize("duplicate", duplicateCount)} removed — only 1 instance kept per address.` : ""}${skippedCount > 0 ? ` ${skippedCount} ${pluralize("row", skippedCount)} skipped — no email address found.` : ""}`
+      : `Are you sure you want to send invitations to ${validCount} ${pluralize("recipient", validCount)}?`
 
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      onConfirm={overCapacity ? () => {} : onConfirm}
-      title={`${validCount} ${pluralize("email", validCount)} ready to assign`}
+      onConfirm={overCapacity ? onClose : onConfirm}
+      title={
+        overCapacity
+          ? "Too many invitees"
+          : `${validCount} ${pluralize("email", validCount)} ready to assign`
+      }
       confirmText={confirmText}
       cancelText={overCapacity ? null : "Cancel"}
       fullWidth
@@ -113,39 +114,37 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
       aria-describedby={descriptionId}
     >
       <VisuallyHidden id={descriptionId}>{descriptionText}</VisuallyHidden>
-      <Stack gap="16px">
-        <Typography variant="body1">
-          {hasIssues
-            ? `${validCount} ${pluralize("email", validCount)} imported and ready to assign.`
-            : `Are you sure you want to send invitations to ${validCount} ${pluralize("recipient", validCount)}?`}
-        </Typography>
-        {duplicateCount > 0 && (
-          <DuplicateNotice>
-            {duplicateCount} {pluralize("duplicate", duplicateCount)} removed —
-            only 1 instance kept per address.
-          </DuplicateNotice>
-        )}
-        {skippedCount > 0 && (
-          <DuplicateNotice>
-            {skippedCount} {pluralize("row", skippedCount)} skipped — no email
-            address found.
-          </DuplicateNotice>
-        )}
-        {overCapacity && (
-          <OverCapacityWarning>
-            Only {availableSeats} unassigned {pluralize("seat", availableSeats)}{" "}
-            available.
-          </OverCapacityWarning>
-        )}
-        {invalidEmails.length > 0 && (
-          <Stack gap="4px">
-            <SectionLabel component="p">
-              These addresses were not valid and were not added:
-            </SectionLabel>
-            <InvalidEmailList emails={invalidEmails} />
-          </Stack>
-        )}
-      </Stack>
+      {overCapacity ? (
+        <Typography variant="body1">{overCapacityBody}</Typography>
+      ) : (
+        <Stack gap="16px">
+          <Typography variant="body1">
+            {hasIssues
+              ? `${validCount} ${pluralize("email", validCount)} imported and ready to assign.`
+              : `Are you sure you want to send invitations to ${validCount} ${pluralize("recipient", validCount)}?`}
+          </Typography>
+          {duplicateCount > 0 && (
+            <DuplicateNotice>
+              {duplicateCount} {pluralize("duplicate", duplicateCount)} removed
+              — only 1 instance kept per address.
+            </DuplicateNotice>
+          )}
+          {skippedCount > 0 && (
+            <DuplicateNotice>
+              {skippedCount} {pluralize("row", skippedCount)} skipped — no email
+              address found.
+            </DuplicateNotice>
+          )}
+          {invalidEmails.length > 0 && (
+            <Stack gap="4px">
+              <SectionLabel component="p">
+                These addresses were not valid and were not added:
+              </SectionLabel>
+              <InvalidEmailList emails={invalidEmails} />
+            </Stack>
+          )}
+        </Stack>
+      )}
     </Dialog>
   )
 }

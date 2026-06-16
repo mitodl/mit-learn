@@ -141,7 +141,7 @@ describe("AssignSeatsConfirmModal", () => {
     ).not.toBeInTheDocument()
   })
 
-  test("shows over-capacity warning when validCount exceeds availableSeats", () => {
+  test("shows over-capacity dialog when validCount exceeds availableSeats", () => {
     renderWithTheme(
       <AssignSeatsConfirmModal
         {...baseProps}
@@ -151,11 +151,16 @@ describe("AssignSeatsConfirmModal", () => {
     )
 
     expect(
-      screen.getAllByText(/only 10 unassigned seats available\./i).length,
+      screen.getAllByText(
+        /15 emails entered, only 10 seats remaining\. Please enter fewer emails\./i,
+      ).length,
     ).toBeGreaterThan(0)
+    expect(
+      screen.getByRole("heading", { name: /too many invitees/i }),
+    ).toBeInTheDocument()
   })
 
-  test("does not show over-capacity warning when validCount is within availableSeats", () => {
+  test("does not show over-capacity dialog when validCount is within availableSeats", () => {
     renderWithTheme(
       <AssignSeatsConfirmModal
         {...baseProps}
@@ -165,11 +170,11 @@ describe("AssignSeatsConfirmModal", () => {
     )
 
     expect(
-      screen.queryByText(/only \d+ unassigned seat/i),
+      screen.queryByText(/emails entered, only \d+ seats remaining/i),
     ).not.toBeInTheDocument()
   })
 
-  test("CSV over-capacity: shows Review Learner List button and no Cancel button", () => {
+  test("over-capacity: shows Ok button and no Cancel button", () => {
     renderWithTheme(
       <AssignSeatsConfirmModal
         {...baseProps}
@@ -178,15 +183,13 @@ describe("AssignSeatsConfirmModal", () => {
       />,
     )
 
-    expect(
-      screen.getByRole("button", { name: "Review Learner List" }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Ok" })).toBeInTheDocument()
     expect(
       screen.queryByRole("button", { name: /cancel/i }),
     ).not.toBeInTheDocument()
   })
 
-  test("CSV over-capacity: Review Learner List button closes the dialog", async () => {
+  test("over-capacity: Ok button closes the dialog", async () => {
     renderWithTheme(
       <AssignSeatsConfirmModal
         {...baseProps}
@@ -195,9 +198,7 @@ describe("AssignSeatsConfirmModal", () => {
       />,
     )
 
-    await user.click(
-      screen.getByRole("button", { name: "Review Learner List" }),
-    )
+    await user.click(screen.getByRole("button", { name: "Ok" }))
 
     expect(baseProps.onClose).toHaveBeenCalledTimes(1)
     expect(baseProps.onConfirm).not.toHaveBeenCalled()
