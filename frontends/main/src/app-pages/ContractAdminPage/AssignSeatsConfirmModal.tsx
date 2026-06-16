@@ -101,7 +101,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
     <Dialog
       open={open}
       onClose={onClose}
-      onConfirm={overCapacity ? onClose : onConfirm}
+      onConfirm={overCapacity ? () => {} : onConfirm}
       title={
         overCapacity
           ? "Too many invitees"
