@@ -55,7 +55,7 @@ export const createBaseExtensions = (
     showOnlyCurrent: false,
     includeChildren: true,
     placeholder: ({ node, editor }): string => {
-      let parentNode: typeof node | null = null
+      let parentNode: ProseMirrorNode | null = null
 
       editor.state.doc.descendants((n: ProseMirrorNode) => {
         n.forEach((childNode: ProseMirrorNode) => {
@@ -70,8 +70,13 @@ export const createBaseExtensions = (
       })
 
       if (parentNode) {
+        const pn = parentNode as ProseMirrorNode
+        if (pn.type.name === "listItem" || pn.type.name === "taskItem") {
+          return ""
+        }
+
         const parentExtension = editor.extensionManager.extensions.find(
-          (ext) => ext.name === parentNode!.type.name,
+          (ext) => ext.name === pn.type.name,
         )
 
         if (
