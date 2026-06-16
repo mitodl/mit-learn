@@ -455,7 +455,9 @@ describe("ProgramAsCoursePage", () => {
     )
 
     expect(await screen.findByText("Certificate Track")).toBeInTheDocument()
-    expect(screen.getByText("Earn a verified certificate of completion")).toBeInTheDocument()
+    expect(
+      screen.getByText("Earn a verified certificate of completion"),
+    ).toBeInTheDocument()
     expect(screen.getByText("$250")).toBeInTheDocument()
   })
 })

@@ -103,7 +103,9 @@ const ProgramAsCourseCertificateTrackCard: React.FC<
         <TopRow>
           <LeftCol>
             <TrackTitle>Certificate Track</TrackTitle>
-            <TrackSubtitle>Earn a verified certificate of completion</TrackSubtitle>
+            <TrackSubtitle>
+              Earn a verified certificate of completion
+            </TrackSubtitle>
           </LeftCol>
           <Price>{displayPrice}</Price>
         </TopRow>
