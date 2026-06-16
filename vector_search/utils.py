@@ -483,12 +483,14 @@ def _process_resource_embeddings(serialized_resources):
 
 
 def update_learning_resource_payload(serialized_document):
-    points = [vector_point_id(vector_point_key(serialized_document))]
-    _set_payload(
-        points,
-        serialized_document,
-        param_map=QDRANT_RESOURCE_PARAM_MAP,
+    """
+    Refresh a resource's Qdrant payload without re-embedding.
+    """
+    point_id = vector_point_id(vector_point_key(serialized_document))
+    qdrant_client().overwrite_payload(
         collection_name=RESOURCES_COLLECTION_NAME,
+        payload=serialized_document,
+        points=[point_id],
     )
 
 
