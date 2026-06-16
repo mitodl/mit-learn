@@ -52,7 +52,13 @@ export async function safeGenerateMetadata(
     if ((error as AxiosError)?.response?.status === 404) {
       return notFound()
     }
-    console.error("Error fetching page metadata", error)
+    const axiosError = error as AxiosError
+    console.error("Error fetching page metadata", {
+      status: axiosError?.response?.status,
+      url: axiosError?.config?.url,
+      code: axiosError?.code,
+      message: axiosError?.message,
+    })
     Sentry.captureException(error)
     return standardizeMetadata()
   }

@@ -20,10 +20,20 @@ import * as Sentry from "@sentry/nextjs"
 import FallbackErrorPage from "@/app-pages/ErrorPage/FallbackErrorPage"
 import { ThemeProvider, MITLearnGlobalStyles } from "ol-components"
 
-export default function GlobalError({ error }: { error: Error }) {
+export default function GlobalError({
+  error,
+}: {
+  error: Error & { digest?: string }
+}) {
   useEffect(() => {
     console.error("Error encountered in global error boundary:", error)
-    Sentry.captureException(error)
+    /**
+     * usePathname relies on router context that may be unavailable here (the
+     * root layout itself failed), so read the path from window instead.
+     */
+    Sentry.captureException(error, {
+      tags: { digest: error.digest, route: window.location.pathname },
+    })
   }, [error])
 
   return (
