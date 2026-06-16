@@ -16,7 +16,13 @@ import type {
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import { renderWithProviders, waitFor, screen, within, user } from "@/test-utils"
+import {
+  renderWithProviders,
+  waitFor,
+  screen,
+  within,
+  user,
+} from "@/test-utils"
 import { assertHeadings } from "ol-test-utilities"
 import ProgramAsCoursePage from "./ProgramAsCoursePage"
 import { notFound } from "next/navigation"

@@ -295,10 +295,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       imageSrc={imageSrc}
       videoUrl={page.video_url}
       enrollmentAction={
-        <StyledProgramEnrollmentButton
-          program={program}
-          variant="bordered"
-        />
+        <StyledProgramEnrollmentButton program={program} variant="bordered" />
       }
       showStayUpdated={
         program.enrollment_modes.length > 0 &&
