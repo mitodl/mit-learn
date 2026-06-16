@@ -202,6 +202,18 @@ def create_qdrant_collections(force_recreate):
     update_qdrant_indexes()
 
 
+def tune_qdrant_collections():
+    """Tune optimizer settings for Qdrant collections."""
+    client = qdrant_client()
+    collections = [
+        RESOURCES_COLLECTION_NAME,
+        CONTENT_FILES_COLLECTION_NAME,
+        TOPICS_COLLECTION_NAME,
+    ]
+    for collection_name in collections:
+        tune_collection(client, collection_name)
+
+
 def create_qdrant_collection(collection_name, force_recreate):
     """
     Create or recreate a QDrant collection
@@ -242,7 +254,6 @@ def create_qdrant_collection(collection_name, force_recreate):
             ),
             hnsw_config=models.HnswConfigDiff(on_disk=False),
         )
-    tune_collection(client, collection_name)
 
 
 def update_qdrant_indexes():

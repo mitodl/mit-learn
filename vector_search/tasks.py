@@ -47,8 +47,20 @@ from vector_search.utils import (
     vector_point_id,
     vector_point_key,
 )
+from vector_search.utils import (
+    tune_qdrant_collections as tune_qdrant_collections_util,
+)
 
 log = logging.getLogger(__name__)
+
+
+@app.task
+def tune_qdrant_collections():
+    """
+    Tune optimizer settings for Qdrant collections.
+    """
+    log.info("Running Qdrant collection tuning task")
+    tune_qdrant_collections_util()
 
 
 def _queue_program_content_file_embedding_tasks(index_tasks, program_ids, overwrite):
