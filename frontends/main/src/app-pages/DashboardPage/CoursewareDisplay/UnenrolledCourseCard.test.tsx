@@ -492,6 +492,10 @@ describe.each([
           )
         })
 
+        await waitFor(() => {
+          expect(window.location.href).toBe(run.courseware_url)
+        })
+
         expect(
           screen.queryByRole("dialog", { name: course.title }),
         ).not.toBeInTheDocument()
