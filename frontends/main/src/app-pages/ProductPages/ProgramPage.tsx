@@ -298,7 +298,6 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
         <StyledProgramEnrollmentButton
           program={program}
           variant="bordered"
-          showArrowIcon={false}
         />
       }
       showStayUpdated={
