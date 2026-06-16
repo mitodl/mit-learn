@@ -101,7 +101,7 @@ export const UnenrolledCourseCard = ({
   const startButton = isCompact ? (
     <CoursewareButton
       size="small"
-      variant="text"
+      variant="secondary"
       data-testid="courseware-button"
       onClick={isDisabled ? undefined : enrollClick}
       disabled={isDisabled}
