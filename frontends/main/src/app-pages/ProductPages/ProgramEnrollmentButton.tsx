@@ -1,13 +1,13 @@
 import { env } from "@/env"
 import React from "react"
-import { LoadingSpinner, Stack, theme } from "ol-components"
+import { LoadingSpinner, Stack } from "ol-components"
 import {
   enrollmentQueries,
   useCreateProgramEnrollment,
 } from "api/mitxonline-hooks/enrollment"
 import { useQuery } from "@tanstack/react-query"
 import { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
-import { RiArrowRightSLine, RiCheckLine } from "@remixicon/react"
+import { RiCheckLine } from "@remixicon/react"
 import {
   Alert,
   Button,
