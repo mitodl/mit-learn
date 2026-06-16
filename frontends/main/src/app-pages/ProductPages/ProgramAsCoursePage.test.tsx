@@ -439,4 +439,23 @@ describe("ProgramAsCoursePage", () => {
       }),
     )
   })
+
+  test("Renders certificate track pricing card", async () => {
+    const program = makeProgramAsCourse({
+      enrollment_modes: [
+        factories.courses.enrollmentMode({ requires_payment: true }),
+      ],
+      products: [factories.courses.product({ price: "250" })],
+    })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+
+    renderWithProviders(
+      <ProgramAsCoursePage readableId={program.readable_id} />,
+    )
+
+    expect(await screen.findByText("Certificate Track")).toBeInTheDocument()
+    expect(screen.getByText("Earn a verified certificate of completion")).toBeInTheDocument()
+    expect(screen.getByText("$250")).toBeInTheDocument()
+  })
 })

@@ -16,6 +16,7 @@ import {
   InfoBoxEnrollArea,
 } from "./InfoBoxParts"
 import { ProductPageAskTimSection } from "./ProductPageAskTim"
+import ProgramAsCourseCertificateTrackCard from "./ProgramAsCourseCertificateTrackCard"
 
 type ProgramAsCourseInfoBoxProps = {
   program: V2ProgramDetail
@@ -37,6 +38,7 @@ const ProgramAsCourseInfoBox: React.FC<ProgramAsCourseInfoBoxProps> = ({
         </InfoBoxContent>
         <InfoBoxEnrollArea>
           <InfoBoxActionStack>
+            <ProgramAsCourseCertificateTrackCard program={program} />
             <ProgramEnrollmentButton program={program} displayAsCourse />
           </InfoBoxActionStack>
         </InfoBoxEnrollArea>

@@ -18,11 +18,11 @@ describe("ProgramAsCourseSummary", () => {
     )
   })
 
-  test("Renders duration and price rows", () => {
+  test("Renders duration row and does not render price row", () => {
     const program = makeProgram()
     renderWithProviders(<ProgramAsCourseSummary program={program} />)
     expect(screen.getByTestId(TestIds.DurationRow)).toBeInTheDocument()
-    expect(screen.getByTestId(TestIds.PriceRow)).toBeInTheDocument()
+    expect(screen.queryByTestId(TestIds.PriceRow)).not.toBeInTheDocument()
   })
 
   test("Renders pace row when courses are provided", () => {
