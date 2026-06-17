@@ -382,7 +382,9 @@ def embed_new_content_files(self):
             chunk_size=settings.QDRANT_CHUNK_SIZE,
         )
     ]
-    embed_tasks = celery.chain(tasks)
+    if not tasks:
+        return None
+    embed_tasks = celery.chain(*tasks)
     return self.replace(embed_tasks)
 
 
