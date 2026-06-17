@@ -74,6 +74,7 @@ from vector_search.utils import (
     update_learning_resource_payload,
     update_qdrant_indexes,
     vector_point_id,
+    vector_point_key,
 )
 from vector_search.utils import qdrant_client as vector_qdrant_client
 
@@ -903,25 +904,22 @@ def test_should_not_generate_for_unchanged_content_file(mocker):
 
 
 def test_update_payload_learning_resource(mocker):
-    """Should update payload for learning resources"""
+    """Should overwrite the point payload with the full serialized document"""
     resource = LearningResourceFactory.create()
-    serialized_resources = list(serialize_bulk_learning_resources([resource.id]))
+    doc = next(iter(serialize_bulk_learning_resources([resource.id])))
     mock_qdrant = mocker.MagicMock()
     mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
-    update_learning_resource_payload(serialized_resources[0])
-    mock_qdrant.set_payload.assert_called_once()
-    call_args = mock_qdrant.set_payload.call_args[1]
+    update_learning_resource_payload(doc)
+    mock_qdrant.overwrite_payload.assert_called_once()
+    call_args = mock_qdrant.overwrite_payload.call_args[1]
     assert call_args["collection_name"] == RESOURCES_COLLECTION_NAME
-    assert call_args["points"] == [
-        vector_point_id(
-            f"{serialized_resources[0]['platform']['code']}.{serialized_resources[0]['readable_id']}"
-        )
-    ]
-    # Verify payload contains the mapped values
-    for src_key, dest_key in QDRANT_RESOURCE_PARAM_MAP.items():
-        if src_key in serialized_resources[0]:
-            assert dest_key in call_args["payload"]
-            assert call_args["payload"][dest_key] == serialized_resources[0][src_key]
+    assert call_args["points"] == [vector_point_id(vector_point_key(doc))]
+    # The whole serialized doc is written. Topics in particular must propagate;
+    # the old param-map projection keyed on `topic` (not `topics`) silently
+    # dropped them, hiding resources from topic filters (mitodl/hq#11786).
+    assert call_args["payload"] == doc
+    assert doc["topics"]
+    assert call_args["payload"]["topics"] == doc["topics"]
 
 
 def test_update_payload_content_file(mocker):
