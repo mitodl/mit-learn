@@ -38,7 +38,9 @@ const ProgramAsCourseInfoBox: React.FC<ProgramAsCourseInfoBoxProps> = ({
         </InfoBoxContent>
         <InfoBoxEnrollArea>
           <InfoBoxActionStack>
-            <ProgramAsCourseCertificateTrackCard program={program} />
+            {program.certificate_available && (
+              <ProgramAsCourseCertificateTrackCard program={program} />
+            )}
             <ProgramEnrollmentButton program={program} displayAsCourse />
           </InfoBoxActionStack>
         </InfoBoxEnrollArea>

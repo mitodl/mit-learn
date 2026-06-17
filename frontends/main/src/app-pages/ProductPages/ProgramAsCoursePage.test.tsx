@@ -442,6 +442,7 @@ describe("ProgramAsCoursePage", () => {
 
   test("Renders certificate track pricing card", async () => {
     const program = makeProgramAsCourse({
+      certificate_available: true,
       enrollment_modes: [
         factories.courses.enrollmentMode({ requires_payment: true }),
       ],
@@ -459,5 +460,28 @@ describe("ProgramAsCoursePage", () => {
       screen.getByText("Earn a verified certificate of completion"),
     ).toBeInTheDocument()
     expect(screen.getByText("$250")).toBeInTheDocument()
+  })
+
+  test("Hides certificate track pricing card for free-enrollment programs", async () => {
+    const program = makeProgramAsCourse({
+      certificate_available: false,
+      enrollment_modes: [
+        factories.courses.enrollmentMode({ requires_payment: false }),
+      ],
+      products: [factories.courses.product({ price: "250" })],
+    })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+
+    renderWithProviders(
+      <ProgramAsCoursePage readableId={program.readable_id} />,
+    )
+
+    await screen.findByRole("heading", { name: page.title })
+    expect(screen.queryByText("Certificate Track")).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("Earn a verified certificate of completion"),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Enroll" })).toBeInTheDocument()
   })
 })
