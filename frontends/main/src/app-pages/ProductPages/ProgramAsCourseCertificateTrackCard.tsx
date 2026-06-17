@@ -9,7 +9,6 @@ const CardShell = styled.div({
   flexDirection: "column",
   alignItems: "flex-start",
   gap: "16px",
-  width: "346px",
   alignSelf: "stretch",
   marginBottom: "16px",
 })
@@ -21,7 +20,6 @@ const CardBody = styled.div(({ theme }) => ({
   alignItems: "center",
   padding: "16px",
   gap: "16px",
-  width: "346px",
   background: theme.custom.colors.lightGray1,
   borderRadius: "8px",
   alignSelf: "stretch",
