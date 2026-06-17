@@ -24,6 +24,7 @@ import {
 } from "./helpers"
 import { ProgressBadge } from "./ProgressBadge"
 import { CoursewareCard } from "./CoursewareCard"
+import { getCertificateLink } from "./CardShared"
 import { buildCourseEntry } from "./model/dashboardViewModel"
 import { formatDate } from "ol-utilities"
 import {
@@ -376,6 +377,7 @@ interface ProgramAsCourseCardProps {
   Component?: React.ElementType
   contextMenuItems?: SimpleMenuItem[]
   className?: string
+  onUpgradeError?: (error: string) => void
 }
 
 /**
@@ -401,6 +403,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   Component,
   contextMenuItems = [],
   className,
+  onUpgradeError,
 }) => {
   const useProductPages = useFeatureFlagEnabled(
     FeatureFlags.MitxOnlineProductPages,
@@ -474,8 +477,10 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
     ancestorProgramEnrollment?.enrollment_mode,
   ].some(isVerifiedEnrollmentMode)
 
-  const programCertificateUrl =
-    courseProgramEnrollment?.certificate?.link ?? null
+  const programCertificateUrl = getCertificateLink(
+    courseProgramEnrollment?.certificate?.link,
+    "program",
+  )
 
   // Build context menu
   const menuItems = getContextMenuItems(
@@ -599,9 +604,11 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
                 id: course.id,
                 runId: entry.displayedEnrollment?.run.id,
               })}
+              kind="course"
               entry={entry}
-              layout="moduleRow"
+              layout="compact"
               headingLevel="h4"
+              onUpgradeError={onUpgradeError}
             />
           )
         })}
