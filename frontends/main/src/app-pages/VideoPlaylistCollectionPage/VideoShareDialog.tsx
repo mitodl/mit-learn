@@ -183,18 +183,9 @@ const EmbedTextarea = styled.textarea(({ theme }) => ({
 
 const EmbedFooter = styled.div({
   display: "flex",
-  justifyContent: "space-between",
+  justifyContent: "end",
   alignItems: "center",
 })
-
-const StartAtLabel = styled.label(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-  ...theme.typography.body2,
-  color: theme.custom.colors.darkGray1,
-  cursor: "pointer",
-}))
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -392,10 +383,6 @@ const VideoShareDialog = ({
                 />
               </Field>
               <EmbedFooter>
-                <StartAtLabel>
-                  <input type="checkbox" />
-                  Start at 0:00
-                </StartAtLabel>
                 <CopyButton
                   size="small"
                   edge="circular"
