@@ -397,16 +397,14 @@ def embed_run_content_files(self, run_id):
         ContentFile.objects.filter(run__id=run_id).values_list("id", flat=True)
     )
 
-    return self.replace(
-        celery.chain(
-            [
-                generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite=True)
-                for ids in chunks(
-                    content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE
-                )
-            ]
-        )
-    )
+    tasks = [
+        generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite=True)
+        for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
+    ]
+    if not tasks:
+        return None
+
+    return self.replace(celery.chain(*tasks))
 
 
 @app.task(bind=True)
