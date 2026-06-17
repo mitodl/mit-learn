@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.71.7 (Released June 17, 2026)
+--------------
+
+- fix ocw routing for playlist parent (#3481)
+- adding fix for remove run embeddings task and tests (#3477)
+- fix: suppress 'Add some text' placeholder inside the list and task items in tiptap editor (#3474)
+
 Version 0.71.6 (Released June 16, 2026)
 --------------
 
