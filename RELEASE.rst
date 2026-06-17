@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.71.9 (Released June 17, 2026)
+--------------
+
+- switch to celery.chain for certain vector_search tasks (#3484)
+- Fix bug in vector resource metadata updates (#3482)
+- add arithmix behind a feature flag (#3405)
+- dashboard refactor phase 7d (#3473)
+- feat: redemption_status migration + Assign Seats CSV flow (#3442)
+- fix issues with multiple summarizer config instances (#3479)
+
 Version 0.71.7 (Released June 17, 2026)
 --------------
 
