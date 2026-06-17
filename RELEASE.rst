@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.71.7
+Version 0.71.7 (Released June 17, 2026)
 --------------
 
 - fix ocw routing for playlist parent (#3481)
