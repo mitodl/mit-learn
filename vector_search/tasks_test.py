@@ -255,6 +255,22 @@ def test_remove_run_content_files(mocker, mocked_celery, settings):
     assert mocked_celery.replace.call_args[0][1] == mocked_celery.chain.return_value
 
 
+def test_remove_run_content_files_no_content_files(mocker, mocked_celery):
+    """
+    remove_run_content_files should short-circuit when there is nothing to remove.
+    """
+    run = LearningResourceRunFactory.create()
+    remove_embeddings_mock = mocker.patch(
+        "vector_search.tasks.remove_embeddings", autospec=True
+    )
+
+    remove_run_content_files.delay(run.id)
+
+    remove_embeddings_mock.si.assert_not_called()
+    mocked_celery.chain.assert_not_called()
+    mocked_celery.replace.assert_not_called()
+
+
 def test_remove_unpublished_run_content_files(mocker, mocked_celery):
     """
     remove_unpublished_run_content_files should only remove unpublished content
