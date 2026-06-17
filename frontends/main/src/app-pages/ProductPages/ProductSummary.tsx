@@ -1129,7 +1129,6 @@ const ProgramAsCourseSummary: React.FC<{
     <SummaryRows>
       <ProgramDurationRow program={program} data-testid={TestIds.DurationRow} />
       <ProgramPaceRow courses={courses} data-testid={TestIds.PaceRow} />
-      <ProgramPriceRow data-testid={TestIds.PriceRow} program={program} />
     </SummaryRows>
   )
 }

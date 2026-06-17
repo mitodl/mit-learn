@@ -16,6 +16,7 @@ import {
   InfoBoxEnrollArea,
 } from "./InfoBoxParts"
 import { ProductPageAskTimSection } from "./ProductPageAskTim"
+import ProgramAsCourseCertificateTrackCard from "./ProgramAsCourseCertificateTrackCard"
 
 type ProgramAsCourseInfoBoxProps = {
   program: V2ProgramDetail
@@ -26,6 +27,8 @@ const ProgramAsCourseInfoBox: React.FC<ProgramAsCourseInfoBoxProps> = ({
   program,
   courses,
 }) => {
+  const hasCertificateTrackPrice = Boolean(program.products?.[0]?.price)
+
   return (
     <InfoBoxColumn>
       <InfoBoxCard as="section" aria-labelledby={HeadingIds.Summary}>
@@ -37,6 +40,9 @@ const ProgramAsCourseInfoBox: React.FC<ProgramAsCourseInfoBoxProps> = ({
         </InfoBoxContent>
         <InfoBoxEnrollArea>
           <InfoBoxActionStack>
+            {program.certificate_available && hasCertificateTrackPrice && (
+              <ProgramAsCourseCertificateTrackCard program={program} />
+            )}
             <ProgramEnrollmentButton program={program} displayAsCourse />
           </InfoBoxActionStack>
         </InfoBoxEnrollArea>
