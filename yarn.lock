@@ -3296,6 +3296,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@mitodl/arithmix@npm:^0.2.2":
+  version: 0.2.2
+  resolution: "@mitodl/arithmix@npm:0.2.2"
+  peerDependencies:
+    "@emotion/react": ">=11"
+    "@emotion/styled": ">=11"
+    react: ">=18"
+    react-dom: ">=18"
+  checksum: 10/6e1d7f1a8306cc64e281934b94c29f387455f58bc56af6dfdc19ecbcafaef5614fb91e867dce0f392a80bf804fd32f2dfa81b3d21b7dd1cdf60f8dfe704a46d4
+  languageName: node
+  linkType: hard
+
 "@mitodl/course-search-utils@npm:^3.5.2":
   version: 3.5.2
   resolution: "@mitodl/course-search-utils@npm:3.5.2"
@@ -16166,6 +16178,7 @@ __metadata:
     "@faker-js/faker": "npm:^10.0.0"
     "@floating-ui/react": "npm:^0.27.16"
     "@happy-dom/jest-environment": "npm:^20.1.0"
+    "@mitodl/arithmix": "npm:^0.2.2"
     "@mitodl/course-search-utils": "npm:^3.5.2"
     "@mitodl/mitxonline-api-axios": "npm:2026.6.10"
     "@mitodl/smoot-design": "npm:^6.27.0"
