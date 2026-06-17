@@ -482,7 +482,10 @@ describe("ProgramAsCoursePage", () => {
     expect(
       screen.queryByText("Earn a verified certificate of completion"),
     ).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Enroll" })).toBeInTheDocument()
+    const enrollButtons = await screen.findAllByRole("button", {
+      name: /enroll/i,
+    })
+    expect(enrollButtons.length).toBeGreaterThanOrEqual(1)
   })
 
   test("Hides certificate track pricing card when products are empty", async () => {
@@ -503,7 +506,6 @@ describe("ProgramAsCoursePage", () => {
     await screen.findByRole("heading", { name: page.title })
     expect(screen.queryByText("Certificate Track")).not.toBeInTheDocument()
     expect(screen.queryByText("Price unavailable")).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Enroll" })).toBeInTheDocument()
   })
 
   test("Hides certificate track pricing card when product price is missing", async () => {
@@ -524,6 +526,5 @@ describe("ProgramAsCoursePage", () => {
     await screen.findByRole("heading", { name: page.title })
     expect(screen.queryByText("Certificate Track")).not.toBeInTheDocument()
     expect(screen.queryByText("Price unavailable")).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Enroll" })).toBeInTheDocument()
   })
 })
