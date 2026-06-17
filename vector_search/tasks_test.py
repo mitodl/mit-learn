@@ -212,7 +212,7 @@ def test_embed_new_content_files(mocker, mocked_celery):
 
     with pytest.raises(mocked_celery.replace_exception_class):
         embed_new_content_files.delay()
-    list(mocked_celery.chain.call_args[0][0])
+    list(mocked_celery.chain.call_args[0])
 
     embedded_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
     assert sorted(new_content_file_ids) == sorted(embedded_ids)
