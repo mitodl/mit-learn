@@ -109,16 +109,16 @@ describe("PodcastEmbedPlayer", () => {
       expect(audio).toHaveAttribute("src", "https://cdn.example.com/ep.mp3")
     })
 
-    test("falls back to episode_link when audio_url is absent", async () => {
+    test("does not use episode_link as audio src when audio_url is absent", async () => {
       const resource = makeEpisode({
         podcast_episode: {
           ...makeEpisode().podcast_episode!,
           audio_url: null as unknown as string,
-          episode_link: "https://example.com/fallback.mp3",
+          episode_link: "https://example.com/webpage",
         },
       })
-      const { audio } = await renderPlayer(resource)
-      expect(audio).toHaveAttribute("src", "https://example.com/fallback.mp3")
+      const { audio } = await renderPlayer(resource, { waitForAutoPlay: false })
+      expect(audio).not.toHaveAttribute("src")
     })
 
     test("audio element has no src when resource is not a podcast episode", async () => {
@@ -303,6 +303,20 @@ describe("PodcastEmbedPlayer", () => {
       const { audio } = await renderPlayer()
       fireEvent.click(screen.getByRole("button", { name: /playback speed/i }))
       expect(audio.playbackRate).toBe(1.25)
+    })
+  })
+
+  describe("time display", () => {
+    test("formats duration under 60 minutes as MM:SS", async () => {
+      const { simulateLoadedMetadata } = await renderPlayer()
+      simulateLoadedMetadata(125) // 2:05
+      expect(screen.getAllByText("02:05")[0]).toBeInTheDocument()
+    })
+
+    test("formats duration of 60 minutes or more as H:MM:SS", async () => {
+      const { simulateLoadedMetadata } = await renderPlayer()
+      simulateLoadedMetadata(3661) // 1:01:01
+      expect(screen.getAllByText("1:01:01")[0]).toBeInTheDocument()
     })
   })
 
