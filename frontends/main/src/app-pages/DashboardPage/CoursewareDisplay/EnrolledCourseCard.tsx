@@ -2,6 +2,7 @@ import React from "react"
 import { SimpleMenu, Stack } from "ol-components"
 import {
   CardRoot,
+  CardTypeText,
   CourseStartCountdown,
   CoursewareActionColumn,
   CoursewareButton,
@@ -173,7 +174,7 @@ export const EnrolledCourseCard = ({
     </>
   )
   const titleSection = (
-    <>
+    <Stack gap="6px">
       {coursewareUrl ? (
         <TitleHeading as={headingLevel}>
           <TitleLink size="medium" color="black" href={coursewareUrl}>
@@ -184,7 +185,7 @@ export const EnrolledCourseCard = ({
         <TitleText as={headingLevel}>{title}</TitleText>
       )}
       {isCompact ? null : certificateAndUpgrade}
-    </>
+    </Stack>
   )
   // Determine if button should be disabled
   // Staff can access courseware even before the course has started
@@ -335,7 +336,8 @@ export const EnrolledCourseCard = ({
         className={className}
         layout={layout}
       >
-        <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
+        <Stack justifyContent="start" alignItems="stretch" flex={1}>
+          <CardTypeText>Course</CardTypeText>
           {titleSection}
         </Stack>
         <Stack gap="8px">

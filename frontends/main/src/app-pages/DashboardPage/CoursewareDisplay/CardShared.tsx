@@ -1,5 +1,5 @@
 import React from "react"
-import { Link, Stack, styled } from "ol-components"
+import { Link, Stack, styled, Typography } from "ol-components"
 import NextLink from "next/link"
 import { EnrollmentStatus } from "./helpers"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
@@ -65,6 +65,11 @@ const CardRoot = styled.div<{
     },
   },
 ])
+
+const CardTypeText = styled(Typography)(({ theme }) => ({
+  ...theme.typography.subtitle4,
+  color: theme.custom.colors.silverGrayDark,
+}))
 
 const TitleHeading = styled.h3(({ theme }) => ({
   margin: 0,
@@ -244,6 +249,7 @@ const CourseStartCountdown: React.FC<{
 
 export {
   CardRoot,
+  CardTypeText,
   TitleHeading,
   TitleLink,
   TitleText,

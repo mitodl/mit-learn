@@ -7,6 +7,7 @@ import {
 import { LoadingSpinner, Stack } from "ol-components"
 import {
   CardRoot,
+  CardTypeText,
   CourseStartCountdown,
   CoursewareActionColumn,
   CoursewareButton,
@@ -174,7 +175,8 @@ export const UnenrolledCourseCard = ({
         className={className}
         layout={layout}
       >
-        <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
+        <Stack justifyContent="start" alignItems="stretch" gap="6px" flex={1}>
+          <CardTypeText>Course</CardTypeText>
           {titleSection}
         </Stack>
         <Stack gap="8px">
