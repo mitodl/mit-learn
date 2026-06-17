@@ -212,7 +212,7 @@ def test_embed_new_content_files(mocker, mocked_celery):
 
     with pytest.raises(mocked_celery.replace_exception_class):
         embed_new_content_files.delay()
-    list(mocked_celery.group.call_args[0][0])
+    list(mocked_celery.chain.call_args[0][0])
 
     embedded_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
     assert sorted(new_content_file_ids) == sorted(embedded_ids)
@@ -246,9 +246,9 @@ def test_remove_run_content_files(mocker, mocked_celery, settings):
         mock_call.args[1] == CONTENT_FILE_TYPE
         for mock_call in remove_embeddings_mock.si.mock_calls
     )
-    assert mocked_celery.group.call_count == 1
+    assert mocked_celery.chain.call_count == 1
     assert mocked_celery.replace.call_count == 1
-    assert mocked_celery.replace.call_args[0][1] == mocked_celery.group.return_value
+    assert mocked_celery.replace.call_args[0][1] == mocked_celery.chain.return_value
 
 
 def test_remove_unpublished_run_content_files(mocker, mocked_celery):
@@ -271,9 +271,9 @@ def test_remove_unpublished_run_content_files(mocker, mocked_celery):
         [unpublished_content_file.id],
         CONTENT_FILE_TYPE,
     )
-    assert mocked_celery.group.call_count == 1
+    assert mocked_celery.chain.call_count == 1
     assert mocked_celery.replace.call_count == 1
-    assert mocked_celery.replace.call_args[0][1] == mocked_celery.group.return_value
+    assert mocked_celery.replace.call_args[0][1] == mocked_celery.chain.return_value
 
 
 def test_embed_learning_resources_by_id(mocker, mocked_celery):
@@ -578,7 +578,7 @@ def test_embed_new_content_files_without_runs(mocker, mocked_celery):
 
     with pytest.raises(mocked_celery.replace_exception_class):
         embed_new_content_files.delay()
-    list(mocked_celery.group.call_args[0][0])
+    list(mocked_celery.chain.call_args[0][0])
     embedded_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
     for contentfile_id in content_files_without_run:
         assert contentfile_id in embedded_ids
