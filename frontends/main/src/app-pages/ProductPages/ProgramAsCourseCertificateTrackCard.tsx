@@ -90,7 +90,7 @@ type ProgramAsCourseCertificateTrackCardProps = {
 const ProgramAsCourseCertificateTrackCard: React.FC<
   ProgramAsCourseCertificateTrackCardProps
 > = ({ program }) => {
-  const currentPrice = program.products[0]?.price
+  const currentPrice = program.products?.[0]?.price
   const displayPrice = currentPrice
     ? formatPrice(currentPrice, { avoidCents: true })
     : "Price unavailable"

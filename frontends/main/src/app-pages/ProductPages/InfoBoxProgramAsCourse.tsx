@@ -27,7 +27,7 @@ const ProgramAsCourseInfoBox: React.FC<ProgramAsCourseInfoBoxProps> = ({
   program,
   courses,
 }) => {
-  const hasCertificateTrackPrice = Boolean(program.products[0]?.price)
+  const hasCertificateTrackPrice = Boolean(program.products?.[0]?.price)
 
   return (
     <InfoBoxColumn>
