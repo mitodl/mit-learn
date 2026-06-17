@@ -5,6 +5,7 @@ import { HeadingIds } from "./util"
 import { CourseSummary } from "./ProductSummary"
 import ProgramBundleUpsell from "./ProgramBundleUpsell"
 import CourseEnrollmentButton from "./CourseEnrollmentButton"
+import CourseCertificateTrackCard from "./CourseCertificateTrackCard"
 import {
   InfoBoxActionStack,
   InfoBoxCard,
@@ -19,6 +20,10 @@ type CourseInfoBoxProps = {
 }
 
 const CourseInfoBox: React.FC<CourseInfoBoxProps> = ({ course }) => {
+  const nextRunId = course.next_run_id
+  const nextRun = course.courseruns.find((run) => run.id === nextRunId)
+  const hasCertificateTrackPrice = Boolean(nextRun?.products?.[0]?.price)
+
   return (
     <InfoBoxColumn>
       <InfoBoxCard as="section" aria-labelledby={HeadingIds.Summary}>
@@ -30,6 +35,9 @@ const CourseInfoBox: React.FC<CourseInfoBoxProps> = ({ course }) => {
         </InfoBoxContent>
         <InfoBoxEnrollArea>
           <InfoBoxActionStack>
+            {course.certificate_available && hasCertificateTrackPrice && (
+              <CourseCertificateTrackCard course={course} />
+            )}
             <CourseEnrollmentButton course={course} />
           </InfoBoxActionStack>
         </InfoBoxEnrollArea>
