@@ -51,6 +51,15 @@ from vector_search.utils import (
 log = logging.getLogger(__name__)
 
 
+def _replace_with_chain(task, task_signatures):
+    """
+    Replace a task with a chain only when there is work to do.
+    """
+    if not task_signatures:
+        return None
+    return task.replace(celery.chain(*task_signatures))
+
+
 def _queue_program_content_file_embedding_tasks(index_tasks, program_ids, overwrite):
     """Queue content file embedding tasks for programs using a single bulk query."""
     if not program_ids:
@@ -80,7 +89,7 @@ def _queue_program_content_file_embedding_tasks(index_tasks, program_ids, overwr
     reject_on_worker_lost=True,
     autoretry_for=(RetryError,),
     retry_backoff=True,
-    rate_limit="300/m",
+    rate_limit="200/m",
 )
 def generate_embeddings(ids, resource_type, overwrite):
     """
@@ -243,7 +252,7 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):  # noqa
 
     # Use self.replace so that code waiting on this task will also wait on the embedding
     #  and finish tasks
-    return self.replace(celery.chain(*index_tasks))
+    return _replace_with_chain(self, index_tasks)
 
 
 @app.task(bind=True)
@@ -321,7 +330,7 @@ def embed_learning_resources_by_id(self, ids, skip_content_files, overwrite):
     # Use self.replace so that code waiting on this task will also wait on the embedding
     #  and finish tasks
 
-    return self.replace(celery.chain(*index_tasks))
+    return _replace_with_chain(self, index_tasks)
 
 
 @app.task(bind=True)
@@ -382,8 +391,7 @@ def embed_new_content_files(self):
             chunk_size=settings.QDRANT_CHUNK_SIZE,
         )
     ]
-    embed_tasks = celery.group(tasks)
-    return self.replace(embed_tasks)
+    return _replace_with_chain(self, tasks)
 
 
 @app.task(bind=True)
@@ -395,16 +403,11 @@ def embed_run_content_files(self, run_id):
         ContentFile.objects.filter(run__id=run_id).values_list("id", flat=True)
     )
 
-    return self.replace(
-        celery.group(
-            [
-                generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite=True)
-                for ids in chunks(
-                    content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE
-                )
-            ]
-        )
-    )
+    tasks = [
+        generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite=True)
+        for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
+    ]
+    return _replace_with_chain(self, tasks)
 
 
 @app.task(bind=True)
@@ -415,16 +418,11 @@ def remove_run_content_files(self, run_id):
     content_file_ids = list(
         ContentFile.objects.filter(run__id=run_id).values_list("id", flat=True)
     )
-    return self.replace(
-        celery.group(
-            [
-                remove_embeddings.si(ids, CONTENT_FILE_TYPE)
-                for ids in chunks(
-                    content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE
-                )
-            ]
-        )
-    )
+    tasks = [
+        remove_embeddings.si(ids, CONTENT_FILE_TYPE)
+        for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
+    ]
+    return _replace_with_chain(self, tasks)
 
 
 @app.task(bind=True)
@@ -437,16 +435,11 @@ def remove_unpublished_run_content_files(self, run_id):
             "id", flat=True
         )
     )
-    return self.replace(
-        celery.group(
-            [
-                remove_embeddings.si(ids, CONTENT_FILE_TYPE)
-                for ids in chunks(
-                    content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE
-                )
-            ]
-        )
-    )
+    tasks = [
+        remove_embeddings.si(ids, CONTENT_FILE_TYPE)
+        for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
+    ]
+    return _replace_with_chain(self, tasks)
 
 
 @app.task

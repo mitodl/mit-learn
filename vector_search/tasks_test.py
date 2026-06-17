@@ -29,6 +29,7 @@ from vector_search.tasks import (
     embed_learning_resources_by_id,
     embed_new_content_files,
     embed_new_learning_resources,
+    embed_run_content_files,
     embeddings_healthcheck,
     remove_run_content_files,
     remove_unpublished_run_content_files,
@@ -212,10 +213,13 @@ def test_embed_new_content_files(mocker, mocked_celery):
 
     with pytest.raises(mocked_celery.replace_exception_class):
         embed_new_content_files.delay()
-    list(mocked_celery.group.call_args[0][0])
 
     embedded_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
     assert sorted(new_content_file_ids) == sorted(embedded_ids)
+    assert mocked_celery.chain.call_args.args == tuple(
+        generate_embeddings_mock.si.return_value
+        for _ in generate_embeddings_mock.si.mock_calls
+    )
 
 
 def test_remove_run_content_files(mocker, mocked_celery, settings):
@@ -246,9 +250,25 @@ def test_remove_run_content_files(mocker, mocked_celery, settings):
         mock_call.args[1] == CONTENT_FILE_TYPE
         for mock_call in remove_embeddings_mock.si.mock_calls
     )
-    assert mocked_celery.group.call_count == 1
+    assert mocked_celery.chain.call_count == 1
     assert mocked_celery.replace.call_count == 1
-    assert mocked_celery.replace.call_args[0][1] == mocked_celery.group.return_value
+    assert mocked_celery.replace.call_args[0][1] == mocked_celery.chain.return_value
+
+
+def test_remove_run_content_files_no_content_files(mocker, mocked_celery):
+    """
+    remove_run_content_files should short-circuit when there is nothing to remove.
+    """
+    run = LearningResourceRunFactory.create()
+    remove_embeddings_mock = mocker.patch(
+        "vector_search.tasks.remove_embeddings", autospec=True
+    )
+
+    remove_run_content_files.delay(run.id)
+
+    remove_embeddings_mock.si.assert_not_called()
+    mocked_celery.chain.assert_not_called()
+    mocked_celery.replace.assert_not_called()
 
 
 def test_remove_unpublished_run_content_files(mocker, mocked_celery):
@@ -271,9 +291,9 @@ def test_remove_unpublished_run_content_files(mocker, mocked_celery):
         [unpublished_content_file.id],
         CONTENT_FILE_TYPE,
     )
-    assert mocked_celery.group.call_count == 1
+    assert mocked_celery.chain.call_count == 1
     assert mocked_celery.replace.call_count == 1
-    assert mocked_celery.replace.call_args[0][1] == mocked_celery.group.return_value
+    assert mocked_celery.replace.call_args[0][1] == mocked_celery.chain.return_value
 
 
 def test_embed_learning_resources_by_id(mocker, mocked_celery):
@@ -578,10 +598,61 @@ def test_embed_new_content_files_without_runs(mocker, mocked_celery):
 
     with pytest.raises(mocked_celery.replace_exception_class):
         embed_new_content_files.delay()
-    list(mocked_celery.group.call_args[0][0])
     embedded_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
     for contentfile_id in content_files_without_run:
         assert contentfile_id in embedded_ids
+
+
+def test_embed_run_content_files(mocker, mocked_celery, settings):
+    """
+    embed_run_content_files should replace itself with embedding tasks for all
+    content files associated with the run.
+    """
+    settings.QDRANT_CHUNK_SIZE = 2
+    run = LearningResourceRunFactory.create()
+    content_file_ids = [
+        content_file.id for content_file in ContentFileFactory.create_batch(3, run=run)
+    ]
+    ContentFileFactory.create()
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        embed_run_content_files.delay(run.id)
+
+    embedded_ids = [
+        content_file_id
+        for mock_call in generate_embeddings_mock.si.mock_calls
+        for content_file_id in mock_call.args[0]
+    ]
+    assert sorted(embedded_ids) == sorted(content_file_ids)
+    assert all(
+        mock_call.args[1:] == (CONTENT_FILE_TYPE,)
+        and mock_call.kwargs == {"overwrite": True}
+        for mock_call in generate_embeddings_mock.si.mock_calls
+    )
+    assert mocked_celery.chain.call_args.args == tuple(
+        generate_embeddings_mock.si.return_value
+        for _ in generate_embeddings_mock.si.mock_calls
+    )
+    assert mocked_celery.replace.call_count == 1
+
+
+def test_embed_run_content_files_no_content_files(mocker, mocked_celery):
+    """
+    embed_run_content_files should short-circuit when there is nothing to embed.
+    """
+    run = LearningResourceRunFactory.create()
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+
+    embed_run_content_files.delay(run.id)
+
+    generate_embeddings_mock.si.assert_not_called()
+    mocked_celery.chain.assert_not_called()
+    mocked_celery.replace.assert_not_called()
 
 
 def test_embeddings_healthcheck_no_missing_embeddings(mocker):
