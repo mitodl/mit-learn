@@ -80,7 +80,7 @@ def _queue_program_content_file_embedding_tasks(index_tasks, program_ids, overwr
     reject_on_worker_lost=True,
     autoretry_for=(RetryError,),
     retry_backoff=True,
-    rate_limit="300/m",
+    rate_limit="200/m",
 )
 def generate_embeddings(ids, resource_type, overwrite):
     """
@@ -382,7 +382,7 @@ def embed_new_content_files(self):
             chunk_size=settings.QDRANT_CHUNK_SIZE,
         )
     ]
-    embed_tasks = celery.group(tasks)
+    embed_tasks = celery.chain(tasks)
     return self.replace(embed_tasks)
 
 
@@ -396,7 +396,7 @@ def embed_run_content_files(self, run_id):
     )
 
     return self.replace(
-        celery.group(
+        celery.chain(
             [
                 generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite=True)
                 for ids in chunks(
@@ -416,7 +416,7 @@ def remove_run_content_files(self, run_id):
         ContentFile.objects.filter(run__id=run_id).values_list("id", flat=True)
     )
     return self.replace(
-        celery.group(
+        celery.chain(
             [
                 remove_embeddings.si(ids, CONTENT_FILE_TYPE)
                 for ids in chunks(
@@ -438,7 +438,7 @@ def remove_unpublished_run_content_files(self, run_id):
         )
     )
     return self.replace(
-        celery.group(
+        celery.chain(
             [
                 remove_embeddings.si(ids, CONTENT_FILE_TYPE)
                 for ids in chunks(
