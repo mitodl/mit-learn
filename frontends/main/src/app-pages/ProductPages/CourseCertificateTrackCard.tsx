@@ -132,4 +132,3 @@ const CourseCertificateTrackCard: React.FC<
 }
 
 export default CourseCertificateTrackCard
-
