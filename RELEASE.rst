@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.71.8
+--------------
+
+- add arithmix behind a feature flag (#3405)
+- dashboard refactor phase 7d (#3473)
+- feat: redemption_status migration + Assign Seats CSV flow (#3442)
+- fix issues with multiple summarizer config instances (#3479)
+
 Version 0.71.7 (Released June 17, 2026)
 --------------
 
