@@ -484,4 +484,46 @@ describe("ProgramAsCoursePage", () => {
     ).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Enroll" })).toBeInTheDocument()
   })
+
+  test("Hides certificate track pricing card when products are empty", async () => {
+    const program = makeProgramAsCourse({
+      certificate_available: true,
+      enrollment_modes: [
+        factories.courses.enrollmentMode({ requires_payment: true }),
+      ],
+      products: [],
+    })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+
+    renderWithProviders(
+      <ProgramAsCoursePage readableId={program.readable_id} />,
+    )
+
+    await screen.findByRole("heading", { name: page.title })
+    expect(screen.queryByText("Certificate Track")).not.toBeInTheDocument()
+    expect(screen.queryByText("Price unavailable")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Enroll" })).toBeInTheDocument()
+  })
+
+  test("Hides certificate track pricing card when product price is missing", async () => {
+    const program = makeProgramAsCourse({
+      certificate_available: true,
+      enrollment_modes: [
+        factories.courses.enrollmentMode({ requires_payment: true }),
+      ],
+      products: [factories.courses.product({ price: "" })],
+    })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+
+    renderWithProviders(
+      <ProgramAsCoursePage readableId={program.readable_id} />,
+    )
+
+    await screen.findByRole("heading", { name: page.title })
+    expect(screen.queryByText("Certificate Track")).not.toBeInTheDocument()
+    expect(screen.queryByText("Price unavailable")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Enroll" })).toBeInTheDocument()
+  })
 })

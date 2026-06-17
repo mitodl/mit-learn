@@ -27,6 +27,8 @@ const ProgramAsCourseInfoBox: React.FC<ProgramAsCourseInfoBoxProps> = ({
   program,
   courses,
 }) => {
+  const hasCertificateTrackPrice = Boolean(program.products[0]?.price)
+
   return (
     <InfoBoxColumn>
       <InfoBoxCard as="section" aria-labelledby={HeadingIds.Summary}>
@@ -38,7 +40,7 @@ const ProgramAsCourseInfoBox: React.FC<ProgramAsCourseInfoBoxProps> = ({
         </InfoBoxContent>
         <InfoBoxEnrollArea>
           <InfoBoxActionStack>
-            {program.certificate_available && (
+            {program.certificate_available && hasCertificateTrackPrice && (
               <ProgramAsCourseCertificateTrackCard program={program} />
             )}
             <ProgramEnrollmentButton program={program} displayAsCourse />
