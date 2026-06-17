@@ -3,6 +3,7 @@ import { styled } from "@mitodl/smoot-design"
 import { RiCheckLine } from "@remixicon/react"
 import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import { formatPrice } from "@/common/mitxonline"
+import { theme } from "ol-components"
 
 const CardShell = styled.div({
   display: "flex",
@@ -42,10 +43,11 @@ const LeftCol = styled.div({
   flexGrow: 1,
 })
 
-const TrackTitle = styled.div(({ theme }) => ({
+const TrackTitle = styled.h3(({ theme }) => ({
   ...theme.typography.subtitle1,
   fontWeight: theme.typography.fontWeightBold,
   color: theme.custom.colors.darkGray2,
+  margin: 0,
 }))
 
 const TrackSubtitle = styled.div(({ theme }) => ({
@@ -79,7 +81,7 @@ const FeatureRow = styled.div(({ theme }) => ({
 const FeatureIcon = styled(RiCheckLine)({
   width: "16px",
   height: "16px",
-  color: "#00AD00",
+  color: theme.custom.colors.green,
   flexShrink: 0,
 })
 

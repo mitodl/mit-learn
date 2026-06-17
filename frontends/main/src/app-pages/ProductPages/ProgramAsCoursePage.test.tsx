@@ -133,6 +133,8 @@ describe("ProgramAsCoursePage", () => {
     op.addCourse()
 
     const program = makeProgramAsCourse({
+      certificate_available: true,
+      products: [factories.courses.product({ price: "250" })],
       req_tree: reqTree.serialize(),
     })
     const page = makePage({ program_details: program })
@@ -146,6 +148,7 @@ describe("ProgramAsCoursePage", () => {
       assertHeadings([
         { level: 1, name: page.title },
         { level: 2, name: "Course Information" },
+        { level: 3, name: "Certificate Track" },
         { level: 2, name: "About this Course" },
         { level: 2, name: "What you'll learn" },
         { level: 2, name: "Modules" },
@@ -455,7 +458,12 @@ describe("ProgramAsCoursePage", () => {
       <ProgramAsCoursePage readableId={program.readable_id} />,
     )
 
-    expect(await screen.findByText("Certificate Track")).toBeInTheDocument()
+    expect(
+      await screen.findByRole("heading", {
+        level: 3,
+        name: "Certificate Track",
+      }),
+    ).toBeInTheDocument()
     expect(
       screen.getByText("Earn a verified certificate of completion"),
     ).toBeInTheDocument()
