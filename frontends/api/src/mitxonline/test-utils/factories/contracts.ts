@@ -22,13 +22,22 @@ const contract = (overrides: Partial<ContractPage> = {}): ContractPage => ({
 
 const contracts = makePaginatedFactory(contract)
 
-const contractCode = (overrides: Partial<ContractCode> = {}): ContractCode => ({
-  id: faker.number.int(),
-  code: faker.string.alphanumeric(12),
-  is_redeemed: false,
-  redeemed_by: null,
-  redeemed_on: null,
-  ...overrides,
-})
+const contractCode = (overrides: Partial<ContractCode> = {}): ContractCode => {
+  const status = overrides.redemption_status ?? "assigned"
+  const isAssigned = status !== "unassigned"
+  const isRedeemed = status === "redeemed"
+  return {
+    id: faker.number.int(),
+    code: faker.string.alphanumeric(12),
+    redemption_status: status,
+    assigned_to: isAssigned ? faker.internet.email() : null,
+    assigned_on: isAssigned ? faker.date.past().toISOString() : null,
+    assigned_name: isAssigned ? faker.person.fullName() : null,
+    redeemed_by: isRedeemed ? faker.internet.email() : null,
+    redeemed_on: isRedeemed ? faker.date.past().toISOString() : null,
+    last_sent: null,
+    ...overrides,
+  }
+}
 
 export { contract, contracts, contractCode }
