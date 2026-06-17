@@ -1324,9 +1324,9 @@ def custom_score_formula(collection_name: str) -> list[models.MultExpression]:
                         models.GaussDecayExpression(
                             gauss_decay=models.DecayParamsExpression(
                                 x="$score",  # decay over the relevance score itself
-                                target=1.0,  # cosine "perfect match" — full boost
+                                target=0.4,  # cosine "perfect match" — full boost
                                 scale=0.2,
-                                midpoint=0.5,
+                                midpoint=0.2,
                             )
                         ),
                     ]
