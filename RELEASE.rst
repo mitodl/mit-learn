@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.71.9
+Version 0.71.9 (Released June 17, 2026)
 --------------
 
 - switch to celery.chain for certain vector_search tasks (#3484)
