@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.71.10
+---------------
+
+- update button CTA for course page (#3476)
+
 Version 0.71.9 (Released June 17, 2026)
 --------------
 
