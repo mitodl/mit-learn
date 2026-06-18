@@ -41,6 +41,94 @@ function extractMITLearnVideoId(url: string): number | null {
 }
 
 /**
+ * Matches podcast episode embed URLs on this app's own origin, e.g.
+ *   https://learn.mit.edu/podcast/embed/137277
+ * A trailing slash is allowed. Returns the numeric episode ID, or null if not
+ * matched.
+ */
+function extractMITLearnPodcastEmbedId(url: string): number | null {
+  try {
+    const parsed = new URL(url.trim())
+    const appHostname = new URL(
+      requiredEnv("NEXT_PUBLIC_ORIGIN"),
+    ).hostname.replace(/^www\./, "")
+    if (parsed.hostname.replace(/^www\./, "") !== appHostname || !appHostname) {
+      return null
+    }
+    const match = parsed.pathname.match(/^\/podcast\/embed\/(\d+)\/?$/)
+    if (!match) return null
+    return Number(match[1])
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Creates a ProseMirror keydown handler that asynchronously resolves MIT Learn
+ * podcast episode embed URLs by fetching the resource detail from the API, then
+ * replaces the typed text with a podcastEpisodeEmbed node (native React render,
+ * not an iframe).
+ */
+function createMITLearnPodcastHandler(queryClient: QueryClient) {
+  return (view: EditorView, event: KeyboardEvent): boolean => {
+    if (event.key !== "Enter") return false
+
+    const { state } = view
+    const { $from } = state.selection
+    const parent = $from.parent
+
+    if (parent.type.name !== "paragraph") return false
+
+    const text = parent.textContent.trim()
+    const episodeId = extractMITLearnPodcastEmbedId(text)
+    if (!episodeId) return false
+
+    event.preventDefault()
+
+    queryClient
+      .fetchQuery(learningResourceQueries.detail(episodeId))
+      .then((resource) => {
+        if (resource.resource_type !== "podcast_episode") return
+
+        const currentState = view.state
+        let foundStart: number | null = null
+        let foundEnd: number | null = null
+
+        currentState.doc.descendants((node, pos) => {
+          if (foundStart !== null) return false
+          if (node.type.name !== "paragraph") return true
+          if (node.textContent.trim() !== text) return true
+
+          const $pos = currentState.doc.resolve(pos + 1)
+          const grandParent = $pos.node($pos.depth - 1)
+          if (grandParent?.type.name === "mediaEmbedInput") {
+            foundStart = $pos.before($pos.depth - 1)
+            foundEnd = foundStart + grandParent.nodeSize
+          } else {
+            foundStart = pos
+            foundEnd = pos + node.nodeSize
+          }
+          return false
+        })
+
+        if (foundStart === null || foundEnd === null) return
+
+        const embedNode = currentState.schema.nodes[
+          "podcastEpisodeEmbed"
+        ].create({ episodeId, src: text })
+        const tr = currentState.tr.replaceWith(foundStart, foundEnd, embedNode)
+        tr.setSelection(NodeSelection.create(tr.doc, foundStart))
+        view.dispatch(tr)
+      })
+      .catch(() => {
+        // Silently fail — the typed URL text remains in the editor.
+      })
+
+    return true
+  }
+}
+
+/**
  * Creates a ProseMirror keydown handler that asynchronously resolves MIT Learn
  * video embed URLs by fetching the resource detail from the API, then replaces
  * the typed text with a mediaEmbed node.
@@ -142,6 +230,11 @@ export const MediaEmbedURLHandler =
           new Plugin({
             props: {
               handleKeyDown: createMITLearnHandler(queryClient),
+            },
+          }),
+          new Plugin({
+            props: {
+              handleKeyDown: createMITLearnPodcastHandler(queryClient),
             },
           }),
         )

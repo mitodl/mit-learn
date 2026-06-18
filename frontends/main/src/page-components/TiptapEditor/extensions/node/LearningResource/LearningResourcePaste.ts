@@ -15,6 +15,23 @@ function extractResourceId(url: string): number | null {
     return Number(videoPathMatch[1])
   }
 
+  // Support MIT Learn podcast episode URLs like:
+  // https://rc.learn.mit.edu/podcast/136068/podcast_episode/137277
+  const podcastEpisodeMatch = url.match(
+    /\/podcast\/\d+\/podcast_episode\/(\d+)(?:[/?#]|$)/,
+  )
+  if (podcastEpisodeMatch) {
+    return Number(podcastEpisodeMatch[1])
+  }
+
+  // Support MIT Learn podcast URLs like:
+  // https://rc.learn.mit.edu/podcast/136068
+  const podcastMatch = url.match(/\/podcast\/(\d+)(?:[/?#]|$)/)
+  console.log("podcastMatch", podcastMatch)
+  if (podcastMatch) {
+    return Number(podcastMatch[1])
+  }
+
   return null
 }
 

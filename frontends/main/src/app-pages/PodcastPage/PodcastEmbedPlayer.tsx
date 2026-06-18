@@ -41,6 +41,15 @@ const Shell = styled.div(({ theme }) => ({
   boxSizing: "border-box",
 }))
 
+const InlineWrapper = styled.div(({ theme }) => ({
+  width: "100%",
+  backgroundColor: theme.custom.colors.white,
+  padding: "24px",
+  boxSizing: "border-box",
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  borderRadius: "8px",
+}))
+
 const PlayerCard = styled.div(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: "auto 1fr",
@@ -211,10 +220,12 @@ const SpeedButton = styled.button(({ theme }) => ({
 
 type PodcastEmbedPlayerProps = {
   resource: LearningResource
+  inline?: boolean
 }
 
 const PodcastEmbedPlayer: React.FC<PodcastEmbedPlayerProps> = ({
   resource,
+  inline = false,
 }) => {
   const audioUrl = getAudioUrl(resource)
   const hasAudioSource = Boolean(audioUrl.trim())
@@ -301,8 +312,10 @@ const PodcastEmbedPlayer: React.FC<PodcastEmbedPlayerProps> = ({
 
   const percent = duration ? (currentTime / duration) * 100 : 0
 
+  const Wrapper = inline ? InlineWrapper : Shell
+
   return (
-    <Shell>
+    <Wrapper>
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <audio
         ref={audioRef}
@@ -318,7 +331,7 @@ const PodcastEmbedPlayer: React.FC<PodcastEmbedPlayerProps> = ({
         onEnded={() => setIsPlaying(false)}
       />
 
-      <PlayerCard>
+      <PlayerCard style={inline ? { maxWidth: "100%" } : undefined}>
         {resource.image?.url ? (
           <CoverArt
             src={resource.image.url}
@@ -328,8 +341,11 @@ const PodcastEmbedPlayer: React.FC<PodcastEmbedPlayerProps> = ({
           <CoverArtPlaceholder />
         )}
 
-        <TrackInfo>
-          <PodcastName variant="body2">
+        <TrackInfo style={inline ? { marginTop: 0 } : undefined}>
+          <PodcastName
+            variant="body2"
+            style={inline ? { marginTop: "20px" } : undefined}
+          >
             {resource.offered_by?.name ?? "Podcast"}
           </PodcastName>
           <TrackTitle variant="subtitle2">{resource.title}</TrackTitle>
@@ -399,7 +415,7 @@ const PodcastEmbedPlayer: React.FC<PodcastEmbedPlayerProps> = ({
           <TimeLabel variant="body3">{formatTime(duration)}</TimeLabel>
         </ProgressWrapper>
       </PlayerCard>
-    </Shell>
+    </Wrapper>
   )
 }
 
