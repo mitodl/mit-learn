@@ -7,7 +7,11 @@ import {
   B2bApiB2bManagerOrganizationsContractsCodesRemindCreateRequest,
   B2bApiB2bManagerOrganizationsContractsCodesRevokeDestroyRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { organizationQueries, managerOrganizationQueries } from "./queries"
+import {
+  organizationQueries,
+  managerOrganizationQueries,
+  managerOrganizationKeys,
+} from "./queries"
 
 const useB2BAttachMutation = (opts: B2bApiB2bAttachCreateRequest) => {
   const queryClient = useQueryClient()
@@ -33,15 +37,12 @@ const useBulkAssignSeats = () => {
     mutationFn: (
       opts: B2bApiB2bManagerOrganizationsContractsCodesBulkAssignCreateRequest,
     ) => b2bApi.b2bManagerOrganizationsContractsCodesBulkAssignCreate(opts),
-    onSettled: () => {
+    onSettled: (_data, _err, vars) => {
       queryClient.invalidateQueries({
-        queryKey: [
-          "mitxonline",
-          "manager",
-          "organizations",
-          "contracts",
-          "codes",
-        ],
+        queryKey: managerOrganizationKeys.contractCodes({
+          id: vars.id,
+          parent_lookup_organization: vars.parent_lookup_organization,
+        }),
       })
     },
   })
@@ -54,15 +55,12 @@ const useRemindCode = () => {
     mutationFn: (
       opts: B2bApiB2bManagerOrganizationsContractsCodesRemindCreateRequest,
     ) => b2bApi.b2bManagerOrganizationsContractsCodesRemindCreate(opts),
-    onSettled: () => {
+    onSettled: (_data, _err, vars) => {
       queryClient.invalidateQueries({
-        queryKey: [
-          "mitxonline",
-          "manager",
-          "organizations",
-          "contracts",
-          "codes",
-        ],
+        queryKey: managerOrganizationKeys.contractCodes({
+          id: vars.id,
+          parent_lookup_organization: vars.parent_lookup_organization,
+        }),
       })
     },
   })
@@ -75,15 +73,12 @@ const useRevokeCode = () => {
     mutationFn: (
       opts: B2bApiB2bManagerOrganizationsContractsCodesRevokeDestroyRequest,
     ) => b2bApi.b2bManagerOrganizationsContractsCodesRevokeDestroy(opts),
-    onSettled: () => {
+    onSettled: (_data, _err, vars) => {
       queryClient.invalidateQueries({
-        queryKey: [
-          "mitxonline",
-          "manager",
-          "organizations",
-          "contracts",
-          "codes",
-        ],
+        queryKey: managerOrganizationKeys.contractCodes({
+          id: vars.id,
+          parent_lookup_organization: vars.parent_lookup_organization,
+        }),
       })
     },
   })
@@ -100,15 +95,12 @@ const useReassignCode = () => {
     mutationFn: (
       opts: B2bApiB2bManagerOrganizationsContractsCodesReassignUpdateRequest,
     ) => b2bApi.b2bManagerOrganizationsContractsCodesReassignUpdate(opts),
-    onSettled: () => {
+    onSettled: (_data, _err, vars) => {
       queryClient.invalidateQueries({
-        queryKey: [
-          "mitxonline",
-          "manager",
-          "organizations",
-          "contracts",
-          "codes",
-        ],
+        queryKey: managerOrganizationKeys.contractCodes({
+          id: vars.id,
+          parent_lookup_organization: vars.parent_lookup_organization,
+        }),
       })
     },
   })
