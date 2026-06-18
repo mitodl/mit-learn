@@ -199,7 +199,9 @@ def test_search_index_plugin_content_files_loaded_published_run(
     mock_search_index_helpers,
 ):
     """Published run should index content files and remove unpublished ones."""
-    run = LearningResourceRunFactory.create(published=True)
+    run = LearningResourceRunFactory.create(
+        published=True, learning_resource__create_runs=False
+    )
     ContentFileFactory.create(run=run)
 
     SearchIndexPlugin().content_files_loaded(run)
@@ -215,7 +217,9 @@ def test_search_index_plugin_content_files_loaded_published_run_with_qdrant(
 ):
     """Published run should schedule Qdrant embed and unpublished cleanup."""
     settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
-    run = LearningResourceRunFactory.create(published=True)
+    run = LearningResourceRunFactory.create(
+        published=True, learning_resource__create_runs=False
+    )
     ContentFileFactory.create(run=run)
 
     SearchIndexPlugin().content_files_loaded(run)
@@ -232,21 +236,78 @@ def test_search_index_plugin_content_files_loaded_published_run_with_qdrant(
 
 
 @pytest.mark.django_db
-def test_search_index_plugin_content_files_loaded_unpublished_run_with_qdrant(
+def test_content_files_loaded_unpublished_run_embeds_qdrant_only(
     mock_search_index_helpers, settings
 ):
-    """Unpublished run should deindex and remove all run content files."""
+    """An unpublished run is embedded into Qdrant but NOT indexed into OpenSearch."""
     settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
-    run = LearningResourceRunFactory.create(published=False)
+    run = LearningResourceRunFactory.create(
+        published=False, learning_resource__published=True
+    )
     ContentFileFactory.create(run=run)
 
     SearchIndexPlugin().content_files_loaded(run)
 
-    mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_called_once_with(
-        run.id,
-        unpublished_only=False,
+    mock_search_index_helpers.mock_embed_run_contentfiles_immutable_signature.assert_called_once_with(
+        run.id
     )
-    mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_called_once_with(
+    mock_search_index_helpers.mock_remove_unpublished_run_contentfiles_immutable_signature.assert_called_once_with(
+        run.id
+    )
+    # OpenSearch indexing is skipped for a non-published run.
+    mock_search_index_helpers.mock_upsert_contentfiles_immutable_signature.assert_not_called()
+    # The old behavior (deindex / remove from Qdrant) no longer fires here.
+    mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_not_called()
+    mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_content_files_loaded_non_best_published_run_skips_opensearch(
+    mock_search_index_helpers, settings
+):
+    """A published-but-not-best run embeds to Qdrant only (no OpenSearch index)."""
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    from datetime import UTC, datetime
+
+    course = LearningResourceFactory.create(published=True, create_runs=False)
+    LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=True,
+        start_date=datetime(2023, 1, 1, tzinfo=UTC),
+    )  # best run
+    non_best = LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=True,
+        start_date=datetime(2022, 1, 1, tzinfo=UTC),
+    )
+    ContentFileFactory.create(run=non_best)
+
+    SearchIndexPlugin().content_files_loaded(non_best)
+
+    mock_search_index_helpers.mock_embed_run_contentfiles_immutable_signature.assert_called_once_with(
+        non_best.id
+    )
+    mock_search_index_helpers.mock_upsert_contentfiles_immutable_signature.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_content_files_loaded_test_mode_published_run_indexes_opensearch(
+    mock_search_index_helpers, settings
+):
+    """Any published run of a test_mode course is indexed into OpenSearch."""
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    course = LearningResourceFactory.create(
+        published=False, test_mode=True, create_runs=False
+    )
+    run = LearningResourceRunFactory.create(learning_resource=course, published=True)
+    ContentFileFactory.create(run=run)
+
+    SearchIndexPlugin().content_files_loaded(run)
+
+    mock_search_index_helpers.mock_upsert_contentfiles_immutable_signature.assert_called_once_with(
+        run.id
+    )
+    mock_search_index_helpers.mock_embed_run_contentfiles_immutable_signature.assert_called_once_with(
         run.id
     )
 

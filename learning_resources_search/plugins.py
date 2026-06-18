@@ -195,33 +195,31 @@ class SearchIndexPlugin:
     @hookimpl
     def content_files_loaded(self, run):
         """
-        Upsert a created/modified run's content files
+        Upsert a created/modified run's content files.
+
+        Qdrant: embed every loaded run (all runs of a published/test_mode course)
+        and drop stale files. OpenSearch: index only the best published run, or
+        any published run of a test_mode course.
 
          Args:
              run(LearningResourceRun): The LearningResourceRun that was upserted
         """
         if not run.content_files.exists():
             return
-        if run.published:
-            index_tasks = []
-            if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
-                index_tasks.append(
-                    vector_tasks.embed_run_content_files.si(run.id),
-                )
+
+        index_tasks = []
+
+        if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+            index_tasks.append(vector_tasks.embed_run_content_files.si(run.id))
+
+        resource = run.learning_resource
+        if run.published and (resource.test_mode or resource.best_run == run):
+            index_tasks.append(tasks.index_run_content_files.si(run.id))
+
+        if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
             index_tasks.append(
-                tasks.index_run_content_files.si(run.id),
+                vector_tasks.remove_unpublished_run_content_files.si(run.id)
             )
-            if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
-                index_tasks.append(
-                    vector_tasks.remove_unpublished_run_content_files.si(run.id),
-                )
+
+        if index_tasks:
             try_with_retry_as_task(chain(*index_tasks))
-        else:
-            deindex_tasks = [
-                tasks.deindex_run_content_files.si(run.id, unpublished_only=False),
-            ]
-            if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
-                deindex_tasks.append(
-                    vector_tasks.remove_run_content_files.si(run.id),
-                )
-            try_with_retry_as_task(chain(*deindex_tasks))
