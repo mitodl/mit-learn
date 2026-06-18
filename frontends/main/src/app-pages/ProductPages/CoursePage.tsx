@@ -5,7 +5,7 @@ import { Typography } from "ol-components"
 
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
-import { styled } from "@mitodl/smoot-design"
+import { styled, Button, ButtonLink } from "@mitodl/smoot-design"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -20,28 +20,74 @@ import HowYoullLearnSection from "./HowYoullLearnSection"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import CourseInfoBox from "./InfoBoxCourse"
-import CourseEnrollmentButton from "./CourseEnrollmentButton"
 import CourseOutlineSection from "./CourseOutlineSection"
 import {
   trackViewCoursePage,
   trackCourseProgramView,
 } from "@/common/analytics/gtm"
+import { EnrollButton } from "./CourseEnrollArea"
+import { useCourseEnrollment } from "./useCourseEnrollment"
+import { getSelectedRun } from "./courseRun"
+import { RiCheckLine } from "@remixicon/react"
+import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
+import type { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
 
 type CoursePageProps = {
   readableId: string
 }
-
-const StyledCourseEnrollmentButton = styled(CourseEnrollmentButton)(
-  ({ theme }) => ({
-    color: theme.custom.colors.darkGray2,
-  }),
-)
 
 const PrerequisitesSection = styled.section({
   display: "flex",
   flexDirection: "column",
   gap: "16px",
 })
+
+const CourseHeaderEnrollButton: React.FC<{
+  course: CourseWithCourseRunsSerializerV2
+}> = ({ course }) => {
+  const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
+
+  const { state, isStatusLoading, isPending } = useCourseEnrollment(
+    course,
+    getSelectedRun(course),
+    { onRequireSignup: (el) => setAnchor(el) },
+  )
+
+  if (state.status === "enrolled") {
+    return (
+      <>
+        <ButtonLink variant="bordered" href={state.href}>
+          Enrolled
+          <RiCheckLine aria-hidden="true" />
+        </ButtonLink>
+        <SignupPopover anchorEl={anchor} onClose={() => setAnchor(null)} />
+      </>
+    )
+  }
+
+  if (state.status === "options") {
+    return (
+      <>
+        <EnrollButton
+          action={state.options[0]}
+          size="large"
+          loading={isStatusLoading}
+          pending={isPending}
+          variant="bordered"
+          announceStatus={false}
+        />
+        <SignupPopover anchorEl={anchor} onClose={() => setAnchor(null)} />
+      </>
+    )
+  }
+
+  // status === "none"
+  return (
+    <Button variant="bordered" size="large" disabled>
+      Enroll
+    </Button>
+  )
+}
 
 const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   const pages = useQuery(pagesQueries.coursePages(readableId))
@@ -87,9 +133,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       imageSrc={imageSrc}
       videoUrl={page.video_url}
       infoBox={<CourseInfoBox course={course} />}
-      enrollmentAction={
-        <StyledCourseEnrollmentButton course={course} variant="bordered" />
-      }
+      enrollmentAction={<CourseHeaderEnrollButton course={course} />}
       showStayUpdated={
         course.courseruns.length > 0 &&
         course.courseruns.every(

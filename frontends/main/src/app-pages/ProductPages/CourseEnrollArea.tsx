@@ -1,6 +1,11 @@
 import React from "react"
 import { LoadingSpinner } from "ol-components"
-import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
+import {
+  Alert,
+  Button,
+  ButtonLink,
+  type ButtonProps,
+} from "@mitodl/smoot-design"
 import { RiCheckLine } from "@remixicon/react"
 import type {
   CourseRunV2,
@@ -12,31 +17,40 @@ import { useCertificatePrice } from "./useCertificatePrice"
 import CertificateTrackCard from "./CertificateTrackCard"
 import LearnForFreeCard from "./LearnForFreeCard"
 
-type EnrollButtonProps = {
+export type EnrollButtonProps = {
   action: EnrollAction
   size: "medium" | "large"
   loading: boolean
   pending: boolean
+  variant?: ButtonProps["variant"]
+  announceStatus?: boolean
 }
 
-const EnrollButton: React.FC<EnrollButtonProps> = ({
+export const EnrollButton: React.FC<EnrollButtonProps> = ({
   action,
   size,
   loading,
   pending,
+  variant = "primary",
+  announceStatus = true,
 }) => {
   const isBusy = loading || pending
   return (
     <span data-size={size}>
       <Button
-        variant="primary"
+        variant={variant}
         size={size}
         onClick={action.onClick}
         disabled={action.disabled || isBusy}
-        aria-busy={isBusy}
+        {...(announceStatus ? { "aria-busy": isBusy } : {})}
         endIcon={
           isBusy ? (
-            <LoadingSpinner size="16px" loading={true} color="inherit" />
+            <LoadingSpinner
+              size="16px"
+              loading={true}
+              color="inherit"
+              aria-hidden="true"
+            />
           ) : undefined
         }
       >
@@ -183,3 +197,4 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
 }
 
 export default CourseEnrollArea
+export { CourseEnrollArea }
