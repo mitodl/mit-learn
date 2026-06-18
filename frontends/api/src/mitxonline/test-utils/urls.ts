@@ -92,15 +92,35 @@ const contracts = {
     `${getApiBaseUrl()}/api/v0/b2b/manager/organizations/${orgId}/contracts/${contractId}/`,
   managerContractCodes: (orgId: number, contractId: number) =>
     `${getApiBaseUrl()}/api/v0/b2b/manager/organizations/${orgId}/contracts/${contractId}/codes/`,
+  managerContractBulkAssign: (orgId: number, contractId: number) =>
+    `${getApiBaseUrl()}/api/v0/b2b/manager/organizations/${orgId}/contracts/${contractId}/codes/bulk_assign/`,
+  managerContractCodeRemind: (
+    orgId: number,
+    contractId: number,
+    code: string,
+  ) =>
+    `${getApiBaseUrl()}/api/v0/b2b/manager/organizations/${orgId}/contracts/${contractId}/codes/${code}/remind/`,
+  managerContractCodeRevoke: (
+    orgId: number,
+    contractId: number,
+    code: string,
+  ) =>
+    `${getApiBaseUrl()}/api/v0/b2b/manager/organizations/${orgId}/contracts/${contractId}/codes/${code}/revoke/`,
+  managerContractCodeReassign: (
+    orgId: number,
+    contractId: number,
+    code: string,
+  ) =>
+    `${getApiBaseUrl()}/api/v0/b2b/manager/organizations/${orgId}/contracts/${contractId}/codes/${code}/reassign/`,
 }
 
 const certificates = {
   courseCertificatesRetrieve: (
     params: CourseCertificatesApiCourseCertificatesRetrieveRequest,
-  ) => `${getApiBaseUrl()}/api/v2/course_certificates/${params.cert_uuid}/`,
+  ) => `${getApiBaseUrl()}/api/v2/course_certificates/${params.uuid}/`,
   programCertificatesRetrieve: (
     params: ProgramCertificatesApiProgramCertificatesRetrieveRequest,
-  ) => `${getApiBaseUrl()}/api/v2/program_certificates/${params.cert_uuid}/`,
+  ) => `${getApiBaseUrl()}/api/v2/program_certificates/${params.uuid}/`,
 }
 
 const products = {

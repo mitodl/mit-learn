@@ -8,7 +8,7 @@
  */
 import type {
   BaseCourseRun,
-  BaseProgramDisplayMode,
+  V2ProgramDisplayMode,
   ContractPage,
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
@@ -306,7 +306,7 @@ const groupProgramEnrollmentsByProgramId = (
 }
 
 const isProgramAsCourse = (program: {
-  display_mode?: BaseProgramDisplayMode | null
+  display_mode?: V2ProgramDisplayMode | null
 }) => program.display_mode === DisplayModeEnum.Course
 
 const isNonContractEnrollment = (enrollment: CourseRunEnrollmentV3) =>

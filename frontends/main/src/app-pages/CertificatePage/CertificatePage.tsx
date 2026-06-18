@@ -691,7 +691,7 @@ const CertificatePage: React.FC<{
     isError: isCourseError,
   } = useQuery({
     ...certificateQueries.courseCertificatesRetrieve({
-      cert_uuid: uuid,
+      uuid,
     }),
     enabled: certificateType === CertificateType.Course,
   })
@@ -702,7 +702,7 @@ const CertificatePage: React.FC<{
     isError: isProgramError,
   } = useQuery({
     ...certificateQueries.programCertificatesRetrieve({
-      cert_uuid: uuid,
+      uuid,
     }),
     enabled: certificateType === CertificateType.Program,
   })

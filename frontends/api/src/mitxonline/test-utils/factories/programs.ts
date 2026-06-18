@@ -18,6 +18,7 @@ const baseProgram: Factory<BaseProgram> = (overrides = {}) => {
     id: uniqueProgramId.enforce(() => faker.number.int()),
     readable_id: faker.lorem.slug(),
     type: faker.lorem.words(),
+    display_mode: null,
   }
   return {
     ...defaults,

@@ -11,6 +11,8 @@ import {
 } from "ol-utilities"
 import Papa from "papaparse"
 import { AssignSeatsConfirmModal } from "./AssignSeatsConfirmModal"
+import { useBulkAssignSeats } from "api/mitxonline-hooks/organizations"
+import type { BulkAssignError } from "@mitodl/mitxonline-api-axios/v2"
 
 // Shared metrics — must be identical between EmailHighlightLayer and EmailTextarea
 // so the overlay and the real textarea render text in exactly the same position.
@@ -184,6 +186,12 @@ const tokenizeInput = (input: string, allCommitted: boolean) => {
   })
 }
 
+const ResultErrorList = styled.ul(({ theme }) => ({
+  margin: "8px 0 0",
+  paddingLeft: "20px",
+  ...theme.typography.body2,
+}))
+
 type ModalData = {
   validEmails: string[]
   invalidEmails: string[]
@@ -191,11 +199,25 @@ type ModalData = {
   skippedCount: number
 }
 
+/**
+ * Outcome of a bulk-assign request, surfaced in an inline Alert.
+ * `errors: null` means the request itself failed (network/server error);
+ * `errors: []` means every code was assigned successfully.
+ */
+type AssignResult = {
+  assignedCount: number
+  errors: BulkAssignError[] | null
+}
+
 type AssignSeatsSectionProps = {
+  orgId: number
+  contractId: number
   availableSeats: number
 }
 
 const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
+  orgId,
+  contractId,
   availableSeats,
 }) => {
   const [emailInput, setEmailInput] = useState("")
@@ -203,9 +225,13 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
   const [csvReadError, setCsvReadError] = useState(false)
   const [csvNoValid, setCsvNoValid] = useState(false)
   const [modalData, setModalData] = useState<ModalData | null>(null)
+  const [result, setResult] = useState<AssignResult | null>(null)
   const [debouncedAnnouncement, setDebouncedAnnouncement] = useState("")
   const [errorAnnouncement, setErrorAnnouncement] = useState("")
+  const [resultAnnouncement, setResultAnnouncement] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const bulkAssign = useBulkAssignSeats()
 
   const submitResult = useMemo(
     () => parseEmailsForSubmit(emailInput),
@@ -243,6 +269,36 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
       setErrorAnnouncement("")
     }
   }, [csvReadError, csvNoValid])
+
+  // Severity, headline message, and screen-reader announcement for the
+  // bulk-assign outcome, derived from the result shape.
+  const resultContent = useMemo(() => {
+    if (!result) return null
+    const { assignedCount, errors } = result
+    const assigned = `${assignedCount} ${pluralize("seat", assignedCount)} assigned.`
+    if (errors === null) {
+      return {
+        severity: "error" as const,
+        message: "Something went wrong assigning seats. Please try again.",
+      }
+    }
+    if (errors.length === 0) {
+      return { severity: "success" as const, message: assigned }
+    }
+    const failed = `${errors.length} could not be assigned:`
+    return {
+      severity: assignedCount > 0 ? ("warning" as const) : ("error" as const),
+      message:
+        assignedCount > 0
+          ? `${assigned} ${failed}`
+          : `No seats assigned. ${failed}`,
+      errors,
+    }
+  }, [result])
+
+  useEffect(() => {
+    setResultAnnouncement(resultContent?.message ?? "")
+  }, [resultContent])
 
   const handleCsvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -286,9 +342,25 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
 
   const handleModalClose = () => setModalData(null)
 
-  const handleModalConfirm = () => {
-    // TODO: implement send when API is available
-    setModalData(null)
+  const handleModalConfirm = async () => {
+    const emails = modalData?.validEmails ?? []
+    if (emails.length === 0) return
+    setResult(null)
+    try {
+      const { data } = await bulkAssign.mutateAsync({
+        id: contractId,
+        parent_lookup_organization: orgId,
+        AssignRevokeCodeRequestRequest: emails.map((email) => ({ email })),
+      })
+      setResult({ assignedCount: data.assigned.length, errors: data.errors })
+      // Clear the input only on a fully successful assignment.
+      if (data.errors.length === 0) {
+        setEmailInput("")
+      }
+    } catch {
+      setResult({ assignedCount: 0, errors: null })
+    }
+    // The Dialog closes itself once this resolves (see Dialog.handleConfirm).
   }
 
   return (
@@ -307,6 +379,10 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
       {/* Always-mounted so NVDA reliably announces dynamically injected errors */}
       <VisuallyHidden aria-live="assertive" aria-atomic="true">
         {errorAnnouncement}
+      </VisuallyHidden>
+      {/* Always-mounted live region for the assignment outcome */}
+      <VisuallyHidden aria-live="assertive" aria-atomic="true">
+        {resultAnnouncement}
       </VisuallyHidden>
       <Stack
         direction={{ xs: "column", sm: "row" }}
@@ -426,6 +502,24 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
       {csvNoValid && (
         <Alert severity="error" closable onClose={() => setCsvNoValid(false)}>
           No valid email addresses found in this file.
+        </Alert>
+      )}
+      {resultContent && (
+        <Alert
+          severity={resultContent.severity}
+          closable
+          onClose={() => setResult(null)}
+        >
+          {resultContent.message}
+          {resultContent.errors && resultContent.errors.length > 0 && (
+            <ResultErrorList>
+              {resultContent.errors.map((err) => (
+                <li key={err.email}>
+                  {err.email} — {err.detail}
+                </li>
+              ))}
+            </ResultErrorList>
+          )}
         </Alert>
       )}
       {modalData && (
