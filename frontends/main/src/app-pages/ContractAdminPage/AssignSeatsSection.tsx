@@ -227,8 +227,6 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
   const [modalData, setModalData] = useState<ModalData | null>(null)
   const [result, setResult] = useState<AssignResult | null>(null)
   const [debouncedAnnouncement, setDebouncedAnnouncement] = useState("")
-  const [errorAnnouncement, setErrorAnnouncement] = useState("")
-  const [resultAnnouncement, setResultAnnouncement] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const bulkAssign = useBulkAssignSeats()
@@ -260,16 +258,6 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
     return () => clearTimeout(id)
   }, [announcement])
 
-  useEffect(() => {
-    if (csvReadError) {
-      setErrorAnnouncement("Could not read the file. Please try again.")
-    } else if (csvNoValid) {
-      setErrorAnnouncement("No valid email addresses found in this file.")
-    } else {
-      setErrorAnnouncement("")
-    }
-  }, [csvReadError, csvNoValid])
-
   // Severity, headline message, and screen-reader announcement for the
   // bulk-assign outcome, derived from the result shape.
   const resultContent = useMemo(() => {
@@ -295,10 +283,6 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
       errors,
     }
   }, [result])
-
-  useEffect(() => {
-    setResultAnnouncement(resultContent?.message ?? "")
-  }, [resultContent])
 
   const handleCsvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -375,14 +359,6 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
       {/* Always-mounted live region — debounced so screen readers aren't spammed on every keystroke */}
       <VisuallyHidden aria-live="polite" aria-atomic="true">
         {debouncedAnnouncement}
-      </VisuallyHidden>
-      {/* Always-mounted so NVDA reliably announces dynamically injected errors */}
-      <VisuallyHidden aria-live="assertive" aria-atomic="true">
-        {errorAnnouncement}
-      </VisuallyHidden>
-      {/* Always-mounted live region for the assignment outcome */}
-      <VisuallyHidden aria-live="assertive" aria-atomic="true">
-        {resultAnnouncement}
       </VisuallyHidden>
       <Stack
         direction={{ xs: "column", sm: "row" }}

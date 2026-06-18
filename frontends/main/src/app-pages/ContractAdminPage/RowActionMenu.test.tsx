@@ -259,7 +259,9 @@ describe("RowActionMenu", () => {
       await user.type(input, "not-an-email")
 
       // Confirm button is disabled while the email is invalid.
-      expect(screen.getByRole("button", { name: "Reassign seat" })).toBeDisabled()
+      expect(
+        screen.getByRole("button", { name: "Reassign seat" }),
+      ).toBeDisabled()
       expect(
         screen.getByText("Enter a valid email address."),
       ).toBeInTheDocument()
