@@ -197,4 +197,3 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
 }
 
 export default CourseEnrollArea
-export { CourseEnrollArea }

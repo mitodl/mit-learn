@@ -29,6 +29,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import invariant from "tiny-invariant"
 import { getOutlineCoursewareId } from "./util"
 import { FeatureFlags } from "@/common/feature_flags"
+import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
@@ -428,6 +429,12 @@ describe("CoursePage", () => {
         })
         await act(async () => {
           enrollBtns[0].click()
+        })
+
+        await waitFor(() => {
+          expect(window.location.assign).toHaveBeenCalledWith(
+            mitxonlineLegacyUrl("/cart/"),
+          )
         })
       })
 

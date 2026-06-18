@@ -55,13 +55,10 @@ const CourseHeaderEnrollButton: React.FC<{
 
   if (state.status === "enrolled") {
     return (
-      <>
-        <ButtonLink variant="bordered" href={state.href}>
-          Enrolled
-          <RiCheckLine aria-hidden="true" />
-        </ButtonLink>
-        <SignupPopover anchorEl={anchor} onClose={() => setAnchor(null)} />
-      </>
+      <ButtonLink variant="bordered" size="large" href={state.href}>
+        Enrolled
+        <RiCheckLine aria-hidden="true" />
+      </ButtonLink>
     )
   }
 
