@@ -7,10 +7,12 @@ import {
   CoursewareActionColumn,
   CoursewareButton,
   CoursewareButtonLink,
+  EndDateText,
   getCertificateLink,
   getDashboardEnrollmentStatus,
   HorizontalSeparator,
   MenuButton,
+  Separator,
   SubtitleLink,
   SubtitleLinkRoot,
   TitleHeading,
@@ -19,7 +21,7 @@ import {
 } from "./CardShared"
 import { EnrollmentStatus, DashboardType } from "./model/dashboardViewModel"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
-import { RiAddLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
+import { RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { isInPast, calendarDaysUntil, NoSSR } from "ol-utilities"
 import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
@@ -91,7 +93,7 @@ const UpgradeBanner: React.FC<
   return (
     <SubtitleLinkRoot layout={layout} {...others}>
       <SubtitleLink layout={layout} href="#" onClick={handleUpgradeClick}>
-        <RiAddLine size="16px" />
+        <RiAwardLine size="16px" />
         {`Add a certificate for ${formattedPrice}`}
       </SubtitleLink>
       {calendarDays !== null && (
@@ -126,40 +128,52 @@ export const EnrolledCourseCard = ({
   const isContractPageResource = Boolean(enrollment.b2b_contract_id)
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const isStaff = mitxOnlineUser.data?.is_staff
-  const title = layout === "compact" ? course.title : run?.title || course.title
+  const isCompact = layout === "compact"
+  const title = isCompact ? course.title : run?.title || course.title
   const coursewareUrl = run?.courseware_url
   const certificateLink = getCertificateLink(
     enrollment?.certificate?.link,
     "course",
   )
   const enrollmentMode = enrollment?.enrollment_mode
-  const canUpgrade =
-    !isVerifiedEnrollmentMode(enrollmentMode) &&
-    (run?.is_upgradable ?? false) &&
-    (enrollment?.run?.upgrade_product_is_active ?? false)
   const offerUpgrade = !enrollment?.b2b_contract_id
   const startDate = run?.start_date
   const hasStarted = startDate ? isInPast(startDate) : true
+  const endDate = run?.end_date
+  const daysUntilEnd = endDate ? calendarDaysUntil(endDate) : null
+  const hasEnded = endDate ? isInPast(endDate) : false
+  const canUpgrade =
+    offerUpgrade &&
+    !isVerifiedEnrollmentMode(enrollmentMode) &&
+    (run?.is_upgradable ?? false) &&
+    (enrollment?.run?.upgrade_product_is_active ?? false) &&
+    !hasEnded
+  const showUpgradeBanner =
+    canUpgrade &&
+    !!run?.upgrade_product_price &&
+    !!run?.upgrade_product_id &&
+    !(run?.upgrade_deadline && isInPast(run.upgrade_deadline))
   const enrollmentStatus = getDashboardEnrollmentStatus({
     type: DashboardType.CourseRunEnrollment,
     data: enrollment,
   })
-  const isCompact = layout === "compact"
-  const showUpgradeLink =
-    !isVerifiedEnrollmentMode(enrollmentMode) && offerUpgrade && canUpgrade
-  const showCertificateSection = Boolean(certificateLink) || showUpgradeLink
-  const certificateAndUpgrade = (
-    <>
-      {certificateLink ? (
-        <SubtitleLink href={certificateLink} layout={layout}>
-          <RiAwardLine size="16px" />
-          {isCompact ? "Certificate" : "View Certificate"}
-        </SubtitleLink>
+  const daysAgo = Math.abs(daysUntilEnd ?? 0)
+  const endDateAndCertSection = (
+    <Stack direction="row" alignItems="center">
+      {daysUntilEnd !== null && (
+        <EndDateText>
+          {hasEnded
+            ? `Ended ${daysAgo} ${daysAgo === 1 ? "day" : "days"} ago`
+            : `Ends in ${daysUntilEnd} ${daysUntilEnd === 1 ? "day" : "days"}`}
+        </EndDateText>
+      )}
+      {daysUntilEnd !== null && (showUpgradeBanner || !!certificateLink) ? (
+        <Separator />
       ) : null}
-      {showUpgradeLink ? (
+      {showUpgradeBanner ? (
         <UpgradeBanner
           data-testid="upgrade-root"
-          canUpgrade={canUpgrade}
+          canUpgrade={showUpgradeBanner}
           certificateUpgradeDeadline={run?.upgrade_deadline}
           certificateUpgradePrice={run?.upgrade_product_price}
           productId={run?.upgrade_product_id}
@@ -171,7 +185,13 @@ export const EnrolledCourseCard = ({
           }}
         />
       ) : null}
-    </>
+      {certificateLink ? (
+        <SubtitleLink href={certificateLink} layout={layout}>
+          <RiAwardLine size="16px" />
+          {isCompact ? "Certificate" : "View Certificate"}
+        </SubtitleLink>
+      ) : null}
+    </Stack>
   )
   const titleSection = (
     <Stack gap="6px">
@@ -184,7 +204,7 @@ export const EnrolledCourseCard = ({
       ) : (
         <TitleText as={headingLevel}>{title}</TitleText>
       )}
-      {isCompact ? null : certificateAndUpgrade}
+      {isCompact ? null : endDateAndCertSection}
     </Stack>
   )
   // Determine if button should be disabled
@@ -240,8 +260,8 @@ export const EnrolledCourseCard = ({
   const buttonSection = isCompact ? (
     <Stack direction="column" gap="4px" alignItems="stretch">
       <Stack direction="row" gap="8px" alignItems="center">
-        {certificateAndUpgrade}
-        {showCertificateSection ? <HorizontalSeparator /> : null}
+        {endDateAndCertSection}
+        {canUpgrade ? <HorizontalSeparator /> : null}
         <CoursewareActionColumn direction="row" justifyContent="center">
           {ctaButton}
         </CoursewareActionColumn>

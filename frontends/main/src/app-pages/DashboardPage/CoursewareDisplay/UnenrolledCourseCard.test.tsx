@@ -196,6 +196,91 @@ describe.each([
   })
 
   // ---------------------------------------------------------------------------
+  // End date display
+  // ---------------------------------------------------------------------------
+
+  test.each([
+    {
+      endDate: moment().add(2, "days").toISOString(),
+      expectedText: /ends in 2 days/i,
+      case: "future (plural)",
+    },
+    {
+      endDate: moment().add(1, "day").toISOString(),
+      expectedText: /ends in 1 day/i,
+      case: "future (singular)",
+    },
+    {
+      endDate: moment().subtract(2, "days").toISOString(),
+      expectedText: /ended 2 days ago/i,
+      case: "past (plural)",
+    },
+    {
+      endDate: moment().subtract(1, "day").toISOString(),
+      expectedText: /ended 1 day ago/i,
+      case: "past (singular)",
+    },
+  ])("Shows end date text ($case)", ({ endDate, expectedText }) => {
+    setupUserApis()
+    const run = mitxonline.factories.courses.courseRun({
+      is_enrollable: true,
+      end_date: endDate,
+    })
+    const course = mitxOnlineCourse({ courseruns: [run], next_run_id: run.id })
+    renderWithProviders(<UnenrolledCourseCard course={course} />)
+    expect(within(getCard()).getByText(expectedText)).toBeInTheDocument()
+  })
+
+  test("Does not show end date text when run has no end date", () => {
+    setupUserApis()
+    const run = mitxonline.factories.courses.courseRun({
+      is_enrollable: true,
+      end_date: null,
+    })
+    const course = mitxOnlineCourse({ courseruns: [run], next_run_id: run.id })
+    renderWithProviders(<UnenrolledCourseCard course={course} />)
+    expect(
+      within(getCard()).queryByText(/ends in \d+ day/i),
+    ).not.toBeInTheDocument()
+    expect(
+      within(getCard()).queryByText(/ended \d+ day/i),
+    ).not.toBeInTheDocument()
+  })
+
+  test.each([
+    { layout: "compact" as const, testId: "courseware-button" },
+    { layout: "default" as const, testId: undefined },
+  ])(
+    "End date shown in correct position for $layout layout",
+    ({ layout, testId }) => {
+      setupUserApis()
+      const run = mitxonline.factories.courses.courseRun({
+        is_enrollable: true,
+        end_date: moment().add(5, "days").toISOString(),
+      })
+      const course = mitxOnlineCourse({
+        courseruns: [run],
+        next_run_id: run.id,
+      })
+      renderWithProviders(
+        <UnenrolledCourseCard course={course} layout={layout} />,
+      )
+      const card = getCard()
+      const endDateEl = within(card).getByText(/ends in 5 days/i)
+      const button = within(card).getByTestId(testId ?? "courseware-button")
+      // endDateEl.closest(Stack) is the direct row/column container of the end date
+      const endDateContainer = endDateEl.closest("[class*='Stack']")
+      if (testId) {
+        // Compact: end date and button share the same row Stack
+        expect(endDateContainer).toContainElement(button)
+      } else {
+        // Default: end date is in the title column, not in the button area
+        expect(endDateContainer).not.toContainElement(button)
+      }
+    },
+  )
+
+  // ---------------------------------------------------------------------------
   // B2B enrollment flows
   // ---------------------------------------------------------------------------
 

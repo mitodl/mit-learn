@@ -11,6 +11,7 @@ import {
   CourseStartCountdown,
   CoursewareActionColumn,
   CoursewareButton,
+  EndDateText,
   TitleText,
 } from "./CardShared"
 import { EnrollmentStatus, getBestRun } from "./helpers"
@@ -18,6 +19,7 @@ import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { useEnrollmentHandler } from "./hooks/useEnrollmentHandler"
 import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
 import { Button } from "@mitodl/smoot-design"
+import { calendarDaysUntil, isInPast } from "ol-utilities"
 
 type UnenrolledCourseCardProps = {
   course: CourseWithCourseRunsSerializerV2
@@ -53,6 +55,9 @@ export const UnenrolledCourseCard = ({
   const isDisabled = !courseRun?.is_enrollable || !coursewareUrl || !readableId
   const title =
     layout === "compact" ? course.title : courseRun?.title || course.title
+  const endDate = courseRun?.end_date
+  const daysUntilEnd = endDate ? calendarDaysUntil(endDate) : null
+  const hasEnded = endDate ? isInPast(endDate) : false
   const isContractPageResource = Boolean(contractId)
   const handleEnrollmentClick = React.useCallback(() => {
     const isVerifiedProgramEnrollment =
@@ -76,7 +81,6 @@ export const UnenrolledCourseCard = ({
         ancestorContext?.programEnrollment?.program.readable_id,
     })
   }, [
-    isVerifiedEnrollmentMode,
     course,
     ancestorContext,
     readableId,
@@ -98,6 +102,14 @@ export const UnenrolledCourseCard = ({
       {title}
     </TitleText>
   )
+  const daysAgo = Math.abs(daysUntilEnd ?? 0)
+  const endDateSection = endDate ? (
+    <EndDateText>
+      {hasEnded
+        ? `Ended ${daysAgo} ${daysAgo === 1 ? "day" : "days"} ago`
+        : `Ends in ${daysUntilEnd} ${daysUntilEnd === 1 ? "day" : "days"}`}
+    </EndDateText>
+  ) : null
   const startButton = isCompact ? (
     <CoursewareButton
       size="small"
@@ -132,6 +144,7 @@ export const UnenrolledCourseCard = ({
   const buttonSection = isCompact ? (
     <Stack direction="column" gap="4px" alignItems="stretch">
       <Stack direction="row" gap="8px" alignItems="center">
+        {endDateSection}
         <CoursewareActionColumn direction="row" justifyContent="center">
           {startButton}
         </CoursewareActionColumn>
@@ -178,6 +191,7 @@ export const UnenrolledCourseCard = ({
         <Stack justifyContent="start" alignItems="stretch" gap="6px" flex={1}>
           <CardTypeText>Course</CardTypeText>
           {titleSection}
+          {!isCompact && endDateSection}
         </Stack>
         <Stack gap="8px">
           <Stack
@@ -208,6 +222,7 @@ export const UnenrolledCourseCard = ({
         >
           <Stack direction="column" gap="8px" flex={1}>
             {titleSection}
+            {!isCompact && endDateSection}
           </Stack>
         </Stack>
         <Stack

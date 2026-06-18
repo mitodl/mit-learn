@@ -247,6 +247,19 @@ const CourseStartCountdown: React.FC<{
   )
 }
 
+const Separator = styled.span(({ theme }) => ({
+  display: "inline-block",
+  width: "1px",
+  height: "12px",
+  margin: "0 8px",
+  backgroundColor: theme.custom.colors.silverGrayLight,
+}))
+
+const EndDateText = styled(Typography)(({ theme }) => ({
+  ...theme.typography.subtitle3,
+  color: theme.custom.colors.silverGrayDark,
+}))
+
 export {
   CardRoot,
   CardTypeText,
@@ -262,6 +275,8 @@ export {
   CoursewareActionColumn,
   CoursewareButton,
   CoursewareButtonLink,
+  Separator,
+  EndDateText,
   getCertificateLink,
   getDashboardEnrollmentStatus,
 }
