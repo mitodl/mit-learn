@@ -4,15 +4,13 @@ import { renderWithProviders } from "@/test-utils"
 import { factories } from "api/test-utils"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { getByImageSrc } from "ol-test-utilities"
-import { PlatformEnum, ResourceTypeEnum, ResourceTypeGroupEnum } from "api"
+import { PlatformEnum, ResourceTypeEnum } from "api"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import type { PostHog } from "posthog-js"
 import { FeatureFlags } from "@/common/feature_flags"
-import { coursePageView, programPageView } from "@/common/urls"
 import CallToActionSection from "./CallToActionSection"
 import type { ImageConfig } from "ol-components"
 import { kebabCase } from "lodash"
-import { faker } from "@faker-js/faker/locale/en"
 
 jest.mock("posthog-js/react")
 
@@ -224,67 +222,18 @@ describe("CallToActionSection", () => {
   })
 
   describe("MITx Online product pages", () => {
-    const readableId = faker.lorem.slug()
-    const url = faker.internet.url()
-
-    const mitxOnlineResource: typeof factories.learningResources.resource = (
-      overrides,
-    ) => {
-      return factories.learningResources.resource({
+    it("links to the resource's Learn product URL without rewriting it", () => {
+      // MITx Online product-page URLs are supplied by the backend ETL in
+      // `resource.url`; the component links to them directly rather than
+      // deriving a path from readable_id. The URL is same-origin (internal),
+      // so it gets no UTM params.
+      const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
+      const productUrl = `${NEXT_PUBLIC_ORIGIN}/courses/product-page-slug`
+      const resource = factories.learningResources.resource({
         platform: { code: PlatformEnum.Mitxonline },
-        readable_id: readableId,
-        url,
-        ...overrides,
-      })
-    }
-
-    it.each([
-      {
-        resourceType: ResourceTypeEnum.Course,
-        expectedPath: coursePageView(readableId),
-      },
-      {
-        resourceType: ResourceTypeEnum.Program,
-        resourceTypeGroup: ResourceTypeGroupEnum.Program,
-        expectedPath: programPageView({
-          readable_id: readableId,
-          display_mode: "",
-        }),
-      },
-      {
-        resourceType: ResourceTypeEnum.Program,
-        resourceTypeGroup: ResourceTypeGroupEnum.Course,
-        expectedPath: programPageView({
-          readable_id: readableId,
-          display_mode: "course",
-        }),
-      },
-    ])(
-      "links to product page $expectedPath for MITx Online $resourceType",
-      ({ resourceType, resourceTypeGroup, expectedPath }) => {
-        const resource = mitxOnlineResource({
-          resource_type: resourceType,
-          resource_type_group: resourceTypeGroup,
-        })
-
-        renderWithProviders(
-          <CallToActionSection
-            imgConfig={IMG_CONFIG}
-            resource={resource}
-            shareUrl="https://learn.mit.edu/test"
-          />,
-        )
-
-        const link = screen.getByRole("link", { name: "Learn More" })
-        expect(link).toHaveAttribute("href", expectedPath)
-        expect(link.getAttribute("href")).not.toContain("utm_")
-      },
-    )
-
-    it("uses external URL with UTM params for non-MITx Online course", () => {
-      const resource = mitxOnlineResource({
         resource_type: ResourceTypeEnum.Course,
-        platform: { code: PlatformEnum.Ocw },
+        readable_id: "a-different-readable-id",
+        url: productUrl,
       })
 
       renderWithProviders(
@@ -295,13 +244,9 @@ describe("CallToActionSection", () => {
         />,
       )
 
-      const link = screen.getByRole("link", {
-        name: "Access Course Materials",
-      })
-      const href = link.getAttribute("href")
-      expect(href).toContain(url)
-      expect(href).toContain("utm_source=mit-learn")
-      expect(href).not.toContain("/courses/")
+      const link = screen.getByRole("link", { name: "Learn More" })
+      expect(link).toHaveAttribute("href", productUrl)
+      expect(link.getAttribute("href")).not.toContain("utm_")
     })
   })
 

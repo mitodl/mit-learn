@@ -17,7 +17,7 @@ import {
   resourceContentFilesImageSrc,
   useImageWithFallback,
 } from "ol-utilities"
-import { ResourceTypeEnum, ResourceTypeGroupEnum, PlatformEnum } from "api"
+import { ResourceTypeEnum, PlatformEnum } from "api"
 import {
   Button,
   ButtonLink,
@@ -43,8 +43,6 @@ import {
   FACEBOOK_SHARE_BASE_URL,
   TWITTER_SHARE_BASE_URL,
   LINKEDIN_SHARE_BASE_URL,
-  coursePageView,
-  programPageView,
   videoDetailPageView,
   videoPlaylistPageView,
   podcastPageView,
@@ -52,7 +50,6 @@ import {
   ocwLearnPageView,
 } from "@/common/urls"
 import { parentPodcastIds, videoPlaylistIds } from "@/common/slugs"
-import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { FeatureFlags } from "@/common/feature_flags"
 import { externalLinkProps } from "@/common/utils"
 
@@ -326,21 +323,6 @@ const getResourceUrl = (
     ocwProductPages?: boolean
   },
 ) => {
-  if (resource.platform?.code === PlatformEnum.Mitxonline) {
-    if (resource.resource_type === ResourceTypeEnum.Course) {
-      return coursePageView(resource.readable_id)
-    } else if (resource.resource_type === ResourceTypeEnum.Program) {
-      return programPageView({
-        readable_id: resource.readable_id,
-        // Learn program resources that have resource_type_group correspond to
-        // MITxOnline programs with display_mode="course"
-        display_mode:
-          resource.resource_type_group === ResourceTypeGroupEnum.Course
-            ? DisplayModeEnum.Course
-            : undefined,
-      })
-    }
-  }
   if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
     return videoPlaylistPageView(resource.id.toString(), resource.title)
   }
