@@ -124,19 +124,14 @@ describe("CourseEnrollArea — paidOnly scenario", () => {
     // No Choose Your Path
     expect(screen.queryByText("Choose Your Path")).toBeNull()
 
-    // Button is NOT inside the Certificate Track card (no data-card wrapper in paidOnly)
-    const certHeading = screen.getByRole("heading", {
+    // Button and card share the [data-card='cert'] wrapper cell
+    const certCell = document.querySelector("[data-card='cert']") as HTMLElement
+    expect(certCell).not.toBeNull()
+    within(certCell).getByRole("heading", {
       name: "Certificate Track",
       level: 3,
     })
-    // CertificateTrackCard renders CardShell(div) > CardBody(div) > heading deep inside
-    // Walk up 4 divs to get to CardShell (h3 < LeftCol < TopRow < CardBody < CardShell)
-    const cardShell =
-      certHeading.parentElement?.parentElement?.parentElement?.parentElement
-    expect(cardShell).toBeDefined()
-    expect(
-      within(cardShell!).queryByRole("button", { name: "Enroll" }),
-    ).toBeNull()
+    within(certCell).getByRole("button", { name: "Enroll" })
 
     // Button is large
     expect(enrollBtn.closest("[data-size]")).toHaveAttribute(
@@ -167,18 +162,11 @@ describe("CourseEnrollArea — freeOnly scenario", () => {
     })
     expect(startBtn).toBeInTheDocument()
 
-    // NOT inside the Learn for Free card
-    const freeHeading = screen.getByRole("heading", {
-      name: "Learn for Free",
-      level: 3,
-    })
-    // LearnForFreeCard: h3 < LeftCol < TopRow < CardBody < CardShell
-    const cardShell =
-      freeHeading.parentElement?.parentElement?.parentElement?.parentElement
-    expect(cardShell).toBeDefined()
-    expect(
-      within(cardShell!).queryByRole("button", { name: "Start Learning" }),
-    ).toBeNull()
+    // Button and card share the [data-card='free'] wrapper cell
+    const freeCell = document.querySelector("[data-card='free']") as HTMLElement
+    expect(freeCell).not.toBeNull()
+    within(freeCell).getByRole("heading", { name: "Learn for Free", level: 3 })
+    within(freeCell).getByRole("button", { name: "Start Learning" })
 
     // Large
     expect(startBtn.closest("[data-size]")).toHaveAttribute(
@@ -286,7 +274,7 @@ describe("CourseEnrollArea — enrolled scenario", () => {
 })
 
 describe("CourseEnrollArea — loading state", () => {
-  test("buttons are disabled and aria-busy while status is loading", async () => {
+  test("card renders immediately while enrollment-status button is aria-busy and disabled (cards never spin)", async () => {
     const run = makeRun({
       is_enrollable: true,
       is_upgradable: true,
@@ -296,7 +284,7 @@ describe("CourseEnrollArea — loading state", () => {
     })
     const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
 
-    // Return a promise that won't resolve immediately so we catch the loading state
+    // Hold the auth response so we can observe the loading state
     const { promise: mePromise, resolve: resolveMe } = (() => {
       let resolve!: (v: unknown) => void
       const promise = new Promise((r) => {
@@ -311,25 +299,21 @@ describe("CourseEnrollArea — loading state", () => {
       <CourseEnrollArea course={course} selectedRun={getSelectedRun(course)} />,
     )
 
-    // During loading, button(s) should be aria-busy
+    // Card heading is present immediately (cards never spin)
     const btns = await screen.findAllByRole("button", { hidden: false })
-    // At least one button present with aria-busy
     const busyBtns = btns.filter((b) => b.getAttribute("aria-busy") === "true")
     expect(busyBtns.length).toBeGreaterThan(0)
     busyBtns.forEach((btn) => expect(btn).toBeDisabled())
+    expect(
+      screen.getByRole("heading", { name: "Learn for Free", level: 3 }),
+    ).toBeInTheDocument()
 
-    // After resolving, buttons are no longer busy
+    // After auth resolves, button gets its label
     await act(async () => {
       resolveMe(makeUser({ is_authenticated: true }))
     })
     setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), [])
-    await waitFor(() => {
-      const buttons = screen.queryAllByRole("button")
-      const stillBusy = buttons.filter(
-        (b) => b.getAttribute("aria-busy") === "true",
-      )
-      expect(stillBusy).toHaveLength(0)
-    })
+    await screen.findByRole("button", { name: "Start Learning" })
   })
 })
 
@@ -450,5 +434,54 @@ describe("CourseEnrollArea — financial assistance link", () => {
     })
     expect(link).toBeInTheDocument()
     expect(link).toHaveAttribute("href", mitxonlineLegacyUrl("/financial-aid/"))
+  })
+
+  test("paidOnly course with approved flexible price shows discounted final price and struck-through original", async () => {
+    // Case C2: course Certificate Track with approved financial aid shows both prices
+    setupAuth()
+    const product = makeProduct({ price: "100" })
+    const flexiblePrice = makeFlexiblePrice({
+      id: product.id,
+      price: product.price,
+      product_flexible_price: {
+        id: 1,
+        amount: "25.00",
+        discount_type: "dollars-off" as const,
+        discount_code: "AID",
+        redemption_type: "one-time" as const,
+        is_redeemed: false,
+        automatic: true,
+        max_redemptions: 1,
+        payment_type: null,
+        activation_date: null,
+        expiration_date: null,
+      },
+    })
+    const run = makeRun({
+      is_enrollable: true,
+      is_upgradable: true,
+      is_archived: false,
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [product],
+    })
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      page: { financial_assistance_form_url: "/financial-aid/" },
+    })
+
+    setMockResponse.get(
+      mitxUrls.products.userFlexiblePriceDetail(product.id),
+      flexiblePrice,
+    )
+
+    renderWithProviders(
+      <CourseEnrollArea course={course} selectedRun={getSelectedRun(course)} />,
+    )
+
+    // Final discounted price renders
+    expect(await screen.findByText("$75")).toBeInTheDocument()
+    // Struck-through original price renders
+    expect(screen.getByText("$100")).toBeInTheDocument()
   })
 })

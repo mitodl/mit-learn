@@ -5,7 +5,7 @@ import { Typography } from "ol-components"
 
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
-import { styled, Button, ButtonLink } from "@mitodl/smoot-design"
+import { styled, Button } from "@mitodl/smoot-design"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -28,8 +28,8 @@ import {
 import { EnrollButton } from "./CourseEnrollArea"
 import { useCourseEnrollment } from "./useCourseEnrollment"
 import { getSelectedRun } from "./courseRun"
-import { RiCheckLine } from "@remixicon/react"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
+import EnrolledLink from "./EnrolledLink"
 import type { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
 
 type CoursePageProps = {
@@ -54,12 +54,7 @@ const CourseHeaderEnrollButton: React.FC<{
   )
 
   if (state.status === "enrolled") {
-    return (
-      <ButtonLink variant="bordered" size="large" href={state.href}>
-        Enrolled
-        <RiCheckLine aria-hidden="true" />
-      </ButtonLink>
-    )
+    return <EnrolledLink variant="bordered" href={state.href} />
   }
 
   if (state.status === "options") {

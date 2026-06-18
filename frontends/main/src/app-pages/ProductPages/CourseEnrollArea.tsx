@@ -1,12 +1,6 @@
 import React from "react"
 import { LoadingSpinner } from "ol-components"
-import {
-  Alert,
-  Button,
-  ButtonLink,
-  type ButtonProps,
-} from "@mitodl/smoot-design"
-import { RiCheckLine } from "@remixicon/react"
+import { Alert, Button, styled, type ButtonProps } from "@mitodl/smoot-design"
 import type {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
@@ -16,6 +10,13 @@ import { useCourseEnrollment, type EnrollAction } from "./useCourseEnrollment"
 import { useCertificatePrice } from "./useCertificatePrice"
 import CertificateTrackCard from "./CertificateTrackCard"
 import LearnForFreeCard from "./LearnForFreeCard"
+import EnrolledLink from "./EnrolledLink"
+
+const ChooseYourPath = styled.div(({ theme }) => ({
+  ...theme.typography.subtitle1,
+  fontWeight: theme.typography.fontWeightBold,
+  color: theme.custom.colors.darkGray2,
+}))
 
 export type EnrollButtonProps = {
   action: EnrollAction
@@ -83,15 +84,7 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
   }
 
   if (state.status === "enrolled") {
-    return (
-      <>
-        <ButtonLink variant="primary" size="large" href={state.href}>
-          Enrolled
-          <RiCheckLine aria-hidden="true" />
-        </ButtonLink>
-        <SignupPopover anchorEl={anchor} onClose={() => setAnchor(null)} />
-      </>
-    )
+    return <EnrolledLink variant="primary" href={state.href} />
   }
 
   // state.status === "options"
@@ -124,7 +117,7 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
     }
     // paidOnly: card + button below, wrapped as one grid cell
     return (
-      <div data-card="paid">
+      <div data-card="cert">
         <CertificateTrackCard
           price={price}
           financialAid={financialAid}
@@ -183,7 +176,9 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
 
   return (
     <>
-      {scenario === "both" && <div data-choose-path>Choose Your Path</div>}
+      {scenario === "both" && (
+        <ChooseYourPath data-choose-path>Choose Your Path</ChooseYourPath>
+      )}
       {renderPaidBox()}
       {renderFreeBox()}
       {isError && (

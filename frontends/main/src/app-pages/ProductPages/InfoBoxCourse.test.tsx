@@ -366,13 +366,13 @@ describe("InfoBoxCourse — grid structure", () => {
     const grid = document.querySelector("[data-boxes]") as HTMLElement
     expect(grid).not.toBeNull()
 
-    // Must be exactly 2 direct element children: [data-grid-meta] and [data-card="paid"]
+    // Must be exactly 2 direct element children: [data-grid-meta] and [data-card="cert"]
     const directChildren = Array.from(grid.children)
     expect(directChildren).toHaveLength(2)
 
     // The offering wrapper must contain both the card heading and the Enroll button
     const offeringWrapper = grid.querySelector(
-      "[data-card='paid']",
+      "[data-card='cert']",
     ) as HTMLElement
     expect(offeringWrapper).not.toBeNull()
     expect(

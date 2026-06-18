@@ -137,7 +137,7 @@ const CertificateTrackCard: React.FC<CertificateTrackCardProps> = ({
           </FinancialAidLink>
         )}
 
-        {action !== null && action !== undefined && action}
+        {action}
       </CardBody>
     </CardShell>
   )

@@ -1,5 +1,5 @@
 import React from "react"
-import { styled } from "ol-components"
+import { styled } from "@mitodl/smoot-design"
 import { useQuery } from "@tanstack/react-query"
 import type {
   CourseRunV2,
