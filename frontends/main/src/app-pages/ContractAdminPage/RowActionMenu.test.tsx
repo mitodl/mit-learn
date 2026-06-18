@@ -102,6 +102,19 @@ describe("RowActionMenu", () => {
       })
     })
 
+    test("is disabled when the seat has no assigned email", async () => {
+      const code = makeCode({ redemption_status: "assigned", assigned_to: "" })
+      const { onResult } = renderMenu(code)
+
+      await user.click(screen.getByRole("button", { name: /more actions/i }))
+
+      const item = screen.getByRole("menuitem", { name: "Resend claim email" })
+      expect(item).toHaveAttribute("aria-disabled", "true")
+
+      await user.click(item)
+      expect(onResult).not.toHaveBeenCalled()
+    })
+
     test("reports an error when the remind endpoint fails", async () => {
       const code = makeCode({ redemption_status: "assigned" })
       setMockResponse.post(

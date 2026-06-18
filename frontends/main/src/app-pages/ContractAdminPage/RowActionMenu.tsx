@@ -7,6 +7,7 @@ import {
   FormDialog,
   Menu,
   MenuItem,
+  Tooltip,
   Typography,
   styled,
 } from "ol-components"
@@ -98,6 +99,7 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({
   const reassign = useReassignCode()
 
   const isRedeemed = code.redemption_status === "redeemed"
+  const hasAssignedEmail = Boolean(code.assigned_to?.trim())
 
   const handleOpen = (e: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(e.currentTarget)
@@ -111,16 +113,16 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({
 
   const handleResend = async () => {
     handleClose()
+    // No recipient to remind — the menu item is disabled in this state, so this
+    // is a defensive guard against an already-redeemed or unassigned code.
+    if (isRedeemed || !hasAssignedEmail) return
     try {
       await remind.mutateAsync({
         code: code.code,
         id: contractId,
         parent_lookup_organization: orgId,
       })
-      onResult(
-        `Claim email resent${code.assigned_to ? ` to ${code.assigned_to}` : ""}.`,
-        "success",
-      )
+      onResult(`Claim email resent to ${code.assigned_to}.`, "success")
     } catch {
       onResult("Could not resend the claim email. Please try again.", "error")
     }
@@ -228,9 +230,21 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({
       <ActionMenuItem key="change-email" onClick={openReassign}>
         Change assigned email
       </ActionMenuItem>,
-      <ActionMenuItem key="resend-email" onClick={handleResend}>
-        Resend claim email
-      </ActionMenuItem>,
+      hasAssignedEmail ? (
+        <ActionMenuItem key="resend-email" onClick={handleResend}>
+          Resend claim email
+        </ActionMenuItem>
+      ) : (
+        <Tooltip
+          key="resend-email"
+          title="No email is assigned to this seat yet."
+          describeChild
+        >
+          <ActionMenuItem disabled aria-label="Resend claim email">
+            Resend claim email
+          </ActionMenuItem>
+        </Tooltip>
+      ),
       copied ? (
         <CopiedMenuItem key="copy-link" disabled>
           Link copied to clipboard
