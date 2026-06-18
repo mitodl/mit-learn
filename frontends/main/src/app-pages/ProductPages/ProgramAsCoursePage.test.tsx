@@ -26,19 +26,14 @@ import {
 import { assertHeadings } from "ol-test-utilities"
 import ProgramAsCoursePage from "./ProgramAsCoursePage"
 import { notFound } from "next/navigation"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import {
   useStayUpdatedEnv,
   PROGRAM_HIDE_STAY_UPDATED_CASES,
 } from "./test-utils/stayUpdated"
 import invariant from "tiny-invariant"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { getIdsFromReqTree } from "@/common/mitxonline"
 
 jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
-jest.mock("@/common/useFeatureFlagsLoaded")
-const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 
 const makeProgramAsCourse: typeof factories.programs.program = (
   overrides = {},
@@ -121,11 +116,6 @@ const setupApis = ({
 }
 
 describe("ProgramAsCoursePage", () => {
-  beforeEach(() => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-  })
-
   test("Page has expected headings", async () => {
     const reqTree = new RequirementTreeBuilder()
     const op = reqTree.addOperator({ operator: "all_of" })

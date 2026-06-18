@@ -16,15 +16,12 @@ import { notFound } from "next/navigation"
 import { useStayUpdatedEnv } from "./test-utils/stayUpdated"
 
 import { useFeatureFlagEnabled } from "posthog-js/react"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import invariant from "tiny-invariant"
 import { getOutlineCoursewareId } from "./util"
 import { FeatureFlags } from "@/common/feature_flags"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
-jest.mock("@/common/useFeatureFlagsLoaded")
-const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 
 const makeCourse = factories.courses.course
 const makePage = factories.pages.coursePageItem
@@ -107,34 +104,7 @@ const setupApis = ({
 describe("CoursePage", () => {
   beforeEach(() => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
   })
-
-  test.each([
-    { flagsLoaded: true, isEnabled: true, shouldNotFound: false },
-    { flagsLoaded: true, isEnabled: false, shouldNotFound: true },
-    { flagsLoaded: false, isEnabled: true, shouldNotFound: false },
-    { flagsLoaded: false, isEnabled: false, shouldNotFound: false },
-  ])(
-    "Calls noFound if and only the feature flag is disabled",
-    async ({ flagsLoaded, isEnabled, shouldNotFound }) => {
-      mockedUseFeatureFlagEnabled.mockReturnValue(isEnabled)
-      mockedUseFeatureFlagsLoaded.mockReturnValue(flagsLoaded)
-
-      const course = makeCourse()
-      const page = makePage({ course_details: course })
-      setupApis({ course, page })
-      renderWithProviders(<CoursePage readableId={course.readable_id} />, {
-        url: `/courses/${course.readable_id}/`,
-      })
-
-      if (shouldNotFound) {
-        expect(notFound).toHaveBeenCalled()
-      } else {
-        expect(notFound).not.toHaveBeenCalled()
-      }
-    },
-  )
 
   test("Page has expected headings", async () => {
     const course = makeCourse()

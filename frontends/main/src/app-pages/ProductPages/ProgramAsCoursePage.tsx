@@ -6,8 +6,6 @@ import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
 import { styled } from "@mitodl/smoot-design"
 import { programsQueries } from "api/mitxonline-hooks/programs"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
 import { HeadingIds, parseReqTree } from "./util"
 import type { RequirementItem } from "./util"
@@ -23,7 +21,6 @@ import ProductPageTemplate from "./ProductPageTemplate"
 import WhatYoullLearnSection from "./WhatYoullLearnSection"
 import HowYoullLearnSection from "./HowYoullLearnSection"
 import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import ProgramAsCourseInfoBox from "./InfoBoxProgramAsCourse"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
@@ -240,13 +237,6 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
     }),
     enabled: programIds.length > 0,
   })
-
-  const enabled = useFeatureFlagEnabled(FeatureFlags.MitxOnlineProductPages)
-  const flagsLoaded = useFeatureFlagsLoaded()
-
-  if (!enabled) {
-    return flagsLoaded ? notFound() : null
-  }
 
   const isLoading = pages.isLoading || programs.isLoading
 

@@ -31,22 +31,18 @@ import {
   PROGRAM_HIDE_STAY_UPDATED_CASES,
 } from "./test-utils/stayUpdated"
 
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { usePostHog } from "posthog-js/react"
 import invariant from "tiny-invariant"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { getIdsFromReqTree } from "@/common/mitxonline"
 import { faker } from "@faker-js/faker/locale/en"
 import { PostHogEvents } from "@/common/constants"
 
 jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 const mockCapture = jest.fn()
 jest.mocked(usePostHog).mockReturnValue(
   // @ts-expect-error Not mocking all of posthog
   { capture: mockCapture },
 )
-jest.mock("@/common/useFeatureFlagsLoaded")
-const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 
 const makeProgram = factories.programs.program
 const makePage = factories.pages.programPageItem
@@ -225,36 +221,6 @@ const setupApis = ({
 }
 
 describe("ProgramPage", () => {
-  beforeEach(() => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
-  })
-
-  test.each([
-    { flagsLoaded: true, isEnabled: true, shouldNotFound: false },
-    { flagsLoaded: true, isEnabled: false, shouldNotFound: true },
-    { flagsLoaded: false, isEnabled: true, shouldNotFound: false },
-    { flagsLoaded: false, isEnabled: false, shouldNotFound: false },
-  ])(
-    "Calls notFound if and only if the feature flag is disabled",
-    async ({ flagsLoaded, isEnabled, shouldNotFound }) => {
-      mockedUseFeatureFlagEnabled.mockReturnValue(isEnabled)
-      mockedUseFeatureFlagsLoaded.mockReturnValue(flagsLoaded)
-
-      const program = makeProgram({ ...makeReqs() })
-      const page = makePage({ program_details: program })
-      setupApis({ program, page })
-      renderWithProviders(<ProgramPage readableId={program.readable_id} />, {
-        url: `/programs/${program.readable_id}/`,
-      })
-
-      if (shouldNotFound) {
-        expect(notFound).toHaveBeenCalled()
-      } else {
-        expect(notFound).not.toHaveBeenCalled()
-      }
-    },
-  )
-
   test("Page has expected headings", async () => {
     const program = makeProgram({
       ...makeReqs({

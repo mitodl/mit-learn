@@ -129,6 +129,7 @@ describe("CallToActionSection", () => {
     it("adds UTM params to external URLs", () => {
       const resource = factories.learningResources.resource({
         resource_type: ResourceTypeEnum.Course,
+        platform: { code: PlatformEnum.Xpro },
         title: "Test Course Title",
         url: "https://external-site.com/course",
       })
@@ -151,6 +152,7 @@ describe("CallToActionSection", () => {
     it("adds UTM params to URLs with existing query params", () => {
       const resource = factories.learningResources.resource({
         resource_type: ResourceTypeEnum.Course,
+        platform: { code: PlatformEnum.Xpro },
         title: "Test Course",
         url: "https://external-site.com/course?existing=param",
       })
@@ -175,6 +177,7 @@ describe("CallToActionSection", () => {
       const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
       const resource = factories.learningResources.resource({
         resource_type: ResourceTypeEnum.Course,
+        platform: { code: PlatformEnum.Xpro },
         title: "Test Course",
         url: `${NEXT_PUBLIC_ORIGIN}/internal/page`,
       })
@@ -198,6 +201,7 @@ describe("CallToActionSection", () => {
     it("does NOT add UTM params to relative URLs", () => {
       const resource = factories.learningResources.resource({
         resource_type: ResourceTypeEnum.Course,
+        platform: { code: PlatformEnum.Xpro },
         title: "Test Course",
         url: "/relative/path",
       })
@@ -256,11 +260,8 @@ describe("CallToActionSection", () => {
         }),
       },
     ])(
-      "links to product page $expectedPath when flag is ON for MITx Online $resourceType",
+      "links to product page $expectedPath for MITx Online $resourceType",
       ({ resourceType, resourceTypeGroup, expectedPath }) => {
-        mockUseFeatureFlagEnabled.mockImplementation(
-          (flag) => flag === FeatureFlags.MitxOnlineProductPages,
-        )
         const resource = mitxOnlineResource({
           resource_type: resourceType,
           resource_type_group: resourceTypeGroup,
@@ -280,32 +281,7 @@ describe("CallToActionSection", () => {
       },
     )
 
-    it("uses external URL with UTM params when feature flag is OFF for MITx Online course/program", () => {
-      mockUseFeatureFlagEnabled.mockReturnValue(false)
-
-      const resource = mitxOnlineResource({
-        resource_type: ResourceTypeEnum.Course,
-      })
-      renderWithProviders(
-        <CallToActionSection
-          imgConfig={IMG_CONFIG}
-          resource={resource}
-          shareUrl="https://learn.mit.edu/test"
-        />,
-      )
-
-      const link = screen.getByRole("link", { name: "Learn More" })
-      const href = link.getAttribute("href")
-      expect(href).toContain(url)
-      expect(href).toContain("utm_source=mit-learn")
-      expect(href).toContain("utm_medium=referral")
-    })
-
-    it("uses external URL with UTM params for non-MITx Online course even when flag is ON", () => {
-      mockUseFeatureFlagEnabled.mockImplementation(
-        (flag) => flag === FeatureFlags.MitxOnlineProductPages,
-      )
-
+    it("uses external URL with UTM params for non-MITx Online course", () => {
       const resource = mitxOnlineResource({
         resource_type: ResourceTypeEnum.Course,
         platform: { code: PlatformEnum.Ocw },
@@ -430,9 +406,9 @@ describe("CallToActionSection", () => {
         (flag) => flag === FeatureFlags.OcwProductPages,
       )
       const resource = factories.learningResources.resource({
-        platform: { code: PlatformEnum.Mitxonline },
+        platform: { code: PlatformEnum.Xpro },
         resource_type: ResourceTypeEnum.Course,
-        url: "https://courses.mitxonline.mit.edu/learn/course/some-course/",
+        url: "https://xpro.mit.edu/courses/some-course/",
       })
 
       renderWithProviders(
@@ -445,7 +421,7 @@ describe("CallToActionSection", () => {
 
       const link = screen.getByRole("link", { name: "Learn More" })
       const href = link.getAttribute("href")
-      expect(href).toContain("mitxonline.mit.edu")
+      expect(href).toContain("xpro.mit.edu")
       expect(href).not.toContain("/courses/o/")
     })
 

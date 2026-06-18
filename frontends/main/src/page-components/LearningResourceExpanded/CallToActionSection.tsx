@@ -320,22 +320,13 @@ const getResourceUrl = (
   resource: LearningResource,
   {
     ocwProductPages,
-    mitxonlineProductPages,
     showPodcastPage,
   }: {
-    mitxonlineProductPages?: boolean
     showPodcastPage?: boolean
     ocwProductPages?: boolean
   },
 ) => {
-  if (
-    mitxonlineProductPages &&
-    resource.platform?.code === PlatformEnum.Mitxonline
-  ) {
-    /**
-     * TODO: After mitxonlineProductPages feature flag is fully rolled out,
-     * this logic should be handled during ETL
-     */
+  if (resource.platform?.code === PlatformEnum.Mitxonline) {
     if (resource.resource_type === ResourceTypeEnum.Course) {
       return coursePageView(resource.readable_id)
     } else if (resource.resource_type === ResourceTypeEnum.Program) {
@@ -343,7 +334,6 @@ const getResourceUrl = (
         readable_id: resource.readable_id,
         // Learn program resources that have resource_type_group correspond to
         // MITxOnline programs with display_mode="course"
-        // This can be moved into backend ETL after feature flags are removed.
         display_mode:
           resource.resource_type_group === ResourceTypeGroupEnum.Course
             ? DisplayModeEnum.Course
@@ -413,9 +403,6 @@ const CallToActionSection = ({
   const [shareExpanded, setShareExpanded] = useState(false)
   const [copyText, setCopyText] = useState("Copy Link")
   const ocwProductPages = useFeatureFlagEnabled(FeatureFlags.OcwProductPages)
-  const mitxonlineProductPages = useFeatureFlagEnabled(
-    FeatureFlags.MitxOnlineProductPages,
-  )
   const showPodcastPage = useFeatureFlagEnabled(FeatureFlags.PodcastDetailPage)
 
   if (hide) {
@@ -444,7 +431,6 @@ const CallToActionSection = ({
   const socialIconSize = 18
   const url = appendUtmParams(
     getResourceUrl(resource, {
-      mitxonlineProductPages,
       showPodcastPage,
       ocwProductPages,
     }),
