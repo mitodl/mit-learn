@@ -514,20 +514,22 @@ def deindex_content_files(content_file_ids, learning_resource_id):
     )
 
 
-def deindex_run_content_files(run_id, unpublished_only):
+def deindex_run_content_files(run_id, unpublished_only, *, keep_published=False):
     """
     Deindex a list of content files by run from the index.
-    Files are soft-deleted (published=False) and will be physically deleted
-    by the cleanup_deleted_content_files task after the retention period.
 
     Args:
         run_id(int): Course run id
         unpublished_only(bool): if true only deindex files with published=False
-
+        keep_published(bool): if true, deindex all of the run's current content
+            files from OpenSearch without flipping ContentFile.published. Used to
+            remove a run from OpenSearch while keeping it in Qdrant / the REST API.
     """
     run = LearningResourceRun.objects.get(id=run_id)
     if unpublished_only:
         content_files = run.content_files.filter(published=False).all()
+    elif keep_published:
+        content_files = run.content_files.all()
     else:
         run.content_files.filter(published=True).update(published=False)
         content_files = run.content_files.all()

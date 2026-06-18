@@ -529,18 +529,23 @@ def index_run_content_files(run_id, index_types=IndexestoUpdate.all_indexes.valu
     retry_backoff=True,
     rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
 )
-def deindex_run_content_files(run_id, unpublished_only):
+def deindex_run_content_files(run_id, unpublished_only, keep_published=False):  # noqa: FBT002
     """
     Deindex content files for a LearningResourceRun
 
     Args:
         run_id(int): LearningResourceRun id
         unpublished_only(bool): Whether to only deindex unpublished content files
-
+        keep_published(bool): Whether to remove from OpenSearch without flipping
+            ContentFile.published
     """
     try:
         with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
-            api.deindex_run_content_files(run_id, unpublished_only=unpublished_only)
+            api.deindex_run_content_files(
+                run_id,
+                unpublished_only=unpublished_only,
+                keep_published=keep_published,
+            )
     except (RetryError, Ignore):
         raise
     except:  # noqa: E722
