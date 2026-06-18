@@ -244,10 +244,15 @@ def test_resource_unpublished_course_purges_runs_from_qdrant(
 @pytest.mark.parametrize("has_content_files", [True, False])
 @pytest.mark.parametrize("test_mode", [True, False])
 def test_search_index_plugin_resource_run_delete(
-    mock_search_index_helpers, has_content_files, test_mode
+    mock_search_index_helpers, settings, has_content_files, test_mode
 ):
     """The plugin function should remove contenfiles from the index and delete the run"""
-    run = LearningResourceRunFactory.create(learning_resource__test_mode=test_mode)
+    # Course stays published: run-unpublish alone would keep Qdrant, but deletion
+    # removes the content files, so Qdrant must be purged unconditionally.
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    run = LearningResourceRunFactory.create(
+        learning_resource__published=True, learning_resource__test_mode=test_mode
+    )
     if has_content_files:
         ContentFileFactory.create(run=run)
     run_id = run.id
@@ -260,6 +265,13 @@ def test_search_index_plugin_resource_run_delete(
         )
     else:
         mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_not_called()
+    if not test_mode:
+        # Deletion always purges Qdrant, even though the course is still published.
+        mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_called_once_with(
+            run_id
+        )
+    else:
+        mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_not_called()
     assert LearningResourceRun.objects.filter(id=run_id).exists() is False
 
 

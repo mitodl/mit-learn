@@ -196,11 +196,17 @@ class SearchIndexPlugin:
     @hookimpl
     def resource_run_delete(self, run):
         """
-        Remove a learning resource run's content files from the search index
-        and then delete the object
+        Remove a learning resource run's content files from the search indexes
+        and then delete the object. Unlike run-unpublish (which keeps a run in
+        Qdrant while the course is still published), deletion always purges
+        Qdrant because the content files are removed too.
         """
         if not run.learning_resource.test_mode:
             self.resource_run_unpublished(run)
+            if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+                try_with_retry_as_task(
+                    chain(vector_tasks.remove_run_content_files.si(run.id))
+                )
         run.delete()
 
     @hookimpl
