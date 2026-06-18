@@ -13,7 +13,7 @@ const CourseEntryCardStyled = styled(CoursewareCard)({
   boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
 })
 
-const ProgramEnrollmentCard = styled(CoursewareCard)({
+const StyledCoursewareCard = styled(CoursewareCard)({
   borderRadius: "8px",
   boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
 })
@@ -127,8 +127,8 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                           item.entry.displayedEnrollment?.run.id ??
                           item.entry.displayedRun?.id,
                       })}
+                      kind="course"
                       entry={item.entry}
-                      showNotComplete={false}
                     />
                   )
                 }
@@ -150,14 +150,13 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                 }
 
                 return (
-                  <ProgramEnrollmentCard
+                  <StyledCoursewareCard
                     key={getKey({
                       resourceType: ResourceType.Program,
                       id: item.enrollment.program.id,
                     })}
-                    layout="program"
+                    kind="program-enrollment"
                     programEnrollment={item.enrollment}
-                    showNotComplete={false}
                   />
                 )
               })}

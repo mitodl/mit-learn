@@ -41,6 +41,17 @@ const LoadingShell = styled.div(({ theme }) => ({
   borderRadius: "8px",
 }))
 
+const ErrorShell = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: "88px",
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  borderRadius: "8px",
+  color: theme.custom.colors.silverGrayDark,
+  ...theme.typography.body2,
+}))
+
 // ─── Node view ─────────────────────────────────────────────────────────────────
 
 const PodcastEpisodeEmbedNodeViewComponent = ({
@@ -49,7 +60,11 @@ const PodcastEpisodeEmbedNodeViewComponent = ({
   getPos,
 }: ReactNodeViewProps) => {
   const { episodeId, editable } = node.attrs
-  const { data: resource, isLoading } = useLearningResourcesDetail(episodeId)
+  const {
+    data: resource,
+    isLoading,
+    isError,
+  } = useLearningResourcesDetail(episodeId)
 
   const handleRemove = () => {
     const pos = getPos()
@@ -77,10 +92,12 @@ const PodcastEpisodeEmbedNodeViewComponent = ({
           <RiCloseLargeLine />
         </RemoveButton>
       )}
-      {isLoading || !resource ? (
+      {isLoading ? (
         <LoadingShell>
           <LoadingSpinner loading size={32} />
         </LoadingShell>
+      ) : isError || resource?.resource_type !== "podcast_episode" ? (
+        <ErrorShell>Unable to load podcast episode.</ErrorShell>
       ) : (
         <div data-style-boundary>
           <PodcastEmbedPlayer resource={resource} inline />

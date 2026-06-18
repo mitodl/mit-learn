@@ -80,8 +80,8 @@ const CoverArt = styled.img(({ theme }) => ({
 
 const CoverArtPlaceholder = styled.div(({ theme }) => ({
   gridArea: "art",
-  width: "120px",
-  height: "120px",
+  width: "200px",
+  height: "200px",
   borderRadius: "8px",
   backgroundColor: theme.custom.colors.lightGray2,
   alignSelf: "center",
@@ -405,6 +405,7 @@ const PodcastEmbedPlayer: React.FC<PodcastEmbedPlayerProps> = ({
             value={currentTime}
             step={1}
             percent={percent}
+            aria-valuetext={formatTime(currentTime)}
             aria-label="Seek"
             onChange={(e) => {
               const audio = audioRef.current

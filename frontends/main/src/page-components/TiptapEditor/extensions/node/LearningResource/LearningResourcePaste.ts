@@ -27,7 +27,6 @@ function extractResourceId(url: string): number | null {
   // Support MIT Learn podcast URLs like:
   // https://rc.learn.mit.edu/podcast/136068
   const podcastMatch = url.match(/\/podcast\/(\d+)(?:[/?#]|$)/)
-  console.log("podcastMatch", podcastMatch)
   if (podcastMatch) {
     return Number(podcastMatch[1])
   }

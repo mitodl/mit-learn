@@ -1,13 +1,13 @@
 import { env } from "@/env"
 import React from "react"
-import { LoadingSpinner, Stack, theme } from "ol-components"
+import { LoadingSpinner, Stack } from "ol-components"
 import {
   enrollmentQueries,
   useCreateProgramEnrollment,
 } from "api/mitxonline-hooks/enrollment"
 import { useQuery } from "@tanstack/react-query"
 import { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
-import { RiArrowRightSLine, RiCheckLine } from "@remixicon/react"
+import { RiCheckLine } from "@remixicon/react"
 import {
   Alert,
   Button,
@@ -37,33 +37,17 @@ const ButtonLinkWithDisabled = styled(ButtonLink)(({ href }) => [
   },
 ])
 
-const EnrollButtonIcon = styled.span({
-  width: "24px",
-  height: "24px",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flexShrink: 0,
-  color: theme.custom.colors.white,
-  "> svg": {
-    width: "24px",
-    height: "24px",
-  },
-})
-
 type ProgramEnrollmentButtonProps = {
   program: V2ProgramDetail
   variant?: ButtonProps["variant"]
   className?: string
   displayAsCourse?: boolean
-  showArrowIcon?: boolean
 }
 const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
   program,
   variant = "primary",
   className,
   displayAsCourse,
-  showArrowIcon = true,
 }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
   const me = useQuery(userQueries.me())
@@ -80,7 +64,7 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
   const enrollmentType = getEnrollmentType(program.enrollment_modes)
   const isPaidWithoutPrice =
     enrollmentType === "paid" && !program.products[0]?.price
-  const enrollButtonLabel = "Enroll in Program"
+  const enrollButtonLabel = displayAsCourse ? "Enroll" : "Enroll in Program"
 
   const isLoading = enrollments.isLoading || me.isLoading
   const isPending =
@@ -153,10 +137,6 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
             endIcon={
               isLoading || isPending ? (
                 <LoadingSpinner size="16px" loading={true} color="inherit" />
-              ) : showArrowIcon ? (
-                <EnrollButtonIcon data-testid="program-enroll-arrow-icon">
-                  <RiArrowRightSLine aria-hidden="true" />
-                </EnrollButtonIcon>
               ) : undefined
             }
           >

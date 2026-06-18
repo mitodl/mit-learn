@@ -1,5 +1,5 @@
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import { auth, coursePageView, programPageView } from "./urls"
+import { auth, coursePageView, ocwLearnPageView, programPageView } from "./urls"
 
 const MITOL_API_BASE_URL = process.env.NEXT_PUBLIC_MITOL_API_BASE_URL
 
@@ -112,4 +112,28 @@ test("programPageView falls back to /programs/ for unknown display_mode values",
       display_mode: "unknown-future-value" as never,
     }),
   ).toBe("/programs/some-slug")
+})
+
+test.each([
+  "https://example.com/courses/some-course",
+  "https://mit.edu/courses/some-course",
+])("ocwLearnPageView returns original URL for non-OCW hostnames", (url) => {
+  expect(ocwLearnPageView(url)).toBe(url)
+})
+
+test.each([
+  {
+    input: "https://ocw.mit.edu/courses/some-course",
+    expected: "/courses/o/some-course",
+  },
+  {
+    input: "https://ocw.mit.edu/courses/physics-101/",
+    expected: "/courses/o/physics-101/",
+  },
+  {
+    input: "https://ocw.mit.edu/search",
+    expected: "/search",
+  },
+])("ocwLearnPageView transforms OCW URLs correctly", ({ input, expected }) => {
+  expect(ocwLearnPageView(input)).toBe(expected)
 })

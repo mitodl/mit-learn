@@ -87,7 +87,7 @@ const programEnrollmentV3: PartialFactory<V3UserProgramEnrollment> = (
     certificate: hasCertificate
       ? {
           uuid: faker.string.uuid(),
-          link: `/certificate/program/${faker.string.uuid()}/`,
+          link: `/certificate/${faker.string.uuid()}/`,
         }
       : null,
     enrollment_mode: faker.helpers.arrayElement([

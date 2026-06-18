@@ -13,6 +13,7 @@ import {
   buildRequirementSections,
 } from "../model/dashboardViewModel"
 import type { RequirementSection } from "../model/dashboardViewModel"
+import { getCertificateLink } from "../CardShared"
 
 export type ProgramDashboardData = {
   sections: RequirementSection[]
@@ -168,7 +169,10 @@ const useProgramDashboardData = (programId: number): ProgramDashboardData => {
         }
       : undefined
 
-  const programCertificateUrl = programEnrollment?.certificate?.link ?? null
+  const programCertificateUrl = getCertificateLink(
+    programEnrollment?.certificate?.link,
+    "program",
+  )
 
   return {
     sections,

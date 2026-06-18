@@ -3296,6 +3296,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@mitodl/arithmix@npm:^0.2.2":
+  version: 0.2.2
+  resolution: "@mitodl/arithmix@npm:0.2.2"
+  peerDependencies:
+    "@emotion/react": ">=11"
+    "@emotion/styled": ">=11"
+    react: ">=18"
+    react-dom: ">=18"
+  checksum: 10/6e1d7f1a8306cc64e281934b94c29f387455f58bc56af6dfdc19ecbcafaef5614fb91e867dce0f392a80bf804fd32f2dfa81b3d21b7dd1cdf60f8dfe704a46d4
+  languageName: node
+  linkType: hard
+
 "@mitodl/course-search-utils@npm:^3.5.2":
   version: 3.5.2
   resolution: "@mitodl/course-search-utils@npm:3.5.2"
@@ -7460,6 +7472,15 @@ __metadata:
   dependencies:
     undici-types: "npm:~7.16.0"
   checksum: 10/ff7124058917a0f658637ac0137a3906c83c1dc78928228d8045a06ae8b6a02c1f15bf1fbe86c8d6f1839ccdd6033f3d79d615493f196f54b9130c50a65a64fa
+  languageName: node
+  linkType: hard
+
+"@types/papaparse@npm:^5.5.2":
+  version: 5.5.2
+  resolution: "@types/papaparse@npm:5.5.2"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10/35c38d8c789a0512465665fa6472e8eda7a20413227aafc25b55955a0ced8a061dfbeb0c75658393ebe61670cb95064cc3753ce1a0bac93a12c53ff569d15170
   languageName: node
   linkType: hard
 
@@ -16157,6 +16178,7 @@ __metadata:
     "@faker-js/faker": "npm:^10.0.0"
     "@floating-ui/react": "npm:^0.27.16"
     "@happy-dom/jest-environment": "npm:^20.1.0"
+    "@mitodl/arithmix": "npm:^0.2.2"
     "@mitodl/course-search-utils": "npm:^3.5.2"
     "@mitodl/mitxonline-api-axios": "npm:2026.6.10"
     "@mitodl/smoot-design": "npm:^6.27.0"
@@ -16195,6 +16217,7 @@ __metadata:
     "@types/jest": "npm:^29.5.12"
     "@types/lodash": "npm:^4.17.7"
     "@types/node": "npm:^24.0.0"
+    "@types/papaparse": "npm:^5.5.2"
     "@types/react": "npm:^19.2.7"
     "@types/react-dom": "npm:^19.2.3"
     "@types/react-slick": "npm:^0.23.13"
@@ -16220,6 +16243,7 @@ __metadata:
     ol-components: "npm:0.0.0"
     ol-test-utilities: "npm:0.0.0"
     ol-utilities: "npm:0.0.0"
+    papaparse: "npm:^5.5.3"
     posthog-js: "npm:^1.297.2"
     react: "npm:^19.2.1"
     react-dom: "npm:^19.2.1"
@@ -18007,6 +18031,13 @@ __metadata:
   version: 1.0.11
   resolution: "pako@npm:1.0.11"
   checksum: 10/1ad07210e894472685564c4d39a08717e84c2a68a70d3c1d9e657d32394ef1670e22972a433cbfe48976cb98b154ba06855dcd3fcfba77f60f1777634bec48c0
+  languageName: node
+  linkType: hard
+
+"papaparse@npm:^5.5.3":
+  version: 5.5.3
+  resolution: "papaparse@npm:5.5.3"
+  checksum: 10/383e38f8ff910be48b684e7f47b84dbe5e67708669c13bb21f316a0591ef183ff670dfc7eb9f6d0a8b67e21a5b0e8934712cda96ff8fb678d6591e597d108bd1
   languageName: node
   linkType: hard
 
