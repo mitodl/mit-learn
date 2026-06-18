@@ -132,7 +132,12 @@ describe("CoursePage", () => {
   })
 
   test("Page has expected headings", async () => {
-    const course = makeCourse()
+    // A non-enrollable run keeps the outline section (needs a courseware_id)
+    // while making the InfoBox render no enroll-card (h3) headings, so the
+    // page heading outline is deterministic. (makeCourse() otherwise
+    // randomizes run enrollability, injecting card h3s and flaking this test.)
+    const run = mitxFactories.courses.courseRun({ is_enrollable: false })
+    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
     const page = makePage({ course_details: course })
     invariant(page.faculty.length > 0)
     setupApis({ course, page })
