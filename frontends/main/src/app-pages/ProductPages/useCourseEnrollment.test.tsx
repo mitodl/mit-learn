@@ -143,7 +143,7 @@ describe("useCourseEnrollment — state mapping", () => {
     ).toEqual(["free"])
   })
 
-  test("deadlinePassed -> [Start Learning]", async () => {
+  test("deadlinePassed -> [Access Course Materials]", async () => {
     // paid-only but not purchasable (is_upgradable=false) with a free mode too
     const run = makeRun({
       is_enrollable: true,
@@ -169,7 +169,10 @@ describe("useCourseEnrollment — state mapping", () => {
     expect(state.status).toBe("options")
     expect(
       state.status === "options" && state.options.map((o) => o.label),
-    ).toEqual(["Start Learning"])
+    ).toEqual(["Access Course Materials"])
+    expect(
+      state.status === "options" && state.options.map((o) => o.kind),
+    ).toEqual(["access"])
   })
 
   test("archived -> [Access Course Materials]", async () => {
@@ -420,6 +423,54 @@ describe("useCourseEnrollment — actions", () => {
     } as React.MouseEvent<HTMLButtonElement>
 
     freeOption!.onClick!(fakeEvent)
+
+    await waitFor(() =>
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "post",
+          url: enrollUrl,
+        }),
+      ),
+    )
+
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.stringContaining("/dashboard"),
+      ),
+    )
+
+    expect(trackCourseEnrolled).toHaveBeenCalledWith(course.title)
+  })
+
+  test("access action (archived) -> audit POST {run_id} + redirect to dashboard success URL", async () => {
+    const run = makeRun({
+      is_enrollable: true,
+      is_archived: true,
+      enrollment_modes: [makeMode({ requires_payment: false })],
+    })
+    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+
+    const enrollUrl = mitxUrls.enrollment.enrollmentsListV1()
+    setMockResponse.post(enrollUrl, {})
+
+    const { result } = renderHook(() => useCourseEnrollment(course, run), {
+      wrapper,
+    })
+
+    await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
+
+    const state = result.current.state
+    expect(state.status).toBe("options")
+    if (state.status !== "options") return
+
+    const accessOption = state.options.find((o) => o.kind === "access")
+    expect(accessOption).toBeDefined()
+
+    const fakeEvent = {
+      currentTarget: document.createElement("button"),
+    } as React.MouseEvent<HTMLButtonElement>
+
+    accessOption!.onClick!(fakeEvent)
 
     await waitFor(() =>
       expect(makeRequest).toHaveBeenCalledWith(

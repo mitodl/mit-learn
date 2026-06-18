@@ -26,8 +26,8 @@ const useCourseEnrolledRunIds = (
   if (!isAuthenticated || !enrollments.data) {
     return {
       runIds: [],
-      isLoading: isAuthenticated ? (enrollments.isLoading ?? false) : false,
-      isError: isAuthenticated ? (enrollments.isError ?? false) : false,
+      isLoading: isAuthenticated ? enrollments.isLoading : false,
+      isError: isAuthenticated ? enrollments.isError : false,
     }
   }
 

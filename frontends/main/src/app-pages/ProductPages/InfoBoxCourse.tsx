@@ -25,7 +25,7 @@ import { ProductPageAskTimSection } from "./ProductPageAskTim"
  *   - data-boxes="2": auto-flow places meta + one offering box side by side.
  *
  * The "Choose Your Path" heading (emitted by CourseEnrollArea in the Both case)
- * always spans both columns via the .choose-path-heading selector.
+ * always spans both columns via the [data-choose-path] selector.
  */
 const BoxGrid = styled.div(({ theme: t }) => ({
   display: "grid",

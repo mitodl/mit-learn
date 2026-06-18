@@ -98,7 +98,7 @@ export const useCourseEnrollment = (
         if (product) {
           replaceBasketItem.mutate(product.id)
         }
-      } else if (kind === "free") {
+      } else if (kind === "free" || kind === "access") {
         if (selectedRun) {
           createEnrollment.mutate(
             { run_id: selectedRun.id },
@@ -115,7 +115,6 @@ export const useCourseEnrollment = (
           )
         }
       }
-      // "access" kind — no action needed (archive access link; rendered as ButtonLink by consumer)
     }
 
   // Enrolled in the selected run — supersedes everything
@@ -182,9 +181,9 @@ export const useCourseEnrollment = (
         status: "options",
         options: [
           {
-            kind: "free",
-            label: "Start Learning",
-            onClick: makeOnClick("free", "Start Learning"),
+            kind: "access",
+            label: "Access Course Materials",
+            onClick: makeOnClick("access", "Access Course Materials"),
             disabled: isPending,
           },
         ],

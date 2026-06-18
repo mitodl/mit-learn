@@ -1,7 +1,6 @@
 import React from "react"
 import { styled } from "@mitodl/smoot-design"
 import { RiCheckLine } from "@remixicon/react"
-import { theme } from "ol-components"
 
 const CardShell = styled.div({
   display: "flex",
@@ -76,12 +75,12 @@ const FeatureRow = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
 }))
 
-const FeatureIcon = styled(RiCheckLine)({
+const FeatureIcon = styled(RiCheckLine)(({ theme }) => ({
   width: "16px",
   height: "16px",
   color: theme.custom.colors.green,
   flexShrink: 0,
-})
+}))
 
 const FinancialAidLink = styled.a(({ theme }) => ({
   ...theme.typography.body3,

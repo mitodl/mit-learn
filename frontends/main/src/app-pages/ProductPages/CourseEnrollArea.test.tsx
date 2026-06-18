@@ -189,7 +189,7 @@ describe("CourseEnrollArea — freeOnly scenario", () => {
 })
 
 describe("CourseEnrollArea — deadlinePassed scenario", () => {
-  test("shows Learn for Free card with deadline note; Start Learning below", async () => {
+  test("shows Learn for Free card with deadline note; Access Course Materials below", async () => {
     setupAuth()
     const run = makeRun({
       is_enrollable: true,
@@ -211,7 +211,7 @@ describe("CourseEnrollArea — deadlinePassed scenario", () => {
       await screen.findByText("Certificate deadline has passed."),
     ).toBeInTheDocument()
     expect(
-      await screen.findByRole("button", { name: "Start Learning" }),
+      await screen.findByRole("button", { name: "Access Course Materials" }),
     ).toBeInTheDocument()
   })
 })
@@ -336,7 +336,7 @@ describe("CourseEnrollArea — loading state", () => {
 describe("CourseEnrollArea — click smoke tests", () => {
   setupLocationMock()
 
-  test("paid click triggers basket replace", async () => {
+  test("paid click redirects to cart", async () => {
     setupAuth()
     const product = makeProduct()
     const run = makeRun({
@@ -357,36 +357,18 @@ describe("CourseEnrollArea — click smoke tests", () => {
     renderWithProviders(<CourseEnrollArea course={course} selectedRun={run} />)
 
     const enrollBtn = await screen.findByRole("button", { name: "Enroll" })
-    expect(enrollBtn).toBeInTheDocument()
-    // Click doesn't throw
     await act(async () => {
       enrollBtn.click()
     })
-  })
 
-  test("free click triggers audit enrollment", async () => {
-    setupAuth()
-    const run = makeRun({
-      is_enrollable: true,
-      is_upgradable: false,
-      is_archived: false,
-      enrollment_modes: [makeMode({ requires_payment: false })],
-      products: [],
-    })
-    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
-
-    setMockResponse.post(mitxUrls.enrollment.enrollmentsListV1(), {})
-
-    renderWithProviders(<CourseEnrollArea course={course} selectedRun={run} />)
-
-    const startBtn = await screen.findByRole("button", {
-      name: "Start Learning",
-    })
-    expect(startBtn).toBeInTheDocument()
-    await act(async () => {
-      startBtn.click()
+    await waitFor(() => {
+      expect(window.location.assign).toHaveBeenCalledWith(
+        mitxonlineLegacyUrl("/cart/"),
+      )
     })
   })
+  // Free-click behavior (audit POST + dashboard redirect) is fully covered by
+  // useCourseEnrollment.test.tsx "free action -> audit POST + redirect" test.
 })
 
 describe("CourseEnrollArea — financial assistance link", () => {
