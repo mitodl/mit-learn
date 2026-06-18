@@ -166,19 +166,30 @@ class SearchIndexPlugin:
     @hookimpl
     def resource_run_unpublished(self, run):
         """
-        Remove a learning resource run's content files from the search index
+        Remove an unpublished run's content files from OpenSearch (without
+        flipping ContentFile.published) while keeping them in Qdrant. If the
+        parent course is fully retired (unpublished, non-test_mode), also purge
+        the run from Qdrant.
 
         Args:
             run(LearningResourceRun): The Learning Resource run that was removed
         """
-        if run.learning_resource.test_mode:
+        resource = run.learning_resource
+        if resource.test_mode:
             return
         if not run.content_files.exists():
             return
+
         deindex_tasks = [
-            tasks.deindex_run_content_files.si(run.id, unpublished_only=False),
+            tasks.deindex_run_content_files.si(
+                run.id, unpublished_only=False, keep_published=True
+            ),
         ]
-        if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+        if (
+            django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS
+            and not resource.published
+        ):
+            # Full course retirement -> remove from Qdrant as well.
             deindex_tasks.append(vector_tasks.remove_run_content_files.si(run.id))
         try_with_retry_as_task(chain(*deindex_tasks))
 

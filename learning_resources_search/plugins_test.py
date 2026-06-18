@@ -110,7 +110,9 @@ def test_search_index_plugin_resource_unpublished(
     if resource_type == COURSE_TYPE and has_content_files and not test_mode:
         assert unpublish_run_mock.call_count == resource.runs.count()
         for run in resource.runs.all():
-            unpublish_run_mock.assert_any_call(run.id, unpublished_only=False)
+            unpublish_run_mock.assert_any_call(
+                run.id, unpublished_only=False, keep_published=True
+            )
     else:
         unpublish_run_mock.assert_not_called()
 
@@ -147,6 +149,7 @@ def test_search_index_plugin_resource_before_delete(
             mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_any_call(
                 run.id,
                 unpublished_only=False,
+                keep_published=True,
             )
     else:
         mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_not_called()
@@ -155,21 +158,86 @@ def test_search_index_plugin_resource_before_delete(
 @pytest.mark.django_db
 @pytest.mark.parametrize("has_content_files", [True, False])
 @pytest.mark.parametrize("test_mode", [True, False])
-def test_search_index_plugin_resource_run_unpublished(
-    mock_search_index_helpers, has_content_files, test_mode
+def test_resource_run_unpublished_keeps_qdrant(
+    mock_search_index_helpers, settings, has_content_files, test_mode
 ):
-    """The plugin function should remove a run's contenfiles from the search index"""
-    run = LearningResourceRunFactory.create(learning_resource__test_mode=test_mode)
+    """Unpublishing one run of a still-published course removes it from OpenSearch
+    (without flipping published) but keeps it in Qdrant.
+    """
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    run = LearningResourceRunFactory.create(
+        published=False,
+        learning_resource__published=True,
+        learning_resource__test_mode=test_mode,
+    )
     if has_content_files:
         ContentFileFactory.create(run=run)
+
     SearchIndexPlugin().resource_run_unpublished(run)
+
     if has_content_files and not test_mode:
         mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_called_once_with(
             run.id,
             unpublished_only=False,
+            keep_published=True,
         )
+        # Course still published -> keep the run in Qdrant.
+        mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_not_called()
     else:
         mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_not_called()
+        mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_resource_run_unpublished_retired_course_purges_qdrant(
+    mock_search_index_helpers, settings
+):
+    """When the parent course is fully retired, the run is purged from Qdrant too."""
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    run = LearningResourceRunFactory.create(
+        published=False,
+        learning_resource__published=False,
+        learning_resource__test_mode=False,
+    )
+    ContentFileFactory.create(run=run)
+
+    SearchIndexPlugin().resource_run_unpublished(run)
+
+    mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_called_once_with(
+        run.id,
+        unpublished_only=False,
+        keep_published=True,
+    )
+    mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_called_once_with(
+        run.id
+    )
+
+
+@pytest.mark.django_db
+def test_resource_unpublished_course_purges_runs_from_qdrant(
+    mock_search_index_helpers, settings
+):
+    """Unpublishing a whole course purges each run's content files from Qdrant."""
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    resource = LearningResourceFactory.create(
+        resource_type=COURSE_TYPE, published=False, test_mode=False, create_runs=False
+    )
+    runs = LearningResourceRunFactory.create_batch(
+        2, learning_resource=resource, published=False
+    )
+    for run in runs:
+        ContentFileFactory.create(run=run)
+
+    SearchIndexPlugin().resource_unpublished(resource)
+
+    assert (
+        mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.call_count
+        == len(runs)
+    )
+    for run in runs:
+        mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_any_call(
+            run.id
+        )
 
 
 @pytest.mark.django_db
@@ -188,6 +256,7 @@ def test_search_index_plugin_resource_run_delete(
         mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_called_once_with(
             run_id,
             unpublished_only=False,
+            keep_published=True,
         )
     else:
         mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_not_called()
