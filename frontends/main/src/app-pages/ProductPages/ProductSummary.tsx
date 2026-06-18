@@ -174,7 +174,7 @@ const CourseDatesRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
           </InfoRowInner>
         ) : null}
         {enrollable
-          .filter((cr) => expanded || cr.id === course.next_run_id)
+          .filter((cr) => expanded || cr.id === nextRun.id)
           .filter((cr) => cr.start_date)
           .map((cr) => {
             const anytime = runStartsAnytime(cr)

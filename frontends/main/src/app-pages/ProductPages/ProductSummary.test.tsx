@@ -387,6 +387,34 @@ describe("CourseSummary", () => {
       expect(datesRow).not.toHaveTextContent(formatDate(run3.start_date))
     })
 
+    test("Collapsed dates row shows selectedRun's date, not next_run_id run's date, when they differ", () => {
+      const runA = makeRun({
+        is_enrollable: true,
+        start_date: monthsFromNow(1),
+        end_date: monthsFromNow(3),
+      })
+      const runB = makeRun({
+        is_enrollable: true,
+        start_date: monthsFromNow(6),
+        end_date: monthsFromNow(8),
+      })
+
+      const course = makeCourse({
+        next_run_id: runA.id, // course's default run is A
+        courseruns: shuffle([runA, runB]),
+      })
+      // User has selected run B — collapsed view must show run B, not run A
+      renderWithProviders(<CourseSummary course={course} selectedRun={runB} />)
+
+      const datesRow = screen.getByTestId(TestIds.DatesRow)
+
+      invariant(runB.start_date)
+      expect(datesRow).toHaveTextContent(formatDate(runB.start_date))
+
+      invariant(runA.start_date)
+      expect(datesRow).not.toHaveTextContent(formatDate(runA.start_date))
+    })
+
     test("Never displays dates for non-enrollable runs", async () => {
       const enrollableRun = makeRun({
         is_enrollable: true,
