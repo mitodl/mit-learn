@@ -39,10 +39,7 @@ const useBulkAssignSeats = () => {
     ) => b2bApi.b2bManagerOrganizationsContractsCodesBulkAssignCreate(opts),
     onSettled: (_data, _err, vars) => {
       queryClient.invalidateQueries({
-        queryKey: managerOrganizationKeys.contractCodes({
-          id: vars.id,
-          parent_lookup_organization: vars.parent_lookup_organization,
-        }),
+        queryKey: ["mitxonline", "manager", "organizations", "contracts", "codes"],
       })
     },
   })
