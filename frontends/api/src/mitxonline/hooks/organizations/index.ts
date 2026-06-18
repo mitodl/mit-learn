@@ -39,7 +39,13 @@ const useBulkAssignSeats = () => {
     ) => b2bApi.b2bManagerOrganizationsContractsCodesBulkAssignCreate(opts),
     onSettled: (_data, _err, vars) => {
       queryClient.invalidateQueries({
-        queryKey: ["mitxonline", "manager", "organizations", "contracts", "codes"],
+        queryKey: [
+          "mitxonline",
+          "manager",
+          "organizations",
+          "contracts",
+          "codes",
+        ],
       })
     },
   })
@@ -54,7 +60,13 @@ const useRemindCode = () => {
     ) => b2bApi.b2bManagerOrganizationsContractsCodesRemindCreate(opts),
     onSettled: (_data, _err, vars) => {
       queryClient.invalidateQueries({
-        queryKey: ["mitxonline", "manager", "organizations", "contracts", "codes"],
+        queryKey: [
+          "mitxonline",
+          "manager",
+          "organizations",
+          "contracts",
+          "codes",
+        ],
       })
     },
   })
@@ -69,7 +81,13 @@ const useRevokeCode = () => {
     ) => b2bApi.b2bManagerOrganizationsContractsCodesRevokeDestroy(opts),
     onSettled: (_data, _err, vars) => {
       queryClient.invalidateQueries({
-        queryKey: ["mitxonline", "manager", "organizations", "contracts", "codes"],
+        queryKey: [
+          "mitxonline",
+          "manager",
+          "organizations",
+          "contracts",
+          "codes",
+        ],
       })
     },
   })
@@ -88,7 +106,13 @@ const useReassignCode = () => {
     ) => b2bApi.b2bManagerOrganizationsContractsCodesReassignUpdate(opts),
     onSettled: (_data, _err, vars) => {
       queryClient.invalidateQueries({
-        queryKey: ["mitxonline", "manager", "organizations", "contracts", "codes"],
+        queryKey: [
+          "mitxonline",
+          "manager",
+          "organizations",
+          "contracts",
+          "codes",
+        ],
       })
     },
   })
