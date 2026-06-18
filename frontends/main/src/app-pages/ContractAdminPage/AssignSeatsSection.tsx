@@ -260,6 +260,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
 
   // Severity and headline message for the bulk-assign outcome, derived from the
   // result shape (and surfaced via an inline Alert).
+  const resultContent = useMemo(() => {
     if (!result) return null
     const { assignedCount, errors } = result
     const assigned = `${assignedCount} ${pluralize("seat", assignedCount)} assigned.`
