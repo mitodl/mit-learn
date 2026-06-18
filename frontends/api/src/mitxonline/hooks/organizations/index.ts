@@ -7,11 +7,7 @@ import {
   B2bApiB2bManagerOrganizationsContractsCodesRemindCreateRequest,
   B2bApiB2bManagerOrganizationsContractsCodesRevokeDestroyRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
-import {
-  organizationQueries,
-  managerOrganizationQueries,
-  managerOrganizationKeys,
-} from "./queries"
+import { organizationQueries, managerOrganizationQueries } from "./queries"
 
 const useB2BAttachMutation = (opts: B2bApiB2bAttachCreateRequest) => {
   const queryClient = useQueryClient()
@@ -37,7 +33,7 @@ const useBulkAssignSeats = () => {
     mutationFn: (
       opts: B2bApiB2bManagerOrganizationsContractsCodesBulkAssignCreateRequest,
     ) => b2bApi.b2bManagerOrganizationsContractsCodesBulkAssignCreate(opts),
-    onSettled: (_data, _err, vars) => {
+    onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: [
           "mitxonline",
@@ -58,7 +54,7 @@ const useRemindCode = () => {
     mutationFn: (
       opts: B2bApiB2bManagerOrganizationsContractsCodesRemindCreateRequest,
     ) => b2bApi.b2bManagerOrganizationsContractsCodesRemindCreate(opts),
-    onSettled: (_data, _err, vars) => {
+    onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: [
           "mitxonline",
@@ -79,7 +75,7 @@ const useRevokeCode = () => {
     mutationFn: (
       opts: B2bApiB2bManagerOrganizationsContractsCodesRevokeDestroyRequest,
     ) => b2bApi.b2bManagerOrganizationsContractsCodesRevokeDestroy(opts),
-    onSettled: (_data, _err, vars) => {
+    onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: [
           "mitxonline",
@@ -104,7 +100,7 @@ const useReassignCode = () => {
     mutationFn: (
       opts: B2bApiB2bManagerOrganizationsContractsCodesReassignUpdateRequest,
     ) => b2bApi.b2bManagerOrganizationsContractsCodesReassignUpdate(opts),
-    onSettled: (_data, _err, vars) => {
+    onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: [
           "mitxonline",
