@@ -219,9 +219,8 @@ function buildEmbedHtml(
   title: string,
   embedPageUrl: string,
 ): string {
-  const isOvs = video.platform?.code === "ovs"
+  const isOvs = video.platform?.code === "ovs" || video.platform?.code === "ocw"
   const escapedTitle = escapeHtmlAttr(title)
-
   if (isOvs) {
     if (!embedPageUrl) return ""
     return `<iframe width="560" height="315" src="${embedPageUrl}" title="${escapedTitle}" frameborder="0" allowfullscreen></iframe>`
