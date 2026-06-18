@@ -3,6 +3,7 @@ import { VisuallyHidden } from "@mitodl/smoot-design"
 import type { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds } from "./util"
 import { CourseSummary } from "./ProductSummary"
+import { getSelectedRun } from "./courseRun"
 import ProgramBundleUpsell from "./ProgramBundleUpsell"
 import CourseEnrollmentButton from "./CourseEnrollmentButton"
 import {
@@ -26,7 +27,7 @@ const CourseInfoBox: React.FC<CourseInfoBoxProps> = ({ course }) => {
           <h2 id={HeadingIds.Summary}>Course Information</h2>
         </VisuallyHidden>
         <InfoBoxContent>
-          <CourseSummary course={course} />
+          <CourseSummary course={course} selectedRun={getSelectedRun(course)} />
         </InfoBoxContent>
         <InfoBoxEnrollArea>
           <InfoBoxActionStack>

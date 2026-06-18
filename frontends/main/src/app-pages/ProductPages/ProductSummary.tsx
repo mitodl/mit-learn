@@ -19,7 +19,6 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds, parseReqTree } from "./util"
 import {
-  canPurchaseRun,
   formatPrice,
   getEnrollmentType,
   getFlexiblePriceForProduct,
@@ -371,23 +370,6 @@ const CourseDurationRow: React.FC<CourseInfoRowProps> = ({
   )
 }
 
-const COURSE_CERT_INFO_HREF =
-  "https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
-const COURSE_CERT_INFO_LINK = (
-  <UnderlinedLink
-    color="black"
-    href={COURSE_CERT_INFO_HREF}
-    target="_blank"
-    rel="noopener noreferrer"
-  >
-    Learn More
-  </UnderlinedLink>
-)
-
-const GrayText = styled.span(({ theme }) => ({
-  color: theme.custom.colors.silverGrayDark,
-}))
-
 const ProgramPaySection = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
@@ -541,16 +523,6 @@ const ProgramStartForFreeInfoIcon = styled.span(({ theme }) => ({
   },
 }))
 
-const CertificateBoxRoot = styled.div(({ theme }) => ({
-  width: "100%",
-  backgroundColor: theme.custom.colors.lightGray1,
-  borderRadius: "8px",
-  padding: "16px",
-  display: "flex",
-  flexDirection: "column",
-  gap: "8px",
-}))
-
 const StrickenText = styled.span(({ theme }) => ({
   textDecoration: "line-through",
   color: theme.custom.colors.silverGrayDark,
@@ -559,170 +531,6 @@ const StrickenText = styled.span(({ theme }) => ({
     ...theme.typography.body4,
   },
 }))
-
-const CourseCertificateBox: React.FC<CourseInfoRowProps> = ({
-  nextRun,
-  course,
-}) => {
-  const canPurchase = nextRun ? canPurchaseRun(nextRun) : false
-  const product = nextRun?.products[0]
-  const financialAidUrl = course?.page?.financial_assistance_form_url
-  const hasFinancialAid = !!(financialAidUrl && product)
-  const userFlexiblePrice = useQuery({
-    ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
-    enabled: canPurchase && hasFinancialAid,
-  })
-  const price =
-    canPurchase && product
-      ? priceWithDiscount({
-          product,
-          flexiblePrice: userFlexiblePrice.data,
-          avoidCents: true,
-        })
-      : null
-
-  const upgradeDeadline = nextRun?.is_archived
-    ? null
-    : nextRun?.upgrade_deadline
-  return (
-    <CertificateBoxRoot>
-      {price ? (
-        <>
-          <InfoRowInner flexWrap={"nowrap"}>
-            <span>
-              <UnderlinedLink
-                href={COURSE_CERT_INFO_HREF}
-                target="_blank"
-                rel="noopener noreferrer"
-                color="black"
-              >
-                <InfoLabel>Earn a certificate</InfoLabel>
-              </UnderlinedLink>
-              :{" "}
-              {price.isDiscounted ? (
-                <>
-                  {price.finalPrice}{" "}
-                  <StrickenText>{price.originalPrice}</StrickenText>
-                </>
-              ) : (
-                price.finalPrice
-              )}
-            </span>
-          </InfoRowInner>
-          {hasFinancialAid ? (
-            <UnderlinedLink
-              color="black"
-              href={mitxonlineLegacyUrl(financialAidUrl)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {price.approvedFinancialAid
-                ? "Financial assistance applied"
-                : "Financial assistance available"}
-            </UnderlinedLink>
-          ) : null}
-          {upgradeDeadline ? (
-            <Typography
-              typography={{ xs: "body3", sm: "body2" }}
-              sx={(theme) => ({ color: theme.custom.colors.red })}
-            >
-              Payment deadline:{" "}
-              <NoSSR
-                onSSR={
-                  <Skeleton
-                    variant="text"
-                    sx={{ display: "inline-block" }}
-                    width="80px"
-                  />
-                }
-              >
-                {formatDate(upgradeDeadline)}
-              </NoSSR>
-            </Typography>
-          ) : null}
-        </>
-      ) : (
-        <InfoRowInner>
-          <Typography typography={{ xs: "subtitle3", sm: "subtitle2" }}>
-            Certificate deadline passed
-          </Typography>
-          {COURSE_CERT_INFO_LINK}
-        </InfoRowInner>
-      )}
-    </CertificateBoxRoot>
-  )
-}
-
-const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
-  course,
-  nextRun,
-  ...others
-}) => {
-  const enrollmentType = getEnrollmentType(nextRun?.enrollment_modes)
-  const product = nextRun?.products[0]
-  const canPurchase = nextRun ? canPurchaseRun(nextRun) : false
-  const financialAidUrl = course?.page?.financial_assistance_form_url
-  const hasFinancialAid = !!(financialAidUrl && product)
-  const userFlexiblePrice = useQuery({
-    ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
-    enabled: enrollmentType === "paid" && canPurchase && hasFinancialAid,
-  })
-  const price =
-    enrollmentType === "paid" && product
-      ? priceWithDiscount({
-          product,
-          flexiblePrice: userFlexiblePrice.data,
-          avoidCents: true,
-        })
-      : null
-
-  if (enrollmentType === "none") return null
-
-  const paidPrice = price ? (
-    <>
-      {price.isDiscounted ? (
-        <>
-          {price.finalPrice} <StrickenText>{price.originalPrice}</StrickenText>
-        </>
-      ) : (
-        price.finalPrice
-      )}{" "}
-      <GrayText>(includes {course.certificate_type})</GrayText>
-    </>
-  ) : null
-
-  return (
-    <InfoRow {...others}>
-      <InfoRowIcon>
-        <RiPriceTag3Line aria-hidden="true" />
-      </InfoRowIcon>
-      <Stack gap="8px" width="100%">
-        {enrollmentType === "paid" ? (
-          <>
-            <InfoLabelValue label="Price" value={paidPrice} />
-            {canPurchase && hasFinancialAid ? (
-              <UnderlinedLink
-                color="black"
-                href={mitxonlineLegacyUrl(financialAidUrl)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {price?.approvedFinancialAid
-                  ? "Financial assistance applied"
-                  : "Financial assistance available"}
-              </UnderlinedLink>
-            ) : null}
-          </>
-        ) : (
-          <InfoLabelValue label="Price" value="Free to Learn" />
-        )}
-        {enrollmentType === "both" ? (
-          <CourseCertificateBox course={course} nextRun={nextRun} />
-        ) : null}
-      </Stack>
-    </InfoRow>
-  )
-}
 
 enum TestIds {
   DatesRow = "dates-row",
@@ -775,41 +583,70 @@ const SummaryRows = styled.div(({ theme }) => ({
 
 const CourseSummary: React.FC<{
   course: CourseWithCourseRunsSerializerV2
-}> = ({ course }) => {
-  const nextRunId = course.next_run_id
-  const nextRun = course.courseruns.find((run) => run.id === nextRunId)
+  selectedRun: CourseRunV2 | undefined
+  sessionSelect?: React.ReactNode
+}> = ({ course, selectedRun, sessionSelect }) => {
+  const upgradeDeadline =
+    selectedRun !== undefined && !selectedRun.is_archived
+      ? selectedRun.upgrade_deadline
+      : null
   return (
     <SummaryRows>
-      {!nextRun ? (
+      {!selectedRun ? (
         <Alert severity="warning">
           No sessions of this course are currently open for enrollment. More
           sessions may be added in the future.
         </Alert>
       ) : null}
-      {nextRun?.is_archived ? <ArchivedAlert /> : null}
-      {nextRun ? (
-        <CourseDatesRow
-          course={course}
-          nextRun={nextRun}
-          data-testid={TestIds.DatesRow}
-        />
+      {selectedRun?.is_archived ? <ArchivedAlert /> : null}
+      {selectedRun ? (
+        sessionSelect ? (
+          <InfoRow data-testid={TestIds.DatesRow}>
+            <InfoRowIcon>
+              <RiCalendarLine aria-hidden="true" />
+            </InfoRowIcon>
+            <Stack gap="16px" width="100%">
+              {sessionSelect}
+            </Stack>
+          </InfoRow>
+        ) : (
+          <CourseDatesRow
+            course={course}
+            nextRun={selectedRun}
+            data-testid={TestIds.DatesRow}
+          />
+        )
       ) : null}
-      {nextRun ? (
+      {upgradeDeadline ? (
+        <Typography
+          typography={{ xs: "body3", sm: "body2" }}
+          sx={(theme) => ({ color: theme.custom.colors.red })}
+        >
+          Payment deadline:{" "}
+          <NoSSR
+            onSSR={
+              <Skeleton
+                variant="text"
+                sx={{ display: "inline-block" }}
+                width="80px"
+              />
+            }
+          >
+            {formatDate(upgradeDeadline)}
+          </NoSSR>
+        </Typography>
+      ) : null}
+      {selectedRun ? (
         <CoursePaceRow
           course={course}
-          nextRun={nextRun}
+          nextRun={selectedRun}
           data-testid={TestIds.PaceRow}
         />
       ) : null}
       <CourseDurationRow
         course={course}
-        nextRun={nextRun}
+        nextRun={selectedRun}
         data-testid={TestIds.DurationRow}
-      />
-      <CoursePriceRow
-        course={course}
-        nextRun={nextRun}
-        data-testid={TestIds.PriceRow}
       />
     </SummaryRows>
   )

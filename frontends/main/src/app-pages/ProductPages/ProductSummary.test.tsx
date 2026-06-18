@@ -34,13 +34,17 @@ const bothModes = () => [freeMode(), paidMode()]
 
 describe("CourseSummary", () => {
   test.each([
-    { overrides: { next_run_id: null }, expectAlert: true },
-    { overrides: {}, expectAlert: false },
+    { hasRun: false, expectAlert: true },
+    { hasRun: true, expectAlert: false },
   ])(
     "If no run is found, renders an alert (alert=$expectAlert)",
-    ({ overrides, expectAlert }) => {
-      const course = makeCourse(overrides)
-      renderWithProviders(<CourseSummary course={course} />)
+    ({ hasRun, expectAlert }) => {
+      const run = makeRun()
+      const course = makeCourse({ courseruns: hasRun ? [run] : [] })
+      const selectedRun = hasRun ? run : undefined
+      renderWithProviders(
+        <CourseSummary course={course} selectedRun={selectedRun} />,
+      )
       const alertMessage = screen.queryByText(
         /No sessions of this course are currently open for enrollment/,
       )
@@ -62,11 +66,8 @@ describe("CourseSummary", () => {
     "Renders an alert if run is archived (alert = $expectAlert)",
     ({ overrides, expectAlert }) => {
       const run = makeRun(overrides)
-      const course = makeCourse({
-        next_run_id: run.id,
-        courseruns: shuffle([run, makeRun()]),
-      })
-      renderWithProviders(<CourseSummary course={course} />)
+      const course = makeCourse({ courseruns: [run] })
+      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
       const alert = screen.queryByRole("alert")
 
       if (expectAlert) {
@@ -89,7 +90,7 @@ describe("CourseSummary", () => {
         next_run_id: run.id,
         courseruns: shuffle([run, nonEnrollableRun]),
       })
-      renderWithProviders(<CourseSummary course={course} />)
+      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -113,7 +114,7 @@ describe("CourseSummary", () => {
         courseruns: [run],
         next_run_id: run.id,
       })
-      renderWithProviders(<CourseSummary course={course} />)
+      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -131,7 +132,7 @@ describe("CourseSummary", () => {
         courseruns: shuffle([run, nonEnrollableRun]),
         next_run_id: run.id,
       })
-      renderWithProviders(<CourseSummary course={course} />)
+      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -147,7 +148,7 @@ describe("CourseSummary", () => {
         courseruns: shuffle([run, makeRun()]),
         next_run_id: run.id,
       })
-      renderWithProviders(<CourseSummary course={course} />)
+      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -167,7 +168,7 @@ describe("CourseSummary", () => {
         next_run_id: run.id,
         courseruns: [run, nonEnrollableRun],
       })
-      renderWithProviders(<CourseSummary course={course} />)
+      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -197,7 +198,7 @@ describe("CourseSummary", () => {
         next_run_id: run1.id,
         courseruns: [run1, run2],
       })
-      renderWithProviders(<CourseSummary course={course} />)
+      renderWithProviders(<CourseSummary course={course} selectedRun={run1} />)
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -236,7 +237,7 @@ describe("CourseSummary", () => {
         next_run_id: run1.id,
         courseruns: [run1, run2, run3],
       })
-      renderWithProviders(<CourseSummary course={course} />)
+      renderWithProviders(<CourseSummary course={course} selectedRun={run1} />)
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -309,7 +310,9 @@ describe("CourseSummary", () => {
         // Shuffle the runs to ensure sorting works regardless of input order
         courseruns: shuffle([oldestRun, middleRun, newestRun]),
       })
-      renderWithProviders(<CourseSummary course={course} />)
+      renderWithProviders(
+        <CourseSummary course={course} selectedRun={middleRun} />,
+      )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -367,7 +370,7 @@ describe("CourseSummary", () => {
         next_run_id: run2.id, // Select the middle run as next
         courseruns: shuffle([run1, run2, run3]),
       })
-      renderWithProviders(<CourseSummary course={course} />)
+      renderWithProviders(<CourseSummary course={course} selectedRun={run2} />)
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -409,7 +412,9 @@ describe("CourseSummary", () => {
           nonEnrollableRun2,
         ]),
       })
-      renderWithProviders(<CourseSummary course={course} />)
+      renderWithProviders(
+        <CourseSummary course={course} selectedRun={enrollableRun} />,
+      )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -446,7 +451,7 @@ describe("CourseSummary", () => {
         next_run_id: run1.id,
         courseruns: [run1, run2],
       })
-      renderWithProviders(<CourseSummary course={course} />)
+      renderWithProviders(<CourseSummary course={course} selectedRun={run1} />)
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -474,7 +479,9 @@ describe("CourseSummary", () => {
         next_run_id: runWithDate.id,
         courseruns: shuffle([runWithDate, runWithoutDate, anotherRunWithDate]),
       })
-      renderWithProviders(<CourseSummary course={course} />)
+      renderWithProviders(
+        <CourseSummary course={course} selectedRun={runWithDate} />,
+      )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -511,7 +518,9 @@ describe("CourseSummary", () => {
         next_run_id: runWithEndDate.id,
         courseruns: [runWithEndDate, runWithoutEndDate],
       })
-      renderWithProviders(<CourseSummary course={course} />)
+      renderWithProviders(
+        <CourseSummary course={course} selectedRun={runWithEndDate} />,
+      )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -573,7 +582,9 @@ describe("CourseSummary", () => {
         next_run_id: anytimeRun.id,
         courseruns: [anytimeRun, instructorPacedRun, futureRun],
       })
-      renderWithProviders(<CourseSummary course={course} />)
+      renderWithProviders(
+        <CourseSummary course={course} selectedRun={anytimeRun} />,
+      )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -628,7 +639,9 @@ describe("CourseSummary", () => {
         next_run_id: archivedRun.id,
         courseruns: [archivedRun, anytimeRun],
       })
-      renderWithProviders(<CourseSummary course={course} />)
+      renderWithProviders(
+        <CourseSummary course={course} selectedRun={archivedRun} />,
+      )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -672,7 +685,7 @@ describe("CourseSummary", () => {
           next_run_id: run.id,
           courseruns: shuffle([run, makeRun()]),
         })
-        renderWithProviders(<CourseSummary course={course} />)
+        renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
 
         const formatRow = screen.getByTestId(TestIds.PaceRow)
         expect(formatRow).toHaveTextContent("Course Format: Self-Paced")
@@ -699,7 +712,7 @@ describe("CourseSummary", () => {
         next_run_id: run.id,
         courseruns: shuffle([run, makeRun()]),
       })
-      renderWithProviders(<CourseSummary course={course} />)
+      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
 
       const formatRow = screen.getByTestId(TestIds.PaceRow)
       expect(formatRow).toHaveTextContent("Course Format: Instructor-Paced")
@@ -736,7 +749,9 @@ describe("CourseSummary", () => {
           page: { length, effort },
         })
 
-        renderWithProviders(<CourseSummary course={course} />)
+        renderWithProviders(
+          <CourseSummary course={course} selectedRun={undefined} />,
+        )
 
         if (!length) {
           expect(screen.queryByTestId(TestIds.DurationRow)).toBeNull()
@@ -756,7 +771,9 @@ describe("CourseSummary", () => {
           effort: "10 hours/week",
         },
       })
-      renderWithProviders(<CourseSummary course={course} />)
+      renderWithProviders(
+        <CourseSummary course={course} selectedRun={undefined} />,
+      )
 
       const durationRow = screen.getByTestId(TestIds.DurationRow)
 
@@ -765,318 +782,53 @@ describe("CourseSummary", () => {
     })
   })
 
-  describe("Price Row", () => {
-    test.each([
-      {
-        label: "has no products",
-        runOverrides: { is_archived: false, products: [] },
-      },
-      {
-        label: "is archived",
-        runOverrides: { is_archived: true, products: [makeProduct()] },
-      },
-    ])("Does not offer certificate if $label", ({ runOverrides }) => {
-      const run = makeRun({ ...runOverrides, enrollment_modes: bothModes() })
-      const course = makeCourse({
-        next_run_id: run.id,
-        courseruns: shuffle([run, makeRun()]),
-      })
-      renderWithProviders(<CourseSummary course={course} />)
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
-
-      expect(priceRow).not.toHaveTextContent("Payment deadline")
-      expect(priceRow).toHaveTextContent("Certificate deadline passed")
-
-      expect(priceRow).toHaveTextContent("Free to Learn")
-    })
-
-    test("Offers certificate upgrade if not archived and has product", () => {
+  describe("Payment Deadline", () => {
+    test("Shows payment deadline when selected run has upgrade_deadline and is not archived", () => {
+      const upgradeDeadline = monthsFromNow(1)
       const run = makeRun({
+        upgrade_deadline: upgradeDeadline,
         is_archived: false,
-        products: [makeProduct()],
-        is_enrollable: true,
-        is_upgradable: true,
-        enrollment_modes: bothModes(),
       })
-      const course = makeCourse({
-        next_run_id: run.id,
-        courseruns: shuffle([run, makeRun()]),
-      })
-      renderWithProviders(<CourseSummary course={course} />)
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
-
-      expect(priceRow).toHaveTextContent(
-        `Earn a certificate: ${formatPrice(run.products[0].price, { avoidCents: true })}`,
-      )
-      invariant(run.upgrade_deadline)
-      expect(priceRow).toHaveTextContent(
-        `Payment deadline: ${formatDate(run.upgrade_deadline)}`,
-      )
-      expect(priceRow).not.toHaveTextContent("Certificate deadline passed")
+      const course = makeCourse({ courseruns: [run] })
+      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+      expect(screen.getByText(/Payment deadline/)).toBeInTheDocument()
+      expect(
+        screen.getByText(new RegExp(formatDate(upgradeDeadline))),
+      ).toBeInTheDocument()
     })
 
-    test("Price row does not render when no next run is found", () => {
-      const course = makeCourse({
-        next_run_id: null,
-        courseruns: [],
-      })
-      renderWithProviders(<CourseSummary course={course} />)
-
-      expect(screen.queryByTestId(TestIds.PriceRow)).toBeNull()
-    })
-
-    test("Price row does not render when enrollment_modes is empty", () => {
-      const run = makeRun({ enrollment_modes: [] })
-      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
-      renderWithProviders(<CourseSummary course={course} />)
-
-      expect(screen.queryByTestId(TestIds.PriceRow)).toBeNull()
-    })
-
-    test("Shows only 'Free to Learn' with no cert box when all enrollment modes are free", () => {
+    test("Does not show payment deadline when selected run is archived", () => {
       const run = makeRun({
-        enrollment_modes: [freeMode()],
-        products: [makeProduct()],
+        upgrade_deadline: monthsFromNow(1),
+        is_archived: true,
       })
-      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
-      renderWithProviders(<CourseSummary course={course} />)
-
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
-      expect(priceRow).toHaveTextContent("Free to Learn")
-      expect(priceRow).not.toHaveTextContent("Earn a certificate")
+      const course = makeCourse({ courseruns: [run] })
+      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+      expect(screen.queryByText(/Payment deadline/)).toBeNull()
     })
 
-    test("Shows paid price with certificate type and no cert box when all enrollment modes are paid", () => {
-      const product = makeProduct({ price: "899.00" })
-      const run = makeRun({
-        enrollment_modes: [paidMode()],
-        products: [product],
-      })
-      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
-      renderWithProviders(<CourseSummary course={course} />)
-
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
-      expect(priceRow).toHaveTextContent(
-        formatPrice(product.price, { avoidCents: true }),
-      )
-      expect(priceRow).toHaveTextContent(course.certificate_type)
-      expect(priceRow).not.toHaveTextContent("Free to Learn")
-      expect(priceRow).not.toHaveTextContent("Earn a certificate")
-    })
-
-    test("Shows 'Free to Learn' and cert box when enrollment modes include both free and paid", () => {
-      const run = makeRun({
-        is_archived: false,
-        is_enrollable: true,
-        products: [makeProduct()],
-        is_upgradable: true,
-        enrollment_modes: bothModes(),
-      })
-      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
-      renderWithProviders(<CourseSummary course={course} />)
-
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
-      expect(priceRow).toHaveTextContent("Free to Learn")
-      expect(priceRow).toHaveTextContent("Earn a certificate")
+    test("Does not show payment deadline when selected run has no upgrade_deadline", () => {
+      const run = makeRun({ upgrade_deadline: null, is_archived: false })
+      const course = makeCourse({ courseruns: [run] })
+      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+      expect(screen.queryByText(/Payment deadline/)).toBeNull()
     })
   })
 
-  describe("Financial Assistance", () => {
-    test.each([
-      { hasFinancialAid: true, expectLink: true },
-      { hasFinancialAid: false, expectLink: false },
-    ])(
-      "Financial aid link is displayed if and only if URL is non-empty (hasFinancialAid=$hasFinancialAid)",
-      async ({ hasFinancialAid, expectLink }) => {
-        const financialAidUrl = hasFinancialAid
-          ? `/financial-aid/${faker.string.alphanumeric(10)}`
-          : ""
-        const product = makeProduct()
-        const run = makeRun({
-          is_archived: false,
-          products: [product],
-          is_enrollable: true,
-          is_upgradable: true,
-          enrollment_modes: bothModes(),
-        })
-        const course = makeCourse({
-          next_run_id: run.id,
-          courseruns: [run],
-          page: { financial_assistance_form_url: financialAidUrl },
-        })
-
-        // Mock the flexible price API response when financial aid is available
-        if (hasFinancialAid) {
-          const mockFlexiblePrice = makeFlexiblePrice({
-            id: product.id,
-            price: product.price,
-            product_flexible_price: null,
-          })
-          setMockResponse.get(
-            urls.products.userFlexiblePriceDetail(product.id),
-            mockFlexiblePrice,
-          )
+  test("Renders sessionSelect in place of dates when provided", () => {
+    const run = makeRun({ is_enrollable: true })
+    const course = makeCourse({ courseruns: [run], next_run_id: run.id })
+    renderWithProviders(
+      <CourseSummary
+        course={course}
+        selectedRun={run}
+        sessionSelect={
+          <div data-testid="session-select-slot">Session Picker</div>
         }
-
-        renderWithProviders(<CourseSummary course={course} />)
-
-        const priceRow = screen.getByTestId(TestIds.PriceRow)
-
-        if (expectLink) {
-          const link = await within(priceRow).findByRole("link", {
-            name: /financial assistance/i,
-          })
-          const expectedUrl = mitxonlineLegacyUrl(financialAidUrl)
-          expect(link).toHaveAttribute("href", expectedUrl)
-          expect(link).toHaveTextContent("Financial assistance available")
-        } else {
-          const link = within(priceRow).queryByRole("link", {
-            name: /financial assistance/i,
-          })
-          expect(link).toBeNull()
-          expect(link).toBeNull()
-        }
-      },
+      />,
     )
-
-    test("Displays user-specific discounted price when financial aid is available", async () => {
-      const originalPrice = "100.00"
-      const discountedAmount = "50.00"
-      const product = makeProduct({ price: originalPrice })
-      const flexiblePrice = makeFlexiblePrice({
-        id: product.id,
-        price: originalPrice,
-        product_flexible_price: {
-          id: faker.number.int(),
-          amount: discountedAmount,
-          discount_type: "dollars-off" as const,
-          discount_code: faker.string.alphanumeric(8),
-          redemption_type: "one-time" as const,
-          is_redeemed: false,
-          automatic: true,
-          max_redemptions: 1,
-          payment_type: null,
-          activation_date: faker.date.past().toISOString(),
-          expiration_date: faker.date.future().toISOString(),
-        },
-      })
-      const financialAidUrl = `/financial-aid/${faker.string.alphanumeric(10)}`
-      const run = makeRun({
-        is_archived: false,
-        products: [product],
-        is_enrollable: true,
-        is_upgradable: true,
-        enrollment_modes: bothModes(),
-      })
-      const course = makeCourse({
-        next_run_id: run.id,
-        courseruns: [run],
-        page: { financial_assistance_form_url: financialAidUrl },
-      })
-
-      setMockResponse.get(
-        urls.products.userFlexiblePriceDetail(product.id),
-        flexiblePrice,
-      )
-
-      renderWithProviders(<CourseSummary course={course} />)
-
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
-
-      // Wait for the flexible price API to be called and prices to be displayed
-      // The discounted price is calculated as: $100 - $50 = $50
-      await within(priceRow).findByText("Financial assistance applied")
-      expect(priceRow).toHaveTextContent("$50")
-      expect(priceRow).toHaveTextContent("$100")
-    })
-
-    test("Does NOT call flexible price API when financial aid URL is empty", () => {
-      const product = makeProduct({ price: "100.00" })
-      const run = makeRun({
-        is_archived: false,
-        products: [product],
-        is_enrollable: true,
-        is_upgradable: true,
-        enrollment_modes: bothModes(),
-      })
-      const course = makeCourse({
-        next_run_id: run.id,
-        courseruns: [run],
-        page: { financial_assistance_form_url: "" },
-      })
-
-      // We're NOT setting up a mock response for the flexible price API
-      // If it's called, the test will fail
-
-      renderWithProviders(<CourseSummary course={course} />)
-
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
-
-      // Should show the regular price
-      expect(priceRow).toHaveTextContent(
-        formatPrice(product.price, { avoidCents: true }),
-      )
-      // Should NOT show financial assistance link
-      expect(
-        within(priceRow).queryByRole("link", { name: /financial assistance/i }),
-      ).toBeNull()
-    })
-
-    test("Does NOT show financial assistance when certificate link is present but products array is empty", () => {
-      const financialAidUrl = `/financial-aid/${faker.string.alphanumeric(10)}`
-      const run = makeRun({
-        is_archived: false,
-        products: [],
-        is_enrollable: true,
-        is_upgradable: false,
-        enrollment_modes: bothModes(),
-      })
-      const course = makeCourse({
-        next_run_id: run.id,
-        courseruns: [run],
-        page: { financial_assistance_form_url: financialAidUrl },
-      })
-
-      renderWithProviders(<CourseSummary course={course} />)
-
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
-
-      // Should show "Certificate deadline passed" since no products
-      expect(priceRow).toHaveTextContent("Certificate deadline passed")
-
-      // Certificate link should be present
-      const certLink = within(priceRow).getByRole("link", {
-        name: /Learn More/i,
-      })
-      expect(certLink).toBeInTheDocument()
-
-      // Financial assistance link should NOT be present
-      expect(
-        within(priceRow).queryByRole("link", { name: /financial assistance/i }),
-      ).toBeNull()
-    })
-
-    test("Does not crash when course page is null", () => {
-      const run = makeRun({
-        is_archived: false,
-        is_enrollable: true,
-        is_upgradable: true,
-        enrollment_modes: bothModes(),
-      })
-      const course = makeCourse({
-        next_run_id: run.id,
-        courseruns: [run],
-        page: null as never,
-      })
-
-      renderWithProviders(<CourseSummary course={course} />)
-
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
-      expect(priceRow).toBeInTheDocument()
-      expect(
-        within(priceRow).queryByRole("link", { name: /financial assistance/i }),
-      ).toBeNull()
-    })
+    expect(screen.getByTestId("session-select-slot")).toBeInTheDocument()
+    expect(screen.queryByText(/^Start:/)).toBeNull()
   })
 })
 
