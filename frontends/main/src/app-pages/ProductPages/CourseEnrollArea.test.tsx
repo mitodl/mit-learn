@@ -13,6 +13,7 @@ import {
   factories as mitxFactories,
   urls as mitxUrls,
 } from "api/mitxonline-test-utils"
+import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import CourseEnrollArea from "./CourseEnrollArea"
 import { getSelectedRun } from "./courseRun"
 
@@ -33,6 +34,7 @@ const makeCourse = mitxFactories.courses.course
 const makeRun = mitxFactories.courses.courseRun
 const makeMode = mitxFactories.courses.enrollmentMode
 const makeProduct = mitxFactories.courses.product
+const makeFlexiblePrice = mitxFactories.products.flexiblePrice
 const makeUser = factories.user.user
 
 function setupAuth() {
@@ -384,5 +386,87 @@ describe("CourseEnrollArea — click smoke tests", () => {
     await act(async () => {
       startBtn.click()
     })
+  })
+})
+
+describe("CourseEnrollArea — financial assistance link", () => {
+  test("paidOnly course with financial_assistance_form_url shows 'Financial assistance available' link", async () => {
+    setupAuth()
+    const product = makeProduct()
+    const run = makeRun({
+      is_enrollable: true,
+      is_upgradable: true,
+      is_archived: false,
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [product],
+    })
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      page: { financial_assistance_form_url: "/financial-aid/" },
+    })
+
+    setMockResponse.get(
+      mitxUrls.products.userFlexiblePriceDetail(product.id),
+      makeFlexiblePrice({ id: product.id, product_flexible_price: null }),
+    )
+
+    renderWithProviders(
+      <CourseEnrollArea course={course} selectedRun={getSelectedRun(course)} />,
+    )
+
+    const link = await screen.findByRole("link", {
+      name: "Financial assistance available",
+    })
+    expect(link).toBeInTheDocument()
+    expect(link).toHaveAttribute("href", mitxonlineLegacyUrl("/financial-aid/"))
+  })
+
+  test("paidOnly course with approved flexible price shows 'Financial assistance applied' link", async () => {
+    setupAuth()
+    const product = makeProduct()
+    const flexiblePrice = makeFlexiblePrice({
+      id: product.id,
+      product_flexible_price: {
+        id: 1,
+        amount: "25.00",
+        discount_type: "dollars-off" as const,
+        discount_code: "AID",
+        redemption_type: "one-time" as const,
+        is_redeemed: false,
+        automatic: true,
+        max_redemptions: 1,
+        payment_type: null,
+        activation_date: null,
+        expiration_date: null,
+      },
+    })
+    const run = makeRun({
+      is_enrollable: true,
+      is_upgradable: true,
+      is_archived: false,
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [product],
+    })
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      page: { financial_assistance_form_url: "/financial-aid/" },
+    })
+
+    setMockResponse.get(
+      mitxUrls.products.userFlexiblePriceDetail(product.id),
+      flexiblePrice,
+    )
+
+    renderWithProviders(
+      <CourseEnrollArea course={course} selectedRun={getSelectedRun(course)} />,
+    )
+
+    const link = await screen.findByRole("link", {
+      name: "Financial assistance applied",
+    })
+    expect(link).toBeInTheDocument()
+    expect(link).toHaveAttribute("href", mitxonlineLegacyUrl("/financial-aid/"))
   })
 })

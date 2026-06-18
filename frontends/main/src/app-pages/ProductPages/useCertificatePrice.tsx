@@ -6,7 +6,11 @@ import type {
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { productQueries } from "api/mitxonline-hooks/products"
-import { canPurchaseRun, priceWithDiscount } from "@/common/mitxonline"
+import {
+  canPurchaseRun,
+  mitxonlineLegacyUrl,
+  priceWithDiscount,
+} from "@/common/mitxonline"
 
 const DiscountedPrice = styled.span({
   display: "inline-flex",
@@ -20,15 +24,21 @@ const StrickenPrice = styled.span(({ theme }) => ({
   ...theme.typography.buttonSmall,
 }))
 
+type CertificatePriceResult = {
+  price: React.ReactNode
+  financialAid: { href: string; applied: boolean } | null
+}
+
 /**
- * Returns the price node for a course's Certificate Track card. Resolves the
- * selected run's product price, applies any approved/applied flexible price
- * discount, and renders the discounted price with the original struck through.
+ * Returns the price node and financial aid info for a course's Certificate
+ * Track card. Resolves the selected run's product price, applies any
+ * approved/applied flexible price discount, and renders the discounted price
+ * with the original struck through.
  */
 export const useCertificatePrice = (
   course: CourseWithCourseRunsSerializerV2,
   selectedRun: CourseRunV2 | undefined,
-): React.ReactNode => {
+): CertificatePriceResult => {
   const product = selectedRun?.products?.[0]
   const financialAidUrl = course?.page?.financial_assistance_form_url
   const hasFinancialAid = !!(financialAidUrl && product)
@@ -39,22 +49,32 @@ export const useCertificatePrice = (
     enabled: canPurchase && hasFinancialAid,
   })
 
-  if (!product?.price) return null
+  if (!product?.price) return { price: null, financialAid: null }
 
-  const price = priceWithDiscount({
+  const priceResult = priceWithDiscount({
     product,
     flexiblePrice: userFlexiblePrice.data,
     avoidCents: true,
   })
 
-  if (price.isDiscounted) {
-    return (
+  let priceNode: React.ReactNode
+  if (priceResult.isDiscounted) {
+    priceNode = (
       <DiscountedPrice>
-        <span>{price.finalPrice}</span>
-        <StrickenPrice>{price.originalPrice}</StrickenPrice>
+        <span>{priceResult.finalPrice}</span>
+        <StrickenPrice>{priceResult.originalPrice}</StrickenPrice>
       </DiscountedPrice>
     )
+  } else {
+    priceNode = priceResult.finalPrice
   }
 
-  return price.finalPrice
+  const financialAid = hasFinancialAid
+    ? {
+        href: mitxonlineLegacyUrl(financialAidUrl),
+        applied: !!userFlexiblePrice.data?.product_flexible_price?.id,
+      }
+    : null
+
+  return { price: priceNode, financialAid }
 }

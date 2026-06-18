@@ -62,7 +62,7 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
       onRequireSignup: (el) => setAnchor(el),
     })
 
-  const price = useCertificatePrice(course, selectedRun)
+  const { price, financialAid } = useCertificatePrice(course, selectedRun)
 
   if (state.status === "none") {
     return null
@@ -94,6 +94,7 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
         <div data-card="cert">
           <CertificateTrackCard
             price={price}
+            financialAid={financialAid}
             productNoun="course"
             action={
               <EnrollButton
@@ -110,7 +111,11 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
     // paidOnly: card + button below
     return (
       <>
-        <CertificateTrackCard price={price} productNoun="course" />
+        <CertificateTrackCard
+          price={price}
+          financialAid={financialAid}
+          productNoun="course"
+        />
         <EnrollButton
           action={paidAction}
           size="large"
