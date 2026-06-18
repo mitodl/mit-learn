@@ -108,9 +108,9 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
         </div>
       )
     }
-    // paidOnly: card + button below
+    // paidOnly: card + button below, wrapped as one grid cell
     return (
-      <>
+      <div data-card="paid">
         <CertificateTrackCard
           price={price}
           financialAid={financialAid}
@@ -122,7 +122,7 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
           loading={isStatusLoading}
           pending={isPending}
         />
-      </>
+      </div>
     )
   }
 
@@ -150,9 +150,9 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
         </div>
       )
     }
-    // freeOnly / deadlinePassed / archived: card + button below
+    // freeOnly / deadlinePassed / archived: card + button below, wrapped as one grid cell
     return (
-      <>
+      <div data-card="free">
         <LearnForFreeCard
           productNoun="course"
           certificateDeadlineNote={deadlineNote}
@@ -163,13 +163,13 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
           loading={isStatusLoading}
           pending={isPending}
         />
-      </>
+      </div>
     )
   }
 
   return (
     <>
-      {scenario === "both" && <div>Choose Your Path</div>}
+      {scenario === "both" && <div data-choose-path>Choose Your Path</div>}
       {renderPaidBox()}
       {renderFreeBox()}
       {isError && (

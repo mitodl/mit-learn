@@ -347,4 +347,42 @@ describe("InfoBoxCourse — grid structure", () => {
       within(grid).getByRole("heading", { name: "Learn for Free", level: 3 }),
     ).toBeInTheDocument()
   })
+
+  test("paidOnly: grid has exactly 2 direct children (meta + one offering wrapper); Enroll button shares the same wrapper as the Certificate Track card", async () => {
+    setupAuth()
+    const run = makeRun({
+      is_enrollable: true,
+      is_archived: false,
+      is_upgradable: true,
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [makeProduct()],
+    })
+    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+
+    renderWithProviders(<InfoBoxCourse course={course} />)
+
+    await screen.findByRole("button", { name: "Enroll" })
+
+    const grid = document.querySelector("[data-boxes]") as HTMLElement
+    expect(grid).not.toBeNull()
+
+    // Must be exactly 2 direct element children: [data-grid-meta] and [data-card="paid"]
+    const directChildren = Array.from(grid.children)
+    expect(directChildren).toHaveLength(2)
+
+    // The offering wrapper must contain both the card heading and the Enroll button
+    const offeringWrapper = grid.querySelector(
+      "[data-card='paid']",
+    ) as HTMLElement
+    expect(offeringWrapper).not.toBeNull()
+    expect(
+      within(offeringWrapper).getByRole("heading", {
+        name: "Certificate Track",
+        level: 3,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(offeringWrapper).getByRole("button", { name: "Enroll" }),
+    ).toBeInTheDocument()
+  })
 })

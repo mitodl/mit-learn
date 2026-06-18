@@ -44,6 +44,10 @@ const BoxGrid = styled.div(({ theme: t }) => ({
     "&[data-boxes='3'] [data-grid-meta]": {
       gridColumn: "1 / -1",
     },
+    // 3-box (Both): "Choose Your Path" heading spans both columns
+    "&[data-boxes='3'] [data-choose-path]": {
+      gridColumn: "1 / -1",
+    },
     // 1-box (no runs): collapse back to single column
     "&[data-boxes='1']": {
       gridTemplateColumns: "1fr",
