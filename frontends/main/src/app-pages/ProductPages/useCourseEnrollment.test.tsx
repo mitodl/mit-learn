@@ -16,6 +16,11 @@ import { useCourseEnrollment } from "./useCourseEnrollment"
 import { getSelectedRun } from "./courseRun"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
+import { trackCourseEnrolled } from "@/common/analytics/gtm"
+
+jest.mock("@/common/analytics/gtm", () => ({
+  trackCourseEnrolled: jest.fn(),
+}))
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
@@ -430,6 +435,8 @@ describe("useCourseEnrollment — actions", () => {
         expect.stringContaining("/dashboard"),
       ),
     )
+
+    expect(trackCourseEnrolled).toHaveBeenCalledWith(course.title)
   })
 
   test("unauthenticated click -> onRequireSignup called with anchor button", async () => {

@@ -11,6 +11,7 @@ import { enrollmentAlertSuccessUrl } from "@/common/mitxonline"
 import { useRouter } from "next-nprogress-bar"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
+import { trackCourseEnrolled } from "@/common/analytics/gtm"
 import { env } from "@/env"
 import { DASHBOARD_HOME } from "@/common/urls"
 import { getCourseScenario, type CourseScenarioKind } from "./courseRun"
@@ -103,6 +104,7 @@ export const useCourseEnrollment = (
             { run_id: selectedRun.id },
             {
               onSuccess: () => {
+                trackCourseEnrolled(course.title)
                 router.push(
                   enrollmentAlertSuccessUrl({
                     title: course.title ?? "your enrollment",
