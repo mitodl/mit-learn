@@ -45,17 +45,11 @@ const managerOrganizationKeys = {
       "detail",
       opts,
     ] as const,
+  contractCodesRoot: () =>
+    ["mitxonline", "manager", "organizations", "contracts", "codes"] as const,
   contractCodes: (
     opts: B2bApiB2bManagerOrganizationsContractsCodesListRequest,
-  ) =>
-    [
-      "mitxonline",
-      "manager",
-      "organizations",
-      "contracts",
-      "codes",
-      opts,
-    ] as const,
+  ) => [...managerOrganizationKeys.contractCodesRoot(), opts] as const,
 }
 
 const managerOrganizationQueries = {
