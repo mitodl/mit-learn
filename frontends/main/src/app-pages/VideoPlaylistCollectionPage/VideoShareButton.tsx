@@ -3,7 +3,7 @@
 import React, { useRef, useState } from "react"
 import { RiShareForwardFill } from "@remixicon/react"
 import type { VideoResource } from "api/v1"
-import VideoShareDialog from "./VideoShareDialog"
+import ShareDialog from "./ShareDialog"
 import * as Styled from "./VideoSeriesDetailPage.styled"
 
 type VideoShareButtonProps = {
@@ -33,7 +33,7 @@ const VideoShareButton: React.FC<VideoShareButtonProps> = ({
         <RiShareForwardFill size={16} />
         Share
       </Styled.ShareButton>
-      <VideoShareDialog
+      <ShareDialog
         open={shareOpen}
         video={video}
         title={title}

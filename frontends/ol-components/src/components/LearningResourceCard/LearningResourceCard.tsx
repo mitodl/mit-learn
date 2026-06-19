@@ -1,6 +1,11 @@
 import React from "react"
-import { RiMenuAddLine, RiBookmarkLine, RiBookmarkFill } from "@remixicon/react"
-import { LearningResource } from "api"
+import {
+  RiMenuAddLine,
+  RiBookmarkLine,
+  RiBookmarkFill,
+  RiShareForwardFill,
+} from "@remixicon/react"
+import { LearningResource, ResourceTypeEnum } from "api"
 import {
   LocalDate,
   DEFAULT_RESOURCE_IMG,
@@ -31,6 +36,7 @@ interface LearningResourceCardProps {
   href?: string
   onAddToLearningPathClick?: ResourceIdCallback | null
   onAddToUserListClick?: ResourceIdCallback | null
+  onShareClick?: ResourceIdCallback | null
   inUserList?: boolean
   inLearningPath?: boolean
   onClick?: React.MouseEventHandler
@@ -48,6 +54,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   href,
   onAddToLearningPathClick,
   onAddToUserListClick,
+  onShareClick,
   inLearningPath,
   inUserList,
   onClick,
@@ -89,6 +96,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
         href={href}
         onAddToLearningPathClick={onAddToLearningPathClick}
         onAddToUserListClick={onAddToUserListClick}
+        onShareClick={onShareClick}
         inUserList={inUserList}
         inLearningPath={inLearningPath}
         onClick={onClick}
@@ -145,6 +153,17 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       ) : (
         <RiBookmarkLine aria-hidden />
       ),
+    })
+  }
+
+  if (
+    onShareClick &&
+    resource.resource_type === ResourceTypeEnum.PodcastEpisode
+  ) {
+    actions.push({
+      onClick: (event) => onShareClick(event, resource.id),
+      "aria-label": "Share",
+      icon: <RiShareForwardFill aria-hidden />,
     })
   }
 

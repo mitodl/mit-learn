@@ -11,10 +11,10 @@ import SeriesNavBar from "./SeriesNavBar"
 import UpNextSection from "./UpNextSection"
 import * as Styled from "./VideoSeriesDetailPage.styled"
 import { env } from "@/env"
-
-const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 import { buildVideoStructuredData } from "./videoStructuredData"
 import VideoResourcePlayer from "./VideoResourcePlayer"
+
+const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 const StyledVideoResourcePlayer = styled(VideoResourcePlayer)(({ theme }) => ({
   borderBottom: `3px solid ${theme.custom.colors.darkGray2}`,
@@ -177,7 +177,11 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               nextVideo={nextVideo}
               getVideoHref={getVideoHref}
               currentVideo={video}
-              shareUrl={`${NEXT_PUBLIC_ORIGIN}/video/${video.id}?playlist=${playlistId}`}
+              shareUrl={
+                playlistId
+                  ? `${NEXT_PUBLIC_ORIGIN}/video/${video.id}?playlist=${playlistId}`
+                  : `${NEXT_PUBLIC_ORIGIN}/video/${video.id}`
+              }
             />
           )}
 

@@ -6,6 +6,7 @@ import {
   screen,
   expectProps,
   waitFor,
+  fireEvent,
 } from "@/test-utils"
 import type { User } from "api/hooks/user"
 import { learningResourceQueries } from "api/hooks/learningResources"
@@ -20,6 +21,15 @@ import { urls, factories, setMockResponse } from "api/test-utils"
 import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import invariant from "tiny-invariant"
 import { LearningResourceCard } from "ol-components"
+
+// Mock ShareDialog to avoid MUI Popper portal rendering issues in jsdom.
+// The mock renders a detectable element so we can assert on it.
+jest.mock("@/app-pages/VideoPlaylistCollectionPage/ShareDialog", () => ({
+  __esModule: true,
+  default: jest.fn(({ open }: { open: boolean }) => (
+    <div data-testid="share-dialog" data-open={String(open)} />
+  )),
+}))
 
 jest.mock("ol-components", () => {
   const actual = jest.requireActual("ol-components")
@@ -235,5 +245,39 @@ describe.each([
       learningResourceQueries.detail(resource.id).queryKey,
     )
     expect(cached).toEqual(resource)
+  })
+
+  test("Share button appears for podcast episode resource", async () => {
+    const resource = factories.learningResources.podcastEpisode()
+    setup({ user: { is_authenticated: false }, props: { resource } })
+    await screen.findByRole("button", { name: "Share" })
+  })
+
+  test("Share button does not appear for non-podcast-episode resources", async () => {
+    const resource = factories.learningResources.course()
+    setup({ user: { is_authenticated: false }, props: { resource } })
+    await screen.findByRole("button", {
+      name: `Bookmark ${resource.resource_category}`,
+    })
+    expect(
+      screen.queryByRole("button", { name: "Share" }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("Clicking Share button opens ShareDialog for podcast episode", async () => {
+    const resource = factories.learningResources.podcastEpisode()
+    setup({ user: { is_authenticated: false }, props: { resource } })
+    const shareButton = await screen.findByRole("button", { name: "Share" })
+    expect(screen.getByTestId("share-dialog")).toHaveAttribute(
+      "data-open",
+      "false",
+    )
+    fireEvent.click(shareButton)
+    await waitFor(() => {
+      expect(screen.getByTestId("share-dialog")).toHaveAttribute(
+        "data-open",
+        "true",
+      )
+    })
   })
 })
