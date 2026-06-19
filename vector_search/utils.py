@@ -269,8 +269,8 @@ def update_qdrant_indexes():
     ]:
         indexes = index[0]
         collection_name = index[1]
+        collection = client.get_collection(collection_name=collection_name)
         for index_field in indexes:
-            collection = client.get_collection(collection_name=collection_name)
             if (
                 index_field not in collection.payload_schema
                 or indexes[index_field]
