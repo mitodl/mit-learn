@@ -6,9 +6,11 @@ from functools import cache
 
 from django.conf import settings
 from django.db.models import Q
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
-from langchain_text_splitters import MarkdownHeaderTextSplitter
+from langchain_text_splitters import (
+    MarkdownHeaderTextSplitter,
+    RecursiveCharacterTextSplitter,
+)
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
 from learning_resources.constants import PROGRAM_COURSE_CACHE_KEY_TEST_MODE

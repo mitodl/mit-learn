@@ -7,7 +7,7 @@ import pytest
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.urls import reverse
-from langchain.schema import Document
+from langchain_core.documents import Document
 from qdrant_client import models
 from qdrant_client.models import PointStruct
 
