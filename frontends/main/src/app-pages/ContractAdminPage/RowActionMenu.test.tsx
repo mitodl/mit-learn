@@ -5,10 +5,6 @@ import { RowActionMenu } from "./RowActionMenu"
 
 const makeCode = factories.contracts.contractCode
 
-// MUI Tooltip injects aria-label="Coming soon" onto wrapped disabled items,
-// so their accessible name becomes "Coming soon" rather than their text.
-// Use getByText for those items and getByRole only for non-tooltip items.
-
 afterEach(() => {
   // Restore clipboard so Object.defineProperty calls don't leak between tests
   Object.defineProperty(navigator, "clipboard", {
@@ -20,38 +16,47 @@ afterEach(() => {
 describe("RowActionMenu", () => {
   describe("pending code", () => {
     test("opens menu with correct items on trigger click", async () => {
-      const code = makeCode({ is_redeemed: false })
+      const code = makeCode({ redemption_status: "assigned" })
       renderWithTheme(<RowActionMenu code={code} />)
 
       await user.click(screen.getByRole("button", { name: /more actions/i }))
 
-      expect(screen.getByText("Change assigned email")).toBeInTheDocument()
-      expect(screen.getByText("Resend claim email")).toBeInTheDocument()
+      expect(
+        screen.getByRole("menuitem", { name: "Change assigned email" }),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("menuitem", { name: "Resend claim email" }),
+      ).toBeInTheDocument()
       expect(
         screen.getByRole("menuitem", { name: "Copy claim link" }),
       ).toBeInTheDocument()
-      expect(screen.getByText("Release seat")).toBeInTheDocument()
+      expect(
+        screen.getByRole("menuitem", { name: "Release seat" }),
+      ).toBeInTheDocument()
     })
   })
 
   describe("redeemed code", () => {
     test("opens menu with only Uninvite item", async () => {
       const code = makeCode({
-        is_redeemed: true,
+        redemption_status: "redeemed",
         redeemed_by: "user@example.com",
+        redeemed_on: new Date().toISOString(),
       })
       renderWithTheme(<RowActionMenu code={code} />)
 
       await user.click(screen.getByRole("button", { name: /more actions/i }))
 
-      expect(screen.getByText("Uninvite")).toBeInTheDocument()
+      expect(
+        screen.getByRole("menuitem", { name: "Uninvite" }),
+      ).toBeInTheDocument()
       expect(screen.queryByText("Copy claim link")).not.toBeInTheDocument()
     })
   })
 
   describe("Copy claim link", () => {
     test("writes the enrollment URL to clipboard and shows confirmation", async () => {
-      const code = makeCode({ is_redeemed: false, code: "ABC123" })
+      const code = makeCode({ redemption_status: "assigned", code: "ABC123" })
       const writeText = jest.fn().mockResolvedValue(undefined)
       Object.defineProperty(navigator, "clipboard", {
         value: { writeText },
@@ -76,7 +81,7 @@ describe("RowActionMenu", () => {
     })
 
     test("announces the copy to screen readers via aria-live region", async () => {
-      const code = makeCode({ is_redeemed: false })
+      const code = makeCode({ redemption_status: "assigned" })
       Object.defineProperty(navigator, "clipboard", {
         value: { writeText: jest.fn().mockResolvedValue(undefined) },
         configurable: true,
@@ -102,7 +107,7 @@ describe("RowActionMenu", () => {
     })
 
     test("falls back to execCommand when clipboard API is unavailable", async () => {
-      const code = makeCode({ is_redeemed: false, code: "XYZ789" })
+      const code = makeCode({ redemption_status: "assigned", code: "XYZ789" })
       Object.defineProperty(navigator, "clipboard", {
         value: undefined,
         configurable: true,

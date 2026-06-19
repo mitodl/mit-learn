@@ -290,7 +290,10 @@ export const programPageView = (program: {
       : PROGRAM_PAGE_VIEW
   return generatePath(pattern, { readableId: program.readable_id })
 }
-export const ocwLearnPageView = (ocwUrl: string) => {
-  const url = new URL(ocwUrl)
+export const ocwLearnPageView = (originalUrl: string) => {
+  const url = new URL(originalUrl)
+  if (!url.hostname.includes("ocw.mit.edu")) {
+    return originalUrl
+  }
   return url.pathname.replace(/^\/courses/, "/courses/o")
 }

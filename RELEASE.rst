@@ -1,6 +1,38 @@
 Release Notes
 =============
 
+Version 0.71.9 (Released June 17, 2026)
+--------------
+
+- switch to celery.chain for certain vector_search tasks (#3484)
+- Fix bug in vector resource metadata updates (#3482)
+- add arithmix behind a feature flag (#3405)
+- dashboard refactor phase 7d (#3473)
+- feat: redemption_status migration + Assign Seats CSV flow (#3442)
+- fix issues with multiple summarizer config instances (#3479)
+
+Version 0.71.7 (Released June 17, 2026)
+--------------
+
+- fix ocw routing for playlist parent (#3481)
+- adding fix for remove run embeddings task and tests (#3477)
+- fix: suppress 'Add some text' placeholder inside the list and task items in tiptap editor (#3474)
+
+Version 0.71.6 (Released June 16, 2026)
+--------------
+
+- show ocw course for video playlists (#3462)
+- fix: Add Article model to Django Admin (#3471)
+- fix vector resource serialization (#3468)
+- feat: implement PostHog tracking for video shorts interactions (#3456)
+- Add course enrollment gtm (#3461)
+- feat: add title to learning resource summary endpoint (#3472)
+- dashboard refactor phase 7c (#3469)
+- Route /ai/* through the APISIX gateway to local learn-ai (#3451)
+- Fix sitemap pagination (#3470)
+- chore: bump @mitodl/mitxonline-api-axios to 2026.6.10 (#3464)
+- dashboard refactor phase 7b (#3463)
+
 Version 0.71.5 (Released June 15, 2026)
 --------------
 
