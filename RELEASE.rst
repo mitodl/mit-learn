@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.71.10
+---------------
+
+- fix(dashboard): enroll in the displayed variant run, not getBestRun's… (#3508)
+
 Version 0.71.9 (Released June 17, 2026)
 --------------
 
