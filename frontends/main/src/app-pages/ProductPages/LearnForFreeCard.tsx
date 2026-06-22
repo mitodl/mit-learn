@@ -85,6 +85,8 @@ const FeatureIcon = styled(RiCheckLine)(({ theme }) => ({
 
 const DeadlineNote = styled.div(({ theme }) => ({
   ...theme.typography.body3,
+  fontWeight: theme.typography.fontWeightBold,
+  textDecoration: "underline",
   color: theme.custom.colors.darkGray2,
 }))
 
@@ -110,16 +112,16 @@ const LearnForFreeCard: React.FC<LearnForFreeCardProps> = ({
           <PriceContainer>Free</PriceContainer>
         </TopRow>
 
+        {certificateDeadlineNote && (
+          <DeadlineNote>Certificate deadline passed</DeadlineNote>
+        )}
+
         <FeatureList>
           <FeatureRow>
             <FeatureIcon aria-hidden="true" />
             <span>Access to this {productNoun} &amp; course materials</span>
           </FeatureRow>
         </FeatureList>
-
-        {certificateDeadlineNote && (
-          <DeadlineNote>Certificate deadline has passed.</DeadlineNote>
-        )}
 
         {action}
       </CardBody>

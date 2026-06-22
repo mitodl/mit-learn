@@ -159,7 +159,11 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
     const freeOrAccess = freeAction ?? accessAction
     if (!freeOrAccess) return null
 
-    const deadlineNote = scenario === "deadlinePassed"
+    // The certificate deadline has passed both when the cert window closed on
+    // an active run (deadlinePassed) and when the run is archived — show the
+    // note in the free card for both.
+    const deadlineNote =
+      scenario === "deadlinePassed" || scenario === "archived"
 
     if (scenario === "both") {
       // Button inside card. Secondary (outline) only here, to distinguish it

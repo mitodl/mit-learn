@@ -68,22 +68,29 @@ describe("CourseSummary", () => {
       const run = makeRun(overrides)
       const course = makeCourse({ courseruns: [run] })
       renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
-      const alert = screen.queryByRole("alert")
+      // Scope to the archived alert specifically — a non-archived run can show
+      // an unrelated alert (e.g. deadline-passed) depending on factory randomness.
+      const archivedAlert = screen.queryByText(
+        "This course is no longer active, but you can still access selected content.",
+      )
 
       if (expectAlert) {
-        invariant(alert)
-        expect(alert).toHaveTextContent(
-          "This course is no longer active, but you can still access selected content.",
-        )
+        invariant(archivedAlert)
+        expect(archivedAlert.closest("[role='alert']")).toBeInTheDocument()
       } else {
-        expect(alert).toBeNull()
+        expect(archivedAlert).toBeNull()
       }
     },
   )
 
   describe("Dates Row", () => {
     test("Renders expected start/end dates", async () => {
-      const run = makeRun({ is_enrollable: true, is_archived: false })
+      const run = makeRun({
+        is_enrollable: true,
+        is_archived: false,
+        // purchasable → not deadlinePassed, so the normal date row renders
+        is_upgradable: true,
+      })
       const nonEnrollableRun = makeRun({ is_enrollable: false })
       const course = makeCourse({
         availability: "dated",
@@ -108,6 +115,8 @@ describe("CourseSummary", () => {
         is_self_paced: true,
         is_archived: false,
         is_enrollable: true,
+        // purchasable → not deadlinePassed, so the normal date row renders
+        is_upgradable: true,
       })
       const course = makeCourse({
         availability: "anytime",
@@ -129,6 +138,9 @@ describe("CourseSummary", () => {
         start_date: null,
         is_enrollable: true,
         is_archived: false,
+        // free-only keeps this in the normal date branch (not the
+        // archived/deadline-passed "available anytime" treatment).
+        enrollment_modes: [freeMode()],
       })
       const nonEnrollableRun = makeRun({ is_enrollable: false })
       const course = makeCourse({
@@ -164,6 +176,8 @@ describe("CourseSummary", () => {
         is_enrollable: true,
         is_archived: false,
         is_self_paced: false,
+        // purchasable → not deadlinePassed, so the normal date row renders
+        is_upgradable: true,
       })
       const nonEnrollableRun = makeRun({
         is_enrollable: false,
@@ -425,6 +439,8 @@ describe("CourseSummary", () => {
         is_archived: false,
         start_date: monthsFromNow(6),
         end_date: monthsFromNow(8),
+        // purchasable → not deadlinePassed, so the normal date row renders
+        is_upgradable: true,
       })
       const nonEnrollableRun1 = makeRun({
         is_enrollable: false,
@@ -846,6 +862,9 @@ describe("CourseSummary", () => {
       const run = makeRun({
         upgrade_deadline: upgradeDeadline,
         is_archived: false,
+        // purchasable → not deadlinePassed, so the payment deadline still shows
+        is_enrollable: true,
+        is_upgradable: true,
       })
       const course = makeCourse({ courseruns: [run] })
       renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
@@ -869,6 +888,51 @@ describe("CourseSummary", () => {
       const run = makeRun({ upgrade_deadline: null, is_archived: false })
       const course = makeCourse({ courseruns: [run] })
       renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+      expect(screen.queryByText(/Payment deadline/)).toBeNull()
+    })
+  })
+
+  describe("Deadline passed scenario", () => {
+    // offers paid + free, but the cert window is closed (not upgradable),
+    // and the run is not archived → getCourseScenario === "deadlinePassed".
+    const makeDeadlinePassedRun = () =>
+      makeRun({
+        is_enrollable: true,
+        is_archived: false,
+        is_upgradable: false,
+        enrollment_modes: bothModes(),
+        products: [makeProduct()],
+        upgrade_deadline: monthsFromNow(-1),
+        start_date: monthsFromNow(-6),
+        end_date: monthsFromNow(3),
+      })
+
+    test("Shows the 'Certificate deadline has passed.' warning alert", () => {
+      const run = makeDeadlinePassedRun()
+      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+
+      const alert = screen.getByRole("alert")
+      expect(alert).toHaveTextContent("Certificate deadline has passed.")
+    })
+
+    test("Date row shows 'available anytime' with the end date, not a start date", () => {
+      const run = makeDeadlinePassedRun()
+      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+
+      const datesRow = screen.getByTestId(TestIds.DatesRow)
+      expect(datesRow).toHaveTextContent("Course content available anytime")
+      expect(datesRow).not.toHaveTextContent("Start:")
+      invariant(run.end_date)
+      expect(datesRow).toHaveTextContent(`End: ${formatDate(run.end_date)}`)
+    })
+
+    test("Suppresses the payment deadline line", () => {
+      const run = makeDeadlinePassedRun()
+      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+
       expect(screen.queryByText(/Payment deadline/)).toBeNull()
     })
   })

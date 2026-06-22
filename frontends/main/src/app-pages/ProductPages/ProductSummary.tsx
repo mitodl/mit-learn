@@ -18,6 +18,7 @@ import type {
   V2ProgramDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds, parseReqTree } from "./util"
+import { getCourseScenario } from "./courseRun"
 import {
   formatPrice,
   getEnrollmentType,
@@ -154,11 +155,9 @@ type CourseInfoRowProps = {
   nextRun?: CourseRunV2
 } & HTMLAttributes<HTMLDivElement>
 type NeedsNextRun = { nextRun: CourseRunV2 }
-const CourseDatesRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
-  course,
-  nextRun,
-  ...others
-}) => {
+const CourseDatesRow: React.FC<
+  CourseInfoRowProps & NeedsNextRun & { contentAvailableAnytime?: boolean }
+> = ({ course, nextRun, contentAvailableAnytime, ...others }) => {
   const [expanded, setExpanded] = useState(false)
   const enrollable = course.courseruns
     .filter((cr) => cr.is_enrollable)
@@ -170,10 +169,11 @@ const CourseDatesRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
 
   const manyDates = enrollable.length > 1
 
-  // Archived courses are open-ended: content stays available, so the single-run
-  // view leads with "available anytime" rather than a stale start date, keeping
-  // the end date. (Multiple runs render their concrete dates in the list.)
-  if (nextRun.is_archived && !manyDates) {
+  // Archived / deadline-passed courses are open-ended: content stays available,
+  // so the single-run view leads with "available anytime" rather than a stale
+  // start date, keeping the end date. (Multiple runs render their concrete
+  // dates in the list.)
+  if (contentAvailableAnytime && !manyDates) {
     return (
       <InfoRow {...others}>
         <InfoRowIcon>
@@ -628,8 +628,16 @@ const CourseSummary: React.FC<{
   selectedRun: CourseRunV2 | undefined
   sessionSelect?: React.ReactNode
 }> = ({ course, selectedRun, sessionSelect }) => {
+  const scenario = getCourseScenario(selectedRun)
+  // Once the certificate window has closed (deadline passed) or the run is
+  // archived, content stays open-ended: the date row leads with "available
+  // anytime" + end date rather than a stale start date.
+  const contentAvailableAnytime =
+    scenario === "archived" || scenario === "deadlinePassed"
+  // A passed deadline (or archived run) has no upcoming payment date, so the
+  // payment-deadline line is suppressed alongside the "deadline passed" notice.
   const upgradeDeadline =
-    selectedRun !== undefined && !selectedRun.is_archived
+    selectedRun !== undefined && !contentAvailableAnytime
       ? selectedRun.upgrade_deadline
       : null
   const deadlineContent = upgradeDeadline ? (
@@ -651,13 +659,6 @@ const CourseSummary: React.FC<{
 
   return (
     <SummaryRows>
-      {!selectedRun ? (
-        <Alert severity="warning">
-          No sessions of this course are currently open for enrollment. More
-          sessions may be added in the future.
-        </Alert>
-      ) : null}
-      {selectedRun?.is_archived ? <ArchivedAlert /> : null}
       {selectedRun ? (
         <CoursePaceRow
           course={course}
@@ -688,6 +689,7 @@ const CourseSummary: React.FC<{
             <CourseDatesRow
               course={course}
               nextRun={selectedRun}
+              contentAvailableAnytime={contentAvailableAnytime}
               data-testid={TestIds.DatesRow}
             />
             {deadlineContent ? (
@@ -697,6 +699,19 @@ const CourseSummary: React.FC<{
             ) : null}
           </Stack>
         )
+      ) : null}
+      {/* Degraded-state notices sit at the bottom of the metadata block, just
+          above the offerings, matching Figma (the spec pinned the row order and
+          the notice copy but not the notice's vertical placement). */}
+      {!selectedRun ? (
+        <Alert severity="warning">
+          No sessions of this course are currently open for enrollment. More
+          sessions may be added in the future.
+        </Alert>
+      ) : null}
+      {selectedRun?.is_archived ? <ArchivedAlert /> : null}
+      {scenario === "deadlinePassed" ? (
+        <Alert severity="warning">Certificate deadline has passed.</Alert>
       ) : null}
     </SummaryRows>
   )

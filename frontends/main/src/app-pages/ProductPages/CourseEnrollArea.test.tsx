@@ -196,7 +196,7 @@ describe("CourseEnrollArea — deadlinePassed scenario", () => {
     )
 
     expect(
-      await screen.findByText("Certificate deadline has passed."),
+      await screen.findByText("Certificate deadline passed"),
     ).toBeInTheDocument()
     expect(
       await screen.findByRole("button", { name: "Access Course Materials" }),
@@ -226,6 +226,9 @@ describe("CourseEnrollArea — archived scenario", () => {
       "data-size",
       "large",
     )
+    // Archived runs are past their certificate window too, so the free card
+    // carries the deadline note.
+    expect(screen.getByText("Certificate deadline passed")).toBeInTheDocument()
   })
 })
 

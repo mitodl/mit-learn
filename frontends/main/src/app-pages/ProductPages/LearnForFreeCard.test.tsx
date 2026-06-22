@@ -43,14 +43,12 @@ describe("LearnForFreeCard", () => {
     renderWithProviders(
       <LearnForFreeCard productNoun="course" certificateDeadlineNote={true} />,
     )
-    expect(
-      screen.getByText("Certificate deadline has passed."),
-    ).toBeInTheDocument()
+    expect(screen.getByText("Certificate deadline passed")).toBeInTheDocument()
   })
 
   test("does not show certificate deadline note when certificateDeadlineNote is falsy", () => {
     renderWithProviders(<LearnForFreeCard productNoun="course" />)
-    expect(screen.queryByText("Certificate deadline has passed.")).toBeNull()
+    expect(screen.queryByText("Certificate deadline passed")).toBeNull()
   })
 
   test("renders free-path content and the embedded action", () => {
