@@ -295,6 +295,59 @@ describe.each([
     },
   )
 
+  test("B2B enrollment targets the displayed (variant) run, not getBestRun's default pick", async () => {
+    const userData = mitxUser({
+      legal_address: { country: "US" },
+      user_profile: { year_of_birth: 1988 },
+    })
+    const b2bContractId = faker.number.int()
+    // getBestRun returns next_run_id (the default variant), but the card is
+    // showing — and must enroll in — the selected variant run (displayedRun).
+    const defaultRun = mitxonline.factories.courses.courseRun({
+      b2b_contract: b2bContractId,
+      is_enrollable: true,
+    })
+    const variantRun = mitxonline.factories.courses.courseRun({
+      b2b_contract: b2bContractId,
+      is_enrollable: true,
+    })
+    const course = mitxOnlineCourse({
+      courseruns: [defaultRun, variantRun],
+      next_run_id: defaultRun.id,
+    })
+    const { enrollmentUrl: variantEnrollUrl } = setupEnrollmentApis({
+      user: userData,
+      course,
+      run: variantRun,
+    })
+    // The default run must NOT be enrolled in. Mock it (rather than leaving it
+    // unhandled) so a buggy call resolves and the failure surfaces as a clear
+    // assertion; the sentinel body documents that reaching it is the bug.
+    const defaultEnrollUrl = mitxonline.urls.b2b.courseEnrollment(
+      defaultRun.courseware_id,
+    )
+    setMockResponse.post(defaultEnrollUrl, { result: "SHOULD_NOT_BE_CALLED" })
+
+    renderWithProviders(
+      <UnenrolledCourseCard
+        course={course}
+        contractId={b2bContractId}
+        displayedRun={variantRun}
+      />,
+    )
+
+    await user.click(within(getCard()).getByTestId("courseware-button"))
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "post", url: variantEnrollUrl }),
+      )
+    })
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "post", url: defaultEnrollUrl }),
+    )
+  })
+
   // ---------------------------------------------------------------------------
   // B2C (non-B2B) enrollment flows
   // ---------------------------------------------------------------------------
