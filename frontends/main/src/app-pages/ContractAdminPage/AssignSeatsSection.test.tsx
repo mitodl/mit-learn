@@ -237,7 +237,9 @@ describe("AssignSeatsSection", () => {
     await user.click(screen.getByRole("button", { name: "Assign Seats" }))
 
     expect(
-      await screen.findByRole("heading", { name: /ready to send invitations/i }),
+      await screen.findByRole("heading", {
+        name: /ready to send invitations/i,
+      }),
     ).toBeInTheDocument()
   })
 
@@ -305,7 +307,9 @@ describe("AssignSeatsSection", () => {
     await user.upload(fileInput, file)
 
     expect(
-      await screen.findByRole("heading", { name: /ready to send invitations/i }),
+      await screen.findByRole("heading", {
+        name: /ready to send invitations/i,
+      }),
     ).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/enter employee emails/i)).toHaveValue(
       "",
@@ -414,7 +418,9 @@ describe("AssignSeatsSection", () => {
       await user.click(textarea)
       await user.paste(emails)
       await user.click(screen.getByRole("button", { name: "Assign Seats" }))
-      await user.click(screen.getByRole("button", { name: /send 2 invitations/i }))
+      await user.click(
+        screen.getByRole("button", { name: /send 2 invitations/i }),
+      )
     }
 
     test("assigns seats and shows a success alert, clearing the input", async () => {

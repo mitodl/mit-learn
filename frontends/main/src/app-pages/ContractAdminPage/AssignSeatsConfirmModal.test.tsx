@@ -43,11 +43,17 @@ describe("AssignSeatsConfirmModal — confirm step (no issues)", () => {
 
   test("shows seats-remaining stat", () => {
     renderWithTheme(
-      <AssignSeatsConfirmModal {...baseProps} validCount={3} availableSeats={10} />,
+      <AssignSeatsConfirmModal
+        {...baseProps}
+        validCount={3}
+        availableSeats={10}
+      />,
     )
 
     expect(screen.getByText("7")).toBeInTheDocument()
-    expect(screen.getByText(/seats remaining after sending/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/seats remaining after sending/i),
+    ).toBeInTheDocument()
   })
 
   test("calls onConfirm and then onClose when Send is clicked", async () => {
@@ -82,7 +88,9 @@ describe("AssignSeatsConfirmModal — review step (has issues)", () => {
     )
 
     expect(
-      screen.getByRole("heading", { name: /some learners could not be added/i }),
+      screen.getByRole("heading", {
+        name: /some learners could not be added/i,
+      }),
     ).toBeInTheDocument()
   })
 
@@ -138,7 +146,9 @@ describe("AssignSeatsConfirmModal — review step (has issues)", () => {
 
     expect(screen.getByText("a@x.com")).toBeInTheDocument()
     expect(screen.queryByText("d@x.com")).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /\+ 2 more/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: /\+ 2 more/i }),
+    ).toBeInTheDocument()
   })
 
   test("expands full list when show more is clicked", async () => {
@@ -150,7 +160,9 @@ describe("AssignSeatsConfirmModal — review step (has issues)", () => {
     await user.click(screen.getByRole("button", { name: /\+ 2 more/i }))
 
     expect(screen.getByText("e@x.com")).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: /more/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /more/i }),
+    ).not.toBeInTheDocument()
   })
 
   test("shows skipped count in description when rows were skipped", () => {
@@ -167,15 +179,10 @@ describe("AssignSeatsConfirmModal — review step (has issues)", () => {
 
   test("advancing from review step shows confirm step", async () => {
     renderWithTheme(
-      <AssignSeatsConfirmModal
-        {...baseProps}
-        invalidEmails={["bad@"]}
-      />,
+      <AssignSeatsConfirmModal {...baseProps} invalidEmails={["bad@"]} />,
     )
 
-    await user.click(
-      screen.getByRole("button", { name: /review & confirm/i }),
-    )
+    await user.click(screen.getByRole("button", { name: /review & confirm/i }))
 
     expect(
       screen.getByRole("heading", { name: /ready to send invitations/i }),
@@ -243,7 +250,9 @@ describe("AssignSeatsConfirmModal — over-capacity state (CSV only)", () => {
       />,
     )
 
-    await user.click(screen.getByRole("button", { name: /close & update csv/i }))
+    await user.click(
+      screen.getByRole("button", { name: /close & update csv/i }),
+    )
 
     expect(baseProps.onClose).toHaveBeenCalledTimes(1)
     expect(baseProps.onConfirm).not.toHaveBeenCalled()

@@ -1,7 +1,14 @@
 "use client"
 
 import React, { useEffect, useId, useRef, useState } from "react"
-import { Dialog, DialogActions, Stack, Typography, alpha, styled } from "ol-components"
+import {
+  Dialog,
+  DialogActions,
+  Stack,
+  Typography,
+  alpha,
+  styled,
+} from "ol-components"
 import { Button, VisuallyHidden } from "@mitodl/smoot-design"
 import { pluralize } from "ol-utilities"
 import {
@@ -106,7 +113,9 @@ const DescriptionText = styled(Typography)(({ theme }) => ({
 const StatsCard = styled("div")<{ $variant: "default" | "error" }>(
   ({ theme, $variant }) => ({
     backgroundColor:
-      $variant === "error" ? theme.custom.colors.white : theme.custom.colors.lightGray1,
+      $variant === "error"
+        ? theme.custom.colors.white
+        : theme.custom.colors.lightGray1,
     border: `1px solid ${$variant === "error" ? theme.custom.colors.red : theme.custom.colors.lightGray2}`,
     borderRadius: "4px",
     padding: "16px",
@@ -221,7 +230,9 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
   const copyInvalidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const copyDuplicateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const copyDuplicateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  )
 
   useEffect(() => {
     if (open) {
@@ -235,7 +246,8 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   useEffect(() => {
     return () => {
       if (copyInvalidTimerRef.current) clearTimeout(copyInvalidTimerRef.current)
-      if (copyDuplicateTimerRef.current) clearTimeout(copyDuplicateTimerRef.current)
+      if (copyDuplicateTimerRef.current)
+        clearTimeout(copyDuplicateTimerRef.current)
     }
   }, [])
 
@@ -243,14 +255,21 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
     copyToClipboard(invalidEmails.join("\n"))
     setCopiedInvalid(true)
     if (copyInvalidTimerRef.current) clearTimeout(copyInvalidTimerRef.current)
-    copyInvalidTimerRef.current = setTimeout(() => setCopiedInvalid(false), 2000)
+    copyInvalidTimerRef.current = setTimeout(
+      () => setCopiedInvalid(false),
+      2000,
+    )
   }
 
   const handleCopyDuplicate = () => {
     copyToClipboard(duplicateEmails.join("\n"))
     setCopiedDuplicate(true)
-    if (copyDuplicateTimerRef.current) clearTimeout(copyDuplicateTimerRef.current)
-    copyDuplicateTimerRef.current = setTimeout(() => setCopiedDuplicate(false), 2000)
+    if (copyDuplicateTimerRef.current)
+      clearTimeout(copyDuplicateTimerRef.current)
+    copyDuplicateTimerRef.current = setTimeout(
+      () => setCopiedDuplicate(false),
+      2000,
+    )
   }
 
   const handleSend = async () => {
@@ -372,7 +391,11 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
             {hasInvalid && (
               <>
                 <strong>{invalidEmails.length}</strong>{" "}
-                {pluralize("email address", invalidEmails.length, "email addresses")}{" "}
+                {pluralize(
+                  "email address",
+                  invalidEmails.length,
+                  "email addresses",
+                )}{" "}
                 {hasInvalid && hasDuplicates
                   ? "were invalid."
                   : "were invalid and will be excluded."}
@@ -384,7 +407,8 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
                 <strong>{duplicateCount}</strong> duplicate{" "}
                 {pluralize("email address", duplicateCount, "email addresses")}{" "}
                 {duplicateCount === 1 ? "was" : "were"} removed.
-                {!hasInvalid && " Only the first instance of each email was kept."}
+                {!hasInvalid &&
+                  " Only the first instance of each email was kept."}
               </>
             )}
             {skippedCount > 0 && (
@@ -465,7 +489,8 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
         <DescriptionText>
           You are about to send <strong>{validCount}</strong> invitation{" "}
           {pluralize("email", validCount)} from MIT Learn. Learners will receive
-          an email with secure link to claim their seat and access the materials.
+          an email with secure link to claim their seat and access the
+          materials.
         </DescriptionText>
         <StatsCard $variant="default">
           <StatColumn>

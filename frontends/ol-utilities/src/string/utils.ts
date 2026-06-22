@@ -108,7 +108,13 @@ export const extractEmailsFromCsvRows = (
     }
   }
 
-  return { valid: deduped, invalid, duplicateEmails, duplicateCount, skippedCount }
+  return {
+    valid: deduped,
+    invalid,
+    duplicateEmails,
+    duplicateCount,
+    skippedCount,
+  }
 }
 
 /**
@@ -148,7 +154,13 @@ export const parseEmailsForSubmit = (input: string): EmailParseResult => {
     }
   }
 
-  return { valid: deduped, invalid, duplicateEmails, duplicateCount, skippedCount: 0 }
+  return {
+    valid: deduped,
+    invalid,
+    duplicateEmails,
+    duplicateCount,
+    skippedCount: 0,
+  }
 }
 
 export const initials = (title: string): string => {
