@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { Popover, styled, theme } from "ol-components"
+import { Dialog, styled, theme } from "ol-components"
 import Link from "next/link"
 import { env } from "@/env"
 import {
@@ -16,7 +16,6 @@ import {
   RiLink,
   RiShareForwardFill,
   RiCodeSSlashLine,
-  RiCloseLine,
 } from "@remixicon/react"
 import { Button, Input } from "@mitodl/smoot-design"
 import type { VideoResource, PodcastEpisodeResource } from "api/v1"
@@ -27,27 +26,10 @@ type Tab = "share" | "embed"
 
 // ─── Layout ────────────────────────────────────────────────────────────────
 
-const StyledPopover = styled(Popover)({
-  width: "648px",
-  maxWidth: "calc(100vw - 48px)",
-  ".MuiPopper-arrow": {
-    display: "none",
-  },
-})
-
 const DialogInner = styled.div({
   display: "flex",
   flexDirection: "column",
   gap: "24px",
-  padding: "16px",
-})
-
-// ─── Header ────────────────────────────────────────────────────────────────
-
-const Header = styled.div({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
 })
 
 const TabGroup = styled.div({
@@ -79,21 +61,6 @@ const TabButton = styled.button<{ active: boolean }>(({ active }) => ({
       : theme.custom.colors.lightGray2,
   },
 }))
-
-const CloseButton = styled.button({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  background: "none",
-  border: "none",
-  cursor: "pointer",
-  color: theme.custom.colors.darkGray1,
-  padding: "4px",
-  borderRadius: "4px",
-  "&:hover": {
-    color: theme.custom.colors.black,
-  },
-})
 
 // ─── Share tab ─────────────────────────────────────────────────────────────
 
@@ -249,7 +216,7 @@ function buildPodcastEmbedHtml(
 type ShareDialogProps = {
   open: boolean
   onClose: () => void
-  anchorEl: HTMLElement | null
+  anchorEl?: HTMLElement | null
   video?: VideoResource
   resource?: PodcastEpisodeResource
   pageUrl: string
@@ -259,7 +226,6 @@ type ShareDialogProps = {
 const ShareDialog = ({
   open,
   onClose,
-  anchorEl,
   video,
   resource,
   pageUrl,
@@ -289,35 +255,37 @@ const ShareDialog = ({
   const embedUrlLabel = video ? "Video URL" : "Audio URL"
 
   return (
-    <StyledPopover open={open} onClose={onClose} anchorEl={anchorEl}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      cancelText={null}
+      confirmText={null}
+      fullWidth
+      maxWidth="sm"
+    >
       <DialogInner>
-        <Header>
-          {hasEmbed && (
-            <TabGroup role="tablist">
-              <TabButton
-                role="tab"
-                aria-selected={activeTab === "share"}
-                active={activeTab === "share"}
-                onClick={() => setActiveTab("share")}
-              >
-                <RiShareForwardFill size={16} />
-                Share
-              </TabButton>
-              <TabButton
-                role="tab"
-                aria-selected={activeTab === "embed"}
-                active={activeTab === "embed"}
-                onClick={() => setActiveTab("embed")}
-              >
-                <RiCodeSSlashLine size={16} />
-                Embed
-              </TabButton>
-            </TabGroup>
-          )}
-          <CloseButton onClick={onClose} aria-label="Close dialog">
-            <RiCloseLine size={20} />
-          </CloseButton>
-        </Header>
+        {hasEmbed && (
+          <TabGroup role="tablist">
+            <TabButton
+              role="tab"
+              aria-selected={activeTab === "share"}
+              active={activeTab === "share"}
+              onClick={() => setActiveTab("share")}
+            >
+              <RiShareForwardFill size={16} />
+              Share
+            </TabButton>
+            <TabButton
+              role="tab"
+              aria-selected={activeTab === "embed"}
+              active={activeTab === "embed"}
+              onClick={() => setActiveTab("embed")}
+            >
+              <RiCodeSSlashLine size={16} />
+              Embed
+            </TabButton>
+          </TabGroup>
+        )}
 
         <div
           role="tabpanel"
@@ -439,7 +407,7 @@ const ShareDialog = ({
           )}
         </div>
       </DialogInner>
-    </StyledPopover>
+    </Dialog>
   )
 }
 

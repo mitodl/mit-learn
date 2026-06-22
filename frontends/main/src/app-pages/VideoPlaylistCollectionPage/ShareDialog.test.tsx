@@ -63,9 +63,7 @@ describe("VideoShareDialog", () => {
           title="Test video"
         />,
       )
-      await user.click(
-        await screen.findByRole("button", { name: /close dialog/i }),
-      )
+      await user.click(await screen.findByRole("button", { name: /^close$/i }))
       expect(onClose).toHaveBeenCalledTimes(1)
     })
   })
