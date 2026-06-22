@@ -208,7 +208,8 @@ def tune_qdrant_collections():
     """Tune optimizer settings for Qdrant collections."""
     if not all([settings.QDRANT_HOST, settings.QDRANT_BASE_COLLECTION_NAME]):
         logger.warning(
-            "Skipping Qdrant collection tuning: QDRANT_HOST and QDRANT_BASE_COLLECTION_NAME must be set"
+            "Skipping Qdrant collection tuning: "
+            "QDRANT_HOST and QDRANT_BASE_COLLECTION_NAME must be set"
         )
         return
 
@@ -1336,7 +1337,7 @@ def custom_score_formula(collection_name: str) -> list[models.MultExpression]:
                         models.GaussDecayExpression(
                             gauss_decay=models.DecayParamsExpression(
                                 x="$score",  # decay over the relevance score itself
-                                target=0.4,  # cosine "perfect match" — full boost
+                                target=0.4,  # full boost at this target
                                 scale=0.2,
                                 midpoint=0.2,
                             )
