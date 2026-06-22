@@ -261,7 +261,9 @@ export const EnrolledCourseCard = ({
     <Stack direction="column" gap="4px" alignItems="stretch">
       <Stack direction="row" gap="8px" alignItems="center">
         {endDateAndCertSection}
-        {canUpgrade ? <HorizontalSeparator /> : null}
+        {daysUntilEnd !== null || showUpgradeBanner || !!certificateLink ? (
+          <HorizontalSeparator />
+        ) : null}
         <CoursewareActionColumn direction="row" justifyContent="center">
           {ctaButton}
         </CoursewareActionColumn>
