@@ -95,7 +95,7 @@ def test_search_index_plugin_resource_unpublished(
 ):
     """The plugin function should remove a resource from the search index"""
     resource = LearningResourceFactory.create(
-        resource_type=resource_type, test_mode=test_mode
+        resource_type=resource_type, test_mode=test_mode, published=False
     )
     if resource_type == COURSE_TYPE and has_content_files:
         for run in resource.runs.all():
@@ -110,8 +110,10 @@ def test_search_index_plugin_resource_unpublished(
     if resource_type == COURSE_TYPE and has_content_files and not test_mode:
         assert unpublish_run_mock.call_count == resource.runs.count()
         for run in resource.runs.all():
+            # Full course retirement -> flip published so content also leaves
+            # the REST API.
             unpublish_run_mock.assert_any_call(
-                run.id, unpublished_only=False, keep_published=True
+                run.id, unpublished_only=False, keep_published=False
             )
     else:
         unpublish_run_mock.assert_not_called()
@@ -192,7 +194,9 @@ def test_resource_run_unpublished_keeps_qdrant(
 def test_resource_run_unpublished_retired_course_purges_qdrant(
     mock_search_index_helpers, settings
 ):
-    """When the parent course is fully retired, the run is purged from Qdrant too."""
+    """When the parent course is fully retired, the run is purged from Qdrant
+    and its content files leave the REST API (keep_published=False).
+    """
     settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
     run = LearningResourceRunFactory.create(
         published=False,
@@ -206,7 +210,7 @@ def test_resource_run_unpublished_retired_course_purges_qdrant(
     mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_called_once_with(
         run.id,
         unpublished_only=False,
-        keep_published=True,
+        keep_published=False,
     )
     mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_called_once_with(
         run.id

@@ -182,7 +182,11 @@ class SearchIndexPlugin:
 
         deindex_tasks = [
             tasks.deindex_run_content_files.si(
-                run.id, unpublished_only=False, keep_published=True
+                run.id,
+                unpublished_only=False,
+                # Still-published course: keep content in Qdrant + the REST API.
+                # Otherwise: flip published so it also leaves the REST API.
+                keep_published=resource.published,
             ),
         ]
         if (
