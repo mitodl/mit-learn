@@ -38,6 +38,7 @@ from vector_search.utils import (
     _resource_vector_hits,
     async_qdrant_aggregations,
     async_qdrant_client,
+    best_run_ids_for_resources,
     custom_score_formula,
     dense_encoder,
     qdrant_query_conditions,
@@ -689,11 +690,19 @@ class ContentFilesVectorSearchView(QdrantView):
                     f"{settings.QDRANT_BASE_COLLECTION_NAME}.{collection_name_override}"
                 )
 
+            params = dict(request_data.data)
+            resource_ids = params.get("resource_readable_id")
+            has_run_filter = "run_readable_id" in params or "edx_module_id" in params
+            if resource_ids and not has_run_filter:
+                params["run_readable_id"] = await sync_to_async(
+                    best_run_ids_for_resources
+                )(resource_ids)
+
             response = await self.async_vector_search(
                 query_text,
                 limit=limit,
                 offset=offset,
-                params=request_data.data,
+                params=params,
                 search_collection=collection_name,
                 hybrid_search=hybrid_search,
             )

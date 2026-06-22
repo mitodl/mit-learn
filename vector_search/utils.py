@@ -1125,6 +1125,32 @@ async def async_qdrant_aggregations(
     return dict(results)
 
 
+def best_run_ids_for_resources(readable_ids):
+    """
+    Resolve the run_id values a resource_readable_id content-file query should
+    be restricted to.
+
+    Non-test_mode course -> its best run only.
+    test_mode course     -> all its published runs (matches OpenSearch indexing).
+    Course with no published run -> contributes nothing.
+
+    Args:
+        readable_ids (list[str]): resource readable_id values from the request
+
+    Returns:
+        list[str]: LearningResourceRun.run_id values to filter on
+    """
+    run_ids = []
+    for resource in LearningResource.objects.filter(readable_id__in=readable_ids):
+        if resource.test_mode:
+            run_ids.extend(
+                resource.runs.filter(published=True).values_list("run_id", flat=True)
+            )
+        elif resource.best_run:
+            run_ids.append(resource.best_run.run_id)
+    return run_ids
+
+
 def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
     """
     Return a list of Qdrant FieldCondition objects based on params

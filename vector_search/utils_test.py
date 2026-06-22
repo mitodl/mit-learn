@@ -1956,3 +1956,113 @@ def test_custom_score_formula_defaults(mocker):
     assert isinstance(results[0].mult[1], models.Filter)
 
     assert isinstance(results[0].mult[2], models.GaussDecayExpression)
+
+
+@pytest.mark.django_db
+def test_best_run_ids_for_resources_non_test_mode():
+    """A normal course resolves to only its best run's run_id."""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from vector_search.utils import best_run_ids_for_resources
+
+    course = LearningResourceFactory.create(is_course=True, test_mode=False)
+    course.runs.all().delete()
+    LearningResourceRunFactory.create(
+        learning_resource=course,
+        run_id="OLD_RUN",
+        published=True,
+        start_date=timezone.now() - timedelta(days=60),
+        enrollment_start=None,
+        enrollment_end=None,
+        end_date=None,
+    )
+    best = LearningResourceRunFactory.create(
+        learning_resource=course,
+        run_id="NEW_RUN",
+        published=True,
+        start_date=timezone.now() - timedelta(days=10),
+        enrollment_start=None,
+        enrollment_end=None,
+        end_date=None,
+    )
+    # best_run falls back to the latest start_date among published runs
+    assert course.best_run.run_id == best.run_id
+
+    run_ids = best_run_ids_for_resources([course.readable_id])
+
+    assert run_ids == [best.run_id]
+
+
+@pytest.mark.django_db
+def test_best_run_ids_for_resources_test_mode_returns_all_published():
+    """A test_mode course resolves to every published run_id."""
+    from vector_search.utils import best_run_ids_for_resources
+
+    course = LearningResourceFactory.create(is_course=True, test_mode=True)
+    course.runs.all().delete()
+    run_a = LearningResourceRunFactory.create(
+        learning_resource=course, run_id="RUN_A", published=True
+    )
+    run_b = LearningResourceRunFactory.create(
+        learning_resource=course, run_id="RUN_B", published=True
+    )
+    LearningResourceRunFactory.create(
+        learning_resource=course, run_id="RUN_UNPUB", published=False
+    )
+
+    run_ids = best_run_ids_for_resources([course.readable_id])
+
+    assert set(run_ids) == {run_a.run_id, run_b.run_id}
+
+
+@pytest.mark.django_db
+def test_best_run_ids_for_resources_union_across_resources():
+    """Multiple resources yield the union of their resolved run_ids."""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from vector_search.utils import best_run_ids_for_resources
+
+    course1 = LearningResourceFactory.create(is_course=True, test_mode=False)
+    course1.runs.all().delete()
+    best1 = LearningResourceRunFactory.create(
+        learning_resource=course1,
+        run_id="C1_BEST",
+        published=True,
+        start_date=timezone.now() - timedelta(days=10),
+        enrollment_start=None,
+        enrollment_end=None,
+        end_date=None,
+    )
+    course2 = LearningResourceFactory.create(is_course=True, test_mode=False)
+    course2.runs.all().delete()
+    best2 = LearningResourceRunFactory.create(
+        learning_resource=course2,
+        run_id="C2_BEST",
+        published=True,
+        start_date=timezone.now() - timedelta(days=10),
+        enrollment_start=None,
+        enrollment_end=None,
+        end_date=None,
+    )
+
+    run_ids = best_run_ids_for_resources([course1.readable_id, course2.readable_id])
+
+    assert set(run_ids) == {best1.run_id, best2.run_id}
+
+
+@pytest.mark.django_db
+def test_best_run_ids_for_resources_no_published_run():
+    """A course with no published run contributes nothing (no error)."""
+    from vector_search.utils import best_run_ids_for_resources
+
+    course = LearningResourceFactory.create(is_course=True, test_mode=False)
+    course.runs.all().delete()
+    LearningResourceRunFactory.create(
+        learning_resource=course, run_id="UNPUB", published=False
+    )
+
+    assert best_run_ids_for_resources([course.readable_id]) == []

@@ -1,13 +1,19 @@
 import asyncio
+from datetime import timedelta
 
 import pytest
 from django.contrib.auth.models import Group
 from django.urls import reverse
+from django.utils import timezone
 from qdrant_client import models
 from qdrant_client.http.models.models import CountResult
 from rest_framework.exceptions import NotAuthenticated, PermissionDenied
 
 from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
+from learning_resources.factories import (
+    LearningResourceFactory,
+    LearningResourceRunFactory,
+)
 from vector_search.encoders.utils import dense_encoder, sparse_encoder
 from vector_search.views import QdrantView
 
@@ -833,3 +839,189 @@ def test_build_search_params_sort_with_cutoff_score(
             assert search_params["query"].order_by.direction == models.Direction.DESC
         else:
             assert search_params["query"].order_by.direction == models.Direction.ASC
+
+
+@pytest.mark.django_db
+def test_content_file_search_restricts_resource_query_to_best_run(
+    mocker, client, django_user_model
+):
+    """resource_readable_id with no run filter is pinned to the best run."""
+    course = LearningResourceFactory.create(is_course=True, test_mode=False)
+    course.runs.all().delete()
+    # end_date=None is load-bearing: prevents both runs from looking currently-enrollable,
+    # which would cause best_run to pick earliest start_date (OLD_RUN) instead of latest.
+    LearningResourceRunFactory.create(
+        learning_resource=course,
+        run_id="OLD_RUN",
+        published=True,
+        start_date=timezone.now() - timedelta(days=60),
+        enrollment_start=None,
+        enrollment_end=None,
+        end_date=None,
+    )
+    best = LearningResourceRunFactory.create(
+        learning_resource=course,
+        run_id="NEW_RUN",
+        published=True,
+        start_date=timezone.now() - timedelta(days=10),
+        enrollment_start=None,
+        enrollment_end=None,
+        end_date=None,
+    )
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points_groups = mocker.AsyncMock()
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    admin = django_user_model.objects.create_superuser(
+        "admin", "admin@example.com", "pass"
+    )
+    client.force_login(admin)
+
+    client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={"q": "topics", "resource_readable_id": [course.readable_id]},
+    )
+
+    must = mock_qdrant.query_points.mock_calls[0].kwargs["query_filter"].must
+    assert (
+        models.FieldCondition(
+            key="run_readable_id", match=models.MatchAny(any=[best.run_id])
+        )
+        in must
+    )
+
+
+@pytest.mark.django_db
+def test_content_file_search_test_mode_not_restricted(
+    mocker, client, django_user_model
+):
+    """A test_mode course allows all its published runs."""
+    course = LearningResourceFactory.create(is_course=True, test_mode=True)
+    course.runs.all().delete()
+    run_a = LearningResourceRunFactory.create(
+        learning_resource=course, run_id="RUN_A", published=True
+    )
+    run_b = LearningResourceRunFactory.create(
+        learning_resource=course, run_id="RUN_B", published=True
+    )
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points_groups = mocker.AsyncMock()
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    admin = django_user_model.objects.create_superuser(
+        "admin", "admin@example.com", "pass"
+    )
+    client.force_login(admin)
+
+    client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={"q": "topics", "resource_readable_id": [course.readable_id]},
+    )
+
+    must = mock_qdrant.query_points.mock_calls[0].kwargs["query_filter"].must
+    run_conditions = [c for c in must if getattr(c, "key", None) == "run_readable_id"]
+    assert len(run_conditions) == 1
+    assert set(run_conditions[0].match.any) == {run_a.run_id, run_b.run_id}
+
+
+@pytest.mark.django_db
+def test_content_file_search_explicit_run_not_overridden(
+    mocker, client, django_user_model
+):
+    """An explicit run_readable_id filter is left untouched."""
+    course = LearningResourceFactory.create(is_course=True, test_mode=False)
+    course.runs.all().delete()
+    LearningResourceRunFactory.create(
+        learning_resource=course, run_id="BEST_RUN", published=True
+    )
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points_groups = mocker.AsyncMock()
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    admin = django_user_model.objects.create_superuser(
+        "admin", "admin@example.com", "pass"
+    )
+    client.force_login(admin)
+
+    client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={
+            "q": "topics",
+            "resource_readable_id": [course.readable_id],
+            "run_readable_id": ["EXPLICIT_RUN"],
+        },
+    )
+
+    must = mock_qdrant.query_points.mock_calls[0].kwargs["query_filter"].must
+    assert (
+        models.FieldCondition(
+            key="run_readable_id", match=models.MatchAny(any=["EXPLICIT_RUN"])
+        )
+        in must
+    )
+    assert not any(
+        getattr(c, "key", None) == "run_readable_id" and c.match.any == ["BEST_RUN"]
+        for c in must
+    )
+
+
+@pytest.mark.django_db
+def test_content_file_search_no_best_run_yields_zero_results(
+    mocker, client, django_user_model
+):
+    """A resource with no published run resolves to an empty run filter (no results)."""
+    course = LearningResourceFactory.create(is_course=True, test_mode=False)
+    course.runs.all().delete()
+    # Only an unpublished run, so best_run is None and best_run_ids_for_resources -> [].
+    LearningResourceRunFactory.create(
+        learning_resource=course,
+        run_id="UNPUB_RUN",
+        published=False,
+        start_date=timezone.now() - timedelta(days=10),
+        enrollment_start=None,
+        enrollment_end=None,
+        end_date=None,
+    )
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points_groups = mocker.AsyncMock()
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    admin = django_user_model.objects.create_superuser(
+        "admin", "admin@example.com", "pass"
+    )
+    client.force_login(admin)
+
+    client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={"q": "topics", "resource_readable_id": [course.readable_id]},
+    )
+
+    must = mock_qdrant.query_points.mock_calls[0].kwargs["query_filter"].must
+    assert (
+        models.FieldCondition(key="run_readable_id", match=models.MatchAny(any=[]))
+        in must
+    )
