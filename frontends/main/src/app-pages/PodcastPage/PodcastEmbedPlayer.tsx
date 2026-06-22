@@ -233,7 +233,7 @@ const PodcastEmbedPlayer: React.FC<PodcastEmbedPlayerProps> = ({
   const isPlayPendingRef = useRef(false)
   const playAttemptIdRef = useRef(0)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [isBuffering, setIsBuffering] = useState(hasAudioSource)
+  const [isBuffering, setIsBuffering] = useState(false)
   const [isPlayPending, setIsPlayPending] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -269,7 +269,7 @@ const PodcastEmbedPlayer: React.FC<PodcastEmbedPlayerProps> = ({
     setCurrentTime(0)
     setDuration(0)
     setIsPlaying(false)
-    setIsBuffering(hasAudioSource)
+    setIsBuffering(false)
 
     if (!hasAudioSource) return
 
@@ -277,7 +277,6 @@ const PodcastEmbedPlayer: React.FC<PodcastEmbedPlayerProps> = ({
     if (!audio) return
     audio.load()
     audio.playbackRate = SPEED_OPTIONS[speedIndexRef.current]
-    void startPlayback()
   }, [audioUrl, hasAudioSource, startPlayback])
 
   const handlePlayPause = () => {
