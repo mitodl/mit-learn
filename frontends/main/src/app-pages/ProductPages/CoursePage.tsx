@@ -42,6 +42,18 @@ const PrerequisitesSection = styled.section({
   gap: "16px",
 })
 
+/**
+ * The page-header enroll button uses the `bordered` variant but with darkGray2
+ * text (matching production), not the variant's default silverGrayDark. Disabled
+ * buttons keep the variant default. `display: contents` adds no layout box.
+ */
+const HeaderButtonSlot = styled.div(({ theme }) => ({
+  display: "contents",
+  "& button:not(:disabled), & a": {
+    color: theme.custom.colors.darkGray2,
+  },
+}))
+
 const CourseHeaderEnrollButton: React.FC<{
   course: CourseWithCourseRunsSerializerV2
 }> = ({ course }) => {
@@ -54,12 +66,16 @@ const CourseHeaderEnrollButton: React.FC<{
   )
 
   if (state.status === "enrolled") {
-    return <EnrolledLink variant="bordered" href={state.href} />
+    return (
+      <HeaderButtonSlot>
+        <EnrolledLink variant="bordered" href={state.href} />
+      </HeaderButtonSlot>
+    )
   }
 
   if (state.status === "options") {
     return (
-      <>
+      <HeaderButtonSlot>
         <EnrollButton
           action={state.options[0]}
           size="large"
@@ -69,15 +85,17 @@ const CourseHeaderEnrollButton: React.FC<{
           announceStatus={false}
         />
         <SignupPopover anchorEl={anchor} onClose={() => setAnchor(null)} />
-      </>
+      </HeaderButtonSlot>
     )
   }
 
   // status === "none"
   return (
-    <Button variant="bordered" size="large" disabled>
-      Enroll
-    </Button>
+    <HeaderButtonSlot>
+      <Button variant="bordered" size="large" disabled>
+        Enroll
+      </Button>
+    </HeaderButtonSlot>
   )
 }
 
@@ -91,13 +109,13 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   const effectiveOutlineCoursewareId = course
     ? getOutlineCoursewareId(course)
     : undefined
-  const outline = useQuery({
-    ...coursesQueries.courseOutline(effectiveOutlineCoursewareId ?? ""),
-    enabled: Boolean(effectiveOutlineCoursewareId),
-  })
   const showCourseOutline = useFeatureFlagEnabled(
     FeatureFlags.CourseOutlineSection,
   )
+  const outline = useQuery({
+    ...coursesQueries.courseOutline(effectiveOutlineCoursewareId ?? ""),
+    enabled: Boolean(showCourseOutline && effectiveOutlineCoursewareId),
+  })
   useEffect(() => {
     if (!course) return
     trackViewCoursePage(course.title)

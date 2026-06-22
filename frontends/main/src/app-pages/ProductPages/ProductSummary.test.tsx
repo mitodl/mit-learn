@@ -716,7 +716,7 @@ describe("CourseSummary", () => {
         renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
 
         const formatRow = screen.getByTestId(TestIds.PaceRow)
-        expect(formatRow).toHaveTextContent("Course Format: Self-Paced")
+        expect(formatRow).toHaveTextContent("Format: Self-Paced")
 
         const dialogTitle = "What are Self-Paced courses?"
         const button = within(formatRow).getByRole("button", {
@@ -743,7 +743,7 @@ describe("CourseSummary", () => {
       renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
 
       const formatRow = screen.getByTestId(TestIds.PaceRow)
-      expect(formatRow).toHaveTextContent("Course Format: Instructor-Paced")
+      expect(formatRow).toHaveTextContent("Format: Instructor-Paced")
 
       const dialogTitle = "What are Instructor-Paced courses?"
       const button = within(formatRow).getByRole("button", {

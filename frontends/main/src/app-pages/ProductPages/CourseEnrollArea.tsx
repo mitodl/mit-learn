@@ -13,10 +13,28 @@ import LearnForFreeCard from "./LearnForFreeCard"
 import EnrolledLink from "./EnrolledLink"
 
 const ChooseYourPath = styled.div(({ theme }) => ({
-  ...theme.typography.subtitle1,
+  ...theme.typography.subtitle2,
   fontWeight: theme.typography.fontWeightBold,
   color: theme.custom.colors.darkGray2,
 }))
+
+const ButtonWrapper = styled.span<{ $fullWidth?: boolean }>(({ $fullWidth }) =>
+  $fullWidth
+    ? { display: "block", width: "100%", "> button": { width: "100%" } }
+    : { display: "inline-block" },
+)
+
+/**
+ * One offering "box" as a grid cell: the card plus, in single-box scenarios,
+ * the enrollment button below it. The 16px gap separates the card from a
+ * below-the-card button (no-op in the Both case, where the button is inside
+ * the card).
+ */
+const OfferingCell = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  gap: "16px",
+})
 
 export type EnrollButtonProps = {
   action: EnrollAction
@@ -25,6 +43,7 @@ export type EnrollButtonProps = {
   pending: boolean
   variant?: ButtonProps["variant"]
   announceStatus?: boolean
+  fullWidth?: boolean
 }
 
 export const EnrollButton: React.FC<EnrollButtonProps> = ({
@@ -34,10 +53,11 @@ export const EnrollButton: React.FC<EnrollButtonProps> = ({
   pending,
   variant = "primary",
   announceStatus = true,
+  fullWidth = false,
 }) => {
   const isBusy = loading || pending
   return (
-    <span data-size={size}>
+    <ButtonWrapper data-size={size} $fullWidth={fullWidth}>
       <Button
         variant={variant}
         size={size}
@@ -57,7 +77,7 @@ export const EnrollButton: React.FC<EnrollButtonProps> = ({
       >
         {isBusy ? null : action.label}
       </Button>
-    </span>
+    </ButtonWrapper>
   )
 }
 
@@ -98,7 +118,7 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
     if (scenario === "both") {
       // Button inside card
       return (
-        <div data-card="cert">
+        <OfferingCell data-card="cert">
           <CertificateTrackCard
             price={price}
             financialAid={financialAid}
@@ -109,15 +129,16 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
                 size="medium"
                 loading={isStatusLoading}
                 pending={isPending}
+                fullWidth
               />
             }
           />
-        </div>
+        </OfferingCell>
       )
     }
     // paidOnly: card + button below, wrapped as one grid cell
     return (
-      <div data-card="cert">
+      <OfferingCell data-card="cert">
         <CertificateTrackCard
           price={price}
           financialAid={financialAid}
@@ -128,8 +149,9 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
           size="large"
           loading={isStatusLoading}
           pending={isPending}
+          fullWidth
         />
-      </div>
+      </OfferingCell>
     )
   }
 
@@ -140,9 +162,10 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
     const deadlineNote = scenario === "deadlinePassed"
 
     if (scenario === "both") {
-      // Button inside card
+      // Button inside card. Secondary (outline) only here, to distinguish it
+      // from the primary Certificate Track button alongside it.
       return (
-        <div data-card="free">
+        <OfferingCell data-card="free">
           <LearnForFreeCard
             productNoun="course"
             action={
@@ -151,15 +174,18 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
                 size="medium"
                 loading={isStatusLoading}
                 pending={isPending}
+                variant="secondary"
+                fullWidth
               />
             }
           />
-        </div>
+        </OfferingCell>
       )
     }
-    // freeOnly / deadlinePassed / archived: card + button below, wrapped as one grid cell
+    // freeOnly / deadlinePassed / archived: card + button below, wrapped as one
+    // grid cell. The lone action is primary (filled).
     return (
-      <div data-card="free">
+      <OfferingCell data-card="free">
         <LearnForFreeCard
           productNoun="course"
           certificateDeadlineNote={deadlineNote}
@@ -169,8 +195,9 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
           size="large"
           loading={isStatusLoading}
           pending={isPending}
+          fullWidth
         />
-      </div>
+      </OfferingCell>
     )
   }
 

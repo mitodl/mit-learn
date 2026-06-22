@@ -127,15 +127,17 @@ const CertificateTrackCard: React.FC<CertificateTrackCardProps> = ({
             <FeatureIcon aria-hidden="true" />
             <span>MIT certificate on completion</span>
           </FeatureRow>
+          {financialAid !== null && financialAid !== undefined && (
+            <FeatureRow>
+              <FeatureIcon aria-hidden="true" />
+              <FinancialAidLink href={financialAid.href}>
+                {financialAid.applied
+                  ? "Financial assistance applied"
+                  : "Financial assistance available"}
+              </FinancialAidLink>
+            </FeatureRow>
+          )}
         </FeatureList>
-
-        {financialAid !== null && financialAid !== undefined && (
-          <FinancialAidLink href={financialAid.href}>
-            {financialAid.applied
-              ? "Financial assistance applied"
-              : "Financial assistance available"}
-          </FinancialAidLink>
-        )}
 
         {action}
       </CardBody>

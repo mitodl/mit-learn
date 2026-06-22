@@ -119,6 +119,27 @@ const dateLoading = (
   <Skeleton variant="text" sx={{ display: "inline-block" }} width="80px" />
 )
 
+/**
+ * Three-column grid for the session row: [calendar icon] [Session: label]
+ * [dropdown]. `alignItems: center` vertically centers the icon and label with
+ * the taller (40px) dropdown. The payment deadline tucks under the dropdown
+ * (column 3, second row) regardless of the label's width.
+ */
+const SessionRow = styled.div(({ theme }) => ({
+  display: "grid",
+  gridTemplateColumns: "auto max-content 1fr",
+  alignItems: "center",
+  columnGap: "8px",
+  rowGap: "8px",
+  width: "100%",
+  color: theme.custom.colors.darkGray2,
+}))
+
+const PaymentDeadline = styled.div(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.darkGray2,
+}))
+
 const runStartsAnytime = (run: CourseRunV2) => {
   return (
     !run.is_archived &&
@@ -332,7 +353,7 @@ const CoursePaceRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
       </InfoRowIcon>
       <InfoRowInner>
         <InfoLabelValue
-          label="Course Format"
+          label="Format"
           value={
             <>
               {pace.label}
@@ -590,6 +611,23 @@ const CourseSummary: React.FC<{
     selectedRun !== undefined && !selectedRun.is_archived
       ? selectedRun.upgrade_deadline
       : null
+  const deadlineContent = upgradeDeadline ? (
+    <>
+      Payment deadline:{" "}
+      <NoSSR
+        onSSR={
+          <Skeleton
+            variant="text"
+            sx={{ display: "inline-block" }}
+            width="80px"
+          />
+        }
+      >
+        {formatDate(upgradeDeadline)}
+      </NoSSR>
+    </>
+  ) : null
+
   return (
     <SummaryRows>
       {!selectedRun ? (
@@ -599,43 +637,6 @@ const CourseSummary: React.FC<{
         </Alert>
       ) : null}
       {selectedRun?.is_archived ? <ArchivedAlert /> : null}
-      {selectedRun ? (
-        sessionSelect ? (
-          <InfoRow data-testid={TestIds.DatesRow}>
-            <InfoRowIcon>
-              <RiCalendarLine aria-hidden="true" />
-            </InfoRowIcon>
-            <Stack gap="16px" width="100%">
-              {sessionSelect}
-            </Stack>
-          </InfoRow>
-        ) : (
-          <CourseDatesRow
-            course={course}
-            nextRun={selectedRun}
-            data-testid={TestIds.DatesRow}
-          />
-        )
-      ) : null}
-      {upgradeDeadline ? (
-        <Typography
-          typography={{ xs: "body3", sm: "body2" }}
-          sx={(theme) => ({ color: theme.custom.colors.red })}
-        >
-          Payment deadline:{" "}
-          <NoSSR
-            onSSR={
-              <Skeleton
-                variant="text"
-                sx={{ display: "inline-block" }}
-                width="80px"
-              />
-            }
-          >
-            {formatDate(upgradeDeadline)}
-          </NoSSR>
-        </Typography>
-      ) : null}
       {selectedRun ? (
         <CoursePaceRow
           course={course}
@@ -648,6 +649,34 @@ const CourseSummary: React.FC<{
         nextRun={selectedRun}
         data-testid={TestIds.DurationRow}
       />
+      {selectedRun ? (
+        sessionSelect ? (
+          <SessionRow data-testid={TestIds.DatesRow}>
+            <InfoRowIcon>
+              <RiCalendarLine aria-hidden="true" />
+            </InfoRowIcon>
+            {sessionSelect}
+            {deadlineContent ? (
+              <PaymentDeadline style={{ gridColumn: 3 }}>
+                {deadlineContent}
+              </PaymentDeadline>
+            ) : null}
+          </SessionRow>
+        ) : (
+          <Stack gap="8px" width="100%">
+            <CourseDatesRow
+              course={course}
+              nextRun={selectedRun}
+              data-testid={TestIds.DatesRow}
+            />
+            {deadlineContent ? (
+              <PaymentDeadline style={{ paddingLeft: "28px" }}>
+                {deadlineContent}
+              </PaymentDeadline>
+            ) : null}
+          </Stack>
+        )
+      ) : null}
     </SummaryRows>
   )
 }

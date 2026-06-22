@@ -1,6 +1,7 @@
-import React from "react"
-import { SimpleSelectField } from "ol-components"
-import type { SimpleSelectOption } from "ol-components"
+import React, { useId } from "react"
+import { Select, styled } from "@mitodl/smoot-design"
+import type { SelectChangeEvent } from "@mitodl/smoot-design"
+import { MenuItem } from "ol-components"
 import type { CourseRunV2 } from "@mitodl/mitxonline-api-axios/v2"
 import { formatDate, isInPast } from "ol-utilities"
 
@@ -10,6 +11,19 @@ type SessionSelectProps = {
   enrolledRunIds?: number[]
   onChange: (runId: number) => void
 }
+
+/**
+ * Inline "Session:" label, styled to match the bold metadata labels
+ * (Format:, Estimated:). The select gets its accessible name from this label
+ * via `labelId` (→ `aria-labelledby`) since the MUI combobox is not a labelable
+ * element.
+ */
+const SessionLabel = styled.label(({ theme }) => ({
+  ...theme.typography.subtitle2,
+  fontWeight: theme.typography.fontWeightBold,
+  color: theme.custom.colors.darkGray2,
+  whiteSpace: "nowrap",
+}))
 
 /**
  * Returns true when the run is self-paced, not archived, and its start date is
@@ -48,18 +62,31 @@ const SessionSelect: React.FC<SessionSelectProps> = ({
   enrolledRunIds,
   onChange,
 }) => {
-  const options: SimpleSelectOption[] = runs.map((run) => ({
-    label: buildOptionLabel(run, enrolledRunIds),
-    value: String(run.id),
-  }))
-
+  const labelId = useId()
+  const selectId = useId()
   return (
-    <SimpleSelectField
-      label="Session"
-      options={options}
-      value={String(selectedRunId)}
-      onChange={(e) => onChange(Number(e.target.value))}
-    />
+    <>
+      <SessionLabel id={labelId} htmlFor={selectId}>
+        Session:
+      </SessionLabel>
+      <Select
+        id={selectId}
+        labelId={labelId}
+        size="medium"
+        fullWidth
+        displayEmpty
+        value={String(selectedRunId)}
+        onChange={(e: SelectChangeEvent<unknown>) =>
+          onChange(Number(e.target.value))
+        }
+      >
+        {runs.map((run) => (
+          <MenuItem key={run.id} value={String(run.id)}>
+            {buildOptionLabel(run, enrolledRunIds)}
+          </MenuItem>
+        ))}
+      </Select>
+    </>
   )
 }
 

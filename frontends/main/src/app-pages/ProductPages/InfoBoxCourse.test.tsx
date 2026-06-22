@@ -348,7 +348,7 @@ describe("InfoBoxCourse — grid structure", () => {
     ).toBeInTheDocument()
   })
 
-  test("paidOnly: grid has exactly 2 direct children (meta + one offering wrapper); Enroll button shares the same wrapper as the Certificate Track card", async () => {
+  test("paidOnly: grid has meta + divider + one offering wrapper; Enroll button shares the same wrapper as the Certificate Track card", async () => {
     setupAuth()
     const run = makeRun({
       is_enrollable: true,
@@ -366,9 +366,13 @@ describe("InfoBoxCourse — grid structure", () => {
     const grid = document.querySelector("[data-boxes]") as HTMLElement
     expect(grid).not.toBeNull()
 
-    // Must be exactly 2 direct element children: [data-grid-meta] and [data-card="cert"]
+    // Exactly 3 direct element children: [data-grid-meta], the section divider
+    // (hr), and the single offering wrapper [data-card="cert"]. The card and its
+    // Enroll button must live in ONE wrapper, not as separate grid children.
     const directChildren = Array.from(grid.children)
-    expect(directChildren).toHaveLength(2)
+    expect(directChildren).toHaveLength(3)
+    expect(grid.querySelector("[data-grid-meta]")).not.toBeNull()
+    expect(grid.querySelector("hr")).not.toBeNull()
 
     // The offering wrapper must contain both the card heading and the Enroll button
     const offeringWrapper = grid.querySelector(

@@ -55,6 +55,22 @@ const BoxGrid = styled.div(({ theme: t }) => ({
   },
 }))
 
+/**
+ * Full-width rule separating the metadata block from the "Choose Your Path"
+ * offering(s). Single-column only — hidden in the tablet 2-column grid, where
+ * meta and offerings sit side by side and a horizontal rule would not apply.
+ */
+const SectionDivider = styled.hr(({ theme: t }) => ({
+  border: "none",
+  borderTop: `1px solid ${t.custom.colors.lightGray2}`,
+  width: "100%",
+  margin: 0,
+  gridColumn: "1 / -1",
+  [t.breakpoints.between("sm", "md")]: {
+    display: "none",
+  },
+}))
+
 type CourseInfoBoxProps = {
   course: CourseWithCourseRunsSerializerV2
 }
@@ -101,6 +117,7 @@ const CourseInfoBox: React.FC<CourseInfoBoxProps> = ({ course }) => {
               sessionSelect={sessionSelect}
             />
           </div>
+          {offeringBoxes > 0 ? <SectionDivider /> : null}
           <CourseEnrollArea course={course} selectedRun={selectedRun} />
         </BoxGrid>
         {upsell}

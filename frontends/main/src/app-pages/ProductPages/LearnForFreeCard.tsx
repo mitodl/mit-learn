@@ -18,7 +18,7 @@ const CardBody = styled.div(({ theme }) => ({
   padding: "16px",
   gap: "16px",
   background: theme.custom.colors.white,
-  border: `1px solid ${theme.custom.colors.silverGrayLight}`,
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
   borderRadius: theme.shape.borderRadius,
   alignSelf: "stretch",
   boxSizing: "border-box",
