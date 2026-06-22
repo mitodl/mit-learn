@@ -1,6 +1,23 @@
 Release Notes
 =============
 
+Version 0.71.11
+---------------
+
+- fix(dashboard): enroll in the displayed variant run, not getBestRun's… (#3508)
+- remove langchain-openai (#3502)
+- Readable URLs for videos, podasts, and their lists (#3467)
+- feat: wire up B2B seat management write actions (#3493)
+- feat: embed posdcast and podcast episode inside the editor (#3491)
+- feat: Add Share/Embed dialog for Video Detail Page which should have … (#3465)
+- Update dependency langchain,  langchain-experimental (#3496)
+- Update dependency pyarrow to v24 (#3499)
+- Update dependency litellm to v1.84.0 [SECURITY] (#3494)
+- Update dependency cryptography to v48 [SECURITY] (#3495)
+- Update dependency langchain to v0.3.30 [SECURITY] (#3338)
+- feat: implement podcast embed page (#3480)
+- update button CTA for course page (#3476)
+
 Version 0.71.9 (Released June 17, 2026)
 --------------
 
