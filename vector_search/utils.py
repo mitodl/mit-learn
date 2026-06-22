@@ -206,6 +206,12 @@ def create_qdrant_collections(force_recreate):
 
 def tune_qdrant_collections():
     """Tune optimizer settings for Qdrant collections."""
+    if not all([settings.QDRANT_HOST, settings.QDRANT_BASE_COLLECTION_NAME]):
+        logger.warning(
+            "Skipping Qdrant collection tuning: QDRANT_HOST and QDRANT_BASE_COLLECTION_NAME must be set"
+        )
+        return
+
     client = qdrant_client()
     collections = [
         RESOURCES_COLLECTION_NAME,
@@ -213,6 +219,8 @@ def tune_qdrant_collections():
         TOPICS_COLLECTION_NAME,
     ]
     for collection_name in collections:
+        if not client.collection_exists(collection_name=collection_name):
+            continue
         tune_collection(client, collection_name)
 
 
