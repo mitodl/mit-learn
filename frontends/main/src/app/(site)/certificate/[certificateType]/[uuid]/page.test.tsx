@@ -16,7 +16,7 @@ describe("Certificate page generateMetadata", () => {
     certificate.program.program_type = "MicroMasters®"
     setMockResponse.get(
       mitxonline.urls.certificates.programCertificatesRetrieve({
-        cert_uuid: certificate.uuid,
+        uuid: certificate.uuid,
       }),
       certificate,
     )
@@ -36,7 +36,7 @@ describe("Certificate page generateMetadata", () => {
     certificate.program.program_type = "Program"
     setMockResponse.get(
       mitxonline.urls.certificates.programCertificatesRetrieve({
-        cert_uuid: certificate.uuid,
+        uuid: certificate.uuid,
       }),
       certificate,
     )
@@ -52,7 +52,7 @@ describe("Certificate page generateMetadata", () => {
     const certificate = factories.mitxonline.courseCertificate()
     setMockResponse.get(
       mitxonline.urls.certificates.courseCertificatesRetrieve({
-        cert_uuid: certificate.uuid,
+        uuid: certificate.uuid,
       }),
       certificate,
     )

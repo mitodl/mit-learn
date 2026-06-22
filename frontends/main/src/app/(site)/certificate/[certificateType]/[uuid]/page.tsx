@@ -30,7 +30,7 @@ export async function generateMetadata({
     if (certificateType === CertificateType.Course) {
       const data = await queryClient.fetchQueryOr404(
         certificateQueries.courseCertificatesRetrieve({
-          cert_uuid: uuid,
+          uuid,
         }),
       )
 
@@ -41,7 +41,7 @@ export async function generateMetadata({
     } else {
       const data = await queryClient.fetchQueryOr404(
         certificateQueries.programCertificatesRetrieve({
-          cert_uuid: uuid,
+          uuid,
         }),
       )
 
@@ -73,13 +73,13 @@ const Page: React.FC<
   if (certificateType === CertificateType.Course) {
     await queryClient.fetchQueryOr404(
       certificateQueries.courseCertificatesRetrieve({
-        cert_uuid: uuid,
+        uuid,
       }),
     )
   } else {
     await queryClient.fetchQueryOr404(
       certificateQueries.programCertificatesRetrieve({
-        cert_uuid: uuid,
+        uuid,
       }),
     )
   }

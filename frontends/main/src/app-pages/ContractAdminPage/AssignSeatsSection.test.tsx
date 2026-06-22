@@ -1,5 +1,7 @@
 import React from "react"
-import { renderWithTheme, screen, user, waitFor } from "@/test-utils"
+import { renderWithProviders, screen, user, waitFor } from "@/test-utils"
+import { setMockResponse } from "api/test-utils"
+import { factories, urls } from "api/mitxonline-test-utils"
 import { AssignSeatsSection } from "./AssignSeatsSection"
 
 // jsdom's File/Blob has no .text() or .arrayBuffer(), so FileReader.readAsText
@@ -48,7 +50,9 @@ describe("AssignSeatsSection", () => {
   })
 
   test("renders section title and key UI elements", () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     expect(
       screen.getByRole("heading", { name: "Assign Seats" }),
@@ -65,7 +69,9 @@ describe("AssignSeatsSection", () => {
   })
 
   test("download sample CSV pseudo-link is in the tab order and disabled", () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     // Only the download link is still disabled — import from CSV is now active
     const downloadLink = screen.getByRole("button", {
@@ -76,7 +82,9 @@ describe("AssignSeatsSection", () => {
   })
 
   test("import from CSV button is active and in the tab order", () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     const importButton = screen.getByRole("button", { name: "import from CSV" })
     expect(importButton).toBeInTheDocument()
@@ -85,13 +93,17 @@ describe("AssignSeatsSection", () => {
   })
 
   test("Assign Seats button is disabled when textarea is empty", () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     expect(screen.getByRole("button", { name: "Assign Seats" })).toBeDisabled()
   })
 
   test("Assign Seats button is disabled when valid email count exceeds available seats", async () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={1} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={1} />,
+    )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "alice@example.com, bob@example.com")
@@ -100,7 +112,9 @@ describe("AssignSeatsSection", () => {
   })
 
   test("Assign Seats button enables when at least one valid email is entered", async () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "alice@example.com")
@@ -111,7 +125,9 @@ describe("AssignSeatsSection", () => {
   })
 
   test("Assign Seats button stays disabled when only invalid emails are entered", async () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "notanemail")
@@ -120,7 +136,9 @@ describe("AssignSeatsSection", () => {
   })
 
   test("sole invalid token is not highlighted while focused (no preceding comma)", async () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "notvalid")
@@ -131,7 +149,9 @@ describe("AssignSeatsSection", () => {
   })
 
   test("last invalid token is highlighted while focused when preceded by a comma", async () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "alice@example.com, notvalid")
@@ -142,7 +162,9 @@ describe("AssignSeatsSection", () => {
   })
 
   test("last invalid token is highlighted after blur (no trailing comma)", async () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "notvalid")
@@ -154,7 +176,9 @@ describe("AssignSeatsSection", () => {
   })
 
   test("shows valid/invalid counts after entering emails", async () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "alice@example.com, bob@example.com, notvalid")
@@ -164,7 +188,9 @@ describe("AssignSeatsSection", () => {
   })
 
   test("shows only valid count when all emails are valid", async () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "alice@example.com, bob@example.com")
@@ -174,13 +200,17 @@ describe("AssignSeatsSection", () => {
   })
 
   test("validation badge is not shown when textarea is empty", () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     expect(screen.queryByText(/valid/i)).not.toBeInTheDocument()
   })
 
   test("live region announces email validation summary after debounce", async () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "alice@example.com, bad-email")
@@ -198,7 +228,9 @@ describe("AssignSeatsSection", () => {
   })
 
   test("clicking Assign Seats opens the confirm modal", async () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "alice@example.com")
@@ -210,7 +242,9 @@ describe("AssignSeatsSection", () => {
   })
 
   test("modal shows invalid emails when textarea has mixed input", async () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.click(textarea)
@@ -221,7 +255,9 @@ describe("AssignSeatsSection", () => {
   })
 
   test("modal shows duplicate count when textarea has repeated emails", async () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.click(textarea)
@@ -234,7 +270,9 @@ describe("AssignSeatsSection", () => {
   })
 
   test("closing the modal hides it", async () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "alice@example.com")
@@ -253,7 +291,9 @@ describe("AssignSeatsSection", () => {
   // CSV import tests
 
   test("importing a valid CSV opens the modal without populating the textarea", async () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     const csvContent = "email\nalice@example.com\nbob@example.com"
     mockFileContent = csvContent
@@ -273,7 +313,9 @@ describe("AssignSeatsSection", () => {
   })
 
   test("importing a CSV with invalid emails shows them in the modal", async () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     const csvContent = "alice@example.com\nbad@\nnot-quite@.com"
     mockFileContent = csvContent
@@ -289,7 +331,9 @@ describe("AssignSeatsSection", () => {
   })
 
   test("importing a CSV with duplicates shows duplicate count in modal", async () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     const csvContent = "alice@example.com\nbob@example.com\nalice@example.com"
     mockFileContent = csvContent
@@ -306,7 +350,9 @@ describe("AssignSeatsSection", () => {
   })
 
   test("importing a CSV with no-@ rows shows skipped count in modal", async () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     const csvContent =
       "alice@example.com\nnoatsymbol\nalso-no-at\nalice@example.com"
@@ -324,7 +370,9 @@ describe("AssignSeatsSection", () => {
   })
 
   test("importing a CSV with no valid emails shows inline error", async () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     const csvContent = "Email\nNot An Email\nbad@"
     mockFileContent = csvContent
@@ -344,7 +392,9 @@ describe("AssignSeatsSection", () => {
   })
 
   test("accepts newline-separated emails", async () => {
-    renderWithTheme(<AssignSeatsSection availableSeats={50} />)
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     // Simulate pasting newline-separated emails
@@ -353,5 +403,96 @@ describe("AssignSeatsSection", () => {
 
     expect(screen.getByText("2 valid")).toBeInTheDocument()
     expect(screen.getByText("1 invalid")).toBeInTheDocument()
+  })
+
+  describe("submitting the assignment", () => {
+    const ORG_ID = 1
+    const CONTRACT_ID = 2
+
+    const enterEmailsAndConfirm = async (emails: string) => {
+      const textarea = screen.getByPlaceholderText(/enter employee emails/i)
+      await user.click(textarea)
+      await user.paste(emails)
+      await user.click(screen.getByRole("button", { name: "Assign Seats" }))
+      await user.click(screen.getByRole("button", { name: /send 2 emails/i }))
+    }
+
+    test("assigns seats and shows a success alert, clearing the input", async () => {
+      setMockResponse.post(
+        urls.contracts.managerContractBulkAssign(ORG_ID, CONTRACT_ID),
+        factories.contracts.bulkAssignResult({
+          assigned: [
+            factories.contracts.contractCode(),
+            factories.contracts.contractCode(),
+          ],
+          errors: [],
+        }),
+      )
+      renderWithProviders(
+        <AssignSeatsSection
+          orgId={ORG_ID}
+          contractId={CONTRACT_ID}
+          availableSeats={50}
+        />,
+      )
+
+      await enterEmailsAndConfirm("alice@example.com\nbob@example.com")
+
+      const alert = await screen.findByRole("alert")
+      expect(alert).toHaveTextContent("2 seats assigned.")
+      expect(screen.getByPlaceholderText(/enter employee emails/i)).toHaveValue(
+        "",
+      )
+    })
+
+    test("surfaces partial failures with a warning alert and the failed addresses", async () => {
+      setMockResponse.post(
+        urls.contracts.managerContractBulkAssign(ORG_ID, CONTRACT_ID),
+        factories.contracts.bulkAssignResult({
+          assigned: [factories.contracts.contractCode()],
+          errors: [
+            factories.contracts.bulkAssignError({
+              email: "taken@example.com",
+              detail: "Code has already been assigned or redeemed.",
+            }),
+          ],
+        }),
+      )
+      renderWithProviders(
+        <AssignSeatsSection
+          orgId={ORG_ID}
+          contractId={CONTRACT_ID}
+          availableSeats={50}
+        />,
+      )
+
+      await enterEmailsAndConfirm("alice@example.com\ntaken@example.com")
+
+      const alert = await screen.findByRole("alert")
+      expect(alert).toHaveTextContent("1 seat assigned.")
+      expect(alert).toHaveTextContent("1 could not be assigned:")
+      expect(alert).toHaveTextContent("taken@example.com")
+    })
+
+    test("shows an error alert when the request fails", async () => {
+      setMockResponse.post(
+        urls.contracts.managerContractBulkAssign(ORG_ID, CONTRACT_ID),
+        { detail: "boom" },
+        { code: 500 },
+      )
+      renderWithProviders(
+        <AssignSeatsSection
+          orgId={ORG_ID}
+          contractId={CONTRACT_ID}
+          availableSeats={50}
+        />,
+      )
+
+      await enterEmailsAndConfirm("alice@example.com\nbob@example.com")
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        /something went wrong/i,
+      )
+    })
   })
 })

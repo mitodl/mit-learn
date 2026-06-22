@@ -105,7 +105,7 @@ const v2Course: PartialFactory<V2Course> = (overrides = {}) => {
         name: faker.company.name(),
       },
     ],
-    programs: null,
+    programs: [],
     min_price: faker.number.int({ min: 0, max: 1000 }),
     max_price: faker.number.int({ min: 1000, max: 2000 }),
     include_in_learn_catalog: faker.datatype.boolean(),

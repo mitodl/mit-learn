@@ -18,6 +18,7 @@ import {
   styled,
 } from "ol-components"
 import {
+  Alert,
   Button,
   TabButton,
   TabButtonList,
@@ -336,6 +337,10 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const [searchQuery, setSearchQuery] = useState("")
   const [page, setPage] = useState(1)
   const [searchAnnouncement, setSearchAnnouncement] = useState("")
+  const [rowActionResult, setRowActionResult] = useState<{
+    message: string
+    severity: "success" | "error"
+  } | null>(null)
 
   const {
     data: managerOrgs,
@@ -511,11 +516,24 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
           </StatsSide>
         </HeaderSection>
 
-        <AssignSeatsSection availableSeats={totalUnassigned} />
+        <AssignSeatsSection
+          orgId={org.id}
+          contractId={contract.id}
+          availableSeats={totalUnassigned}
+        />
 
         {/* Seat Assignments */}
         <SeatAssignmentsSection>
           <SectionTitle component="h2">Seat Assignments</SectionTitle>
+          {rowActionResult && (
+            <Alert
+              severity={rowActionResult.severity}
+              closable
+              onClose={() => setRowActionResult(null)}
+            >
+              {rowActionResult.message}
+            </Alert>
+          )}
           <SeatAssignmentsControls>
             <ControlsLeft>
               <TabContext value={statusFilter}>
@@ -670,7 +688,14 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                         {formatDate(code.last_sent)}
                       </TableCell>
                       <ActionCell role="cell">
-                        <RowActionMenu code={code} />
+                        <RowActionMenu
+                          code={code}
+                          orgId={org.id}
+                          contractId={contract.id}
+                          onResult={(message, severity) =>
+                            setRowActionResult({ message, severity })
+                          }
+                        />
                       </ActionCell>
                     </TableRow>
                   ))
