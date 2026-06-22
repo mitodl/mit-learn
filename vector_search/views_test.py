@@ -889,12 +889,14 @@ def test_content_file_search_restricts_resource_query_to_best_run(
     )
 
     must = mock_qdrant.query_points.mock_calls[0].kwargs["query_filter"].must
-    assert (
-        models.FieldCondition(
-            key="run_readable_id", match=models.MatchAny(any=[best.run_id])
-        )
-        in must
-    )
+    # Allowed runs are the best run PLUS the resource readable_id itself (which
+    # matches the run-less course-metadata point).
+    run_conditions = [c for c in must if getattr(c, "key", None) == "run_readable_id"]
+    assert len(run_conditions) == 1
+    assert set(run_conditions[0].match.any) == {best.run_id, course.readable_id}
+    # resource_readable_id is replaced by the run filter, not AND-ed with it
+    # (a single-field filter keeps Qdrant's approximate count accurate).
+    assert not any(getattr(c, "key", None) == "resource_readable_id" for c in must)
 
 
 @pytest.mark.django_db
@@ -933,7 +935,12 @@ def test_content_file_search_test_mode_not_restricted(
     must = mock_qdrant.query_points.mock_calls[0].kwargs["query_filter"].must
     run_conditions = [c for c in must if getattr(c, "key", None) == "run_readable_id"]
     assert len(run_conditions) == 1
-    assert set(run_conditions[0].match.any) == {run_a.run_id, run_b.run_id}
+    # All published runs plus the resource readable_id (for the metadata point).
+    assert set(run_conditions[0].match.any) == {
+        run_a.run_id,
+        run_b.run_id,
+        course.readable_id,
+    }
 
 
 @pytest.mark.django_db
@@ -984,10 +991,15 @@ def test_content_file_search_explicit_run_not_overridden(
 
 
 @pytest.mark.django_db
-def test_content_file_search_no_best_run_yields_zero_results(
+def test_content_file_search_no_best_run_metadata_only(
     mocker, client, django_user_model
 ):
-    """A resource with no published run resolves to an empty run filter (no results)."""
+    """A resource with no published run resolves to the resource metadata point only.
+
+    best_run_ids_for_resources returns [], so the allowed run set is just the
+    resource readable_id (which matches the course-metadata point). No real run's
+    content files leak in.
+    """
     course = LearningResourceFactory.create(is_course=True, test_mode=False)
     course.runs.all().delete()
     # Only an unpublished run, so best_run is None and best_run_ids_for_resources -> [].
@@ -1021,7 +1033,6 @@ def test_content_file_search_no_best_run_yields_zero_results(
     )
 
     must = mock_qdrant.query_points.mock_calls[0].kwargs["query_filter"].must
-    assert (
-        models.FieldCondition(key="run_readable_id", match=models.MatchAny(any=[]))
-        in must
-    )
+    run_conditions = [c for c in must if getattr(c, "key", None) == "run_readable_id"]
+    assert len(run_conditions) == 1
+    assert set(run_conditions[0].match.any) == {course.readable_id}

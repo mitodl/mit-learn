@@ -694,9 +694,16 @@ class ContentFilesVectorSearchView(QdrantView):
             resource_ids = params.get("resource_readable_id")
             has_run_filter = "run_readable_id" in params or "edx_module_id" in params
             if resource_ids and not has_run_filter:
-                params["run_readable_id"] = await sync_to_async(
-                    best_run_ids_for_resources
-                )(resource_ids)
+                # Restrict resource-scoped queries to each resource's best run.
+                # Replace resource_readable_id with a single run_readable_id filter
+                # (don't AND them: compound filters break Qdrant's approximate
+                # count). The resource readable_ids are included to match each
+                # resource's run-less course-metadata point.
+                best_run_ids = await sync_to_async(best_run_ids_for_resources)(
+                    resource_ids
+                )
+                del params["resource_readable_id"]
+                params["run_readable_id"] = best_run_ids + list(resource_ids)
 
             response = await self.async_vector_search(
                 query_text,
