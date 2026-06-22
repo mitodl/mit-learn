@@ -277,7 +277,7 @@ const PodcastEmbedPlayer: React.FC<PodcastEmbedPlayerProps> = ({
     if (!audio) return
     audio.load()
     audio.playbackRate = SPEED_OPTIONS[speedIndexRef.current]
-  }, [audioUrl, hasAudioSource, startPlayback])
+  }, [audioUrl, hasAudioSource])
 
   const handlePlayPause = () => {
     if (!hasAudioSource) return
