@@ -194,21 +194,13 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):  # noqa
                     .exclude(readable_id=blocklisted_ids)
                     .order_by("id")
                 ):
-                    run = (
-                        course.best_run
-                        if course.best_run
-                        else course.runs.filter(published=True)
-                        .order_by("-start_date")
-                        .first()
-                    )
+                    # Embed published content files across all runs of the course
+                    # (Qdrant retains all runs, not just best_run).
                     contentfiles = (
-                        ContentFile.objects.filter(
-                            Q(run=run, published=True, run__published=True)
-                            | Q(
-                                learning_resource=course,
-                                published=True,
-                                learning_resource__published=True,
-                            )
+                        ContentFile.objects.filter(published=True)
+                        .filter(
+                            Q(run__learning_resource=course)
+                            | Q(learning_resource=course)
                         )
                         .order_by("id")
                         .values_list("id", flat=True)
@@ -306,21 +298,13 @@ def embed_learning_resources_by_id(self, ids, skip_content_files, overwrite):
                 )
             elif not skip_content_files and resource_type == COURSE_TYPE:
                 for course in embed_resources.order_by("id"):
-                    run = (
-                        course.best_run
-                        if course.best_run
-                        else course.runs.filter(published=True)
-                        .order_by("-start_date")
-                        .first()
-                    )
+                    # Embed published content files across all runs of the course
+                    # (Qdrant retains all runs, not just best_run).
                     content_ids = (
-                        ContentFile.objects.filter(
-                            Q(run=run, published=True, run__published=True)
-                            | Q(
-                                learning_resource=course,
-                                published=True,
-                                learning_resource__published=True,
-                            )
+                        ContentFile.objects.filter(published=True)
+                        .filter(
+                            Q(run__learning_resource=course)
+                            | Q(learning_resource=course)
                         )
                         .order_by("id")
                         .values_list("id", flat=True)
@@ -470,35 +454,34 @@ def embeddings_healthcheck():
     )
 
     for lr in all_resources:
-        run = (
-            lr.best_run
-            if lr.best_run
-            else lr.runs.filter(published=True).order_by("-start_date").first()
-        )
         serialized = LearningResourceSerializer(lr).data
         point_id = vector_point_id(vector_point_key(serialized))
         resource_point_ids[point_id] = {"resource_id": lr.readable_id, "id": lr.id}
         content_file_point_ids = {}
-        if run:
-            for cf in run.content_files.for_serialization().filter(published=True):
-                if cf and cf.content:
-                    serialized_cf = ContentFileSerializer(cf).data
-                    point_id = vector_point_id(
-                        vector_point_key(
-                            serialized_cf, chunk_number=0, document_type="content_file"
-                        )
+        # All runs are embedded in Qdrant, not just best_run.
+        content_files = ContentFile.objects.for_serialization().filter(
+            Q(run__learning_resource=lr) | Q(learning_resource=lr),
+            published=True,
+        )
+        for cf in content_files:
+            if cf and cf.content:
+                serialized_cf = ContentFileSerializer(cf).data
+                point_id = vector_point_id(
+                    vector_point_key(
+                        serialized_cf, chunk_number=0, document_type="content_file"
                     )
-                    content_file_point_ids[point_id] = {"key": cf.key, "id": cf.id}
-            for batch in chunks(content_file_point_ids.keys(), chunk_size=200):
-                remaining_content_files = filter_existing_qdrant_points_by_ids(
-                    batch, collection_name=CONTENT_FILES_COLLECTION_NAME
                 )
-                remaining_content_file_ids.extend(
-                    [
-                        content_file_point_ids.get(p, {}).get("id")
-                        for p in remaining_content_files
-                    ]
-                )
+                content_file_point_ids[point_id] = {"key": cf.key, "id": cf.id}
+        for batch in chunks(content_file_point_ids.keys(), chunk_size=200):
+            remaining_content_files = filter_existing_qdrant_points_by_ids(
+                batch, collection_name=CONTENT_FILES_COLLECTION_NAME
+            )
+            remaining_content_file_ids.extend(
+                [
+                    content_file_point_ids.get(p, {}).get("id")
+                    for p in remaining_content_files
+                ]
+            )
 
     for batch in chunks(
         all_resources.values_list("id", flat=True),
