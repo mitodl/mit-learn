@@ -528,10 +528,9 @@ def deindex_run_content_files(run_id, unpublished_only, *, keep_published=False)
     run = LearningResourceRun.objects.get(id=run_id)
     if unpublished_only:
         content_files = run.content_files.filter(published=False).all()
-    elif keep_published:
-        content_files = run.content_files.all()
     else:
-        run.content_files.filter(published=True).update(published=False)
+        if not keep_published:
+            run.content_files.filter(published=True).update(published=False)
         content_files = run.content_files.all()
 
     if not content_files.exists():
