@@ -395,6 +395,27 @@ describe("AssignSeatsSection", () => {
     ).not.toBeInTheDocument()
   })
 
+  test("assertive live region announces CSV error text for screen readers", async () => {
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
+
+    const csvContent = "Email\nNot An Email\nbad@"
+    mockFileContent = csvContent
+    const file = new File([csvContent], "emails.csv", { type: "text/csv" })
+
+    const fileInput = document.querySelector(
+      "input[type='file']",
+    ) as HTMLInputElement
+    await user.upload(fileInput, file)
+
+    await screen.findByRole("alert")
+    const assertiveRegion = document.querySelector("[aria-live='assertive']")
+    expect(assertiveRegion).toHaveTextContent(
+      /no valid email addresses found in this file/i,
+    )
+  })
+
   test("accepts newline-separated emails", async () => {
     renderWithProviders(
       <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,

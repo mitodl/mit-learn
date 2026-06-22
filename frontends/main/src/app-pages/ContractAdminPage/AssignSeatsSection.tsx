@@ -285,6 +285,31 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
     }
   }, [result])
 
+  // Derive the assertive announcement from all error sources in one place so
+  // the two concerns can't clear each other. Two separate effects sharing one
+  // setState caused the second effect to wipe the first when resultContent
+  // went null (e.g. user closes the success Alert).
+  const errorAnnouncement = useMemo(() => {
+    if (csvReadError) return "Error: Could not read the file. Please try again."
+    if (csvNoValid) return "Error: No valid email addresses found in this file."
+    if (resultContent) {
+      const prefix =
+        resultContent.severity === "error" ||
+        resultContent.severity === "warning"
+          ? `${resultContent.severity}: `
+          : ""
+      const errorDetails = resultContent.errors
+        ?.map((e) => `${e.email} — ${e.detail}`)
+        .join(", ")
+      return (
+        prefix +
+        resultContent.message +
+        (errorDetails ? ` ${errorDetails}` : "")
+      )
+    }
+    return ""
+  }, [csvReadError, csvNoValid, resultContent])
+
   const handleCsvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -362,6 +387,11 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
       {/* Always-mounted live region — debounced so screen readers aren't spammed on every keystroke */}
       <VisuallyHidden aria-live="polite" aria-atomic="true">
         {debouncedAnnouncement}
+      </VisuallyHidden>
+      {/* Assertive region for errors — workaround for smoot-design Alert announcing
+          only its aria-describedby ("error message") instead of the children text */}
+      <VisuallyHidden aria-live="assertive" aria-atomic="true">
+        {errorAnnouncement}
       </VisuallyHidden>
       <Stack
         direction={{ xs: "column", sm: "row" }}

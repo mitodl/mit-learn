@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -341,6 +341,14 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     message: string
     severity: "success" | "error"
   } | null>(null)
+  const [rowActionAnnouncement, setRowActionAnnouncement] = useState("")
+
+  // Mirror row-action Alert text into an assertive live region — smoot-design
+  // Alert announces only its aria-describedby ("success/error message") via NVDA
+  // instead of the actual children text. Must be before early returns (Rules of Hooks).
+  useEffect(() => {
+    setRowActionAnnouncement(rowActionResult?.message ?? "")
+  }, [rowActionResult])
 
   const {
     data: managerOrgs,
@@ -525,6 +533,11 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
         {/* Seat Assignments */}
         <SeatAssignmentsSection>
           <SectionTitle component="h2">Seat Assignments</SectionTitle>
+          {/* Assertive live region — workaround for smoot-design Alert reading
+              only aria-describedby ("success/error message") instead of children */}
+          <VisuallyHidden aria-live="assertive" aria-atomic="true">
+            {rowActionAnnouncement}
+          </VisuallyHidden>
           {rowActionResult && (
             <Alert
               severity={rowActionResult.severity}

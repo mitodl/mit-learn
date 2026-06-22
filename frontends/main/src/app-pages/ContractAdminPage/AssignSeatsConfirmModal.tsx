@@ -176,7 +176,10 @@ const EmailListExpand: React.FC<{ emails: string[] }> = ({ emails }) => {
         ))}
       </EmailListUl>
       {!expanded && hidden > 0 && (
-        <ShowMoreButton onClick={() => setExpanded(true)}>
+        <ShowMoreButton
+          onClick={() => setExpanded(true)}
+          aria-label={`Show ${hidden} more email addresses`}
+        >
           + {hidden} more
         </ShowMoreButton>
       )}
@@ -315,7 +318,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
         }
       >
         <VisuallyHidden id={descriptionId}>
-          {`${validCount} learners were imported, but only ${availableSeats} seats remain. ${overLimit} learners exceed the remaining contract capacity and cannot be assigned.`}
+          {`${validCount} learners were imported, but only ${availableSeats} seats remain. ${overLimit} learners exceed the remaining contract capacity and cannot be assigned. Update your CSV to reduce the number of learners before continuing.`}
         </VisuallyHidden>
         <Stack gap="24px">
           <DescriptionText>
@@ -325,19 +328,26 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
             capacity and cannot be assigned.
           </DescriptionText>
           <StatsCard $variant="error">
-            <StatColumn>
-              <StatValue>{validCount}</StatValue>
-              <StatLabel>Imported</StatLabel>
+            <StatColumn role="group" aria-label={`${validCount} imported`}>
+              <StatValue aria-hidden="true">{validCount}</StatValue>
+              <StatLabel aria-hidden="true">Imported</StatLabel>
             </StatColumn>
-            <StatDivider />
-            <StatColumn>
-              <StatValue $error>{availableSeats}</StatValue>
-              <StatLabel>Seats available</StatLabel>
+            <StatDivider aria-hidden="true" />
+            <StatColumn
+              role="group"
+              aria-label={`${availableSeats} seats available`}
+            >
+              <StatValue $error aria-hidden="true">
+                {availableSeats}
+              </StatValue>
+              <StatLabel aria-hidden="true">Seats available</StatLabel>
             </StatColumn>
-            <StatDivider />
-            <StatColumn>
-              <StatValue $error>{overLimit}</StatValue>
-              <StatLabel>Over the limit</StatLabel>
+            <StatDivider aria-hidden="true" />
+            <StatColumn role="group" aria-label={`${overLimit} over the limit`}>
+              <StatValue $error aria-hidden="true">
+                {overLimit}
+              </StatValue>
+              <StatLabel aria-hidden="true">Over the limit</StatLabel>
             </StatColumn>
           </StatsCard>
           <InfoNote>
@@ -383,7 +393,19 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
         }
       >
         <VisuallyHidden id={descriptionId}>
-          {`${validCount} learners are ready to invite.${hasInvalid ? ` ${invalidEmails.length} email addresses were invalid.` : ""}${hasDuplicates ? ` ${duplicateCount} duplicate email addresses were removed.` : ""}`}
+          {[
+            `${validCount} learners are ready to invite.`,
+            hasInvalid
+              ? ` ${invalidEmails.length} ${pluralize("email address", invalidEmails.length, "email addresses")} were invalid and will be excluded.`
+              : "",
+            hasDuplicates
+              ? ` ${duplicateCount} duplicate ${pluralize("email address", duplicateCount, "email addresses")} ${duplicateCount === 1 ? "was" : "were"} removed.`
+              : "",
+            skippedCount > 0
+              ? ` ${skippedCount} ${pluralize("row", skippedCount)} skipped — no email address found.`
+              : "",
+            " Only valid, unique emails will be assigned.",
+          ].join("")}
         </VisuallyHidden>
         <Stack gap="24px">
           <DescriptionText>
@@ -483,7 +505,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
       }
     >
       <VisuallyHidden id={descriptionId}>
-        {`You are about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with secure link to claim their seat and access the materials.`}
+        {`You are about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with secure link to claim their seat and access the materials. ${seatsAfterSending} seats remaining after sending. Emails will be sent immediately and cannot be recalled.`}
       </VisuallyHidden>
       <Stack gap="24px">
         <DescriptionText>
@@ -493,16 +515,24 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
           materials.
         </DescriptionText>
         <StatsCard $variant="default">
-          <StatColumn>
-            <StatValue>{validCount}</StatValue>
-            <StatLabel>Invitations</StatLabel>
+          <StatColumn
+            role="group"
+            aria-label={`${validCount} ${pluralize("invitation", validCount)}`}
+          >
+            <StatValue aria-hidden="true">{validCount}</StatValue>
+            <StatLabel aria-hidden="true">Invitations</StatLabel>
           </StatColumn>
-          <StatDivider />
-          <StatColumn>
-            <StatValue>{seatsAfterSending}</StatValue>
-            <StatLabel>Seats remaining after sending</StatLabel>
+          <StatDivider aria-hidden="true" />
+          <StatColumn
+            role="group"
+            aria-label={`${seatsAfterSending} seats remaining after sending`}
+          >
+            <StatValue aria-hidden="true">{seatsAfterSending}</StatValue>
+            <StatLabel aria-hidden="true">
+              Seats remaining after sending
+            </StatLabel>
           </StatColumn>
-          <StatDivider />
+          <StatDivider aria-hidden="true" />
           <StatColumn>
             <RiMailLine
               aria-hidden="true"
@@ -514,7 +544,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
           </StatColumn>
         </StatsCard>
         {sendError && (
-          <Typography variant="body2" component="p" color="error">
+          <Typography variant="body2" component="p" color="error" role="alert">
             {sendError}
           </Typography>
         )}
