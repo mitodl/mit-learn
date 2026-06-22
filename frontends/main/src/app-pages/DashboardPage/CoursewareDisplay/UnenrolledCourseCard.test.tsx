@@ -266,16 +266,17 @@ describe.each([
         <UnenrolledCourseCard course={course} layout={layout} />,
       )
       const card = getCard()
-      const endDateEl = within(card).getByText(/ends in 5 days/i)
-      const button = within(card).getByTestId(testId ?? "courseware-button")
-      // endDateEl.closest(Stack) is the direct row/column container of the end date
-      const endDateContainer = endDateEl.closest("[class*='Stack']")
       if (testId) {
-        // Compact: end date and button share the same row Stack
-        expect(endDateContainer).toContainElement(button)
+        // Compact: end date and button are both inside the compact-meta-row
+        const metaRow = within(card).getByTestId("compact-meta-row")
+        expect(metaRow).toHaveTextContent(/ends in 5 days/i)
+        expect(within(metaRow).getByTestId(testId)).toBeInTheDocument()
       } else {
-        // Default: end date is in the title column, not in the button area
-        expect(endDateContainer).not.toContainElement(button)
+        // Default layout has no compact-meta-row; end date appears below the title
+        expect(
+          within(card).queryByTestId("compact-meta-row"),
+        ).not.toBeInTheDocument()
+        expect(within(card).getByText(/ends in 5 days/i)).toBeInTheDocument()
       }
     },
   )

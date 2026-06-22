@@ -143,7 +143,12 @@ export const UnenrolledCourseCard = ({
   )
   const buttonSection = isCompact ? (
     <Stack direction="column" gap="4px" alignItems="stretch">
-      <Stack direction="row" gap="8px" alignItems="center">
+      <Stack
+        direction="row"
+        gap="8px"
+        alignItems="center"
+        data-testid="compact-meta-row"
+      >
         {endDateSection}
         <CoursewareActionColumn direction="row" justifyContent="center">
           {startButton}
