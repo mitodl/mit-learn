@@ -38,13 +38,35 @@ describe("extractEmailsFromCsvRows", () => {
     },
   )
 
-  test("counts data rows with no @ as skipped (not header rows)", () => {
+  test("counts data rows with no @ as skipped (no header row — column unknown)", () => {
     const { valid, skippedCount } = extract([
       ["alice@example.com"],
       ["no-email-here"],
       ["bob@example.com"],
     ])
     expect(valid).toEqual(["alice@example.com", "bob@example.com"])
+    expect(skippedCount).toBe(1)
+  })
+
+  test("treats no-@ values as invalid when email column is identified via header", () => {
+    const { valid, invalid, skippedCount } = extract([
+      ["id", "name", "email"],
+      ["1", "Alice", "alice@example.com"],
+      ["2", "Bob", "notanemail"],
+      ["3", "Carol", "carol@example.com"],
+    ])
+    expect(valid).toEqual(["alice@example.com", "carol@example.com"])
+    expect(invalid).toEqual(["notanemail"])
+    expect(skippedCount).toBe(0)
+  })
+
+  test("skips rows with blank email column when header is present", () => {
+    const { valid, skippedCount } = extract([
+      ["id", "name", "email"],
+      ["1", "Alice", "alice@example.com"],
+      ["2", "Bob", ""],
+    ])
+    expect(valid).toEqual(["alice@example.com"])
     expect(skippedCount).toBe(1)
   })
 
@@ -77,13 +99,14 @@ describe("extractEmailsFromCsvRows", () => {
   })
 
   test("deduplicates emails case-insensitively and counts duplicates", () => {
-    const { valid, duplicateCount } = extract([
+    const { valid, duplicateCount, duplicateEmails } = extract([
       ["alice@example.com"],
       ["Alice@Example.COM"],
       ["bob@example.com"],
     ])
     expect(valid).toEqual(["alice@example.com", "bob@example.com"])
     expect(duplicateCount).toBe(1)
+    expect(duplicateEmails).toEqual(["Alice@Example.COM"])
   })
 
   test("returns clean result with empty arrays for valid input", () => {
@@ -91,6 +114,7 @@ describe("extractEmailsFromCsvRows", () => {
     expect(result).toEqual({
       valid: ["alice@example.com", "bob@example.com"],
       invalid: [],
+      duplicateEmails: [],
       duplicateCount: 0,
       skippedCount: 0,
     })
@@ -134,6 +158,7 @@ describe("parseEmailsForSubmit", () => {
     expect(result).toEqual({
       valid: ["alice@example.com", "bob@example.com"],
       invalid: [],
+      duplicateEmails: [],
       duplicateCount: 0,
       skippedCount: 0,
     })
@@ -146,11 +171,12 @@ describe("parseEmailsForSubmit", () => {
   })
 
   test("deduplicates valid emails case-insensitively", () => {
-    const { valid, duplicateCount } = parse(
+    const { valid, duplicateCount, duplicateEmails } = parse(
       "alice@example.com\nAlice@Example.COM\nbob@example.com",
     )
     expect(valid).toEqual(["alice@example.com", "bob@example.com"])
     expect(duplicateCount).toBe(1)
+    expect(duplicateEmails).toEqual(["Alice@Example.COM"])
   })
 
   test("handles newline-separated input", () => {
@@ -163,6 +189,7 @@ describe("parseEmailsForSubmit", () => {
     expect(result).toEqual({
       valid: [],
       invalid: [],
+      duplicateEmails: [],
       duplicateCount: 0,
       skippedCount: 0,
     })

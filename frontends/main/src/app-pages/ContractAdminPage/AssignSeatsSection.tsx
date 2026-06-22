@@ -195,6 +195,7 @@ const ResultErrorList = styled.ul(({ theme }) => ({
 type ModalData = {
   validEmails: string[]
   invalidEmails: string[]
+  duplicateEmails: string[]
   duplicateCount: number
   skippedCount: number
 }
@@ -297,7 +298,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
       const { data } = Papa.parse<string[]>(text, {
         skipEmptyLines: true,
       })
-      const { valid, invalid, duplicateCount, skippedCount } =
+      const { valid, invalid, duplicateEmails, duplicateCount, skippedCount } =
         extractEmailsFromCsvRows(data)
       if (valid.length === 0) {
         setCsvNoValid(true)
@@ -307,6 +308,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
       setModalData({
         validEmails: valid,
         invalidEmails: invalid,
+        duplicateEmails,
         duplicateCount,
         skippedCount,
       })
@@ -319,6 +321,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
     setModalData({
       validEmails: submitResult.valid,
       invalidEmails: submitResult.invalid,
+      duplicateEmails: submitResult.duplicateEmails,
       duplicateCount: submitResult.duplicateCount,
       skippedCount: submitResult.skippedCount,
     })
@@ -506,6 +509,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
           validCount={modalData.validEmails.length}
           availableSeats={availableSeats}
           invalidEmails={modalData.invalidEmails}
+          duplicateEmails={modalData.duplicateEmails}
           duplicateCount={modalData.duplicateCount}
           skippedCount={modalData.skippedCount}
         />

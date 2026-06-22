@@ -1,75 +1,199 @@
 "use client"
 
-import React, { useId, useState } from "react"
-import { Dialog, Stack, Typography, styled } from "ol-components"
-import { VisuallyHidden } from "@mitodl/smoot-design"
+import React, { useEffect, useId, useRef, useState } from "react"
+import { Dialog, DialogActions, Stack, Typography, alpha, styled } from "ol-components"
+import { Button, VisuallyHidden } from "@mitodl/smoot-design"
 import { pluralize } from "ol-utilities"
+import {
+  RiAlertFill,
+  RiFileCopyLine,
+  RiInformationLine,
+  RiMailLine,
+} from "@remixicon/react"
 
-const SHOW_MORE_THRESHOLD = 10
+// ─── Icon badges ─────────────────────────────────────────────────────────────
 
-const SectionLabel = styled(Typography)(({ theme }) => ({
-  ...theme.typography.subtitle2,
+const IconBadge = styled("span")<{ $variant: "warning" | "error" }>(
+  ({ theme, $variant }) => ({
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "28px",
+    height: "28px",
+    borderRadius: "50%",
+    backgroundColor:
+      $variant === "error"
+        ? theme.custom.colors.red
+        : theme.custom.colors.orange,
+    color: theme.custom.colors.white,
+    flexShrink: 0,
+    "& svg": { width: "20px", height: "20px" },
+  }),
+)
+
+// ─── Email alert box (invalid / duplicate list) ───────────────────────────────
+
+const EmailAlertBox = styled("div")(({ theme }) => ({
+  backgroundColor: alpha(theme.custom.colors.orange, 0.15),
+  border: `1px solid ${alpha(theme.custom.colors.orange, 0.5)}`,
+  borderRadius: "4px",
+  padding: "11px 16px",
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+  width: "100%",
+}))
+
+const AlertBoxTitle = styled(Typography)(({ theme }) => ({
+  ...theme.typography.subtitle3,
   color: theme.custom.colors.darkGray2,
 })) as typeof Typography
 
-const EmailList = styled.ul(({ theme }) => ({
-  margin: "4px 0 0",
-  paddingLeft: "20px",
-  ...theme.typography.body2,
+const EmailListUl = styled("ul")(({ theme }) => ({
+  margin: 0,
+  paddingLeft: "18px",
+  ...theme.typography.body3,
   color: theme.custom.colors.darkGray2,
+  "& li": { marginBottom: 0 },
 }))
 
-const ShowMoreButton = styled.button(({ theme }) => ({
+const ShowMoreButton = styled("button")(({ theme }) => ({
   background: "none",
   border: "none",
   padding: 0,
   cursor: "pointer",
-  ...theme.typography.body2,
-  color: theme.custom.colors.darkRed,
-  textDecoration: "underline",
+  ...theme.typography.body3,
+  color: theme.custom.colors.darkGray2,
+  textAlign: "left",
   "&:hover": { opacity: 0.8 },
 }))
 
-const DuplicateNotice = styled(Typography)(({ theme }) => ({
+const CopyLink = styled("button")(({ theme }) => ({
+  background: "none",
+  border: "none",
+  padding: "8px 0",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  gap: "4px",
+  textDecoration: "underline",
+  ...theme.typography.body3,
+  color: theme.custom.colors.darkGray2,
+  "& svg": { width: "16px", height: "16px", flexShrink: 0 },
+  "&:hover": { opacity: 0.8 },
+}))
+
+// ─── Info note ────────────────────────────────────────────────────────────────
+
+const InfoNote = styled("div")(({ theme }) => ({
+  display: "flex",
+  alignItems: "flex-start",
+  gap: "4px",
+  ...theme.typography.body3,
+  color: theme.custom.colors.silverGrayDark,
+  "& svg": { width: "16px", height: "16px", marginTop: "1px", flexShrink: 0 },
+}))
+
+// ─── Description text ─────────────────────────────────────────────────────────
+
+const DescriptionText = styled(Typography)(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.darkGray2,
 })) as typeof Typography
 
-type InvalidEmailListProps = {
-  emails: string[]
-}
+// ─── Stats card ───────────────────────────────────────────────────────────────
 
-const InvalidEmailList: React.FC<InvalidEmailListProps> = ({ emails }) => {
+const StatsCard = styled("div")<{ $variant: "default" | "error" }>(
+  ({ theme, $variant }) => ({
+    backgroundColor:
+      $variant === "error" ? theme.custom.colors.white : theme.custom.colors.lightGray1,
+    border: `1px solid ${$variant === "error" ? theme.custom.colors.red : theme.custom.colors.lightGray2}`,
+    borderRadius: "4px",
+    padding: "16px",
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+    width: "100%",
+  }),
+)
+
+const StatDivider = styled("div")(({ theme }) => ({
+  width: "1px",
+  alignSelf: "stretch",
+  backgroundColor: theme.custom.colors.lightGray2,
+  flexShrink: 0,
+}))
+
+const StatColumn = styled("div")({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  flex: "1 0 0",
+  minWidth: 0,
+  gap: "4px",
+})
+
+const StatValue = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== "$error",
+})<{ $error?: boolean }>(({ theme, $error }) => ({
+  ...theme.typography.h3,
+  color: $error ? theme.custom.colors.red : theme.custom.colors.darkGray2,
+  lineHeight: "36px",
+  textAlign: "center",
+  width: "100%",
+}))
+
+const StatLabel = styled(Typography)(({ theme }) => ({
+  ...theme.typography.subtitle3,
+  color: theme.custom.colors.silverGrayDark,
+  textAlign: "center",
+  width: "100%",
+})) as typeof Typography
+
+// ─── Small helpers ────────────────────────────────────────────────────────────
+
+const SHOW_MORE_THRESHOLD = 3
+
+const EmailListExpand: React.FC<{ emails: string[] }> = ({ emails }) => {
   const [expanded, setExpanded] = useState(false)
   const visible = expanded ? emails : emails.slice(0, SHOW_MORE_THRESHOLD)
   const hidden = emails.length - SHOW_MORE_THRESHOLD
 
   return (
     <div>
-      <EmailList>
+      <EmailListUl>
         {visible.map((email) => (
           <li key={email}>{email}</li>
         ))}
-      </EmailList>
+      </EmailListUl>
       {!expanded && hidden > 0 && (
         <ShowMoreButton onClick={() => setExpanded(true)}>
-          +{hidden} more
+          + {hidden} more
         </ShowMoreButton>
       )}
     </div>
   )
 }
 
+const copyToClipboard = (text: string) => {
+  navigator.clipboard.writeText(text).catch(() => undefined)
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 type AssignSeatsConfirmModalProps = {
   open: boolean
   onClose: () => void
-  onConfirm: () => void
+  onConfirm: () => void | Promise<void>
   validCount: number
   availableSeats: number
   invalidEmails: string[]
+  duplicateEmails: string[]
   duplicateCount: number
   skippedCount: number
 }
+
+type Step = "review" | "confirm"
 
 const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   open,
@@ -78,73 +202,298 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   validCount,
   availableSeats,
   invalidEmails,
+  duplicateEmails,
   duplicateCount,
   skippedCount,
 }) => {
   const descriptionId = useId()
-  const hasIssues =
-    invalidEmails.length > 0 || duplicateCount > 0 || skippedCount > 0
+
+  const hasInvalid = invalidEmails.length > 0
+  const hasDuplicates = duplicateCount > 0
+  const hasIssues = hasInvalid || hasDuplicates
   const overCapacity = validCount > availableSeats
-  const confirmText = overCapacity
-    ? "Ok"
-    : `Send ${validCount} ${pluralize("email", validCount)}`
-  const overCapacityBody = overCapacity
-    ? `${validCount} ${pluralize("email", validCount)} entered, only ${availableSeats} ${pluralize("seat", availableSeats)} remaining. Please enter fewer emails.`
-    : ""
-  const descriptionText = overCapacity
-    ? overCapacityBody
-    : hasIssues
-      ? `${validCount} ${pluralize("email", validCount)} imported and ready to assign.${duplicateCount > 0 ? ` ${duplicateCount} ${pluralize("duplicate", duplicateCount)} removed — only 1 instance kept per address.` : ""}${skippedCount > 0 ? ` ${skippedCount} ${pluralize("row", skippedCount)} skipped — no email address found.` : ""}`
-      : `Are you sure you want to send invitations to ${validCount} ${pluralize("recipient", validCount)}?`
+
+  const [step, setStep] = useState<Step>(() =>
+    hasIssues && !overCapacity ? "review" : "confirm",
+  )
+  const [copiedInvalid, setCopiedInvalid] = useState(false)
+  const [copiedDuplicate, setCopiedDuplicate] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
+  const copyInvalidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const copyDuplicateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (open) {
+      setStep(hasIssues && !overCapacity ? "review" : "confirm")
+      setCopiedInvalid(false)
+      setCopiedDuplicate(false)
+      setSendError(null)
+    }
+  }, [open, hasIssues, overCapacity])
+
+  useEffect(() => {
+    return () => {
+      if (copyInvalidTimerRef.current) clearTimeout(copyInvalidTimerRef.current)
+      if (copyDuplicateTimerRef.current) clearTimeout(copyDuplicateTimerRef.current)
+    }
+  }, [])
+
+  const handleCopyInvalid = () => {
+    copyToClipboard(invalidEmails.join("\n"))
+    setCopiedInvalid(true)
+    if (copyInvalidTimerRef.current) clearTimeout(copyInvalidTimerRef.current)
+    copyInvalidTimerRef.current = setTimeout(() => setCopiedInvalid(false), 2000)
+  }
+
+  const handleCopyDuplicate = () => {
+    copyToClipboard(duplicateEmails.join("\n"))
+    setCopiedDuplicate(true)
+    if (copyDuplicateTimerRef.current) clearTimeout(copyDuplicateTimerRef.current)
+    copyDuplicateTimerRef.current = setTimeout(() => setCopiedDuplicate(false), 2000)
+  }
+
+  const handleSend = async () => {
+    setIsSubmitting(true)
+    setSendError(null)
+    try {
+      await onConfirm()
+      onClose()
+    } catch {
+      setSendError("Something went wrong. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const seatsAfterSending = availableSeats - validCount
+  const overLimit = validCount - availableSeats
+
+  // ── Over-capacity state (CSV only) ────────────────────────────────────────
+
+  if (overCapacity) {
+    return (
+      <Dialog
+        open={open}
+        onClose={onClose}
+        fullWidth
+        maxWidth="sm"
+        aria-describedby={descriptionId}
+        title={
+          <>
+            <IconBadge $variant="error" aria-hidden="true">
+              <RiAlertFill />
+            </IconBadge>
+            Not enough seats available
+          </>
+        }
+        actions={
+          <DialogActions>
+            <Button variant="primary" onClick={onClose}>
+              Close &amp; Update CSV
+            </Button>
+          </DialogActions>
+        }
+      >
+        <VisuallyHidden id={descriptionId}>
+          {`${validCount} learners were imported, but only ${availableSeats} seats remain. ${overLimit} learners exceed the remaining contract capacity and cannot be assigned.`}
+        </VisuallyHidden>
+        <Stack gap="24px">
+          <DescriptionText>
+            <strong>{validCount}</strong> learners were imported, but only{" "}
+            <strong>{availableSeats} seats</strong> remain.{" "}
+            <strong>{overLimit} learners</strong> exceed the remaining contract
+            capacity and cannot be assigned.
+          </DescriptionText>
+          <StatsCard $variant="error">
+            <StatColumn>
+              <StatValue>{validCount}</StatValue>
+              <StatLabel>Imported</StatLabel>
+            </StatColumn>
+            <StatDivider />
+            <StatColumn>
+              <StatValue $error>{availableSeats}</StatValue>
+              <StatLabel>Seats available</StatLabel>
+            </StatColumn>
+            <StatDivider />
+            <StatColumn>
+              <StatValue $error>{overLimit}</StatValue>
+              <StatLabel>Over the limit</StatLabel>
+            </StatColumn>
+          </StatsCard>
+          <InfoNote>
+            <RiInformationLine aria-hidden="true" />
+            Update your CSV to reduce the number of learners before continuing.
+          </InfoNote>
+        </Stack>
+      </Dialog>
+    )
+  }
+
+  // ── Review step (has invalid/duplicate emails) ────────────────────────────
+
+  if (step === "review") {
+    const reviewTitle = hasInvalid
+      ? "Some learners could not be added"
+      : "Duplicate emails removed"
+
+    return (
+      <Dialog
+        open={open}
+        onClose={onClose}
+        fullWidth
+        maxWidth="sm"
+        aria-describedby={descriptionId}
+        title={
+          <>
+            <IconBadge $variant="warning" aria-hidden="true">
+              <RiAlertFill />
+            </IconBadge>
+            {reviewTitle}
+          </>
+        }
+        actions={
+          <DialogActions>
+            <Button variant="bordered" color="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={() => setStep("confirm")}>
+              Review &amp; Confirm
+            </Button>
+          </DialogActions>
+        }
+      >
+        <VisuallyHidden id={descriptionId}>
+          {`${validCount} learners are ready to invite.${hasInvalid ? ` ${invalidEmails.length} email addresses were invalid.` : ""}${hasDuplicates ? ` ${duplicateCount} duplicate email addresses were removed.` : ""}`}
+        </VisuallyHidden>
+        <Stack gap="24px">
+          <DescriptionText>
+            <strong>{validCount} learners are ready</strong> to invite.{" "}
+            {hasInvalid && (
+              <>
+                <strong>{invalidEmails.length}</strong>{" "}
+                {pluralize("email address", invalidEmails.length, "email addresses")}{" "}
+                {hasInvalid && hasDuplicates
+                  ? "were invalid."
+                  : "were invalid and will be excluded."}
+              </>
+            )}
+            {hasInvalid && hasDuplicates && " "}
+            {hasDuplicates && (
+              <>
+                <strong>{duplicateCount}</strong> duplicate{" "}
+                {pluralize("email address", duplicateCount, "email addresses")}{" "}
+                {duplicateCount === 1 ? "was" : "were"} removed.
+                {!hasInvalid && " Only the first instance of each email was kept."}
+              </>
+            )}
+            {skippedCount > 0 && (
+              <>
+                {" "}
+                <strong>
+                  {skippedCount} {pluralize("row", skippedCount)} skipped
+                </strong>{" "}
+                — no email address found.
+              </>
+            )}
+          </DescriptionText>
+
+          {hasInvalid && (
+            <EmailAlertBox>
+              <AlertBoxTitle component="p">
+                Invalid email addresses ({invalidEmails.length})
+              </AlertBoxTitle>
+              <EmailListExpand emails={invalidEmails} />
+              <CopyLink onClick={handleCopyInvalid} type="button">
+                <RiFileCopyLine aria-hidden="true" />
+                {copiedInvalid ? "Copied!" : "Copy all invalid emails"}
+              </CopyLink>
+            </EmailAlertBox>
+          )}
+
+          {hasDuplicates && (
+            <EmailAlertBox>
+              <AlertBoxTitle component="p">
+                Duplicate email addresses ({duplicateCount})
+              </AlertBoxTitle>
+              <EmailListExpand emails={duplicateEmails} />
+              <CopyLink onClick={handleCopyDuplicate} type="button">
+                <RiFileCopyLine aria-hidden="true" />
+                {copiedDuplicate ? "Copied!" : "Copy all duplicate emails"}
+              </CopyLink>
+            </EmailAlertBox>
+          )}
+
+          <InfoNote>
+            <RiInformationLine aria-hidden="true" />
+            Only valid, unique emails will be assigned.
+          </InfoNote>
+        </Stack>
+      </Dialog>
+    )
+  }
+
+  // ── Confirm step ("Ready to send invitations") ────────────────────────────
 
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      onConfirm={overCapacity ? () => {} : onConfirm}
-      title={
-        overCapacity
-          ? "Too many invitees"
-          : `${validCount} ${pluralize("email", validCount)} ready to assign`
-      }
-      confirmText={confirmText}
-      cancelText={overCapacity ? null : "Cancel"}
       fullWidth
       maxWidth="sm"
       aria-describedby={descriptionId}
+      title="Ready to send invitations"
+      actions={
+        <DialogActions>
+          <Button variant="bordered" color="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSend}
+            disabled={isSubmitting}
+          >
+            Send {validCount} {pluralize("Invitation", validCount)}
+          </Button>
+        </DialogActions>
+      }
     >
-      <VisuallyHidden id={descriptionId}>{descriptionText}</VisuallyHidden>
-      {overCapacity ? (
-        <Typography variant="body1">{overCapacityBody}</Typography>
-      ) : (
-        <Stack gap="16px">
-          <Typography variant="body1">
-            {hasIssues
-              ? `${validCount} ${pluralize("email", validCount)} imported and ready to assign.`
-              : `Are you sure you want to send invitations to ${validCount} ${pluralize("recipient", validCount)}?`}
+      <VisuallyHidden id={descriptionId}>
+        {`You are about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with secure link to claim their seat and access the materials.`}
+      </VisuallyHidden>
+      <Stack gap="24px">
+        <DescriptionText>
+          You are about to send <strong>{validCount}</strong> invitation{" "}
+          {pluralize("email", validCount)} from MIT Learn. Learners will receive
+          an email with secure link to claim their seat and access the materials.
+        </DescriptionText>
+        <StatsCard $variant="default">
+          <StatColumn>
+            <StatValue>{validCount}</StatValue>
+            <StatLabel>Invitations</StatLabel>
+          </StatColumn>
+          <StatDivider />
+          <StatColumn>
+            <StatValue>{seatsAfterSending}</StatValue>
+            <StatLabel>Seats remaining after sending</StatLabel>
+          </StatColumn>
+          <StatDivider />
+          <StatColumn>
+            <RiMailLine
+              aria-hidden="true"
+              style={{ width: "28px", height: "28px" }}
+            />
+            <StatLabel>
+              Emails will be sent immediately and cannot be recalled.
+            </StatLabel>
+          </StatColumn>
+        </StatsCard>
+        {sendError && (
+          <Typography variant="body2" component="p" color="error">
+            {sendError}
           </Typography>
-          {duplicateCount > 0 && (
-            <DuplicateNotice>
-              {duplicateCount} {pluralize("duplicate", duplicateCount)} removed
-              — only 1 instance kept per address.
-            </DuplicateNotice>
-          )}
-          {skippedCount > 0 && (
-            <DuplicateNotice>
-              {skippedCount} {pluralize("row", skippedCount)} skipped — no email
-              address found.
-            </DuplicateNotice>
-          )}
-          {invalidEmails.length > 0 && (
-            <Stack gap="4px">
-              <SectionLabel component="p">
-                These addresses were not valid and were not added:
-              </SectionLabel>
-              <InvalidEmailList emails={invalidEmails} />
-            </Stack>
-          )}
-        </Stack>
-      )}
+        )}
+      </Stack>
     </Dialog>
   )
 }

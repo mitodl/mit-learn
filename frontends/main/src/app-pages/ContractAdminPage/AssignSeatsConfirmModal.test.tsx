@@ -9,214 +9,56 @@ const baseProps = {
   validCount: 3,
   availableSeats: 10,
   invalidEmails: [],
+  duplicateEmails: [],
   duplicateCount: 0,
   skippedCount: 0,
 }
 
-describe("AssignSeatsConfirmModal", () => {
+describe("AssignSeatsConfirmModal — confirm step (no issues)", () => {
   beforeEach(() => jest.clearAllMocks())
 
-  test("shows valid count in title and confirm button", () => {
+  test("shows 'Ready to send invitations' title when there are no issues", () => {
     renderWithTheme(<AssignSeatsConfirmModal {...baseProps} />)
 
     expect(
-      screen.getByRole("heading", { name: /3 emails ready to assign/i }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole("button", { name: /send 3 emails/i }),
+      screen.getByRole("heading", { name: /ready to send invitations/i }),
     ).toBeInTheDocument()
   })
 
-  test("shows singular form for a single email", () => {
+  test("shows invitation count in the send button", () => {
+    renderWithTheme(<AssignSeatsConfirmModal {...baseProps} />)
+
+    expect(
+      screen.getByRole("button", { name: /send 3 invitations/i }),
+    ).toBeInTheDocument()
+  })
+
+  test("shows singular form for one invitation", () => {
     renderWithTheme(<AssignSeatsConfirmModal {...baseProps} validCount={1} />)
 
     expect(
-      screen.getByRole("heading", { name: /1 email ready to assign/i }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole("button", { name: /send 1 email/i }),
+      screen.getByRole("button", { name: /send 1 invitation$/i }),
     ).toBeInTheDocument()
   })
 
-  test("shows confirmation copy when there are no issues", () => {
+  test("shows seats-remaining stat", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal {...baseProps} validCount={3} availableSeats={10} />,
+    )
+
+    expect(screen.getByText("7")).toBeInTheDocument()
+    expect(screen.getByText(/seats remaining after sending/i)).toBeInTheDocument()
+  })
+
+  test("calls onConfirm and then onClose when Send is clicked", async () => {
     renderWithTheme(<AssignSeatsConfirmModal {...baseProps} />)
 
-    expect(
-      screen.getAllByText(/are you sure you want to send/i)[0],
-    ).toBeInTheDocument()
-  })
-
-  test("shows imported copy when there are issues", () => {
-    renderWithTheme(
-      <AssignSeatsConfirmModal
-        {...baseProps}
-        invalidEmails={["bad@example"]}
-      />,
+    await user.click(
+      screen.getByRole("button", { name: /send 3 invitations/i }),
     )
 
-    expect(
-      screen.getAllByText(/imported and ready to assign/i)[0],
-    ).toBeInTheDocument()
-  })
-
-  test("shows duplicate count when duplicates were removed", () => {
-    renderWithTheme(
-      <AssignSeatsConfirmModal {...baseProps} duplicateCount={2} />,
-    )
-
-    expect(screen.getAllByText(/2 duplicates removed/i)[0]).toBeInTheDocument()
-  })
-
-  test("does not show duplicate section when duplicateCount is 0", () => {
-    renderWithTheme(
-      <AssignSeatsConfirmModal {...baseProps} duplicateCount={0} />,
-    )
-
-    expect(screen.queryByText(/duplicate/i)).not.toBeInTheDocument()
-  })
-
-  test("shows skipped row count when rows were skipped", () => {
-    renderWithTheme(<AssignSeatsConfirmModal {...baseProps} skippedCount={3} />)
-
-    expect(screen.getAllByText(/3 rows skipped/i)[0]).toBeInTheDocument()
-    expect(
-      screen.getAllByText(/no email address found/i)[0],
-    ).toBeInTheDocument()
-  })
-
-  test("does not show skipped section when skippedCount is 0", () => {
-    renderWithTheme(<AssignSeatsConfirmModal {...baseProps} skippedCount={0} />)
-
-    expect(screen.queryByText(/skipped/i)).not.toBeInTheDocument()
-  })
-
-  test("lists invalid emails", () => {
-    renderWithTheme(
-      <AssignSeatsConfirmModal
-        {...baseProps}
-        invalidEmails={["bad@", "also-bad@"]}
-      />,
-    )
-
-    expect(screen.getByText("bad@")).toBeInTheDocument()
-    expect(screen.getByText("also-bad@")).toBeInTheDocument()
-    expect(
-      screen.getByText(/these addresses were not valid/i),
-    ).toBeInTheDocument()
-  })
-
-  test("does not show invalid section when invalidEmails is empty", () => {
-    renderWithTheme(<AssignSeatsConfirmModal {...baseProps} />)
-
-    expect(
-      screen.queryByText(/these addresses were not valid/i),
-    ).not.toBeInTheDocument()
-  })
-
-  test("collapses long invalid list beyond 10 items", () => {
-    const manyEmails = Array.from({ length: 15 }, (_, i) => `bad${i}@`)
-    renderWithTheme(
-      <AssignSeatsConfirmModal {...baseProps} invalidEmails={manyEmails} />,
-    )
-
-    // First 10 visible, rest hidden behind show more
-    expect(screen.getByText("bad0@")).toBeInTheDocument()
-    expect(screen.queryByText("bad10@")).not.toBeInTheDocument()
-    expect(
-      screen.getByRole("button", { name: /\+5 more/i }),
-    ).toBeInTheDocument()
-  })
-
-  test("expands full list when show more is clicked", async () => {
-    const manyEmails = Array.from({ length: 15 }, (_, i) => `bad${i}@`)
-    renderWithTheme(
-      <AssignSeatsConfirmModal {...baseProps} invalidEmails={manyEmails} />,
-    )
-
-    await user.click(screen.getByRole("button", { name: /\+5 more/i }))
-
-    expect(screen.getByText("bad14@")).toBeInTheDocument()
-    expect(
-      screen.queryByRole("button", { name: /more/i }),
-    ).not.toBeInTheDocument()
-  })
-
-  test("shows over-capacity dialog when validCount exceeds availableSeats", () => {
-    renderWithTheme(
-      <AssignSeatsConfirmModal
-        {...baseProps}
-        validCount={15}
-        availableSeats={10}
-      />,
-    )
-
-    expect(
-      screen.getAllByText(
-        /15 emails entered, only 10 seats remaining\. Please enter fewer emails\./i,
-      ).length,
-    ).toBeGreaterThan(0)
-    expect(
-      screen.getByRole("heading", { name: /too many invitees/i }),
-    ).toBeInTheDocument()
-  })
-
-  test("does not show over-capacity dialog when validCount is within availableSeats", () => {
-    renderWithTheme(
-      <AssignSeatsConfirmModal
-        {...baseProps}
-        validCount={3}
-        availableSeats={10}
-      />,
-    )
-
-    expect(
-      screen.queryByText(/emails entered, only \d+ seats remaining/i),
-    ).not.toBeInTheDocument()
-  })
-
-  test("over-capacity: shows Ok button and no Cancel button", () => {
-    renderWithTheme(
-      <AssignSeatsConfirmModal
-        {...baseProps}
-        validCount={15}
-        availableSeats={10}
-      />,
-    )
-
-    expect(screen.getByRole("button", { name: "Ok" })).toBeInTheDocument()
-    expect(
-      screen.queryByRole("button", { name: /cancel/i }),
-    ).not.toBeInTheDocument()
-  })
-
-  test("over-capacity: Ok button closes the dialog", async () => {
-    renderWithTheme(
-      <AssignSeatsConfirmModal
-        {...baseProps}
-        validCount={15}
-        availableSeats={10}
-      />,
-    )
-
-    await user.click(screen.getByRole("button", { name: "Ok" }))
-
+    expect(baseProps.onConfirm).toHaveBeenCalledTimes(1)
     expect(baseProps.onClose).toHaveBeenCalledTimes(1)
-    expect(baseProps.onConfirm).not.toHaveBeenCalled()
-  })
-
-  test("CSV within capacity: shows normal Send button and Cancel button", () => {
-    renderWithTheme(
-      <AssignSeatsConfirmModal
-        {...baseProps}
-        validCount={5}
-        availableSeats={10}
-      />,
-    )
-
-    expect(
-      screen.getByRole("button", { name: /send 5 emails/i }),
-    ).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument()
   })
 
   test("calls onClose when Cancel is clicked", async () => {
@@ -226,12 +68,184 @@ describe("AssignSeatsConfirmModal", () => {
 
     expect(baseProps.onClose).toHaveBeenCalledTimes(1)
   })
+})
 
-  test("calls onConfirm when Send is clicked", async () => {
-    renderWithTheme(<AssignSeatsConfirmModal {...baseProps} />)
+describe("AssignSeatsConfirmModal — review step (has issues)", () => {
+  beforeEach(() => jest.clearAllMocks())
 
-    await user.click(screen.getByRole("button", { name: /send 3 emails/i }))
+  test("shows review step when there are invalid emails", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...baseProps}
+        invalidEmails={["bad@", "alsabad@"]}
+      />,
+    )
 
-    expect(baseProps.onConfirm).toHaveBeenCalledTimes(1)
+    expect(
+      screen.getByRole("heading", { name: /some learners could not be added/i }),
+    ).toBeInTheDocument()
+  })
+
+  test("shows 'Duplicate emails removed' title when only duplicates exist", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...baseProps}
+        duplicateCount={2}
+        duplicateEmails={["dup@example.com", "dup2@example.com"]}
+      />,
+    )
+
+    expect(
+      screen.getByRole("heading", { name: /duplicate emails removed/i }),
+    ).toBeInTheDocument()
+  })
+
+  test("shows invalid email addresses in an alert box", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...baseProps}
+        invalidEmails={["bad@", "alsabad@"]}
+      />,
+    )
+
+    expect(screen.getByText("bad@")).toBeInTheDocument()
+    expect(screen.getByText("alsabad@")).toBeInTheDocument()
+    expect(
+      screen.getByText(/invalid email addresses \(2\)/i),
+    ).toBeInTheDocument()
+  })
+
+  test("shows duplicate emails in an alert box", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...baseProps}
+        duplicateCount={1}
+        duplicateEmails={["dup@example.com"]}
+      />,
+    )
+
+    expect(screen.getByText("dup@example.com")).toBeInTheDocument()
+    expect(
+      screen.getByText(/duplicate email addresses \(1\)/i),
+    ).toBeInTheDocument()
+  })
+
+  test("collapses email list beyond 3 items with show-more button", () => {
+    const emails = ["a@x.com", "b@x.com", "c@x.com", "d@x.com", "e@x.com"]
+    renderWithTheme(
+      <AssignSeatsConfirmModal {...baseProps} invalidEmails={emails} />,
+    )
+
+    expect(screen.getByText("a@x.com")).toBeInTheDocument()
+    expect(screen.queryByText("d@x.com")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /\+ 2 more/i })).toBeInTheDocument()
+  })
+
+  test("expands full list when show more is clicked", async () => {
+    const emails = ["a@x.com", "b@x.com", "c@x.com", "d@x.com", "e@x.com"]
+    renderWithTheme(
+      <AssignSeatsConfirmModal {...baseProps} invalidEmails={emails} />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /\+ 2 more/i }))
+
+    expect(screen.getByText("e@x.com")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /more/i })).not.toBeInTheDocument()
+  })
+
+  test("shows skipped count in description when rows were skipped", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...baseProps}
+        invalidEmails={["bad@"]}
+        skippedCount={4}
+      />,
+    )
+
+    expect(screen.getByText(/4 rows skipped/i)).toBeInTheDocument()
+  })
+
+  test("advancing from review step shows confirm step", async () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...baseProps}
+        invalidEmails={["bad@"]}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: /review & confirm/i }),
+    )
+
+    expect(
+      screen.getByRole("heading", { name: /ready to send invitations/i }),
+    ).toBeInTheDocument()
+  })
+})
+
+describe("AssignSeatsConfirmModal — over-capacity state (CSV only)", () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  test("shows 'Not enough seats available' title when over capacity", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...baseProps}
+        validCount={15}
+        availableSeats={10}
+      />,
+    )
+
+    expect(
+      screen.getByRole("heading", { name: /not enough seats available/i }),
+    ).toBeInTheDocument()
+  })
+
+  test("shows imported, available, and over-limit stats", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...baseProps}
+        validCount={15}
+        availableSeats={10}
+      />,
+    )
+
+    expect(screen.getAllByText("15")[0]).toBeInTheDocument()
+    expect(screen.getByText("10")).toBeInTheDocument()
+    expect(screen.getByText("5")).toBeInTheDocument()
+    expect(screen.getByText("Imported")).toBeInTheDocument()
+    expect(screen.getByText("Seats available")).toBeInTheDocument()
+    expect(screen.getByText("Over the limit")).toBeInTheDocument()
+  })
+
+  test("shows only 'Close & Update CSV' button with no Cancel", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...baseProps}
+        validCount={15}
+        availableSeats={10}
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", { name: /close & update csv/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /cancel/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("'Close & Update CSV' calls onClose and not onConfirm", async () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...baseProps}
+        validCount={15}
+        availableSeats={10}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /close & update csv/i }))
+
+    expect(baseProps.onClose).toHaveBeenCalledTimes(1)
+    expect(baseProps.onConfirm).not.toHaveBeenCalled()
   })
 })
