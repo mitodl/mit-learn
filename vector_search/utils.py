@@ -5,7 +5,12 @@ import uuid
 from functools import cache
 
 from django.conf import settings
+<<<<<<< HEAD
 from django.db.models import Q
+=======
+from django.db.models import Prefetch, Q
+from langchain_experimental.text_splitter import SemanticChunker
+>>>>>>> a7f66ae58 (feedback)
 from langchain_text_splitters import (
     MarkdownHeaderTextSplitter,
     RecursiveCharacterTextSplitter,
@@ -17,6 +22,7 @@ from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.models import (
     ContentFile,
     LearningResource,
+    LearningResourceRun,
     LearningResourceTopic,
 )
 from learning_resources.serializers import (
@@ -1140,12 +1146,21 @@ def best_run_ids_for_resources(readable_ids):
     Returns:
         list[str]: LearningResourceRun.run_id values to filter on
     """
+    # Prefetch published runs into _published_runs so both best_run and the
+    # test_mode branch resolve without a per-resource query (avoids an N+1).
+    resources = LearningResource.objects.filter(
+        readable_id__in=readable_ids
+    ).prefetch_related(
+        Prefetch(
+            "runs",
+            queryset=LearningResourceRun.objects.filter(published=True),
+            to_attr="_published_runs",
+        )
+    )
     run_ids = []
-    for resource in LearningResource.objects.filter(readable_id__in=readable_ids):
+    for resource in resources:
         if resource.test_mode:
-            run_ids.extend(
-                resource.runs.filter(published=True).values_list("run_id", flat=True)
-            )
+            run_ids.extend(run.run_id for run in resource.published_runs)
         elif resource.best_run:
             run_ids.append(resource.best_run.run_id)
     return run_ids

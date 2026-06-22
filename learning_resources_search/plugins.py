@@ -205,9 +205,13 @@ class SearchIndexPlugin:
         Qdrant while the course is still published), deletion always purges
         Qdrant because the content files are removed too.
         """
-        if not run.learning_resource.test_mode:
+        resource = run.learning_resource
+        if not resource.test_mode:
             self.resource_run_unpublished(run)
-            if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+            if (
+                django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS
+                and resource.published
+            ):
                 try_with_retry_as_task(
                     chain(vector_tasks.remove_run_content_files.si(run.id))
                 )

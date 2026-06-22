@@ -247,15 +247,23 @@ def test_resource_unpublished_course_purges_runs_from_qdrant(
 @pytest.mark.django_db
 @pytest.mark.parametrize("has_content_files", [True, False])
 @pytest.mark.parametrize("test_mode", [True, False])
+@pytest.mark.parametrize("resource_published", [True, False])
 def test_search_index_plugin_resource_run_delete(
-    mock_search_index_helpers, settings, has_content_files, test_mode
+    mock_search_index_helpers,
+    settings,
+    has_content_files,
+    test_mode,
+    resource_published,
 ):
     """The plugin function should remove contenfiles from the index and delete the run"""
-    # Course stays published: run-unpublish alone would keep Qdrant, but deletion
-    # removes the content files, so Qdrant must be purged unconditionally.
+    # Deletion removes the content files, so Qdrant must be purged for every
+    # non-test_mode run. It must be purged exactly once: resource_run_unpublished
+    # already purges Qdrant for a retired course, so delete only purges the
+    # still-published case to avoid a duplicate task.
     settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
     run = LearningResourceRunFactory.create(
-        learning_resource__published=True, learning_resource__test_mode=test_mode
+        learning_resource__published=resource_published,
+        learning_resource__test_mode=test_mode,
     )
     if has_content_files:
         ContentFileFactory.create(run=run)
@@ -265,12 +273,12 @@ def test_search_index_plugin_resource_run_delete(
         mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_called_once_with(
             run_id,
             unpublished_only=False,
-            keep_published=True,
+            keep_published=resource_published,
         )
     else:
         mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_not_called()
-    if not test_mode:
-        # Deletion always purges Qdrant, even though the course is still published.
+    if not test_mode and (resource_published or has_content_files):
+        # Purged exactly once regardless of publication state — no duplicate task.
         mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_called_once_with(
             run_id
         )
