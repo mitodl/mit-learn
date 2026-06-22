@@ -103,13 +103,14 @@ export const UnenrolledCourseCard = ({
     </TitleText>
   )
   const daysAgo = Math.abs(daysUntilEnd ?? 0)
-  const endDateSection = endDate ? (
-    <EndDateText>
-      {hasEnded
-        ? `Ended ${daysAgo} ${daysAgo === 1 ? "day" : "days"} ago`
-        : `Ends in ${daysUntilEnd} ${daysUntilEnd === 1 ? "day" : "days"}`}
-    </EndDateText>
-  ) : null
+  const endDateSection =
+    daysUntilEnd !== null && hasEnded !== null ? (
+      <EndDateText>
+        {hasEnded
+          ? `Ended ${daysAgo} ${daysAgo === 1 ? "day" : "days"} ago`
+          : `Ends in ${daysUntilEnd} ${daysUntilEnd === 1 ? "day" : "days"}`}
+      </EndDateText>
+    ) : null
   const startButton = isCompact ? (
     <CoursewareButton
       size="small"
