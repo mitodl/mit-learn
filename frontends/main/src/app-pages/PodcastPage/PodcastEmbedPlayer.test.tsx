@@ -23,23 +23,13 @@ const makeEpisode = (
 ): PodcastEpisodeResource =>
   factories.learningResources.podcastEpisode(overrides)
 
-const renderPlayer = async (
-  resource: LearningResource = makeEpisode(),
-  options: { waitForAutoPlay?: boolean } = {},
-) => {
-  const { waitForAutoPlay = true } = options
+const renderPlayer = (resource: LearningResource = makeEpisode()) => {
   const view = render(
     <ThemeProvider>
       <PodcastEmbedPlayer resource={resource} />
     </ThemeProvider>,
   )
-  if (waitForAutoPlay) {
-    await waitFor(() =>
-      expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalled(),
-    )
-  }
   const audio = document.querySelector("audio") as HTMLAudioElement
-  const simulateCanPlay = () => fireEvent.canPlay(audio)
   const simulateLoadedMetadata = (duration: number) => {
     Object.defineProperty(audio, "duration", {
       value: duration,
@@ -47,18 +37,18 @@ const renderPlayer = async (
     })
     fireEvent.loadedMetadata(audio)
   }
-  return { ...view, audio, simulateCanPlay, simulateLoadedMetadata }
+  return { ...view, audio, simulateLoadedMetadata }
 }
 
 describe("PodcastEmbedPlayer", () => {
   describe("metadata display", () => {
-    test("renders episode title", async () => {
+    test("renders episode title", () => {
       const resource = makeEpisode({ title: "Deep Dive Episode" })
-      await renderPlayer(resource)
+      renderPlayer(resource)
       expect(screen.getByText("Deep Dive Episode")).toBeInTheDocument()
     })
 
-    test("renders offered_by name as podcast label", async () => {
+    test("renders offered_by name as podcast label", () => {
       const resource = makeEpisode({
         offered_by: {
           channel_url: "https://example.com/channel",
@@ -66,17 +56,17 @@ describe("PodcastEmbedPlayer", () => {
           name: "MITx",
         },
       })
-      await renderPlayer(resource)
+      renderPlayer(resource)
       expect(screen.getByText("MITx")).toBeInTheDocument()
     })
 
-    test('falls back to "Podcast" when offered_by is null', async () => {
+    test('falls back to "Podcast" when offered_by is null', () => {
       const resource = makeEpisode({ offered_by: null })
-      await renderPlayer(resource)
+      renderPlayer(resource)
       expect(screen.getByText("Podcast")).toBeInTheDocument()
     })
 
-    test("renders cover art when image URL is present", async () => {
+    test("renders cover art when image URL is present", () => {
       const resource = makeEpisode({
         image: {
           id: 1,
@@ -84,20 +74,20 @@ describe("PodcastEmbedPlayer", () => {
           alt: "Cover art",
         },
       })
-      await renderPlayer(resource)
+      renderPlayer(resource)
       const img = screen.getByRole("img", { name: /cover art/i })
       expect(img).toHaveAttribute("src", "https://example.com/cover.jpg")
     })
 
-    test("renders placeholder when image URL is absent", async () => {
+    test("renders placeholder when image URL is absent", () => {
       const resource = makeEpisode({ image: null })
-      await renderPlayer(resource)
+      renderPlayer(resource)
       expect(screen.queryByRole("img")).not.toBeInTheDocument()
     })
   })
 
   describe("audio source", () => {
-    test("audio element src uses audio_url", async () => {
+    test("audio element src uses audio_url", () => {
       const resource = makeEpisode({
         podcast_episode: {
           ...makeEpisode().podcast_episode!,
@@ -105,11 +95,11 @@ describe("PodcastEmbedPlayer", () => {
           episode_link: "https://example.com/episode",
         },
       })
-      const { audio } = await renderPlayer(resource)
+      const { audio } = renderPlayer(resource)
       expect(audio).toHaveAttribute("src", "https://cdn.example.com/ep.mp3")
     })
 
-    test("does not use episode_link as audio src when audio_url is absent", async () => {
+    test("does not use episode_link as audio src when audio_url is absent", () => {
       const resource = makeEpisode({
         podcast_episode: {
           ...makeEpisode().podcast_episode!,
@@ -117,42 +107,40 @@ describe("PodcastEmbedPlayer", () => {
           episode_link: "https://example.com/webpage",
         },
       })
-      const { audio } = await renderPlayer(resource, { waitForAutoPlay: false })
+      const { audio } = renderPlayer(resource)
       expect(audio).not.toHaveAttribute("src")
     })
 
-    test("audio element has no src when resource is not a podcast episode", async () => {
+    test("audio element has no src when resource is not a podcast episode", () => {
       const resource = factories.learningResources.course() as LearningResource
-      const { audio } = await renderPlayer(resource, {
-        waitForAutoPlay: false,
-      })
+      const { audio } = renderPlayer(resource)
       expect(audio).not.toHaveAttribute("src")
     })
   })
 
   describe("play/pause", () => {
-    test("auto-plays on mount", async () => {
-      await renderPlayer()
+    test("does not auto-play on mount", () => {
+      renderPlayer()
+      expect(window.HTMLMediaElement.prototype.play).not.toHaveBeenCalled()
+    })
+
+    test("shows enabled Play button on mount", () => {
+      renderPlayer()
+      const btn = screen.getByRole("button", { name: /^play$/i })
+      expect(btn).not.toBeDisabled()
+    })
+
+    test("clicking Play calls audio.play() and shows Pause", async () => {
+      renderPlayer()
+      fireEvent.click(screen.getByRole("button", { name: /^play$/i }))
       expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalled()
-    })
-
-    test("shows loading state initially", async () => {
-      await renderPlayer()
-      // canPlay has not fired yet — still buffering
-      expect(screen.getByRole("button", { name: /^loading$/i })).toBeDisabled()
-    })
-
-    test("enables play/pause button after canPlay fires", async () => {
-      const { simulateCanPlay } = await renderPlayer()
-      simulateCanPlay()
-      expect(
-        screen.getByRole("button", { name: /^pause$/i }),
-      ).not.toBeDisabled()
+      await screen.findByRole("button", { name: /^pause$/i })
     })
 
     test("clicking Pause calls audio.pause() and shows Play", async () => {
-      const { simulateCanPlay } = await renderPlayer()
-      simulateCanPlay()
+      renderPlayer()
+      fireEvent.click(screen.getByRole("button", { name: /^play$/i }))
+      await screen.findByRole("button", { name: /^pause$/i })
       fireEvent.click(screen.getByRole("button", { name: /^pause$/i }))
       expect(window.HTMLMediaElement.prototype.pause).toHaveBeenCalled()
       expect(
@@ -161,8 +149,9 @@ describe("PodcastEmbedPlayer", () => {
     })
 
     test("clicking Play after pause calls audio.play()", async () => {
-      const { simulateCanPlay } = await renderPlayer()
-      simulateCanPlay()
+      renderPlayer()
+      fireEvent.click(screen.getByRole("button", { name: /^play$/i }))
+      await screen.findByRole("button", { name: /^pause$/i })
       fireEvent.click(screen.getByRole("button", { name: /^pause$/i }))
       jest.clearAllMocks()
       fireEvent.click(screen.getByRole("button", { name: /^play$/i }))
@@ -171,7 +160,7 @@ describe("PodcastEmbedPlayer", () => {
       )
     })
 
-    test("shows Play unavailable and is disabled when there is no audio source", async () => {
+    test("shows Play unavailable and is disabled when there is no audio source", () => {
       const resource = makeEpisode({
         podcast_episode: {
           ...makeEpisode().podcast_episode!,
@@ -179,7 +168,7 @@ describe("PodcastEmbedPlayer", () => {
           episode_link: null,
         },
       })
-      await renderPlayer(resource, { waitForAutoPlay: false })
+      renderPlayer(resource)
       expect(window.HTMLMediaElement.prototype.play).not.toHaveBeenCalled()
       expect(
         screen.getByRole("button", { name: /play unavailable/i }),
@@ -187,10 +176,7 @@ describe("PodcastEmbedPlayer", () => {
     })
 
     test("prevents duplicate play calls while play is pending", async () => {
-      const { simulateCanPlay } = await renderPlayer()
-      simulateCanPlay()
-      fireEvent.click(screen.getByRole("button", { name: /^pause$/i }))
-      jest.clearAllMocks()
+      renderPlayer()
 
       let resolvePlay: (() => void) | undefined
       const pendingPlay = new Promise<void>((resolve) => {
@@ -213,11 +199,9 @@ describe("PodcastEmbedPlayer", () => {
   })
 
   describe("skip controls", () => {
-    test("rewind button subtracts 10s from currentTime", async () => {
-      const { audio, simulateCanPlay, simulateLoadedMetadata } =
-        await renderPlayer()
+    test("rewind button subtracts 10s from currentTime", () => {
+      const { audio, simulateLoadedMetadata } = renderPlayer()
       simulateLoadedMetadata(120)
-      simulateCanPlay()
       Object.defineProperty(audio, "currentTime", {
         value: 60,
         configurable: true,
@@ -229,11 +213,9 @@ describe("PodcastEmbedPlayer", () => {
       expect(audio.currentTime).toBe(50)
     })
 
-    test("forward button adds 30s to currentTime", async () => {
-      const { audio, simulateCanPlay, simulateLoadedMetadata } =
-        await renderPlayer()
+    test("forward button adds 30s to currentTime", () => {
+      const { audio, simulateLoadedMetadata } = renderPlayer()
       simulateLoadedMetadata(120)
-      simulateCanPlay()
       Object.defineProperty(audio, "currentTime", {
         value: 60,
         configurable: true,
@@ -245,11 +227,9 @@ describe("PodcastEmbedPlayer", () => {
       expect(audio.currentTime).toBe(90)
     })
 
-    test("rewind clamps to 0", async () => {
-      const { audio, simulateCanPlay, simulateLoadedMetadata } =
-        await renderPlayer()
+    test("rewind clamps to 0", () => {
+      const { audio, simulateLoadedMetadata } = renderPlayer()
       simulateLoadedMetadata(120)
-      simulateCanPlay()
       Object.defineProperty(audio, "currentTime", {
         value: 5,
         configurable: true,
@@ -261,11 +241,9 @@ describe("PodcastEmbedPlayer", () => {
       expect(audio.currentTime).toBe(0)
     })
 
-    test("forward clamps to duration", async () => {
-      const { audio, simulateCanPlay, simulateLoadedMetadata } =
-        await renderPlayer()
+    test("forward clamps to duration", () => {
+      const { audio, simulateLoadedMetadata } = renderPlayer()
       simulateLoadedMetadata(120)
-      simulateCanPlay()
       Object.defineProperty(audio, "currentTime", {
         value: 110,
         configurable: true,
@@ -279,15 +257,15 @@ describe("PodcastEmbedPlayer", () => {
   })
 
   describe("speed control", () => {
-    test("initial speed label is 1x", async () => {
-      await renderPlayer()
+    test("initial speed label is 1x", () => {
+      renderPlayer()
       expect(
         screen.getByRole("button", { name: /playback speed/i }),
       ).toHaveTextContent("1x")
     })
 
-    test("cycles through speed options on click", async () => {
-      await renderPlayer()
+    test("cycles through speed options on click", () => {
+      renderPlayer()
       const btn = screen.getByRole("button", { name: /playback speed/i })
       fireEvent.click(btn)
       expect(btn).toHaveTextContent("1.25x")
@@ -299,33 +277,31 @@ describe("PodcastEmbedPlayer", () => {
       expect(btn).toHaveTextContent("0.75x")
     })
 
-    test("cycling speed applies playbackRate to audio element", async () => {
-      const { audio } = await renderPlayer()
+    test("cycling speed applies playbackRate to audio element", () => {
+      const { audio } = renderPlayer()
       fireEvent.click(screen.getByRole("button", { name: /playback speed/i }))
       expect(audio.playbackRate).toBe(1.25)
     })
   })
 
   describe("time display", () => {
-    test("formats duration under 60 minutes as MM:SS", async () => {
-      const { simulateLoadedMetadata } = await renderPlayer()
+    test("formats duration under 60 minutes as MM:SS", () => {
+      const { simulateLoadedMetadata } = renderPlayer()
       simulateLoadedMetadata(125) // 2:05
       expect(screen.getAllByText("02:05")[0]).toBeInTheDocument()
     })
 
-    test("formats duration of 60 minutes or more as H:MM:SS", async () => {
-      const { simulateLoadedMetadata } = await renderPlayer()
+    test("formats duration of 60 minutes or more as H:MM:SS", () => {
+      const { simulateLoadedMetadata } = renderPlayer()
       simulateLoadedMetadata(3661) // 1:01:01
       expect(screen.getAllByText("1:01:01")[0]).toBeInTheDocument()
     })
   })
 
   describe("seek slider", () => {
-    test("dragging the slider updates audio currentTime", async () => {
-      const { audio, simulateCanPlay, simulateLoadedMetadata } =
-        await renderPlayer()
+    test("dragging the slider updates audio currentTime", () => {
+      const { audio, simulateLoadedMetadata } = renderPlayer()
       simulateLoadedMetadata(200)
-      simulateCanPlay()
       const slider = screen.getByRole("slider", { name: /seek/i })
       fireEvent.change(slider, { target: { value: "90" } })
       expect(audio.currentTime).toBe(90)
@@ -333,8 +309,8 @@ describe("PodcastEmbedPlayer", () => {
   })
 
   describe("no close button", () => {
-    test("does not render a close button", async () => {
-      await renderPlayer()
+    test("does not render a close button", () => {
+      renderPlayer()
       expect(
         screen.queryByRole("button", { name: /close/i }),
       ).not.toBeInTheDocument()
