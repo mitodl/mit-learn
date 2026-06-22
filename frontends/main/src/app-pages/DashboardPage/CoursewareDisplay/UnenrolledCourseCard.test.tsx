@@ -126,6 +126,24 @@ describe.each([
     expect(within(card).getByTestId("courseware-button")).toBeDisabled()
   })
 
+  test("CTA is disabled when the displayed run is not enrollable", () => {
+    setupUserApis()
+    // A selected variant run can resolve to a non-enrollable run. The CTA must
+    // disable (the diff's `!courseRun?.is_enrollable` guard) rather than fall
+    // back to enrolling in some other run. courseware_url/id are present via
+    // factory defaults, so is_enrollable is the sole reason it's disabled.
+    const nonEnrollableRun = mitxonline.factories.courses.courseRun({
+      is_enrollable: false,
+    })
+    const course = mitxOnlineCourse()
+
+    renderWithProviders(
+      <UnenrolledCourseCard course={course} displayedRun={nonEnrollableRun} />,
+    )
+
+    expect(within(getCard()).getByTestId("courseware-button")).toBeDisabled()
+  })
+
   test("uses displayedRun title when provided", () => {
     setupUserApis()
     const defaultRun = mitxonline.factories.courses.courseRun({
@@ -301,8 +319,9 @@ describe.each([
       user_profile: { year_of_birth: 1988 },
     })
     const b2bContractId = faker.number.int()
-    // getBestRun returns next_run_id (the default variant), but the card is
-    // showing — and must enroll in — the selected variant run (displayedRun).
+    // Pre-fix, the card enrolled in getBestRun's pick (defaultRun, the canonical
+    // "next run") instead of the run it displays. The selected variant run is
+    // what must be enrolled in.
     const defaultRun = mitxonline.factories.courses.courseRun({
       b2b_contract: b2bContractId,
       is_enrollable: true,
@@ -311,10 +330,19 @@ describe.each([
       b2b_contract: b2bContractId,
       is_enrollable: true,
     })
+    // The variant run is intentionally NOT in course.courseruns: variant runs
+    // come from a separate endpoint and are often absent from the course
+    // payload. The card must still enroll in it (via displayedRun), and the
+    // handler must resolve its URL from the explicitly-passed href — not a
+    // course.courseruns lookup. Keeping it out of the array makes this test
+    // fail if that explicit-href path is ever dropped.
     const course = mitxOnlineCourse({
-      courseruns: [defaultRun, variantRun],
+      courseruns: [defaultRun],
       next_run_id: defaultRun.id,
     })
+    expect(course.courseruns.map((run) => run.courseware_id)).not.toContain(
+      variantRun.courseware_id,
+    )
     const { enrollmentUrl: variantEnrollUrl } = setupEnrollmentApis({
       user: userData,
       course,
