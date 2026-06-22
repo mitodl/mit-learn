@@ -51,6 +51,7 @@ import {
   podcastEpisodePageView,
   ocwLearnPageView,
 } from "@/common/urls"
+import { parentPodcastIds, videoPlaylistIds } from "@/common/slugs"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { FeatureFlags } from "@/common/feature_flags"
 import { externalLinkProps } from "@/common/utils"
@@ -351,27 +352,28 @@ const getResourceUrl = (
     }
   }
   if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
-    return videoPlaylistPageView(resource.id.toString())
+    return videoPlaylistPageView(resource.id.toString(), resource.title)
   }
-  if (
-    resource.resource_type === ResourceTypeEnum.Video &&
-    resource?.playlists?.length > 0
-  ) {
-    return videoDetailPageView(resource.id, Number(resource.playlists[0]))
+  if (resource.resource_type === ResourceTypeEnum.Video) {
+    const [firstPlaylist] = videoPlaylistIds(resource)
+    if (firstPlaylist !== undefined) {
+      return videoDetailPageView(resource.id, firstPlaylist, resource.title)
+    }
   }
 
   if (showPodcastPage) {
     if (resource.resource_type === ResourceTypeEnum.Podcast) {
-      return podcastPageView(resource.id.toString())
+      return podcastPageView(resource.id.toString(), resource.title)
     }
-    if (
-      resource.resource_type === ResourceTypeEnum.PodcastEpisode &&
-      resource?.podcast_episode?.podcasts?.[0]
-    ) {
-      return podcastEpisodePageView(
-        resource.id.toString(),
-        resource?.podcast_episode?.podcasts[0].toString(),
-      )
+    if (resource.resource_type === ResourceTypeEnum.PodcastEpisode) {
+      const [parentPodcastId] = parentPodcastIds(resource)
+      if (parentPodcastId !== undefined) {
+        return podcastEpisodePageView(
+          resource.id.toString(),
+          String(parentPodcastId),
+          resource.title,
+        )
+      }
     }
   }
 

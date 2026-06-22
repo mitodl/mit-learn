@@ -1,7 +1,9 @@
 import { requiredEnv } from "@/env"
-import type { MetadataRoute } from "next"
-import type { GenerateSitemapResult, GeneratedSitemapArgs } from "../types"
-import { dangerouslyDetectProductionBuildPhase } from "../util"
+import type { GenerateSitemapResult } from "../types"
+import {
+  dangerouslyDetectProductionBuildPhase,
+  constructSitemap,
+} from "../util"
 import { getQueryClient } from "@/app/getQueryClient"
 import { channelQueries } from "api/hooks/channels"
 
@@ -33,10 +35,7 @@ export async function generateSitemaps(): Promise<GenerateSitemapResult[]> {
   }))
 }
 
-export default async function sitemap({
-  id,
-}: GeneratedSitemapArgs): Promise<MetadataRoute.Sitemap> {
-  const page = +(await id)
+export default constructSitemap(async (page) => {
   const queryClient = getQueryClient()
   const data = await queryClient.fetchQuery(
     channelQueries.list({
@@ -48,4 +47,4 @@ export default async function sitemap({
   return data.results.map((channel) => ({
     url: channel.channel_url,
   }))
-}
+})

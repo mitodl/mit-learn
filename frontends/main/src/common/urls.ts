@@ -1,5 +1,6 @@
 import { env, requiredEnv } from "@/env"
 import type { V2ProgramDisplayMode } from "@mitodl/mitxonline-api-axios/v2"
+import { slugify } from "@/common/slugs"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 
 // matches ! $ & ' ( ) * + , ; = : @ ~
@@ -127,12 +128,50 @@ export const RECOMMENDER_QUERY_PARAM = "recommender"
 
 export const RESOURCE_DRAWER_PARAMS = {
   resource: "resource",
+  resource_title: "resource_title",
   syllabus: "syllabus",
   syllabusOnly: "syllabus_only",
 } as const
 
-export const canonicalResourceDrawerUrl = (resourceId: number) =>
-  `${requiredEnv("NEXT_PUBLIC_ORIGIN")}/search?${RESOURCE_DRAWER_PARAMS.resource}=${resourceId}`
+/**
+ * Path slug segment from a title: the slug, or the literal "resource" when the
+ * slug is blank (the canonical path's slug segment is mandatory — see the
+ * readable-URLs spec, mitodl/hq#11210). The slug is cosmetic and ignored on
+ * lookup.
+ *
+ * INVARIANT: canonical paths must round-trip Next's URL decoding
+ * byte-identically — keep the slug charset to [a-z0-9-] and ids numeric, or
+ * the [slug] pages' incoming-vs-canonical string compares could redirect a
+ * URL to a spelling of itself and loop.
+ */
+const pathSlug = (title: string): string => slugify(title) || "resource"
+
+/** Prefix a same-origin path with the public origin (for canonical tags). */
+export const absoluteUrl = (path: string): string =>
+  `${requiredEnv("NEXT_PUBLIC_ORIGIN")}${path}`
+
+/**
+ * Relative drawer URL on the search page:
+ *   /search?resource={id}[&resource_title={slug}]
+ * `resource` is the authoritative id; `resource_title` is a cosmetic slug,
+ * omitted when blank and ignored on lookup.
+ */
+export const resourceDrawerSearch = (
+  resourceId: number,
+  title: string | undefined,
+) => {
+  const slug = title ? slugify(title) : ""
+  const params = new URLSearchParams({
+    [RESOURCE_DRAWER_PARAMS.resource]: String(resourceId),
+  })
+  if (slug) params.set(RESOURCE_DRAWER_PARAMS.resource_title, slug)
+  return `${SEARCH}?${params.toString()}`
+}
+
+export const canonicalResourceDrawerUrl = (
+  resourceId: number,
+  title: string | undefined,
+) => absoluteUrl(resourceDrawerSearch(resourceId, title))
 
 export const querifiedSearchUrl = (
   params:
@@ -238,30 +277,82 @@ export const LINKEDIN_ADD_TO_PROFILE_BASE_URL =
 export const COURSE_PAGE_VIEW = "/courses/[readableId]"
 export const coursePageView = (readableId: string) =>
   generatePath(COURSE_PAGE_VIEW, { readableId })
+// Each page-view builder appends a mandatory slug segment when a title is given
+// (the slug, or the literal "resource" when blank). With an undefined title it
+// emits the bare path, which still resolves and 307-redirects to canonical.
+// `title` is required-but-undefinable so a call site can't silently omit it —
+// passing undefined (e.g. a title still in flight) is a visible opt-in to the
+// redirecting bare form. Id and slug are separate segments; the slug is
+// cosmetic and ignored on lookup.
 export const VIDEO_PLAYLIST_PAGE_VIEW = "/video-playlist/[id]"
-export const videoPlaylistPageView = (id: string) =>
-  generatePath(VIDEO_PLAYLIST_PAGE_VIEW, { id })
+export const videoPlaylistPageView = (
+  id: string,
+  title: string | undefined,
+) => {
+  const base = generatePath(VIDEO_PLAYLIST_PAGE_VIEW, { id })
+  return title === undefined ? base : `${base}/${pathSlug(title)}`
+}
 export const PODCAST_PAGE_VIEW = "/podcast/[podcastId]"
-export const podcastPageView = (id: string) =>
-  generatePath(PODCAST_PAGE_VIEW, { podcastId: id })
+export const podcastPageView = (id: string, title: string | undefined) => {
+  const base = generatePath(PODCAST_PAGE_VIEW, { podcastId: id })
+  return title === undefined ? base : `${base}/${pathSlug(title)}`
+}
 export const PODCAST_EPISODE_PAGE_VIEW =
   "/podcast/[podcastId]/podcast_episode/[episodeId]"
-export const podcastEpisodePageView = (id: string, podcastId: string) =>
-  generatePath(PODCAST_EPISODE_PAGE_VIEW, {
-    podcastId: String(podcastId),
+export const podcastEpisodePageView = (
+  id: string,
+  podcastId: string,
+  title: string | undefined,
+) => {
+  const base = generatePath(PODCAST_EPISODE_PAGE_VIEW, {
+    podcastId: String(podcastId), // bare context id
     episodeId: String(id),
   })
+  return title === undefined ? base : `${base}/${pathSlug(title)}`
+}
 export const VIDEO_DETAIL_PAGE_VIEW = "/video/[videoId]"
-export const videoDetailPageView = (videoId: number, playlistId?: number) => {
-  const base = generatePath(VIDEO_DETAIL_PAGE_VIEW, {
+export const videoDetailPageView = (
+  videoId: number,
+  playlistId: number | undefined,
+  title: string | undefined,
+) => {
+  const path = generatePath(VIDEO_DETAIL_PAGE_VIEW, {
     videoId: String(videoId),
   })
+  const base = title === undefined ? path : `${path}/${pathSlug(title)}`
   if (playlistId !== undefined) {
     const params = new URLSearchParams({ playlist: String(playlistId) })
     return `${base}?${params.toString()}`
   }
   return base
 }
+/**
+ * Append a request's incoming search params to a canonical URL so redirects
+ * preserve tracking params (e.g. utm_*). Params the canonical already sets
+ * win, and `omit` lists params the canonical builder owns (always dropped
+ * from the incoming set so a rejected value — e.g. a non-member `playlist` —
+ * can't be re-forwarded and redirect again).
+ */
+export const carrySearchParams = (
+  canonical: string,
+  incoming: Record<string, string | string[] | undefined>,
+  omit: string[] = [],
+): string => {
+  const [path, query] = canonical.split("?")
+  const params = new URLSearchParams()
+  Object.entries(incoming).forEach(([key, value]) => {
+    if (omit.includes(key) || value === undefined) return
+    const values = Array.isArray(value) ? value : [value]
+    values.forEach((v) => params.append(key, v))
+  })
+  new URLSearchParams(query).forEach((value, key) => {
+    params.delete(key)
+    params.append(key, value)
+  })
+  const qs = params.toString()
+  return qs ? `${path}?${qs}` : path
+}
+
 export const PROGRAM_PAGE_VIEW = "/programs/[readableId]"
 export const PROGRAM_AS_COURSE_PAGE_VIEW = "/courses/p/[readableId]"
 

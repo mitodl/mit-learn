@@ -2,7 +2,7 @@ import { Extension } from "@tiptap/core"
 import { Plugin } from "@tiptap/pm/state"
 import { createURLToNodeHandler } from "../shared/createURLToNodeHandler"
 
-function extractResourceId(url: string): number | null {
+export function extractResourceId(url: string): number | null {
   const resourceParamMatch = url.match(/[?&]resource=(\d+)\b/)
   if (resourceParamMatch) {
     return Number(resourceParamMatch[1])

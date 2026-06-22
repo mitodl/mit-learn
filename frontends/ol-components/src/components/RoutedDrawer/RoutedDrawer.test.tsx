@@ -131,6 +131,43 @@ describe("RoutedDrawer", () => {
     expect(mockRouter.query).toEqual({})
   })
 
+  it("Does not open when validateRequiredParams returns false", () => {
+    const { childFn } = renderRoutedDrawer(
+      {
+        params: ["resource"],
+        requiredParams: ["resource"],
+        // `$` anchor is load-bearing: without it "2813oops" passes ^\d+
+        validateRequiredParams: (p) => /^\d+$/.test(p.resource ?? ""),
+      },
+      "resource=2813oops",
+      "",
+    )
+    expect(childFn).not.toHaveBeenCalled()
+    expect(screen.queryByRole("heading", { name: "DrawerContent" })).toBeNull()
+  })
+
+  it("Does not open when a required param is repeated", () => {
+    const { childFn } = renderRoutedDrawer(
+      { params: ["resource"], requiredParams: ["resource"] },
+      "resource=1&resource=2",
+      "",
+    )
+    expect(childFn).not.toHaveBeenCalled()
+  })
+
+  it("Opens when validateRequiredParams returns true", () => {
+    const { childFn } = renderRoutedDrawer(
+      {
+        params: ["resource"],
+        requiredParams: ["resource"],
+        validateRequiredParams: (p) => /^\d+$/.test(p.resource ?? ""),
+      },
+      "resource=2813",
+      "",
+    )
+    expect(childFn).toHaveBeenCalled()
+  })
+
   it("Restores any hash params that were in the initial request", async () => {
     const params = ["a"]
     const requiredParams = ["a"]

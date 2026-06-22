@@ -1,10 +1,14 @@
 import { requiredEnv } from "@/env"
-import type { MetadataRoute } from "next"
 import { getQueryClient } from "@/app/getQueryClient"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { ResourceTypeEnum } from "api"
-import type { GenerateSitemapResult, GeneratedSitemapArgs } from "../types"
-import { dangerouslyDetectProductionBuildPhase } from "../util"
+import { videoDetailPageView, videoPlaylistPageView } from "@/common/urls"
+import { videoPlaylistIds } from "@/common/slugs"
+import type { GenerateSitemapResult } from "../types"
+import {
+  dangerouslyDetectProductionBuildPhase,
+  constructSitemap,
+} from "../util"
 
 const PAGE_SIZE = 1_000
 
@@ -41,10 +45,7 @@ export async function generateSitemaps(): Promise<GenerateSitemapResult[]> {
   }))
 }
 
-export default async function sitemap({
-  id,
-}: GeneratedSitemapArgs): Promise<MetadataRoute.Sitemap> {
-  const page = +(await id)
+export default constructSitemap(async (page) => {
   const BASE_URL = requiredEnv("NEXT_PUBLIC_ORIGIN")
   const queryClient = getQueryClient()
   const data = await queryClient.fetchQuery(
@@ -57,9 +58,17 @@ export default async function sitemap({
 
   return data.results.flatMap((resource) => {
     if (resource.resource_type === ResourceTypeEnum.Video) {
+      // Emit the true canonical: a video with playlists redirects bare →
+      // playlists[0], so include it (couples to playlists[0] ordering, same as
+      // the canonical tag + page redirect — no new coupling).
+      const [firstPlaylist] = videoPlaylistIds(resource)
       return [
         {
-          url: `${BASE_URL}/video/${resource.id}`,
+          url: `${BASE_URL}${videoDetailPageView(
+            resource.id,
+            firstPlaylist,
+            resource.title,
+          )}`,
           lastModified: resource.last_modified ?? undefined,
         },
       ]
@@ -67,11 +76,14 @@ export default async function sitemap({
     if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
       return [
         {
-          url: `${BASE_URL}/video-playlist/${resource.id}`,
+          url: `${BASE_URL}${videoPlaylistPageView(
+            String(resource.id),
+            resource.title,
+          )}`,
           lastModified: resource.last_modified ?? undefined,
         },
       ]
     }
     return []
   })
-}
+})
