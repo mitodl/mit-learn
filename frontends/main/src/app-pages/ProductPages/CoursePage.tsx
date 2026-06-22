@@ -30,7 +30,10 @@ import { useCourseEnrollment } from "./useCourseEnrollment"
 import { getSelectedRun } from "./courseRun"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 import EnrolledLink from "./EnrolledLink"
-import type { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
+import type {
+  CourseRunV2,
+  CourseWithCourseRunsSerializerV2,
+} from "@mitodl/mitxonline-api-axios/v2"
 
 type CoursePageProps = {
   readableId: string
@@ -56,12 +59,13 @@ const HeaderButtonSlot = styled.div(({ theme }) => ({
 
 const CourseHeaderEnrollButton: React.FC<{
   course: CourseWithCourseRunsSerializerV2
-}> = ({ course }) => {
+  selectedRun: CourseRunV2 | undefined
+}> = ({ course, selectedRun }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
 
   const { state, isStatusLoading, isPending } = useCourseEnrollment(
     course,
-    getSelectedRun(course),
+    selectedRun,
     { onRequireSignup: (el) => setAnchor(el) },
   )
 
@@ -116,6 +120,9 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
     ...coursesQueries.courseOutline(effectiveOutlineCoursewareId ?? ""),
     enabled: Boolean(showCourseOutline && effectiveOutlineCoursewareId),
   })
+  // Owned here so the header CTA and the InfoBox track the same session: when
+  // the user picks a run in the InfoBox's session select, the header follows.
+  const [selectedRunId, setSelectedRunId] = React.useState<number | null>(null)
   useEffect(() => {
     if (!course) return
     trackViewCoursePage(course.title)
@@ -135,6 +142,8 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   const imageSrc =
     page.course_details.page?.feature_image_src || DEFAULT_RESOURCE_IMG
 
+  const selectedRun = getSelectedRun(course, selectedRunId)
+
   return (
     <ProductPageTemplate
       currentBreadcrumbLabel="Course"
@@ -142,8 +151,16 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       shortDescription={page.course_details.page?.description}
       imageSrc={imageSrc}
       videoUrl={page.video_url}
-      infoBox={<CourseInfoBox course={course} />}
-      enrollmentAction={<CourseHeaderEnrollButton course={course} />}
+      infoBox={
+        <CourseInfoBox
+          course={course}
+          selectedRunId={selectedRunId}
+          onSelectRun={setSelectedRunId}
+        />
+      }
+      enrollmentAction={
+        <CourseHeaderEnrollButton course={course} selectedRun={selectedRun} />
+      }
       showStayUpdated={
         course.courseruns.length > 0 &&
         course.courseruns.every(

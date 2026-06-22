@@ -23,6 +23,9 @@ const SessionLabel = styled.label(({ theme }) => ({
   fontWeight: theme.typography.fontWeightBold,
   color: theme.custom.colors.darkGray2,
   whiteSpace: "nowrap",
+  // In the SessionRow grid, an item's margin adds to the 8px columnGap, making
+  // the label→dropdown gap 16px while icon→label stays the row-level 8px.
+  marginRight: "8px",
 }))
 
 /**
@@ -38,20 +41,29 @@ const runStartsAnytime = (run: CourseRunV2): boolean => {
   )
 }
 
+/**
+ * "MMM D, YYYY", collapsing the redundant year on the start of a same-year
+ * range ("Sep 8 - Dec 12, 2026"). Cross-year ranges keep both years
+ * ("Dec 8, 2026 - Feb 12, 2027").
+ */
+const formatDateRange = (run: CourseRunV2): string => {
+  if (runStartsAnytime(run)) return "Anytime"
+  const start = typeof run.start_date === "string" ? run.start_date : null
+  const end = typeof run.end_date === "string" ? run.end_date : null
+  if (start && end) {
+    const sameYear = formatDate(start, "YYYY") === formatDate(end, "YYYY")
+    const startLabel = formatDate(start, sameYear ? "MMM D" : "MMM D, YYYY")
+    return `${startLabel} - ${formatDate(end)}`
+  }
+  const single = start ?? end
+  return single ? formatDate(single) : ""
+}
+
 const buildOptionLabel = (
   run: CourseRunV2,
   enrolledRunIds: number[] | undefined,
 ): string => {
-  let dates: string
-  if (runStartsAnytime(run)) {
-    dates = "Anytime"
-  } else {
-    const parts = [run.start_date, run.end_date]
-      .filter((d): d is string => typeof d === "string")
-      .map((d) => formatDate(d))
-    dates = parts.join(" - ")
-  }
-
+  const dates = formatDateRange(run)
   const enrolled = enrolledRunIds?.includes(run.id)
   return enrolled ? `${dates} — Enrolled` : dates
 }

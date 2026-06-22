@@ -170,6 +170,27 @@ const CourseDatesRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
 
   const manyDates = enrollable.length > 1
 
+  // Archived courses are open-ended: content stays available, so the single-run
+  // view leads with "available anytime" rather than a stale start date, keeping
+  // the end date. (Multiple runs render their concrete dates in the list.)
+  if (nextRun.is_archived && !manyDates) {
+    return (
+      <InfoRow {...others}>
+        <InfoRowIcon>
+          <RiCalendarLine aria-hidden="true" />
+        </InfoRowIcon>
+        <Stack gap="4px" width="100%">
+          <InfoLabel>Course content available anytime</InfoLabel>
+          {nextRun.end_date ? (
+            <span>
+              End: <LocalDate onSSR={dateLoading} date={nextRun.end_date} />
+            </span>
+          ) : null}
+        </Stack>
+      </InfoRow>
+    )
+  }
+
   return (
     <InfoRow {...others}>
       <InfoRowIcon>

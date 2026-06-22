@@ -18,6 +18,7 @@ import {
   screen,
   within,
   act,
+  user,
   setupLocationMock,
 } from "@/test-utils"
 import CoursePage from "./CoursePage"
@@ -393,6 +394,59 @@ describe("CoursePage", () => {
 
       expect(
         (await screen.findAllByRole("link", { name: /Enrolled/ })).length,
+      ).toBeGreaterThan(0)
+    })
+
+    test("header CTA tracks the run selected in the InfoBox", async () => {
+      const paidRun = mitxFactories.courses.courseRun({
+        is_enrollable: true,
+        is_upgradable: true,
+        is_archived: false,
+        enrollment_modes: [paidMode],
+        products: [product],
+        start_date: "2026-07-15",
+        end_date: "2026-10-15",
+      })
+      const freeRun = mitxFactories.courses.courseRun({
+        is_enrollable: true,
+        is_upgradable: false,
+        is_archived: false,
+        enrollment_modes: [freeMode],
+        products: [],
+        start_date: "2027-03-10",
+        end_date: "2027-06-10",
+      })
+      const course = makeCourse({
+        next_run_id: paidRun.id,
+        courseruns: [paidRun, freeRun],
+      })
+      const page = makePage({ course_details: course })
+      setupApis({ course, page })
+      renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+      const select = await screen.findByRole("combobox", { name: /Session/i })
+
+      // Select the paid run: header + InfoBox show "Enroll", none show "Start Learning"
+      await user.click(select)
+      await user.click(screen.getByRole("option", { name: /Jul 15/i }))
+      await waitFor(() => {
+        expect(
+          screen.queryByRole("button", { name: "Start Learning" }),
+        ).toBeNull()
+      })
+      expect(
+        (await screen.findAllByRole("button", { name: "Enroll" })).length,
+      ).toBeGreaterThan(0)
+
+      // Switch to the free run: the header CTA follows — no "Enroll" remains
+      await user.click(select)
+      await user.click(screen.getByRole("option", { name: /Mar 10/i }))
+      await waitFor(() => {
+        expect(screen.queryByRole("button", { name: "Enroll" })).toBeNull()
+      })
+      expect(
+        (await screen.findAllByRole("button", { name: "Start Learning" }))
+          .length,
       ).toBeGreaterThan(0)
     })
 

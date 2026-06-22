@@ -41,6 +41,24 @@ function setupAuth(enrollments: unknown[] = []) {
   setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), enrollments)
 }
 
+/**
+ * InfoBoxCourse is controlled (CoursePage owns selectedRunId). This wrapper
+ * supplies that state so session-switch interactions behave as they do on the
+ * real page.
+ */
+const ControlledInfoBox: React.FC<
+  Pick<React.ComponentProps<typeof InfoBoxCourse>, "course">
+> = (props) => {
+  const [selectedRunId, setSelectedRunId] = React.useState<number | null>(null)
+  return (
+    <InfoBoxCourse
+      {...props}
+      selectedRunId={selectedRunId}
+      onSelectRun={setSelectedRunId}
+    />
+  )
+}
+
 describe("InfoBoxCourse — session selector", () => {
   test("single-run course: no SessionSelect rendered", async () => {
     setupAuth()
@@ -53,7 +71,7 @@ describe("InfoBoxCourse — session selector", () => {
     })
     const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
 
-    renderWithProviders(<InfoBoxCourse course={course} />)
+    renderWithProviders(<ControlledInfoBox course={course} />)
 
     // Wait for component to settle
     await screen.findByRole("button", { name: "Start Learning" })
@@ -85,7 +103,7 @@ describe("InfoBoxCourse — session selector", () => {
       courseruns: [run1, run2],
     })
 
-    renderWithProviders(<InfoBoxCourse course={course} />)
+    renderWithProviders(<ControlledInfoBox course={course} />)
 
     // SessionSelect renders as a combobox labeled "Session"
     await screen.findByRole("combobox", { name: /Session/i })
@@ -119,7 +137,7 @@ describe("InfoBoxCourse — run selection changes enroll area", () => {
       courseruns: [bothRun, freeOnlyRun],
     })
 
-    renderWithProviders(<InfoBoxCourse course={course} />)
+    renderWithProviders(<ControlledInfoBox course={course} />)
 
     // Wait for initial render to settle with the Both scenario
     await screen.findByText("Choose Your Path")
@@ -130,7 +148,7 @@ describe("InfoBoxCourse — run selection changes enroll area", () => {
     // Switch to the free-only run by clicking the combobox then the option
     const select = screen.getByRole("combobox", { name: /Session/i })
     await user.click(select)
-    const freeRunDateLabel = formatDate(freeOnlyRun.start_date!)
+    const freeRunDateLabel = formatDate(freeOnlyRun.start_date!, "MMM D")
     await user.click(
       screen.getByRole("option", {
         name: new RegExp(freeRunDateLabel, "i"),
@@ -179,7 +197,7 @@ describe("InfoBoxCourse — session-switch round-trip (enrolled run)", () => {
     })
     setupAuth([enrollment])
 
-    renderWithProviders(<InfoBoxCourse course={course} />)
+    renderWithProviders(<ControlledInfoBox course={course} />)
 
     // Initially on runA (enrolled) — should show "Enrolled" link
     const enrolledLink = await screen.findByRole("link", { name: /Enrolled/ })
@@ -188,7 +206,7 @@ describe("InfoBoxCourse — session-switch round-trip (enrolled run)", () => {
     // Switch to runB (not enrolled) — cards should appear
     const select = screen.getByRole("combobox", { name: /Session/i })
     await user.click(select)
-    const runBDateLabel = formatDate(runB.start_date!)
+    const runBDateLabel = formatDate(runB.start_date!, "MMM D")
     await user.click(
       screen.getByRole("option", { name: new RegExp(runBDateLabel, "i") }),
     )
@@ -202,7 +220,7 @@ describe("InfoBoxCourse — session-switch round-trip (enrolled run)", () => {
 
     // Switch back to runA (enrolled) — back to collapsed state
     await user.click(select)
-    const runADateLabel = formatDate(runA.start_date!)
+    const runADateLabel = formatDate(runA.start_date!, "MMM D")
     await user.click(
       screen.getByRole("option", {
         name: new RegExp(`${runADateLabel}.*Enrolled`, "i"),
@@ -233,7 +251,7 @@ describe("InfoBoxCourse — data-boxes attribute", () => {
     })
     const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
 
-    renderWithProviders(<InfoBoxCourse course={course} />)
+    renderWithProviders(<ControlledInfoBox course={course} />)
 
     await screen.findByText("Choose Your Path")
 
@@ -253,7 +271,7 @@ describe("InfoBoxCourse — data-boxes attribute", () => {
     })
     const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
 
-    renderWithProviders(<InfoBoxCourse course={course} />)
+    renderWithProviders(<ControlledInfoBox course={course} />)
 
     await screen.findByRole("button", { name: "Enroll" })
 
@@ -273,7 +291,7 @@ describe("InfoBoxCourse — data-boxes attribute", () => {
     })
     const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
 
-    renderWithProviders(<InfoBoxCourse course={course} />)
+    renderWithProviders(<ControlledInfoBox course={course} />)
 
     await screen.findByRole("button", { name: "Start Learning" })
 
@@ -286,7 +304,7 @@ describe("InfoBoxCourse — data-boxes attribute", () => {
     setupAuth()
     const course = makeCourse({ courseruns: [] })
 
-    renderWithProviders(<InfoBoxCourse course={course} />)
+    renderWithProviders(<ControlledInfoBox course={course} />)
 
     // Wait for auth to settle (no buttons, just the no-enrollment alert)
     await screen.findByText(
@@ -313,7 +331,7 @@ describe("InfoBoxCourse — data-boxes attribute", () => {
     })
     setupAuth([enrollment])
 
-    renderWithProviders(<InfoBoxCourse course={course} />)
+    renderWithProviders(<ControlledInfoBox course={course} />)
 
     await screen.findByRole("link", { name: /Enrolled/ })
 
@@ -335,7 +353,7 @@ describe("InfoBoxCourse — grid structure", () => {
     })
     const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
 
-    renderWithProviders(<InfoBoxCourse course={course} />)
+    renderWithProviders(<ControlledInfoBox course={course} />)
 
     await screen.findByRole("button", { name: "Start Learning" })
 
@@ -359,7 +377,7 @@ describe("InfoBoxCourse — grid structure", () => {
     })
     const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
 
-    renderWithProviders(<InfoBoxCourse course={course} />)
+    renderWithProviders(<ControlledInfoBox course={course} />)
 
     await screen.findByRole("button", { name: "Enroll" })
 

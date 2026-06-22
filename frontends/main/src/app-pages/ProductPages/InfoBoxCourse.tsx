@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React from "react"
 import { VisuallyHidden, styled } from "@mitodl/smoot-design"
 import type { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds } from "./util"
@@ -73,10 +73,15 @@ const SectionDivider = styled.hr(({ theme: t }) => ({
 
 type CourseInfoBoxProps = {
   course: CourseWithCourseRunsSerializerV2
+  selectedRunId: number | null
+  onSelectRun: (runId: number) => void
 }
 
-const CourseInfoBox: React.FC<CourseInfoBoxProps> = ({ course }) => {
-  const [selectedRunId, setSelectedRunId] = useState<number | null>(null)
+const CourseInfoBox: React.FC<CourseInfoBoxProps> = ({
+  course,
+  selectedRunId,
+  onSelectRun,
+}) => {
   const selectedRun = getSelectedRun(course, selectedRunId)
   const { runIds: enrolledRunIds } = useCourseEnrolledRunIds(course)
 
@@ -87,7 +92,7 @@ const CourseInfoBox: React.FC<CourseInfoBoxProps> = ({ course }) => {
         runs={enrollableRuns}
         selectedRunId={selectedRun?.id ?? enrollableRuns[0].id}
         enrolledRunIds={enrolledRunIds}
-        onChange={setSelectedRunId}
+        onChange={onSelectRun}
       />
     ) : undefined
 

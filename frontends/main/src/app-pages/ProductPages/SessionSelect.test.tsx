@@ -17,7 +17,7 @@ describe("SessionSelect", () => {
     await user.click(screen.getByRole("combobox", { name: /session/i }))
     await user.click(
       screen.getByRole("option", {
-        name: new RegExp(formatDate(b.start_date!), "i"),
+        name: new RegExp(formatDate(b.start_date!, "MMM D"), "i"),
       }),
     )
     expect(onChange).toHaveBeenCalledWith(b.id)
@@ -37,8 +37,41 @@ describe("SessionSelect", () => {
     await user.click(screen.getByRole("combobox", { name: /session/i }))
     expect(
       screen.getByRole("option", {
-        name: new RegExp(`${formatDate(b.start_date!)}.*Enrolled`, "i"),
+        name: new RegExp(
+          `${formatDate(b.start_date!, "MMM D")}.*Enrolled`,
+          "i",
+        ),
       }),
+    ).toBeInTheDocument()
+  })
+
+  test("collapses the redundant start-year for a same-year range", async () => {
+    const run = makeRun({ start_date: "2026-09-08", end_date: "2026-12-16" })
+    renderWithProviders(
+      <SessionSelect
+        runs={[run]}
+        selectedRunId={run.id}
+        onChange={jest.fn()}
+      />,
+    )
+    await user.click(screen.getByRole("combobox", { name: /session/i }))
+    expect(
+      screen.getByRole("option", { name: "Sep 8 - Dec 16, 2026" }),
+    ).toBeInTheDocument()
+  })
+
+  test("keeps both years for a cross-year range", async () => {
+    const run = makeRun({ start_date: "2026-12-08", end_date: "2027-02-12" })
+    renderWithProviders(
+      <SessionSelect
+        runs={[run]}
+        selectedRunId={run.id}
+        onChange={jest.fn()}
+      />,
+    )
+    await user.click(screen.getByRole("combobox", { name: /session/i }))
+    expect(
+      screen.getByRole("option", { name: "Dec 8, 2026 - Feb 12, 2027" }),
     ).toBeInTheDocument()
   })
 

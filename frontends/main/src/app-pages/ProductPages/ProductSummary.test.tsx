@@ -83,7 +83,7 @@ describe("CourseSummary", () => {
 
   describe("Dates Row", () => {
     test("Renders expected start/end dates", async () => {
-      const run = makeRun({ is_enrollable: true })
+      const run = makeRun({ is_enrollable: true, is_archived: false })
       const nonEnrollableRun = makeRun({ is_enrollable: false })
       const course = makeCourse({
         availability: "dated",
@@ -125,7 +125,11 @@ describe("CourseSummary", () => {
     })
 
     test("Renders nothing if next run has no start date and is only enrollable run", () => {
-      const run = makeRun({ start_date: null, is_enrollable: true })
+      const run = makeRun({
+        start_date: null,
+        is_enrollable: true,
+        is_archived: false,
+      })
       const nonEnrollableRun = makeRun({ is_enrollable: false })
       const course = makeCourse({
         availability: "dated",
@@ -418,6 +422,7 @@ describe("CourseSummary", () => {
     test("Never displays dates for non-enrollable runs", async () => {
       const enrollableRun = makeRun({
         is_enrollable: true,
+        is_archived: false,
         start_date: monthsFromNow(6),
         end_date: monthsFromNow(8),
       })
@@ -691,6 +696,31 @@ describe("CourseSummary", () => {
       invariant(anytimeRun.end_date)
       expect(datesRow).toHaveTextContent(formatDate(archivedRun.end_date))
       expect(datesRow).toHaveTextContent(formatDate(anytimeRun.end_date))
+    })
+
+    test("Single archived run shows 'available anytime' with the end date, not a start date", () => {
+      const archivedRun = makeRun({
+        is_enrollable: true,
+        is_archived: true,
+        start_date: monthsFromNow(-18),
+        end_date: monthsFromNow(-3),
+      })
+      const course = makeCourse({
+        next_run_id: archivedRun.id,
+        courseruns: [archivedRun],
+      })
+      renderWithProviders(
+        <CourseSummary course={course} selectedRun={archivedRun} />,
+      )
+
+      const datesRow = screen.getByTestId(TestIds.DatesRow)
+
+      expect(datesRow).toHaveTextContent("Course content available anytime")
+      expect(datesRow).not.toHaveTextContent("Start:")
+      invariant(archivedRun.end_date)
+      expect(datesRow).toHaveTextContent(
+        `End: ${formatDate(archivedRun.end_date)}`,
+      )
     })
   })
 
