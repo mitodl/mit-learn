@@ -13,9 +13,13 @@ const EmbedPlayer = styled(VideoResourcePlayer)({
 
 type VideoEmbedPageProps = {
   videoResource: VideoResource
+  startTime?: number
 }
 
-const VideoEmbedPage: React.FC<VideoEmbedPageProps> = ({ videoResource }) => {
+const VideoEmbedPage: React.FC<VideoEmbedPageProps> = ({
+  videoResource,
+  startTime,
+}) => {
   const videoTitleLabel = videoResource.title.trim()
 
   return (
@@ -25,6 +29,7 @@ const VideoEmbedPage: React.FC<VideoEmbedPageProps> = ({ videoResource }) => {
       isLoading={false}
       videoTitleLabel={videoTitleLabel}
       videoThumbnailAlt={`Video thumbnail for ${videoTitleLabel}`}
+      startTime={startTime}
     />
   )
 }

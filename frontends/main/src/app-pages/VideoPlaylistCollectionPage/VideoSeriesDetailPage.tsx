@@ -14,6 +14,7 @@ import * as Styled from "./VideoSeriesDetailPage.styled"
 import { env } from "@/env"
 import { buildVideoStructuredData } from "./videoStructuredData"
 import VideoResourcePlayer from "./VideoResourcePlayer"
+import type { VideoPlayerHandle } from "./VideoResourcePlayer"
 
 const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
@@ -35,6 +36,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
   playlistLoading,
 }) => {
   const titleRef = useRef<HTMLHeadingElement>(null)
+  const playerRef = useRef<VideoPlayerHandle | null>(null)
 
   const { data: resource, isLoading: videoLoading } =
     useLearningResourcesDetail(videoId)
@@ -171,6 +173,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
           )}
           {/* Video player */}
           <StyledVideoResourcePlayer
+            ref={playerRef}
             video={video}
             videoId={videoId}
             isLoading={isLoading}
@@ -184,6 +187,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               nextVideo={nextVideo}
               getVideoHref={getVideoHref}
               currentVideo={video}
+              playerRef={playerRef}
               shareUrl={
                 playlistId
                   ? `${NEXT_PUBLIC_ORIGIN}/video/${video.id}?playlist=${playlistId}`

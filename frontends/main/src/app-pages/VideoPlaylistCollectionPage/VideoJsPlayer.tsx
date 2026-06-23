@@ -25,6 +25,7 @@ export type VideoJsPlayerProps = {
   playsinline?: boolean
   ariaLabel?: string
   ariaDescribedBy?: string
+  startTime?: number
   onReady?: (player: Player) => void
 }
 
@@ -44,6 +45,7 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
   playsinline = false,
   ariaLabel,
   ariaDescribedBy,
+  startTime,
   onReady,
 }) => {
   const videoRef = useRef<HTMLDivElement>(null)
@@ -116,6 +118,9 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
         // Add tracks inside the ready callback — this is the earliest safe
         // point; adding them before ready can silently fail on some browsers.
         addTracks(this, tracks)
+        if (startTime && startTime > 0) {
+          this.currentTime(startTime)
+        }
         onReady?.(this)
         // Set the flag here so the update effect only runs after the player
         // is truly ready and the initial setup is complete.
@@ -136,6 +141,7 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
     playsinline,
     poster,
     sources,
+    startTime,
     tracks,
   ])
 

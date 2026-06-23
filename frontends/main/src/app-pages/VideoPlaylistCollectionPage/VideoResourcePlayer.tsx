@@ -1,15 +1,18 @@
 "use client"
 
-import React, { useMemo } from "react"
+import React, { useImperativeHandle, useMemo, useRef } from "react"
 import dynamic from "next/dynamic"
 import Image from "next/image"
 import { Skeleton, styled } from "ol-components"
 import { NoVideoMessage } from "./shared.styled"
 import { resolveVideoSources } from "./videoSources"
 import { convertToEmbedUrl } from "@/common/utils"
-import YouTubeIframePlayer from "./YouTubeIframePlayer"
+import YouTubeIframePlayer, {
+  type YouTubePlayerHandle,
+} from "./YouTubeIframePlayer"
 import type { VideoResource } from "api/v1"
 import type { VideoJsPlayerProps } from "./VideoJsPlayer"
+import type Player from "video.js/dist/types/player"
 
 const VideoJsPlayer = dynamic<VideoJsPlayerProps>(
   () => import("./VideoJsPlayer"),
@@ -79,6 +82,10 @@ const ScreenReaderOnly = styled.span({
   border: 0,
 })
 
+export type VideoPlayerHandle = {
+  getCurrentTime: () => number
+}
+
 export type VideoResourcePlayerProps = {
   video: VideoResource | undefined
   videoId: number
@@ -86,6 +93,7 @@ export type VideoResourcePlayerProps = {
   videoTitleLabel: string
   videoThumbnailAlt: string
   ariaDescribedBy?: string
+  startTime?: number
   className?: string
 }
 
@@ -95,98 +103,136 @@ export type VideoResourcePlayerProps = {
  *
  * Accepts `className` so it can be extended with `styled(VideoResourcePlayer)`
  * for per-page layout overrides (e.g. margin, border).
+ *
+ * Exposes a `VideoPlayerHandle` ref so callers can read `getCurrentTime()`.
+ * OVS (VideoJS) returns the actual playback position; YouTube returns 0
+ * until the YouTube IFrame API is wired up.
  */
-const VideoResourcePlayer: React.FC<VideoResourcePlayerProps> = ({
-  video,
-  videoId,
-  isLoading,
-  videoTitleLabel,
-  videoThumbnailAlt,
-  ariaDescribedBy = "video-description",
-  className,
-}) => {
-  const sources = useMemo(
-    () =>
-      video
-        ? resolveVideoSources(
-            video.video?.streaming_url,
-            video.url,
-            video.content_files?.[0]?.youtube_id,
-          )
-        : [],
-    [video],
-  )
+const VideoResourcePlayer = React.forwardRef<
+  VideoPlayerHandle,
+  VideoResourcePlayerProps
+>(
+  (
+    {
+      video,
+      videoId,
+      isLoading,
+      videoTitleLabel,
+      videoThumbnailAlt,
+      ariaDescribedBy = "video-description",
+      startTime,
+      className,
+    },
+    ref,
+  ) => {
+    const vjsPlayerRef = useRef<Player | null>(null)
+    const ytPlayerRef = useRef<YouTubePlayerHandle | null>(null)
 
-  const captionUrls = video?.video?.caption_urls ?? []
+    const sources = useMemo(
+      () =>
+        video
+          ? resolveVideoSources(
+              video.video?.streaming_url,
+              video.url,
+              video.content_files?.[0]?.youtube_id,
+            )
+          : [],
+      [video],
+    )
 
-  const embedUrl =
-    sources[0]?.type === "video/youtube"
-      ? convertToEmbedUrl(sources[0].src)
-      : null
+    const captionUrls = video?.video?.caption_urls ?? []
 
-  const thumbnailUrl =
-    video?.image?.url ?? video?.content_files?.[0]?.image_src ?? null
+    const embedUrl =
+      sources[0]?.type === "video/youtube"
+        ? convertToEmbedUrl(sources[0].src)
+        : null
 
-  const posterUrl =
-    video?.video?.cover_image_url ??
-    video?.content_files?.[0]?.image_src ??
-    video?.image?.url ??
-    undefined
+    useImperativeHandle(
+      ref,
+      () => ({
+        getCurrentTime: () =>
+          embedUrl
+            ? (ytPlayerRef.current?.getCurrentTime() ?? 0)
+            : (vjsPlayerRef.current?.currentTime() ?? 0),
+      }),
+      [embedUrl],
+    )
 
-  return (
-    <Wrapper
-      id="video-player-region"
-      tabIndex={-1}
-      role="region"
-      aria-label={`Video player for ${videoTitleLabel}`}
-      aria-describedby={ariaDescribedBy}
-      className={className}
-    >
-      {isLoading ? (
-        <div role="status" aria-live="polite" aria-label="Loading video player">
-          <Skeleton variant="rectangular" width="100%" height="100%" />
-        </div>
-      ) : embedUrl ? (
-        <YouTubeIframePlayer
-          key={videoId}
-          embedUrl={embedUrl}
-          ariaLabel={`Video: ${videoTitleLabel}`}
-          ariaDescribedBy={ariaDescribedBy}
-        />
-      ) : sources.length > 0 ? (
-        <VideoJsPlayer
-          key={videoId}
-          sources={sources}
-          tracks={captionUrls}
-          poster={posterUrl}
-          autoplay={false}
-          controls
-          fluid={false}
-          ariaLabel={`Video: ${videoTitleLabel}`}
-          ariaDescribedBy={ariaDescribedBy}
-        />
-      ) : thumbnailUrl ? (
-        <ThumbnailWrapper>
-          <Image
-            src={thumbnailUrl}
-            alt={videoThumbnailAlt}
-            fill
-            sizes="100vw"
-            style={{ objectFit: "cover" }}
+    const thumbnailUrl =
+      video?.image?.url ?? video?.content_files?.[0]?.image_src ?? null
+
+    const posterUrl =
+      video?.video?.cover_image_url ??
+      video?.content_files?.[0]?.image_src ??
+      video?.image?.url ??
+      undefined
+
+    return (
+      <Wrapper
+        id="video-player-region"
+        tabIndex={-1}
+        role="region"
+        aria-label={`Video player for ${videoTitleLabel}`}
+        aria-describedby={ariaDescribedBy}
+        className={className}
+      >
+        {isLoading ? (
+          <div
+            role="status"
+            aria-live="polite"
+            aria-label="Loading video player"
+          >
+            <Skeleton variant="rectangular" width="100%" height="100%" />
+          </div>
+        ) : embedUrl ? (
+          <YouTubeIframePlayer
+            key={videoId}
+            ref={ytPlayerRef}
+            embedUrl={embedUrl}
+            ariaLabel={`Video: ${videoTitleLabel}`}
+            ariaDescribedBy={ariaDescribedBy}
+            startTime={startTime}
           />
-        </ThumbnailWrapper>
-      ) : (
-        <>
-          <ScreenReaderOnly role="alert" aria-live="polite">
-            No playable source available for this video.
-          </ScreenReaderOnly>
-          <NoVideoMessage>
-            No playable source available for this video.
-          </NoVideoMessage>
-        </>
-      )}
-    </Wrapper>
-  )
-}
+        ) : sources.length > 0 ? (
+          <VideoJsPlayer
+            key={videoId}
+            sources={sources}
+            tracks={captionUrls}
+            poster={posterUrl}
+            autoplay={false}
+            controls
+            fluid={false}
+            ariaLabel={`Video: ${videoTitleLabel}`}
+            ariaDescribedBy={ariaDescribedBy}
+            startTime={startTime}
+            onReady={(player) => {
+              vjsPlayerRef.current = player
+            }}
+          />
+        ) : thumbnailUrl ? (
+          <ThumbnailWrapper>
+            <Image
+              src={thumbnailUrl}
+              alt={videoThumbnailAlt}
+              fill
+              sizes="100vw"
+              style={{ objectFit: "cover" }}
+            />
+          </ThumbnailWrapper>
+        ) : (
+          <>
+            <ScreenReaderOnly role="alert" aria-live="polite">
+              No playable source available for this video.
+            </ScreenReaderOnly>
+            <NoVideoMessage>
+              No playable source available for this video.
+            </NoVideoMessage>
+          </>
+        )}
+      </Wrapper>
+    )
+  },
+)
 
+VideoResourcePlayer.displayName = "VideoResourcePlayer"
 export default VideoResourcePlayer
