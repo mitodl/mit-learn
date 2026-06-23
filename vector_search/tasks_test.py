@@ -168,6 +168,7 @@ def test_embed_new_learning_resources(mocker, mocked_celery):
         embed_new_learning_resources.delay()
     list(mocked_celery.group.call_args[0][0])
 
+    assert generate_embeddings_mock.si.call_count == 1
     embedded_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
     assert sorted(new_resource_ids) == sorted(embedded_ids)
 

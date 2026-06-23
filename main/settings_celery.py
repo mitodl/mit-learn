@@ -186,6 +186,10 @@ CELERY_BEAT_SCHEDULE = (
             "task": "vector_search.tasks.sync_topics",
             "schedule": crontab(minute=0, hour="6,18,23"),  # 2am 2pm and 7pm EST
         },
+        "daily_tune_qdrant_collections": {
+            "task": "vector_search.tasks.tune_qdrant_collections",
+            "schedule": crontab(minute=0, hour=10),  # once per day
+        },
         "weekly_check_missing_embeddings": {
             "task": "vector_search.tasks.embeddings_healthcheck",
             "schedule": crontab(

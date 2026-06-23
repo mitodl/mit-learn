@@ -204,6 +204,27 @@ def create_qdrant_collections(force_recreate):
     update_qdrant_indexes()
 
 
+def tune_qdrant_collections():
+    """Tune optimizer settings for Qdrant collections."""
+    if not all([settings.QDRANT_HOST, settings.QDRANT_BASE_COLLECTION_NAME]):
+        logger.warning(
+            "Skipping Qdrant collection tuning: "
+            "QDRANT_HOST and QDRANT_BASE_COLLECTION_NAME must be set"
+        )
+        return
+
+    client = qdrant_client()
+    collections = [
+        RESOURCES_COLLECTION_NAME,
+        CONTENT_FILES_COLLECTION_NAME,
+        TOPICS_COLLECTION_NAME,
+    ]
+    for collection_name in collections:
+        if not client.collection_exists(collection_name=collection_name):
+            continue
+        tune_collection(client, collection_name)
+
+
 def create_qdrant_collection(collection_name, force_recreate):
     """
     Create or recreate a QDrant collection
@@ -244,7 +265,6 @@ def create_qdrant_collection(collection_name, force_recreate):
             ),
             hnsw_config=models.HnswConfigDiff(on_disk=False),
         )
-    tune_collection(client, collection_name)
 
 
 def update_qdrant_indexes():
@@ -260,8 +280,8 @@ def update_qdrant_indexes():
     ]:
         indexes = index[0]
         collection_name = index[1]
+        collection = client.get_collection(collection_name=collection_name)
         for index_field in indexes:
-            collection = client.get_collection(collection_name=collection_name)
             if (
                 index_field not in collection.payload_schema
                 or indexes[index_field]
@@ -1317,9 +1337,9 @@ def custom_score_formula(collection_name: str) -> list[models.MultExpression]:
                         models.GaussDecayExpression(
                             gauss_decay=models.DecayParamsExpression(
                                 x="$score",  # decay over the relevance score itself
-                                target=1.0,  # cosine "perfect match" — full boost
+                                target=0.4,  # full boost at this target
                                 scale=0.2,
-                                midpoint=0.5,
+                                midpoint=0.2,
                             )
                         ),
                     ]

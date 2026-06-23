@@ -47,8 +47,20 @@ from vector_search.utils import (
     vector_point_id,
     vector_point_key,
 )
+from vector_search.utils import (
+    tune_qdrant_collections as tune_qdrant_collections_util,
+)
 
 log = logging.getLogger(__name__)
+
+
+@app.task
+def tune_qdrant_collections():
+    """
+    Tune optimizer settings for Qdrant collections.
+    """
+    log.info("Running Qdrant collection tuning task")
+    tune_qdrant_collections_util()
 
 
 def _replace_with_chain(task, task_signatures):
@@ -347,7 +359,9 @@ def embed_new_learning_resources(self):
     ).exclude(resource_type=CONTENT_FILE_TYPE)
 
     resource_types = list(
-        new_learning_resources.values_list("resource_type", flat=True)
+        new_learning_resources.order_by("resource_type")
+        .values_list("resource_type", flat=True)
+        .distinct()
     )
     tasks = []
     for resource_type in resource_types:
