@@ -10,7 +10,6 @@ const baseProps = {
   availableSeats: 10,
   invalidEmails: [],
   duplicateEmails: [],
-  duplicateCount: 0,
   skippedCount: 0,
 }
 
@@ -52,7 +51,7 @@ describe("AssignSeatsConfirmModal — confirm step (no issues)", () => {
 
     expect(screen.getByText("7")).toBeInTheDocument()
     expect(
-      screen.getByText(/seats remaining after sending/i),
+      screen.getByRole("group", { name: /7 seats remaining after sending/i }),
     ).toBeInTheDocument()
   })
 
@@ -73,6 +72,26 @@ describe("AssignSeatsConfirmModal — confirm step (no issues)", () => {
     await user.click(screen.getByRole("button", { name: /cancel/i }))
 
     expect(baseProps.onClose).toHaveBeenCalledTimes(1)
+  })
+
+  test("shows 'Sending…' on the Send button while submitting", async () => {
+    let resolve!: () => void
+    const promise = new Promise<void>((res) => {
+      resolve = res
+    })
+    renderWithTheme(
+      <AssignSeatsConfirmModal {...baseProps} onConfirm={() => promise} />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: /send 3 invitations/i }),
+    )
+
+    expect(
+      screen.getByRole("button", { name: /sending…/i }),
+    ).toBeInTheDocument()
+
+    resolve()
   })
 })
 
@@ -98,7 +117,6 @@ describe("AssignSeatsConfirmModal — review step (has issues)", () => {
     renderWithTheme(
       <AssignSeatsConfirmModal
         {...baseProps}
-        duplicateCount={2}
         duplicateEmails={["dup@example.com", "dup2@example.com"]}
       />,
     )
@@ -127,7 +145,6 @@ describe("AssignSeatsConfirmModal — review step (has issues)", () => {
     renderWithTheme(
       <AssignSeatsConfirmModal
         {...baseProps}
-        duplicateCount={1}
         duplicateEmails={["dup@example.com"]}
       />,
     )
@@ -147,7 +164,7 @@ describe("AssignSeatsConfirmModal — review step (has issues)", () => {
     expect(screen.getByText("a@x.com")).toBeInTheDocument()
     expect(screen.queryByText("d@x.com")).not.toBeInTheDocument()
     expect(
-      screen.getByRole("button", { name: /\+ 2 more/i }),
+      screen.getByRole("button", { name: /show 2 more email addresses/i }),
     ).toBeInTheDocument()
   })
 
@@ -157,7 +174,9 @@ describe("AssignSeatsConfirmModal — review step (has issues)", () => {
       <AssignSeatsConfirmModal {...baseProps} invalidEmails={emails} />,
     )
 
-    await user.click(screen.getByRole("button", { name: /\+ 2 more/i }))
+    await user.click(
+      screen.getByRole("button", { name: /show 2 more email addresses/i }),
+    )
 
     expect(screen.getByText("e@x.com")).toBeInTheDocument()
     expect(
@@ -174,7 +193,9 @@ describe("AssignSeatsConfirmModal — review step (has issues)", () => {
       />,
     )
 
-    expect(screen.getByText(/4 rows skipped/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/4 rows skipped/i, { selector: "strong" }),
+    ).toBeInTheDocument()
   })
 
   test("advancing from review step shows confirm step", async () => {
@@ -187,6 +208,15 @@ describe("AssignSeatsConfirmModal — review step (has issues)", () => {
     expect(
       screen.getByRole("heading", { name: /ready to send invitations/i }),
     ).toBeInTheDocument()
+  })
+
+  test("shows review step when only skippedCount > 0 (no invalid or duplicate)", () => {
+    renderWithTheme(<AssignSeatsConfirmModal {...baseProps} skippedCount={3} />)
+
+    expect(
+      screen.getByRole("heading", { name: /some rows were skipped/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/3 rows skipped/i)).toBeInTheDocument()
   })
 })
 
@@ -205,11 +235,10 @@ describe("AssignSeatsConfirmModal — over-capacity state (CSV only)", () => {
     expect(
       screen.getByRole("heading", { name: /not enough seats available/i }),
     ).toBeInTheDocument()
-    expect(
-      screen.getByRole("alertdialog", {
-        name: /not enough seats available/i,
-      }),
-    ).toHaveAccessibleDescription(
+    // MUI places role="alertdialog" on the outer modal root; aria-labelledby and
+    // aria-describedby are on the inner role="dialog" paper.
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument()
+    expect(screen.getByRole("dialog")).toHaveAccessibleDescription(
       /15 learners were imported, but only 10 seats remain/i,
     )
   })

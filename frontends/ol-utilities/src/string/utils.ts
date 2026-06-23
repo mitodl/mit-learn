@@ -95,13 +95,17 @@ export const extractEmailsFromCsvRows = (
   const seen = new Set<string>()
   const deduped: string[] = []
   const duplicateEmails: string[] = []
+  const duplicateSeen = new Set<string>()
   let duplicateCount = 0
 
   for (const email of valid) {
     const key = email.toLowerCase()
     if (seen.has(key)) {
-      duplicateEmails.push(email)
       duplicateCount++
+      if (!duplicateSeen.has(key)) {
+        duplicateEmails.push(email)
+        duplicateSeen.add(key)
+      }
     } else {
       seen.add(key)
       deduped.push(email)
@@ -141,13 +145,17 @@ export const parseEmailsForSubmit = (input: string): EmailParseResult => {
   const seen = new Set<string>()
   const deduped: string[] = []
   const duplicateEmails: string[] = []
+  const duplicateSeen = new Set<string>()
   let duplicateCount = 0
 
   for (const email of valid) {
     const key = email.toLowerCase()
     if (seen.has(key)) {
-      duplicateEmails.push(email)
       duplicateCount++
+      if (!duplicateSeen.has(key)) {
+        duplicateEmails.push(email)
+        duplicateSeen.add(key)
+      }
     } else {
       seen.add(key)
       deduped.push(email)

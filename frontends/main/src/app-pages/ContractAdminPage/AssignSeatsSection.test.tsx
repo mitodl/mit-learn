@@ -410,10 +410,12 @@ describe("AssignSeatsSection", () => {
     await user.upload(fileInput, file)
 
     await screen.findByRole("alert")
-    const assertiveRegion = document.querySelector("[aria-live='assertive']")
-    expect(assertiveRegion).toHaveTextContent(
-      /no valid email addresses found in this file/i,
-    )
+    await waitFor(() => {
+      const assertiveRegion = document.querySelector("[aria-live='assertive']")
+      expect(assertiveRegion).toHaveTextContent(
+        /no valid email addresses found in this file/i,
+      )
+    })
   })
 
   test("accepts newline-separated emails", async () => {

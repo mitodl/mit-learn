@@ -201,7 +201,6 @@ type AssignSeatsConfirmModalProps = {
   availableSeats: number
   invalidEmails: string[]
   duplicateEmails: string[]
-  duplicateCount: number
   skippedCount: number
 }
 
@@ -215,15 +214,14 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   availableSeats,
   invalidEmails,
   duplicateEmails,
-  duplicateCount,
   skippedCount,
 }) => {
   const descriptionId = useId()
   const overCapacitySummaryId = `${descriptionId}-summary`
 
   const hasInvalid = invalidEmails.length > 0
-  const hasDuplicates = duplicateCount > 0
-  const hasIssues = hasInvalid || hasDuplicates
+  const hasDuplicates = duplicateEmails.length > 0
+  const hasIssues = hasInvalid || hasDuplicates || skippedCount > 0
   const overCapacity = validCount > availableSeats
 
   const [step, setStep] = useState<Step>(() =>
@@ -304,7 +302,9 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
 
   const reviewTitle = hasInvalid
     ? "Some learners could not be added"
-    : "Duplicate emails removed"
+    : hasDuplicates
+      ? "Duplicate emails removed"
+      : "Some rows were skipped"
 
   // Advance from the review step to the confirm step within the same dialog
   // instance. Using an assertive live region (reset-then-set) rather than
@@ -363,7 +363,9 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
         Cancel
       </Button>
       <Button variant="primary" onClick={handleSend} disabled={isSubmitting}>
-        Send {validCount} {pluralize("Invitation", validCount)}
+        {isSubmitting
+          ? "Sending…"
+          : `Send ${validCount} ${pluralize("Invitation", validCount)}`}
       </Button>
     </DialogActions>
   )
@@ -377,7 +379,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
             ? ` ${invalidEmails.length} ${pluralize("email address", invalidEmails.length, "email addresses")} were invalid and will be excluded.`
             : "",
           hasDuplicates
-            ? ` ${duplicateCount} duplicate ${pluralize("email address", duplicateCount, "email addresses")} ${duplicateCount === 1 ? "was" : "were"} removed.`
+            ? ` ${duplicateEmails.length} duplicate ${pluralize("email address", duplicateEmails.length, "email addresses")} ${duplicateEmails.length === 1 ? "was" : "were"} removed.`
             : "",
           skippedCount > 0
             ? ` ${skippedCount} ${pluralize("row", skippedCount)} skipped — no email address found.`
@@ -476,9 +478,13 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
             {hasInvalid && hasDuplicates && " "}
             {hasDuplicates && (
               <>
-                <strong>{duplicateCount}</strong> duplicate{" "}
-                {pluralize("email address", duplicateCount, "email addresses")}{" "}
-                {duplicateCount === 1 ? "was" : "were"} removed.
+                <strong>{duplicateEmails.length}</strong> duplicate{" "}
+                {pluralize(
+                  "email address",
+                  duplicateEmails.length,
+                  "email addresses",
+                )}{" "}
+                {duplicateEmails.length === 1 ? "was" : "were"} removed.
                 {!hasInvalid &&
                   " Only the first instance of each email was kept."}
               </>
@@ -510,7 +516,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
           {hasDuplicates && (
             <EmailAlertBox>
               <AlertBoxTitle component="p">
-                Duplicate email addresses ({duplicateCount})
+                Duplicate email addresses ({duplicateEmails.length})
               </AlertBoxTitle>
               <EmailListExpand emails={duplicateEmails} />
               <CopyLink onClick={handleCopyDuplicate} type="button">

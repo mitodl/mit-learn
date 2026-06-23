@@ -109,6 +109,18 @@ describe("extractEmailsFromCsvRows", () => {
     expect(duplicateEmails).toEqual(["Alice@Example.COM"])
   })
 
+  test("does not add repeated entries to duplicateEmails when same address appears 3+ times", () => {
+    const { valid, duplicateCount, duplicateEmails } = extract([
+      ["alice@example.com"],
+      ["alice@example.com"],
+      ["alice@example.com"],
+      ["bob@example.com"],
+    ])
+    expect(valid).toEqual(["alice@example.com", "bob@example.com"])
+    expect(duplicateCount).toBe(2)
+    expect(duplicateEmails).toEqual(["alice@example.com"])
+  })
+
   test("returns clean result with empty arrays for valid input", () => {
     const result = extract([["alice@example.com"], ["bob@example.com"]])
     expect(result).toEqual({
