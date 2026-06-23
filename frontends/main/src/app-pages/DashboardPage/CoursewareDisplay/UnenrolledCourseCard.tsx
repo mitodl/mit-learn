@@ -143,19 +143,19 @@ export const UnenrolledCourseCard = ({
         data-testid="compact-meta-row"
       >
         {courseDateText}
-        <CoursewareActionColumn direction="row" justifyContent="center">
+        <CoursewareActionColumn direction="row" justifyContent="end">
           {startButton}
         </CoursewareActionColumn>
       </Stack>
     </Stack>
   ) : (
-    <>
+    <Stack direction="row" gap="8px" alignItems="center" justifyContent="end">
       <EnrollmentStatusIndicator
         status={EnrollmentStatus.NotEnrolled}
         showNotComplete={Boolean(isContractPageResource)}
       />
       {startButton}
-    </>
+    </Stack>
   )
 
   return (
@@ -177,6 +177,7 @@ export const UnenrolledCourseCard = ({
           gap="8px"
           paddingRight="32px"
           alignItems="center"
+          justifyContent="end"
         >
           {buttonSection}
         </Stack>
@@ -201,7 +202,13 @@ export const UnenrolledCourseCard = ({
             {!isCompact && courseDateText}
           </Stack>
         </Stack>
-        <Stack direction="row" gap="8px" alignItems="center">
+        <Stack
+          direction="row"
+          width="100%"
+          gap="8px"
+          alignItems="center"
+          justifyContent="end"
+        >
           {buttonSection}
         </Stack>
       </CardRoot>
