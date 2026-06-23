@@ -23,21 +23,18 @@ import {
 const IconBadge = styled("span", {
   shouldForwardProp: (prop) => prop !== "$variant",
 })<{ $variant: "warning" | "error" }>(({ theme, $variant }) => ({
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "28px",
-    height: "28px",
-    borderRadius: "50%",
-    backgroundColor:
-      $variant === "error"
-        ? theme.custom.colors.red
-        : theme.custom.colors.orange,
-    color: theme.custom.colors.white,
-    flexShrink: 0,
-    "& svg": { width: "20px", height: "20px" },
-  }),
-)
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "28px",
+  height: "28px",
+  borderRadius: "50%",
+  backgroundColor:
+    $variant === "error" ? theme.custom.colors.red : theme.custom.colors.orange,
+  color: theme.custom.colors.white,
+  flexShrink: 0,
+  "& svg": { width: "20px", height: "20px" },
+}))
 
 // ─── Email alert box (invalid / duplicate list) ───────────────────────────────
 
@@ -114,19 +111,18 @@ const DescriptionText = styled(Typography)(({ theme }) => ({
 const StatsCard = styled("div", {
   shouldForwardProp: (prop) => prop !== "$variant",
 })<{ $variant: "default" | "error" }>(({ theme, $variant }) => ({
-    backgroundColor:
-      $variant === "error"
-        ? theme.custom.colors.white
-        : theme.custom.colors.lightGray1,
-    border: `1px solid ${$variant === "error" ? theme.custom.colors.red : theme.custom.colors.lightGray2}`,
-    borderRadius: "4px",
-    padding: "16px",
-    display: "flex",
-    alignItems: "center",
-    gap: "16px",
-    width: "100%",
-  }),
-)
+  backgroundColor:
+    $variant === "error"
+      ? theme.custom.colors.white
+      : theme.custom.colors.lightGray1,
+  border: `1px solid ${$variant === "error" ? theme.custom.colors.red : theme.custom.colors.lightGray2}`,
+  borderRadius: "4px",
+  padding: "16px",
+  display: "flex",
+  alignItems: "center",
+  gap: "16px",
+  width: "100%",
+}))
 
 const StatDivider = styled("div")(({ theme }) => ({
   width: "1px",
