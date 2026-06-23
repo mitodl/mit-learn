@@ -3,11 +3,10 @@ import { SimpleMenu, Stack } from "ol-components"
 import {
   CardRoot,
   CardTypeText,
-  CourseStartCountdown,
   CoursewareActionColumn,
   CoursewareButton,
   CoursewareButtonLink,
-  EndDateText,
+  CourseDateText,
   getCertificateLink,
   getDashboardEnrollmentStatus,
   HorizontalSeparator,
@@ -142,6 +141,13 @@ export const EnrolledCourseCard = ({
   const endDate = run?.end_date
   const daysUntilEnd = endDate ? calendarDaysUntil(endDate) : null
   const hasEnded = endDate ? isInPast(endDate) : false
+  const courseDateText = (
+    <CourseDateText
+      startDate={startDate}
+      endDate={endDate}
+      className={className}
+    />
+  )
   const canUpgrade =
     offerUpgrade &&
     !isVerifiedEnrollmentMode(enrollmentMode) &&
@@ -157,17 +163,10 @@ export const EnrolledCourseCard = ({
     type: DashboardType.CourseRunEnrollment,
     data: enrollment,
   })
-  const daysAgo = Math.abs(daysUntilEnd ?? 0)
   const endDateAndCertSection = (
     <Stack direction="row" alignItems="center">
-      {daysUntilEnd !== null && (
-        <EndDateText>
-          {hasEnded
-            ? `Ended ${daysAgo} ${daysAgo === 1 ? "day" : "days"} ago`
-            : `Ends in ${daysUntilEnd} ${daysUntilEnd === 1 ? "day" : "days"}`}
-        </EndDateText>
-      )}
-      {daysUntilEnd !== null && (showUpgradeBanner || !!certificateLink) ? (
+      {courseDateText}
+      {courseDateText !== null && (showUpgradeBanner || !!certificateLink) ? (
         <Separator />
       ) : null}
       {showUpgradeBanner ? (
@@ -258,25 +257,14 @@ export const EnrolledCourseCard = ({
     </ButtonLink>
   )
   const buttonSection = isCompact ? (
-    <Stack direction="column" gap="4px" alignItems="stretch">
-      <Stack direction="row" gap="8px" alignItems="center">
-        {endDateAndCertSection}
-        {daysUntilEnd !== null || showUpgradeBanner || !!certificateLink ? (
-          <HorizontalSeparator />
-        ) : null}
-        <CoursewareActionColumn direction="row" justifyContent="center">
-          {ctaButton}
-        </CoursewareActionColumn>
-      </Stack>
-      {startDate && !hasStarted ? (
-        <CoursewareActionColumn
-          direction="row"
-          justifyContent="center"
-          alignSelf="flex-end"
-        >
-          <CourseStartCountdown startDate={startDate} layout={layout} />
-        </CoursewareActionColumn>
+    <Stack direction="row" gap="8px" alignItems="center">
+      {endDateAndCertSection}
+      {daysUntilEnd !== null || showUpgradeBanner || !!certificateLink ? (
+        <HorizontalSeparator />
       ) : null}
+      <CoursewareActionColumn direction="row" justifyContent="center">
+        {ctaButton}
+      </CoursewareActionColumn>
     </Stack>
   ) : (
     <>
@@ -344,10 +332,6 @@ export const EnrolledCourseCard = ({
       }
     />
   )
-  const startDateSection =
-    !isCompact && startDate && !hasStarted ? (
-      <CourseStartCountdown startDate={startDate} layout={layout} />
-    ) : null
 
   return (
     <>
@@ -362,12 +346,9 @@ export const EnrolledCourseCard = ({
           <CardTypeText>Course</CardTypeText>
           {titleSection}
         </Stack>
-        <Stack gap="8px">
-          <Stack direction="row" gap="8px" alignItems="center">
-            {buttonSection}
-            {contextMenu}
-          </Stack>
-          {startDateSection}
+        <Stack direction="row" gap="8px" alignItems="center">
+          {buttonSection}
+          {contextMenu}
         </Stack>
       </CardRoot>
 
@@ -390,16 +371,8 @@ export const EnrolledCourseCard = ({
           </Stack>
           {contextMenu}
         </Stack>
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="end"
-          width="100%"
-        >
-          {startDateSection}
-          <Stack direction="row" gap="8px" alignItems="center">
-            {buttonSection}
-          </Stack>
+        <Stack direction="row" gap="8px" alignItems="center">
+          {buttonSection}
         </Stack>
       </CardRoot>
     </>

@@ -8,7 +8,7 @@ import {
   DashboardType,
   getEnrollmentStatus,
 } from "./model/dashboardViewModel"
-import { calendarDaysUntil } from "ol-utilities"
+import { calendarDaysUntil, isInPast } from "ol-utilities"
 
 const CardRoot = styled.div<{
   screenSize: "desktop" | "mobile"
@@ -222,31 +222,6 @@ const getDashboardEnrollmentStatus = (
     : EnrollmentStatus.Enrolled
 }
 
-const CourseStartCountdown: React.FC<{
-  startDate: string
-  className?: string
-  layout?: "default" | "compact"
-}> = ({ startDate, className, layout = "default" }) => {
-  const calendarDays = calendarDaysUntil(startDate)
-
-  let value
-  if (calendarDays === null || calendarDays < 0) return null
-  if (calendarDays === 0) {
-    value = "Starts Today"
-  } else if (calendarDays === 1) {
-    value = "Starts Tomorrow"
-  } else {
-    value = `Starts in ${calendarDays} days`
-  }
-  return (
-    <CountdownRoot layout={layout}>
-      <Link color="black" size="small" className={className}>
-        {value}
-      </Link>
-    </CountdownRoot>
-  )
-}
-
 const Separator = styled.span(({ theme }) => ({
   display: "inline-block",
   width: "1px",
@@ -255,10 +230,54 @@ const Separator = styled.span(({ theme }) => ({
   backgroundColor: theme.custom.colors.silverGrayLight,
 }))
 
-const EndDateText = styled(Typography)(({ theme }) => ({
+const DateText = styled(Typography)(({ theme }) => ({
   ...theme.typography.subtitle3,
   color: theme.custom.colors.silverGrayDark,
 }))
+
+// Converts a calendarDaysUntil value to a human-readable relative-day suffix.
+// Positive = future (Tomorrow / in N days), negative = past (Yesterday / N days ago), 0 = Today.
+const formatCalendarDays = (days: number): string => {
+  const abs = Math.abs(days)
+  if (abs === 0) return "Today"
+  if (days > 0) return days === 1 ? "Tomorrow" : `in ${days} days`
+  return abs === 1 ? "Yesterday" : `${abs} days ago`
+}
+
+const CourseDateText: React.FC<{
+  startDate?: string | null | undefined
+  endDate?: string | null | undefined
+  className?: string
+}> = ({ startDate, endDate, className }) => {
+  if (!startDate && !endDate) return null
+  const hasStarted = startDate ? isInPast(startDate) : true
+  const daysUntilStart = startDate ? calendarDaysUntil(startDate) : null
+  const daysUntilEnd = endDate ? calendarDaysUntil(endDate) : null
+  const hasEnded = endDate ? isInPast(endDate) : false
+
+  if (!hasStarted) {
+    if (daysUntilStart === null || daysUntilStart < 0) return null
+    return (
+      <DateText className={className}>
+        {`Starts ${formatCalendarDays(daysUntilStart)}`}
+      </DateText>
+    )
+  }
+  if (!hasEnded) {
+    if (daysUntilEnd === null || daysUntilEnd < 0) return null
+    return (
+      <DateText className={className}>
+        {`Ends ${formatCalendarDays(daysUntilEnd)}`}
+      </DateText>
+    )
+  }
+  if (daysUntilEnd === null) return null
+  return (
+    <DateText className={className}>
+      {`Ended ${formatCalendarDays(daysUntilEnd)}`}
+    </DateText>
+  )
+}
 
 export {
   CardRoot,
@@ -270,13 +289,13 @@ export {
   SubtitleLink,
   MenuButton,
   CountdownRoot,
-  CourseStartCountdown,
   HorizontalSeparator,
   CoursewareActionColumn,
   CoursewareButton,
   CoursewareButtonLink,
   Separator,
-  EndDateText,
+  DateText,
+  CourseDateText,
   getCertificateLink,
   getDashboardEnrollmentStatus,
 }

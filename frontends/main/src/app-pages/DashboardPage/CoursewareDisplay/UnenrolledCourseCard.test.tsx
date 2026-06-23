@@ -207,7 +207,7 @@ describe.each([
     },
     {
       endDate: moment().add(1, "day").toISOString(),
-      expectedText: /ends in 1 day/i,
+      expectedText: /ends tomorrow/i,
       case: "future (singular)",
     },
     {
@@ -217,13 +217,14 @@ describe.each([
     },
     {
       endDate: moment().subtract(1, "day").toISOString(),
-      expectedText: /ended 1 day ago/i,
+      expectedText: /ended yesterday/i,
       case: "past (singular)",
     },
   ])("Shows end date text ($case)", ({ endDate, expectedText }) => {
     setupUserApis()
     const run = mitxonline.factories.courses.courseRun({
       is_enrollable: true,
+      start_date: moment().subtract(30, "days").toISOString(),
       end_date: endDate,
     })
     const course = mitxOnlineCourse({ courseruns: [run], next_run_id: run.id })
@@ -256,6 +257,7 @@ describe.each([
       setupUserApis()
       const run = mitxonline.factories.courses.courseRun({
         is_enrollable: true,
+        start_date: moment().subtract(30, "days").toISOString(),
         end_date: moment().add(5, "days").toISOString(),
       })
       const course = mitxOnlineCourse({

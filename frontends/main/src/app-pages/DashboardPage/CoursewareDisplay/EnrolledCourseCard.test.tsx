@@ -206,7 +206,7 @@ describe.each([
     },
     {
       endDate: moment().add(1, "day").toISOString(),
-      expectedText: /ends in 1 day/i,
+      expectedText: /ends tomorrow/i,
       case: "future (singular)",
     },
     {
@@ -216,7 +216,7 @@ describe.each([
     },
     {
       endDate: moment().subtract(1, "day").toISOString(),
-      expectedText: /ended 1 day ago/i,
+      expectedText: /ended yesterday/i,
       case: "past (singular)",
     },
   ])("Shows end date text ($case)", ({ endDate, expectedText }) => {
