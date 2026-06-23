@@ -434,6 +434,29 @@ def test_content_files_loaded_test_mode_published_run_indexes_opensearch(
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("qdrant_enabled", [True, False])
+def test_content_files_loaded_retired_course_does_nothing(
+    mock_search_index_helpers, settings, qdrant_enabled
+):
+    """A fully-retired course (unpublished, non-test_mode) is neither embedded
+    into Qdrant nor indexed into OpenSearch.
+    """
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = qdrant_enabled
+    run = LearningResourceRunFactory.create(
+        published=False,
+        learning_resource__published=False,
+        learning_resource__test_mode=False,
+    )
+    ContentFileFactory.create(run=run)
+
+    SearchIndexPlugin().content_files_loaded(run)
+
+    mock_search_index_helpers.mock_embed_run_contentfiles_immutable_signature.assert_not_called()
+    mock_search_index_helpers.mock_remove_unpublished_run_contentfiles_immutable_signature.assert_not_called()
+    mock_search_index_helpers.mock_upsert_contentfiles_immutable_signature.assert_not_called()
+
+
+@pytest.mark.django_db
 def test_resource_similar_topics(mocker, settings):
     """The plugin function should return expected topics for a resource"""
     expected_topics = ["topic1", "topic2"]

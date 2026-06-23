@@ -77,8 +77,8 @@ def build_run_lookup(
     Args:
         etl_source(str): The ETL source
         ids(list of int): List of LearningResource IDs to filter by.
-            If empty/falsy, all published/test_mode runs for the source
-            are included.
+            If empty/falsy, all runs of every published/test_mode course
+            for the source are included.
 
     Returns:
         dict: Mapping of normalized run_id -> list of LearningResourceRun
@@ -327,9 +327,4 @@ def sync_edx_course_files(
             log.warning("There are %d runs for %s", len(matching_runs), key)
 
         run = matching_runs[0]
-        course = run.learning_resource
-
-        if not course.published and not course.test_mode:
-            log.debug("Retired course for %s, skipping", run.run_id)
-            continue
         process_course_archive(bucket, key, run, overwrite=overwrite)

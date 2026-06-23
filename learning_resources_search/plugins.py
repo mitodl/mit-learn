@@ -234,17 +234,16 @@ class SearchIndexPlugin:
 
         index_tasks = []
 
-        if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
-            index_tasks.append(vector_tasks.embed_run_content_files.si(run.id))
-
         resource = run.learning_resource
-        if run.published and (resource.test_mode or resource.best_run == run):
-            index_tasks.append(tasks.index_run_content_files.si(run.id))
+        if resource.published or resource.test_mode:
+            if run.published and (resource.test_mode or resource.best_run == run):
+                index_tasks.append(tasks.index_run_content_files.si(run.id))
 
-        if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
-            index_tasks.append(
-                vector_tasks.remove_unpublished_run_content_files.si(run.id)
-            )
+            if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+                index_tasks.append(vector_tasks.embed_run_content_files.si(run.id))
+                index_tasks.append(
+                    vector_tasks.remove_unpublished_run_content_files.si(run.id)
+                )
 
         if index_tasks:
             try_with_retry_as_task(chain(*index_tasks))
