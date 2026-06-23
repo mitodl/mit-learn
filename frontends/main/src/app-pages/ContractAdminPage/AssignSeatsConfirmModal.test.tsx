@@ -1,4 +1,4 @@
-import React from "react"
+import React, { act } from "react"
 import { renderWithTheme, screen, user } from "@/test-utils"
 import { AssignSeatsConfirmModal } from "./AssignSeatsConfirmModal"
 
@@ -91,7 +91,9 @@ describe("AssignSeatsConfirmModal — confirm step (no issues)", () => {
       screen.getByRole("button", { name: /sending…/i }),
     ).toBeInTheDocument()
 
-    resolve()
+    await act(async () => {
+      resolve()
+    })
   })
 })
 
@@ -216,7 +218,9 @@ describe("AssignSeatsConfirmModal — review step (has issues)", () => {
     expect(
       screen.getByRole("heading", { name: /some rows were skipped/i }),
     ).toBeInTheDocument()
-    expect(screen.getByText(/3 rows skipped/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/3 rows skipped/i, { selector: "strong" }),
+    ).toBeInTheDocument()
   })
 })
 
@@ -235,10 +239,11 @@ describe("AssignSeatsConfirmModal — over-capacity state (CSV only)", () => {
     expect(
       screen.getByRole("heading", { name: /not enough seats available/i }),
     ).toBeInTheDocument()
-    // MUI places role="alertdialog" on the outer modal root; aria-labelledby and
-    // aria-describedby are on the inner role="dialog" paper.
+    // role="alertdialog" is applied to the MUI paper via PaperProps, which also
+    // carries aria-describedby. alertdialog is a subtype of dialog per ARIA, so
+    // getByRole("dialog") matches the same element.
     expect(screen.getByRole("alertdialog")).toBeInTheDocument()
-    expect(screen.getByRole("dialog")).toHaveAccessibleDescription(
+    expect(screen.getByRole("alertdialog")).toHaveAccessibleDescription(
       /15 learners were imported, but only 10 seats remain/i,
     )
   })

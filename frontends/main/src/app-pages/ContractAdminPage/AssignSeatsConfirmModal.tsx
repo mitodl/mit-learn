@@ -20,8 +20,9 @@ import {
 
 // ─── Icon badges ─────────────────────────────────────────────────────────────
 
-const IconBadge = styled("span")<{ $variant: "warning" | "error" }>(
-  ({ theme, $variant }) => ({
+const IconBadge = styled("span", {
+  shouldForwardProp: (prop) => prop !== "$variant",
+})<{ $variant: "warning" | "error" }>(({ theme, $variant }) => ({
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
@@ -110,8 +111,9 @@ const DescriptionText = styled(Typography)(({ theme }) => ({
 
 // ─── Stats card ───────────────────────────────────────────────────────────────
 
-const StatsCard = styled("div")<{ $variant: "default" | "error" }>(
-  ({ theme, $variant }) => ({
+const StatsCard = styled("div", {
+  shouldForwardProp: (prop) => prop !== "$variant",
+})<{ $variant: "default" | "error" }>(({ theme, $variant }) => ({
     backgroundColor:
       $variant === "error"
         ? theme.custom.colors.white
@@ -188,7 +190,7 @@ const EmailListExpand: React.FC<{ emails: string[] }> = ({ emails }) => {
 }
 
 const copyToClipboard = (text: string) => {
-  navigator.clipboard.writeText(text).catch(() => undefined)
+  navigator.clipboard?.writeText(text).catch(() => undefined)
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -235,6 +237,8 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   // delay) so NVDA picks up the content change cleanly after focus settles on the
   // new step's first focusable element inside the same persistent dialog.
   const [stepAnnouncement, setStepAnnouncement] = useState("")
+  const [sendErrorAnnouncement, setSendErrorAnnouncement] = useState("")
+  const prevOpenRef = useRef(open)
   const copyInvalidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const copyDuplicateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -242,13 +246,23 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   const stepAnnouncementTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   )
+  const sendErrorAnnouncementTimerRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null)
 
+  // Only reset step and copy state when the dialog transitions from closed to
+  // open. Without prevOpenRef the effect would also fire when hasIssues or
+  // overCapacity change while the dialog is already open (e.g. a parent
+  // re-render), resetting the user's progress mid-flow.
   useEffect(() => {
-    if (open) {
+    const wasOpen = prevOpenRef.current
+    prevOpenRef.current = open
+    if (open && !wasOpen) {
       setStep(hasIssues && !overCapacity ? "review" : "confirm")
       setCopiedInvalid(false)
       setCopiedDuplicate(false)
       setSendError(null)
+      setSendErrorAnnouncement("")
       setStepAnnouncement("")
     }
   }, [open, hasIssues, overCapacity])
@@ -260,6 +274,8 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
         clearTimeout(copyDuplicateTimerRef.current)
       if (stepAnnouncementTimerRef.current)
         clearTimeout(stepAnnouncementTimerRef.current)
+      if (sendErrorAnnouncementTimerRef.current)
+        clearTimeout(sendErrorAnnouncementTimerRef.current)
     }
   }, [])
 
@@ -291,7 +307,18 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
       await onConfirm()
       onClose()
     } catch {
-      setSendError("Something went wrong. Please try again.")
+      const msg = "Something went wrong. Please try again."
+      setSendError(msg)
+      // Announce via assertive live region — same reset-then-set pattern used
+      // elsewhere in this file, because dynamically-mounted role="alert" elements
+      // are not consistently picked up by NVDA when other live regions are active.
+      setSendErrorAnnouncement("")
+      if (sendErrorAnnouncementTimerRef.current)
+        clearTimeout(sendErrorAnnouncementTimerRef.current)
+      sendErrorAnnouncementTimerRef.current = setTimeout(
+        () => setSendErrorAnnouncement(msg),
+        100,
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -401,7 +428,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
       fullWidth
       maxWidth="sm"
       aria-describedby={dialogDescribedBy}
-      role={overCapacity ? "alertdialog" : undefined}
+      PaperProps={overCapacity ? { role: "alertdialog" } : undefined}
       title={dialogTitle}
       actions={dialogActions}
     >
@@ -416,6 +443,19 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
           previous step or miss the new one */}
       <VisuallyHidden aria-live="assertive" aria-atomic="true">
         {stepAnnouncement}
+      </VisuallyHidden>
+      {/* Send-error announcement — workaround for dynamically-mounted role="alert"
+          not being consistently picked up by NVDA when other live regions are active */}
+      <VisuallyHidden aria-live="assertive" aria-atomic="true">
+        {sendErrorAnnouncement}
+      </VisuallyHidden>
+      {/* Copy-success announcement — polite so it doesn't interrupt ongoing speech */}
+      <VisuallyHidden aria-live="polite" aria-atomic="true">
+        {copiedInvalid
+          ? "Copied invalid emails to clipboard."
+          : copiedDuplicate
+            ? "Copied duplicate emails to clipboard."
+            : ""}
       </VisuallyHidden>
 
       {/* ── Over-capacity content ──────────────────────────────────────────── */}
