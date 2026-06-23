@@ -525,30 +525,37 @@ def _url_config_key(item):
     return item.get("title")
 
 
-def _url_config_item_visible(item_configuration):
+def _url_config_item_visible(item_configuration, *, allow_hidden=False):
     """
     Determine if an item is visible based on its configuration
-    from the metadata json file
+    from the metadata json file.
+
+    When allow_hidden is True, items that are merely "available with link" (the
+    file or its folder is hidden) are still treated as visible. This is used for
+    files embedded in published content: students reach them through the linking
+    page even though they are not browsable in the Files area. Items that are
+    genuinely inaccessible (unpublished/locked, date-locked, or in a locked
+    folder) are excluded regardless.
     """
     if item_configuration:
         # check if explicitely unpublished
         unpublished = not item_configuration.get("published", True)
         lock_at = item_configuration.get("lock_at")
         unlock_at = item_configuration.get("unlock_at")
-        return not any(
-            [
-                unpublished,
-                is_date_locked(lock_at, unlock_at),
-                item_configuration.get("hidden"),  # file hidden
-                item_configuration.get("locked"),  # file locked
+        checks = [
+            unpublished,
+            is_date_locked(lock_at, unlock_at),
+            item_configuration.get("locked"),  # file locked (unpublished)
+            item_configuration.get("folder", {}).get("locked"),  # parent folder locked
+        ]
+        if not allow_hidden:
+            checks.append(item_configuration.get("hidden"))  # file hidden
+            checks.append(
                 item_configuration.get("folder", {}).get(
                     "hidden"
-                ),  # parent folder hidden
-                item_configuration.get("folder", {}).get(
-                    "locked"
-                ),  # parent folder locked
-            ]
-        )
+                )  # parent folder hidden
+            )
+        return not any(checks)
     return True
 
 
@@ -684,6 +691,16 @@ def get_published_items(zipfile_path, url_config):
             }
             all_embedded_items.append(embedded)
             if embedded_path in all_published_items:
+                continue
+            # tutor problem files are ingested separately as problem files
+            if str(embedded_file).startswith(settings.CANVAS_TUTORBOT_FOLDER):
+                continue
+            # Embedded files bypass the Files-section and "available with link"
+            # (hidden) checks because students reach them through the linking
+            # page. They are still excluded when the file itself is
+            # unpublished/locked or date-locked (genuinely inaccessible).
+            embedded_config = url_config.get(_url_config_key(embedded))
+            if not _url_config_item_visible(embedded_config, allow_hidden=True):
                 continue
             published_items[embedded_path] = embedded
 
