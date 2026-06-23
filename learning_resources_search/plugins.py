@@ -178,10 +178,13 @@ class SearchIndexPlugin:
     @hookimpl
     def resource_run_unpublished(self, run):
         """
-        Deindex an unpublished run's content files.
+        Deindex an unpublished run's content files. Retained sources
+        (edX + Canvas) leave OpenSearch only and stay in Qdrant;
+        all other sources leave both indexes.
 
-        Retained sources (edX + Canvas) leave OpenSearch only and stay in
-        Qdrant; all other sources leave both indexes.
+        Args:
+            run(LearningResourceRun): The Learning Resource run that was removed
+
         """
         resource = run.learning_resource
         if resource.test_mode:
