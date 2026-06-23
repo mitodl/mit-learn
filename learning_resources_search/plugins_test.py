@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from learning_resources.etl.constants import ETLSource
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
@@ -110,11 +111,8 @@ def test_search_index_plugin_resource_unpublished(
     if resource_type == COURSE_TYPE and has_content_files and not test_mode:
         assert unpublish_run_mock.call_count == resource.runs.count()
         for run in resource.runs.all():
-            # Full course retirement -> flip published so content also leaves
-            # the REST API.
-            unpublish_run_mock.assert_any_call(
-                run.id, unpublished_only=False, keep_published=False
-            )
+            # Default "mock" source is non-retained -> removed from both indexes.
+            unpublish_run_mock.assert_any_call(run.id, unpublished_only=False)
     else:
         unpublish_run_mock.assert_not_called()
 
@@ -149,72 +147,112 @@ def test_search_index_plugin_resource_before_delete(
         )
         for run in resource.runs.all():
             mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_any_call(
-                run.id,
-                unpublished_only=False,
-                keep_published=True,
+                run.id, unpublished_only=False
             )
     else:
         mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_not_called()
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("has_content_files", [True, False])
-@pytest.mark.parametrize("test_mode", [True, False])
-def test_resource_run_unpublished_keeps_qdrant(
-    mock_search_index_helpers, settings, has_content_files, test_mode
+def test_resource_before_delete_retained_source_purges_qdrant(
+    mock_search_index_helpers, settings
 ):
-    """Unpublishing one run of a still-published course removes it from OpenSearch
-    (without flipping published) but keeps it in Qdrant.
+    """Deleting a retained-source course purges each run's content from Qdrant,
+    since resource_run_unpublished would otherwise keep retained sources there.
     """
     settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
-    run = LearningResourceRunFactory.create(
-        published=False,
-        learning_resource__published=True,
-        learning_resource__test_mode=test_mode,
+    resource = LearningResourceFactory.create(
+        resource_type=COURSE_TYPE,
+        etl_source=ETLSource.mitxonline.value,
+        create_runs=False,
     )
-    if has_content_files:
+    runs = LearningResourceRunFactory.create_batch(
+        2, learning_resource=resource, published=True
+    )
+    for run in runs:
         ContentFileFactory.create(run=run)
 
-    SearchIndexPlugin().resource_run_unpublished(run)
+    SearchIndexPlugin().resource_before_delete(resource)
 
-    if has_content_files and not test_mode:
-        mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_called_once_with(
-            run.id,
-            unpublished_only=False,
-            keep_published=True,
+    assert (
+        mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.call_count
+        == len(runs)
+    )
+    for run in runs:
+        mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_any_call(
+            run.id
         )
-        # Course still published -> keep the run in Qdrant.
-        mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_not_called()
-    else:
-        mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_not_called()
-        mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_not_called()
 
 
 @pytest.mark.django_db
-def test_resource_run_unpublished_retired_course_purges_qdrant(
-    mock_search_index_helpers, settings
+@pytest.mark.parametrize("course_published", [True, False])
+def test_resource_run_unpublished_retained_source_keeps_qdrant(
+    mock_search_index_helpers, settings, course_published
 ):
-    """When the parent course is fully retired, the run is purged from Qdrant
-    and its content files leave the REST API (keep_published=False).
+    """edX/Canvas: run leaves OpenSearch (keep_published) but ALWAYS stays in
+    Qdrant -- even when the whole course is unpublished.
     """
     settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
     run = LearningResourceRunFactory.create(
         published=False,
-        learning_resource__published=False,
+        learning_resource__published=course_published,
         learning_resource__test_mode=False,
+        learning_resource__etl_source=ETLSource.mitxonline.value,
     )
     ContentFileFactory.create(run=run)
 
     SearchIndexPlugin().resource_run_unpublished(run)
 
     mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_called_once_with(
-        run.id,
-        unpublished_only=False,
-        keep_published=False,
+        run.id, unpublished_only=False, keep_published=True
+    )
+    mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_resource_run_unpublished_non_retained_source_removes_both(
+    mock_search_index_helpers, settings
+):
+    """OCW (non-retained): run is removed from BOTH indexes (current behavior)."""
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    run = LearningResourceRunFactory.create(
+        published=False,
+        learning_resource__published=True,
+        learning_resource__test_mode=False,
+        learning_resource__etl_source=ETLSource.ocw.value,
+    )
+    ContentFileFactory.create(run=run)
+
+    SearchIndexPlugin().resource_run_unpublished(run)
+
+    mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_called_once_with(
+        run.id, unpublished_only=False
     )
     mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_called_once_with(
         run.id
     )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("has_content_files", [True, False])
+def test_resource_run_unpublished_test_mode_or_empty_noops(
+    mock_search_index_helpers, settings, has_content_files
+):
+    """test_mode (any source) or a run with no content files -> no-op."""
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    run = LearningResourceRunFactory.create(
+        published=False,
+        learning_resource__published=True,
+        learning_resource__test_mode=True,
+        learning_resource__etl_source=ETLSource.mitxonline.value,
+    )
+    if has_content_files:
+        ContentFileFactory.create(run=run)
+
+    SearchIndexPlugin().resource_run_unpublished(run)
+
+    mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_not_called()
+    mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_not_called()
 
 
 @pytest.mark.django_db
@@ -245,45 +283,35 @@ def test_resource_unpublished_course_purges_runs_from_qdrant(
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize(
+    "etl_source", [ETLSource.mitxonline.value, ETLSource.ocw.value]
+)
 @pytest.mark.parametrize("has_content_files", [True, False])
 @pytest.mark.parametrize("test_mode", [True, False])
-@pytest.mark.parametrize("resource_published", [True, False])
 def test_search_index_plugin_resource_run_delete(
-    mock_search_index_helpers,
-    settings,
-    has_content_files,
-    test_mode,
-    resource_published,
+    mock_search_index_helpers, settings, etl_source, has_content_files, test_mode
 ):
-    """The plugin function should remove contenfiles from the index and delete the run"""
-    # Deletion removes the content files, so Qdrant must be purged for every
-    # non-test_mode run. It must be purged exactly once: resource_run_unpublished
-    # already purges Qdrant for a retired course, so delete only purges the
-    # still-published case to avoid a duplicate task.
+    """Deleting a run always purges BOTH indexes and deletes the object,
+    regardless of source, test_mode, or whether content files exist.
+    """
     settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
     run = LearningResourceRunFactory.create(
-        learning_resource__published=resource_published,
+        learning_resource__published=True,
         learning_resource__test_mode=test_mode,
+        learning_resource__etl_source=etl_source,
     )
     if has_content_files:
         ContentFileFactory.create(run=run)
     run_id = run.id
+
     SearchIndexPlugin().resource_run_delete(run)
-    if has_content_files and not test_mode:
-        mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_called_once_with(
-            run_id,
-            unpublished_only=False,
-            keep_published=resource_published,
-        )
-    else:
-        mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_not_called()
-    if not test_mode and (resource_published or has_content_files):
-        # Purged exactly once regardless of publication state — no duplicate task.
-        mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_called_once_with(
-            run_id
-        )
-    else:
-        mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_not_called()
+
+    mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_called_once_with(
+        run_id, unpublished_only=False
+    )
+    mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_called_once_with(
+        run_id
+    )
     assert LearningResourceRun.objects.filter(id=run_id).exists() is False
 
 

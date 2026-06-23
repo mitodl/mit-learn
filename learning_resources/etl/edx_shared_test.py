@@ -1118,6 +1118,22 @@ def test_build_run_lookup(source, platform):
     assert lookup[normalized][0].id == run.id
 
 
+def test_build_run_lookup_oll_strips_mitx_prefix():
+    """OLL runs are also indexed without the MITx prefix the archives omit"""
+    source = ETLSource.oll.name
+    course = LearningResourceFactory.create(
+        etl_source=source, published=True, create_runs=False
+    )
+    run = LearningResourceRunFactory.create(
+        learning_resource=course, run_id="MITx+0.501x+2T2019", published=True
+    )
+    lookup = build_run_lookup(source, [course.id])
+    # archive filenames like 0_501x_2T2019_OLL.tar.gz normalize without the prefix
+    assert "0.501x.2t2019" in lookup
+    assert lookup["0.501x.2t2019"][0].id == run.id
+    assert "mitx.0.501x.2t2019" in lookup
+
+
 def test_build_run_lookup_filters_by_ids():
     """build_run_lookup only includes runs for the specified course ids"""
     source = ETLSource.mitxonline.name

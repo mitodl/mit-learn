@@ -1153,7 +1153,9 @@ def best_run_ids_for_resources(readable_ids):
     ).prefetch_related(
         Prefetch(
             "runs",
-            queryset=LearningResourceRun.objects.filter(published=True),
+            queryset=LearningResourceRun.objects.filter(published=True).order_by(
+                "start_date", "enrollment_start", "id"
+            ),
             to_attr="_published_runs",
         )
     )

@@ -106,6 +106,9 @@ def build_run_lookup(
     for run in runs:
         normalized = normalize_run_id(etl_source, run.run_id)
         lookup.setdefault(normalized, []).append(run)
+        if etl_source == ETLSource.oll.name:
+            # OLL archive filenames omit the MITx+ prefix the run_ids carry
+            lookup.setdefault(normalized.removeprefix("mitx."), []).append(run)
     return lookup
 
 

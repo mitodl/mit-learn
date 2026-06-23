@@ -6,6 +6,7 @@ from celery import chain
 from django.apps import apps
 from django.conf import settings as django_settings
 
+from learning_resources.etl.constants import QDRANT_RETAINED_SOURCES
 from learning_resources_search import tasks
 from learning_resources_search.api import get_similar_topics_qdrant
 from learning_resources_search.constants import (
@@ -162,17 +163,25 @@ class SearchIndexPlugin:
         # Ensure test mode is false so the resource is removed from the search index
         resource.test_mode = False
         self.resource_unpublished(resource)
+        # Deletion removes the content files, so retained sources (kept in Qdrant
+        # by resource_run_unpublished) must be purged here too.
+        if (
+            django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS
+            and resource.resource_type == COURSE_TYPE
+            and resource.etl_source in QDRANT_RETAINED_SOURCES
+        ):
+            for run in resource.runs.all():
+                try_with_retry_as_task(
+                    chain(vector_tasks.remove_run_content_files.si(run.id))
+                )
 
     @hookimpl
     def resource_run_unpublished(self, run):
         """
-        Remove an unpublished run's content files from OpenSearch (without
-        flipping ContentFile.published) while keeping them in Qdrant. If the
-        parent course is fully retired (unpublished, non-test_mode), also purge
-        the run from Qdrant.
+        Deindex an unpublished run's content files.
 
-        Args:
-            run(LearningResourceRun): The Learning Resource run that was removed
+        Retained sources (edX + Canvas) leave OpenSearch only and stay in
+        Qdrant; all other sources leave both indexes.
         """
         resource = run.learning_resource
         if resource.test_mode:
@@ -180,41 +189,32 @@ class SearchIndexPlugin:
         if not run.content_files.exists():
             return
 
-        deindex_tasks = [
-            tasks.deindex_run_content_files.si(
-                run.id,
-                unpublished_only=False,
-                # Still-published course: keep content in Qdrant + the REST API.
-                # Otherwise: flip published so it also leaves the REST API.
-                keep_published=resource.published,
-            ),
-        ]
-        if (
-            django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS
-            and not resource.published
-        ):
-            # Full course retirement -> remove from Qdrant as well.
-            deindex_tasks.append(vector_tasks.remove_run_content_files.si(run.id))
+        if resource.etl_source in QDRANT_RETAINED_SOURCES:
+            deindex_tasks = [
+                tasks.deindex_run_content_files.si(
+                    run.id, unpublished_only=False, keep_published=True
+                ),
+            ]
+        else:
+            deindex_tasks = [
+                tasks.deindex_run_content_files.si(run.id, unpublished_only=False),
+            ]
+            if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+                deindex_tasks.append(vector_tasks.remove_run_content_files.si(run.id))
         try_with_retry_as_task(chain(*deindex_tasks))
 
     @hookimpl
     def resource_run_delete(self, run):
         """
-        Remove a learning resource run's content files from the search indexes
-        and then delete the object. Unlike run-unpublish (which keeps a run in
-        Qdrant while the course is still published), deletion always purges
-        Qdrant because the content files are removed too.
+        Remove a learning resource run's content files from BOTH search indexes
+        and then delete the object.
         """
-        resource = run.learning_resource
-        if not resource.test_mode:
-            self.resource_run_unpublished(run)
-            if (
-                django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS
-                and resource.published
-            ):
-                try_with_retry_as_task(
-                    chain(vector_tasks.remove_run_content_files.si(run.id))
-                )
+        deindex_tasks = [
+            tasks.deindex_run_content_files.si(run.id, unpublished_only=False),
+        ]
+        if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+            deindex_tasks.append(vector_tasks.remove_run_content_files.si(run.id))
+        try_with_retry_as_task(chain(*deindex_tasks))
         run.delete()
 
     @hookimpl
