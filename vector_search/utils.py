@@ -360,7 +360,7 @@ def _get_text_splitter(**kwargs):
 
 
 def _chunk_documents(texts, metadatas):
-    # chunk the documents. use semantic chunking if enabled
+    # chunk the documents
     chunk_params = {
         "chunk_overlap": settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP,
     }

@@ -39,7 +39,6 @@ def _use_test_qdrant_settings(settings, mocker):
         "vector_search.encoders.sparse_hash.SparseHashEncoder"
     )
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
-    mocker.patch("vector_search.utils.SemanticChunker")
     mocker.patch(
         "vector_search.utils.compute_optimizer_settings",
         return_value={
