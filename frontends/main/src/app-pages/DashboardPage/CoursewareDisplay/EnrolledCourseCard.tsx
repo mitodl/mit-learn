@@ -370,7 +370,13 @@ export const EnrolledCourseCard = ({
           </Stack>
           {contextMenu}
         </Stack>
-        <Stack direction="row" gap="8px" alignItems="center">
+        <Stack
+          direction="row"
+          gap="8px"
+          alignItems="center"
+          justifyContent="flex-end"
+          width="100%"
+        >
           {buttonSection}
         </Stack>
       </CardRoot>
