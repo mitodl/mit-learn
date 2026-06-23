@@ -142,7 +142,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
     : undefined
   const sharePageUrl =
     isPodcastEpisode && podcastId !== undefined
-      ? `${NEXT_PUBLIC_ORIGIN}${podcastEpisodePageView(String(resource!.id), String(podcastId))}`
+      ? `${NEXT_PUBLIC_ORIGIN}${podcastEpisodePageView(String(resource!.id), String(podcastId), resource?.title)}`
       : ""
 
   return (
@@ -166,7 +166,6 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
         <ShareDialog
           open={Boolean(shareAnchorEl)}
           onClose={() => setShareAnchorEl(null)}
-          anchorEl={shareAnchorEl}
           resource={resource as PodcastEpisodeResource}
           pageUrl={sharePageUrl}
           title={resource?.title ?? ""}

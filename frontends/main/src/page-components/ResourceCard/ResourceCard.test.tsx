@@ -250,7 +250,7 @@ describe.each([
   test("Share button appears for podcast episode resource", async () => {
     const resource = factories.learningResources.podcastEpisode()
     setup({ user: { is_authenticated: false }, props: { resource } })
-    await screen.findByRole("button", { name: "Share" })
+    await screen.findByRole("button", { name: `Share ${resource.title}` })
   })
 
   test("Share button does not appear for non-podcast-episode resources", async () => {
@@ -260,14 +260,16 @@ describe.each([
       name: `Bookmark ${resource.resource_category}`,
     })
     expect(
-      screen.queryByRole("button", { name: "Share" }),
+      screen.queryByRole("button", { name: /^Share / }),
     ).not.toBeInTheDocument()
   })
 
   test("Clicking Share button opens ShareDialog for podcast episode", async () => {
     const resource = factories.learningResources.podcastEpisode()
     setup({ user: { is_authenticated: false }, props: { resource } })
-    const shareButton = await screen.findByRole("button", { name: "Share" })
+    const shareButton = await screen.findByRole("button", {
+      name: `Share ${resource.title}`,
+    })
     expect(screen.getByTestId("share-dialog")).toHaveAttribute(
       "data-open",
       "false",

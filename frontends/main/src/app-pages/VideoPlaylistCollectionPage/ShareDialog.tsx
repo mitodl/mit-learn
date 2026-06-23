@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { Dialog, styled, theme } from "ol-components"
 import Link from "next/link"
 import { env } from "@/env"
@@ -52,8 +52,6 @@ const TabButton = styled.button<{ active: boolean }>(({ active }) => ({
     ? theme.custom.colors.red
     : theme.custom.colors.lightGray2,
   color: active ? theme.custom.colors.white : theme.custom.colors.darkGray1,
-  boxShadow:
-    "0 2px 4px 0 rgba(37, 38, 43, 0.10), 0 3px 8px 0 rgba(37, 38, 43, 0.12)",
   transition: "background-color 0.15s, color 0.15s",
   "&:hover": {
     backgroundColor: active
@@ -216,7 +214,6 @@ function buildPodcastEmbedHtml(
 type ShareDialogProps = {
   open: boolean
   onClose: () => void
-  anchorEl?: HTMLElement | null
   video?: VideoResource
   resource?: PodcastEpisodeResource
   pageUrl: string
@@ -234,6 +231,39 @@ const ShareDialog = ({
   const [activeTab, setActiveTab] = useState<Tab>("share")
   const [copyLinkText, setCopyLinkText] = useState("Copy Link")
   const [copyEmbedText, setCopyEmbedText] = useState("Copy")
+
+  const copyLinkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const copyEmbedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(
+    () => () => {
+      if (copyLinkTimerRef.current) clearTimeout(copyLinkTimerRef.current)
+      if (copyEmbedTimerRef.current) clearTimeout(copyEmbedTimerRef.current)
+    },
+    [],
+  )
+
+  const shareTabRef = useRef<HTMLButtonElement | null>(null)
+  const embedTabRef = useRef<HTMLButtonElement | null>(null)
+  const tabRefs: Record<Tab, React.RefObject<HTMLButtonElement | null>> = {
+    share: shareTabRef,
+    embed: embedTabRef,
+  }
+  const TABS: Tab[] = ["share", "embed"]
+
+  const handleTabKeyDown =
+    (tab: Tab) => (e: React.KeyboardEvent<HTMLButtonElement>) => {
+      const idx = TABS.indexOf(tab)
+      let next: Tab | null = null
+      if (e.key === "ArrowRight") next = TABS[(idx + 1) % TABS.length]
+      else if (e.key === "ArrowLeft")
+        next = TABS[(idx - 1 + TABS.length) % TABS.length]
+      if (next) {
+        e.preventDefault()
+        setActiveTab(next)
+        tabRefs[next].current?.focus()
+      }
+    }
 
   const hasEmbed = video !== undefined || resource !== undefined
 
@@ -267,19 +297,29 @@ const ShareDialog = ({
         {hasEmbed && (
           <TabGroup role="tablist">
             <TabButton
+              ref={tabRefs.share}
+              id="tab-share"
               role="tab"
               aria-selected={activeTab === "share"}
+              aria-controls="tabpanel-share"
               active={activeTab === "share"}
+              tabIndex={activeTab === "share" ? 0 : -1}
               onClick={() => setActiveTab("share")}
+              onKeyDown={handleTabKeyDown("share")}
             >
               <RiShareForwardFill size={16} />
               Share
             </TabButton>
             <TabButton
+              ref={tabRefs.embed}
+              id="tab-embed"
               role="tab"
               aria-selected={activeTab === "embed"}
+              aria-controls="tabpanel-embed"
               active={activeTab === "embed"}
+              tabIndex={activeTab === "embed" ? 0 : -1}
               onClick={() => setActiveTab("embed")}
+              onKeyDown={handleTabKeyDown("embed")}
             >
               <RiCodeSSlashLine size={16} />
               Embed
@@ -289,7 +329,9 @@ const ShareDialog = ({
 
         <div
           role="tabpanel"
-          aria-label={activeTab === "share" ? "Share" : "Embed"}
+          id={`tabpanel-${activeTab}`}
+          aria-labelledby={`tab-${activeTab}`}
+          tabIndex={0}
         >
           {activeTab === "share" || !hasEmbed ? (
             <ShareContents>
@@ -345,11 +387,15 @@ const ShareDialog = ({
                       try {
                         await copyToClipboard(pageUrl)
                         setCopyLinkText("Copied!")
-                        setTimeout(() => setCopyLinkText("Copy Link"), 2000)
                       } catch {
                         setCopyLinkText("Failed to copy")
-                        setTimeout(() => setCopyLinkText("Copy Link"), 2000)
                       }
+                      if (copyLinkTimerRef.current)
+                        clearTimeout(copyLinkTimerRef.current)
+                      copyLinkTimerRef.current = setTimeout(
+                        () => setCopyLinkText("Copy Link"),
+                        2000,
+                      )
                     }}
                   >
                     {copyLinkText}
@@ -393,11 +439,15 @@ const ShareDialog = ({
                     try {
                       await copyToClipboard(embedHtml)
                       setCopyEmbedText("Copied!")
-                      setTimeout(() => setCopyEmbedText("Copy"), 2000)
                     } catch {
                       setCopyEmbedText("Failed to copy")
-                      setTimeout(() => setCopyEmbedText("Copy"), 2000)
                     }
+                    if (copyEmbedTimerRef.current)
+                      clearTimeout(copyEmbedTimerRef.current)
+                    copyEmbedTimerRef.current = setTimeout(
+                      () => setCopyEmbedText("Copy"),
+                      2000,
+                    )
                   }}
                 >
                   {copyEmbedText}

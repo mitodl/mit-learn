@@ -18,7 +18,6 @@ const renderDialog = (video: VideoResource = makeVideo()) =>
     <VideoShareDialog
       open
       onClose={jest.fn()}
-      anchorEl={null}
       video={video}
       pageUrl={PAGE_URL}
       title={video.title ?? "Test video"}
@@ -57,7 +56,6 @@ describe("VideoShareDialog", () => {
         <VideoShareDialog
           open
           onClose={onClose}
-          anchorEl={null}
           video={makeVideo()}
           pageUrl={PAGE_URL}
           title="Test video"

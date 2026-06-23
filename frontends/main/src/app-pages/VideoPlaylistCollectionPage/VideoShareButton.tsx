@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef, useState } from "react"
+import React, { useState } from "react"
 import { RiShareForwardFill } from "@remixicon/react"
 import type { VideoResource } from "api/v1"
 import ShareDialog from "./ShareDialog"
@@ -20,12 +20,10 @@ const VideoShareButton: React.FC<VideoShareButtonProps> = ({
   className,
 }) => {
   const [shareOpen, setShareOpen] = useState(false)
-  const shareButtonRef = useRef<HTMLButtonElement>(null)
 
   return (
     <>
       <Styled.ShareButton
-        ref={shareButtonRef}
         className={className}
         aria-label={`Share ${title}`}
         onClick={() => setShareOpen(true)}
@@ -37,7 +35,6 @@ const VideoShareButton: React.FC<VideoShareButtonProps> = ({
         open={shareOpen}
         video={video}
         title={title}
-        anchorEl={shareButtonRef.current}
         onClose={() => setShareOpen(false)}
         pageUrl={pageUrl}
       />

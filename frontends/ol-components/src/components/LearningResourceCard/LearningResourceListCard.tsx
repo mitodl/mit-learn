@@ -212,7 +212,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   ) {
     actions.push({
       onClick: (event) => onShareClick(event, resource.id),
-      "aria-label": "Share",
+      "aria-label": `Share ${resource.title}`,
       icon: <RiShareForwardFill aria-hidden />,
     })
   }
