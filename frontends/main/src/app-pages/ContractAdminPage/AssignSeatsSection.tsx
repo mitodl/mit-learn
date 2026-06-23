@@ -67,24 +67,26 @@ const DisabledLink = styled.span(({ theme }) => ({
   opacity: 0.5,
 }))
 
-const ValidationBadge = styled.div(({ theme }) => ({
-  display: "inline-flex",
-  gap: "24px",
-  backgroundColor: theme.custom.colors.lightGray1,
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "4px",
-  padding: "8px 16px",
-  ...theme.typography.subtitle3,
-  fontWeight: theme.typography.fontWeightMedium as number,
-}))
-
-const ValidCount = styled.span(({ theme }) => ({
-  color: theme.custom.colors.darkGreen,
-}))
-
-const InvalidCount = styled.span(({ theme }) => ({
-  color: theme.custom.colors.darkRed,
-}))
+const CountBadge = styled.div<{ $variant: "valid" | "warning" | "default" }>(
+  ({ theme, $variant }) => ({
+    display: "inline-flex",
+    backgroundColor:
+      $variant === "warning"
+        ? theme.custom.colors.white
+        : theme.custom.colors.lightGray1,
+    border: `1px solid ${$variant === "warning" ? theme.custom.colors.darkRed : theme.custom.colors.lightGray2}`,
+    borderRadius: "4px",
+    padding: "8px 16px",
+    ...theme.typography.subtitle3,
+    fontWeight: theme.typography.fontWeightMedium as number,
+    color:
+      $variant === "valid"
+        ? theme.custom.colors.darkGreen
+        : $variant === "warning"
+          ? theme.custom.colors.darkRed
+          : theme.custom.colors.darkGray2,
+  }),
+)
 
 /**
  * Wrapper for the textarea + highlight overlay. We use a custom textarea here
@@ -145,7 +147,7 @@ const EmailTextarea = styled("textarea")<{ $transparent: boolean }>(
     background: "transparent",
     border: "none",
     outline: "none",
-    resize: "none",
+    resize: "vertical",
     fontFamily: "inherit",
     fontSize: TA_FONT_SIZE,
     lineHeight: TA_LINE_HEIGHT,
@@ -238,6 +240,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
   )
   const validCount = submitResult.valid.length
   const invalidCount = submitResult.invalid.length
+  const duplicateCount = submitResult.duplicateEmails.length
   const hasEmails = emailInput.trim().length > 0
   const canSubmit = validCount > 0
 
@@ -249,8 +252,22 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
   )
   const showOverlay = hasEmails
 
+  const overCapacity = validCount > availableSeats
+  const ignoreWarning =
+    !overCapacity && (invalidCount > 0 || duplicateCount > 0)
+      ? `. ${[
+          duplicateCount > 0
+            ? `${duplicateCount} duplicate ${pluralize("email address", duplicateCount, "email addresses")}`
+            : "",
+          invalidCount > 0
+            ? `${invalidCount} invalid ${pluralize("email address", invalidCount, "email addresses")}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" and ")} will be ignored`
+      : ""
   const announcement = hasEmails
-    ? `${validCount} valid ${pluralize("email", validCount)}${invalidCount > 0 ? `, ${invalidCount} invalid` : ""}`
+    ? `${validCount} valid ${pluralize("email", validCount)}${invalidCount > 0 ? `, ${invalidCount} invalid` : ""}${duplicateCount > 0 ? `, ${duplicateCount} ${pluralize("duplicate", duplicateCount)}` : ""}${ignoreWarning}${overCapacity ? `. Error: You entered ${validCount} ${pluralize("email", validCount)}, but only ${availableSeats} unassigned ${pluralize("seat", availableSeats)} are available. Remove ${validCount - availableSeats} more email ${pluralize("address", validCount - availableSeats, "addresses")} to continue.` : ""}`
     : ""
 
   // Debounce the live-region text so screen readers aren't spammed on every keystroke.
@@ -459,24 +476,34 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
             />
           </EmailInputRoot>
           {hasEmails && (
-            <ValidationBadge id="assign-seats-validation" aria-hidden="true">
-              <ValidCount>{validCount} valid</ValidCount>
-              {invalidCount > 0 && (
-                <InvalidCount>{invalidCount} invalid</InvalidCount>
-              )}
-            </ValidationBadge>
-          )}
-          {validCount > availableSeats && (
-            <InvalidCount>
-              Only {availableSeats} unassigned{" "}
-              {pluralize("seat", availableSeats)} available.
-            </InvalidCount>
+            <Stack
+              direction="row"
+              alignItems="center"
+              flexWrap="wrap"
+              gap="8px"
+            >
+              <CountBadge $variant="valid" aria-hidden="true">
+                {validCount} valid
+              </CountBadge>
+              <CountBadge
+                $variant={invalidCount > 0 ? "warning" : "default"}
+                aria-hidden="true"
+              >
+                {invalidCount} invalid
+              </CountBadge>
+              <CountBadge
+                $variant={duplicateCount > 0 ? "warning" : "default"}
+                aria-hidden="true"
+              >
+                {duplicateCount} {pluralize("duplicate", duplicateCount)}
+              </CountBadge>
+            </Stack>
           )}
         </Stack>
         <ButtonWrapper>
           <Button
             variant="primary"
-            disabled={!canSubmit || validCount > availableSeats}
+            disabled={!canSubmit || overCapacity}
             onClick={handleAssignSeats}
           >
             Assign Seats
@@ -514,6 +541,30 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
           </DisabledLink>
         </Tooltip>
       </Stack>
+      {!overCapacity && (invalidCount > 0 || duplicateCount > 0) && (
+        <Alert severity="warning">
+          {[
+            duplicateCount > 0
+              ? `${duplicateCount} duplicate ${pluralize("email address", duplicateCount, "email addresses")}`
+              : "",
+            invalidCount > 0
+              ? `${invalidCount} invalid ${pluralize("email address", invalidCount, "email addresses")}`
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" and ")}{" "}
+          will be ignored
+        </Alert>
+      )}
+      {overCapacity && (
+        <Alert severity="error">
+          You entered {validCount} {pluralize("email", validCount)}, but only{" "}
+          {availableSeats} unassigned {pluralize("seat", availableSeats)} are
+          available. Remove {validCount - availableSeats} more email{" "}
+          {pluralize("address", validCount - availableSeats, "addresses")} to
+          continue.
+        </Alert>
+      )}
       {csvReadError && (
         <Alert severity="error" closable onClose={() => setCsvReadError(false)}>
           Could not read the file. Please try again.
