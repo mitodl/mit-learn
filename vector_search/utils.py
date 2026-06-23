@@ -6,7 +6,6 @@ from functools import cache
 
 from django.conf import settings
 from django.db.models import Q
-from langchain_experimental.text_splitter import SemanticChunker
 from langchain_text_splitters import (
     MarkdownHeaderTextSplitter,
     RecursiveCharacterTextSplitter,
@@ -380,8 +379,8 @@ def _get_text_splitter(**kwargs):
     return RecursiveCharacterTextSplitter(**kwargs)
 
 
-def _chunk_documents(encoder, texts, metadatas):
-    # chunk the documents. use semantic chunking if enabled
+def _chunk_documents(texts, metadatas):
+    # chunk the documents
     chunk_params = {
         "chunk_overlap": settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP,
     }
@@ -390,18 +389,6 @@ def _chunk_documents(encoder, texts, metadatas):
         chunk_params["chunk_size"] = settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
 
     recursive_splitter = _get_text_splitter(**chunk_params)
-
-    if settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED:
-        """
-        If semantic chunking is enabled,
-        use the semantic chunker then recursive splitter
-        to stay within chunk size limits
-        """
-        return recursive_splitter.split_documents(
-            SemanticChunker(
-                encoder, **settings.SEMANTIC_CHUNKING_CONFIG
-            ).create_documents(texts=texts, metadatas=metadatas)
-        )
     return recursive_splitter.create_documents(texts=texts, metadatas=metadatas)
 
 
@@ -739,7 +726,7 @@ def _generate_content_file_points(serialized_content):
         if _is_markdown_content(doc):
             split_docs = _chunk_markdown_documents(embedding_context, doc)
         else:
-            split_docs = _chunk_documents(encoder_dense, [embedding_context], [doc])
+            split_docs = _chunk_documents([embedding_context], [doc])
 
         # Identify non-empty chunks and their original indices
         valid_chunks = [(i, d) for i, d in enumerate(split_docs) if d.page_content]
