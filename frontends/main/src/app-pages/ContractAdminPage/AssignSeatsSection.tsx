@@ -341,11 +341,11 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
       })
       const { valid, invalid, duplicateEmails, skippedCount } =
         extractEmailsFromCsvRows(data)
+      setEmailInput("")
       if (valid.length === 0) {
         setCsvNoValid(true)
         return
       }
-      setEmailInput("")
       setModalData({
         validEmails: valid,
         invalidEmails: invalid,
@@ -379,10 +379,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
         AssignRevokeCodeRequestRequest: emails.map((email) => ({ email })),
       })
       setResult({ assignedCount: data.assigned.length, errors: data.errors })
-      // Clear the input only on a fully successful assignment.
-      if (data.errors.length === 0) {
-        setEmailInput("")
-      }
+      setEmailInput("")
     } catch {
       setResult({ assignedCount: 0, errors: null })
     }
