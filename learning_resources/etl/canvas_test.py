@@ -1543,6 +1543,11 @@ def test_get_published_items_with_hidden_file_section(mocker, tmp_path):
 
 
 def test_get_published_items_for_unpublshed_but_embedded(mocker, tmp_path):
+    """
+    An embedded file that is unpublished (locked) is excluded, but one that is
+    only "available with link" (hidden, not locked) is still ingested because a
+    student can reach it through the linking page.
+    """
     html_content = """
     <html>
     <head><meta name="workflow_state" content="active"/></head>
@@ -1626,15 +1631,64 @@ def test_get_published_items_for_unpublshed_but_embedded(mocker, tmp_path):
             ("web_resources/html_page.html", html_content),
         ],
     )
-    url_config = {
+    # unpublished (locked) embedded file -> excluded even though it is linked
+    # from an active page: a student cannot open a locked file
+    locked_config = {
         "/file1.pdf": {
             "url": "https://cdn.example.com/file1.pdf",
             "locked": True,
             "hidden": True,
         },
     }
-    published = get_published_items(zip_path, url_config)
+    published = get_published_items(zip_path, locked_config)
+    assert Path("web_resources/file1.pdf").resolve() not in published
+
+    # "available with link" (hidden but not locked) embedded file -> ingested,
+    # since the linking page makes it reachable
+    hidden_config = {
+        "/file1.pdf": {
+            "url": "https://cdn.example.com/file1.pdf",
+            "hidden": True,
+        },
+    }
+    published = get_published_items(zip_path, hidden_config)
     assert Path("web_resources/file1.pdf").resolve() in published
+
+
+def test_get_published_items_excludes_embedded_tutor_files(tmp_path, settings):
+    """
+    A tutor problem file embedded in an active page is not ingested as a content
+    file - tutor files are ingested separately as problem files.
+    """
+    settings.CANVAS_TUTORBOT_FOLDER = "web_resources/ai/tutor/"
+    html_content = """
+    <html>
+    <head><meta name="workflow_state" content="active"/></head>
+        <body>
+            <a href="$IMS-CC-FILEBASE$/ai/tutor/problem.pdf">Embedded problem</a>
+        </body>
+    </html>
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES3" type="webcontent" href="web_resources/html_page.html">
+          <file href="web_resources/html_page.html"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    zip_path = make_canvas_zip(
+        tmp_path,
+        module_xml=None,
+        manifest_xml=manifest_xml,
+        files=[
+            ("web_resources/html_page.html", html_content),
+            ("web_resources/ai/tutor/problem.pdf", "problem"),
+        ],
+    )
+    published = get_published_items(zip_path, {})
+    assert Path("web_resources/ai/tutor/problem.pdf").resolve() not in published
 
 
 def test_get_published_items_for_attachment_module(mocker, tmp_path):
