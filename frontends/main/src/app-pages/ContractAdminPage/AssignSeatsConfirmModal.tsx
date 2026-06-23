@@ -219,6 +219,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   skippedCount,
 }) => {
   const descriptionId = useId()
+  const overCapacitySummaryId = `${descriptionId}-summary`
 
   const hasInvalid = invalidEmails.length > 0
   const hasDuplicates = duplicateCount > 0
@@ -232,8 +233,15 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   const [copiedDuplicate, setCopiedDuplicate] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
+  // Assertive live region text for step transitions. Using reset-then-set (100ms
+  // delay) so NVDA picks up the content change cleanly after focus settles on the
+  // new step's first focusable element inside the same persistent dialog.
+  const [stepAnnouncement, setStepAnnouncement] = useState("")
   const copyInvalidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const copyDuplicateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  )
+  const stepAnnouncementTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   )
 
@@ -243,6 +251,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
       setCopiedInvalid(false)
       setCopiedDuplicate(false)
       setSendError(null)
+      setStepAnnouncement("")
     }
   }, [open, hasIssues, overCapacity])
 
@@ -251,6 +260,8 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
       if (copyInvalidTimerRef.current) clearTimeout(copyInvalidTimerRef.current)
       if (copyDuplicateTimerRef.current)
         clearTimeout(copyDuplicateTimerRef.current)
+      if (stepAnnouncementTimerRef.current)
+        clearTimeout(stepAnnouncementTimerRef.current)
     }
   }, [])
 
@@ -291,43 +302,130 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   const seatsAfterSending = availableSeats - validCount
   const overLimit = validCount - availableSeats
 
-  // ── Over-capacity state (CSV only) ────────────────────────────────────────
+  const reviewTitle = hasInvalid
+    ? "Some learners could not be added"
+    : "Duplicate emails removed"
 
-  if (overCapacity) {
-    return (
-      <Dialog
-        open={open}
-        onClose={onClose}
-        fullWidth
-        maxWidth="sm"
-        aria-describedby={descriptionId}
-        title={
-          <>
-            <IconBadge $variant="error" aria-hidden="true">
-              <RiAlertFill />
-            </IconBadge>
-            Not enough seats available
-          </>
-        }
-        actions={
-          <DialogActions>
-            <Button variant="primary" onClick={onClose}>
-              Close &amp; Update CSV
-            </Button>
-          </DialogActions>
-        }
-      >
-        <VisuallyHidden id={descriptionId}>
-          {`${validCount} learners were imported, but only ${availableSeats} seats remain. ${overLimit} learners exceed the remaining contract capacity and cannot be assigned. Update your CSV to reduce the number of learners before continuing.`}
-        </VisuallyHidden>
+  // Advance from the review step to the confirm step within the same dialog
+  // instance. Using an assertive live region (reset-then-set) rather than
+  // mounting a new Dialog so that focus stays trapped and NVDA doesn't have
+  // to re-discover a new role="dialog" element.
+  const handleReviewAndConfirm = () => {
+    setStep("confirm")
+    const confirmText = `Ready to send invitations. You are about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with a secure link to claim their seat and access the materials. ${seatsAfterSending} seats remaining after sending. Emails will be sent immediately and cannot be recalled.`
+    setStepAnnouncement("")
+    if (stepAnnouncementTimerRef.current)
+      clearTimeout(stepAnnouncementTimerRef.current)
+    stepAnnouncementTimerRef.current = setTimeout(
+      () => setStepAnnouncement(confirmText),
+      100,
+    )
+  }
+
+  // ── Derived title / actions / description (single Dialog, step-based) ──────
+
+  const dialogTitle = overCapacity ? (
+    <>
+      <IconBadge $variant="error" aria-hidden="true">
+        <RiAlertFill />
+      </IconBadge>
+      Not enough seats available
+    </>
+  ) : step === "review" ? (
+    <>
+      <IconBadge $variant="warning" aria-hidden="true">
+        <RiAlertFill />
+      </IconBadge>
+      {reviewTitle}
+    </>
+  ) : (
+    "Ready to send invitations"
+  )
+
+  const dialogActions = overCapacity ? (
+    <DialogActions>
+      <Button variant="primary" onClick={onClose}>
+        Close &amp; Update CSV
+      </Button>
+    </DialogActions>
+  ) : step === "review" ? (
+    <DialogActions>
+      <Button variant="bordered" color="secondary" onClick={onClose}>
+        Cancel
+      </Button>
+      <Button variant="primary" onClick={handleReviewAndConfirm}>
+        Review &amp; Confirm
+      </Button>
+    </DialogActions>
+  ) : (
+    <DialogActions>
+      <Button variant="bordered" color="secondary" onClick={onClose}>
+        Cancel
+      </Button>
+      <Button variant="primary" onClick={handleSend} disabled={isSubmitting}>
+        Send {validCount} {pluralize("Invitation", validCount)}
+      </Button>
+    </DialogActions>
+  )
+
+  const dialogDescription = overCapacity
+    ? `${validCount} learners were imported, but only ${availableSeats} seats remain. ${overLimit} learners exceed the remaining contract capacity and cannot be assigned. Update your CSV to reduce the number of learners before continuing.`
+    : step === "review"
+      ? [
+          `${validCount} learners are ready to invite.`,
+          hasInvalid
+            ? ` ${invalidEmails.length} ${pluralize("email address", invalidEmails.length, "email addresses")} were invalid and will be excluded.`
+            : "",
+          hasDuplicates
+            ? ` ${duplicateCount} duplicate ${pluralize("email address", duplicateCount, "email addresses")} ${duplicateCount === 1 ? "was" : "were"} removed.`
+            : "",
+          skippedCount > 0
+            ? ` ${skippedCount} ${pluralize("row", skippedCount)} skipped — no email address found.`
+            : "",
+          " Only valid, unique emails will be assigned.",
+        ].join("")
+      : `You are about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with secure link to claim their seat and access the materials. ${seatsAfterSending} seats remaining after sending. Emails will be sent immediately and cannot be recalled.`
+
+  // For overCapacity we point aria-describedby at the visible paragraph so
+  // role="alertdialog" reads it exactly once on open. We do NOT programmatically
+  // focus that paragraph — focus goes to the first interactive element (close
+  // button) so NVDA enters forms mode, preventing browse-mode mouse-hover reads.
+  const dialogDescribedBy = overCapacity ? overCapacitySummaryId : descriptionId
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+      aria-describedby={dialogDescribedBy}
+      role={overCapacity ? "alertdialog" : undefined}
+      title={dialogTitle}
+      actions={dialogActions}
+    >
+      {/* Static description read when focus first enters the dialog.
+          Not rendered for overCapacity — focus on the visible paragraph handles
+          that announcement to avoid a double-read. */}
+      {!overCapacity && (
+        <VisuallyHidden id={descriptionId}>{dialogDescription}</VisuallyHidden>
+      )}
+      {/* Step-transition announcement — fires after focus settles on the new
+          step's content within the same dialog, so NVDA doesn't re-read the
+          previous step or miss the new one */}
+      <VisuallyHidden aria-live="assertive" aria-atomic="true">
+        {stepAnnouncement}
+      </VisuallyHidden>
+
+      {/* ── Over-capacity content ──────────────────────────────────────────── */}
+      {overCapacity && (
         <Stack gap="24px">
-          <DescriptionText>
+          <DescriptionText id={overCapacitySummaryId}>
             <strong>{validCount}</strong> learners were imported, but only{" "}
             <strong>{availableSeats} seats</strong> remain.{" "}
             <strong>{overLimit} learners</strong> exceed the remaining contract
             capacity and cannot be assigned.
           </DescriptionText>
-          <StatsCard $variant="error">
+          <StatsCard $variant="error" aria-hidden="true">
             <StatColumn role="group" aria-label={`${validCount} imported`}>
               <StatValue aria-hidden="true">{validCount}</StatValue>
               <StatLabel aria-hidden="true">Imported</StatLabel>
@@ -355,58 +453,10 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
             Update your CSV to reduce the number of learners before continuing.
           </InfoNote>
         </Stack>
-      </Dialog>
-    )
-  }
+      )}
 
-  // ── Review step (has invalid/duplicate emails) ────────────────────────────
-
-  if (step === "review") {
-    const reviewTitle = hasInvalid
-      ? "Some learners could not be added"
-      : "Duplicate emails removed"
-
-    return (
-      <Dialog
-        open={open}
-        onClose={onClose}
-        fullWidth
-        maxWidth="sm"
-        aria-describedby={descriptionId}
-        title={
-          <>
-            <IconBadge $variant="warning" aria-hidden="true">
-              <RiAlertFill />
-            </IconBadge>
-            {reviewTitle}
-          </>
-        }
-        actions={
-          <DialogActions>
-            <Button variant="bordered" color="secondary" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={() => setStep("confirm")}>
-              Review &amp; Confirm
-            </Button>
-          </DialogActions>
-        }
-      >
-        <VisuallyHidden id={descriptionId}>
-          {[
-            `${validCount} learners are ready to invite.`,
-            hasInvalid
-              ? ` ${invalidEmails.length} ${pluralize("email address", invalidEmails.length, "email addresses")} were invalid and will be excluded.`
-              : "",
-            hasDuplicates
-              ? ` ${duplicateCount} duplicate ${pluralize("email address", duplicateCount, "email addresses")} ${duplicateCount === 1 ? "was" : "were"} removed.`
-              : "",
-            skippedCount > 0
-              ? ` ${skippedCount} ${pluralize("row", skippedCount)} skipped — no email address found.`
-              : "",
-            " Only valid, unique emails will be assigned.",
-          ].join("")}
-        </VisuallyHidden>
+      {/* ── Review step content ────────────────────────────────────────────── */}
+      {!overCapacity && step === "review" && (
         <Stack gap="24px">
           <DescriptionText>
             <strong>{validCount} learners are ready</strong> to invite.{" "}
@@ -475,80 +525,58 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
             Only valid, unique emails will be assigned.
           </InfoNote>
         </Stack>
-      </Dialog>
-    )
-  }
+      )}
 
-  // ── Confirm step ("Ready to send invitations") ────────────────────────────
-
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      fullWidth
-      maxWidth="sm"
-      aria-describedby={descriptionId}
-      title="Ready to send invitations"
-      actions={
-        <DialogActions>
-          <Button variant="bordered" color="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleSend}
-            disabled={isSubmitting}
-          >
-            Send {validCount} {pluralize("Invitation", validCount)}
-          </Button>
-        </DialogActions>
-      }
-    >
-      <VisuallyHidden id={descriptionId}>
-        {`You are about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with secure link to claim their seat and access the materials. ${seatsAfterSending} seats remaining after sending. Emails will be sent immediately and cannot be recalled.`}
-      </VisuallyHidden>
-      <Stack gap="24px">
-        <DescriptionText>
-          You are about to send <strong>{validCount}</strong> invitation{" "}
-          {pluralize("email", validCount)} from MIT Learn. Learners will receive
-          an email with secure link to claim their seat and access the
-          materials.
-        </DescriptionText>
-        <StatsCard $variant="default">
-          <StatColumn
-            role="group"
-            aria-label={`${validCount} ${pluralize("invitation", validCount)}`}
-          >
-            <StatValue aria-hidden="true">{validCount}</StatValue>
-            <StatLabel aria-hidden="true">Invitations</StatLabel>
-          </StatColumn>
-          <StatDivider aria-hidden="true" />
-          <StatColumn
-            role="group"
-            aria-label={`${seatsAfterSending} seats remaining after sending`}
-          >
-            <StatValue aria-hidden="true">{seatsAfterSending}</StatValue>
-            <StatLabel aria-hidden="true">
-              Seats remaining after sending
-            </StatLabel>
-          </StatColumn>
-          <StatDivider aria-hidden="true" />
-          <StatColumn>
-            <RiMailLine
-              aria-hidden="true"
-              style={{ width: "28px", height: "28px" }}
-            />
-            <StatLabel>
-              Emails will be sent immediately and cannot be recalled.
-            </StatLabel>
-          </StatColumn>
-        </StatsCard>
-        {sendError && (
-          <Typography variant="body2" component="p" color="error" role="alert">
-            {sendError}
-          </Typography>
-        )}
-      </Stack>
+      {/* ── Confirm step content ───────────────────────────────────────────── */}
+      {!overCapacity && step === "confirm" && (
+        <Stack gap="24px">
+          <DescriptionText>
+            You are about to send <strong>{validCount}</strong> invitation{" "}
+            {pluralize("email", validCount)} from MIT Learn. Learners will
+            receive an email with secure link to claim their seat and access the
+            materials.
+          </DescriptionText>
+          <StatsCard $variant="default">
+            <StatColumn
+              role="group"
+              aria-label={`${validCount} ${pluralize("invitation", validCount)}`}
+            >
+              <StatValue aria-hidden="true">{validCount}</StatValue>
+              <StatLabel aria-hidden="true">Invitations</StatLabel>
+            </StatColumn>
+            <StatDivider aria-hidden="true" />
+            <StatColumn
+              role="group"
+              aria-label={`${seatsAfterSending} seats remaining after sending`}
+            >
+              <StatValue aria-hidden="true">{seatsAfterSending}</StatValue>
+              <StatLabel aria-hidden="true">
+                Seats remaining after sending
+              </StatLabel>
+            </StatColumn>
+            <StatDivider aria-hidden="true" />
+            <StatColumn>
+              <RiMailLine
+                aria-hidden="true"
+                style={{ width: "28px", height: "28px" }}
+              />
+              <StatLabel>
+                Emails will be sent immediately and cannot be recalled.
+              </StatLabel>
+            </StatColumn>
+          </StatsCard>
+          {sendError && (
+            <Typography
+              variant="body2"
+              component="p"
+              color="error"
+              role="alert"
+            >
+              {sendError}
+            </Typography>
+          )}
+        </Stack>
+      )}
     </Dialog>
   )
 }

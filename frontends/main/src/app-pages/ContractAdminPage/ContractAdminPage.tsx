@@ -346,8 +346,18 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   // Mirror row-action Alert text into an assertive live region — smoot-design
   // Alert announces only its aria-describedby ("success/error message") via NVDA
   // instead of the actual children text. Must be before early returns (Rules of Hooks).
+  // Reset-then-set with a 100ms delay so the live region fires after the Alert's
+  // role="alert" has been processed by NVDA, preventing the update from being dropped.
   useEffect(() => {
-    setRowActionAnnouncement(rowActionResult?.message ?? "")
+    if (!rowActionResult?.message) {
+      setRowActionAnnouncement("")
+      return
+    }
+    const prefix = rowActionResult.severity === "error" ? "error: " : ""
+    const text = prefix + rowActionResult.message
+    setRowActionAnnouncement("")
+    const id = setTimeout(() => setRowActionAnnouncement(text), 100)
+    return () => clearTimeout(id)
   }, [rowActionResult])
 
   const {

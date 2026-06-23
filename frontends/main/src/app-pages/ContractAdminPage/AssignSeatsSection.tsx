@@ -228,6 +228,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
   const [modalData, setModalData] = useState<ModalData | null>(null)
   const [result, setResult] = useState<AssignResult | null>(null)
   const [debouncedAnnouncement, setDebouncedAnnouncement] = useState("")
+  const [errorAnnouncement, setErrorAnnouncement] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const bulkAssign = useBulkAssignSeats()
@@ -289,7 +290,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
   // the two concerns can't clear each other. Two separate effects sharing one
   // setState caused the second effect to wipe the first when resultContent
   // went null (e.g. user closes the success Alert).
-  const errorAnnouncement = useMemo(() => {
+  const errorAnnouncementText = useMemo(() => {
     if (csvReadError) return "Error: Could not read the file. Please try again."
     if (csvNoValid) return "Error: No valid email addresses found in this file."
     if (resultContent) {
@@ -309,6 +310,22 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
     }
     return ""
   }, [csvReadError, csvNoValid, resultContent])
+
+  // Reset-then-set with a short delay so the assertive live region fires after
+  // smoot-design Alert's role="alert" has been processed by NVDA. Without the
+  // delay, both fire in the same frame and NVDA drops the live-region update.
+  useEffect(() => {
+    if (!errorAnnouncementText) {
+      setErrorAnnouncement("")
+      return
+    }
+    setErrorAnnouncement("")
+    const id = setTimeout(
+      () => setErrorAnnouncement(errorAnnouncementText),
+      100,
+    )
+    return () => clearTimeout(id)
+  }, [errorAnnouncementText])
 
   const handleCsvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

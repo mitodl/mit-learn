@@ -205,6 +205,13 @@ describe("AssignSeatsConfirmModal — over-capacity state (CSV only)", () => {
     expect(
       screen.getByRole("heading", { name: /not enough seats available/i }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole("alertdialog", {
+        name: /not enough seats available/i,
+      }),
+    ).toHaveAccessibleDescription(
+      /15 learners were imported, but only 10 seats remain/i,
+    )
   })
 
   test("shows imported, available, and over-limit stats", () => {
