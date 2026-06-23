@@ -485,18 +485,16 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
               <CountBadge $variant="valid" aria-hidden="true">
                 {validCount} valid
               </CountBadge>
-              <CountBadge
-                $variant={invalidCount > 0 ? "warning" : "default"}
-                aria-hidden="true"
-              >
-                {invalidCount} invalid
-              </CountBadge>
-              <CountBadge
-                $variant={duplicateCount > 0 ? "warning" : "default"}
-                aria-hidden="true"
-              >
-                {duplicateCount} {pluralize("duplicate", duplicateCount)}
-              </CountBadge>
+              {invalidCount > 0 && (
+                <CountBadge $variant="warning" aria-hidden="true">
+                  {invalidCount} invalid
+                </CountBadge>
+              )}
+              {duplicateCount > 0 && (
+                <CountBadge $variant="warning" aria-hidden="true">
+                  {duplicateCount} {pluralize("duplicate", duplicateCount)}
+                </CountBadge>
+              )}
             </Stack>
           )}
         </Stack>

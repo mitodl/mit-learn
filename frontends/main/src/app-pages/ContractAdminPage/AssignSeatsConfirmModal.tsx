@@ -169,8 +169,8 @@ const EmailListExpand: React.FC<{ emails: string[] }> = ({ emails }) => {
   return (
     <div>
       <EmailListUl>
-        {visible.map((email) => (
-          <li key={email}>{email}</li>
+        {visible.map((email, idx) => (
+          <li key={`${email}-${idx}`}>{email}</li>
         ))}
       </EmailListUl>
       {!expanded && hidden > 0 && (
