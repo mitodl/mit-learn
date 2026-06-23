@@ -17,6 +17,7 @@ export enum FeatureFlags {
   PodcastDetailPage = "podcast-detail-page",
   B2BContractManagerDashboard = "b2b-contract-manager-dashboard",
   Arithmix = "arithmix",
+  CmsCertificateTitle = "cms-certificate-title",
 }
 
 /**
