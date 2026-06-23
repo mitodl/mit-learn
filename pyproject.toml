@@ -138,7 +138,7 @@ dev = [
     "pytest-mock>=3.10.0,<4",
     "pytest-repeat>=0.9.4",
     "responses>=0.25.0,<0.26",
-    "ruff==0.14.14",
+    "ruff==0.15.16",
     "safety>=3.0.0,<4",
     "semantic-version>=2.10.0,<3",
     "freezegun>=1.4.0,<2",
