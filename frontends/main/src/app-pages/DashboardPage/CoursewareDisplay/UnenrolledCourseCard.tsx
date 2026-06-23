@@ -10,8 +10,8 @@ import {
   CardTypeText,
   CoursewareActionColumn,
   CoursewareButton,
-  CourseDateText,
   TitleText,
+  CourseDateSummary,
 } from "./CardShared"
 import { EnrollmentStatus, getBestRun } from "./helpers"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
@@ -98,7 +98,7 @@ export const UnenrolledCourseCard = ({
     </TitleText>
   )
   const courseDateText = (
-    <CourseDateText
+    <CourseDateSummary
       startDate={courseRun?.start_date}
       endDate={courseRun?.end_date}
     />

@@ -1,14 +1,10 @@
 import React from "react"
-import { Link, Stack, styled, Typography } from "ol-components"
+import { Link, Popover, Stack, styled, Typography } from "ol-components"
 import NextLink from "next/link"
 import { EnrollmentStatus } from "./helpers"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
-import {
-  DashboardResource,
-  DashboardType,
-  getEnrollmentStatus,
-} from "./model/dashboardViewModel"
-import { calendarDaysUntil, isInPast } from "ol-utilities"
+import { formatDate, getTimezone } from "ol-utilities"
+import { getCourseDateText, getRelativeDateContent } from "./courseDateUtils"
 
 const CardRoot = styled.div<{
   screenSize: "desktop" | "mobile"
@@ -139,21 +135,6 @@ const MenuButton = styled(ActionButton)<{
     },
 ])
 
-const CountdownRoot = styled.div<{ layout?: "default" | "compact" }>(
-  ({ theme, layout = "default" }) => ({
-    width: layout === "compact" ? "88px" : "100%",
-    paddingRight: layout === "compact" ? "0px" : "32px",
-    display: "flex",
-    justifyContent: "center",
-    alignSelf: "end",
-    whiteSpace: layout === "compact" ? "nowrap" : "normal",
-    [theme.breakpoints.down("md")]: {
-      marginRight: "0px",
-      justifyContent: "flex-start",
-    },
-  }),
-)
-
 const COURSEWARE_BUTTON_WIDTH = "88px"
 
 // Thin vertical divider shown between the certificate/upgrade links and the
@@ -188,40 +169,6 @@ const CoursewareButtonLink = styled(ButtonLink)(({ theme, variant }) => ({
   }),
 }))
 
-/**
- * Rewrites a raw mitxonline certificate link (`/certificate/{uuid}/`) to MIT
- * Learn's own certificate route (`/certificate/{certificateType}/{uuid}/`).
- */
-const getCertificateLink = (
-  link: string | null | undefined,
-  certificateType: "course" | "program",
-): string | null => {
-  if (!link) return null
-  const pattern = /\/certificate\/([^/]+)\/?$/
-  return link.replace(pattern, `/certificate/${certificateType}/$1/`)
-}
-
-const getDashboardEnrollmentStatus = (
-  resource: DashboardResource,
-): EnrollmentStatus => {
-  const hasValidCertificate =
-    resource.type !== DashboardType.Course && !!resource.data.certificate?.uuid
-
-  if (resource.type === DashboardType.Course) {
-    return EnrollmentStatus.NotEnrolled
-  }
-
-  if (resource.type === DashboardType.CourseRunEnrollment) {
-    return hasValidCertificate
-      ? EnrollmentStatus.Completed
-      : getEnrollmentStatus(resource.data)
-  }
-
-  return hasValidCertificate
-    ? EnrollmentStatus.Completed
-    : EnrollmentStatus.Enrolled
-}
-
 const Separator = styled.span(({ theme }) => ({
   display: "inline-block",
   width: "1px",
@@ -235,47 +182,114 @@ const DateText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
-// Converts a calendarDaysUntil value to a human-readable relative-day suffix.
-// Positive = future (Tomorrow / in N days), negative = past (Yesterday / N days ago), 0 = Today.
-const formatCalendarDays = (days: number): string => {
-  const abs = Math.abs(days)
-  if (abs === 0) return "Today"
-  if (days > 0) return days === 1 ? "Tomorrow" : `in ${days} days`
-  return abs === 1 ? "Yesterday" : `${abs} days ago`
-}
-
 const CourseDateText: React.FC<{
   startDate?: string | null | undefined
   endDate?: string | null | undefined
   className?: string
 }> = ({ startDate, endDate, className }) => {
-  if (!startDate && !endDate) return null
-  const hasStarted = startDate ? isInPast(startDate) : true
-  const daysUntilStart = startDate ? calendarDaysUntil(startDate) : null
-  const daysUntilEnd = endDate ? calendarDaysUntil(endDate) : null
-  const hasEnded = endDate ? isInPast(endDate) : false
+  const text = getCourseDateText(startDate, endDate)
+  if (!text) return null
+  return <DateText className={className}>{text}</DateText>
+}
 
-  if (!hasStarted) {
-    if (daysUntilStart === null || daysUntilStart < 0) return null
-    return (
-      <DateText className={className}>
-        {`Starts ${formatCalendarDays(daysUntilStart)}`}
-      </DateText>
-    )
-  }
-  if (!hasEnded) {
-    if (daysUntilEnd === null || daysUntilEnd < 0) return null
-    return (
-      <DateText className={className}>
-        {`Ends ${formatCalendarDays(daysUntilEnd)}`}
-      </DateText>
-    )
-  }
-  if (daysUntilEnd === null) return null
+const DatePopoverContent = styled.div({
+  maxWidth: "240px",
+  display: "flex",
+  padding: "8px",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: "28px",
+  alignSelf: "stretch",
+})
+
+const DatePopoverTrigger = styled(Link)(({ theme }) => ({
+  ...theme.typography.body2,
+  color: theme.custom.colors.silverGrayDark,
+  "&:hover": {
+    color: theme.custom.colors.silverGrayDark,
+  },
+}))
+
+const DatePopoverHeading = styled(Typography)(({ theme }) => ({
+  color: theme.custom.colors.black,
+}))
+
+const DatePopoverBody = styled(Typography)(({ theme }) => ({
+  color: theme.custom.colors.black,
+}))
+
+const DatePopoverDismissButton = styled(Button)({
+  alignSelf: "flex-end",
+})
+
+const CourseDateSummary: React.FC<{
+  startDate?: string | null | undefined
+  endDate?: string | null | undefined
+}> = ({ startDate, endDate }) => {
+  const [popoverAnchorEl, setPopoverAnchorEl] =
+    React.useState<HTMLAnchorElement | null>(null)
+
+  const triggerText = getCourseDateText(startDate, endDate)
+  const startDateFormatted = startDate
+    ? `${formatDate(startDate, "MMMM D, YYYY h:mm A")} ${getTimezone(startDate)}`
+    : null
+  const endDateFormatted = endDate
+    ? `${formatDate(endDate, "MMMM D, YYYY h:mm A")} ${getTimezone(endDate)}`
+    : null
+  const datePopoverContent = getRelativeDateContent(
+    startDate,
+    endDate,
+    startDateFormatted,
+    endDateFormatted,
+  )
+
+  if (!triggerText || !datePopoverContent) return null
+
   return (
-    <DateText className={className}>
-      {`Ended ${formatCalendarDays(daysUntilEnd)}`}
-    </DateText>
+    <>
+      <Popover
+        anchorEl={popoverAnchorEl}
+        open={!!popoverAnchorEl}
+        onClose={() => setPopoverAnchorEl(null)}
+      >
+        <DatePopoverContent>
+          <Stack direction="column" gap="4px">
+            <DatePopoverHeading variant="subtitle3">
+              Important Dates:
+            </DatePopoverHeading>
+            <DatePopoverBody variant="body3">
+              This course{" "}
+              <Typography variant="subtitle3" component="span">
+                {datePopoverContent.startVerb}
+              </Typography>{" "}
+              {datePopoverContent.startSuffix}
+            </DatePopoverBody>
+          </Stack>
+          {datePopoverContent.endVerb && datePopoverContent.endSuffix && (
+            <DatePopoverBody variant="body3">
+              This course{" "}
+              <Typography variant="subtitle3" component="span">
+                {datePopoverContent.endVerb}
+              </Typography>{" "}
+              {datePopoverContent.endSuffix}
+            </DatePopoverBody>
+          )}
+          <DatePopoverDismissButton
+            variant="primary"
+            size="small"
+            onClick={() => setPopoverAnchorEl(null)}
+          >
+            Got it!
+          </DatePopoverDismissButton>
+        </DatePopoverContent>
+      </Popover>
+      <DatePopoverTrigger
+        color="black"
+        onClick={(event) => setPopoverAnchorEl(event.currentTarget)}
+      >
+        {triggerText}
+      </DatePopoverTrigger>
+    </>
   )
 }
 
@@ -288,7 +302,6 @@ export {
   SubtitleLinkRoot,
   SubtitleLink,
   MenuButton,
-  CountdownRoot,
   HorizontalSeparator,
   CoursewareActionColumn,
   CoursewareButton,
@@ -296,6 +309,5 @@ export {
   Separator,
   DateText,
   CourseDateText,
-  getCertificateLink,
-  getDashboardEnrollmentStatus,
+  CourseDateSummary,
 }

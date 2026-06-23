@@ -90,10 +90,33 @@ const isInPast = (date: string): null | boolean => {
   return x.isBefore(moment())
 }
 
+/**
+ * Converts a `calendarDaysUntil` value to a human-readable relative-day suffix.
+ * Positive = future ("Tomorrow" / "in N days"), negative = past ("Yesterday" / "N days ago"), 0 = "Today".
+ */
+const formatCalendarDays = (days: number): string => {
+  const abs = Math.abs(days)
+  if (abs === 0) return "Today"
+  if (days > 0) return days === 1 ? "Tomorrow" : `in ${days} days`
+  return abs === 1 ? "Yesterday" : `${abs} days ago`
+}
+
+/** Extracts the short timezone abbreviation from a date string, e.g. "EST". */
+const getTimezone = (dateString: string): string => {
+  return (
+    new Date(dateString)
+      .toLocaleString("en-US", { timeZoneName: "short" })
+      .split(" ")
+      .pop() ?? ""
+  )
+}
+
 export {
   formatDate,
   formatDurationClockTime,
   formatDurationHuman,
   isInPast,
   calendarDaysUntil,
+  formatCalendarDays,
+  getTimezone,
 }

@@ -160,7 +160,7 @@ describe("ProgramAsCourseCard", () => {
       />,
     )
 
-    const dateSummary = await screen.findByText(/until this course ends\./i)
+    const dateSummary = await screen.findByText(/ends in \d+ days/i)
     await user.click(dateSummary)
 
     expect(await screen.findByText("Important Dates:")).toBeInTheDocument()

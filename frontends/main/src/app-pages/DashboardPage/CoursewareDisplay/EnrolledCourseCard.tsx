@@ -6,9 +6,6 @@ import {
   CoursewareActionColumn,
   CoursewareButton,
   CoursewareButtonLink,
-  CourseDateText,
-  getCertificateLink,
-  getDashboardEnrollmentStatus,
   HorizontalSeparator,
   MenuButton,
   Separator,
@@ -17,8 +14,14 @@ import {
   TitleHeading,
   TitleLink,
   TitleText,
+  CourseDateSummary,
 } from "./CardShared"
-import { EnrollmentStatus, DashboardType } from "./model/dashboardViewModel"
+import {
+  EnrollmentStatus,
+  DashboardType,
+  getCertificateLink,
+  getDashboardEnrollmentStatus,
+} from "./model/dashboardViewModel"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
@@ -142,11 +145,7 @@ export const EnrolledCourseCard = ({
   const daysUntilEnd = endDate ? calendarDaysUntil(endDate) : null
   const hasEnded = endDate ? isInPast(endDate) : false
   const courseDateText = (
-    <CourseDateText
-      startDate={startDate}
-      endDate={endDate}
-      className={className}
-    />
+    <CourseDateSummary startDate={startDate} endDate={endDate} />
   )
   const canUpgrade =
     offerUpgrade &&

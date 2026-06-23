@@ -7,7 +7,6 @@ import {
 import {
   CardRoot,
   CardTypeText,
-  getCertificateLink,
   MenuButton,
   SubtitleLink,
   TitleHeading,
@@ -19,6 +18,7 @@ import {
   isVerifiedEnrollmentMode,
   mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
+import { getCertificateLink } from "./model/dashboardViewModel"
 import { ButtonLink } from "@mitodl/smoot-design"
 import NiceModal from "@ebay/nice-modal-react"
 import { UnenrollProgramDialog } from "./DashboardDialogs"
