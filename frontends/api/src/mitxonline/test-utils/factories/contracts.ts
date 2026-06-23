@@ -1,5 +1,9 @@
 import { faker } from "@faker-js/faker/locale/en"
-import type { ContractPage } from "@mitodl/mitxonline-api-axios/v2"
+import type {
+  BulkAssignError,
+  BulkAssignResult,
+  ContractPage,
+} from "@mitodl/mitxonline-api-axios/v2"
 import { makePaginatedFactory } from "ol-test-utilities"
 import type { ContractCode } from "../../hooks/organizations"
 
@@ -40,4 +44,21 @@ const contractCode = (overrides: Partial<ContractCode> = {}): ContractCode => {
   }
 }
 
-export { contract, contracts, contractCode }
+const bulkAssignError = (
+  overrides: Partial<BulkAssignError> = {},
+): BulkAssignError => ({
+  email: faker.internet.email(),
+  name: faker.person.fullName(),
+  detail: "Code has already been assigned or redeemed.",
+  ...overrides,
+})
+
+const bulkAssignResult = (
+  overrides: Partial<BulkAssignResult> = {},
+): BulkAssignResult => ({
+  assigned: [contractCode({ redemption_status: "assigned" })],
+  errors: [],
+  ...overrides,
+})
+
+export { contract, contracts, contractCode, bulkAssignError, bulkAssignResult }

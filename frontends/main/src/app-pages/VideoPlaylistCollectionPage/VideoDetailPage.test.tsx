@@ -1,4 +1,5 @@
 import React from "react"
+import user from "@testing-library/user-event"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { renderWithProviders, screen } from "@/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -110,6 +111,32 @@ describe("VideoDetailPage", () => {
       name: "Introduction to Machine Learning",
     })
   })
+
+  // Share URL is the slugged canonical form, and carries the playlist only
+  // when present (no `?playlist=null` when the video is viewed without one).
+  test.each([
+    {
+      playlistId: 99,
+      expected:
+        "http://test.learn.odl.local:8062/video/720/intro-to-machine-learning?playlist=99",
+    },
+    {
+      playlistId: null,
+      expected:
+        "http://test.learn.odl.local:8062/video/720/intro-to-machine-learning",
+    },
+  ])(
+    "Share link is the slugged canonical URL (playlistId=$playlistId)",
+    async ({ playlistId, expected }) => {
+      const video = makeVideo({ id: 720, title: "Intro to Machine Learning" })
+      renderPage({ video, playlistId })
+
+      await screen.findByRole("heading", { name: video.title })
+      await user.click(screen.getByRole("button", { name: /share/i }))
+
+      expect(screen.getByRole("textbox")).toHaveValue(expected)
+    },
+  )
 
   test("renders VideoResourcePlayer for the video", async () => {
     const video = makeVideo({

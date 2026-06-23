@@ -1,11 +1,27 @@
 "use client"
 
 import React, { useState } from "react"
-import { Divider, Menu, MenuItem, Tooltip, styled } from "ol-components"
+import {
+  Dialog,
+  Divider,
+  FormDialog,
+  Menu,
+  MenuItem,
+  Tooltip,
+  Typography,
+  styled,
+} from "ol-components"
 import { RiMoreLine } from "@remixicon/react"
-import { ActionButton, VisuallyHidden } from "@mitodl/smoot-design"
+import { ActionButton, TextField, VisuallyHidden } from "@mitodl/smoot-design"
+import { isValidEmail } from "ol-utilities"
 import { b2bAttachView } from "@/common/urls"
+import {
+  useReassignCode,
+  useRemindCode,
+  useRevokeCode,
+} from "api/mitxonline-hooks/organizations"
 import type { ContractCode } from "api/mitxonline-hooks/organizations"
+import type { AxiosError } from "axios"
 
 const ActionMenuItem = styled(MenuItem)(({ theme }) => ({
   ...theme.typography.body3,
@@ -46,27 +62,44 @@ const CopiedMenuItem = styled(ActionMenuItem)(({ theme }) => ({
   },
 }))
 
+type ActionSeverity = "success" | "error"
+
 type RowActionMenuProps = {
   code: ContractCode
+  orgId: number
+  contractId: number
+  /** Surfaces action outcomes in the page-level result Alert. */
+  onResult: (message: string, severity: ActionSeverity) => void
 }
-
-const COMING_SOON = "Coming soon"
 
 /**
  * Three-dot row action menu for the contract admin codes table.
  *
- * Pending rows: Change assigned email (disabled), Resend claim email
- * (disabled), Copy claim link (functional), Release seat (disabled).
+ * Pending rows: Change assigned email (reassign, confirmed), Resend claim
+ * email (remind), Copy claim link, Release seat (revoke, confirmed).
  *
- * Redeemed rows: Uninvite (disabled).
- *
- * NOTE: All actions except "Copy claim link" are disabled pending backend
- * write API availability.
+ * Redeemed rows: Uninvite (revoke, confirmed).
  */
-const RowActionMenu: React.FC<RowActionMenuProps> = ({ code }) => {
+const RowActionMenu: React.FC<RowActionMenuProps> = ({
+  code,
+  orgId,
+  contractId,
+  onResult,
+}) => {
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
   const [copied, setCopied] = useState(false)
+  const [revokeConfirmOpen, setRevokeConfirmOpen] = useState(false)
+  const [reassignOpen, setReassignOpen] = useState(false)
+  const [reassignEmail, setReassignEmail] = useState("")
+  const [reassignTouched, setReassignTouched] = useState(false)
   const open = Boolean(anchorEl)
+
+  const remind = useRemindCode()
+  const revoke = useRevokeCode()
+  const reassign = useReassignCode()
+
+  const isRedeemed = code.redemption_status === "redeemed"
+  const hasAssignedEmail = Boolean(code.assigned_to?.trim())
 
   const handleOpen = (e: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(e.currentTarget)
@@ -76,6 +109,43 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({ code }) => {
   const handleClose = () => {
     setAnchorEl(null)
     setCopied(false)
+  }
+
+  const handleResend = async () => {
+    handleClose()
+    // No recipient to remind — the menu item is disabled in this state, so this
+    // is a defensive guard against an already-redeemed or unassigned code.
+    if (isRedeemed || !hasAssignedEmail) return
+    try {
+      await remind.mutateAsync({
+        code: code.code,
+        id: contractId,
+        parent_lookup_organization: orgId,
+      })
+      onResult(`Claim email resent to ${code.assigned_to}.`, "success")
+    } catch {
+      onResult("Could not resend the claim email. Please try again.", "error")
+    }
+  }
+
+  const handleRevokeConfirm = async () => {
+    try {
+      await revoke.mutateAsync({
+        code: code.code,
+        id: contractId,
+        parent_lookup_organization: orgId,
+      })
+      onResult(isRedeemed ? "Learner uninvited." : "Seat released.", "success")
+    } catch (err) {
+      const status = (err as AxiosError)?.response?.status
+      onResult(
+        status === 409
+          ? "This code has already been redeemed and cannot be revoked."
+          : "Could not complete the action. Please try again.",
+        "error",
+      )
+    }
+    // Dialog closes itself once this resolves.
   }
 
   const handleCopyClaimLink = async () => {
@@ -109,49 +179,87 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({ code }) => {
 
   const assignedTo = code.assigned_to ?? "unassigned seat"
 
-  const menuItems =
-    code.redemption_status === "redeemed" ? (
-      <Tooltip title={COMING_SOON} placement="right" describeChild>
-        <DestructiveMenuItem disabled>Uninvite</DestructiveMenuItem>
-      </Tooltip>
-    ) : (
-      [
-        <Tooltip
-          key="change-email"
-          title={COMING_SOON}
-          placement="right"
-          describeChild
-        >
-          <ActionMenuItem disabled>Change assigned email</ActionMenuItem>
-        </Tooltip>,
+  const openRevokeConfirm = () => {
+    handleClose()
+    setRevokeConfirmOpen(true)
+  }
+
+  const openReassign = () => {
+    handleClose()
+    setReassignEmail(code.assigned_to ?? "")
+    setReassignTouched(false)
+    setReassignOpen(true)
+  }
+
+  const emailValid = isValidEmail(reassignEmail.trim())
+
+  const handleReassignSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const email = reassignEmail.trim()
+    if (!emailValid) {
+      setReassignTouched(true)
+      return
+    }
+    try {
+      await reassign.mutateAsync({
+        code: code.code,
+        id: contractId,
+        parent_lookup_organization: orgId,
+        AssignRevokeCodeRequestRequest: { email },
+      })
+      onResult(`Invitation reassigned to ${email}.`, "success")
+      setReassignOpen(false)
+    } catch (err) {
+      const status = (err as AxiosError)?.response?.status
+      onResult(
+        status === 409
+          ? "This code has already been redeemed and cannot be reassigned."
+          : "Could not change the assigned email. Please try again.",
+        "error",
+      )
+      setReassignOpen(false)
+    }
+  }
+
+  const menuItems = isRedeemed ? (
+    <DestructiveMenuItem onClick={openRevokeConfirm}>
+      Uninvite
+    </DestructiveMenuItem>
+  ) : (
+    [
+      <ActionMenuItem key="change-email" onClick={openReassign}>
+        Change assigned email
+      </ActionMenuItem>,
+      hasAssignedEmail ? (
+        <ActionMenuItem key="resend-email" onClick={handleResend}>
+          Resend claim email
+        </ActionMenuItem>
+      ) : (
         <Tooltip
           key="resend-email"
-          title={COMING_SOON}
-          placement="right"
+          title="No email is assigned to this seat yet."
           describeChild
         >
-          <ActionMenuItem disabled>Resend claim email</ActionMenuItem>
-        </Tooltip>,
-        copied ? (
-          <CopiedMenuItem key="copy-link" disabled>
-            Link copied to clipboard
-          </CopiedMenuItem>
-        ) : (
-          <ActionMenuItem key="copy-link" onClick={handleCopyClaimLink}>
-            Copy claim link
+          <ActionMenuItem disabled aria-label="Resend claim email">
+            Resend claim email
           </ActionMenuItem>
-        ),
-        <Divider component="li" role="separator" key="divider" />,
-        <Tooltip
-          key="release-seat"
-          title={COMING_SOON}
-          placement="right"
-          describeChild
-        >
-          <DestructiveMenuItem disabled>Release seat</DestructiveMenuItem>
-        </Tooltip>,
-      ]
-    )
+        </Tooltip>
+      ),
+      copied ? (
+        <CopiedMenuItem key="copy-link" disabled>
+          Link copied to clipboard
+        </CopiedMenuItem>
+      ) : (
+        <ActionMenuItem key="copy-link" onClick={handleCopyClaimLink}>
+          Copy claim link
+        </ActionMenuItem>
+      ),
+      <Divider component="li" role="separator" key="divider" />,
+      <DestructiveMenuItem key="release-seat" onClick={openRevokeConfirm}>
+        Release seat
+      </DestructiveMenuItem>,
+    ]
+  )
 
   return (
     <>
@@ -179,6 +287,51 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({ code }) => {
       >
         {menuItems}
       </Menu>
+      <Dialog
+        open={revokeConfirmOpen}
+        onClose={() => setRevokeConfirmOpen(false)}
+        onConfirm={handleRevokeConfirm}
+        title={isRedeemed ? "Uninvite learner" : "Release seat"}
+        confirmText={isRedeemed ? "Uninvite" : "Release seat"}
+        maxWidth="sm"
+      >
+        {isRedeemed
+          ? `This will remove ${assignedTo}'s access to the program. This cannot be undone.`
+          : `This will revoke the invitation for ${assignedTo} and return the seat to the unassigned pool.`}
+      </Dialog>
+      <FormDialog
+        open={reassignOpen}
+        title="Change assigned email"
+        confirmText="Reassign seat"
+        onClose={() => setReassignOpen(false)}
+        onSubmit={handleReassignSubmit}
+        disabled={!emailValid}
+        maxWidth="sm"
+        noValidate
+      >
+        <Typography variant="body2">
+          The invitation for {assignedTo} will be reassigned to the new address
+          and a claim email sent there.
+        </Typography>
+        <TextField
+          name="email"
+          label="New email address"
+          type="email"
+          value={reassignEmail}
+          onChange={(e) => {
+            setReassignEmail(e.target.value)
+            setReassignTouched(true)
+          }}
+          error={reassignTouched && !emailValid}
+          errorText={
+            reassignTouched && !emailValid
+              ? "Enter a valid email address."
+              : undefined
+          }
+          required
+          fullWidth
+        />
+      </FormDialog>
     </>
   )
 }

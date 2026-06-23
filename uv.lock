@@ -2062,20 +2062,6 @@ wheels = [
 ]
 
 [[package]]
-name = "langchain-openai"
-version = "0.3.34"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "langchain-core" },
-    { name = "openai" },
-    { name = "tiktoken" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/75/23/91461c6c2b1c8ceeadd6fefe453a03b1537afeff4ace3c118d7e7659f5a7/langchain_openai-0.3.34.tar.gz", hash = "sha256:57916d462be5b8fd19e5cb2f00d4e5cf0465266a292d583de2fc693a55ba190e", size = 785924, upload-time = "2025-10-01T15:18:40.635Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/66/94/132aff5a1ed4ebfe7b4d3e4dbf30b9f70ce2bd2ac3470d0c0e742845afb1/langchain_openai-0.3.34-py3-none-any.whl", hash = "sha256:08d61d68a6d869c70d542171e149b9065668dedfc4fafcd4de8aeb5b933030a9", size = 75605, upload-time = "2025-10-01T15:18:39.415Z" },
-]
-
-[[package]]
 name = "langchain-protocol"
 version = "0.0.17"
 source = { registry = "https://pypi.org/simple" }
@@ -2620,7 +2606,6 @@ dependencies = [
     { name = "langchain" },
     { name = "langchain-experimental" },
     { name = "langchain-litellm" },
-    { name = "langchain-openai" },
     { name = "litellm" },
     { name = "llama-index" },
     { name = "llama-index-llms-openai" },
@@ -2760,7 +2745,6 @@ requires-dist = [
     { name = "langchain", specifier = ">=1.3.9,<1.4" },
     { name = "langchain-experimental", specifier = ">=0.4,<0.5" },
     { name = "langchain-litellm", specifier = ">=0.5.1" },
-    { name = "langchain-openai", specifier = ">=0.3.2,<0.4" },
     { name = "litellm", specifier = "==1.84.0" },
     { name = "llama-index", specifier = ">=0.14.0,<0.15" },
     { name = "llama-index-llms-openai", specifier = ">=0.6.0,<0.7" },

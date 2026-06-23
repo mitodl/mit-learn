@@ -2,7 +2,7 @@ import { Extension } from "@tiptap/core"
 import { Plugin } from "@tiptap/pm/state"
 import { createURLToNodeHandler } from "../shared/createURLToNodeHandler"
 
-function extractResourceId(url: string): number | null {
+export function extractResourceId(url: string): number | null {
   const resourceParamMatch = url.match(/[?&]resource=(\d+)\b/)
   if (resourceParamMatch) {
     return Number(resourceParamMatch[1])
@@ -13,6 +13,22 @@ function extractResourceId(url: string): number | null {
   const videoPathMatch = url.match(/\/video\/(\d+)(?:[/?#]|$)/)
   if (videoPathMatch) {
     return Number(videoPathMatch[1])
+  }
+
+  // Support MIT Learn podcast episode URLs like:
+  // https://rc.learn.mit.edu/podcast/136068/podcast_episode/137277
+  const podcastEpisodeMatch = url.match(
+    /\/podcast\/\d+\/podcast_episode\/(\d+)(?:[/?#]|$)/,
+  )
+  if (podcastEpisodeMatch) {
+    return Number(podcastEpisodeMatch[1])
+  }
+
+  // Support MIT Learn podcast URLs like:
+  // https://rc.learn.mit.edu/podcast/136068
+  const podcastMatch = url.match(/\/podcast\/(\d+)(?:[/?#]|$)/)
+  if (podcastMatch) {
+    return Number(podcastMatch[1])
   }
 
   return null

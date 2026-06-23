@@ -11,7 +11,10 @@ import {
 import LearningResourceDrawer from "./LearningResourceDrawer"
 import { urls, factories, setMockResponse } from "api/test-utils"
 import { LearningResourceExpanded } from "../LearningResourceExpanded/LearningResourceExpanded"
-import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
+import {
+  canonicalResourceDrawerUrl,
+  RESOURCE_DRAWER_PARAMS,
+} from "@/common/urls"
 import { LearningResource, ResourceTypeEnum } from "api"
 import { makeUserSettings } from "@/test-utils/factories"
 import type { User } from "api/hooks/user"
@@ -105,7 +108,11 @@ describe("LearningResourceDrawer", () => {
       })
       expect(LearningResourceExpanded).toHaveBeenCalled()
       await waitFor(() => {
-        expectProps(LearningResourceExpanded, { resource })
+        expectProps(LearningResourceExpanded, {
+          resource,
+          // Share links use the canonical slugged drawer URL
+          shareUrl: canonicalResourceDrawerUrl(resource.id, resource.title),
+        })
       })
       await screen.findByText(resource.title)
 
@@ -120,6 +127,13 @@ describe("LearningResourceDrawer", () => {
   it("Does not render drawer content when resource=id is NOT in the URL", async () => {
     renderWithProviders(<LearningResourceDrawer />, {
       url: "?dog=woof",
+    })
+    expect(LearningResourceExpanded).not.toHaveBeenCalled()
+  })
+
+  it("Does not render drawer content when resource is not a valid id", async () => {
+    renderWithProviders(<LearningResourceDrawer />, {
+      url: `?${RESOURCE_DRAWER_PARAMS.resource}=abc`,
     })
     expect(LearningResourceExpanded).not.toHaveBeenCalled()
   })

@@ -55,6 +55,7 @@ import { DividerViewer } from "./extensions/node/Divider/DividerNode"
 import { LearningResourceButton } from "./extensions/ui/LearningResource/LearningResourceButton"
 import { LearningResourceCardViewer } from "./extensions/node/LearningResource/LearningResourceNode"
 import { MediaEmbedViewer } from "./extensions/node/MediaEmbed/MediaEmbedViewer"
+import { PodcastEpisodeEmbedViewer } from "./extensions/node/PodcastEpisodeEmbed/PodcastEpisodeEmbedViewer"
 
 const Container = styled.div<{
   readOnly: boolean
@@ -106,7 +107,7 @@ const Container = styled.div<{
       marginTop: "40px",
       marginBottom: "40px",
     },
-    p: {
+    "p:not([data-style-boundary] *)": {
       ...theme.typography.body1,
       fontSize: pxToRem(18),
       lineHeight: pxToRem(32),
@@ -134,6 +135,15 @@ const Container = styled.div<{
     },
     // [data-style-boundary] marks embedded third-party components (e.g. video player)
     // that must not inherit editor typography.
+    "& [data-style-boundary] p": {
+      listStyle: "revert",
+      fontFamily: "revert",
+      fontSize: "revert",
+      fontWeight: "revert",
+      lineHeight: "revert",
+      letterSpacing: "revert",
+      marginTop: "inherit",
+    },
     "& [data-style-boundary] ul, & [data-style-boundary] ol": {
       marginTop: "revert",
       marginBottom: "unset",
@@ -337,6 +347,7 @@ const TipTapViewer = ({
               imageWithCaption: ImageWithCaptionViewer,
               learningResource: LearningResourceCardViewer,
               mediaEmbed: MediaEmbedViewer,
+              podcastEpisodeEmbed: PodcastEpisodeEmbedViewer,
             },
           },
         })}

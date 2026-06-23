@@ -54,6 +54,11 @@ export const useEnrollmentHandler = () => {
           })
           return
         }
+        // A selected variant run may not be present in `course.courseruns`
+        // (variant runs come from a separate endpoint and aren't always in the
+        // course payload), so this find() can miss. `href` is the displayed
+        // run's URL, passed explicitly by the card for exactly this reason — it
+        // must take precedence, or variant enrollment redirects silently break.
         const matchedRun = (course.courseruns ?? []).find(
           (run) => run.courseware_id === readableId,
         )
@@ -102,6 +107,9 @@ export const useEnrollmentHandler = () => {
           )
           return
         }
+        // See the B2B note above: the displayed run may be absent from
+        // course.courseruns, so selectedCoursewareUrl/href must take precedence
+        // over this find().
         const verifiedDestination =
           selectedCoursewareUrl ??
           (course.courseruns ?? []).find(

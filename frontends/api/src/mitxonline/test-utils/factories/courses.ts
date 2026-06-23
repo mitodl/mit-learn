@@ -176,7 +176,7 @@ const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
         bio: faker.lorem.paragraph(),
       })),
     },
-    programs: null,
+    programs: [],
     topics: [
       {
         name: faker.lorem.word(),
