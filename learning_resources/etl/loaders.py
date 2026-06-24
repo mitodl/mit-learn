@@ -336,7 +336,7 @@ def load_run(
         run_data["published"] = True
 
     with transaction.atomic():
-        was_published = (
+        previously_published = (
             LearningResourceRun.objects.filter(
                 learning_resource=learning_resource, run_id=run_id
             )
@@ -359,7 +359,7 @@ def load_run(
         if hasattr(learning_resource, "best_run"):
             del learning_resource.best_run
 
-        if was_published and not learning_resource_run.published:
+        if previously_published and not learning_resource_run.published:
             resource_run_unpublished_actions(learning_resource_run)
         elif learning_resource.published or learning_resource.test_mode:
             if (
@@ -394,7 +394,7 @@ def load_run(
                     )
 
                 transaction.on_commit(enqueue_content_tasks)
-            elif was_published is False:
+            elif previously_published is False:
                 # Run was republished. Its content files are still present and
                 # published (retained sources keep them in Qdrant), just absent
                 # from OpenSearch. Re-index them without a full re-ingest.
