@@ -3,7 +3,8 @@ import { Select, styled } from "@mitodl/smoot-design"
 import type { SelectChangeEvent } from "@mitodl/smoot-design"
 import { MenuItem } from "ol-components"
 import type { CourseRunV2 } from "@mitodl/mitxonline-api-axios/v2"
-import { formatDate, isInPast } from "ol-utilities"
+import { formatDate } from "ol-utilities"
+import { runStartsAnytime, byStartDateDesc } from "./courseRun"
 
 type SessionSelectProps = {
   runs: CourseRunV2[]
@@ -43,19 +44,6 @@ const TruncatedValue = styled.span({
 })
 
 /**
- * Returns true when the run is self-paced, not archived, and its start date is
- * in the past — meaning "enroll anytime".
- */
-const runStartsAnytime = (run: CourseRunV2): boolean => {
-  return !!(
-    !run.is_archived &&
-    run.is_self_paced &&
-    run.start_date &&
-    isInPast(run.start_date)
-  )
-}
-
-/**
  * "MMM D, YYYY", collapsing the redundant year on the start of a same-year
  * range ("Sep 8 - Dec 12, 2026"). Cross-year ranges keep both years
  * ("Dec 8, 2026 - Feb 12, 2027"). Dates always show — including for self-paced
@@ -78,16 +66,6 @@ const formatDateRange = (run: CourseRunV2): string => {
 /** " — Start Anytime" for a self-paced, already-open run; null otherwise. */
 const anytimeAnnotation = (run: CourseRunV2): string | null =>
   runStartsAnytime(run) ? " — Start Anytime" : null
-
-// Comparator that orders runs by start date, latest first, so upcoming sessions
-// sit at the top of the list; runs without a start date sort last. This mirrors
-// the "More Dates" list in CourseSummary. The default *selection* is driven by
-// selectedRunId (the course's next_run_id), independent of this display order.
-const byStartDateDesc = (a: CourseRunV2, b: CourseRunV2): number => {
-  const aTime = a.start_date ? new Date(a.start_date).getTime() : -Infinity
-  const bTime = b.start_date ? new Date(b.start_date).getTime() : -Infinity
-  return bTime - aTime
-}
 
 /**
  * " (no certificate available)" for a run whose certificate can no longer be

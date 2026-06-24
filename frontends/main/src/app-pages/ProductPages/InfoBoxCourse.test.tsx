@@ -341,6 +341,32 @@ describe("InfoBoxCourse — data-boxes attribute", () => {
     expect(grid).not.toBeNull()
     expect(grid).toHaveAttribute("data-boxes", "2")
   })
+
+  test("data-boxes=2 when enrolled in a 'none'-scenario run (enrolled collapse supersedes the degraded scenario)", async () => {
+    // Paid-only run past its upgrade deadline with no free mode → scenario
+    // "none". The user holds a prior enrollment, so the Enrolled link still
+    // renders and must count as one offering box (§4h), not zero.
+    const run = makeRun({
+      is_enrollable: true,
+      is_archived: false,
+      is_upgradable: false,
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [],
+    })
+    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+
+    const enrollment = mitxFactories.enrollment.courseEnrollment({
+      run: { id: run.id },
+    })
+    setupAuth([enrollment])
+
+    renderWithProviders(<ControlledInfoBox course={course} />)
+
+    await screen.findByRole("link", { name: /Enrolled/ })
+
+    const grid = getBoxGrid()
+    expect(grid).toHaveAttribute("data-boxes", "2")
+  })
 })
 
 describe("InfoBoxCourse — grid structure", () => {

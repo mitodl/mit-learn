@@ -11,14 +11,18 @@ import {
   RiFileCopy2Line,
   RiInformation2Line,
 } from "@remixicon/react"
-import { formatDate, isInPast, LocalDate, NoSSR, pluralize } from "ol-utilities"
+import { formatDate, LocalDate, NoSSR, pluralize } from "ol-utilities"
 import type {
   CourseWithCourseRunsSerializerV2,
   CourseRunV2,
   V2ProgramDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds, parseReqTree } from "./util"
-import { getCourseScenario } from "./courseRun"
+import {
+  getCourseScenario,
+  runStartsAnytime,
+  byStartDateDesc,
+} from "./courseRun"
 import {
   formatPrice,
   getEnrollmentType,
@@ -156,15 +160,6 @@ const SessionSubText = styled.div(({ theme }) => ({
   rowGap: "2px",
 }))
 
-const runStartsAnytime = (run: CourseRunV2) => {
-  return (
-    !run.is_archived &&
-    run.is_self_paced &&
-    run.start_date &&
-    isInPast(run.start_date)
-  )
-}
-
 type CourseInfoRowProps = {
   course: CourseWithCourseRunsSerializerV2
   nextRun?: CourseRunV2
@@ -176,11 +171,9 @@ const CourseDatesRow: React.FC<
   const [expanded, setExpanded] = useState(false)
   const enrollable = course.courseruns
     .filter((cr) => cr.is_enrollable)
-    .sort((a, b) => {
-      if (!a.start_date || !b.start_date) return 0
-      // Otherwise sort by start date
-      return new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
-    })
+    // Latest start first, shared with the session selector (§4g/§5). Null-start
+    // runs are filtered out below, so byStartDateDesc's null handling is moot.
+    .sort(byStartDateDesc)
 
   const manyDates = enrollable.length > 1
 

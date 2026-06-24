@@ -75,12 +75,13 @@ export const EnrollButton: React.FC<EnrollButtonProps> = ({
         {...busyProps}
         endIcon={
           isBusy ? (
-            <LoadingSpinner
-              size="16px"
-              loading={true}
-              color="inherit"
-              aria-hidden="true"
-            />
+            // Hide the spinner from assistive tech — the button already conveys
+            // busy via aria-busy + the "Loading" name, and would otherwise leak
+            // a redundant role=progressbar named "Loading". LoadingSpinner does
+            // not forward aria-hidden, so wrap it in an element that does.
+            <span aria-hidden="true">
+              <LoadingSpinner size="16px" loading={true} color="inherit" />
+            </span>
           ) : undefined
         }
       >

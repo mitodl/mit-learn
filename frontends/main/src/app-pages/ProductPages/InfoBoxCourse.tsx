@@ -100,8 +100,18 @@ const CourseInfoBox: React.FC<CourseInfoBoxProps> = ({
   const scenario = getCourseScenario(selectedRun)
   const isEnrolled =
     selectedRun !== undefined && enrolledRunIds.includes(selectedRun.id)
-  const offeringBoxes =
-    scenario === "none" ? 0 : isEnrolled ? 1 : scenario === "both" ? 2 : 1
+  // isEnrolled is checked first: the enroll area collapses to a single
+  // "Enrolled" box and that collapse supersedes every scenario, including the
+  // degraded "none" state (§4h) — mirroring useCourseEnrollment, which returns
+  // the enrolled status before the scenario switch. (An enrolled user can land
+  // on a "none" run, e.g. a paid-only run past its upgrade deadline.)
+  const offeringBoxes = isEnrolled
+    ? 1
+    : scenario === "none"
+      ? 0
+      : scenario === "both"
+        ? 2
+        : 1
   const boxCount = 1 + offeringBoxes // 1 | 2 | 3
 
   const upsell = course.programs?.length ? (

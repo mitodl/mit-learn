@@ -7,11 +7,37 @@ import {
   getEnrollmentType,
   canPurchaseRun,
 } from "@/common/mitxonline"
+import { isInPast } from "ol-utilities"
 
 export const getEnrollableRuns = (
   course: CourseWithCourseRunsSerializerV2,
 ): CourseRunV2[] => {
   return (course.courseruns ?? []).filter((run) => run.is_enrollable)
+}
+
+/**
+ * True when a run is self-paced, not archived, and its start date is already in
+ * the past — i.e. "enroll anytime". Shared by the session selector option labels
+ * and the metadata date row so the two can't drift.
+ */
+export const runStartsAnytime = (run: CourseRunV2): boolean => {
+  return !!(
+    !run.is_archived &&
+    run.is_self_paced &&
+    run.start_date &&
+    isInPast(run.start_date)
+  )
+}
+
+/**
+ * Comparator ordering runs by start date, latest first (upcoming sessions on
+ * top); runs without a start date sort last. Shared by the session selector and
+ * the "More Dates" list so their orderings stay identical.
+ */
+export const byStartDateDesc = (a: CourseRunV2, b: CourseRunV2): number => {
+  const aTime = a.start_date ? new Date(a.start_date).getTime() : -Infinity
+  const bTime = b.start_date ? new Date(b.start_date).getTime() : -Infinity
+  return bTime - aTime
 }
 
 export const getSelectedRun = (

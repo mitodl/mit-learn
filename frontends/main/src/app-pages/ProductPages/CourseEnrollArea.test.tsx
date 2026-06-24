@@ -329,6 +329,10 @@ describe("CourseEnrollArea — loading state", () => {
     const busyBtns = btns.filter((b) => b.getAttribute("aria-busy") === "true")
     expect(busyBtns.length).toBeGreaterThan(0)
     busyBtns.forEach((btn) => expect(btn).toBeDisabled())
+    // The busy button's label is hidden behind the spinner, so it must still be
+    // reachable by an accessible name ("Loading") rather than nameless (WCAG
+    // 4.1.2). A regression dropping that aria-label would fail here.
+    expect(screen.getByRole("button", { name: "Loading" })).toBeInTheDocument()
     expect(
       screen.getByRole("heading", { name: "Learn for Free", level: 3 }),
     ).toBeInTheDocument()
