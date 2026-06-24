@@ -75,11 +75,12 @@ describe("SessionSelect", () => {
     ).toBeInTheDocument()
   })
 
-  test("shows 'Anytime' for a self-paced run with a past start date", async () => {
+  test("shows dates with a 'Start Anytime' annotation for a self-paced past-start run", async () => {
     const selfPaced = makeRun({
       is_self_paced: true,
       is_archived: false,
       start_date: "2020-01-01T00:00:00Z",
+      end_date: "2026-06-01",
     })
     const other = makeRun({ start_date: "2027-06-01" })
     renderWithProviders(
@@ -90,6 +91,35 @@ describe("SessionSelect", () => {
       />,
     )
     await user.click(screen.getByRole("combobox", { name: /session/i }))
-    expect(screen.getByRole("option", { name: /anytime/i })).toBeInTheDocument()
+    // The date range is shown (not a bare "Anytime"), with the annotation appended.
+    expect(
+      screen.getByRole("option", { name: /Jan 1, 2020.*Start Anytime/ }),
+    ).toBeInTheDocument()
+  })
+
+  test("collapsed value shows dates but omits '— Enrolled' (the standalone Enrolled button covers it)", async () => {
+    const run = makeRun({
+      start_date: "2026-09-08",
+      end_date: "2026-12-16",
+      is_self_paced: false,
+    })
+    renderWithProviders(
+      <SessionSelect
+        runs={[run]}
+        selectedRunId={run.id}
+        enrolledRunIds={[run.id]}
+        onChange={jest.fn()}
+      />,
+    )
+    // Collapsed combobox: dates, no "— Enrolled"
+    const combobox = screen.getByRole("combobox", { name: /session/i })
+    expect(combobox).toHaveTextContent("Sep 8 - Dec 16, 2026")
+    expect(combobox).not.toHaveTextContent("Enrolled")
+
+    // ...but the open menu still marks it enrolled
+    await user.click(combobox)
+    expect(
+      screen.getByRole("option", { name: /Sep 8 - Dec 16, 2026 — Enrolled/ }),
+    ).toBeInTheDocument()
   })
 })
