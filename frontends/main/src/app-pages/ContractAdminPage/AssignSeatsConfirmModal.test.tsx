@@ -299,3 +299,156 @@ describe("AssignSeatsConfirmModal — over-capacity state (CSV only)", () => {
     expect(baseProps.onConfirm).not.toHaveBeenCalled()
   })
 })
+
+describe("AssignSeatsConfirmModal — copy buttons", () => {
+  afterEach(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: undefined,
+      configurable: true,
+    })
+  })
+
+  test("copies invalid emails to clipboard and shows Copied! feedback", async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    })
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...baseProps}
+        invalidEmails={["bad@", "alsobad@"]}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: /copy all invalid emails/i }),
+    )
+
+    expect(writeText).toHaveBeenCalledWith("bad@\nalsobad@")
+    expect(
+      await screen.findByRole("button", { name: /copied!/i }),
+    ).toBeInTheDocument()
+  })
+
+  test("copies duplicate emails to clipboard and shows Copied! feedback", async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    })
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...baseProps}
+        duplicateEmails={["dup@example.com", "dup2@example.com"]}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: /copy all duplicate emails/i }),
+    )
+
+    expect(writeText).toHaveBeenCalledWith("dup@example.com\ndup2@example.com")
+    expect(
+      await screen.findByRole("button", { name: /copied!/i }),
+    ).toBeInTheDocument()
+  })
+
+  test("announces copy success to screen readers via aria-live region", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: jest.fn().mockResolvedValue(undefined) },
+      configurable: true,
+    })
+    renderWithTheme(
+      <AssignSeatsConfirmModal {...baseProps} invalidEmails={["bad@"]} />,
+    )
+
+    const liveRegion = document.querySelector("[aria-live='polite']")
+    expect(liveRegion).toHaveTextContent("")
+
+    await user.click(
+      screen.getByRole("button", { name: /copy all invalid emails/i }),
+    )
+
+    await screen.findByRole("button", { name: /copied!/i })
+    expect(liveRegion).toHaveTextContent("Copied invalid emails to clipboard.")
+  })
+
+  test("falls back to execCommand when clipboard API is unavailable (invalid emails)", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: undefined,
+      configurable: true,
+    })
+    document.execCommand = jest.fn().mockImplementation((cmd: string) => {
+      if (cmd === "copy") {
+        document.dispatchEvent(
+          new Event("copy", { bubbles: true, cancelable: true }),
+        )
+        return true
+      }
+      return false
+    })
+    renderWithTheme(
+      <AssignSeatsConfirmModal {...baseProps} invalidEmails={["bad@"]} />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: /copy all invalid emails/i }),
+    )
+
+    expect(document.execCommand).toHaveBeenCalledWith("copy")
+    expect(
+      await screen.findByRole("button", { name: /copied!/i }),
+    ).toBeInTheDocument()
+  })
+
+  test("falls back to execCommand when clipboard API is unavailable (duplicate emails)", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: undefined,
+      configurable: true,
+    })
+    document.execCommand = jest.fn().mockImplementation((cmd: string) => {
+      if (cmd === "copy") {
+        document.dispatchEvent(
+          new Event("copy", { bubbles: true, cancelable: true }),
+        )
+        return true
+      }
+      return false
+    })
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...baseProps}
+        duplicateEmails={["dup@example.com"]}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: /copy all duplicate emails/i }),
+    )
+
+    expect(document.execCommand).toHaveBeenCalledWith("copy")
+    expect(
+      await screen.findByRole("button", { name: /copied!/i }),
+    ).toBeInTheDocument()
+  })
+
+  test("does not show Copied! when both clipboard and execCommand fail", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: undefined,
+      configurable: true,
+    })
+    document.execCommand = jest.fn().mockReturnValue(false)
+    renderWithTheme(
+      <AssignSeatsConfirmModal {...baseProps} invalidEmails={["bad@"]} />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: /copy all invalid emails/i }),
+    )
+
+    expect(
+      screen.queryByRole("button", { name: /copied!/i }),
+    ).not.toBeInTheDocument()
+  })
+})

@@ -185,8 +185,31 @@ const EmailListExpand: React.FC<{ emails: string[] }> = ({ emails }) => {
   )
 }
 
-const copyToClipboard = (text: string) => {
-  navigator.clipboard?.writeText(text).catch(() => undefined)
+const copyToClipboard = async (text: string): Promise<boolean> => {
+  if (navigator.clipboard) {
+    try {
+      await navigator.clipboard.writeText(text)
+      return true
+    } catch {
+      // fall through to execCommand fallback
+    }
+  }
+  // execCommand fallback for non-secure contexts (HTTP dev environments).
+  // Sets clipboard data via the copy event directly, bypassing focus trap
+  // issues caused by MUI Dialog.
+  return new Promise<boolean>((resolve) => {
+    const handler = (e: ClipboardEvent) => {
+      e.clipboardData?.setData("text/plain", text)
+      e.preventDefault()
+      resolve(true)
+    }
+    document.addEventListener("copy", handler, { once: true })
+    const success = document.execCommand("copy")
+    if (!success) {
+      document.removeEventListener("copy", handler)
+      resolve(false)
+    }
+  })
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -275,8 +298,9 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
     }
   }, [])
 
-  const handleCopyInvalid = () => {
-    copyToClipboard(invalidEmails.join("\n"))
+  const handleCopyInvalid = async () => {
+    const ok = await copyToClipboard(invalidEmails.join("\n"))
+    if (!ok) return
     setCopiedInvalid(true)
     if (copyInvalidTimerRef.current) clearTimeout(copyInvalidTimerRef.current)
     copyInvalidTimerRef.current = setTimeout(
@@ -285,8 +309,9 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
     )
   }
 
-  const handleCopyDuplicate = () => {
-    copyToClipboard(duplicateEmails.join("\n"))
+  const handleCopyDuplicate = async () => {
+    const ok = await copyToClipboard(duplicateEmails.join("\n"))
+    if (!ok) return
     setCopiedDuplicate(true)
     if (copyDuplicateTimerRef.current)
       clearTimeout(copyDuplicateTimerRef.current)
