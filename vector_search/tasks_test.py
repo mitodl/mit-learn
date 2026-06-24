@@ -833,6 +833,16 @@ def test_remove_embeddings_raises_retryerror_on_grpc_deadline(mocker):
         remove_embeddings([1], COURSE_TYPE)
 
 
+def test_remove_embeddings_reraises_other_grpc_errors(mocker):
+    """Non-transient gRPC errors propagate (task fails) rather than retrying."""
+    mocker.patch(
+        "vector_search.tasks.remove_qdrant_records",
+        side_effect=_rpc_error(grpc.StatusCode.INVALID_ARGUMENT),
+    )
+    with pytest.raises(grpc.RpcError):
+        remove_embeddings([1], COURSE_TYPE)
+
+
 def test_remove_embeddings_does_not_swallow_errors(mocker):
     """Unhandled errors propagate so the task fails instead of reporting success."""
     mocker.patch(
