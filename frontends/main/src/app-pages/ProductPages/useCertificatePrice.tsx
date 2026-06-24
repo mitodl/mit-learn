@@ -61,8 +61,7 @@ export const useCertificatePrice = (
   if (priceResult.isDiscounted) {
     // The strike-through is visual only, so assistive tech would otherwise read
     // two bare prices with no current-vs-original cue. Announce a single
-    // sensible phrase and hide the visual amounts (mirrors the program price
-    // path in ProductSummary).
+    // sensible phrase and hide the visual amounts.
     priceNode = (
       <DiscountedPrice
         role="group"

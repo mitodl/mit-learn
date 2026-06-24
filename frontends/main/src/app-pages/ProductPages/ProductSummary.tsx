@@ -171,8 +171,7 @@ const CourseDatesRow: React.FC<
   const [expanded, setExpanded] = useState(false)
   const enrollable = course.courseruns
     .filter((cr) => cr.is_enrollable)
-    // Latest start first, shared with the session selector. Null-start runs are
-    // filtered out below, so byStartDateDesc's null handling is moot.
+    // Latest start first; null-start runs are filtered out below.
     .sort(byStartDateDesc)
 
   const manyDates = enrollable.length > 1
@@ -704,9 +703,9 @@ const CourseSummary: React.FC<{
           </Stack>
         )
       ) : null}
-      {/* Degraded-state notices sit at the bottom of the metadata block, just
-          above the offerings, matching Figma, which fixes the row order and
-          notice copy but leaves the notice's vertical placement open. */}
+      {/* Degraded-state notices sit at the bottom of the metadata block,
+          immediately above the offerings they qualify, so the warning reads as
+          context for the enrollment choices below it. */}
       {!selectedRun ? (
         <Alert severity="warning">
           No sessions of this course are currently open for enrollment. More

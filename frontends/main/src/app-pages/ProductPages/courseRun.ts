@@ -94,10 +94,9 @@ export const getCourseScenario = (
   const hasFree = type === "free" || type === "both"
   const offersPaid = type === "paid" || type === "both"
   // Archived grants free audit access to the (ended) content regardless of the
-  // run's original modes — the established product behavior (see legacy
-  // CourseProductDetailEnroll: `is_archived ? "Access Course Materials"`).
-  // offeredCertificate records whether a paid track existed, so an audit-only
-  // archived run doesn't claim a certificate deadline it never had.
+  // run's original modes — the established product behavior. offeredCertificate
+  // records whether a paid track existed, so an audit-only archived run doesn't
+  // claim a certificate deadline it never had.
   if (run.is_archived) {
     return {
       status: "archived",
@@ -124,10 +123,9 @@ export const getCourseScenario = (
 }
 
 /**
- * How many offering boxes the enroll area renders for a run: an enrolled user
- * collapses to a single box regardless of offering; otherwise "both" shows two
- * tracks, a single track shows one, and "none" shows zero. The count-aware grid
- * layout reads this so it can't disagree with what CourseEnrollArea renders.
+ * How many offering boxes the enroll area renders: an enrolled user collapses to
+ * a single box regardless of offering. The count-aware grid layout reads this so
+ * it can't disagree with what CourseEnrollArea renders.
  */
 export const offeringBoxCount = (
   scenario: CourseScenario,

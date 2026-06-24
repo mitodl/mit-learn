@@ -54,8 +54,8 @@ const BoxGrid = styled.div(({ theme: t }) => ({
       gridTemplateColumns: "1fr",
     },
     // In the 3-box (Both) layout the two offering cells share a row and stretch
-    // to equal height (grid default); each card fills its cell and bottom-aligns
-    // its button via its own `fill` prop, so no card-internal CSS lives here.
+    // to equal height (grid default); each card's own `fill` prop handles the
+    // rest (see TrackCard), so no card-internal CSS lives here.
   },
 }))
 
@@ -100,10 +100,8 @@ const CourseInfoBox: React.FC<CourseInfoBoxProps> = ({
       />
     ) : undefined
 
-  // data-boxes drives the count-aware grid CSS below. offeringBoxCount owns the
-  // enrolled/offering → count mapping so the layout can't disagree with what
-  // CourseEnrollArea renders (an enrolled user collapses to one box even on a
-  // degraded "none" run).
+  // data-boxes drives the count-aware grid CSS below; offeringBoxCount owns the
+  // enrolled/offering → count mapping.
   const scenario = getCourseScenario(selectedRun)
   const isEnrolled =
     selectedRun !== undefined && enrolledRunIds.includes(selectedRun.id)
