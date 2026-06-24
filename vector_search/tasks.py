@@ -2,6 +2,7 @@ import datetime
 import logging
 
 import celery
+import grpc
 import sentry_sdk
 from celery.exceptions import Ignore
 from django.conf import settings
@@ -119,10 +120,10 @@ def generate_embeddings(ids, resource_type, overwrite):
         raise
     except SystemExit as err:
         raise RetryError(SystemExit.__name__) from err
-    except:  # noqa: E722
-        error = "generate_embeddings threw an error"
-        log.exception(error)
-        return error
+    except grpc.RpcError as err:
+        if err.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
+            raise RetryError(str(err)) from err
+        raise
 
 
 @app.task(
@@ -148,10 +149,10 @@ def remove_embeddings(ids, resource_type):
         raise
     except SystemExit as err:
         raise RetryError(SystemExit.__name__) from err
-    except:  # noqa: E722
-        error = "generate_embeddings threw an error"
-        log.exception(error)
-        return error
+    except grpc.RpcError as err:
+        if err.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
+            raise RetryError(str(err)) from err
+        raise
 
 
 @app.task(bind=True)
