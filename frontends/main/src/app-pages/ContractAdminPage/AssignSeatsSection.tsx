@@ -266,9 +266,22 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
           .filter(Boolean)
           .join(" and ")} will be ignored`
       : ""
-  const announcement = hasEmails
-    ? `${validCount} valid ${pluralize("email", validCount)}${invalidCount > 0 ? `, ${invalidCount} invalid` : ""}${duplicateCount > 0 ? `, ${duplicateCount} ${pluralize("duplicate", duplicateCount)}` : ""}${ignoreWarning}${overCapacity ? `. Error: You entered ${validCount} ${pluralize("email", validCount)}, but only ${availableSeats} unassigned ${pluralize("seat", availableSeats)} are available. Remove ${validCount - availableSeats} more email ${pluralize("address", validCount - availableSeats, "addresses")} to continue.` : ""}`
-    : ""
+  let announcement = ""
+  if (hasEmails) {
+    const parts = [`${validCount} valid ${pluralize("email", validCount)}`]
+    if (invalidCount > 0) parts.push(`${invalidCount} invalid`)
+    if (duplicateCount > 0)
+      parts.push(`${duplicateCount} ${pluralize("duplicate", duplicateCount)}`)
+    announcement = parts.join(", ") + ignoreWarning
+    if (overCapacity) {
+      const excess = validCount - availableSeats
+      const seatsClause =
+        availableSeats > 1
+          ? `${availableSeats} unassigned ${pluralize("seat", availableSeats)} are available.`
+          : `${availableSeats} unassigned seat is available.`
+      announcement += `. Error: You entered ${validCount} ${pluralize("email", validCount)}, but only ${seatsClause} Remove ${excess} more email ${pluralize("address", excess, "addresses")} to continue.`
+    }
+  }
 
   // Debounce the live-region text so screen readers aren't spammed on every keystroke.
   useEffect(() => {
@@ -556,9 +569,10 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
       )}
       {overCapacity && (
         <Alert severity="error">
-          You entered {validCount} {pluralize("email", validCount)}, but only{" "}
-          {availableSeats} unassigned {pluralize("seat", availableSeats)} are
-          available. Remove {validCount - availableSeats} more email{" "}
+          {availableSeats > 1
+            ? `You entered ${validCount} ${pluralize("email", validCount)}, but only ${availableSeats} unassigned ${pluralize("seat", availableSeats)} are available.`
+            : `You entered ${validCount} ${pluralize("email", validCount)}, but only ${availableSeats} unassigned seat is available.`}{" "}
+          Remove {validCount - availableSeats} more email{" "}
           {pluralize("address", validCount - availableSeats, "addresses")} to
           continue.
         </Alert>
