@@ -70,7 +70,12 @@ export const ProgramEnrollmentCard = ({
     </Stack>
   )
   const buttonSection = (
-    <ButtonLink size="small" variant="primary" href={programView(program.id)}>
+    <ButtonLink
+      size="small"
+      variant="primary"
+      href={programView(program.id)}
+      aria-label={`View program: ${title}`}
+    >
       View
     </ButtonLink>
   )

@@ -116,7 +116,11 @@ const OrganizationContracts: React.FC<OrganizationContractsProps> = ({
               {contract.name}
             </TitleLink>
           </ContractTitleHeading>
-          <CardButton size="small" href={href}>
+          <CardButton
+            size="small"
+            href={href}
+            aria-label={`Continue ${contract.name}`}
+          >
             Continue
           </CardButton>
         </CardContent>

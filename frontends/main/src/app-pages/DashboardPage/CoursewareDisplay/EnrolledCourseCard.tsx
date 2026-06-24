@@ -225,6 +225,7 @@ export const EnrolledCourseCard = ({
         variant={compactVariant}
         disabled
         data-testid="courseware-button"
+        aria-label={`${buttonText} course: ${title}`}
       >
         {buttonText}
       </CoursewareButton>
@@ -234,6 +235,7 @@ export const EnrolledCourseCard = ({
         variant={compactVariant}
         href={coursewareUrl ?? ""}
         data-testid="courseware-button"
+        aria-label={`${buttonText} course: ${title}`}
       >
         {buttonText}
       </CoursewareButtonLink>
@@ -244,6 +246,7 @@ export const EnrolledCourseCard = ({
       variant="primary"
       disabled
       data-testid="courseware-button"
+      aria-label={`${buttonText} course: ${title}`}
     >
       {buttonText}
     </Button>
@@ -253,6 +256,7 @@ export const EnrolledCourseCard = ({
       variant="primary"
       href={coursewareUrl ?? ""}
       data-testid="courseware-button"
+      aria-label={`${buttonText} course: ${title}`}
     >
       {buttonText}
     </ButtonLink>

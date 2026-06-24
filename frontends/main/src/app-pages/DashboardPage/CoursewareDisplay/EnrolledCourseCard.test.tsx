@@ -100,7 +100,9 @@ describe.each([
       run: { ...futureRunDates, courseware_url: coursewareUrl },
     })
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
-    const btn = await within(getCard()).findByRole("link", { name: "Continue" })
+    const btn = await within(getCard()).findByRole("link", {
+      name: /^Continue course:/,
+    })
     expect(btn).toHaveAttribute("href", coursewareUrl)
   })
 
