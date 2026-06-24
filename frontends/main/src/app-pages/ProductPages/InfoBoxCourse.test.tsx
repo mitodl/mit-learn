@@ -345,7 +345,7 @@ describe("InfoBoxCourse — data-boxes attribute", () => {
   test("data-boxes=2 when enrolled in a 'none'-scenario run (enrolled collapse supersedes the degraded scenario)", async () => {
     // Paid-only run past its upgrade deadline with no free mode → scenario
     // "none". The user holds a prior enrollment, so the Enrolled link still
-    // renders and must count as one offering box (§4h), not zero.
+    // renders and must count as one offering box, not zero.
     const run = makeRun({
       is_enrollable: true,
       is_archived: false,

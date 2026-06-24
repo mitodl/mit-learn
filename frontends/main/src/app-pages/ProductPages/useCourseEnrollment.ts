@@ -26,7 +26,6 @@ export type EnrollAction = {
   kind: EnrollActionKind
   label: string
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void
-  disabled: boolean
 }
 
 // Discriminated — "enrolled" is the collapse state, not an "option"; "none" = no button.
@@ -143,7 +142,6 @@ export const useCourseEnrollment = (
       kind: "paid",
       label,
       onClick: makeOnClick("paid", label),
-      disabled: isPending,
     })
   }
   if (offering === "free" || offering === "both") {
@@ -153,7 +151,6 @@ export const useCourseEnrollment = (
       kind: "free",
       label,
       onClick: makeOnClick("free", label),
-      disabled: isPending,
     })
   }
   // offering "none" (no run, or paid-only past its deadline) yields no options.

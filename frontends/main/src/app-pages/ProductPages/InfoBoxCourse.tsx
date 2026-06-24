@@ -7,6 +7,7 @@ import {
   getCourseScenario,
   getEnrollableRuns,
   getSelectedRun,
+  offeringBoxCount,
 } from "./courseRun"
 import { useCourseEnrolledRunIds } from "./useCourseEnrolledRunIds"
 import ProgramBundleUpsell from "./ProgramBundleUpsell"
@@ -114,22 +115,14 @@ const CourseInfoBox: React.FC<CourseInfoBoxProps> = ({
       />
     ) : undefined
 
-  // Compute box count for data-boxes attribute (drives count-aware grid CSS)
+  // data-boxes drives the count-aware grid CSS below. offeringBoxCount owns the
+  // enrolled/offering → count mapping so the layout can't disagree with what
+  // CourseEnrollArea renders (an enrolled user collapses to one box even on a
+  // degraded "none" run).
   const scenario = getCourseScenario(selectedRun)
   const isEnrolled =
     selectedRun !== undefined && enrolledRunIds.includes(selectedRun.id)
-  // isEnrolled is checked first: the enroll area collapses to a single
-  // "Enrolled" box and that collapse supersedes every scenario, including the
-  // degraded "none" state (§4h) — mirroring useCourseEnrollment, which returns
-  // the enrolled status before the scenario switch. (An enrolled user can land
-  // on a "none" run, e.g. a paid-only run past its upgrade deadline.)
-  const offeringBoxes = isEnrolled
-    ? 1
-    : scenario.offering === "none"
-      ? 0
-      : scenario.offering === "both"
-        ? 2
-        : 1
+  const offeringBoxes = offeringBoxCount(scenario, isEnrolled)
   const boxCount = 1 + offeringBoxes // 1 | 2 | 3
 
   const upsell = course.programs?.length ? (

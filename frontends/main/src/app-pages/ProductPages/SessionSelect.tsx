@@ -76,7 +76,7 @@ const certUnavailableNote = (run: CourseRunV2): string | null =>
   run.is_upgradable ? null : " (no certificate available)"
 
 // Dropdown option: dates · the self-paced annotation · the cert-unavailable note
-// · the enrolled marker (so the user can spot a session they're already in — §4g).
+// · the enrolled marker (so the user can spot a session they're already in).
 const buildOptionLabel = (
   run: CourseRunV2,
   enrolledRunIds: number[] | undefined,

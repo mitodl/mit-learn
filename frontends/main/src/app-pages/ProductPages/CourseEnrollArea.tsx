@@ -5,7 +5,6 @@ import type {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { getEnrollmentType } from "@/common/mitxonline"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 import { useCourseEnrollment, type EnrollAction } from "./useCourseEnrollment"
 import { useCertificatePrice } from "./useCertificatePrice"
@@ -71,7 +70,7 @@ export const EnrollButton: React.FC<EnrollButtonProps> = ({
         variant={variant}
         size={size}
         onClick={action.onClick}
-        disabled={action.disabled || isBusy}
+        disabled={isBusy}
         {...busyProps}
         endIcon={
           isBusy ? (
@@ -120,8 +119,6 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
   // state.status === "options"
   const options = state.options
   const paidAction = options.find((o) => o.kind === "paid")
-  // Covers active audit ("Start Learning") and degraded audit ("Access Course
-  // Materials") — both are kind "free", distinguished only by label.
   const freeAction = options.find((o) => o.kind === "free")
 
   const renderPaidBox = () => {
@@ -169,20 +166,11 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
   const renderFreeBox = () => {
     if (!freeAction) return null
 
-    // The in-card "Certificate deadline passed" note shows whenever the cert
-    // deadline has actually passed for a run that offered one — i.e. both the
-    // deadlinePassed and archived scenarios (matching Figma). Showing it in both
-    // keeps them consistent: deadlinePassed's own "Certificate deadline has
-    // passed." alert and archived's "no longer active…" alert convey the closure
-    // differently, so the shared in-card line is the single consistent signal.
-    // (An archived audit-only run never offered a certificate, so no note — there
-    // was no deadline to pass; if archival strips enrollment_modes we likewise
-    // omit it, which is fine: better than claiming a certificate existed when it
-    // did not.)
-    const runOfferedCert =
-      selectedRun !== undefined &&
-      ["paid", "both"].includes(getEnrollmentType(selectedRun.enrollment_modes))
-    const deadlineNote = scenario.status !== "active" && runOfferedCert
+    // Show the in-card "Certificate deadline passed" note in both degraded
+    // states (deadlinePassed and archived), but only when the run actually
+    // offered a certificate — an audit-only archived run had no deadline to pass.
+    const deadlineNote =
+      scenario.status !== "active" && scenario.offeredCertificate
 
     if (scenario.offering === "both") {
       // Button inside card. Secondary (outline) only here, to distinguish it

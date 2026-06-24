@@ -167,6 +167,7 @@ describe("useCourseEnrollment — state mapping", () => {
     expect(result.current.scenario).toEqual({
       status: "deadlinePassed",
       offering: "free",
+      offeredCertificate: true,
     })
     const state = result.current.state
     expect(state.status).toBe("options")
@@ -176,6 +177,34 @@ describe("useCourseEnrollment — state mapping", () => {
     expect(
       state.status === "options" && state.options.map((o) => o.kind),
     ).toEqual(["free"])
+  })
+
+  test("deadlinePassed + none (paid-only past deadline) -> {status:'none'}, no button", async () => {
+    // A real run, not the empty-courseruns case: paid-only and no longer
+    // purchasable with no free fallback. Pins that the offering→button mapping
+    // emits no enroll button while the scenario still warns.
+    const run = makeRun({
+      is_enrollable: true,
+      is_upgradable: false,
+      is_archived: false,
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [],
+    })
+    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+
+    const { result } = renderHook(
+      () => useCourseEnrollment(course, getSelectedRun(course)),
+      { wrapper },
+    )
+
+    await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
+
+    expect(result.current.scenario).toEqual({
+      status: "deadlinePassed",
+      offering: "none",
+      offeredCertificate: true,
+    })
+    expect(result.current.state).toEqual({ status: "none" })
   })
 
   test("archived -> [Access Course Materials]", async () => {
@@ -270,6 +299,7 @@ describe("useCourseEnrollment — enrolled precedence", () => {
     expect(result.current.scenario).toEqual({
       status: "deadlinePassed",
       offering: "free",
+      offeredCertificate: true,
     })
     expect(result.current.state.status).toBe("enrolled")
   })
