@@ -22,6 +22,7 @@ import {
   getCertificateLink,
   getDashboardEnrollmentStatus,
 } from "./model/dashboardViewModel"
+import { getCourseDateText } from "./courseDateUtils"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
@@ -144,6 +145,7 @@ export const EnrolledCourseCard = ({
   const endDate = run?.end_date
   const daysUntilEnd = endDate ? calendarDaysUntil(endDate) : null
   const hasEnded = endDate ? isInPast(endDate) : false
+  const hasCourseDateText = getCourseDateText(startDate, endDate) !== null
   const courseDateText = (
     <CourseDateSummary startDate={startDate} endDate={endDate} />
   )
@@ -165,7 +167,7 @@ export const EnrolledCourseCard = ({
   const endDateAndCertSection = (
     <Stack direction="row" alignItems="center">
       {courseDateText}
-      {courseDateText !== null && (showUpgradeBanner || !!certificateLink) ? (
+      {hasCourseDateText && (showUpgradeBanner || !!certificateLink) ? (
         <Separator />
       ) : null}
       {showUpgradeBanner ? (
