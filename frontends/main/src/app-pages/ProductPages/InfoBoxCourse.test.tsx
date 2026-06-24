@@ -314,6 +314,8 @@ describe("InfoBoxCourse — data-boxes attribute", () => {
     const grid = getBoxGrid()
     expect(grid).not.toBeNull()
     expect(grid).toHaveAttribute("data-boxes", "1")
+    // No offering boxes → no section divider between meta and offerings.
+    expect(grid?.querySelector("hr")).toBeNull()
   })
 
   test("data-boxes=2 for enrolled scenario (enrolled link = 1 offering box)", async () => {

@@ -890,12 +890,38 @@ describe("CourseSummary", () => {
       renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
       expect(screen.queryByText(/Payment deadline/)).toBeNull()
     })
+
+    test("Shows the payment deadline alongside the session selector (multi-run path)", () => {
+      const upgradeDeadline = monthsFromNow(1)
+      const run = makeRun({
+        upgrade_deadline: upgradeDeadline,
+        is_archived: false,
+        // purchasable → not deadlinePassed, so the payment deadline still shows
+        is_enrollable: true,
+        is_upgradable: true,
+      })
+      const course = makeCourse({ courseruns: [run] })
+      renderWithProviders(
+        <CourseSummary
+          course={course}
+          selectedRun={run}
+          sessionSelect={
+            <div data-testid="session-select-slot">Session Picker</div>
+          }
+        />,
+      )
+      expect(screen.getByTestId("session-select-slot")).toBeInTheDocument()
+      expect(screen.getByText(/Payment deadline/)).toBeInTheDocument()
+      expect(
+        screen.getByText(new RegExp(formatDate(upgradeDeadline))),
+      ).toBeInTheDocument()
+    })
   })
 
   describe("Deadline passed scenario", () => {
     // offers paid + free, but the cert window is closed (not upgradable),
     // and the run is not archived → getCourseScenario === "deadlinePassed".
-    const makeDeadlinePassedRun = () =>
+    const makeDeadlinePassedRun = (overrides = {}) =>
       makeRun({
         is_enrollable: true,
         is_archived: false,
@@ -905,6 +931,7 @@ describe("CourseSummary", () => {
         upgrade_deadline: monthsFromNow(-1),
         start_date: monthsFromNow(-6),
         end_date: monthsFromNow(3),
+        ...overrides,
       })
 
     test("Shows the 'Certificate deadline has passed.' warning alert", () => {
@@ -916,15 +943,18 @@ describe("CourseSummary", () => {
       expect(alert).toHaveTextContent("Certificate deadline has passed.")
     })
 
-    test("Date row shows 'available anytime' with the end date, not a start date", () => {
-      const run = makeDeadlinePassedRun()
+    test("Date row shows the run's normal dates, not 'available anytime' (a deadline-passed run is still scheduled)", () => {
+      // Instructor-paced so the row shows concrete Start/End dates rather than
+      // the self-paced "Anytime" start.
+      const run = makeDeadlinePassedRun({ is_self_paced: false })
       const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
       renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
-      expect(datesRow).toHaveTextContent("Course content available anytime")
-      expect(datesRow).not.toHaveTextContent("Start:")
+      expect(datesRow).not.toHaveTextContent("Course content available anytime")
+      invariant(run.start_date)
       invariant(run.end_date)
+      expect(datesRow).toHaveTextContent(`Start: ${formatDate(run.start_date)}`)
       expect(datesRow).toHaveTextContent(`End: ${formatDate(run.end_date)}`)
     })
 

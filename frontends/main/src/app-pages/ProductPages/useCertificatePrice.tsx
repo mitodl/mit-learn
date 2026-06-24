@@ -59,10 +59,19 @@ export const useCertificatePrice = (
 
   let priceNode: React.ReactNode
   if (priceResult.isDiscounted) {
+    // The strike-through is visual only, so assistive tech would otherwise read
+    // two bare prices with no current-vs-original cue. Announce a single
+    // sensible phrase and hide the visual amounts (mirrors the program price
+    // path in ProductSummary).
     priceNode = (
-      <DiscountedPrice>
-        <span>{priceResult.finalPrice}</span>
-        <StrickenPrice>{priceResult.originalPrice}</StrickenPrice>
+      <DiscountedPrice
+        role="group"
+        aria-label={`Discounted price: ${priceResult.finalPrice}, was ${priceResult.originalPrice}`}
+      >
+        <span aria-hidden="true">{priceResult.finalPrice}</span>
+        <StrickenPrice aria-hidden="true">
+          {priceResult.originalPrice}
+        </StrickenPrice>
       </DiscountedPrice>
     )
   } else {

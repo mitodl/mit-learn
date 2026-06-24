@@ -177,7 +177,7 @@ describe("CourseEnrollArea — freeOnly scenario", () => {
 })
 
 describe("CourseEnrollArea — deadlinePassed scenario", () => {
-  test("shows Learn for Free card with deadline note; Access Course Materials below", async () => {
+  test("shows Learn for Free card with Access Course Materials below; no in-card deadline note (the alert already says it)", async () => {
     setupAuth()
     const run = makeRun({
       is_enrollable: true,
@@ -196,21 +196,25 @@ describe("CourseEnrollArea — deadlinePassed scenario", () => {
     )
 
     expect(
-      await screen.findByText("Certificate deadline passed"),
-    ).toBeInTheDocument()
-    expect(
       await screen.findByRole("button", { name: "Access Course Materials" }),
     ).toBeInTheDocument()
+    // The metadata "Certificate deadline has passed." alert lives in
+    // CourseSummary, not here; the free card must not repeat it.
+    expect(screen.queryByText("Certificate deadline passed")).toBeNull()
   })
 })
 
 describe("CourseEnrollArea — archived scenario", () => {
-  test("shows Learn for Free card; Access Course Materials button below", async () => {
+  test("shows Learn for Free card; Access Course Materials button below; deadline note when the run offered a certificate", async () => {
     setupAuth()
     const run = makeRun({
       is_enrollable: true,
       is_archived: true,
-      enrollment_modes: [makeMode({ requires_payment: false })],
+      // offered a paid certificate, so the "deadline passed" note applies
+      enrollment_modes: [
+        makeMode({ requires_payment: false }),
+        makeMode({ requires_payment: true }),
+      ],
     })
     const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
 
@@ -226,9 +230,26 @@ describe("CourseEnrollArea — archived scenario", () => {
       "data-size",
       "large",
     )
-    // Archived runs are past their certificate window too, so the free card
-    // carries the deadline note.
+    // Archived runs are past their certificate window too, so a run that
+    // offered a certificate carries the deadline note.
     expect(screen.getByText("Certificate deadline passed")).toBeInTheDocument()
+  })
+
+  test("audit-only archived run shows no 'Certificate deadline passed' note (it never offered one)", async () => {
+    setupAuth()
+    const run = makeRun({
+      is_enrollable: true,
+      is_archived: true,
+      enrollment_modes: [makeMode({ requires_payment: false })],
+    })
+    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+
+    renderWithProviders(
+      <CourseEnrollArea course={course} selectedRun={getSelectedRun(course)} />,
+    )
+
+    await screen.findByRole("button", { name: "Access Course Materials" })
+    expect(screen.queryByText("Certificate deadline passed")).toBeNull()
   })
 })
 

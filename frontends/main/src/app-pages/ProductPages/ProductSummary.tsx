@@ -629,31 +629,22 @@ const CourseSummary: React.FC<{
   sessionSelect?: React.ReactNode
 }> = ({ course, selectedRun, sessionSelect }) => {
   const scenario = getCourseScenario(selectedRun)
-  // Once the certificate window has closed (deadline passed) or the run is
-  // archived, content stays open-ended: the date row leads with "available
-  // anytime" + end date rather than a stale start date.
-  const contentAvailableAnytime =
+  // Archived courses have no live schedule, so the date row leads with "content
+  // available anytime" + end date instead of dates. A deadline-passed run is
+  // still an active, scheduled run — it keeps its normal date row (dropdown /
+  // "anytime" / dated); only the now-stale payment-deadline line is dropped,
+  // since the "Certificate deadline has passed." alert conveys that.
+  const contentAvailableAnytime = scenario === "archived"
+  const suppressPaymentDeadline =
     scenario === "archived" || scenario === "deadlinePassed"
-  // A passed deadline (or archived run) has no upcoming payment date, so the
-  // payment-deadline line is suppressed alongside the "deadline passed" notice.
   const upgradeDeadline =
-    selectedRun !== undefined && !contentAvailableAnytime
+    selectedRun !== undefined && !suppressPaymentDeadline
       ? selectedRun.upgrade_deadline
       : null
   const deadlineContent = upgradeDeadline ? (
     <>
       Payment deadline:{" "}
-      <NoSSR
-        onSSR={
-          <Skeleton
-            variant="text"
-            sx={{ display: "inline-block" }}
-            width="80px"
-          />
-        }
-      >
-        {formatDate(upgradeDeadline)}
-      </NoSSR>
+      <NoSSR onSSR={dateLoading}>{formatDate(upgradeDeadline)}</NoSSR>
     </>
   ) : null
 
