@@ -40,22 +40,84 @@ EXCLUDE_REGEX = r"PROCTORED EXAM"
 OFFERED_BY = {"code": OfferedBy.mitx.name}
 
 
-def _fetch_data(url, params=None):
+def _fetch_data(url, params=None, headers=None):
     if not params:
         params = {}
     while url:
         response = requests.get(
-            url, params=params, timeout=settings.REQUESTS_TIMEOUT
+            url, params=params, headers=headers, timeout=settings.REQUESTS_TIMEOUT
         ).json()
         results = response["results"]
         yield from results
         next_url = response.get("next")
         if next_url:
-            parsed = urlparse(next_url)
+            parsed = urlparse(next_url)._replace(scheme="https")
             url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
             params = parse_qs(parsed.query)
         else:
             url = None
+
+
+def _get_b2b_access_token() -> str | None:
+    """
+    Fetch a Keycloak access token for the MITx Online B2B client.
+
+    Uses the ``client_credentials`` grant against the token endpoint advertised
+    by the realm's OpenID discovery document, as configured in
+    ``settings.MITXONLINE_B2B_CLIENT_CONFIG``.
+
+    Returns:
+        str or None: the access token, or None if the B2B client is not
+            configured (missing discovery URL, client id, or secret).
+    """
+    config = settings.MITXONLINE_B2B_CLIENT_CONFIG or {}
+    discovery_url = config.get("KEYCLOAK_DISCOVERY_URL")
+    client_id = config.get("KEYCLOAK_CLIENT_ID")
+    client_secret = config.get("KEYCLOAK_CLIENT_SECRET")
+    if not (discovery_url and client_id and client_secret):
+        return None
+
+    discovery = requests.get(discovery_url, timeout=settings.REQUESTS_TIMEOUT)
+    discovery.raise_for_status()
+    token_endpoint = discovery.json()["token_endpoint"]
+
+    token_response = requests.post(
+        token_endpoint,
+        data={
+            "grant_type": "client_credentials",
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "scope": config.get("KEYCLOAK_CLIENT_SCOPES"),
+        },
+        timeout=settings.REQUESTS_TIMEOUT,
+    )
+    token_response.raise_for_status()
+    return token_response.json()["access_token"]
+
+
+def _courses_api_request_args() -> tuple[str | None, dict | None]:
+    """
+    Resolve the courses API endpoint and request headers to use.
+
+    Prefer the authenticated internal endpoint, which returns the same response
+    shape as the public endpoint but includes courses absent from the public
+    catalog, when both it and the B2B Keycloak client are configured. Otherwise
+    fall back to the public endpoint with no authentication.
+
+    Returns:
+        tuple: ``(url, headers)`` where ``url`` may be None if neither endpoint
+            is configured and ``headers`` is None when no authentication is used.
+    """
+    internal_url = settings.MITX_ONLINE_INTERNAL_COURSES_API_URL
+    if internal_url:
+        token = _get_b2b_access_token()
+        if token:
+            return internal_url, {"Authorization": f"Bearer {token}"}
+        log.warning(
+            "MITX_ONLINE_INTERNAL_COURSES_API_URL is set but the B2B Keycloak "
+            "client is not configured; falling back to the public courses API"
+        )
+    return settings.MITX_ONLINE_COURSES_API_URL, None
 
 
 def _parse_datetime(value):
@@ -170,13 +232,15 @@ def extract_programs():
 
 def extract_courses():
     """Loads the MITx Online catalog data"""  # noqa: D401
-    if settings.MITX_ONLINE_COURSES_API_URL:
+    url, headers = _courses_api_request_args()
+    if url:
         return list(
             _fetch_data(
-                settings.MITX_ONLINE_COURSES_API_URL,
+                url,
                 params={
                     "live": True,
                 },
+                headers=headers,
             )
         )
     else:
@@ -577,14 +641,16 @@ def _collect_child_positions(
 def _fetch_courses_by_ids(course_ids):
     if not course_ids:
         return []
-    if settings.MITX_ONLINE_COURSES_API_URL:
+    url, headers = _courses_api_request_args()
+    if url:
         fetched = list(
             _fetch_data(
-                settings.MITX_ONLINE_COURSES_API_URL,
+                url,
                 params={
                     "id": ",".join([str(courseid) for courseid in course_ids]),
                     "live": True,
                 },
+                headers=headers,
             )
         )
         courses_by_id = {course["id"]: course for course in fetched}
