@@ -177,7 +177,7 @@ describe("CourseEnrollArea — freeOnly scenario", () => {
 })
 
 describe("CourseEnrollArea — deadlinePassed scenario", () => {
-  test("shows Learn for Free card with Access Course Materials below; no in-card deadline note (the alert already says it)", async () => {
+  test("shows Learn for Free card with Access Course Materials below and the in-card 'Certificate deadline passed' note", async () => {
     setupAuth()
     const run = makeRun({
       is_enrollable: true,
@@ -198,9 +198,10 @@ describe("CourseEnrollArea — deadlinePassed scenario", () => {
     expect(
       await screen.findByRole("button", { name: "Access Course Materials" }),
     ).toBeInTheDocument()
-    // The metadata "Certificate deadline has passed." alert lives in
-    // CourseSummary, not here; the free card must not repeat it.
-    expect(screen.queryByText("Certificate deadline passed")).toBeNull()
+    // The cert deadline has passed for a run that offered one, so the in-card
+    // note shows — matching the archived scenario and Figma. (The metadata
+    // "Certificate deadline has passed." alert in CourseSummary is separate.)
+    expect(screen.getByText("Certificate deadline passed")).toBeInTheDocument()
   })
 })
 

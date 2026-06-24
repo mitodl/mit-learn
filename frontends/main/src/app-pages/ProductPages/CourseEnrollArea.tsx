@@ -168,19 +168,22 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
     const freeOrAccess = freeAction ?? accessAction
     if (!freeOrAccess) return null
 
-    // The in-card "Certificate deadline passed" note appears only for an
-    // archived run that actually offered a certificate. deadlinePassed omits it:
-    // that scenario's own "Certificate deadline has passed." alert sits just
-    // above the card, so repeating it here would be redundant. Archived is
-    // different — its alert ("no longer active…") says nothing about the
-    // certificate, so the note still adds information. (An archived audit-only
-    // run never offered a certificate, so no note — there was no deadline to
-    // pass; if archival strips enrollment_modes we likewise omit it, which is
-    // fine: better than claiming a certificate existed when it did not.)
+    // The in-card "Certificate deadline passed" note shows whenever the cert
+    // deadline has actually passed for a run that offered one — i.e. both the
+    // deadlinePassed and archived scenarios (matching Figma). Showing it in both
+    // keeps them consistent: deadlinePassed's own "Certificate deadline has
+    // passed." alert and archived's "no longer active…" alert convey the closure
+    // differently, so the shared in-card line is the single consistent signal.
+    // (An archived audit-only run never offered a certificate, so no note — there
+    // was no deadline to pass; if archival strips enrollment_modes we likewise
+    // omit it, which is fine: better than claiming a certificate existed when it
+    // did not.)
     const runOfferedCert =
       selectedRun !== undefined &&
       ["paid", "both"].includes(getEnrollmentType(selectedRun.enrollment_modes))
-    const deadlineNote = scenario === "archived" && runOfferedCert
+    const deadlineNote =
+      (scenario === "archived" || scenario === "deadlinePassed") &&
+      runOfferedCert
 
     if (scenario === "both") {
       // Button inside card. Secondary (outline) only here, to distinguish it
