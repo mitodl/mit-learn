@@ -14,14 +14,10 @@ import { waitFor } from "@testing-library/react"
 import invariant from "tiny-invariant"
 import moment from "moment"
 import NiceModal from "@ebay/nice-modal-react"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { UnenrollProgramDialog } from "./DashboardDialogs"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 
 jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest
-  .mocked(useFeatureFlagEnabled)
-  .mockImplementation(() => false)
 
 describe("ProgramAsCourseCard", () => {
   setupLocationMock()
@@ -431,47 +427,7 @@ describe("ProgramAsCourseCard", () => {
     expect(certButton).not.toBeInTheDocument()
   })
 
-  test("shows legacy details link in context menu when product pages flag is disabled", async () => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(false)
-    const cardData = setupCardData({ includeProgramEnrollment: true })
-
-    renderWithProviders(
-      <ProgramAsCourseCard
-        courseProgram={cardData.courseProgram}
-        moduleCourses={cardData.moduleCourses}
-        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
-        courseProgramEnrollment={cardData.courseProgramEnrollment}
-      />,
-    )
-
-    await screen.findByText(cardData.courseProgram.title)
-    const programCard = screen.getByTestId("program-as-course-card")
-    await user.click(within(programCard).getAllByLabelText("More options")[0])
-
-    const detailsLink = await screen.findByRole("menuitem", {
-      name: "View Course Details",
-    })
-    expect(detailsLink).toHaveAttribute(
-      "href",
-      expect.stringContaining(
-        `/programs/${cardData.courseProgram.readable_id}`,
-      ),
-    )
-    expect(detailsLink).toHaveAttribute(
-      "href",
-      expect.stringContaining("ecom-service=true"),
-    )
-
-    expect(
-      screen.getByRole("menuitem", { name: "Program Record" }),
-    ).toHaveAttribute(
-      "href",
-      mitxonlineLegacyUrl(`/records/${cardData.courseProgram.id}/`),
-    )
-  })
-
-  test("shows product-page details link in context menu when product pages flag is enabled", async () => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+  test("shows product-page details link in context menu", async () => {
     const cardData = setupCardData({ includeProgramEnrollment: true })
 
     renderWithProviders(
@@ -504,7 +460,6 @@ describe("ProgramAsCourseCard", () => {
   })
 
   test("clicking Unenroll menu item opens UnenrollProgramDialog with readable_id", async () => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(false)
     const cardData = setupCardData({ includeProgramEnrollment: true })
     invariant(cardData.courseProgramEnrollment)
     cardData.courseProgramEnrollment.enrollment_mode = "audit"
@@ -532,7 +487,6 @@ describe("ProgramAsCourseCard", () => {
   })
 
   test("does not show Unenroll option in context menu for verified enrollment", async () => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(false)
     const cardData = setupCardData({ includeProgramEnrollment: true })
     invariant(cardData.courseProgramEnrollment)
     cardData.courseProgramEnrollment.enrollment_mode = "verified"

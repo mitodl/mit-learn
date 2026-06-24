@@ -37,8 +37,6 @@ import { RiAwardFill, RiMore2Line } from "@remixicon/react"
 import NiceModal from "@ebay/nice-modal-react"
 import { UnenrollProgramDialog } from "./DashboardDialogs"
 import { ProgramCertificateButton } from "./ProgramEnrollmentDisplay"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
 import { programPageView } from "@/common/urls"
 
 const ProgramCardRoot = styled.div(({ theme }) => ({
@@ -284,15 +282,12 @@ const getContextMenuItems = (
   resource: ProgramAsCourse,
   enrollmentMode: string | null | undefined,
   additionalItems: SimpleMenuItem[] = [],
-  useProductPages = false,
 ) => {
   const menuItems = []
-  const detailsUrl = useProductPages
-    ? programPageView({
-        readable_id: resource.readable_id,
-        display_mode: "course",
-      })
-    : mitxonlineLegacyUrl(`/programs/${resource.readable_id}`)
+  const detailsUrl = programPageView({
+    readable_id: resource.readable_id,
+    display_mode: "course",
+  })
 
   const courseMenuItems = []
 
@@ -405,9 +400,6 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   className,
   onUpgradeError,
 }) => {
-  const useProductPages = useFeatureFlagEnabled(
-    FeatureFlags.MitxOnlineProductPages,
-  )
   const moduleRequirementSection = courseProgram?.req_tree?.find(
     (node) => node.data.node_type === "operator",
   )
@@ -488,7 +480,6 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
     courseProgram,
     courseProgramEnrollment?.enrollment_mode,
     contextMenuItems,
-    useProductPages ?? false,
   )
 
   const contextMenu = (
