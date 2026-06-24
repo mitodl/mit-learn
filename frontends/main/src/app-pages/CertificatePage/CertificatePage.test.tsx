@@ -84,9 +84,45 @@ describe("CertificatePage", () => {
     await screen.findAllByText(certificate.uuid)
   })
 
-  it("renders a program certificate", async () => {
+  it("renders a program certificate with the CMS product name as the title", async () => {
     const certificate = factories.mitxonline.programCertificate()
     certificate.program.program_type = "Program"
+    certificate.certificate_page.product_name =
+      "Custom Program Certificate Title"
+    setMockResponse.get(
+      mitxonline.urls.certificates.programCertificatesRetrieve({
+        uuid: certificate.uuid,
+      }),
+      certificate,
+    )
+    renderWithProviders(
+      <CertificatePage
+        certificateType={CertificateType.Program}
+        uuid={certificate.uuid}
+        pageUrl={`https://${process.env.NEXT_PUBLIC_ORIGIN}/certificate/program/${certificate.uuid}`}
+      />,
+    )
+
+    await screen.findAllByText("Custom Program Certificate Title")
+    const badge = await screen.findByTestId("certificate-badge-label")
+    expect(within(badge).getByText("Program")).toBeInTheDocument()
+    expect(within(badge).getByText("Certificate")).toBeInTheDocument()
+    await screen.findAllByText(certificate.user.name!)
+
+    await screen.findAllByText(
+      `Awarded ${certificate.certificate_page.CEUs} Continuing Education Units (CEUs)`,
+    )
+    await screen.findAllByText(
+      moment(certificate.issue_date).format("MMM D, YYYY"),
+    )
+
+    await screen.findAllByText(certificate.uuid)
+  })
+
+  it("falls back to the program title when the certificate page has no product name", async () => {
+    const certificate = factories.mitxonline.programCertificate()
+    certificate.program.program_type = "Program"
+    certificate.certificate_page.product_name = ""
     setMockResponse.get(
       mitxonline.urls.certificates.programCertificatesRetrieve({
         uuid: certificate.uuid,
@@ -102,19 +138,6 @@ describe("CertificatePage", () => {
     )
 
     await screen.findAllByText(certificate.program.title)
-    const badge = await screen.findByTestId("certificate-badge-label")
-    expect(within(badge).getByText("Program")).toBeInTheDocument()
-    expect(within(badge).getByText("Certificate")).toBeInTheDocument()
-    await screen.findAllByText(certificate.user.name!)
-
-    await screen.findAllByText(
-      `Awarded ${certificate.certificate_page.CEUs} Continuing Education Units (CEUs)`,
-    )
-    await screen.findAllByText(
-      moment(certificate.issue_date).format("MMM D, YYYY"),
-    )
-
-    await screen.findAllByText(certificate.uuid)
   })
 
   it("renders a MicroMasters program certificate badge with the registered mark", async () => {
@@ -166,7 +189,7 @@ describe("CertificatePage", () => {
       />,
     )
 
-    await screen.findAllByText(certificate.program.title)
+    await screen.findAllByText(certificate.user.name!)
 
     expect(
       screen.queryByRole("button", { name: "Download PDF" }),
@@ -204,7 +227,7 @@ describe("CertificatePage", () => {
       />,
     )
 
-    await screen.findAllByText(certificate.program.title)
+    await screen.findAllByText(certificate.user.name!)
 
     await screen.findByRole("button", { name: "Download PDF" })
     await screen.findByRole("button", { name: "Share" })

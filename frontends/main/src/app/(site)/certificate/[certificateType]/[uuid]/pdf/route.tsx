@@ -29,6 +29,7 @@ import { pxToPt, getNameStyles } from "./utils"
 import {
   getCertificateBadgeLines,
   getCertificateBadgeTypography,
+  getCertificateTitle,
 } from "@/common/certificateUtils"
 
 // https://use.typekit.net/lbk1xay.css
@@ -529,7 +530,10 @@ const ProgramCertificate = ({
 }: {
   certificate: V2ProgramCertificate
 }) => {
-  const title = certificate?.program?.title
+  const title = getCertificateTitle(
+    certificate?.certificate_page?.product_name,
+    certificate?.program?.title,
+  )
 
   const userName = certificate?.user?.name
 

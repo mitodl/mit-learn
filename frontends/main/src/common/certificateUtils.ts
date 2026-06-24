@@ -82,6 +82,11 @@ export const getCertificateInfo = (
   displayType: resolveCertificateLabel(programType).displayType,
 })
 
+export const getCertificateTitle = (
+  productName: string | null | undefined,
+  fallbackTitle: string,
+): string => productName?.trim() || fallbackTitle
+
 const BADGE_REGISTERED_MARK_SCALE = 0.645
 
 export type CertificateBadgeTypography = {

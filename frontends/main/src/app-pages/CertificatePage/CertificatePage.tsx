@@ -24,6 +24,7 @@ import SharePopover from "@/components/SharePopover/SharePopover"
 import { DigitalCredentialDialog } from "./DigitalCredentialDialog"
 import {
   getCertificateInfo,
+  getCertificateTitle,
   getCertificateBadgeLines,
   getCertificateBadgeTypography,
   getVerifiableCredentialLinkedInURL,
@@ -626,11 +627,11 @@ const Certificate = ({
 
 const CourseCertificate = ({
   certificate,
+  title,
 }: {
   certificate: V2CourseRunCertificate
+  title: string
 }) => {
-  const title = certificate.course_run.course.title
-
   const userName = certificate.user.name
 
   const signatories = certificate.certificate_page.signatory_items
@@ -649,11 +650,11 @@ const CourseCertificate = ({
 
 const ProgramCertificate = ({
   certificate,
+  title,
 }: {
   certificate: V2ProgramCertificate
+  title: string
 }) => {
-  const title = certificate.program.title
-
   const userName = certificate.user.name
 
   const ceus = certificate.certificate_page.CEUs
@@ -750,6 +751,16 @@ const CertificatePage: React.FC<{
     return notFound()
   }
 
+  let title = ""
+  if (certificateType === CertificateType.Course) {
+    title = courseCertificateData?.course_run.course.title ?? ""
+  } else {
+    title = getCertificateTitle(
+      programCertificateData?.certificate_page?.product_name,
+      programCertificateData?.program.title ?? "",
+    )
+  }
+
   const download = async () => {
     const res = await fetch(`/certificate/${certificateType}/${uuid}/pdf`)
     const blob = await res.blob()
@@ -762,11 +773,6 @@ const CertificatePage: React.FC<{
     document.body.removeChild(a)
     window.URL.revokeObjectURL(url)
   }
-
-  const title =
-    certificateType === CertificateType.Course
-      ? courseCertificateData?.course_run.course.title
-      : programCertificateData?.program.title
 
   const { displayType } = getCertificateInfo(
     programCertificateData?.program?.program_type,
@@ -849,9 +855,15 @@ const CertificatePage: React.FC<{
       ) : null}
       <PrintContainer ref={contentRef}>
         {certificateType === CertificateType.Course ? (
-          <CourseCertificate certificate={courseCertificateData!} />
+          <CourseCertificate
+            certificate={courseCertificateData!}
+            title={title}
+          />
         ) : (
-          <ProgramCertificate certificate={programCertificateData!} />
+          <ProgramCertificate
+            certificate={programCertificateData!}
+            title={title}
+          />
         )}
       </PrintContainer>
       <Note>
