@@ -1,86 +1,6 @@
 import React from "react"
 import { styled } from "@mitodl/smoot-design"
-import { RiCheckLine } from "@remixicon/react"
-
-const CardShell = styled.div({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "flex-start",
-  gap: "16px",
-  alignSelf: "stretch",
-})
-
-const CardBody = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "center",
-  alignItems: "flex-start",
-  padding: "16px",
-  gap: "16px",
-  background: theme.custom.colors.lightGray1,
-  borderRadius: theme.shape.borderRadius,
-  alignSelf: "stretch",
-  boxSizing: "border-box",
-}))
-
-const TopRow = styled.div({
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "flex-start",
-  justifyContent: "space-between",
-  gap: "8px",
-  width: "100%",
-})
-
-const LeftCol = styled.div({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "flex-start",
-  gap: "8px",
-  flexGrow: 1,
-})
-
-const TrackTitle = styled.h3(({ theme }) => ({
-  ...theme.typography.subtitle1,
-  fontWeight: theme.typography.fontWeightBold,
-  color: theme.custom.colors.darkGray2,
-  margin: 0,
-}))
-
-const TrackSubtitle = styled.div(({ theme }) => ({
-  ...theme.typography.subtitle3,
-  color: theme.custom.colors.darkGray2,
-}))
-
-const PriceContainer = styled.div(({ theme }) => ({
-  ...theme.typography.h4,
-  color: theme.custom.colors.darkGray2,
-  whiteSpace: "nowrap",
-}))
-
-const FeatureList = styled.div({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "flex-start",
-  gap: "12px",
-  width: "100%",
-})
-
-const FeatureRow = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  gap: "4px",
-  ...theme.typography.body3,
-  color: theme.custom.colors.darkGray2,
-}))
-
-const FeatureIcon = styled(RiCheckLine)(({ theme }) => ({
-  width: "16px",
-  height: "16px",
-  color: theme.custom.colors.green,
-  flexShrink: 0,
-}))
+import TrackCard, { FeatureRow, FeatureIcon } from "./TrackCard"
 
 const FinancialAidLink = styled.a(({ theme }) => ({
   ...theme.typography.body3,
@@ -93,6 +13,7 @@ type CertificateTrackCardProps = {
   financialAid?: { href: string; applied: boolean } | null
   productNoun: "course" | "program"
   action?: React.ReactNode
+  fill?: boolean
 }
 
 const CertificateTrackCard: React.FC<CertificateTrackCardProps> = ({
@@ -100,48 +21,40 @@ const CertificateTrackCard: React.FC<CertificateTrackCardProps> = ({
   financialAid,
   productNoun,
   action,
+  fill,
 }) => {
   return (
-    <CardShell>
-      <CardBody>
-        <TopRow>
-          <LeftCol>
-            <TrackTitle>Certificate Track</TrackTitle>
-            <TrackSubtitle>
-              Earn a verified certificate of completion
-            </TrackSubtitle>
-          </LeftCol>
-          <PriceContainer>{price}</PriceContainer>
-        </TopRow>
-
-        <FeatureList>
-          <FeatureRow>
-            <FeatureIcon aria-hidden="true" />
-            <span>Access to this {productNoun} &amp; course materials</span>
-          </FeatureRow>
-          <FeatureRow>
-            <FeatureIcon aria-hidden="true" />
-            <span>Graded assignments &amp; exams</span>
-          </FeatureRow>
-          <FeatureRow>
-            <FeatureIcon aria-hidden="true" />
-            <span>MIT certificate on completion</span>
-          </FeatureRow>
-          {financialAid !== null && financialAid !== undefined && (
-            <FeatureRow>
-              <FeatureIcon aria-hidden="true" />
-              <FinancialAidLink href={financialAid.href}>
-                {financialAid.applied
-                  ? "Financial assistance applied"
-                  : "Financial assistance available"}
-              </FinancialAidLink>
-            </FeatureRow>
-          )}
-        </FeatureList>
-
-        {action}
-      </CardBody>
-    </CardShell>
+    <TrackCard
+      variant="shaded"
+      title="Certificate Track"
+      subtitle="Earn a verified certificate of completion"
+      price={price}
+      action={action}
+      fill={fill}
+    >
+      <FeatureRow>
+        <FeatureIcon aria-hidden="true" />
+        <span>Access to this {productNoun} &amp; course materials</span>
+      </FeatureRow>
+      <FeatureRow>
+        <FeatureIcon aria-hidden="true" />
+        <span>Graded assignments &amp; exams</span>
+      </FeatureRow>
+      <FeatureRow>
+        <FeatureIcon aria-hidden="true" />
+        <span>MIT certificate on completion</span>
+      </FeatureRow>
+      {financialAid !== null && financialAid !== undefined && (
+        <FeatureRow>
+          <FeatureIcon aria-hidden="true" />
+          <FinancialAidLink href={financialAid.href}>
+            {financialAid.applied
+              ? "Financial assistance applied"
+              : "Financial assistance available"}
+          </FinancialAidLink>
+        </FeatureRow>
+      )}
+    </TrackCard>
   )
 }
 

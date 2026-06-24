@@ -124,13 +124,15 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
   const renderPaidBox = () => {
     if (!paidAction) return null
     if (scenario.offering === "both") {
-      // Button inside card
+      // Button inside card. fill: match the free card's height in the
+      // side-by-side layout and bottom-align the button.
       return (
         <OfferingCell data-card="cert">
           <CertificateTrackCard
             price={price}
             financialAid={financialAid}
             productNoun="course"
+            fill
             action={
               <EnrollButton
                 action={paidAction}
@@ -179,6 +181,7 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
         <OfferingCell data-card="free">
           <LearnForFreeCard
             productNoun="course"
+            fill
             action={
               <EnrollButton
                 action={freeAction}

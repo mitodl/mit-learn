@@ -53,24 +53,9 @@ const BoxGrid = styled.div(({ theme: t }) => ({
     "&[data-boxes='1']": {
       gridTemplateColumns: "1fr",
     },
-    // 3-box (Both): the two offering cells share a row and already stretch to
-    // equal height (grid default), but the bordered card inside each is only
-    // content-height — so the shorter (free) card's box ends early. Make each
-    // card's flex chain fill its stretched cell and drop the CTA to the bottom,
-    // so the two boxes match height and their buttons align. Reaches into the
-    // card structure: [data-card] cell > CardShell > CardBody > (…content, CTA
-    // last). Tablet-only; on the single-column grid the cells are content-height
-    // and flexGrow is a no-op, so this is scoped here rather than in the cards.
-    "&[data-boxes='3'] [data-card] > *": {
-      flexGrow: 1, // CardShell fills the stretched cell
-    },
-    "&[data-boxes='3'] [data-card] > * > *": {
-      flexGrow: 1, // CardBody fills CardShell
-      justifyContent: "flex-start",
-    },
-    "&[data-boxes='3'] [data-card] > * > * > :last-child": {
-      marginTop: "auto", // CTA to the bottom
-    },
+    // In the 3-box (Both) layout the two offering cells share a row and stretch
+    // to equal height (grid default); each card fills its cell and bottom-aligns
+    // its button via its own `fill` prop, so no card-internal CSS lives here.
   },
 }))
 
