@@ -202,11 +202,16 @@ const DatePopoverContent = styled.div({
   alignSelf: "stretch",
 })
 
-const DatePopoverTrigger = styled(Link)(({ theme }) => ({
+const DatePopoverTrigger = styled("button")(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
+  background: "none",
+  border: "none",
+  padding: 0,
+  cursor: "pointer",
   "&:hover": {
     color: theme.custom.colors.silverGrayDark,
+    textDecoration: "underline",
   },
 }))
 
@@ -226,8 +231,9 @@ const CourseDateSummary: React.FC<{
   startDate?: string | null | undefined
   endDate?: string | null | undefined
 }> = ({ startDate, endDate }) => {
+  const popoverId = React.useId()
   const [popoverAnchorEl, setPopoverAnchorEl] =
-    React.useState<HTMLAnchorElement | null>(null)
+    React.useState<HTMLButtonElement | null>(null)
 
   const triggerText = getCourseDateText(startDate, endDate)
   const startDateFormatted = startDate
@@ -252,7 +258,11 @@ const CourseDateSummary: React.FC<{
         open={!!popoverAnchorEl}
         onClose={() => setPopoverAnchorEl(null)}
       >
-        <DatePopoverContent>
+        <DatePopoverContent
+          id={popoverId}
+          role="dialog"
+          aria-label="Important Dates"
+        >
           <Stack direction="column" gap="4px">
             <DatePopoverHeading variant="subtitle3">
               Important Dates:
@@ -284,7 +294,9 @@ const CourseDateSummary: React.FC<{
         </DatePopoverContent>
       </Popover>
       <DatePopoverTrigger
-        color="black"
+        aria-expanded={!!popoverAnchorEl}
+        aria-haspopup="dialog"
+        aria-controls={popoverAnchorEl ? popoverId : undefined}
         onClick={(event) => setPopoverAnchorEl(event.currentTarget)}
       >
         {triggerText}
