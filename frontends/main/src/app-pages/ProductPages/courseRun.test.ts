@@ -48,11 +48,14 @@ describe("getSelectedRun", () => {
 })
 
 describe("getCourseScenario", () => {
-  it("returns 'none' when run is undefined", () => {
-    expect(getCourseScenario(undefined)).toBe("none")
+  it("returns an inert active/none scenario when run is undefined", () => {
+    expect(getCourseScenario(undefined)).toEqual({
+      status: "active",
+      offering: "none",
+    })
   })
 
-  it("returns 'archived' when run is archived", () => {
+  it("is archived + audit-only access when the run is archived", () => {
     const run = makeRun({
       is_archived: true,
       is_enrollable: true,
@@ -60,10 +63,13 @@ describe("getCourseScenario", () => {
       enrollment_modes: [makeMode({ requires_payment: false })],
       products: [],
     })
-    expect(getCourseScenario(run)).toBe("archived")
+    expect(getCourseScenario(run)).toEqual({
+      status: "archived",
+      offering: "free",
+    })
   })
 
-  it("returns 'both' when paid cert is purchasable and free audit is also available", () => {
+  it("offers both when paid cert is purchasable and free audit is also available", () => {
     const run = makeRun({
       is_enrollable: true,
       is_archived: false,
@@ -74,10 +80,13 @@ describe("getCourseScenario", () => {
       ],
       products: [makeProduct({ price: "100" })],
     })
-    expect(getCourseScenario(run)).toBe("both")
+    expect(getCourseScenario(run)).toEqual({
+      status: "active",
+      offering: "both",
+    })
   })
 
-  it("returns 'paidOnly' when paid cert is purchasable and no free mode", () => {
+  it("offers paid only when paid cert is purchasable and there is no free mode", () => {
     const run = makeRun({
       is_enrollable: true,
       is_archived: false,
@@ -85,10 +94,13 @@ describe("getCourseScenario", () => {
       enrollment_modes: [makeMode({ requires_payment: true })],
       products: [makeProduct({ price: "100" })],
     })
-    expect(getCourseScenario(run)).toBe("paidOnly")
+    expect(getCourseScenario(run)).toEqual({
+      status: "active",
+      offering: "paid",
+    })
   })
 
-  it("returns 'freeOnly' when only free mode available", () => {
+  it("offers free only when only a free mode is available", () => {
     const run = makeRun({
       is_enrollable: true,
       is_archived: false,
@@ -96,10 +108,13 @@ describe("getCourseScenario", () => {
       enrollment_modes: [makeMode({ requires_payment: false })],
       products: [],
     })
-    expect(getCourseScenario(run)).toBe("freeOnly")
+    expect(getCourseScenario(run)).toEqual({
+      status: "active",
+      offering: "free",
+    })
   })
 
-  it("returns 'deadlinePassed' when paid offered but not purchasable and free mode exists", () => {
+  it("is deadlinePassed + free when paid is offered but not purchasable and a free mode exists", () => {
     const run = makeRun({
       is_enrollable: true,
       is_archived: false,
@@ -110,10 +125,13 @@ describe("getCourseScenario", () => {
       ],
       products: [makeProduct({ price: "250" })],
     })
-    expect(getCourseScenario(run)).toBe("deadlinePassed")
+    expect(getCourseScenario(run)).toEqual({
+      status: "deadlinePassed",
+      offering: "free",
+    })
   })
 
-  it("returns 'none' for degenerate paid-only past deadline with no free mode", () => {
+  it("is deadlinePassed + none for a paid-only run past its deadline (no free fallback, but still warns)", () => {
     const run = makeRun({
       is_enrollable: true,
       is_archived: false,
@@ -121,6 +139,9 @@ describe("getCourseScenario", () => {
       enrollment_modes: [makeMode({ requires_payment: true })],
       products: [makeProduct({ price: "100" })],
     })
-    expect(getCourseScenario(run)).toBe("none")
+    expect(getCourseScenario(run)).toEqual({
+      status: "deadlinePassed",
+      offering: "none",
+    })
   })
 })

@@ -120,12 +120,13 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
   // state.status === "options"
   const options = state.options
   const paidAction = options.find((o) => o.kind === "paid")
+  // Covers active audit ("Start Learning") and degraded audit ("Access Course
+  // Materials") — both are kind "free", distinguished only by label.
   const freeAction = options.find((o) => o.kind === "free")
-  const accessAction = options.find((o) => o.kind === "access")
 
   const renderPaidBox = () => {
     if (!paidAction) return null
-    if (scenario === "both") {
+    if (scenario.offering === "both") {
       // Button inside card
       return (
         <OfferingCell data-card="cert">
@@ -166,8 +167,7 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
   }
 
   const renderFreeBox = () => {
-    const freeOrAccess = freeAction ?? accessAction
-    if (!freeOrAccess) return null
+    if (!freeAction) return null
 
     // The in-card "Certificate deadline passed" note shows whenever the cert
     // deadline has actually passed for a run that offered one — i.e. both the
@@ -182,11 +182,9 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
     const runOfferedCert =
       selectedRun !== undefined &&
       ["paid", "both"].includes(getEnrollmentType(selectedRun.enrollment_modes))
-    const deadlineNote =
-      (scenario === "archived" || scenario === "deadlinePassed") &&
-      runOfferedCert
+    const deadlineNote = scenario.status !== "active" && runOfferedCert
 
-    if (scenario === "both") {
+    if (scenario.offering === "both") {
       // Button inside card. Secondary (outline) only here, to distinguish it
       // from the primary Certificate Track button alongside it.
       return (
@@ -195,7 +193,7 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
             productNoun="course"
             action={
               <EnrollButton
-                action={freeOrAccess}
+                action={freeAction}
                 size="medium"
                 loading={isStatusLoading}
                 pending={isPending}
@@ -216,7 +214,7 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
           certificateDeadlineNote={deadlineNote}
         />
         <EnrollButton
-          action={freeOrAccess}
+          action={freeAction}
           size="large"
           loading={isStatusLoading}
           pending={isPending}
@@ -228,7 +226,7 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
 
   return (
     <>
-      {scenario === "both" && (
+      {scenario.offering === "both" && (
         <ChooseYourPath data-choose-path>Choose Your Path</ChooseYourPath>
       )}
       {renderPaidBox()}

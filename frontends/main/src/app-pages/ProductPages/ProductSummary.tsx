@@ -642,12 +642,13 @@ const CourseSummary: React.FC<{
   // still an active, scheduled run — it keeps its normal date row (dropdown /
   // "anytime" / dated); only the now-stale payment-deadline line is dropped,
   // since the "Certificate deadline has passed." alert conveys that.
-  const contentAvailableAnytime = scenario === "archived"
+  const contentAvailableAnytime = scenario.status === "archived"
   const selectedRunStartsAnytime = !!(
     selectedRun && runStartsAnytime(selectedRun)
   )
-  const suppressPaymentDeadline =
-    scenario === "archived" || scenario === "deadlinePassed"
+  // Any degraded status (archived or deadline-passed) drops the stale
+  // payment-deadline line — the warning alert conveys the closure instead.
+  const suppressPaymentDeadline = scenario.status !== "active"
   const upgradeDeadline =
     selectedRun !== undefined && !suppressPaymentDeadline
       ? selectedRun.upgrade_deadline
@@ -712,8 +713,8 @@ const CourseSummary: React.FC<{
           sessions may be added in the future.
         </Alert>
       ) : null}
-      {selectedRun?.is_archived ? <ArchivedAlert /> : null}
-      {scenario === "deadlinePassed" ? (
+      {scenario.status === "archived" ? <ArchivedAlert /> : null}
+      {scenario.status === "deadlinePassed" ? (
         <Alert severity="warning">Certificate deadline has passed.</Alert>
       ) : null}
     </SummaryRows>

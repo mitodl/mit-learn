@@ -52,25 +52,56 @@ export const getSelectedRun = (
   return getBestRun(course, { enrollableOnly: true })
 }
 
-export type CourseScenarioKind =
-  | "both"
-  | "paidOnly"
-  | "freeOnly"
-  | "deadlinePassed"
-  | "archived"
-  | "none"
+/**
+ * What the selected run lets you enroll in right now:
+ * - "both": free audit and a purchasable paid certificate
+ * - "paid": purchasable paid certificate only
+ * - "free": free audit only
+ * - "none": nothing enrollable (no run, or a paid-only run past its deadline)
+ */
+export type CourseOffering = "none" | "free" | "paid" | "both"
+
+/**
+ * Lifecycle of the selected run. "active" is the normal case; the others are
+ * degraded states that render a warning and cap enrollment at free audit:
+ * - "deadlinePassed": the paid-certificate window has closed
+ * - "archived": the course has ended; content remains available to audit
+ */
+export type CourseStatus = "active" | "deadlinePassed" | "archived"
+
+/**
+ * The selected run's enrollment scenario as two orthogonal facets: what's
+ * enrollable (`offering`) and the lifecycle `status`. Modeled as a discriminated
+ * union so the impossible combinations are unrepresentable — a degraded run
+ * can't still offer a purchasable certificate, and an archived run is always
+ * audit-only.
+ */
+export type CourseScenario =
+  | { status: "active"; offering: CourseOffering }
+  | { status: "deadlinePassed"; offering: "free" | "none" }
+  | { status: "archived"; offering: "free" }
 
 export const getCourseScenario = (
   run: CourseRunV2 | undefined,
-): CourseScenarioKind => {
-  if (!run) return "none"
-  if (run.is_archived) return "archived"
+): CourseScenario => {
+  if (!run) return { status: "active", offering: "none" }
+  // Archived grants free audit access to the (ended) content regardless of the
+  // run's original modes — the established product behavior (see legacy
+  // CourseProductDetailEnroll: `is_archived ? "Access Course Materials"`).
+  if (run.is_archived) return { status: "archived", offering: "free" }
   const type = getEnrollmentType(run.enrollment_modes) // "none" | "free" | "paid" | "both"
   const hasFree = type === "free" || type === "both"
   const offersPaid = type === "paid" || type === "both"
   const purchasable = canPurchaseRun(run) // is_enrollable && !archived && is_upgradable && has product
-  if (offersPaid && purchasable) return hasFree ? "both" : "paidOnly"
-  if (offersPaid && !purchasable) return hasFree ? "deadlinePassed" : "none" // paid-only-expired → none
-  if (hasFree) return "freeOnly"
-  return "none"
+  if (offersPaid && purchasable) {
+    return { status: "active", offering: hasFree ? "both" : "paid" }
+  }
+  if (offersPaid && !purchasable) {
+    // Paid window closed. Free audit remains if the run also offers it;
+    // otherwise nothing is enrollable, but we still surface the closed-deadline
+    // warning rather than silently showing no offering at all.
+    return { status: "deadlinePassed", offering: hasFree ? "free" : "none" }
+  }
+  if (hasFree) return { status: "active", offering: "free" }
+  return { status: "active", offering: "none" }
 }

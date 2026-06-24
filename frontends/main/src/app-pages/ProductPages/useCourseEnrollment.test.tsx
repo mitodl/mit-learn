@@ -164,7 +164,10 @@ describe("useCourseEnrollment — state mapping", () => {
 
     await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
 
-    expect(result.current.scenario).toBe("deadlinePassed")
+    expect(result.current.scenario).toEqual({
+      status: "deadlinePassed",
+      offering: "free",
+    })
     const state = result.current.state
     expect(state.status).toBe("options")
     expect(
@@ -172,7 +175,7 @@ describe("useCourseEnrollment — state mapping", () => {
     ).toEqual(["Access Course Materials"])
     expect(
       state.status === "options" && state.options.map((o) => o.kind),
-    ).toEqual(["access"])
+    ).toEqual(["free"])
   })
 
   test("archived -> [Access Course Materials]", async () => {
@@ -197,7 +200,7 @@ describe("useCourseEnrollment — state mapping", () => {
     ).toEqual(["Access Course Materials"])
     expect(
       state.status === "options" && state.options.map((o) => o.kind),
-    ).toEqual(["access"])
+    ).toEqual(["free"])
   })
 
   test("none -> {status:'none'}", async () => {
@@ -264,7 +267,10 @@ describe("useCourseEnrollment — enrolled precedence", () => {
 
     await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
 
-    expect(result.current.scenario).toBe("deadlinePassed")
+    expect(result.current.scenario).toEqual({
+      status: "deadlinePassed",
+      offering: "free",
+    })
     expect(result.current.state.status).toBe("enrolled")
   })
 })
@@ -463,7 +469,11 @@ describe("useCourseEnrollment — actions", () => {
     expect(state.status).toBe("options")
     if (state.status !== "options") return
 
-    const accessOption = state.options.find((o) => o.kind === "access")
+    // The archived "Access Course Materials" action — now kind "free", with the
+    // audit label distinguishing it from the active "Start Learning" free path.
+    const accessOption = state.options.find(
+      (o) => o.label === "Access Course Materials",
+    )
     expect(accessOption).toBeDefined()
 
     const fakeEvent = {

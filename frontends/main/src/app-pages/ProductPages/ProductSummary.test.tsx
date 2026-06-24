@@ -965,6 +965,19 @@ describe("CourseSummary", () => {
 
       expect(screen.queryByText(/Payment deadline/)).toBeNull()
     })
+
+    test("Paid-only run past its deadline still warns (no free fallback → deadlinePassed + none)", () => {
+      // No free mode, so nothing is enrollable, but the closed-deadline warning
+      // still shows rather than silently nothing (was previously the inert
+      // "none" scenario).
+      const run = makeDeadlinePassedRun({ enrollment_modes: [paidMode()] })
+      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Certificate deadline has passed.",
+      )
+    })
   })
 
   test("Renders sessionSelect in place of dates when provided", () => {

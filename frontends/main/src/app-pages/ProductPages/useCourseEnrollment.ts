@@ -14,10 +14,13 @@ import { PostHogEvents } from "@/common/constants"
 import { trackCourseEnrolled } from "@/common/analytics/gtm"
 import { env } from "@/env"
 import { DASHBOARD_HOME } from "@/common/urls"
-import { getCourseScenario, type CourseScenarioKind } from "./courseRun"
+import { getCourseScenario, type CourseScenario } from "./courseRun"
 import { useCourseEnrolledRunIds } from "./useCourseEnrolledRunIds"
 
-export type EnrollActionKind = "paid" | "free" | "access"
+// "free" covers every non-paid enrollment — active audit ("Start Learning") and
+// the degraded archived/deadline-passed audit ("Access Course Materials"). They
+// hit the same free-enrollment path; only the button label differs.
+export type EnrollActionKind = "paid" | "free"
 
 export type EnrollAction = {
   kind: EnrollActionKind
@@ -34,7 +37,7 @@ export type EnrollAreaState =
 
 export type UseCourseEnrollment = {
   state: EnrollAreaState
-  scenario: CourseScenarioKind
+  scenario: CourseScenario
   isStatusLoading: boolean
   isPending: boolean
   isError: boolean
@@ -98,7 +101,7 @@ export const useCourseEnrollment = (
         if (product) {
           replaceBasketItem.mutate(product.id)
         }
-      } else if (kind === "free" || kind === "access") {
+      } else if (kind === "free") {
         if (selectedRun) {
           createEnrollment.mutate(
             { run_id: selectedRun.id },
@@ -128,85 +131,35 @@ export const useCourseEnrollment = (
     }
   }
 
-  // Map scenario to EnrollAreaState
-  let state: EnrollAreaState
-  switch (scenario) {
-    case "both":
-      state = {
-        status: "options",
-        options: [
-          {
-            kind: "paid",
-            label: "Earn Certificate",
-            onClick: makeOnClick("paid", "Earn Certificate"),
-            disabled: isPending,
-          },
-          {
-            kind: "free",
-            label: "Start Learning",
-            onClick: makeOnClick("free", "Start Learning"),
-            disabled: isPending,
-          },
-        ],
-      }
-      break
-    case "paidOnly":
-      state = {
-        status: "options",
-        options: [
-          {
-            kind: "paid",
-            label: "Enroll",
-            onClick: makeOnClick("paid", "Enroll"),
-            disabled: isPending,
-          },
-        ],
-      }
-      break
-    case "freeOnly":
-      state = {
-        status: "options",
-        options: [
-          {
-            kind: "free",
-            label: "Start Learning",
-            onClick: makeOnClick("free", "Start Learning"),
-            disabled: isPending,
-          },
-        ],
-      }
-      break
-    case "deadlinePassed":
-      state = {
-        status: "options",
-        options: [
-          {
-            kind: "access",
-            label: "Access Course Materials",
-            onClick: makeOnClick("access", "Access Course Materials"),
-            disabled: isPending,
-          },
-        ],
-      }
-      break
-    case "archived":
-      state = {
-        status: "options",
-        options: [
-          {
-            kind: "access",
-            label: "Access Course Materials",
-            onClick: makeOnClick("access", "Access Course Materials"),
-            disabled: isPending,
-          },
-        ],
-      }
-      break
-    case "none":
-    default:
-      state = { status: "none" }
-      break
+  // Build the enroll options from the run's offering. The paid and free tracks
+  // are independent; labels depend on the offering ("Earn Certificate" when a
+  // free track sits alongside, else "Enroll") and the status ("Start Learning"
+  // when active, "Access Course Materials" for a degraded/archived run).
+  const { status, offering } = scenario
+  const options: EnrollAction[] = []
+  if (offering === "paid" || offering === "both") {
+    const label = offering === "both" ? "Earn Certificate" : "Enroll"
+    options.push({
+      kind: "paid",
+      label,
+      onClick: makeOnClick("paid", label),
+      disabled: isPending,
+    })
   }
+  if (offering === "free" || offering === "both") {
+    const label =
+      status === "active" ? "Start Learning" : "Access Course Materials"
+    options.push({
+      kind: "free",
+      label,
+      onClick: makeOnClick("free", label),
+      disabled: isPending,
+    })
+  }
+  // offering "none" (no run, or paid-only past its deadline) yields no options.
+  const state: EnrollAreaState = options.length
+    ? { status: "options", options }
+    : { status: "none" }
 
   return {
     state,
