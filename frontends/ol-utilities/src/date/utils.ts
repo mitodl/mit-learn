@@ -97,6 +97,12 @@ const isInPast = (date: string): null | boolean => {
 const formatCalendarDays = (days: number): string => {
   const abs = Math.abs(days)
   if (abs === 0) return "Today"
+  if (abs > 90) {
+    const browserLocale = Intl.DateTimeFormat().resolvedOptions().locale
+    return Intl.DateTimeFormat(browserLocale, { dateStyle: "short" }).format(
+      moment().add(days, "days").toDate(),
+    )
+  }
   if (days > 0) return days === 1 ? "Tomorrow" : `in ${days} days`
   return abs === 1 ? "Yesterday" : `${abs} days ago`
 }
