@@ -46,7 +46,13 @@ describe("SessionSelect", () => {
   })
 
   test("collapses the redundant start-year for a same-year range", async () => {
-    const run = makeRun({ start_date: "2026-09-08", end_date: "2026-12-16" })
+    // is_upgradable: true so the option label is just the date range (a
+    // non-upgradable run appends "(no certificate available)").
+    const run = makeRun({
+      start_date: "2026-09-08",
+      end_date: "2026-12-16",
+      is_upgradable: true,
+    })
     renderWithProviders(
       <SessionSelect
         runs={[run]}
@@ -61,7 +67,11 @@ describe("SessionSelect", () => {
   })
 
   test("keeps both years for a cross-year range", async () => {
-    const run = makeRun({ start_date: "2026-12-08", end_date: "2027-02-12" })
+    const run = makeRun({
+      start_date: "2026-12-08",
+      end_date: "2027-02-12",
+      is_upgradable: true,
+    })
     renderWithProviders(
       <SessionSelect
         runs={[run]}
@@ -102,16 +112,56 @@ describe("SessionSelect", () => {
     ).toBeInTheDocument()
   })
 
+  test("annotates a run whose certificate can't be purchased with '(no certificate available)'", async () => {
+    const noCert = makeRun({
+      is_upgradable: false,
+      start_date: "2026-09-08",
+      end_date: "2026-12-16",
+    })
+    const withCert = makeRun({
+      is_upgradable: true,
+      start_date: "2027-01-10",
+      end_date: "2027-04-01",
+    })
+    renderWithProviders(
+      <SessionSelect
+        runs={[noCert, withCert]}
+        selectedRunId={noCert.id}
+        onChange={jest.fn()}
+      />,
+    )
+    await user.click(screen.getByRole("combobox", { name: /session/i }))
+    expect(
+      screen.getByRole("option", {
+        name: /Sep 8 - Dec 16, 2026 \(no certificate available\)/,
+      }),
+    ).toBeInTheDocument()
+    // The upgradable run carries no such note.
+    expect(
+      screen.queryByRole("option", { name: /Jan 10.*no certificate/i }),
+    ).toBeNull()
+  })
+
   test("orders options by start date, latest first", async () => {
-    // Instructor-paced so its past start date doesn't pick up a "Start Anytime"
-    // annotation, which would muddy the label-order assertion below.
+    // Instructor-paced + upgradable so labels are bare date ranges (no
+    // "Start Anytime" / "(no certificate available)" annotations) — this test
+    // pins ordering, not annotations.
     const past = makeRun({
       start_date: "2025-01-10",
       end_date: "2025-04-01",
       is_self_paced: false,
+      is_upgradable: true,
     })
-    const soon = makeRun({ start_date: "2026-09-08", end_date: "2026-12-16" })
-    const later = makeRun({ start_date: "2027-01-10", end_date: "2027-04-01" })
+    const soon = makeRun({
+      start_date: "2026-09-08",
+      end_date: "2026-12-16",
+      is_upgradable: true,
+    })
+    const later = makeRun({
+      start_date: "2027-01-10",
+      end_date: "2027-04-01",
+      is_upgradable: true,
+    })
     // Pass them out of order to prove the component sorts.
     renderWithProviders(
       <SessionSelect
@@ -134,6 +184,7 @@ describe("SessionSelect", () => {
       start_date: "2026-09-08",
       end_date: "2026-12-16",
       is_self_paced: false,
+      is_upgradable: true,
     })
     renderWithProviders(
       <SessionSelect

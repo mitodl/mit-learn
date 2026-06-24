@@ -89,8 +89,16 @@ const byStartDateDesc = (a: CourseRunV2, b: CourseRunV2): number => {
   return bTime - aTime
 }
 
-// Dropdown option: dates · the self-paced annotation · the enrolled marker (so
-// the user can spot a session they're already in — §4g).
+/**
+ * " (no certificate available)" for a run whose certificate can no longer be
+ * purchased (not upgradable), so a user choosing a session knows it before
+ * enrolling. Mirrors the legacy enrollment dialog's per-run note.
+ */
+const certUnavailableNote = (run: CourseRunV2): string | null =>
+  run.is_upgradable ? null : " (no certificate available)"
+
+// Dropdown option: dates · the self-paced annotation · the cert-unavailable note
+// · the enrolled marker (so the user can spot a session they're already in — §4g).
 const buildOptionLabel = (
   run: CourseRunV2,
   enrolledRunIds: number[] | undefined,
@@ -99,6 +107,7 @@ const buildOptionLabel = (
   return (
     <>
       {formatDateRange(run)}
+      {certUnavailableNote(run)}
       {anytimeAnnotation(run)}
       {enrolled ? " — Enrolled" : null}
     </>
