@@ -256,7 +256,11 @@ export const getCertificateLinkedInUrl = (
   const credentialName =
     certificateType === CertificateType.Course
       ? (certificateData as V2CourseRunCertificate).course_run.course.title
-      : (certificateData as V2ProgramCertificate).program.title
+      : getCertificateTitle(
+          (certificateData as V2ProgramCertificate).certificate_page
+            ?.product_name,
+          (certificateData as V2ProgramCertificate).program.title,
+        )
   const certId = certificateData.uuid
   const linkedinUrl = new URL(LINKEDIN_ADD_TO_PROFILE_BASE_URL)
   linkedinUrl.searchParams.set("startTask", "CERTIFICATION_NAME")
