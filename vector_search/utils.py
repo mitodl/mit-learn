@@ -5,12 +5,7 @@ import uuid
 from functools import cache
 
 from django.conf import settings
-<<<<<<< HEAD
-from django.db.models import Q
-=======
 from django.db.models import Prefetch, Q
-from langchain_experimental.text_splitter import SemanticChunker
->>>>>>> a7f66ae58 (feedback)
 from langchain_text_splitters import (
     MarkdownHeaderTextSplitter,
     RecursiveCharacterTextSplitter,

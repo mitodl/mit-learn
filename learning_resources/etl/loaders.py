@@ -336,6 +336,13 @@ def load_run(
         run_data["published"] = True
 
     with transaction.atomic():
+        was_published = (
+            LearningResourceRun.objects.filter(
+                learning_resource=learning_resource, run_id=run_id
+            )
+            .values_list("published", flat=True)
+            .first()
+        )
         (
             learning_resource_run,
             _,
@@ -352,42 +359,46 @@ def load_run(
         if hasattr(learning_resource, "best_run"):
             del learning_resource.best_run
 
-        if (
-            (
-                learning_resource_run == learning_resource.best_run
-                or learning_resource.test_mode
-            )
-            and learning_resource.etl_source
-            in (
-                ETLSource.mit_edx.value,
-                ETLSource.mitxonline.value,
-                ETLSource.xpro.value,
-            )
-            and learning_resource_run.content_files.count() == 0
-        ):
-            # webhook may have been sent before run was created or was best run,
-            # so trigger a contentfile ingestion for the course. If already
-            # ingested & checksums match, no new content files will be created
-            from learning_resources.tasks import import_content_files
-
-            etl_source = learning_resource.etl_source
-            resource_id = learning_resource.id
-            cache_key = f"content_tasks_triggered_{etl_source}_{resource_id}"
-
-            def enqueue_content_tasks():
-                redis_cache = caches["redis"]
-                if not redis_cache.add(
-                    cache_key,
-                    True,  # noqa: FBT003
-                    timeout=CONTENT_TASKS_CACHE_TIMEOUT,
-                ):
-                    return
-                import_content_files.delay(
-                    etl_source,
-                    learning_resource_ids=[resource_id],
+        if was_published and not learning_resource_run.published:
+            resource_run_unpublished_actions(learning_resource_run)
+        elif learning_resource.published or learning_resource.test_mode:
+            if (
+                learning_resource.etl_source
+                in (
+                    ETLSource.mit_edx.value,
+                    ETLSource.mitxonline.value,
+                    ETLSource.xpro.value,
                 )
+                and learning_resource_run.content_files.count() == 0
+            ):
+                # webhook may have been sent before run was created or was best
+                # run, so trigger a contentfile ingestion for the course. If
+                # already ingested & checksums match, no new files are created
+                from learning_resources.tasks import import_content_files
 
-            transaction.on_commit(enqueue_content_tasks)
+                etl_source = learning_resource.etl_source
+                resource_id = learning_resource.id
+                cache_key = f"content_tasks_triggered_{etl_source}_{resource_id}"
+
+                def enqueue_content_tasks():
+                    redis_cache = caches["redis"]
+                    if not redis_cache.add(
+                        cache_key,
+                        True,  # noqa: FBT003
+                        timeout=CONTENT_TASKS_CACHE_TIMEOUT,
+                    ):
+                        return
+                    import_content_files.delay(
+                        etl_source,
+                        learning_resource_ids=[resource_id],
+                    )
+
+                transaction.on_commit(enqueue_content_tasks)
+            elif was_published is False:
+                # Run was republished. Its content files are still present and
+                # published (retained sources keep them in Qdrant), just absent
+                # from OpenSearch. Re-index them without a full re-ingest.
+                content_files_loaded_actions(learning_resource_run)
     return learning_resource_run
 
 
