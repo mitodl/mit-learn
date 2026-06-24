@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.71.13
+---------------
+
+- Ingest contentfile archives for all runs (two-tier indexing) (#3503)
+- Program certificate title from CMS "Certificate Title" (behind flag) (#3512)
+- remove semantic chunker and dependance on langchain-experimental (#3514)
+
 Version 0.71.12 (Released June 23, 2026)
 ---------------
 
