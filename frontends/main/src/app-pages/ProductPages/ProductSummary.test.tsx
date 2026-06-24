@@ -982,6 +982,28 @@ describe("CourseSummary", () => {
     expect(screen.getByTestId("session-select-slot")).toBeInTheDocument()
     expect(screen.queryByText(/^Start:/)).toBeNull()
   })
+
+  test("Surfaces a 'Start Anytime' line under the dropdown for a self-paced, already-open selected run", () => {
+    // The dropdown's collapsed value shows dates only; the anytime nature is
+    // shown here as its own line instead of overflowing the column.
+    const run = makeRun({
+      is_self_paced: true,
+      is_archived: false,
+      start_date: monthsFromNow(-6),
+      end_date: monthsFromNow(3),
+    })
+    const course = makeCourse({ courseruns: [run], next_run_id: run.id })
+    renderWithProviders(
+      <CourseSummary
+        course={course}
+        selectedRun={run}
+        sessionSelect={
+          <div data-testid="session-select-slot">Session Picker</div>
+        }
+      />,
+    )
+    expect(screen.getByText("Start Anytime")).toBeInTheDocument()
+  })
 })
 
 describe("ProgramSummary", () => {

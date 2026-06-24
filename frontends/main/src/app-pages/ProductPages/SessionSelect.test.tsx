@@ -75,7 +75,7 @@ describe("SessionSelect", () => {
     ).toBeInTheDocument()
   })
 
-  test("shows dates with a 'Start Anytime' annotation for a self-paced past-start run", async () => {
+  test("annotates a self-paced past-start run 'Start Anytime' in the menu, but shows dates only when collapsed", async () => {
     const selfPaced = makeRun({
       is_self_paced: true,
       is_archived: false,
@@ -90,11 +90,43 @@ describe("SessionSelect", () => {
         onChange={jest.fn()}
       />,
     )
-    await user.click(screen.getByRole("combobox", { name: /session/i }))
-    // The date range is shown (not a bare "Anytime"), with the annotation appended.
+    // Collapsed value: the date range, not a bare "Anytime", and without the
+    // annotation (it would overflow — CourseSummary surfaces it on its own line).
+    const combobox = screen.getByRole("combobox", { name: /session/i })
+    expect(combobox).toHaveTextContent("Jan 1, 2020")
+    expect(combobox).not.toHaveTextContent("Start Anytime")
+    // ...but the open menu annotates the option.
+    await user.click(combobox)
     expect(
       screen.getByRole("option", { name: /Jan 1, 2020.*Start Anytime/ }),
     ).toBeInTheDocument()
+  })
+
+  test("orders options by start date, latest first", async () => {
+    // Instructor-paced so its past start date doesn't pick up a "Start Anytime"
+    // annotation, which would muddy the label-order assertion below.
+    const past = makeRun({
+      start_date: "2025-01-10",
+      end_date: "2025-04-01",
+      is_self_paced: false,
+    })
+    const soon = makeRun({ start_date: "2026-09-08", end_date: "2026-12-16" })
+    const later = makeRun({ start_date: "2027-01-10", end_date: "2027-04-01" })
+    // Pass them out of order to prove the component sorts.
+    renderWithProviders(
+      <SessionSelect
+        runs={[soon, past, later]}
+        selectedRunId={soon.id}
+        onChange={jest.fn()}
+      />,
+    )
+    await user.click(screen.getByRole("combobox", { name: /session/i }))
+    const options = screen.getAllByRole("option").map((o) => o.textContent)
+    expect(options).toEqual([
+      "Jan 10 - Apr 1, 2027",
+      "Sep 8 - Dec 16, 2026",
+      "Jan 10 - Apr 1, 2025",
+    ])
   })
 
   test("collapsed value shows dates but omits '— Enrolled' (the standalone Enrolled button covers it)", async () => {

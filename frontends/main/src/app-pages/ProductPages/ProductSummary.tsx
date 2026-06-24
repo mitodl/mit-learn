@@ -141,6 +141,17 @@ const PaymentDeadline = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
 }))
 
+/**
+ * "Start Anytime" line under the session dropdown, for a self-paced,
+ * already-open selected run. The dropdown's collapsed value shows dates only
+ * (the inline annotation overflowed the narrow column), so the anytime nature
+ * surfaces here instead — above the payment-deadline line.
+ */
+const SessionAnnotation = styled.div(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.darkGray2,
+}))
+
 const runStartsAnytime = (run: CourseRunV2) => {
   return (
     !run.is_archived &&
@@ -635,6 +646,9 @@ const CourseSummary: React.FC<{
   // "anytime" / dated); only the now-stale payment-deadline line is dropped,
   // since the "Certificate deadline has passed." alert conveys that.
   const contentAvailableAnytime = scenario === "archived"
+  const selectedRunStartsAnytime = !!(
+    selectedRun && runStartsAnytime(selectedRun)
+  )
   const suppressPaymentDeadline =
     scenario === "archived" || scenario === "deadlinePassed"
   const upgradeDeadline =
@@ -669,6 +683,11 @@ const CourseSummary: React.FC<{
               <RiCalendarLine aria-hidden="true" />
             </InfoRowIcon>
             {sessionSelect}
+            {selectedRunStartsAnytime ? (
+              <SessionAnnotation style={{ gridColumn: 3 }}>
+                Start Anytime
+              </SessionAnnotation>
+            ) : null}
             {deadlineContent ? (
               <PaymentDeadline style={{ gridColumn: 3 }}>
                 {deadlineContent}

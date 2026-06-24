@@ -29,21 +29,17 @@ const SessionLabel = styled.label(({ theme }) => ({
 }))
 
 /**
- * Collapsed-value display: truncate with an ellipsis so a long date range (or
- * the "(Starts anytime)" annotation) can't overflow the narrow sidebar column
- * and collide with the dropdown chevron. The full label stays visible in the
- * open menu.
+ * Collapsed-value display: truncate with an ellipsis so a long date range can't
+ * overflow the narrow sidebar column and collide with the dropdown chevron. The
+ * collapsed value is dates only — the "Start Anytime" annotation is dropped here
+ * (it overflowed too readily) and surfaced on its own line under the dropdown by
+ * CourseSummary; the open menu still annotates each option.
  */
 const TruncatedValue = styled.span({
   display: "block",
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
-})
-
-/** Italic annotation appended to a session label (e.g. "Start Anytime"). */
-const Annotation = styled.em({
-  fontStyle: "italic",
 })
 
 /**
@@ -65,7 +61,7 @@ const runStartsAnytime = (run: CourseRunV2): boolean => {
  * ("Dec 8, 2026 - Feb 12, 2027"). Dates always show — including for self-paced
  * "starts anytime" runs, which would otherwise all render as a bare "Anytime"
  * and be indistinguishable; the anytime nature is annotated separately (see
- * anytimeSuffix).
+ * anytimeAnnotation).
  */
 const formatDateRange = (run: CourseRunV2): string => {
   const start = typeof run.start_date === "string" ? run.start_date : null
@@ -79,14 +75,19 @@ const formatDateRange = (run: CourseRunV2): string => {
   return single ? formatDate(single) : ""
 }
 
-/** Italic " — Start Anytime" for a self-paced, already-open run; null otherwise. */
-const anytimeAnnotation = (run: CourseRunV2): React.ReactNode =>
-  runStartsAnytime(run) ? (
-    <>
-      {" — "}
-      <Annotation>Start Anytime</Annotation>
-    </>
-  ) : null
+/** " — Start Anytime" for a self-paced, already-open run; null otherwise. */
+const anytimeAnnotation = (run: CourseRunV2): string | null =>
+  runStartsAnytime(run) ? " — Start Anytime" : null
+
+// Comparator that orders runs by start date, latest first, so upcoming sessions
+// sit at the top of the list; runs without a start date sort last. This mirrors
+// the "More Dates" list in CourseSummary. The default *selection* is driven by
+// selectedRunId (the course's next_run_id), independent of this display order.
+const byStartDateDesc = (a: CourseRunV2, b: CourseRunV2): number => {
+  const aTime = a.start_date ? new Date(a.start_date).getTime() : -Infinity
+  const bTime = b.start_date ? new Date(b.start_date).getTime() : -Infinity
+  return bTime - aTime
+}
 
 // Dropdown option: dates · the self-paced annotation · the enrolled marker (so
 // the user can spot a session they're already in — §4g).
@@ -103,17 +104,6 @@ const buildOptionLabel = (
     </>
   )
 }
-
-// Collapsed (selected) display: dates + the self-paced annotation only. The
-// "— Enrolled" marker is dropped here — when the selected run is enrolled the
-// enroll area already collapses to a standalone "Enrolled" button, so repeating
-// it is redundant and is the main cause of overflow in the narrow column.
-const buildSelectedLabel = (run: CourseRunV2): React.ReactNode => (
-  <>
-    {formatDateRange(run)}
-    {anytimeAnnotation(run)}
-  </>
-)
 
 const SessionSelect: React.FC<SessionSelectProps> = ({
   runs,
@@ -139,15 +129,18 @@ const SessionSelect: React.FC<SessionSelectProps> = ({
           onChange(Number(e.target.value))
         }
         renderValue={(value) => {
+          // Collapsed display: dates only. Both the "— Enrolled" marker (the
+          // enroll area already shows a standalone Enrolled button) and the
+          // "Start Anytime" annotation (surfaced on its own line by
+          // CourseSummary) are dropped — they're the main causes of overflow in
+          // the narrow column. The open menu keeps both (buildOptionLabel).
           const run = runs.find((r) => String(r.id) === String(value))
           return (
-            <TruncatedValue>
-              {run ? buildSelectedLabel(run) : ""}
-            </TruncatedValue>
+            <TruncatedValue>{run ? formatDateRange(run) : ""}</TruncatedValue>
           )
         }}
       >
-        {runs.map((run) => (
+        {[...runs].sort(byStartDateDesc).map((run) => (
           <MenuItem key={run.id} value={String(run.id)}>
             {buildOptionLabel(run, enrolledRunIds)}
           </MenuItem>
