@@ -26,6 +26,8 @@ export type VideoJsPlayerProps = {
   ariaLabel?: string
   ariaDescribedBy?: string
   onReady?: (player: Player) => void
+  onPlay?: () => void
+  onHalfProgress?: () => void
 }
 
 /**
@@ -45,6 +47,8 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
   ariaLabel,
   ariaDescribedBy,
   onReady,
+  onPlay,
+  onHalfProgress,
 }) => {
   const videoRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<Player | null>(null)
@@ -116,6 +120,27 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
         // Add tracks inside the ready callback — this is the earliest safe
         // point; adding them before ready can silently fail on some browsers.
         addTracks(this, tracks)
+        if (onPlay) {
+          this.on("play", () => onPlay())
+        }
+        if (onHalfProgress) {
+          let halfFired = false
+          const p = this
+          this.on("timeupdate", () => {
+            const duration = p.duration()
+            const currentTime = p.currentTime()
+            if (
+              !halfFired &&
+              duration != null &&
+              duration > 0 &&
+              currentTime != null &&
+              currentTime >= duration / 2
+            ) {
+              halfFired = true
+              onHalfProgress()
+            }
+          })
+        }
         onReady?.(this)
         // Set the flag here so the update effect only runs after the player
         // is truly ready and the initial setup is complete.
@@ -132,6 +157,8 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
     controls,
     fluid,
     loop,
+    onHalfProgress,
+    onPlay,
     onReady,
     playsinline,
     poster,

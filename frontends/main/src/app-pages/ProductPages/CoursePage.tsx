@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useEffect } from "react"
 import { Typography } from "ol-components"
 
 import { pagesQueries } from "api/mitxonline-hooks/pages"
@@ -23,6 +23,10 @@ import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import CourseInfoBox from "./InfoBoxCourse"
 import CourseEnrollmentButton from "./CourseEnrollmentButton"
 import CourseOutlineSection from "./CourseOutlineSection"
+import {
+  trackViewCoursePage,
+  trackCourseProgramView,
+} from "@/common/analytics/gtm"
 
 type CoursePageProps = {
   readableId: string
@@ -59,6 +63,12 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
     FeatureFlags.CourseOutlineSection,
   )
   const flagsLoaded = useFeatureFlagsLoaded()
+
+  useEffect(() => {
+    if (!course) return
+    trackViewCoursePage(course.title)
+    trackCourseProgramView({ name: course.title, id: course.readable_id })
+  }, [course])
 
   if (!enabled) {
     return flagsLoaded ? notFound() : null

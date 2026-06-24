@@ -10,6 +10,7 @@ import { convertToEmbedUrl } from "@/common/utils"
 import YouTubeIframePlayer from "./YouTubeIframePlayer"
 import type { VideoResource } from "api/v1"
 import type { VideoJsPlayerProps } from "./VideoJsPlayer"
+import { trackVideoStart, trackVideo50Percent } from "@/common/analytics/gtm"
 
 const VideoJsPlayer = dynamic<VideoJsPlayerProps>(
   () => import("./VideoJsPlayer"),
@@ -164,6 +165,8 @@ const VideoResourcePlayer: React.FC<VideoResourcePlayerProps> = ({
           fluid={false}
           ariaLabel={`Video: ${videoTitleLabel}`}
           ariaDescribedBy={ariaDescribedBy}
+          onPlay={() => trackVideoStart(videoTitleLabel)}
+          onHalfProgress={() => trackVideo50Percent(videoTitleLabel)}
         />
       ) : thumbnailUrl ? (
         <ThumbnailWrapper>

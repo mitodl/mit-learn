@@ -24,7 +24,7 @@ import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { useRouter } from "next-nprogress-bar"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
-import { trackCourseEnrolled } from "@/common/analytics/gtm"
+import { trackCourseEnrolled, trackStartEnrollment, trackBeginCheckout } from "@/common/analytics/gtm"
 
 const DiscountedPriceContent = styled.span({
   display: "inline-flex",
@@ -104,9 +104,11 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
       })
     }
     if (me.data?.is_authenticated) {
+      trackStartEnrollment(course.title)
       if (enrollmentDecision.type === "dialog") {
         NiceModal.show(CourseEnrollmentDialog, { course })
       } else if (enrollmentDecision.type === "checkout") {
+        trackBeginCheckout(course.title)
         replaceBasketItem.mutate(enrollmentDecision.product.id)
       } else if (enrollmentDecision.type === "audit") {
         createEnrollment.mutate(

@@ -5,6 +5,7 @@ import RawHTML from "./RawHTML"
 import { Typography } from "ol-components"
 import { styled } from "@mitodl/smoot-design"
 import type { ProductNoun } from "./util"
+import { trackViewProgramDetails } from "@/common/analytics/gtm"
 
 const AboutSectionRoot = styled.section<{ expanded: boolean }>(
   ({ expanded }) => {
@@ -53,6 +54,9 @@ const AboutSection: React.FC<{
         className="show-more-less"
         onClick={(e) => {
           e.preventDefault()
+          if (!aboutExpanded) {
+            trackViewProgramDetails("About")
+          }
           setAboutExpanded((curr) => !curr)
         }}
       >
