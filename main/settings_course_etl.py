@@ -147,6 +147,11 @@ CONTENT_BASE_URL_OLL = get_string(
 CONTENT_BASE_URL_EDX = get_string("CONTENT_BASE_URL_EDX", "https://courses.edx.org")
 
 
+# Authenticated courses endpoint which includes b2b/variant courses
+MITX_ONLINE_INTERNAL_COURSES_API_URL = get_string(
+    "MITX_ONLINE_INTERNAL_COURSES_API_URL", None
+)
+
 # B2B client KeyCloak settings
 MITXONLINE_B2B_CLIENT_CONFIG = {
     "KEYCLOAK_CLIENT_ID": get_string(
@@ -159,11 +164,9 @@ MITXONLINE_B2B_CLIENT_CONFIG = {
         "MITXONLINE_B2B_KEYCLOAK_DISCOVERY_URL",
         "https://sso-qa.ol.mit.edu/realms/olapps/.well-known/openid-configuration",
     ),
-    "KEYCLOAK_B2B_CLIENT_SECRET": get_string(
-        "MITXONLINE_B2B_KEYCLOAK_CLIENT_SECRET", ""
-    ),
+    "KEYCLOAK_CLIENT_SECRET": get_string("MITXONLINE_B2B_KEYCLOAK_CLIENT_SECRET", ""),
     "KEYCLOAK_REALM_NAME": get_string("MITXONLINE_B2B_KEYCLOAK_REALM_NAME", "olapps"),
-    "KEYCLOAK_B2B_CLIENT_SCOPES": get_string(
+    "KEYCLOAK_CLIENT_SCOPES": get_string(
         "MITXONLINE_B2B_KEYCLOAK_CLIENT_SCOPES", "openid profile email"
     ),
 }
