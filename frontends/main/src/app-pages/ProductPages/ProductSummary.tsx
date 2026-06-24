@@ -142,14 +142,18 @@ const PaymentDeadline = styled.div(({ theme }) => ({
 }))
 
 /**
- * "Start Anytime" line under the session dropdown, for a self-paced,
- * already-open selected run. The dropdown's collapsed value shows dates only
- * (the inline annotation overflowed the narrow column), so the anytime nature
- * surfaces here instead — above the payment-deadline line.
+ * Compact block of secondary lines under the session dropdown — "Start Anytime"
+ * (for a self-paced, already-open selected run; the collapsed dropdown value
+ * shows dates only, so the anytime nature surfaces here) and the payment
+ * deadline. A tight inter-line gap keeps them reading as one unit rather than
+ * two airy grid rows; the 8px from the dropdown comes from the row's rowGap.
  */
-const SessionAnnotation = styled.div(({ theme }) => ({
+const SessionSubText = styled.div(({ theme }) => ({
   ...theme.typography.body3,
   color: theme.custom.colors.darkGray2,
+  display: "flex",
+  flexDirection: "column",
+  rowGap: "2px",
 }))
 
 const runStartsAnytime = (run: CourseRunV2) => {
@@ -683,15 +687,11 @@ const CourseSummary: React.FC<{
               <RiCalendarLine aria-hidden="true" />
             </InfoRowIcon>
             {sessionSelect}
-            {selectedRunStartsAnytime ? (
-              <SessionAnnotation style={{ gridColumn: 3 }}>
-                Start Anytime
-              </SessionAnnotation>
-            ) : null}
-            {deadlineContent ? (
-              <PaymentDeadline style={{ gridColumn: 3 }}>
-                {deadlineContent}
-              </PaymentDeadline>
+            {selectedRunStartsAnytime || deadlineContent ? (
+              <SessionSubText style={{ gridColumn: 3 }}>
+                {selectedRunStartsAnytime ? <div>Start Anytime</div> : null}
+                {deadlineContent ? <div>{deadlineContent}</div> : null}
+              </SessionSubText>
             ) : null}
           </SessionRow>
         ) : (
