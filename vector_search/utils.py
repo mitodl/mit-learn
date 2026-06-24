@@ -5,7 +5,7 @@ import uuid
 from functools import cache
 
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from langchain_text_splitters import (
     MarkdownHeaderTextSplitter,
     RecursiveCharacterTextSplitter,
@@ -17,6 +17,7 @@ from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.models import (
     ContentFile,
     LearningResource,
+    LearningResourceRun,
     LearningResourceTopic,
 )
 from learning_resources.serializers import (
@@ -1123,6 +1124,43 @@ async def async_qdrant_aggregations(
 
     results = await asyncio.gather(*[_get_facet(key) for key in aggregation_keys])
     return dict(results)
+
+
+def best_run_ids_for_resources(readable_ids):
+    """
+    Resolve the run_id values a resource_readable_id content-file query should
+    be restricted to.
+
+    Non-test_mode course -> its best run only.
+    test_mode course     -> all its published runs (matches OpenSearch indexing).
+    Course with no published run -> contributes nothing.
+
+    Args:
+        readable_ids (list[str]): resource readable_id values from the request
+
+    Returns:
+        list[str]: LearningResourceRun.run_id values to filter on
+    """
+    # Prefetch published runs into _published_runs so both best_run and the
+    # test_mode branch resolve without a per-resource query (avoids an N+1).
+    resources = LearningResource.objects.filter(
+        readable_id__in=readable_ids
+    ).prefetch_related(
+        Prefetch(
+            "runs",
+            queryset=LearningResourceRun.objects.filter(published=True).order_by(
+                "start_date", "enrollment_start", "id"
+            ),
+            to_attr="_published_runs",
+        )
+    )
+    run_ids = []
+    for resource in resources:
+        if resource.test_mode:
+            run_ids.extend(run.run_id for run in resource.published_runs)
+        elif resource.best_run:
+            run_ids.append(resource.best_run.run_id)
+    return run_ids
 
 
 def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):

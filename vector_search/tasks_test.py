@@ -334,32 +334,38 @@ def test_embed_learning_resources_by_id(mocker, mocked_celery):
     assert sorted(resource_ids) == sorted(embedded_resource_ids)
 
 
-def test_embedded_content_from_best_run(mocker, mocked_celery):
+def _embedded_content_file_ids(generate_embeddings_mock):
+    """Collect all content file ids passed to generate_embeddings across chunks"""
+    return {
+        cid
+        for call in generate_embeddings_mock.si.call_args_list
+        if call.args[1] == "content_file"
+        for cid in call.args[0]
+    }
+
+
+def test_embedded_content_from_all_runs(mocker, mocked_celery):
     """
-    Content files to embed should come from best course run
+    Content files from every run of a course should be embedded, not just best_run
     """
 
     mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
 
     course = CourseFactory.create(etl_source=ETLSource.ocw.value)
     course.runs.all().delete()
-    other_run = LearningResourceRunFactory.create(
+    older_run = LearningResourceRunFactory.create(
         learning_resource=course.learning_resource,
         start_date=datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(days=2),
     )
-    LearningResourceRunFactory.create(
+    newer_run = LearningResourceRunFactory.create(
         learning_resource=course.learning_resource,
         start_date=datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(days=2),
     )
-
-    best_run_contentfiles = [
+    all_contentfiles = {
         cf.id
-        for cf in ContentFileFactory.create_batch(
-            3, run=course.learning_resource.best_run
-        )
-    ]
-    # create contentfiles using the other run
-    ContentFileFactory.create_batch(3, run=other_run)
+        for run in (older_run, newer_run)
+        for cf in ContentFileFactory.create_batch(3, run=run)
+    }
 
     generate_embeddings_mock = mocker.patch(
         "vector_search.tasks.generate_embeddings", autospec=True
@@ -370,43 +376,46 @@ def test_embedded_content_from_best_run(mocker, mocked_celery):
             ["course"], skip_content_files=False, overwrite=True
         )
 
-    generate_embeddings_mock.si.assert_called_with(
-        best_run_contentfiles,
-        "content_file",
-        True,  # noqa: FBT003
-    )
+    assert all_contentfiles <= _embedded_content_file_ids(generate_embeddings_mock)
 
 
-def test_embedded_content_from_latest_run_if_next_missing(mocker, mocked_celery):
+def test_embed_by_id_all_runs_excludes_unpublished(mocker, mocked_celery):
     """
-    Content files to embed should come from latest run if the next run is missing
+    embed_learning_resources_by_id embeds published content files from all runs and
+    excludes unpublished ones
     """
 
     mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
 
     course = CourseFactory.create(etl_source=ETLSource.ocw.value)
     course.runs.all().delete()
-    latest_run = LearningResourceRunFactory.create(
-        learning_resource=course.learning_resource,
-        start_date=datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(hours=1),
+    run_a = LearningResourceRunFactory.create(
+        learning_resource=course.learning_resource
     )
-    latest_run_contentfiles = [
-        cf.id for cf in ContentFileFactory.create_batch(3, run=latest_run)
-    ]
+    run_b = LearningResourceRunFactory.create(
+        learning_resource=course.learning_resource
+    )
+    published_ids = {
+        cf.id
+        for run in (run_a, run_b)
+        for cf in ContentFileFactory.create_batch(2, run=run, published=True)
+    }
+    unpublished_ids = {
+        cf.id for cf in ContentFileFactory.create_batch(2, run=run_a, published=False)
+    }
+
     generate_embeddings_mock = mocker.patch(
         "vector_search.tasks.generate_embeddings", autospec=True
     )
 
     with pytest.raises(mocked_celery.replace_exception_class):
-        start_embed_resources.delay(
-            ["course"], skip_content_files=False, overwrite=True
+        embed_learning_resources_by_id.delay(
+            [course.learning_resource.id], skip_content_files=False, overwrite=True
         )
 
-    generate_embeddings_mock.si.assert_called_with(
-        latest_run_contentfiles,
-        "content_file",
-        True,  # noqa: FBT003
-    )
+    embedded = _embedded_content_file_ids(generate_embeddings_mock)
+    assert published_ids <= embedded
+    assert not (unpublished_ids & embedded)
 
 
 def test_embedded_content_file_without_runs(mocker, mocked_celery):
@@ -695,6 +704,36 @@ def test_embeddings_healthcheck_missing_both(mocker):
     embeddings_healthcheck()
 
     assert mock_sentry.call_count == 2
+
+
+def test_embeddings_healthcheck_checks_all_runs(mocker):
+    """
+    embeddings_healthcheck should check content files from every run, not just best_run
+    """
+    from vector_search.constants import CONTENT_FILES_COLLECTION_NAME
+
+    lr = LearningResourceFactory.create(published=True, create_runs=False)
+    run_a = LearningResourceRunFactory.create(published=True, learning_resource=lr)
+    run_b = LearningResourceRunFactory.create(published=True, learning_resource=lr)
+    ContentFileFactory.create(run=run_a, content="test", published=True)
+    ContentFileFactory.create(run=run_b, content="test", published=True)
+
+    def fake_filter(batch, collection_name=None):
+        # report every content file point as missing, no missing resources
+        return list(batch) if collection_name == CONTENT_FILES_COLLECTION_NAME else []
+
+    mocker.patch(
+        "vector_search.tasks.filter_existing_qdrant_points_by_ids",
+        side_effect=fake_filter,
+    )
+    mock_sentry = mocker.patch("vector_search.tasks.sentry_sdk.capture_message")
+
+    embeddings_healthcheck()
+
+    assert (
+        mock_sentry.mock_calls[0].args[0]
+        == "Warning: 2 missing content file embeddings detected"
+    )
 
 
 def test_embeddings_healthcheck_missing_summaries(mocker):

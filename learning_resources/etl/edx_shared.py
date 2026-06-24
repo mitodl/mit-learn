@@ -77,8 +77,8 @@ def build_run_lookup(
     Args:
         etl_source(str): The ETL source
         ids(list of int): List of LearningResource IDs to filter by.
-            If empty/falsy, all published/test_mode runs for the source
-            are included.
+            If empty/falsy, all runs of every published/test_mode course
+            for the source are included.
 
     Returns:
         dict: Mapping of normalized run_id -> list of LearningResourceRun
@@ -87,7 +87,6 @@ def build_run_lookup(
         LearningResourceRun.objects.filter(
             learning_resource__etl_source=etl_source,
         )
-        .filter(Q(published=True) | Q(learning_resource__test_mode=True))
         .filter(
             Q(learning_resource__published=True) | Q(learning_resource__test_mode=True)
         )
@@ -107,6 +106,9 @@ def build_run_lookup(
     for run in runs:
         normalized = normalize_run_id(etl_source, run.run_id)
         lookup.setdefault(normalized, []).append(run)
+        if etl_source == ETLSource.oll.name:
+            # OLL archive filenames omit the MITx+ prefix the run_ids carry
+            lookup.setdefault(normalized.removeprefix("mitx."), []).append(run)
     return lookup
 
 
@@ -256,10 +258,12 @@ def sync_edx_archive(
         trigger_resource_etl(etl_source)
         return
     course = run.learning_resource
-    if course.published and not course.test_mode and course.best_run != run:
-        # This is not the best run for the published course, so skip it
+    if not course.published and not course.test_mode:
+        # Fully-retired course; skip it
         log.warning(
-            "%s not the best run for %s, skipping", run.run_id, course.readable_id
+            "%s belongs to a retired course %s, skipping",
+            run.run_id,
+            course.readable_id,
         )
         return
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
@@ -278,14 +282,10 @@ def run_for_edx_archive(etl_source: str, archive_filename: str):
         LearningResourceRun or None: The matching run, or None if not found
     """
     normalized_run_id = extract_run_id_from_key(etl_source, archive_filename)
-    runs = (
-        LearningResourceRun.objects.filter(
-            learning_resource__etl_source=etl_source,
-        )
-        .filter(Q(published=True) | Q(learning_resource__test_mode=True))
-        .filter(
-            Q(learning_resource__published=True) | Q(learning_resource__test_mode=True)
-        )
+    runs = LearningResourceRun.objects.filter(
+        learning_resource__etl_source=etl_source,
+    ).filter(
+        Q(learning_resource__published=True) | Q(learning_resource__test_mode=True)
     )
     if etl_source in (ETLSource.mit_edx.name, ETLSource.oll.name):
         runs = runs.filter(run_id__iregex=normalized_run_id)
@@ -327,10 +327,4 @@ def sync_edx_course_files(
             log.warning("There are %d runs for %s", len(matching_runs), key)
 
         run = matching_runs[0]
-        course = run.learning_resource
-
-        if course.published and not course.test_mode and course.best_run != run:
-            # This is not the best run for the published course, so skip it
-            log.debug("Not the best run for %s, skipping", run.run_id)
-            continue
         process_course_archive(bucket, key, run, overwrite=overwrite)
