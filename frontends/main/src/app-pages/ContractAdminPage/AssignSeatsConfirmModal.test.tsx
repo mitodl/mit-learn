@@ -75,10 +75,7 @@ describe("AssignSeatsConfirmModal — confirm step (no issues)", () => {
   })
 
   test("shows 'Sending…' on the Send button while submitting", async () => {
-    let resolve!: () => void
-    const promise = new Promise<void>((res) => {
-      resolve = res
-    })
+    const { promise, resolve } = Promise.withResolvers<void>()
     renderWithTheme(
       <AssignSeatsConfirmModal {...baseProps} onConfirm={() => promise} />,
     )
