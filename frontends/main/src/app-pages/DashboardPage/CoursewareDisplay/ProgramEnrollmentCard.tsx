@@ -6,7 +6,7 @@ import {
 } from "@mitodl/mitxonline-api-axios/v2"
 import {
   CardRoot,
-  getCertificateLink,
+  CardTypeText,
   MenuButton,
   SubtitleLink,
   TitleHeading,
@@ -18,6 +18,7 @@ import {
   isVerifiedEnrollmentMode,
   mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
+import { getCertificateLink } from "./model/dashboardViewModel"
 import { ButtonLink } from "@mitodl/smoot-design"
 import NiceModal from "@ebay/nice-modal-react"
 import { UnenrollProgramDialog } from "./DashboardDialogs"
@@ -50,7 +51,7 @@ export const ProgramEnrollmentCard = ({
     : EnrollmentStatus.Enrolled
   const displayMode = program.display_mode
   const titleSection = (
-    <>
+    <Stack gap="6px">
       {titleHref ? (
         <TitleHeading>
           <TitleLink size="medium" color="black" href={titleHref}>
@@ -66,11 +67,16 @@ export const ProgramEnrollmentCard = ({
           View Certificate
         </SubtitleLink>
       ) : null}
-    </>
+    </Stack>
   )
   const buttonSection = (
-    <ButtonLink size="small" variant="primary" href={programView(program.id)}>
-      View Program
+    <ButtonLink
+      size="small"
+      variant="primary"
+      href={programView(program.id)}
+      aria-label={`View program: ${title}`}
+    >
+      View
     </ButtonLink>
   )
   const detailsUrl = programPageView({
@@ -138,7 +144,8 @@ export const ProgramEnrollmentCard = ({
         as={Component}
         className={className}
       >
-        <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
+        <Stack justifyContent="start" alignItems="stretch" flex={1}>
+          <CardTypeText>Program</CardTypeText>
           {titleSection}
         </Stack>
         <Stack gap="8px">

@@ -1,14 +1,10 @@
 import React from "react"
-import { Link, Stack, styled } from "ol-components"
+import { Link, Popover, Stack, styled, Typography } from "ol-components"
 import NextLink from "next/link"
 import { EnrollmentStatus } from "./helpers"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
-import {
-  DashboardResource,
-  DashboardType,
-  getEnrollmentStatus,
-} from "./model/dashboardViewModel"
-import { calendarDaysUntil } from "ol-utilities"
+import { formatDate, getTimezone } from "ol-utilities"
+import { getCourseDateText, getRelativeDateContent } from "./courseDateUtils"
 
 const CardRoot = styled.div<{
   screenSize: "desktop" | "mobile"
@@ -65,6 +61,11 @@ const CardRoot = styled.div<{
     },
   },
 ])
+
+const CardTypeText = styled(Typography)(({ theme }) => ({
+  ...theme.typography.subtitle4,
+  color: theme.custom.colors.silverGrayDark,
+}))
 
 const TitleHeading = styled.h3(({ theme }) => ({
   margin: 0,
@@ -134,21 +135,6 @@ const MenuButton = styled(ActionButton)<{
     },
 ])
 
-const CountdownRoot = styled.div<{ layout?: "default" | "compact" }>(
-  ({ theme, layout = "default" }) => ({
-    width: layout === "compact" ? "88px" : "100%",
-    paddingRight: layout === "compact" ? "0px" : "32px",
-    display: "flex",
-    justifyContent: "center",
-    alignSelf: "end",
-    whiteSpace: layout === "compact" ? "nowrap" : "normal",
-    [theme.breakpoints.down("md")]: {
-      marginRight: "0px",
-      justifyContent: "flex-start",
-    },
-  }),
-)
-
 const COURSEWARE_BUTTON_WIDTH = "88px"
 
 // Thin vertical divider shown between the certificate/upgrade links and the
@@ -183,79 +169,157 @@ const CoursewareButtonLink = styled(ButtonLink)(({ theme, variant }) => ({
   }),
 }))
 
-/**
- * Rewrites a raw mitxonline certificate link (`/certificate/{uuid}/`) to MIT
- * Learn's own certificate route (`/certificate/{certificateType}/{uuid}/`).
- */
-const getCertificateLink = (
-  link: string | null | undefined,
-  certificateType: "course" | "program",
-): string | null => {
-  if (!link) return null
-  const pattern = /\/certificate\/([^/]+)\/?$/
-  return link.replace(pattern, `/certificate/${certificateType}/$1/`)
-}
+const Separator = styled.span(({ theme }) => ({
+  display: "inline-block",
+  width: "1px",
+  height: "12px",
+  margin: "0 8px",
+  backgroundColor: theme.custom.colors.silverGrayLight,
+}))
 
-const getDashboardEnrollmentStatus = (
-  resource: DashboardResource,
-): EnrollmentStatus => {
-  const hasValidCertificate =
-    resource.type !== DashboardType.Course && !!resource.data.certificate?.uuid
+const DateText = styled(Typography)(({ theme }) => ({
+  ...theme.typography.subtitle3,
+  color: theme.custom.colors.silverGrayDark,
+}))
 
-  if (resource.type === DashboardType.Course) {
-    return EnrollmentStatus.NotEnrolled
-  }
-
-  if (resource.type === DashboardType.CourseRunEnrollment) {
-    return hasValidCertificate
-      ? EnrollmentStatus.Completed
-      : getEnrollmentStatus(resource.data)
-  }
-
-  return hasValidCertificate
-    ? EnrollmentStatus.Completed
-    : EnrollmentStatus.Enrolled
-}
-
-const CourseStartCountdown: React.FC<{
-  startDate: string
+const CourseDateText: React.FC<{
+  startDate?: string | null | undefined
+  endDate?: string | null | undefined
   className?: string
-  layout?: "default" | "compact"
-}> = ({ startDate, className, layout = "default" }) => {
-  const calendarDays = calendarDaysUntil(startDate)
+}> = ({ startDate, endDate, className }) => {
+  const text = getCourseDateText(startDate, endDate)
+  if (!text) return null
+  return <DateText className={className}>{text}</DateText>
+}
 
-  let value
-  if (calendarDays === null || calendarDays < 0) return null
-  if (calendarDays === 0) {
-    value = "Starts Today"
-  } else if (calendarDays === 1) {
-    value = "Starts Tomorrow"
-  } else {
-    value = `Starts in ${calendarDays} days`
-  }
+const DatePopoverContent = styled.div({
+  maxWidth: "240px",
+  display: "flex",
+  padding: "8px",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: "28px",
+  alignSelf: "stretch",
+})
+
+const DatePopoverTrigger = styled("button")(({ theme }) => ({
+  ...theme.typography.body2,
+  color: theme.custom.colors.silverGrayDark,
+  background: "none",
+  border: "none",
+  padding: 0,
+  cursor: "pointer",
+  "&:hover": {
+    color: theme.custom.colors.silverGrayDark,
+    textDecoration: "underline",
+  },
+}))
+
+const DatePopoverHeading = styled(Typography)(({ theme }) => ({
+  color: theme.custom.colors.black,
+}))
+
+const DatePopoverBody = styled(Typography)(({ theme }) => ({
+  color: theme.custom.colors.black,
+}))
+
+const DatePopoverDismissButton = styled(Button)({
+  alignSelf: "flex-end",
+})
+
+const CourseDateSummary: React.FC<{
+  startDate?: string | null | undefined
+  endDate?: string | null | undefined
+}> = ({ startDate, endDate }) => {
+  const popoverId = React.useId()
+  const [popoverAnchorEl, setPopoverAnchorEl] =
+    React.useState<HTMLButtonElement | null>(null)
+
+  const triggerText = getCourseDateText(startDate, endDate)
+  const startDateFormatted = startDate
+    ? `${formatDate(startDate, "MMMM D, YYYY h:mm A")} ${getTimezone(startDate)}`
+    : null
+  const endDateFormatted = endDate
+    ? `${formatDate(endDate, "MMMM D, YYYY h:mm A")} ${getTimezone(endDate)}`
+    : null
+  const datePopoverContent = getRelativeDateContent(
+    startDate,
+    endDate,
+    startDateFormatted,
+    endDateFormatted,
+  )
+
+  if (!triggerText || !datePopoverContent) return null
+
   return (
-    <CountdownRoot layout={layout}>
-      <Link color="black" size="small" className={className}>
-        {value}
-      </Link>
-    </CountdownRoot>
+    <>
+      <Popover
+        anchorEl={popoverAnchorEl}
+        open={!!popoverAnchorEl}
+        onClose={() => setPopoverAnchorEl(null)}
+      >
+        <DatePopoverContent
+          id={popoverId}
+          role="dialog"
+          aria-label="Important Dates"
+        >
+          <Stack direction="column" gap="4px">
+            <DatePopoverHeading variant="subtitle3">
+              Important Dates:
+            </DatePopoverHeading>
+            <DatePopoverBody variant="body3">
+              This course{" "}
+              <Typography variant="subtitle3" component="span">
+                {datePopoverContent.startVerb}
+              </Typography>{" "}
+              {datePopoverContent.startSuffix}
+            </DatePopoverBody>
+          </Stack>
+          {datePopoverContent.endVerb && datePopoverContent.endSuffix && (
+            <DatePopoverBody variant="body3">
+              This course{" "}
+              <Typography variant="subtitle3" component="span">
+                {datePopoverContent.endVerb}
+              </Typography>{" "}
+              {datePopoverContent.endSuffix}
+            </DatePopoverBody>
+          )}
+          <DatePopoverDismissButton
+            variant="primary"
+            size="small"
+            onClick={() => setPopoverAnchorEl(null)}
+          >
+            Got it!
+          </DatePopoverDismissButton>
+        </DatePopoverContent>
+      </Popover>
+      <DatePopoverTrigger
+        aria-expanded={!!popoverAnchorEl}
+        aria-haspopup="dialog"
+        aria-controls={popoverAnchorEl ? popoverId : undefined}
+        onClick={(event) => setPopoverAnchorEl(event.currentTarget)}
+      >
+        {triggerText}
+      </DatePopoverTrigger>
+    </>
   )
 }
 
 export {
   CardRoot,
+  CardTypeText,
   TitleHeading,
   TitleLink,
   TitleText,
   SubtitleLinkRoot,
   SubtitleLink,
   MenuButton,
-  CountdownRoot,
-  CourseStartCountdown,
   HorizontalSeparator,
   CoursewareActionColumn,
   CoursewareButton,
   CoursewareButtonLink,
-  getCertificateLink,
-  getDashboardEnrollmentStatus,
+  Separator,
+  DateText,
+  CourseDateText,
+  CourseDateSummary,
 }

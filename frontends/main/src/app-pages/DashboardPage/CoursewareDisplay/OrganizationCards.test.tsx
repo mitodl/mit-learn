@@ -172,7 +172,7 @@ describe("OrganizationCards", () => {
       setup({ organizations: [organization] })
 
       const continueButtons = await screen.findAllByRole("link", {
-        name: "Continue",
+        name: /^Continue /,
       })
       expect(continueButtons).toHaveLength(4) // 2 contracts × 2 screen sizes (mobile + desktop)
 
@@ -237,7 +237,7 @@ describe("OrganizationCards", () => {
       expect(elements.length).toBeGreaterThan(0)
 
       expect(
-        screen.queryByRole("link", { name: "Continue" }),
+        screen.queryByRole("link", { name: /^Continue / }),
       ).not.toBeInTheDocument()
       expect(screen.queryByText("Other Org Contract")).not.toBeInTheDocument()
     })
@@ -308,7 +308,7 @@ describe("OrganizationCards", () => {
       expect(screen.getAllByText("Org2 Contract 1")).toHaveLength(2) // mobile + desktop
 
       // Check Continue button URLs point to correct organizations and contracts
-      const allButtons = screen.getAllByRole("link", { name: "Continue" })
+      const allButtons = screen.getAllByRole("link", { name: /^Continue / })
 
       const org1Contract1Buttons = allButtons.filter(
         (button) =>
@@ -380,7 +380,7 @@ describe("OrganizationCards", () => {
       setup({ organizations: [organization] })
 
       const continueButtons = await screen.findAllByRole("link", {
-        name: "Continue",
+        name: /^Continue /,
       })
       expect(continueButtons[0]).toHaveAttribute(
         "href",
@@ -407,7 +407,7 @@ describe("OrganizationCards", () => {
       setup({ organizations: [organization] })
 
       const continueButtons = await screen.findAllByRole("link", {
-        name: "Continue",
+        name: /^Continue /,
       })
       expect(continueButtons[0]).toHaveAttribute(
         "href",
@@ -438,7 +438,7 @@ describe("OrganizationCards", () => {
       expect(screen.queryByText("Other Org Contract 1")).not.toBeInTheDocument()
       expect(screen.queryByText("Other Org Contract 2")).not.toBeInTheDocument()
       expect(
-        screen.queryByRole("link", { name: "Continue" }),
+        screen.queryByRole("link", { name: /^Continue / }),
       ).not.toBeInTheDocument()
     })
   })

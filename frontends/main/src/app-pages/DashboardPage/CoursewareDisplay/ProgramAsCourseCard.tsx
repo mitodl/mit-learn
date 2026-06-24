@@ -1,13 +1,5 @@
 import React from "react"
-import {
-  Link,
-  Popover,
-  SimpleMenu,
-  SimpleMenuItem,
-  Stack,
-  Typography,
-  styled,
-} from "ol-components"
+import { SimpleMenu, SimpleMenuItem, Typography, styled } from "ol-components"
 import {
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
@@ -24,9 +16,11 @@ import {
 } from "./helpers"
 import { ProgressBadge } from "./ProgressBadge"
 import { CoursewareCard } from "./CoursewareCard"
-import { getCertificateLink } from "./CardShared"
-import { buildCourseEntry } from "./model/dashboardViewModel"
-import { formatDate } from "ol-utilities"
+import { CourseDateSummary } from "./CardShared"
+import {
+  getCertificateLink,
+  buildCourseEntry,
+} from "./model/dashboardViewModel"
 import {
   getIdsFromReqTree,
   isVerifiedEnrollmentMode,
@@ -81,40 +75,8 @@ const StatusContainer = styled.div({
   gap: "16px",
 })
 
-const DatePopoverContent = styled.div({
-  maxWidth: "240px",
-  display: "flex",
-  padding: "8px",
-  flexDirection: "column",
-  alignItems: "flex-start",
-  gap: "28px",
-  alignSelf: "stretch",
-})
-
-const DatePopoverTrigger = styled(Link)(({ theme }) => ({
-  ...theme.typography.body2,
-  color: theme.custom.colors.silverGrayDark,
-  "&:hover": {
-    color: theme.custom.colors.silverGrayDark,
-  },
-}))
-
-const DatePopoverHeading = styled(Typography)(({ theme }) => ({
-  color: theme.custom.colors.black,
-}))
-
-const DatePopoverBody = styled(Typography)(({ theme }) => ({
-  color: theme.custom.colors.black,
-}))
-
 const ProgramCardSubHeaderText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
-}))
-
-const HorizontalSeparator = styled.div(({ theme }) => ({
-  width: "1px",
-  height: "13px",
-  backgroundColor: theme.custom.colors.lightGray2,
 }))
 
 const ProgramCardSubHeader = styled.div(({ theme }) => ({
@@ -157,125 +119,6 @@ const MenuButton = styled(ActionButton)<{
       visibility: "hidden",
     },
 ])
-
-const getTimezone = (dateString: string): string => {
-  const tz =
-    new Date(dateString)
-      .toLocaleString("en-US", { timeZoneName: "short" })
-      .split(" ")
-      .pop() || ""
-  return tz
-}
-
-const MS_IN_DAY = 1000 * 60 * 60 * 24
-
-const formatDayCount = (days: number): string => {
-  return `${days} day${days === 1 ? "" : "s"}`
-}
-
-interface RelativeDateContent {
-  anchorLabel: string
-  startVerb: "starts" | "started"
-  startSuffix: string
-  endVerb?: "ends" | "ended"
-  endSuffix?: string
-}
-
-const getRelativeDateContent = (
-  startDateString?: string | null,
-  endDateString?: string | null,
-  startDateDisplay?: string | null,
-  endDateDisplay?: string | null,
-): RelativeDateContent | null => {
-  if (!startDateString) {
-    return null
-  }
-
-  const now = Date.now()
-  const startDate = new Date(startDateString)
-  if (Number.isNaN(startDate.getTime())) {
-    return null
-  }
-
-  const hasEndDate = Boolean(endDateString)
-  const endDate = hasEndDate ? new Date(endDateString as string) : null
-  const hasValidEndDate = Boolean(endDate) && !Number.isNaN(endDate!.getTime())
-
-  if (!hasValidEndDate) {
-    if (now < startDate.getTime()) {
-      const daysUntilStart = Math.max(
-        0,
-        Math.ceil((startDate.getTime() - now) / MS_IN_DAY),
-      )
-      const dayCount = formatDayCount(daysUntilStart)
-      return {
-        anchorLabel: `${dayCount} until this course starts.`,
-        startVerb: "starts",
-        startSuffix: `in ${dayCount}${startDateDisplay ? ` on ${startDateDisplay}` : ""}.`,
-      }
-    }
-
-    const daysSinceStart = Math.max(
-      0,
-      Math.floor((now - startDate.getTime()) / MS_IN_DAY),
-    )
-    const dayCount = formatDayCount(daysSinceStart)
-    return {
-      anchorLabel: `this course started ${dayCount} ago.`,
-      startVerb: "started",
-      startSuffix: `${dayCount} ago${startDateDisplay ? ` on ${startDateDisplay}` : ""}.`,
-    }
-  }
-
-  const endTime = endDate!.getTime()
-
-  if (now < startDate.getTime()) {
-    const daysUntilStart = Math.max(
-      0,
-      Math.ceil((startDate.getTime() - now) / MS_IN_DAY),
-    )
-    const dayCount = formatDayCount(daysUntilStart)
-    return {
-      anchorLabel: `${dayCount} until this course starts.`,
-      startVerb: "starts",
-      startSuffix: `in ${dayCount}${startDateDisplay ? ` on ${startDateDisplay}` : ""}.`,
-      endVerb: endDateDisplay ? "ends" : undefined,
-      endSuffix: endDateDisplay ? `on ${endDateDisplay}.` : undefined,
-    }
-  }
-
-  if (now <= endTime) {
-    const daysUntilEnd = Math.max(0, Math.ceil((endTime - now) / MS_IN_DAY))
-    const daysUntilStart = Math.max(
-      0,
-      Math.floor((now - startDate.getTime()) / MS_IN_DAY),
-    )
-    const endDayCount = formatDayCount(daysUntilEnd)
-    const startDayCount = formatDayCount(daysUntilStart)
-    return {
-      anchorLabel: `${endDayCount} until this course ends.`,
-      startVerb: "started",
-      startSuffix: `${startDayCount} ago${startDateDisplay ? ` on ${startDateDisplay}` : ""}.`,
-      endVerb: "ends",
-      endSuffix: `in ${endDayCount}${endDateDisplay ? ` on ${endDateDisplay}` : ""}.`,
-    }
-  }
-
-  const daysSinceEnd = Math.max(0, Math.floor((now - endTime) / MS_IN_DAY))
-  const daysSinceStart = Math.max(
-    0,
-    Math.floor((now - startDate.getTime()) / MS_IN_DAY),
-  )
-  const endDayCount = formatDayCount(daysSinceEnd)
-  const startDayCount = formatDayCount(daysSinceStart)
-  return {
-    anchorLabel: `this course ended ${endDayCount} ago.`,
-    startVerb: "started",
-    startSuffix: `${startDayCount} ago${startDateDisplay ? ` on ${startDateDisplay}` : ""}.`,
-    endVerb: "ended",
-    endSuffix: `${endDayCount} ago${endDateDisplay ? ` on ${endDateDisplay}` : ""}.`,
-  }
-}
 
 const getContextMenuItems = (
   title: string,
@@ -441,23 +284,6 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
     completedCount,
   )
 
-  const [popoverAnchorEl, setPopoverAnchorEl] =
-    React.useState<HTMLAnchorElement | null>(null)
-
-  const startDatePopoverString = courseProgram?.start_date
-    ? `${formatDate(courseProgram.start_date, "MMMM D, YYYY h:mm A")} ${getTimezone(courseProgram.start_date)}`
-    : null
-  const endDatePopoverString = courseProgram?.end_date
-    ? `${formatDate(courseProgram.end_date, "MMMM D, YYYY h:mm A")} ${getTimezone(courseProgram.end_date)}`
-    : null
-  const datePopoverContent = getRelativeDateContent(
-    courseProgram?.start_date,
-    courseProgram?.end_date,
-    startDatePopoverString,
-    endDatePopoverString,
-  )
-  const showDatePopoverTrigger = Boolean(datePopoverContent)
-
   const parentProgramIds = [
     courseProgram.readable_id,
     ...(ancestorProgramEnrollment
@@ -509,47 +335,10 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
         <ProgramCardHeaderInner>
           <StatusContainer>
             <ProgressBadge enrollmentStatus={programEnrollmentStatus} />
-            {showDatePopoverTrigger && datePopoverContent && (
-              <>
-                <HorizontalSeparator />
-                <Popover
-                  anchorEl={popoverAnchorEl}
-                  open={!!popoverAnchorEl}
-                  onClose={() => setPopoverAnchorEl(null)}
-                >
-                  <DatePopoverContent>
-                    <Stack direction="column" gap="4px">
-                      <DatePopoverHeading variant="subtitle3">
-                        Important Dates:
-                      </DatePopoverHeading>
-                      <DatePopoverBody variant="body3">
-                        This course{" "}
-                        <Typography variant="subtitle3" component="span">
-                          {datePopoverContent.startVerb}
-                        </Typography>{" "}
-                        {datePopoverContent.startSuffix}
-                      </DatePopoverBody>
-                    </Stack>
-                    {datePopoverContent.endVerb &&
-                      datePopoverContent.endSuffix && (
-                        <DatePopoverBody variant="body3">
-                          This course{" "}
-                          <Typography variant="subtitle3" component="span">
-                            {datePopoverContent.endVerb}
-                          </Typography>{" "}
-                          {datePopoverContent.endSuffix}
-                        </DatePopoverBody>
-                      )}
-                  </DatePopoverContent>
-                </Popover>
-                <DatePopoverTrigger
-                  color="black"
-                  onClick={(event) => setPopoverAnchorEl(event.currentTarget)}
-                >
-                  {datePopoverContent.anchorLabel}
-                </DatePopoverTrigger>
-              </>
-            )}
+            <CourseDateSummary
+              startDate={courseProgram?.start_date}
+              endDate={courseProgram?.end_date}
+            />
           </StatusContainer>
           <Typography variant="subtitle2" component="h3">
             {courseProgram?.title}

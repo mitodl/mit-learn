@@ -100,7 +100,9 @@ describe.each([
       run: { ...futureRunDates, courseware_url: coursewareUrl },
     })
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
-    const btn = await within(getCard()).findByRole("link", { name: "Continue" })
+    const btn = await within(getCard()).findByRole("link", {
+      name: /^Continue course:/,
+    })
     expect(btn).toHaveAttribute("href", coursewareUrl)
   })
 
@@ -192,6 +194,54 @@ describe.each([
     })
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
     expect(getCard()).toHaveTextContent(/starts in 5 days/i)
+  })
+
+  // ---------------------------------------------------------------------------
+  // End date display
+  // ---------------------------------------------------------------------------
+
+  test.each([
+    {
+      endDate: moment().add(2, "days").toISOString(),
+      expectedText: /ends in 2 days/i,
+      case: "future (plural)",
+    },
+    {
+      endDate: moment().add(1, "day").toISOString(),
+      expectedText: /ends tomorrow/i,
+      case: "future (singular)",
+    },
+    {
+      endDate: moment().subtract(2, "days").toISOString(),
+      expectedText: /ended 2 days ago/i,
+      case: "past (plural)",
+    },
+    {
+      endDate: moment().subtract(1, "day").toISOString(),
+      expectedText: /ended yesterday/i,
+      case: "past (singular)",
+    },
+  ])("Shows end date text ($case)", ({ endDate, expectedText }) => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      run: { ...currentRunDates, end_date: endDate },
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(within(getCard()).getByText(expectedText)).toBeInTheDocument()
+  })
+
+  test("Does not show end date text when run has no end date", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      run: { ...currentRunDates, end_date: null },
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(
+      within(getCard()).queryByText(/ends in \d+ day/i),
+    ).not.toBeInTheDocument()
+    expect(
+      within(getCard()).queryByText(/ended \d+ day/i),
+    ).not.toBeInTheDocument()
   })
 
   // ---------------------------------------------------------------------------
@@ -337,6 +387,26 @@ describe.each([
       )
     },
   )
+
+  test("Does not show upgrade banner when upgrade deadline has passed", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      b2b_contract_id: null,
+      run: {
+        ...currentRunDates,
+        is_upgradable: true,
+        upgrade_deadline: moment().subtract(1, "day").toISOString(),
+        upgrade_product_id: faker.number.int(),
+        upgrade_product_price: faker.commerce.price(),
+        upgrade_product_is_active: true,
+      },
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(
+      within(getCard()).queryByTestId("upgrade-root"),
+    ).not.toBeInTheDocument()
+  })
 
   test("Does not show upgrade banner when upgrade_product_is_active is missing", () => {
     setupUserApis()
