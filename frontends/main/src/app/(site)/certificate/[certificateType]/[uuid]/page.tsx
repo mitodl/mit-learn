@@ -8,7 +8,10 @@ import { isInEnum } from "@/common/utils"
 import { notFound } from "next/navigation"
 import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
 import { getQueryClient } from "@/app/getQueryClient"
-import { getCertificateInfo } from "@/common/certificateUtils"
+import {
+  getCertificateInfo,
+  getCertificateTitle,
+} from "@/common/certificateUtils"
 
 const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
@@ -45,7 +48,10 @@ export async function generateMetadata({
         }),
       )
 
-      title = data.program.title
+      title = getCertificateTitle(
+        data.certificate_page?.product_name,
+        data.program.title ?? "",
+      )
 
       userName = data.user.name
       displayType = getCertificateInfo(data.program.program_type).displayType

@@ -6,23 +6,14 @@ import CertificatePage from "./CertificatePage"
 import { CertificateType } from "@/common/certificateUtils"
 import SharePopover from "@/components/SharePopover/SharePopover"
 import * as mitxonline from "api/mitxonline-test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import {
   FACEBOOK_SHARE_BASE_URL,
   TWITTER_SHARE_BASE_URL,
   LINKEDIN_SHARE_BASE_URL,
 } from "@/common/urls"
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
-}))
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
-
 describe("CertificatePage", () => {
   beforeEach(() => {
-    // Default the CMS-title flag ON; individual tests override as needed.
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     const mitxUser = mitxonline.factories.user.user()
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser)
   })
@@ -147,29 +138,6 @@ describe("CertificatePage", () => {
     )
 
     await screen.findAllByText(certificate.program.title)
-  })
-
-  it("shows the program title (not the CMS title) when the flag is off", async () => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(false)
-    const certificate = factories.mitxonline.programCertificate()
-    certificate.program.program_type = "Program"
-    certificate.certificate_page.product_name = "Custom CMS Title"
-    setMockResponse.get(
-      mitxonline.urls.certificates.programCertificatesRetrieve({
-        uuid: certificate.uuid,
-      }),
-      certificate,
-    )
-    renderWithProviders(
-      <CertificatePage
-        certificateType={CertificateType.Program}
-        uuid={certificate.uuid}
-        pageUrl={`https://${process.env.NEXT_PUBLIC_ORIGIN}/certificate/program/${certificate.uuid}`}
-      />,
-    )
-
-    await screen.findAllByText(certificate.program.title)
-    expect(screen.queryByText("Custom CMS Title")).not.toBeInTheDocument()
   })
 
   it("renders a MicroMasters program certificate badge with the registered mark", async () => {
