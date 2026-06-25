@@ -31,7 +31,7 @@ const SearchField: React.FC<SearchFieldProps> = ({
     if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
       posthog.capture(PostHogEvents.SearchUpdate, { isEnter: isEnter })
     }
-    trackSiteSearch((event.target as HTMLInputElement).value ?? "")
+    trackSiteSearch(event.target.value)
   }
 
   return <SearchInput onSubmit={handleSubmit} {...others} />
