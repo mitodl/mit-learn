@@ -11,6 +11,7 @@ from langchain_core.documents import Document
 from qdrant_client import models
 from qdrant_client.models import PointStruct
 
+import vector_search.utils as vs_utils
 from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
 from learning_resources.factories import (
     ContentFileFactory,
@@ -2066,3 +2067,30 @@ def test_best_run_ids_for_resources_no_published_run():
     )
 
     assert best_run_ids_for_resources([course.readable_id]) == []
+
+
+@pytest.fixture
+def reset_collections_guard():
+    vs_utils._collections_ensured = False  # noqa: SLF001
+    yield
+    vs_utils._collections_ensured = False  # noqa: SLF001
+
+
+def test_ensure_qdrant_collections_runs_once(mocker, reset_collections_guard):
+    create = mocker.patch("vector_search.utils.create_qdrant_collections")
+    vs_utils.ensure_qdrant_collections()
+    vs_utils.ensure_qdrant_collections()
+    create.assert_called_once_with(force_recreate=False)
+
+
+def test_embed_learning_resources_uses_collection_guard(
+    mocker, reset_collections_guard
+):
+    """embed_learning_resources delegates collection-ensuring to the guard
+    (not a direct create_qdrant_collections call).
+    """
+    ensure = mocker.patch("vector_search.utils.ensure_qdrant_collections")
+    mocker.patch("vector_search.utils.qdrant_client")
+    mocker.patch("vector_search.utils.serialize_bulk_content_files", return_value=[])
+    vs_utils.embed_learning_resources([1], CONTENT_FILE_TYPE, overwrite=True)
+    ensure.assert_called_once()
