@@ -244,6 +244,14 @@ def test_embed_new_content_files(mocker, mocked_celery):
 
     embedded_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
     assert sorted(new_content_file_ids) == sorted(embedded_ids)
+    assert all(
+        mock_call.kwargs.get("overwrite") is False and "failure_key" in mock_call.kwargs
+        for mock_call in generate_embeddings_mock.si.mock_calls
+    )
+    assert (
+        finalize_embeddings_mock.si.call_args.args[0]
+        == generate_embeddings_mock.si.mock_calls[0].kwargs["failure_key"]
+    )
     chain_args = mocked_celery.chain.call_args.args
     assert chain_args[:-1] == tuple(
         generate_embeddings_mock.si.return_value
