@@ -3,7 +3,7 @@ import { Select, styled } from "@mitodl/smoot-design"
 import type { SelectChangeEvent } from "@mitodl/smoot-design"
 import { MenuItem } from "ol-components"
 import type { CourseRunV2 } from "@mitodl/mitxonline-api-axios/v2"
-import { formatDate } from "ol-utilities"
+import { formatDate, NoSSR } from "ol-utilities"
 import { runStartsAnytime, byStartDateDesc } from "./courseRun"
 
 type SessionSelectProps = {
@@ -50,6 +50,10 @@ const TruncatedValue = styled.span({
  * "starts anytime" runs, which would otherwise all render as a bare "Anytime"
  * and be indistinguishable; the anytime nature is annotated separately (see
  * anytimeAnnotation).
+ *
+ * `formatDate` renders in the local timezone, so callers wrap the result in
+ * <NoSSR> — a run timestamp near a day boundary formats to different calendar
+ * dates on the (UTC) server vs the browser, which is a hydration mismatch.
  */
 const formatDateRange = (run: CourseRunV2): string => {
   const start = typeof run.start_date === "string" ? run.start_date : null
@@ -84,7 +88,7 @@ const buildOptionLabel = (
   const enrolled = enrolledRunIds?.includes(run.id)
   return (
     <>
-      {formatDateRange(run)}
+      <NoSSR>{formatDateRange(run)}</NoSSR>
       {certUnavailableNote(run)}
       {anytimeAnnotation(run)}
       {enrolled ? " — Enrolled" : null}
@@ -123,7 +127,9 @@ const SessionSelect: React.FC<SessionSelectProps> = ({
           // the narrow column. The open menu keeps both (buildOptionLabel).
           const run = runs.find((r) => String(r.id) === String(value))
           return (
-            <TruncatedValue>{run ? formatDateRange(run) : ""}</TruncatedValue>
+            <TruncatedValue>
+              {run ? <NoSSR>{formatDateRange(run)}</NoSSR> : ""}
+            </TruncatedValue>
           )
         }}
       >
