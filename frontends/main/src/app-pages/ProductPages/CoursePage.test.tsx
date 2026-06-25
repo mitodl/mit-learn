@@ -305,70 +305,80 @@ describe("CoursePage", () => {
     })
     const product = mitxFactories.courses.product()
 
-    test("both scenario: header shows Earn Certificate", async () => {
-      const run = mitxFactories.courses.courseRun({
-        is_enrollable: true,
-        is_upgradable: true,
-        is_archived: false,
-        enrollment_modes: [freeMode, paidMode],
-        products: [product],
-      })
-      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+    // The header CTA mirrors the enroll area's scenario→label mapping (which is
+    // unit tested in useCourseEnrollment.test.tsx). Here we pin that the header
+    // reflects each scenario; the "none" placeholder is additionally disabled.
+    const headerCases = [
+      {
+        name: "both → Earn Certificate",
+        run: () =>
+          mitxFactories.courses.courseRun({
+            is_enrollable: true,
+            is_upgradable: true,
+            is_archived: false,
+            enrollment_modes: [freeMode, paidMode],
+            products: [product],
+          }),
+        button: "Earn Certificate",
+        disabled: false,
+      },
+      {
+        name: "free only → Start Learning",
+        run: () =>
+          mitxFactories.courses.courseRun({
+            is_enrollable: true,
+            is_upgradable: false,
+            is_archived: false,
+            enrollment_modes: [freeMode],
+            products: [],
+          }),
+        button: "Start Learning",
+        disabled: false,
+      },
+      {
+        name: "paid only → Enroll",
+        run: () =>
+          mitxFactories.courses.courseRun({
+            is_enrollable: true,
+            is_upgradable: true,
+            is_archived: false,
+            enrollment_modes: [paidMode],
+            products: [product],
+          }),
+        button: "Enroll",
+        disabled: false,
+      },
+      {
+        name: "no runs → disabled Enroll placeholder",
+        run: () => null,
+        button: "Enroll",
+        disabled: true,
+      },
+    ]
+
+    test.each(headerCases)("$name", async ({ run, button, disabled }) => {
+      const courseRun = run()
+      const course = makeCourse(
+        courseRun
+          ? { next_run_id: courseRun.id, courseruns: [courseRun] }
+          : { courseruns: [] },
+      )
       const page = makePage({ course_details: course })
       setupApis({ course, page })
       renderWithProviders(<CoursePage readableId={course.readable_id} />)
 
-      expect(
-        (await screen.findAllByRole("button", { name: "Earn Certificate" }))
-          .length,
-      ).toBeGreaterThan(0)
-    })
-
-    test("freeOnly scenario: header shows Start Learning", async () => {
-      const run = mitxFactories.courses.courseRun({
-        is_enrollable: true,
-        is_upgradable: false,
-        is_archived: false,
-        enrollment_modes: [freeMode],
-        products: [],
-      })
-      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
-      const page = makePage({ course_details: course })
-      setupApis({ course, page })
-      renderWithProviders(<CoursePage readableId={course.readable_id} />)
-
-      expect(
-        (await screen.findAllByRole("button", { name: "Start Learning" }))
-          .length,
-      ).toBeGreaterThan(0)
-    })
-
-    test("paidOnly scenario: header shows Enroll", async () => {
-      const run = mitxFactories.courses.courseRun({
-        is_enrollable: true,
-        is_upgradable: true,
-        is_archived: false,
-        enrollment_modes: [paidMode],
-        products: [product],
-      })
-      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
-      const page = makePage({ course_details: course })
-      setupApis({ course, page })
-      renderWithProviders(<CoursePage readableId={course.readable_id} />)
-
-      expect(
-        (await screen.findAllByRole("button", { name: "Enroll" })).length,
-      ).toBeGreaterThan(0)
-    })
-
-    test("none scenario: header shows disabled Enroll placeholder", async () => {
-      const course = makeCourse({ courseruns: [] })
-      const page = makePage({ course_details: course })
-      setupApis({ course, page })
-      renderWithProviders(<CoursePage readableId={course.readable_id} />)
-
-      const btn = await screen.findByRole("button", { name: "Enroll" })
-      expect(btn).toBeDisabled()
+      if (disabled) {
+        // Only the header placeholder renders (the enroll area is empty), so a
+        // single button is expected.
+        expect(
+          await screen.findByRole("button", { name: button }),
+        ).toBeDisabled()
+      } else {
+        // Both the header and the InfoBox render the CTA.
+        expect(
+          (await screen.findAllByRole("button", { name: button })).length,
+        ).toBeGreaterThan(0)
+      }
     })
 
     test("enrolled scenario: header shows Enrolled link", async () => {

@@ -237,68 +237,73 @@ describe("InfoBoxCourse — data-boxes attribute", () => {
     return document.querySelector("[data-boxes]") as HTMLElement | null
   }
 
-  test("data-boxes=3 for Both scenario (not enrolled)", async () => {
-    setupAuth()
-    const run = makeRun({
-      is_enrollable: true,
-      is_archived: false,
-      is_upgradable: true,
-      enrollment_modes: [
-        makeMode({ requires_payment: false }),
-        makeMode({ requires_payment: true }),
-      ],
-      products: [makeProduct()],
-    })
-    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+  // meta box (1) + offering boxes. The offering→count mapping itself is unit
+  // tested in courseRun.test.ts (offeringBoxCount); here we pin that the grid
+  // carries the computed count for each not-enrolled offering.
+  const notEnrolledBoxCases = [
+    {
+      name: "both → data-boxes=3",
+      run: () =>
+        makeRun({
+          is_enrollable: true,
+          is_archived: false,
+          is_upgradable: true,
+          enrollment_modes: [
+            makeMode({ requires_payment: false }),
+            makeMode({ requires_payment: true }),
+          ],
+          products: [makeProduct()],
+        }),
+      settle: () => screen.findByText("Choose Your Path"),
+      boxes: "3",
+    },
+    {
+      name: "paid only → data-boxes=2",
+      run: () =>
+        makeRun({
+          is_enrollable: true,
+          is_archived: false,
+          is_upgradable: true,
+          enrollment_modes: [makeMode({ requires_payment: true })],
+          products: [makeProduct()],
+        }),
+      settle: () => screen.findByRole("button", { name: "Enroll" }),
+      boxes: "2",
+    },
+    {
+      name: "free only → data-boxes=2",
+      run: () =>
+        makeRun({
+          is_enrollable: true,
+          is_archived: false,
+          is_upgradable: false,
+          enrollment_modes: [makeMode({ requires_payment: false })],
+          products: [],
+        }),
+      settle: () => screen.findByRole("button", { name: "Start Learning" }),
+      boxes: "2",
+    },
+  ]
 
-    renderWithProviders(<ControlledInfoBox course={course} />)
+  test.each(notEnrolledBoxCases)(
+    "not enrolled: $name",
+    async ({ run, settle, boxes }) => {
+      setupAuth()
+      const courseRun = run()
+      const course = makeCourse({
+        next_run_id: courseRun.id,
+        courseruns: [courseRun],
+      })
 
-    await screen.findByText("Choose Your Path")
+      renderWithProviders(<ControlledInfoBox course={course} />)
 
-    const grid = getBoxGrid()
-    expect(grid).not.toBeNull()
-    expect(grid).toHaveAttribute("data-boxes", "3")
-  })
+      await settle()
 
-  test("data-boxes=2 for paidOnly scenario (not enrolled)", async () => {
-    setupAuth()
-    const run = makeRun({
-      is_enrollable: true,
-      is_archived: false,
-      is_upgradable: true,
-      enrollment_modes: [makeMode({ requires_payment: true })],
-      products: [makeProduct()],
-    })
-    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
-
-    renderWithProviders(<ControlledInfoBox course={course} />)
-
-    await screen.findByRole("button", { name: "Enroll" })
-
-    const grid = getBoxGrid()
-    expect(grid).not.toBeNull()
-    expect(grid).toHaveAttribute("data-boxes", "2")
-  })
-
-  test("data-boxes=2 for freeOnly scenario (not enrolled)", async () => {
-    setupAuth()
-    const run = makeRun({
-      is_enrollable: true,
-      is_archived: false,
-      is_upgradable: false,
-      enrollment_modes: [makeMode({ requires_payment: false })],
-      products: [],
-    })
-    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
-
-    renderWithProviders(<ControlledInfoBox course={course} />)
-
-    await screen.findByRole("button", { name: "Start Learning" })
-
-    const grid = getBoxGrid()
-    expect(grid).not.toBeNull()
-    expect(grid).toHaveAttribute("data-boxes", "2")
-  })
+      const grid = getBoxGrid()
+      expect(grid).not.toBeNull()
+      expect(grid).toHaveAttribute("data-boxes", boxes)
+    },
+  )
 
   test("data-boxes=1 for no-runs scenario", async () => {
     setupAuth()

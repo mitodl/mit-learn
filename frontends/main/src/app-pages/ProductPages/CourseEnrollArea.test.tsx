@@ -385,44 +385,17 @@ describe("CourseEnrollArea — click smoke tests", () => {
 })
 
 describe("CourseEnrollArea — financial assistance link", () => {
-  test("paidOnly course with financial_assistance_form_url shows 'Financial assistance available' link", async () => {
-    setupAuth()
-    const product = makeProduct()
-    const run = makeRun({
-      is_enrollable: true,
-      is_upgradable: true,
-      is_archived: false,
-      enrollment_modes: [makeMode({ requires_payment: true })],
-      products: [product],
-    })
-    const course = makeCourse({
-      next_run_id: run.id,
-      courseruns: [run],
-      page: { financial_assistance_form_url: "/financial-aid/" },
-    })
-
-    setMockResponse.get(
-      mitxUrls.products.userFlexiblePriceDetail(product.id),
-      makeFlexiblePrice({ id: product.id, product_flexible_price: null }),
-    )
-
-    renderWithProviders(
-      <CourseEnrollArea course={course} selectedRun={getSelectedRun(course)} />,
-    )
-
-    const link = await screen.findByRole("link", {
-      name: "Financial assistance available",
-    })
-    expect(link).toBeInTheDocument()
-    expect(link).toHaveAttribute("href", mitxonlineLegacyUrl("/financial-aid/"))
-  })
-
-  test("paidOnly course with approved flexible price shows 'Financial assistance approved' link", async () => {
-    setupAuth()
-    const product = makeProduct()
-    const flexiblePrice = makeFlexiblePrice({
-      id: product.id,
-      product_flexible_price: {
+  // Both finaid states link to the same form URL; only the label differs by
+  // whether the user already has an approved flexible price.
+  test.each([
+    {
+      name: "available, when aid not yet applied",
+      productFlexiblePrice: null,
+      linkText: "Financial assistance available",
+    },
+    {
+      name: "approved (applied at checkout), when aid is approved",
+      productFlexiblePrice: {
         id: 1,
         amount: "25.00",
         discount_type: "dollars-off" as const,
@@ -435,35 +408,49 @@ describe("CourseEnrollArea — financial assistance link", () => {
         activation_date: null,
         expiration_date: null,
       },
-    })
-    const run = makeRun({
-      is_enrollable: true,
-      is_upgradable: true,
-      is_archived: false,
-      enrollment_modes: [makeMode({ requires_payment: true })],
-      products: [product],
-    })
-    const course = makeCourse({
-      next_run_id: run.id,
-      courseruns: [run],
-      page: { financial_assistance_form_url: "/financial-aid/" },
-    })
+      linkText: "Financial assistance approved (applied at checkout)",
+    },
+  ])(
+    "paidOnly course with financial_assistance_form_url shows link — $name",
+    async ({ productFlexiblePrice, linkText }) => {
+      setupAuth()
+      const product = makeProduct()
+      const run = makeRun({
+        is_enrollable: true,
+        is_upgradable: true,
+        is_archived: false,
+        enrollment_modes: [makeMode({ requires_payment: true })],
+        products: [product],
+      })
+      const course = makeCourse({
+        next_run_id: run.id,
+        courseruns: [run],
+        page: { financial_assistance_form_url: "/financial-aid/" },
+      })
 
-    setMockResponse.get(
-      mitxUrls.products.userFlexiblePriceDetail(product.id),
-      flexiblePrice,
-    )
+      setMockResponse.get(
+        mitxUrls.products.userFlexiblePriceDetail(product.id),
+        makeFlexiblePrice({
+          id: product.id,
+          product_flexible_price: productFlexiblePrice,
+        }),
+      )
 
-    renderWithProviders(
-      <CourseEnrollArea course={course} selectedRun={getSelectedRun(course)} />,
-    )
+      renderWithProviders(
+        <CourseEnrollArea
+          course={course}
+          selectedRun={getSelectedRun(course)}
+        />,
+      )
 
-    const link = await screen.findByRole("link", {
-      name: "Financial assistance approved (applied at checkout)",
-    })
-    expect(link).toBeInTheDocument()
-    expect(link).toHaveAttribute("href", mitxonlineLegacyUrl("/financial-aid/"))
-  })
+      const link = await screen.findByRole("link", { name: linkText })
+      expect(link).toBeInTheDocument()
+      expect(link).toHaveAttribute(
+        "href",
+        mitxonlineLegacyUrl("/financial-aid/"),
+      )
+    },
+  )
 
   test("paidOnly course with approved flexible price shows the full price, not a finaid discount", async () => {
     // Case C2: financial aid is surfaced as text ("applied at checkout"), not by

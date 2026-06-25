@@ -44,37 +44,33 @@ describe("CertificateTrackCard", () => {
     ).toBeInTheDocument()
   })
 
-  test("renders financial aid link with 'available' text when not applied", () => {
-    const href = "https://example.com/financial-aid"
-    renderWithProviders(
-      <CertificateTrackCard
-        price={<span>$250</span>}
-        productNoun="course"
-        financialAid={{ href, applied: false }}
-      />,
-    )
-    const link = screen.getByRole("link", {
-      name: "Financial assistance available",
-    })
-    expect(link).toBeInTheDocument()
-    expect(link).toHaveAttribute("href", href)
-  })
-
-  test("renders financial aid link with 'approved' text when applied", () => {
-    const href = "https://example.com/financial-aid"
-    renderWithProviders(
-      <CertificateTrackCard
-        price={<span>$250</span>}
-        productNoun="course"
-        financialAid={{ href, applied: true }}
-      />,
-    )
-    const link = screen.getByRole("link", {
-      name: "Financial assistance approved (applied at checkout)",
-    })
-    expect(link).toBeInTheDocument()
-    expect(link).toHaveAttribute("href", href)
-  })
+  test.each([
+    {
+      name: "available, when not applied",
+      applied: false,
+      linkText: "Financial assistance available",
+    },
+    {
+      name: "approved (applied at checkout), when applied",
+      applied: true,
+      linkText: "Financial assistance approved (applied at checkout)",
+    },
+  ])(
+    "renders financial aid link to the form — $name",
+    ({ applied, linkText }) => {
+      const href = "https://example.com/financial-aid"
+      renderWithProviders(
+        <CertificateTrackCard
+          price={<span>$250</span>}
+          productNoun="course"
+          financialAid={{ href, applied }}
+        />,
+      )
+      const link = screen.getByRole("link", { name: linkText })
+      expect(link).toBeInTheDocument()
+      expect(link).toHaveAttribute("href", href)
+    },
+  )
 
   test("does not render a financial aid link when financialAid is not provided", () => {
     renderWithProviders(

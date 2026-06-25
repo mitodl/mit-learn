@@ -13,7 +13,13 @@ import {
   urls as mitxUrls,
 } from "api/mitxonline-test-utils"
 import { useCourseEnrollment } from "./useCourseEnrollment"
+import type { EnrollActionKind } from "./useCourseEnrollment"
 import { getSelectedRun } from "./courseRun"
+import type { CourseScenario } from "./courseRun"
+import type {
+  CourseRunV2,
+  CourseWithCourseRunsSerializerV2,
+} from "@mitodl/mitxonline-api-axios/v2"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 import { trackCourseEnrolled } from "@/common/analytics/gtm"
@@ -52,6 +58,115 @@ const wrapper = ({ children }: { children: React.ReactNode }) => {
   )
 }
 
+type StateMappingCase = {
+  name: string
+  build: () => {
+    course: CourseWithCourseRunsSerializerV2
+    selectedRun: CourseRunV2 | undefined
+  }
+  // Asserted only when present — the degraded scenarios additionally pin their
+  // CourseScenario union shape.
+  scenario?: CourseScenario
+  expected: { labels: string[]; kinds: EnrollActionKind[] } | { none: true }
+}
+
+// Build a course with a single selected run, active + enrollable by default, so
+// each case only spells out the fields that define its offering/status.
+const singleRunCourse = (overrides: Parameters<typeof makeRun>[0]) => {
+  const run = makeRun({ is_enrollable: true, is_archived: false, ...overrides })
+  const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+  return { course, selectedRun: getSelectedRun(course) }
+}
+
+const STATE_MAPPING_CASES: StateMappingCase[] = [
+  {
+    name: "both (free + paid, upgradable) → [Earn Certificate, Start Learning]",
+    build: () =>
+      singleRunCourse({
+        is_upgradable: true,
+        enrollment_modes: [
+          makeMode({ requires_payment: false }),
+          makeMode({ requires_payment: true }),
+        ],
+        products: [makeProduct()],
+      }),
+    expected: {
+      labels: ["Earn Certificate", "Start Learning"],
+      kinds: ["paid", "free"],
+    },
+  },
+  {
+    name: "paid only (upgradable) → [Enroll]",
+    build: () =>
+      singleRunCourse({
+        is_upgradable: true,
+        enrollment_modes: [makeMode({ requires_payment: true })],
+        products: [makeProduct()],
+      }),
+    expected: { labels: ["Enroll"], kinds: ["paid"] },
+  },
+  {
+    name: "free only → [Start Learning]",
+    build: () =>
+      singleRunCourse({
+        is_upgradable: false,
+        enrollment_modes: [makeMode({ requires_payment: false })],
+        products: [],
+      }),
+    expected: { labels: ["Start Learning"], kinds: ["free"] },
+  },
+  {
+    name: "deadline passed, free fallback → [Access Course Materials]",
+    build: () =>
+      singleRunCourse({
+        is_upgradable: false,
+        enrollment_modes: [
+          makeMode({ requires_payment: false }),
+          makeMode({ requires_payment: true }),
+        ],
+        products: [makeProduct()],
+      }),
+    scenario: {
+      status: "deadlinePassed",
+      offering: "free",
+      offeredCertificate: true,
+    },
+    expected: { labels: ["Access Course Materials"], kinds: ["free"] },
+  },
+  {
+    name: "deadline passed, paid only (no free fallback) → no button",
+    build: () =>
+      singleRunCourse({
+        is_upgradable: false,
+        enrollment_modes: [makeMode({ requires_payment: true })],
+        products: [],
+      }),
+    scenario: {
+      status: "deadlinePassed",
+      offering: "none",
+      offeredCertificate: true,
+    },
+    expected: { none: true },
+  },
+  {
+    name: "archived → [Access Course Materials]",
+    build: () =>
+      singleRunCourse({
+        is_archived: true,
+        enrollment_modes: [makeMode({ requires_payment: false })],
+      }),
+    expected: { labels: ["Access Course Materials"], kinds: ["free"] },
+  },
+  {
+    name: "no enrollable runs → no button",
+    build: () => ({
+      course: makeCourse({ courseruns: [] }),
+      selectedRun: undefined,
+    }),
+    expected: { none: true },
+  },
+]
+
 describe("useCourseEnrollment — state mapping", () => {
   beforeEach(() => {
     // Most tests use an authenticated user with no enrollments
@@ -59,189 +174,36 @@ describe("useCourseEnrollment — state mapping", () => {
     setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), [])
   })
 
-  test("both -> [Earn Certificate, Start Learning]", async () => {
-    const run = makeRun({
-      is_enrollable: true,
-      is_upgradable: true,
-      is_archived: false,
-      enrollment_modes: [
-        makeMode({ requires_payment: false }),
-        makeMode({ requires_payment: true }),
-      ],
-      products: [makeProduct()],
-    })
-    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+  test.each(STATE_MAPPING_CASES)(
+    "$name",
+    async ({ build, scenario, expected }) => {
+      const { course, selectedRun } = build()
 
-    const { result } = renderHook(
-      () => useCourseEnrollment(course, getSelectedRun(course)),
-      { wrapper },
-    )
+      const { result } = renderHook(
+        () => useCourseEnrollment(course, selectedRun),
+        { wrapper },
+      )
 
-    await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
+      await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
 
-    const state = result.current.state
-    expect(state.status).toBe("options")
-    expect(
-      state.status === "options" && state.options.map((o) => o.label),
-    ).toEqual(["Earn Certificate", "Start Learning"])
-    expect(
-      state.status === "options" && state.options.map((o) => o.kind),
-    ).toEqual(["paid", "free"])
-  })
+      if (scenario) {
+        expect(result.current.scenario).toEqual(scenario)
+      }
 
-  test("paidOnly -> [Enroll]", async () => {
-    const run = makeRun({
-      is_enrollable: true,
-      is_upgradable: true,
-      is_archived: false,
-      enrollment_modes: [makeMode({ requires_payment: true })],
-      products: [makeProduct()],
-    })
-    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
-
-    const { result } = renderHook(
-      () => useCourseEnrollment(course, getSelectedRun(course)),
-      { wrapper },
-    )
-
-    await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
-
-    const state = result.current.state
-    expect(state.status).toBe("options")
-    expect(
-      state.status === "options" && state.options.map((o) => o.label),
-    ).toEqual(["Enroll"])
-    expect(
-      state.status === "options" && state.options.map((o) => o.kind),
-    ).toEqual(["paid"])
-  })
-
-  test("freeOnly -> [Start Learning]", async () => {
-    const run = makeRun({
-      is_enrollable: true,
-      is_upgradable: false,
-      is_archived: false,
-      enrollment_modes: [makeMode({ requires_payment: false })],
-      products: [],
-    })
-    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
-
-    const { result } = renderHook(
-      () => useCourseEnrollment(course, getSelectedRun(course)),
-      { wrapper },
-    )
-
-    await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
-
-    const state = result.current.state
-    expect(state.status).toBe("options")
-    expect(
-      state.status === "options" && state.options.map((o) => o.label),
-    ).toEqual(["Start Learning"])
-    expect(
-      state.status === "options" && state.options.map((o) => o.kind),
-    ).toEqual(["free"])
-  })
-
-  test("deadlinePassed -> [Access Course Materials]", async () => {
-    // paid-only but not purchasable (is_upgradable=false) with a free mode too
-    const run = makeRun({
-      is_enrollable: true,
-      is_upgradable: false,
-      is_archived: false,
-      enrollment_modes: [
-        makeMode({ requires_payment: false }),
-        makeMode({ requires_payment: true }),
-      ],
-      products: [makeProduct()],
-    })
-    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
-
-    const { result } = renderHook(
-      () => useCourseEnrollment(course, getSelectedRun(course)),
-      { wrapper },
-    )
-
-    await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
-
-    expect(result.current.scenario).toEqual({
-      status: "deadlinePassed",
-      offering: "free",
-      offeredCertificate: true,
-    })
-    const state = result.current.state
-    expect(state.status).toBe("options")
-    expect(
-      state.status === "options" && state.options.map((o) => o.label),
-    ).toEqual(["Access Course Materials"])
-    expect(
-      state.status === "options" && state.options.map((o) => o.kind),
-    ).toEqual(["free"])
-  })
-
-  test("deadlinePassed + none (paid-only past deadline) -> {status:'none'}, no button", async () => {
-    // A real run, not the empty-courseruns case: paid-only and no longer
-    // purchasable with no free fallback. Pins that the offering→button mapping
-    // emits no enroll button while the scenario still warns.
-    const run = makeRun({
-      is_enrollable: true,
-      is_upgradable: false,
-      is_archived: false,
-      enrollment_modes: [makeMode({ requires_payment: true })],
-      products: [],
-    })
-    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
-
-    const { result } = renderHook(
-      () => useCourseEnrollment(course, getSelectedRun(course)),
-      { wrapper },
-    )
-
-    await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
-
-    expect(result.current.scenario).toEqual({
-      status: "deadlinePassed",
-      offering: "none",
-      offeredCertificate: true,
-    })
-    expect(result.current.state).toEqual({ status: "none" })
-  })
-
-  test("archived -> [Access Course Materials]", async () => {
-    const run = makeRun({
-      is_enrollable: true,
-      is_archived: true,
-      enrollment_modes: [makeMode({ requires_payment: false })],
-    })
-    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
-
-    const { result } = renderHook(
-      () => useCourseEnrollment(course, getSelectedRun(course)),
-      { wrapper },
-    )
-
-    await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
-
-    const state = result.current.state
-    expect(state.status).toBe("options")
-    expect(
-      state.status === "options" && state.options.map((o) => o.label),
-    ).toEqual(["Access Course Materials"])
-    expect(
-      state.status === "options" && state.options.map((o) => o.kind),
-    ).toEqual(["free"])
-  })
-
-  test("none -> {status:'none'}", async () => {
-    const { result } = renderHook(
-      () => useCourseEnrollment(makeCourse({ courseruns: [] }), undefined),
-      { wrapper },
-    )
-
-    await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
-
-    expect(result.current.state).toEqual({ status: "none" })
-  })
+      const state = result.current.state
+      if ("none" in expected) {
+        expect(state).toEqual({ status: "none" })
+        return
+      }
+      expect(state.status).toBe("options")
+      expect(
+        state.status === "options" && state.options.map((o) => o.label),
+      ).toEqual(expected.labels)
+      expect(
+        state.status === "options" && state.options.map((o) => o.kind),
+      ).toEqual(expected.kinds)
+    },
+  )
 })
 
 describe("useCourseEnrollment — enrolled precedence", () => {
