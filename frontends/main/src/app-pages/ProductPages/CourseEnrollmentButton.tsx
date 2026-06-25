@@ -24,7 +24,11 @@ import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { useRouter } from "next-nprogress-bar"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
-import { trackCourseEnrolled, trackStartEnrollment, trackBeginCheckout } from "@/common/analytics/gtm"
+import {
+  trackCourseEnrolled,
+  trackStartEnrollment,
+  trackBeginCheckout,
+} from "@/common/analytics/gtm"
 
 const DiscountedPriceContent = styled.span({
   display: "inline-flex",

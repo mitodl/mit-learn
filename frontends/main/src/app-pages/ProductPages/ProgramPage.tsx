@@ -261,7 +261,6 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
     trackCourseProgramView({ name: program.title, id: program.readable_id })
   }, [program])
 
-
   const isLoading = pages.isLoading || programs.isLoading
 
   if (!page || !program) {
