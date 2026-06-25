@@ -217,82 +217,6 @@ describe("ProgramEnrollmentButton", () => {
     expect(button).toHaveTextContent(ENROLL_PROGRAM)
   })
 
-  test("Hides arrow icon when showArrowIcon is false", async () => {
-    const program = makeProgram({
-      enrollment_modes: [makeEnrollmentMode({ requires_payment: true })],
-      products: [makeProduct({ price: "500" })],
-    })
-
-    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
-    setMockResponse.get(
-      urls.userMe.get(),
-      makeUser({ is_authenticated: false }),
-    )
-
-    renderWithProviders(
-      <ProgramEnrollmentButton
-        program={program}
-        variant="primary"
-        showArrowIcon={false}
-      />,
-    )
-
-    await screen.findByRole("button", { name: ENROLL_PROGRAM })
-    expect(screen.queryByTestId("program-enroll-arrow-icon")).toBeNull()
-  })
-
-  test("Still shows loading spinner when showArrowIcon is false", async () => {
-    const product = makeProduct({ price: "500" })
-    const program = makeProgram({
-      enrollment_modes: [makeEnrollmentMode({ requires_payment: true })],
-      products: [product],
-    })
-
-    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
-    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
-    const { promise } = Promise.withResolvers()
-    setMockResponse.delete(mitxUrls.baskets.clear(), promise)
-
-    renderWithProviders(
-      <ProgramEnrollmentButton
-        program={program}
-        variant="primary"
-        showArrowIcon={false}
-      />,
-    )
-
-    const button = await screen.findByRole("button", { name: ENROLL_PROGRAM })
-    await user.click(button)
-
-    await screen.findByRole("progressbar", { name: "Loading" })
-    expect(screen.queryByTestId("program-enroll-arrow-icon")).toBeNull()
-  })
-
-  test("Still shows loading spinner during initial loading when showArrowIcon is false", async () => {
-    const program = makeProgram({
-      enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
-    })
-    const enrollmentResponse = Promise.withResolvers()
-    const userResponse = Promise.withResolvers()
-
-    setMockResponse.get(
-      mitxUrls.programEnrollments.enrollmentsListV3(),
-      enrollmentResponse.promise,
-    )
-    setMockResponse.get(urls.userMe.get(), userResponse.promise)
-
-    renderWithProviders(
-      <ProgramEnrollmentButton
-        program={program}
-        variant="primary"
-        showArrowIcon={false}
-      />,
-    )
-
-    await screen.findByRole("progressbar", { name: "Loading" })
-    expect(screen.queryByTestId("program-enroll-arrow-icon")).toBeNull()
-  })
-
   test("Shows error alert when basket operation fails (paid)", async () => {
     const product = makeProduct({ price: "500" })
     const program = makeProgram({
@@ -446,6 +370,30 @@ describe("ProgramEnrollmentButton", () => {
     await user.click(enrollButton)
 
     screen.getByTestId("signup-popover")
+  })
+
+  test("Shows 'Enroll' label when displayAsCourse is true", async () => {
+    const program = makeProgram({
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
+    })
+
+    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
+    setMockResponse.get(
+      urls.userMe.get(),
+      makeUser({ is_authenticated: false }),
+    )
+
+    renderWithProviders(
+      <ProgramEnrollmentButton
+        program={program}
+        variant="primary"
+        displayAsCourse
+      />,
+    )
+
+    expect(
+      await screen.findByRole("button", { name: "Enroll" }),
+    ).toBeInTheDocument()
   })
 
   describe("PostHog tracking", () => {

@@ -7,8 +7,6 @@ import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
 import { styled } from "@mitodl/smoot-design"
 import { programsQueries } from "api/mitxonline-hooks/programs"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
 import { HeadingIds, parseReqTree, RequirementData } from "./util"
 import {
@@ -27,7 +25,6 @@ import type {
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import ProgramInfoBox from "./InfoBoxProgram"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import MitxOnlineResourceCard from "./MitxOnlineResourceCard"
@@ -259,17 +256,11 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
     enabled: programIds.length > 0,
   })
 
-  const enabled = useFeatureFlagEnabled(FeatureFlags.MitxOnlineProductPages)
-  const flagsLoaded = useFeatureFlagsLoaded()
-
   useEffect(() => {
     if (!program) return
     trackCourseProgramView({ name: program.title, id: program.readable_id })
   }, [program])
 
-  if (!enabled) {
-    return flagsLoaded ? notFound() : null
-  }
 
   const isLoading = pages.isLoading || programs.isLoading
 
@@ -301,11 +292,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       imageSrc={imageSrc}
       videoUrl={page.video_url}
       enrollmentAction={
-        <StyledProgramEnrollmentButton
-          program={program}
-          variant="bordered"
-          showArrowIcon={false}
-        />
+        <StyledProgramEnrollmentButton program={program} variant="bordered" />
       }
       showStayUpdated={
         program.enrollment_modes.length > 0 &&

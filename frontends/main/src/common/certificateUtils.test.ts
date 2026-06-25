@@ -2,6 +2,7 @@ import {
   getCertificateBadgeLines,
   getCertificateBadgeTypography,
   getCertificateInfo,
+  getCertificateTitle,
 } from "./certificateUtils"
 
 describe("getCertificateInfo", () => {
@@ -42,6 +43,38 @@ describe("getCertificateInfo", () => {
 
   it("falls back to default label for unrecognized program types", () => {
     expect(getCertificateInfo("Degree").displayType).toBe("Certificate")
+  })
+})
+
+describe("getCertificateTitle", () => {
+  it("prefers the CMS product name when present", () => {
+    expect(getCertificateTitle("Universal AI", "Fundamentals of ML")).toBe(
+      "Universal AI",
+    )
+  })
+
+  it("falls back to the program/course title when product name is missing", () => {
+    expect(getCertificateTitle(null, "Fundamentals of ML")).toBe(
+      "Fundamentals of ML",
+    )
+    expect(getCertificateTitle(undefined, "Fundamentals of ML")).toBe(
+      "Fundamentals of ML",
+    )
+  })
+
+  it("falls back when product name is empty or whitespace only", () => {
+    expect(getCertificateTitle("", "Fundamentals of ML")).toBe(
+      "Fundamentals of ML",
+    )
+    expect(getCertificateTitle("   ", "Fundamentals of ML")).toBe(
+      "Fundamentals of ML",
+    )
+  })
+
+  it("trims surrounding whitespace from the product name", () => {
+    expect(getCertificateTitle("  Universal AI  ", "fallback")).toBe(
+      "Universal AI",
+    )
   })
 })
 

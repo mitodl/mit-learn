@@ -20,6 +20,7 @@ app.conf.task_routes = {
     "vector_search.tasks.generate_embeddings": {"queue": "embeddings"},
     "vector_search.tasks.embed_run_content_files": {"queue": "embeddings"},
     "vector_search.tasks.remove_run_content_files": {"queue": "embeddings"},
+    "vector_search.tasks.remove_unpublished_run_content_files": {"queue": "embeddings"},
     "vector_search.tasks.remove_embeddings": {"queue": "embeddings"},
     "vector_search.tasks.embed_learning_resources_by_id": {"queue": "embeddings"},
     "vector_search.tasks.embed_new_learning_resources": {"queue": "embeddings"},

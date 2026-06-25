@@ -28,7 +28,7 @@ const certificateQueries = {
           .courseCertificatesRetrieve(opts)
           .then((res) => res.data)
       },
-      enabled: !!opts.cert_uuid,
+      enabled: !!opts.uuid,
     }),
   programCertificatesRetrieve: (
     opts: ProgramCertificatesApiProgramCertificatesRetrieveRequest,

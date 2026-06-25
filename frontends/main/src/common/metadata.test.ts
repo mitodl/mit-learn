@@ -1,6 +1,16 @@
 import type { AxiosError, AxiosResponse } from "axios"
-import { safeGenerateMetadata, standardizeMetadata } from "./metadata"
+import {
+  safeGenerateMetadata,
+  standardizeMetadata,
+  getMetadataAsync,
+} from "./metadata"
 import { nextNavigationMocks } from "ol-test-utilities/mocks/nextNavigation"
+import { setMockResponse, urls, factories } from "api/test-utils"
+
+jest.mock("@/app/getQueryClient", () => {
+  const { makeBrowserQueryClient } = jest.requireActual("@/app/getQueryClient")
+  return { getQueryClient: () => makeBrowserQueryClient({ maxRetries: 0 }) }
+})
 
 describe("safeGenerateMetadata", () => {
   const mockMetadata = {
@@ -55,5 +65,27 @@ describe("safeGenerateMetadata", () => {
       "Error fetching page metadata",
       error,
     )
+  })
+})
+
+describe("getMetadataAsync drawer canonical", () => {
+  test("emits a slugged separate-param canonical for a valid ?resource=", async () => {
+    const resource = factories.learningResources.course()
+    setMockResponse.get(
+      urls.learningResources.details({ id: resource.id }),
+      resource,
+    )
+    const meta = await getMetadataAsync({
+      searchParams: Promise.resolve({ resource: String(resource.id) }),
+    })
+    expect(meta.alternates?.canonical).toContain(`resource=${resource.id}`)
+    expect(meta.alternates?.canonical).toMatch(/resource_title=[a-z0-9-]+/)
+  })
+
+  test("no canonical override when ?resource= is not a valid id", async () => {
+    const meta = await getMetadataAsync({
+      searchParams: Promise.resolve({ resource: "abc" }),
+    })
+    expect(meta.alternates?.canonical).toBeUndefined()
   })
 })

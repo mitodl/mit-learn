@@ -1,6 +1,73 @@
 Release Notes
 =============
 
+Version 0.71.12 (Released June 23, 2026)
+---------------
+
+- Improvements and fixes for issues in the vector search app (#3505)
+
+Version 0.71.11 (Released June 22, 2026)
+---------------
+
+- fix(dashboard): enroll in the displayed variant run, not getBestRun's… (#3508)
+- remove langchain-openai (#3502)
+- Readable URLs for videos, podasts, and their lists (#3467)
+- feat: wire up B2B seat management write actions (#3493)
+- feat: embed posdcast and podcast episode inside the editor (#3491)
+- feat: Add Share/Embed dialog for Video Detail Page which should have … (#3465)
+- Update dependency langchain,  langchain-experimental (#3496)
+- Update dependency pyarrow to v24 (#3499)
+- Update dependency litellm to v1.84.0 [SECURITY] (#3494)
+- Update dependency cryptography to v48 [SECURITY] (#3495)
+- Update dependency langchain to v0.3.30 [SECURITY] (#3338)
+- feat: implement podcast embed page (#3480)
+- update button CTA for course page (#3476)
+
+Version 0.71.9 (Released June 17, 2026)
+--------------
+
+- switch to celery.chain for certain vector_search tasks (#3484)
+- Fix bug in vector resource metadata updates (#3482)
+- add arithmix behind a feature flag (#3405)
+- dashboard refactor phase 7d (#3473)
+- feat: redemption_status migration + Assign Seats CSV flow (#3442)
+- fix issues with multiple summarizer config instances (#3479)
+
+Version 0.71.7 (Released June 17, 2026)
+--------------
+
+- fix ocw routing for playlist parent (#3481)
+- adding fix for remove run embeddings task and tests (#3477)
+- fix: suppress 'Add some text' placeholder inside the list and task items in tiptap editor (#3474)
+
+Version 0.71.6 (Released June 16, 2026)
+--------------
+
+- show ocw course for video playlists (#3462)
+- fix: Add Article model to Django Admin (#3471)
+- fix vector resource serialization (#3468)
+- feat: implement PostHog tracking for video shorts interactions (#3456)
+- Add course enrollment gtm (#3461)
+- feat: add title to learning resource summary endpoint (#3472)
+- dashboard refactor phase 7c (#3469)
+- Route /ai/* through the APISIX gateway to local learn-ai (#3451)
+- Fix sitemap pagination (#3470)
+- chore: bump @mitodl/mitxonline-api-axios to 2026.6.10 (#3464)
+- dashboard refactor phase 7b (#3463)
+
+Version 0.71.5 (Released June 15, 2026)
+--------------
+
+- fix ordering of course runs when none of them are enrollable (#3454)
+- fix: fix the caption controls breaking on video player (#3457)
+- feat: display financial aid status and discounted pricing on program pages (#3431)
+- ci: run next typegen before typecheck; drop redundant CI build step (#3459)
+- dashboard refactor phase 7a (#3443)
+- clear out env vars before running jest tests (#3455)
+- vector search program boost (#3453)
+- Channels API: improver performance, remove CRUD (#3388)
+- fix: create program enrollment on B2B course enrollment (#3439)
+
 Version 0.71.4 (Released June 11, 2026)
 --------------
 

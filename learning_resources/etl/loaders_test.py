@@ -444,6 +444,33 @@ def test_load_run_sets_test_resource_run_to_published(mocker):
     assert not result.published
 
 
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    ("test_mode", "new_published", "expect_unpublish"),
+    [
+        (False, False, True),  # published->False fires the unpublish hook
+        (False, True, False),  # stays published, no hook
+        (True, False, False),  # test_mode forces published=True, never unpublishes
+    ],
+)
+def test_load_run_unpublishes_on_transition(
+    mocker, test_mode, new_published, expect_unpublish
+):
+    """A run flipped published->False via load_run should trigger unpublish actions"""
+    mock_unpublish = mocker.patch(
+        "learning_resources.etl.loaders.resource_run_unpublished_actions",
+    )
+    resource = LearningResourceFactory.create(is_course=True, test_mode=test_mode)
+    run = LearningResourceRunFactory.create(learning_resource=resource, published=True)
+
+    loaders.load_run(resource, {"run_id": run.run_id, "published": new_published})
+
+    if expect_unpublish:
+        mock_unpublish.assert_called_once()
+    else:
+        mock_unpublish.assert_not_called()
+
+
 def test_load_program_bad_platform(mocker):
     """A bad platform should log an exception and not create the program"""
     mock_log = mocker.patch("learning_resources.etl.loaders.log.exception")
@@ -2344,6 +2371,7 @@ def test_load_playlist(mocker, playlist_exists, mock_get_similar_topics_qdrant):
 
     assert result.resources.count() == len(video_resources)
     assert result.video_playlist.channel == channel
+    assert result.video_playlist.parent_learning_resource is None
     assert list(result.topics.values_list("name", flat=True).order_by("name")) == [
         topic["name"] for topic in expected_topics
     ]
@@ -2470,6 +2498,15 @@ def test_load_playlist_create_videos_false(
 
     if all_videos_exist:
         video_resource = VideoFactory.create().learning_resource
+        parent_course = LearningResourceFactory.create(
+            is_course=True,
+            published=True,
+        )
+        parent_run = LearningResourceRunFactory.create(learning_resource=parent_course)
+        ContentFileFactory.create(
+            run=parent_run,
+            direct_learning_resource=video_resource,
+        )
         mock_load_from_cf = mocker.patch(
             "learning_resources.etl.loaders.load_videos_from_content_files",
             return_value=[video_resource],
@@ -2507,6 +2544,7 @@ def test_load_playlist_create_videos_false(
         assert isinstance(result, LearningResource)
         assert result.resources.count() == 1
         assert result.video_playlist.channel == channel
+        assert result.video_playlist.parent_learning_resource == parent_course
     else:
         assert result is None
         mock_update_index.assert_not_called()
@@ -2959,6 +2997,7 @@ def test_load_youtube_video_channels():
         del playlist_data["id"]
         del playlist_data["channel"]
         del playlist_data["learning_resource"]
+        del playlist_data["parent_learning_resource"]
 
         channel_data["playlists"] = [playlist_data]
         channels_data.append(channel_data)

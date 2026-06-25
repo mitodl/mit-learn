@@ -7,6 +7,10 @@ upstreams:
     nodes:
       "${{MITX_ONLINE_UPSTREAM}}": 1
     type: roundrobin
+  - id: 3
+    nodes:
+      "${{AI_UPSTREAM}}": 1
+    type: roundrobin
 
 routes:
   - id: 1
@@ -136,4 +140,85 @@ routes:
     uri: "/mitxonline/*"
     hosts:
       - ${{MITOL_API_DOMAIN}}
+  - id: 5
+    name: "learn-ai-passauth"
+    desc: "Proxy /ai/* to learn-ai, includes user data if any."
+    priority: 20
+    upstream_id: 3
+    plugins:
+      openid-connect:
+        client_id: ${{KEYCLOAK_CLIENT_ID}}
+        client_secret: ${{KEYCLOAK_CLIENT_SECRET}}
+        discovery: ${{KEYCLOAK_DISCOVERY_URL}}
+        realm: ${{KEYCLOAK_REALM_NAME}}
+        scope: ${{KEYCLOAK_SCOPES}}
+        bearer_only: false
+        introspection_endpoint_auth_method: "client_secret_post"
+        ssl_verify: false
+        session:
+          secret: ${{APISIX_SESSION_SECRET_KEY}}
+          cookie:
+            lifetime: 1209600
+            domain: ${{CSRF_COOKIE_DOMAIN}}
+        logout_path: "/logout/oidc"
+        post_logout_redirect_uri: ${{APISIX_LOGOUT_URL}}
+        unauth_action: "pass"
+      cors:
+        allow_origins: "**"
+        allow_methods: "**"
+        allow_headers: "**"
+        allow_credential: true
+      response-rewrite:
+        headers:
+          set:
+            Referrer-Policy: "origin"
+      proxy-rewrite:
+        regex_uri:
+          - "^/ai/(.*)"
+          - "/$1"
+    uri: "/ai/*"
+    hosts:
+      - open.odl.local
+  - id: 6
+    name: "learn-ai-reqauth"
+    desc: "learn-ai routes that require authentication."
+    priority: 30
+    upstream_id: 3
+    plugins:
+      openid-connect:
+        client_id: ${{KEYCLOAK_CLIENT_ID}}
+        client_secret: ${{KEYCLOAK_CLIENT_SECRET}}
+        discovery: ${{KEYCLOAK_DISCOVERY_URL}}
+        realm: ${{KEYCLOAK_REALM_NAME}}
+        scope: ${{KEYCLOAK_SCOPES}}
+        bearer_only: false
+        introspection_endpoint_auth_method: "client_secret_post"
+        ssl_verify: false
+        session:
+          secret: ${{APISIX_SESSION_SECRET_KEY}}
+          cookie:
+            lifetime: 1209600
+            domain: ${{CSRF_COOKIE_DOMAIN}}
+        logout_path: "/logout/oidc"
+        post_logout_redirect_uri: ${{APISIX_LOGOUT_URL}}
+        unauth_action: "auth"
+      cors:
+        allow_origins: "**"
+        allow_methods: "**"
+        allow_headers: "**"
+        allow_credential: true
+      response-rewrite:
+        headers:
+          set:
+            Referrer-Policy: "origin"
+      proxy-rewrite:
+        regex_uri:
+          - "^/ai/(.*)"
+          - "/$1"
+    uris:
+      - "/ai/http/login"
+      - "/ai/http/login/"
+      - "/ai/admin/login/*"
+    hosts:
+      - open.odl.local
 #END

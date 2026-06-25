@@ -27,6 +27,7 @@ import { LearningResourceURLHandler } from "./node/LearningResource/LearningReso
 import { MediaEmbedURLHandler } from "./node/MediaEmbed/MediaEmbedURLHandler"
 import { MediaEmbedNode } from "./node/MediaEmbed/MediaEmbedNode"
 import { MediaEmbedInputNode } from "./node/MediaEmbed/MediaEmbedInputNode"
+import { PodcastEpisodeEmbedNode } from "./node/PodcastEpisodeEmbed/PodcastEpisodeEmbedNode"
 import type { ExtendedNodeConfig } from "./node/types"
 import { MAX_FILE_SIZE } from "../vendor/lib/tiptap-utils"
 import type { UploadHandler } from "../core/WebsiteContentEditor"
@@ -55,7 +56,7 @@ export const createBaseExtensions = (
     showOnlyCurrent: false,
     includeChildren: true,
     placeholder: ({ node, editor }): string => {
-      let parentNode: typeof node | null = null
+      let parentNode: ProseMirrorNode | null = null
 
       editor.state.doc.descendants((n: ProseMirrorNode) => {
         n.forEach((childNode: ProseMirrorNode) => {
@@ -70,8 +71,13 @@ export const createBaseExtensions = (
       })
 
       if (parentNode) {
+        const pn = parentNode as ProseMirrorNode
+        if (pn.type.name === "listItem" || pn.type.name === "taskItem") {
+          return ""
+        }
+
         const parentExtension = editor.extensionManager.extensions.find(
-          (ext) => ext.name === parentNode!.type.name,
+          (ext) => ext.name === pn.type.name,
         )
 
         if (
@@ -110,6 +116,7 @@ export const createBaseExtensions = (
   Image,
   MediaEmbedNode,
   MediaEmbedInputNode,
+  PodcastEpisodeEmbedNode,
   DividerNode,
   ImageWithCaptionNode,
   MediaEmbedURLHandler.configure({ queryClient: queryClient ?? null }),

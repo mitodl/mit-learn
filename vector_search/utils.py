@@ -5,10 +5,11 @@ import uuid
 from functools import cache
 
 from django.conf import settings
-from django.db.models import Q
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_experimental.text_splitter import SemanticChunker
-from langchain_text_splitters import MarkdownHeaderTextSplitter
+from django.db.models import Prefetch, Q
+from langchain_text_splitters import (
+    MarkdownHeaderTextSplitter,
+    RecursiveCharacterTextSplitter,
+)
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
 from learning_resources.constants import PROGRAM_COURSE_CACHE_KEY_TEST_MODE
@@ -16,6 +17,7 @@ from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.models import (
     ContentFile,
     LearningResource,
+    LearningResourceRun,
     LearningResourceTopic,
 )
 from learning_resources.serializers import (
@@ -202,6 +204,27 @@ def create_qdrant_collections(force_recreate):
     update_qdrant_indexes()
 
 
+def tune_qdrant_collections():
+    """Tune optimizer settings for Qdrant collections."""
+    if not all([settings.QDRANT_HOST, settings.QDRANT_BASE_COLLECTION_NAME]):
+        logger.warning(
+            "Skipping Qdrant collection tuning: "
+            "QDRANT_HOST and QDRANT_BASE_COLLECTION_NAME must be set"
+        )
+        return
+
+    client = qdrant_client()
+    collections = [
+        RESOURCES_COLLECTION_NAME,
+        CONTENT_FILES_COLLECTION_NAME,
+        TOPICS_COLLECTION_NAME,
+    ]
+    for collection_name in collections:
+        if not client.collection_exists(collection_name=collection_name):
+            continue
+        tune_collection(client, collection_name)
+
+
 def create_qdrant_collection(collection_name, force_recreate):
     """
     Create or recreate a QDrant collection
@@ -242,7 +265,6 @@ def create_qdrant_collection(collection_name, force_recreate):
             ),
             hnsw_config=models.HnswConfigDiff(on_disk=False),
         )
-    tune_collection(client, collection_name)
 
 
 def update_qdrant_indexes():
@@ -258,8 +280,8 @@ def update_qdrant_indexes():
     ]:
         indexes = index[0]
         collection_name = index[1]
+        collection = client.get_collection(collection_name=collection_name)
         for index_field in indexes:
-            collection = client.get_collection(collection_name=collection_name)
             if (
                 index_field not in collection.payload_schema
                 or indexes[index_field]
@@ -358,8 +380,8 @@ def _get_text_splitter(**kwargs):
     return RecursiveCharacterTextSplitter(**kwargs)
 
 
-def _chunk_documents(encoder, texts, metadatas):
-    # chunk the documents. use semantic chunking if enabled
+def _chunk_documents(texts, metadatas):
+    # chunk the documents
     chunk_params = {
         "chunk_overlap": settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP,
     }
@@ -368,18 +390,6 @@ def _chunk_documents(encoder, texts, metadatas):
         chunk_params["chunk_size"] = settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
 
     recursive_splitter = _get_text_splitter(**chunk_params)
-
-    if settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED:
-        """
-        If semantic chunking is enabled,
-        use the semantic chunker then recursive splitter
-        to stay within chunk size limits
-        """
-        return recursive_splitter.split_documents(
-            SemanticChunker(
-                encoder, **settings.SEMANTIC_CHUNKING_CONFIG
-            ).create_documents(texts=texts, metadatas=metadatas)
-        )
     return recursive_splitter.create_documents(texts=texts, metadatas=metadatas)
 
 
@@ -483,12 +493,14 @@ def _process_resource_embeddings(serialized_resources):
 
 
 def update_learning_resource_payload(serialized_document):
-    points = [vector_point_id(vector_point_key(serialized_document))]
-    _set_payload(
-        points,
-        serialized_document,
-        param_map=QDRANT_RESOURCE_PARAM_MAP,
+    """
+    Refresh a resource's Qdrant payload without re-embedding.
+    """
+    point_id = vector_point_id(vector_point_key(serialized_document))
+    qdrant_client().overwrite_payload(
         collection_name=RESOURCES_COLLECTION_NAME,
+        payload=serialized_document,
+        points=[point_id],
     )
 
 
@@ -715,7 +727,7 @@ def _generate_content_file_points(serialized_content):
         if _is_markdown_content(doc):
             split_docs = _chunk_markdown_documents(embedding_context, doc)
         else:
-            split_docs = _chunk_documents(encoder_dense, [embedding_context], [doc])
+            split_docs = _chunk_documents([embedding_context], [doc])
 
         # Identify non-empty chunks and their original indices
         valid_chunks = [(i, d) for i, d in enumerate(split_docs) if d.page_content]
@@ -928,21 +940,29 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
 
 
 def _resource_vector_hits(search_result):
-    hits = list(
-        dict.fromkeys(
-            readable_id
-            for readable_id in (hit.payload.get("readable_id") for hit in search_result)
-            if readable_id
+    readable_ids = [
+        hit.payload.get("readable_id")
+        for hit in search_result
+        if hit.payload.get("readable_id")
+    ]
+    keys = [
+        key
+        for key in (
+            f"{(hit.payload.get('platform') or {}).get('code', '')}:"
+            f"{hit.payload.get('readable_id')}"
+            for hit in search_result
         )
-    )
+        if key
+    ]
+    hits = list(dict.fromkeys(keys))
     """
     Always lookup learning resources by readable_id for portability
     in case we load points from external systems
     """
     resources_by_id = {
-        r.readable_id: r
+        f"{(r.platform.code if r.platform else '')}:{r.readable_id}": r
         for r in LearningResource.objects.for_serialization().filter(
-            readable_id__in=hits
+            readable_id__in=readable_ids
         )
     }
     # Re-order to match the Qdrant ranking
@@ -1104,6 +1124,43 @@ async def async_qdrant_aggregations(
 
     results = await asyncio.gather(*[_get_facet(key) for key in aggregation_keys])
     return dict(results)
+
+
+def best_run_ids_for_resources(readable_ids):
+    """
+    Resolve the run_id values a resource_readable_id content-file query should
+    be restricted to.
+
+    Non-test_mode course -> its best run only.
+    test_mode course     -> all its published runs (matches OpenSearch indexing).
+    Course with no published run -> contributes nothing.
+
+    Args:
+        readable_ids (list[str]): resource readable_id values from the request
+
+    Returns:
+        list[str]: LearningResourceRun.run_id values to filter on
+    """
+    # Prefetch published runs into _published_runs so both best_run and the
+    # test_mode branch resolve without a per-resource query (avoids an N+1).
+    resources = LearningResource.objects.filter(
+        readable_id__in=readable_ids
+    ).prefetch_related(
+        Prefetch(
+            "runs",
+            queryset=LearningResourceRun.objects.filter(published=True).order_by(
+                "start_date", "enrollment_start", "id"
+            ),
+            to_attr="_published_runs",
+        )
+    )
+    run_ids = []
+    for resource in resources:
+        if resource.test_mode:
+            run_ids.extend(run.run_id for run in resource.published_runs)
+        elif resource.best_run:
+            run_ids.append(resource.best_run.run_id)
+    return run_ids
 
 
 def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
@@ -1305,9 +1362,9 @@ def custom_score_formula(collection_name: str) -> list[models.MultExpression]:
                         models.GaussDecayExpression(
                             gauss_decay=models.DecayParamsExpression(
                                 x="$score",  # decay over the relevance score itself
-                                target=1.0,  # cosine "perfect match" — full boost
+                                target=0.4,  # full boost at this target
                                 scale=0.2,
-                                midpoint=0.5,
+                                midpoint=0.2,
                             )
                         ),
                     ]

@@ -567,7 +567,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     if (certificateType === CertificateType.Course) {
       const certificate = await queryClient.fetchQuery(
         certificateQueries.courseCertificatesRetrieve({
-          cert_uuid: uuid,
+          uuid,
         }),
       )
 
@@ -575,7 +575,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     } else {
       const certificate = await queryClient.fetchQuery(
         certificateQueries.programCertificatesRetrieve({
-          cert_uuid: uuid,
+          uuid,
         }),
       )
       pdfDoc = pdf(<ProgramCertificate certificate={certificate} />)

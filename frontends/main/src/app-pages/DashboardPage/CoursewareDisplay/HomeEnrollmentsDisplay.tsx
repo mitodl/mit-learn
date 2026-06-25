@@ -24,9 +24,9 @@ import {
   getKey,
   type DashboardResource,
 } from "./model/dashboardViewModel"
-import { DashboardCard } from "./DashboardCard"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import { useHomeDashboardData } from "./hooks/useHomeDashboardData"
+import { CoursewareCard } from "./CoursewareCard"
 
 const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
@@ -47,7 +47,7 @@ const AlertBanner = styled(Alert)({
   marginBottom: "16px",
 })
 
-const DashboardCardStyled = styled(DashboardCard)({
+const CoursewareCardStyled = styled(CoursewareCard)({
   borderRadius: "8px",
   boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
 })
@@ -125,7 +125,6 @@ const isProgramAsCourseEnrollment = (
 interface EnrollmentExpandCollapseProps {
   cards: DashboardResource[]
   initiallyVisibleCount: number
-  isLoading?: boolean
   enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>
   courseProgramsById: Map<number, V2ProgramDetail>
   moduleCoursesByProgramId: Record<number, CourseWithCourseRunsSerializerV2[]>
@@ -140,7 +139,6 @@ interface EnrollmentExpandCollapseProps {
 const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
   cards,
   initiallyVisibleCount,
-  isLoading,
   enrollmentsByCourseId,
   courseProgramsById,
   moduleCoursesByProgramId,
@@ -157,45 +155,44 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
   const hiddenResources = cards.slice(initiallyVisibleCount)
 
   const renderResource = (resource: DashboardResource) => {
-    if (isProgramAsCourseEnrollment(resource)) {
-      const courseProgram = courseProgramsById.get(resource.data.program.id)
-      if (!courseProgram) {
-        return (
-          <DashboardCardStyled
-            key={getResourceKey(resource)}
-            Component="li"
-            resource={resource}
-            showNotComplete={false}
-            isLoading={isLoading}
-            onUpgradeError={onUpgradeError}
-          />
-        )
+    if (resource.type === DashboardType.ProgramEnrollment) {
+      if (isProgramAsCourseEnrollment(resource)) {
+        const courseProgram = courseProgramsById.get(resource.data.program.id)
+        if (courseProgram) {
+          return (
+            <ProgramAsCourseCard
+              key={getResourceKey(resource)}
+              Component="li"
+              courseProgram={courseProgram}
+              moduleCourses={
+                moduleCoursesByProgramId[resource.data.program.id] ?? []
+              }
+              moduleEnrollmentsByCourseId={enrollmentsByCourseId}
+              courseProgramEnrollment={resource.data}
+              onUpgradeError={onUpgradeError}
+            />
+          )
+        }
       }
-
       return (
-        <ProgramAsCourseCard
+        <CoursewareCardStyled
           key={getResourceKey(resource)}
           Component="li"
-          courseProgram={courseProgram}
-          moduleCourses={
-            moduleCoursesByProgramId[resource.data.program.id] ?? []
-          }
-          moduleEnrollmentsByCourseId={enrollmentsByCourseId}
-          courseProgramEnrollment={resource.data}
+          kind="program-enrollment"
+          programEnrollment={resource.data}
+        />
+      )
+    } else if (resource.type === DashboardType.CourseRunEnrollment) {
+      return (
+        <CoursewareCardStyled
+          key={getResourceKey(resource)}
+          Component="li"
+          kind="enrollment"
+          enrollment={resource.data}
+          onUpgradeError={onUpgradeError}
         />
       )
     }
-
-    return (
-      <DashboardCardStyled
-        key={getResourceKey(resource)}
-        Component="li"
-        resource={resource}
-        showNotComplete={false}
-        isLoading={isLoading}
-        onUpgradeError={onUpgradeError}
-      />
-    )
   }
 
   return (
@@ -243,7 +240,6 @@ const HomeEnrollmentsDisplay: React.FC = () => {
     enrollmentsByCourseId,
     courseProgramsById,
     moduleCoursesByProgramId,
-    isLoading,
   } = useHomeDashboardData()
 
   return cards.length > 0 ? (
@@ -267,7 +263,6 @@ const HomeEnrollmentsDisplay: React.FC = () => {
       <EnrollmentExpandCollapse
         cards={cards}
         initiallyVisibleCount={initiallyVisibleCount}
-        isLoading={isLoading}
         enrollmentsByCourseId={enrollmentsByCourseId}
         courseProgramsById={courseProgramsById}
         moduleCoursesByProgramId={moduleCoursesByProgramId}

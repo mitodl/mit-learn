@@ -1,5 +1,17 @@
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import { auth, coursePageView, programPageView } from "./urls"
+import {
+  auth,
+  coursePageView,
+  ocwLearnPageView,
+  programPageView,
+  podcastPageView,
+  podcastEpisodePageView,
+  videoDetailPageView,
+  videoPlaylistPageView,
+  canonicalResourceDrawerUrl,
+  carrySearchParams,
+  resourceDrawerSearch,
+} from "./urls"
 
 const MITOL_API_BASE_URL = process.env.NEXT_PUBLIC_MITOL_API_BASE_URL
 
@@ -112,4 +124,135 @@ test("programPageView falls back to /programs/ for unknown display_mode values",
       display_mode: "unknown-future-value" as never,
     }),
   ).toBe("/programs/some-slug")
+})
+
+test.each([
+  "https://example.com/courses/some-course",
+  "https://mit.edu/courses/some-course",
+])("ocwLearnPageView returns original URL for non-OCW hostnames", (url) => {
+  expect(ocwLearnPageView(url)).toBe(url)
+})
+
+test.each([
+  {
+    input: "https://ocw.mit.edu/courses/some-course",
+    expected: "/courses/o/some-course",
+  },
+  {
+    input: "https://ocw.mit.edu/courses/physics-101/",
+    expected: "/courses/o/physics-101/",
+  },
+  {
+    input: "https://ocw.mit.edu/search",
+    expected: "/search",
+  },
+])("ocwLearnPageView transforms OCW URLs correctly", ({ input, expected }) => {
+  expect(ocwLearnPageView(input)).toBe(expected)
+})
+
+describe("slug-aware path builders", () => {
+  test("podcastPageView appends a slug segment; blank → 'resource'; no title → bare", () => {
+    expect(podcastPageView("123", "Beyond Biology")).toBe(
+      "/podcast/123/beyond-biology",
+    )
+    expect(podcastPageView("123", "2024")).toBe("/podcast/123/resource") // blank slug
+    // explicit undefined title → bare (redirects)
+    expect(podcastPageView("123", undefined)).toBe("/podcast/123")
+  })
+
+  test("podcastEpisodePageView slugs the episode, keeps podcast id bare", () => {
+    expect(podcastEpisodePageView("55", "123", "Episode One")).toBe(
+      "/podcast/123/podcast_episode/55/episode-one",
+    )
+    expect(podcastEpisodePageView("55", "123", "你好")).toBe(
+      "/podcast/123/podcast_episode/55/resource",
+    )
+  })
+
+  test("videoDetailPageView slugs the video and keeps ?playlist", () => {
+    expect(videoDetailPageView(16765, 13798, "Beyond Biology")).toBe(
+      "/video/16765/beyond-biology?playlist=13798",
+    )
+    expect(videoDetailPageView(16765, undefined, "Beyond Biology")).toBe(
+      "/video/16765/beyond-biology",
+    )
+    expect(videoDetailPageView(16765, 13798, undefined)).toBe(
+      "/video/16765?playlist=13798",
+    )
+  })
+
+  test("videoDetailPageView allows a slug equal to 'embed' (embed route moved out)", () => {
+    expect(videoDetailPageView(16765, undefined, "Embed")).toBe(
+      "/video/16765/embed",
+    )
+  })
+
+  test("videoPlaylistPageView appends a slug segment", () => {
+    expect(videoPlaylistPageView("13798", "Great Talks")).toBe(
+      "/video-playlist/13798/great-talks",
+    )
+  })
+})
+
+describe("separate-param drawer builders", () => {
+  test("resourceDrawerSearch emits resource + optional resource_title (relative)", () => {
+    expect(resourceDrawerSearch(114927, "Beyond Biology")).toBe(
+      "/search?resource=114927&resource_title=beyond-biology",
+    )
+    expect(resourceDrawerSearch(114927, "2024")).toBe("/search?resource=114927") // blank → omit
+    expect(resourceDrawerSearch(114927, undefined)).toBe(
+      "/search?resource=114927",
+    )
+  })
+
+  test("canonicalResourceDrawerUrl is the absolute form", () => {
+    expect(canonicalResourceDrawerUrl(114927, "Beyond Biology")).toMatch(
+      /\/search\?resource=114927&resource_title=beyond-biology$/,
+    )
+    expect(canonicalResourceDrawerUrl(114927, "2024")).toMatch(
+      /\/search\?resource=114927$/,
+    )
+  })
+})
+
+test("INVARIANT: canonical paths round-trip URL decoding byte-identically", () => {
+  // The [slug] pages compare Next's *decoded* route params against builder
+  // output; if a builder ever emits a percent-encodable character, a URL
+  // could redirect to a spelling of itself and loop. See pathSlug in urls.ts.
+  const paths = [
+    podcastPageView("123", "Beyond Biology!"),
+    podcastEpisodePageView("55", "123", "Épisode #1"),
+    videoDetailPageView(16765, 13798, "你好"),
+    videoPlaylistPageView("9", "a".repeat(70)),
+  ]
+  paths.forEach((p) => expect(decodeURIComponent(p)).toBe(p))
+})
+
+describe("carrySearchParams", () => {
+  test("appends incoming params to the canonical", () => {
+    expect(
+      carrySearchParams("/podcast/1/slug", { utm_source: "newsletter" }),
+    ).toBe("/podcast/1/slug?utm_source=newsletter")
+    expect(carrySearchParams("/podcast/1/slug", {})).toBe("/podcast/1/slug")
+  })
+
+  test("canonical-owned params win", () => {
+    expect(
+      carrySearchParams(
+        "/video/1/slug?playlist=10",
+        { playlist: "999", utm_source: "x" },
+        ["playlist"],
+      ),
+    ).toBe("/video/1/slug?utm_source=x&playlist=10")
+  })
+
+  test("omit drops a rejected param the canonical doesn't own (loop safety)", () => {
+    // Without omit, the rejected playlist would be forwarded onto the bare
+    // canonical, differ from it on the next request, and redirect forever.
+    expect(
+      carrySearchParams("/video/1/slug", { playlist: "999", utm_source: "x" }, [
+        "playlist",
+      ]),
+    ).toBe("/video/1/slug?utm_source=x")
+  })
 })

@@ -301,6 +301,34 @@ MITX_ONLINE_COURSES_API_URL=http://mitxonline.odl.local:8013/api/v2/courses/
 MITX_ONLINE_PROGRAMS_API_URL=http://mitxonline.odl.local:8013/api/v2/programs/
 ```
 
+### Connecting with learn-ai
+
+The [learn-ai](https://github.com/mitodl/learn-ai) service (AI recommendation/syllabus
+agents) integrates the same way as MITxOnline: a single shared Keycloak realm, with
+MIT Learn's APISIX acting as the gateway. MIT Learn's APISIX proxies `/ai/*` to the
+local learn-ai service, performing the Keycloak login and forwarding the user identity,
+so a user logged into Learn is automatically authenticated in learn-ai.
+
+> [!TIP]
+> Log in via the Learn frontend. The shared APISIX session is reused for `/ai/*`, so
+> learn-ai sees your user without a separate login.
+
+Run [learn-ai](https://github.com/mitodl/learn-ai) locally, then point the Learn frontend at the gateway path:
+
+```env
+# MIT Learn, frontend.local.env
+NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT=http://open.odl.local:8065/ai/http/recommendation_agent/
+NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT=http://open.odl.local:8065/ai/http/syllabus_agent/
+```
+
+On the learn-ai side, add the Learn gateway origin to its trusted origins so
+CSRF-protected requests routed through the gateway are accepted:
+
+```env
+# learn-ai, env/backend.env (add http://open.odl.local:8065 to the existing list)
+CSRF_TRUSTED_ORIGINS=["http://open.odl.local:8062", "http://open.odl.local:8065", ...]
+```
+
 ## GitHub Pages Storybook
 
 Demos and documentation of reusable UI components in this repo are published as a [storybook](https://storybook.js.org/) at https://mitodl.github.io/mit-learn/.

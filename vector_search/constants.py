@@ -68,7 +68,7 @@ QDRANT_LEARNING_RESOURCE_INDEXES = {
     "course_feature": models.PayloadSchemaType.KEYWORD,
     "topics[].name": models.PayloadSchemaType.KEYWORD,
     "ocw_topics": models.PayloadSchemaType.KEYWORD,
-    "runs[].level.code": models.PayloadSchemaType.KEYWORD,
+    "runs[].level[].code": models.PayloadSchemaType.KEYWORD,
     "departments[].department_id": models.PayloadSchemaType.KEYWORD,
     "platform.code": models.PayloadSchemaType.KEYWORD,
     "offered_by.code": models.PayloadSchemaType.KEYWORD,
@@ -131,7 +131,7 @@ QDRANT_TOPIC_INDEXES = {
 
 
 CONTENT_FILES_RETRIEVE_PAYLOAD = True
-RESOURCES_RETRIEVE_PAYLOAD = ["readable_id"]
+RESOURCES_RETRIEVE_PAYLOAD = ["readable_id", "platform"]
 
 
 COLLECTION_PARAM_MAP = {

@@ -3,12 +3,11 @@ import Image from "next/image"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import { Stack, Typography, styled, theme, Link } from "ol-components"
 import { useQuery } from "@tanstack/react-query"
-import { DashboardCardRoot } from "./DashboardCard"
+import { CardRoot } from "./CardShared"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { contractView } from "@/common/urls"
 import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
-import { RiArrowRightLine } from "@remixicon/react"
 
 const Wrapper = styled.div(({ theme }) => ({
   display: "flex",
@@ -43,7 +42,7 @@ const ContractCard = styled.div({
   },
 })
 
-const CardRootStyled = styled(DashboardCardRoot)({
+const CardRootStyled = styled(CardRoot)({
   display: "flex",
   flexDirection: "column",
   padding: 0,
@@ -117,7 +116,11 @@ const OrganizationContracts: React.FC<OrganizationContractsProps> = ({
               {contract.name}
             </TitleLink>
           </ContractTitleHeading>
-          <CardButton size="small" href={href} endIcon={<RiArrowRightLine />}>
+          <CardButton
+            size="small"
+            href={href}
+            aria-label={`Continue ${contract.name}`}
+          >
             Continue
           </CardButton>
         </CardContent>

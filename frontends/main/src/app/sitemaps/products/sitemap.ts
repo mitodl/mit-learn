@@ -1,10 +1,12 @@
 import { requiredEnv } from "@/env"
-import type { MetadataRoute } from "next"
 import { getQueryClient } from "@/app/getQueryClient"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { PlatformEnum, ResourceTypeEnum } from "api"
 import type { GenerateSitemapResult } from "../types"
-import { dangerouslyDetectProductionBuildPhase } from "../util"
+import {
+  dangerouslyDetectProductionBuildPhase,
+  constructSitemap,
+} from "../util"
 
 const PAGE_SIZE = 1_000
 
@@ -31,16 +33,12 @@ export async function generateSitemaps(): Promise<GenerateSitemapResult[]> {
   }))
 }
 
-export default async function sitemap({
-  id,
-}: {
-  id: string
-}): Promise<MetadataRoute.Sitemap> {
+export default constructSitemap(async (page) => {
   const queryClient = getQueryClient()
   const data = await queryClient.fetchQuery(
     learningResourceQueries.summaryList({
       limit: PAGE_SIZE,
-      offset: +id * PAGE_SIZE,
+      offset: page * PAGE_SIZE,
       platform: [PlatformEnum.Mitxonline],
       resource_type: [ResourceTypeEnum.Course, ResourceTypeEnum.Program],
     }),
@@ -52,4 +50,4 @@ export default async function sitemap({
       url: resource.url as string,
       lastModified: resource.last_modified ?? undefined,
     }))
-}
+})

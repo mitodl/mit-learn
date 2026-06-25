@@ -8,6 +8,7 @@ import {
   setMockResponse,
   urls as learnUrls,
   factories as learnFactories,
+  makeRequest,
 } from "api/test-utils"
 import type {
   V2ProgramDetail,
@@ -15,23 +16,24 @@ import type {
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
+import {
+  renderWithProviders,
+  waitFor,
+  screen,
+  within,
+  user,
+} from "@/test-utils"
 import { assertHeadings } from "ol-test-utilities"
 import ProgramAsCoursePage from "./ProgramAsCoursePage"
 import { notFound } from "next/navigation"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import {
   useStayUpdatedEnv,
   PROGRAM_HIDE_STAY_UPDATED_CASES,
 } from "./test-utils/stayUpdated"
 import invariant from "tiny-invariant"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { getIdsFromReqTree } from "@/common/mitxonline"
 
 jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
-jest.mock("@/common/useFeatureFlagsLoaded")
-const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 
 const makeProgramAsCourse: typeof factories.programs.program = (
   overrides = {},
@@ -114,11 +116,6 @@ const setupApis = ({
 }
 
 describe("ProgramAsCoursePage", () => {
-  beforeEach(() => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-  })
-
   test("Page has expected headings", async () => {
     const reqTree = new RequirementTreeBuilder()
     const op = reqTree.addOperator({ operator: "all_of" })
@@ -126,6 +123,8 @@ describe("ProgramAsCoursePage", () => {
     op.addCourse()
 
     const program = makeProgramAsCourse({
+      certificate_available: true,
+      products: [factories.courses.product({ price: "250" })],
       req_tree: reqTree.serialize(),
     })
     const page = makePage({ program_details: program })
@@ -139,6 +138,7 @@ describe("ProgramAsCoursePage", () => {
       assertHeadings([
         { level: 1, name: page.title },
         { level: 2, name: "Course Information" },
+        { level: 3, name: "Certificate Track" },
         { level: 2, name: "About this Course" },
         { level: 2, name: "What you'll learn" },
         { level: 2, name: "Modules" },
@@ -393,5 +393,136 @@ describe("ProgramAsCoursePage", () => {
     )
 
     await screen.findByRole("heading", { name: page.title })
+  })
+
+  test("Enroll CTA posts program enrollment from ProgramAsCoursePage", async () => {
+    const program = makeProgramAsCourse({
+      enrollment_modes: [
+        factories.courses.enrollmentMode({ requires_payment: false }),
+      ],
+    })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+    setMockResponse.get(
+      learnUrls.userMe.get(),
+      learnFactories.user.user({ is_authenticated: true }),
+    )
+
+    const enrollUrl = urls.programEnrollments.enrollmentsListV3()
+    setMockResponse.post(enrollUrl, {})
+
+    renderWithProviders(
+      <ProgramAsCoursePage readableId={program.readable_id} />,
+    )
+
+    const [enrollButton] = await screen.findAllByRole("button", {
+      name: "Enroll",
+    })
+    await user.click(enrollButton)
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "post", url: enrollUrl }),
+      )
+    })
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "post",
+        url: urls.enrollment.enrollmentsListV1(),
+      }),
+    )
+  })
+
+  test("Renders certificate track pricing card", async () => {
+    const program = makeProgramAsCourse({
+      certificate_available: true,
+      enrollment_modes: [
+        factories.courses.enrollmentMode({ requires_payment: true }),
+      ],
+      products: [factories.courses.product({ price: "250" })],
+    })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+
+    renderWithProviders(
+      <ProgramAsCoursePage readableId={program.readable_id} />,
+    )
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 3,
+        name: "Certificate Track",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("Earn a verified certificate of completion"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("$250")).toBeInTheDocument()
+  })
+
+  test("Hides certificate track pricing card for free-enrollment programs", async () => {
+    const program = makeProgramAsCourse({
+      certificate_available: false,
+      enrollment_modes: [
+        factories.courses.enrollmentMode({ requires_payment: false }),
+      ],
+      products: [factories.courses.product({ price: "250" })],
+    })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+
+    renderWithProviders(
+      <ProgramAsCoursePage readableId={program.readable_id} />,
+    )
+
+    await screen.findByRole("heading", { name: page.title })
+    expect(screen.queryByText("Certificate Track")).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("Earn a verified certificate of completion"),
+    ).not.toBeInTheDocument()
+    const enrollButtons = await screen.findAllByRole("button", {
+      name: /enroll/i,
+    })
+    expect(enrollButtons.length).toBeGreaterThanOrEqual(1)
+  })
+
+  test("Hides certificate track pricing card when products are empty", async () => {
+    const program = makeProgramAsCourse({
+      certificate_available: true,
+      enrollment_modes: [
+        factories.courses.enrollmentMode({ requires_payment: true }),
+      ],
+      products: [],
+    })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+
+    renderWithProviders(
+      <ProgramAsCoursePage readableId={program.readable_id} />,
+    )
+
+    await screen.findByRole("heading", { name: page.title })
+    expect(screen.queryByText("Certificate Track")).not.toBeInTheDocument()
+    expect(screen.queryByText("Price unavailable")).not.toBeInTheDocument()
+  })
+
+  test("Hides certificate track pricing card when product price is missing", async () => {
+    const program = makeProgramAsCourse({
+      certificate_available: true,
+      enrollment_modes: [
+        factories.courses.enrollmentMode({ requires_payment: true }),
+      ],
+      products: [factories.courses.product({ price: "" })],
+    })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+
+    renderWithProviders(
+      <ProgramAsCoursePage readableId={program.readable_id} />,
+    )
+
+    await screen.findByRole("heading", { name: page.title })
+    expect(screen.queryByText("Certificate Track")).not.toBeInTheDocument()
+    expect(screen.queryByText("Price unavailable")).not.toBeInTheDocument()
   })
 })

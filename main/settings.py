@@ -35,7 +35,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.71.4"
+VERSION = "0.71.12"
 
 log = logging.getLogger()
 
@@ -871,32 +871,6 @@ CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = get_int(
     name="CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP",
     default=0,  # default that the tokenizer uses
 )
-CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED = get_bool(
-    name="CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED", default=False
-)
-
-SEMANTIC_CHUNKING_CONFIG = {
-    "buffer_size": get_int(
-        # Number of sentences to combine.
-        name="SEMANTIC_CHUNKING_BUFFER_SIZE",
-        default=1,
-    ),
-    "breakpoint_threshold_type": get_string(
-        # 'percentile', 'standard_deviation', 'interquartile', or 'gradient'
-        name="SEMANTIC_CHUNKING_BREAKPOINT_THRESHOLD_TYPE",
-        default="percentile",
-    ),
-    "breakpoint_threshold_amount": get_float(
-        # value we use for breakpoint_threshold_type to filter outliers
-        name="SEMANTIC_CHUNKING_BREAKPOINT_THRESHOLD_AMOUNT",
-        default=None,
-    ),
-    "number_of_chunks": get_int(
-        # number of chunks to consider for merging
-        name="SEMANTIC_CHUNKING_NUMBER_OF_CHUNKS",
-        default=None,
-    ),
-}
 
 CONTENT_FILE_SUMMARIZER_BATCH_SIZE = get_int("CONTENT_FILE_SUMMARIZER_BATCH_SIZE", 20)
 # number of flashcards to generate

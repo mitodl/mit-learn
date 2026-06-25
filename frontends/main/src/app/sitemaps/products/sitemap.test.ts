@@ -52,7 +52,7 @@ describe("Product Sitemaps", () => {
       summaries,
     )
 
-    const sitemapPage = await sitemap({ id: String(page) })
+    const sitemapPage = await sitemap({ id: Promise.resolve(String(page)) })
     expect(sitemapPage).toEqual(
       summaries.results
         .filter((resource) => Boolean(resource.url))

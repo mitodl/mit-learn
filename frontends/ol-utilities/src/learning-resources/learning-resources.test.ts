@@ -1,4 +1,7 @@
-import { allRunsAreIdentical } from "./learning-resources"
+import {
+  allRunsAreIdentical,
+  formattedParentCourseName,
+} from "./learning-resources"
 import * as factories from "api/test-utils/factories"
 import { CourseResourceDeliveryInnerCodeEnum } from "api"
 
@@ -233,5 +236,84 @@ describe("allRunsAreIdentical", () => {
       }),
     ]
     expect(allRunsAreIdentical(resource)).toBe(false)
+  })
+})
+
+describe("formattedParentCourseName", () => {
+  test("formats the parent course name for a video playlist", () => {
+    const resource = factories.learningResources.videoPlaylist({
+      video_playlist: {
+        parent_title: "Test Course Title",
+        parent_course_numbers: ["TEST-101"],
+      },
+    })
+    expect(formattedParentCourseName(resource)).toBe(
+      "TEST-101: Test Course Title",
+    )
+  })
+
+  test("returns null for a video playlist missing parent title", () => {
+    const resource = factories.learningResources.videoPlaylist({
+      video_playlist: {
+        parent_title: "",
+        parent_course_numbers: ["TEST-101"],
+      },
+    })
+    expect(formattedParentCourseName(resource)).toBeNull()
+  })
+
+  test("returns null for a video playlist missing parent course numbers", () => {
+    const resource = factories.learningResources.videoPlaylist({
+      video_playlist: {
+        parent_title: "Test Course Title",
+        parent_course_numbers: [],
+      },
+    })
+    expect(formattedParentCourseName(resource)).toBeNull()
+  })
+
+  test("formats the parent course name for a video", () => {
+    const resource = factories.learningResources.video({
+      content_files: [
+        factories.learningResources.contentFile({
+          run_title: "Test Course Title",
+          course_number: ["TEST-101"],
+        }),
+      ],
+    })
+    expect(formattedParentCourseName(resource)).toBe(
+      "TEST-101: Test Course Title",
+    )
+  })
+
+  test("returns null for a video missing content files", () => {
+    const resource = factories.learningResources.video({
+      content_files: [],
+    })
+    expect(formattedParentCourseName(resource)).toBeNull()
+  })
+
+  test("returns null for a video missing run title", () => {
+    const resource = factories.learningResources.video({
+      content_files: [
+        factories.learningResources.contentFile({
+          run_title: undefined,
+          course_number: ["TEST-101"],
+        }),
+      ],
+    })
+    expect(formattedParentCourseName(resource)).toBeNull()
+  })
+
+  test("returns null for a video missing course number", () => {
+    const resource = factories.learningResources.video({
+      content_files: [
+        factories.learningResources.contentFile({
+          run_title: "Test Course Title",
+          course_number: [],
+        }),
+      ],
+    })
+    expect(formattedParentCourseName(resource)).toBeNull()
   })
 })

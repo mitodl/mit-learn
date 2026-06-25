@@ -8,7 +8,7 @@
  */
 import type {
   BaseCourseRun,
-  BaseProgramDisplayMode,
+  V2ProgramDisplayMode,
   ContractPage,
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
@@ -89,6 +89,40 @@ export const EnrollmentStatus = {
 } as const
 export type EnrollmentStatus =
   (typeof EnrollmentStatus)[keyof typeof EnrollmentStatus]
+
+/**
+ * Rewrites a raw mitxonline certificate link (`/certificate/{uuid}/`) to MIT
+ * Learn's own certificate route (`/certificate/{certificateType}/{uuid}/`).
+ */
+export const getCertificateLink = (
+  link: string | null | undefined,
+  certificateType: "course" | "program",
+): string | null => {
+  if (!link) return null
+  const pattern = /\/certificate\/([^/]+)\/?$/
+  return link.replace(pattern, `/certificate/${certificateType}/$1/`)
+}
+
+export const getDashboardEnrollmentStatus = (
+  resource: DashboardResource,
+): EnrollmentStatus => {
+  const hasValidCertificate =
+    resource.type !== DashboardType.Course && !!resource.data.certificate?.uuid
+
+  if (resource.type === DashboardType.Course) {
+    return EnrollmentStatus.NotEnrolled
+  }
+
+  if (resource.type === DashboardType.CourseRunEnrollment) {
+    return hasValidCertificate
+      ? EnrollmentStatus.Completed
+      : getEnrollmentStatus(resource.data)
+  }
+
+  return hasValidCertificate
+    ? EnrollmentStatus.Completed
+    : EnrollmentStatus.Enrolled
+}
 
 type KeyOpts = {
   resourceType: ResourceType
@@ -306,7 +340,7 @@ const groupProgramEnrollmentsByProgramId = (
 }
 
 const isProgramAsCourse = (program: {
-  display_mode?: BaseProgramDisplayMode | null
+  display_mode?: V2ProgramDisplayMode | null
 }) => program.display_mode === DisplayModeEnum.Course
 
 const isNonContractEnrollment = (enrollment: CourseRunEnrollmentV3) =>
@@ -560,7 +594,7 @@ const resolveDisplayedRunAndEnrollment = (
       enrollableOnly: true,
       contractId: opts?.contractId,
     }) ??
-    course.courseruns[0] ??
+    getBestRun(course, { contractId: opts?.contractId }) ??
     null
   const isNonDefaultVariant = opts?.variant && !opts.variant.default_variant
   const displayedRun = isNonDefaultVariant

@@ -240,7 +240,6 @@ const trackViewProgramDetails = (sectionName?: string) => {
   })
 }
 
-
 export {
   pushGtmEvent,
   trackCourseEnrolled,

@@ -11,6 +11,7 @@ import {
   groupProgramEnrollmentsByProgramId,
   groupModuleCoursesByProgramId,
   buildRequirementSections,
+  getCertificateLink,
 } from "../model/dashboardViewModel"
 import type { RequirementSection } from "../model/dashboardViewModel"
 
@@ -168,7 +169,10 @@ const useProgramDashboardData = (programId: number): ProgramDashboardData => {
         }
       : undefined
 
-  const programCertificateUrl = programEnrollment?.certificate?.link ?? null
+  const programCertificateUrl = getCertificateLink(
+    programEnrollment?.certificate?.link,
+    "program",
+  )
 
   return {
     sections,

@@ -17,7 +17,7 @@ import {
   resourceContentFilesImageSrc,
   useImageWithFallback,
 } from "ol-utilities"
-import { ResourceTypeEnum, ResourceTypeGroupEnum, PlatformEnum } from "api"
+import { ResourceTypeEnum, PlatformEnum } from "api"
 import {
   Button,
   ButtonLink,
@@ -43,15 +43,13 @@ import {
   FACEBOOK_SHARE_BASE_URL,
   TWITTER_SHARE_BASE_URL,
   LINKEDIN_SHARE_BASE_URL,
-  coursePageView,
-  programPageView,
   videoDetailPageView,
   videoPlaylistPageView,
   podcastPageView,
   podcastEpisodePageView,
   ocwLearnPageView,
 } from "@/common/urls"
-import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { parentPodcastIds, videoPlaylistIds } from "@/common/slugs"
 import { FeatureFlags } from "@/common/feature_flags"
 import { externalLinkProps } from "@/common/utils"
 
@@ -319,59 +317,35 @@ const getResourceUrl = (
   resource: LearningResource,
   {
     ocwProductPages,
-    mitxonlineProductPages,
     showPodcastPage,
   }: {
-    mitxonlineProductPages?: boolean
     showPodcastPage?: boolean
     ocwProductPages?: boolean
   },
 ) => {
-  if (
-    mitxonlineProductPages &&
-    resource.platform?.code === PlatformEnum.Mitxonline
-  ) {
-    /**
-     * TODO: After mitxonlineProductPages feature flag is fully rolled out,
-     * this logic should be handled during ETL
-     */
-    if (resource.resource_type === ResourceTypeEnum.Course) {
-      return coursePageView(resource.readable_id)
-    } else if (resource.resource_type === ResourceTypeEnum.Program) {
-      return programPageView({
-        readable_id: resource.readable_id,
-        // Learn program resources that have resource_type_group correspond to
-        // MITxOnline programs with display_mode="course"
-        // This can be moved into backend ETL after feature flags are removed.
-        display_mode:
-          resource.resource_type_group === ResourceTypeGroupEnum.Course
-            ? DisplayModeEnum.Course
-            : undefined,
-      })
-    }
-  }
   if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
-    return videoPlaylistPageView(resource.id.toString())
+    return videoPlaylistPageView(resource.id.toString(), resource.title)
   }
-  if (
-    resource.resource_type === ResourceTypeEnum.Video &&
-    resource?.playlists?.length > 0
-  ) {
-    return videoDetailPageView(resource.id, Number(resource.playlists[0]))
+  if (resource.resource_type === ResourceTypeEnum.Video) {
+    const [firstPlaylist] = videoPlaylistIds(resource)
+    if (firstPlaylist !== undefined) {
+      return videoDetailPageView(resource.id, firstPlaylist, resource.title)
+    }
   }
 
   if (showPodcastPage) {
     if (resource.resource_type === ResourceTypeEnum.Podcast) {
-      return podcastPageView(resource.id.toString())
+      return podcastPageView(resource.id.toString(), resource.title)
     }
-    if (
-      resource.resource_type === ResourceTypeEnum.PodcastEpisode &&
-      resource?.podcast_episode?.podcasts?.[0]
-    ) {
-      return podcastEpisodePageView(
-        resource.id.toString(),
-        resource?.podcast_episode?.podcasts[0].toString(),
-      )
+    if (resource.resource_type === ResourceTypeEnum.PodcastEpisode) {
+      const [parentPodcastId] = parentPodcastIds(resource)
+      if (parentPodcastId !== undefined) {
+        return podcastEpisodePageView(
+          resource.id.toString(),
+          String(parentPodcastId),
+          resource.title,
+        )
+      }
     }
   }
 
@@ -411,9 +385,6 @@ const CallToActionSection = ({
   const [shareExpanded, setShareExpanded] = useState(false)
   const [copyText, setCopyText] = useState("Copy Link")
   const ocwProductPages = useFeatureFlagEnabled(FeatureFlags.OcwProductPages)
-  const mitxonlineProductPages = useFeatureFlagEnabled(
-    FeatureFlags.MitxOnlineProductPages,
-  )
   const showPodcastPage = useFeatureFlagEnabled(FeatureFlags.PodcastDetailPage)
 
   if (hide) {
@@ -442,7 +413,6 @@ const CallToActionSection = ({
   const socialIconSize = 18
   const url = appendUtmParams(
     getResourceUrl(resource, {
-      mitxonlineProductPages,
       showPodcastPage,
       ocwProductPages,
     }),

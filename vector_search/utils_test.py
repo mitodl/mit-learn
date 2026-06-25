@@ -7,7 +7,7 @@ import pytest
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.urls import reverse
-from langchain.schema import Document
+from langchain_core.documents import Document
 from qdrant_client import models
 from qdrant_client.models import PointStruct
 
@@ -15,6 +15,7 @@ from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
+    LearningResourcePlatformFactory,
     LearningResourcePriceFactory,
     LearningResourceRunFactory,
     LearningResourceTopicFactory,
@@ -73,6 +74,7 @@ from vector_search.utils import (
     update_learning_resource_payload,
     update_qdrant_indexes,
     vector_point_id,
+    vector_point_key,
 )
 from vector_search.utils import qdrant_client as vector_qdrant_client
 
@@ -468,32 +470,6 @@ def test_complex_qdrant_query_conditions():
     )
 
 
-def test_document_chunker(mocker):
-    """
-    Test that the correct splitter is returned based on encoder
-    """
-    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = None
-    settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED = True
-    settings.LITELLM_TOKEN_ENCODING_NAME = None
-    encoder = dense_encoder()
-    encoder.token_encoding_name = None
-    mocked_splitter = mocker.patch("vector_search.utils.RecursiveCharacterTextSplitter")
-    mocked_chunker = mocker.patch("vector_search.utils.SemanticChunker")
-    _chunk_documents(encoder, ["this is a test document"], [{}])
-
-    mocked_chunker.assert_called()
-    mocked_splitter.assert_called()
-
-    settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED = False
-    _get_text_splitter.cache_clear()
-    mocked_splitter = mocker.patch("vector_search.utils.RecursiveCharacterTextSplitter")
-    mocked_chunker = mocker.patch("vector_search.utils.SemanticChunker")
-
-    _chunk_documents(encoder, ["this is a test document"], [{}])
-    mocked_chunker.assert_not_called()
-    mocked_splitter.assert_called()
-
-
 def test_expected_document_chunks(mocker):
     """
     Test that the expected number of chunks are uploaded
@@ -503,7 +479,6 @@ def test_expected_document_chunks(mocker):
     settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = random.randrange(  # noqa: S311
         1, settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
     )
-    settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED = False
 
     encoder = dense_encoder()
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
@@ -518,7 +493,6 @@ def test_expected_document_chunks(mocker):
         content="this is a.  test: document. " * 1000
     )
     chunked = _chunk_documents(
-        encoder,
         [content_file.content],
         list(serialize_bulk_content_files([content_file.id])),
     )
@@ -547,13 +521,13 @@ def test_document_chunker_tiktoken(mocker):
         "vector_search.utils.RecursiveCharacterTextSplitter.from_tiktoken_encoder"
     )
 
-    _chunk_documents(encoder, ["this is a test document"], [{}])
+    _chunk_documents(["this is a test document"], [{}])
     mocked_splitter.assert_not_called()
 
     # work around cache for testing
     _get_text_splitter.cache_clear()
     settings.LITELLM_TOKEN_ENCODING_NAME = "test"  # noqa: S105
-    _chunk_documents(encoder, ["this is a test document"], [{}])
+    _chunk_documents(["this is a test document"], [{}])
     mocked_splitter.assert_called()
 
 
@@ -567,11 +541,11 @@ def test_text_splitter_chunk_size_override(mocker):
     encoder = dense_encoder()
     mocked_splitter = mocker.patch("vector_search.utils.RecursiveCharacterTextSplitter")
     encoder.token_encoding_name = "cl100k_base"  # noqa: S105
-    _chunk_documents(encoder, ["this is a test document"], [{}])
+    _chunk_documents(["this is a test document"], [{}])
     assert mocked_splitter.mock_calls[0].kwargs["chunk_size"] == 100
     mocked_splitter = mocker.patch("vector_search.utils.RecursiveCharacterTextSplitter")
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = None
-    _chunk_documents(encoder, ["this is a test document"], [{}])
+    _chunk_documents(["this is a test document"], [{}])
     assert "chunk_size" not in mocked_splitter.mock_calls[0].kwargs
 
 
@@ -902,25 +876,22 @@ def test_should_not_generate_for_unchanged_content_file(mocker):
 
 
 def test_update_payload_learning_resource(mocker):
-    """Should update payload for learning resources"""
+    """Should overwrite the point payload with the full serialized document"""
     resource = LearningResourceFactory.create()
-    serialized_resources = list(serialize_bulk_learning_resources([resource.id]))
+    doc = next(iter(serialize_bulk_learning_resources([resource.id])))
     mock_qdrant = mocker.MagicMock()
     mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
-    update_learning_resource_payload(serialized_resources[0])
-    mock_qdrant.set_payload.assert_called_once()
-    call_args = mock_qdrant.set_payload.call_args[1]
+    update_learning_resource_payload(doc)
+    mock_qdrant.overwrite_payload.assert_called_once()
+    call_args = mock_qdrant.overwrite_payload.call_args[1]
     assert call_args["collection_name"] == RESOURCES_COLLECTION_NAME
-    assert call_args["points"] == [
-        vector_point_id(
-            f"{serialized_resources[0]['platform']['code']}.{serialized_resources[0]['readable_id']}"
-        )
-    ]
-    # Verify payload contains the mapped values
-    for src_key, dest_key in QDRANT_RESOURCE_PARAM_MAP.items():
-        if src_key in serialized_resources[0]:
-            assert dest_key in call_args["payload"]
-            assert call_args["payload"][dest_key] == serialized_resources[0][src_key]
+    assert call_args["points"] == [vector_point_id(vector_point_key(doc))]
+    # The whole serialized doc is written. Topics in particular must propagate;
+    # the old param-map projection keyed on `topic` (not `topics`) silently
+    # dropped them, hiding resources from topic filters (mitodl/hq#11786).
+    assert call_args["payload"] == doc
+    assert doc["topics"]
+    assert call_args["payload"]["topics"] == doc["topics"]
 
 
 def test_update_payload_content_file(mocker):
@@ -1569,13 +1540,20 @@ def test_vector_search_group_by_offset_behavior(
 
 def test_resource_vector_hits_preserves_qdrant_score_order():
     """Results should be returned in the same order as the search_result (qdrant score order)."""
-    resources = LearningResourceFactory.create_batch(5)
+    resources = LearningResourceFactory.create_batch(4)
+    resources.append(LearningResourceFactory.create(platform=None))
     # Shuffle to create a non-alphabetical, non-pk order (simulating qdrant ranking)
     shuffled = random.sample(resources, len(resources))
 
     # Build mock ScoredPoints with readable_ids in the shuffled order
     search_result = [
-        MagicMock(payload={"readable_id": r.readable_id}) for r in shuffled
+        MagicMock(
+            payload={
+                "readable_id": r.readable_id,
+                "platform": {"code": r.platform.code} if r.platform else None,
+            }
+        )
+        for r in shuffled
     ]
 
     result = _resource_vector_hits(search_result)
@@ -1583,6 +1561,75 @@ def test_resource_vector_hits_preserves_qdrant_score_order():
     expected_readable_ids = [r.readable_id for r in shuffled]
     actual_readable_ids = [r["readable_id"] for r in result]
     assert actual_readable_ids == expected_readable_ids
+
+
+def test_resource_vector_hits_duplicate_readable_ids_different_platforms():
+    """
+    Ensure results with duplicate readable_ids but different platform codes
+    get aligned or discarded appropriately.
+    """
+    platform_xpro = LearningResourcePlatformFactory.create(code="xpro")
+    platform_ocw = LearningResourcePlatformFactory.create(code="ocw")
+
+    # Create two resources with the SAME readable_id but DIFFERENT platforms
+    r_xpro = LearningResourceFactory.create(
+        readable_id="duplicate-id", platform=platform_xpro
+    )
+    r_ocw = LearningResourceFactory.create(
+        readable_id="duplicate-id", platform=platform_ocw
+    )
+
+    # And a third resource that is completely separate
+    r_other = LearningResourceFactory.create(
+        readable_id="other-id", platform=platform_ocw
+    )
+
+    # Case 1: Search results return only the xpro platform for the duplicate id
+    search_result_1 = [
+        MagicMock(
+            payload={
+                "readable_id": "duplicate-id",
+                "platform": {"code": "xpro"},
+            }
+        ),
+        MagicMock(
+            payload={
+                "readable_id": "other-id",
+                "platform": {"code": "ocw"},
+            }
+        ),
+    ]
+
+    result_1 = _resource_vector_hits(search_result_1)
+    # It should match the xpro resource and the other resource, and discard the OCW resource with "duplicate-id"
+    assert len(result_1) == 2
+    assert result_1[0]["id"] == r_xpro.id
+    assert result_1[0]["platform"]["code"] == "xpro"
+    assert result_1[1]["id"] == r_other.id
+
+    # Case 2: Search results return both platforms for the duplicate id
+    search_result_2 = [
+        MagicMock(
+            payload={
+                "readable_id": "duplicate-id",
+                "platform": {"code": "ocw"},
+            }
+        ),
+        MagicMock(
+            payload={
+                "readable_id": "duplicate-id",
+                "platform": {"code": "xpro"},
+            }
+        ),
+    ]
+
+    result_2 = _resource_vector_hits(search_result_2)
+    # It should match and return both in the correct ranking order
+    assert len(result_2) == 2
+    assert result_2[0]["id"] == r_ocw.id
+    assert result_2[0]["platform"]["code"] == "ocw"
+    assert r_xpro.id == result_2[1]["id"]
+    assert result_2[1]["platform"]["code"] == "xpro"
 
 
 def _make_facet_hit(count=0, value="test"):
@@ -1909,3 +1956,113 @@ def test_custom_score_formula_defaults(mocker):
     assert isinstance(results[0].mult[1], models.Filter)
 
     assert isinstance(results[0].mult[2], models.GaussDecayExpression)
+
+
+@pytest.mark.django_db
+def test_best_run_ids_for_resources_non_test_mode():
+    """A normal course resolves to only its best run's run_id."""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from vector_search.utils import best_run_ids_for_resources
+
+    course = LearningResourceFactory.create(is_course=True, test_mode=False)
+    course.runs.all().delete()
+    LearningResourceRunFactory.create(
+        learning_resource=course,
+        run_id="OLD_RUN",
+        published=True,
+        start_date=timezone.now() - timedelta(days=60),
+        enrollment_start=None,
+        enrollment_end=None,
+        end_date=None,
+    )
+    best = LearningResourceRunFactory.create(
+        learning_resource=course,
+        run_id="NEW_RUN",
+        published=True,
+        start_date=timezone.now() - timedelta(days=10),
+        enrollment_start=None,
+        enrollment_end=None,
+        end_date=None,
+    )
+    # best_run falls back to the latest start_date among published runs
+    assert course.best_run.run_id == best.run_id
+
+    run_ids = best_run_ids_for_resources([course.readable_id])
+
+    assert run_ids == [best.run_id]
+
+
+@pytest.mark.django_db
+def test_best_run_ids_for_resources_test_mode_returns_all_published():
+    """A test_mode course resolves to every published run_id."""
+    from vector_search.utils import best_run_ids_for_resources
+
+    course = LearningResourceFactory.create(is_course=True, test_mode=True)
+    course.runs.all().delete()
+    run_a = LearningResourceRunFactory.create(
+        learning_resource=course, run_id="RUN_A", published=True
+    )
+    run_b = LearningResourceRunFactory.create(
+        learning_resource=course, run_id="RUN_B", published=True
+    )
+    LearningResourceRunFactory.create(
+        learning_resource=course, run_id="RUN_UNPUB", published=False
+    )
+
+    run_ids = best_run_ids_for_resources([course.readable_id])
+
+    assert set(run_ids) == {run_a.run_id, run_b.run_id}
+
+
+@pytest.mark.django_db
+def test_best_run_ids_for_resources_union_across_resources():
+    """Multiple resources yield the union of their resolved run_ids."""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from vector_search.utils import best_run_ids_for_resources
+
+    course1 = LearningResourceFactory.create(is_course=True, test_mode=False)
+    course1.runs.all().delete()
+    best1 = LearningResourceRunFactory.create(
+        learning_resource=course1,
+        run_id="C1_BEST",
+        published=True,
+        start_date=timezone.now() - timedelta(days=10),
+        enrollment_start=None,
+        enrollment_end=None,
+        end_date=None,
+    )
+    course2 = LearningResourceFactory.create(is_course=True, test_mode=False)
+    course2.runs.all().delete()
+    best2 = LearningResourceRunFactory.create(
+        learning_resource=course2,
+        run_id="C2_BEST",
+        published=True,
+        start_date=timezone.now() - timedelta(days=10),
+        enrollment_start=None,
+        enrollment_end=None,
+        end_date=None,
+    )
+
+    run_ids = best_run_ids_for_resources([course1.readable_id, course2.readable_id])
+
+    assert set(run_ids) == {best1.run_id, best2.run_id}
+
+
+@pytest.mark.django_db
+def test_best_run_ids_for_resources_no_published_run():
+    """A course with no published run contributes nothing (no error)."""
+    from vector_search.utils import best_run_ids_for_resources
+
+    course = LearningResourceFactory.create(is_course=True, test_mode=False)
+    course.runs.all().delete()
+    LearningResourceRunFactory.create(
+        learning_resource=course, run_id="UNPUB", published=False
+    )
+
+    assert best_run_ids_for_resources([course.readable_id]) == []

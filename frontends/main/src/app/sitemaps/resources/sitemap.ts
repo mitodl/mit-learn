@@ -1,9 +1,12 @@
 import { requiredEnv } from "@/env"
-import type { MetadataRoute } from "next"
 import { getQueryClient } from "@/app/getQueryClient"
 import { learningResourceQueries } from "api/hooks/learningResources"
+import { resourceDrawerSearch } from "@/common/urls"
 import type { GenerateSitemapResult } from "../types"
-import { dangerouslyDetectProductionBuildPhase } from "../util"
+import {
+  dangerouslyDetectProductionBuildPhase,
+  constructSitemap,
+} from "../util"
 
 const PAGE_SIZE = 1_000
 
@@ -37,22 +40,18 @@ export async function generateSitemaps(): Promise<GenerateSitemapResult[]> {
   }))
 }
 
-export default async function sitemap({
-  id,
-}: {
-  id: string
-}): Promise<MetadataRoute.Sitemap> {
+export default constructSitemap(async (page) => {
   const BASE_URL = requiredEnv("NEXT_PUBLIC_ORIGIN")
   const queryClient = getQueryClient()
   const data = await queryClient.fetchQuery(
     learningResourceQueries.summaryList({
       limit: PAGE_SIZE,
-      offset: +id * PAGE_SIZE,
+      offset: page * PAGE_SIZE,
     }),
   )
 
   return data.results.map((resource) => ({
-    url: `${BASE_URL}/search?resource=${resource.id}`,
+    url: `${BASE_URL}${resourceDrawerSearch(resource.id, resource.title)}`,
     lastModified: resource.last_modified ?? undefined,
   }))
-}
+})

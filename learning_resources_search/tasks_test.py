@@ -733,7 +733,7 @@ def test_delete_run_content_files(mocker, with_error, unpublished_only):
         deindex_run_content_files_mock.side_effect = TabError
     result = deindex_run_content_files.delay(1, unpublished_only=unpublished_only).get()
     deindex_run_content_files_mock.assert_called_once_with(
-        1, unpublished_only=unpublished_only
+        1, unpublished_only=unpublished_only, keep_published=False
     )
 
     assert result == (

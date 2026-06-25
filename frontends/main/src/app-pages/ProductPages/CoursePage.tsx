@@ -19,7 +19,6 @@ import WhatYoullLearnSection from "./WhatYoullLearnSection"
 import HowYoullLearnSection from "./HowYoullLearnSection"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import CourseInfoBox from "./InfoBoxCourse"
 import CourseEnrollmentButton from "./CourseEnrollmentButton"
 import CourseOutlineSection from "./CourseOutlineSection"
@@ -58,21 +57,14 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
     ...coursesQueries.courseOutline(effectiveOutlineCoursewareId ?? ""),
     enabled: Boolean(effectiveOutlineCoursewareId),
   })
-  const enabled = useFeatureFlagEnabled(FeatureFlags.MitxOnlineProductPages)
   const showCourseOutline = useFeatureFlagEnabled(
     FeatureFlags.CourseOutlineSection,
   )
-  const flagsLoaded = useFeatureFlagsLoaded()
-
   useEffect(() => {
     if (!course) return
     trackViewCoursePage(course.title)
     trackCourseProgramView({ name: course.title, id: course.readable_id })
   }, [course])
-
-  if (!enabled) {
-    return flagsLoaded ? notFound() : null
-  }
 
   const doneLoading = pages.isSuccess && courses.isSuccess
 

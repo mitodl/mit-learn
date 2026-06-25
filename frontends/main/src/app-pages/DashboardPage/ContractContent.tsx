@@ -3,8 +3,6 @@
 import React, { useEffect } from "react"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
-import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
-import { adaptCourseEntryToLegacyDashboardCardProps } from "./CoursewareDisplay/model/dashboardAdapters"
 import {
   alpha,
   Link,
@@ -36,6 +34,7 @@ import type { DashboardCourseEntry } from "./CoursewareDisplay/model/dashboardVi
 import { useContractDashboardData } from "./CoursewareDisplay/hooks/useContractDashboardData"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 import { VariantPicker } from "./CoursewareDisplay/VariantPicker"
+import { CoursewareCard } from "./CoursewareDisplay/CoursewareCard"
 
 const HeaderRoot = styled.div(({ theme }) => ({
   display: "flex",
@@ -170,7 +169,7 @@ const WelcomeMessage: React.FC<{ contract?: ContractPage }> = ({
   )
 }
 
-const DashboardCardStyled = styled(DashboardCard)({
+const CoursewareCardStyled = styled(CoursewareCard)({
   borderRadius: "0px",
   borderTop: "none",
   "&:last-of-type": {
@@ -270,20 +269,20 @@ const OrgProgramCollectionDisplay: React.FC<{
     <ProgramRoot data-testid="org-program-collection-root">
       {header}
       <PlainList>
-        {entries.map((entry) => (
-          <DashboardCardStyled
-            Component="li"
-            key={getKey({
-              resourceType: ResourceType.Course,
-              id: entry.course.id,
-              runId:
-                entry.displayedEnrollment?.run.id ?? entry.displayedRun?.id,
-            })}
-            {...adaptCourseEntryToLegacyDashboardCardProps(entry)}
-            noun="Module"
-            offerUpgrade={false}
-          />
-        ))}
+        {entries.map((entry) => {
+          return (
+            <CoursewareCardStyled
+              key={getKey({
+                resourceType: ResourceType.Course,
+                id: entry.course.id,
+                runId: entry.displayedRun?.id,
+              })}
+              Component="li"
+              kind="course"
+              entry={entry}
+            />
+          )
+        })}
       </PlainList>
     </ProgramRoot>
   )
@@ -326,20 +325,20 @@ const OrgProgramDisplay: React.FC<{
         )}
       </ProgramHeader>
       <PlainList>
-        {entries.map((entry) => (
-          <DashboardCardStyled
-            Component="li"
-            key={getKey({
-              resourceType: ResourceType.Course,
-              id: entry.course.id,
-              runId:
-                entry.displayedEnrollment?.run.id ?? entry.displayedRun?.id,
-            })}
-            {...adaptCourseEntryToLegacyDashboardCardProps(entry)}
-            noun="Module"
-            offerUpgrade={false}
-          />
-        ))}
+        {entries.map((entry) => {
+          return (
+            <CoursewareCardStyled
+              key={getKey({
+                resourceType: ResourceType.Course,
+                id: entry.course.id,
+                runId: entry.displayedRun?.id,
+              })}
+              Component="li"
+              kind="course"
+              entry={entry}
+            />
+          )
+        })}
       </PlainList>
     </ProgramRoot>
   )

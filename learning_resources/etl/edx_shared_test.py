@@ -36,13 +36,11 @@ pytestmark = pytest.mark.django_db
         (ETLSource.oll.name, PlatformType.edx.name),
     ],
 )
-@pytest.mark.parametrize("published", [True, False])
 def test_sync_edx_course_files(
     mock_course_archive_bucket,
     mocker,
     source,
     platform,
-    published,
 ):  # pylint: disable=too-many-arguments,too-many-locals
     """Sync edx courses from a tarball stored in S3"""
     mock_load_content_files = mocker.patch(
@@ -61,47 +59,69 @@ def test_sync_edx_course_files(
         "learning_resources.etl.edx_shared.get_bucket_by_name",
         return_value=mock_course_archive_bucket.bucket,
     )
+    platform_obj = LearningResourcePlatformFactory.create(code=platform)
     courses = LearningResourceFactory.create_batch(
         2,
-        platform=LearningResourcePlatformFactory.create(code=platform),
+        platform=platform_obj,
         etl_source=source,
         is_course=True,
         published=True,
         create_runs=False,
     )
+    # A fully-retired (unpublished, non-test_mode) course must be excluded
+    retired_course = LearningResourceFactory.create(
+        platform=platform_obj,
+        etl_source=source,
+        is_course=True,
+        published=False,
+        test_mode=False,
+        create_runs=False,
+    )
     keys = []
     s3_prefix = get_s3_prefix_for_source(source)
-    for course in courses:
-        runs = LearningResourceRunFactory.create_batch(
-            2,
-            learning_resource=course,
-            published=published,
-        )
-        course.refresh_from_db()
-        if published:
-            assert course.best_run in runs
-        keys.extend(
+
+    def add_keys_for_runs(runs):
+        new_keys = (
             [f"{s3_prefix}/{run.run_id}/foo.tar.gz" for run in runs]
             if source != ETLSource.oll.name
             else [f"{s3_prefix}/{run.run_id}_OLL.tar.gz" for run in runs]
         )
-        for key in keys:
+        keys.extend(new_keys)
+        for key in new_keys:
             with Path.open(
                 Path("test_json/course-v1:MITxT+8.01.3x+3T2022.tar.gz"), "rb"
             ) as infile:
-                bucket.put_object(
-                    Key=key,
-                    Body=infile.read(),
-                    ACL="public-read",
-                )
-    sync_edx_course_files(source, [course.id for course in courses], keys)
-    # Only best runs for published courses are processed, so 2 runs (one per course) not 4
-    expected_calls = 2 if published else 0
-    assert mock_transform.call_count == expected_calls
-    assert mock_load_content_files.call_count == expected_calls
-    if published:
-        for course in courses:
-            mock_load_content_files.assert_any_call(course.best_run, fake_data)
+                bucket.put_object(Key=key, Body=infile.read(), ACL="public-read")
+
+    for course in courses:
+        runs = LearningResourceRunFactory.create_batch(
+            2,
+            learning_resource=course,
+            published=True,
+        )
+        course.refresh_from_db()
+        assert course.best_run in runs
+        add_keys_for_runs(runs)
+
+    retired_runs = LearningResourceRunFactory.create_batch(
+        2,
+        learning_resource=retired_course,
+        published=True,
+    )
+    add_keys_for_runs(retired_runs)
+
+    sync_edx_course_files(
+        source, [course.id for course in [*courses, retired_course]], keys
+    )
+    # All runs of published courses are processed; retired-course runs are excluded
+    assert mock_transform.call_count == 4
+    assert mock_load_content_files.call_count == 4
+    loaded_runs = {call.args[0] for call in mock_load_content_files.call_args_list}
+    for course in courses:
+        for run in course.runs.all():
+            assert run in loaded_runs
+    for run in retired_runs:
+        assert run not in loaded_runs
     mock_log.assert_not_called()
 
 
@@ -692,8 +712,10 @@ def test_sync_edx_archive_no_run_found(mocker, mock_course_archive_bucket, etl_s
 
 
 @pytest.mark.parametrize("etl_source", [ETLSource.mitxonline.name, ETLSource.xpro.name])
-def test_sync_edx_archive_not_best_run(mocker, mock_course_archive_bucket, etl_source):
-    """Test sync_edx_archive skips processing when run is not the best run"""
+def test_sync_edx_archive_non_best_run_processed(
+    mocker, mock_course_archive_bucket, etl_source
+):
+    """sync_edx_archive now processes a non-best run of a published course."""
     from learning_resources.etl.edx_shared import sync_edx_archive
 
     platform = (
@@ -701,15 +723,12 @@ def test_sync_edx_archive_not_best_run(mocker, mock_course_archive_bucket, etl_s
         if etl_source == ETLSource.mitxonline.name
         else PlatformType.xpro.name
     )
-
-    # Create a course with multiple runs
     course = LearningResourceFactory.create(
         platform=LearningResourcePlatformFactory.create(code=platform),
         etl_source=etl_source,
         published=True,
         create_runs=False,
     )
-    # Create older run (not best) with earlier start date
     from datetime import UTC, datetime
 
     old_run = LearningResourceRunFactory.create(
@@ -718,7 +737,6 @@ def test_sync_edx_archive_not_best_run(mocker, mock_course_archive_bucket, etl_s
         run_id="course-v1:Test+Course+R1",
         start_date=datetime(2022, 1, 1, tzinfo=UTC),
     )
-    # Create newer run (will be best) with later start date
     LearningResourceRunFactory.create(
         learning_resource=course,
         published=True,
@@ -726,35 +744,72 @@ def test_sync_edx_archive_not_best_run(mocker, mock_course_archive_bucket, etl_s
         start_date=datetime(2023, 1, 1, tzinfo=UTC),
     )
     course.refresh_from_db()
-
-    # Verify the newer run is the best run
     assert course.best_run.run_id == "course-v1:Test+Course+R2"
 
-    # Archive is for the old run, not the best run
     bucket = mock_course_archive_bucket.bucket
     s3_key = "20220101/courses/course-v1:Test+Course+R1/abcdefghijklmnop.tar.gz"
-
     with Path.open(
         Path("test_json/course-v1:MITxT+8.01.3x+3T2022.tar.gz"), "rb"
     ) as infile:
         bucket.put_object(Key=s3_key, Body=infile.read(), ACL="public-read")
-
     mocker.patch(
-        "learning_resources.etl.edx_shared.get_bucket_by_name",
-        return_value=bucket,
+        "learning_resources.etl.edx_shared.get_bucket_by_name", return_value=bucket
     )
     mock_process = mocker.patch(
         "learning_resources.etl.edx_shared.process_course_archive"
     )
-    mock_log = mocker.patch("learning_resources.etl.edx_shared.log.warning")
 
     sync_edx_archive(etl_source, s3_key, overwrite=False)
 
-    # Should log warning and not process
-    assert mock_log.called
-    assert "not the best run" in mock_log.call_args[0][0]
-    assert old_run.run_id in mock_log.call_args[0][1]
+    mock_process.assert_called_once()
+    assert mock_process.call_args[0][2] == old_run
+
+
+@pytest.mark.parametrize("etl_source", [ETLSource.mitxonline.name, ETLSource.xpro.name])
+def test_sync_edx_archive_retired_course_skipped(
+    mocker, mock_course_archive_bucket, etl_source
+):
+    """sync_edx_archive still skips runs of a fully-retired (unpublished, non-test_mode) course."""
+    from learning_resources.etl.edx_shared import sync_edx_archive
+
+    platform = (
+        PlatformType.mitxonline.name
+        if etl_source == ETLSource.mitxonline.name
+        else PlatformType.xpro.name
+    )
+    course = LearningResourceFactory.create(
+        platform=LearningResourcePlatformFactory.create(code=platform),
+        etl_source=etl_source,
+        published=False,
+        test_mode=False,
+        create_runs=False,
+    )
+    LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=False,
+        run_id="course-v1:Test+Course+R1",
+    )
+    bucket = mock_course_archive_bucket.bucket
+    s3_key = "20220101/courses/course-v1:Test+Course+R1/abcdefghijklmnop.tar.gz"
+    with Path.open(
+        Path("test_json/course-v1:MITxT+8.01.3x+3T2022.tar.gz"), "rb"
+    ) as infile:
+        bucket.put_object(Key=s3_key, Body=infile.read(), ACL="public-read")
+    mocker.patch(
+        "learning_resources.etl.edx_shared.get_bucket_by_name", return_value=bucket
+    )
+    # No matching run is returned for a retired course, so ETL is triggered instead.
+    mock_trigger = mocker.patch(
+        "learning_resources.etl.edx_shared.trigger_resource_etl"
+    )
+    mock_process = mocker.patch(
+        "learning_resources.etl.edx_shared.process_course_archive"
+    )
+
+    sync_edx_archive(etl_source, s3_key, overwrite=False)
+
     mock_process.assert_not_called()
+    mock_trigger.assert_called_once_with(etl_source)
 
 
 @pytest.mark.parametrize("etl_source", [ETLSource.mitxonline.name, ETLSource.xpro.name])
@@ -1061,6 +1116,22 @@ def test_build_run_lookup(source, platform):
     normalized = normalize_run_id(source, run.run_id)
     assert normalized in lookup
     assert lookup[normalized][0].id == run.id
+
+
+def test_build_run_lookup_oll_strips_mitx_prefix():
+    """OLL runs are also indexed without the MITx prefix the archives omit"""
+    source = ETLSource.oll.name
+    course = LearningResourceFactory.create(
+        etl_source=source, published=True, create_runs=False
+    )
+    run = LearningResourceRunFactory.create(
+        learning_resource=course, run_id="MITx+0.501x+2T2019", published=True
+    )
+    lookup = build_run_lookup(source, [course.id])
+    # archive filenames like 0_501x_2T2019_OLL.tar.gz normalize without the prefix
+    assert "0.501x.2t2019" in lookup
+    assert lookup["0.501x.2t2019"][0].id == run.id
+    assert "mitx.0.501x.2t2019" in lookup
 
 
 def test_build_run_lookup_filters_by_ids():
