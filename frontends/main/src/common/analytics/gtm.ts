@@ -110,7 +110,7 @@ const trackCourseProgramView = (params: CourseProgramViewParams = {}) => {
   pushGtmEvent("course-program-view", {
     ...(params.name ? { "course-program-name": params.name } : {}),
     ...(params.id ? { "course-program-id": params.id } : {}),
-    ...(params.value != null ? { "course-program-value": params.value } : {}),
+    ...(params.value !== null && params.value !== undefined ? { "course-program-value": params.value } : {}),
     ...(params.currency ? { "course-program-currency": params.currency } : {}),
   })
 }

@@ -125,15 +125,16 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
         }
         if (onHalfProgress) {
           let halfFired = false
-          const p = this
-          this.on("timeupdate", () => {
-            const duration = p.duration()
-            const currentTime = p.currentTime()
+          this.on("timeupdate", function (this: videojs.Player) {
+            const duration = this.duration()
+            const currentTime = this.currentTime()
             if (
               !halfFired &&
-              duration != null &&
+              duration !== null &&
+              duration !== undefined &&
               duration > 0 &&
-              currentTime != null &&
+              currentTime !== null &&
+              currentTime !== undefined &&
               currentTime >= duration / 2
             ) {
               halfFired = true
