@@ -87,6 +87,23 @@ def _replace_with_chain(task, task_signatures):
     return task.replace(celery.chain(*task_signatures))
 
 
+def _replace_with_finalized_chain(task, content_file_ids, overwrite):
+    """
+    Chain of content-file embedding chunks + a finalize tail that fails the parent
+    if any chunk failed. Returns None when there is nothing to embed.
+    """
+    failure_key = task.request.id
+    sigs = [
+        generate_embeddings.si(
+            ids, CONTENT_FILE_TYPE, overwrite=overwrite, failure_key=failure_key
+        )
+        for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
+    ]
+    if not sigs:
+        return None
+    return task.replace(celery.chain(*sigs, finalize_embeddings.si(failure_key)))
+
+
 def _queue_program_content_file_embedding_tasks(index_tasks, program_ids, overwrite):
     """Queue content file embedding tasks for programs using a single bulk query."""
     if not program_ids:
@@ -427,14 +444,11 @@ def embed_new_content_files(self):
         .exclude(learning_resource__published=False, learning_resource__test_mode=False)
     )
 
-    tasks = [
-        generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite=False)
-        for ids in chunks(
-            new_content_files.values_list("id", flat=True),
-            chunk_size=settings.QDRANT_CHUNK_SIZE,
-        )
-    ]
-    return _replace_with_chain(self, tasks)
+    return _replace_with_finalized_chain(
+        self,
+        list(new_content_files.values_list("id", flat=True)),
+        overwrite=False,
+    )
 
 
 @app.task(bind=True)
@@ -446,11 +460,7 @@ def embed_run_content_files(self, run_id):
         ContentFile.objects.filter(run__id=run_id).values_list("id", flat=True)
     )
 
-    tasks = [
-        generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite=True)
-        for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
-    ]
-    return _replace_with_chain(self, tasks)
+    return _replace_with_finalized_chain(self, content_file_ids, overwrite=True)
 
 
 @app.task(bind=True)
