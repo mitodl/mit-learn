@@ -88,6 +88,11 @@ class LearningResourcesSearchFiltersSerializer(serializers.Serializer):
             \n\n{build_choice_description_list(resource_choices)}"
         ),
     )
+    resource_category = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="The resource category for the resource",
+    )
     free = ArrayWrappedBoolean(
         required=False,
         allow_null=True,
