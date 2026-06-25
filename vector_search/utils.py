@@ -185,7 +185,7 @@ def tune_collection(client, collection_name):
 
 
 @cache
-def ensure_qdrant_collections():
+def ensure_qdrant_collections() -> None:
     """Ensure Qdrant collections exist, at most once per worker process."""
     create_qdrant_collections(force_recreate=False)
 

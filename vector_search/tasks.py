@@ -59,7 +59,7 @@ log = logging.getLogger(__name__)
 EMBED_FAILURE_TTL = 60 * 60 * 24  # 24h defensive cleanup for the per-run counter
 
 
-def _record_embedding_failure(failure_key):
+def _record_embedding_failure(failure_key: str) -> None:
     """Bump the per-invocation embedding-failure counter in the shared redis cache."""
     cache = caches["redis"]
     key = f"embed_errors:{failure_key}"
@@ -87,7 +87,9 @@ def _replace_with_chain(task, task_signatures):
     return task.replace(celery.chain(*task_signatures))
 
 
-def _replace_with_finalized_chain(task, content_file_ids, overwrite):
+def _replace_with_finalized_chain(
+    task: celery.Task, content_file_ids: list[int], *, overwrite: bool
+) -> None:
     """
     Chain of content-file embedding chunks + a finalize tail that fails the parent
     if any chunk failed. Returns None when there is nothing to embed.
@@ -128,7 +130,7 @@ def _queue_program_content_file_embedding_tasks(index_tasks, program_ids, overwr
     )
 
 
-def _retry_countdown(retries):
+def _retry_countdown(retries: int) -> int:
     """Full-jitter exponential backoff (mirrors retry_backoff=True), capped at 10m."""
     return get_exponential_backoff_interval(
         factor=1, retries=retries, maximum=600, full_jitter=True
@@ -142,7 +144,13 @@ def _retry_countdown(retries):
     max_retries=3,
     rate_limit="200/m",
 )
-def generate_embeddings(self, ids, resource_type, overwrite, failure_key=None):
+def generate_embeddings(
+    self,
+    ids: list[int],
+    resource_type: str,
+    overwrite: bool,  # noqa: FBT001
+    failure_key: str | None = None,
+) -> None:
     """
     Generate learning resource embeddings and index in Qdrant.
 
@@ -204,7 +212,7 @@ def remove_embeddings(ids, resource_type):
 
 
 @app.task
-def finalize_embeddings(failure_key):
+def finalize_embeddings(failure_key: str) -> None:
     """Chain tail: fail the parent task if any chunk recorded a failure."""
     cache = caches["redis"]
     key = f"embed_errors:{failure_key}"
