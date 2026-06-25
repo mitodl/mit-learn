@@ -17,6 +17,7 @@ const makeRun = factories.courses.courseRun
 const makeCourse = factories.courses.course
 const makeProduct = factories.courses.product
 const makeFlexiblePrice = factories.products.flexiblePrice
+const makeDiscount = factories.products.discount
 const makeEnrollmentMode = factories.courses.enrollmentMode
 const { RequirementTreeBuilder } = factories.requirements
 
@@ -1238,7 +1239,7 @@ describe("ProgramSummary", () => {
     })
 
     test("Shows paid price with no cert box when all enrollment modes are paid", () => {
-      const product = factories.courses.product({ price: "1499.00" })
+      const product = factories.courses.product()
       const program = factories.programs.program({
         enrollment_modes: [paidMode()],
         products: [product],
@@ -1331,19 +1332,13 @@ describe("ProgramSummary", () => {
       const flexiblePrice = makeFlexiblePrice({
         id: product.id,
         price: originalPrice,
-        product_flexible_price: {
-          id: faker.number.int(),
+        // Only the discount amount + type drive the asserted $125 (= $200 − $75)
+        // and the "applied" label (gated on the discount's id); the factory fills
+        // the rest.
+        product_flexible_price: makeDiscount({
           amount: discountedAmount,
-          discount_type: "dollars-off" as const,
-          discount_code: faker.string.alphanumeric(8),
-          redemption_type: "one-time" as const,
-          is_redeemed: false,
-          automatic: true,
-          max_redemptions: 1,
-          payment_type: null,
-          activation_date: faker.date.past().toISOString(),
-          expiration_date: faker.date.future().toISOString(),
-        },
+          discount_type: "dollars-off",
+        }),
       })
 
       setMockResponse.get(

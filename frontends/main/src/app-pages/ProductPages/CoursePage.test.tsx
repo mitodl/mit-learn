@@ -278,7 +278,7 @@ describe("CoursePage", () => {
     const programDetail = mitxFactories.programs.program({
       id: baseProgram.id,
       readable_id: baseProgram.readable_id,
-      products: [mitxFactories.courses.product({ price: "500" })],
+      products: [mitxFactories.courses.product()],
     })
     const course = makeCourse({ programs: [baseProgram] })
     const page = makePage({ course_details: course })
