@@ -125,7 +125,7 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
         }
         if (onHalfProgress) {
           let halfFired = false
-          this.on("timeupdate", function (this: videojs.Player) {
+          this.on("timeupdate", function (this: Player) {
             const duration = this.duration()
             const currentTime = this.currentTime()
             if (
