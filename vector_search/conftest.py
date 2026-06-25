@@ -55,3 +55,13 @@ def _use_test_qdrant_settings(settings, mocker):
         "vector_search.utils.qdrant_client",
         return_value=mock_qdrant,
     )
+
+
+@pytest.fixture(autouse=True)
+def _reset_qdrant_collections_guard():
+    """Module-global embed guard must not leak across tests."""
+    import vector_search.utils as vs_utils
+
+    vs_utils._collections_ensured = False  # noqa: SLF001
+    yield
+    vs_utils._collections_ensured = False  # noqa: SLF001
