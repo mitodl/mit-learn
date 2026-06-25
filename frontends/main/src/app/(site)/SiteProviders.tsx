@@ -15,10 +15,22 @@ const RETURN_VISIT_KEY = "gtm_has_visited"
 
 function AnalyticsTracker() {
   useEffect(() => {
-    if (sessionStorage.getItem(SESSION_KEY)) return
-    sessionStorage.setItem(SESSION_KEY, "1")
-    const isReturnVisit = !!localStorage.getItem(RETURN_VISIT_KEY)
-    localStorage.setItem(RETURN_VISIT_KEY, "1")
+    let alreadyTracked = false
+    let isReturnVisit = false
+
+    try {
+      alreadyTracked = Boolean(sessionStorage.getItem(SESSION_KEY))
+      if (!alreadyTracked) {
+        sessionStorage.setItem(SESSION_KEY, "1")
+        isReturnVisit = Boolean(localStorage.getItem(RETURN_VISIT_KEY))
+        localStorage.setItem(RETURN_VISIT_KEY, "1")
+      }
+    } catch {
+      // Storage may be unavailable; fall back to tracking without persistence.
+    }
+
+    if (alreadyTracked) return
+
     const utmParams = parseUtmParams(window.location.search)
     trackLandingPageArrival(utmParams)
     trackAdArrival(utmParams)
