@@ -35,6 +35,7 @@ const makeRun = mitxFactories.courses.courseRun
 const makeMode = mitxFactories.courses.enrollmentMode
 const makeProduct = mitxFactories.courses.product
 const makeFlexiblePrice = mitxFactories.products.flexiblePrice
+const makeDiscount = mitxFactories.products.discount
 const makeUser = factories.user.user
 
 function setupAuth() {
@@ -390,29 +391,20 @@ describe("CourseEnrollArea — financial assistance link", () => {
   test.each([
     {
       name: "available, when aid not yet applied",
-      productFlexiblePrice: null,
+      flexiblePrice: () => makeFlexiblePrice({ product_flexible_price: null }),
       linkText: "Financial assistance available",
     },
     {
       name: "approved (applied at checkout), when aid is approved",
-      productFlexiblePrice: {
-        id: 1,
-        amount: "25.00",
-        discount_type: "dollars-off" as const,
-        discount_code: "AID",
-        redemption_type: "one-time" as const,
-        is_redeemed: false,
-        automatic: true,
-        max_redemptions: 1,
-        payment_type: null,
-        activation_date: null,
-        expiration_date: null,
-      },
+      // The factory already defaults product_flexible_price to a discount with a
+      // real id, which is the only field the "approved" state keys off
+      // (useCertificatePrice: !!product_flexible_price?.id).
+      flexiblePrice: () => makeFlexiblePrice(),
       linkText: "Financial assistance approved (applied at checkout)",
     },
   ])(
     "paidOnly course with financial_assistance_form_url shows link — $name",
-    async ({ productFlexiblePrice, linkText }) => {
+    async ({ flexiblePrice, linkText }) => {
       setupAuth()
       const product = makeProduct()
       const run = makeRun({
@@ -430,10 +422,7 @@ describe("CourseEnrollArea — financial assistance link", () => {
 
       setMockResponse.get(
         mitxUrls.products.userFlexiblePriceDetail(product.id),
-        makeFlexiblePrice({
-          id: product.id,
-          product_flexible_price: productFlexiblePrice,
-        }),
+        flexiblePrice(),
       )
 
       renderWithProviders(
@@ -458,22 +447,14 @@ describe("CourseEnrollArea — financial assistance link", () => {
     // price's would-be discount ($100 - $25 = $75) is never rendered.
     setupAuth()
     const product = makeProduct({ price: "100" })
+    // A real $25-off discount: if the course path (wrongly) applied it, the
+    // display would read $75 instead of the full $100. Only the amount and type
+    // are under test; the factory fills the rest.
     const flexiblePrice = makeFlexiblePrice({
-      id: product.id,
-      price: product.price,
-      product_flexible_price: {
-        id: 1,
+      product_flexible_price: makeDiscount({
+        discount_type: "dollars-off",
         amount: "25.00",
-        discount_type: "dollars-off" as const,
-        discount_code: "AID",
-        redemption_type: "one-time" as const,
-        is_redeemed: false,
-        automatic: true,
-        max_redemptions: 1,
-        payment_type: null,
-        activation_date: null,
-        expiration_date: null,
-      },
+      }),
     })
     const run = makeRun({
       is_enrollable: true,
