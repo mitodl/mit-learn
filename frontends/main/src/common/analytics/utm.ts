@@ -19,7 +19,12 @@ const UTM_PARAM_KEYS: ReadonlyArray<keyof UtmParams> = [
 ]
 
 const GOOGLE_AD_MEDIUMS = new Set(["cpc", "ppc", "paidsearch", "paid"])
-const LINKEDIN_AD_MEDIUMS = new Set(["cpc", "paid", "paid-social", "paidsocial"])
+const LINKEDIN_AD_MEDIUMS = new Set([
+  "cpc",
+  "paid",
+  "paid-social",
+  "paidsocial",
+])
 const ORGANIC_SOCIAL_MEDIUMS = new Set([
   "social",
   "social-organic",

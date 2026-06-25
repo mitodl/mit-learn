@@ -59,9 +59,9 @@ describe("isGoogleAdTraffic", () => {
   )
 
   it("is case-insensitive for utm_source and utm_medium", () => {
-    expect(
-      isGoogleAdTraffic({ utm_source: "Google", utm_medium: "CPC" }),
-    ).toBe(true)
+    expect(isGoogleAdTraffic({ utm_source: "Google", utm_medium: "CPC" })).toBe(
+      true,
+    )
   })
 
   it("returns false for utm_source=google with organic medium", () => {
