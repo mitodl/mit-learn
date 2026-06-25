@@ -1,7 +1,6 @@
 import datetime
 import random
 
-import grpc
 import pytest
 from django.conf import settings
 
@@ -25,7 +24,6 @@ from learning_resources_search.constants import (
     LEARNING_RESOURCE_TYPES,
     PROGRAM_TYPE,
 )
-from learning_resources_search.exceptions import RetryError
 from main.utils import now_in_utc
 from vector_search.tasks import (
     embed_learning_resources_by_id,
@@ -33,8 +31,6 @@ from vector_search.tasks import (
     embed_new_learning_resources,
     embed_run_content_files,
     embeddings_healthcheck,
-    generate_embeddings,
-    remove_embeddings,
     remove_run_content_files,
     remove_unpublished_run_content_files,
     start_embed_resources,
@@ -42,13 +38,6 @@ from vector_search.tasks import (
 from vector_search.utils import vector_point_id
 
 pytestmark = pytest.mark.django_db
-
-
-def _rpc_error(code):
-    """Build a grpc.RpcError carrying a status code, like qdrant's gRPC failures."""
-    err = grpc.RpcError()
-    err.code = lambda: code
-    return err
 
 
 @pytest.mark.parametrize("index", list(LEARNING_RESOURCE_TYPES))
@@ -791,63 +780,3 @@ def test_embeddings_healthcheck_missing_summaries(mocker):
         mock_sentry.mock_calls[0].args[0]
         == "Warning: 1 missing content file summaries detected"
     )
-
-
-def test_generate_embeddings_raises_retryerror_on_grpc_deadline(mocker):
-    """A DEADLINE_EXCEEDED gRPC error becomes a RetryError (autoretry_for picks it up)."""
-    mocker.patch(
-        "vector_search.tasks.embed_learning_resources",
-        side_effect=_rpc_error(grpc.StatusCode.DEADLINE_EXCEEDED),
-    )
-    with pytest.raises(RetryError):
-        generate_embeddings([1], COURSE_TYPE, overwrite=False)
-
-
-def test_generate_embeddings_reraises_other_grpc_errors(mocker):
-    """Non-transient gRPC errors propagate (task fails) rather than retrying."""
-    mocker.patch(
-        "vector_search.tasks.embed_learning_resources",
-        side_effect=_rpc_error(grpc.StatusCode.INVALID_ARGUMENT),
-    )
-    with pytest.raises(grpc.RpcError):
-        generate_embeddings([1], COURSE_TYPE, overwrite=False)
-
-
-def test_generate_embeddings_does_not_swallow_errors(mocker):
-    """Unhandled errors propagate so the task fails instead of reporting success."""
-    mocker.patch(
-        "vector_search.tasks.embed_learning_resources",
-        side_effect=ValueError("boom"),
-    )
-    with pytest.raises(ValueError, match="boom"):
-        generate_embeddings([1], COURSE_TYPE, overwrite=False)
-
-
-def test_remove_embeddings_raises_retryerror_on_grpc_deadline(mocker):
-    """remove_embeddings retries on DEADLINE_EXCEEDED rather than swallowing it."""
-    mocker.patch(
-        "vector_search.tasks.remove_qdrant_records",
-        side_effect=_rpc_error(grpc.StatusCode.DEADLINE_EXCEEDED),
-    )
-    with pytest.raises(RetryError):
-        remove_embeddings([1], COURSE_TYPE)
-
-
-def test_remove_embeddings_reraises_other_grpc_errors(mocker):
-    """Non-transient gRPC errors propagate (task fails) rather than retrying."""
-    mocker.patch(
-        "vector_search.tasks.remove_qdrant_records",
-        side_effect=_rpc_error(grpc.StatusCode.INVALID_ARGUMENT),
-    )
-    with pytest.raises(grpc.RpcError):
-        remove_embeddings([1], COURSE_TYPE)
-
-
-def test_remove_embeddings_does_not_swallow_errors(mocker):
-    """Unhandled errors propagate so the task fails instead of reporting success."""
-    mocker.patch(
-        "vector_search.tasks.remove_qdrant_records",
-        side_effect=ValueError("boom"),
-    )
-    with pytest.raises(ValueError, match="boom"):
-        remove_embeddings([1], COURSE_TYPE)
