@@ -2069,23 +2069,14 @@ def test_best_run_ids_for_resources_no_published_run():
     assert best_run_ids_for_resources([course.readable_id]) == []
 
 
-@pytest.fixture
-def reset_collections_guard():
-    vs_utils._collections_ensured = False  # noqa: SLF001
-    yield
-    vs_utils._collections_ensured = False  # noqa: SLF001
-
-
-def test_ensure_qdrant_collections_runs_once(mocker, reset_collections_guard):
+def test_ensure_qdrant_collections_runs_once(mocker):
     create = mocker.patch("vector_search.utils.create_qdrant_collections")
     vs_utils.ensure_qdrant_collections()
     vs_utils.ensure_qdrant_collections()
     create.assert_called_once_with(force_recreate=False)
 
 
-def test_embed_learning_resources_uses_collection_guard(
-    mocker, reset_collections_guard
-):
+def test_embed_learning_resources_uses_collection_guard(mocker):
     """embed_learning_resources delegates collection-ensuring to the guard
     (not a direct create_qdrant_collections call).
     """

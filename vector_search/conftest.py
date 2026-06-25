@@ -59,9 +59,9 @@ def _use_test_qdrant_settings(settings, mocker):
 
 @pytest.fixture(autouse=True)
 def _reset_qdrant_collections_guard():
-    """Module-global embed guard must not leak across tests."""
-    import vector_search.utils as vs_utils
+    """Per-process embed guard must not leak across tests."""
+    from vector_search.utils import ensure_qdrant_collections
 
-    vs_utils._collections_ensured = False  # noqa: SLF001
+    ensure_qdrant_collections.cache_clear()
     yield
-    vs_utils._collections_ensured = False  # noqa: SLF001
+    ensure_qdrant_collections.cache_clear()

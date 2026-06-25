@@ -203,8 +203,8 @@ def remove_embeddings(ids, resource_type):
         raise
 
 
-@app.task(bind=True)
-def finalize_embeddings(self, failure_key):  # noqa: ARG001
+@app.task
+def finalize_embeddings(failure_key):
     """Chain tail: fail the parent task if any chunk recorded a failure."""
     cache = caches["redis"]
     key = f"embed_errors:{failure_key}"

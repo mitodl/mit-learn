@@ -184,16 +184,10 @@ def tune_collection(client, collection_name):
     )
 
 
-_collections_ensured = False
-
-
+@cache
 def ensure_qdrant_collections():
     """Ensure Qdrant collections exist, at most once per worker process."""
-    global _collections_ensured  # noqa: PLW0603
-    if _collections_ensured:
-        return
     create_qdrant_collections(force_recreate=False)
-    _collections_ensured = True
 
 
 def create_qdrant_collections(force_recreate):
