@@ -46,4 +46,4 @@ USER mitodl
 
 EXPOSE 8061
 ENV PORT=8061
-CMD ["sh", "-c", "exec granian --interface asginl --reload --host 0.0.0.0 --port 8061 --workers ${GRANIAN_WORKERS:-3} --blocking-threads 1 main.asgi:application"]
+CMD ["sh", "-c", "exec granian --interface asginl --reload --host 0.0.0.0 --port ${PORT:-8061} --workers ${GRANIAN_WORKERS:-3} --blocking-threads 1 main.asgi:application"]
