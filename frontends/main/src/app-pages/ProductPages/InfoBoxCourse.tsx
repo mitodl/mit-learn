@@ -124,6 +124,8 @@ const CourseInfoBox: React.FC<CourseInfoBoxProps> = ({
               course={course}
               selectedRun={selectedRun}
               sessionSelect={sessionSelect}
+              // 2-box layout puts metadata in a half-width cell — keep it linear.
+              tabletColumns={boxCount === 2 ? 1 : 2}
             />
           </div>
           {offeringBoxes > 0 ? <SectionDivider /> : null}

@@ -113,7 +113,14 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
   }
 
   if (state.status === "enrolled") {
-    return <EnrolledLink variant="primary" href={state.href} />
+    // Wrap in OfferingCell so the link sits at the top of its grid cell at its
+    // natural height. As a bare grid child it would otherwise stretch to match
+    // the (taller) metadata column in the tablet side-by-side layout.
+    return (
+      <OfferingCell data-card="enrolled">
+        <EnrolledLink variant="primary" href={state.href} />
+      </OfferingCell>
+    )
   }
 
   // state.status === "options"

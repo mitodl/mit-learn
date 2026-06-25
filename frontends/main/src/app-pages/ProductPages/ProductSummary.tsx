@@ -607,34 +607,47 @@ const ArchivedAlert: React.FC = () => {
 /**
  * Flex column by default; on tablet switches to CSS multi-column so
  * metadata rows flow top-to-bottom then wrap to the next column.
+ *
+ * `$tabletColumns` gates that 2-column tablet layout. It only reads well when
+ * the block spans the full InfoBox width; when the metadata shares a tablet row
+ * with an offering box (the 2-box course case) it occupies a half-width cell, so
+ * a further 2-column split would cram the rows — pass 1 there to keep it linear.
  */
-const SummaryRows = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  gap: "24px",
-  [theme.breakpoints.up("md")]: {
-    gap: "32px",
-  },
-  [theme.breakpoints.between("sm", "md")]: {
-    display: "block",
-    columnCount: 2,
-    columnGap: "48px",
-    columnRule: `1px solid ${theme.custom.colors.lightGray2}`,
-    "> *": {
-      breakInside: "avoid",
-      marginBottom: "24px",
-      "&:last-child": {
-        marginBottom: 0,
-      },
+const SummaryRows = styled.div<{ $tabletColumns?: 1 | 2 }>(
+  ({ theme, $tabletColumns = 2 }) => ({
+    display: "flex",
+    flexDirection: "column",
+    gap: "24px",
+    [theme.breakpoints.up("md")]: {
+      gap: "32px",
     },
-  },
-}))
+    ...($tabletColumns === 2
+      ? {
+          [theme.breakpoints.between("sm", "md")]: {
+            display: "block",
+            columnCount: 2,
+            columnGap: "48px",
+            columnRule: `1px solid ${theme.custom.colors.lightGray2}`,
+            "> *": {
+              breakInside: "avoid",
+              marginBottom: "24px",
+              "&:last-child": {
+                marginBottom: 0,
+              },
+            },
+          },
+        }
+      : {}),
+  }),
+)
 
 const CourseSummary: React.FC<{
   course: CourseWithCourseRunsSerializerV2
   selectedRun: CourseRunV2 | undefined
   sessionSelect?: React.ReactNode
-}> = ({ course, selectedRun, sessionSelect }) => {
+  /** Tablet metadata column count — 1 when the block is half-width (see SummaryRows). */
+  tabletColumns?: 1 | 2
+}> = ({ course, selectedRun, sessionSelect, tabletColumns }) => {
   const scenario = getCourseScenario(selectedRun)
   // Archived courses have no live schedule, so the date row leads with "content
   // available anytime" + end date instead of dates. A deadline-passed run is
@@ -660,7 +673,7 @@ const CourseSummary: React.FC<{
   ) : null
 
   return (
-    <SummaryRows>
+    <SummaryRows $tabletColumns={tabletColumns}>
       {selectedRun ? (
         <CoursePaceRow
           course={course}
