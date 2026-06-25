@@ -10822,6 +10822,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
      * @param {boolean} [published] If the resource is published. We default to True unless passed in
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
+     * @param {Array<string>} [resource_category] The resource category for the resource
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {number} [score_cutoff] The minimum score a result must have to be returned. Defaults to 0.0 when omitted, but the server clamps the effective cutoff to the minimum allowed for the selected search mode (dense or hybrid).
@@ -10851,6 +10852,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
       published?: boolean,
       q?: string,
       readable_id?: string,
+      resource_category?: Array<string>,
       resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>,
       resource_type_group?: Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>,
       score_cutoff?: number,
@@ -10948,6 +10950,10 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
         localVarQueryParameter["readable_id"] = readable_id
       }
 
+      if (resource_category) {
+        localVarQueryParameter["resource_category"] = resource_category
+      }
+
       if (resource_type) {
         localVarQueryParameter["resource_type"] = resource_type
       }
@@ -11024,6 +11030,7 @@ export const VectorLearningResourcesSearchApiFp = function (
      * @param {boolean} [published] If the resource is published. We default to True unless passed in
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
+     * @param {Array<string>} [resource_category] The resource category for the resource
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {number} [score_cutoff] The minimum score a result must have to be returned. Defaults to 0.0 when omitted, but the server clamps the effective cutoff to the minimum allowed for the selected search mode (dense or hybrid).
@@ -11053,6 +11060,7 @@ export const VectorLearningResourcesSearchApiFp = function (
       published?: boolean,
       q?: string,
       readable_id?: string,
+      resource_category?: Array<string>,
       resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>,
       resource_type_group?: Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>,
       score_cutoff?: number,
@@ -11087,6 +11095,7 @@ export const VectorLearningResourcesSearchApiFp = function (
           published,
           q,
           readable_id,
+          resource_category,
           resource_type,
           resource_type_group,
           score_cutoff,
@@ -11154,6 +11163,7 @@ export const VectorLearningResourcesSearchApiFactory = function (
           requestParameters.published,
           requestParameters.q,
           requestParameters.readable_id,
+          requestParameters.resource_category,
           requestParameters.resource_type,
           requestParameters.resource_type_group,
           requestParameters.score_cutoff,
@@ -11301,6 +11311,13 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
   readonly readable_id?: string
 
   /**
+   * The resource category for the resource
+   * @type {Array<string>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly resource_category?: Array<string>
+
+  /**
    * The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
    * @type {Array<'course' | 'program' | 'learning_path' | 'podcast' | 'podcast_episode' | 'video' | 'video_playlist' | 'document'>}
    * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
@@ -11389,6 +11406,7 @@ export class VectorLearningResourcesSearchApi extends BaseAPI {
         requestParameters.published,
         requestParameters.q,
         requestParameters.readable_id,
+        requestParameters.resource_category,
         requestParameters.resource_type,
         requestParameters.resource_type_group,
         requestParameters.score_cutoff,
