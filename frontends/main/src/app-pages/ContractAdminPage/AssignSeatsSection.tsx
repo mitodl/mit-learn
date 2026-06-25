@@ -67,24 +67,26 @@ const DisabledLink = styled.span(({ theme }) => ({
   opacity: 0.5,
 }))
 
-const ValidationBadge = styled.div(({ theme }) => ({
-  display: "inline-flex",
-  gap: "24px",
-  backgroundColor: theme.custom.colors.lightGray1,
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "4px",
-  padding: "8px 16px",
-  ...theme.typography.subtitle3,
-  fontWeight: theme.typography.fontWeightMedium as number,
-}))
-
-const ValidCount = styled.span(({ theme }) => ({
-  color: theme.custom.colors.darkGreen,
-}))
-
-const InvalidCount = styled.span(({ theme }) => ({
-  color: theme.custom.colors.darkRed,
-}))
+const CountBadge = styled.div<{ $variant: "valid" | "warning" | "default" }>(
+  ({ theme, $variant }) => ({
+    display: "inline-flex",
+    backgroundColor:
+      $variant === "warning"
+        ? theme.custom.colors.white
+        : theme.custom.colors.lightGray1,
+    border: `1px solid ${$variant === "warning" ? theme.custom.colors.darkRed : theme.custom.colors.lightGray2}`,
+    borderRadius: "4px",
+    padding: "8px 16px",
+    ...theme.typography.subtitle3,
+    fontWeight: theme.typography.fontWeightMedium as number,
+    color:
+      $variant === "valid"
+        ? theme.custom.colors.darkGreen
+        : $variant === "warning"
+          ? theme.custom.colors.darkRed
+          : theme.custom.colors.darkGray2,
+  }),
+)
 
 /**
  * Wrapper for the textarea + highlight overlay. We use a custom textarea here
@@ -145,7 +147,7 @@ const EmailTextarea = styled("textarea")<{ $transparent: boolean }>(
     background: "transparent",
     border: "none",
     outline: "none",
-    resize: "none",
+    resize: "vertical",
     fontFamily: "inherit",
     fontSize: TA_FONT_SIZE,
     lineHeight: TA_LINE_HEIGHT,
@@ -195,7 +197,7 @@ const ResultErrorList = styled.ul(({ theme }) => ({
 type ModalData = {
   validEmails: string[]
   invalidEmails: string[]
-  duplicateCount: number
+  duplicateEmails: string[]
   skippedCount: number
 }
 
@@ -227,6 +229,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
   const [modalData, setModalData] = useState<ModalData | null>(null)
   const [result, setResult] = useState<AssignResult | null>(null)
   const [debouncedAnnouncement, setDebouncedAnnouncement] = useState("")
+  const [errorAnnouncement, setErrorAnnouncement] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const bulkAssign = useBulkAssignSeats()
@@ -237,6 +240,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
   )
   const validCount = submitResult.valid.length
   const invalidCount = submitResult.invalid.length
+  const duplicateCount = submitResult.duplicateEmails.length
   const hasEmails = emailInput.trim().length > 0
   const canSubmit = validCount > 0
 
@@ -248,9 +252,36 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
   )
   const showOverlay = hasEmails
 
-  const announcement = hasEmails
-    ? `${validCount} valid ${pluralize("email", validCount)}${invalidCount > 0 ? `, ${invalidCount} invalid` : ""}`
-    : ""
+  const overCapacity = validCount > availableSeats
+  const ignoreWarning =
+    !overCapacity && (invalidCount > 0 || duplicateCount > 0)
+      ? `. ${[
+          duplicateCount > 0
+            ? `${duplicateCount} duplicate ${pluralize("email address", duplicateCount, "email addresses")}`
+            : "",
+          invalidCount > 0
+            ? `${invalidCount} invalid ${pluralize("email address", invalidCount, "email addresses")}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" and ")} will be ignored`
+      : ""
+  let announcement = ""
+  if (hasEmails) {
+    const parts = [`${validCount} valid ${pluralize("email", validCount)}`]
+    if (invalidCount > 0) parts.push(`${invalidCount} invalid`)
+    if (duplicateCount > 0)
+      parts.push(`${duplicateCount} ${pluralize("duplicate", duplicateCount)}`)
+    announcement = parts.join(", ") + ignoreWarning
+    if (overCapacity) {
+      const excess = validCount - availableSeats
+      const seatsClause =
+        availableSeats > 1
+          ? `${availableSeats} unassigned ${pluralize("seat", availableSeats)} are available.`
+          : `${availableSeats} unassigned seat is available.`
+      announcement += `. Error: You entered ${validCount} ${pluralize("email", validCount)}, but only ${seatsClause} Remove ${excess} more email ${pluralize("address", excess, "addresses")} to continue.`
+    }
+  }
 
   // Debounce the live-region text so screen readers aren't spammed on every keystroke.
   useEffect(() => {
@@ -284,6 +315,47 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
     }
   }, [result])
 
+  // Derive the assertive announcement from all error sources in one place so
+  // the two concerns can't clear each other. Two separate effects sharing one
+  // setState caused the second effect to wipe the first when resultContent
+  // went null (e.g. user closes the success Alert).
+  const errorAnnouncementText = useMemo(() => {
+    if (csvReadError) return "Error: Could not read the file. Please try again."
+    if (csvNoValid) return "Error: No valid email addresses found in this file."
+    if (resultContent) {
+      const prefix =
+        resultContent.severity === "error" ||
+        resultContent.severity === "warning"
+          ? `${resultContent.severity}: `
+          : ""
+      const errorDetails = resultContent.errors
+        ?.map((e) => `${e.email} — ${e.detail}`)
+        .join(", ")
+      return (
+        prefix +
+        resultContent.message +
+        (errorDetails ? ` ${errorDetails}` : "")
+      )
+    }
+    return ""
+  }, [csvReadError, csvNoValid, resultContent])
+
+  // Reset-then-set with a short delay so the assertive live region fires after
+  // smoot-design Alert's role="alert" has been processed by NVDA. Without the
+  // delay, both fire in the same frame and NVDA drops the live-region update.
+  useEffect(() => {
+    if (!errorAnnouncementText) {
+      setErrorAnnouncement("")
+      return
+    }
+    setErrorAnnouncement("")
+    const id = setTimeout(
+      () => setErrorAnnouncement(errorAnnouncementText),
+      100,
+    )
+    return () => clearTimeout(id)
+  }, [errorAnnouncementText])
+
   const handleCsvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -297,17 +369,17 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
       const { data } = Papa.parse<string[]>(text, {
         skipEmptyLines: true,
       })
-      const { valid, invalid, duplicateCount, skippedCount } =
+      const { valid, invalid, duplicateEmails, skippedCount } =
         extractEmailsFromCsvRows(data)
+      setEmailInput("")
       if (valid.length === 0) {
         setCsvNoValid(true)
         return
       }
-      setEmailInput("")
       setModalData({
         validEmails: valid,
         invalidEmails: invalid,
-        duplicateCount,
+        duplicateEmails,
         skippedCount,
       })
     }
@@ -319,7 +391,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
     setModalData({
       validEmails: submitResult.valid,
       invalidEmails: submitResult.invalid,
-      duplicateCount: submitResult.duplicateCount,
+      duplicateEmails: submitResult.duplicateEmails,
       skippedCount: submitResult.skippedCount,
     })
   }
@@ -337,10 +409,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
         AssignRevokeCodeRequestRequest: emails.map((email) => ({ email })),
       })
       setResult({ assignedCount: data.assigned.length, errors: data.errors })
-      // Clear the input only on a fully successful assignment.
-      if (data.errors.length === 0) {
-        setEmailInput("")
-      }
+      setEmailInput("")
     } catch {
       setResult({ assignedCount: 0, errors: null })
     }
@@ -359,6 +428,11 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
       {/* Always-mounted live region — debounced so screen readers aren't spammed on every keystroke */}
       <VisuallyHidden aria-live="polite" aria-atomic="true">
         {debouncedAnnouncement}
+      </VisuallyHidden>
+      {/* Assertive region for errors — workaround for smoot-design Alert announcing
+          only its aria-describedby ("error message") instead of the children text */}
+      <VisuallyHidden aria-live="assertive" aria-atomic="true">
+        {errorAnnouncement}
       </VisuallyHidden>
       <Stack
         direction={{ xs: "column", sm: "row" }}
@@ -415,24 +489,32 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
             />
           </EmailInputRoot>
           {hasEmails && (
-            <ValidationBadge id="assign-seats-validation" aria-hidden="true">
-              <ValidCount>{validCount} valid</ValidCount>
+            <Stack
+              direction="row"
+              alignItems="center"
+              flexWrap="wrap"
+              gap="8px"
+            >
+              <CountBadge $variant="valid" aria-hidden="true">
+                {validCount} valid
+              </CountBadge>
               {invalidCount > 0 && (
-                <InvalidCount>{invalidCount} invalid</InvalidCount>
+                <CountBadge $variant="warning" aria-hidden="true">
+                  {invalidCount} invalid
+                </CountBadge>
               )}
-            </ValidationBadge>
-          )}
-          {validCount > availableSeats && (
-            <InvalidCount>
-              Only {availableSeats} unassigned{" "}
-              {pluralize("seat", availableSeats)} available.
-            </InvalidCount>
+              {duplicateCount > 0 && (
+                <CountBadge $variant="warning" aria-hidden="true">
+                  {duplicateCount} {pluralize("duplicate", duplicateCount)}
+                </CountBadge>
+              )}
+            </Stack>
           )}
         </Stack>
         <ButtonWrapper>
           <Button
             variant="primary"
-            disabled={!canSubmit || validCount > availableSeats}
+            disabled={!canSubmit || overCapacity}
             onClick={handleAssignSeats}
           >
             Assign Seats
@@ -470,6 +552,31 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
           </DisabledLink>
         </Tooltip>
       </Stack>
+      {!overCapacity && (invalidCount > 0 || duplicateCount > 0) && (
+        <Alert severity="warning">
+          {[
+            duplicateCount > 0
+              ? `${duplicateCount} duplicate ${pluralize("email address", duplicateCount, "email addresses")}`
+              : "",
+            invalidCount > 0
+              ? `${invalidCount} invalid ${pluralize("email address", invalidCount, "email addresses")}`
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" and ")}{" "}
+          will be ignored
+        </Alert>
+      )}
+      {overCapacity && (
+        <Alert severity="error">
+          {availableSeats > 1
+            ? `You entered ${validCount} ${pluralize("email", validCount)}, but only ${availableSeats} unassigned ${pluralize("seat", availableSeats)} are available.`
+            : `You entered ${validCount} ${pluralize("email", validCount)}, but only ${availableSeats} unassigned seat is available.`}{" "}
+          Remove {validCount - availableSeats} more email{" "}
+          {pluralize("address", validCount - availableSeats, "addresses")} to
+          continue.
+        </Alert>
+      )}
       {csvReadError && (
         <Alert severity="error" closable onClose={() => setCsvReadError(false)}>
           Could not read the file. Please try again.
@@ -506,7 +613,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
           validCount={modalData.validEmails.length}
           availableSeats={availableSeats}
           invalidEmails={modalData.invalidEmails}
-          duplicateCount={modalData.duplicateCount}
+          duplicateEmails={modalData.duplicateEmails}
           skippedCount={modalData.skippedCount}
         />
       )}

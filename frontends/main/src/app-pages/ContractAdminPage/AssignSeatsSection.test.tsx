@@ -237,7 +237,9 @@ describe("AssignSeatsSection", () => {
     await user.click(screen.getByRole("button", { name: "Assign Seats" }))
 
     expect(
-      await screen.findByRole("heading", { name: /email.*ready to assign/i }),
+      await screen.findByRole("heading", {
+        name: /ready to send invitations/i,
+      }),
     ).toBeInTheDocument()
   })
 
@@ -277,13 +279,13 @@ describe("AssignSeatsSection", () => {
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "alice@example.com")
     await user.click(screen.getByRole("button", { name: "Assign Seats" }))
-    await screen.findByRole("heading", { name: /email.*ready to assign/i })
+    await screen.findByRole("heading", { name: /ready to send invitations/i })
 
     await user.click(screen.getByRole("button", { name: /cancel/i }))
 
     await waitFor(() =>
       expect(
-        screen.queryByRole("heading", { name: /email.*ready to assign/i }),
+        screen.queryByRole("heading", { name: /ready to send invitations/i }),
       ).not.toBeInTheDocument(),
     )
   })
@@ -305,7 +307,9 @@ describe("AssignSeatsSection", () => {
     await user.upload(fileInput, file)
 
     expect(
-      await screen.findByRole("heading", { name: /2 emails ready to assign/i }),
+      await screen.findByRole("heading", {
+        name: /ready to send invitations/i,
+      }),
     ).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/enter employee emails/i)).toHaveValue(
       "",
@@ -391,6 +395,29 @@ describe("AssignSeatsSection", () => {
     ).not.toBeInTheDocument()
   })
 
+  test("assertive live region announces CSV error text for screen readers", async () => {
+    renderWithProviders(
+      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+    )
+
+    const csvContent = "Email\nNot An Email\nbad@"
+    mockFileContent = csvContent
+    const file = new File([csvContent], "emails.csv", { type: "text/csv" })
+
+    const fileInput = document.querySelector(
+      "input[type='file']",
+    ) as HTMLInputElement
+    await user.upload(fileInput, file)
+
+    await screen.findByRole("alert")
+    await waitFor(() => {
+      const assertiveRegion = document.querySelector("[aria-live='assertive']")
+      expect(assertiveRegion).toHaveTextContent(
+        /no valid email addresses found in this file/i,
+      )
+    })
+  })
+
   test("accepts newline-separated emails", async () => {
     renderWithProviders(
       <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
@@ -414,7 +441,9 @@ describe("AssignSeatsSection", () => {
       await user.click(textarea)
       await user.paste(emails)
       await user.click(screen.getByRole("button", { name: "Assign Seats" }))
-      await user.click(screen.getByRole("button", { name: /send 2 emails/i }))
+      await user.click(
+        screen.getByRole("button", { name: /send 2 invitations/i }),
+      )
     }
 
     test("assigns seats and shows a success alert, clearing the input", async () => {

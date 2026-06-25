@@ -7,7 +7,7 @@ import type { DialogProps as MuiDialogProps } from "@mui/material/Dialog"
 import { Button, ActionButton } from "@mitodl/smoot-design"
 import MuiDialogActions from "@mui/material/DialogActions"
 import { RiCloseLine } from "@remixicon/react"
-import Typography from "@mui/material/Typography"
+import MuiTypography from "@mui/material/Typography"
 
 const Close = styled.div`
   position: absolute;
@@ -38,13 +38,19 @@ const DialogActions = styled(MuiDialogActions)`
   }
 `
 
+const HeaderTitle = styled(MuiTypography)`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+` as typeof MuiTypography
+
 type DialogProps = {
   className?: string
   contentCss?: CSSObject
   open: boolean
   onClose: () => void
   onConfirm?: () => void | Promise<void>
-  title?: string
+  title?: React.ReactNode
   message?: string
   children?: React.ReactNode
   /**
@@ -71,6 +77,7 @@ type DialogProps = {
   scroll?: MuiDialogProps["scroll"]
   TransitionProps?: NonNullable<MuiDialogProps["slotProps"]>["transition"]
   "aria-describedby"?: string
+  role?: MuiDialogProps["role"]
 }
 
 /**
@@ -101,6 +108,7 @@ const Dialog: React.FC<DialogProps> = ({
   scroll,
   TransitionProps,
   "aria-describedby": ariaDescribedBy,
+  role,
 }) => {
   const [confirming, setConfirming] = useState(isSubmitting)
   const titleId = useId()
@@ -130,6 +138,7 @@ const Dialog: React.FC<DialogProps> = ({
       }}
       aria-labelledby={titleId}
       aria-describedby={ariaDescribedBy}
+      role={role}
       transitionDuration={process.env.NODE_ENV === "test" ? 0 : undefined}
       maxWidth={maxWidth}
       scroll={scroll}
@@ -141,13 +150,13 @@ const Dialog: React.FC<DialogProps> = ({
       </Close>
       {title && (
         <Header>
-          <Typography id={titleId} component="h1" variant="h5">
+          <HeaderTitle id={titleId} component="h1" variant="h5">
             {title}
-          </Typography>
+          </HeaderTitle>
         </Header>
       )}
       <Content css={contentCss}>
-        {message && <Typography variant="body1">{message}</Typography>}
+        {message && <MuiTypography variant="body1">{message}</MuiTypography>}
         {children}
       </Content>
       {actions !== undefined ? (
