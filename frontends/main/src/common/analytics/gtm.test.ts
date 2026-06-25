@@ -304,4 +304,3 @@ describe("trackViewProgramDetails", () => {
     expect(window.dataLayer).toContainEqual({ event: "view-program-details" })
   })
 })
-
