@@ -3,6 +3,7 @@ import random
 
 import grpc
 import pytest
+from celery.exceptions import Retry
 from django.conf import settings
 from django.core.cache.backends.locmem import LocMemCache
 
@@ -805,14 +806,48 @@ def test_embeddings_healthcheck_missing_summaries(mocker):
     )
 
 
-def test_generate_embeddings_raises_retryerror_on_grpc_deadline(mocker):
-    """A DEADLINE_EXCEEDED gRPC error becomes a RetryError (autoretry_for picks it up)."""
+def test_generate_embeddings_retries_on_deadline(mocker):
+    """A deadline with retry budget left calls self.retry (jittered backoff)."""
     mocker.patch(
         "vector_search.tasks.embed_learning_resources",
         side_effect=_rpc_error(grpc.StatusCode.DEADLINE_EXCEEDED),
     )
-    with pytest.raises(RetryError):
-        generate_embeddings([1], COURSE_TYPE, overwrite=False)
+    retry = mocker.patch.object(generate_embeddings, "retry", side_effect=Retry())
+    with pytest.raises(Retry):
+        generate_embeddings([1], CONTENT_FILE_TYPE, overwrite=True, failure_key="k")
+    retry.assert_called_once()
+    assert retry.call_args.kwargs["countdown"] >= 0
+
+
+def test_generate_embeddings_records_on_exhaustion(mocker):
+    """Exhausted deadline + failure_key: record + return, do not raise (chain continues)."""
+    mocker.patch(
+        "vector_search.tasks.embed_learning_resources",
+        side_effect=_rpc_error(grpc.StatusCode.DEADLINE_EXCEEDED),
+    )
+    record = mocker.patch("vector_search.tasks._record_embedding_failure")
+    generate_embeddings.push_request(retries=3)
+    try:
+        assert (
+            generate_embeddings([1], CONTENT_FILE_TYPE, overwrite=True, failure_key="k")
+            is None
+        )
+    finally:
+        generate_embeddings.pop_request()
+    record.assert_called_once_with("k")
+
+
+def test_generate_embeddings_records_non_transient_with_key(mocker):
+    """Non-transient error + failure_key: record + return, do not raise."""
+    mocker.patch(
+        "vector_search.tasks.embed_learning_resources", side_effect=ValueError("boom")
+    )
+    record = mocker.patch("vector_search.tasks._record_embedding_failure")
+    assert (
+        generate_embeddings([1], CONTENT_FILE_TYPE, overwrite=True, failure_key="k")
+        is None
+    )
+    record.assert_called_once_with("k")
 
 
 def test_generate_embeddings_reraises_other_grpc_errors(mocker):

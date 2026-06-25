@@ -5,6 +5,7 @@ import celery
 import grpc
 import sentry_sdk
 from celery.exceptions import Ignore
+from celery.utils.time import get_exponential_backoff_interval
 from django.conf import settings
 from django.core.cache import caches
 from django.db.models import Q
@@ -110,33 +111,50 @@ def _queue_program_content_file_embedding_tasks(index_tasks, program_ids, overwr
     )
 
 
+def _retry_countdown(retries):
+    """Full-jitter exponential backoff (mirrors retry_backoff=True), capped at 10m."""
+    return get_exponential_backoff_interval(
+        factor=1, retries=retries, maximum=600, full_jitter=True
+    )
+
+
 @app.task(
+    bind=True,
     acks_late=True,
     reject_on_worker_lost=True,
-    autoretry_for=(RetryError,),
-    retry_backoff=True,
+    max_retries=3,
     rate_limit="200/m",
 )
-def generate_embeddings(ids, resource_type, overwrite):
+def generate_embeddings(self, ids, resource_type, overwrite, failure_key=None):
     """
-    Generate learning resource embeddings and index in Qdrant
+    Generate learning resource embeddings and index in Qdrant.
 
-    Args:
-        ids(list of int): List of resource id's
-        resource_type (string): resource_type value for the learning resource objects
-
+    Retries transient Qdrant/search errors with jittered backoff. On exhaustion or a
+    non-transient error: if failure_key is set, log + record the failure and return so
+    the chain continues (finalize_embeddings fails the parent); otherwise propagate.
     """
     try:
         with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
             embed_learning_resources(ids, resource_type, overwrite)
-    except (RetryError, Ignore):
+    except Ignore:
         raise
-    except SystemExit as err:
-        raise RetryError(SystemExit.__name__) from err
-    except grpc.RpcError as err:
-        if err.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
-            raise RetryError(str(err)) from err
+    except SystemExit as err:  # worker shutdown: transient; propagate if exhausted
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=err, countdown=_retry_countdown(self.request.retries))  # noqa: B904
         raise
+    except Exception as err:
+        is_deadline = (
+            isinstance(err, grpc.RpcError)
+            and err.code() == grpc.StatusCode.DEADLINE_EXCEEDED
+        )
+        if (isinstance(err, RetryError) or is_deadline) and (
+            self.request.retries < self.max_retries
+        ):
+            raise self.retry(exc=err, countdown=_retry_countdown(self.request.retries))  # noqa: B904
+        if failure_key is None:
+            raise  # generic callers: propagate terminal failure (current behavior)
+        log.exception("generate_embeddings failed for %s", resource_type)
+        _record_embedding_failure(failure_key)
 
 
 @app.task(
