@@ -18,6 +18,10 @@ import {
   trackViewProgramDetails,
 } from "./gtm"
 
+beforeEach(() => {
+  window.dataLayer = []
+})
+
 describe("trackGoogleAdArrival", () => {
   it("pushes a google-ad-arrival event with UTM params", () => {
     const params = {
