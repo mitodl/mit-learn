@@ -4,6 +4,7 @@ import random
 import grpc
 import pytest
 from django.conf import settings
+from django.core.cache.backends.locmem import LocMemCache
 
 from learning_resources.etl.constants import (
     RESOURCE_FILE_ETL_SOURCES,
@@ -28,11 +29,13 @@ from learning_resources_search.constants import (
 from learning_resources_search.exceptions import RetryError
 from main.utils import now_in_utc
 from vector_search.tasks import (
+    _record_embedding_failure,
     embed_learning_resources_by_id,
     embed_new_content_files,
     embed_new_learning_resources,
     embed_run_content_files,
     embeddings_healthcheck,
+    finalize_embeddings,
     generate_embeddings,
     remove_embeddings,
     remove_run_content_files,
@@ -49,6 +52,15 @@ def _rpc_error(code):
     err = grpc.RpcError()
     err.code = lambda: code
     return err
+
+
+@pytest.fixture
+def embed_cache(mocker):
+    """Real (LocMem) backing store for the redis-alias counter in tasks under test."""
+    cache = LocMemCache("embed-test", {})
+    cache.clear()
+    mocker.patch("vector_search.tasks.caches", {"redis": cache})
+    return cache
 
 
 @pytest.mark.parametrize("index", list(LEARNING_RESOURCE_TYPES))
@@ -851,3 +863,21 @@ def test_remove_embeddings_does_not_swallow_errors(mocker):
     )
     with pytest.raises(ValueError, match="boom"):
         remove_embeddings([1], COURSE_TYPE)
+
+
+def test_record_embedding_failure_increments(embed_cache):
+    _record_embedding_failure("run-1")
+    _record_embedding_failure("run-1")
+    assert embed_cache.get("embed_errors:run-1") == 2
+
+
+def test_finalize_embeddings_raises_and_clears_on_failures(embed_cache):
+    embed_cache.set("embed_errors:run-1", 3)
+    with pytest.raises(RuntimeError, match="3 embedding chunk"):
+        finalize_embeddings("run-1")
+    assert embed_cache.get("embed_errors:run-1") is None
+
+
+def test_finalize_embeddings_succeeds_when_clean(embed_cache):
+    assert finalize_embeddings("run-1") is None
+    assert embed_cache.get("embed_errors:run-1") is None

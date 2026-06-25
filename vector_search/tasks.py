@@ -6,6 +6,7 @@ import grpc
 import sentry_sdk
 from celery.exceptions import Ignore
 from django.conf import settings
+from django.core.cache import caches
 from django.db.models import Q
 
 from learning_resources.content_summarizer import ContentSummarizer
@@ -53,6 +54,18 @@ from vector_search.utils import (
 )
 
 log = logging.getLogger(__name__)
+
+EMBED_FAILURE_TTL = 60 * 60 * 24  # 24h defensive cleanup for the per-run counter
+
+
+def _record_embedding_failure(failure_key):
+    """Bump the per-invocation embedding-failure counter in the shared redis cache."""
+    cache = caches["redis"]
+    key = f"embed_errors:{failure_key}"
+    try:
+        cache.incr(key)
+    except ValueError:  # key absent
+        cache.set(key, 1, EMBED_FAILURE_TTL)
 
 
 @app.task
@@ -153,6 +166,19 @@ def remove_embeddings(ids, resource_type):
         if err.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
             raise RetryError(str(err)) from err
         raise
+
+
+@app.task(bind=True)
+def finalize_embeddings(self, failure_key):  # noqa: ARG001
+    """Chain tail: fail the parent task if any chunk recorded a failure."""
+    cache = caches["redis"]
+    key = f"embed_errors:{failure_key}"
+    failures = cache.get(key, 0)
+    cache.delete(key)
+    if failures:
+        msg = f"{failures} embedding chunk(s) failed for {failure_key}"
+        log.error(msg)
+        raise RuntimeError(msg)
 
 
 @app.task(bind=True)
