@@ -184,6 +184,12 @@ def tune_collection(client, collection_name):
     )
 
 
+@cache
+def ensure_qdrant_collections() -> None:
+    """Ensure Qdrant collections exist, at most once per worker process."""
+    create_qdrant_collections(force_recreate=False)
+
+
 def create_qdrant_collections(force_recreate):
     """
     Create or recreate QDrant collections
@@ -798,7 +804,7 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
         return
 
     client = qdrant_client()
-    create_qdrant_collections(force_recreate=False)
+    ensure_qdrant_collections()
     if resource_type != CONTENT_FILE_TYPE:
         serialized_resources = list(serialize_bulk_learning_resources(ids))
         points = [
