@@ -240,21 +240,6 @@ const trackViewProgramDetails = (sectionName?: string) => {
   })
 }
 
-type DownloadAssetParams = {
-  assetName: string
-  assetType?: string
-}
-
-/**
- * Fired when a user downloads an asset such as a certificate PDF.
- * Maps to "Download Asset" in the marketing event plan.
- */
-const trackDownloadAsset = (params: DownloadAssetParams) => {
-  pushGtmEvent("download-asset", {
-    "asset-name": params.assetName,
-    ...(params.assetType ? { "asset-type": params.assetType } : {}),
-  })
-}
 
 export {
   pushGtmEvent,
@@ -279,12 +264,10 @@ export {
   trackBeginCheckout,
   trackOrganicSocialClick,
   trackViewProgramDetails,
-  trackDownloadAsset,
 }
 
 export type {
   AddToCartParams,
   CatalogFilterParams,
   CourseProgramViewParams,
-  DownloadAssetParams,
 }

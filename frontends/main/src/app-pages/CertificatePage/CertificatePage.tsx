@@ -31,7 +31,6 @@ import {
   getVerifiableCredentialDownloadAPIURL,
   CertificateType,
 } from "@/common/certificateUtils"
-import { trackDownloadAsset } from "@/common/analytics/gtm"
 
 const Page = styled.div(({ theme }) => ({
   backgroundImage: `url(${backgroundImage.src})`,
@@ -752,10 +751,6 @@ const CertificatePage: React.FC<{
   }
 
   const download = async () => {
-    trackDownloadAsset({
-      assetName: `${title ?? ""} Certificate issued by MIT Open Learning`,
-      assetType: "pdf",
-    })
     const res = await fetch(`/certificate/${certificateType}/${uuid}/pdf`)
     const blob = await res.blob()
     const url = window.URL.createObjectURL(blob)

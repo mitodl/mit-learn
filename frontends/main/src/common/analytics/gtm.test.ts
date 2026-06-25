@@ -16,7 +16,6 @@ import {
   trackBeginCheckout,
   trackOrganicSocialClick,
   trackViewProgramDetails,
-  trackDownloadAsset,
 } from "./gtm"
 
 describe("trackGoogleAdArrival", () => {
@@ -306,21 +305,3 @@ describe("trackViewProgramDetails", () => {
   })
 })
 
-describe("trackDownloadAsset", () => {
-  it("pushes a download-asset event with asset name and type", () => {
-    trackDownloadAsset({ assetName: "Machine Learning Certificate", assetType: "pdf" })
-    expect(window.dataLayer).toContainEqual({
-      event: "download-asset",
-      "asset-name": "Machine Learning Certificate",
-      "asset-type": "pdf",
-    })
-  })
-
-  it("pushes a download-asset event without type when not provided", () => {
-    trackDownloadAsset({ assetName: "Machine Learning Certificate" })
-    expect(window.dataLayer).toContainEqual({
-      event: "download-asset",
-      "asset-name": "Machine Learning Certificate",
-    })
-  })
-})
