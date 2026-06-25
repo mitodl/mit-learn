@@ -25,15 +25,14 @@ RUN update-ca-certificates
 
 # Install Python dependencies before copying the full source so that this
 # layer is only invalidated when lock files change, not on every code change.
-COPY pyproject.toml uv.lock /src/
-RUN chown mitodl:mitodl /src/pyproject.toml /src/uv.lock
+COPY --chown=mitodl:mitodl pyproject.toml uv.lock /src/
 
 USER mitodl
 WORKDIR /src
 # BuildKit cache mount keeps the uv download cache across builds, making
 # uv.lock-bump rebuilds reuse already-downloaded wheels.
 RUN --mount=type=cache,target=/opt/uv-cache,uid=1000,gid=1000 \
-    uv sync --frozen --no-install-project
+    uv sync --frozen --no-install-project --no-dev
 
 FROM deps AS final
 
@@ -47,3 +46,9 @@ USER mitodl
 EXPOSE 8061
 ENV PORT=8061
 CMD ["sh", "-c", "exec granian --interface asginl --reload --host 0.0.0.0 --port ${PORT:-8061} --workers ${GRANIAN_WORKERS:-3} --blocking-threads 1 main.asgi:application"]
+
+# ─── Development target ───────────────────────────────────────────────────────
+FROM final AS development
+
+RUN --mount=type=cache,target=/opt/uv-cache,uid=1000,gid=1000 \
+    uv sync --frozen --no-install-project
