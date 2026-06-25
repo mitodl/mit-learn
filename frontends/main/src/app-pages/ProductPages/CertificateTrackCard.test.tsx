@@ -60,7 +60,7 @@ describe("CertificateTrackCard", () => {
     expect(link).toHaveAttribute("href", href)
   })
 
-  test("renders financial aid link with 'applied' text when applied", () => {
+  test("renders financial aid link with 'approved' text when applied", () => {
     const href = "https://example.com/financial-aid"
     renderWithProviders(
       <CertificateTrackCard
@@ -70,7 +70,7 @@ describe("CertificateTrackCard", () => {
       />,
     )
     const link = screen.getByRole("link", {
-      name: "Financial assistance applied",
+      name: "Financial assistance approved (applied at checkout)",
     })
     expect(link).toBeInTheDocument()
     expect(link).toHaveAttribute("href", href)

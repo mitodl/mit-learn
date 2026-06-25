@@ -49,7 +49,7 @@ const CertificateTrackCard: React.FC<CertificateTrackCardProps> = ({
           <FeatureIcon aria-hidden="true" />
           <FinancialAidLink href={financialAid.href}>
             {financialAid.applied
-              ? "Financial assistance applied"
+              ? "Financial assistance approved (applied at checkout)"
               : "Financial assistance available"}
           </FinancialAidLink>
         </FeatureRow>

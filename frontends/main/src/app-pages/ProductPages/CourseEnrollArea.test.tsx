@@ -417,7 +417,7 @@ describe("CourseEnrollArea — financial assistance link", () => {
     expect(link).toHaveAttribute("href", mitxonlineLegacyUrl("/financial-aid/"))
   })
 
-  test("paidOnly course with approved flexible price shows 'Financial assistance applied' link", async () => {
+  test("paidOnly course with approved flexible price shows 'Financial assistance approved' link", async () => {
     setupAuth()
     const product = makeProduct()
     const flexiblePrice = makeFlexiblePrice({
@@ -459,14 +459,16 @@ describe("CourseEnrollArea — financial assistance link", () => {
     )
 
     const link = await screen.findByRole("link", {
-      name: "Financial assistance applied",
+      name: "Financial assistance approved (applied at checkout)",
     })
     expect(link).toBeInTheDocument()
     expect(link).toHaveAttribute("href", mitxonlineLegacyUrl("/financial-aid/"))
   })
 
-  test("paidOnly course with approved flexible price shows discounted final price and struck-through original", async () => {
-    // Case C2: course Certificate Track with approved financial aid shows both prices
+  test("paidOnly course with approved flexible price shows the full price, not a finaid discount", async () => {
+    // Case C2: financial aid is surfaced as text ("applied at checkout"), not by
+    // discounting the displayed price — so the full price shows and the flexible
+    // price's would-be discount ($100 - $25 = $75) is never rendered.
     setupAuth()
     const product = makeProduct({ price: "100" })
     const flexiblePrice = makeFlexiblePrice({
@@ -508,9 +510,12 @@ describe("CourseEnrollArea — financial assistance link", () => {
       <CourseEnrollArea course={course} selectedRun={getSelectedRun(course)} />,
     )
 
-    // Final discounted price renders
-    expect(await screen.findByText("$75")).toBeInTheDocument()
-    // Struck-through original price renders
+    // Approved aid is surfaced as the text note, applied at checkout
+    await screen.findByRole("link", {
+      name: "Financial assistance approved (applied at checkout)",
+    })
+    // Full price shows; the flexible-price discount is not applied to the display
     expect(screen.getByText("$100")).toBeInTheDocument()
+    expect(screen.queryByText("$75")).not.toBeInTheDocument()
   })
 })
