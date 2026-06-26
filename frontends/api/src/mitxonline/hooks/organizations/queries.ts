@@ -68,6 +68,7 @@ const managerOrganizationKeys = {
         opts.parent_lookup_organization,
       ),
       opts.page,
+      opts.page_size,
       opts.search_term,
       opts.status,
     ] as const,

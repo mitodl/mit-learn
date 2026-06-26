@@ -390,15 +390,18 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const org = managerOrgs?.find(matchOrganizationBySlug(orgSlug))
   const contract = org?.contracts.find((c) => c.slug === contractSlug)
 
-  const { data: contractDetail, isLoading: isLoadingContractDetail } = useQuery(
-    {
-      ...managerOrganizationQueries.managerContractDetail({
-        id: contract?.id ?? 0,
-        parent_lookup_organization: org?.id ?? 0,
-      }),
-      enabled: !!org && !!contract,
-    },
-  )
+  const {
+    data: contractDetail,
+    isLoading: isLoadingContractDetail,
+    isError: isContractDetailError,
+    error: contractDetailError,
+  } = useQuery({
+    ...managerOrganizationQueries.managerContractDetail({
+      id: contract?.id ?? 0,
+      parent_lookup_organization: org?.id ?? 0,
+    }),
+    enabled: !!org && !!contract,
+  })
 
   const {
     data: codes,
@@ -457,6 +460,14 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   if (isCodesError) {
     const status = (codesError as AxiosError)?.response?.status
     if (status === 403 || status === 401 || status === 404) {
+      return <ErrorContent title="Access denied" timSays="403" />
+    }
+    return <ErrorContent title="Something went wrong" timSays="Oops!" />
+  }
+
+  if (isContractDetailError) {
+    const status = (contractDetailError as AxiosError)?.response?.status
+    if (status === 403 || status === 401) {
       return <ErrorContent title="Access denied" timSays="403" />
     }
     return <ErrorContent title="Something went wrong" timSays="Oops!" />
@@ -526,16 +537,18 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
         "Redeemed on",
         "Last sent",
       ])
-      const dataRows = rows.map((c) =>
-        buildCsvRow([
-          c.assigned_to,
-          c.redeemed_by,
-          c.redemption_status === "redeemed" ? "Redeemed" : "Pending claim",
-          formatDate(c.assigned_on),
-          formatDate(c.redeemed_on),
-          formatDate(c.last_sent),
-        ]),
-      )
+      const dataRows = rows
+        .filter((c) => c.redemption_status !== "unassigned")
+        .map((c) =>
+          buildCsvRow([
+            c.assigned_to,
+            c.redeemed_by,
+            c.redemption_status === "redeemed" ? "Redeemed" : "Pending claim",
+            formatDate(c.assigned_on),
+            formatDate(c.redeemed_on),
+            formatDate(c.last_sent),
+          ]),
+        )
       const csv = [header, ...dataRows].join("\n")
       const blob = new Blob([csv], { type: "text/csv" })
       const url = URL.createObjectURL(blob)
