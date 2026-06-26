@@ -691,7 +691,7 @@ def get_published_items(zipfile_path, url_config):
                 "title": "",
             }
             all_embedded_items.append(embedded)
-            if embedded_path in all_published_items:
+            if embedded_path in published_items:
                 continue
             # tutor problem files are ingested separately as problem files
             if str(embedded_file).startswith(settings.CANVAS_TUTORBOT_FOLDER):
