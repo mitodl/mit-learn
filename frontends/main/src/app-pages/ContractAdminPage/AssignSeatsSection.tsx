@@ -540,8 +540,12 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
         >
           import from CSV
         </ActiveLink>
-        {/* TODO: replace href with a real sample CSV once we have one */}
-        <Link href="#" color="red" rel="noopener noreferrer" target="_blank">
+        <Link
+          href="/sample-seat-assignments.csv"
+          color="red"
+          download
+          target="_blank"
+        >
           (download sample CSV)
         </Link>
       </Stack>

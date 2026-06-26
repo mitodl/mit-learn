@@ -32,7 +32,7 @@
     "ol-test-utilities": "0.0.0"
   },
   "dependencies": {
-    "@mitodl/mitxonline-api-axios": "https://github.com/mitodl/mitxonline-api-clients/raw/refs/heads/dansubak/202606_paginated_codes_means_paginated_problems-client-7dbc25d/src/typescript/mitxonline-api-axios/package.tgz",
+    "@mitodl/mitxonline-api-axios": "https://github.com/mitodl/mitxonline-api-clients/raw/refs/heads/dansubak/202606_paginated_codes-client-443be46/src/typescript/mitxonline-api-axios/package.tgz",
     "@tanstack/react-query": "^5.66.0",
     "axios": "^1.12.2",
     "tiny-invariant": "^1.3.3"
