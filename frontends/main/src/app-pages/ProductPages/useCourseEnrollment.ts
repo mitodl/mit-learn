@@ -53,11 +53,8 @@ export const useCourseEnrollment = (
   })
   const isAuthenticated = !!me.data?.is_authenticated
 
-  const {
-    runIds: enrolledRunIds,
-    isLoading: enrollmentsIsLoading,
-    isError: enrollmentsIsError,
-  } = useCourseEnrolledRunIds(course)
+  const { runIds: enrolledRunIds, isLoading: enrollmentsIsLoading } =
+    useCourseEnrolledRunIds(course)
 
   const replaceBasketItem = useReplaceBasketItem()
   const createEnrollment = useCreateEnrollment()
@@ -74,8 +71,11 @@ export const useCourseEnrollment = (
     me.isLoading || (isAuthenticated && enrollmentsIsLoading)
 
   const isPending = replaceBasketItem.isPending || createEnrollment.isPending
-  const isError =
-    replaceBasketItem.isError || createEnrollment.isError || enrollmentsIsError
+  // Only enrollment *actions* (basket / create) surface the error alert. A
+  // failure to load the user's enrolled-run list is not an action failure, so
+  // it degrades silently (user is treated as not-enrolled) rather than showing
+  // a misleading "problem processing your enrollment" message.
+  const isError = replaceBasketItem.isError || createEnrollment.isError
 
   const firePostHog = (label: string) => {
     if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
