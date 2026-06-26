@@ -507,6 +507,7 @@ def update_learning_resource_payload(serialized_document):
         collection_name=RESOURCES_COLLECTION_NAME,
         payload=serialized_document,
         points=[point_id],
+        wait=False,
     )
 
 
@@ -558,6 +559,7 @@ def _set_payload(points, document, param_map, collection_name):
             collection_name=collection_name,
             payload=payload,
             points=point_batch,
+            wait=False,
         )
 
 
@@ -1311,6 +1313,7 @@ def remove_points_matching_params(
             points_selector=models.FilterSelector(
                 filter=qdrant_conditions,
             ),
+            wait=False,
         )
 
 
