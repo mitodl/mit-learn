@@ -1,79 +1,54 @@
+# syntax=docker/dockerfile:1
 # hadolint global ignore=SC2046,DL3002,DL3008,DL3025,DL3042,DL4006
 
-FROM python:3.12-slim AS base
-LABEL maintainer "ODL DevOps <mitx-devops@mit.edu>"
+FROM mitodl/ol-python-base:3.12 AS base
+LABEL maintainer="ODL DevOps <mitx-devops@mit.edu>"
 
-# Add package files, install updated node and pip
-WORKDIR /tmp
+# App-specific apt extras; common-core packages are in mitodl/ol-python-base:3.12.
+# BuildKit cache mounts keep downloaded packages out of the final image layer.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+      libcairo2-dev \
+      poppler-utils \
+      default-jre && \
+    echo "deb http://deb.debian.org/debian/ sid main" >> /etc/apt/sources.list && \
+    apt-get update -qqy && \
+    apt-get install -qqy --no-install-recommends chromium chromium-driver
 
-# Install packages
-COPY apt.txt /tmp/apt.txt
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends $(grep -vE "^\s*#" apt.txt | tr "\n" " ") && \
-    apt-get install libpq-dev postgresql-client -y --no-install-recommends && \
-    apt-get install poppler-utils -y && \
-    apt-get install default-jre -y && \
-    apt-get clean && \
-    apt-get purge &&  \
-    rm -rf /var/lib/apt/lists/*
+FROM base AS deps
 
+# Trusted certs (org PKI + local-dev mkcert root injected at deploy time).
+COPY --chmod=644 certs/ /usr/local/share/ca-certificates/
+RUN update-ca-certificates
 
-FROM base AS system
-
-# Add, and run as, non-root user.
-RUN mkdir /src && \
-    adduser --disabled-password --gecos "" mitodl && \
-    mkdir /var/media && chown -R mitodl:mitodl /var/media
-
-FROM system AS uv
-
-## Set some python config
-ENV  \
-  PYTHONUNBUFFERED=1 \
-  PYTHONDONTWRITEBYTECODE=1 \
-  UV_PROJECT_ENVIRONMENT='/opt/venv'
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
-
-# Install Chromium (commented out lines illustrate the syntax for getting specific chromium versions)
-RUN echo "deb http://deb.debian.org/debian/ sid main" >> /etc/apt/sources.list \
-  && apt-get update -qqy \
-  # && apt-get -qqy install chromium=89.0.4389.82-1 \
-  # && apt-get -qqy install chromium=90.0.4430.212-1 \
-  # && apt-get -qqy install chromium=93.0.4577.82-1 \
-  # && apt-get -qqy install chromium=97.0.4692.71-0.1 \
-  # && apt-get -qqy install chromium=98.0.4758.102-1+b1 \
-  && apt-get -qqy install chromium \
-  && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
-
-# install chromedriver, which will be located at /usr/bin/chromedriver
-RUN apt-get update -qqy \
-  && apt-get -qqy install chromium-driver \
-  && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
-COPY pyproject.toml /src
-COPY uv.lock /src
-RUN mkdir -p /opt/venv && chown -R mitodl:mitodl /src /opt/venv
+# Install Python dependencies before copying the full source so that this
+# layer is only invalidated when lock files change, not on every code change.
+COPY --chown=mitodl:mitodl pyproject.toml uv.lock /src/
 
 USER mitodl
 WORKDIR /src
-RUN uv sync --frozen --no-install-project
+# BuildKit cache mount keeps the uv download cache across builds, making
+# uv.lock-bump rebuilds reuse already-downloaded wheels.
+RUN --mount=type=cache,target=/opt/uv-cache,uid=1000,gid=1000 \
+    uv sync --frozen --no-install-project --no-dev
 
-FROM uv AS code
+FROM deps AS final
 
-# Add project
 USER root
-# copy in trusted certs
-COPY --chmod=644 certs/*.crt /usr/local/share/ca-certificates/
-RUN update-ca-certificates
 COPY . /src
 WORKDIR /src
 RUN mkdir -p /src/staticfiles
 
-FROM code AS final
 USER mitodl
 
 EXPOSE 8061
-ENV PORT 8061
-CMD ["sh", "-c", "exec granian --interface asginl --reload --host 0.0.0.0 --port 8061 --workers ${GRANIAN_WORKERS:-3} --blocking-threads 1 main.asgi:application"]
+ENV PORT=8061
+CMD ["sh", "-c", "exec granian --interface asginl --reload --host 0.0.0.0 --port ${PORT:-8061} --workers ${GRANIAN_WORKERS:-3} --blocking-threads 1 main.asgi:application"]
+
+# ─── Development target ───────────────────────────────────────────────────────
+FROM final AS development
+
+RUN --mount=type=cache,target=/opt/uv-cache,uid=1000,gid=1000 \
+    uv sync --frozen --no-install-project
