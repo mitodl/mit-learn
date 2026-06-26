@@ -154,7 +154,6 @@ describe("ContractAdminPage", () => {
     setMockResponse.get(
       urls.contracts.managerContractCodes(org.id, contract.id, {
         page: 1,
-        page_size: 20,
       }),
       factories.contracts.paginatedContractCodes([]),
     )
@@ -180,7 +179,6 @@ describe("ContractAdminPage", () => {
     setMockResponse.get(
       urls.contracts.managerContractCodes(org.id, contract.id, {
         page: 1,
-        page_size: 20,
       }),
       factories.contracts.paginatedContractCodes([]),
     )
@@ -210,7 +208,6 @@ describe("ContractAdminPage", () => {
     setMockResponse.get(
       urls.contracts.managerContractCodes(org.id, contract.id, {
         page: 1,
-        page_size: 20,
       }),
       factories.contracts.paginatedContractCodes([]),
     )
@@ -265,7 +262,6 @@ describe("ContractAdminPage", () => {
     setMockResponse.get(
       urls.contracts.managerContractCodes(org.id, contract.id, {
         page: 1,
-        page_size: 20,
       }),
       factories.contracts.paginatedContractCodes([assignedCode, redeemedCode]),
     )
@@ -312,7 +308,6 @@ describe("ContractAdminPage", () => {
     setMockResponse.get(
       urls.contracts.managerContractCodes(org.id, contract.id, {
         page: 1,
-        page_size: 20,
       }),
       factories.contracts.paginatedContractCodes([assignedCode, redeemedCode]),
     )

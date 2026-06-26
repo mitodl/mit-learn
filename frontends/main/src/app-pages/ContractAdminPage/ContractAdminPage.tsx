@@ -35,8 +35,6 @@ import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 
-const PAGE_SIZE = 20
-
 const Page = styled(Container)(({ theme }) => ({
   maxWidth: "1400px",
   padding: "40px 24px",
@@ -411,7 +409,6 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
       id: contract?.id ?? 0,
       parent_lookup_organization: org?.id ?? 0,
       page,
-      page_size: PAGE_SIZE,
       search_term: debouncedSearchQuery || undefined,
     }),
     enabled: !!org && !!contract,
@@ -483,7 +480,12 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   })
 
   const totalCount = codes?.count ?? 0
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE)
+  // Derive total pages from the response: if there's a next page we're on a
+  // full page so results.length equals the backend page size; otherwise this
+  // is the last page so totalPages equals the current page number.
+  const totalPages = codes?.next
+    ? Math.ceil(totalCount / pageResults.length)
+    : page
 
   const handleTabChange = (_: React.SyntheticEvent, val: StatusFilter) => {
     setStatusFilter(val)
