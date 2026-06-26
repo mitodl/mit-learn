@@ -525,14 +525,13 @@ const ProgramPriceDivider = styled.div(({ theme }) => ({
   alignSelf: "stretch",
 }))
 
-const ProgramStartForFreeBox = styled.div((_theme) => ({
+const ProgramStartForFreeBox = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "8px",
   padding: "8px 16px",
   borderRadius: "8px",
-  background:
-    "linear-gradient(0deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.94)), #004D1A",
+  background: `linear-gradient(0deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.94)), ${theme.custom.colors.darkGreen}`,
 }))
 
 const ProgramStartForFreeIcon = styled.svg(() => ({
