@@ -39,6 +39,7 @@ import {
   RiAwardLine,
   RiMore2Line,
   RiTimeLine,
+  RiSubtractLine,
 } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { isInPast, calendarDaysUntil, NoSSR, formatDate } from "ol-utilities"
@@ -144,6 +145,15 @@ const UpcomingRunIcon = styled(RiTimeLine)(({ theme }) => ({
   borderRadius: "50%",
   color: theme.custom.colors.white,
   backgroundColor: theme.custom.colors.yellow,
+  flexShrink: 0,
+}))
+
+const ExpiredRunIcon = styled(RiSubtractLine)(({ theme }) => ({
+  width: "16px",
+  height: "16px",
+  borderRadius: "50%",
+  border: `1px solid ${theme.custom.colors.silverGray}`,
+  color: theme.custom.colors.silverGray,
   flexShrink: 0,
 }))
 
@@ -535,19 +545,21 @@ export const EnrolledCourseCard = ({
             <RunsAccordionDetails>
               <RunsListWrapper>
                 <RunsListBox>
-                  {otherEnrollments.map((e, i) => {
-                    const isUpcoming =
-                      e.run?.start_date && !isInPast(e.run.start_date)
+                  {otherEnrollments.map((enrollment, i) => {
+                    const startDate = enrollment.run?.start_date
+                    const endDate = enrollment.run?.end_date
+                    const isUpcoming = startDate && !isInPast(startDate)
+                    const isExpired = endDate && isInPast(endDate)
                     const runLabel = isUpcoming
-                      ? `Upcoming: ${formatRunDateRange(e.run?.start_date, e.run?.end_date)}`
-                      : formatRunDateRange(e.run?.start_date, e.run?.end_date)
-                    const runStatus = getDashboardEnrollmentStatus({
+                      ? `Upcoming: ${formatRunDateRange(startDate, endDate)}`
+                      : formatRunDateRange(startDate, endDate)
+                    const runEnrollmentStatus = getDashboardEnrollmentStatus({
                       type: DashboardType.CourseRunEnrollment,
-                      data: e,
+                      data: enrollment,
                     })
-                    const coursewareUrl = e.run?.courseware_url
+                    const coursewareUrl = enrollment.run?.courseware_url
                     return (
-                      <RunRow key={e.id} isFirst={i === 0}>
+                      <RunRow key={enrollment.id} isFirst={i === 0}>
                         <Stack
                           direction="row"
                           gap="8px"
@@ -557,9 +569,11 @@ export const EnrolledCourseCard = ({
                         >
                           {isUpcoming ? (
                             <UpcomingRunIcon />
+                          ) : isExpired ? (
+                            <ExpiredRunIcon />
                           ) : (
                             <EnrollmentStatusIndicator
-                              status={runStatus}
+                              status={runEnrollmentStatus}
                               showNotComplete
                             />
                           )}
