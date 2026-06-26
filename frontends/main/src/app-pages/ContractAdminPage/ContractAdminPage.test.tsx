@@ -303,23 +303,21 @@ describe("ContractAdminPage", () => {
       )
     }
 
-    let clickedAnchor: HTMLAnchorElement | null = null
+    const mockAnchorClick = jest.fn()
     const mockCreateObjectURL = jest.fn().mockReturnValue("blob:fake-url")
     const mockRevokeObjectURL = jest.fn()
 
     beforeEach(() => {
       mockedUseFeatureFlagsLoaded.mockReturnValue(true)
       mockedUseFeatureFlagEnabled.mockReturnValue(true)
-      clickedAnchor = null
+      mockAnchorClick.mockClear()
       mockCreateObjectURL.mockClear()
       mockRevokeObjectURL.mockClear()
       URL.createObjectURL = mockCreateObjectURL
       URL.revokeObjectURL = mockRevokeObjectURL
       jest
         .spyOn(HTMLAnchorElement.prototype, "click")
-        .mockImplementation(function (this: HTMLAnchorElement) {
-          clickedAnchor = this
-        })
+        .mockImplementation(mockAnchorClick)
     })
 
     afterEach(() => {
@@ -353,8 +351,9 @@ describe("ContractAdminPage", () => {
       await waitFor(() => {
         expect(mockCreateObjectURL).toHaveBeenCalledWith(expect.any(Blob))
       })
-      expect(clickedAnchor).not.toBeNull()
-      expect(clickedAnchor!.download).toBe("seat-assignments.csv")
+      expect(mockAnchorClick).toHaveBeenCalledTimes(1)
+      const clickedAnchor = mockAnchorClick.mock.instances[0] as HTMLAnchorElement
+      expect(clickedAnchor.download).toBe("seat-assignments.csv")
       expect(mockRevokeObjectURL).toHaveBeenCalledWith("blob:fake-url")
       await screen.findByText("CSV download started.")
     })
