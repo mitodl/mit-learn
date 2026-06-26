@@ -674,8 +674,9 @@ def get_published_items(zipfile_path, url_config):
         item_configuration = url_config.get(_url_config_key(item))
         item_visible = _url_config_item_visible(item_configuration)
 
-        # Items stored under web_resources are generally only reachable via the Files UI,
-        # which is gated by the Files navigation tab (unless the file is surfaced
+        # Items stored under web_resources are generally only
+        # reachable via the Files UI, which is gated by the Files
+        # navigation tab (unless the file is surfaced
         # through a module). Embedded files are handled separately and can bypass
         # the Files-tab gating.
         in_files_area = "web_resources" in Path(item["path"]).parts
