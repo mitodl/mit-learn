@@ -15,6 +15,7 @@ import {
   buildVariantKey,
   buildVariantLabel,
   enrollmentCourseIsInPrograms,
+  filterVariantSiblings,
   getCollectionFirstCoursesInDisplayOrder,
   getModuleCourseIdsFromPrograms,
   getNonContractProgramEnrollments,
@@ -28,6 +29,7 @@ import {
   isNonContractEnrollment,
   isProgramAsCourse,
   pickDisplayedEnrollmentForLegacyDashboard,
+  pickDisplayedHomeEnrollments,
   programHasContractRuns,
   resolveDisplayedRunAndEnrollment,
   selectVariantRunForCourse,
@@ -1896,5 +1898,244 @@ describe("selectVariantRunForCourse", () => {
     const noDate = makeRun({ id: 1, start_date: null })
     const past = makeRun({ id: 2, start_date: "2020-01-01T00:00:00Z" })
     expect(selectVariantRunForCourse([noDate, past], makeVariant())).toBe(past)
+  })
+})
+
+describe("filterVariantSiblings", () => {
+  test("returns enrollments with the same variant as current, excluding current itself", () => {
+    const courseId = 1
+    const current = factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: courseId },
+        language: "en",
+        variant_industry: null,
+        variant_length: null,
+      },
+    })
+    const sameVariant = factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: courseId },
+        language: "en",
+        variant_industry: null,
+        variant_length: null,
+      },
+    })
+    const differentLanguage = factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: courseId },
+        language: "de",
+        variant_industry: null,
+        variant_length: null,
+      },
+    })
+
+    expect(
+      filterVariantSiblings([current, sameVariant, differentLanguage], current),
+    ).toEqual([sameVariant])
+  })
+
+  test("excludes the current enrollment even when its variant fields match exactly", () => {
+    const enrollment = factories.enrollment.courseEnrollment({
+      run: { language: "en", variant_industry: null, variant_length: null },
+    })
+    expect(filterVariantSiblings([enrollment], enrollment)).toEqual([])
+  })
+
+  test("treats null and empty string as the same value for all three variant fields", () => {
+    const current = factories.enrollment.courseEnrollment({
+      run: { language: null, variant_industry: null, variant_length: null },
+    })
+    const withEmpty = factories.enrollment.courseEnrollment({
+      run: { language: "", variant_industry: "", variant_length: "" },
+    })
+    expect(filterVariantSiblings([current, withEmpty], current)).toEqual([
+      withEmpty,
+    ])
+  })
+
+  test("excludes enrollments that differ in variant_industry", () => {
+    const courseId = 42
+    const current = factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: courseId },
+        language: "en",
+        variant_industry: "",
+        variant_length: "",
+      },
+    })
+    const otherIndustry = factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: courseId },
+        language: "en",
+        variant_industry: "E",
+        variant_length: "",
+      },
+    })
+    expect(filterVariantSiblings([current, otherIndustry], current)).toEqual([])
+  })
+
+  test("excludes enrollments that differ in variant_length", () => {
+    const courseId = 42
+    const current = factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: courseId },
+        language: "en",
+        variant_industry: "",
+        variant_length: "",
+      },
+    })
+    const otherLength = factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: courseId },
+        language: "en",
+        variant_industry: "",
+        variant_length: "S",
+      },
+    })
+    expect(filterVariantSiblings([current, otherLength], current)).toEqual([])
+  })
+
+  test("returns empty array when no siblings match the variant", () => {
+    const current = factories.enrollment.courseEnrollment({
+      run: { language: "en", variant_industry: "", variant_length: "" },
+    })
+    const different = factories.enrollment.courseEnrollment({
+      run: { language: "fr", variant_industry: "", variant_length: "" },
+    })
+    expect(filterVariantSiblings([current, different], current)).toEqual([])
+  })
+})
+
+describe("pickDisplayedHomeEnrollments", () => {
+  test("reduces multiple same-variant enrollments for a course to one card", () => {
+    const courseId = 10
+    const a = factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: courseId },
+        language: "en",
+        variant_industry: null,
+        variant_length: null,
+      },
+      certificate: null,
+      grades: [],
+    })
+    const b = factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: courseId },
+        language: "en",
+        variant_industry: null,
+        variant_length: null,
+      },
+      certificate: null,
+      grades: [],
+    })
+    expect(pickDisplayedHomeEnrollments([a, b])).toHaveLength(1)
+  })
+
+  test("prefers the enrollment with a certificate over one without", () => {
+    const courseId = 10
+    const noCert = factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: courseId },
+        language: "en",
+        variant_industry: null,
+        variant_length: null,
+      },
+      certificate: null,
+      grades: [],
+    })
+    const withCert = factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: courseId },
+        language: "en",
+        variant_industry: null,
+        variant_length: null,
+      },
+      certificate: { uuid: "cert-abc", link: "/certificate/cert-abc/" },
+      grades: [],
+    })
+    expect(pickDisplayedHomeEnrollments([noCert, withCert])).toEqual([withCert])
+  })
+
+  test("prefers the higher grade when certificate state is tied", () => {
+    const courseId = 10
+    const lower = factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: courseId },
+        language: "en",
+        variant_industry: null,
+        variant_length: null,
+      },
+      certificate: null,
+      grades: [factories.enrollment.grade({ grade: 0.6 })],
+    })
+    const higher = factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: courseId },
+        language: "en",
+        variant_industry: null,
+        variant_length: null,
+      },
+      certificate: null,
+      grades: [factories.enrollment.grade({ grade: 0.9 })],
+    })
+    expect(pickDisplayedHomeEnrollments([lower, higher])).toEqual([higher])
+  })
+
+  test("keeps enrollments for different variants of the same course as separate cards", () => {
+    const courseId = 10
+    const english = factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: courseId },
+        language: "en",
+        variant_industry: null,
+        variant_length: null,
+      },
+      certificate: null,
+      grades: [],
+    })
+    const german = factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: courseId },
+        language: "de",
+        variant_industry: null,
+        variant_length: null,
+      },
+      certificate: null,
+      grades: [],
+    })
+    expect(pickDisplayedHomeEnrollments([english, german])).toHaveLength(2)
+  })
+
+  test("keeps enrollments for different courses as separate cards", () => {
+    const a = factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: 1 },
+        language: "en",
+        variant_industry: null,
+        variant_length: null,
+      },
+      certificate: null,
+      grades: [],
+    })
+    const b = factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: 2 },
+        language: "en",
+        variant_industry: null,
+        variant_length: null,
+      },
+      certificate: null,
+      grades: [],
+    })
+    expect(pickDisplayedHomeEnrollments([a, b])).toHaveLength(2)
+  })
+
+  test("returns a single enrollment unchanged", () => {
+    const enrollment = factories.enrollment.courseEnrollment({
+      certificate: null,
+      grades: [],
+    })
+    expect(pickDisplayedHomeEnrollments([enrollment])).toEqual([enrollment])
   })
 })
