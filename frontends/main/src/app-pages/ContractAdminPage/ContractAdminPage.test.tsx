@@ -352,7 +352,8 @@ describe("ContractAdminPage", () => {
         expect(mockCreateObjectURL).toHaveBeenCalledWith(expect.any(Blob))
       })
       expect(mockAnchorClick).toHaveBeenCalledTimes(1)
-      const clickedAnchor = mockAnchorClick.mock.instances[0] as HTMLAnchorElement
+      const clickedAnchor = mockAnchorClick.mock
+        .instances[0] as HTMLAnchorElement
       expect(clickedAnchor.download).toBe("seat-assignments.csv")
       expect(mockRevokeObjectURL).toHaveBeenCalledWith("blob:fake-url")
       await screen.findByText("CSV download started.")
