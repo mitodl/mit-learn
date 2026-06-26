@@ -1,5 +1,5 @@
 import React from "react"
-import { renderWithProviders, screen, user, waitFor } from "@/test-utils"
+import { renderWithProviders, screen, user } from "@/test-utils"
 import { setMockResponse } from "api/test-utils"
 import { factories, urls } from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -26,6 +26,25 @@ const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
 const managerOrgsUrl = urls.organization.managerOrganizationsList()
 const managerContractDetailUrl = urls.contracts.managerContractDetail
+
+const makeContractDetail = (
+  contract: ReturnType<typeof factories.contracts.contract>,
+  overrides: {
+    total_codes?: number
+    assigned_codes?: number
+    unassigned_codes?: number
+    redeemed_codes?: number
+    total_enrollments?: number
+  } = {},
+) => ({
+  ...contract,
+  attachment_percentage: null,
+  total_enrollments: overrides.total_enrollments ?? 0,
+  total_codes: overrides.total_codes ?? 10,
+  assigned_codes: overrides.assigned_codes ?? 2,
+  unassigned_codes: overrides.unassigned_codes ?? 6,
+  redeemed_codes: overrides.redeemed_codes ?? 2,
+})
 
 const makeOrgWithContract = () => {
   const contract = factories.contracts.contract()
@@ -128,15 +147,16 @@ describe("ContractAdminPage", () => {
 
     const { org, contract } = makeOrgWithContract()
     setMockResponse.get(managerOrgsUrl, [org])
-    setMockResponse.get(managerContractDetailUrl(org.id, contract.id), {
-      ...contract,
-      attachment_percentage: null,
-      total_enrollments: 0,
-      total_codes: 50,
-    })
     setMockResponse.get(
-      urls.contracts.managerContractCodes(org.id, contract.id),
-      [],
+      managerContractDetailUrl(org.id, contract.id),
+      makeContractDetail(contract),
+    )
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 20,
+      }),
+      factories.contracts.paginatedContractCodes([]),
     )
 
     renderWithProviders(
@@ -153,17 +173,16 @@ describe("ContractAdminPage", () => {
 
     const { org, contract } = makeOrgWithContract()
     setMockResponse.get(managerOrgsUrl, [org])
-    setMockResponse.get(managerContractDetailUrl(org.id, contract.id), {
-      ...contract,
-      attachment_percentage: null,
-      total_enrollments: 12,
-      total_codes: 75,
-    })
     setMockResponse.get(
-      urls.contracts.managerContractCodes(org.id, contract.id),
-      Array.from({ length: 75 }, () =>
-        factories.contracts.contractCode({ redemption_status: "unassigned" }),
-      ),
+      managerContractDetailUrl(org.id, contract.id),
+      makeContractDetail(contract, { total_codes: 75, total_enrollments: 12 }),
+    )
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 20,
+      }),
+      factories.contracts.paginatedContractCodes([]),
     )
 
     renderWithProviders(
@@ -173,86 +192,47 @@ describe("ContractAdminPage", () => {
     await screen.findByText("75 seats")
   })
 
-  test("derives Unassigned and Pending claim summary stats from codes", async () => {
+  test("renders per-status stats from contract detail", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
     const { org, contract } = makeOrgWithContract()
     setMockResponse.get(managerOrgsUrl, [org])
-    setMockResponse.get(managerContractDetailUrl(org.id, contract.id), {
-      ...contract,
-      attachment_percentage: null,
-      total_enrollments: 1,
-      total_codes: 5,
-    })
     setMockResponse.get(
-      urls.contracts.managerContractCodes(org.id, contract.id),
-      [
-        factories.contracts.contractCode({ redemption_status: "unassigned" }),
-        factories.contracts.contractCode({ redemption_status: "unassigned" }),
-        factories.contracts.contractCode({ redemption_status: "assigned" }),
-        factories.contracts.contractCode({
-          redemption_status: "redeemed",
-          redeemed_by: "a@example.com",
-          redeemed_on: new Date().toISOString(),
-        }),
-      ],
+      managerContractDetailUrl(org.id, contract.id),
+      makeContractDetail(contract, {
+        total_codes: 30,
+        assigned_codes: 10,
+        unassigned_codes: 15,
+        redeemed_codes: 5,
+      }),
+    )
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 20,
+      }),
+      factories.contracts.paginatedContractCodes([]),
     )
 
     renderWithProviders(
       <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
     )
 
-    // findByRole waits for the org to load; then waitFor waits for codes to load
-    const unassignedStat = await screen.findByRole("group", {
-      name: "Unassigned",
-    })
-    await waitFor(() => expect(unassignedStat).toHaveTextContent("2"))
-
-    const pendingStat = screen.getByRole("group", { name: "Pending claim" })
-    expect(pendingStat).toHaveTextContent("1")
-  })
-
-  test("hides unassigned codes from the table and shows assigned and redeemed", async () => {
-    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
-
-    const { org, contract } = makeOrgWithContract()
-    setMockResponse.get(managerOrgsUrl, [org])
-    setMockResponse.get(managerContractDetailUrl(org.id, contract.id), {
-      ...contract,
-      attachment_percentage: null,
-      total_enrollments: 1,
-      total_codes: 3,
-    })
-
-    const assignedCode = factories.contracts.contractCode({
-      redemption_status: "assigned",
-      assigned_to: "pending@example.com",
-    })
-    const redeemedCode = factories.contracts.contractCode({
-      redemption_status: "redeemed",
-      assigned_to: "redeemed@example.com",
-      redeemed_by: "claimer@example.com",
-      redeemed_on: new Date().toISOString(),
-    })
-    const unassignedCode = factories.contracts.contractCode({
-      redemption_status: "unassigned",
-      assigned_to: null,
-    })
-
-    setMockResponse.get(
-      urls.contracts.managerContractCodes(org.id, contract.id),
-      [assignedCode, redeemedCode, unassignedCode],
+    // Wait for contract detail to finish loading (skeletons replaced by values)
+    await screen.findByText("30")
+    expect(
+      screen.getByRole("group", { name: "Total purchased" }),
+    ).toHaveTextContent("30")
+    expect(screen.getByRole("group", { name: "Unassigned" })).toHaveTextContent(
+      "15",
     )
-
-    renderWithProviders(
-      <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+    expect(
+      screen.getByRole("group", { name: "Pending claim" }),
+    ).toHaveTextContent("10")
+    expect(screen.getByRole("group", { name: "Redeemed" })).toHaveTextContent(
+      "5",
     )
-
-    await screen.findByText("pending@example.com")
-    expect(screen.getByText("redeemed@example.com")).toBeInTheDocument()
-    expect(screen.queryByText(unassignedCode.code)).not.toBeInTheDocument()
   })
 
   test("Redeemed tab filters to redeemed codes only", async () => {
@@ -261,12 +241,15 @@ describe("ContractAdminPage", () => {
 
     const { org, contract } = makeOrgWithContract()
     setMockResponse.get(managerOrgsUrl, [org])
-    setMockResponse.get(managerContractDetailUrl(org.id, contract.id), {
-      ...contract,
-      attachment_percentage: null,
-      total_enrollments: 1,
-      total_codes: 2,
-    })
+    setMockResponse.get(
+      managerContractDetailUrl(org.id, contract.id),
+      makeContractDetail(contract, {
+        total_codes: 2,
+        assigned_codes: 1,
+        redeemed_codes: 1,
+        unassigned_codes: 0,
+      }),
+    )
 
     const assignedCode = factories.contracts.contractCode({
       redemption_status: "assigned",
@@ -280,8 +263,11 @@ describe("ContractAdminPage", () => {
     })
 
     setMockResponse.get(
-      urls.contracts.managerContractCodes(org.id, contract.id),
-      [assignedCode, redeemedCode],
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 20,
+      }),
+      factories.contracts.paginatedContractCodes([assignedCode, redeemedCode]),
     )
 
     renderWithProviders(
@@ -302,12 +288,15 @@ describe("ContractAdminPage", () => {
 
     const { org, contract } = makeOrgWithContract()
     setMockResponse.get(managerOrgsUrl, [org])
-    setMockResponse.get(managerContractDetailUrl(org.id, contract.id), {
-      ...contract,
-      attachment_percentage: null,
-      total_enrollments: 1,
-      total_codes: 2,
-    })
+    setMockResponse.get(
+      managerContractDetailUrl(org.id, contract.id),
+      makeContractDetail(contract, {
+        total_codes: 2,
+        assigned_codes: 1,
+        redeemed_codes: 1,
+        unassigned_codes: 0,
+      }),
+    )
 
     const assignedCode = factories.contracts.contractCode({
       redemption_status: "assigned",
@@ -321,8 +310,11 @@ describe("ContractAdminPage", () => {
     })
 
     setMockResponse.get(
-      urls.contracts.managerContractCodes(org.id, contract.id),
-      [assignedCode, redeemedCode],
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 20,
+      }),
+      factories.contracts.paginatedContractCodes([assignedCode, redeemedCode]),
     )
 
     renderWithProviders(

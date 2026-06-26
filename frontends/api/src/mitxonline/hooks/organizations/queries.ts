@@ -4,6 +4,8 @@ import {
   OrganizationPage,
   ManagerContractDetail,
   ManagerEnrollmentCode,
+  PaginatedManagerEnrollmentCodeList,
+  PaginatedOrganizationPageList,
   B2bApiB2bOrganizationsRetrieveRequest,
   B2bApiB2bManagerOrganizationsContractsRetrieveRequest,
   B2bApiB2bManagerOrganizationsContractsCodesListRequest,
@@ -11,6 +13,13 @@ import {
 
 type ContractCode = ManagerEnrollmentCode & {
   redemption_status: "unassigned" | "assigned" | "redeemed"
+}
+
+type PaginatedContractCodes = Omit<
+  PaginatedManagerEnrollmentCodeList,
+  "results"
+> & {
+  results: ContractCode[]
 }
 
 const organizationKeys = {
@@ -47,9 +56,20 @@ const managerOrganizationKeys = {
     ] as const,
   contractCodesRoot: () =>
     ["mitxonline", "manager", "organizations", "contracts", "codes"] as const,
+  // Prefix key used for invalidation — matches all pages/search states for one contract
+  contractCodesForContract: (id: number, orgId: number) =>
+    [...managerOrganizationKeys.contractCodesRoot(), id, orgId] as const,
   contractCodes: (
     opts: B2bApiB2bManagerOrganizationsContractsCodesListRequest,
-  ) => [...managerOrganizationKeys.contractCodesRoot(), opts] as const,
+  ) =>
+    [
+      ...managerOrganizationKeys.contractCodesForContract(
+        opts.id,
+        opts.parent_lookup_organization,
+      ),
+      opts.page,
+      opts.search_term,
+    ] as const,
 }
 
 const managerOrganizationQueries = {
@@ -57,7 +77,12 @@ const managerOrganizationQueries = {
     queryOptions({
       queryKey: managerOrganizationKeys.list(),
       queryFn: async (): Promise<OrganizationPage[]> =>
-        b2bApi.b2bManagerOrganizationsList().then((res) => res.data),
+        b2bApi.b2bManagerOrganizationsList().then((res) => {
+          const data = res.data as
+            | PaginatedOrganizationPageList
+            | OrganizationPage[]
+          return Array.isArray(data) ? data : data.results
+        }),
     }),
   managerContractDetail: (
     opts: B2bApiB2bManagerOrganizationsContractsRetrieveRequest,
@@ -74,10 +99,10 @@ const managerOrganizationQueries = {
   ) =>
     queryOptions({
       queryKey: managerOrganizationKeys.contractCodes(opts),
-      queryFn: async (): Promise<ContractCode[]> =>
+      queryFn: async (): Promise<PaginatedContractCodes> =>
         b2bApi
           .b2bManagerOrganizationsContractsCodesList(opts)
-          .then((res) => res.data as ContractCode[]),
+          .then((res) => res.data as PaginatedContractCodes),
     }),
 }
 
@@ -88,4 +113,4 @@ export {
   managerOrganizationKeys,
 }
 
-export type { ContractCode }
+export type { ContractCode, PaginatedContractCodes }

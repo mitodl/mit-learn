@@ -56,7 +56,7 @@ describe("RowActionMenu", () => {
   })
 
   describe("redeemed code", () => {
-    test("opens menu with only Uninvite item", async () => {
+    test("renders a disabled button with no menu for redeemed codes", async () => {
       const code = makeCode({
         redemption_status: "redeemed",
         redeemed_by: "user@example.com",
@@ -64,12 +64,14 @@ describe("RowActionMenu", () => {
       })
       renderMenu(code)
 
-      await user.click(screen.getByRole("button", { name: /more actions/i }))
+      const button = screen.getByRole("button", {
+        name: /no actions available/i,
+      })
+      expect(button).toBeDisabled()
 
-      expect(
-        screen.getByRole("menuitem", { name: "Uninvite" }),
-      ).toBeInTheDocument()
-      expect(screen.queryByText("Copy claim link")).not.toBeInTheDocument()
+      // Clicking the disabled button should not open any menu
+      await user.click(button)
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument()
     })
   })
 
@@ -172,35 +174,6 @@ describe("RowActionMenu", () => {
 
       await waitFor(() => {
         expect(onResult).toHaveBeenCalledWith("Seat released.", "success")
-      })
-    })
-
-    test("surfaces the already-redeemed (409) error", async () => {
-      const code = makeCode({
-        redemption_status: "redeemed",
-        redeemed_by: "user@example.com",
-        redeemed_on: new Date().toISOString(),
-      })
-      setMockResponse.delete(
-        urls.contracts.managerContractCodeRevoke(
-          ORG_ID,
-          CONTRACT_ID,
-          code.code,
-        ),
-        { detail: "Cannot revoke a code that has already been redeemed." },
-        { code: 409 },
-      )
-      const { onResult } = renderMenu(code)
-
-      await user.click(screen.getByRole("button", { name: /more actions/i }))
-      await user.click(screen.getByRole("menuitem", { name: "Uninvite" }))
-      await user.click(screen.getByRole("button", { name: "Uninvite" }))
-
-      await waitFor(() => {
-        expect(onResult).toHaveBeenCalledWith(
-          expect.stringContaining("already been redeemed"),
-          "error",
-        )
       })
     })
   })

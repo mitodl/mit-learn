@@ -5,7 +5,10 @@ import type {
   ContractPage,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { makePaginatedFactory } from "ol-test-utilities"
-import type { ContractCode } from "../../hooks/organizations"
+import type {
+  ContractCode,
+  PaginatedContractCodes,
+} from "../../hooks/organizations"
 
 const contract = (overrides: Partial<ContractPage> = {}): ContractPage => ({
   id: faker.number.int(),
@@ -25,6 +28,16 @@ const contract = (overrides: Partial<ContractPage> = {}): ContractPage => ({
 })
 
 const contracts = makePaginatedFactory(contract)
+
+const paginatedContractCodes = (
+  results: ContractCode[],
+  opts: { count?: number; next?: string | null; previous?: string | null } = {},
+): PaginatedContractCodes => ({
+  count: opts.count ?? results.length,
+  next: opts.next ?? null,
+  previous: opts.previous ?? null,
+  results,
+})
 
 const contractCode = (overrides: Partial<ContractCode> = {}): ContractCode => {
   const status = overrides.redemption_status ?? "assigned"
@@ -61,4 +74,11 @@ const bulkAssignResult = (
   ...overrides,
 })
 
-export { contract, contracts, contractCode, bulkAssignError, bulkAssignResult }
+export {
+  contract,
+  contracts,
+  contractCode,
+  paginatedContractCodes,
+  bulkAssignError,
+  bulkAssignResult,
+}
