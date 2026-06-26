@@ -1,13 +1,5 @@
 import React from "react"
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  SimpleMenu,
-  Stack,
-  styled,
-  Typography,
-} from "ol-components"
+import { SimpleMenu, Stack, styled } from "ol-components"
 import {
   CardRoot,
   CardTypeText,
@@ -33,16 +25,13 @@ import {
 import { getCourseDateText } from "./courseDateUtils"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import {
-  RiArrowDownSLine,
-  RiArrowRightSLine,
   RiArrowUpCircleLine,
   RiAwardLine,
   RiMore2Line,
-  RiTimeLine,
-  RiSubtractLine,
 } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
-import { isInPast, calendarDaysUntil, NoSSR, formatDate } from "ol-utilities"
+import { isInPast, calendarDaysUntil, NoSSR } from "ol-utilities"
+import { SiblingRunsAccordion } from "./SiblingRunsAccordion"
 import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
@@ -51,7 +40,6 @@ import { coursePageView } from "@/common/urls"
 import NiceModal from "@ebay/nice-modal-react"
 import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
 import { getReceiptMenuItem } from "./receiptMenuItem"
-import NextLink from "next/link"
 import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
 
 const formatUpgradeTime = (daysFloat: number) => {
@@ -126,37 +114,6 @@ const UpgradeBanner: React.FC<
   )
 }
 
-const AdditionalRunsAccordion = styled(Accordion)(({ theme }) => ({
-  boxShadow: "none",
-  "&:before": { display: "none" },
-  backgroundColor: theme.custom.colors.white,
-}))
-
-const CurrentRunIcon = styled.div(({ theme }) => ({
-  width: "8px",
-  height: "8px",
-  backgroundColor: theme.custom.colors.green,
-  flexShrink: 0,
-}))
-
-const UpcomingRunIcon = styled(RiTimeLine)(({ theme }) => ({
-  width: "16px",
-  height: "16px",
-  borderRadius: "50%",
-  color: theme.custom.colors.white,
-  backgroundColor: theme.custom.colors.yellow,
-  flexShrink: 0,
-}))
-
-const ExpiredRunIcon = styled(RiSubtractLine)(({ theme }) => ({
-  width: "16px",
-  height: "16px",
-  borderRadius: "50%",
-  border: `1px solid ${theme.custom.colors.silverGray}`,
-  color: theme.custom.colors.silverGray,
-  flexShrink: 0,
-}))
-
 const EnrolledCardShell = styled.div(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray1}`,
   borderRadius: "8px",
@@ -174,74 +131,9 @@ const CardHeaderContent = styled.div({
   alignItems: "center",
 })
 
-const RunsListBox = styled.div(({ theme }) => ({
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "8px",
-  overflow: "hidden",
+const MobileAccordionWrapper = styled.div({
   width: "100%",
-}))
-
-const RunRow = styled.div<{ isFirst: boolean }>(({ theme, isFirst }) => ({
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  gap: "4px",
-  padding: "16px",
-  borderTop: isFirst ? "none" : `1px solid ${theme.custom.colors.lightGray2}`,
-}))
-
-const ViewContentLink = styled(NextLink)(({ theme }) => ({
-  ...theme.typography.body3,
-  color: theme.custom.colors.mitRed,
-  textDecoration: "none",
-  "&:hover": {
-    textDecoration: "underline",
-  },
-}))
-
-const ExpandChevron = styled(RiArrowDownSLine)(({ theme }) => ({
-  width: "16px",
-  height: "16px",
-  color: theme.custom.colors.silverGrayDark,
-  flexShrink: 0,
-}))
-
-const ViewContentArrow = styled(RiArrowRightSLine)(({ theme }) => ({
-  width: "16px",
-  height: "16px",
-  color: theme.custom.colors.red,
-  flexShrink: 0,
-}))
-
-const CourseRunsCountText = styled.span(({ theme }) => ({
-  ...theme.typography.body3,
-  color: theme.custom.colors.red,
-  textDecoration: "underline",
-}))
-
-const RunsAccordionDetails = styled(AccordionDetails)({
-  padding: 0,
 })
-
-const RunsListWrapper = styled.div({
-  padding: "0 16px 16px",
-})
-
-const formatRunDateRange = (
-  startDate?: string | null,
-  endDate?: string | null,
-): string => {
-  const parts: string[] = []
-  if (startDate) parts.push(formatDate(startDate, "MMM D, YYYY"))
-  if (endDate) parts.push(formatDate(endDate, "MMM D, YYYY"))
-  return parts.join(" – ")
-}
-
-const getRunStatusLabel = (status: EnrollmentStatus): string => {
-  if (status === EnrollmentStatus.Completed) return "Completed"
-  if (status === EnrollmentStatus.Enrolled) return "In Progress"
-  return ""
-}
 
 type EnrolledCourseCardProps = {
   enrollment: CourseRunEnrollmentV3
@@ -483,17 +375,7 @@ export const EnrolledCourseCard = ({
     />
   )
 
-  const [expanded, setExpanded] = React.useState(false)
-
-  const handleAccordionChange = () => {
-    setExpanded(!expanded)
-  }
-
-  const otherEnrollments = (siblingEnrollments ?? []).filter(
-    (e) => e.id !== enrollment.id,
-  )
-
-  const hasMultipleRuns = otherEnrollments.length > 0
+  const hasMultipleRuns = (siblingEnrollments?.length ?? 0) > 0
 
   return (
     <>
@@ -512,99 +394,10 @@ export const EnrolledCourseCard = ({
               {contextMenu}
             </Stack>
           </CardHeaderContent>
-          <AdditionalRunsAccordion
-            expanded={expanded}
-            disableGutters={true}
-            onChange={handleAccordionChange}
-          >
-            <AccordionSummary expandIcon={<ExpandChevron />}>
-              <Stack direction="row" alignItems="flex-end" gap="24px" flex={1}>
-                <Stack
-                  direction="row"
-                  alignItems="center"
-                  gap="4px"
-                  flex={1}
-                  minWidth={0}
-                >
-                  <CurrentRunIcon />
-                  <Typography variant="body3" color="darkGray2" noWrap>
-                    Current run:
-                  </Typography>
-                  <Typography variant="body3" color="silverGrayDark" noWrap>
-                    {formatRunDateRange(run?.start_date, run?.end_date)}
-                    {getRunStatusLabel(enrollmentStatus)
-                      ? ` (${getRunStatusLabel(enrollmentStatus)})`
-                      : ""}
-                  </Typography>
-                </Stack>
-                <CourseRunsCountText>
-                  Course runs ({(siblingEnrollments?.length ?? 0) + 1})
-                </CourseRunsCountText>
-              </Stack>
-            </AccordionSummary>
-            <RunsAccordionDetails>
-              <RunsListWrapper>
-                <RunsListBox>
-                  {otherEnrollments.map((enrollment, i) => {
-                    const startDate = enrollment.run?.start_date
-                    const endDate = enrollment.run?.end_date
-                    const isUpcoming = startDate && !isInPast(startDate)
-                    const isExpired = endDate && isInPast(endDate)
-                    const runLabel = isUpcoming
-                      ? `Upcoming: ${formatRunDateRange(startDate, endDate)}`
-                      : formatRunDateRange(startDate, endDate)
-                    const runEnrollmentStatus = getDashboardEnrollmentStatus({
-                      type: DashboardType.CourseRunEnrollment,
-                      data: enrollment,
-                    })
-                    const coursewareUrl = enrollment.run?.courseware_url
-                    return (
-                      <RunRow key={enrollment.id} isFirst={i === 0}>
-                        <Stack
-                          direction="row"
-                          gap="8px"
-                          alignItems="center"
-                          flex={1}
-                          minWidth={0}
-                        >
-                          {isUpcoming ? (
-                            <UpcomingRunIcon />
-                          ) : isExpired ? (
-                            <ExpiredRunIcon />
-                          ) : (
-                            <EnrollmentStatusIndicator
-                              status={runEnrollmentStatus}
-                              showNotComplete
-                            />
-                          )}
-                          <Typography
-                            variant="subtitle3"
-                            color="darkGray2"
-                            noWrap
-                          >
-                            {runLabel}
-                          </Typography>
-                        </Stack>
-                        {coursewareUrl && (
-                          <Stack
-                            direction="row"
-                            gap="4px"
-                            alignItems="center"
-                            flexShrink={0}
-                          >
-                            <ViewContentLink href={coursewareUrl}>
-                              View content
-                            </ViewContentLink>
-                            <ViewContentArrow />
-                          </Stack>
-                        )}
-                      </RunRow>
-                    )
-                  })}
-                </RunsListBox>
-              </RunsListWrapper>
-            </RunsAccordionDetails>
-          </AdditionalRunsAccordion>
+          <SiblingRunsAccordion
+            enrollment={enrollment}
+            siblingEnrollments={siblingEnrollments ?? []}
+          />
         </EnrolledCardShell>
       ) : (
         <CardRoot
@@ -652,6 +445,14 @@ export const EnrolledCourseCard = ({
         >
           {buttonSection}
         </Stack>
+        {hasMultipleRuns && (
+          <MobileAccordionWrapper>
+            <SiblingRunsAccordion
+              enrollment={enrollment}
+              siblingEnrollments={siblingEnrollments ?? []}
+            />
+          </MobileAccordionWrapper>
+        )}
       </CardRoot>
     </>
   )
