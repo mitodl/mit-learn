@@ -1221,6 +1221,25 @@ const getCollectionFirstCoursesInDisplayOrder = (
   })
 }
 
+/**
+ * Returns all enrollments in `enrollments` that share the same variant
+ * (language × variant_industry × variant_length) as `currentEnrollment`,
+ * excluding `currentEnrollment` itself.
+ */
+const filterVariantSiblings = (
+  enrollments: CourseRunEnrollmentV3[],
+  currentEnrollment: CourseRunEnrollmentV3,
+): CourseRunEnrollmentV3[] => {
+  const run = currentEnrollment.run
+  return enrollments.filter(
+    (e) =>
+      e.id !== currentEnrollment.id &&
+      (e.run.language ?? "") === (run.language ?? "") &&
+      (e.run.variant_industry ?? "") === (run.variant_industry ?? "") &&
+      (e.run.variant_length ?? "") === (run.variant_length ?? ""),
+  )
+}
+
 export {
   pickDisplayedEnrollmentForLegacyDashboard,
   groupCourseRunEnrollmentsByCourseId,
@@ -1246,6 +1265,7 @@ export {
   buildVariantLabel,
   sortVariants,
   selectVariantRunForCourse,
+  filterVariantSiblings,
 }
 
 export type { RequirementSectionItem, RequirementSection }

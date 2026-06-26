@@ -22,6 +22,7 @@ import {
   DashboardType,
   ResourceType,
   getKey,
+  filterVariantSiblings,
   type DashboardResource,
 } from "./model/dashboardViewModel"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
@@ -183,12 +184,19 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
         />
       )
     } else if (resource.type === DashboardType.CourseRunEnrollment) {
+      const enrollment = resource.data
+      const allCourseEnrollments =
+        enrollmentsByCourseId[enrollment.run.course.id] ?? []
       return (
         <CoursewareCardStyled
           key={getResourceKey(resource)}
           Component="li"
           kind="enrollment"
-          enrollment={resource.data}
+          enrollment={enrollment}
+          siblingEnrollments={filterVariantSiblings(
+            allCourseEnrollments,
+            enrollment,
+          )}
           onUpgradeError={onUpgradeError}
         />
       )
