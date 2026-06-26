@@ -1946,15 +1946,22 @@ describe("filterVariantSiblings", () => {
   })
 
   test("treats undefined and empty string as the same value for all three variant fields", () => {
+    const courseId = 99
     const current = factories.enrollment.courseEnrollment({
       run: {
+        course: { id: courseId },
         language: undefined,
         variant_industry: undefined,
         variant_length: undefined,
       },
     })
     const withEmpty = factories.enrollment.courseEnrollment({
-      run: { language: "", variant_industry: "", variant_length: "" },
+      run: {
+        course: { id: courseId },
+        language: "",
+        variant_industry: "",
+        variant_length: "",
+      },
     })
     expect(filterVariantSiblings([current, withEmpty], current)).toEqual([
       withEmpty,
@@ -2011,6 +2018,26 @@ describe("filterVariantSiblings", () => {
       run: { language: "fr", variant_industry: "", variant_length: "" },
     })
     expect(filterVariantSiblings([current, different], current)).toEqual([])
+  })
+
+  test("excludes enrollments from a different course even when variant fields match", () => {
+    const current = factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: 1 },
+        language: "en",
+        variant_industry: "",
+        variant_length: "",
+      },
+    })
+    const otherCourse = factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: 2 },
+        language: "en",
+        variant_industry: "",
+        variant_length: "",
+      },
+    })
+    expect(filterVariantSiblings([current, otherCourse], current)).toEqual([])
   })
 })
 

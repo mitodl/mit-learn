@@ -1276,6 +1276,7 @@ const filterVariantSiblings = (
   return enrollments.filter(
     (e) =>
       e.id !== currentEnrollment.id &&
+      e.run.course.id === run.course.id &&
       (e.run.language ?? "") === (run.language ?? "") &&
       (e.run.variant_industry ?? "") === (run.variant_industry ?? "") &&
       (e.run.variant_length ?? "") === (run.variant_length ?? ""),
