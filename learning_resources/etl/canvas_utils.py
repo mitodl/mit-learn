@@ -674,10 +674,10 @@ def get_published_items(zipfile_path, url_config):
         item_configuration = url_config.get(_url_config_key(item))
         item_visible = _url_config_item_visible(item_configuration)
 
-        # files in the "Files" area are only visible to students when the Files
-        # section is shown in the course navigation (unless the file is surfaced
-        # through a module). Content outside web_resources (pages, assignments)
-        # and embedded files are not gated by this.
+        # Items stored under web_resources are generally only reachable via the Files UI,
+        # which is gated by the Files navigation tab (unless the file is surfaced
+        # through a module). Embedded files are handled separately and can bypass
+        # the Files-tab gating.
         in_files_area = "web_resources" in Path(item["path"]).parts
         if item_visible and (
             not in_files_area or files_section_is_visible or item.get("module")
