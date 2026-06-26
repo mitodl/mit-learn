@@ -1,6 +1,19 @@
 Release Notes
 =============
 
+Version 0.71.16
+---------------
+
+- adding wait=False to relevant calls (#3529)
+- feat(vector_search): embeddings deadline resilience (retry + finalize tail) (#3526)
+- feat: show duplicate emails and stats summary in B2B seat assignment modal (#3509)
+- add card type and end date (#3504)
+- Retry embeddings tasks on Qdrant gRPC DEADLINE_EXCEEDED (#3520)
+- chore: Remove product page feature flag (#3501)
+- Ingest contentfile archives for all runs (two-tier indexing) (#3503)
+- Program certificate title from CMS "Certificate Title" (behind flag) (#3512)
+- remove semantic chunker and dependance on langchain-experimental (#3514)
+
 Version 0.71.12 (Released June 23, 2026)
 ---------------
 
