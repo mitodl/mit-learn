@@ -175,7 +175,7 @@ const SiblingRunsAccordion: React.FC<SiblingRunsAccordionProps> = ({
     <AdditionalRunsAccordion
       expanded={expanded}
       disableGutters
-      onChange={() => setExpanded(!expanded)}
+      onChange={(_e, isExpanded) => setExpanded(isExpanded)}
     >
       <AccordionSummary expandIcon={<ExpandChevron />}>
         <SummaryRow direction="row" alignItems="flex-end">
