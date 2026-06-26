@@ -54,6 +54,8 @@ const toVectorSearchParams = (
   platform: params.platform as VectorSearchRequest["platform"],
   professional: params.professional,
   q: params.q,
+  resource_category:
+    params.resource_category as VectorSearchRequest["resource_category"],
   resource_type: params.resource_type as VectorSearchRequest["resource_type"],
   resource_type_group:
     params.resource_type_group as VectorSearchRequest["resource_type_group"],
