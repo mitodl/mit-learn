@@ -69,6 +69,7 @@ const managerOrganizationKeys = {
       ),
       opts.page,
       opts.search_term,
+      opts.status,
     ] as const,
 }
 

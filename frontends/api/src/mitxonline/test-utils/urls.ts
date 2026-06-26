@@ -93,7 +93,12 @@ const contracts = {
   managerContractCodes: (
     orgId: number,
     contractId: number,
-    params?: { page?: number; page_size?: number; search_term?: string },
+    params?: {
+      page?: number
+      page_size?: number
+      search_term?: string
+      status?: string
+    },
   ) => {
     // queryify does not filter undefined values, so strip them first to avoid e.g. search_term=undefined in the URL
     const clean = params

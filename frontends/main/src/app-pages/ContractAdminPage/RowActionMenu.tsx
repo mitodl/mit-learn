@@ -138,8 +138,14 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({
         parent_lookup_organization: orgId,
       })
       onResult("Seat released.", "success")
-    } catch {
-      onResult("Could not release the seat. Please try again.", "error")
+    } catch (err) {
+      const status = (err as AxiosError)?.response?.status
+      onResult(
+        status === 409
+          ? "This seat has already been redeemed and cannot be released."
+          : "Could not release the seat. Please try again.",
+        "error",
+      )
     }
     // Dialog closes itself once this resolves.
   }

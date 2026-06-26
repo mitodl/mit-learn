@@ -1,5 +1,6 @@
 import React from "react"
 import { renderWithProviders, screen, user } from "@/test-utils"
+import { waitFor } from "@testing-library/react"
 import { setMockResponse } from "api/test-utils"
 import { factories, urls } from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -265,6 +266,13 @@ describe("ContractAdminPage", () => {
       }),
       factories.contracts.paginatedContractCodes([assignedCode, redeemedCode]),
     )
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        status: "redeemed",
+      }),
+      factories.contracts.paginatedContractCodes([redeemedCode]),
+    )
 
     renderWithProviders(
       <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
@@ -274,8 +282,155 @@ describe("ContractAdminPage", () => {
 
     await user.click(screen.getByRole("tab", { name: "Redeemed" }))
 
-    expect(screen.getByText("redeemed@example.com")).toBeInTheDocument()
+    await screen.findByText("redeemed@example.com")
     expect(screen.queryByText("pending@example.com")).not.toBeInTheDocument()
+  })
+
+  describe("CSV export", () => {
+    const setupPage = (
+      org: ReturnType<typeof factories.organizations.organization>,
+      contract: ReturnType<typeof factories.contracts.contract>,
+      overrides: Parameters<typeof makeContractDetail>[1] = {},
+    ) => {
+      setMockResponse.get(managerOrgsUrl, [org])
+      setMockResponse.get(
+        managerContractDetailUrl(org.id, contract.id),
+        makeContractDetail(contract, overrides),
+      )
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, { page: 1 }),
+        factories.contracts.paginatedContractCodes([]),
+      )
+    }
+
+    let clickedAnchor: HTMLAnchorElement | null = null
+    const mockCreateObjectURL = jest.fn().mockReturnValue("blob:fake-url")
+    const mockRevokeObjectURL = jest.fn()
+
+    beforeEach(() => {
+      mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      clickedAnchor = null
+      mockCreateObjectURL.mockClear()
+      mockRevokeObjectURL.mockClear()
+      URL.createObjectURL = mockCreateObjectURL
+      URL.revokeObjectURL = mockRevokeObjectURL
+      jest
+        .spyOn(HTMLAnchorElement.prototype, "click")
+        .mockImplementation(function (this: HTMLAnchorElement) {
+          clickedAnchor = this
+        })
+    })
+
+    afterEach(() => {
+      jest.restoreAllMocks()
+    })
+
+    test("triggers download with correct filename for a single page of results", async () => {
+      const { org, contract } = makeOrgWithContract()
+      setupPage(org, contract, { total_codes: 2 })
+
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 1,
+          page_size: 500,
+        }),
+        factories.contracts.paginatedContractCodes([
+          factories.contracts.contractCode({
+            assigned_to: "alice@example.com",
+          }),
+          factories.contracts.contractCode({ assigned_to: "bob@example.com" }),
+        ]),
+      )
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByRole("button", { name: "Export CSV" })
+      await user.click(screen.getByRole("button", { name: "Export CSV" }))
+
+      await waitFor(() => {
+        expect(mockCreateObjectURL).toHaveBeenCalledWith(expect.any(Blob))
+      })
+      expect(clickedAnchor).not.toBeNull()
+      expect(clickedAnchor!.download).toBe("seat-assignments.csv")
+      expect(mockRevokeObjectURL).toHaveBeenCalledWith("blob:fake-url")
+      await screen.findByText("CSV download started.")
+    })
+
+    test("fetches additional pages and includes all rows in the CSV", async () => {
+      const { org, contract } = makeOrgWithContract()
+      setupPage(org, contract, { total_codes: 2 })
+
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 1,
+          page_size: 500,
+        }),
+        factories.contracts.paginatedContractCodes(
+          [
+            factories.contracts.contractCode({
+              assigned_to: "alice@example.com",
+            }),
+          ],
+          { count: 2, next: "next-page" },
+        ),
+      )
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 2,
+          page_size: 500,
+        }),
+        factories.contracts.paginatedContractCodes([
+          factories.contracts.contractCode({ assigned_to: "bob@example.com" }),
+        ]),
+      )
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByRole("button", { name: "Export CSV" })
+      await user.click(screen.getByRole("button", { name: "Export CSV" }))
+
+      await waitFor(() => {
+        expect(mockCreateObjectURL).toHaveBeenCalledWith(expect.any(Blob))
+      })
+      const blob = mockCreateObjectURL.mock.calls[0][0] as Blob
+      const csv = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsText(blob)
+      })
+      expect(csv).toContain("alice@example.com")
+      expect(csv).toContain("bob@example.com")
+    })
+
+    test("shows error alert when the export request fails", async () => {
+      allowConsoleErrors()
+      const { org, contract } = makeOrgWithContract()
+      setupPage(org, contract, { total_codes: 1 })
+
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 1,
+          page_size: 500,
+        }),
+        "Internal Server Error",
+        { code: 500 },
+      )
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByRole("button", { name: "Export CSV" })
+      await user.click(screen.getByRole("button", { name: "Export CSV" }))
+
+      await screen.findByText("Could not export CSV. Please try again.")
+    })
   })
 
   test("Pending claim tab filters to assigned codes only", async () => {
@@ -311,6 +466,13 @@ describe("ContractAdminPage", () => {
       }),
       factories.contracts.paginatedContractCodes([assignedCode, redeemedCode]),
     )
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        status: "assigned",
+      }),
+      factories.contracts.paginatedContractCodes([assignedCode]),
+    )
 
     renderWithProviders(
       <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
@@ -320,7 +482,9 @@ describe("ContractAdminPage", () => {
 
     await user.click(screen.getByRole("tab", { name: "Pending claim" }))
 
+    await waitFor(() => {
+      expect(screen.queryByText("redeemed@example.com")).not.toBeInTheDocument()
+    })
     expect(screen.getByText("pending@example.com")).toBeInTheDocument()
-    expect(screen.queryByText("redeemed@example.com")).not.toBeInTheDocument()
   })
 })

@@ -352,6 +352,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     severity: "success" | "error"
   } | null>(null)
   const [rowActionAnnouncement, setRowActionAnnouncement] = useState("")
+  const [isExporting, setIsExporting] = useState(false)
 
   // Debounce search query to avoid firing a new request on every keystroke.
   useEffect(() => {
@@ -410,6 +411,12 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
       parent_lookup_organization: org?.id ?? 0,
       page,
       search_term: debouncedSearchQuery || undefined,
+      status:
+        statusFilter === "redeemed"
+          ? "redeemed"
+          : statusFilter === "pending"
+            ? "assigned"
+            : undefined,
     }),
     enabled: !!org && !!contract,
   })
@@ -468,19 +475,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const assignedCount = contractDetail?.assigned_codes
   const redeemedCount = contractDetail?.redeemed_codes
 
-  // Tab filter is applied client-side on the current page of results.
-  // Unassigned codes are excluded server-side (API only returns assigned/redeemed).
-  // TODO: pass statusFilter as a server-side query param once the API supports a
-  // redemption_status filter — client-side filtering against paginated results means
-  // pagination counts reflect all statuses, not the active tab's subset.
   const pageResults = codes?.results ?? []
-  const tabFilteredCodes = pageResults.filter((code) => {
-    return (
-      statusFilter === "all" ||
-      (statusFilter === "redeemed" && code.redemption_status === "redeemed") ||
-      (statusFilter === "pending" && code.redemption_status === "assigned")
-    )
-  })
 
   const totalCount = codes?.count ?? 0
   // Derive total pages from the response: if there's a next page we're on a
@@ -502,13 +497,27 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
 
   const handleExportCsv = async () => {
     if (!totalPurchased) return
+    setIsExporting(true)
     try {
-      const response = await b2bApi.b2bManagerOrganizationsContractsCodesList({
+      const PAGE_SIZE = 500
+      let page = 1
+      let res = await b2bApi.b2bManagerOrganizationsContractsCodesList({
         id: contract.id,
         parent_lookup_organization: org.id,
-        page_size: totalPurchased,
+        page,
+        page_size: PAGE_SIZE,
       })
-      const rows = response.data.results
+      const rows = [...res.data.results]
+      while (res.data.next) {
+        page += 1
+        res = await b2bApi.b2bManagerOrganizationsContractsCodesList({
+          id: contract.id,
+          parent_lookup_organization: org.id,
+          page,
+          page_size: PAGE_SIZE,
+        })
+        rows.push(...res.data.results)
+      }
       const header = buildCsvRow([
         "Assigned to",
         "Redeemed by",
@@ -537,11 +546,17 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
       link.click()
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
+      setRowActionResult({
+        message: "CSV download started.",
+        severity: "success",
+      })
     } catch {
       setRowActionResult({
         message: "Could not export CSV. Please try again.",
         severity: "error",
       })
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -657,9 +672,12 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
               <Button
                 variant="bordered"
                 onClick={handleExportCsv}
-                disabled={isLoadingContractDetail || !totalPurchased}
+                disabled={
+                  isLoadingContractDetail || !totalPurchased || isExporting
+                }
+                aria-busy={isExporting}
               >
-                Export CSV
+                {isExporting ? "Exporting..." : "Export CSV"}
               </Button>
             </ExportButtonWrapper>
           </SeatAssignmentsControls>
@@ -713,7 +731,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                 <VisuallyHidden aria-live="polite" aria-atomic="true">
                   {isLoadingCodes
                     ? "Loading seat assignments"
-                    : tabFilteredCodes.length === 0
+                    : pageResults.length === 0
                       ? "No seat assignments found"
                       : `Showing page ${page} of ${totalPages}`}
                 </VisuallyHidden>
@@ -727,7 +745,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                       </TableRow>
                     ))}
                   </>
-                ) : tabFilteredCodes.length === 0 ? (
+                ) : pageResults.length === 0 ? (
                   <TableRow role="row">
                     <EmptyTableMessage
                       role="cell"
@@ -738,7 +756,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                     </EmptyTableMessage>
                   </TableRow>
                 ) : (
-                  tabFilteredCodes.map((code) => (
+                  pageResults.map((code) => (
                     <TableRow role="row" key={code.id}>
                       <TableCell
                         role="cell"
