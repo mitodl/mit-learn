@@ -73,7 +73,7 @@ describe("AssignSeatsSection", () => {
     expect(screen.getByText("(download sample CSV)")).toBeInTheDocument()
   })
 
-  test("download sample CSV pseudo-link is in the tab order and disabled", () => {
+  test("download sample CSV link is rendered", () => {
     renderWithProviders(
       <AssignSeatsSection
         orgId={1}
@@ -83,12 +83,11 @@ describe("AssignSeatsSection", () => {
       />,
     )
 
-    // Only the download link is still disabled — import from CSV is now active
-    const downloadLink = screen.getByRole("button", {
+    // The download link is a real anchor — in the tab order and not disabled
+    const downloadLink = screen.getByRole("link", {
       name: "(download sample CSV)",
     })
-    expect(downloadLink).toHaveAttribute("tabindex", "0")
-    expect(downloadLink).toHaveAttribute("aria-disabled", "true")
+    expect(downloadLink).toBeInTheDocument()
   })
 
   test("import from CSV button is active and in the tab order", () => {

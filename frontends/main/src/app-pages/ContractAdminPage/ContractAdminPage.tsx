@@ -470,6 +470,9 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
 
   // Tab filter is applied client-side on the current page of results.
   // Unassigned codes are excluded server-side (API only returns assigned/redeemed).
+  // TODO: pass statusFilter as a server-side query param once the API supports a
+  // redemption_status filter — client-side filtering against paginated results means
+  // pagination counts reflect all statuses, not the active tab's subset.
   const pageResults = codes?.results ?? []
   const tabFilteredCodes = pageResults.filter((code) => {
     return (
@@ -483,9 +486,10 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   // Derive total pages from the response: if there's a next page we're on a
   // full page so results.length equals the backend page size; otherwise this
   // is the last page so totalPages equals the current page number.
-  const totalPages = codes?.next
-    ? Math.ceil(totalCount / pageResults.length)
-    : page
+  const totalPages =
+    codes?.next && pageResults.length > 0
+      ? Math.ceil(totalCount / pageResults.length)
+      : page
 
   const handleTabChange = (_: React.SyntheticEvent, val: StatusFilter) => {
     setStatusFilter(val)
@@ -497,40 +501,48 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   }
 
   const handleExportCsv = async () => {
-    const response = await b2bApi.b2bManagerOrganizationsContractsCodesList({
-      id: contract.id,
-      parent_lookup_organization: org.id,
-      page_size: totalPurchased,
-    })
-    const rows = response.data.results
-    const header = buildCsvRow([
-      "Assigned to",
-      "Redeemed by",
-      "Status",
-      "Assigned on",
-      "Redeemed on",
-      "Last sent",
-    ])
-    const dataRows = rows.map((c) =>
-      buildCsvRow([
-        c.assigned_to,
-        c.redeemed_by,
-        c.redemption_status === "redeemed" ? "Redeemed" : "Pending claim",
-        formatDate(c.assigned_on),
-        formatDate(c.redeemed_on),
-        formatDate(c.last_sent),
-      ]),
-    )
-    const csv = [header, ...dataRows].join("\n")
-    const blob = new Blob([csv], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = "seat-assignments.csv"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    if (!totalPurchased) return
+    try {
+      const response = await b2bApi.b2bManagerOrganizationsContractsCodesList({
+        id: contract.id,
+        parent_lookup_organization: org.id,
+        page_size: totalPurchased,
+      })
+      const rows = response.data.results
+      const header = buildCsvRow([
+        "Assigned to",
+        "Redeemed by",
+        "Status",
+        "Assigned on",
+        "Redeemed on",
+        "Last sent",
+      ])
+      const dataRows = rows.map((c) =>
+        buildCsvRow([
+          c.assigned_to,
+          c.redeemed_by,
+          c.redemption_status === "redeemed" ? "Redeemed" : "Pending claim",
+          formatDate(c.assigned_on),
+          formatDate(c.redeemed_on),
+          formatDate(c.last_sent),
+        ]),
+      )
+      const csv = [header, ...dataRows].join("\n")
+      const blob = new Blob([csv], { type: "text/csv" })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = "seat-assignments.csv"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    } catch {
+      setRowActionResult({
+        message: "Could not export CSV. Please try again.",
+        severity: "error",
+      })
+    }
   }
 
   return (
@@ -642,7 +654,11 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
               />
             </ControlsLeft>
             <ExportButtonWrapper>
-              <Button variant="bordered" onClick={handleExportCsv}>
+              <Button
+                variant="bordered"
+                onClick={handleExportCsv}
+                disabled={isLoadingContractDetail || !totalPurchased}
+              >
                 Export CSV
               </Button>
             </ExportButtonWrapper>
