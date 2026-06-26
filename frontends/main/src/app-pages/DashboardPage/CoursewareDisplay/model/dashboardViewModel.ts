@@ -1222,6 +1222,48 @@ const getCollectionFirstCoursesInDisplayOrder = (
 }
 
 /**
+ * Deduplicate home-dashboard enrollments to one per course+variant group.
+ *
+ * Groups by (courseId × language × variant_industry × variant_length) — the
+ * same key used by filterVariantSiblings — then picks the single best
+ * enrollment per group (certificate first, then highest grade). Siblings are
+ * NOT returned here; callers retrieve them at render time via
+ * filterVariantSiblings + enrollmentsByCourseId so the full sibling list is
+ * always fresh.
+ */
+const pickDisplayedHomeEnrollments = (
+  enrollments: CourseRunEnrollmentV3[],
+): CourseRunEnrollmentV3[] => {
+  const groups = new Map<string, CourseRunEnrollmentV3[]>()
+  for (const enrollment of enrollments) {
+    const run = enrollment.run
+    const key = [
+      run.course.id,
+      run.language ?? "",
+      run.variant_industry ?? "",
+      run.variant_length ?? "",
+    ].join("|")
+    const group = groups.get(key)
+    if (group) {
+      group.push(enrollment)
+    } else {
+      groups.set(key, [enrollment])
+    }
+  }
+  return [...groups.values()].map((group) =>
+    group.reduce((best, current) => {
+      const bestHasCert = !!best.certificate?.uuid
+      const currentHasCert = !!current.certificate?.uuid
+      if (currentHasCert && !bestHasCert) return current
+      if (bestHasCert && !currentHasCert) return best
+      return getMaxEnrollmentGrade(current) > getMaxEnrollmentGrade(best)
+        ? current
+        : best
+    }),
+  )
+}
+
+/**
  * Returns all enrollments in `enrollments` that share the same variant
  * (language × variant_industry × variant_length) as `currentEnrollment`,
  * excluding `currentEnrollment` itself.
@@ -1266,6 +1308,7 @@ export {
   sortVariants,
   selectVariantRunForCourse,
   filterVariantSiblings,
+  pickDisplayedHomeEnrollments,
 }
 
 export type { RequirementSectionItem, RequirementSection }

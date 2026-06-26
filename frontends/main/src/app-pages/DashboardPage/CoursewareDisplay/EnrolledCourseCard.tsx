@@ -115,7 +115,7 @@ const UpgradeBanner: React.FC<
 }
 
 const EnrolledCardShell = styled.div(({ theme }) => ({
-  border: `1px solid ${theme.custom.colors.lightGray1}`,
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
   borderRadius: "8px",
   overflow: "hidden",
   backgroundColor: theme.custom.colors.white,
@@ -383,6 +383,7 @@ export const EnrolledCourseCard = ({
         <EnrolledCardShell
           data-testid="enrollment-card-desktop"
           className={className}
+          as={Component}
         >
           <CardHeaderContent>
             <Stack justifyContent="start" alignItems="stretch" flex={1}>
