@@ -124,9 +124,9 @@ describe("HomeEnrollmentsDisplay", () => {
     const enrollmentA = mitxonline.factories.enrollment.courseEnrollment({
       run: {
         course: { id: sharedCourseId },
-        language: null,
-        variant_industry: null,
-        variant_length: null,
+        language: undefined,
+        variant_industry: undefined,
+        variant_length: undefined,
       },
       certificate: null,
       grades: [],
@@ -134,9 +134,9 @@ describe("HomeEnrollmentsDisplay", () => {
     const enrollmentB = mitxonline.factories.enrollment.courseEnrollment({
       run: {
         course: { id: sharedCourseId },
-        language: null,
-        variant_industry: null,
-        variant_length: null,
+        language: undefined,
+        variant_industry: undefined,
+        variant_length: undefined,
       },
       certificate: null,
       grades: [],

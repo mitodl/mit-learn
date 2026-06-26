@@ -1908,24 +1908,24 @@ describe("filterVariantSiblings", () => {
       run: {
         course: { id: courseId },
         language: "en",
-        variant_industry: null,
-        variant_length: null,
+        variant_industry: undefined,
+        variant_length: undefined,
       },
     })
     const sameVariant = factories.enrollment.courseEnrollment({
       run: {
         course: { id: courseId },
         language: "en",
-        variant_industry: null,
-        variant_length: null,
+        variant_industry: undefined,
+        variant_length: undefined,
       },
     })
     const differentLanguage = factories.enrollment.courseEnrollment({
       run: {
         course: { id: courseId },
         language: "de",
-        variant_industry: null,
-        variant_length: null,
+        variant_industry: undefined,
+        variant_length: undefined,
       },
     })
 
@@ -1936,14 +1936,22 @@ describe("filterVariantSiblings", () => {
 
   test("excludes the current enrollment even when its variant fields match exactly", () => {
     const enrollment = factories.enrollment.courseEnrollment({
-      run: { language: "en", variant_industry: null, variant_length: null },
+      run: {
+        language: "en",
+        variant_industry: undefined,
+        variant_length: undefined,
+      },
     })
     expect(filterVariantSiblings([enrollment], enrollment)).toEqual([])
   })
 
-  test("treats null and empty string as the same value for all three variant fields", () => {
+  test("treats undefined and empty string as the same value for all three variant fields", () => {
     const current = factories.enrollment.courseEnrollment({
-      run: { language: null, variant_industry: null, variant_length: null },
+      run: {
+        language: undefined,
+        variant_industry: undefined,
+        variant_length: undefined,
+      },
     })
     const withEmpty = factories.enrollment.courseEnrollment({
       run: { language: "", variant_industry: "", variant_length: "" },
@@ -2013,8 +2021,8 @@ describe("pickDisplayedHomeEnrollments", () => {
       run: {
         course: { id: courseId },
         language: "en",
-        variant_industry: null,
-        variant_length: null,
+        variant_industry: undefined,
+        variant_length: undefined,
       },
       certificate: null,
       grades: [],
@@ -2023,8 +2031,8 @@ describe("pickDisplayedHomeEnrollments", () => {
       run: {
         course: { id: courseId },
         language: "en",
-        variant_industry: null,
-        variant_length: null,
+        variant_industry: undefined,
+        variant_length: undefined,
       },
       certificate: null,
       grades: [],
@@ -2038,8 +2046,8 @@ describe("pickDisplayedHomeEnrollments", () => {
       run: {
         course: { id: courseId },
         language: "en",
-        variant_industry: null,
-        variant_length: null,
+        variant_industry: undefined,
+        variant_length: undefined,
       },
       certificate: null,
       grades: [],
@@ -2048,8 +2056,8 @@ describe("pickDisplayedHomeEnrollments", () => {
       run: {
         course: { id: courseId },
         language: "en",
-        variant_industry: null,
-        variant_length: null,
+        variant_industry: undefined,
+        variant_length: undefined,
       },
       certificate: { uuid: "cert-abc", link: "/certificate/cert-abc/" },
       grades: [],
@@ -2063,8 +2071,8 @@ describe("pickDisplayedHomeEnrollments", () => {
       run: {
         course: { id: courseId },
         language: "en",
-        variant_industry: null,
-        variant_length: null,
+        variant_industry: undefined,
+        variant_length: undefined,
       },
       certificate: null,
       grades: [factories.enrollment.grade({ grade: 0.6 })],
@@ -2073,8 +2081,8 @@ describe("pickDisplayedHomeEnrollments", () => {
       run: {
         course: { id: courseId },
         language: "en",
-        variant_industry: null,
-        variant_length: null,
+        variant_industry: undefined,
+        variant_length: undefined,
       },
       certificate: null,
       grades: [factories.enrollment.grade({ grade: 0.9 })],
@@ -2088,8 +2096,8 @@ describe("pickDisplayedHomeEnrollments", () => {
       run: {
         course: { id: courseId },
         language: "en",
-        variant_industry: null,
-        variant_length: null,
+        variant_industry: undefined,
+        variant_length: undefined,
       },
       certificate: null,
       grades: [],
@@ -2098,8 +2106,8 @@ describe("pickDisplayedHomeEnrollments", () => {
       run: {
         course: { id: courseId },
         language: "de",
-        variant_industry: null,
-        variant_length: null,
+        variant_industry: undefined,
+        variant_length: undefined,
       },
       certificate: null,
       grades: [],
@@ -2112,8 +2120,8 @@ describe("pickDisplayedHomeEnrollments", () => {
       run: {
         course: { id: 1 },
         language: "en",
-        variant_industry: null,
-        variant_length: null,
+        variant_industry: undefined,
+        variant_length: undefined,
       },
       certificate: null,
       grades: [],
@@ -2122,8 +2130,8 @@ describe("pickDisplayedHomeEnrollments", () => {
       run: {
         course: { id: 2 },
         language: "en",
-        variant_industry: null,
-        variant_length: null,
+        variant_industry: undefined,
+        variant_length: undefined,
       },
       certificate: null,
       grades: [],
