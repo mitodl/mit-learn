@@ -122,6 +122,21 @@ const EnrolledCardShell = styled.div(({ theme }) => ({
   [theme.breakpoints.down("md")]: {
     display: "none",
   },
+  '&[data-layout="compact"]': {
+    border: "none",
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRadius: "0px !important",
+    boxShadow: "none",
+    "&:first-of-type": {
+      borderTopLeftRadius: "8px !important",
+      borderTopRightRadius: "8px !important",
+    },
+    "&:last-of-type": {
+      borderBottomLeftRadius: "8px !important",
+      borderBottomRightRadius: "8px !important",
+      borderBottom: "none",
+    },
+  },
 }))
 
 const CardHeaderContent = styled.div({
@@ -382,6 +397,7 @@ export const EnrolledCourseCard = ({
       {hasMultipleRuns ? (
         <EnrolledCardShell
           data-testid="enrollment-card-desktop"
+          data-layout={layout}
           className={className}
           as={Component}
         >
