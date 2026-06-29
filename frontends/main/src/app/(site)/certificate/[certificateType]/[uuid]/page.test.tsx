@@ -27,6 +27,42 @@ describe("Certificate page generateMetadata", () => {
       `${certificate.user.name}'s MicroMasters® Certificate`,
     )
     expect(metadata.description).toBe(
+      `${certificate.user.name} has successfully completed: ${certificate.certificate_page.product_name}`,
+    )
+  })
+
+  it("uses the CMS product name in the program description", async () => {
+    const certificate = factories.mitxonline.programCertificate()
+    certificate.program.program_type = "Program"
+    certificate.certificate_page.product_name = "Universal AI"
+    setMockResponse.get(
+      mitxonline.urls.certificates.programCertificatesRetrieve({
+        uuid: certificate.uuid,
+      }),
+      certificate,
+    )
+
+    const metadata = await callGenerateMetadata("program", certificate.uuid)
+
+    expect(metadata.description).toBe(
+      `${certificate.user.name} has successfully completed: Universal AI`,
+    )
+  })
+
+  it("falls back to the program title in the description when no product name is set", async () => {
+    const certificate = factories.mitxonline.programCertificate()
+    certificate.program.program_type = "Program"
+    certificate.certificate_page.product_name = ""
+    setMockResponse.get(
+      mitxonline.urls.certificates.programCertificatesRetrieve({
+        uuid: certificate.uuid,
+      }),
+      certificate,
+    )
+
+    const metadata = await callGenerateMetadata("program", certificate.uuid)
+
+    expect(metadata.description).toBe(
       `${certificate.user.name} has successfully completed: ${certificate.program.title}`,
     )
   })
