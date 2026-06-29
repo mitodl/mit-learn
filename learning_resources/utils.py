@@ -44,7 +44,7 @@ from main.utils import generate_filepath
 log = logging.getLogger()
 
 
-def log_missing_content_file(identifier, *, reason, source, **context):
+def log_missing_content_file(identifier, *, reason, source):
     """
     Log that a request referenced an edx_module_id with no backing ContentFile.
 
@@ -57,7 +57,15 @@ def log_missing_content_file(identifier, *, reason, source, **context):
         reason,
         identifier,
         source,
-        extra=context,
+    )
+
+
+def present_edx_module_ids(edx_module_ids):
+    """Return the subset of edx_module_ids that have a ContentFile row."""
+    return set(
+        ContentFile.objects.filter(edx_module_id__in=edx_module_ids).values_list(
+            "edx_module_id", flat=True
+        )
     )
 
 

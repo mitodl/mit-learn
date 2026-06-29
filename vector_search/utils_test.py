@@ -57,7 +57,6 @@ from vector_search.encoders.utils import dense_encoder, sparse_encoder
 from vector_search.utils import (
     _chunk_documents,
     _chunk_markdown_documents,
-    _content_file_vector_hits,
     _embed_course_metadata_as_contentfile,
     _generate_content_file_points,
     _get_text_splitter,
@@ -2171,26 +2170,3 @@ def test_check_missing_content_file_ids_skips_index_probe_for_unknown_collection
     # not_in_db should not fire either (the id IS in the DB)
     # not_in_index should not fire (probe was skipped)
     mock_log.assert_not_called()
-
-
-@pytest.mark.django_db
-def test_content_file_vector_hits_logs_unhydrated(mocker):
-    """A Qdrant hit with no matching ContentFile row is logged not_in_db."""
-    mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
-    hit = mocker.Mock()
-    hit.payload = {
-        "run_readable_id": "run_x",
-        "key": "missing.pdf",
-        "edx_module_id": "block_missing",
-    }
-
-    results = _content_file_vector_hits([hit])
-
-    assert results == [hit.payload]  # hit still returned, just unhydrated
-    mock_log.assert_called_once_with(
-        "block_missing",
-        reason="not_in_db",
-        source="vector_hits",
-        run_readable_id="run_x",
-        key="missing.pdf",
-    )

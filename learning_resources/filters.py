@@ -26,7 +26,10 @@ from learning_resources.models import (
     ContentFile,
     LearningResource,
 )
-from learning_resources.utils import log_missing_content_file
+from learning_resources.utils import (
+    log_missing_content_file,
+    present_edx_module_ids,
+)
 from main.filters import CharInFilter, NumberInFilter, multi_or_filter
 
 log = logging.getLogger(__name__)
@@ -195,11 +198,7 @@ class LoggedEdxModuleIdFilter(CharInFilter):
 
     def filter(self, qs, value):
         if value:
-            present = set(
-                ContentFile.objects.filter(edx_module_id__in=value).values_list(
-                    "edx_module_id", flat=True
-                )
-            )
+            present = present_edx_module_ids(value)
             for missing in set(value) - present:
                 log_missing_content_file(
                     missing, reason="not_in_db", source="contentfiles_api"

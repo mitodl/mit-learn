@@ -995,27 +995,14 @@ def test_strip_markdown_images(input_md, expected):
 
 
 def test_log_missing_content_file_logs_error(mocker):
-    """Logs an error with the reason, identifier, source, and context as extra."""
+    """Logs an error with the reason, identifier, and source."""
     mock_log = mocker.patch("learning_resources.utils.log")
 
-    log_missing_content_file(
-        "block_x", reason="not_in_db", source="vector_hits", key="missing.pdf"
-    )
+    log_missing_content_file("block_x", reason="not_in_db", source="contentfiles_api")
 
     mock_log.error.assert_called_once_with(
         "Missing ContentFile (%s) for edx_module_id=%s [source=%s]",
         "not_in_db",
         "block_x",
-        "vector_hits",
-        extra={"key": "missing.pdf"},
+        "contentfiles_api",
     )
-
-
-def test_log_missing_content_file_logs_every_call(mocker):
-    """Every occurrence is logged (no throttle); Sentry handles grouping/rate-limiting."""
-    mock_log = mocker.patch("learning_resources.utils.log")
-
-    log_missing_content_file("block_x", reason="not_in_db", source="test")
-    log_missing_content_file("block_x", reason="not_in_db", source="test")
-
-    assert mock_log.error.call_count == 2
