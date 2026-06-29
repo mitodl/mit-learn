@@ -56,22 +56,15 @@ const managerOrganizationKeys = {
     ] as const,
   contractCodesRoot: () =>
     ["mitxonline", "manager", "organizations", "contracts", "codes"] as const,
-  // Prefix key used for invalidation — matches all pages/search states for one contract
-  contractCodesForContract: (id: number, orgId: number) =>
-    [...managerOrganizationKeys.contractCodesRoot(), id, orgId] as const,
   contractCodes: (
     opts: B2bApiB2bManagerOrganizationsContractsCodesListRequest,
-  ) =>
-    [
-      ...managerOrganizationKeys.contractCodesForContract(
-        opts.id,
-        opts.parent_lookup_organization,
-      ),
-      opts.page,
-      opts.page_size,
-      opts.search_term,
-      opts.status,
-    ] as const,
+  ) => [...managerOrganizationKeys.contractCodesRoot(), opts] as const,
+  // Prefix key used for invalidation — matches all pages/search states for one contract
+  contractCodesForContract: (id: number, orgId: number) =>
+    managerOrganizationKeys.contractCodes({
+      id,
+      parent_lookup_organization: orgId,
+    }),
 }
 
 const managerOrganizationQueries = {
