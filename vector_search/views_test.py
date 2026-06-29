@@ -1047,7 +1047,10 @@ def test_content_file_vector_search_logs_missing_edx_module_id(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
     mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
-    mock_qdrant.query_points = mocker.AsyncMock()
+    # Return empty .points so the hits list is empty and the probe fires.
+    empty_result = mocker.MagicMock()
+    empty_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=empty_result)
     mock_qdrant.query_points_groups = mocker.AsyncMock()
     mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=0))
     mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
@@ -1078,7 +1081,10 @@ def test_content_file_vector_search_probe_failure_does_not_break_search(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
     mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
-    mock_qdrant.query_points = mocker.AsyncMock()
+    # Return empty .points so the hits list is empty and the probe fires (and fails).
+    empty_result = mocker.MagicMock()
+    empty_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=empty_result)
     mock_qdrant.query_points_groups = mocker.AsyncMock()
     mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=0))
     mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
@@ -1098,3 +1104,53 @@ def test_content_file_vector_search_probe_failure_does_not_break_search(
     )
 
     assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_content_file_vector_search_skips_probe_when_results_present(
+    mocker, client, django_user_model
+):
+    """Probe is skipped when the search returns at least one hit.
+
+    We patch check_missing_content_file_ids directly and confirm it is never
+    awaited.  The real gate logic (``not response.get("hits")``) is exercised
+    by making query_points return a non-empty .points list, which flows through
+    the real _content_file_vector_hits pipeline and produces a non-empty hits
+    list in the response dict.
+    """
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+
+    # A single point with the minimum payload needed by _content_file_vector_hits.
+    mock_point = mocker.MagicMock()
+    mock_point.payload = {
+        "run_readable_id": "run-present",
+        "key": "present.pdf",
+        "edx_module_id": "block_present",
+    }
+    non_empty_result = mocker.MagicMock()
+    non_empty_result.points = [mock_point]
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=non_empty_result)
+    mock_qdrant.query_points_groups = mocker.AsyncMock()
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=1))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    mock_probe = mocker.patch(
+        "vector_search.views.check_missing_content_file_ids",
+        new=mocker.AsyncMock(),
+    )
+
+    user = django_user_model.objects.create()
+    group, _ = Group.objects.get_or_create(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS)
+    group.user_set.add(user)
+    client.force_login(user)
+
+    response = client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={"q": "test", "edx_module_id": ["block_present"]},
+    )
+
+    assert response.status_code == 200
+    mock_probe.assert_not_awaited()

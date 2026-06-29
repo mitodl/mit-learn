@@ -706,7 +706,16 @@ class ContentFilesVectorSearchView(QdrantView):
                 del params["resource_readable_id"]
                 params["run_readable_id"] = best_run_ids + list(resource_ids)
 
-            if params.get("edx_module_id"):
+            response = await self.async_vector_search(
+                query_text,
+                limit=limit,
+                offset=offset,
+                params=params,
+                search_collection=collection_name,
+                hybrid_search=hybrid_search,
+            )
+
+            if params.get("edx_module_id") and not response.get("hits"):
                 try:
                     await check_missing_content_file_ids(
                         params["edx_module_id"], collection_name
@@ -716,14 +725,6 @@ class ContentFilesVectorSearchView(QdrantView):
                         "check_missing_content_file_ids failed; continuing search"
                     )
 
-            response = await self.async_vector_search(
-                query_text,
-                limit=limit,
-                offset=offset,
-                params=params,
-                search_collection=collection_name,
-                hybrid_search=hybrid_search,
-            )
             if request_data.data.get("dev_mode"):
                 return Response(response)
             else:
