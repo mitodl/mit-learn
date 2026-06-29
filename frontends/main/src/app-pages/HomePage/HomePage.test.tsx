@@ -95,7 +95,7 @@ const setupAPIs = () => {
     attestations,
   )
 
-  setMockResponse.get(expect.stringContaining(urls.search.resources({})), {
+  setMockResponse.get(expect.stringContaining(urls.search.resources()), {
     count: 0,
     next: null,
     previous: null,
