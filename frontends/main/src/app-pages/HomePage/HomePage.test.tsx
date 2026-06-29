@@ -417,22 +417,19 @@ describe("Home Page Carousel", () => {
 
     renderWithProviders(<HomePage heroImageIndex={1} />)
 
-    await screen.findAllByRole("tablist").then(([featured, media]) => {
+    await screen.findAllByRole("tablist").then(([featured]) => {
       within(featured).getByRole("tab", { name: "All" })
       within(featured).getByRole("tab", { name: "Free" })
       within(featured).getByRole("tab", { name: "With Certificate" })
       within(featured).getByRole("tab", {
         name: "Professional & Executive Learning",
       })
-      within(media).getByRole("tab", { name: "All" })
-      within(media).getByRole("tab", { name: "Videos" })
-      within(media).getByRole("tab", { name: "Podcasts" })
     })
   })
 })
 
 test("Headings", async () => {
-  const { featured, media } = setupAPIs()
+  const { featured } = setupAPIs()
 
   renderWithProviders(<HomePage heroImageIndex={1} />)
   await waitFor(() => {
@@ -442,8 +439,6 @@ test("Headings", async () => {
       // Featured course order is randomized on frontend, so just check for presence
       ...featured.results.map(() => ({ level: 3, name: expect.any(String) })),
       { level: 2, name: "Continue Your Journey" },
-      { level: 2, name: "Media" },
-      ...media.results.map((result) => ({ level: 3, name: result.title })),
       { level: 2, name: "Browse by Topic" },
       { level: 2, name: "From Our Community" },
       { level: 2, name: "MIT News & Events" },
