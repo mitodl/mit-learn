@@ -91,6 +91,13 @@ const setupAPIs = () => {
     attestations,
   )
 
+  setMockResponse.get(expect.stringContaining(urls.search.resources({})), {
+    count: 0,
+    next: null,
+    previous: null,
+    results: [],
+  })
+
   mockedUseFeatureFlagEnabled.mockReturnValue(false)
   return { featured, media }
 }
