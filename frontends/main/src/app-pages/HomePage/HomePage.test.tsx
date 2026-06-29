@@ -22,6 +22,11 @@ import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 
 jest.mock("posthog-js/react")
+jest.mock("ol-components/CarouselV2", () => ({
+  CarouselV2: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+}))
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 const mockedPostHogCapture = jest.fn()
 jest.mock("posthog-js/react")
@@ -438,6 +443,14 @@ describe("Home Page Carousel", () => {
 test("Headings", async () => {
   const { featured } = setupAPIs()
 
+  const videoShorts = [learningResources.video(), learningResources.video()]
+  setMockResponse.get(expect.stringContaining(urls.search.resources({})), {
+    count: videoShorts.length,
+    next: null,
+    previous: null,
+    results: videoShorts,
+  })
+
   renderWithProviders(<HomePage heroImageIndex={1} />)
   await waitFor(() => {
     assertHeadings([
@@ -446,6 +459,7 @@ test("Headings", async () => {
       // Featured course order is randomized on frontend, so just check for presence
       ...featured.results.map(() => ({ level: 3, name: expect.any(String) })),
       { level: 2, name: "Continue Your Journey" },
+      { level: 2, name: "MIT Learning Moments" },
       { level: 2, name: "Browse by Topic" },
       { level: 2, name: "From Our Community" },
       { level: 2, name: "MIT News & Events" },
