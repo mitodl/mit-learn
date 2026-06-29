@@ -33,6 +33,7 @@ const VideoDetailPageRouter: React.FC<VideoDetailPageRouterProps> = ({
   if (isOcw) {
     return (
       <VideoSeriesDetailPage
+        key={videoId}
         videoId={videoId}
         playlistId={playlistId}
         playlistData={playlist}

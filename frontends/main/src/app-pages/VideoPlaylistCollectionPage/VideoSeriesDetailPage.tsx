@@ -188,11 +188,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               getVideoHref={getVideoHref}
               currentVideo={video}
               playerRef={playerRef}
-              shareUrl={
-                playlistId
-                  ? `${NEXT_PUBLIC_ORIGIN}${videoDetailPageView(video.id, playlistId ?? undefined, video.title)}`
-                  : `${NEXT_PUBLIC_ORIGIN}/video/${video.id}`
-              }
+              shareUrl={`${NEXT_PUBLIC_ORIGIN}${videoDetailPageView(video.id, playlistId ?? undefined, video.title)}`}
             />
           )}
 

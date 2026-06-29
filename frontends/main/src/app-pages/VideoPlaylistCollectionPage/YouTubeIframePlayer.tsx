@@ -1,7 +1,7 @@
 "use client"
 
 import { requiredEnv } from "@/env"
-import React, { useEffect, useId, useImperativeHandle, useRef } from "react"
+import React, { useEffect, useImperativeHandle, useRef } from "react"
 
 export type YouTubePlayerHandle = {
   getCurrentTime: () => number
@@ -73,30 +73,67 @@ const YouTubeIframePlayer = React.forwardRef<
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const playerRef = useRef<YTPlayerInstance | null>(null)
 
-  // React 18 useId produces ids like ":r0:" — strip colons for a valid HTML id.
-  const rawId = useId()
-  const iframeId = `yt-player-${rawId.replace(/:/g, "")}`
-
   useImperativeHandle(ref, () => ({
-    getCurrentTime: () => playerRef.current?.getCurrentTime() ?? 0,
+    // Before onReady the postMessage bridge isn't established so
+    // getCurrentTime() can return undefined instead of a number.
+    // Guard with a typeof+isFinite check so we always return a valid number.
+    getCurrentTime: () => {
+      if (typeof playerRef.current?.getCurrentTime !== "function") return 0
+      try {
+        const t = playerRef.current.getCurrentTime()
+        return typeof t === "number" && isFinite(t) && t >= 0 ? t : 0
+      } catch {
+        return 0
+      }
+    },
   }))
 
   useEffect(() => {
     let destroyed = false
+    const iframe = iframeRef.current
+    if (!iframe) return
 
-    ensureYTApi(() => {
-      if (destroyed || !iframeRef.current || !window.YT?.Player) return
-      // Wrapping an existing iframe that already has enablejsapi=1 in its src
-      // does not reload the video — the API bridge is established in place.
-      playerRef.current = new window.YT.Player(iframeId, {})
-    })
+    const createPlayer = () => {
+      // Guard against double-creation (load event + fallback timer both firing).
+      if (destroyed || playerRef.current) return
+      ensureYTApi(() => {
+        if (destroyed || playerRef.current || !iframeRef.current) return
+        if (!window.YT?.Player) return
+        // Pass the element reference directly rather than an id string so
+        // YT.Player tracks this specific element; an id string would cause
+        // document.getElementById lookup at cleanup time and could match a
+        // newly-mounted iframe sharing the same position-based id.
+        playerRef.current = new window.YT.Player(iframeRef.current, {})
+      })
+    }
+
+    // Wrap the iframe with YT.Player only AFTER its embedded player has loaded.
+    // Wrapping a not-yet-loaded iframe leaves the postMessage bridge — and so
+    // getCurrentTime() — permanently disconnected. On the first page load the
+    // YT API script fetch naturally delays us past the iframe load, but on
+    // client-side navigation window.YT already exists, so without this guard we
+    // would wrap the brand-new iframe synchronously, before its content loads.
+    iframe.addEventListener("load", createPlayer)
+    // Fallback for an iframe that already finished loading before this effect
+    // attached the listener (e.g. a server-rendered iframe after hydration),
+    // where the load event will not fire again. No-op once createPlayer's guard
+    // wins via the load event on the navigation path.
+    const fallbackTimer = setTimeout(createPlayer, 1500)
 
     return () => {
       destroyed = true
-      playerRef.current?.destroy()
+      clearTimeout(fallbackTimer)
+      iframe.removeEventListener("load", createPlayer)
+      // Do NOT call playerRef.current?.destroy() here.
+      // YT.Player.destroy() removes the iframe element from the DOM. In React 18
+      // Strict Mode (and during key-based remounts), this fires before the next
+      // effect runs, leaving iframeRef.current pointing to a detached element so
+      // the new YT.Player call silently fails. React owns the iframe's DOM
+      // lifecycle — when it removes the element, the browser terminates the
+      // embedded player automatically.
       playerRef.current = null
     }
-  }, [iframeId])
+  }, [])
 
   const url = new URL(embedUrl)
   url.searchParams.set("rel", "0")
@@ -106,10 +143,8 @@ const YouTubeIframePlayer = React.forwardRef<
     url.searchParams.set("start", String(Math.floor(startTime)))
   }
   const src = url.toString()
-
   return (
     <iframe
-      id={iframeId}
       ref={iframeRef}
       src={src}
       title={title ?? ariaLabel ?? "YouTube video player"}

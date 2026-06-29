@@ -186,7 +186,7 @@ const VideoResourcePlayer = React.forwardRef<
           </div>
         ) : embedUrl ? (
           <YouTubeIframePlayer
-            key={videoId}
+            key={`${videoId}-${embedUrl}-${startTime}`}
             ref={ytPlayerRef}
             embedUrl={embedUrl}
             ariaLabel={`Video: ${videoTitleLabel}`}
