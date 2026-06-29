@@ -83,7 +83,6 @@ describe("AssignSeatsSection", () => {
       />,
     )
 
-    // The download link is a real anchor — in the tab order and not disabled
     const downloadLink = screen.getByRole("link", {
       name: "(download sample CSV)",
     })
