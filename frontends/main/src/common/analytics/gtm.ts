@@ -137,7 +137,7 @@ type AddToCartParams = {
  * the Facebook add-to-cart and LinkedIn add-to-cart tags.
  */
 const trackAddToCart = (params: AddToCartParams) => {
-  pushGtmEvent("addToCart", {
+  pushGtmEvent("add-to-cart", {
     "course-id": params.courseId,
     ...(params.courseName ? { "course-name": params.courseName } : {}),
     "course-price": params.coursePrice ?? 0,
