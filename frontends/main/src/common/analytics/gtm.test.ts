@@ -173,7 +173,7 @@ describe("trackAddToCart", () => {
       coursePrice: 1500,
     })
     expect(window.dataLayer).toContainEqual({
-      event: "addToCart",
+      event: "add-to-cart",
       "course-id": "course-v1:MITx+6.86x",
       "course-name": "Machine Learning",
       "course-price": 1500,
@@ -184,7 +184,7 @@ describe("trackAddToCart", () => {
     trackAddToCart({ courseId: "course-v1:MITx+6.86x" })
     expect(window.dataLayer).toContainEqual(
       expect.objectContaining({
-        event: "addToCart",
+        event: "add-to-cart",
         "course-price": 0,
       }),
     )
