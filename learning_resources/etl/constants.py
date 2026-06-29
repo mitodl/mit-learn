@@ -95,6 +95,15 @@ class ETLSource(ExtendedEnum):
     ovs = "ovs"
 
 
+QDRANT_RETAINED_SOURCES = (
+    ETLSource.mit_edx.value,
+    ETLSource.mitxonline.value,
+    ETLSource.xpro.value,
+    ETLSource.oll.value,
+    ETLSource.canvas.value,
+)
+
+
 class CourseNumberType(Enum):
     """Enum of course number types"""
 

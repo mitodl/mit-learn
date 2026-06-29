@@ -2,9 +2,12 @@ import datetime
 import logging
 
 import celery
+import grpc
 import sentry_sdk
 from celery.exceptions import Ignore
+from celery.utils.time import get_exponential_backoff_interval
 from django.conf import settings
+from django.core.cache import caches
 from django.db.models import Q
 
 from learning_resources.content_summarizer import ContentSummarizer
@@ -47,8 +50,32 @@ from vector_search.utils import (
     vector_point_id,
     vector_point_key,
 )
+from vector_search.utils import (
+    tune_qdrant_collections as tune_qdrant_collections_util,
+)
 
 log = logging.getLogger(__name__)
+
+EMBED_FAILURE_TTL = 60 * 60 * 24  # 24h defensive cleanup for the per-run counter
+
+
+def _record_embedding_failure(failure_key: str) -> None:
+    """Bump the per-invocation embedding-failure counter in the shared redis cache."""
+    cache = caches["redis"]
+    key = f"embed_errors:{failure_key}"
+    try:
+        cache.incr(key)
+    except ValueError:  # key absent
+        cache.set(key, 1, EMBED_FAILURE_TTL)
+
+
+@app.task
+def tune_qdrant_collections():
+    """
+    Tune optimizer settings for Qdrant collections.
+    """
+    log.info("Running Qdrant collection tuning task")
+    tune_qdrant_collections_util()
 
 
 def _replace_with_chain(task, task_signatures):
@@ -58,6 +85,25 @@ def _replace_with_chain(task, task_signatures):
     if not task_signatures:
         return None
     return task.replace(celery.chain(*task_signatures))
+
+
+def _replace_with_finalized_chain(
+    task: celery.Task, content_file_ids: list[int], *, overwrite: bool
+) -> None:
+    """
+    Chain of content-file embedding chunks + a finalize tail that fails the parent
+    if any chunk failed. Returns None when there is nothing to embed.
+    """
+    failure_key = task.request.id
+    sigs = [
+        generate_embeddings.si(
+            ids, CONTENT_FILE_TYPE, overwrite=overwrite, failure_key=failure_key
+        )
+        for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
+    ]
+    if not sigs:
+        return None
+    return task.replace(celery.chain(*sigs, finalize_embeddings.si(failure_key)))
 
 
 def _queue_program_content_file_embedding_tasks(index_tasks, program_ids, overwrite):
@@ -84,33 +130,56 @@ def _queue_program_content_file_embedding_tasks(index_tasks, program_ids, overwr
     )
 
 
+def _retry_countdown(retries: int) -> int:
+    """Full-jitter exponential backoff (mirrors retry_backoff=True), capped at 10m."""
+    return get_exponential_backoff_interval(
+        factor=1, retries=retries, maximum=600, full_jitter=True
+    )
+
+
 @app.task(
+    bind=True,
     acks_late=True,
     reject_on_worker_lost=True,
-    autoretry_for=(RetryError,),
-    retry_backoff=True,
+    max_retries=3,
     rate_limit="200/m",
 )
-def generate_embeddings(ids, resource_type, overwrite):
+def generate_embeddings(
+    self,
+    ids: list[int],
+    resource_type: str,
+    overwrite: bool,  # noqa: FBT001
+    failure_key: str | None = None,
+) -> None:
     """
-    Generate learning resource embeddings and index in Qdrant
+    Generate learning resource embeddings and index in Qdrant.
 
-    Args:
-        ids(list of int): List of resource id's
-        resource_type (string): resource_type value for the learning resource objects
-
+    Retries transient Qdrant/search errors with jittered backoff. On exhaustion or a
+    non-transient error: if failure_key is set, log + record the failure and return so
+    the chain continues (finalize_embeddings fails the parent); otherwise propagate.
     """
     try:
         with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
             embed_learning_resources(ids, resource_type, overwrite)
-    except (RetryError, Ignore):
+    except Ignore:
         raise
-    except SystemExit as err:
-        raise RetryError(SystemExit.__name__) from err
-    except:  # noqa: E722
-        error = "generate_embeddings threw an error"
-        log.exception(error)
-        return error
+    except SystemExit as err:  # worker shutdown: transient; propagate if exhausted
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=err, countdown=_retry_countdown(self.request.retries))  # noqa: B904
+        raise
+    except Exception as err:
+        is_deadline = (
+            isinstance(err, grpc.RpcError)
+            and err.code() == grpc.StatusCode.DEADLINE_EXCEEDED
+        )
+        if (isinstance(err, RetryError) or is_deadline) and (
+            self.request.retries < self.max_retries
+        ):
+            raise self.retry(exc=err, countdown=_retry_countdown(self.request.retries))  # noqa: B904
+        if failure_key is None:
+            raise  # generic callers: propagate terminal failure (current behavior)
+        log.exception("generate_embeddings failed for %s", resource_type)
+        _record_embedding_failure(failure_key)
 
 
 @app.task(
@@ -136,10 +205,23 @@ def remove_embeddings(ids, resource_type):
         raise
     except SystemExit as err:
         raise RetryError(SystemExit.__name__) from err
-    except:  # noqa: E722
-        error = "generate_embeddings threw an error"
-        log.exception(error)
-        return error
+    except grpc.RpcError as err:
+        if err.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
+            raise RetryError(str(err)) from err
+        raise
+
+
+@app.task
+def finalize_embeddings(failure_key: str) -> None:
+    """Chain tail: fail the parent task if any chunk recorded a failure."""
+    cache = caches["redis"]
+    key = f"embed_errors:{failure_key}"
+    failures = cache.get(key, 0)
+    cache.delete(key)
+    if failures:
+        msg = f"{failures} embedding chunk(s) failed for {failure_key}"
+        log.error(msg)
+        raise RuntimeError(msg)
 
 
 @app.task(bind=True)
@@ -182,21 +264,13 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):  # noqa
                     .exclude(readable_id=blocklisted_ids)
                     .order_by("id")
                 ):
-                    run = (
-                        course.best_run
-                        if course.best_run
-                        else course.runs.filter(published=True)
-                        .order_by("-start_date")
-                        .first()
-                    )
+                    # Embed published content files across all runs of the course
+                    # (Qdrant retains all runs, not just best_run).
                     contentfiles = (
-                        ContentFile.objects.filter(
-                            Q(run=run, published=True, run__published=True)
-                            | Q(
-                                learning_resource=course,
-                                published=True,
-                                learning_resource__published=True,
-                            )
+                        ContentFile.objects.filter(published=True)
+                        .filter(
+                            Q(run__learning_resource=course)
+                            | Q(learning_resource=course)
                         )
                         .order_by("id")
                         .values_list("id", flat=True)
@@ -294,21 +368,13 @@ def embed_learning_resources_by_id(self, ids, skip_content_files, overwrite):
                 )
             elif not skip_content_files and resource_type == COURSE_TYPE:
                 for course in embed_resources.order_by("id"):
-                    run = (
-                        course.best_run
-                        if course.best_run
-                        else course.runs.filter(published=True)
-                        .order_by("-start_date")
-                        .first()
-                    )
+                    # Embed published content files across all runs of the course
+                    # (Qdrant retains all runs, not just best_run).
                     content_ids = (
-                        ContentFile.objects.filter(
-                            Q(run=run, published=True, run__published=True)
-                            | Q(
-                                learning_resource=course,
-                                published=True,
-                                learning_resource__published=True,
-                            )
+                        ContentFile.objects.filter(published=True)
+                        .filter(
+                            Q(run__learning_resource=course)
+                            | Q(learning_resource=course)
                         )
                         .order_by("id")
                         .values_list("id", flat=True)
@@ -347,7 +413,9 @@ def embed_new_learning_resources(self):
     ).exclude(resource_type=CONTENT_FILE_TYPE)
 
     resource_types = list(
-        new_learning_resources.values_list("resource_type", flat=True)
+        new_learning_resources.order_by("resource_type")
+        .values_list("resource_type", flat=True)
+        .distinct()
     )
     tasks = []
     for resource_type in resource_types:
@@ -384,14 +452,11 @@ def embed_new_content_files(self):
         .exclude(learning_resource__published=False, learning_resource__test_mode=False)
     )
 
-    tasks = [
-        generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite=False)
-        for ids in chunks(
-            new_content_files.values_list("id", flat=True),
-            chunk_size=settings.QDRANT_CHUNK_SIZE,
-        )
-    ]
-    return _replace_with_chain(self, tasks)
+    return _replace_with_finalized_chain(
+        self,
+        list(new_content_files.values_list("id", flat=True)),
+        overwrite=False,
+    )
 
 
 @app.task(bind=True)
@@ -403,11 +468,7 @@ def embed_run_content_files(self, run_id):
         ContentFile.objects.filter(run__id=run_id).values_list("id", flat=True)
     )
 
-    tasks = [
-        generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite=True)
-        for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
-    ]
-    return _replace_with_chain(self, tasks)
+    return _replace_with_finalized_chain(self, content_file_ids, overwrite=True)
 
 
 @app.task(bind=True)
@@ -456,35 +517,34 @@ def embeddings_healthcheck():
     )
 
     for lr in all_resources:
-        run = (
-            lr.best_run
-            if lr.best_run
-            else lr.runs.filter(published=True).order_by("-start_date").first()
-        )
         serialized = LearningResourceSerializer(lr).data
         point_id = vector_point_id(vector_point_key(serialized))
         resource_point_ids[point_id] = {"resource_id": lr.readable_id, "id": lr.id}
         content_file_point_ids = {}
-        if run:
-            for cf in run.content_files.for_serialization().filter(published=True):
-                if cf and cf.content:
-                    serialized_cf = ContentFileSerializer(cf).data
-                    point_id = vector_point_id(
-                        vector_point_key(
-                            serialized_cf, chunk_number=0, document_type="content_file"
-                        )
+        # All runs are embedded in Qdrant, not just best_run.
+        content_files = ContentFile.objects.for_serialization().filter(
+            Q(run__learning_resource=lr) | Q(learning_resource=lr),
+            published=True,
+        )
+        for cf in content_files:
+            if cf and cf.content:
+                serialized_cf = ContentFileSerializer(cf).data
+                point_id = vector_point_id(
+                    vector_point_key(
+                        serialized_cf, chunk_number=0, document_type="content_file"
                     )
-                    content_file_point_ids[point_id] = {"key": cf.key, "id": cf.id}
-            for batch in chunks(content_file_point_ids.keys(), chunk_size=200):
-                remaining_content_files = filter_existing_qdrant_points_by_ids(
-                    batch, collection_name=CONTENT_FILES_COLLECTION_NAME
                 )
-                remaining_content_file_ids.extend(
-                    [
-                        content_file_point_ids.get(p, {}).get("id")
-                        for p in remaining_content_files
-                    ]
-                )
+                content_file_point_ids[point_id] = {"key": cf.key, "id": cf.id}
+        for batch in chunks(content_file_point_ids.keys(), chunk_size=200):
+            remaining_content_files = filter_existing_qdrant_points_by_ids(
+                batch, collection_name=CONTENT_FILES_COLLECTION_NAME
+            )
+            remaining_content_file_ids.extend(
+                [
+                    content_file_point_ids.get(p, {}).get("id")
+                    for p in remaining_content_files
+                ]
+            )
 
     for batch in chunks(
         all_resources.values_list("id", flat=True),

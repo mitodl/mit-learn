@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.71.12 (Released June 23, 2026)
+---------------
+
+- Improvements and fixes for issues in the vector search app (#3505)
+
 Version 0.71.11 (Released June 22, 2026)
 ---------------
 

@@ -6,6 +6,7 @@ from celery import chain
 from django.apps import apps
 from django.conf import settings as django_settings
 
+from learning_resources.etl.constants import QDRANT_RETAINED_SOURCES
 from learning_resources_search import tasks
 from learning_resources_search.api import get_similar_topics_qdrant
 from learning_resources_search.constants import (
@@ -162,66 +163,90 @@ class SearchIndexPlugin:
         # Ensure test mode is false so the resource is removed from the search index
         resource.test_mode = False
         self.resource_unpublished(resource)
+        # Deletion removes the content files, so retained sources (kept in Qdrant
+        # by resource_run_unpublished) must be purged here too.
+        if (
+            django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS
+            and resource.resource_type == COURSE_TYPE
+            and resource.etl_source in QDRANT_RETAINED_SOURCES
+        ):
+            for run in resource.runs.all():
+                try_with_retry_as_task(
+                    chain(vector_tasks.remove_run_content_files.si(run.id))
+                )
 
     @hookimpl
     def resource_run_unpublished(self, run):
         """
-        Remove a learning resource run's content files from the search index
+        Deindex an unpublished run's content files. Retained sources
+        (edX + Canvas) leave OpenSearch only and stay in Qdrant;
+        all other sources leave both indexes.
 
         Args:
             run(LearningResourceRun): The Learning Resource run that was removed
+
         """
-        if run.learning_resource.test_mode:
+        resource = run.learning_resource
+        if resource.test_mode:
             return
         if not run.content_files.exists():
             return
+
+        if resource.etl_source in QDRANT_RETAINED_SOURCES:
+            deindex_tasks = [
+                tasks.deindex_run_content_files.si(
+                    run.id, unpublished_only=False, keep_published=True
+                ),
+            ]
+        else:
+            deindex_tasks = [
+                tasks.deindex_run_content_files.si(run.id, unpublished_only=False),
+            ]
+            if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+                deindex_tasks.append(vector_tasks.remove_run_content_files.si(run.id))
+        try_with_retry_as_task(chain(*deindex_tasks))
+
+    @hookimpl
+    def resource_run_delete(self, run):
+        """
+        Remove a learning resource run's content files from BOTH search indexes
+        and then delete the object.
+        """
         deindex_tasks = [
             tasks.deindex_run_content_files.si(run.id, unpublished_only=False),
         ]
         if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
             deindex_tasks.append(vector_tasks.remove_run_content_files.si(run.id))
         try_with_retry_as_task(chain(*deindex_tasks))
-
-    @hookimpl
-    def resource_run_delete(self, run):
-        """
-        Remove a learning resource run's content files from the search index
-        and then delete the object
-        """
-        if not run.learning_resource.test_mode:
-            self.resource_run_unpublished(run)
         run.delete()
 
     @hookimpl
     def content_files_loaded(self, run):
         """
-        Upsert a created/modified run's content files
+        Upsert a created/modified run's content files.
+
+        Qdrant: embed every loaded run (all runs of a published/test_mode course)
+        and drop stale files. OpenSearch: index only the best published run, or
+        any published run of a test_mode course.
 
          Args:
              run(LearningResourceRun): The LearningResourceRun that was upserted
         """
         if not run.content_files.exists():
             return
-        if run.published:
-            index_tasks = []
+
+        index_tasks = []
+
+        resource = run.learning_resource
+        if resource.published or resource.test_mode:
+            if run.published and (resource.test_mode or resource.best_run == run):
+                index_tasks.append(tasks.index_run_content_files.si(run.id))
+
             if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+                index_tasks.append(vector_tasks.embed_run_content_files.si(run.id))
                 index_tasks.append(
-                    vector_tasks.embed_run_content_files.si(run.id),
+                    vector_tasks.remove_unpublished_run_content_files.si(run.id)
                 )
-            index_tasks.append(
-                tasks.index_run_content_files.si(run.id),
-            )
-            if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
-                index_tasks.append(
-                    vector_tasks.remove_unpublished_run_content_files.si(run.id),
-                )
+
+        if index_tasks:
             try_with_retry_as_task(chain(*index_tasks))
-        else:
-            deindex_tasks = [
-                tasks.deindex_run_content_files.si(run.id, unpublished_only=False),
-            ]
-            if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
-                deindex_tasks.append(
-                    vector_tasks.remove_run_content_files.si(run.id),
-                )
-            try_with_retry_as_task(chain(*deindex_tasks))

@@ -545,6 +545,27 @@ def test_deindex_run_content_files(mocker):
     assert ContentFile.objects.filter(published=False).count() == 3
 
 
+@pytest.mark.django_db
+def test_deindex_run_content_files_keep_published(mocker):
+    """keep_published removes all docs from OpenSearch without flipping published."""
+    mock_deindex_items = mocker.patch(
+        "learning_resources_search.indexing_api.deindex_items"
+    )
+    run = LearningResourceRunFactory.create(published=True)
+    content_files = ContentFileFactory.create_batch(3, run=run, published=True)
+
+    indexing_api.deindex_run_content_files(
+        run.id, unpublished_only=False, keep_published=True
+    )
+
+    # All files were sent for deindexing from OpenSearch...
+    mock_deindex_items.assert_called_once()
+    # ...but none had published flipped.
+    for cf in content_files:
+        cf.refresh_from_db()
+        assert cf.published is True
+
+
 def test_deindex_run_content_files_unpublished_only_does_not_hard_delete(mocker):
     """deindex_run_content_files with unpublished_only=True should deindex but not hard-delete"""
     mock_deindex = mocker.patch("learning_resources_search.indexing_api.deindex_items")

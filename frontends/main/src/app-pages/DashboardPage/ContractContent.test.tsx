@@ -993,9 +993,9 @@ describe("ContractContent", () => {
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
 
     // Create courses with specific, predictable dates for the contract runs
-    // Use a date that's guaranteed to be in the future relative to mocked time
-    const specificStartDate = "2024-12-01T00:00:00Z"
-    const specificEndDate = "2025-01-15T00:00:00Z"
+    // Use a date within 90 days of frozen time so formatCalendarDays returns "in X days"
+    const specificStartDate = "2024-02-15T00:00:00Z"
+    const specificEndDate = "2024-03-31T00:00:00Z"
 
     const baseCourses = factories.courses.courses({ count: 3 }).results
     const program = factories.programs.program({
@@ -1084,7 +1084,7 @@ describe("ContractContent", () => {
           is_enrollable: true,
           title: `CORRECT RUN - ${run.title}`,
           courseware_url: "https://correct-run.example.com",
-          start_date: "2024-12-01T00:00:00Z", // Future date relative to mocked time
+          start_date: "2024-02-15T00:00:00Z", // Future date relative to mocked time, within 90-day threshold
         }
       }),
     }))

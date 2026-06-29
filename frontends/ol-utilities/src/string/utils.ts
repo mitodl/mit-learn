@@ -17,6 +17,7 @@ export const parseEmails = (input: string) =>
 export type EmailParseResult = {
   valid: string[]
   invalid: string[]
+  duplicateEmails: string[]
   duplicateCount: number
   skippedCount: number
 }
@@ -47,37 +48,77 @@ export const extractEmailsFromCsvRows = (
   const invalid: string[] = []
   let skippedCount = 0
 
-  const dataRows =
-    rows.length > 0 && isHeaderRow(rows[0]) ? rows.slice(1) : rows
+  // When the CSV has an identifiable email column header, record its index so
+  // we can validate values in that column even when they contain no "@".
+  // Without a header we fall back to finding any column that contains "@".
+  let dataRows: string[][]
+  let emailColIndex = -1
+
+  if (rows.length > 0 && isHeaderRow(rows[0])) {
+    dataRows = rows.slice(1)
+    emailColIndex = rows[0].findIndex((c) => EMAIL_HEADER_RE.test(c.trim()))
+  } else {
+    dataRows = rows
+  }
 
   for (const cols of dataRows) {
-    const emailCol = cols.map((c) => c.trim()).find((c) => c.includes("@"))
-    if (!emailCol) {
-      skippedCount++
-      continue
-    }
-    if (EMAIL_REGEX.test(emailCol)) {
-      valid.push(emailCol)
+    const trimmed = cols.map((c) => c.trim())
+
+    if (emailColIndex >= 0) {
+      const emailValue = trimmed[emailColIndex] ?? ""
+      if (!emailValue) {
+        // Blank email column — truly no data provided, skip the row.
+        skippedCount++
+        continue
+      }
+      if (EMAIL_REGEX.test(emailValue)) {
+        valid.push(emailValue)
+      } else {
+        // Non-empty value in a known email column that fails validation is
+        // invalid, even if it has no "@" (e.g. "isabeltaylor").
+        invalid.push(emailValue)
+      }
     } else {
-      invalid.push(emailCol)
+      const emailCol = trimmed.find((c) => c.includes("@"))
+      if (!emailCol) {
+        skippedCount++
+        continue
+      }
+      if (EMAIL_REGEX.test(emailCol)) {
+        valid.push(emailCol)
+      } else {
+        invalid.push(emailCol)
+      }
     }
   }
 
   const seen = new Set<string>()
   const deduped: string[] = []
+  const duplicateEmails: string[] = []
+  const duplicateSeen = new Set<string>()
   let duplicateCount = 0
 
   for (const email of valid) {
     const key = email.toLowerCase()
     if (seen.has(key)) {
       duplicateCount++
+      if (!duplicateSeen.has(key)) {
+        duplicateEmails.push(email)
+        duplicateSeen.add(key)
+      }
     } else {
       seen.add(key)
       deduped.push(email)
     }
   }
 
-  return { valid: deduped, invalid, duplicateCount, skippedCount }
+  return {
+    valid: deduped,
+    invalid,
+    duplicateEmails,
+    duplicateCount,
+    skippedCount,
+  }
 }
 
 /**
@@ -103,19 +144,31 @@ export const parseEmailsForSubmit = (input: string): EmailParseResult => {
 
   const seen = new Set<string>()
   const deduped: string[] = []
+  const duplicateEmails: string[] = []
+  const duplicateSeen = new Set<string>()
   let duplicateCount = 0
 
   for (const email of valid) {
     const key = email.toLowerCase()
     if (seen.has(key)) {
       duplicateCount++
+      if (!duplicateSeen.has(key)) {
+        duplicateEmails.push(email)
+        duplicateSeen.add(key)
+      }
     } else {
       seen.add(key)
       deduped.push(email)
     }
   }
 
-  return { valid: deduped, invalid, duplicateCount, skippedCount: 0 }
+  return {
+    valid: deduped,
+    invalid,
+    duplicateEmails,
+    duplicateCount,
+    skippedCount: 0,
+  }
 }
 
 export const initials = (title: string): string => {

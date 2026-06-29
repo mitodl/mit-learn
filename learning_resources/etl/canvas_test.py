@@ -18,6 +18,7 @@ from learning_resources.etl.canvas_utils import (
     _compact_element,
     get_published_items,
     is_file_published,
+    parse_canvas_files,
     parse_canvas_settings,
     parse_files_meta,
     parse_module_meta,
@@ -1542,6 +1543,11 @@ def test_get_published_items_with_hidden_file_section(mocker, tmp_path):
 
 
 def test_get_published_items_for_unpublshed_but_embedded(mocker, tmp_path):
+    """
+    An embedded file that is unpublished (locked) is excluded, but one that is
+    only "available with link" (hidden, not locked) is still ingested because a
+    student can reach it through the linking page.
+    """
     html_content = """
     <html>
     <head><meta name="workflow_state" content="active"/></head>
@@ -1625,15 +1631,64 @@ def test_get_published_items_for_unpublshed_but_embedded(mocker, tmp_path):
             ("web_resources/html_page.html", html_content),
         ],
     )
-    url_config = {
+    # unpublished (locked) embedded file -> excluded even though it is linked
+    # from an active page: a student cannot open a locked file
+    locked_config = {
         "/file1.pdf": {
             "url": "https://cdn.example.com/file1.pdf",
             "locked": True,
             "hidden": True,
         },
     }
-    published = get_published_items(zip_path, url_config)
+    published = get_published_items(zip_path, locked_config)
+    assert Path("web_resources/file1.pdf").resolve() not in published
+
+    # "available with link" (hidden but not locked) embedded file -> ingested,
+    # since the linking page makes it reachable
+    hidden_config = {
+        "/file1.pdf": {
+            "url": "https://cdn.example.com/file1.pdf",
+            "hidden": True,
+        },
+    }
+    published = get_published_items(zip_path, hidden_config)
     assert Path("web_resources/file1.pdf").resolve() in published
+
+
+def test_get_published_items_excludes_embedded_tutor_files(tmp_path, settings):
+    """
+    A tutor problem file embedded in an active page is not ingested as a content
+    file - tutor files are ingested separately as problem files.
+    """
+    settings.CANVAS_TUTORBOT_FOLDER = "web_resources/ai/tutor/"
+    html_content = """
+    <html>
+    <head><meta name="workflow_state" content="active"/></head>
+        <body>
+            <a href="$IMS-CC-FILEBASE$/ai/tutor/problem.pdf">Embedded problem</a>
+        </body>
+    </html>
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES3" type="webcontent" href="web_resources/html_page.html">
+          <file href="web_resources/html_page.html"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    zip_path = make_canvas_zip(
+        tmp_path,
+        module_xml=None,
+        manifest_xml=manifest_xml,
+        files=[
+            ("web_resources/html_page.html", html_content),
+            ("web_resources/ai/tutor/problem.pdf", "problem"),
+        ],
+    )
+    published = get_published_items(zip_path, {})
+    assert Path("web_resources/ai/tutor/problem.pdf").resolve() not in published
 
 
 def test_get_published_items_for_attachment_module(mocker, tmp_path):
@@ -1746,6 +1801,141 @@ def test_get_published_items_for_attachment_module(mocker, tmp_path):
     }
     published = get_published_items(zip_path, url_config)
     assert Path("web_resources/visible_attachment_module.txt").resolve() in published
+
+
+def test_get_published_items_ingests_file_absent_from_files_meta(tmp_path):
+    """
+    An ordinary published file that Canvas omits from files_meta.xml (because it
+    has no non-default metadata) is still ingested via the manifest inventory.
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent" href="web_resources/Syllabus/syllabus.docx">
+          <file href="web_resources/Syllabus/syllabus.docx"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    # no module_meta.xml and no files_meta.xml: the file is reachable only via
+    # the manifest, exactly like the orphaned syllabus docx in course 2198.
+    zip_path = make_canvas_zip(
+        tmp_path,
+        module_xml=None,
+        manifest_xml=manifest_xml,
+        files=[("web_resources/Syllabus/syllabus.docx", "syllabus body")],
+    )
+    published = get_published_items(zip_path, {})
+    assert Path("web_resources/Syllabus/syllabus.docx").resolve() in published
+
+
+def test_get_published_items_excludes_file_in_locked_folder(tmp_path):
+    """
+    A file that is not individually locked but lives in a locked (or hidden)
+    folder is not ingested, even when it is absent from files_meta.xml.
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent" href="web_resources/secret/hidden.pdf">
+          <file href="web_resources/secret/hidden.pdf"/>
+        </resource>
+        <resource identifier="RES2" type="webcontent" href="web_resources/open/shown.pdf">
+          <file href="web_resources/open/shown.pdf"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    files_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <fileMeta xmlns="http://canvas.instructure.com/xsd/cccv1p0">
+      <folders>
+        <folder path="secret">
+          <locked>true</locked>
+        </folder>
+      </folders>
+    </fileMeta>
+    """
+    zip_path = make_canvas_zip(
+        tmp_path,
+        module_xml=None,
+        manifest_xml=manifest_xml,
+        files=[
+            ("course_settings/files_meta.xml", files_xml),
+            ("web_resources/secret/hidden.pdf", "hidden"),
+            ("web_resources/open/shown.pdf", "shown"),
+        ],
+    )
+    published = get_published_items(zip_path, {})
+    assert Path("web_resources/open/shown.pdf").resolve() in published
+    assert Path("web_resources/secret/hidden.pdf").resolve() not in published
+
+
+def test_get_published_items_subfolder_file_respects_hidden_file_section(tmp_path):
+    """
+    A file in a web_resources subfolder is excluded when the Files navigation
+    section is hidden (it would not be reachable by students).
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent" href="web_resources/materials/notes.pdf">
+          <file href="web_resources/materials/notes.pdf"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    files = [("web_resources/materials/notes.pdf", "notes")]
+    notes_path = Path("web_resources/materials/notes.pdf").resolve()
+
+    # files section visible (default settings) -> ingested
+    visible_zip = make_canvas_zip(
+        tmp_path, module_xml=None, manifest_xml=manifest_xml, files=files
+    )
+    assert notes_path in get_published_items(visible_zip, {})
+
+    # files section hidden -> excluded (re-uses tmp_path, overwriting the zip)
+    settings_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+        <course xmlns="http://canvas.instructure.com/xsd/cccv1p0">
+            <title>Test Course Title</title>
+            <tab_configuration>[{"id":0},{"id":11, "hidden":true}]</tab_configuration>
+            <course_code>TEST-101</course_code>
+        </course>
+    """
+    hidden_zip = make_canvas_zip(
+        tmp_path,
+        settings_xml=settings_xml,
+        module_xml=None,
+        manifest_xml=manifest_xml,
+        files=files,
+    )
+    assert notes_path not in get_published_items(hidden_zip, {})
+
+
+def test_parse_canvas_files_skips_html_and_tutor_files(tmp_path, settings):
+    """
+    parse_canvas_files enumerates webcontent files but skips HTML pages (handled
+    by parse_web_content) and tutor problem files (ingested separately).
+    """
+    settings.CANVAS_TUTORBOT_FOLDER = "web_resources/ai/tutor/"
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent" href="web_resources/doc.pdf">
+          <file href="web_resources/doc.pdf"/>
+        </resource>
+        <resource identifier="RES2" type="webcontent" href="web_resources/page.html">
+          <file href="web_resources/page.html"/>
+        </resource>
+        <resource identifier="RES3" type="webcontent" href="web_resources/ai/tutor/Unit1/problem.docx">
+          <file href="web_resources/ai/tutor/Unit1/problem.docx"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    zip_path = make_canvas_zip(tmp_path, module_xml=None, manifest_xml=manifest_xml)
+    result = parse_canvas_files(zip_path)
+    active_paths = {str(item["path"]) for item in result["active"]}
+    assert active_paths == {"web_resources/doc.pdf"}
 
 
 def test_ingestion_finishes_with_missing_xml_files(

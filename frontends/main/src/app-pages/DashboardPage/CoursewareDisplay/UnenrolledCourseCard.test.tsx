@@ -196,6 +196,94 @@ describe.each([
   })
 
   // ---------------------------------------------------------------------------
+  // End date display
+  // ---------------------------------------------------------------------------
+
+  test.each([
+    {
+      endDate: moment().add(2, "days").toISOString(),
+      expectedText: /ends in 2 days/i,
+      case: "future (plural)",
+    },
+    {
+      endDate: moment().add(1, "day").toISOString(),
+      expectedText: /ends tomorrow/i,
+      case: "future (singular)",
+    },
+    {
+      endDate: moment().subtract(2, "days").toISOString(),
+      expectedText: /ended 2 days ago/i,
+      case: "past (plural)",
+    },
+    {
+      endDate: moment().subtract(1, "day").toISOString(),
+      expectedText: /ended yesterday/i,
+      case: "past (singular)",
+    },
+  ])("Shows end date text ($case)", ({ endDate, expectedText }) => {
+    setupUserApis()
+    const run = mitxonline.factories.courses.courseRun({
+      is_enrollable: true,
+      start_date: moment().subtract(30, "days").toISOString(),
+      end_date: endDate,
+    })
+    const course = mitxOnlineCourse({ courseruns: [run], next_run_id: run.id })
+    renderWithProviders(<UnenrolledCourseCard course={course} />)
+    expect(within(getCard()).getByText(expectedText)).toBeInTheDocument()
+  })
+
+  test("Does not show end date text when run has no end date", () => {
+    setupUserApis()
+    const run = mitxonline.factories.courses.courseRun({
+      is_enrollable: true,
+      end_date: null,
+    })
+    const course = mitxOnlineCourse({ courseruns: [run], next_run_id: run.id })
+    renderWithProviders(<UnenrolledCourseCard course={course} />)
+    expect(
+      within(getCard()).queryByText(/ends in \d+ day/i),
+    ).not.toBeInTheDocument()
+    expect(
+      within(getCard()).queryByText(/ended \d+ day/i),
+    ).not.toBeInTheDocument()
+  })
+
+  test.each([
+    { layout: "compact" as const, testId: "courseware-button" },
+    { layout: "default" as const, testId: undefined },
+  ])(
+    "End date shown in correct position for $layout layout",
+    ({ layout, testId }) => {
+      setupUserApis()
+      const run = mitxonline.factories.courses.courseRun({
+        is_enrollable: true,
+        start_date: moment().subtract(30, "days").toISOString(),
+        end_date: moment().add(5, "days").toISOString(),
+      })
+      const course = mitxOnlineCourse({
+        courseruns: [run],
+        next_run_id: run.id,
+      })
+      renderWithProviders(
+        <UnenrolledCourseCard course={course} layout={layout} />,
+      )
+      const card = getCard()
+      if (testId) {
+        // Compact: end date and button are both inside the compact-meta-row
+        const metaRow = within(card).getByTestId("compact-meta-row")
+        expect(metaRow).toHaveTextContent(/ends in 5 days/i)
+        expect(within(metaRow).getByTestId(testId)).toBeInTheDocument()
+      } else {
+        // Default layout has no compact-meta-row; end date appears below the title
+        expect(
+          within(card).queryByTestId("compact-meta-row"),
+        ).not.toBeInTheDocument()
+        expect(within(card).getByText(/ends in 5 days/i)).toBeInTheDocument()
+      }
+    },
+  )
+
+  // ---------------------------------------------------------------------------
   // B2B enrollment flows
   // ---------------------------------------------------------------------------
 

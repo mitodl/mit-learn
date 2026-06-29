@@ -444,6 +444,33 @@ def test_load_run_sets_test_resource_run_to_published(mocker):
     assert not result.published
 
 
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    ("test_mode", "new_published", "expect_unpublish"),
+    [
+        (False, False, True),  # published->False fires the unpublish hook
+        (False, True, False),  # stays published, no hook
+        (True, False, False),  # test_mode forces published=True, never unpublishes
+    ],
+)
+def test_load_run_unpublishes_on_transition(
+    mocker, test_mode, new_published, expect_unpublish
+):
+    """A run flipped published->False via load_run should trigger unpublish actions"""
+    mock_unpublish = mocker.patch(
+        "learning_resources.etl.loaders.resource_run_unpublished_actions",
+    )
+    resource = LearningResourceFactory.create(is_course=True, test_mode=test_mode)
+    run = LearningResourceRunFactory.create(learning_resource=resource, published=True)
+
+    loaders.load_run(resource, {"run_id": run.run_id, "published": new_published})
+
+    if expect_unpublish:
+        mock_unpublish.assert_called_once()
+    else:
+        mock_unpublish.assert_not_called()
+
+
 def test_load_program_bad_platform(mocker):
     """A bad platform should log an exception and not create the program"""
     mock_log = mocker.patch("learning_resources.etl.loaders.log.exception")

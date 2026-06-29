@@ -7,7 +7,7 @@ import { useLearningResourcesDetail } from "api/hooks/learningResources"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { formatDurationClockTime } from "ol-utilities"
 import { useSeriesNavigation } from "./useSeriesNavigation"
-import { videoPlaylistPageView } from "@/common/urls"
+import { videoDetailPageView, videoPlaylistPageView } from "@/common/urls"
 import SeriesNavBar from "./SeriesNavBar"
 import UpNextSection from "./UpNextSection"
 import * as Styled from "./VideoSeriesDetailPage.styled"
@@ -190,7 +190,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               playerRef={playerRef}
               shareUrl={
                 playlistId
-                  ? `${NEXT_PUBLIC_ORIGIN}/video/${video.id}?playlist=${playlistId}`
+                  ? `${NEXT_PUBLIC_ORIGIN}${videoDetailPageView(video.id, playlistId ?? undefined, video.title)}`
                   : `${NEXT_PUBLIC_ORIGIN}/video/${video.id}`
               }
             />

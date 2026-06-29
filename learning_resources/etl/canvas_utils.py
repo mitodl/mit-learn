@@ -525,31 +525,126 @@ def _url_config_key(item):
     return item.get("title")
 
 
-def _url_config_item_visible(item_configuration):
+def _url_config_item_visible(item_configuration, *, allow_hidden=False):
     """
     Determine if an item is visible based on its configuration
-    from the metadata json file
+    from the metadata json file.
+
+    When allow_hidden is True, items that are merely "available with link" (the
+    file or its folder is hidden) are still treated as visible. This is used for
+    files embedded in published content: students reach them through the linking
+    page even though they are not browsable in the Files area. Items that are
+    genuinely inaccessible (unpublished/locked, date-locked, or in a locked
+    folder) are excluded regardless.
     """
     if item_configuration:
         # check if explicitely unpublished
         unpublished = not item_configuration.get("published", True)
         lock_at = item_configuration.get("lock_at")
         unlock_at = item_configuration.get("unlock_at")
-        return not any(
-            [
-                unpublished,
-                is_date_locked(lock_at, unlock_at),
-                item_configuration.get("hidden"),  # file hidden
-                item_configuration.get("locked"),  # file locked
+        checks = [
+            unpublished,
+            is_date_locked(lock_at, unlock_at),
+            item_configuration.get("locked"),  # file locked (unpublished)
+            item_configuration.get("folder", {}).get("locked"),  # parent folder locked
+        ]
+        if not allow_hidden:
+            checks.append(item_configuration.get("hidden"))  # file hidden
+            checks.append(
                 item_configuration.get("folder", {}).get(
                     "hidden"
-                ),  # parent folder hidden
-                item_configuration.get("folder", {}).get(
-                    "locked"
-                ),  # parent folder locked
-            ]
-        )
+                )  # parent folder hidden
+            )
+        return not any(checks)
     return True
+
+
+def parse_canvas_folders(course_archive_path: str) -> set[str]:
+    """
+    Return the set of folder paths (relative to the course files root) that are
+    hidden or locked according to course_settings/files_meta.xml. Any file in
+    one of these folders (or a descendant of one) is not visible to students.
+    """
+    restricted: set[str] = set()
+    with zipfile.ZipFile(course_archive_path, "r") as course_archive:
+        files_meta_path = "course_settings/files_meta.xml"
+        if files_meta_path not in course_archive.namelist():
+            return restricted
+        files_xml = course_archive.read(files_meta_path)
+    try:
+        root = ElementTree.fromstring(files_xml)
+    except Exception:
+        log.exception("Error parsing files_meta.xml folders")
+        return restricted
+    for folder_elem in root.findall(".//cccv1p0:folder", NAMESPACES):
+        path = folder_elem.get("path")
+        if not path:
+            continue
+        hidden = (
+            folder_elem.findtext("cccv1p0:hidden", "", NAMESPACES) or ""
+        ).strip().lower() == "true"
+        locked = (
+            folder_elem.findtext("cccv1p0:locked", "", NAMESPACES) or ""
+        ).strip().lower() == "true"
+        if hidden or locked:
+            restricted.add(path)
+    return restricted
+
+
+def parse_canvas_files(course_archive_path: str) -> dict:
+    """
+    Resolve publish/visibility status for course files present in the archive.
+
+    Canvas only writes a course_settings/files_meta.xml <file> entry for files
+    with non-default metadata (restricted, renamed, usage rights, icon-maker
+    icons), so ordinary published files are absent from files_meta.xml and are
+    only represented as webcontent resources in imsmanifest.xml. This enumerates
+    those webcontent files (the complete inventory) and marks each active unless
+    it is itself hidden/locked or it lives in a hidden/locked folder.
+
+    HTML pages are skipped here because parse_web_content already resolves them
+    (applying workflow_state, intended-role and syllabus rules). Tutor problem
+    files are skipped because they are ingested separately as problem files.
+    """
+    publish_status = {"active": [], "unpublished": []}
+    with zipfile.ZipFile(course_archive_path, "r") as course_archive:
+        manifest_path = "imsmanifest.xml"
+        if manifest_path not in course_archive.namelist():
+            return publish_status
+        manifest_xml = course_archive.read(manifest_path)
+    resource_map = extract_resources_by_identifier(manifest_xml)
+    restricted_folders = parse_canvas_folders(course_archive_path)
+    # files that files_meta.xml explicitly marks unpublished (hidden/locked/dated)
+    files_meta_unpublished = {
+        str(item["path"])
+        for item in (parse_files_meta(course_archive_path) or {}).get("unpublished", [])
+    }
+    seen = set()
+    for resource in resource_map.values():
+        if resource.get("type") != "webcontent":
+            continue
+        for file in resource.get("files", []):
+            if not file or not file.startswith("web_resources/") or file in seen:
+                continue
+            seen.add(file)
+            # HTML pages are resolved by parse_web_content
+            if file.endswith(".html"):
+                continue
+            # tutor problem files are ingested separately as problem files
+            if file.startswith(settings.CANVAS_TUTORBOT_FOLDER):
+                continue
+            relpath = file[len("web_resources/") :]
+            ancestors = Path(relpath).parts[:-1]
+            in_restricted_folder = any(
+                "/".join(ancestors[: i + 1]) in restricted_folders
+                for i in range(len(ancestors))
+            )
+            item = {"title": Path(file).name, "path": Path(file)}
+            if in_restricted_folder or file in files_meta_unpublished:
+                publish_status["unpublished"].append(item)
+            else:
+                publish_status["active"].append(item)
+    return publish_status
 
 
 def get_published_items(zipfile_path, url_config):
@@ -564,8 +659,12 @@ def get_published_items(zipfile_path, url_config):
     # https://developerdocs.instructure.com/services/dap/dataset/dataset-additional-notes
     """
     files_section_is_visible = not tab_configuration.get(11, {}).get("hidden", False)
+    # parse_canvas_files is listed first so that the more specific sources
+    # (modules, files_meta, web content) override its generic entries with their
+    # richer metadata (Canvas display_name, module membership) for shared paths.
     all_published_items = (
-        parse_module_meta(zipfile_path)["active"]
+        parse_canvas_files(zipfile_path)["active"]
+        + parse_module_meta(zipfile_path)["active"]
         + parse_files_meta(zipfile_path)["active"]
         + parse_web_content(zipfile_path)["active"]
     )
@@ -575,11 +674,14 @@ def get_published_items(zipfile_path, url_config):
         item_configuration = url_config.get(_url_config_key(item))
         item_visible = _url_config_item_visible(item_configuration)
 
-        # if the item is not explicitely hidden and global files section is visible
+        # Items stored under web_resources are generally only
+        # reachable via the Files UI, which is gated by the Files
+        # navigation tab (unless the file is surfaced
+        # through a module). Embedded files are handled separately and can bypass
+        # the Files-tab gating.
+        in_files_area = "web_resources" in Path(item["path"]).parts
         if item_visible and (
-            str(Path(item["path"]).parent) != "web_resources"
-            or files_section_is_visible
-            or item.get("module")
+            not in_files_area or files_section_is_visible or item.get("module")
         ):
             published_items[path] = item
         for embedded_file in item.get("embedded_files", []):
@@ -589,7 +691,17 @@ def get_published_items(zipfile_path, url_config):
                 "title": "",
             }
             all_embedded_items.append(embedded)
-            if embedded_path in all_published_items:
+            if embedded_path in published_items:
+                continue
+            # tutor problem files are ingested separately as problem files
+            if str(embedded_file).startswith(settings.CANVAS_TUTORBOT_FOLDER):
+                continue
+            # Embedded files bypass the Files-section and "available with link"
+            # (hidden) checks because students reach them through the linking
+            # page. They are still excluded when the file itself is
+            # unpublished/locked or date-locked (genuinely inaccessible).
+            embedded_config = url_config.get(_url_config_key(embedded))
+            if not _url_config_item_visible(embedded_config, allow_hidden=True):
                 continue
             published_items[embedded_path] = embedded
 

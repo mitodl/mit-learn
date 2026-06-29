@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useId, useState } from "react"
 import {
   Dialog,
   Divider,
@@ -92,6 +92,8 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({
   const [reassignOpen, setReassignOpen] = useState(false)
   const [reassignEmail, setReassignEmail] = useState("")
   const [reassignTouched, setReassignTouched] = useState(false)
+  const revokeDescId = useId()
+  const reassignDescId = useId()
   const open = Boolean(anchorEl)
 
   const remind = useRemindCode()
@@ -294,10 +296,13 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({
         title={isRedeemed ? "Uninvite learner" : "Release seat"}
         confirmText={isRedeemed ? "Uninvite" : "Release seat"}
         maxWidth="sm"
+        aria-describedby={revokeDescId}
       >
-        {isRedeemed
-          ? `This will remove ${assignedTo}'s access to the program. This cannot be undone.`
-          : `This will revoke the invitation for ${assignedTo} and return the seat to the unassigned pool.`}
+        <p id={revokeDescId} style={{ margin: 0 }}>
+          {isRedeemed
+            ? `This will remove ${assignedTo}'s access to the program. This cannot be undone.`
+            : `This will revoke the invitation for ${assignedTo} and return the seat to the unassigned pool.`}
+        </p>
       </Dialog>
       <FormDialog
         open={reassignOpen}
@@ -308,8 +313,9 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({
         disabled={!emailValid}
         maxWidth="sm"
         noValidate
+        aria-describedby={reassignDescId}
       >
-        <Typography variant="body2">
+        <Typography variant="body2" id={reassignDescId}>
           The invitation for {assignedTo} will be reassigned to the new address
           and a claim email sent there.
         </Typography>

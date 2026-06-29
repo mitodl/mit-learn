@@ -2,23 +2,29 @@ import React from "react"
 import { SimpleMenu, Stack } from "ol-components"
 import {
   CardRoot,
-  CourseStartCountdown,
+  CardTypeText,
   CoursewareActionColumn,
   CoursewareButton,
   CoursewareButtonLink,
-  getCertificateLink,
-  getDashboardEnrollmentStatus,
   HorizontalSeparator,
   MenuButton,
+  Separator,
   SubtitleLink,
   SubtitleLinkRoot,
   TitleHeading,
   TitleLink,
   TitleText,
+  CourseDateSummary,
 } from "./CardShared"
-import { EnrollmentStatus, DashboardType } from "./model/dashboardViewModel"
+import {
+  EnrollmentStatus,
+  DashboardType,
+  getCertificateLink,
+  getDashboardEnrollmentStatus,
+} from "./model/dashboardViewModel"
+import { getCourseDateText } from "./courseDateUtils"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
-import { RiAddLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
+import { RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { isInPast, calendarDaysUntil, NoSSR } from "ol-utilities"
 import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
@@ -90,7 +96,7 @@ const UpgradeBanner: React.FC<
   return (
     <SubtitleLinkRoot layout={layout} {...others}>
       <SubtitleLink layout={layout} href="#" onClick={handleUpgradeClick}>
-        <RiAddLine size="16px" />
+        <RiAwardLine size="16px" />
         {`Add a certificate for ${formattedPrice}`}
       </SubtitleLink>
       {calendarDays !== null && (
@@ -125,40 +131,49 @@ export const EnrolledCourseCard = ({
   const isContractPageResource = Boolean(enrollment.b2b_contract_id)
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const isStaff = mitxOnlineUser.data?.is_staff
-  const title = layout === "compact" ? course.title : run?.title || course.title
+  const isCompact = layout === "compact"
+  const title = isCompact ? course.title : run?.title || course.title
   const coursewareUrl = run?.courseware_url
   const certificateLink = getCertificateLink(
     enrollment?.certificate?.link,
     "course",
   )
   const enrollmentMode = enrollment?.enrollment_mode
-  const canUpgrade =
-    !isVerifiedEnrollmentMode(enrollmentMode) &&
-    (run?.is_upgradable ?? false) &&
-    (enrollment?.run?.upgrade_product_is_active ?? false)
   const offerUpgrade = !enrollment?.b2b_contract_id
   const startDate = run?.start_date
   const hasStarted = startDate ? isInPast(startDate) : true
+  const endDate = run?.end_date
+  const daysUntilEnd = endDate ? calendarDaysUntil(endDate) : null
+  const hasEnded = endDate ? isInPast(endDate) : false
+  const hasCourseDateText = getCourseDateText(startDate, endDate) !== null
+  const courseDateText = (
+    <CourseDateSummary startDate={startDate} endDate={endDate} />
+  )
+  const canUpgrade =
+    offerUpgrade &&
+    !isVerifiedEnrollmentMode(enrollmentMode) &&
+    (run?.is_upgradable ?? false) &&
+    (enrollment?.run?.upgrade_product_is_active ?? false) &&
+    !hasEnded
+  const showUpgradeBanner =
+    canUpgrade &&
+    !!run?.upgrade_product_price &&
+    !!run?.upgrade_product_id &&
+    !(run?.upgrade_deadline && isInPast(run.upgrade_deadline))
   const enrollmentStatus = getDashboardEnrollmentStatus({
     type: DashboardType.CourseRunEnrollment,
     data: enrollment,
   })
-  const isCompact = layout === "compact"
-  const showUpgradeLink =
-    !isVerifiedEnrollmentMode(enrollmentMode) && offerUpgrade && canUpgrade
-  const showCertificateSection = Boolean(certificateLink) || showUpgradeLink
-  const certificateAndUpgrade = (
-    <>
-      {certificateLink ? (
-        <SubtitleLink href={certificateLink} layout={layout}>
-          <RiAwardLine size="16px" />
-          {isCompact ? "Certificate" : "View Certificate"}
-        </SubtitleLink>
+  const endDateAndCertSection = (
+    <Stack direction="row" alignItems="center">
+      {courseDateText}
+      {hasCourseDateText && (showUpgradeBanner || !!certificateLink) ? (
+        <Separator />
       ) : null}
-      {showUpgradeLink ? (
+      {showUpgradeBanner ? (
         <UpgradeBanner
           data-testid="upgrade-root"
-          canUpgrade={canUpgrade}
+          canUpgrade={showUpgradeBanner}
           certificateUpgradeDeadline={run?.upgrade_deadline}
           certificateUpgradePrice={run?.upgrade_product_price}
           productId={run?.upgrade_product_id}
@@ -170,10 +185,16 @@ export const EnrolledCourseCard = ({
           }}
         />
       ) : null}
-    </>
+      {certificateLink ? (
+        <SubtitleLink href={certificateLink} layout={layout}>
+          <RiAwardLine size="16px" />
+          {isCompact ? "Certificate" : "View Certificate"}
+        </SubtitleLink>
+      ) : null}
+    </Stack>
   )
   const titleSection = (
-    <>
+    <Stack gap="6px">
       {coursewareUrl ? (
         <TitleHeading as={headingLevel}>
           <TitleLink size="medium" color="black" href={coursewareUrl}>
@@ -183,8 +204,8 @@ export const EnrolledCourseCard = ({
       ) : (
         <TitleText as={headingLevel}>{title}</TitleText>
       )}
-      {isCompact ? null : certificateAndUpgrade}
-    </>
+      {isCompact ? null : endDateAndCertSection}
+    </Stack>
   )
   // Determine if button should be disabled
   // Staff can access courseware even before the course has started
@@ -204,6 +225,7 @@ export const EnrolledCourseCard = ({
         variant={compactVariant}
         disabled
         data-testid="courseware-button"
+        aria-label={`${buttonText} course: ${title}`}
       >
         {buttonText}
       </CoursewareButton>
@@ -213,6 +235,7 @@ export const EnrolledCourseCard = ({
         variant={compactVariant}
         href={coursewareUrl ?? ""}
         data-testid="courseware-button"
+        aria-label={`${buttonText} course: ${title}`}
       >
         {buttonText}
       </CoursewareButtonLink>
@@ -223,6 +246,7 @@ export const EnrolledCourseCard = ({
       variant="primary"
       disabled
       data-testid="courseware-button"
+      aria-label={`${buttonText} course: ${title}`}
     >
       {buttonText}
     </Button>
@@ -232,28 +256,20 @@ export const EnrolledCourseCard = ({
       variant="primary"
       href={coursewareUrl ?? ""}
       data-testid="courseware-button"
+      aria-label={`${buttonText} course: ${title}`}
     >
       {buttonText}
     </ButtonLink>
   )
   const buttonSection = isCompact ? (
-    <Stack direction="column" gap="4px" alignItems="stretch">
-      <Stack direction="row" gap="8px" alignItems="center">
-        {certificateAndUpgrade}
-        {showCertificateSection ? <HorizontalSeparator /> : null}
-        <CoursewareActionColumn direction="row" justifyContent="center">
-          {ctaButton}
-        </CoursewareActionColumn>
-      </Stack>
-      {startDate && !hasStarted ? (
-        <CoursewareActionColumn
-          direction="row"
-          justifyContent="center"
-          alignSelf="flex-end"
-        >
-          <CourseStartCountdown startDate={startDate} layout={layout} />
-        </CoursewareActionColumn>
+    <Stack direction="row" gap="8px" alignItems="center">
+      {endDateAndCertSection}
+      {daysUntilEnd !== null || showUpgradeBanner || !!certificateLink ? (
+        <HorizontalSeparator />
       ) : null}
+      <CoursewareActionColumn direction="row" justifyContent="center">
+        {ctaButton}
+      </CoursewareActionColumn>
     </Stack>
   ) : (
     <>
@@ -321,10 +337,6 @@ export const EnrolledCourseCard = ({
       }
     />
   )
-  const startDateSection =
-    !isCompact && startDate && !hasStarted ? (
-      <CourseStartCountdown startDate={startDate} layout={layout} />
-    ) : null
 
   return (
     <>
@@ -335,15 +347,13 @@ export const EnrolledCourseCard = ({
         className={className}
         layout={layout}
       >
-        <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
+        <Stack justifyContent="start" alignItems="stretch" flex={1}>
+          <CardTypeText>Course</CardTypeText>
           {titleSection}
         </Stack>
-        <Stack gap="8px">
-          <Stack direction="row" gap="8px" alignItems="center">
-            {buttonSection}
-            {contextMenu}
-          </Stack>
-          {startDateSection}
+        <Stack direction="row" gap="8px" alignItems="center">
+          {buttonSection}
+          {contextMenu}
         </Stack>
       </CardRoot>
 
@@ -368,14 +378,12 @@ export const EnrolledCourseCard = ({
         </Stack>
         <Stack
           direction="row"
+          gap="8px"
           alignItems="center"
-          justifyContent="end"
+          justifyContent="flex-end"
           width="100%"
         >
-          {startDateSection}
-          <Stack direction="row" gap="8px" alignItems="center">
-            {buttonSection}
-          </Stack>
+          {buttonSection}
         </Stack>
       </CardRoot>
     </>

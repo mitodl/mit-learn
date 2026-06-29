@@ -271,6 +271,7 @@ const ShareDialog = ({
   resource,
   pageUrl,
   title,
+
   getCurrentTime,
 }: ShareDialogProps) => {
   const [activeTab, setActiveTab] = useState<Tab>("share")
