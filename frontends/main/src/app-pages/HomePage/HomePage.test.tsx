@@ -29,7 +29,6 @@ jest.mock("ol-components/CarouselV2", () => ({
 }))
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 const mockedPostHogCapture = jest.fn()
-jest.mock("posthog-js/react")
 jest.mocked(usePostHog).mockReturnValue(
   // @ts-expect-error Not mocking all of posthog
   { capture: mockedPostHogCapture },
