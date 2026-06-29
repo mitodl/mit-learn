@@ -29,7 +29,10 @@ import {
 } from "@mitodl/smoot-design"
 import { AssignSeatsSection } from "./AssignSeatsSection"
 import { RowActionMenu } from "./RowActionMenu"
-import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
+import {
+  managerOrganizationQueries,
+  type ContractCode,
+} from "api/mitxonline-hooks/organizations"
 import type { AxiosError } from "axios"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError } from "@/common/errors"
@@ -342,6 +345,7 @@ type ContractAdminPageInternalProps = {
 }
 
 const CODES_PAGE_SIZE = 25
+const CSV_EXPORT_PAGE_SIZE = 500
 
 const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   orgSlug,
@@ -512,14 +516,23 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     if (!totalPurchased) return
     setIsExporting(true)
     try {
-      const data = await queryClient.fetchQuery(
-        managerOrganizationQueries.managerContractCodes({
-          id: contract.id,
-          parent_lookup_organization: org.id,
-          page_size: totalPurchased,
-        }),
-      )
-      const rows = data.results
+      const allRows: ContractCode[] = []
+      let page = 1
+      let hasMore = true
+      while (hasMore) {
+        const data = await queryClient.fetchQuery(
+          managerOrganizationQueries.managerContractCodes({
+            id: contract.id,
+            parent_lookup_organization: org.id,
+            page,
+            page_size: CSV_EXPORT_PAGE_SIZE,
+          }),
+        )
+        allRows.push(...data.results)
+        hasMore = !!data.next
+        page++
+      }
+      const rows = allRows
       const header = buildCsvRow([
         "Assigned to",
         "Redeemed by",

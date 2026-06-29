@@ -155,6 +155,7 @@ describe("ContractAdminPage", () => {
     setMockResponse.get(
       urls.contracts.managerContractCodes(org.id, contract.id, {
         page: 1,
+        page_size: 25,
       }),
       factories.contracts.paginatedContractCodes([]),
     )
@@ -180,6 +181,7 @@ describe("ContractAdminPage", () => {
     setMockResponse.get(
       urls.contracts.managerContractCodes(org.id, contract.id, {
         page: 1,
+        page_size: 25,
       }),
       factories.contracts.paginatedContractCodes([]),
     )
@@ -209,6 +211,7 @@ describe("ContractAdminPage", () => {
     setMockResponse.get(
       urls.contracts.managerContractCodes(org.id, contract.id, {
         page: 1,
+        page_size: 25,
       }),
       factories.contracts.paginatedContractCodes([]),
     )
@@ -263,12 +266,14 @@ describe("ContractAdminPage", () => {
     setMockResponse.get(
       urls.contracts.managerContractCodes(org.id, contract.id, {
         page: 1,
+        page_size: 25,
       }),
       factories.contracts.paginatedContractCodes([assignedCode, redeemedCode]),
     )
     setMockResponse.get(
       urls.contracts.managerContractCodes(org.id, contract.id, {
         page: 1,
+        page_size: 25,
         status: "redeemed",
       }),
       factories.contracts.paginatedContractCodes([redeemedCode]),
@@ -298,7 +303,10 @@ describe("ContractAdminPage", () => {
         makeContractDetail(contract, overrides),
       )
       setMockResponse.get(
-        urls.contracts.managerContractCodes(org.id, contract.id, { page: 1 }),
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 1,
+          page_size: 25,
+        }),
         factories.contracts.paginatedContractCodes([]),
       )
     }
@@ -463,12 +471,14 @@ describe("ContractAdminPage", () => {
     setMockResponse.get(
       urls.contracts.managerContractCodes(org.id, contract.id, {
         page: 1,
+        page_size: 25,
       }),
       factories.contracts.paginatedContractCodes([assignedCode, redeemedCode]),
     )
     setMockResponse.get(
       urls.contracts.managerContractCodes(org.id, contract.id, {
         page: 1,
+        page_size: 25,
         status: "assigned",
       }),
       factories.contracts.paginatedContractCodes([assignedCode]),
