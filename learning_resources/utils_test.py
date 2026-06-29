@@ -4,7 +4,6 @@ Test learning_resources utils
 
 import json
 import random
-import uuid
 from pathlib import Path
 
 import markdown
@@ -995,53 +994,28 @@ def test_strip_markdown_images(input_md, expected):
     assert strip_markdown_images(input_md) == expected
 
 
-@pytest.fixture
-def _use_real_redis_cache_for_throttle(settings):
-    """Override the dummy cache with real redis for throttle tests.
-
-    Reassigning CACHES via pytest-django's ``settings`` fixture fires
-    ``setting_changed``, which resets Django's cache handler — so the new
-    backend takes effect on the next ``caches["redis"]`` access.
-    """
-    new_cache_settings = settings.CACHES.copy()
-    new_cache_settings["redis"] = {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": settings.CELERY_BROKER_URL,
-        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
-    }
-    settings.CACHES = new_cache_settings
-
-
-@pytest.mark.usefixtures("_use_real_redis_cache_for_throttle")
-def test_log_missing_content_file_throttles_repeats(mocker):
-    """Same identifier+reason logs once per window; repeats are suppressed."""
+def test_log_missing_content_file_logs_error(mocker):
+    """Logs an error with the reason, identifier, source, and context as extra."""
     mock_log = mocker.patch("learning_resources.utils.log")
-    identifier = f"block_{uuid.uuid4()}"
 
-    log_missing_content_file(identifier, reason="not_in_db", source="test")
-    log_missing_content_file(identifier, reason="not_in_db", source="test")
+    log_missing_content_file(
+        "block_x", reason="not_in_db", source="vector_hits", key="missing.pdf"
+    )
 
-    assert mock_log.error.call_count == 1
+    mock_log.error.assert_called_once_with(
+        "Missing ContentFile (%s) for edx_module_id=%s [source=%s]",
+        "not_in_db",
+        "block_x",
+        "vector_hits",
+        extra={"key": "missing.pdf"},
+    )
 
 
-@pytest.mark.usefixtures("_use_real_redis_cache_for_throttle")
-def test_log_missing_content_file_distinct_reasons_both_log(mocker):
-    """not_in_db and not_in_index for the same id use different keys, both log."""
+def test_log_missing_content_file_logs_every_call(mocker):
+    """Every occurrence is logged (no throttle); Sentry handles grouping/rate-limiting."""
     mock_log = mocker.patch("learning_resources.utils.log")
-    identifier = f"block_{uuid.uuid4()}"
 
-    log_missing_content_file(identifier, reason="not_in_db", source="test")
-    log_missing_content_file(identifier, reason="not_in_index", source="test")
+    log_missing_content_file("block_x", reason="not_in_db", source="test")
+    log_missing_content_file("block_x", reason="not_in_db", source="test")
 
     assert mock_log.error.call_count == 2
-
-
-@pytest.mark.usefixtures("_use_real_redis_cache_for_throttle")
-def test_log_missing_content_file_identifier_with_spaces(mocker):
-    """An identifier with spaces/tuple must produce a valid cache key (no CacheKeyWarning)."""
-    mock_log = mocker.patch("learning_resources.utils.log")
-    identifier = ("run_x", f"a file with spaces {uuid.uuid4()}.pdf")
-
-    log_missing_content_file(identifier, reason="not_in_db", source="vector_hits")
-
-    assert mock_log.error.call_count == 1
