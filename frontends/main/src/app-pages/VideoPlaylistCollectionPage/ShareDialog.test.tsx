@@ -18,7 +18,6 @@ const renderDialog = (video: VideoResource = makeVideo()) =>
     <VideoShareDialog
       open
       onClose={jest.fn()}
-      anchorEl={null}
       video={video}
       pageUrl={PAGE_URL}
       title={video.title ?? "Test video"}
@@ -57,15 +56,12 @@ describe("VideoShareDialog", () => {
         <VideoShareDialog
           open
           onClose={onClose}
-          anchorEl={null}
           video={makeVideo()}
           pageUrl={PAGE_URL}
           title="Test video"
         />,
       )
-      await user.click(
-        await screen.findByRole("button", { name: /close dialog/i }),
-      )
+      await user.click(await screen.findByRole("button", { name: /^close$/i }))
       expect(onClose).toHaveBeenCalledTimes(1)
     })
   })

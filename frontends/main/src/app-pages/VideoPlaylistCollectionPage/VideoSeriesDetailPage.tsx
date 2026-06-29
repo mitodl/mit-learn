@@ -7,12 +7,15 @@ import { useLearningResourcesDetail } from "api/hooks/learningResources"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { formatDurationClockTime } from "ol-utilities"
 import { useSeriesNavigation } from "./useSeriesNavigation"
-import { videoPlaylistPageView } from "@/common/urls"
+import { videoDetailPageView, videoPlaylistPageView } from "@/common/urls"
 import SeriesNavBar from "./SeriesNavBar"
 import UpNextSection from "./UpNextSection"
 import * as Styled from "./VideoSeriesDetailPage.styled"
+import { env } from "@/env"
 import { buildVideoStructuredData } from "./videoStructuredData"
 import VideoResourcePlayer from "./VideoResourcePlayer"
+
+const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 const StyledVideoResourcePlayer = styled(VideoResourcePlayer)(({ theme }) => ({
   borderBottom: `3px solid ${theme.custom.colors.darkGray2}`,
@@ -176,8 +179,13 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
           />
 
           {/* UP NEXT */}
-          {!itemsLoading && nextVideo && (
-            <UpNextSection nextVideo={nextVideo} getVideoHref={getVideoHref} />
+          {!itemsLoading && nextVideo && video && (
+            <UpNextSection
+              nextVideo={nextVideo}
+              getVideoHref={getVideoHref}
+              currentVideo={video}
+              shareUrl={`${NEXT_PUBLIC_ORIGIN}${videoDetailPageView(video.id, playlistId ?? undefined, video.title)}`}
+            />
           )}
 
           {/* Description */}

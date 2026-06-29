@@ -8,11 +8,16 @@ import {
 } from "../Dialogs/AddToListDialog"
 import { useResourceDrawerHref } from "../LearningResourceDrawer/useResourceDrawerHref"
 import { useUserMe } from "api/hooks/user"
-import { LearningResource } from "api"
+import { LearningResource, PodcastEpisodeResource, ResourceTypeEnum } from "api"
 import { SignupPopover } from "../SignupPopover/SignupPopover"
 import { useIsUserListMember } from "api/hooks/userLists"
 import { useLearningResourceDetailSetCache } from "api/hooks/learningResources"
 import { useIsLearningPathMember } from "api/hooks/learningPaths"
+import ShareDialog from "@/app-pages/VideoPlaylistCollectionPage/ShareDialog"
+import { env } from "@/env"
+import { podcastEpisodePageView } from "@/common/urls"
+
+const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 export const useResourceCard = (resource?: LearningResource | null) => {
   const getDrawerHref = useResourceDrawerHref()
@@ -21,10 +26,12 @@ export const useResourceCard = (resource?: LearningResource | null) => {
   const { data: inLearningPath } = useIsLearningPathMember(resource?.id)
 
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
+  const [shareAnchorEl, setShareAnchorEl] = useState<HTMLElement | null>(null)
 
   const handleClosePopover = useCallback(() => {
     setAnchorEl(null)
   }, [])
+
   const handleAddToLearningPathClick: LearningResourceCardProps["onAddToLearningPathClick"] =
     useMemo(() => {
       if (user?.is_authenticated && user?.is_learning_path_editor) {
@@ -38,7 +45,6 @@ export const useResourceCard = (resource?: LearningResource | null) => {
   const handleAddToUserListClick: LearningResourceCardProps["onAddToUserListClick"] =
     useMemo(() => {
       if (!user) {
-        // user info is still loading
         return null
       }
       if (user.is_authenticated) {
@@ -51,6 +57,11 @@ export const useResourceCard = (resource?: LearningResource | null) => {
       }
     }, [user])
 
+  const handleShareClick: LearningResourceCardProps["onShareClick"] =
+    useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+      setShareAnchorEl(event.currentTarget)
+    }, [])
+
   const onClick = useLearningResourceDetailSetCache(resource)
 
   return {
@@ -60,6 +71,9 @@ export const useResourceCard = (resource?: LearningResource | null) => {
     handleClosePopover,
     handleAddToLearningPathClick,
     handleAddToUserListClick,
+    handleShareClick,
+    shareAnchorEl,
+    setShareAnchorEl,
     inUserList,
     inLearningPath,
   }
@@ -78,7 +92,7 @@ const subheadingMap: Record<HeadingElement, number> = {
 
 type ResourceCardProps = Omit<
   LearningResourceCardProps,
-  "href" | "onAddToLearningPathClick" | "onAddToUserListClick"
+  "href" | "onAddToLearningPathClick" | "onAddToUserListClick" | "onShareClick"
 > & {
   headingLevel?: number
   parentHeadingEl?: HeadingElement
@@ -104,6 +118,9 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
     handleClosePopover,
     handleAddToLearningPathClick,
     handleAddToUserListClick,
+    handleShareClick,
+    shareAnchorEl,
+    setShareAnchorEl,
     inUserList,
     inLearningPath,
     onClick,
@@ -117,6 +134,17 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
     : onClick
 
   const headingLevel = parentHeadingEl ? subheadingMap[parentHeadingEl] : 6
+
+  const isPodcastEpisode =
+    resource?.resource_type === ResourceTypeEnum.PodcastEpisode
+  const podcastId = isPodcastEpisode
+    ? resource?.podcast_episode?.podcasts?.[0]
+    : undefined
+  const sharePageUrl =
+    isPodcastEpisode && podcastId !== undefined
+      ? `${NEXT_PUBLIC_ORIGIN}${podcastEpisodePageView(String(resource!.id), String(podcastId), resource?.title)}`
+      : ""
+
   return (
     <>
       <LearningResourceCard
@@ -125,12 +153,24 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
         href={resource ? getDrawerHref(resource.id) : undefined}
         onAddToLearningPathClick={handleAddToLearningPathClick}
         onAddToUserListClick={handleAddToUserListClick}
+        onShareClick={
+          isPodcastEpisode && podcastId !== undefined ? handleShareClick : null
+        }
         inUserList={inUserList}
         inLearningPath={inLearningPath}
         headingLevel={headingLevel}
         {...others}
       />
       <SignupPopover anchorEl={anchorEl} onClose={handleClosePopover} />
+      {isPodcastEpisode && podcastId !== undefined && (
+        <ShareDialog
+          open={Boolean(shareAnchorEl)}
+          onClose={() => setShareAnchorEl(null)}
+          resource={resource as PodcastEpisodeResource}
+          pageUrl={sharePageUrl}
+          title={resource?.title ?? ""}
+        />
+      )}
     </>
   )
 }
