@@ -2,7 +2,11 @@
 
 import React, { useEffect, useRef, useState } from "react"
 import Image from "next/image"
-import { useQuery } from "@tanstack/react-query"
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import {
   alpha,
@@ -26,7 +30,6 @@ import {
 import { AssignSeatsSection } from "./AssignSeatsSection"
 import { RowActionMenu } from "./RowActionMenu"
 import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
-import { b2bApi } from "api/mitxonline-clients"
 import type { AxiosError } from "axios"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError } from "@/common/errors"
@@ -338,10 +341,13 @@ type ContractAdminPageInternalProps = {
   contractSlug: string
 }
 
+const CODES_PAGE_SIZE = 25
+
 const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   orgSlug,
   contractSlug,
 }) => {
+  const queryClient = useQueryClient()
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
@@ -413,6 +419,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
       id: contract?.id ?? 0,
       parent_lookup_organization: org?.id ?? 0,
       page,
+      page_size: CODES_PAGE_SIZE,
       search_term: debouncedSearchQuery || undefined,
       status:
         statusFilter === "redeemed"
@@ -422,6 +429,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
             : undefined,
     }),
     enabled: !!org && !!contract,
+    placeholderData: keepPreviousData,
   })
 
   // Announce the result count after the query settles following a search change.
@@ -489,13 +497,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const pageResults = codes?.results ?? []
 
   const totalCount = codes?.count ?? 0
-  // Derive total pages from the response: if there's a next page we're on a
-  // full page so results.length equals the backend page size; otherwise this
-  // is the last page so totalPages equals the current page number.
-  const totalPages =
-    codes?.next && pageResults.length > 0
-      ? Math.ceil(totalCount / pageResults.length)
-      : page
+  const totalPages = Math.ceil(totalCount / CODES_PAGE_SIZE)
 
   const handleTabChange = (_: React.SyntheticEvent, val: StatusFilter) => {
     setStatusFilter(val)
@@ -510,25 +512,14 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     if (!totalPurchased) return
     setIsExporting(true)
     try {
-      const PAGE_SIZE = 500
-      let page = 1
-      let res = await b2bApi.b2bManagerOrganizationsContractsCodesList({
-        id: contract.id,
-        parent_lookup_organization: org.id,
-        page,
-        page_size: PAGE_SIZE,
-      })
-      const rows = [...res.data.results]
-      while (res.data.next) {
-        page += 1
-        res = await b2bApi.b2bManagerOrganizationsContractsCodesList({
+      const data = await queryClient.fetchQuery(
+        managerOrganizationQueries.managerContractCodes({
           id: contract.id,
           parent_lookup_organization: org.id,
-          page,
-          page_size: PAGE_SIZE,
-        })
-        rows.push(...res.data.results)
-      }
+          page_size: totalPurchased,
+        }),
+      )
+      const rows = data.results
       const header = buildCsvRow([
         "Assigned to",
         "Redeemed by",
