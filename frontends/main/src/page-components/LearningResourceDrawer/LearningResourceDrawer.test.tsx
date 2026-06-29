@@ -98,7 +98,9 @@ describe("LearningResourceDrawer", () => {
   ])(
     "Renders drawer content when resource=id is in the URL and captures the view if PostHog $descriptor",
     async ({ enablePostHog }) => {
-      const { resource } = setupApis()
+      const { resource } = setupApis({
+        resource: { resource_type: ResourceTypeEnum.Course },
+      })
       process.env.NEXT_PUBLIC_POSTHOG_API_KEY = enablePostHog
         ? "12345abcdef" // pragma: allowlist secret
         : ""
