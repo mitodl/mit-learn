@@ -4,6 +4,7 @@ import logging
 import uuid
 from functools import cache
 
+from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.db.models import Prefetch, Q
 from langchain_text_splitters import (
@@ -25,6 +26,7 @@ from learning_resources.serializers import (
     LearningResourceMetadataDisplaySerializer,
     LearningResourceSerializer,
 )
+from learning_resources.utils import log_missing_content_file
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
     LEARNING_RESOURCE_TYPES,
@@ -979,6 +981,53 @@ def _resource_vector_hits(search_result):
     return LearningResourceSerializer(ordered_resources, many=True).data
 
 
+def _present_edx_module_ids(edx_module_ids):
+    """Return the subset of edx_module_ids that have a ContentFile row."""
+    return set(
+        ContentFile.objects.filter(edx_module_id__in=edx_module_ids).values_list(
+            "edx_module_id", flat=True
+        )
+    )
+
+
+async def check_missing_content_file_ids(edx_module_ids, collection_name):
+    """
+    Log requested edx_module_ids missing from the DB (not_in_db) or present in
+    the DB but absent from the Qdrant index (not_in_index). Probes existence
+    directly, independent of q/other request filters.
+    """
+    present = await sync_to_async(_present_edx_module_ids)(edx_module_ids)
+    for missing in set(edx_module_ids) - present:
+        log_missing_content_file(
+            missing, reason="not_in_db", source="vector_content_files_search"
+        )
+    if not present:
+        return
+    client = async_qdrant_client()
+
+    async def _check_index(edx_module_id):
+        count_filter = qdrant_query_conditions(
+            {"edx_module_id": [edx_module_id]}, collection_name=collection_name
+        )
+        if count_filter is None:
+            # Can't scope a count to this id on this collection (e.g. a
+            # collection_name override) -> skip rather than count the whole
+            # collection, which would mask a real not_in_index gap.
+            return
+        # exact=True: an approximate 0 would create a false not_in_index alert.
+        result = await client.count(
+            collection_name=collection_name, count_filter=count_filter, exact=True
+        )
+        if result.count == 0:
+            log_missing_content_file(
+                edx_module_id,
+                reason="not_in_index",
+                source="vector_content_files_search",
+            )
+
+    await asyncio.gather(*(_check_index(eid) for eid in present))
+
+
 def _content_file_vector_hits(search_result):
     run_readable_ids = [hit.payload.get("run_readable_id") for hit in search_result]
     keys = [hit.payload.get("key") for hit in search_result]
@@ -1005,6 +1054,15 @@ def _content_file_vector_hits(search_result):
             if "content" in serialized:
                 serialized.pop("content")
             payload.update(serialized)
+        else:
+            log_missing_content_file(
+                payload.get("edx_module_id")
+                or (payload.get("run_readable_id"), payload.get("key")),
+                reason="not_in_db",
+                source="vector_hits",
+                run_readable_id=payload.get("run_readable_id"),
+                key=payload.get("key"),
+            )
         results.append(payload)
     return results
 

@@ -4,6 +4,7 @@ Test learning_resources utils
 
 import json
 import random
+import uuid
 from pathlib import Path
 
 import markdown
@@ -41,6 +42,7 @@ from learning_resources.utils import (
     add_parent_topics_to_learning_resource,
     build_program_children_content,
     build_program_children_content_bulk,
+    log_missing_content_file,
     strip_markdown_images,
     transfer_list_resources,
     truncate_to_tokens,
@@ -991,3 +993,55 @@ def test_build_program_children_content_bulk_excludes_unpublished_contentfiles()
 )
 def test_strip_markdown_images(input_md, expected):
     assert strip_markdown_images(input_md) == expected
+
+
+@pytest.fixture
+def _use_real_redis_cache_for_throttle(settings):
+    """Override the dummy cache with real redis for throttle tests.
+
+    Reassigning CACHES via pytest-django's ``settings`` fixture fires
+    ``setting_changed``, which resets Django's cache handler — so the new
+    backend takes effect on the next ``caches["redis"]`` access.
+    """
+    new_cache_settings = settings.CACHES.copy()
+    new_cache_settings["redis"] = {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": settings.CELERY_BROKER_URL,
+        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+    }
+    settings.CACHES = new_cache_settings
+
+
+@pytest.mark.usefixtures("_use_real_redis_cache_for_throttle")
+def test_log_missing_content_file_throttles_repeats(mocker):
+    """Same identifier+reason logs once per window; repeats are suppressed."""
+    mock_log = mocker.patch("learning_resources.utils.log")
+    identifier = f"block_{uuid.uuid4()}"
+
+    log_missing_content_file(identifier, reason="not_in_db", source="test")
+    log_missing_content_file(identifier, reason="not_in_db", source="test")
+
+    assert mock_log.error.call_count == 1
+
+
+@pytest.mark.usefixtures("_use_real_redis_cache_for_throttle")
+def test_log_missing_content_file_distinct_reasons_both_log(mocker):
+    """not_in_db and not_in_index for the same id use different keys, both log."""
+    mock_log = mocker.patch("learning_resources.utils.log")
+    identifier = f"block_{uuid.uuid4()}"
+
+    log_missing_content_file(identifier, reason="not_in_db", source="test")
+    log_missing_content_file(identifier, reason="not_in_index", source="test")
+
+    assert mock_log.error.call_count == 2
+
+
+@pytest.mark.usefixtures("_use_real_redis_cache_for_throttle")
+def test_log_missing_content_file_identifier_with_spaces(mocker):
+    """An identifier with spaces/tuple must produce a valid cache key (no CacheKeyWarning)."""
+    mock_log = mocker.patch("learning_resources.utils.log")
+    identifier = ("run_x", f"a file with spaces {uuid.uuid4()}.pdf")
+
+    log_missing_content_file(identifier, reason="not_in_db", source="vector_hits")
+
+    assert mock_log.error.call_count == 1

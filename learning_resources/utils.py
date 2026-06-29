@@ -1,5 +1,6 @@
 """Utils for learning resources"""
 
+import hashlib
 import logging
 import re
 from collections import defaultdict
@@ -15,6 +16,7 @@ import yaml
 from botocore.exceptions import ClientError
 from django.conf import settings
 from django.contrib.auth.models import Group
+from django.core.cache import caches
 from django.db import transaction
 from django.db.models import Prefetch, Q
 from retry import retry
@@ -42,6 +44,33 @@ from learning_resources.models import (
 from main.utils import generate_filepath
 
 log = logging.getLogger()
+
+
+def log_missing_content_file(identifier, *, reason, source, **context):
+    """
+    Log (once per reason+identifier per throttle window) that a request
+    referenced an edx_module_id with no backing ContentFile.
+
+    reason: "not_in_db" (no ContentFile row) or "not_in_index" (row exists but
+    not embedded in Qdrant). LoggingIntegration forwards the error to Sentry.
+    """
+    identifier_hash = hashlib.md5(  # noqa: S324
+        str(identifier).encode()
+    ).hexdigest()
+    cache_key = f"missing-content-file:{reason}:{identifier_hash}"
+    # caches["redis"] (not the per-process default LocMemCache) so the throttle
+    # holds across web/celery workers. .add is atomic: True only if key absent.
+    if caches["redis"].add(
+        cache_key, 1, timeout=settings.CONTENT_FILE_MISSING_LOG_THROTTLE_SECONDS
+    ):
+        log.error(
+            "Missing ContentFile (%s) for edx_module_id=%s [source=%s]",
+            reason,
+            identifier,
+            source,
+            extra=context,
+        )
+
 
 if TYPE_CHECKING:
     from django.contrib.auth import get_user_model

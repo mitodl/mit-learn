@@ -39,6 +39,7 @@ from vector_search.utils import (
     async_qdrant_aggregations,
     async_qdrant_client,
     best_run_ids_for_resources,
+    check_missing_content_file_ids,
     custom_score_formula,
     dense_encoder,
     qdrant_query_conditions,
@@ -704,6 +705,16 @@ class ContentFilesVectorSearchView(QdrantView):
                 )
                 del params["resource_readable_id"]
                 params["run_readable_id"] = best_run_ids + list(resource_ids)
+
+            if params.get("edx_module_id"):
+                try:
+                    await check_missing_content_file_ids(
+                        params["edx_module_id"], collection_name
+                    )
+                except Exception:
+                    log.exception(
+                        "check_missing_content_file_ids failed; continuing search"
+                    )
 
             response = await self.async_vector_search(
                 query_text,

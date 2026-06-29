@@ -1036,3 +1036,65 @@ def test_content_file_search_no_best_run_metadata_only(
     run_conditions = [c for c in must if getattr(c, "key", None) == "run_readable_id"]
     assert len(run_conditions) == 1
     assert set(run_conditions[0].match.any) == {course.readable_id}
+
+
+@pytest.mark.django_db
+def test_content_file_vector_search_logs_missing_edx_module_id(
+    mocker, client, django_user_model
+):
+    """Vector search for an edx_module_id with no ContentFile logs not_in_db."""
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points_groups = mocker.AsyncMock()
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=0))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+    mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_qdrant)
+    mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
+
+    user = django_user_model.objects.create()
+    group, _ = Group.objects.get_or_create(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS)
+    group.user_set.add(user)
+    client.force_login(user)
+
+    client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={"q": "test", "edx_module_id": ["block_absent"]},
+    )
+
+    mock_log.assert_any_call(
+        "block_absent", reason="not_in_db", source="vector_content_files_search"
+    )
+
+
+@pytest.mark.django_db
+def test_content_file_vector_search_probe_failure_does_not_break_search(
+    mocker, client, django_user_model
+):
+    """A failing observability probe must not propagate and return a 500."""
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points_groups = mocker.AsyncMock()
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=0))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+    mocker.patch(
+        "vector_search.views.check_missing_content_file_ids",
+        new=mocker.AsyncMock(side_effect=Exception("qdrant down")),
+    )
+
+    user = django_user_model.objects.create()
+    group, _ = Group.objects.get_or_create(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS)
+    group.user_set.add(user)
+    client.force_login(user)
+
+    response = client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={"q": "test", "edx_module_id": ["block_absent"]},
+    )
+
+    assert response.status_code == 200
