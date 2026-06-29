@@ -443,7 +443,7 @@ test("Headings", async () => {
   const { featured } = setupAPIs()
 
   const videoShorts = [learningResources.video(), learningResources.video()]
-  setMockResponse.get(expect.stringContaining(urls.search.resources({})), {
+  setMockResponse.get(expect.stringContaining(urls.search.resources()), {
     count: videoShorts.length,
     next: null,
     previous: null,
