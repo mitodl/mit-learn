@@ -350,7 +350,7 @@ const ShareDialog = ({
 
   const startAtLabel =
     video && startTime > 0 ? `Start at ${formatTimestamp(startTime)}` : null
-  console.log("startAtLabel", activeTab, startAtLabel, startTime, includeTime)
+
   return (
     <Dialog
       open={open}
