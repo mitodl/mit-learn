@@ -16,7 +16,6 @@
     "./test-utils/mockAxios": "./src/test-utils/mockAxios.ts",
     "./test-utils": "./src/test-utils/index.ts",
     "./mitxonline-hooks/*": "./src/mitxonline/hooks/*/index.ts",
-    "./mitxonline-clients": "./src/mitxonline/clients.ts",
     "./mitxonline-test-utils": "./src/mitxonline/test-utils/index.ts"
   },
   "peerDependencies": {
