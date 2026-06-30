@@ -1341,6 +1341,56 @@ def test_fetch_data(mock_responses, expected_results, mocker, settings):
             assert kwargs["params"] == parse_qs(parsed.query)
 
 
+def test_fetch_data_preserves_scheme(mocker, settings):
+    """_fetch_data should follow the original scheme even if "next" is http"""
+    settings.REQUESTS_TIMEOUT = 5
+    mock_get = mocker.patch(
+        "learning_resources.etl.mitxonline.requests.get",
+        side_effect=[
+            mocker.Mock(
+                json=mocker.Mock(
+                    return_value={
+                        "results": [{"id": 1}],
+                        # upstream returns an http next URL
+                        "next": "http://mitxonline.example.com/api/courses?page=2",
+                    }
+                )
+            ),
+            mocker.Mock(
+                json=mocker.Mock(return_value={"results": [{"id": 2}], "next": None})
+            ),
+        ],
+    )
+
+    list(_fetch_data("https://mitxonline.example.com/api/courses"))
+
+    # the second request must keep the https scheme of the initial request
+    assert (
+        mock_get.mock_calls[1].args[0] == "https://mitxonline.example.com/api/courses"
+    )
+
+
+@pytest.mark.parametrize("api_key", [None, "", "secret-key"])
+def test_fetch_data_authorization_header(mocker, settings, api_key):
+    """_fetch_data should send an Api-Key Authorization header when a key is set"""
+    settings.REQUESTS_TIMEOUT = 5
+    settings.MITX_ONLINE_ETL_API_KEY = api_key
+    mock_get = mocker.patch(
+        "learning_resources.etl.mitxonline.requests.get",
+        return_value=mocker.Mock(
+            json=mocker.Mock(return_value={"results": [], "next": None})
+        ),
+    )
+
+    list(_fetch_data("http://localhost/api/courses"))
+
+    headers = mock_get.call_args.kwargs["headers"]
+    if api_key:
+        assert headers["Authorization"] == f"Api-Key {api_key}"
+    else:
+        assert "Authorization" not in headers
+
+
 @pytest.mark.parametrize(
     ("run_data", "expected"),
     [
