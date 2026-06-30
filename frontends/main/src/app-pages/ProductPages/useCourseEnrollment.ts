@@ -43,13 +43,17 @@ export type UseCourseEnrollment = {
   isError: boolean
 }
 
+type UseCourseEnrollmentOptions = {
+  /** Analytics-only metadata for the `enroll_cta_clicked` event; no behavior. */
+  tracking: { placement: "header" | "infobox" }
+  /** Behavioral: called when an unauthenticated user clicks an enroll action. */
+  onRequireSignup?: (anchor: HTMLButtonElement) => void
+}
+
 export const useCourseEnrollment = (
   course: CourseWithCourseRunsSerializerV2,
   selectedRun: CourseRunV2 | undefined,
-  opts?: {
-    placement: "header" | "infobox"
-    onRequireSignup?: (anchor: HTMLButtonElement) => void
-  },
+  opts?: UseCourseEnrollmentOptions,
 ): UseCourseEnrollment => {
   const me = useQuery({
     ...userQueries.me(),
@@ -88,7 +92,7 @@ export const useCourseEnrollment = (
   const firePostHog = (kind: EnrollActionKind, label: string) => {
     if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
       posthog.capture(PostHogEvents.EnrollCtaClicked, {
-        placement: opts?.placement,
+        placement: opts?.tracking.placement,
         enrollmentMode: kind === "paid" ? "verified" : "audit",
         resourceType: "course",
         readableId: course.readable_id,

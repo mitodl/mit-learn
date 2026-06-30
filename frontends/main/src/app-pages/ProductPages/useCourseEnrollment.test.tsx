@@ -512,7 +512,7 @@ describe("useCourseEnrollment — actions", () => {
     const { result } = renderHook(
       () =>
         useCourseEnrollment(course, run, {
-          placement: "infobox",
+          tracking: { placement: "infobox" },
           onRequireSignup,
         }),
       { wrapper },
@@ -555,7 +555,10 @@ describe("useCourseEnrollment — actions", () => {
     })
 
     const { result } = renderHook(
-      () => useCourseEnrollment(course, run, { placement: "infobox" }),
+      () =>
+        useCourseEnrollment(course, run, {
+          tracking: { placement: "infobox" },
+        }),
       { wrapper },
     )
 
@@ -598,7 +601,8 @@ describe("useCourseEnrollment — actions", () => {
     const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
 
     const { result } = renderHook(
-      () => useCourseEnrollment(course, run, { placement: "header" }),
+      () =>
+        useCourseEnrollment(course, run, { tracking: { placement: "header" } }),
       { wrapper },
     )
 
