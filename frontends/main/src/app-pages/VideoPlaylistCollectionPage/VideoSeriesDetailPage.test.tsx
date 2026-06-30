@@ -1,6 +1,6 @@
 import React from "react"
 import { setMockResponse, urls, factories } from "api/test-utils"
-import { renderWithProviders, screen } from "@/test-utils"
+import { renderWithProviders, screen, user } from "@/test-utils"
 import VideoSeriesDetailPage from "./VideoSeriesDetailPage"
 import { ResourceTypeEnum } from "api/v1"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
@@ -262,6 +262,90 @@ describe("VideoSeriesDetailPage", () => {
       expect(
         screen.queryByRole("link", { name: /Next/i }),
       ).not.toBeInTheDocument()
+    })
+  })
+
+  describe("share button in Up Next section", () => {
+    test("is not shown while playlist items are still loading", async () => {
+      const playlist = makePlaylist()
+      const video = makeVideo({ title: "Loading Items Test" })
+
+      setupVideoApi(video)
+      setMockResponse.get(
+        urls.learningResources.items({ id: playlist.id }),
+        new Promise(() => {}), // never resolves → items stay loading
+      )
+
+      renderWithProviders(
+        <VideoSeriesDetailPage
+          videoId={video.id}
+          playlistId={playlist.id}
+          playlistData={playlist}
+          playlistLoading={false}
+        />,
+      )
+
+      await screen.findByRole("heading", { name: video.title })
+      expect(
+        screen.queryByRole("button", { name: /share/i }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("share URL uses the slugged canonical form with playlist param", async () => {
+      const playlist = makePlaylist({ id: 99 })
+      const current = makeVideo({ id: 720, title: "Intro to Machine Learning" })
+      const next = makeVideo({ title: "Next Lecture" })
+      renderPage({
+        video: current,
+        playlistId: playlist.id,
+        playlistData: playlist,
+        playlistItems: [current, next],
+      })
+
+      await screen.findByText("Up Next")
+      await user.click(
+        screen.getByRole("button", {
+          name: /share intro to machine learning/i,
+        }),
+      )
+      expect(screen.getByRole("textbox")).toHaveValue(
+        "http://test.learn.odl.local:8062/video/720/intro-to-machine-learning?playlist=99",
+      )
+    })
+
+    test("clicking the share button opens the dialog", async () => {
+      const playlist = makePlaylist()
+      const current = makeVideo({ title: "Current Video" })
+      const next = makeVideo({ title: "Next Video" })
+      renderPage({
+        video: current,
+        playlistId: playlist.id,
+        playlistData: playlist,
+        playlistItems: [current, next],
+      })
+
+      await user.click(
+        await screen.findByRole("button", { name: /share current video/i }),
+      )
+      expect(screen.getByRole("dialog")).toBeInTheDocument()
+    })
+
+    test("closing the share dialog removes it from the page", async () => {
+      const playlist = makePlaylist()
+      const current = makeVideo({ title: "Close Dialog Test" })
+      const next = makeVideo({ title: "Next Video" })
+      renderPage({
+        video: current,
+        playlistId: playlist.id,
+        playlistData: playlist,
+        playlistItems: [current, next],
+      })
+
+      await user.click(
+        await screen.findByRole("button", { name: /share close dialog test/i }),
+      )
+      await user.click(screen.getByRole("button", { name: /^close$/i }))
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     })
   })
 

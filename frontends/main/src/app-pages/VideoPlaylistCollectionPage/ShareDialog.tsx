@@ -152,6 +152,24 @@ const EmbedFooter = styled.div({
   alignItems: "center",
 })
 
+const StartAtRow = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+  ...theme.typography.body2,
+  color: theme.custom.colors.darkGray2,
+  "input[type='checkbox']": {
+    width: "16px",
+    height: "16px",
+    cursor: "pointer",
+    accentColor: theme.custom.colors.red,
+  },
+  label: {
+    cursor: "pointer",
+    userSelect: "none",
+  },
+}))
+
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 async function copyToClipboard(text: string): Promise<void> {
@@ -180,21 +198,46 @@ function escapeHtmlAttr(value: string): string {
     .replace(/</g, "&lt;")
 }
 
+function formatTimestamp(totalSeconds: number): string {
+  const s = Math.floor(totalSeconds)
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const sec = s % 60
+  const mm = String(m).padStart(2, "0")
+  const ss = String(sec).padStart(2, "0")
+  return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`
+}
+
+function withTimeParam(url: string, seconds: number, param = "t"): string {
+  try {
+    const u = new URL(url)
+    u.searchParams.set(param, String(Math.floor(seconds)))
+    return u.toString()
+  } catch {
+    return url
+  }
+}
+
 function buildVideoEmbedHtml(
   video: VideoResource,
   title: string,
   embedPageUrl: string,
+  startTime = 0,
 ): string {
   const isOvs = video.platform?.code === "ovs" || video.platform?.code === "ocw"
   const escapedTitle = escapeHtmlAttr(title)
+  const t = Math.floor(startTime)
   if (isOvs) {
     if (!embedPageUrl) return ""
-    return `<iframe width="560" height="315" src="${embedPageUrl}" title="${escapedTitle}" frameborder="0" allowfullscreen></iframe>`
+    const src = t > 0 ? withTimeParam(embedPageUrl, t) : embedPageUrl
+    return `<iframe width="560" height="315" src="${src}" title="${escapedTitle}" frameborder="0" allowfullscreen></iframe>`
   }
 
   const youtubeId = getYouTubeVideoId(video.url)
   if (!youtubeId) return ""
-  return `<iframe width="560" height="315" src="https://www.youtube.com/embed/${youtubeId}" title="${escapedTitle}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`
+  const ytBase = `https://www.youtube.com/embed/${youtubeId}`
+  const src = t > 0 ? withTimeParam(ytBase, t, "start") : ytBase
+  return `<iframe width="560" height="315" src="${src}" title="${escapedTitle}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`
 }
 
 function buildPodcastEmbedHtml(
@@ -218,6 +261,7 @@ type ShareDialogProps = {
   resource?: PodcastEpisodeResource
   pageUrl: string
   title: string
+  getCurrentTime?: () => number
 }
 
 const ShareDialog = ({
@@ -227,10 +271,24 @@ const ShareDialog = ({
   resource,
   pageUrl,
   title,
+
+  getCurrentTime,
 }: ShareDialogProps) => {
   const [activeTab, setActiveTab] = useState<Tab>("share")
   const [copyLinkText, setCopyLinkText] = useState("Copy Link")
   const [copyEmbedText, setCopyEmbedText] = useState("Copy")
+  const [startTime, setStartTime] = useState(0)
+  const [includeTime, setIncludeTime] = useState(false)
+
+  const wasOpenRef = useRef(false)
+  useEffect(() => {
+    if (open && !wasOpenRef.current) {
+      const t = getCurrentTime?.() ?? 0
+      setStartTime(t)
+      setIncludeTime(t > 0)
+    }
+    wasOpenRef.current = open
+  }, [open, getCurrentTime])
 
   const copyLinkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const copyEmbedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -276,13 +334,22 @@ const ShareDialog = ({
       ? `${NEXT_PUBLIC_ORIGIN}/podcast/embed/${resource.id}`
       : null
 
+  const t = includeTime && startTime > 0 ? Math.floor(startTime) : 0
+
+  const activeShareUrl = pageUrl
+  const activeEmbedUrl =
+    embedUrl && t > 0 ? withTimeParam(embedUrl, t) : embedUrl
+
   const embedHtml = video
-    ? buildVideoEmbedHtml(video, title, videoEmbedPageUrl)
+    ? buildVideoEmbedHtml(video, title, videoEmbedPageUrl, t)
     : resource
       ? buildPodcastEmbedHtml(resource, title, embedUrl || "")
       : ""
 
   const embedUrlLabel = video ? "Video URL" : "Audio URL"
+
+  const startAtLabel =
+    video && startTime > 0 ? `Start at ${formatTimestamp(startTime)}` : null
 
   return (
     <Dialog
@@ -339,7 +406,7 @@ const ShareDialog = ({
                 <SectionHeading>Share on Social</SectionHeading>
                 <SocialButtonRow>
                   <ShareLink
-                    href={`${FACEBOOK_SHARE_BASE_URL}?u=${encodeURIComponent(pageUrl)}`}
+                    href={`${FACEBOOK_SHARE_BASE_URL}?u=${encodeURIComponent(activeShareUrl)}`}
                     aria-label="Share on Facebook"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -347,7 +414,7 @@ const ShareDialog = ({
                     <RiFacebookFill size={18} />
                   </ShareLink>
                   <ShareLink
-                    href={`${TWITTER_SHARE_BASE_URL}?text=${encodeURIComponent(title)}&url=${encodeURIComponent(pageUrl)}`}
+                    href={`${TWITTER_SHARE_BASE_URL}?text=${encodeURIComponent(title)}&url=${encodeURIComponent(activeShareUrl)}`}
                     aria-label="Share on X (Twitter)"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -355,7 +422,7 @@ const ShareDialog = ({
                     <RiTwitterXLine size={18} />
                   </ShareLink>
                   <ShareLink
-                    href={`${LINKEDIN_SHARE_BASE_URL}?url=${encodeURIComponent(pageUrl)}`}
+                    href={`${LINKEDIN_SHARE_BASE_URL}?url=${encodeURIComponent(activeShareUrl)}`}
                     aria-label="Share on LinkedIn"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -369,7 +436,7 @@ const ShareDialog = ({
                 <LinkControls>
                   <Input
                     fullWidth
-                    value={pageUrl}
+                    value={activeShareUrl}
                     size="small"
                     onClick={(event) => {
                       const input = event.currentTarget.querySelector("input")
@@ -383,9 +450,9 @@ const ShareDialog = ({
                     variant="bordered"
                     startIcon={<RedLinkIcon />}
                     onClick={async () => {
-                      if (!pageUrl) return
+                      if (!activeShareUrl) return
                       try {
-                        await copyToClipboard(pageUrl)
+                        await copyToClipboard(activeShareUrl)
                         setCopyLinkText("Copied!")
                       } catch {
                         setCopyLinkText("Failed to copy")
@@ -409,7 +476,7 @@ const ShareDialog = ({
                 <SectionHeading>{embedUrlLabel}</SectionHeading>
                 <Input
                   fullWidth
-                  value={embedUrl}
+                  value={activeEmbedUrl}
                   size="small"
                   inputProps={{ "aria-label": embedUrlLabel }}
                   onClick={(event) => {
@@ -429,6 +496,17 @@ const ShareDialog = ({
                 />
               </Field>
               <EmbedFooter>
+                {startAtLabel && (
+                  <StartAtRow style={{ flex: 1 }}>
+                    <input
+                      type="checkbox"
+                      id="start-at-embed"
+                      checked={includeTime}
+                      onChange={(e) => setIncludeTime(e.target.checked)}
+                    />
+                    <label htmlFor="start-at-embed">{startAtLabel}</label>
+                  </StartAtRow>
+                )}
                 <CopyButton
                   size="small"
                   edge="circular"

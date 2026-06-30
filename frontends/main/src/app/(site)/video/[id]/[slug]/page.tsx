@@ -110,9 +110,17 @@ const Page: React.FC<Props> = async ({ params, searchParams }) => {
     ])
   }
 
+  const rawT = resolvedSearchParams?.t
+  const startTime =
+    typeof rawT === "string" && /^\d+$/.test(rawT) ? Number(rawT) : undefined
+
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <VideoDetailPageRouter videoId={videoId} playlistId={playlistId} />
+      <VideoDetailPageRouter
+        videoId={videoId}
+        playlistId={playlistId}
+        startTime={startTime}
+      />
     </HydrationBoundary>
   )
 }

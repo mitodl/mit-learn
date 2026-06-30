@@ -138,6 +138,46 @@ describe("VideoDetailPage", () => {
     },
   )
 
+  describe("share button", () => {
+    test("is not shown while data is still loading", async () => {
+      const video = makeVideo({ title: "Loading Test" })
+      renderPage({ video })
+      // Synchronously after render the API hasn't resolved yet
+      expect(
+        screen.queryByRole("button", { name: /share/i }),
+      ).not.toBeInTheDocument()
+      // Confirm it does appear once loaded (proving the above was the loading state)
+      await screen.findByRole("button", { name: /share loading test/i })
+    })
+
+    test("aria-label includes the video title", async () => {
+      const video = makeVideo({ title: "Quantum Computing" })
+      renderPage({ video })
+      expect(
+        await screen.findByRole("button", { name: /share quantum computing/i }),
+      ).toBeInTheDocument()
+    })
+
+    test("clicking the button opens the share dialog", async () => {
+      const video = makeVideo({ title: "Open Dialog Test" })
+      renderPage({ video })
+      await user.click(
+        await screen.findByRole("button", { name: /share open dialog test/i }),
+      )
+      expect(screen.getByRole("dialog")).toBeInTheDocument()
+    })
+
+    test("closing the dialog removes it from the page", async () => {
+      const video = makeVideo({ title: "Close Dialog Test" })
+      renderPage({ video })
+      await user.click(
+        await screen.findByRole("button", { name: /share close dialog test/i }),
+      )
+      await user.click(screen.getByRole("button", { name: /^close$/i }))
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+  })
+
   test("renders VideoResourcePlayer for the video", async () => {
     const video = makeVideo({
       video: {

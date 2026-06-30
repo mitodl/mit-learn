@@ -4,12 +4,14 @@ import React, { useState } from "react"
 import { RiShareForwardFill } from "@remixicon/react"
 import type { VideoResource } from "api/v1"
 import ShareDialog from "./ShareDialog"
+import type { VideoPlayerHandle } from "./VideoResourcePlayer"
 import * as Styled from "./VideoSeriesDetailPage.styled"
 
 type VideoShareButtonProps = {
   video: VideoResource
   title: string
   pageUrl: string
+  playerRef?: React.RefObject<VideoPlayerHandle | null>
   className?: string
 }
 
@@ -17,6 +19,7 @@ const VideoShareButton: React.FC<VideoShareButtonProps> = ({
   video,
   title,
   pageUrl,
+  playerRef,
   className,
 }) => {
   const [shareOpen, setShareOpen] = useState(false)
@@ -37,6 +40,7 @@ const VideoShareButton: React.FC<VideoShareButtonProps> = ({
         title={title}
         onClose={() => setShareOpen(false)}
         pageUrl={pageUrl}
+        getCurrentTime={() => playerRef?.current?.getCurrentTime() ?? 0}
       />
     </>
   )

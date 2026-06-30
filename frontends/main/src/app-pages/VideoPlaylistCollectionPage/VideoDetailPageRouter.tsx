@@ -11,11 +11,13 @@ import { LoadingSpinner } from "ol-components"
 type VideoDetailPageRouterProps = {
   videoId: number
   playlistId: number | null
+  startTime?: number
 }
 
 const VideoDetailPageRouter: React.FC<VideoDetailPageRouterProps> = ({
   videoId,
   playlistId,
+  startTime,
 }) => {
   const { data: playlist, isLoading: playlistLoading } = useQuery({
     ...videoPlaylistQueries.detail(playlistId ?? 0),
@@ -31,6 +33,7 @@ const VideoDetailPageRouter: React.FC<VideoDetailPageRouterProps> = ({
   if (isOcw) {
     return (
       <VideoSeriesDetailPage
+        key={videoId}
         videoId={videoId}
         playlistId={playlistId}
         playlistData={playlist}
@@ -45,6 +48,7 @@ const VideoDetailPageRouter: React.FC<VideoDetailPageRouterProps> = ({
       playlistId={playlistId}
       playlistData={playlist}
       playlistLoading={playlistLoading}
+      startTime={startTime}
     />
   )
 }
