@@ -14,6 +14,18 @@ def test_filter_serializer_accepts_resource_type():
     assert s.validated_data["resource_type"] == ["video_playlist"]
 
 
+def test_filter_serializer_accepts_resource_category():
+    """Resource category is a shared learning resource search filter."""
+    s = LearningResourcesSearchFiltersSerializer(
+        data={"resource_category": ["Course", "Practice & Assignment"]}
+    )
+    assert s.is_valid(), s.errors
+    assert s.validated_data["resource_category"] == [
+        "Course",
+        "Practice & Assignment",
+    ]
+
+
 def test_filter_serializer_rejects_invalid_resource_type():
     s = LearningResourcesSearchFiltersSerializer(data={"resource_type": ["not_a_type"]})
     assert not s.is_valid()
@@ -36,6 +48,7 @@ def test_filter_serializer_has_no_search_fields():
 def test_vector_search_request_serializer_inherits_filter_fields():
     fields = LearningResourcesVectorSearchRequestSerializer().fields
     assert "resource_type" in fields
+    assert "resource_category" in fields
     assert "platform" in fields
     assert "q" in fields
     assert "hybrid_search" in fields
