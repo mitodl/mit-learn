@@ -1,7 +1,12 @@
+from django.contrib.auth import get_user_model
+from django.db import transaction
 from mitol.scim.adapters import UserAdapter
 
 from authentication.hooks import get_plugin_manager
 from profiles.models import Profile
+from users.tasks import reindex_user_learning_paths
+
+User = get_user_model()
 
 
 class LearnUserAdapter(UserAdapter):
@@ -43,13 +48,33 @@ class LearnUserAdapter(UserAdapter):
     def save(self):
         """
         Save the user object and any related objects, such as the profile.
+
+        For existing users a SELECT FOR UPDATE row-level lock is acquired
+        before writing so that concurrent SCIM PATCH requests for the same
+        user (arriving on different pods) are serialized rather than
+        racing each other, which previously produced HTTP 409 conflicts.
+
+        After the database transaction commits, a Celery task is dispatched
+        to re-index any learning paths owned by this user, keeping
+        OpenSearch documents consistent without blocking the HTTP response
+        with synchronous I/O.
         """
         newly_created = self.is_new_user
-        super().save()
+        with transaction.atomic():
+            if not newly_created:
+                # Lock the user row so concurrent PATCH requests for the
+                # same user block here rather than racing to the UPDATE.
+                User.objects.select_for_update().get(pk=self.obj.pk)
+            super().save()
         if newly_created:
             pm = get_plugin_manager()
             hook = pm.hook
             hook.user_created(user=self.obj, user_data={})
+        else:
+            # Dispatch search re-indexing only after the outermost transaction
+            # commits so the Celery worker always sees the committed state.
+            user_pk = self.obj.pk
+            transaction.on_commit(lambda: reindex_user_learning_paths.delay(user_pk))
 
     def _save_related(self):
         """
