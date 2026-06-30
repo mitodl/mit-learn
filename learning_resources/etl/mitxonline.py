@@ -43,9 +43,12 @@ OFFERED_BY = {"code": OfferedBy.mitx.name}
 def _fetch_data(url, params=None):
     if not params:
         params = {}
+    headers = {}
+    if settings.MITX_ONLINE_ETL_API_KEY:
+        headers["Authorization"] = f"Api-Key {settings.MITX_ONLINE_ETL_API_KEY}"
     while url:
         response = requests.get(
-            url, params=params, timeout=settings.REQUESTS_TIMEOUT
+            url, params=params, headers=headers, timeout=settings.REQUESTS_TIMEOUT
         ).json()
         results = response["results"]
         yield from results
