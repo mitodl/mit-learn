@@ -336,7 +336,7 @@ const ShareDialog = ({
 
   const t = includeTime && startTime > 0 ? Math.floor(startTime) : 0
 
-  const activeShareUrl = t > 0 ? withTimeParam(pageUrl, t) : pageUrl
+  const activeShareUrl = pageUrl
   const activeEmbedUrl =
     embedUrl && t > 0 ? withTimeParam(embedUrl, t) : embedUrl
 

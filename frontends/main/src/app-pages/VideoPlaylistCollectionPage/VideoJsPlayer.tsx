@@ -119,7 +119,13 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
         // point; adding them before ready can silently fail on some browsers.
         addTracks(this, tracks)
         if (startTime && startTime > 0) {
-          this.currentTime(startTime)
+          // Seek only after metadata (duration/seekable range) is available.
+          // Calling currentTime() in ready() runs before metadata loads, so the
+          // seek is silently ignored for non-YouTube (HTML5) sources. `one`
+          // fires a single time, so it seeks on initial load only.
+          this.one("loadedmetadata", () => {
+            this.currentTime(startTime)
+          })
         }
         onReady?.(this)
         // Set the flag here so the update effect only runs after the player

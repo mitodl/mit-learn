@@ -186,27 +186,9 @@ describe("VideoShareDialog", () => {
 
   describe("timestamp-aware share links", () => {
     describe("Share tab", () => {
-      test("appends ?t= to share URL when video is mid-play", async () => {
-        renderDialogWithTime(() => 90)
-        expect(
-          await screen.findByDisplayValue(`${PAGE_URL}&t=90`),
-        ).toBeInTheDocument()
-      })
-
       test("does not append ?t= when video is at position 0", async () => {
         renderDialogWithTime(() => 0)
         expect(await screen.findByDisplayValue(PAGE_URL)).toBeInTheDocument()
-      })
-
-      test("social share links use the timestamped URL", async () => {
-        renderDialogWithTime(() => 90)
-        const fbLink = await screen.findByRole("link", {
-          name: /share on facebook/i,
-        })
-        expect(fbLink).toHaveAttribute(
-          "href",
-          expect.stringContaining(encodeURIComponent(`${PAGE_URL}&t=90`)),
-        )
       })
     })
 

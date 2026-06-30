@@ -98,8 +98,15 @@ describe("VideoShareButton", () => {
       await user.click(
         await screen.findByRole("button", { name: /share with time/i }),
       )
-      // timestamp 90s appended to share URL
-      expect(screen.getByDisplayValue(`${PAGE_URL}&t=90`)).toBeInTheDocument()
+      // The share-tab link is always the bare page URL; the timestamp read
+      // from playerRef is surfaced in the Embed tab.
+      await user.click(await screen.findByRole("tab", { name: /embed/i }))
+      // 90s read from playerRef.getCurrentTime() → "Start at 1:30" + ?t=90
+      expect(screen.getByText("Start at 1:30")).toBeInTheDocument()
+      const videoUrlInput = screen.getByRole("textbox", {
+        name: "Video URL",
+      }) as HTMLInputElement
+      expect(videoUrlInput.value).toContain("t=90")
     })
   })
 })
