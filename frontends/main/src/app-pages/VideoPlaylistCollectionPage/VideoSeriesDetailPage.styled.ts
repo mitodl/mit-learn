@@ -22,6 +22,14 @@ export const BreadcrumbBar = styled.div(({ theme }) => ({
   },
 }))
 
+export const VideoShareSection = styled("div")({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  flexWrap: "wrap",
+  gap: "8px",
+})
+
 export const ShareRow = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "flex-end",
@@ -289,7 +297,7 @@ export const MetaInstructorLine = styled.div(({ theme }) => ({
 export const StyledDuration = styled.div(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
-  margin: "0 0 40px",
+  margin: "0 0 24px",
   [theme.breakpoints.down("sm")]: {
     margin: "0 0 16px",
   },

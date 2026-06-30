@@ -9,7 +9,6 @@ import VideoContainer from "./VideoContainer"
 import { RiPlayCircleFill } from "@remixicon/react"
 import { SkipLinksNav, SkipLink, StyledBreadcrumbs } from "./shared.styled"
 import VideoShareButton from "./VideoShareButton"
-import { ShareRow } from "./VideoSeriesDetailPage.styled"
 import { useQuery } from "@tanstack/react-query"
 import {
   useLearningResourcesDetail,
@@ -65,6 +64,17 @@ const CategoryLabel = styled(Link)(({ theme }) => ({
     textDecoration: "underline",
   },
 }))
+const StyledVideoShareButton = styled(VideoShareButton)({
+  margin: "0 0 24px",
+})
+
+export const VideoShareSection = styled("div")({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  flexWrap: "wrap",
+  gap: "8px",
+})
 
 const VideoTitle = styled.h1(({ theme }) => ({
   ...theme.typography.h2,
@@ -436,13 +446,25 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
             </VideoTitle>
           )}
 
-          {!isLoading && (duration || topicNames) && (
-            <MetaRow>
-              <DurationText>{duration && <span>{duration}</span>}</DurationText>
-              <TopicText>{topicNames}</TopicText>
-            </MetaRow>
-          )}
+          <VideoShareSection>
+            {!isLoading && (duration || topicNames) && (
+              <MetaRow>
+                <DurationText>
+                  {duration && <span>{duration}</span>}
+                </DurationText>
+                <TopicText>{topicNames}</TopicText>
+              </MetaRow>
+            )}
 
+            {!isLoading && video && (
+              <StyledVideoShareButton
+                video={video}
+                title={video.title ?? "video"}
+                pageUrl={`${NEXT_PUBLIC_ORIGIN}${videoDetailPageView(video.id, playlistId ?? undefined, video.title)}`}
+                playerRef={playerRef}
+              />
+            )}
+          </VideoShareSection>
           <StyledVideoResourcePlayer
             ref={playerRef}
             video={video}
@@ -466,17 +488,6 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
               {videoTitleLabel}. Duration: {durationLabel}. Topics:{" "}
               {topicNamesLabel}.
             </ScreenReaderOnly>
-          )}
-
-          {!isLoading && video && (
-            <ShareRow>
-              <VideoShareButton
-                video={video}
-                title={video.title ?? "video"}
-                pageUrl={`${NEXT_PUBLIC_ORIGIN}${videoDetailPageView(video.id, playlistId ?? undefined, video.title)}`}
-                playerRef={playerRef}
-              />
-            </ShareRow>
           )}
 
           {/* More from playlist */}
