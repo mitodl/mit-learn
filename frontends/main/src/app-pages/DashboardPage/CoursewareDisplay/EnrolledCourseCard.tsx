@@ -6,7 +6,6 @@ import {
   CoursewareActionColumn,
   CoursewareButton,
   CoursewareButtonLink,
-  HorizontalSeparator,
   MenuButton,
   Separator,
   SubtitleLink,
@@ -24,13 +23,13 @@ import {
 } from "./model/dashboardViewModel"
 import { getCourseDateText } from "./courseDateUtils"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
-import { RiAwardLine, RiMore2Line } from "@remixicon/react"
+import { RiAwardLine, RiCheckLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { isInPast, calendarDaysUntil, NoSSR } from "ol-utilities"
 import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
-import { Button, ButtonLink } from "@mitodl/smoot-design"
+import { Button, ButtonLink, styled } from "@mitodl/smoot-design"
 import { coursePageView } from "@/common/urls"
 import NiceModal from "@ebay/nice-modal-react"
 import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
@@ -109,6 +108,14 @@ const UpgradeBanner: React.FC<
   )
 }
 
+const UpgradedBanner = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: "4px",
+  color: theme.custom.colors.silverGrayDark,
+  ...theme.typography.subtitle3,
+}))
+
 type EnrolledCourseCardProps = {
   enrollment: CourseRunEnrollmentV3
   layout?: "default" | "compact"
@@ -164,10 +171,13 @@ export const EnrolledCourseCard = ({
     type: DashboardType.CourseRunEnrollment,
     data: enrollment,
   })
+  const alreadyUpgraded =
+    !isContractPageResource && isVerifiedEnrollmentMode(enrollmentMode)
   const endDateAndCertSection = (
     <Stack direction="row" alignItems="center">
       {courseDateText}
-      {hasCourseDateText && (showUpgradeBanner || !!certificateLink) ? (
+      {hasCourseDateText &&
+      (showUpgradeBanner || alreadyUpgraded || !!certificateLink) ? (
         <Separator />
       ) : null}
       {showUpgradeBanner ? (
@@ -184,6 +194,11 @@ export const EnrolledCourseCard = ({
             )
           }}
         />
+      ) : alreadyUpgraded && !certificateLink ? (
+        <UpgradedBanner data-testid="upgraded-banner">
+          <RiCheckLine size="16px" />
+          Paid - Certificate Included
+        </UpgradedBanner>
       ) : null}
       {certificateLink ? (
         <SubtitleLink href={certificateLink} layout={layout}>
@@ -262,10 +277,10 @@ export const EnrolledCourseCard = ({
     </ButtonLink>
   )
   const buttonSection = isCompact ? (
-    <Stack direction="row" gap="8px" alignItems="center">
+    <Stack direction="row" alignItems="center">
       {endDateAndCertSection}
       {daysUntilEnd !== null || showUpgradeBanner || !!certificateLink ? (
-        <HorizontalSeparator />
+        <Separator />
       ) : null}
       <CoursewareActionColumn direction="row" justifyContent="center">
         {ctaButton}

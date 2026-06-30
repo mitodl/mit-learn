@@ -139,12 +139,6 @@ const COURSEWARE_BUTTON_WIDTH = "88px"
 
 // Thin vertical divider shown between the certificate/upgrade links and the
 // courseware action button in the compact (module row) layout.
-const HorizontalSeparator = styled.div(({ theme }) => ({
-  width: "1px",
-  height: "12px",
-  backgroundColor: theme.custom.colors.lightGray2,
-}))
-
 // Fixed-width column that keeps the courseware button (and countdown) aligned
 // in the compact (module row) layout.
 const CoursewareActionColumn = styled(Stack)({
@@ -314,7 +308,6 @@ export {
   SubtitleLinkRoot,
   SubtitleLink,
   MenuButton,
-  HorizontalSeparator,
   CoursewareActionColumn,
   CoursewareButton,
   CoursewareButtonLink,

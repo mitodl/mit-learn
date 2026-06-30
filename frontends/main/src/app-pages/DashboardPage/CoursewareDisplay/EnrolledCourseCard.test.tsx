@@ -562,6 +562,70 @@ describe.each([
   })
 
   // ---------------------------------------------------------------------------
+  // Upgraded (paid, certificate not yet earned) banner
+  // ---------------------------------------------------------------------------
+
+  test("Shows 'Paid - Certificate Included' for verified enrollment without a certificate", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Verified,
+      certificate: null,
+      grades: [],
+      run: currentRunDates,
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(within(getCard()).getByTestId("upgraded-banner")).toHaveTextContent(
+      "Paid - Certificate Included",
+    )
+  })
+
+  test("Does not show 'Paid - Certificate Included' when verified enrollment has a certificate", () => {
+    setupUserApis()
+    const certUuid = faker.string.uuid()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Verified,
+      certificate: { uuid: certUuid, link: faker.internet.url() },
+      run: currentRunDates,
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(
+      within(getCard()).queryByTestId("upgraded-banner"),
+    ).not.toBeInTheDocument()
+    expect(
+      within(getCard()).getByRole("link", { name: /View Certificate/ }),
+    ).toBeInTheDocument()
+  })
+
+  test("Does not show 'Paid - Certificate Included' for audit enrollment", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      certificate: null,
+      grades: [],
+      run: currentRunDates,
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(
+      within(getCard()).queryByTestId("upgraded-banner"),
+    ).not.toBeInTheDocument()
+  })
+
+  test("Does not show 'Paid - Certificate Included' for B2B verified enrollment", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Verified,
+      b2b_contract_id: faker.number.int(),
+      certificate: null,
+      grades: [],
+      run: currentRunDates,
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(
+      within(getCard()).queryByTestId("upgraded-banner"),
+    ).not.toBeInTheDocument()
+  })
+
+  // ---------------------------------------------------------------------------
   // Context menu
   // ---------------------------------------------------------------------------
 
