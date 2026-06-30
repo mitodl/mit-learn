@@ -43,6 +43,32 @@ from main.utils import generate_filepath
 
 log = logging.getLogger()
 
+
+def log_missing_content_file(identifier, *, reason, source):
+    """
+    Log that a request referenced an edx_module_id with no backing ContentFile.
+
+    reason: "not_in_db" (no ContentFile row) or "not_in_index" (row exists but
+    not embedded in Qdrant). LoggingIntegration forwards the error to Sentry,
+    which groups by the stable message template and applies its own rate limiting.
+    """
+    log.error(
+        "Missing ContentFile (%s) for edx_module_id=%s [source=%s]",
+        reason,
+        identifier,
+        source,
+    )
+
+
+def present_edx_module_ids(edx_module_ids):
+    """Return the subset of edx_module_ids that have a ContentFile row."""
+    return set(
+        ContentFile.objects.filter(edx_module_id__in=edx_module_ids).values_list(
+            "edx_module_id", flat=True
+        )
+    )
+
+
 if TYPE_CHECKING:
     from django.contrib.auth import get_user_model
 

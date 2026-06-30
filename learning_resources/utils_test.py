@@ -41,6 +41,7 @@ from learning_resources.utils import (
     add_parent_topics_to_learning_resource,
     build_program_children_content,
     build_program_children_content_bulk,
+    log_missing_content_file,
     strip_markdown_images,
     transfer_list_resources,
     truncate_to_tokens,
@@ -991,3 +992,17 @@ def test_build_program_children_content_bulk_excludes_unpublished_contentfiles()
 )
 def test_strip_markdown_images(input_md, expected):
     assert strip_markdown_images(input_md) == expected
+
+
+def test_log_missing_content_file_logs_error(mocker):
+    """Logs an error with the reason, identifier, and source."""
+    mock_log = mocker.patch("learning_resources.utils.log")
+
+    log_missing_content_file("block_x", reason="not_in_db", source="contentfiles_api")
+
+    mock_log.error.assert_called_once_with(
+        "Missing ContentFile (%s) for edx_module_id=%s [source=%s]",
+        "not_in_db",
+        "block_x",
+        "contentfiles_api",
+    )

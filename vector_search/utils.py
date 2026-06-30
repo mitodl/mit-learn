@@ -4,6 +4,7 @@ import logging
 import uuid
 from functools import cache
 
+from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.db.models import Prefetch, Q
 from langchain_text_splitters import (
@@ -24,6 +25,10 @@ from learning_resources.serializers import (
     ContentFileSerializer,
     LearningResourceMetadataDisplaySerializer,
     LearningResourceSerializer,
+)
+from learning_resources.utils import (
+    log_missing_content_file,
+    present_edx_module_ids,
 )
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
@@ -977,6 +982,44 @@ def _resource_vector_hits(search_result):
     ordered_resources = [resources_by_id[rid] for rid in hits if rid in resources_by_id]
 
     return LearningResourceSerializer(ordered_resources, many=True).data
+
+
+async def check_missing_content_file_ids(edx_module_ids, collection_name):
+    """
+    Log requested edx_module_ids missing from the DB (not_in_db) or present in
+    the DB but absent from the Qdrant index (not_in_index). Probes existence
+    directly, independent of q/other request filters.
+    """
+    present = await sync_to_async(present_edx_module_ids)(edx_module_ids)
+    for missing in set(edx_module_ids) - present:
+        log_missing_content_file(
+            missing, reason="not_in_db", source="vector_content_files_search"
+        )
+    if not present:
+        return
+    client = async_qdrant_client()
+
+    async def _check_index(edx_module_id):
+        count_filter = qdrant_query_conditions(
+            {"edx_module_id": [edx_module_id]}, collection_name=collection_name
+        )
+        if count_filter is None:
+            # Can't scope a count to this id on this collection (e.g. a
+            # collection_name override) -> skip rather than count the whole
+            # collection, which would mask a real not_in_index gap.
+            return
+        # exact=True: an approximate 0 would create a false not_in_index alert.
+        result = await client.count(
+            collection_name=collection_name, count_filter=count_filter, exact=True
+        )
+        if result.count == 0:
+            log_missing_content_file(
+                edx_module_id,
+                reason="not_in_index",
+                source="vector_content_files_search",
+            )
+
+    await asyncio.gather(*(_check_index(eid) for eid in present))
 
 
 def _content_file_vector_hits(search_result):

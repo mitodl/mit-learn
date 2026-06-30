@@ -18,6 +18,37 @@ from vector_search.encoders.utils import dense_encoder, sparse_encoder
 from vector_search.views import QdrantView
 
 
+@pytest.fixture
+def content_file_viewer(client, django_user_model):
+    """Log in a user permitted to view content-file search results."""
+    user = django_user_model.objects.create()
+    group, _ = Group.objects.get_or_create(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS)
+    group.user_set.add(user)
+    client.force_login(user)
+    return user
+
+
+@pytest.fixture
+def mock_qdrant(mocker):
+    """Async Qdrant client mock wired into both views and utils.
+
+    Defaults to an empty result set (no hits, count 0); tests needing hits
+    override ``query_points`` / ``count`` on the returned mock.
+    """
+    qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    empty = mocker.MagicMock()
+    empty.points = []
+    qdrant.query_points = mocker.AsyncMock(return_value=empty)
+    qdrant.query_points_groups = mocker.AsyncMock()
+    qdrant.count = mocker.AsyncMock(return_value=CountResult(count=0))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=qdrant)
+    mocker.patch("vector_search.utils.async_qdrant_client", return_value=qdrant)
+    return qdrant
+
+
 def test_vector_search_filters(mocker, client):
     """Test vector search with query uses query filters"""
 
@@ -1046,3 +1077,69 @@ def test_content_file_search_no_best_run_metadata_only(
     run_conditions = [c for c in must if getattr(c, "key", None) == "run_readable_id"]
     assert len(run_conditions) == 1
     assert set(run_conditions[0].match.any) == {course.readable_id}
+
+
+@pytest.mark.django_db
+def test_content_file_vector_search_logs_missing_edx_module_id(
+    mocker, client, mock_qdrant, content_file_viewer
+):
+    """Vector search for an edx_module_id with no ContentFile logs not_in_db."""
+    mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
+
+    client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={"q": "test", "edx_module_id": ["block_absent"]},
+    )
+
+    mock_log.assert_any_call(
+        "block_absent", reason="not_in_db", source="vector_content_files_search"
+    )
+
+
+@pytest.mark.django_db
+def test_content_file_vector_search_probe_failure_does_not_break_search(
+    mocker, client, mock_qdrant, content_file_viewer
+):
+    """A failing observability probe must not propagate and return a 500."""
+    mocker.patch(
+        "vector_search.views.check_missing_content_file_ids",
+        new=mocker.AsyncMock(side_effect=Exception("qdrant down")),
+    )
+
+    response = client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={"q": "test", "edx_module_id": ["block_absent"]},
+    )
+
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_content_file_vector_search_skips_probe_when_results_present(
+    mocker, client, mock_qdrant, content_file_viewer
+):
+    """Probe is skipped when the search returns at least one hit."""
+    # A single point with the minimum payload needed by _content_file_vector_hits.
+    mock_point = mocker.MagicMock()
+    mock_point.payload = {
+        "run_readable_id": "run-present",
+        "key": "present.pdf",
+        "edx_module_id": "block_present",
+    }
+    non_empty_result = mocker.MagicMock()
+    non_empty_result.points = [mock_point]
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=non_empty_result)
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=1))
+
+    mock_probe = mocker.patch(
+        "vector_search.views.check_missing_content_file_ids",
+        new=mocker.AsyncMock(),
+    )
+
+    response = client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={"q": "test", "edx_module_id": ["block_present"]},
+    )
+
+    assert response.status_code == 200
+    mock_probe.assert_not_awaited()
