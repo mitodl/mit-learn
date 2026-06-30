@@ -50,7 +50,7 @@ const UpcomingRunIcon = styled(RiTimeLine)(({ theme }) => ({
   height: "16px",
   borderRadius: "50%",
   color: theme.custom.colors.white,
-  backgroundColor: theme.custom.colors.yellow,
+  backgroundColor: theme.custom.colors.orange,
   flexShrink: 0,
 }))
 
