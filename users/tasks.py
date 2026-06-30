@@ -2,12 +2,9 @@
 
 import logging
 
-from django.contrib.auth import get_user_model
-
 from main.celery import app
 
 log = logging.getLogger(__name__)
-User = get_user_model()
 
 
 @app.task

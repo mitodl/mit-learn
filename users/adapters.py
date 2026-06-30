@@ -60,21 +60,24 @@ class LearnUserAdapter(UserAdapter):
         with synchronous I/O.
         """
         newly_created = self.is_new_user
+        user_pk = self.obj.pk
         with transaction.atomic():
             if not newly_created:
                 # Lock the user row so concurrent PATCH requests for the
                 # same user block here rather than racing to the UPDATE.
                 User.objects.select_for_update().get(pk=self.obj.pk)
             super().save()
+            if not newly_created:
+                # Register the Celery dispatch inside the atomic block so
+                # on_commit fires after the transaction commits, not immediately
+                # (which would happen in autocommit mode if called outside).
+                transaction.on_commit(
+                    lambda: reindex_user_learning_paths.delay(user_pk)
+                )
         if newly_created:
             pm = get_plugin_manager()
             hook = pm.hook
             hook.user_created(user=self.obj, user_data={})
-        else:
-            # Dispatch search re-indexing only after the outermost transaction
-            # commits so the Celery worker always sees the committed state.
-            user_pk = self.obj.pk
-            transaction.on_commit(lambda: reindex_user_learning_paths.delay(user_pk))
 
     def _save_related(self):
         """
