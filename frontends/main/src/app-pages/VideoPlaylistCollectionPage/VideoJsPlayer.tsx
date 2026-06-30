@@ -25,6 +25,7 @@ export type VideoJsPlayerProps = {
   playsinline?: boolean
   ariaLabel?: string
   ariaDescribedBy?: string
+  startTime?: number
   onReady?: (player: Player) => void
   onPlay?: () => void
   onHalfProgress?: () => void
@@ -46,6 +47,7 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
   playsinline = false,
   ariaLabel,
   ariaDescribedBy,
+  startTime,
   onReady,
   onPlay,
   onHalfProgress,
@@ -149,6 +151,15 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
             }
           })
         }
+        if (startTime && startTime > 0) {
+          // Seek only after metadata (duration/seekable range) is available.
+          // Calling currentTime() in ready() runs before metadata loads, so the
+          // seek is silently ignored for non-YouTube (HTML5) sources. `one`
+          // fires a single time, so it seeks on initial load only.
+          this.one("loadedmetadata", () => {
+            this.currentTime(startTime)
+          })
+        }
         onReady?.(this)
         // Set the flag here so the update effect only runs after the player
         // is truly ready and the initial setup is complete.
@@ -171,6 +182,7 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
     playsinline,
     poster,
     sources,
+    startTime,
     tracks,
   ])
 

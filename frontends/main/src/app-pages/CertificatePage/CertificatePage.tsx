@@ -32,8 +32,6 @@ import {
   getVerifiableCredentialDownloadAPIURL,
   CertificateType,
 } from "@/common/certificateUtils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
 
 const Page = styled.div(({ theme }) => ({
   backgroundImage: `url(${backgroundImage.src})`,
@@ -688,11 +686,6 @@ const CertificatePage: React.FC<{
 
   const { data: userData } = useQuery(mitxUserQueries.me())
 
-  // Gates whether the certificate title comes from the CMS "Certificate Title"
-  // (product_name) field or the program/course title. Defaults to the
-  // program/course title until the flag loads / is enabled.
-  const useCmsTitle = !!useFeatureFlagEnabled(FeatureFlags.CmsCertificateTitle)
-
   const {
     data: courseCertificateData,
     isLoading: isCourseLoading,
@@ -761,13 +754,11 @@ const CertificatePage: React.FC<{
   let title = ""
   if (certificateType === CertificateType.Course) {
     title = courseCertificateData?.course_run.course.title ?? ""
-  } else if (useCmsTitle) {
+  } else {
     title = getCertificateTitle(
       programCertificateData?.certificate_page?.product_name,
       programCertificateData?.program.title ?? "",
     )
-  } else {
-    title = programCertificateData?.program.title ?? ""
   }
 
   const download = async () => {

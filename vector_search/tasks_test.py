@@ -3,7 +3,9 @@ import random
 
 import grpc
 import pytest
+from celery.exceptions import Retry
 from django.conf import settings
+from django.core.cache.backends.locmem import LocMemCache
 
 from learning_resources.etl.constants import (
     RESOURCE_FILE_ETL_SOURCES,
@@ -28,11 +30,13 @@ from learning_resources_search.constants import (
 from learning_resources_search.exceptions import RetryError
 from main.utils import now_in_utc
 from vector_search.tasks import (
+    _record_embedding_failure,
     embed_learning_resources_by_id,
     embed_new_content_files,
     embed_new_learning_resources,
     embed_run_content_files,
     embeddings_healthcheck,
+    finalize_embeddings,
     generate_embeddings,
     remove_embeddings,
     remove_run_content_files,
@@ -49,6 +53,15 @@ def _rpc_error(code):
     err = grpc.RpcError()
     err.code = lambda: code
     return err
+
+
+@pytest.fixture
+def embed_cache(mocker):
+    """Real (LocMem) backing store for the redis-alias counter in tasks under test."""
+    cache = LocMemCache("embed-test", {})
+    cache.clear()
+    mocker.patch("vector_search.tasks.caches", {"redis": cache})
+    return cache
 
 
 @pytest.mark.parametrize("index", list(LEARNING_RESOURCE_TYPES))
@@ -222,16 +235,29 @@ def test_embed_new_content_files(mocker, mocked_celery):
     generate_embeddings_mock = mocker.patch(
         "vector_search.tasks.generate_embeddings", autospec=True
     )
+    finalize_embeddings_mock = mocker.patch(
+        "vector_search.tasks.finalize_embeddings", autospec=True
+    )
 
     with pytest.raises(mocked_celery.replace_exception_class):
         embed_new_content_files.delay()
 
     embedded_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
     assert sorted(new_content_file_ids) == sorted(embedded_ids)
-    assert mocked_celery.chain.call_args.args == tuple(
+    assert all(
+        mock_call.kwargs.get("overwrite") is False and "failure_key" in mock_call.kwargs
+        for mock_call in generate_embeddings_mock.si.mock_calls
+    )
+    assert (
+        finalize_embeddings_mock.si.call_args.args[0]
+        == generate_embeddings_mock.si.mock_calls[0].kwargs["failure_key"]
+    )
+    chain_args = mocked_celery.chain.call_args.args
+    assert chain_args[:-1] == tuple(
         generate_embeddings_mock.si.return_value
         for _ in generate_embeddings_mock.si.mock_calls
     )
+    assert chain_args[-1] == finalize_embeddings_mock.si.return_value
 
 
 def test_remove_run_content_files(mocker, mocked_celery, settings):
@@ -638,6 +664,9 @@ def test_embed_run_content_files(mocker, mocked_celery, settings):
     generate_embeddings_mock = mocker.patch(
         "vector_search.tasks.generate_embeddings", autospec=True
     )
+    finalize_embeddings_mock = mocker.patch(
+        "vector_search.tasks.finalize_embeddings", autospec=True
+    )
 
     with pytest.raises(mocked_celery.replace_exception_class):
         embed_run_content_files.delay(run.id)
@@ -650,12 +679,20 @@ def test_embed_run_content_files(mocker, mocked_celery, settings):
     assert sorted(embedded_ids) == sorted(content_file_ids)
     assert all(
         mock_call.args[1:] == (CONTENT_FILE_TYPE,)
-        and mock_call.kwargs == {"overwrite": True}
+        and mock_call.kwargs["overwrite"] is True
+        and "failure_key" in mock_call.kwargs
         for mock_call in generate_embeddings_mock.si.mock_calls
     )
-    assert mocked_celery.chain.call_args.args == tuple(
+    # chain = all chunk sigs, then the finalize tail
+    chain_args = mocked_celery.chain.call_args.args
+    assert chain_args[:-1] == tuple(
         generate_embeddings_mock.si.return_value
         for _ in generate_embeddings_mock.si.mock_calls
+    )
+    assert chain_args[-1] == finalize_embeddings_mock.si.return_value
+    assert (
+        finalize_embeddings_mock.si.call_args.args[0]
+        == generate_embeddings_mock.si.mock_calls[0].kwargs["failure_key"]
     )
     assert mocked_celery.replace.call_count == 1
 
@@ -674,6 +711,15 @@ def test_embed_run_content_files_no_content_files(mocker, mocked_celery):
     generate_embeddings_mock.si.assert_not_called()
     mocked_celery.chain.assert_not_called()
     mocked_celery.replace.assert_not_called()
+
+
+def test_embed_run_content_files_no_files_returns_none(mocker, mocked_celery):
+    """No content files → no chain, no replace, returns None."""
+    run = LearningResourceRunFactory.create()  # no content files
+    mocker.patch("vector_search.tasks.generate_embeddings", autospec=True)
+    mocker.patch("vector_search.tasks.finalize_embeddings", autospec=True)
+    assert embed_run_content_files(run.id) is None
+    mocked_celery.chain.assert_not_called()
 
 
 def test_embeddings_healthcheck_no_missing_embeddings(mocker):
@@ -793,14 +839,48 @@ def test_embeddings_healthcheck_missing_summaries(mocker):
     )
 
 
-def test_generate_embeddings_raises_retryerror_on_grpc_deadline(mocker):
-    """A DEADLINE_EXCEEDED gRPC error becomes a RetryError (autoretry_for picks it up)."""
+def test_generate_embeddings_retries_on_deadline(mocker):
+    """A deadline with retry budget left calls self.retry (jittered backoff)."""
     mocker.patch(
         "vector_search.tasks.embed_learning_resources",
         side_effect=_rpc_error(grpc.StatusCode.DEADLINE_EXCEEDED),
     )
-    with pytest.raises(RetryError):
-        generate_embeddings([1], COURSE_TYPE, overwrite=False)
+    retry = mocker.patch.object(generate_embeddings, "retry", side_effect=Retry())
+    with pytest.raises(Retry):
+        generate_embeddings([1], CONTENT_FILE_TYPE, overwrite=True, failure_key="k")
+    retry.assert_called_once()
+    assert retry.call_args.kwargs["countdown"] >= 0
+
+
+def test_generate_embeddings_records_on_exhaustion(mocker):
+    """Exhausted deadline + failure_key: record + return, do not raise (chain continues)."""
+    mocker.patch(
+        "vector_search.tasks.embed_learning_resources",
+        side_effect=_rpc_error(grpc.StatusCode.DEADLINE_EXCEEDED),
+    )
+    record = mocker.patch("vector_search.tasks._record_embedding_failure")
+    generate_embeddings.push_request(retries=3)
+    try:
+        assert (
+            generate_embeddings([1], CONTENT_FILE_TYPE, overwrite=True, failure_key="k")
+            is None
+        )
+    finally:
+        generate_embeddings.pop_request()
+    record.assert_called_once_with("k")
+
+
+def test_generate_embeddings_records_non_transient_with_key(mocker):
+    """Non-transient error + failure_key: record + return, do not raise."""
+    mocker.patch(
+        "vector_search.tasks.embed_learning_resources", side_effect=ValueError("boom")
+    )
+    record = mocker.patch("vector_search.tasks._record_embedding_failure")
+    assert (
+        generate_embeddings([1], CONTENT_FILE_TYPE, overwrite=True, failure_key="k")
+        is None
+    )
+    record.assert_called_once_with("k")
 
 
 def test_generate_embeddings_reraises_other_grpc_errors(mocker):
@@ -851,3 +931,21 @@ def test_remove_embeddings_does_not_swallow_errors(mocker):
     )
     with pytest.raises(ValueError, match="boom"):
         remove_embeddings([1], COURSE_TYPE)
+
+
+def test_record_embedding_failure_increments(embed_cache):
+    _record_embedding_failure("run-1")
+    _record_embedding_failure("run-1")
+    assert embed_cache.get("embed_errors:run-1") == 2
+
+
+def test_finalize_embeddings_raises_and_clears_on_failures(embed_cache):
+    embed_cache.set("embed_errors:run-1", 3)
+    with pytest.raises(RuntimeError, match="3 embedding chunk"):
+        finalize_embeddings("run-1")
+    assert embed_cache.get("embed_errors:run-1") is None
+
+
+def test_finalize_embeddings_succeeds_when_clean(embed_cache):
+    assert finalize_embeddings("run-1") is None
+    assert embed_cache.get("embed_errors:run-1") is None

@@ -40,7 +40,13 @@ export const generateMetadata = ({
     })
   })
 
-const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
+const Page = async ({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
+}) => {
   const { id } = await params
   const videoId = Number(id)
   if (!Number.isInteger(videoId) || videoId <= 0) {
@@ -56,9 +62,14 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
     notFound()
   }
 
+  const resolvedSearch = await searchParams
+  const rawT = resolvedSearch?.t
+  const startTime =
+    typeof rawT === "string" && /^\d+$/.test(rawT) ? Number(rawT) : undefined
+
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <VideoEmbedPage videoResource={resource} />
+      <VideoEmbedPage videoResource={resource} startTime={startTime} />
     </HydrationBoundary>
   )
 }

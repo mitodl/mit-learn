@@ -1,13 +1,15 @@
 "use client"
 
 import { env } from "@/env"
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useRef } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Typography, styled, theme, Skeleton } from "ol-components"
 import VideoContainer from "./VideoContainer"
-import { RiShareForwardFill, RiPlayCircleFill } from "@remixicon/react"
+import { RiPlayCircleFill } from "@remixicon/react"
 import { SkipLinksNav, SkipLink, StyledBreadcrumbs } from "./shared.styled"
+import VideoShareButton from "./VideoShareButton"
+import { ShareRow } from "./VideoSeriesDetailPage.styled"
 import { useQuery } from "@tanstack/react-query"
 import {
   useLearningResourcesDetail,
@@ -16,10 +18,10 @@ import {
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { VideoResourceResourceTypeEnum } from "api/v1"
 import { formatDurationClockTime } from "ol-utilities"
-import VideoShareDialog from "./VideoShareDialog"
 import { videoDetailPageView, videoPlaylistPageView } from "@/common/urls"
 import { buildVideoStructuredData } from "./videoStructuredData"
 import VideoResourcePlayer from "./VideoResourcePlayer"
+import type { VideoPlayerHandle } from "./VideoResourcePlayer"
 
 const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
@@ -108,37 +110,6 @@ const DescriptionText = styled(Typography)(({ theme }) => ({
     fontSize: "16px",
     lineHeight: "28px",
     marginBottom: "24px",
-  },
-}))
-
-const ShareRow = styled.div(({ theme }) => ({
-  display: "flex",
-  justifyContent: "flex-end",
-  width: "100%",
-  [theme.breakpoints.down("sm")]: {
-    marginBottom: "32px",
-  },
-}))
-
-const ShareButton = styled.button(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-  borderRadius: "4px",
-  padding: "14px 12px",
-  height: "32px",
-  border: `1px solid ${theme.custom.colors.silverGrayLight}`,
-  background: `${theme.custom.colors.white}`,
-  cursor: "pointer",
-  ...theme.typography.body2,
-  color: theme.custom.colors.darkGray1,
-  fontWeight: theme.typography.fontWeightMedium,
-  "&:hover": {
-    color: theme.custom.colors.red,
-  },
-  [theme.breakpoints.down("sm")]: {
-    width: "100%",
-    justifyContent: "center",
   },
 }))
 
@@ -321,6 +292,7 @@ type VideoDetailPageProps = {
   playlistId: number | null
   playlistData?: VideoPlaylistResource
   playlistLoading: boolean
+  startTime?: number
 }
 
 const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
@@ -328,10 +300,10 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
   playlistId,
   playlistData,
   playlistLoading,
+  startTime,
 }) => {
-  const [shareOpen, setShareOpen] = useState(false)
-  const shareButtonRef = useRef<HTMLButtonElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
+  const playerRef = useRef<VideoPlayerHandle | null>(null)
 
   const { data: resource, isLoading: videoLoading } =
     useLearningResourcesDetail(videoId)
@@ -472,11 +444,13 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
           )}
 
           <StyledVideoResourcePlayer
+            ref={playerRef}
             video={video}
             videoId={videoId}
             isLoading={isLoading}
             videoTitleLabel={videoTitleLabel}
             videoThumbnailAlt={videoThumbnailAlt}
+            startTime={startTime}
           />
           <BorderLine />
 
@@ -496,25 +470,11 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
 
           {!isLoading && video && (
             <ShareRow>
-              <ShareButton
-                ref={shareButtonRef}
-                aria-label={`Share ${video.title ?? "video"}`}
-                onClick={() => setShareOpen(true)}
-              >
-                <RiShareForwardFill size={16} />
-                Share
-              </ShareButton>
-              <VideoShareDialog
-                open={shareOpen}
-                title={video?.title ?? ""}
-                anchorEl={shareButtonRef.current}
-                onClose={() => setShareOpen(false)}
+              <VideoShareButton
                 video={video}
-                pageUrl={`${NEXT_PUBLIC_ORIGIN}${videoDetailPageView(
-                  video.id,
-                  playlistId ?? undefined,
-                  video.title,
-                )}`}
+                title={video.title ?? "video"}
+                pageUrl={`${NEXT_PUBLIC_ORIGIN}${videoDetailPageView(video.id, playlistId ?? undefined, video.title)}`}
+                playerRef={playerRef}
               />
             </ShareRow>
           )}

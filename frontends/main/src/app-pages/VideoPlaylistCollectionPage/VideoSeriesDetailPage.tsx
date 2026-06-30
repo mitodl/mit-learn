@@ -7,12 +7,16 @@ import { useLearningResourcesDetail } from "api/hooks/learningResources"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { formatDurationClockTime } from "ol-utilities"
 import { useSeriesNavigation } from "./useSeriesNavigation"
-import { videoPlaylistPageView } from "@/common/urls"
+import { videoDetailPageView, videoPlaylistPageView } from "@/common/urls"
 import SeriesNavBar from "./SeriesNavBar"
 import UpNextSection from "./UpNextSection"
 import * as Styled from "./VideoSeriesDetailPage.styled"
+import { env } from "@/env"
 import { buildVideoStructuredData } from "./videoStructuredData"
 import VideoResourcePlayer from "./VideoResourcePlayer"
+import type { VideoPlayerHandle } from "./VideoResourcePlayer"
+
+const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 const StyledVideoResourcePlayer = styled(VideoResourcePlayer)(({ theme }) => ({
   borderBottom: `3px solid ${theme.custom.colors.darkGray2}`,
@@ -32,6 +36,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
   playlistLoading,
 }) => {
   const titleRef = useRef<HTMLHeadingElement>(null)
+  const playerRef = useRef<VideoPlayerHandle | null>(null)
 
   const { data: resource, isLoading: videoLoading } =
     useLearningResourcesDetail(videoId)
@@ -168,6 +173,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
           )}
           {/* Video player */}
           <StyledVideoResourcePlayer
+            ref={playerRef}
             video={video}
             videoId={videoId}
             isLoading={isLoading}
@@ -176,8 +182,14 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
           />
 
           {/* UP NEXT */}
-          {!itemsLoading && nextVideo && (
-            <UpNextSection nextVideo={nextVideo} getVideoHref={getVideoHref} />
+          {!itemsLoading && nextVideo && video && (
+            <UpNextSection
+              nextVideo={nextVideo}
+              getVideoHref={getVideoHref}
+              currentVideo={video}
+              playerRef={playerRef}
+              shareUrl={`${NEXT_PUBLIC_ORIGIN}${videoDetailPageView(video.id, playlistId ?? undefined, video.title)}`}
+            />
           )}
 
           {/* Description */}

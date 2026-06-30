@@ -38,6 +38,7 @@ def test_vector_search_filters(mocker, client):
         "offered_by": ["ocw"],
         "platform": ["edx"],
         "resource_type": ["course"],
+        "resource_category": ["Course", "Practice & Assignment"],
         "free": True,
         "department": ["6", "7"],
     }
@@ -57,6 +58,10 @@ def test_vector_search_filters(mocker, client):
             ),
             models.FieldCondition(
                 key="resource_type", match=models.MatchAny(any=["course"])
+            ),
+            models.FieldCondition(
+                key="resource_category",
+                match=models.MatchAny(any=["Course", "Practice & Assignment"]),
             ),
             models.FieldCondition(key="free", match=models.MatchValue(value=True)),
             models.FieldCondition(
@@ -88,6 +93,7 @@ def test_vector_search_filters_empty_query(mocker, client):
         "offered_by": ["ocw"],
         "platform": ["edx"],
         "resource_type": ["course"],
+        "resource_category": ["Course", "Practice & Assignment"],
         "free": True,
         "department": ["6", "7"],
     }
@@ -107,6 +113,10 @@ def test_vector_search_filters_empty_query(mocker, client):
             ),
             models.FieldCondition(
                 key="resource_type", match=models.MatchAny(any=["course"])
+            ),
+            models.FieldCondition(
+                key="resource_category",
+                match=models.MatchAny(any=["Course", "Practice & Assignment"]),
             ),
             models.FieldCondition(key="free", match=models.MatchValue(value=True)),
             models.FieldCondition(

@@ -2994,6 +2994,14 @@ paths:
           type: boolean
           nullable: true
       - in: query
+        name: resource_category
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The resource category for the resource
+      - in: query
         name: resource_type
         schema:
           type: array
@@ -3354,6 +3362,14 @@ paths:
         schema:
           type: boolean
           nullable: true
+      - in: query
+        name: resource_category
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The resource category for the resource
       - in: query
         name: resource_type
         schema:

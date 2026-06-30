@@ -1,6 +1,11 @@
 import React from "react"
 import styled from "@emotion/styled"
-import { RiMenuAddLine, RiBookmarkLine, RiBookmarkFill } from "@remixicon/react"
+import {
+  RiMenuAddLine,
+  RiBookmarkLine,
+  RiBookmarkFill,
+  RiShareForwardFill,
+} from "@remixicon/react"
 import { ResourceTypeEnum, LearningResource } from "api"
 import {
   LocalDate,
@@ -133,6 +138,7 @@ interface LearningResourceListCardProps {
   href?: string
   onAddToLearningPathClick?: ResourceIdCallback | null
   onAddToUserListClick?: ResourceIdCallback | null
+  onShareClick?: ResourceIdCallback | null
   editMenu?: React.ReactNode | null
   inUserList?: boolean
   inLearningPath?: boolean
@@ -148,6 +154,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   href,
   onAddToLearningPathClick,
   onAddToUserListClick,
+  onShareClick,
   editMenu,
   inLearningPath,
   inUserList,
@@ -196,6 +203,17 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       ) : (
         <RiBookmarkLine aria-hidden />
       ),
+    })
+  }
+
+  if (
+    onShareClick &&
+    resource.resource_type === ResourceTypeEnum.PodcastEpisode
+  ) {
+    actions.push({
+      onClick: (event) => onShareClick(event, resource.id),
+      "aria-label": `Share ${resource.title}`,
+      icon: <RiShareForwardFill aria-hidden />,
     })
   }
 
