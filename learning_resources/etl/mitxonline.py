@@ -47,6 +47,9 @@ def _fetch_data(url, params=None):
     if settings.MITX_ONLINE_ETL_API_KEY:
         headers["Authorization"] = f"Api-Key {settings.MITX_ONLINE_ETL_API_KEY}"
     while url:
+        # Preserve the scheme of the current request: the upstream API can
+        # return an http "next" URL even when we requested over https.
+        scheme = urlparse(url).scheme
         response = requests.get(
             url, params=params, headers=headers, timeout=settings.REQUESTS_TIMEOUT
         ).json()
@@ -54,7 +57,7 @@ def _fetch_data(url, params=None):
         yield from results
         next_url = response.get("next")
         if next_url:
-            parsed = urlparse(next_url)
+            parsed = urlparse(next_url)._replace(scheme=scheme)
             url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
             params = parse_qs(parsed.query)
         else:
