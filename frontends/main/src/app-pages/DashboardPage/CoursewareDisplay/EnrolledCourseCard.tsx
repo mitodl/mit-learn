@@ -14,6 +14,7 @@ import {
   TitleLink,
   TitleText,
   CourseDateSummary,
+  UpgradedBanner,
 } from "./CardShared"
 import {
   EnrollmentStatus,
@@ -23,13 +24,13 @@ import {
 } from "./model/dashboardViewModel"
 import { getCourseDateText } from "./courseDateUtils"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
-import { RiAwardLine, RiCheckLine, RiMore2Line } from "@remixicon/react"
+import { RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { isInPast, calendarDaysUntil, NoSSR } from "ol-utilities"
 import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
-import { Button, ButtonLink, styled } from "@mitodl/smoot-design"
+import { Button, ButtonLink } from "@mitodl/smoot-design"
 import { coursePageView } from "@/common/urls"
 import NiceModal from "@ebay/nice-modal-react"
 import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
@@ -107,14 +108,6 @@ const UpgradeBanner: React.FC<
     </SubtitleLinkRoot>
   )
 }
-
-const UpgradedBanner = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: "4px",
-  color: theme.custom.colors.silverGrayDark,
-  ...theme.typography.subtitle3,
-}))
 
 type EnrolledCourseCardProps = {
   enrollment: CourseRunEnrollmentV3
@@ -195,10 +188,7 @@ export const EnrolledCourseCard = ({
           }}
         />
       ) : alreadyUpgraded && !certificateLink ? (
-        <UpgradedBanner data-testid="upgraded-banner">
-          <RiCheckLine size="16px" />
-          Paid - Certificate Included
-        </UpgradedBanner>
+        <UpgradedBanner />
       ) : null}
       {certificateLink ? (
         <SubtitleLink href={certificateLink} layout={layout}>

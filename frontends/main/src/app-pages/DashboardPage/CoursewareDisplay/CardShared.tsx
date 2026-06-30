@@ -5,6 +5,7 @@ import { EnrollmentStatus } from "./helpers"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
 import { formatDate, getTimezone, isInPast } from "ol-utilities"
 import { getCourseDateText, getRelativeDateContent } from "./courseDateUtils"
+import { RiCheckLine } from "@remixicon/react"
 
 const CardRoot = styled.div<{
   screenSize: "desktop" | "mobile"
@@ -186,6 +187,21 @@ const CourseDateText: React.FC<{
   return <DateText className={className}>{text}</DateText>
 }
 
+const UpgradedBannerRoot = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: "4px",
+  color: theme.custom.colors.silverGrayDark,
+  ...theme.typography.subtitle3,
+}))
+
+const UpgradedBanner: React.FC<{ className?: string }> = ({ className }) => (
+  <UpgradedBannerRoot data-testid="upgraded-banner" className={className}>
+    <RiCheckLine size="16px" />
+    Paid - Certificate Included
+  </UpgradedBannerRoot>
+)
+
 const DatePopoverContent = styled.div({
   maxWidth: "240px",
   display: "flex",
@@ -321,4 +337,5 @@ export {
   DateText,
   CourseDateText,
   CourseDateSummary,
+  UpgradedBanner,
 }

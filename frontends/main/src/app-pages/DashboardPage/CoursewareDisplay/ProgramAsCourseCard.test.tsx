@@ -66,6 +66,7 @@ describe("ProgramAsCourseCard", () => {
         ...moduleOne.courseruns[0],
         course: moduleOne,
       },
+      enrollment_mode: "audit",
       certificate: null,
     })
 
@@ -425,6 +426,81 @@ describe("ProgramAsCourseCard", () => {
     await screen.findByText(cardData.courseProgram.title)
     const certButton = screen.queryByRole("link", { name: "Certificate" })
     expect(certButton).not.toBeInTheDocument()
+  })
+
+  test("shows 'Paid - Certificate Included' for verified program enrollment without a certificate", async () => {
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+    invariant(cardData.courseProgramEnrollment)
+    const programEnrollment = {
+      ...cardData.courseProgramEnrollment,
+      enrollment_mode: "verified",
+      certificate: null,
+    }
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={programEnrollment}
+      />,
+    )
+
+    await screen.findByText(cardData.courseProgram.title)
+    expect(screen.getByTestId("upgraded-banner")).toHaveTextContent(
+      "Paid - Certificate Included",
+    )
+    expect(
+      screen.queryByRole("link", { name: "Certificate" }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("does not show 'Paid - Certificate Included' when verified program enrollment has a certificate", async () => {
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+    invariant(cardData.courseProgramEnrollment)
+    const certUuid = "cert-uuid"
+    const programEnrollment = {
+      ...cardData.courseProgramEnrollment,
+      enrollment_mode: "verified",
+      certificate: { uuid: certUuid, link: `/certificate/${certUuid}/` },
+    }
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={programEnrollment}
+      />,
+    )
+
+    await screen.findByText(cardData.courseProgram.title)
+    expect(screen.queryByTestId("upgraded-banner")).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("link", { name: "Certificate" }),
+    ).toBeInTheDocument()
+  })
+
+  test("does not show 'Paid - Certificate Included' for audit program enrollment", async () => {
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+    invariant(cardData.courseProgramEnrollment)
+    const programEnrollment = {
+      ...cardData.courseProgramEnrollment,
+      enrollment_mode: "audit",
+      certificate: null,
+    }
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={programEnrollment}
+      />,
+    )
+
+    await screen.findByText(cardData.courseProgram.title)
+    expect(screen.queryByTestId("upgraded-banner")).not.toBeInTheDocument()
   })
 
   test("shows product-page details link in context menu", async () => {

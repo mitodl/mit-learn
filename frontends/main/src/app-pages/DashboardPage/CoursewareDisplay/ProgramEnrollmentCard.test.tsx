@@ -87,6 +87,48 @@ describe.each([
     ).not.toBeInTheDocument()
   })
 
+  test("shows 'Paid - Certificate Included' for verified enrollment without a certificate", () => {
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        enrollment_mode: "verified",
+        certificate: null,
+      })
+    renderWithProviders(
+      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
+    )
+    expect(within(getCard()).getByTestId("upgraded-banner")).toHaveTextContent(
+      "Paid - Certificate Included",
+    )
+  })
+
+  test("does not show 'Paid - Certificate Included' when verified enrollment has a certificate", () => {
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        enrollment_mode: "verified",
+        certificate: { uuid: "abc", link: "https://example.com/cert/" },
+      })
+    renderWithProviders(
+      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
+    )
+    expect(
+      within(getCard()).queryByTestId("upgraded-banner"),
+    ).not.toBeInTheDocument()
+  })
+
+  test("does not show 'Paid - Certificate Included' for audit enrollment", () => {
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        enrollment_mode: "audit",
+        certificate: null,
+      })
+    renderWithProviders(
+      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
+    )
+    expect(
+      within(getCard()).queryByTestId("upgraded-banner"),
+    ).not.toBeInTheDocument()
+  })
+
   test("context menu includes View Program Details with product page URL", async () => {
     const program = mitxonline.factories.programs.simpleProgram()
     const programEnrollment =

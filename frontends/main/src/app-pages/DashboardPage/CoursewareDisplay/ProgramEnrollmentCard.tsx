@@ -12,6 +12,7 @@ import {
   TitleHeading,
   TitleLink,
   TitleText,
+  UpgradedBanner,
 } from "./CardShared"
 import { RiAwardLine, RiMore2Line } from "@remixicon/react"
 import {
@@ -49,6 +50,9 @@ export const ProgramEnrollmentCard = ({
   const enrollmentStatus = programEnrollment.certificate?.uuid
     ? EnrollmentStatus.Completed
     : EnrollmentStatus.Enrolled
+  const alreadyUpgraded = isVerifiedEnrollmentMode(
+    programEnrollment.enrollment_mode,
+  )
   const displayMode = program.display_mode
   const titleSection = (
     <Stack gap="6px">
@@ -66,6 +70,8 @@ export const ProgramEnrollmentCard = ({
           <RiAwardLine size="16px" />
           View Certificate
         </SubtitleLink>
+      ) : alreadyUpgraded ? (
+        <UpgradedBanner />
       ) : null}
     </Stack>
   )
