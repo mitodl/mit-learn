@@ -279,7 +279,10 @@ export const EnrolledCourseCard = ({
   const buttonSection = isCompact ? (
     <Stack direction="row" alignItems="center">
       {endDateAndCertSection}
-      {daysUntilEnd !== null || showUpgradeBanner || !!certificateLink ? (
+      {daysUntilEnd !== null ||
+      showUpgradeBanner ||
+      alreadyUpgraded ||
+      !!certificateLink ? (
         <Separator />
       ) : null}
       <CoursewareActionColumn direction="row" justifyContent="center">
