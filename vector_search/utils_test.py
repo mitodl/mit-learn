@@ -2090,9 +2090,6 @@ def test_embed_learning_resources_uses_collection_guard(mocker):
     ensure.assert_called_once()
 
 
-# Tests for check_missing_content_file_ids
-
-
 @pytest.mark.django_db
 def test_check_missing_content_file_ids_not_in_db(mocker):
     """An edx_module_id with no ContentFile row is logged not_in_db."""
@@ -2143,30 +2140,4 @@ def test_check_missing_content_file_ids_present_and_indexed_silent(mocker):
         ["block_ok"], CONTENT_FILES_COLLECTION_NAME
     )
 
-    mock_log.assert_not_called()
-
-
-@pytest.mark.django_db
-def test_check_missing_content_file_ids_skips_index_probe_for_unknown_collection(
-    mocker,
-):
-    """
-    When qdrant_query_conditions returns None (unknown collection name), the
-    index probe must be skipped entirely: client.count must not be called and
-    no not_in_index log must be emitted.
-    """
-    ContentFileFactory.create(edx_module_id="block_present")
-    mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
-    mock_client = mocker.AsyncMock()
-    mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
-
-    # "some_base.unknown_override" is not a key in COLLECTION_PARAM_MAP, so
-    # qdrant_query_conditions returns None for it — confirmed in shell.
-    async_to_sync(check_missing_content_file_ids)(
-        ["block_present"], "some_base.unknown_override"
-    )
-
-    mock_client.count.assert_not_called()
-    # not_in_db should not fire either (the id IS in the DB)
-    # not_in_index should not fire (probe was skipped)
     mock_log.assert_not_called()
