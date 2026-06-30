@@ -3,7 +3,7 @@ import { Link, Popover, Stack, styled, Typography } from "ol-components"
 import NextLink from "next/link"
 import { EnrollmentStatus } from "./helpers"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
-import { formatDate, getTimezone } from "ol-utilities"
+import { formatDate, getTimezone, isInPast } from "ol-utilities"
 import { getCourseDateText, getRelativeDateContent } from "./courseDateUtils"
 
 const CardRoot = styled.div<{
@@ -196,18 +196,22 @@ const DatePopoverContent = styled.div({
   alignSelf: "stretch",
 })
 
-const DatePopoverTrigger = styled("button")(({ theme }) => ({
-  ...theme.typography.body2,
-  color: theme.custom.colors.silverGrayDark,
-  background: "none",
-  border: "none",
-  padding: 0,
-  cursor: "pointer",
-  "&:hover": {
-    color: theme.custom.colors.silverGrayDark,
-    textDecoration: "underline",
-  },
-}))
+const DatePopoverTrigger = styled("button")<{ $upcoming: boolean }>(
+  ({ theme, $upcoming }) => ({
+    ...theme.typography.body2,
+    color: $upcoming
+      ? theme.custom.colors.red
+      : theme.custom.colors.silverGrayDark,
+    background: "none",
+    border: "none",
+    padding: 0,
+    cursor: "pointer",
+    "&:hover": {
+      color: $upcoming ? theme.custom.colors.red : theme.custom.colors.black,
+      textDecoration: "underline",
+    },
+  }),
+)
 
 const DatePopoverHeading = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.black,
@@ -230,6 +234,7 @@ const CourseDateSummary: React.FC<{
     React.useState<HTMLButtonElement | null>(null)
 
   const triggerText = getCourseDateText(startDate, endDate)
+  const isUpcoming = startDate ? !isInPast(startDate) : false
   const startDateFormatted = startDate
     ? `${formatDate(startDate, "MMMM D, YYYY h:mm A")} ${getTimezone(startDate)}`
     : null
@@ -288,6 +293,7 @@ const CourseDateSummary: React.FC<{
         </DatePopoverContent>
       </Popover>
       <DatePopoverTrigger
+        $upcoming={isUpcoming}
         aria-expanded={!!popoverAnchorEl}
         aria-haspopup="dialog"
         aria-controls={popoverAnchorEl ? popoverId : undefined}
