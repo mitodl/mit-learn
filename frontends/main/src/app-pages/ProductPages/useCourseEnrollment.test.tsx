@@ -510,7 +510,11 @@ describe("useCourseEnrollment — actions", () => {
     const onRequireSignup = jest.fn()
 
     const { result } = renderHook(
-      () => useCourseEnrollment(course, run, { onRequireSignup }),
+      () =>
+        useCourseEnrollment(course, run, {
+          placement: "infobox",
+          onRequireSignup,
+        }),
       { wrapper },
     )
 
@@ -571,9 +575,9 @@ describe("useCourseEnrollment — actions", () => {
       PostHogEvents.EnrollCtaClicked,
       expect.objectContaining({
         placement: "infobox",
-        enrollment_mode: "verified",
-        resource_type: "course",
-        readable_id: course.readable_id,
+        enrollmentMode: "verified",
+        resourceType: "course",
+        readableId: course.readable_id,
       }),
     )
   })
@@ -612,9 +616,9 @@ describe("useCourseEnrollment — actions", () => {
       PostHogEvents.EnrollCtaClicked,
       expect.objectContaining({
         placement: "header",
-        enrollment_mode: "audit",
-        resource_type: "course",
-        readable_id: course.readable_id,
+        enrollmentMode: "audit",
+        resourceType: "course",
+        readableId: course.readable_id,
       }),
     )
   })

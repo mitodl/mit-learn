@@ -4,6 +4,7 @@ import type {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
+import { PlatformEnum } from "api"
 import { userQueries } from "api/hooks/user"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
@@ -46,7 +47,7 @@ export const useCourseEnrollment = (
   course: CourseWithCourseRunsSerializerV2,
   selectedRun: CourseRunV2 | undefined,
   opts?: {
-    placement?: "header" | "infobox"
+    placement: "header" | "infobox"
     onRequireSignup?: (anchor: HTMLButtonElement) => void
   },
 ): UseCourseEnrollment => {
@@ -88,9 +89,10 @@ export const useCourseEnrollment = (
     if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
       posthog.capture(PostHogEvents.EnrollCtaClicked, {
         placement: opts?.placement,
-        enrollment_mode: kind === "paid" ? "verified" : "audit",
-        resource_type: "course",
-        readable_id: course.readable_id,
+        enrollmentMode: kind === "paid" ? "verified" : "audit",
+        resourceType: "course",
+        readableId: course.readable_id,
+        platform: PlatformEnum.Mitxonline,
         label,
       })
     }
