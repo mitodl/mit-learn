@@ -1108,14 +1108,7 @@ def test_content_file_vector_search_probe_failure_does_not_break_search(
 def test_content_file_vector_search_skips_probe_when_results_present(
     mocker, client, mock_qdrant, content_file_viewer
 ):
-    """Probe is skipped when the search returns at least one hit.
-
-    We patch check_missing_content_file_ids directly and confirm it is never
-    awaited.  The real gate logic (``not response.get("hits")``) is exercised
-    by making query_points return a non-empty .points list, which flows through
-    the real _content_file_vector_hits pipeline and produces a non-empty hits
-    list in the response dict.
-    """
+    """Probe is skipped when the search returns at least one hit."""
     # A single point with the minimum payload needed by _content_file_vector_hits.
     mock_point = mocker.MagicMock()
     mock_point.payload = {
