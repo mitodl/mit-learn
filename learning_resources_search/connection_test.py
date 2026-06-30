@@ -3,9 +3,32 @@ Tests for the indexing API
 """
 
 import pytest
+from django.conf import settings
 
-from learning_resources_search.connection import get_active_aliases
+from learning_resources_search.connection import (
+    configure_connections,
+    get_active_aliases,
+)
 from learning_resources_search.constants import COURSE_TYPE, IndexestoUpdate
+
+
+def test_configure_connections_uses_pool_maxsize(mocker):
+    """configure_connections must pass pool_maxsize, not connections_per_node.
+
+    opensearch-py's Transport only reads pool_maxsize; connections_per_node is
+    silently dropped, leaving urllib3 at its default maxsize of 1.
+    """
+    mock_configure = mocker.patch(
+        "learning_resources_search.connection.connections.configure"
+    )
+    configure_connections()
+    call_kwargs = mock_configure.call_args[1]["default"]
+    assert "pool_maxsize" in call_kwargs, (
+        "pool_maxsize must be passed to connections.configure; "
+        "connections_per_node is ignored by opensearch-py Transport"
+    )
+    assert call_kwargs["pool_maxsize"] == settings.OPENSEARCH_CONNECTIONS_PER_NODE
+    assert "connections_per_node" not in call_kwargs
 
 
 @pytest.mark.parametrize(
