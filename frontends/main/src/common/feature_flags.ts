@@ -12,7 +12,7 @@ export enum FeatureFlags {
   VideoShorts = "video-shorts",
   CourseOutlineSection = "course-outline-section",
   OcwProductPages = "ocw-product-pages",
-  PodcastDetailPage = "podcast-detail-page",
+  VideoPlaylistPage = "video-playlist-page",
   B2BContractManagerDashboard = "b2b-contract-manager-dashboard",
   Arithmix = "arithmix",
 }

@@ -11,9 +11,6 @@ import {
 import type { Theme } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import { RiPlayFill, RiPauseFill } from "@remixicon/react"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
 import PodcastPlayer, { PLAYER_HEIGHT } from "./PodcastPlayer"
 import type { PodcastTrack, PodcastPlayerHandle } from "./PodcastPlayer"
 import {
@@ -29,7 +26,6 @@ import { HOME, podcastPageView, podcastEpisodePageView } from "@/common/urls"
 import DOMPurify from "isomorphic-dompurify"
 import { EpisodeItem } from "./PodcastDetailPage"
 import PodcastContainer from "./PodcastContainer"
-import { notFound } from "next/navigation"
 import Link from "next/link"
 
 /* ── Layout ── */
@@ -202,10 +198,6 @@ export const PodcastEpisodeDetailPage: React.FC<
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
   const playerRef = useRef<PodcastPlayerHandle>(null)
 
-  const showPodcastDetailPage = useFeatureFlagEnabled(
-    FeatureFlags.PodcastDetailPage,
-  )
-  const flagsLoaded = useFeatureFlagsLoaded()
   const { data: episode } = useLearningResourcesDetail(Number(episodeId))
   const { data: podcast } = useLearningResourcesDetail(Number(podcastId))
 
@@ -293,9 +285,6 @@ export const PodcastEpisodeDetailPage: React.FC<
     ? podcastPageView(podcastId, podcast?.title)
     : "/"
 
-  if (!showPodcastDetailPage) {
-    return flagsLoaded ? notFound() : null
-  }
   return (
     <>
       <PageSection>
