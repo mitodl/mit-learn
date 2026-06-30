@@ -277,6 +277,22 @@ class TestSettings(TestCase):
                 in settings_vars["CELERY_BEAT_SCHEDULE"]
             )
 
+    def test_liveness_probe_has_no_db_check(self):
+        """Liveness must not query the database.
+
+        A DB check in the liveness probe causes Kubernetes to kill pods that are
+        merely slow under load (e.g. SCIM storms), producing avoidable restart
+        cascades. DB health is covered by readiness and startup probes.
+        """
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            settings_vars = self.reload_settings()
+            liveness_checks = settings_vars["HEALTH_CHECK"]["SUBSETS"]["liveness"]
+            assert liveness_checks == [], (
+                "liveness probe must not contain any checks — "
+                "DB checks belong in readiness/startup only"
+            )
+            assert "DatabaseHeartBeatCheck" not in liveness_checks
+
     def _assert_s3_storage_config(
         self,
         storages_dict,
