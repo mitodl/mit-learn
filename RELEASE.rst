@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.72.1
+Version 0.72.1 (Released June 30, 2026)
 --------------
 
 - Always show CMS "Certificate Title" on program certificates (page, PDF, metadata; no flag) (#3517)
