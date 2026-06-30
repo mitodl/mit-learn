@@ -55,6 +55,7 @@ import type {
 import { useSearchParams } from "@mitodl/course-search-utils/next"
 import { ResourceTypeGroupTabs } from "./ResourceTypeGroupTabs"
 import ProfessionalToggle from "./ProfessionalToggle"
+import { trackCatalogFilter } from "@/common/analytics/gtm"
 import SliderInput from "./SliderInput"
 
 import type { TabConfig } from "./ResourceTypeGroupTabs"
@@ -703,6 +704,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   ) => {
     actuallyToggleParamValue(name, rawValue, checked)
     captureSearchEvent()
+    if (checked) trackCatalogFilter({ filterName: name, filterValue: rawValue })
   }
 
   const sortDropdown = (

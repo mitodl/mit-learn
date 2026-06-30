@@ -4,6 +4,7 @@ import { SearchInput } from "ol-components"
 import type { SearchInputProps, SearchSubmissionEvent } from "ol-components"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
+import { trackSiteSearch } from "@/common/analytics/gtm"
 
 type SearchFieldProps = SearchInputProps & {
   onSubmit: (event: SearchSubmissionEvent) => void
@@ -30,6 +31,7 @@ const SearchField: React.FC<SearchFieldProps> = ({
     if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
       posthog.capture(PostHogEvents.SearchUpdate, { isEnter: isEnter })
     }
+    trackSiteSearch(event.target.value)
   }
 
   return <SearchInput onSubmit={handleSubmit} {...others} />
