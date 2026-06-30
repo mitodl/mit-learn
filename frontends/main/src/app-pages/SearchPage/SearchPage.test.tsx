@@ -85,6 +85,16 @@ const getLastApiSearchParams = () => {
   return fullUrl.searchParams
 }
 
+const getLastVectorApiSearchParams = () => {
+  const call = makeRequest.mock.calls.find(([args]) => {
+    if (args.method !== "get") return false
+    return args.url.startsWith(urls.search.vectorResources())
+  })
+  invariant(call)
+  const fullUrl = new URL(call[0].url, "http://mit.edu")
+  return fullUrl.searchParams
+}
+
 describe("SearchPage", () => {
   test("Renders search results", async () => {
     const resources = factories.learningResources.resources({
@@ -1078,6 +1088,39 @@ describe("UniversalAIBanner", () => {
         "LearningMaterials(0)",
       ])
     })
+  })
+
+  test("Vector Hybrid Search passes resource category filters without a text query", async () => {
+    setMockApiResponses({
+      search: {
+        count: 1,
+        metadata: {
+          aggregations: {
+            resource_type_group: [{ key: "learning_material", doc_count: 1 }],
+            resource_category: [{ key: "Video", doc_count: 1 }],
+          },
+          suggestions: [],
+        },
+      },
+    })
+
+    renderWithProviders(<SearchPage />, {
+      url: "?vector_search=true&resource_type_group=learning_material&resource_category=Video&topic=Systems%20Engineering",
+    })
+
+    await waitFor(() => {
+      expect(
+        makeRequest.mock.calls.some(([args]) =>
+          args.url.startsWith(urls.search.vectorResources()),
+        ),
+      ).toBe(true)
+    })
+
+    const apiSearchParams = getLastVectorApiSearchParams()
+    expect(apiSearchParams.get("hybrid_search")).toBe("true")
+    expect(apiSearchParams.get("resource_type_group")).toBe("learning_material")
+    expect(apiSearchParams.get("resource_category")).toBe("Video")
+    expect(apiSearchParams.get("topic")).toBe("Systems Engineering")
   })
 
   test("Vector Hybrid Search with a query hides pagination and filters results locally", async () => {

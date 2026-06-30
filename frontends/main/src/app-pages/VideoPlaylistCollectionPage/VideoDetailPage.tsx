@@ -21,6 +21,7 @@ import { formatDurationClockTime } from "ol-utilities"
 import { videoDetailPageView, videoPlaylistPageView } from "@/common/urls"
 import { buildVideoStructuredData } from "./videoStructuredData"
 import VideoResourcePlayer from "./VideoResourcePlayer"
+import type { VideoPlayerHandle } from "./VideoResourcePlayer"
 
 const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
@@ -291,6 +292,7 @@ type VideoDetailPageProps = {
   playlistId: number | null
   playlistData?: VideoPlaylistResource
   playlistLoading: boolean
+  startTime?: number
 }
 
 const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
@@ -298,8 +300,10 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
   playlistId,
   playlistData,
   playlistLoading,
+  startTime,
 }) => {
   const titleRef = useRef<HTMLHeadingElement>(null)
+  const playerRef = useRef<VideoPlayerHandle | null>(null)
 
   const { data: resource, isLoading: videoLoading } =
     useLearningResourcesDetail(videoId)
@@ -440,11 +444,13 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
           )}
 
           <StyledVideoResourcePlayer
+            ref={playerRef}
             video={video}
             videoId={videoId}
             isLoading={isLoading}
             videoTitleLabel={videoTitleLabel}
             videoThumbnailAlt={videoThumbnailAlt}
+            startTime={startTime}
           />
           <BorderLine />
 
@@ -468,6 +474,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                 video={video}
                 title={video.title ?? "video"}
                 pageUrl={`${NEXT_PUBLIC_ORIGIN}${videoDetailPageView(video.id, playlistId ?? undefined, video.title)}`}
+                playerRef={playerRef}
               />
             </ShareRow>
           )}
