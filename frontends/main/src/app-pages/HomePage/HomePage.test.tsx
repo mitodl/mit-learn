@@ -22,9 +22,13 @@ import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 
 jest.mock("posthog-js/react")
+jest.mock("ol-components/CarouselV2", () => ({
+  CarouselV2: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+}))
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 const mockedPostHogCapture = jest.fn()
-jest.mock("posthog-js/react")
 jest.mocked(usePostHog).mockReturnValue(
   // @ts-expect-error Not mocking all of posthog
   { capture: mockedPostHogCapture },
@@ -90,6 +94,13 @@ const setupAPIs = () => {
     expect.stringContaining(urls.testimonials.list({})),
     attestations,
   )
+
+  setMockResponse.get(expect.stringContaining(urls.search.resources()), {
+    count: 0,
+    next: null,
+    previous: null,
+    results: [],
+  })
 
   mockedUseFeatureFlagEnabled.mockReturnValue(false)
   return { featured, media }
@@ -417,22 +428,27 @@ describe("Home Page Carousel", () => {
 
     renderWithProviders(<HomePage heroImageIndex={1} />)
 
-    await screen.findAllByRole("tablist").then(([featured, media]) => {
+    await screen.findAllByRole("tablist").then(([featured]) => {
       within(featured).getByRole("tab", { name: "All" })
       within(featured).getByRole("tab", { name: "Free" })
       within(featured).getByRole("tab", { name: "With Certificate" })
       within(featured).getByRole("tab", {
         name: "Professional & Executive Learning",
       })
-      within(media).getByRole("tab", { name: "All" })
-      within(media).getByRole("tab", { name: "Videos" })
-      within(media).getByRole("tab", { name: "Podcasts" })
     })
   })
 })
 
 test("Headings", async () => {
-  const { featured, media } = setupAPIs()
+  const { featured } = setupAPIs()
+
+  const videoShorts = [learningResources.video(), learningResources.video()]
+  setMockResponse.get(expect.stringContaining(urls.search.resources()), {
+    count: videoShorts.length,
+    next: null,
+    previous: null,
+    results: videoShorts,
+  })
 
   renderWithProviders(<HomePage heroImageIndex={1} />)
   await waitFor(() => {
@@ -442,8 +458,7 @@ test("Headings", async () => {
       // Featured course order is randomized on frontend, so just check for presence
       ...featured.results.map(() => ({ level: 3, name: expect.any(String) })),
       { level: 2, name: "Continue Your Journey" },
-      { level: 2, name: "Media" },
-      ...media.results.map((result) => ({ level: 3, name: result.title })),
+      { level: 2, name: "MIT Learning Moments" },
       { level: 2, name: "Browse by Topic" },
       { level: 2, name: "From Our Community" },
       { level: 2, name: "MIT News & Events" },
