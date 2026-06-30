@@ -8,7 +8,6 @@ import {
   Container,
   Typography,
   SimpleSelect,
-  truncateText,
   css,
   Drawer,
   Stack,
@@ -150,11 +149,16 @@ const FacetStyles = styled.div`
     justify-content: space-between;
     display: flex;
     flex-direction: row;
-    width: 100%;
-    align-items: baseline;
+    flex: 1;
+    min-width: 0;
+    align-items: center;
 
     .facet-text {
-      ${truncateText(1)};
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
       color: ${({ theme }) => theme.custom.colors.silverGrayDark};
     }
   }
@@ -211,9 +215,11 @@ const FacetStyles = styled.div`
 
       .facet-count {
         font-size: 12px;
-        padding-left: 3px;
+        padding-left: 8px;
         color: ${({ theme }) => theme.custom.colors.silverGrayDark};
-        float: right;
+        flex-shrink: 0;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
       }
 
       &.checked,
