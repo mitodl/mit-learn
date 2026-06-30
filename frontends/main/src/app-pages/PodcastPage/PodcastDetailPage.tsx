@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from "react"
-import { notFound } from "next/navigation"
 import Link from "next/link"
 import { Breadcrumbs, Typography, styled, useMediaQuery } from "ol-components"
 import type { Theme } from "ol-components"
@@ -19,9 +18,6 @@ import moment from "moment"
 import { formatDate } from "ol-utilities"
 import { HOME, podcastEpisodePageView } from "@/common/urls"
 import PodcastContainer from "./PodcastContainer"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
 
 const HeaderSection = styled.div(({ theme }) => ({
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -404,10 +400,6 @@ const EPISODES_PAGE_SIZE = 5
 export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
   podcastId,
 }) => {
-  const showPodcastDetailPage = useFeatureFlagEnabled(
-    FeatureFlags.PodcastDetailPage,
-  )
-  const flagsLoaded = useFeatureFlagsLoaded()
   const id = Number(podcastId)
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"))
   const [playingEpisode, setPlayingEpisode] = useState<LearningResource | null>(
@@ -510,10 +502,6 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
       root.style.removeProperty("--mit-player-height")
     }
   }, [currentTrack, isMobile])
-
-  if (!showPodcastDetailPage) {
-    return flagsLoaded ? notFound() : null
-  }
 
   return (
     <>

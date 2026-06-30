@@ -3,15 +3,7 @@ import { factories, setMockResponse, urls } from "api/test-utils"
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource, PodcastEpisodeResource } from "api/v1"
 import { renderWithProviders, screen, user } from "@/test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { PodcastEpisodeDetailPage } from "./PodcastEpisodeDetailPage"
-
-jest.mock("posthog-js/react")
-jest.mock("@/common/useFeatureFlagsLoaded")
-
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
-const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 
 jest.mock("./PodcastPlayer", () => ({
   __esModule: true,
@@ -90,15 +82,6 @@ const setupApis = ({
 }
 
 describe("PodcastEpisodeDetailPage", () => {
-  beforeEach(() => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-  })
-
-  afterEach(() => {
-    jest.clearAllMocks()
-  })
-
   test("renders episode title and podcast name on the page", async () => {
     const { episode, podcast } = setupApis({ moreEpisodes: [] })
 
@@ -274,35 +257,5 @@ describe("PodcastEpisodeDetailPage", () => {
     expect(screen.getByTestId("player-track-title")).toHaveTextContent(
       moreEpisode.title!,
     )
-  })
-
-  test("returns null (not found) when feature flag is not loaded yet", () => {
-    mockedUseFeatureFlagsLoaded.mockReturnValue(false)
-    mockedUseFeatureFlagEnabled.mockReturnValue(false)
-
-    const episode = makePodcastEpisode()
-    const podcast = makePodcast()
-
-    setMockResponse.get(
-      urls.learningResources.details({ id: episode.id }),
-      episode,
-    )
-    setMockResponse.get(
-      urls.learningResources.details({ id: podcast.id }),
-      podcast,
-    )
-    setMockResponse.get(
-      `${urls.learningResources.items({ id: podcast.id })}?limit=${EPISODES_PAGE_SIZE}`,
-      makeItemsResponse([]),
-    )
-
-    const { view } = renderWithProviders(
-      <PodcastEpisodeDetailPage
-        episodeId={String(episode.id)}
-        podcastId={String(podcast.id)}
-      />,
-    )
-
-    expect(view.container).toBeEmptyDOMElement()
   })
 })
