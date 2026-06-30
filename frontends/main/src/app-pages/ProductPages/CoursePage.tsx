@@ -66,7 +66,7 @@ const CourseHeaderEnrollButton: React.FC<{
   const { state, isStatusLoading, isPending } = useCourseEnrollment(
     course,
     selectedRun,
-    { onRequireSignup: (el) => setAnchor(el) },
+    { placement: "header", onRequireSignup: (el) => setAnchor(el) },
   )
 
   if (state.status === "enrolled") {

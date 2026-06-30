@@ -45,7 +45,10 @@ export type UseCourseEnrollment = {
 export const useCourseEnrollment = (
   course: CourseWithCourseRunsSerializerV2,
   selectedRun: CourseRunV2 | undefined,
-  opts?: { onRequireSignup?: (anchor: HTMLButtonElement) => void },
+  opts?: {
+    placement?: "header" | "infobox"
+    onRequireSignup?: (anchor: HTMLButtonElement) => void
+  },
 ): UseCourseEnrollment => {
   const me = useQuery({
     ...userQueries.me(),
@@ -77,11 +80,17 @@ export const useCourseEnrollment = (
   // a misleading "problem processing your enrollment" message.
   const isError = replaceBasketItem.isError || createEnrollment.isError
 
-  const firePostHog = (label: string) => {
+  // Dedicated, semantically-named enrollment event (hq#11941). Replaces the
+  // generic cta_clicked for enroll CTAs so analytics can slice by placement /
+  // enrollment_mode instead of the drifting button copy. `label` is retained
+  // for human readability, not as the analytics key.
+  const firePostHog = (kind: EnrollActionKind, label: string) => {
     if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-      posthog.capture(PostHogEvents.CallToActionClicked, {
-        readableId: course.readable_id,
-        resourceType: "course",
+      posthog.capture(PostHogEvents.EnrollCtaClicked, {
+        placement: opts?.placement,
+        enrollment_mode: kind === "paid" ? "verified" : "audit",
+        resource_type: "course",
+        readable_id: course.readable_id,
         label,
       })
     }
@@ -90,7 +99,7 @@ export const useCourseEnrollment = (
   const makeOnClick =
     (kind: EnrollActionKind, label: string): EnrollAction["onClick"] =>
     (e) => {
-      firePostHog(label)
+      firePostHog(kind, label)
       if (!me.data?.is_authenticated) {
         opts?.onRequireSignup?.(e.currentTarget)
         return

@@ -533,7 +533,7 @@ describe("useCourseEnrollment — actions", () => {
     expect(onRequireSignup).toHaveBeenCalledWith(anchorButton)
   })
 
-  test("fires PostHog cta_clicked on paid action click", async () => {
+  test("fires PostHog enroll_cta_clicked on paid action click", async () => {
     const product = makeProduct()
     const run = makeRun({
       is_enrollable: true,
@@ -550,9 +550,10 @@ describe("useCourseEnrollment — actions", () => {
       items: [],
     })
 
-    const { result } = renderHook(() => useCourseEnrollment(course, run), {
-      wrapper,
-    })
+    const { result } = renderHook(
+      () => useCourseEnrollment(course, run, { placement: "infobox" }),
+      { wrapper },
+    )
 
     await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
 
@@ -567,10 +568,53 @@ describe("useCourseEnrollment — actions", () => {
     paidOption.onClick!(fakeEvent)
 
     expect(mockCapture).toHaveBeenCalledWith(
-      PostHogEvents.CallToActionClicked,
+      PostHogEvents.EnrollCtaClicked,
       expect.objectContaining({
-        readableId: course.readable_id,
-        resourceType: "course",
+        placement: "infobox",
+        enrollment_mode: "verified",
+        resource_type: "course",
+        readable_id: course.readable_id,
+      }),
+    )
+  })
+
+  test("fires PostHog enroll_cta_clicked with audit mode on free action click", async () => {
+    // Unauthenticated: the event fires before the auth gate, then we return to
+    // the signup flow — so the fire is observable without an enrollment mock.
+    setMockResponse.get(
+      urls.userMe.get(),
+      makeUser({ is_authenticated: false }),
+    )
+    const run = makeRun({
+      is_enrollable: true,
+      is_upgradable: false,
+      is_archived: false,
+      enrollment_modes: [makeMode({ requires_payment: false })],
+    })
+    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+
+    const { result } = renderHook(
+      () => useCourseEnrollment(course, run, { placement: "header" }),
+      { wrapper },
+    )
+
+    await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
+
+    const state = result.current.state
+    if (state.status !== "options") return
+    const freeOption = state.options.find((o) => o.kind === "free")!
+
+    freeOption.onClick!({
+      currentTarget: document.createElement("button"),
+    } as React.MouseEvent<HTMLButtonElement>)
+
+    expect(mockCapture).toHaveBeenCalledWith(
+      PostHogEvents.EnrollCtaClicked,
+      expect.objectContaining({
+        placement: "header",
+        enrollment_mode: "audit",
+        resource_type: "course",
+        readable_id: course.readable_id,
       }),
     )
   })
