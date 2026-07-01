@@ -48,6 +48,7 @@ const schema = yup.object().shape({
   NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT: yup.string(),
   NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT: yup.string(),
   NEXT_PUBLIC_LEARN_AI_CSRF_COOKIE_NAME: yup.string(),
+  GOOGLE_MAPS_API_KEY: yup.string(),
 })
 
 /**

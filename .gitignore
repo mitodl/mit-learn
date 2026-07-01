@@ -149,3 +149,6 @@ backups/
 .claude
 
 load_testing/data/
+
+# Hacksnack game assets (copied by postinstall)
+frontends/main/public/games/hacksnack
