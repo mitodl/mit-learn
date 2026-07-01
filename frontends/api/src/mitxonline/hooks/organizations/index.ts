@@ -115,4 +115,7 @@ export {
   useRemindCode,
   useRevokeCode,
 }
-export type { ContractCode, PaginatedContractCodes } from "./queries"
+export type {
+  ManagerEnrollmentCode,
+  PaginatedManagerEnrollmentCodeList,
+} from "@mitodl/mitxonline-api-axios/v2"

@@ -20,7 +20,7 @@ import {
   useRemindCode,
   useRevokeCode,
 } from "api/mitxonline-hooks/organizations"
-import type { ContractCode } from "api/mitxonline-hooks/organizations"
+import type { ManagerEnrollmentCode } from "api/mitxonline-hooks/organizations"
 import type { AxiosError } from "axios"
 
 const ActionMenuItem = styled(MenuItem)(({ theme }) => ({
@@ -65,7 +65,7 @@ const CopiedMenuItem = styled(ActionMenuItem)(({ theme }) => ({
 type ActionSeverity = "success" | "error"
 
 type RowActionMenuProps = {
-  code: ContractCode
+  code: ManagerEnrollmentCode
   orgId: number
   contractId: number
   /** Surfaces action outcomes in the page-level result Alert. */

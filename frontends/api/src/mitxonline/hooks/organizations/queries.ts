@@ -3,24 +3,11 @@ import { b2bApi } from "../../clients"
 import {
   OrganizationPage,
   ManagerContractDetail,
-  ManagerEnrollmentCode,
   PaginatedManagerEnrollmentCodeList,
-  PaginatedOrganizationPageList,
   B2bApiB2bOrganizationsRetrieveRequest,
   B2bApiB2bManagerOrganizationsContractsRetrieveRequest,
   B2bApiB2bManagerOrganizationsContractsCodesListRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
-
-type ContractCode = ManagerEnrollmentCode & {
-  redemption_status: "unassigned" | "assigned" | "redeemed"
-}
-
-type PaginatedContractCodes = Omit<
-  PaginatedManagerEnrollmentCodeList,
-  "results"
-> & {
-  results: ContractCode[]
-}
 
 const organizationKeys = {
   root: ["mitxonline", "organizations"],
@@ -72,12 +59,7 @@ const managerOrganizationQueries = {
     queryOptions({
       queryKey: managerOrganizationKeys.list(),
       queryFn: async (): Promise<OrganizationPage[]> =>
-        b2bApi.b2bManagerOrganizationsList().then((res) => {
-          const data = res.data as
-            | PaginatedOrganizationPageList
-            | OrganizationPage[]
-          return Array.isArray(data) ? data : data.results
-        }),
+        b2bApi.b2bManagerOrganizationsList().then((res) => res.data.results),
     }),
   managerContractDetail: (
     opts: B2bApiB2bManagerOrganizationsContractsRetrieveRequest,
@@ -94,10 +76,10 @@ const managerOrganizationQueries = {
   ) =>
     queryOptions({
       queryKey: managerOrganizationKeys.contractCodes(opts),
-      queryFn: async (): Promise<PaginatedContractCodes> =>
+      queryFn: async (): Promise<PaginatedManagerEnrollmentCodeList> =>
         b2bApi
           .b2bManagerOrganizationsContractsCodesList(opts)
-          .then((res) => res.data as PaginatedContractCodes),
+          .then((res) => res.data),
     }),
 }
 
@@ -108,4 +90,3 @@ export {
   managerOrganizationKeys,
 }
 
-export type { ContractCode, PaginatedContractCodes }

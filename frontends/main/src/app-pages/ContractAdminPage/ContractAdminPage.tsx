@@ -31,7 +31,7 @@ import { AssignSeatsSection } from "./AssignSeatsSection"
 import { RowActionMenu } from "./RowActionMenu"
 import {
   managerOrganizationQueries,
-  type ContractCode,
+  type ManagerEnrollmentCode,
 } from "api/mitxonline-hooks/organizations"
 import type { AxiosError } from "axios"
 import { matchOrganizationBySlug } from "@/common/utils"
@@ -516,7 +516,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     if (!totalPurchased) return
     setIsExporting(true)
     try {
-      const allRows: ContractCode[] = []
+      const allRows: ManagerEnrollmentCode[] = []
       let page = 1
       let hasMore = true
       while (hasMore) {

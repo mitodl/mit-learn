@@ -16,7 +16,7 @@
     "@floating-ui/react": "^0.27.16",
     "@mitodl/arithmix": "^0.2.2",
     "@mitodl/course-search-utils": "^3.5.2",
-    "@mitodl/mitxonline-api-axios": "https://github.com/mitodl/mitxonline-api-clients/raw/refs/heads/dansubak/202606_paginated_codes-client-443be46/src/typescript/mitxonline-api-axios/package.tgz",
+    "@mitodl/mitxonline-api-axios": "2026.6.30-1",
     "@mitodl/smoot-design": "^6.27.0",
     "@mui/base": "5.0.0-beta.70",
     "@mui/material": "^6.4.5",
