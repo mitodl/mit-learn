@@ -45,6 +45,8 @@ jest.mock("next-nprogress-bar", () => ({
 
 jest.mock("@/common/analytics/gtm", () => ({
   trackCourseEnrolled: jest.fn(),
+  trackViewCoursePage: jest.fn(),
+  trackCourseProgramView: jest.fn(),
 }))
 
 const makeCourse = mitxFactories.courses.course
