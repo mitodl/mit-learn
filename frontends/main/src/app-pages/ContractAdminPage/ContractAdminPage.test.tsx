@@ -116,7 +116,12 @@ describe("ContractAdminPage", () => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
     const otherOrg = factories.organizations.organization({})
-    setMockResponse.get(managerOrgsUrl, [otherOrg])
+    setMockResponse.get(managerOrgsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [otherOrg],
+    })
 
     renderWithProviders(
       <ContractAdminPage orgSlug="not-my-org" contractSlug="some-contract" />,
@@ -130,7 +135,12 @@ describe("ContractAdminPage", () => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
     const { org } = makeOrgWithContract()
-    setMockResponse.get(managerOrgsUrl, [org])
+    setMockResponse.get(managerOrgsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [org],
+    })
 
     renderWithProviders(
       <ContractAdminPage
@@ -147,7 +157,12 @@ describe("ContractAdminPage", () => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
     const { org, contract } = makeOrgWithContract()
-    setMockResponse.get(managerOrgsUrl, [org])
+    setMockResponse.get(managerOrgsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [org],
+    })
     setMockResponse.get(
       managerContractDetailUrl(org.id, contract.id),
       makeContractDetail(contract),
@@ -173,7 +188,12 @@ describe("ContractAdminPage", () => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
     const { org, contract } = makeOrgWithContract()
-    setMockResponse.get(managerOrgsUrl, [org])
+    setMockResponse.get(managerOrgsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [org],
+    })
     setMockResponse.get(
       managerContractDetailUrl(org.id, contract.id),
       makeContractDetail(contract, { total_codes: 75, total_enrollments: 12 }),
@@ -198,7 +218,12 @@ describe("ContractAdminPage", () => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
     const { org, contract } = makeOrgWithContract()
-    setMockResponse.get(managerOrgsUrl, [org])
+    setMockResponse.get(managerOrgsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [org],
+    })
     setMockResponse.get(
       managerContractDetailUrl(org.id, contract.id),
       makeContractDetail(contract, {
@@ -241,7 +266,12 @@ describe("ContractAdminPage", () => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
     const { org, contract } = makeOrgWithContract()
-    setMockResponse.get(managerOrgsUrl, [org])
+    setMockResponse.get(managerOrgsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [org],
+    })
     setMockResponse.get(
       managerContractDetailUrl(org.id, contract.id),
       makeContractDetail(contract, {
@@ -297,7 +327,12 @@ describe("ContractAdminPage", () => {
       contract: ReturnType<typeof factories.contracts.contract>,
       overrides: Parameters<typeof makeContractDetail>[1] = {},
     ) => {
-      setMockResponse.get(managerOrgsUrl, [org])
+      setMockResponse.get(managerOrgsUrl, {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [org],
+      })
       setMockResponse.get(
         managerContractDetailUrl(org.id, contract.id),
         makeContractDetail(contract, overrides),
@@ -446,7 +481,12 @@ describe("ContractAdminPage", () => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
     const { org, contract } = makeOrgWithContract()
-    setMockResponse.get(managerOrgsUrl, [org])
+    setMockResponse.get(managerOrgsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [org],
+    })
     setMockResponse.get(
       managerContractDetailUrl(org.id, contract.id),
       makeContractDetail(contract, {
