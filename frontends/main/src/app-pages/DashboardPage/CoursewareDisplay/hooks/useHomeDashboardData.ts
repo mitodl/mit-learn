@@ -109,7 +109,7 @@ const useHomeDashboardData = (): HomeDashboardData => {
       programEnrollments: programEnrollmentsToRender,
     }),
     enrollmentsByCourseId: groupCourseRunEnrollmentsByCourseId(
-      enrolledCourses ?? [],
+      (enrolledCourses ?? []).filter(isNonContractEnrollment),
     ),
     courseProgramsById: new Map(coursePrograms.map((p) => [p.id, p])),
     moduleCoursesByProgramId: groupModuleCoursesByProgramId(

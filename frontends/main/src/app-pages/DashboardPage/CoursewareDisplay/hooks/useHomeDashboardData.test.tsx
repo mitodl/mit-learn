@@ -64,7 +64,7 @@ describe("useHomeDashboardData", () => {
     ).toBe(true)
   })
 
-  test("excludes B2B course enrollments from the card list", async () => {
+  test("excludes B2B course enrollments from the card list and enrollmentsByCourseId lookup", async () => {
     const mitxOnlineUser = mitxonline.factories.user.user()
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
@@ -92,6 +92,15 @@ describe("useHomeDashboardData", () => {
     )
     expect(courseRunIds).toContain(personalEnrollment.id)
     expect(courseRunIds).not.toContain(b2bEnrollment.id)
+
+    // B2B enrollments must also be absent from the sibling/module lookup so
+    // they don't leak into a personal card's accordion or program modules.
+    expect(
+      result.current.enrollmentsByCourseId[personalEnrollment.run.course.id],
+    ).toEqual([personalEnrollment])
+    expect(
+      result.current.enrollmentsByCourseId[b2bEnrollment.run.course.id],
+    ).toBeUndefined()
   })
 
   test("groups course-run enrollments by course id for the renderer", async () => {
