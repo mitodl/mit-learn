@@ -253,14 +253,17 @@ export const getCertificateLinkedInUrl = (
   certificateData: V2ProgramCertificate | V2CourseRunCertificate,
   pageUrl: string,
 ): string => {
-  const credentialName =
-    certificateType === CertificateType.Course
-      ? (certificateData as V2CourseRunCertificate).course_run.course.title
-      : getCertificateTitle(
-          (certificateData as V2ProgramCertificate).certificate_page
-            ?.product_name,
-          (certificateData as V2ProgramCertificate).program.title,
-        )
+  let credentialName: string
+  if (certificateType === CertificateType.Course) {
+    credentialName = (certificateData as V2CourseRunCertificate).course_run
+      .course.title
+  } else {
+    const programCert = certificateData as V2ProgramCertificate
+    credentialName = getCertificateTitle(
+      programCert.certificate_page?.product_name,
+      programCert.program.title,
+    )
+  }
   const certId = certificateData.uuid
   const linkedinUrl = new URL(LINKEDIN_ADD_TO_PROFILE_BASE_URL)
   linkedinUrl.searchParams.set("startTask", "CERTIFICATION_NAME")
