@@ -1,0 +1,147 @@
+import React, { useId } from "react"
+import { Select, styled } from "@mitodl/smoot-design"
+import type { SelectChangeEvent } from "@mitodl/smoot-design"
+import { MenuItem } from "ol-components"
+import type { CourseRunV2 } from "@mitodl/mitxonline-api-axios/v2"
+import { formatDate, NoSSR } from "ol-utilities"
+import { runStartsAnytime, byStartDateDesc } from "./courseRun"
+
+type SessionSelectProps = {
+  runs: CourseRunV2[]
+  selectedRunId: number
+  enrolledRunIds?: number[]
+  onChange: (runId: number) => void
+}
+
+/**
+ * Inline "Session:" label, styled to match the bold metadata labels
+ * (Format:, Estimated:). The select gets its accessible name from this label
+ * via `labelId` (→ `aria-labelledby`) since the MUI combobox is not a labelable
+ * element.
+ */
+const SessionLabel = styled.label(({ theme }) => ({
+  ...theme.typography.subtitle2,
+  fontWeight: theme.typography.fontWeightBold,
+  color: theme.custom.colors.darkGray2,
+  whiteSpace: "nowrap",
+  // In the SessionRow grid, an item's margin adds to the 8px columnGap, making
+  // the label→dropdown gap 16px while icon→label stays the row-level 8px.
+  marginRight: "8px",
+}))
+
+/**
+ * Collapsed-value display: truncate with an ellipsis so a long date range can't
+ * overflow the narrow sidebar column and collide with the dropdown chevron. The
+ * collapsed value is dates only — the "Start Anytime" annotation is dropped here
+ * (it overflowed too readily) and surfaced on its own line under the dropdown by
+ * CourseSummary; the open menu still annotates each option.
+ */
+const TruncatedValue = styled.span({
+  display: "block",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+})
+
+/**
+ * "MMM D, YYYY", collapsing the redundant year on the start of a same-year
+ * range ("Sep 8 - Dec 12, 2026"). Cross-year ranges keep both years
+ * ("Dec 8, 2026 - Feb 12, 2027"). Dates always show — including for self-paced
+ * "starts anytime" runs, which would otherwise all render as a bare "Anytime"
+ * and be indistinguishable; the anytime nature is annotated separately (see
+ * anytimeAnnotation).
+ *
+ * `formatDate` renders in the local timezone, so callers wrap the result in
+ * <NoSSR> — a run timestamp near a day boundary formats to different calendar
+ * dates on the (UTC) server vs the browser, which is a hydration mismatch.
+ */
+const formatDateRange = (run: CourseRunV2): string => {
+  const start = typeof run.start_date === "string" ? run.start_date : null
+  const end = typeof run.end_date === "string" ? run.end_date : null
+  if (start && end) {
+    const sameYear = formatDate(start, "YYYY") === formatDate(end, "YYYY")
+    const startLabel = formatDate(start, sameYear ? "MMM D" : "MMM D, YYYY")
+    return `${startLabel} - ${formatDate(end)}`
+  }
+  const single = start ?? end
+  return single ? formatDate(single) : ""
+}
+
+/** " — Start Anytime" for a self-paced, already-open run; null otherwise. */
+const anytimeAnnotation = (run: CourseRunV2): string | null =>
+  runStartsAnytime(run) ? " — Start Anytime" : null
+
+/**
+ * " (no certificate available)" for a run whose certificate can no longer be
+ * purchased (not upgradable), so a user choosing a session knows it before
+ * enrolling. Mirrors the legacy enrollment dialog's per-run note.
+ */
+const certUnavailableNote = (run: CourseRunV2): string | null =>
+  run.is_upgradable ? null : " (no certificate available)"
+
+// Dropdown option: dates · the self-paced annotation · the cert-unavailable note
+// · the enrolled marker (so the user can spot a session they're already in).
+const buildOptionLabel = (
+  run: CourseRunV2,
+  enrolledRunIds: number[] | undefined,
+): React.ReactNode => {
+  const enrolled = enrolledRunIds?.includes(run.id)
+  return (
+    <>
+      <NoSSR>{formatDateRange(run)}</NoSSR>
+      {certUnavailableNote(run)}
+      {anytimeAnnotation(run)}
+      {enrolled ? " — Enrolled" : null}
+    </>
+  )
+}
+
+const SessionSelect: React.FC<SessionSelectProps> = ({
+  runs,
+  selectedRunId,
+  enrolledRunIds,
+  onChange,
+}) => {
+  const labelId = useId()
+  const selectId = useId()
+  return (
+    <>
+      <SessionLabel id={labelId} htmlFor={selectId}>
+        Session:
+      </SessionLabel>
+      <Select
+        id={selectId}
+        labelId={labelId}
+        size="medium"
+        fullWidth
+        displayEmpty
+        value={String(selectedRunId)}
+        onChange={(e: SelectChangeEvent<unknown>) =>
+          onChange(Number(e.target.value))
+        }
+        renderValue={(value) => {
+          // Collapsed display: dates only. Both the "— Enrolled" marker (the
+          // enroll area already shows a standalone Enrolled button) and the
+          // "Start Anytime" annotation (surfaced on its own line by
+          // CourseSummary) are dropped — they're the main causes of overflow in
+          // the narrow column. The open menu keeps both (buildOptionLabel).
+          const run = runs.find((r) => String(r.id) === String(value))
+          return (
+            <TruncatedValue>
+              {run ? <NoSSR>{formatDateRange(run)}</NoSSR> : ""}
+            </TruncatedValue>
+          )
+        }}
+      >
+        {[...runs].sort(byStartDateDesc).map((run) => (
+          <MenuItem key={run.id} value={String(run.id)}>
+            {buildOptionLabel(run, enrolledRunIds)}
+          </MenuItem>
+        ))}
+      </Select>
+    </>
+  )
+}
+
+export default SessionSelect
+export type { SessionSelectProps }

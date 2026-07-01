@@ -1,5 +1,8 @@
 import React from "react"
-import { urls, factories } from "api/mitxonline-test-utils"
+import {
+  urls as mitxUrls,
+  factories as mitxFactories,
+} from "api/mitxonline-test-utils"
 import type {
   CoursePageItem,
   CourseWithCourseRunsSerializerV2,
@@ -9,7 +12,15 @@ import {
   urls as learnUrls,
   factories as learnFactories,
 } from "api/test-utils"
-import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
+import {
+  renderWithProviders,
+  waitFor,
+  screen,
+  within,
+  act,
+  user,
+  setupLocationMock,
+} from "@/test-utils"
 import CoursePage from "./CoursePage"
 import { assertHeadings } from "ol-test-utilities"
 import { notFound } from "next/navigation"
@@ -19,12 +30,27 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import invariant from "tiny-invariant"
 import { getOutlineCoursewareId } from "./util"
 import { FeatureFlags } from "@/common/feature_flags"
+import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 
-jest.mock("posthog-js/react")
+jest.mock("posthog-js/react", () => ({
+  ...jest.requireActual("posthog-js/react"),
+  useFeatureFlagEnabled: jest.fn(),
+  usePostHog: jest.fn(() => ({ capture: jest.fn() })),
+}))
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
-const makeCourse = factories.courses.course
-const makePage = factories.pages.coursePageItem
+jest.mock("next-nprogress-bar", () => ({
+  useRouter: () => ({ push: jest.fn() }),
+}))
+
+jest.mock("@/common/analytics/gtm", () => ({
+  trackCourseEnrolled: jest.fn(),
+  trackViewCoursePage: jest.fn(),
+  trackCourseProgramView: jest.fn(),
+}))
+
+const makeCourse = mitxFactories.courses.course
+const makePage = mitxFactories.pages.coursePageItem
 
 const expectRawContent = (el: HTMLElement, htmlString: string) => {
   const raw = within(el).getByTestId("raw")
@@ -40,16 +66,19 @@ const setupApis = ({
   page: CoursePageItem
 }) => {
   setMockResponse.get(
-    urls.courses.coursesList({ readable_id: course.readable_id, live: true }),
+    mitxUrls.courses.coursesList({
+      readable_id: course.readable_id,
+      live: true,
+    }),
     { results: [course] },
   )
 
-  setMockResponse.get(urls.pages.coursePages(course.readable_id), {
+  setMockResponse.get(mitxUrls.pages.coursePages(course.readable_id), {
     items: [page],
   })
   const outlineCoursewareId = getOutlineCoursewareId(course)
   if (outlineCoursewareId) {
-    setMockResponse.get(urls.courses.courseOutline(outlineCoursewareId), {
+    setMockResponse.get(mitxUrls.courses.courseOutline(outlineCoursewareId), {
       course_id: course.readable_id,
       generated_at: new Date().toISOString(),
       modules: [
@@ -107,7 +136,12 @@ describe("CoursePage", () => {
   })
 
   test("Page has expected headings", async () => {
-    const course = makeCourse()
+    // A non-enrollable run keeps the outline section (needs a courseware_id)
+    // while making the InfoBox render no enroll-card (h3) headings, so the
+    // page heading outline is deterministic. (makeCourse() otherwise
+    // randomizes run enrollability, injecting card h3s and flaking this test.)
+    const run = mitxFactories.courses.courseRun({ is_enrollable: false })
+    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
     const page = makePage({ course_details: course })
     invariant(page.faculty.length > 0)
     setupApis({ course, page })
@@ -242,18 +276,21 @@ describe("CoursePage", () => {
   })
 
   test("Renders program bundle upsell when course belongs to a program (content tested in ProgramBundleUpsell.test)", async () => {
-    const baseProgram = factories.programs.baseProgram()
-    const programDetail = factories.programs.program({
+    const baseProgram = mitxFactories.programs.baseProgram()
+    const programDetail = mitxFactories.programs.program({
       id: baseProgram.id,
       readable_id: baseProgram.readable_id,
-      products: [factories.courses.product({ price: "500" })],
+      products: [mitxFactories.courses.product()],
     })
     const course = makeCourse({ programs: [baseProgram] })
     const page = makePage({ course_details: course })
     setupApis({ course, page })
-    setMockResponse.get(urls.programs.programsList({ id: [baseProgram.id] }), {
-      results: [programDetail],
-    })
+    setMockResponse.get(
+      mitxUrls.programs.programsList({ id: [baseProgram.id] }),
+      {
+        results: [programDetail],
+      },
+    )
     renderWithProviders(<CoursePage readableId={course.readable_id} />)
 
     expect(
@@ -261,14 +298,236 @@ describe("CoursePage", () => {
     ).toBeInTheDocument()
   })
 
-  test("Renders an enrollment button", async () => {
-    const course = makeCourse()
-    const page = makePage({ course_details: course })
-    setupApis({ course, page })
-    renderWithProviders(<CoursePage readableId={course.readable_id} />)
+  describe("Header enrollment button", () => {
+    const freeMode = mitxFactories.courses.enrollmentMode({
+      requires_payment: false,
+    })
+    const paidMode = mitxFactories.courses.enrollmentMode({
+      requires_payment: true,
+    })
+    const product = mitxFactories.courses.product()
 
-    const buttons = await screen.findAllByTestId("course-enrollment-button")
-    expect(buttons.length).toBeGreaterThan(0)
+    // The header CTA mirrors the enroll area's scenario→label mapping (which is
+    // unit tested in useCourseEnrollment.test.tsx). Here we pin that the header
+    // reflects each scenario; the "none" placeholder is additionally disabled.
+    const headerCases = [
+      {
+        name: "both → Earn Certificate",
+        run: () =>
+          mitxFactories.courses.courseRun({
+            is_enrollable: true,
+            is_upgradable: true,
+            is_archived: false,
+            enrollment_modes: [freeMode, paidMode],
+            products: [product],
+          }),
+        button: "Earn Certificate",
+        disabled: false,
+      },
+      {
+        name: "free only → Start Learning",
+        run: () =>
+          mitxFactories.courses.courseRun({
+            is_enrollable: true,
+            is_upgradable: false,
+            is_archived: false,
+            enrollment_modes: [freeMode],
+            products: [],
+          }),
+        button: "Start Learning",
+        disabled: false,
+      },
+      {
+        name: "paid only → Enroll",
+        run: () =>
+          mitxFactories.courses.courseRun({
+            is_enrollable: true,
+            is_upgradable: true,
+            is_archived: false,
+            enrollment_modes: [paidMode],
+            products: [product],
+          }),
+        button: "Enroll",
+        disabled: false,
+      },
+      {
+        name: "no runs → disabled Enroll placeholder",
+        run: () => null,
+        button: "Enroll",
+        disabled: true,
+      },
+    ]
+
+    test.each(headerCases)("$name", async ({ run, button, disabled }) => {
+      const courseRun = run()
+      const course = makeCourse(
+        courseRun
+          ? { next_run_id: courseRun.id, courseruns: [courseRun] }
+          : { courseruns: [] },
+      )
+      const page = makePage({ course_details: course })
+      setupApis({ course, page })
+      renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+      if (disabled) {
+        // Only the header placeholder renders (the enroll area is empty), so a
+        // single button is expected.
+        expect(
+          await screen.findByRole("button", { name: button }),
+        ).toBeDisabled()
+      } else {
+        // Both the header and the InfoBox render the CTA.
+        expect(
+          (await screen.findAllByRole("button", { name: button })).length,
+        ).toBeGreaterThan(0)
+      }
+    })
+
+    test("enrolled scenario: header shows Enrolled link", async () => {
+      const run = mitxFactories.courses.courseRun({
+        is_enrollable: true,
+        is_archived: false,
+        enrollment_modes: [freeMode],
+      })
+      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+      const page = makePage({ course_details: course })
+      setupApis({ course, page })
+
+      const enrollment = mitxFactories.enrollment.courseEnrollment({
+        run: { id: run.id },
+      })
+      setMockResponse.get(
+        learnUrls.userMe.get(),
+        learnFactories.user.user({ is_authenticated: true }),
+      )
+      setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), [enrollment])
+
+      renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+      expect(
+        (await screen.findAllByRole("link", { name: /Enrolled/ })).length,
+      ).toBeGreaterThan(0)
+    })
+
+    test("header CTA tracks the run selected in the InfoBox", async () => {
+      const paidRun = mitxFactories.courses.courseRun({
+        is_enrollable: true,
+        is_upgradable: true,
+        is_archived: false,
+        enrollment_modes: [paidMode],
+        products: [product],
+        start_date: "2026-07-15",
+        end_date: "2026-10-15",
+      })
+      const freeRun = mitxFactories.courses.courseRun({
+        is_enrollable: true,
+        is_upgradable: false,
+        is_archived: false,
+        enrollment_modes: [freeMode],
+        products: [],
+        start_date: "2027-03-10",
+        end_date: "2027-06-10",
+      })
+      const course = makeCourse({
+        next_run_id: paidRun.id,
+        courseruns: [paidRun, freeRun],
+      })
+      const page = makePage({ course_details: course })
+      setupApis({ course, page })
+      renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+      const select = await screen.findByRole("combobox", { name: /Session/i })
+
+      // Select the paid run: header + InfoBox show "Enroll", none show "Start Learning"
+      await user.click(select)
+      await user.click(screen.getByRole("option", { name: /Jul 15/i }))
+      await waitFor(() => {
+        expect(
+          screen.queryByRole("button", { name: "Start Learning" }),
+        ).toBeNull()
+      })
+      expect(
+        (await screen.findAllByRole("button", { name: "Enroll" })).length,
+      ).toBeGreaterThan(0)
+
+      // Switch to the free run: the header CTA follows — no "Enroll" remains
+      await user.click(select)
+      await user.click(screen.getByRole("option", { name: /Mar 10/i }))
+      await waitFor(() => {
+        expect(screen.queryByRole("button", { name: "Enroll" })).toBeNull()
+      })
+      expect(
+        (await screen.findAllByRole("button", { name: "Start Learning" }))
+          .length,
+      ).toBeGreaterThan(0)
+    })
+
+    describe("click smoke tests", () => {
+      setupLocationMock()
+
+      test("header paid button click triggers basket replace", async () => {
+        const run = mitxFactories.courses.courseRun({
+          is_enrollable: true,
+          is_upgradable: true,
+          is_archived: false,
+          enrollment_modes: [paidMode],
+          products: [product],
+        })
+        const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+        const page = makePage({ course_details: course })
+        setupApis({ course, page })
+
+        setMockResponse.get(
+          learnUrls.userMe.get(),
+          learnFactories.user.user({ is_authenticated: true }),
+        )
+        setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), [])
+        setMockResponse.delete(mitxUrls.baskets.clear(), undefined)
+        setMockResponse.post(mitxUrls.baskets.createFromProduct(product.id), {
+          id: 1,
+          items: [],
+        })
+
+        renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+        const enrollBtns = await screen.findAllByRole("button", {
+          name: "Enroll",
+        })
+        await act(async () => {
+          enrollBtns[0].click()
+        })
+
+        await waitFor(() => {
+          expect(window.location.assign).toHaveBeenCalledWith(
+            mitxonlineLegacyUrl("/cart/"),
+          )
+        })
+      })
+
+      test("unauthenticated header click shows signup popover", async () => {
+        const run = mitxFactories.courses.courseRun({
+          is_enrollable: true,
+          is_upgradable: false,
+          is_archived: false,
+          enrollment_modes: [freeMode],
+          products: [],
+        })
+        const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+        const page = makePage({ course_details: course })
+        setupApis({ course, page })
+
+        renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+        const startBtns = await screen.findAllByRole("button", {
+          name: "Start Learning",
+        })
+        await act(async () => {
+          startBtns[0].click()
+        })
+
+        expect(screen.getByTestId("signup-popover")).toBeInTheDocument()
+      })
+    })
   })
 
   test("Shows a YouTube video in the sidebar when video_url is a YouTube URL", async () => {
@@ -322,20 +581,23 @@ describe("CoursePage", () => {
     { courses: [], pages: [] },
   ])("Returns 404 if no course found", async ({ courses, pages }) => {
     setMockResponse.get(
-      urls.courses.coursesList({ readable_id: "readable_id", live: true }),
+      mitxUrls.courses.coursesList({ readable_id: "readable_id", live: true }),
       { results: courses },
     )
     if (courses.length > 0) {
       const outlineCoursewareId = getOutlineCoursewareId(courses[0])
       if (outlineCoursewareId) {
-        setMockResponse.get(urls.courses.courseOutline(outlineCoursewareId), {
-          course_id: courses[0].readable_id,
-          generated_at: new Date().toISOString(),
-          modules: [],
-        })
+        setMockResponse.get(
+          mitxUrls.courses.courseOutline(outlineCoursewareId),
+          {
+            course_id: courses[0].readable_id,
+            generated_at: new Date().toISOString(),
+            modules: [],
+          },
+        )
       }
     }
-    setMockResponse.get(urls.pages.coursePages("readable_id"), {
+    setMockResponse.get(mitxUrls.pages.coursePages("readable_id"), {
       items: pages,
     })
 
@@ -350,10 +612,13 @@ describe("CoursePage", () => {
     const page = makePage({ course_details: course })
     // Simulate live=false: the API filters it out, returning empty results
     setMockResponse.get(
-      urls.courses.coursesList({ readable_id: course.readable_id, live: true }),
+      mitxUrls.courses.coursesList({
+        readable_id: course.readable_id,
+        live: true,
+      }),
       { results: [] },
     )
-    setMockResponse.get(urls.pages.coursePages(course.readable_id), {
+    setMockResponse.get(mitxUrls.pages.coursePages(course.readable_id), {
       items: [page],
     })
     renderWithProviders(<CoursePage readableId={course.readable_id} />)
@@ -366,13 +631,13 @@ describe("CoursePage", () => {
     useStayUpdatedEnv()
 
     test("Shows button when all course runs have only the verified enrollment mode", async () => {
-      const verifiedMode = factories.courses.enrollmentMode({
+      const verifiedMode = mitxFactories.courses.enrollmentMode({
         mode_slug: "verified",
       })
       const course = makeCourse({
         courseruns: [
-          factories.courses.courseRun({ enrollment_modes: [verifiedMode] }),
-          factories.courses.courseRun({ enrollment_modes: [verifiedMode] }),
+          mitxFactories.courses.courseRun({ enrollment_modes: [verifiedMode] }),
+          mitxFactories.courses.courseRun({ enrollment_modes: [verifiedMode] }),
         ],
       })
       const page = makePage({ course_details: course })
@@ -388,14 +653,14 @@ describe("CoursePage", () => {
       {
         label: "one run has a non-verified mode",
         buildRuns: () => [
-          factories.courses.courseRun({
+          mitxFactories.courses.courseRun({
             enrollment_modes: [
-              factories.courses.enrollmentMode({ mode_slug: "verified" }),
+              mitxFactories.courses.enrollmentMode({ mode_slug: "verified" }),
             ],
           }),
-          factories.courses.courseRun({
+          mitxFactories.courses.courseRun({
             enrollment_modes: [
-              factories.courses.enrollmentMode({ mode_slug: "audit" }),
+              mitxFactories.courses.enrollmentMode({ mode_slug: "audit" }),
             ],
           }),
         ],
@@ -403,10 +668,10 @@ describe("CoursePage", () => {
       {
         label: "a run has mixed verified and non-verified modes",
         buildRuns: () => [
-          factories.courses.courseRun({
+          mitxFactories.courses.courseRun({
             enrollment_modes: [
-              factories.courses.enrollmentMode({ mode_slug: "verified" }),
-              factories.courses.enrollmentMode({ mode_slug: "audit" }),
+              mitxFactories.courses.enrollmentMode({ mode_slug: "verified" }),
+              mitxFactories.courses.enrollmentMode({ mode_slug: "audit" }),
             ],
           }),
         ],
@@ -414,7 +679,7 @@ describe("CoursePage", () => {
       {
         label: "a run has no enrollment modes",
         buildRuns: () => [
-          factories.courses.courseRun({ enrollment_modes: [] }),
+          mitxFactories.courses.courseRun({ enrollment_modes: [] }),
         ],
       },
       {
@@ -435,12 +700,12 @@ describe("CoursePage", () => {
 
     test("Hides button when Stay Updated form ID is not configured", async () => {
       delete process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID
-      const verifiedMode = factories.courses.enrollmentMode({
+      const verifiedMode = mitxFactories.courses.enrollmentMode({
         mode_slug: "verified",
       })
       const course = makeCourse({
         courseruns: [
-          factories.courses.courseRun({ enrollment_modes: [verifiedMode] }),
+          mitxFactories.courses.courseRun({ enrollment_modes: [verifiedMode] }),
         ],
       })
       const page = makePage({ course_details: course })

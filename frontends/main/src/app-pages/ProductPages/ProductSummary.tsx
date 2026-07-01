@@ -11,7 +11,7 @@ import {
   RiFileCopy2Line,
   RiInformation2Line,
 } from "@remixicon/react"
-import { formatDate, isInPast, LocalDate, NoSSR, pluralize } from "ol-utilities"
+import { formatDate, LocalDate, NoSSR, pluralize } from "ol-utilities"
 import type {
   CourseWithCourseRunsSerializerV2,
   CourseRunV2,
@@ -19,7 +19,11 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds, parseReqTree } from "./util"
 import {
-  canPurchaseRun,
+  getCourseScenario,
+  runStartsAnytime,
+  byStartDateDesc,
+} from "./courseRun"
+import {
   formatPrice,
   getEnrollmentType,
   getFlexiblePriceForProduct,
@@ -120,35 +124,79 @@ const dateLoading = (
   <Skeleton variant="text" sx={{ display: "inline-block" }} width="80px" />
 )
 
-const runStartsAnytime = (run: CourseRunV2) => {
-  return (
-    !run.is_archived &&
-    run.is_self_paced &&
-    run.start_date &&
-    isInPast(run.start_date)
-  )
-}
+/**
+ * Three-column grid for the session row: [calendar icon] [Session: label]
+ * [dropdown]. `alignItems: center` vertically centers the icon and label with
+ * the taller (40px) dropdown. The payment deadline tucks under the dropdown
+ * (column 3, second row) regardless of the label's width.
+ */
+const SessionRow = styled.div(({ theme }) => ({
+  display: "grid",
+  gridTemplateColumns: "auto max-content 1fr",
+  alignItems: "center",
+  columnGap: "8px",
+  rowGap: "8px",
+  width: "100%",
+  color: theme.custom.colors.darkGray2,
+}))
+
+const PaymentDeadline = styled.div(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.darkGray2,
+}))
+
+/**
+ * Compact block of secondary lines under the session dropdown — "Start Anytime"
+ * (for a self-paced, already-open selected run; the collapsed dropdown value
+ * shows dates only, so the anytime nature surfaces here) and the payment
+ * deadline. A tight inter-line gap keeps them reading as one unit rather than
+ * two airy grid rows; the 8px from the dropdown comes from the row's rowGap.
+ */
+const SessionSubText = styled.div(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.darkGray2,
+  display: "flex",
+  flexDirection: "column",
+  rowGap: "2px",
+}))
 
 type CourseInfoRowProps = {
   course: CourseWithCourseRunsSerializerV2
   nextRun?: CourseRunV2
 } & HTMLAttributes<HTMLDivElement>
 type NeedsNextRun = { nextRun: CourseRunV2 }
-const CourseDatesRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
-  course,
-  nextRun,
-  ...others
-}) => {
+const CourseDatesRow: React.FC<
+  CourseInfoRowProps & NeedsNextRun & { contentAvailableAnytime?: boolean }
+> = ({ course, nextRun, contentAvailableAnytime, ...others }) => {
   const [expanded, setExpanded] = useState(false)
   const enrollable = course.courseruns
     .filter((cr) => cr.is_enrollable)
-    .sort((a, b) => {
-      if (!a.start_date || !b.start_date) return 0
-      // Otherwise sort by start date
-      return new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
-    })
+    // Latest start first; null-start runs are filtered out below.
+    .sort(byStartDateDesc)
 
   const manyDates = enrollable.length > 1
+
+  // Archived / deadline-passed courses are open-ended: content stays available,
+  // so the single-run view leads with "available anytime" rather than a stale
+  // start date, keeping the end date. (Multiple runs render their concrete
+  // dates in the list.)
+  if (contentAvailableAnytime && !manyDates) {
+    return (
+      <InfoRow {...others}>
+        <InfoRowIcon>
+          <RiCalendarLine aria-hidden="true" />
+        </InfoRowIcon>
+        <Stack gap="4px" width="100%">
+          <InfoLabel>Course content available anytime</InfoLabel>
+          {nextRun.end_date ? (
+            <span>
+              End: <LocalDate onSSR={dateLoading} date={nextRun.end_date} />
+            </span>
+          ) : null}
+        </Stack>
+      </InfoRow>
+    )
+  }
 
   return (
     <InfoRow {...others}>
@@ -175,7 +223,7 @@ const CourseDatesRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
           </InfoRowInner>
         ) : null}
         {enrollable
-          .filter((cr) => expanded || cr.id === course.next_run_id)
+          .filter((cr) => expanded || cr.id === nextRun.id)
           .filter((cr) => cr.start_date)
           .map((cr) => {
             const anytime = runStartsAnytime(cr)
@@ -333,7 +381,7 @@ const CoursePaceRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
       </InfoRowIcon>
       <InfoRowInner>
         <InfoLabelValue
-          label="Course Format"
+          label="Format"
           value={
             <>
               {pace.label}
@@ -370,23 +418,6 @@ const CourseDurationRow: React.FC<CourseInfoRowProps> = ({
     </InfoRow>
   )
 }
-
-const COURSE_CERT_INFO_HREF =
-  "https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
-const COURSE_CERT_INFO_LINK = (
-  <UnderlinedLink
-    color="black"
-    href={COURSE_CERT_INFO_HREF}
-    target="_blank"
-    rel="noopener noreferrer"
-  >
-    Learn More
-  </UnderlinedLink>
-)
-
-const GrayText = styled.span(({ theme }) => ({
-  color: theme.custom.colors.silverGrayDark,
-}))
 
 const ProgramPaySection = styled.div(({ theme }) => ({
   display: "flex",
@@ -494,14 +525,13 @@ const ProgramPriceDivider = styled.div(({ theme }) => ({
   alignSelf: "stretch",
 }))
 
-const ProgramStartForFreeBox = styled.div((_theme) => ({
+const ProgramStartForFreeBox = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "8px",
   padding: "8px 16px",
   borderRadius: "8px",
-  background:
-    "linear-gradient(0deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.94)), #004D1A",
+  background: `linear-gradient(0deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.94)), ${theme.custom.colors.darkGreen}`,
 }))
 
 const ProgramStartForFreeIcon = styled.svg(() => ({
@@ -541,16 +571,6 @@ const ProgramStartForFreeInfoIcon = styled.span(({ theme }) => ({
   },
 }))
 
-const CertificateBoxRoot = styled.div(({ theme }) => ({
-  width: "100%",
-  backgroundColor: theme.custom.colors.lightGray1,
-  borderRadius: "8px",
-  padding: "16px",
-  display: "flex",
-  flexDirection: "column",
-  gap: "8px",
-}))
-
 const StrickenText = styled.span(({ theme }) => ({
   textDecoration: "line-through",
   color: theme.custom.colors.silverGrayDark,
@@ -559,170 +579,6 @@ const StrickenText = styled.span(({ theme }) => ({
     ...theme.typography.body4,
   },
 }))
-
-const CourseCertificateBox: React.FC<CourseInfoRowProps> = ({
-  nextRun,
-  course,
-}) => {
-  const canPurchase = nextRun ? canPurchaseRun(nextRun) : false
-  const product = nextRun?.products[0]
-  const financialAidUrl = course?.page?.financial_assistance_form_url
-  const hasFinancialAid = !!(financialAidUrl && product)
-  const userFlexiblePrice = useQuery({
-    ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
-    enabled: canPurchase && hasFinancialAid,
-  })
-  const price =
-    canPurchase && product
-      ? priceWithDiscount({
-          product,
-          flexiblePrice: userFlexiblePrice.data,
-          avoidCents: true,
-        })
-      : null
-
-  const upgradeDeadline = nextRun?.is_archived
-    ? null
-    : nextRun?.upgrade_deadline
-  return (
-    <CertificateBoxRoot>
-      {price ? (
-        <>
-          <InfoRowInner flexWrap={"nowrap"}>
-            <span>
-              <UnderlinedLink
-                href={COURSE_CERT_INFO_HREF}
-                target="_blank"
-                rel="noopener noreferrer"
-                color="black"
-              >
-                <InfoLabel>Earn a certificate</InfoLabel>
-              </UnderlinedLink>
-              :{" "}
-              {price.isDiscounted ? (
-                <>
-                  {price.finalPrice}{" "}
-                  <StrickenText>{price.originalPrice}</StrickenText>
-                </>
-              ) : (
-                price.finalPrice
-              )}
-            </span>
-          </InfoRowInner>
-          {hasFinancialAid ? (
-            <UnderlinedLink
-              color="black"
-              href={mitxonlineLegacyUrl(financialAidUrl)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {price.approvedFinancialAid
-                ? "Financial assistance applied"
-                : "Financial assistance available"}
-            </UnderlinedLink>
-          ) : null}
-          {upgradeDeadline ? (
-            <Typography
-              typography={{ xs: "body3", sm: "body2" }}
-              sx={(theme) => ({ color: theme.custom.colors.red })}
-            >
-              Payment deadline:{" "}
-              <NoSSR
-                onSSR={
-                  <Skeleton
-                    variant="text"
-                    sx={{ display: "inline-block" }}
-                    width="80px"
-                  />
-                }
-              >
-                {formatDate(upgradeDeadline)}
-              </NoSSR>
-            </Typography>
-          ) : null}
-        </>
-      ) : (
-        <InfoRowInner>
-          <Typography typography={{ xs: "subtitle3", sm: "subtitle2" }}>
-            Certificate deadline passed
-          </Typography>
-          {COURSE_CERT_INFO_LINK}
-        </InfoRowInner>
-      )}
-    </CertificateBoxRoot>
-  )
-}
-
-const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
-  course,
-  nextRun,
-  ...others
-}) => {
-  const enrollmentType = getEnrollmentType(nextRun?.enrollment_modes)
-  const product = nextRun?.products[0]
-  const canPurchase = nextRun ? canPurchaseRun(nextRun) : false
-  const financialAidUrl = course?.page?.financial_assistance_form_url
-  const hasFinancialAid = !!(financialAidUrl && product)
-  const userFlexiblePrice = useQuery({
-    ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
-    enabled: enrollmentType === "paid" && canPurchase && hasFinancialAid,
-  })
-  const price =
-    enrollmentType === "paid" && product
-      ? priceWithDiscount({
-          product,
-          flexiblePrice: userFlexiblePrice.data,
-          avoidCents: true,
-        })
-      : null
-
-  if (enrollmentType === "none") return null
-
-  const paidPrice = price ? (
-    <>
-      {price.isDiscounted ? (
-        <>
-          {price.finalPrice} <StrickenText>{price.originalPrice}</StrickenText>
-        </>
-      ) : (
-        price.finalPrice
-      )}{" "}
-      <GrayText>(includes {course.certificate_type})</GrayText>
-    </>
-  ) : null
-
-  return (
-    <InfoRow {...others}>
-      <InfoRowIcon>
-        <RiPriceTag3Line aria-hidden="true" />
-      </InfoRowIcon>
-      <Stack gap="8px" width="100%">
-        {enrollmentType === "paid" ? (
-          <>
-            <InfoLabelValue label="Price" value={paidPrice} />
-            {canPurchase && hasFinancialAid ? (
-              <UnderlinedLink
-                color="black"
-                href={mitxonlineLegacyUrl(financialAidUrl)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {price?.approvedFinancialAid
-                  ? "Financial assistance applied"
-                  : "Financial assistance available"}
-              </UnderlinedLink>
-            ) : null}
-          </>
-        ) : (
-          <InfoLabelValue label="Price" value="Free to Learn" />
-        )}
-        {enrollmentType === "both" ? (
-          <CourseCertificateBox course={course} nextRun={nextRun} />
-        ) : null}
-      </Stack>
-    </InfoRow>
-  )
-}
 
 enum TestIds {
   DatesRow = "dates-row",
@@ -750,67 +606,128 @@ const ArchivedAlert: React.FC = () => {
 /**
  * Flex column by default; on tablet switches to CSS multi-column so
  * metadata rows flow top-to-bottom then wrap to the next column.
+ *
+ * `$tabletColumns` gates that 2-column tablet layout. It only reads well when
+ * the block spans the full InfoBox width; when the metadata shares a tablet row
+ * with an offering box (the 2-box course case) it occupies a half-width cell, so
+ * a further 2-column split would cram the rows — pass 1 there to keep it linear.
  */
-const SummaryRows = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  gap: "24px",
-  [theme.breakpoints.up("md")]: {
-    gap: "32px",
-  },
-  [theme.breakpoints.between("sm", "md")]: {
-    display: "block",
-    columnCount: 2,
-    columnGap: "48px",
-    columnRule: `1px solid ${theme.custom.colors.lightGray2}`,
-    "> *": {
-      breakInside: "avoid",
-      marginBottom: "24px",
-      "&:last-child": {
-        marginBottom: 0,
-      },
+const SummaryRows = styled.div<{ $tabletColumns?: 1 | 2 }>(
+  ({ theme, $tabletColumns = 2 }) => ({
+    display: "flex",
+    flexDirection: "column",
+    gap: "24px",
+    [theme.breakpoints.up("md")]: {
+      gap: "32px",
     },
-  },
-}))
+    ...($tabletColumns === 2
+      ? {
+          [theme.breakpoints.between("sm", "md")]: {
+            display: "block",
+            columnCount: 2,
+            columnGap: "48px",
+            columnRule: `1px solid ${theme.custom.colors.lightGray2}`,
+            "> *": {
+              breakInside: "avoid",
+              marginBottom: "24px",
+              "&:last-child": {
+                marginBottom: 0,
+              },
+            },
+          },
+        }
+      : {}),
+  }),
+)
 
 const CourseSummary: React.FC<{
   course: CourseWithCourseRunsSerializerV2
-}> = ({ course }) => {
-  const nextRunId = course.next_run_id
-  const nextRun = course.courseruns.find((run) => run.id === nextRunId)
+  selectedRun: CourseRunV2 | undefined
+  sessionSelect?: React.ReactNode
+  /** Tablet metadata column count — 1 when the block is half-width (see SummaryRows). */
+  tabletColumns?: 1 | 2
+}> = ({ course, selectedRun, sessionSelect, tabletColumns }) => {
+  const scenario = getCourseScenario(selectedRun)
+  // Archived courses have no live schedule, so the date row leads with "content
+  // available anytime" + end date instead of dates. A deadline-passed run is
+  // still an active, scheduled run — it keeps its normal date row (dropdown /
+  // "anytime" / dated); only the now-stale payment-deadline line is dropped,
+  // since the "Certificate deadline has passed." alert conveys that.
+  const contentAvailableAnytime = scenario.status === "archived"
+  const selectedRunStartsAnytime = !!(
+    selectedRun && runStartsAnytime(selectedRun)
+  )
+  // Any degraded status (archived or deadline-passed) drops the stale
+  // payment-deadline line — the warning alert conveys the closure instead.
+  const suppressPaymentDeadline = scenario.status !== "active"
+  const upgradeDeadline =
+    selectedRun !== undefined && !suppressPaymentDeadline
+      ? selectedRun.upgrade_deadline
+      : null
+  const deadlineContent = upgradeDeadline ? (
+    <>
+      Payment deadline:{" "}
+      <NoSSR onSSR={dateLoading}>{formatDate(upgradeDeadline)}</NoSSR>
+    </>
+  ) : null
+
   return (
-    <SummaryRows>
-      {!nextRun ? (
-        <Alert severity="warning">
-          No sessions of this course are currently open for enrollment. More
-          sessions may be added in the future.
-        </Alert>
-      ) : null}
-      {nextRun?.is_archived ? <ArchivedAlert /> : null}
-      {nextRun ? (
-        <CourseDatesRow
-          course={course}
-          nextRun={nextRun}
-          data-testid={TestIds.DatesRow}
-        />
-      ) : null}
-      {nextRun ? (
+    <SummaryRows $tabletColumns={tabletColumns}>
+      {selectedRun ? (
         <CoursePaceRow
           course={course}
-          nextRun={nextRun}
+          nextRun={selectedRun}
           data-testid={TestIds.PaceRow}
         />
       ) : null}
       <CourseDurationRow
         course={course}
-        nextRun={nextRun}
+        nextRun={selectedRun}
         data-testid={TestIds.DurationRow}
       />
-      <CoursePriceRow
-        course={course}
-        nextRun={nextRun}
-        data-testid={TestIds.PriceRow}
-      />
+      {selectedRun ? (
+        sessionSelect ? (
+          <SessionRow data-testid={TestIds.DatesRow}>
+            <InfoRowIcon>
+              <RiCalendarLine aria-hidden="true" />
+            </InfoRowIcon>
+            {sessionSelect}
+            {selectedRunStartsAnytime || deadlineContent ? (
+              <SessionSubText style={{ gridColumn: 3 }}>
+                {selectedRunStartsAnytime ? <div>Start Anytime</div> : null}
+                {deadlineContent ? <div>{deadlineContent}</div> : null}
+              </SessionSubText>
+            ) : null}
+          </SessionRow>
+        ) : (
+          <Stack gap="8px" width="100%">
+            <CourseDatesRow
+              course={course}
+              nextRun={selectedRun}
+              contentAvailableAnytime={contentAvailableAnytime}
+              data-testid={TestIds.DatesRow}
+            />
+            {deadlineContent ? (
+              <PaymentDeadline style={{ paddingLeft: "28px" }}>
+                {deadlineContent}
+              </PaymentDeadline>
+            ) : null}
+          </Stack>
+        )
+      ) : null}
+      {/* Degraded-state notices sit at the bottom of the metadata block,
+          immediately above the offerings they qualify, so the warning reads as
+          context for the enrollment choices below it. */}
+      {!selectedRun ? (
+        <Alert severity="warning">
+          No sessions of this course are currently open for enrollment. More
+          sessions may be added in the future.
+        </Alert>
+      ) : null}
+      {scenario.status === "archived" ? <ArchivedAlert /> : null}
+      {scenario.status === "deadlinePassed" ? (
+        <Alert severity="warning">Certificate deadline has passed.</Alert>
+      ) : null}
     </SummaryRows>
   )
 }
