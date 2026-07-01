@@ -3,7 +3,7 @@
 
 from django.db import migrations
 
-OLD_LEVEL = "non-credit"
+OLD_LEVELS = ("Non-Credit", "non-credit")
 NEW_LEVEL = "noncredit"
 
 
@@ -11,11 +11,12 @@ def replace_non_credit_level(apps, schema_editor):
     """Replace non-credit with noncredit in LearningResourceRun.level arrays."""
     LearningResourceRun = apps.get_model("learning_resources", "LearningResourceRun")
 
-    matching_runs = LearningResourceRun.objects.filter(level__icontains=OLD_LEVEL)
+    matching_runs = LearningResourceRun.objects.filter(level__overlap=OLD_LEVELS)
     for run in matching_runs.iterator():
         updated_level = [
-            NEW_LEVEL if level.lower() == OLD_LEVEL else level for level in run.level
+            NEW_LEVEL if level in OLD_LEVELS else level for level in run.level
         ]
+
         if updated_level != run.level:
             run.level = updated_level
             run.save(update_fields=["level"])
