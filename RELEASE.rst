@@ -1,6 +1,19 @@
 Release Notes
 =============
 
+Version 0.72.2 (Released July 01, 2026)
+--------------
+
+- update elipses css (#3533)
+- fix(search): pass pool_maxsize instead of connections_per_node to opensearch-py (#3544)
+- chore: remove video-shorts feature flag (#3537)
+- chore: Remove podcast-detail-page feature flag (#3541)
+- chore: remove video-playlist-page feature flag (#3538)
+- make uai heading navigable (#3532)
+- Hybrid Search: Fix "resource type" filter (#3528)
+- feat: Implement timestamp-aware share/embed links for video player (#3513)
+- Fix flaky test (#3536)
+
 Version 0.72.1 (Released June 30, 2026)
 --------------
 
