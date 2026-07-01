@@ -128,6 +128,8 @@ const contracts = {
     code: string,
   ) =>
     `${getApiBaseUrl()}/api/v0/b2b/manager/organizations/${orgId}/contracts/${contractId}/codes/${code}/reassign/`,
+  managerContractSendTestEmail: (orgId: number, contractId: number) =>
+    `${getApiBaseUrl()}/api/v0/b2b/manager/organizations/${orgId}/contracts/${contractId}/codes/send_test_email/`,
 }
 
 const certificates = {

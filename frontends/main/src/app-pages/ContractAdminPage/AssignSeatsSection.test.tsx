@@ -4,6 +4,8 @@ import { setMockResponse } from "api/test-utils"
 import { factories, urls } from "api/mitxonline-test-utils"
 import { AssignSeatsSection } from "./AssignSeatsSection"
 
+const USER_EMAIL = "manager@test.com"
+
 // jsdom's File/Blob has no .text() or .arrayBuffer(), so FileReader.readAsText
 // always fires onerror. Tests set mockFileContent before each upload so the mock
 // can return the expected text.
@@ -11,6 +13,13 @@ let mockFileContent: string | null = null
 
 describe("AssignSeatsSection", () => {
   let originalFileReader: typeof FileReader
+
+  beforeEach(() => {
+    setMockResponse.get(
+      urls.userMe.get(),
+      factories.user.user({ email: USER_EMAIL }),
+    )
+  })
 
   beforeAll(() => {
     originalFileReader = window.FileReader
@@ -553,6 +562,96 @@ describe("AssignSeatsSection", () => {
 
     expect(screen.getByText("2 valid")).toBeInTheDocument()
     expect(screen.getByText("1 invalid")).toBeInTheDocument()
+  })
+
+  describe("send test email", () => {
+    const ORG_ID = 1
+    const CONTRACT_ID = 2
+
+    const openConfirmModal = async () => {
+      const textarea = screen.getByPlaceholderText(/enter employee emails/i)
+      await user.type(textarea, "alice@example.com")
+      await user.click(screen.getByRole("button", { name: "Assign Seats" }))
+      await screen.findByRole("heading", { name: /ready to send invitations/i })
+    }
+
+    test("shows 'Send Test Email to Me' button in the confirm modal", async () => {
+      renderWithProviders(
+        <AssignSeatsSection
+          orgId={ORG_ID}
+          contractId={CONTRACT_ID}
+          availableSeats={50}
+          isLoadingSeats={false}
+        />,
+      )
+
+      await openConfirmModal()
+
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: /send test email to me/i }),
+        ).not.toBeDisabled(),
+      )
+    })
+
+    test("sends test email to the user's address and shows success alert", async () => {
+      setMockResponse.post(
+        urls.contracts.managerContractSendTestEmail(ORG_ID, CONTRACT_ID),
+        null,
+      )
+      renderWithProviders(
+        <AssignSeatsSection
+          orgId={ORG_ID}
+          contractId={CONTRACT_ID}
+          availableSeats={50}
+          isLoadingSeats={false}
+        />,
+      )
+
+      await openConfirmModal()
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: /send test email to me/i }),
+        ).not.toBeDisabled(),
+      )
+      await user.click(
+        screen.getByRole("button", { name: /send test email to me/i }),
+      )
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        new RegExp(`test email successfully sent to ${USER_EMAIL}`, "i"),
+      )
+    })
+
+    test("shows error alert when test email request fails", async () => {
+      setMockResponse.post(
+        urls.contracts.managerContractSendTestEmail(ORG_ID, CONTRACT_ID),
+        { detail: "Internal server error" },
+        { code: 500 },
+      )
+      renderWithProviders(
+        <AssignSeatsSection
+          orgId={ORG_ID}
+          contractId={CONTRACT_ID}
+          availableSeats={50}
+          isLoadingSeats={false}
+        />,
+      )
+
+      await openConfirmModal()
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: /send test email to me/i }),
+        ).not.toBeDisabled(),
+      )
+      await user.click(
+        screen.getByRole("button", { name: /send test email to me/i }),
+      )
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        /something went wrong sending the test email/i,
+      )
+    })
   })
 
   describe("submitting the assignment", () => {
