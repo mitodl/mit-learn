@@ -17,6 +17,7 @@ from learning_resources.constants import LearningResourceType
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.loaders import (
     load_courses,
+    load_documents,
     load_ovs_video_from_webhook,
     load_podcasts,
     load_programs,
@@ -180,7 +181,8 @@ class LearningResourceWebhookView(BaseWebhookView):
     canonical LearningResource dict carrying at minimum ``readable_id``,
     ``etl_source`` and ``resource_type``. Resources are grouped by
     ``(etl_source, resource_type)`` and routed to the matching loader
-    (``load_courses`` / ``load_programs`` / ``load_videos`` / ``load_podcasts``).
+    (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``
+    / ``load_podcasts``).
     Each loader performs a full sync for that source and upserts the OpenSearch
     index, so a batch must contain the authoritative set of resources for the
     (etl_source, resource_type) it represents. Resource types without a loader
@@ -229,6 +231,8 @@ def _load_resource_group(etl_source, resource_type, resources):
         return load_courses(etl_source, resources)
     if resource_type == LearningResourceType.program.name:
         return load_programs(etl_source, resources)
+    if resource_type == LearningResourceType.document.name:
+        return load_documents(etl_source, resources)
     if resource_type == LearningResourceType.video.name:
         return load_videos(resources)
     if resource_type == LearningResourceType.podcast.name:

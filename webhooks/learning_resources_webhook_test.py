@@ -121,17 +121,45 @@ def test_videos_and_podcasts_routed(settings, client, mocker):
 
 
 @pytest.mark.django_db
+def test_documents_routed_to_load_documents(settings, client, mocker):
+    """Document resources (e.g. MIT Climate articles) route to load_documents."""
+    mocker.patch("webhooks.views.clear_views_cache")
+    mock_load_documents = mocker.patch("webhooks.views.load_documents", return_value=[])
+    mock_load_courses = mocker.patch("webhooks.views.load_courses", return_value=[])
+
+    payload = {
+        "resources": [
+            _resource(
+                "climate-1",
+                ETLSource.mit_climate.name,
+                LearningResourceType.document.name,
+                resource_category="Article",
+            ),
+        ]
+    }
+    response = _post(client, settings, payload)
+
+    assert response.status_code == 200
+    mock_load_documents.assert_called_once()
+    etl_source_arg, docs_arg = mock_load_documents.call_args.args
+    assert etl_source_arg == ETLSource.mit_climate.name
+    assert [r["readable_id"] for r in docs_arg] == ["climate-1"]
+    mock_load_courses.assert_not_called()
+
+
+@pytest.mark.django_db
 def test_unsupported_resource_type_skipped(settings, client, mocker):
     """A resource_type with no loader (e.g. mit_climate 'article') is skipped, not 500."""
     mocker.patch("webhooks.views.clear_views_cache")
     mock_load_courses = mocker.patch("webhooks.views.load_courses", return_value=[])
     mock_load_programs = mocker.patch("webhooks.views.load_programs", return_value=[])
+    mock_load_documents = mocker.patch("webhooks.views.load_documents", return_value=[])
     mock_load_videos = mocker.patch("webhooks.views.load_videos", return_value=[])
     mock_load_podcasts = mocker.patch("webhooks.views.load_podcasts", return_value=[])
 
     payload = {
         "resources": [
-            _resource("art-1", ETLSource.mit_climate.name, "article"),
+            _resource("mystery-1", ETLSource.mit_climate.name, "some_unknown_type"),
         ]
     }
     response = _post(client, settings, payload)
@@ -140,6 +168,7 @@ def test_unsupported_resource_type_skipped(settings, client, mocker):
     assert response.json()["status"] == "success"
     mock_load_courses.assert_not_called()
     mock_load_programs.assert_not_called()
+    mock_load_documents.assert_not_called()
     mock_load_videos.assert_not_called()
     mock_load_podcasts.assert_not_called()
 
