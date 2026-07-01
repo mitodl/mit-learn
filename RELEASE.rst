@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.72.4
+--------------
+
+- hacksnack game (#3489)
+
 Version 0.72.3 (Released July 01, 2026)
 --------------
 
