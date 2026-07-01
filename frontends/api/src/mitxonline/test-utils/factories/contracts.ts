@@ -36,7 +36,9 @@ const paginatedContractCodes = (
   results,
 })
 
-const contractCode = (overrides: Partial<ManagerEnrollmentCode> = {}): ManagerEnrollmentCode => {
+const contractCode = (
+  overrides: Partial<ManagerEnrollmentCode> = {},
+): ManagerEnrollmentCode => {
   const status = overrides.redemption_status ?? "assigned"
   const isAssigned = status !== "unassigned"
   const isRedeemed = status === "redeemed"
