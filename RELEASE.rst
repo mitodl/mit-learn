@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.72.3
+Version 0.72.3 (Released July 01, 2026)
 --------------
 
 - feat: server-side pagination and search for contract codes (#3530)
