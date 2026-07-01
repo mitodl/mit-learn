@@ -180,7 +180,7 @@ const SiblingRunsAccordion: React.FC<SiblingRunsAccordionProps> = ({
       <AccordionSummary expandIcon={<ExpandChevron />}>
         <SummaryRow direction="row" alignItems="flex-end">
           <DateRangeStack direction="row" alignItems="center" gap="4px">
-            <CurrentRunIcon />
+            <CurrentRunIcon aria-hidden="true" />
             <Typography variant="body3" color="darkGray2" noWrap>
               Current run:
             </Typography>
