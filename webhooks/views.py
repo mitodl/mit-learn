@@ -1,5 +1,6 @@
 import json
 import logging
+from collections import defaultdict
 
 from django.core.exceptions import BadRequest
 from django.db.transaction import non_atomic_requests
@@ -14,7 +15,13 @@ from rest_framework.response import Response
 
 from learning_resources.constants import LearningResourceType
 from learning_resources.etl.constants import ETLSource
-from learning_resources.etl.loaders import load_ovs_video_from_webhook
+from learning_resources.etl.loaders import (
+    load_courses,
+    load_ovs_video_from_webhook,
+    load_podcasts,
+    load_programs,
+    load_videos,
+)
 from learning_resources.models import LearningResource
 from learning_resources.tasks import ingest_canvas_course, ingest_edx_run_archive
 from learning_resources.utils import (
@@ -24,6 +31,7 @@ from main.utils import clear_views_cache
 from webhooks.decorators import require_signature
 from webhooks.serializers import (
     ContentFileWebHookRequestSerializer,
+    LearningResourceWebhookRequestSerializer,
     OVSVideoWebhookRequestSerializer,
     WebhookResponseSerializer,
 )
@@ -155,6 +163,117 @@ class ContentFileDeleteWebhookView(ContentFileWebhookView):
             return self.success()
         except json.JSONDecodeError:
             return HttpResponseBadRequest("Invalid JSON format")
+
+
+@extend_schema_view(
+    post=extend_schema(
+        request=LearningResourceWebhookRequestSerializer,
+        responses=WebhookResponseSerializer(),
+    ),
+)
+class LearningResourceWebhookView(BaseWebhookView):
+    """
+    Generic webhook handler for pre-computed LearningResource batches delivered
+    by the OL Data Platform (Dagster).
+
+    The request body is ``{"resources": [ ... ]}`` where each resource is a
+    canonical LearningResource dict carrying at minimum ``readable_id``,
+    ``etl_source`` and ``resource_type``. Resources are grouped by
+    ``(etl_source, resource_type)`` and routed to the matching loader
+    (``load_courses`` / ``load_programs`` / ``load_videos`` / ``load_podcasts``).
+    Each loader performs a full sync for that source and upserts the OpenSearch
+    index, so a batch must contain the authoritative set of resources for the
+    (etl_source, resource_type) it represents. Resource types without a loader
+    are logged and skipped rather than failing the whole batch.
+    """
+
+    permission_classes = []
+    authentication_classes = []
+    parser_classes = [JSONParser]
+    serializer_class = LearningResourceWebhookRequestSerializer
+
+    def success(self, extra_data=None):
+        if not extra_data:
+            extra_data = {}
+        response = WebhookResponseSerializer(
+            data={"status": "success", "message": "Webhook received", **extra_data}
+        )
+        if response.is_valid():
+            return Response(response.data)
+        log.error("Invalid response data: %s", response.errors)
+        return HttpResponseBadRequest("Invalid response data")
+
+    def post(self, request):
+        try:
+            payload = json.loads(request.body)
+        except json.JSONDecodeError:
+            return HttpResponseBadRequest("Invalid JSON format")
+        serializer = LearningResourceWebhookRequestSerializer(data=payload)
+        serializer.is_valid(raise_exception=True)
+        summary = process_learning_resources_webhook(
+            serializer.validated_data["resources"]
+        )
+        log.info("learning_resources webhook processed: %s", summary)
+        clear_views_cache()
+        return self.success()
+
+
+def _load_resource_group(etl_source, resource_type, resources):
+    """
+    Dispatch a group of same-typed resources to the matching loader.
+
+    Returns the list of loaded LearningResource objects, or ``None`` if the
+    resource_type has no supported loader (the group is then skipped).
+    """
+    if resource_type == LearningResourceType.course.name:
+        return load_courses(etl_source, resources)
+    if resource_type == LearningResourceType.program.name:
+        return load_programs(etl_source, resources)
+    if resource_type == LearningResourceType.video.name:
+        return load_videos(resources)
+    if resource_type == LearningResourceType.podcast.name:
+        return load_podcasts(resources)
+    return None
+
+
+def process_learning_resources_webhook(resources):
+    """
+    Group canonical LearningResource dicts by (etl_source, resource_type) and
+    route each group to the appropriate loader. Unsupported resource types are
+    logged and skipped rather than failing the whole batch.
+    """
+    grouped = defaultdict(list)
+    for resource in resources:
+        grouped[(resource["etl_source"], resource["resource_type"])].append(resource)
+
+    summary = {"loaded": 0, "skipped": 0, "groups": []}
+    for (etl_source, resource_type), items in grouped.items():
+        loaded = _load_resource_group(etl_source, resource_type, items)
+        if loaded is None:
+            log.warning(
+                "No loader for resource_type=%s (etl_source=%s); skipping %d "
+                "resource(s)",
+                resource_type,
+                etl_source,
+                len(items),
+            )
+            summary["skipped"] += len(items)
+            status = "skipped"
+            loaded_count = 0
+        else:
+            loaded_count = len(loaded)
+            summary["loaded"] += loaded_count
+            status = "loaded"
+        summary["groups"].append(
+            {
+                "etl_source": etl_source,
+                "resource_type": resource_type,
+                "received": len(items),
+                "loaded": loaded_count,
+                "status": status,
+            }
+        )
+    return summary
 
 
 def process_create_content_file_request(data):
