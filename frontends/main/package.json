@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "TZ=UTC next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
-    "typegen": "NEXT_BUILD_CI=1 next typegen"
+    "typegen": "NEXT_BUILD_CI=1 next typegen",
+    "postinstall": "hacksnack-copy-assets"
   },
   "dependencies": {
     "@ebay/nice-modal-react": "^1.2.13",
