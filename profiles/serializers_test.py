@@ -62,7 +62,6 @@ def test_serialize_create_user(db, mocker):
     serializer.is_valid(raise_exception=True)
     user = serializer.save()
 
-    del profile["email_optin"]  # is write-only
     del profile["toc_optin"]  # is write-only
 
     profile.update(
