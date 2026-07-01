@@ -8,6 +8,20 @@ from users.tasks import reindex_user_learning_paths
 
 User = get_user_model()
 
+# User model fields managed by SCIM (set by UserAdapter.from_dict()).
+# _save_user() restricts writes to these columns so that non-SCIM data
+# loaded before this request is not written back over a concurrent update.
+_SCIM_USER_FIELDS = (
+    "email",
+    "username",
+    "first_name",
+    "last_name",
+    "is_active",
+    "scim_username",
+    "scim_external_id",
+    "global_id",
+)
+
 
 class LearnUserAdapter(UserAdapter):
     """
@@ -48,36 +62,33 @@ class LearnUserAdapter(UserAdapter):
     def save(self):
         """
         Save the user object and any related objects, such as the profile.
-
-        For existing users a SELECT FOR UPDATE row-level lock is acquired
-        before writing so that concurrent SCIM PATCH requests for the same
-        user (arriving on different pods) are serialized rather than
-        racing each other, which previously produced HTTP 409 conflicts.
-
-        After the database transaction commits, a Celery task is dispatched
-        to re-index any learning paths owned by this user, keeping
-        OpenSearch documents consistent without blocking the HTTP response
-        with synchronous I/O.
+        Triggers the new-user plugin hook after creation.
         """
         newly_created = self.is_new_user
-        user_pk = self.obj.pk
-        with transaction.atomic():
-            if not newly_created:
-                # Lock the user row so concurrent PATCH requests for the
-                # same user block here rather than racing to the UPDATE.
-                User.objects.select_for_update().get(pk=self.obj.pk)
-            super().save()
-            if not newly_created:
-                # Register the Celery dispatch inside the atomic block so
-                # on_commit fires after the transaction commits, not immediately
-                # (which would happen in autocommit mode if called outside).
-                transaction.on_commit(
-                    lambda: reindex_user_learning_paths.delay(user_pk)
-                )
+        super().save()
         if newly_created:
             pm = get_plugin_manager()
             hook = pm.hook
             hook.user_created(user=self.obj, user_data={})
+
+    def _save_user(self):
+        """
+        Serialize concurrent SCIM PATCH requests and schedule async reindexing.
+
+        Runs inside the transaction.atomic() from the parent save(). For existing
+        users, SELECT FOR UPDATE serializes concurrent PATCH requests for the same
+        user. update_fields restricts writes to SCIM-managed columns so that
+        non-SCIM data from before this request cannot overwrite a concurrent
+        update. After commit, dispatches async re-indexing for learning paths
+        owned by this user to keep OpenSearch documents consistent.
+        """
+        if not self.is_new_user:
+            User.objects.select_for_update().get(pk=self.obj.pk)
+            self.obj.save(update_fields=_SCIM_USER_FIELDS)
+            user_pk = self.obj.pk
+            transaction.on_commit(lambda: reindex_user_learning_paths.delay(user_pk))
+        else:
+            super()._save_user()
 
     def _save_related(self):
         """
