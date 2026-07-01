@@ -3,15 +3,11 @@ import { b2bApi } from "../../clients"
 import {
   OrganizationPage,
   ManagerContractDetail,
-  ManagerEnrollmentCode,
+  PaginatedManagerEnrollmentCodeList,
   B2bApiB2bOrganizationsRetrieveRequest,
   B2bApiB2bManagerOrganizationsContractsRetrieveRequest,
   B2bApiB2bManagerOrganizationsContractsCodesListRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
-
-type ContractCode = ManagerEnrollmentCode & {
-  redemption_status: "unassigned" | "assigned" | "redeemed"
-}
 
 const organizationKeys = {
   root: ["mitxonline", "organizations"],
@@ -50,6 +46,12 @@ const managerOrganizationKeys = {
   contractCodes: (
     opts: B2bApiB2bManagerOrganizationsContractsCodesListRequest,
   ) => [...managerOrganizationKeys.contractCodesRoot(), opts] as const,
+  // Prefix key used for invalidation — matches all pages/search states for one contract
+  contractCodesForContract: (id: number, orgId: number) =>
+    managerOrganizationKeys.contractCodes({
+      id,
+      parent_lookup_organization: orgId,
+    }),
 }
 
 const managerOrganizationQueries = {
@@ -57,7 +59,7 @@ const managerOrganizationQueries = {
     queryOptions({
       queryKey: managerOrganizationKeys.list(),
       queryFn: async (): Promise<OrganizationPage[]> =>
-        b2bApi.b2bManagerOrganizationsList().then((res) => res.data),
+        b2bApi.b2bManagerOrganizationsList().then((res) => res.data.results),
     }),
   managerContractDetail: (
     opts: B2bApiB2bManagerOrganizationsContractsRetrieveRequest,
@@ -74,10 +76,10 @@ const managerOrganizationQueries = {
   ) =>
     queryOptions({
       queryKey: managerOrganizationKeys.contractCodes(opts),
-      queryFn: async (): Promise<ContractCode[]> =>
+      queryFn: async (): Promise<PaginatedManagerEnrollmentCodeList> =>
         b2bApi
           .b2bManagerOrganizationsContractsCodesList(opts)
-          .then((res) => res.data as ContractCode[]),
+          .then((res) => res.data),
     }),
 }
 
@@ -87,5 +89,3 @@ export {
   managerOrganizationQueries,
   managerOrganizationKeys,
 }
-
-export type { ContractCode }

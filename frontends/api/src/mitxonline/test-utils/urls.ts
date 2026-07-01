@@ -90,8 +90,24 @@ const contracts = {
   contractsList: () => `${getApiBaseUrl()}/api/v0/b2b/contracts/`,
   managerContractDetail: (orgId: number, contractId: number) =>
     `${getApiBaseUrl()}/api/v0/b2b/manager/organizations/${orgId}/contracts/${contractId}/`,
-  managerContractCodes: (orgId: number, contractId: number) =>
-    `${getApiBaseUrl()}/api/v0/b2b/manager/organizations/${orgId}/contracts/${contractId}/codes/`,
+  managerContractCodes: (
+    orgId: number,
+    contractId: number,
+    params?: {
+      page?: number
+      page_size?: number
+      search_term?: string
+      status?: string
+    },
+  ) => {
+    // queryify does not filter undefined values, so strip them first to avoid e.g. search_term=undefined in the URL
+    const clean = params
+      ? Object.fromEntries(
+          Object.entries(params).filter(([, v]) => v !== undefined),
+        )
+      : undefined
+    return `${getApiBaseUrl()}/api/v0/b2b/manager/organizations/${orgId}/contracts/${contractId}/codes/${queryify(clean)}`
+  },
   managerContractBulkAssign: (orgId: number, contractId: number) =>
     `${getApiBaseUrl()}/api/v0/b2b/manager/organizations/${orgId}/contracts/${contractId}/codes/bulk_assign/`,
   managerContractCodeRemind: (

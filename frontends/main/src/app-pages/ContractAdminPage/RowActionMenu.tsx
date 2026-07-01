@@ -20,7 +20,7 @@ import {
   useRemindCode,
   useRevokeCode,
 } from "api/mitxonline-hooks/organizations"
-import type { ContractCode } from "api/mitxonline-hooks/organizations"
+import type { ManagerEnrollmentCode } from "api/mitxonline-hooks/organizations"
 import type { AxiosError } from "axios"
 
 const ActionMenuItem = styled(MenuItem)(({ theme }) => ({
@@ -65,7 +65,7 @@ const CopiedMenuItem = styled(ActionMenuItem)(({ theme }) => ({
 type ActionSeverity = "success" | "error"
 
 type RowActionMenuProps = {
-  code: ContractCode
+  code: ManagerEnrollmentCode
   orgId: number
   contractId: number
   /** Surfaces action outcomes in the page-level result Alert. */
@@ -75,10 +75,10 @@ type RowActionMenuProps = {
 /**
  * Three-dot row action menu for the contract admin codes table.
  *
- * Pending rows: Change assigned email (reassign, confirmed), Resend claim
- * email (remind), Copy claim link, Release seat (revoke, confirmed).
+ * Pending (assigned) rows: Change assigned email, Resend claim email, Copy
+ * claim link, Release seat.
  *
- * Redeemed rows: Uninvite (revoke, confirmed).
+ * Redeemed rows: button is disabled — no actions available.
  */
 const RowActionMenu: React.FC<RowActionMenuProps> = ({
   code,
@@ -137,13 +137,13 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({
         id: contractId,
         parent_lookup_organization: orgId,
       })
-      onResult(isRedeemed ? "Learner uninvited." : "Seat released.", "success")
+      onResult("Seat released.", "success")
     } catch (err) {
       const status = (err as AxiosError)?.response?.status
       onResult(
         status === 409
-          ? "This code has already been redeemed and cannot be revoked."
-          : "Could not complete the action. Please try again.",
+          ? "This seat has already been redeemed and cannot be released."
+          : "Could not release the seat. Please try again.",
         "error",
       )
     }
@@ -223,45 +223,19 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({
     }
   }
 
-  const menuItems = isRedeemed ? (
-    <DestructiveMenuItem onClick={openRevokeConfirm}>
-      Uninvite
-    </DestructiveMenuItem>
-  ) : (
-    [
-      <ActionMenuItem key="change-email" onClick={openReassign}>
-        Change assigned email
-      </ActionMenuItem>,
-      hasAssignedEmail ? (
-        <ActionMenuItem key="resend-email" onClick={handleResend}>
-          Resend claim email
-        </ActionMenuItem>
-      ) : (
-        <Tooltip
-          key="resend-email"
-          title="No email is assigned to this seat yet."
-          describeChild
-        >
-          <ActionMenuItem disabled aria-label="Resend claim email">
-            Resend claim email
-          </ActionMenuItem>
-        </Tooltip>
-      ),
-      copied ? (
-        <CopiedMenuItem key="copy-link" disabled>
-          Link copied to clipboard
-        </CopiedMenuItem>
-      ) : (
-        <ActionMenuItem key="copy-link" onClick={handleCopyClaimLink}>
-          Copy claim link
-        </ActionMenuItem>
-      ),
-      <Divider component="li" role="separator" key="divider" />,
-      <DestructiveMenuItem key="release-seat" onClick={openRevokeConfirm}>
-        Release seat
-      </DestructiveMenuItem>,
-    ]
-  )
+  // Redeemed rows have no available actions — render a disabled button only.
+  if (isRedeemed) {
+    return (
+      <ActionButton
+        aria-label={`No actions available for ${assignedTo}`}
+        variant="text"
+        size="small"
+        disabled
+      >
+        <RiMoreLine size={16} />
+      </ActionButton>
+    )
+  }
 
   return (
     <>
@@ -287,21 +261,43 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({
         onClose={handleClose}
         MenuListProps={{ "aria-labelledby": `row-action-trigger-${code.id}` }}
       >
-        {menuItems}
+        <ActionMenuItem onClick={openReassign}>
+          Change assigned email
+        </ActionMenuItem>
+        {hasAssignedEmail ? (
+          <ActionMenuItem onClick={handleResend}>
+            Resend claim email
+          </ActionMenuItem>
+        ) : (
+          <Tooltip title="No email is assigned to this seat yet." describeChild>
+            <ActionMenuItem disabled aria-label="Resend claim email">
+              Resend claim email
+            </ActionMenuItem>
+          </Tooltip>
+        )}
+        {copied ? (
+          <CopiedMenuItem disabled>Link copied to clipboard</CopiedMenuItem>
+        ) : (
+          <ActionMenuItem onClick={handleCopyClaimLink}>
+            Copy claim link
+          </ActionMenuItem>
+        )}
+        <Divider component="li" role="separator" />
+        <DestructiveMenuItem onClick={openRevokeConfirm}>
+          Release seat
+        </DestructiveMenuItem>
       </Menu>
       <Dialog
         open={revokeConfirmOpen}
         onClose={() => setRevokeConfirmOpen(false)}
         onConfirm={handleRevokeConfirm}
-        title={isRedeemed ? "Uninvite learner" : "Release seat"}
-        confirmText={isRedeemed ? "Uninvite" : "Release seat"}
+        title="Release seat"
+        confirmText="Release seat"
         maxWidth="sm"
         aria-describedby={revokeDescId}
       >
         <p id={revokeDescId} style={{ margin: 0 }}>
-          {isRedeemed
-            ? `This will remove ${assignedTo}'s access to the program. This cannot be undone.`
-            : `This will revoke the invitation for ${assignedTo} and return the seat to the unassigned pool.`}
+          {`This will revoke the invitation for ${assignedTo} and return the seat to the unassigned pool.`}
         </p>
       </Dialog>
       <FormDialog

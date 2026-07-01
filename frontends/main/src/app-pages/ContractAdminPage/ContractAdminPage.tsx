@@ -1,8 +1,12 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import Image from "next/image"
-import { useQuery } from "@tanstack/react-query"
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import {
   alpha,
@@ -13,7 +17,6 @@ import {
   Skeleton,
   Stack,
   TabContext,
-  Tooltip,
   Typography,
   styled,
 } from "ol-components"
@@ -26,7 +29,10 @@ import {
 } from "@mitodl/smoot-design"
 import { AssignSeatsSection } from "./AssignSeatsSection"
 import { RowActionMenu } from "./RowActionMenu"
-import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
+import {
+  managerOrganizationQueries,
+  type ManagerEnrollmentCode,
+} from "api/mitxonline-hooks/organizations"
 import type { AxiosError } from "axios"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError } from "@/common/errors"
@@ -34,8 +40,6 @@ import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
-
-const PAGE_SIZE = 20
 
 const Page = styled(Container)(({ theme }) => ({
   maxWidth: "1400px",
@@ -324,17 +328,33 @@ function formatDate(iso: string | null | undefined): string {
   })
 }
 
+function buildCsvRow(values: (string | null | undefined)[]): string {
+  return values
+    .map((v) => {
+      const s = v ?? ""
+      return s.includes(",") || s.includes('"') || s.includes("\n")
+        ? `"${s.replace(/"/g, '""')}"`
+        : s
+    })
+    .join(",")
+}
+
 type ContractAdminPageInternalProps = {
   orgSlug: string
   contractSlug: string
 }
 
+const CODES_PAGE_SIZE = 25
+const CSV_EXPORT_PAGE_SIZE = 500
+
 const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   orgSlug,
   contractSlug,
 }) => {
+  const queryClient = useQueryClient()
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
   const [page, setPage] = useState(1)
   const [searchAnnouncement, setSearchAnnouncement] = useState("")
   const [rowActionResult, setRowActionResult] = useState<{
@@ -342,6 +362,16 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     severity: "success" | "error"
   } | null>(null)
   const [rowActionAnnouncement, setRowActionAnnouncement] = useState("")
+  const [isExporting, setIsExporting] = useState(false)
+
+  // Debounce search query to avoid firing a new request on every keystroke.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+      setPage(1)
+    }, 300)
+    return () => clearTimeout(id)
+  }, [searchQuery])
 
   // Mirror row-action Alert text into an assertive live region — smoot-design
   // Alert announces only its aria-describedby ("success/error message") via NVDA
@@ -371,6 +401,19 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const contract = org?.contracts.find((c) => c.slug === contractSlug)
 
   const {
+    data: contractDetail,
+    isLoading: isLoadingContractDetail,
+    isError: isContractDetailError,
+    error: contractDetailError,
+  } = useQuery({
+    ...managerOrganizationQueries.managerContractDetail({
+      id: contract?.id ?? 0,
+      parent_lookup_organization: org?.id ?? 0,
+    }),
+    enabled: !!org && !!contract,
+  })
+
+  const {
     data: codes,
     isLoading: isLoadingCodes,
     isError: isCodesError,
@@ -379,9 +422,36 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     ...managerOrganizationQueries.managerContractCodes({
       id: contract?.id ?? 0,
       parent_lookup_organization: org?.id ?? 0,
+      page,
+      page_size: CODES_PAGE_SIZE,
+      search_term: debouncedSearchQuery || undefined,
+      status:
+        statusFilter === "redeemed"
+          ? "redeemed"
+          : statusFilter === "pending"
+            ? "assigned"
+            : undefined,
     }),
     enabled: !!org && !!contract,
+    placeholderData: keepPreviousData,
   })
+
+  // Announce the result count after the query settles following a search change.
+  // Using a ref to track the last announced query so we only fire once per change,
+  // not on every re-render while loading.
+  const announcedQueryRef = useRef("")
+  useEffect(() => {
+    if (isLoadingCodes || announcedQueryRef.current === debouncedSearchQuery)
+      return
+    announcedQueryRef.current = debouncedSearchQuery
+    const count = codes?.count ?? 0
+    setSearchAnnouncement("")
+    const id = setTimeout(
+      () => setSearchAnnouncement(`${count} result${count !== 1 ? "s" : ""}`),
+      0,
+    )
+    return () => clearTimeout(id)
+  }, [isLoadingCodes, debouncedSearchQuery, codes?.count])
 
   if (isLoadingOrgs) {
     return (
@@ -407,6 +477,14 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     return <ErrorContent title="Something went wrong" timSays="Oops!" />
   }
 
+  if (isContractDetailError) {
+    const status = (contractDetailError as AxiosError)?.response?.status
+    if (status === 403 || status === 401) {
+      return <ErrorContent title="Access denied" timSays="403" />
+    }
+    return <ErrorContent title="Something went wrong" timSays="Oops!" />
+  }
+
   if (!org) {
     return <ErrorContent title="Access denied" timSays="403" />
   }
@@ -415,44 +493,15 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     return <ErrorContent title="Contract not found" timSays="404" />
   }
 
-  const allCodes = codes ?? []
-  const totalPurchased = isLoadingCodes ? undefined : allCodes.length
-  const totalUnassigned = allCodes.filter(
-    (code) => code.redemption_status === "unassigned",
-  ).length
-  const totalPendingClaim = allCodes.filter(
-    (code) => code.redemption_status === "assigned",
-  ).length
-  const totalRedeemed = allCodes.filter(
-    (code) => code.redemption_status === "redeemed",
-  ).length
+  const totalPurchased = contractDetail?.total_codes
+  const unassignedCount = contractDetail?.unassigned_codes
+  const assignedCount = contractDetail?.assigned_codes
+  const redeemedCount = contractDetail?.redeemed_codes
 
-  const visibleCodes = (codes ?? []).filter(
-    (code) => code.redemption_status !== "unassigned",
-  )
+  const pageResults = codes?.results ?? []
 
-  const tabFilteredCodes = visibleCodes.filter((code) => {
-    return (
-      statusFilter === "all" ||
-      (statusFilter === "redeemed" && code.redemption_status === "redeemed") ||
-      (statusFilter === "pending" && code.redemption_status === "assigned")
-    )
-  })
-
-  const filteredCodes = tabFilteredCodes.filter((code) => {
-    if (!searchQuery) return true
-    const q = searchQuery.toLowerCase()
-    return (
-      (code.assigned_to ?? "").toLowerCase().includes(q) ||
-      (code.assigned_name ?? "").toLowerCase().includes(q)
-    )
-  })
-
-  const totalPages = Math.ceil(filteredCodes.length / PAGE_SIZE)
-  const pagedCodes = filteredCodes.slice(
-    (page - 1) * PAGE_SIZE,
-    page * PAGE_SIZE,
-  )
+  const totalCount = codes?.count ?? 0
+  const totalPages = Math.ceil(totalCount / CODES_PAGE_SIZE)
 
   const handleTabChange = (_: React.SyntheticEvent, val: StatusFilter) => {
     setStatusFilter(val)
@@ -461,14 +510,71 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value)
-    setPage(1)
   }
 
-  const announceSearchCount = (count: number) => {
-    setSearchAnnouncement("")
-    setTimeout(() => {
-      setSearchAnnouncement(`${count} result${count !== 1 ? "s" : ""}`)
-    }, 0)
+  const handleExportCsv = async () => {
+    if (!totalPurchased) return
+    setIsExporting(true)
+    try {
+      const allRows: ManagerEnrollmentCode[] = []
+      let page = 1
+      let hasMore = true
+      while (hasMore) {
+        const data = await queryClient.fetchQuery(
+          managerOrganizationQueries.managerContractCodes({
+            id: contract.id,
+            parent_lookup_organization: org.id,
+            page,
+            page_size: CSV_EXPORT_PAGE_SIZE,
+          }),
+        )
+        allRows.push(...data.results)
+        hasMore = !!data.next
+        page++
+      }
+      const rows = allRows
+      const header = buildCsvRow([
+        "Assigned to",
+        "Redeemed by",
+        "Status",
+        "Assigned on",
+        "Redeemed on",
+        "Last sent",
+      ])
+      const dataRows = rows
+        .filter((c) => c.redemption_status !== "unassigned")
+        .map((c) =>
+          buildCsvRow([
+            c.assigned_to,
+            c.redeemed_by,
+            c.redemption_status === "redeemed" ? "Redeemed" : "Pending claim",
+            formatDate(c.assigned_on),
+            formatDate(c.redeemed_on),
+            formatDate(c.last_sent),
+          ]),
+        )
+      const csv = [header, ...dataRows].join("\n")
+      const blob = new Blob([csv], { type: "text/csv" })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = "seat-assignments.csv"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      setRowActionResult({
+        message: "CSV download started.",
+        severity: "success",
+      })
+    } catch {
+      setRowActionResult({
+        message: "Could not export CSV. Please try again.",
+        severity: "error",
+      })
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   return (
@@ -489,7 +595,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
               <OrgName component="h1">{org.name}</OrgName>
               <ContractSubtitle>
                 <span>{contract.name}</span>
-                {!isLoadingCodes && totalPurchased !== undefined ? (
+                {!isLoadingContractDetail && totalPurchased !== undefined ? (
                   <>
                     {" "}
                     · <span>{totalPurchased} seats</span>
@@ -500,34 +606,34 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
           </OrgDetailsContainer>
           <StatsSide>
             <StatBlock role="group" aria-label="Total purchased">
-              {isLoadingCodes ? (
+              {isLoadingContractDetail ? (
                 <Skeleton width="48px" height="36px" />
               ) : (
-                <StatValue>{totalPurchased ?? STUB}</StatValue>
+                <StatValue>{totalPurchased}</StatValue>
               )}
               <StatLabel>Total purchased</StatLabel>
             </StatBlock>
             <StatBlock role="group" aria-label="Unassigned">
-              {isLoadingCodes ? (
+              {isLoadingContractDetail ? (
                 <Skeleton width="48px" height="36px" />
               ) : (
-                <StatValue>{totalUnassigned}</StatValue>
+                <StatValue>{unassignedCount}</StatValue>
               )}
               <StatLabel>Unassigned</StatLabel>
             </StatBlock>
             <StatBlock role="group" aria-label="Pending claim">
-              {isLoadingCodes ? (
+              {isLoadingContractDetail ? (
                 <Skeleton width="48px" height="36px" />
               ) : (
-                <StatValue>{totalPendingClaim}</StatValue>
+                <StatValue>{assignedCount}</StatValue>
               )}
               <StatLabel>Pending claim</StatLabel>
             </StatBlock>
             <StatBlock role="group" aria-label="Redeemed">
-              {isLoadingCodes ? (
+              {isLoadingContractDetail ? (
                 <Skeleton width="48px" height="36px" />
               ) : (
-                <StatValue>{totalRedeemed}</StatValue>
+                <StatValue>{redeemedCount}</StatValue>
               )}
               <StatLabel>Redeemed</StatLabel>
             </StatBlock>
@@ -537,7 +643,8 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
         <AssignSeatsSection
           orgId={org.id}
           contractId={contract.id}
-          availableSeats={totalUnassigned}
+          availableSeats={unassignedCount ?? 0}
+          isLoadingSeats={isLoadingContractDetail}
         />
 
         {/* Seat Assignments */}
@@ -574,25 +681,21 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                 onClear={() => {
                   setSearchQuery("")
                   setPage(1)
-                  announceSearchCount(tabFilteredCodes.length)
                 }}
-                onSubmit={() => announceSearchCount(filteredCodes.length)}
+                onSubmit={() => {}}
               />
             </ControlsLeft>
             <ExportButtonWrapper>
-              <Tooltip title="Coming soon" describeChild>
-                <Stack
-                  component="span"
-                  sx={{
-                    width: { xs: "100%", md: "auto" },
-                    "& > button": { width: { xs: "100%", md: "auto" } },
-                  }}
-                >
-                  <Button variant="bordered" disabled>
-                    Export CSV
-                  </Button>
-                </Stack>
-              </Tooltip>
+              <Button
+                variant="bordered"
+                onClick={handleExportCsv}
+                disabled={
+                  isLoadingContractDetail || !totalPurchased || isExporting
+                }
+                aria-busy={isExporting}
+              >
+                {isExporting ? "Exporting..." : "Export CSV"}
+              </Button>
             </ExportButtonWrapper>
           </SeatAssignmentsControls>
           <VisuallyHidden aria-live="polite" aria-atomic="true">
@@ -645,9 +748,9 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                 <VisuallyHidden aria-live="polite" aria-atomic="true">
                   {isLoadingCodes
                     ? "Loading seat assignments"
-                    : filteredCodes.length === 0
+                    : pageResults.length === 0
                       ? "No seat assignments found"
-                      : `Showing ${filteredCodes.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filteredCodes.length)} of ${filteredCodes.length} assignment${filteredCodes.length !== 1 ? "s" : ""}`}
+                      : `Showing page ${page} of ${totalPages}`}
                 </VisuallyHidden>
                 {isLoadingCodes ? (
                   <>
@@ -659,7 +762,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                       </TableRow>
                     ))}
                   </>
-                ) : pagedCodes.length === 0 ? (
+                ) : pageResults.length === 0 ? (
                   <TableRow role="row">
                     <EmptyTableMessage
                       role="cell"
@@ -670,7 +773,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                     </EmptyTableMessage>
                   </TableRow>
                 ) : (
-                  pagedCodes.map((code) => (
+                  pageResults.map((code) => (
                     <TableRow role="row" key={code.id}>
                       <TableCell
                         role="cell"
@@ -727,11 +830,9 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
             </div>
             <TableFooter>
               <TableFootnote aria-hidden="true">
-                Showing{" "}
-                {filteredCodes.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–
-                {Math.min(page * PAGE_SIZE, filteredCodes.length)} of{" "}
-                {filteredCodes.length} assignment
-                {filteredCodes.length !== 1 ? "s" : ""}
+                {totalCount === 0
+                  ? "No assignments"
+                  : `Page ${page} of ${totalPages}`}
               </TableFootnote>
               {totalPages > 1 && (
                 <Pagination

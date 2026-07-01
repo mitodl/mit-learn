@@ -51,7 +51,12 @@ describe("AssignSeatsSection", () => {
 
   test("renders section title and key UI elements", () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     expect(
@@ -68,22 +73,30 @@ describe("AssignSeatsSection", () => {
     expect(screen.getByText("(download sample CSV)")).toBeInTheDocument()
   })
 
-  test("download sample CSV pseudo-link is in the tab order and disabled", () => {
+  test("download sample CSV link is rendered", () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
-    // Only the download link is still disabled — import from CSV is now active
-    const downloadLink = screen.getByRole("button", {
+    const downloadLink = screen.getByRole("link", {
       name: "(download sample CSV)",
     })
-    expect(downloadLink).toHaveAttribute("tabindex", "0")
-    expect(downloadLink).toHaveAttribute("aria-disabled", "true")
+    expect(downloadLink).toBeInTheDocument()
   })
 
   test("import from CSV button is active and in the tab order", () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const importButton = screen.getByRole("button", { name: "import from CSV" })
@@ -94,7 +107,12 @@ describe("AssignSeatsSection", () => {
 
   test("Assign Seats button is disabled when textarea is empty", () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     expect(screen.getByRole("button", { name: "Assign Seats" })).toBeDisabled()
@@ -102,7 +120,12 @@ describe("AssignSeatsSection", () => {
 
   test("Assign Seats button is disabled when valid email count exceeds available seats", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={1} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={1}
+        isLoadingSeats={false}
+      />,
     )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
@@ -113,7 +136,12 @@ describe("AssignSeatsSection", () => {
 
   test("Assign Seats button enables when at least one valid email is entered", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
@@ -126,7 +154,12 @@ describe("AssignSeatsSection", () => {
 
   test("Assign Seats button stays disabled when only invalid emails are entered", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
@@ -137,7 +170,12 @@ describe("AssignSeatsSection", () => {
 
   test("sole invalid token is not highlighted while focused (no preceding comma)", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
@@ -150,7 +188,12 @@ describe("AssignSeatsSection", () => {
 
   test("last invalid token is highlighted while focused when preceded by a comma", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
@@ -163,7 +206,12 @@ describe("AssignSeatsSection", () => {
 
   test("last invalid token is highlighted after blur (no trailing comma)", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
@@ -177,7 +225,12 @@ describe("AssignSeatsSection", () => {
 
   test("shows valid/invalid counts after entering emails", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
@@ -189,7 +242,12 @@ describe("AssignSeatsSection", () => {
 
   test("shows only valid count when all emails are valid", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
@@ -201,7 +259,12 @@ describe("AssignSeatsSection", () => {
 
   test("validation badge is not shown when textarea is empty", () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     expect(screen.queryByText(/valid/i)).not.toBeInTheDocument()
@@ -209,7 +272,12 @@ describe("AssignSeatsSection", () => {
 
   test("live region announces email validation summary after debounce", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
@@ -229,7 +297,12 @@ describe("AssignSeatsSection", () => {
 
   test("clicking Assign Seats opens the confirm modal", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
@@ -245,7 +318,12 @@ describe("AssignSeatsSection", () => {
 
   test("modal shows invalid emails when textarea has mixed input", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
@@ -258,7 +336,12 @@ describe("AssignSeatsSection", () => {
 
   test("modal shows duplicate count when textarea has repeated emails", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
@@ -273,7 +356,12 @@ describe("AssignSeatsSection", () => {
 
   test("closing the modal hides it", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
@@ -294,7 +382,12 @@ describe("AssignSeatsSection", () => {
 
   test("importing a valid CSV opens the modal without populating the textarea", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const csvContent = "email\nalice@example.com\nbob@example.com"
@@ -318,7 +411,12 @@ describe("AssignSeatsSection", () => {
 
   test("importing a CSV with invalid emails shows them in the modal", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const csvContent = "alice@example.com\nbad@\nnot-quite@.com"
@@ -336,7 +434,12 @@ describe("AssignSeatsSection", () => {
 
   test("importing a CSV with duplicates shows duplicate count in modal", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const csvContent = "alice@example.com\nbob@example.com\nalice@example.com"
@@ -355,7 +458,12 @@ describe("AssignSeatsSection", () => {
 
   test("importing a CSV with no-@ rows shows skipped count in modal", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const csvContent =
@@ -375,7 +483,12 @@ describe("AssignSeatsSection", () => {
 
   test("importing a CSV with no valid emails shows inline error", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const csvContent = "Email\nNot An Email\nbad@"
@@ -397,7 +510,12 @@ describe("AssignSeatsSection", () => {
 
   test("assertive live region announces CSV error text for screen readers", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const csvContent = "Email\nNot An Email\nbad@"
@@ -420,7 +538,12 @@ describe("AssignSeatsSection", () => {
 
   test("accepts newline-separated emails", async () => {
     renderWithProviders(
-      <AssignSeatsSection orgId={1} contractId={2} availableSeats={50} />,
+      <AssignSeatsSection
+        orgId={1}
+        contractId={2}
+        availableSeats={50}
+        isLoadingSeats={false}
+      />,
     )
 
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
@@ -462,6 +585,7 @@ describe("AssignSeatsSection", () => {
           orgId={ORG_ID}
           contractId={CONTRACT_ID}
           availableSeats={50}
+          isLoadingSeats={false}
         />,
       )
 
@@ -492,6 +616,7 @@ describe("AssignSeatsSection", () => {
           orgId={ORG_ID}
           contractId={CONTRACT_ID}
           availableSeats={50}
+          isLoadingSeats={false}
         />,
       )
 
@@ -514,6 +639,7 @@ describe("AssignSeatsSection", () => {
           orgId={ORG_ID}
           contractId={CONTRACT_ID}
           availableSeats={50}
+          isLoadingSeats={false}
         />,
       )
 

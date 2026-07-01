@@ -39,10 +39,10 @@ const useBulkAssignSeats = () => {
     ) => b2bApi.b2bManagerOrganizationsContractsCodesBulkAssignCreate(opts),
     onSettled: (_data, _err, vars) => {
       queryClient.invalidateQueries({
-        queryKey: managerOrganizationKeys.contractCodes({
-          id: vars.id,
-          parent_lookup_organization: vars.parent_lookup_organization,
-        }),
+        queryKey: managerOrganizationKeys.contractCodesForContract(
+          vars.id,
+          vars.parent_lookup_organization,
+        ),
       })
     },
   })
@@ -57,10 +57,10 @@ const useRemindCode = () => {
     ) => b2bApi.b2bManagerOrganizationsContractsCodesRemindCreate(opts),
     onSettled: (_data, _err, vars) => {
       queryClient.invalidateQueries({
-        queryKey: managerOrganizationKeys.contractCodes({
-          id: vars.id,
-          parent_lookup_organization: vars.parent_lookup_organization,
-        }),
+        queryKey: managerOrganizationKeys.contractCodesForContract(
+          vars.id,
+          vars.parent_lookup_organization,
+        ),
       })
     },
   })
@@ -75,10 +75,10 @@ const useRevokeCode = () => {
     ) => b2bApi.b2bManagerOrganizationsContractsCodesRevokeDestroy(opts),
     onSettled: (_data, _err, vars) => {
       queryClient.invalidateQueries({
-        queryKey: managerOrganizationKeys.contractCodes({
-          id: vars.id,
-          parent_lookup_organization: vars.parent_lookup_organization,
-        }),
+        queryKey: managerOrganizationKeys.contractCodesForContract(
+          vars.id,
+          vars.parent_lookup_organization,
+        ),
       })
     },
   })
@@ -97,10 +97,10 @@ const useReassignCode = () => {
     ) => b2bApi.b2bManagerOrganizationsContractsCodesReassignUpdate(opts),
     onSettled: (_data, _err, vars) => {
       queryClient.invalidateQueries({
-        queryKey: managerOrganizationKeys.contractCodes({
-          id: vars.id,
-          parent_lookup_organization: vars.parent_lookup_organization,
-        }),
+        queryKey: managerOrganizationKeys.contractCodesForContract(
+          vars.id,
+          vars.parent_lookup_organization,
+        ),
       })
     },
   })
@@ -115,4 +115,7 @@ export {
   useRemindCode,
   useRevokeCode,
 }
-export type { ContractCode } from "./queries"
+export type {
+  ManagerEnrollmentCode,
+  PaginatedManagerEnrollmentCodeList,
+} from "@mitodl/mitxonline-api-axios/v2"

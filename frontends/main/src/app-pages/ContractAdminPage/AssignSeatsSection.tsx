@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useMemo, useRef, useState } from "react"
-import { Stack, Tooltip, Typography, styled } from "ol-components"
+import { Link, Stack, Typography, styled } from "ol-components"
 import { Alert, Button, VisuallyHidden } from "@mitodl/smoot-design"
 import {
   isValidEmail,
@@ -57,14 +57,6 @@ const ActiveLink = styled.span(({ theme }) => ({
   textDecoration: "underline",
   cursor: "pointer",
   "&:hover": { opacity: 0.8 },
-}))
-
-const DisabledLink = styled.span(({ theme }) => ({
-  ...theme.typography.subtitle2,
-  color: theme.custom.colors.darkRed,
-  textDecoration: "underline",
-  cursor: "not-allowed",
-  opacity: 0.5,
 }))
 
 const CountBadge = styled.div<{ $variant: "valid" | "warning" | "default" }>(
@@ -215,12 +207,14 @@ type AssignSeatsSectionProps = {
   orgId: number
   contractId: number
   availableSeats: number
+  isLoadingSeats: boolean
 }
 
 const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
   orgId,
   contractId,
   availableSeats,
+  isLoadingSeats,
 }) => {
   const [emailInput, setEmailInput] = useState("")
   const [focused, setFocused] = useState(false)
@@ -514,7 +508,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
         <ButtonWrapper>
           <Button
             variant="primary"
-            disabled={!canSubmit || overCapacity}
+            disabled={!canSubmit || overCapacity || isLoadingSeats}
             onClick={handleAssignSeats}
           >
             Assign Seats
@@ -546,11 +540,14 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
         >
           import from CSV
         </ActiveLink>
-        <Tooltip title="Coming soon" describeChild>
-          <DisabledLink role="button" aria-disabled="true" tabIndex={0}>
-            (download sample CSV)
-          </DisabledLink>
-        </Tooltip>
+        <Link
+          href="/sample-seat-assignments.csv"
+          color="red"
+          download
+          target="_blank"
+        >
+          (download sample CSV)
+        </Link>
       </Stack>
       {!overCapacity && (invalidCount > 0 || duplicateCount > 0) && (
         <Alert severity="warning">

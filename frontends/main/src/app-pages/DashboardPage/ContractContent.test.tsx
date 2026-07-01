@@ -1413,7 +1413,12 @@ describe("ContractContent", () => {
     mockedUseFeatureFlagEnabled.mockImplementation(() => false)
     const { orgX } = setupProgramsAndCourses()
 
-    setMockResponse.get(managerOrganizationsUrl, [orgX])
+    setMockResponse.get(managerOrganizationsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [orgX],
+    })
 
     renderWithProviders(
       <ContractContent
@@ -1436,7 +1441,12 @@ describe("ContractContent", () => {
 
     // Return a different org — user is a manager elsewhere, not for orgX
     const otherOrg = factories.organizations.organization({})
-    setMockResponse.get(managerOrganizationsUrl, [otherOrg])
+    setMockResponse.get(managerOrganizationsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [otherOrg],
+    })
 
     renderWithProviders(
       <ContractContent
@@ -1457,7 +1467,12 @@ describe("ContractContent", () => {
     )
     const { orgX } = setupProgramsAndCourses()
 
-    setMockResponse.get(managerOrganizationsUrl, [orgX])
+    setMockResponse.get(managerOrganizationsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [orgX],
+    })
 
     renderWithProviders(
       <ContractContent

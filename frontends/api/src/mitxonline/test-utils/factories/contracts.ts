@@ -3,16 +3,16 @@ import type {
   BulkAssignError,
   BulkAssignResult,
   ContractPage,
+  ManagerEnrollmentCode,
+  PaginatedManagerEnrollmentCodeList,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { makePaginatedFactory } from "ol-test-utilities"
-import type { ContractCode } from "../../hooks/organizations"
 
 const contract = (overrides: Partial<ContractPage> = {}): ContractPage => ({
   id: faker.number.int(),
   contract_end: faker.date.future().toISOString(),
   contract_start: faker.date.past().toISOString(),
   description: faker.lorem.sentence(),
-  integration_type: "non-sso" as const,
   name: faker.company.name(),
   organization: faker.number.int(),
   slug: faker.lorem.slug(),
@@ -26,7 +26,19 @@ const contract = (overrides: Partial<ContractPage> = {}): ContractPage => ({
 
 const contracts = makePaginatedFactory(contract)
 
-const contractCode = (overrides: Partial<ContractCode> = {}): ContractCode => {
+const paginatedContractCodes = (
+  results: ManagerEnrollmentCode[],
+  opts: { count?: number; next?: string | null; previous?: string | null } = {},
+): PaginatedManagerEnrollmentCodeList => ({
+  count: opts.count ?? results.length,
+  next: opts.next ?? null,
+  previous: opts.previous ?? null,
+  results,
+})
+
+const contractCode = (
+  overrides: Partial<ManagerEnrollmentCode> = {},
+): ManagerEnrollmentCode => {
   const status = overrides.redemption_status ?? "assigned"
   const isAssigned = status !== "unassigned"
   const isRedeemed = status === "redeemed"
@@ -61,4 +73,11 @@ const bulkAssignResult = (
   ...overrides,
 })
 
-export { contract, contracts, contractCode, bulkAssignError, bulkAssignResult }
+export {
+  contract,
+  contracts,
+  contractCode,
+  paginatedContractCodes,
+  bulkAssignError,
+  bulkAssignResult,
+}
