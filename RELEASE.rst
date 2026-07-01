@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.73.0
+--------------
+
+- hacksnack postinstall (#3555)
+- Make the Profile.email_optin field writable (#3552)
+- hacksnack game (#3489)
+
 Version 0.72.3 (Released July 01, 2026)
 --------------
 
