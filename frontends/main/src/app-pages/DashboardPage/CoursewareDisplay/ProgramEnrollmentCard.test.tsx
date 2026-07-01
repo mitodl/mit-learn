@@ -87,7 +87,7 @@ describe.each([
     ).not.toBeInTheDocument()
   })
 
-  test("shows 'Paid - Certificate Included' for verified enrollment without a certificate", () => {
+  test("shows 'Certificate track' for verified enrollment without a certificate", () => {
     const programEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
         enrollment_mode: "verified",
@@ -97,11 +97,11 @@ describe.each([
       <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
     )
     expect(within(getCard()).getByTestId("upgraded-banner")).toHaveTextContent(
-      "Paid - Certificate Included",
+      "Certificate track",
     )
   })
 
-  test("does not show 'Paid - Certificate Included' when verified enrollment has a certificate", () => {
+  test("does not show 'Certificate track' when verified enrollment has a certificate", () => {
     const programEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
         enrollment_mode: "verified",
@@ -115,7 +115,7 @@ describe.each([
     ).not.toBeInTheDocument()
   })
 
-  test("does not show 'Paid - Certificate Included' for audit enrollment", () => {
+  test("does not show 'Certificate track' for audit enrollment", () => {
     const programEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
         enrollment_mode: "audit",

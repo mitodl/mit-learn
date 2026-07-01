@@ -24,7 +24,7 @@ import {
 } from "./model/dashboardViewModel"
 import { getCourseDateText } from "./courseDateUtils"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
-import { RiAwardLine, RiMore2Line } from "@remixicon/react"
+import { RiArrowUpCircleLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { isInPast, calendarDaysUntil, NoSSR } from "ol-utilities"
 import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
@@ -41,11 +41,11 @@ const formatUpgradeTime = (daysFloat: number) => {
   if (daysFloat < 0) return ""
   const days = Math.floor(daysFloat)
   if (days > 1) {
-    return `${days} days remaining`
+    return ` · ${days} days remaining`
   } else if (days === 1) {
-    return `${days} day remaining`
+    return ` · ${days} day remaining`
   }
-  return "Less than a day remaining"
+  return " · Less than a day remaining"
 }
 
 const UpgradeBanner: React.FC<
@@ -96,8 +96,8 @@ const UpgradeBanner: React.FC<
   return (
     <SubtitleLinkRoot layout={layout} {...others}>
       <SubtitleLink layout={layout} href="#" onClick={handleUpgradeClick}>
-        <RiAwardLine size="16px" />
-        {`Add a certificate for ${formattedPrice}`}
+        <RiArrowUpCircleLine size="16px" />
+        {`Upgrade for certificate - ${formattedPrice}`}
       </SubtitleLink>
       {calendarDays !== null && (
         <NoSSR>

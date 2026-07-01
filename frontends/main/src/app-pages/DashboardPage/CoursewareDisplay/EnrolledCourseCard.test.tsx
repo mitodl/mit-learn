@@ -464,7 +464,7 @@ describe.each([
     })
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
     const banner = within(getCard()).getByTestId("upgrade-root")
-    expect(banner).toHaveTextContent(`Add a certificate for $${price}`)
+    expect(banner).toHaveTextContent(`Upgrade for certificate - $${price}`)
     expect(banner).toHaveTextContent(/5 days remaining/)
   })
 
@@ -484,7 +484,7 @@ describe.each([
     })
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
     const banner = within(getCard()).getByTestId("upgrade-root")
-    expect(banner).toHaveTextContent(`Add a certificate for $${price}`)
+    expect(banner).toHaveTextContent(`Upgrade for certificate - $${price}`)
     expect(banner).not.toHaveTextContent(/days? remaining/)
   })
 
@@ -511,7 +511,7 @@ describe.each([
 
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
     await user.click(
-      within(getCard()).getByRole("link", { name: /Add a certificate/ }),
+      within(getCard()).getByRole("link", { name: /Upgrade for certificate/ }),
     )
 
     expect(makeRequest).toHaveBeenCalledWith(
@@ -552,7 +552,7 @@ describe.each([
       />,
     )
     await user.click(
-      within(getCard()).getByRole("link", { name: /Add a certificate/ }),
+      within(getCard()).getByRole("link", { name: /Upgrade for certificate/ }),
     )
     await waitFor(() => {
       expect(onUpgradeError).toHaveBeenCalledWith(
@@ -565,7 +565,7 @@ describe.each([
   // Upgraded (paid, certificate not yet earned) banner
   // ---------------------------------------------------------------------------
 
-  test("Shows 'Paid - Certificate Included' for verified enrollment without a certificate", () => {
+  test("Shows 'Certificate track' for verified enrollment without a certificate", () => {
     setupUserApis()
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Verified,
@@ -575,11 +575,11 @@ describe.each([
     })
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
     expect(within(getCard()).getByTestId("upgraded-banner")).toHaveTextContent(
-      "Paid - Certificate Included",
+      "Certificate track",
     )
   })
 
-  test("Does not show 'Paid - Certificate Included' when verified enrollment has a certificate", () => {
+  test("Does not show 'Certificate track' when verified enrollment has a certificate", () => {
     setupUserApis()
     const certUuid = faker.string.uuid()
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
@@ -596,7 +596,7 @@ describe.each([
     ).toBeInTheDocument()
   })
 
-  test("Does not show 'Paid - Certificate Included' for audit enrollment", () => {
+  test("Does not show 'Certificate track' for audit enrollment", () => {
     setupUserApis()
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
@@ -610,7 +610,7 @@ describe.each([
     ).not.toBeInTheDocument()
   })
 
-  test("Does not show 'Paid - Certificate Included' for B2B verified enrollment", () => {
+  test("Does not show 'Certificate track' for B2B verified enrollment", () => {
     setupUserApis()
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Verified,

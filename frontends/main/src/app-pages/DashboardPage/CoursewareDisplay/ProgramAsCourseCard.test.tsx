@@ -428,7 +428,7 @@ describe("ProgramAsCourseCard", () => {
     expect(certButton).not.toBeInTheDocument()
   })
 
-  test("shows 'Paid - Certificate Included' for verified program enrollment without a certificate", async () => {
+  test("shows 'Certificate track' for verified program enrollment without a certificate", async () => {
     const cardData = setupCardData({ includeProgramEnrollment: true })
     invariant(cardData.courseProgramEnrollment)
     const programEnrollment = {
@@ -448,14 +448,14 @@ describe("ProgramAsCourseCard", () => {
 
     await screen.findByText(cardData.courseProgram.title)
     expect(screen.getByTestId("upgraded-banner")).toHaveTextContent(
-      "Paid - Certificate Included",
+      "Certificate track",
     )
     expect(
       screen.queryByRole("link", { name: "Certificate" }),
     ).not.toBeInTheDocument()
   })
 
-  test("does not show 'Paid - Certificate Included' when verified program enrollment has a certificate", async () => {
+  test("does not show 'Certificate track' when verified program enrollment has a certificate", async () => {
     const cardData = setupCardData({ includeProgramEnrollment: true })
     invariant(cardData.courseProgramEnrollment)
     const certUuid = "cert-uuid"
@@ -481,7 +481,7 @@ describe("ProgramAsCourseCard", () => {
     ).toBeInTheDocument()
   })
 
-  test("does not show 'Paid - Certificate Included' for audit program enrollment", async () => {
+  test("does not show 'Certificate track' for audit program enrollment", async () => {
     const cardData = setupCardData({ includeProgramEnrollment: true })
     invariant(cardData.courseProgramEnrollment)
     const programEnrollment = {

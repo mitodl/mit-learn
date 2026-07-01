@@ -5,7 +5,7 @@ import { EnrollmentStatus } from "./helpers"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
 import { formatDate, getTimezone, isInPast } from "ol-utilities"
 import { getCourseDateText, getRelativeDateContent } from "./courseDateUtils"
-import { RiCheckLine } from "@remixicon/react"
+import { RiAwardLine } from "@remixicon/react"
 
 const CardRoot = styled.div<{
   screenSize: "desktop" | "mobile"
@@ -197,8 +197,8 @@ const UpgradedBannerRoot = styled.div(({ theme }) => ({
 
 const UpgradedBanner: React.FC<{ className?: string }> = ({ className }) => (
   <UpgradedBannerRoot data-testid="upgraded-banner" className={className}>
-    <RiCheckLine size="16px" />
-    Paid - Certificate Included
+    <RiAwardLine size="16px" />
+    Certificate track
   </UpgradedBannerRoot>
 )
 
