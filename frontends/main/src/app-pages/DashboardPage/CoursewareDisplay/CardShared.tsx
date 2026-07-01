@@ -138,8 +138,6 @@ const MenuButton = styled(ActionButton)<{
 
 const COURSEWARE_BUTTON_WIDTH = "88px"
 
-// Thin vertical divider shown between the certificate/upgrade links and the
-// courseware action button in the compact (module row) layout.
 // Fixed-width column that keeps the courseware button (and countdown) aligned
 // in the compact (module row) layout.
 const CoursewareActionColumn = styled(Stack)({
