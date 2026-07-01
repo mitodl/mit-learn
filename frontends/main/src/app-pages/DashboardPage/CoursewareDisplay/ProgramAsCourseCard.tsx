@@ -299,7 +299,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
     courseProgramEnrollment?.certificate?.link,
     "program",
   )
-  const alreadyUpgraded = useVerifiedEnrollment && !programCertificateUrl
+  const upgradedAndIncomplete = useVerifiedEnrollment && !programCertificateUrl
 
   // Build context menu
   const menuItems = getContextMenuItems(
@@ -355,7 +355,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
             >
               Certificate
             </ProgramCertificateButton>
-          ) : alreadyUpgraded ? (
+          ) : upgradedAndIncomplete ? (
             <UpgradedBanner />
           ) : null}
           {contextMenu}

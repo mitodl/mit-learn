@@ -164,13 +164,13 @@ export const EnrolledCourseCard = ({
     type: DashboardType.CourseRunEnrollment,
     data: enrollment,
   })
-  const alreadyUpgraded =
+  const upgradedAndIncomplete =
     !isContractPageResource && isVerifiedEnrollmentMode(enrollmentMode)
   const endDateAndCertSection = (
     <Stack direction="row" alignItems="center">
       {courseDateText}
       {hasCourseDateText &&
-      (showUpgradeBanner || alreadyUpgraded || !!certificateLink) ? (
+      (showUpgradeBanner || upgradedAndIncomplete || !!certificateLink) ? (
         <Separator />
       ) : null}
       {showUpgradeBanner ? (
@@ -187,7 +187,7 @@ export const EnrolledCourseCard = ({
             )
           }}
         />
-      ) : alreadyUpgraded && !certificateLink ? (
+      ) : upgradedAndIncomplete && !certificateLink ? (
         <UpgradedBanner />
       ) : null}
       {certificateLink ? (
@@ -271,7 +271,7 @@ export const EnrolledCourseCard = ({
       {endDateAndCertSection}
       {daysUntilEnd !== null ||
       showUpgradeBanner ||
-      alreadyUpgraded ||
+      upgradedAndIncomplete ||
       !!certificateLink ? (
         <Separator />
       ) : null}

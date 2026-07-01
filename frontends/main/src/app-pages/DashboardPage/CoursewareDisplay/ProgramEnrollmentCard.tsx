@@ -50,7 +50,7 @@ export const ProgramEnrollmentCard = ({
   const enrollmentStatus = programEnrollment.certificate?.uuid
     ? EnrollmentStatus.Completed
     : EnrollmentStatus.Enrolled
-  const alreadyUpgraded = isVerifiedEnrollmentMode(
+  const upgradedAndIncomplete = isVerifiedEnrollmentMode(
     programEnrollment.enrollment_mode,
   )
   const displayMode = program.display_mode
@@ -70,7 +70,7 @@ export const ProgramEnrollmentCard = ({
           <RiAwardLine size="16px" />
           View Certificate
         </SubtitleLink>
-      ) : alreadyUpgraded ? (
+      ) : upgradedAndIncomplete ? (
         <UpgradedBanner />
       ) : null}
     </Stack>
