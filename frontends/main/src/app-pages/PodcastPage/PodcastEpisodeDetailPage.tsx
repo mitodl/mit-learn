@@ -146,6 +146,7 @@ const EpisodeList = styled.ul({
   gridTemplateColumns: "1fr",
 })
 const StyledPodcastShareButton = styled(PodcastShareButton)({
+  padding: "18px 12px",
   margin: "0 0 24px",
 })
 
@@ -300,8 +301,8 @@ export const PodcastEpisodeDetailPage: React.FC<
     : "/"
 
   const sharePageUrl =
-    episode && podcastId !== undefined
-      ? `${NEXT_PUBLIC_ORIGIN}${podcastEpisodePageView(String(episode!.id), String(podcastId), episode?.title)}`
+    episode && podcastId
+      ? `${NEXT_PUBLIC_ORIGIN}${podcastEpisodePageView(String(episode!.id), podcastId, episode?.title)}`
       : ""
 
   return (

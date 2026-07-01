@@ -28,6 +28,10 @@ export const VideoShareSection = styled("div")({
   justifyContent: "space-between",
   flexWrap: "wrap",
   gap: "8px",
+  margin: "0 0 24px",
+  [theme.breakpoints.down("sm")]: {
+    margin: "0 0 16px",
+  },
 })
 
 export const ShareRow = styled.div(({ theme }) => ({
@@ -297,10 +301,6 @@ export const MetaInstructorLine = styled.div(({ theme }) => ({
 export const StyledDuration = styled.div(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
-  margin: "0 0 24px",
-  [theme.breakpoints.down("sm")]: {
-    margin: "0 0 16px",
-  },
 }))
 
 export const DescriptionText = styled(Typography)(({ theme }) => ({

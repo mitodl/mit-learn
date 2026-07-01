@@ -26,9 +26,7 @@ const StyledVideoResourcePlayer = styled(VideoResourcePlayer)(({ theme }) => ({
 
 const StyledVideoShareButton = styled(VideoShareButton)({
   height: "40px",
-  marginTop: "8px",
-  padding: "18px 16px",
-  margin: "0 0 24px",
+  padding: "18px 12px",
 })
 
 type VideoSeriesDetailPageProps = {
@@ -182,7 +180,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
             {duration && (
               <Styled.StyledDuration>{duration}</Styled.StyledDuration>
             )}
-            {video && (
+            {!itemsLoading && video && (
               <StyledVideoShareButton
                 video={video}
                 title={video?.title ?? ""}

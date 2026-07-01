@@ -6,14 +6,14 @@ import type { PodcastEpisodeResource } from "api/v1"
 import ShareDialog from "../VideoPlaylistCollectionPage/ShareDialog"
 import * as Styled from "../VideoPlaylistCollectionPage/VideoSeriesDetailPage.styled"
 
-type VideoShareButtonProps = {
+type PodcastShareButtonProps = {
   resource: PodcastEpisodeResource
   title: string
   sharePageUrl: string
   className?: string
 }
 
-const PodcastShareButton: React.FC<VideoShareButtonProps> = ({
+const PodcastShareButton: React.FC<PodcastShareButtonProps> = ({
   resource,
   title,
   sharePageUrl,

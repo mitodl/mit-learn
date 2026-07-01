@@ -64,16 +64,22 @@ const CategoryLabel = styled(Link)(({ theme }) => ({
     textDecoration: "underline",
   },
 }))
+
 const StyledVideoShareButton = styled(VideoShareButton)({
-  margin: "0 0 24px",
+  height: "40px",
+  padding: "18px 12px",
 })
 
-export const VideoShareSection = styled("div")({
+const VideoShareSection = styled("div")({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
   flexWrap: "wrap",
   gap: "8px",
+  marginBottom: "24px",
+  [theme.breakpoints.down("sm")]: {
+    marginBottom: "16px",
+  },
 })
 
 const VideoTitle = styled.h1(({ theme }) => ({
@@ -96,14 +102,9 @@ const VideoTitle = styled.h1(({ theme }) => ({
 const MetaRow = styled.div({
   ...theme.typography.body2,
   color: theme.custom.colors.darkGray1,
-  marginBottom: "24px",
-  [theme.breakpoints.down("sm")]: {
-    marginBottom: "16px",
-  },
 })
 
 const StyledVideoResourcePlayer = styled(VideoResourcePlayer)(({ theme }) => ({
-  marginTop: "-10px",
   [theme.breakpoints.down("sm")]: {
     marginTop: "0",
   },
