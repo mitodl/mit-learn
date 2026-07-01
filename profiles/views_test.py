@@ -147,6 +147,7 @@ def test_get_profile(logged_in, user, user_client):
                 profile.certificate_desired == Profile.CertificateDesired.YES.value
             ),
         },
+        "email_optin": profile.email_optin,
     }
 
 
