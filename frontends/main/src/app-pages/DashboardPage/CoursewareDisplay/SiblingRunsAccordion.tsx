@@ -102,8 +102,7 @@ const ViewContentArrow = styled(RiArrowRightSLine)(({ theme }) => ({
 
 const CourseRunsCountText = styled.span(({ theme }) => ({
   ...theme.typography.body3,
-  color: theme.custom.colors.red,
-  textDecoration: "underline",
+  color: theme.custom.colors.silverGrayDark,
   flexShrink: 0,
   whiteSpace: "nowrap",
 }))
@@ -113,6 +112,15 @@ const DateRangeStack = styled(Stack)({
   minWidth: 0,
   overflow: "hidden",
 })
+
+const RunsAccordionSummary = styled(AccordionSummary)(({ theme }) => ({
+  "&:hover": {
+    ".course-runs-count-text": {
+      color: theme.custom.colors.mitRed,
+      textDecoration: "underline",
+    },
+  },
+}))
 
 const RunsAccordionDetails = styled(AccordionDetails)({
   padding: 0,
@@ -177,7 +185,7 @@ const SiblingRunsAccordion: React.FC<SiblingRunsAccordionProps> = ({
       disableGutters
       onChange={(_e, isExpanded) => setExpanded(isExpanded)}
     >
-      <AccordionSummary expandIcon={<ExpandChevron />}>
+      <RunsAccordionSummary expandIcon={<ExpandChevron />}>
         <SummaryRow direction="row" alignItems="flex-end">
           <DateRangeStack direction="row" alignItems="center" gap="4px">
             <CurrentRunIcon aria-hidden="true" />
@@ -191,11 +199,11 @@ const SiblingRunsAccordion: React.FC<SiblingRunsAccordionProps> = ({
                 : ""}
             </Typography>
           </DateRangeStack>
-          <CourseRunsCountText>
+          <CourseRunsCountText className="course-runs-count-text">
             Course runs ({siblingEnrollments.length + 1})
           </CourseRunsCountText>
         </SummaryRow>
-      </AccordionSummary>
+      </RunsAccordionSummary>
       <RunsAccordionDetails>
         <RunsListWrapper>
           <RunsListBox>
