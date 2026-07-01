@@ -5,6 +5,8 @@ import {
   Link,
   PlainList,
   PlainListProps,
+  Skeleton,
+  Stack,
   Typography,
   TypographyProps,
   styled,
@@ -248,7 +250,23 @@ const HomeEnrollmentsDisplay: React.FC = () => {
     enrollmentsByCourseId,
     courseProgramsById,
     moduleCoursesByProgramId,
+    isLoading,
   } = useHomeDashboardData()
+
+  if (isLoading) {
+    return (
+      <Wrapper id={DASHBOARD_MY_LEARNING_ID}>
+        <Title variant="h5" component="h2">
+          My Learning
+        </Title>
+        <Stack direction="column" spacing={2}>
+          <Skeleton variant="rectangular" width="100%" height={96} />
+          <Skeleton variant="rectangular" width="100%" height={96} />
+          <Skeleton variant="rectangular" width="100%" height={96} />
+        </Stack>
+      </Wrapper>
+    )
+  }
 
   return cards.length > 0 ? (
     <Wrapper id={DASHBOARD_MY_LEARNING_ID}>

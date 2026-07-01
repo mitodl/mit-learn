@@ -73,6 +73,25 @@ describe("HomeEnrollmentsDisplay", () => {
     })
   })
 
+  test("shows a loading skeleton until dashboard data resolves, then renders cards", async () => {
+    setupApis()
+    renderWithProviders(<HomeEnrollmentsDisplay />)
+
+    // While the home queries are still loading, a skeleton is shown and no
+    // enrollment cards have rendered yet (prevents the accordion-then-program
+    // card flash).
+    expect(
+      document.querySelectorAll(".MuiSkeleton-root").length,
+    ).toBeGreaterThan(0)
+    expect(
+      screen.queryByTestId("enrollment-card-desktop"),
+    ).not.toBeInTheDocument()
+
+    // Once data resolves, cards render and the skeleton is gone.
+    await screen.findAllByTestId("enrollment-card-desktop")
+    expect(document.querySelectorAll(".MuiSkeleton-root")).toHaveLength(0)
+  })
+
   test("Deduplicates same-variant enrollments to one card with an accordion", async () => {
     const mitxOnlineUser = mitxonline.factories.user.user()
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
