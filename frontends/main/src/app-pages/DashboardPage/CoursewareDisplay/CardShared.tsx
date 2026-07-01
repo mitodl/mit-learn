@@ -250,7 +250,7 @@ const CourseDateSummary: React.FC<{
     React.useState<HTMLButtonElement | null>(null)
 
   const triggerText = getCourseDateText(startDate, endDate)
-  const isUpcoming = startDate ? !isInPast(startDate) : false
+  const isUpcoming = startDate ? isInPast(startDate) === false : false
   const startDateFormatted = startDate
     ? `${formatDate(startDate, "MMMM D, YYYY h:mm A")} ${getTimezone(startDate)}`
     : null
