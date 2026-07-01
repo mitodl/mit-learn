@@ -378,7 +378,8 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
       )
     } catch {
       setTestEmailStatus("error")
-      const msg = "Something went wrong sending the test email. Please try again."
+      const msg =
+        "Something went wrong sending the test email. Please try again."
       setTestEmailAnnouncement("")
       if (testEmailAnnouncementTimerRef.current)
         clearTimeout(testEmailAnnouncementTimerRef.current)
@@ -672,14 +673,12 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
           <DescriptionText>
             You are about to send <strong>{validCount}</strong> invitation{" "}
             {pluralize("email", validCount)} from MIT Learn. Learners will
-            receive an email with secure link to claim their seat and access
-            the materials.
+            receive an email with secure link to claim their seat and access the
+            materials.
           </DescriptionText>
           {onSendTestEmail && (
             <EmailPreviewSection>
-              <EmailPreviewLabel component="p">
-                Email Preview
-              </EmailPreviewLabel>
+              <EmailPreviewLabel component="p">Email Preview</EmailPreviewLabel>
               <EmailPreviewRow>
                 <DescriptionText component="p">
                   This is the email learners will receive.

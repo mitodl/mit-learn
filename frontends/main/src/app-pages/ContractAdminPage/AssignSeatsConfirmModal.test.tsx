@@ -326,10 +326,7 @@ describe("AssignSeatsConfirmModal — email preview (send test email)", () => {
 
   test("button is disabled when userEmail is not provided", () => {
     renderWithTheme(
-      <AssignSeatsConfirmModal
-        {...baseProps}
-        onSendTestEmail={jest.fn()}
-      />,
+      <AssignSeatsConfirmModal {...baseProps} onSendTestEmail={jest.fn()} />,
     )
 
     expect(
@@ -378,7 +375,9 @@ describe("AssignSeatsConfirmModal — email preview (send test email)", () => {
     renderWithTheme(
       <AssignSeatsConfirmModal
         {...sendTestEmailProps}
-        onSendTestEmail={jest.fn().mockRejectedValue(new Error("Network error"))}
+        onSendTestEmail={jest
+          .fn()
+          .mockRejectedValue(new Error("Network error"))}
       />,
     )
 
