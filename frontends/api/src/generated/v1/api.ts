@@ -16586,6 +16586,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
      * @param {Array<LearningResourcesSimilarListOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;climate&#x60; - MIT Climate
      * @param {Array<LearningResourcesSimilarListPlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate * &#x60;ovs&#x60; - ODL Video Service
      * @param {boolean | null} [professional]
+     * @param {Array<string>} [resource_category] The resource category for the resource
      * @param {Array<LearningResourcesSimilarListResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
      * @param {Array<LearningResourcesSimilarListResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
@@ -16606,6 +16607,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
       offered_by?: Array<LearningResourcesSimilarListOfferedByEnum>,
       platform?: Array<LearningResourcesSimilarListPlatformEnum>,
       professional?: boolean | null,
+      resource_category?: Array<string>,
       resource_type?: Array<LearningResourcesSimilarListResourceTypeEnum>,
       resource_type_group?: Array<LearningResourcesSimilarListResourceTypeGroupEnum>,
       topic?: Array<string>,
@@ -16678,6 +16680,10 @@ export const LearningResourcesApiAxiosParamCreator = function (
 
       if (professional !== undefined) {
         localVarQueryParameter["professional"] = professional
+      }
+
+      if (resource_category) {
+        localVarQueryParameter["resource_category"] = resource_category
       }
 
       if (resource_type) {
@@ -16930,6 +16936,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
      * @param {Array<LearningResourcesVectorSimilarListOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;climate&#x60; - MIT Climate
      * @param {Array<LearningResourcesVectorSimilarListPlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate * &#x60;ovs&#x60; - ODL Video Service
      * @param {boolean | null} [professional]
+     * @param {Array<string>} [resource_category] The resource category for the resource
      * @param {Array<LearningResourcesVectorSimilarListResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
      * @param {Array<LearningResourcesVectorSimilarListResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
@@ -16950,6 +16957,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
       offered_by?: Array<LearningResourcesVectorSimilarListOfferedByEnum>,
       platform?: Array<LearningResourcesVectorSimilarListPlatformEnum>,
       professional?: boolean | null,
+      resource_category?: Array<string>,
       resource_type?: Array<LearningResourcesVectorSimilarListResourceTypeEnum>,
       resource_type_group?: Array<LearningResourcesVectorSimilarListResourceTypeGroupEnum>,
       topic?: Array<string>,
@@ -17023,6 +17031,10 @@ export const LearningResourcesApiAxiosParamCreator = function (
 
       if (professional !== undefined) {
         localVarQueryParameter["professional"] = professional
+      }
+
+      if (resource_category) {
+        localVarQueryParameter["resource_category"] = resource_category
       }
 
       if (resource_type) {
@@ -17406,6 +17418,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
      * @param {Array<LearningResourcesSimilarListOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;climate&#x60; - MIT Climate
      * @param {Array<LearningResourcesSimilarListPlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate * &#x60;ovs&#x60; - ODL Video Service
      * @param {boolean | null} [professional]
+     * @param {Array<string>} [resource_category] The resource category for the resource
      * @param {Array<LearningResourcesSimilarListResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
      * @param {Array<LearningResourcesSimilarListResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
@@ -17426,6 +17439,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
       offered_by?: Array<LearningResourcesSimilarListOfferedByEnum>,
       platform?: Array<LearningResourcesSimilarListPlatformEnum>,
       professional?: boolean | null,
+      resource_category?: Array<string>,
       resource_type?: Array<LearningResourcesSimilarListResourceTypeEnum>,
       resource_type_group?: Array<LearningResourcesSimilarListResourceTypeGroupEnum>,
       topic?: Array<string>,
@@ -17451,6 +17465,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
           offered_by,
           platform,
           professional,
+          resource_category,
           resource_type,
           resource_type_group,
           topic,
@@ -17610,6 +17625,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
      * @param {Array<LearningResourcesVectorSimilarListOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;climate&#x60; - MIT Climate
      * @param {Array<LearningResourcesVectorSimilarListPlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate * &#x60;ovs&#x60; - ODL Video Service
      * @param {boolean | null} [professional]
+     * @param {Array<string>} [resource_category] The resource category for the resource
      * @param {Array<LearningResourcesVectorSimilarListResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
      * @param {Array<LearningResourcesVectorSimilarListResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
@@ -17630,6 +17646,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
       offered_by?: Array<LearningResourcesVectorSimilarListOfferedByEnum>,
       platform?: Array<LearningResourcesVectorSimilarListPlatformEnum>,
       professional?: boolean | null,
+      resource_category?: Array<string>,
       resource_type?: Array<LearningResourcesVectorSimilarListResourceTypeEnum>,
       resource_type_group?: Array<LearningResourcesVectorSimilarListResourceTypeGroupEnum>,
       topic?: Array<string>,
@@ -17655,6 +17672,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
           offered_by,
           platform,
           professional,
+          resource_category,
           resource_type,
           resource_type_group,
           topic,
@@ -17868,6 +17886,7 @@ export const LearningResourcesApiFactory = function (
           requestParameters.offered_by,
           requestParameters.platform,
           requestParameters.professional,
+          requestParameters.resource_category,
           requestParameters.resource_type,
           requestParameters.resource_type_group,
           requestParameters.topic,
@@ -17956,6 +17975,7 @@ export const LearningResourcesApiFactory = function (
           requestParameters.offered_by,
           requestParameters.platform,
           requestParameters.professional,
+          requestParameters.resource_category,
           requestParameters.resource_type,
           requestParameters.resource_type_group,
           requestParameters.topic,
@@ -18386,6 +18406,13 @@ export interface LearningResourcesApiLearningResourcesSimilarListRequest {
   readonly professional?: boolean | null
 
   /**
+   * The resource category for the resource
+   * @type {Array<string>}
+   * @memberof LearningResourcesApiLearningResourcesSimilarList
+   */
+  readonly resource_category?: Array<string>
+
+  /**
    * The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
    * @type {Array<'course' | 'program' | 'learning_path' | 'podcast' | 'podcast_episode' | 'video' | 'video_playlist' | 'document'>}
    * @memberof LearningResourcesApiLearningResourcesSimilarList
@@ -18666,6 +18693,13 @@ export interface LearningResourcesApiLearningResourcesVectorSimilarListRequest {
   readonly professional?: boolean | null
 
   /**
+   * The resource category for the resource
+   * @type {Array<string>}
+   * @memberof LearningResourcesApiLearningResourcesVectorSimilarList
+   */
+  readonly resource_category?: Array<string>
+
+  /**
    * The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
    * @type {Array<'course' | 'program' | 'learning_path' | 'podcast' | 'podcast_episode' | 'video' | 'video_playlist' | 'document'>}
    * @memberof LearningResourcesApiLearningResourcesVectorSimilarList
@@ -18890,6 +18924,7 @@ export class LearningResourcesApi extends BaseAPI {
         requestParameters.offered_by,
         requestParameters.platform,
         requestParameters.professional,
+        requestParameters.resource_category,
         requestParameters.resource_type,
         requestParameters.resource_type_group,
         requestParameters.topic,
@@ -18984,6 +19019,7 @@ export class LearningResourcesApi extends BaseAPI {
         requestParameters.offered_by,
         requestParameters.platform,
         requestParameters.professional,
+        requestParameters.resource_category,
         requestParameters.resource_type,
         requestParameters.resource_type_group,
         requestParameters.topic,

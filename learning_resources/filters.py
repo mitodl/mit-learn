@@ -26,6 +26,10 @@ from learning_resources.models import (
     ContentFile,
     LearningResource,
 )
+from learning_resources.utils import (
+    log_missing_content_file,
+    present_edx_module_ids,
+)
 from main.filters import CharInFilter, NumberInFilter, multi_or_filter
 
 log = logging.getLogger(__name__)
@@ -189,6 +193,19 @@ class LearningResourceFilter(FilterSet):
         fields = ["professional", "certification"]
 
 
+class LoggedEdxModuleIdFilter(CharInFilter):
+    """CharInFilter that logs requested edx_module_ids with no ContentFile row."""
+
+    def filter(self, qs, value):
+        if value:
+            present = present_edx_module_ids(value)
+            for missing in set(value) - present:
+                log_missing_content_file(
+                    missing, reason="not_in_db", source="contentfiles_api"
+                )
+        return super().filter(qs, value)
+
+
 class ContentFileFilter(FilterSet):
     """ContentFile filter"""
 
@@ -208,7 +225,7 @@ class ContentFileFilter(FilterSet):
         field_name="content_tags__name__iexact",
     )
 
-    edx_module_id = CharInFilter(
+    edx_module_id = LoggedEdxModuleIdFilter(
         label="The edx module id of the content file",
         field_name="edx_module_id__exact",
     )

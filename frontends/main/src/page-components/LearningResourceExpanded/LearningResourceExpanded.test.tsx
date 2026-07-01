@@ -12,6 +12,8 @@ import { renderWithProviders } from "@/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { kebabCase } from "lodash"
 import { faker } from "@faker-js/faker/locale/en"
+import { podcastEpisodePageView } from "@/common/urls"
+import { parentPodcastIds } from "@/common/slugs"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest
@@ -96,10 +98,19 @@ describe("Learning Resource Expanded", () => {
         const link = screen.getByRole("link", {
           name: linkName,
         }) as HTMLAnchorElement
-        expect(link.target).toBe("_blank")
-        expect(link.href).toBe(
-          `${resource.url?.replace(/\/$/, "")}/?utm_source=mit-learn&utm_medium=referral&utm_content=${kebabCase(resource.title)}`,
-        )
+
+        const isPodcast =
+          resourceType === ResourceTypeEnum.Podcast ||
+          resourceType === ResourceTypeEnum.PodcastEpisode
+
+        if (isPodcast) {
+          expect(link.target).toBe("")
+        } else {
+          expect(link.target).toBe("_blank")
+          expect(link.href).toBe(
+            `${resource.url?.replace(/\/$/, "")}/?utm_source=mit-learn&utm_medium=referral&utm_content=${kebabCase(resource.title)}`,
+          )
+        }
       }
     },
   )
@@ -163,7 +174,18 @@ describe("Learning Resource Expanded", () => {
         name: "Listen to Podcast",
       }) as HTMLAnchorElement
 
-      expect(link.href).toMatch(resource.url || "")
+      const [parentPodcastId] = parentPodcastIds(
+        resource as Parameters<typeof parentPodcastIds>[0],
+      )
+      const expectedHref =
+        parentPodcastId !== undefined
+          ? podcastEpisodePageView(
+              String(resource.id),
+              String(parentPodcastId),
+              resource.title,
+            )
+          : resource.url
+      expect(link.href).toContain(expectedHref || "")
     },
   )
 

@@ -27,6 +27,8 @@ export type VideoJsPlayerProps = {
   ariaDescribedBy?: string
   startTime?: number
   onReady?: (player: Player) => void
+  onPlay?: () => void
+  onHalfProgress?: () => void
 }
 
 /**
@@ -47,6 +49,8 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
   ariaDescribedBy,
   startTime,
   onReady,
+  onPlay,
+  onHalfProgress,
 }) => {
   const videoRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<Player | null>(null)
@@ -118,6 +122,35 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
         // Add tracks inside the ready callback — this is the earliest safe
         // point; adding them before ready can silently fail on some browsers.
         addTracks(this, tracks)
+        if (onPlay) {
+          this.on("play", () => onPlay())
+        }
+        if (onHalfProgress) {
+          let halfFired = false
+          let lastSrc = this.currentSrc()
+          this.on("timeupdate", function (this: Player) {
+            const src = this.currentSrc()
+            if (src && src !== lastSrc) {
+              lastSrc = src
+              halfFired = false
+            }
+
+            const duration = this.duration()
+            const currentTime = this.currentTime()
+            if (
+              !halfFired &&
+              duration !== null &&
+              duration !== undefined &&
+              duration > 0 &&
+              currentTime !== null &&
+              currentTime !== undefined &&
+              currentTime >= duration / 2
+            ) {
+              halfFired = true
+              onHalfProgress()
+            }
+          })
+        }
         if (startTime && startTime > 0) {
           // Seek only after metadata (duration/seekable range) is available.
           // Calling currentTime() in ready() runs before metadata loads, so the
@@ -143,6 +176,8 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
     controls,
     fluid,
     loop,
+    onHalfProgress,
+    onPlay,
     onReady,
     playsinline,
     poster,

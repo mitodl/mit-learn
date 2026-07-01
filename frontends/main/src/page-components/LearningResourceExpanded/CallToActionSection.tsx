@@ -317,9 +317,7 @@ const getResourceUrl = (
   resource: LearningResource,
   {
     ocwProductPages,
-    showPodcastPage,
   }: {
-    showPodcastPage?: boolean
     ocwProductPages?: boolean
   },
 ) => {
@@ -333,19 +331,17 @@ const getResourceUrl = (
     }
   }
 
-  if (showPodcastPage) {
-    if (resource.resource_type === ResourceTypeEnum.Podcast) {
-      return podcastPageView(resource.id.toString(), resource.title)
-    }
-    if (resource.resource_type === ResourceTypeEnum.PodcastEpisode) {
-      const [parentPodcastId] = parentPodcastIds(resource)
-      if (parentPodcastId !== undefined) {
-        return podcastEpisodePageView(
-          resource.id.toString(),
-          String(parentPodcastId),
-          resource.title,
-        )
-      }
+  if (resource.resource_type === ResourceTypeEnum.Podcast) {
+    return podcastPageView(resource.id.toString(), resource.title)
+  }
+  if (resource.resource_type === ResourceTypeEnum.PodcastEpisode) {
+    const [parentPodcastId] = parentPodcastIds(resource)
+    if (parentPodcastId !== undefined) {
+      return podcastEpisodePageView(
+        resource.id.toString(),
+        String(parentPodcastId),
+        resource.title,
+      )
     }
   }
 
@@ -385,7 +381,6 @@ const CallToActionSection = ({
   const [shareExpanded, setShareExpanded] = useState(false)
   const [copyText, setCopyText] = useState("Copy Link")
   const ocwProductPages = useFeatureFlagEnabled(FeatureFlags.OcwProductPages)
-  const showPodcastPage = useFeatureFlagEnabled(FeatureFlags.PodcastDetailPage)
 
   if (hide) {
     return null
@@ -413,7 +408,6 @@ const CallToActionSection = ({
   const socialIconSize = 18
   const url = appendUtmParams(
     getResourceUrl(resource, {
-      showPodcastPage,
       ocwProductPages,
     }),
     resource.title,

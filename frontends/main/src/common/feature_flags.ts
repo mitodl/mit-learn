@@ -9,11 +9,9 @@ export enum FeatureFlags {
   HomePageRecommendationBot = "home-page-recommendation-bot",
   UniversalAI = "universal-ai",
   UniversalAISearchBanner = "universal-ai-search-banner",
-  VideoShorts = "video-shorts",
   CourseOutlineSection = "course-outline-section",
   OcwProductPages = "ocw-product-pages",
   VideoPlaylistPage = "video-playlist-page",
-  PodcastDetailPage = "podcast-detail-page",
   B2BContractManagerDashboard = "b2b-contract-manager-dashboard",
   Arithmix = "arithmix",
 }

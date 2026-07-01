@@ -3,15 +3,7 @@ import { factories, setMockResponse, urls } from "api/test-utils"
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource, PodcastEpisodeResource } from "api/v1"
 import { renderWithProviders, screen, user } from "@/test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { PodcastDetailPage } from "./PodcastDetailPage"
-
-jest.mock("posthog-js/react")
-jest.mock("@/common/useFeatureFlagsLoaded")
-
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
-const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 
 jest.mock(
   "@/page-components/LearningResourceDrawer/LearningResourceDrawer",
@@ -94,15 +86,6 @@ const setupApis = ({
 }
 
 describe("PodcastDetailPage", () => {
-  beforeEach(() => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-  })
-
-  afterEach(() => {
-    jest.clearAllMocks()
-  })
-
   test("renders initial episode list", async () => {
     const episodes = makePodcastEpisodes(3)
     const { podcast } = setupApis({ episodesPage1: episodes })

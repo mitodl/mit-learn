@@ -23,6 +23,7 @@ import {
   useHubspotFormSubmit,
   type HubspotSubmitField,
 } from "api/hooks/hubspot"
+import { trackSignUpForUpdates } from "@/common/analytics/gtm"
 
 const StayUpdatedDialogContainer = styled.div(({ theme }) => ({
   minWidth: "516px",
@@ -160,11 +161,14 @@ const StayUpdatedDialogInner: React.FC<StayUpdatedDialogProps> = ({
                 })
               }
 
-              hubspotFormSubmit.mutate({
-                formId: stayUpdatedFormId,
-                fields,
-                recaptchaToken,
-              })
+              hubspotFormSubmit.mutate(
+                {
+                  formId: stayUpdatedFormId,
+                  fields,
+                  recaptchaToken,
+                },
+                { onSuccess: () => trackSignUpForUpdates() },
+              )
             }}
           />
         </StayUpdatedDialogContainer>

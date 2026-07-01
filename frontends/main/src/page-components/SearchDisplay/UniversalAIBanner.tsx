@@ -60,7 +60,7 @@ const BannerTitle = styled(Typography)(({ theme }) => ({
   fontWeight: theme.typography.fontWeightBold,
   fontSize: "16px",
   lineHeight: "20px",
-}))
+})) as typeof Typography
 
 const BannerLink = styled(Link)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
@@ -126,7 +126,7 @@ const UniversalAIBanner: React.FC<UniversalAIBannerProps> = ({
     <BannerContainer>
       <BannerContent>
         <BannerLabel>New on MIT Learn</BannerLabel>
-        <BannerTitle>Universal AI</BannerTitle>
+        <BannerTitle component="h2">Universal AI</BannerTitle>
         <BannerDescription>
           A self-paced program that takes learners from AI fundamentals to
           practical, industry-relevant applications. No technical background

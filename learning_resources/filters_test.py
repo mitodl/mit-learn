@@ -624,6 +624,30 @@ def test_content_file_filter_edx_module_id(mock_content_files, client):
     ]
 
 
+def test_content_file_filter_logs_missing_edx_module_id(
+    mocker, mock_content_files, client
+):
+    """Requesting an absent edx_module_id logs a missing-content-file error."""
+    mock_log = mocker.patch("learning_resources.filters.log_missing_content_file")
+
+    client.get(f"{CONTENT_API_URL}?edx_module_id=block_does_not_exist")
+
+    mock_log.assert_called_once_with(
+        "block_does_not_exist", reason="not_in_db", source="contentfiles_api"
+    )
+
+
+def test_content_file_filter_present_edx_module_id_not_logged(
+    mocker, mock_content_files, client
+):
+    """A present edx_module_id is not logged as missing."""
+    mock_log = mocker.patch("learning_resources.filters.log_missing_content_file")
+
+    client.get(f"{CONTENT_API_URL}?edx_module_id=block_xpro")
+
+    mock_log.assert_not_called()
+
+
 @pytest.mark.skip_nplusone_check
 def test_content_file_filter_platform(mock_content_files, client):
     """Test that the platform filter works"""

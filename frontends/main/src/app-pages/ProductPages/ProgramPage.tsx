@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useEffect } from "react"
 import { PlainList, Stack, Typography } from "ol-components"
 
 import { pagesQueries } from "api/mitxonline-hooks/pages"
@@ -29,6 +29,7 @@ import ProgramInfoBox from "./InfoBoxProgram"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import MitxOnlineResourceCard from "./MitxOnlineResourceCard"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
+import { trackCourseProgramView } from "@/common/analytics/gtm"
 import { keyBy } from "lodash"
 import { coursePageView, programPageView } from "@/common/urls"
 
@@ -254,6 +255,11 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
     }),
     enabled: programIds.length > 0,
   })
+
+  useEffect(() => {
+    if (!program) return
+    trackCourseProgramView({ name: program.title, id: program.readable_id })
+  }, [program])
 
   const isLoading = pages.isLoading || programs.isLoading
 

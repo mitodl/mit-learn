@@ -32,7 +32,7 @@ def configure_connections():
             "http_auth": http_auth,
             "use_ssl": use_ssl,
             "timeout": settings.OPENSEARCH_DEFAULT_TIMEOUT,
-            "connections_per_node": settings.OPENSEARCH_CONNECTIONS_PER_NODE,
+            "pool_maxsize": settings.OPENSEARCH_CONNECTIONS_PER_NODE,
             # make sure we verify SSL certificates (off by default)
             "verify_certs": use_ssl,
         }

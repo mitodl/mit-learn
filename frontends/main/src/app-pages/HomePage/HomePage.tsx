@@ -41,7 +41,7 @@ const LearningResourceDrawer = dynamic(
     import("@/page-components/LearningResourceDrawer/LearningResourceDrawer"),
 )
 
-const MediaSection = dynamic(() => import("./MediaSection"))
+const VideoShortsSection = dynamic(() => import("./VideoShortsSection"))
 
 const HomePage: React.FC<{ heroImageIndex: number }> = ({ heroImageIndex }) => {
   return (
@@ -61,7 +61,7 @@ const HomePage: React.FC<{ heroImageIndex: number }> = ({ heroImageIndex }) => {
         </StyledContainer>
       </FullWidthBackground>
       <PersonalizeSection />
-      <MediaSection />
+      <VideoShortsSection />
       <BrowseTopicsSection />
       <TestimonialsSection />
       <NewsEventsSection />
