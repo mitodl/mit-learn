@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.72.3 (Released July 01, 2026)
+--------------
+
+- feat: server-side pagination and search for contract codes (#3530)
+- Log missing/invalid edx_module_id in content-file API requests (#3539)
+- Add course enrollment gtm (#3524)
+
 Version 0.72.2 (Released July 01, 2026)
 --------------
 
