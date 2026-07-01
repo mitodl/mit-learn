@@ -242,7 +242,10 @@ const SiblingRunsAccordion: React.FC<SiblingRunsAccordionProps> = ({
                       alignItems="center"
                       flexShrink={0}
                     >
-                      <ViewContentLink href={coursewareUrl}>
+                      <ViewContentLink
+                        href={coursewareUrl}
+                        aria-label={`View content for ${runLabel}`}
+                      >
                         View content
                       </ViewContentLink>
                       <ViewContentArrow />

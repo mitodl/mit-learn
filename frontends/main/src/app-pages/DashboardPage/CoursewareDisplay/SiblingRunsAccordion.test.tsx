@@ -81,6 +81,45 @@ describe("SiblingRunsAccordion", () => {
     expect(links[1]).toHaveAttribute("href", urlB)
   })
 
+  test("each 'View content' link has a distinct aria-label derived from its run label", async () => {
+    const urlA = faker.internet.url()
+    const urlB = faker.internet.url()
+    const siblings = [
+      makeEnrollment({
+        courseware_url: urlA,
+        start_date: moment("2020-01-15").toISOString(),
+        end_date: moment("2020-03-15").toISOString(),
+      }),
+      makeEnrollment({
+        courseware_url: urlB,
+        start_date: moment("2021-06-10").toISOString(),
+        end_date: moment("2021-08-10").toISOString(),
+      }),
+    ]
+    const enrollment = makeEnrollment()
+    renderWithProviders(
+      <SiblingRunsAccordion
+        enrollment={enrollment}
+        siblingEnrollments={siblings}
+      />,
+    )
+    await expandAccordion()
+
+    // The accessible name comes from the aria-label, not the shared
+    // "View content" text, so each link is distinguishable by its run dates.
+    const linkA = await screen.findByRole("link", {
+      name: /View content for Jan 15, 2020/,
+    })
+    const linkB = await screen.findByRole("link", {
+      name: /View content for Jun 10, 2021/,
+    })
+    expect(linkA).toHaveAttribute("href", urlA)
+    expect(linkB).toHaveAttribute("href", urlB)
+    expect(linkA.getAttribute("aria-label")).not.toEqual(
+      linkB.getAttribute("aria-label"),
+    )
+  })
+
   test("siblings without a courseware URL do not get a 'View content' link", async () => {
     const sibling = makeEnrollment({ courseware_url: null })
     const enrollment = makeEnrollment()
