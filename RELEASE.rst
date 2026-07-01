@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.72.2
+Version 0.72.2 (Released July 01, 2026)
 --------------
 
 - update elipses css (#3533)
