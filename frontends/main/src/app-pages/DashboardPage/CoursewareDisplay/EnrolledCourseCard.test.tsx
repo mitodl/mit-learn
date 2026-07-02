@@ -379,6 +379,7 @@ describe.each([
       const enrollment = mitxonline.factories.enrollment.courseEnrollment({
         enrollment_mode: enrollmentMode,
         b2b_contract_id: b2bContractId,
+        certificate: null,
         run,
       })
       renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
@@ -454,6 +455,7 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
       b2b_contract_id: null,
+      certificate: null,
       run: {
         is_upgradable: true,
         upgrade_deadline: deadline,
@@ -474,6 +476,7 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
       b2b_contract_id: null,
+      certificate: null,
       run: {
         is_upgradable: true,
         upgrade_deadline: null,
@@ -496,6 +499,7 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
       b2b_contract_id: null,
+      certificate: null,
       run: {
         is_upgradable: true,
         upgrade_deadline: faker.date.future().toISOString(),
@@ -529,6 +533,7 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
       b2b_contract_id: null,
+      certificate: null,
       run: {
         is_upgradable: true,
         upgrade_deadline: faker.date.future().toISOString(),
@@ -732,5 +737,74 @@ describe.each([
       "noopener,noreferrer",
     )
     windowOpenSpy.mockRestore()
+  })
+})
+
+describe("EnrolledCourseCard — multiple enrollment runs", () => {
+  setupLocationMock()
+
+  test("shows accordion on desktop when siblingEnrollments is non-empty", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      run: currentRunDates,
+    })
+    const siblings = [
+      mitxonline.factories.enrollment.courseEnrollment(),
+      mitxonline.factories.enrollment.courseEnrollment(),
+    ]
+    renderWithProviders(
+      <EnrolledCourseCard
+        enrollment={enrollment}
+        siblingEnrollments={siblings}
+      />,
+    )
+    const desktopCard = screen.getByTestId("enrollment-card-desktop")
+    // 2 siblings + 1 current = 3
+    expect(within(desktopCard).getByText("Course runs (3)")).toBeInTheDocument()
+  })
+
+  test("does not show accordion on desktop when siblingEnrollments is empty", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment()
+    renderWithProviders(
+      <EnrolledCourseCard enrollment={enrollment} siblingEnrollments={[]} />,
+    )
+    expect(screen.queryByText(/Course runs/)).not.toBeInTheDocument()
+  })
+
+  test("does not show accordion when siblingEnrollments is omitted", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment()
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(screen.queryByText(/Course runs/)).not.toBeInTheDocument()
+  })
+
+  test("shows accordion on mobile when siblingEnrollments is non-empty", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment()
+    const sibling = mitxonline.factories.enrollment.courseEnrollment()
+    renderWithProviders(
+      <EnrolledCourseCard
+        enrollment={enrollment}
+        siblingEnrollments={[sibling]}
+      />,
+    )
+    const mobileCard = screen.getByTestId("enrollment-card-mobile")
+    expect(within(mobileCard).getByText("Course runs (2)")).toBeInTheDocument()
+  })
+
+  test("accordion count reflects total runs (siblings + current)", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment()
+    const siblings = Array.from({ length: 4 }, () =>
+      mitxonline.factories.enrollment.courseEnrollment(),
+    )
+    renderWithProviders(
+      <EnrolledCourseCard
+        enrollment={enrollment}
+        siblingEnrollments={siblings}
+      />,
+    )
+    expect(screen.getAllByText("Course runs (5)").length).toBeGreaterThan(0)
   })
 })

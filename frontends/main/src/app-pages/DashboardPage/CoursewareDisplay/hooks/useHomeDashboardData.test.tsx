@@ -64,7 +64,7 @@ describe("useHomeDashboardData", () => {
     ).toBe(true)
   })
 
-  test("excludes B2B course enrollments from the card list", async () => {
+  test("excludes B2B course enrollments from the card list and enrollmentsByCourseId lookup", async () => {
     const mitxOnlineUser = mitxonline.factories.user.user()
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
@@ -92,6 +92,15 @@ describe("useHomeDashboardData", () => {
     )
     expect(courseRunIds).toContain(personalEnrollment.id)
     expect(courseRunIds).not.toContain(b2bEnrollment.id)
+
+    // B2B enrollments must also be absent from the sibling/module lookup so
+    // they don't leak into a personal card's accordion or program modules.
+    expect(
+      result.current.enrollmentsByCourseId[personalEnrollment.run.course.id],
+    ).toEqual([personalEnrollment])
+    expect(
+      result.current.enrollmentsByCourseId[b2bEnrollment.run.course.id],
+    ).toBeUndefined()
   })
 
   test("groups course-run enrollments by course id for the renderer", async () => {
@@ -133,6 +142,132 @@ describe("useHomeDashboardData", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.cards).toEqual([])
     expect(result.current.initiallyVisibleCount).toBe(0)
+  })
+
+  test("deduplicates same-variant enrollments for a course to one card", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const courseId = 99
+    const enrollmentA = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+      run: {
+        course: { id: courseId },
+        language: undefined,
+        variant_industry: undefined,
+        variant_length: undefined,
+      },
+      certificate: null,
+      grades: [],
+    })
+    const enrollmentB = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+      run: {
+        course: { id: courseId },
+        language: undefined,
+        variant_industry: undefined,
+        variant_length: undefined,
+      },
+      certificate: null,
+      grades: [],
+    })
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      enrollmentA,
+      enrollmentB,
+    ])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [],
+    )
+
+    const { result } = renderUseHomeDashboardData()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    const courseCards = result.current.cards.filter(
+      (c) => c.type === "courserun-enrollment",
+    )
+    expect(courseCards).toHaveLength(1)
+  })
+
+  test("keeps enrollments for different variants of the same course as separate cards", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const courseId = 99
+    const englishEnrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+      run: {
+        course: { id: courseId },
+        language: "en",
+        variant_industry: undefined,
+        variant_length: undefined,
+      },
+      certificate: null,
+      grades: [],
+    })
+    const germanEnrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+      run: {
+        course: { id: courseId },
+        language: "de",
+        variant_industry: undefined,
+        variant_length: undefined,
+      },
+      certificate: null,
+      grades: [],
+    })
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      englishEnrollment,
+      germanEnrollment,
+    ])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [],
+    )
+
+    const { result } = renderUseHomeDashboardData()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    const courseCards = result.current.cards.filter(
+      (c) => c.type === "courserun-enrollment",
+    )
+    expect(courseCards).toHaveLength(2)
+  })
+
+  test("enrollmentsByCourseId contains all enrollments including non-displayed siblings", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const courseId = 99
+    const enrollmentA = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+      run: { course: { id: courseId } },
+      certificate: null,
+      grades: [],
+    })
+    const enrollmentB = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+      run: { course: { id: courseId } },
+      certificate: null,
+      grades: [],
+    })
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      enrollmentA,
+      enrollmentB,
+    ])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [],
+    )
+
+    const { result } = renderUseHomeDashboardData()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // enrollmentsByCourseId has both; cards has only one (deduped)
+    expect(result.current.enrollmentsByCourseId[courseId]).toHaveLength(2)
+    expect(
+      result.current.cards.filter((c) => c.type === "courserun-enrollment"),
+    ).toHaveLength(1)
   })
 
   test("exposes program-as-course lookups (courseProgramsById, moduleCoursesByProgramId)", async () => {
