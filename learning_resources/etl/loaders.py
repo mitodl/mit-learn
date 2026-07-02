@@ -32,6 +32,7 @@ from learning_resources.etl.constants import (
     ResourceNextRunConfig,
 )
 from learning_resources.etl.exceptions import ExtractException
+from learning_resources.etl.ownership import pull_write_allowed
 from learning_resources.etl.utils import most_common_topics
 from learning_resources.models import (
     ContentFile,
@@ -632,6 +633,14 @@ def load_courses(
     Returns:
         A list of course LearningResources
     """
+    if not pull_write_allowed(etl_source, LearningResourceType.course.name):
+        log.info(
+            "Skipping pull-ETL write for %s/%s: ownership is push",
+            etl_source,
+            LearningResourceType.course.name,
+        )
+        return []
+
     blocklist = load_course_blocklist()
     duplicates = load_course_duplicates(etl_source)
 
@@ -888,6 +897,14 @@ def load_programs(
     For MITx Online data, each deferred child program may map to either
     PROGRAM_PROGRAMS or PROGRAM_COURSES based on child `display_mode`.
     """
+    if not pull_write_allowed(etl_source, LearningResourceType.program.name):
+        log.info(
+            "Skipping pull-ETL write for %s/%s: ownership is push",
+            etl_source,
+            LearningResourceType.program.name,
+        )
+        return []
+
     blocklist = load_course_blocklist()
     duplicates = load_course_duplicates(etl_source)
 

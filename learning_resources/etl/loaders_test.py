@@ -69,6 +69,7 @@ from learning_resources.etl.xpro import _parse_datetime
 from learning_resources.factories import (
     ContentFileFactory,
     CourseFactory,
+    ETLSourceOwnershipFactory,
     LearningResourceContentTagFactory,
     LearningResourceDepartmentFactory,
     LearningResourceFactory,
@@ -89,6 +90,7 @@ from learning_resources.factories import (
 from learning_resources.models import (
     ContentFile,
     Course,
+    ETLSourceOwnership,
     LearningResource,
     LearningResourceImage,
     LearningResourceOfferor,
@@ -1415,6 +1417,31 @@ def test_load_courses(mocker, mock_blocklist, mock_duplicates, prune):
     assert course_to_unpublish.learning_resource.published is not prune
 
 
+def test_load_courses_skips_write_when_push_owned(mocker):
+    """load_courses should no-op (no writes, no prune) for a push-owned source"""
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.see.name,
+        resource_type=LearningResourceType.course.name,
+        mode=ETLSourceOwnership.Mode.PUSH,
+    )
+    course_to_unpublish = CourseFactory.create(etl_source=ETLSource.see.name)
+
+    mock_load_course = mocker.patch(
+        "learning_resources.etl.loaders.load_course", autospec=True
+    )
+
+    result = load_courses(
+        ETLSource.see.name,
+        [{"readable_id": "some-course"}],
+        config=CourseLoaderConfig(prune=True),
+    )
+
+    assert result == []
+    mock_load_course.assert_not_called()
+    course_to_unpublish.refresh_from_db()
+    assert course_to_unpublish.learning_resource.published is True
+
+
 def test_load_programs(mocker, mock_blocklist, mock_duplicates):
     """Test that load_programs calls the expected functions"""
     program_data = [{"courses": [{"platform": "a"}, {}], "id": 5}]
@@ -1432,6 +1459,33 @@ def test_load_programs(mocker, mock_blocklist, mock_duplicates):
     assert mock_load_program.call_count == len(program_data)
     mock_blocklist.assert_called_once()
     mock_duplicates.assert_called_once_with("mitx")
+
+
+def test_load_programs_skips_write_when_push_owned(mocker):
+    """load_programs should no-op (no writes, no prune) for a push-owned source"""
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.see.name,
+        resource_type=LearningResourceType.program.name,
+        mode=ETLSourceOwnership.Mode.PUSH,
+    )
+    program_to_unpublish = ProgramFactory.create(
+        learning_resource__etl_source=ETLSource.see.name
+    )
+
+    mock_load_program = mocker.patch(
+        "learning_resources.etl.loaders.load_program", autospec=True
+    )
+
+    result = load_programs(
+        ETLSource.see.name,
+        [{"courses": [], "id": 1}],
+        config=ProgramLoaderConfig(prune=True),
+    )
+
+    assert result == []
+    mock_load_program.assert_not_called()
+    program_to_unpublish.refresh_from_db()
+    assert program_to_unpublish.learning_resource.published is True
 
 
 @pytest.fixture

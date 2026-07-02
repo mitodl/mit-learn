@@ -952,3 +952,15 @@ class ContentSummarizerConfigurationFactory(DjangoModelFactory):
     class Meta:
         model = models.ContentSummarizerConfiguration
         django_get_or_create = ("platform", "llm_model")
+
+
+class ETLSourceOwnershipFactory(DjangoModelFactory):
+    """Factory for ETLSourceOwnership"""
+
+    etl_source = factory.Faker("word")
+    resource_type = constants.LearningResourceType.course.name
+    mode = models.ETLSourceOwnership.Mode.PULL
+
+    class Meta:
+        model = models.ETLSourceOwnership
+        django_get_or_create = ("etl_source", "resource_type")

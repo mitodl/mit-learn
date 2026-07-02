@@ -16,10 +16,11 @@ from learning_resources.constants import LearningResourceType, PlatformType
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.factories import (
     ContentFileFactory,
+    ETLSourceOwnershipFactory,
     LearningResourceFactory,
     LearningResourceRunFactory,
 )
-from learning_resources.models import ContentFile, LearningResource
+from learning_resources.models import ContentFile, ETLSourceOwnership, LearningResource
 from learning_resources.tasks import (
     cleanup_deleted_content_files,
     get_ocw_data,
@@ -835,6 +836,38 @@ def test_sync_canvas_courses(settings, mocker, django_assert_num_queries, canvas
         assert mock_ingest_course.call_count == 1
     else:
         assert mock_ingest_course.call_count == 2
+
+
+def test_sync_canvas_courses_skips_stale_prune_when_push_owned(settings, mocker):
+    """
+    sync_canvas_courses should not unpublish/delete stale courses once canvas
+    courses are push-owned.
+    """
+    settings.CANVAS_COURSE_BUCKET_PREFIX = "canvas/"
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.canvas.name,
+        resource_type=LearningResourceType.course.name,
+        mode=ETLSourceOwnership.Mode.PUSH,
+    )
+    mocker.patch("learning_resources.tasks.resource_unpublished_actions")
+    mock_bucket = mocker.Mock()
+    mock_bucket.objects.filter.return_value = []
+    mocker.patch(
+        "learning_resources.tasks.get_bucket_by_name", return_value=mock_bucket
+    )
+
+    lr_stale = LearningResourceFactory.create(
+        readable_id="course3",
+        etl_source=ETLSource.canvas.name,
+        published=True,
+        test_mode=True,
+        resource_type="course",
+    )
+
+    sync_canvas_courses(canvas_course_ids=None, overwrite=False)
+
+    lr_stale.refresh_from_db()
+    assert lr_stale.published is True
 
 
 @pytest.mark.parametrize(
