@@ -1,6 +1,17 @@
 Release Notes
 =============
 
+Version 0.73.1
+--------------
+
+- multiple enrollment display (#3534)
+- add upgraded banner (#3550)
+- Add posthog enrollment_cta_clicked event with enrollment-specific data (#3542)
+- Updated InfoBox for Course Product Pages (#3523)
+- hacksnack postinstall (#3555)
+- Make the Profile.email_optin field writable (#3552)
+- hacksnack game (#3489)
+
 Version 0.72.3 (Released July 01, 2026)
 --------------
 
