@@ -399,15 +399,15 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
 
   const handleModalClose = () => setModalData(null)
 
-const handleSendTestEmail = async () => {
-  const email = user?.email
-  if (!email) throw new Error("Logged-in user email is unavailable")
-  await sendTestEmail.mutateAsync({
-    id: contractId,
-    parent_lookup_organization: orgId,
-    SendTestEmailRequest: { email },
-  })
-}
+  const handleSendTestEmail = async () => {
+    const email = user?.email
+    if (!email) throw new Error("Logged-in user email is unavailable")
+    await sendTestEmail.mutateAsync({
+      id: contractId,
+      parent_lookup_organization: orgId,
+      SendTestEmailRequest: { email },
+    })
+  }
 
   const handleModalConfirm = async () => {
     const emails = modalData?.validEmails ?? []

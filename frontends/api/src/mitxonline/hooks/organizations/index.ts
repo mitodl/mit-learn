@@ -107,7 +107,7 @@ const useReassignCode = () => {
   })
 }
 
-/** Send a test enrollment code email (with placeholder values) to the given address. */
+/** Send a test enrollment code to the given email address. */
 const useSendTestEmail = () =>
   useMutation({
     mutationFn: (
