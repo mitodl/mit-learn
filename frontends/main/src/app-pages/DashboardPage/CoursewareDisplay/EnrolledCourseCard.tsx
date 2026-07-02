@@ -143,7 +143,6 @@ export const EnrolledCourseCard = ({
   const startDate = run?.start_date
   const hasStarted = startDate ? isInPast(startDate) : true
   const endDate = run?.end_date
-  const daysUntilEnd = endDate ? calendarDaysUntil(endDate) : null
   const hasEnded = endDate ? isInPast(endDate) : false
   const hasCourseDateText = getCourseDateText(startDate, endDate) !== null
   const courseDateText = (
@@ -166,38 +165,45 @@ export const EnrolledCourseCard = ({
   })
   const upgradedAndIncomplete =
     !isContractPageResource && isVerifiedEnrollmentMode(enrollmentMode)
-  const endDateAndCertSection = (
-    <Stack direction="row" alignItems="center">
-      {courseDateText}
-      {hasCourseDateText &&
-      (showUpgradeBanner || upgradedAndIncomplete || !!certificateLink) ? (
-        <Separator />
-      ) : null}
-      {showUpgradeBanner ? (
-        <UpgradeBanner
-          data-testid="upgrade-root"
-          canUpgrade={showUpgradeBanner}
-          certificateUpgradeDeadline={run?.upgrade_deadline}
-          certificateUpgradePrice={run?.upgrade_product_price}
-          productId={run?.upgrade_product_id}
-          layout={layout}
-          onError={() => {
-            onUpgradeError?.(
-              "There was a problem adding the certificate to your cart.",
-            )
-          }}
-        />
-      ) : upgradedAndIncomplete && !certificateLink ? (
-        <UpgradedBanner />
-      ) : null}
-      {certificateLink ? (
-        <SubtitleLink href={certificateLink} layout={layout}>
-          <RiAwardLine size="16px" />
-          {isCompact ? "Certificate" : "View Certificate"}
-        </SubtitleLink>
-      ) : null}
-    </Stack>
-  )
+  const certStatus = showUpgradeBanner ? (
+    <UpgradeBanner
+      data-testid="upgrade-root"
+      canUpgrade={showUpgradeBanner}
+      certificateUpgradeDeadline={run?.upgrade_deadline}
+      certificateUpgradePrice={run?.upgrade_product_price}
+      productId={run?.upgrade_product_id}
+      layout={layout}
+      onError={() => {
+        onUpgradeError?.(
+          "There was a problem adding the certificate to your cart.",
+        )
+      }}
+    />
+  ) : certificateLink ? (
+    <SubtitleLink href={certificateLink} layout={layout}>
+      <RiAwardLine size="16px" />
+      {isCompact ? "Certificate" : "View Certificate"}
+    </SubtitleLink>
+  ) : upgradedAndIncomplete ? (
+    <UpgradedBanner />
+  ) : null
+
+  const metaSegments = [
+    hasCourseDateText ? courseDateText : null,
+    certStatus,
+  ].filter(Boolean)
+
+  const endDateAndCertSection =
+    metaSegments.length > 0 ? (
+      <Stack direction="row" alignItems="center">
+        {metaSegments.map((segment, i) => (
+          <React.Fragment key={i}>
+            {i > 0 && <Separator />}
+            {segment}
+          </React.Fragment>
+        ))}
+      </Stack>
+    ) : null
   const titleSection = (
     <Stack gap="6px">
       {coursewareUrl ? (
@@ -269,12 +275,7 @@ export const EnrolledCourseCard = ({
   const buttonSection = isCompact ? (
     <Stack direction="row" alignItems="center">
       {endDateAndCertSection}
-      {daysUntilEnd !== null ||
-      showUpgradeBanner ||
-      upgradedAndIncomplete ||
-      !!certificateLink ? (
-        <Separator />
-      ) : null}
+      {endDateAndCertSection && <Separator />}
       <CoursewareActionColumn direction="row" justifyContent="center">
         {ctaButton}
       </CoursewareActionColumn>
