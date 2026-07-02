@@ -513,6 +513,28 @@ def test_expected_document_chunks(mocker):
     assert len(chunked) == num_points_uploaded
 
 
+def test_embed_learning_resources_chunks_content_file_serialization(mocker, settings):
+    """
+    QDRANT_CHUNK_SIZE controls Celery task fanout; content files are serialized in
+    smaller batches so large task chunks do not hydrate every content blob at once.
+    """
+    settings.QDRANT_CHUNK_SIZE = 50
+    settings.QDRANT_CONTENT_FILE_SERIALIZATION_CHUNK_SIZE = 2
+    mocker.patch("vector_search.utils.qdrant_client", return_value=MagicMock())
+    mocker.patch("vector_search.utils.ensure_qdrant_collections")
+    serialize_mock = mocker.patch(
+        "vector_search.utils.serialize_bulk_content_files", return_value=[]
+    )
+
+    embed_learning_resources([1, 2, 3, 4, 5], CONTENT_FILE_TYPE, overwrite=True)
+
+    assert [mock_call.args[0] for mock_call in serialize_mock.mock_calls] == [
+        [1, 2],
+        [3, 4],
+        [5],
+    ]
+
+
 def test_document_chunker_tiktoken(mocker):
     """
     Test that we use tiktoken if a token encoding is specified
