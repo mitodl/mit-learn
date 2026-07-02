@@ -131,8 +131,14 @@ def test_transform_mitxonline_program():
 
     assert result["resource_type"] == LearningResourceType.program.name
     assert result["courses"] == [
-        {"readable_id": "course-v1:MITxT+1.1x", "platform": PlatformType.mitxonline.name},
-        {"readable_id": "course-v1:MITxT+1.2x", "platform": PlatformType.mitxonline.name},
+        {
+            "readable_id": "course-v1:MITxT+1.1x",
+            "platform": PlatformType.mitxonline.name,
+        },
+        {
+            "readable_id": "course-v1:MITxT+1.2x",
+            "platform": PlatformType.mitxonline.name,
+        },
     ]
     assert len(result["runs"]) == 1
     assert result["runs"][0]["run_id"] == MITXONLINE_PROGRAM_ROW["readable_id"]
