@@ -13,6 +13,8 @@ eligibility, program requirement trees — is intentionally left at its model
 default rather than reconstructed here.
 """
 
+from datetime import UTC
+
 from dateutil.parser import parse
 
 from learning_resources.constants import (
@@ -41,8 +43,16 @@ XPRO_PLATFORM_TRANSFORM = {
 }
 
 
-def _split(value: str | None, sep: str = ", ") -> list[str]:
-    """Split a delimited string column into stripped, non-empty parts."""
+def _split(value: str | None, sep: str = ",") -> list[str]:
+    """Split a delimited string column into stripped, non-empty parts.
+
+    Defaults to a plain comma (matching the split convention used elsewhere
+    in learning_resources.etl, e.g. ocw.py/podcast.py/sloan.py) rather than
+    the ol-data-platform views' actual ``", "`` array_join separator —
+    per-part ``.strip()`` makes the two equivalent for well-formed input,
+    and the plain comma is also correct if a view ever emits "a,b" without
+    the space.
+    """
     if not value:
         return []
     return [part.strip() for part in value.split(sep) if part.strip()]
@@ -55,10 +65,11 @@ def _parse_bool(value) -> bool:
 
 
 def _parse_datetime(value):
+    """Parse a warehouse datetime string (matches mitxonline.py/xpro.py)."""
     if not value:
         return None
     try:
-        return parse(value)
+        return parse(value).replace(tzinfo=UTC)
     except (ValueError, TypeError, OverflowError):
         return None
 
