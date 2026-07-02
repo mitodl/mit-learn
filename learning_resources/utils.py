@@ -748,19 +748,19 @@ def build_resource_summary_dict(resource):
 PROGRAM_CHILDREN_CONTENT_MAX_CHARS = 1_000_000
 
 
-def _reachable_course_ids(relationships, course_type):
-    """Course ids from a program's child relationships (direct + via child programs)."""
-    course_ids = set()
+def _course_ids_by_program(relationships, course_type):
+    """Map program id -> reachable published course ids (direct + via subprograms)."""
+    result = defaultdict(set)
     for rel in relationships:
         if rel.child.resource_type == course_type:
-            course_ids.add(rel.child_id)
+            result[rel.parent_id].add(rel.child_id)
         else:
-            course_ids.update(
+            result[rel.parent_id].update(
                 sub_rel.child_id
                 for sub_rel in getattr(rel.child, "program_children", [])
                 if sub_rel.child.resource_type == course_type
             )
-    return course_ids
+    return result
 
 
 def build_program_children_content(learning_resource):
@@ -815,17 +815,7 @@ def build_program_children_content_bulk(program_resources):
     )
 
     course_type = LearningResourceType.course.name
-    relationships_by_program = defaultdict(list)
-    for rel in relationships:
-        relationships_by_program[rel.parent_id].append(rel)
-
-    # Reachable published course ids per program (direct + via child programs)
-    course_ids_by_program = {
-        program.id: _reachable_course_ids(
-            relationships_by_program.get(program.id, []), course_type
-        )
-        for program in programs
-    }
+    course_ids_by_program = _course_ids_by_program(relationships, course_type)
     all_course_ids = set().union(*course_ids_by_program.values())
 
     # One marketing-page content file per course (published), fetched in bulk
