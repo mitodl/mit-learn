@@ -230,9 +230,9 @@ const SiblingRunsAccordion: React.FC<SiblingRunsAccordionProps> = ({
                     minWidth={0}
                   >
                     {isUpcoming ? (
-                      <UpcomingRunIcon />
+                      <UpcomingRunIcon aria-hidden="true" />
                     ) : isExpired ? (
-                      <ExpiredRunIcon />
+                      <ExpiredRunIcon aria-hidden="true" />
                     ) : (
                       <EnrollmentStatusIndicator
                         status={runEnrollmentStatus}
