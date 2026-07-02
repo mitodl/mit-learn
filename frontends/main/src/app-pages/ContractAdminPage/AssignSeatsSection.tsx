@@ -206,7 +206,8 @@ type AssignResult = {
 type AssignSeatsSectionProps = {
   orgId: number
   contractId: number
-  availableSeats: number
+  /** Null means the contract has no max_learners cap — never over capacity. */
+  availableSeats: number | null
   isLoadingSeats: boolean
 }
 
@@ -246,7 +247,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
   )
   const showOverlay = hasEmails
 
-  const overCapacity = validCount > availableSeats
+  const overCapacity = availableSeats !== null && validCount > availableSeats
   const ignoreWarning =
     !overCapacity && (invalidCount > 0 || duplicateCount > 0)
       ? `. ${[
@@ -267,7 +268,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
     if (duplicateCount > 0)
       parts.push(`${duplicateCount} ${pluralize("duplicate", duplicateCount)}`)
     announcement = parts.join(", ") + ignoreWarning
-    if (overCapacity) {
+    if (overCapacity && availableSeats !== null) {
       const excess = validCount - availableSeats
       const seatsClause =
         availableSeats > 1
@@ -564,7 +565,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
           will be ignored
         </Alert>
       )}
-      {overCapacity && (
+      {overCapacity && availableSeats !== null && (
         <Alert severity="error">
           {availableSeats > 1
             ? `You entered ${validCount} ${pluralize("email", validCount)}, but only ${availableSeats} unassigned ${pluralize("seat", availableSeats)} are available.`
