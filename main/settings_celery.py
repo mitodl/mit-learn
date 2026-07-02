@@ -202,55 +202,68 @@ CELERY_BEAT_SCHEDULE = (
                 minute=0, hour=4
             ),  # 04:00 UTC (midnight ET during DST, 11pm ET during standard time)
         },
-        # Cohort 1 warehouse-pull catalog sources (learning_resources.tasks.Sync*Task).
-        # Scheduled to run in parallel with the existing API-based ETL tasks
-        # above during validation; see implementation_guide_01_db_catalog.md.
-        # Programs run 15 minutes after their courses task so fetch_only child
-        # course lookups find freshly-synced course resources.
-        #
-        # All entries below run full_refresh=True (the safe, pruning-capable
-        # baseline). Each task also supports full_refresh=False for a
-        # cheaper, watermark-based incremental pull — see
-        # learning_resources.lib.warehouse.BaseWarehouseETLTask — for a
-        # future higher-frequency schedule tier once Cohort 1 is validated;
-        # not wired up here yet.
-        "warehouse-sync-mitxonline-courses-every-1-days": {
-            "task": "learning_resources.tasks.SyncMITxOnlineCoursesTask",
-            "schedule": crontab(minute=0, hour=10),  # 6:00am EST
-            "kwargs": {"full_refresh": True},
-        },
-        "warehouse-sync-mitxonline-programs-every-1-days": {
-            "task": "learning_resources.tasks.SyncMITxOnlineProgramsTask",
-            "schedule": crontab(minute=15, hour=10),
-            "kwargs": {"full_refresh": True},
-        },
-        "warehouse-sync-xpro-courses-every-1-days": {
-            "task": "learning_resources.tasks.SyncXProCoursesTask",
-            "schedule": crontab(minute=30, hour=10),
-            "kwargs": {"full_refresh": True},
-        },
-        "warehouse-sync-xpro-programs-every-1-days": {
-            "task": "learning_resources.tasks.SyncXProProgramsTask",
-            "schedule": crontab(minute=45, hour=10),
-            "kwargs": {"full_refresh": True},
-        },
-        "warehouse-sync-mit-edx-courses-every-1-days": {
-            "task": "learning_resources.tasks.SyncMITEdXCoursesTask",
-            "schedule": crontab(minute=0, hour=11),
-            "kwargs": {"full_refresh": True},
-        },
-        "warehouse-sync-ocw-courses-every-1-days": {
-            "task": "learning_resources.tasks.SyncOCWCoursesTask",
-            "schedule": crontab(minute=15, hour=11),
-            "kwargs": {"full_refresh": True},
-        },
-        "warehouse-sync-micromasters-programs-every-1-days": {
-            "task": "learning_resources.tasks.SyncMicromastersProgramsTask",
-            "schedule": crontab(minute=30, hour=11),
-            "kwargs": {"full_refresh": True},
-        },
     }
 )
+
+# Cohort 1 warehouse-pull catalog sources (learning_resources.tasks.Sync*Task).
+# Scheduled to run in parallel with the existing API-based ETL tasks above
+# during validation; see implementation_guide_01_db_catalog.md. Programs run
+# 15 minutes after their courses task so fetch_only child course lookups find
+# freshly-synced course resources.
+#
+# All entries below run full_refresh=True (the safe, pruning-capable
+# baseline). Each task also supports full_refresh=False for a cheaper,
+# watermark-based incremental pull — see
+# learning_resources.lib.warehouse.BaseWarehouseETLTask — for a future
+# higher-frequency schedule tier once Cohort 1 is validated; not wired up
+# here yet.
+#
+# Gated on TRINO_HOST being configured: read directly here (not imported
+# from settings_course_etl, which loads after settings_celery — see
+# main/settings.py's import order) so these entries are simply absent, not
+# registered-but-guaranteed-to-fail, in any environment without warehouse
+# connectivity (no environment has it yet; see
+# https://github.com/mitodl/hq/issues/11509).
+if not CELERY_BEAT_DISABLED and get_string("TRINO_HOST", None):
+    CELERY_BEAT_SCHEDULE.update(
+        {
+            "warehouse-sync-mitxonline-courses-every-1-days": {
+                "task": "learning_resources.tasks.SyncMITxOnlineCoursesTask",
+                "schedule": crontab(minute=0, hour=10),  # 6:00am EDT / 5:00am EST
+                "kwargs": {"full_refresh": True},
+            },
+            "warehouse-sync-mitxonline-programs-every-1-days": {
+                "task": "learning_resources.tasks.SyncMITxOnlineProgramsTask",
+                "schedule": crontab(minute=15, hour=10),
+                "kwargs": {"full_refresh": True},
+            },
+            "warehouse-sync-xpro-courses-every-1-days": {
+                "task": "learning_resources.tasks.SyncXProCoursesTask",
+                "schedule": crontab(minute=30, hour=10),
+                "kwargs": {"full_refresh": True},
+            },
+            "warehouse-sync-xpro-programs-every-1-days": {
+                "task": "learning_resources.tasks.SyncXProProgramsTask",
+                "schedule": crontab(minute=45, hour=10),
+                "kwargs": {"full_refresh": True},
+            },
+            "warehouse-sync-mit-edx-courses-every-1-days": {
+                "task": "learning_resources.tasks.SyncMITEdXCoursesTask",
+                "schedule": crontab(minute=0, hour=11),
+                "kwargs": {"full_refresh": True},
+            },
+            "warehouse-sync-ocw-courses-every-1-days": {
+                "task": "learning_resources.tasks.SyncOCWCoursesTask",
+                "schedule": crontab(minute=15, hour=11),
+                "kwargs": {"full_refresh": True},
+            },
+            "warehouse-sync-micromasters-programs-every-1-days": {
+                "task": "learning_resources.tasks.SyncMicromastersProgramsTask",
+                "schedule": crontab(minute=30, hour=11),
+                "kwargs": {"full_refresh": True},
+            },
+        }
+    )
 
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"

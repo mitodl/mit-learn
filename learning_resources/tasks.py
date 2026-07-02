@@ -829,14 +829,18 @@ def cleanup_deleted_content_files():
 # should be scheduled after its courses task has run at least once.
 # ---------------------------------------------------------------------------
 
-_INTEGRATIONS_CATALOG = "ol_warehouse_production.integrations"
+# Schema-only, not catalog-qualified: the connection's TRINO_CATALOG
+# setting supplies the catalog, so a staging/validation Trino cluster
+# with a differently-named catalog is honored via settings alone,
+# without these view_name literals drifting out of sync.
+_INTEGRATIONS_SCHEMA = "integrations"
 
 
 class SyncMITxOnlineCoursesTask(BaseWarehouseETLTask):
     """Warehouse-pull MITx Online courses into MIT Learn."""
 
     name = "learning_resources.tasks.SyncMITxOnlineCoursesTask"
-    view_name = f"{_INTEGRATIONS_CATALOG}.integrations__learn__mitxonline_courses"
+    view_name = f"{_INTEGRATIONS_SCHEMA}.integrations__learn__mitxonline_courses"
 
     def fetch_and_upsert(self, conn, *, since=None) -> int:
         """Pull, transform, and upsert rows from this task's warehouse view."""
@@ -860,7 +864,7 @@ class SyncMITxOnlineProgramsTask(BaseWarehouseETLTask):
     """Warehouse-pull MITx Online programs into MIT Learn."""
 
     name = "learning_resources.tasks.SyncMITxOnlineProgramsTask"
-    view_name = f"{_INTEGRATIONS_CATALOG}.integrations__learn__mitxonline_programs"
+    view_name = f"{_INTEGRATIONS_SCHEMA}.integrations__learn__mitxonline_programs"
 
     def fetch_and_upsert(self, conn, *, since=None) -> int:
         """Pull, transform, and upsert rows from this task's warehouse view."""
@@ -886,7 +890,7 @@ class SyncXProCoursesTask(BaseWarehouseETLTask):
     """Warehouse-pull xPRO courses into MIT Learn."""
 
     name = "learning_resources.tasks.SyncXProCoursesTask"
-    view_name = f"{_INTEGRATIONS_CATALOG}.integrations__learn__xpro_courses"
+    view_name = f"{_INTEGRATIONS_SCHEMA}.integrations__learn__xpro_courses"
 
     def fetch_and_upsert(self, conn, *, since=None) -> int:
         """Pull, transform, and upsert rows from this task's warehouse view."""
@@ -908,7 +912,7 @@ class SyncXProProgramsTask(BaseWarehouseETLTask):
     """Warehouse-pull xPRO programs into MIT Learn."""
 
     name = "learning_resources.tasks.SyncXProProgramsTask"
-    view_name = f"{_INTEGRATIONS_CATALOG}.integrations__learn__xpro_programs"
+    view_name = f"{_INTEGRATIONS_SCHEMA}.integrations__learn__xpro_programs"
 
     def fetch_and_upsert(self, conn, *, since=None) -> int:
         """Pull, transform, and upsert rows from this task's warehouse view."""
@@ -934,7 +938,7 @@ class SyncMITEdXCoursesTask(BaseWarehouseETLTask):
     """Warehouse-pull MIT edX (edx.org) courses into MIT Learn."""
 
     name = "learning_resources.tasks.SyncMITEdXCoursesTask"
-    view_name = f"{_INTEGRATIONS_CATALOG}.integrations__learn__mit_edx_courses"
+    view_name = f"{_INTEGRATIONS_SCHEMA}.integrations__learn__mit_edx_courses"
 
     def fetch_and_upsert(self, conn, *, since=None) -> int:
         """Pull, transform, and upsert rows from this task's warehouse view."""
@@ -958,7 +962,7 @@ class SyncOCWCoursesTask(BaseWarehouseETLTask):
     """Warehouse-pull OCW courses into MIT Learn."""
 
     name = "learning_resources.tasks.SyncOCWCoursesTask"
-    view_name = f"{_INTEGRATIONS_CATALOG}.integrations__learn__ocw_courses"
+    view_name = f"{_INTEGRATIONS_SCHEMA}.integrations__learn__ocw_courses"
 
     def fetch_and_upsert(self, conn, *, since=None) -> int:
         """Pull, transform, and upsert rows from this task's warehouse view."""
@@ -980,7 +984,7 @@ class SyncMicromastersProgramsTask(BaseWarehouseETLTask):
     """Warehouse-pull MicroMasters programs into MIT Learn."""
 
     name = "learning_resources.tasks.SyncMicromastersProgramsTask"
-    view_name = f"{_INTEGRATIONS_CATALOG}.integrations__learn__micromasters_programs"
+    view_name = f"{_INTEGRATIONS_SCHEMA}.integrations__learn__micromasters_programs"
 
     def fetch_and_upsert(self, conn, *, since=None) -> int:
         """Pull, transform, and upsert rows from this task's warehouse view."""

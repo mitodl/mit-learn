@@ -18,6 +18,7 @@ import sentry_sdk
 from celery import Task
 from django.conf import settings
 from django.core.cache import caches
+from django.core.exceptions import ImproperlyConfigured
 
 log = logging.getLogger(__name__)
 
@@ -36,15 +37,36 @@ _WATERMARK_SQL_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 
 
 def _connect_trino():
-    """Open a Trino DB-API connection using Django settings."""
+    """Open a Trino DB-API connection using Django settings.
+
+    Raises:
+        ImproperlyConfigured: If TRINO_HOST or TRINO_USER is unset — fails
+            fast with a clear message instead of BasicAuthentication
+            silently pairing None/None credentials and connect() attempting
+            host=None/user=None (Trino requires a non-empty user even for
+            unauthenticated connections).
+    """
     from trino.auth import BasicAuthentication
     from trino.dbapi import connect
 
+    if not settings.TRINO_HOST or not settings.TRINO_USER:
+        msg = (
+            "WAREHOUSE_BACKEND is 'trino' but TRINO_HOST/TRINO_USER are not "
+            "set. Set TRINO_HOST/TRINO_USER/TRINO_PASSWORD/TRINO_CATALOG, "
+            "or switch WAREHOUSE_BACKEND to a configured backend."
+        )
+        raise ImproperlyConfigured(msg)
+
+    auth = (
+        BasicAuthentication(settings.TRINO_USER, settings.TRINO_PASSWORD)
+        if settings.TRINO_USER and settings.TRINO_PASSWORD
+        else None
+    )
     return connect(
         host=settings.TRINO_HOST,
         port=settings.TRINO_PORT,
         user=settings.TRINO_USER,
-        auth=BasicAuthentication(settings.TRINO_USER, settings.TRINO_PASSWORD),
+        auth=auth,
         catalog=settings.TRINO_CATALOG,
     )
 
@@ -102,9 +124,13 @@ def iter_rows(conn, view_name, *, since=None, batch_size=1000):
 
     Args:
         conn: An open DB-API connection.
-        view_name (str): Fully-qualified view name, e.g.
-            ``"ol_warehouse_production.integrations.integrations__learn__ocw_courses"``.
-            Must contain only alphanumeric characters, underscores, and dots.
+        view_name (str): Schema-qualified view name, e.g.
+            ``"integrations.integrations__learn__ocw_courses"`` — not
+            catalog-qualified; the connection's configured catalog (e.g.
+            ``settings.TRINO_CATALOG``) supplies that. A fully-qualified
+            ``catalog.schema.table`` name also works if callers want to
+            override the connection's default catalog for one query. Must
+            contain only alphanumeric characters, underscores, and dots.
         since (datetime | None): If given, only rows whose ``last_modified``
             column is greater than this timestamp are returned — every
             ``integrations__learn__*`` view exposes ``last_modified`` per the
@@ -177,9 +203,7 @@ class BaseWarehouseETLTask(Task):
 
         class SyncOCWCoursesTask(BaseWarehouseETLTask):
             name = "learning_resources.tasks.SyncOCWCoursesTask"
-            view_name = (
-                "ol_warehouse_production.integrations.integrations__learn__ocw_courses"
-            )
+            view_name = "integrations.integrations__learn__ocw_courses"
 
             def fetch_and_upsert(self, conn, *, since=None):
                 for row in iter_rows(conn, self.view_name, since=since):
