@@ -336,7 +336,7 @@ export const PodcastEpisodeDetailPage: React.FC<
             )}
             {isMobile && <Topics>{topicString}</Topics>}
             <PodcastShareSection>
-              {episode && (
+              {episode && podcastId && (
                 <StyledButton
                   onClick={handlePlay}
                   variant="primary"

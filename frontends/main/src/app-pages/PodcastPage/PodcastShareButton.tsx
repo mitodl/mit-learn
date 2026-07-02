@@ -3,8 +3,8 @@
 import React, { useState } from "react"
 import { RiShareForwardFill } from "@remixicon/react"
 import type { PodcastEpisodeResource } from "api/v1"
-import ShareDialog from "../VideoPlaylistCollectionPage/ShareDialog"
-import * as Styled from "../VideoPlaylistCollectionPage/VideoSeriesDetailPage.styled"
+import ShareDialog from "@/components/ShareDialog/ShareDialog"
+import ShareButton from "@/components/ShareButton/ShareButton"
 
 type PodcastShareButtonProps = {
   resource: PodcastEpisodeResource
@@ -23,14 +23,14 @@ const PodcastShareButton: React.FC<PodcastShareButtonProps> = ({
 
   return (
     <>
-      <Styled.ShareButton
+      <ShareButton
         className={className}
         aria-label={`Share ${title}`}
         onClick={() => setShareOpen(true)}
       >
         <RiShareForwardFill size={16} />
         Share
-      </Styled.ShareButton>
+      </ShareButton>
       <ShareDialog
         open={shareOpen}
         onClose={() => setShareOpen(false)}
