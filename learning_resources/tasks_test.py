@@ -646,6 +646,14 @@ def test_marketing_page_for_program_appends_children(mocker, settings):
         relation_type="PROGRAM_COURSES",
         position=0,
     )
+    models.ContentFile.objects.create(
+        learning_resource=child_course,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        file_extension=".md",
+        key="mktg-child-course",
+        content="Child Course marketing copy",
+        published=True,
+    )
 
     html_content = "<html><body><h1>Test Program</h1><p>Program info</p></body></html>"
     mocker.patch(
