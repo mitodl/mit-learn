@@ -768,6 +768,34 @@ def test_build_program_children_content_caps_summaries_per_child():
     assert included == 20
 
 
+def test_build_program_children_content_summary_cap_is_deterministic():
+    """The capped subset of summaries is stable (ordered), not DB-order dependent"""
+    from learning_resources.models import ContentFile, LearningResourceRun
+
+    course_lr = CourseFactory.create().learning_resource
+    run = LearningResourceRun.objects.create(
+        learning_resource=course_lr,
+        run_id="test-run",
+    )
+    content_files = [
+        ContentFile.objects.create(
+            run=run,
+            key=f"file-{i}.txt",
+            summary=f"summary-{i}-end",
+        )
+        for i in range(30)
+    ]
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+
+    result = build_program_children_content(program_lr)
+
+    by_id = sorted(content_files, key=lambda cf: cf.id)
+    for cf in by_id[:20]:
+        assert cf.summary in result
+    for cf in by_id[20:]:
+        assert cf.summary not in result
+
+
 def test_build_program_children_content_caps_total_length():
     """Program children content is hard-capped in total size"""
     from learning_resources.models import ContentFile, LearningResourceRun

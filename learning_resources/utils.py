@@ -867,6 +867,9 @@ def build_program_children_content_bulk(program_resources):
                 run__published=True,
             )
             .exclude(summary="")
+            # Stable ordering so the per-child summary cap keeps a deterministic
+            # subset instead of a DB-order-dependent one.
+            .order_by("run__learning_resource_id", "id")
             .values_list("run__learning_resource_id", "summary")
         )
         for resource_id, summary in summary_qs:
