@@ -16,14 +16,16 @@ from django.utils import timezone
 
 from learning_resources.constants import LearningResourceType
 from learning_resources.content_summarizer import ContentSummarizer
-from learning_resources.etl import ovs, pipelines, youtube
+from learning_resources.etl import catalog_sources, ovs, pipelines, youtube
 from learning_resources.etl.canvas import (
     sync_canvas_archive,
 )
 from learning_resources.etl.constants import (
     MARKETING_PAGE_FILE_TYPE,
     RESOURCE_FILE_ETL_SOURCES,
+    CourseLoaderConfig,
     ETLSource,
+    ProgramLoaderConfig,
 )
 from learning_resources.etl.edx_shared import (
     get_most_recent_course_archives,
@@ -31,7 +33,9 @@ from learning_resources.etl.edx_shared import (
     sync_edx_course_files,
 )
 from learning_resources.etl.loaders import (
+    load_courses,
     load_learning_materials,
+    load_programs,
     load_run_dependent_values,
 )
 from learning_resources.etl.pipelines import ocw_courses_etl
@@ -39,6 +43,7 @@ from learning_resources.etl.utils import (
     get_bucket_by_name,
     get_s3_prefix_for_source,
 )
+from learning_resources.lib.warehouse import BaseWarehouseETLTask, iter_rows
 from learning_resources.models import ContentFile, LearningResource
 from learning_resources.site_scrapers.utils import scraper_for_site
 from learning_resources.utils import (
@@ -810,3 +815,188 @@ def cleanup_deleted_content_files():
         error = "cleanup_deleted_content_files threw an error"
         log.exception(error)
         return error
+
+
+# ---------------------------------------------------------------------------
+# Cohort 1: warehouse-pull catalog sources
+#
+# Each task pulls its integrations__learn__* view from the OL Data
+# Platform warehouse (Trino today; see learning_resources.lib.warehouse for
+# the backend abstraction), transforms rows with
+# learning_resources.etl.catalog_sources, and upserts through the same
+# loaders.load_courses/load_programs used by the API-based ETL pipelines
+# above. Program tasks fetch_only their child courses, so a program task
+# should be scheduled after its courses task has run at least once.
+# ---------------------------------------------------------------------------
+
+_INTEGRATIONS_CATALOG = "ol_warehouse_production.integrations"
+
+
+class SyncMITxOnlineCoursesTask(BaseWarehouseETLTask):
+    """Warehouse-pull MITx Online courses into MIT Learn."""
+
+    name = "learning_resources.tasks.SyncMITxOnlineCoursesTask"
+    view_name = f"{_INTEGRATIONS_CATALOG}.integrations__learn__mitxonline_courses"
+
+    def fetch_and_upsert(self, conn, *, since=None) -> int:
+        """Pull, transform, and upsert rows from this task's warehouse view."""
+        courses = [
+            catalog_sources.transform_mitxonline_course(row)
+            for row in iter_rows(conn, self.view_name, since=since)
+        ]
+        loaded = load_courses(
+            ETLSource.mitxonline.name,
+            courses,
+            config=CourseLoaderConfig(prune=since is None),
+        )
+        clear_views_cache()
+        return len(loaded)
+
+
+SyncMITxOnlineCoursesTask = app.register_task(SyncMITxOnlineCoursesTask())
+
+
+class SyncMITxOnlineProgramsTask(BaseWarehouseETLTask):
+    """Warehouse-pull MITx Online programs into MIT Learn."""
+
+    name = "learning_resources.tasks.SyncMITxOnlineProgramsTask"
+    view_name = f"{_INTEGRATIONS_CATALOG}.integrations__learn__mitxonline_programs"
+
+    def fetch_and_upsert(self, conn, *, since=None) -> int:
+        """Pull, transform, and upsert rows from this task's warehouse view."""
+        programs = [
+            catalog_sources.transform_mitxonline_program(row)
+            for row in iter_rows(conn, self.view_name, since=since)
+        ]
+        loaded = load_programs(
+            ETLSource.mitxonline.name,
+            programs,
+            config=ProgramLoaderConfig(
+                courses=CourseLoaderConfig(fetch_only=True), prune=since is None
+            ),
+        )
+        clear_views_cache()
+        return len(loaded)
+
+
+SyncMITxOnlineProgramsTask = app.register_task(SyncMITxOnlineProgramsTask())
+
+
+class SyncXProCoursesTask(BaseWarehouseETLTask):
+    """Warehouse-pull xPRO courses into MIT Learn."""
+
+    name = "learning_resources.tasks.SyncXProCoursesTask"
+    view_name = f"{_INTEGRATIONS_CATALOG}.integrations__learn__xpro_courses"
+
+    def fetch_and_upsert(self, conn, *, since=None) -> int:
+        """Pull, transform, and upsert rows from this task's warehouse view."""
+        courses = [
+            catalog_sources.transform_xpro_course(row)
+            for row in iter_rows(conn, self.view_name, since=since)
+        ]
+        loaded = load_courses(
+            ETLSource.xpro.name, courses, config=CourseLoaderConfig(prune=since is None)
+        )
+        clear_views_cache()
+        return len(loaded)
+
+
+SyncXProCoursesTask = app.register_task(SyncXProCoursesTask())
+
+
+class SyncXProProgramsTask(BaseWarehouseETLTask):
+    """Warehouse-pull xPRO programs into MIT Learn."""
+
+    name = "learning_resources.tasks.SyncXProProgramsTask"
+    view_name = f"{_INTEGRATIONS_CATALOG}.integrations__learn__xpro_programs"
+
+    def fetch_and_upsert(self, conn, *, since=None) -> int:
+        """Pull, transform, and upsert rows from this task's warehouse view."""
+        programs = [
+            catalog_sources.transform_xpro_program(row)
+            for row in iter_rows(conn, self.view_name, since=since)
+        ]
+        loaded = load_programs(
+            ETLSource.xpro.name,
+            programs,
+            config=ProgramLoaderConfig(
+                courses=CourseLoaderConfig(fetch_only=True), prune=since is None
+            ),
+        )
+        clear_views_cache()
+        return len(loaded)
+
+
+SyncXProProgramsTask = app.register_task(SyncXProProgramsTask())
+
+
+class SyncMITEdXCoursesTask(BaseWarehouseETLTask):
+    """Warehouse-pull MIT edX (edx.org) courses into MIT Learn."""
+
+    name = "learning_resources.tasks.SyncMITEdXCoursesTask"
+    view_name = f"{_INTEGRATIONS_CATALOG}.integrations__learn__mit_edx_courses"
+
+    def fetch_and_upsert(self, conn, *, since=None) -> int:
+        """Pull, transform, and upsert rows from this task's warehouse view."""
+        courses = [
+            catalog_sources.transform_mit_edx_course(row)
+            for row in iter_rows(conn, self.view_name, since=since)
+        ]
+        loaded = load_courses(
+            ETLSource.mit_edx.name,
+            courses,
+            config=CourseLoaderConfig(prune=since is None),
+        )
+        clear_views_cache()
+        return len(loaded)
+
+
+SyncMITEdXCoursesTask = app.register_task(SyncMITEdXCoursesTask())
+
+
+class SyncOCWCoursesTask(BaseWarehouseETLTask):
+    """Warehouse-pull OCW courses into MIT Learn."""
+
+    name = "learning_resources.tasks.SyncOCWCoursesTask"
+    view_name = f"{_INTEGRATIONS_CATALOG}.integrations__learn__ocw_courses"
+
+    def fetch_and_upsert(self, conn, *, since=None) -> int:
+        """Pull, transform, and upsert rows from this task's warehouse view."""
+        courses = [
+            catalog_sources.transform_ocw_course(row)
+            for row in iter_rows(conn, self.view_name, since=since)
+        ]
+        loaded = load_courses(
+            ETLSource.ocw.name, courses, config=CourseLoaderConfig(prune=since is None)
+        )
+        clear_views_cache()
+        return len(loaded)
+
+
+SyncOCWCoursesTask = app.register_task(SyncOCWCoursesTask())
+
+
+class SyncMicromastersProgramsTask(BaseWarehouseETLTask):
+    """Warehouse-pull MicroMasters programs into MIT Learn."""
+
+    name = "learning_resources.tasks.SyncMicromastersProgramsTask"
+    view_name = f"{_INTEGRATIONS_CATALOG}.integrations__learn__micromasters_programs"
+
+    def fetch_and_upsert(self, conn, *, since=None) -> int:
+        """Pull, transform, and upsert rows from this task's warehouse view."""
+        programs = [
+            catalog_sources.transform_micromasters_program(row)
+            for row in iter_rows(conn, self.view_name, since=since)
+        ]
+        loaded = load_programs(
+            ETLSource.micromasters.name,
+            programs,
+            config=ProgramLoaderConfig(
+                courses=CourseLoaderConfig(fetch_only=True), prune=since is None
+            ),
+        )
+        clear_views_cache()
+        return len(loaded)
+
+
+SyncMicromastersProgramsTask = app.register_task(SyncMicromastersProgramsTask())

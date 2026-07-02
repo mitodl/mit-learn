@@ -118,6 +118,7 @@ dependencies = [
     "gensim>=4.4.0",
     "langchain-community>=0.4.2",
     "langchain-text-splitters>=1.1.2",
+    "trino>=0.334.0",
 ]
 
 [dependency-groups]
