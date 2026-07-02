@@ -19,6 +19,7 @@ from learning_resources.constants import (
     CONTENT_TYPE_VIDEO,
     LearningResourceRelationTypes,
 )
+from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE
 from learning_resources.etl.utils import get_content_type
 from learning_resources.factories import (
     CourseFactory,
@@ -124,7 +125,7 @@ def _add_course_marketing_page(course_lr, content):
 
     return ContentFile.objects.create(
         learning_resource=course_lr,
-        file_type="marketing_page",
+        file_type=MARKETING_PAGE_FILE_TYPE,
         file_extension=".md",
         key=f"mktg-{course_lr.id}",
         content=content,
@@ -763,7 +764,7 @@ def test_build_program_children_content_excludes_unpublished_marketing_pages():
     ).learning_resource
     ContentFile.objects.create(
         learning_resource=course_lr,
-        file_type="marketing_page",
+        file_type=MARKETING_PAGE_FILE_TYPE,
         file_extension=".md",
         key=f"mktg-{course_lr.id}",
         content="Hidden marketing copy.",
@@ -977,7 +978,7 @@ def test_build_program_children_content_bulk_excludes_unpublished_marketing_page
     ).learning_resource
     ContentFile.objects.create(
         learning_resource=unpublished_course,
-        file_type="marketing_page",
+        file_type=MARKETING_PAGE_FILE_TYPE,
         file_extension=".md",
         key=f"mktg-{unpublished_course.id}",
         content="Hidden marketing copy.",

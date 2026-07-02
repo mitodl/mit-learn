@@ -709,7 +709,11 @@ def _generate_content_file_points(serialized_content):
     after the chunk-size split, so real chunks can exceed the nominal size.
     """
     request_chunk_size = max(
-        1, int(300000 * 0.9 / settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE)
+        1,
+        min(
+            2048,
+            int(300000 * 0.9 / settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE),
+        ),
     )
 
     for doc in serialized_content:

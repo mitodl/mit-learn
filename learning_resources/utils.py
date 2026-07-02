@@ -776,8 +776,9 @@ def build_program_children_content_bulk(program_resources):
     """Build program children markdown for many program resources in bulk.
 
     For each program, concatenates the marketing-page content of its published
-    child courses, including courses reached through child programs. Returns a
-    dict keyed by learning_resource id. Non-program resources are ignored.
+    (or test-mode) child courses, including courses reached through child
+    programs. Returns a dict keyed by learning_resource id. Non-program
+    resources are ignored.
     """
     programs = [
         resource
