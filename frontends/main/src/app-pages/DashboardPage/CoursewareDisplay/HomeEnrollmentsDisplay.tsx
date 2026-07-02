@@ -5,6 +5,8 @@ import {
   Link,
   PlainList,
   PlainListProps,
+  Skeleton,
+  Stack,
   Typography,
   TypographyProps,
   styled,
@@ -22,6 +24,7 @@ import {
   DashboardType,
   ResourceType,
   getKey,
+  filterVariantSiblings,
   type DashboardResource,
 } from "./model/dashboardViewModel"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
@@ -183,12 +186,19 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
         />
       )
     } else if (resource.type === DashboardType.CourseRunEnrollment) {
+      const enrollment = resource.data
+      const allCourseEnrollments =
+        enrollmentsByCourseId[enrollment.run.course.id] ?? []
       return (
         <CoursewareCardStyled
           key={getResourceKey(resource)}
           Component="li"
           kind="enrollment"
-          enrollment={resource.data}
+          enrollment={enrollment}
+          siblingEnrollments={filterVariantSiblings(
+            allCourseEnrollments,
+            enrollment,
+          )}
           onUpgradeError={onUpgradeError}
         />
       )
@@ -240,7 +250,23 @@ const HomeEnrollmentsDisplay: React.FC = () => {
     enrollmentsByCourseId,
     courseProgramsById,
     moduleCoursesByProgramId,
+    isLoading,
   } = useHomeDashboardData()
+
+  if (isLoading) {
+    return (
+      <Wrapper id={DASHBOARD_MY_LEARNING_ID}>
+        <Title variant="h5" component="h2">
+          My Learning
+        </Title>
+        <Stack direction="column" spacing={2}>
+          <Skeleton variant="rectangular" width="100%" height={96} />
+          <Skeleton variant="rectangular" width="100%" height={96} />
+          <Skeleton variant="rectangular" width="100%" height={96} />
+        </Stack>
+      </Wrapper>
+    )
+  }
 
   return cards.length > 0 ? (
     <Wrapper id={DASHBOARD_MY_LEARNING_ID}>
