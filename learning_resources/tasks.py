@@ -624,6 +624,13 @@ def sync_canvas_courses(canvas_course_ids, overwrite):
     Args:
         overwrite (bool): Whether to overwrite existing content files
     """
+    if not pull_write_allowed(ETLSource.canvas.name, LearningResourceType.course.name):
+        log.info(
+            "Skipping pull-ETL write for %s/%s: ownership is push",
+            ETLSource.canvas.name,
+            LearningResourceType.course.name,
+        )
+        return
 
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     s3_prefix = get_s3_prefix_for_source(ETLSource.canvas.name)
@@ -660,15 +667,6 @@ def sync_canvas_courses(canvas_course_ids, overwrite):
         canvas_readable_ids.append(resource_readable_id)
 
     if not canvas_course_ids:
-        if not pull_write_allowed(
-            ETLSource.canvas.name, LearningResourceType.course.name
-        ):
-            log.info(
-                "Skipping canvas stale-course prune: %s/%s is push-owned",
-                ETLSource.canvas.name,
-                LearningResourceType.course.name,
-            )
-            return
         stale_courses = LearningResource.objects.filter(
             etl_source=ETLSource.canvas.name
         ).exclude(readable_id__in=canvas_readable_ids)

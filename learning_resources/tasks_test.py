@@ -838,10 +838,10 @@ def test_sync_canvas_courses(settings, mocker, django_assert_num_queries, canvas
         assert mock_ingest_course.call_count == 2
 
 
-def test_sync_canvas_courses_skips_stale_prune_when_push_owned(settings, mocker):
+def test_sync_canvas_courses_skips_entirely_when_push_owned(settings, mocker):
     """
-    sync_canvas_courses should not unpublish/delete stale courses once canvas
-    courses are push-owned.
+    sync_canvas_courses should not ingest archives or unpublish/delete stale
+    courses once canvas courses are push-owned.
     """
     settings.CANVAS_COURSE_BUCKET_PREFIX = "canvas/"
     ETLSourceOwnershipFactory.create(
@@ -850,11 +850,8 @@ def test_sync_canvas_courses_skips_stale_prune_when_push_owned(settings, mocker)
         mode=ETLSourceOwnership.Mode.PUSH,
     )
     mocker.patch("learning_resources.tasks.resource_unpublished_actions")
-    mock_bucket = mocker.Mock()
-    mock_bucket.objects.filter.return_value = []
-    mocker.patch(
-        "learning_resources.tasks.get_bucket_by_name", return_value=mock_bucket
-    )
+    mock_get_bucket = mocker.patch("learning_resources.tasks.get_bucket_by_name")
+    mock_ingest_course = mocker.patch("learning_resources.tasks.ingest_canvas_course")
 
     lr_stale = LearningResourceFactory.create(
         readable_id="course3",
@@ -866,6 +863,8 @@ def test_sync_canvas_courses_skips_stale_prune_when_push_owned(settings, mocker)
 
     sync_canvas_courses(canvas_course_ids=None, overwrite=False)
 
+    mock_get_bucket.assert_not_called()
+    mock_ingest_course.assert_not_called()
     lr_stale.refresh_from_db()
     assert lr_stale.published is True
 
