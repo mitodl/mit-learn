@@ -379,6 +379,7 @@ describe.each([
       const enrollment = mitxonline.factories.enrollment.courseEnrollment({
         enrollment_mode: enrollmentMode,
         b2b_contract_id: b2bContractId,
+        certificate: null,
         run,
       })
       renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
@@ -454,6 +455,7 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
       b2b_contract_id: null,
+      certificate: null,
       run: {
         is_upgradable: true,
         upgrade_deadline: deadline,
@@ -474,6 +476,7 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
       b2b_contract_id: null,
+      certificate: null,
       run: {
         is_upgradable: true,
         upgrade_deadline: null,
@@ -496,6 +499,7 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
       b2b_contract_id: null,
+      certificate: null,
       run: {
         is_upgradable: true,
         upgrade_deadline: faker.date.future().toISOString(),
@@ -529,6 +533,7 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
       b2b_contract_id: null,
+      certificate: null,
       run: {
         is_upgradable: true,
         upgrade_deadline: faker.date.future().toISOString(),

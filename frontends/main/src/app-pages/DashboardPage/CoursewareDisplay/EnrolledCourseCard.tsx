@@ -24,11 +24,7 @@ import {
 } from "./model/dashboardViewModel"
 import { getCourseDateText } from "./courseDateUtils"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
-import {
-  RiArrowUpCircleLine,
-  RiAwardLine,
-  RiMore2Line,
-} from "@remixicon/react"
+import { RiArrowUpCircleLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { isInPast, calendarDaysUntil, NoSSR } from "ol-utilities"
 import { SiblingRunsAccordion } from "./SiblingRunsAccordion"
@@ -208,7 +204,12 @@ export const EnrolledCourseCard = ({
   })
   const upgradedAndIncomplete =
     !isContractPageResource && isVerifiedEnrollmentMode(enrollmentMode)
-  const certStatus = showUpgradeBanner ? (
+  const certStatus = certificateLink ? (
+    <SubtitleLink href={certificateLink} layout={layout}>
+      <RiAwardLine size="16px" />
+      {isCompact ? "Certificate" : "View Certificate"}
+    </SubtitleLink>
+  ) : showUpgradeBanner ? (
     <UpgradeBanner
       data-testid="upgrade-root"
       canUpgrade={showUpgradeBanner}
@@ -222,11 +223,6 @@ export const EnrolledCourseCard = ({
         )
       }}
     />
-  ) : certificateLink ? (
-    <SubtitleLink href={certificateLink} layout={layout}>
-      <RiAwardLine size="16px" />
-      {isCompact ? "Certificate" : "View Certificate"}
-    </SubtitleLink>
   ) : upgradedAndIncomplete ? (
     <UpgradedBanner />
   ) : null
