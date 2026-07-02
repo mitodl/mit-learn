@@ -746,6 +746,49 @@ def test_build_program_children_content_with_summaries():
     assert "Content summaries" in result
 
 
+def test_build_program_children_content_caps_summaries_per_child():
+    """Only a bounded number of summaries per child course are included"""
+    from learning_resources.models import ContentFile, LearningResourceRun
+
+    course_lr = CourseFactory.create().learning_resource
+    run = LearningResourceRun.objects.create(
+        learning_resource=course_lr,
+        run_id="test-run",
+    )
+    for i in range(30):
+        ContentFile.objects.create(
+            run=run,
+            key=f"file-{i}.txt",
+            summary=f"distinct-summary-{i}-end",
+        )
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+
+    result = build_program_children_content(program_lr)
+    included = sum(1 for i in range(30) if f"distinct-summary-{i}-end" in result)
+    assert included == 20
+
+
+def test_build_program_children_content_caps_total_length():
+    """Program children content is hard-capped in total size"""
+    from learning_resources.models import ContentFile, LearningResourceRun
+
+    course_lr = CourseFactory.create().learning_resource
+    run = LearningResourceRun.objects.create(
+        learning_resource=course_lr,
+        run_id="test-run",
+    )
+    for i in range(5):
+        ContentFile.objects.create(
+            run=run,
+            key=f"file-{i}.txt",
+            summary=f"summary-{i}-" + "x" * 300_000,
+        )
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+
+    result = build_program_children_content(program_lr)
+    assert len(result) <= 1_000_000
+
+
 def test_build_program_children_content_ignores_non_program_relations():
     """Only PROGRAM_COURSES and PROGRAM_PROGRAMS relations are included"""
     from learning_resources.models import LearningResourceRelationship

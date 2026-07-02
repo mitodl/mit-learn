@@ -740,10 +740,19 @@ def build_resource_summary_dict(resource):
     }
 
 
+# Bound program marketing-page content so it stays a reasonable embedding input.
+# Without these, a large program's page balloons with every child summary (seen
+# at 23MB in prod) and overflows the embedding API's per-request token limit.
+PROGRAM_CHILD_MAX_SUMMARIES = 20
+PROGRAM_CHILDREN_CONTENT_MAX_CHARS = 1_000_000
+
+
 def _build_entry(resource, summaries_by_resource):
     """Build a resource entry dict for markdown rendering."""
     entry = build_resource_summary_dict(resource)
-    entry["summaries"] = summaries_by_resource.get(resource.id, [])
+    entry["summaries"] = summaries_by_resource.get(resource.id, [])[
+        :PROGRAM_CHILD_MAX_SUMMARIES
+    ]
     return entry
 
 
@@ -878,6 +887,8 @@ def build_program_children_content_bulk(program_resources):
 
         sections = ["\n\n## Program Contents\n"]
         sections.extend(_format_resource_entries(entries))
-        content_by_program_id[program.id] = "\n\n".join(sections)
+        content_by_program_id[program.id] = "\n\n".join(sections)[
+            :PROGRAM_CHILDREN_CONTENT_MAX_CHARS
+        ]
 
     return content_by_program_id
