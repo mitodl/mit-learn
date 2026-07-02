@@ -464,7 +464,7 @@ describe.each([
     })
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
     const banner = within(getCard()).getByTestId("upgrade-root")
-    expect(banner).toHaveTextContent(`Add a certificate for $${price}`)
+    expect(banner).toHaveTextContent(`Upgrade for certificate - $${price}`)
     expect(banner).toHaveTextContent(/5 days remaining/)
   })
 
@@ -484,7 +484,7 @@ describe.each([
     })
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
     const banner = within(getCard()).getByTestId("upgrade-root")
-    expect(banner).toHaveTextContent(`Add a certificate for $${price}`)
+    expect(banner).toHaveTextContent(`Upgrade for certificate - $${price}`)
     expect(banner).not.toHaveTextContent(/days? remaining/)
   })
 
@@ -511,7 +511,7 @@ describe.each([
 
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
     await user.click(
-      within(getCard()).getByRole("link", { name: /Add a certificate/ }),
+      within(getCard()).getByRole("link", { name: /Upgrade for certificate/ }),
     )
 
     expect(makeRequest).toHaveBeenCalledWith(
@@ -552,13 +552,77 @@ describe.each([
       />,
     )
     await user.click(
-      within(getCard()).getByRole("link", { name: /Add a certificate/ }),
+      within(getCard()).getByRole("link", { name: /Upgrade for certificate/ }),
     )
     await waitFor(() => {
       expect(onUpgradeError).toHaveBeenCalledWith(
         "There was a problem adding the certificate to your cart.",
       )
     })
+  })
+
+  // ---------------------------------------------------------------------------
+  // Upgraded (paid, certificate not yet earned) banner
+  // ---------------------------------------------------------------------------
+
+  test("Shows 'Certificate track' for verified enrollment without a certificate", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Verified,
+      certificate: null,
+      grades: [],
+      run: currentRunDates,
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(within(getCard()).getByTestId("upgraded-banner")).toHaveTextContent(
+      "Certificate track",
+    )
+  })
+
+  test("Does not show 'Certificate track' when verified enrollment has a certificate", () => {
+    setupUserApis()
+    const certUuid = faker.string.uuid()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Verified,
+      certificate: { uuid: certUuid, link: faker.internet.url() },
+      run: currentRunDates,
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(
+      within(getCard()).queryByTestId("upgraded-banner"),
+    ).not.toBeInTheDocument()
+    expect(
+      within(getCard()).getByRole("link", { name: /View Certificate/ }),
+    ).toBeInTheDocument()
+  })
+
+  test("Does not show 'Certificate track' for audit enrollment", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      certificate: null,
+      grades: [],
+      run: currentRunDates,
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(
+      within(getCard()).queryByTestId("upgraded-banner"),
+    ).not.toBeInTheDocument()
+  })
+
+  test("Does not show 'Certificate track' for B2B verified enrollment", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Verified,
+      b2b_contract_id: faker.number.int(),
+      certificate: null,
+      grades: [],
+      run: currentRunDates,
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(
+      within(getCard()).queryByTestId("upgraded-banner"),
+    ).not.toBeInTheDocument()
   })
 
   // ---------------------------------------------------------------------------
