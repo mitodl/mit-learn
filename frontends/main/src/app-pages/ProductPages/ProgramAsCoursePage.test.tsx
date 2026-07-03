@@ -124,6 +124,9 @@ describe("ProgramAsCoursePage", () => {
 
     const program = makeProgramAsCourse({
       certificate_available: true,
+      enrollment_modes: [
+        factories.courses.enrollmentMode({ requires_payment: true }),
+      ],
       products: [factories.courses.product({ price: "250" })],
       req_tree: reqTree.serialize(),
     })
@@ -161,7 +164,9 @@ describe("ProgramAsCoursePage", () => {
     renderWithProviders(
       <ProgramAsCoursePage readableId={program.readable_id} />,
     )
-    const buttons = await screen.findAllByRole("button", { name: /enroll/i })
+    const buttons = await screen.findAllByRole("button", {
+      name: "Start Learning",
+    })
     expect(buttons.length).toBeGreaterThanOrEqual(1)
   })
 
@@ -416,7 +421,7 @@ describe("ProgramAsCoursePage", () => {
     )
 
     const [enrollButton] = await screen.findAllByRole("button", {
-      name: "Enroll",
+      name: "Start Learning",
     })
     await user.click(enrollButton)
 
@@ -481,7 +486,7 @@ describe("ProgramAsCoursePage", () => {
       screen.queryByText("Earn a verified certificate of completion"),
     ).not.toBeInTheDocument()
     const enrollButtons = await screen.findAllByRole("button", {
-      name: /enroll/i,
+      name: "Start Learning",
     })
     expect(enrollButtons.length).toBeGreaterThanOrEqual(1)
   })

@@ -6,17 +6,13 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds } from "./util"
 import { ProgramAsCourseSummary } from "./ProductSummary"
-import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
+import { getProgramOffering, programOfferingBoxCount } from "./programOffering"
+import { useProgramIsEnrolled } from "./useProgramIsEnrolled"
+import ProgramEnrollArea from "./ProgramEnrollArea"
 import ProgramBundleUpsell from "./ProgramBundleUpsell"
-import {
-  InfoBoxActionStack,
-  InfoBoxCard,
-  InfoBoxColumn,
-  InfoBoxContent,
-  InfoBoxEnrollArea,
-} from "./InfoBoxParts"
+import { InfoBoxCard, InfoBoxColumn } from "./InfoBoxParts"
 import { ProductPageAskTimSection } from "./ProductPageAskTim"
-import ProgramAsCourseCertificateTrackCard from "./ProgramAsCourseCertificateTrackCard"
+import { BoxGrid, SectionDivider } from "./InfoBoxGrid"
 
 type ProgramAsCourseInfoBoxProps = {
   program: V2ProgramDetail
@@ -27,7 +23,19 @@ const ProgramAsCourseInfoBox: React.FC<ProgramAsCourseInfoBoxProps> = ({
   program,
   courses,
 }) => {
-  const hasCertificateTrackPrice = Boolean(program.products?.[0]?.price)
+  // data-boxes drives the count-aware grid CSS below; programOfferingBoxCount
+  // owns the enrolled/offering → count mapping. Same sources (getProgramOffering,
+  // useProgramIsEnrolled) that useProgramEnrollment uses internally, so the grid
+  // can't disagree with what ProgramEnrollArea renders — React Query dedupes the
+  // underlying queries.
+  const offering = getProgramOffering(program)
+  const { isEnrolled } = useProgramIsEnrolled(program)
+  const offeringBoxes = programOfferingBoxCount(offering, isEnrolled)
+  const boxCount = 1 + offeringBoxes // 1 | 2 | 3
+
+  const upsell = program.programs?.length ? (
+    <ProgramBundleUpsell programs={program.programs} />
+  ) : null
 
   return (
     <InfoBoxColumn>
@@ -35,20 +43,14 @@ const ProgramAsCourseInfoBox: React.FC<ProgramAsCourseInfoBoxProps> = ({
         <VisuallyHidden>
           <h2 id={HeadingIds.Summary}>Course Information</h2>
         </VisuallyHidden>
-        <InfoBoxContent>
-          <ProgramAsCourseSummary program={program} courses={courses} />
-        </InfoBoxContent>
-        <InfoBoxEnrollArea>
-          <InfoBoxActionStack>
-            {program.certificate_available && hasCertificateTrackPrice && (
-              <ProgramAsCourseCertificateTrackCard program={program} />
-            )}
-            <ProgramEnrollmentButton program={program} displayAsCourse />
-          </InfoBoxActionStack>
-        </InfoBoxEnrollArea>
-        {program.programs?.length ? (
-          <ProgramBundleUpsell programs={program.programs} />
-        ) : null}
+        <BoxGrid data-boxes={boxCount}>
+          <div data-grid-meta>
+            <ProgramAsCourseSummary program={program} courses={courses} />
+          </div>
+          {offeringBoxes > 0 ? <SectionDivider /> : null}
+          <ProgramEnrollArea program={program} displayAsCourse />
+        </BoxGrid>
+        {upsell}
       </InfoBoxCard>
       <ProductPageAskTimSection
         readableId={program.readable_id}
