@@ -1060,4 +1060,5 @@ export {
   SummaryRows,
   UnderlinedLink,
   TestIds,
+  getTotalRequiredCourses,
 }
