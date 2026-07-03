@@ -792,6 +792,35 @@ const ProgramDurationRow: React.FC<ProgramInfoRowProps> = ({
   )
 }
 
+const ProgramDatesRow: React.FC<ProgramInfoRowProps> = ({
+  program,
+  ...others
+}) => {
+  if (!program.start_date && !program.end_date) return null
+
+  return (
+    <InfoRow {...others}>
+      <InfoRowIcon>
+        <RiCalendarLine aria-hidden="true" />
+      </InfoRowIcon>
+      <InfoRowInner>
+        {program.start_date ? (
+          <InfoLabelValue
+            label="Start"
+            value={<LocalDate onSSR={dateLoading} date={program.start_date} />}
+          />
+        ) : null}
+        {program.end_date ? (
+          <InfoLabelValue
+            label="End"
+            value={<LocalDate onSSR={dateLoading} date={program.end_date} />}
+          />
+        ) : null}
+      </InfoRowInner>
+    </InfoRow>
+  )
+}
+
 const getProgramPacing = (
   programCourses: CourseWithCourseRunsSerializerV2[],
 ) => {
@@ -1061,8 +1090,9 @@ const ProgramAsCourseSummary: React.FC<{
 }> = ({ program, courses }) => {
   return (
     <SummaryRows>
-      <ProgramDurationRow program={program} data-testid={TestIds.DurationRow} />
       <ProgramPaceRow courses={courses} data-testid={TestIds.PaceRow} />
+      <ProgramDurationRow program={program} data-testid={TestIds.DurationRow} />
+      <ProgramDatesRow program={program} data-testid={TestIds.DatesRow} />
     </SummaryRows>
   )
 }
