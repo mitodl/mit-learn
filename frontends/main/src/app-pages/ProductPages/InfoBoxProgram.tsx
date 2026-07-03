@@ -6,15 +6,12 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds } from "./util"
 import { ProgramSummary } from "./ProductSummary"
-import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
-import {
-  InfoBoxActionStack,
-  InfoBoxCard,
-  InfoBoxColumn,
-  InfoBoxContent,
-  InfoBoxEnrollArea,
-} from "./InfoBoxParts"
+import { getProgramOffering, programOfferingBoxCount } from "./programOffering"
+import { useProgramIsEnrolled } from "./useProgramIsEnrolled"
+import ProgramEnrollArea from "./ProgramEnrollArea"
+import { InfoBoxCard, InfoBoxColumn } from "./InfoBoxParts"
 import { ProductPageAskTimSection } from "./ProductPageAskTim"
+import { BoxGrid, SectionDivider } from "./InfoBoxGrid"
 
 type ProgramInfoBoxProps = {
   program: V2ProgramDetail
@@ -25,20 +22,29 @@ const ProgramInfoBox: React.FC<ProgramInfoBoxProps> = ({
   program,
   courses,
 }) => {
+  // data-boxes drives the count-aware grid CSS below; programOfferingBoxCount
+  // owns the enrolled/offering → count mapping. Same sources (getProgramOffering,
+  // useProgramIsEnrolled) that useProgramEnrollment uses internally, so the grid
+  // can't disagree with what ProgramEnrollArea renders — React Query dedupes the
+  // underlying queries.
+  const offering = getProgramOffering(program)
+  const { isEnrolled } = useProgramIsEnrolled(program)
+  const offeringBoxes = programOfferingBoxCount(offering, isEnrolled)
+  const boxCount = 1 + offeringBoxes // 1 | 2 | 3
+
   return (
     <InfoBoxColumn>
       <InfoBoxCard as="section" aria-labelledby={HeadingIds.Summary}>
         <VisuallyHidden>
           <h2 id={HeadingIds.Summary}>Program Information</h2>
         </VisuallyHidden>
-        <InfoBoxContent>
-          <ProgramSummary program={program} courses={courses} />
-        </InfoBoxContent>
-        <InfoBoxEnrollArea>
-          <InfoBoxActionStack>
-            <ProgramEnrollmentButton program={program} variant="primary" />
-          </InfoBoxActionStack>
-        </InfoBoxEnrollArea>
+        <BoxGrid data-boxes={boxCount}>
+          <div data-grid-meta>
+            <ProgramSummary program={program} courses={courses} />
+          </div>
+          {offeringBoxes > 0 ? <SectionDivider /> : null}
+          <ProgramEnrollArea program={program} />
+        </BoxGrid>
       </InfoBoxCard>
       <ProductPageAskTimSection
         readableId={program.readable_id}

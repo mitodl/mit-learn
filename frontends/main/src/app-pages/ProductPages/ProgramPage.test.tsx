@@ -227,6 +227,12 @@ describe("ProgramPage", () => {
         required: { count: 3, title: "Core Dog Courses" },
         electives: { count: 2, outOf: 4, title: "Elective Cat Courses" },
       }),
+      // Deterministic offering: the InfoBox now renders offering-card headings
+      // (e.g. "Learn for Free" / "Certificate Track") from ProgramEnrollArea,
+      // so pin a single free enrollment mode to keep this heading list stable.
+      enrollment_modes: [
+        factories.courses.enrollmentMode({ requires_payment: false }),
+      ],
     })
     const page = makePage({ program_details: program })
     invariant(page.faculty.length > 0)
@@ -239,6 +245,7 @@ describe("ProgramPage", () => {
           [
             { level: 1, name: page.title },
             { level: 2, name: "Program Information" },
+            { level: 3, name: "Learn for Free" },
             { level: 2, name: "About this Program" },
             { level: 2, name: "What you'll learn" },
             { level: 2, name: "Courses" },
@@ -543,7 +550,16 @@ describe("ProgramPage", () => {
   })
 
   test("Renders an enrollment button", async () => {
-    const program = makeProgram({ ...makeReqs() })
+    // Pin a paid-only offering: the header and infobox CTAs both read "Enroll
+    // in Program" for "paid", whereas "free"/"both" use non-matching labels
+    // ("Start Learning" / "Earn Certificate"). Without pinning this, the
+    // default random enrollment mode makes the /enroll/i assertion flaky.
+    const program = makeProgram({
+      ...makeReqs(),
+      enrollment_modes: [
+        factories.courses.enrollmentMode({ requires_payment: true }),
+      ],
+    })
     const page = makePage({ program_details: program })
     setupApis({ program, page })
     renderWithProviders(<ProgramPage readableId={program.readable_id} />)
