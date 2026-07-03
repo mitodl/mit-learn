@@ -25,7 +25,7 @@ import {
   trackViewCoursePage,
   trackCourseProgramView,
 } from "@/common/analytics/gtm"
-import { EnrollButton } from "./CourseEnrollArea"
+import { EnrollButton } from "./EnrollAreaParts"
 import { useCourseEnrollment } from "./useCourseEnrollment"
 import { getSelectedRun } from "./courseRun"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
