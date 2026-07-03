@@ -88,6 +88,10 @@ const PriceContainer = styled.div(({ theme }) => ({
   whiteSpace: "nowrap",
 }))
 
+const FullWidthPrice = styled.div({
+  width: "100%",
+})
+
 const FeatureList = styled.div({
   display: "flex",
   flexDirection: "column",
@@ -121,6 +125,8 @@ type TrackCardProps = {
   children: React.ReactNode
   /** Optional note between the header and the feature list. */
   note?: React.ReactNode
+  /** Optional full-width price block (e.g., savings). When provided, the top-right price is omitted. */
+  priceBlock?: React.ReactNode
   action?: React.ReactNode
   fill?: boolean
 }
@@ -132,6 +138,7 @@ const TrackCard: React.FC<TrackCardProps> = ({
   price,
   children,
   note,
+  priceBlock,
   action,
   fill,
 }) => {
@@ -143,8 +150,10 @@ const TrackCard: React.FC<TrackCardProps> = ({
             <TrackTitle>{title}</TrackTitle>
             <TrackSubtitle>{subtitle}</TrackSubtitle>
           </LeftCol>
-          <PriceContainer>{price}</PriceContainer>
+          {priceBlock ? null : <PriceContainer>{price}</PriceContainer>}
         </TopRow>
+
+        {priceBlock ? <FullWidthPrice>{priceBlock}</FullWidthPrice> : null}
 
         {note}
 

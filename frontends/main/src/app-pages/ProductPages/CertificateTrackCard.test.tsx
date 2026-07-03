@@ -100,4 +100,28 @@ describe("CertificateTrackCard", () => {
     )
     expect(screen.queryByRole("button")).toBeNull()
   })
+
+  test("renders a full-width priceBlock instead of the top-right price", () => {
+    renderWithProviders(
+      <CertificateTrackCard
+        price={null}
+        priceBlock={<div data-testid="savings-block">savings</div>}
+        productNoun="program"
+      />,
+    )
+    expect(screen.getByTestId("savings-block")).toBeInTheDocument()
+  })
+
+  test("omits top-right price when priceBlock is provided", () => {
+    const priceNode = <span>$250</span>
+    renderWithProviders(
+      <CertificateTrackCard
+        price={priceNode}
+        priceBlock={<div data-testid="savings-block">savings</div>}
+        productNoun="program"
+      />,
+    )
+    expect(screen.queryByText("$250")).not.toBeInTheDocument()
+    expect(screen.getByTestId("savings-block")).toBeInTheDocument()
+  })
 })

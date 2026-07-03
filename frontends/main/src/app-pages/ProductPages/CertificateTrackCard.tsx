@@ -12,6 +12,7 @@ type CertificateTrackCardProps = {
   price: React.ReactNode
   financialAid?: { href: string; applied: boolean } | null
   productNoun: "course" | "program"
+  priceBlock?: React.ReactNode
   action?: React.ReactNode
   fill?: boolean
 }
@@ -20,6 +21,7 @@ const CertificateTrackCard: React.FC<CertificateTrackCardProps> = ({
   price,
   financialAid,
   productNoun,
+  priceBlock,
   action,
   fill,
 }) => {
@@ -29,6 +31,7 @@ const CertificateTrackCard: React.FC<CertificateTrackCardProps> = ({
       title="Certificate Track"
       subtitle="Earn a verified certificate of completion"
       price={price}
+      priceBlock={priceBlock}
       action={action}
       fill={fill}
     >
