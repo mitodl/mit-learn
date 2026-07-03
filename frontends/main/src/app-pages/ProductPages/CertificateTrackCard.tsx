@@ -34,7 +34,11 @@ const CertificateTrackCard: React.FC<CertificateTrackCardProps> = ({
     >
       <FeatureRow>
         <FeatureIcon aria-hidden="true" />
-        <span>Access to this {productNoun} &amp; course materials</span>
+        <span>
+          {productNoun === "program"
+            ? "Access to this program & materials"
+            : "Access to this course & course materials"}
+        </span>
       </FeatureRow>
       <FeatureRow>
         <FeatureIcon aria-hidden="true" />

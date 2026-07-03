@@ -38,7 +38,11 @@ const LearnForFreeCard: React.FC<LearnForFreeCardProps> = ({
     >
       <FeatureRow>
         <FeatureIcon aria-hidden="true" />
-        <span>Access to this {productNoun} &amp; course materials</span>
+        <span>
+          {productNoun === "program"
+            ? "Access to this program & materials"
+            : "Access to this course & course materials"}
+        </span>
       </FeatureRow>
     </TrackCard>
   )

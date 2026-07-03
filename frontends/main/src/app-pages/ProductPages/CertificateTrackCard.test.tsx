@@ -40,7 +40,7 @@ describe("CertificateTrackCard", () => {
       <CertificateTrackCard price={<span>$250</span>} productNoun="program" />,
     )
     expect(
-      screen.getByText("Access to this program & course materials"),
+      screen.getByText("Access to this program & materials"),
     ).toBeInTheDocument()
   })
 
