@@ -28,7 +28,7 @@ import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
 import ProgramInfoBox from "./InfoBoxProgram"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import MitxOnlineResourceCard from "./MitxOnlineResourceCard"
-import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
+import ProgramHeaderEnrollButton from "./ProgramHeaderEnrollButton"
 import { trackCourseProgramView } from "@/common/analytics/gtm"
 import { keyBy } from "lodash"
 import { coursePageView, programPageView } from "@/common/urls"
@@ -46,12 +46,6 @@ const PrerequisitesSection = styled.section({
 const DescriptionHTML = styled(UnstyledRawHTML)({
   p: { margin: 0 },
 })
-
-const StyledProgramEnrollmentButton = styled(ProgramEnrollmentButton)(
-  ({ theme }) => ({
-    color: theme.custom.colors.darkGray2,
-  }),
-)
 
 const RequirementsListing = styled(PlainList)({
   display: "flex",
@@ -290,9 +284,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       }
       imageSrc={imageSrc}
       videoUrl={page.video_url}
-      enrollmentAction={
-        <StyledProgramEnrollmentButton program={program} variant="bordered" />
-      }
+      enrollmentAction={<ProgramHeaderEnrollButton program={program} />}
       showStayUpdated={
         program.enrollment_modes.length > 0 &&
         program.enrollment_modes.every((mode) =>

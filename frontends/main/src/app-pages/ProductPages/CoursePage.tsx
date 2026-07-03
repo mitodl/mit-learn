@@ -25,7 +25,7 @@ import {
   trackViewCoursePage,
   trackCourseProgramView,
 } from "@/common/analytics/gtm"
-import { EnrollButton } from "./EnrollAreaParts"
+import { EnrollButton, HeaderButtonSlot } from "./EnrollAreaParts"
 import { useCourseEnrollment } from "./useCourseEnrollment"
 import { getSelectedRun } from "./courseRun"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
@@ -44,18 +44,6 @@ const PrerequisitesSection = styled.section({
   flexDirection: "column",
   gap: "16px",
 })
-
-/**
- * The page-header enroll button uses the `bordered` variant but with darkGray2
- * text (matching production), not the variant's default silverGrayDark. Disabled
- * buttons keep the variant default. `display: contents` adds no layout box.
- */
-const HeaderButtonSlot = styled.div(({ theme }) => ({
-  display: "contents",
-  "& button:not(:disabled), & a": {
-    color: theme.custom.colors.darkGray2,
-  },
-}))
 
 const CourseHeaderEnrollButton: React.FC<{
   course: CourseWithCourseRunsSerializerV2

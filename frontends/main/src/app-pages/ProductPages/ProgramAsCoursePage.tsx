@@ -22,7 +22,7 @@ import WhatYoullLearnSection from "./WhatYoullLearnSection"
 import HowYoullLearnSection from "./HowYoullLearnSection"
 import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
 import ProgramAsCourseInfoBox from "./InfoBoxProgramAsCourse"
-import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
+import ProgramHeaderEnrollButton from "./ProgramHeaderEnrollButton"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import type {
   V2ProgramDetail,
@@ -191,12 +191,6 @@ const ModulesSection: React.FC<ModulesSectionProps> = ({
   )
 }
 
-const StyledProgramEnrollmentButton = styled(ProgramEnrollmentButton)(
-  ({ theme }) => ({
-    color: theme.custom.colors.darkGray2,
-  }),
-)
-
 const PrerequisitesSection = styled.section({
   display: "flex",
   flexDirection: "column",
@@ -267,11 +261,7 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
       imageSrc={imageSrc}
       videoUrl={page.video_url}
       enrollmentAction={
-        <StyledProgramEnrollmentButton
-          program={program}
-          variant="bordered"
-          displayAsCourse
-        />
+        <ProgramHeaderEnrollButton program={program} displayAsCourse />
       }
       showStayUpdated={
         program.enrollment_modes.length > 0 &&
