@@ -586,6 +586,7 @@ enum TestIds {
   DurationRow = "duration-row",
   PriceRow = "price-row",
   RequirementsRow = "requirements-row",
+  CertificateRow = "certificate-row",
 }
 
 const ArchivedAlert: React.FC = () => {
@@ -837,6 +838,22 @@ const ProgramPaceRow: React.FC<
   )
 }
 
+const CertificateRow: React.FC<HTMLAttributes<HTMLDivElement>> = (props) => {
+  return (
+    <InfoRow {...props}>
+      <InfoRowIcon>
+        <RiFileCopy2Line aria-hidden="true" />
+      </InfoRowIcon>
+      <InfoRowInner>
+        <InfoLabelValue
+          label="Certificate"
+          value="Program certificate on completion"
+        />
+      </InfoRowInner>
+    </InfoRow>
+  )
+}
+
 const PROGRAM_CERT_INFO_HREF =
   "https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
 
@@ -1031,9 +1048,9 @@ const ProgramSummary: React.FC<{
         program={program}
         data-testid={TestIds.RequirementsRow}
       />
-      <ProgramDurationRow program={program} data-testid={TestIds.DurationRow} />
       <ProgramPaceRow courses={courses} data-testid={TestIds.PaceRow} />
-      <ProgramPriceRow data-testid={TestIds.PriceRow} program={program} />
+      <ProgramDurationRow program={program} data-testid={TestIds.DurationRow} />
+      <CertificateRow data-testid={TestIds.CertificateRow} />
     </SummaryRows>
   )
 }

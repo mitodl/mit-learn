@@ -1,5 +1,5 @@
 import React from "react"
-import { factories, urls } from "api/mitxonline-test-utils"
+import { factories } from "api/mitxonline-test-utils"
 import {
   setMockResponse,
   urls as apiUrls,
@@ -8,7 +8,6 @@ import {
 import { renderWithProviders, screen, within, user } from "@/test-utils"
 import { CourseSummary, ProgramSummary, TestIds } from "./ProductSummary"
 import { formatDate } from "ol-utilities"
-import { formatPrice, mitxonlineLegacyUrl } from "@/common/mitxonline"
 import invariant from "tiny-invariant"
 import { faker } from "@faker-js/faker/locale/en"
 
@@ -16,8 +15,6 @@ const shuffle = faker.helpers.shuffle
 const makeRun = factories.courses.courseRun
 const makeCourse = factories.courses.course
 const makeProduct = factories.courses.product
-const makeFlexiblePrice = factories.products.flexiblePrice
-const makeDiscount = factories.products.discount
 const makeEnrollmentMode = factories.courses.enrollmentMode
 const { RequirementTreeBuilder } = factories.requirements
 
@@ -1028,13 +1025,48 @@ describe("ProgramSummary", () => {
     )
   })
 
-  test("renders program summary rows", async () => {
-    const program = factories.programs.program({
-      enrollment_modes: bothModes(),
-    })
+  test("shows the certificate row and no price row", () => {
+    const program = factories.programs.program()
     renderWithProviders(<ProgramSummary program={program} />)
 
-    screen.getByTestId(TestIds.PriceRow)
+    expect(
+      screen.getByText("Program certificate on completion", {
+        exact: false,
+      }),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId(TestIds.PriceRow)).not.toBeInTheDocument()
+  })
+
+  test("orders metadata rows as requirements, format, duration, certificate", () => {
+    const requirements = new RequirementTreeBuilder()
+    const required = requirements.addOperator({ operator: "all_of" })
+    required.addCourse()
+    const program = factories.programs.program({
+      requirements: {
+        courses: {
+          required:
+            required.children?.map((n) => ({
+              id: n.id,
+              readable_id: `readable-${n.id}`,
+            })) ?? [],
+          electives: [],
+        },
+        programs: { required: [], electives: [] },
+      },
+      req_tree: requirements.serialize(),
+    })
+    const course = makeCourse({
+      courseruns: [makeRun()],
+    })
+    renderWithProviders(<ProgramSummary program={program} courses={[course]} />)
+
+    const rows = screen.getAllByTestId(/-row$/)
+    expect(rows.map((row) => row.getAttribute("data-testid"))).toEqual([
+      TestIds.RequirementsRow,
+      TestIds.PaceRow,
+      TestIds.DurationRow,
+      TestIds.CertificateRow,
+    ])
   })
 
   describe("RequirementsRow", () => {
@@ -1216,179 +1248,6 @@ describe("ProgramSummary", () => {
       await user.click(within(dialog).getByRole("button", { name: "Close" }))
 
       expect(dialog).not.toBeVisible()
-    })
-  })
-
-  describe("Price & Certificate Row", () => {
-    test("Price row does not render when enrollment_modes is empty", () => {
-      const program = factories.programs.program({ enrollment_modes: [] })
-      renderWithProviders(<ProgramSummary program={program} />)
-
-      expect(screen.queryByTestId(TestIds.PriceRow)).toBeNull()
-    })
-
-    test("Shows only 'Free to Learn' with no cert box when all enrollment modes are free", () => {
-      const program = factories.programs.program({
-        enrollment_modes: [freeMode()],
-      })
-      renderWithProviders(<ProgramSummary program={program} />)
-
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
-      expect(priceRow).toHaveTextContent("Free to Learn")
-      expect(priceRow).not.toHaveTextContent("Earn a certificate")
-    })
-
-    test("Shows paid price with no cert box when all enrollment modes are paid", () => {
-      const product = factories.courses.product()
-      const program = factories.programs.program({
-        enrollment_modes: [paidMode()],
-        products: [product],
-      })
-      renderWithProviders(<ProgramSummary program={program} />)
-
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
-      expect(priceRow).toHaveTextContent(
-        formatPrice(product.price, { avoidCents: true }),
-      )
-      expect(priceRow).toHaveTextContent("full program")
-      expect(priceRow).not.toHaveTextContent("Free to Learn")
-      expect(priceRow).not.toHaveTextContent("Earn a certificate")
-      expect(priceRow).not.toHaveTextContent("Audit for free")
-    })
-
-    test("Shows paid price and 'Start for free' callout when enrollment modes include both free and paid", () => {
-      const program = factories.programs.program({
-        enrollment_modes: bothModes(),
-      })
-      invariant(program.products[0])
-      renderWithProviders(<ProgramSummary program={program} />)
-
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
-      expect(priceRow).toHaveTextContent("Audit for free")
-      expect(priceRow).toHaveTextContent("or upgrade to")
-      expect(priceRow).toHaveTextContent("certificate")
-      expect(priceRow).toHaveTextContent(
-        formatPrice(program.products[0].price, { avoidCents: true }),
-      )
-      expect(priceRow).not.toHaveTextContent("Free to Learn")
-      expect(priceRow).not.toHaveTextContent("Earn a certificate")
-    })
-
-    test.each([
-      { hasFinancialAid: true, expectLink: true },
-      { hasFinancialAid: false, expectLink: false },
-    ])(
-      "Program financial aid link is displayed if and only if URL is non-empty (hasFinancialAid=$hasFinancialAid)",
-      ({ hasFinancialAid, expectLink }) => {
-        const financialAidUrl = hasFinancialAid
-          ? `/financial-aid/${faker.string.alphanumeric(10)}`
-          : ""
-        const program = factories.programs.program({
-          enrollment_modes: bothModes(),
-          page: { financial_assistance_form_url: financialAidUrl },
-        })
-
-        if (hasFinancialAid) {
-          const product = program.products[0]
-          invariant(product)
-          setMockResponse.get(
-            urls.products.userFlexiblePriceDetail(product.id),
-            makeFlexiblePrice({ id: product.id, price: product.price }),
-          )
-        }
-
-        renderWithProviders(<ProgramSummary program={program} />, {
-          user: { is_authenticated: true },
-        })
-
-        const priceRow = screen.getByTestId(TestIds.PriceRow)
-
-        if (expectLink) {
-          const link = within(priceRow).getByRole("link", {
-            name: /financial assistance/i,
-          })
-          const expectedUrl = mitxonlineLegacyUrl(financialAidUrl)
-          expect(link).toHaveAttribute("href", expectedUrl)
-          expect(link).toHaveTextContent("Financial assistance available")
-        } else {
-          const link = within(priceRow).queryByRole("link", {
-            name: /financial assistance/i,
-          })
-          expect(link).toBeNull()
-        }
-      },
-    )
-
-    test("Displays discounted price with strikethrough original when approved financial aid exists", async () => {
-      const originalPrice = "200.00"
-      const discountedAmount = "75.00"
-      const product = makeProduct({ price: originalPrice })
-      const financialAidUrl = `/financial-aid/${faker.string.alphanumeric(10)}`
-      const program = factories.programs.program({
-        enrollment_modes: bothModes(),
-        products: [product],
-        page: { financial_assistance_form_url: financialAidUrl },
-      })
-      const flexiblePrice = makeFlexiblePrice({
-        id: product.id,
-        price: originalPrice,
-        // Only the discount amount + type drive the asserted $125 (= $200 − $75)
-        // and the "applied" label (gated on the discount's id); the factory fills
-        // the rest.
-        product_flexible_price: makeDiscount({
-          amount: discountedAmount,
-          discount_type: "dollars-off",
-        }),
-      })
-
-      setMockResponse.get(
-        urls.products.userFlexiblePriceDetail(product.id),
-        flexiblePrice,
-      )
-
-      renderWithProviders(<ProgramSummary program={program} />, {
-        user: { is_authenticated: true },
-      })
-
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
-
-      // Wait for flexible price API response and label update
-      // Discounted price: $200 - $75 = $125
-      await within(priceRow).findByText("Financial assistance applied")
-      expect(priceRow).toHaveTextContent("$125")
-      expect(priceRow).toHaveTextContent("$200")
-    })
-
-    test("Shows 'Financial assistance available' when financial aid URL exists but no discount is applied", async () => {
-      const product = makeProduct({ price: "300.00" })
-      const financialAidUrl = `/financial-aid/${faker.string.alphanumeric(10)}`
-      const program = factories.programs.program({
-        enrollment_modes: bothModes(),
-        products: [product],
-        page: { financial_assistance_form_url: financialAidUrl },
-      })
-
-      setMockResponse.get(
-        urls.products.userFlexiblePriceDetail(product.id),
-        makeFlexiblePrice({
-          id: product.id,
-          price: product.price,
-          product_flexible_price: null,
-        }),
-      )
-
-      renderWithProviders(<ProgramSummary program={program} />, {
-        user: { is_authenticated: true },
-      })
-
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
-      const link = await within(priceRow).findByRole("link", {
-        name: /financial assistance/i,
-      })
-      expect(link).toHaveTextContent("Financial assistance available")
-      expect(priceRow).toHaveTextContent(
-        formatPrice(product.price, { avoidCents: true }),
-      )
     })
   })
 })
