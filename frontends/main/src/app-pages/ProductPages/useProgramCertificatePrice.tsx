@@ -6,7 +6,11 @@ import { pluralize } from "ol-utilities"
 import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import { productQueries } from "api/mitxonline-hooks/products"
 import { useUserIsAuthenticated } from "api/hooks/user"
-import { formatPrice, mitxonlineLegacyUrl } from "@/common/mitxonline"
+import {
+  formatPrice,
+  getEnrollmentType,
+  mitxonlineLegacyUrl,
+} from "@/common/mitxonline"
 import { getTotalRequiredCourses } from "./ProductSummary"
 
 /* Ported from ProductSummary.tsx's ProgramPriceRow. Renders the full-width
@@ -142,6 +146,7 @@ export const useProgramCertificatePrice = (
 ): ProgramCertificatePriceResult => {
   const showSavings = opts?.showSavings ?? true
   const isAuthenticated = useUserIsAuthenticated()
+  const enrollmentType = getEnrollmentType(program.enrollment_modes)
 
   const product = program.products[0]
   const financialAidUrl = program.page?.financial_assistance_form_url
@@ -149,7 +154,10 @@ export const useProgramCertificatePrice = (
 
   const userFlexiblePrice = useQuery({
     ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
-    enabled: isAuthenticated && hasFinancialAid,
+    enabled:
+      (enrollmentType === "paid" || enrollmentType === "both") &&
+      isAuthenticated &&
+      hasFinancialAid,
   })
 
   if (!product?.price) {

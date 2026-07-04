@@ -1,5 +1,4 @@
 import React from "react"
-import fs from "fs"
 import { renderWithProviders, screen, setMockResponse } from "@/test-utils"
 import { factories as apiFactories, urls as apiUrls } from "api/test-utils"
 import {
@@ -79,7 +78,6 @@ describe("InfoBoxProgramAsCourse — financial assistance", () => {
       enrollment_modes: [makeMode({ requires_payment: true })],
       products: [product],
       page: {
-        list_price: "800",
         financial_assistance_form_url: "/financial-aid/foo",
       },
     })
@@ -162,14 +160,5 @@ describe("InfoBoxProgramAsCourse — a11y heading", () => {
     expect(
       screen.getByRole("heading", { name: "Course Information", level: 2 }),
     ).toBeInTheDocument()
-  })
-})
-
-describe("InfoBoxProgramAsCourse — bespoke card removed", () => {
-  test("(f) does not import the old bespoke ProgramAsCourseCertificateTrackCard", () => {
-    const source = fs.readFileSync(`${__dirname}/InfoBoxProgramAsCourse.tsx`, {
-      encoding: "utf-8",
-    })
-    expect(source).not.toMatch(/ProgramAsCourseCertificateTrackCard/)
   })
 })

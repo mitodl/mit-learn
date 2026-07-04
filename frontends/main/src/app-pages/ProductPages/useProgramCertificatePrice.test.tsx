@@ -107,6 +107,7 @@ describe("useProgramCertificatePrice", () => {
     test("finaid available, not approved -> applied: false, displayed price unaffected", async () => {
       const product = courses.product({ price: "800" })
       const program = programs.program({
+        enrollment_modes: [courses.enrollmentMode({ requires_payment: true })],
         products: [product],
         page: {
           list_price: "800",
@@ -142,6 +143,7 @@ describe("useProgramCertificatePrice", () => {
     test("approved flexible price -> applied: true, displayed price still the full price", async () => {
       const product = courses.product({ price: "800" })
       const program = programs.program({
+        enrollment_modes: [courses.enrollmentMode({ requires_payment: true })],
         products: [product],
         page: {
           list_price: "800",
@@ -170,6 +172,37 @@ describe("useProgramCertificatePrice", () => {
         expect(result.current.financialAid?.applied).toBe(true),
       )
       expect(result.current.price).toBe(formatPrice(800, { avoidCents: true }))
+    })
+
+    test("free-only program with finaid url -> flexible-price endpoint is never requested", async () => {
+      const product = courses.product({ price: "800" })
+      const program = programs.program({
+        enrollment_modes: [courses.enrollmentMode({ requires_payment: false })],
+        products: [product],
+        page: {
+          financial_assistance_form_url: "/financial-aid/foo",
+        },
+      })
+      setMockResponse.get(
+        apiUrls.userMe.get(),
+        makeUser({ is_authenticated: true }),
+      )
+      // No mock for userFlexiblePriceDetail — it must NOT be requested
+
+      const { result } = renderHook(() => useProgramCertificatePrice(program), {
+        wrapper,
+      })
+
+      await waitFor(() =>
+        expect(result.current.price).toBe(
+          formatPrice(800, { avoidCents: true }),
+        ),
+      )
+      expect(makeRequest).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: urls.products.userFlexiblePriceDetail(product.id),
+        }),
+      )
     })
   })
 })

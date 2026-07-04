@@ -467,7 +467,6 @@ describe("ProgramAsCoursePage", () => {
 
   test("Hides certificate track pricing card for free-enrollment programs", async () => {
     const program = makeProgramAsCourse({
-      certificate_available: false,
       enrollment_modes: [
         factories.courses.enrollmentMode({ requires_payment: false }),
       ],

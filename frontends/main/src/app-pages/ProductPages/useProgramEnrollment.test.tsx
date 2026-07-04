@@ -17,6 +17,7 @@ import { programView } from "@/common/urls"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 import { trackCourseEnrolled } from "@/common/analytics/gtm"
+import { PlatformEnum } from "api"
 
 jest.mock("@/common/analytics/gtm", () => ({
   trackCourseEnrolled: jest.fn(),
@@ -262,6 +263,8 @@ describe("useProgramEnrollment — actions", () => {
         enrollmentMode: "verified",
         resourceType: "program",
         readableId: program.readable_id,
+        platform: PlatformEnum.Mitxonline,
+        label: "Enroll in Program",
       }),
     )
   })
