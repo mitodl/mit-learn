@@ -1,12 +1,10 @@
 import React, { HTMLAttributes, useState } from "react"
 import { ActionButton, Alert, styled } from "@mitodl/smoot-design"
-import { productQueries } from "api/mitxonline-hooks/products"
-import { Dialog, Link, Skeleton, Stack, theme, Typography } from "ol-components"
+import { Dialog, Link, Skeleton, Stack, Typography } from "ol-components"
 import type { StackProps } from "ol-components"
 import {
   RiCalendarLine,
   RiComputerLine,
-  RiPriceTag3Line,
   RiTimeLine,
   RiFileCopy2Line,
   RiInformation2Line,
@@ -23,15 +21,6 @@ import {
   runStartsAnytime,
   byStartDateDesc,
 } from "./courseRun"
-import {
-  formatPrice,
-  getEnrollmentType,
-  getFlexiblePriceForProduct,
-  mitxonlineLegacyUrl,
-  priceWithDiscount,
-} from "@/common/mitxonline"
-import { useQuery } from "@tanstack/react-query"
-import { useUserIsAuthenticated } from "api/hooks/user"
 
 const ResponsiveLink = styled(Link)(({ theme }) => ({
   ...theme.typography.body2, // override default for "black" color is subtitle2
@@ -43,14 +32,6 @@ const ResponsiveLink = styled(Link)(({ theme }) => ({
 const UnderlinedLink = styled(ResponsiveLink)({
   textDecoration: "underline",
 })
-
-const SecondaryUnderlinedLink = styled(UnderlinedLink)(({ theme }) => ({
-  ...theme.typography.body3,
-  color: theme.custom.colors.silverGrayDark,
-  [theme.breakpoints.down("sm")]: {
-    ...theme.typography.body4,
-  },
-}))
 
 const InfoRow = styled.div(({ theme }) => ({
   width: "100%",
@@ -419,167 +400,6 @@ const CourseDurationRow: React.FC<CourseInfoRowProps> = ({
   )
 }
 
-const ProgramPaySection = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "flex-start",
-  gap: "12px",
-  width: "346px",
-  alignSelf: "stretch",
-  flex: "none",
-  color: theme.custom.colors.darkGray2,
-}))
-
-const ProgramPayLabel = styled.span(({ theme }) => ({
-  ...theme.typography.subtitle3,
-  color: theme.custom.colors.silverGrayDark,
-  textTransform: "uppercase",
-  letterSpacing: "0.04em",
-}))
-
-/** Horizontal row: [current price block] | [vertical divider] | [list price block] */
-const ProgramPriceRowInner = styled.div({
-  display: "flex",
-  flexDirection: "row" as const,
-  alignItems: "flex-end" as const,
-  gap: "24px",
-})
-
-const ProgramCurrentPriceBlock = styled.div({
-  display: "flex",
-  flexDirection: "column" as const,
-  justifyContent: "flex-end" as const,
-  alignItems: "flex-start" as const,
-})
-
-const ProgramPriceAmount = styled.span(({ theme }) => ({
-  ...theme.typography.subtitle2,
-  fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-  fontWeight: theme.typography.fontWeightBold,
-  fontSize: "34px",
-  lineHeight: "40px",
-  color: theme.custom.colors.darkGray2,
-}))
-
-const ProgramPriceSuffix = styled.span(({ theme }) => ({
-  ...theme.typography.body3,
-  color: theme.custom.colors.silverGrayDark,
-}))
-
-const ProgramVerticalDivider = styled.div(() => ({
-  width: "1px",
-  height: "48px",
-  backgroundColor: theme.custom.colors.lightGray2,
-  flexShrink: 0,
-}))
-
-const ProgramListPriceBlock = styled.div({
-  display: "flex",
-  flexDirection: "column" as const,
-  justifyContent: "flex-end" as const,
-  alignItems: "flex-start" as const,
-})
-
-const ProgramListPriceAmount = styled.span({
-  ...theme.typography.body3,
-  fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-  fontSize: "28px",
-  lineHeight: "36px",
-  display: "flex",
-  alignItems: "flex-end" as const,
-  textDecoration: "line-through",
-  color: theme.custom.colors.silverGrayDark,
-})
-
-const ProgramListPriceSubLabel = styled.span({
-  ...theme.typography.body3,
-  color: theme.custom.colors.silverGrayDark,
-})
-
-/** Inline row: "Save $X  compared to purchasing N courses separately" */
-const ProgramDiscountRow = styled.div({
-  display: "flex",
-  flexDirection: "row" as const,
-  alignItems: "center" as const,
-  gap: "4px",
-  width: "100%",
-})
-
-const ProgramSavingsText = styled.span({
-  ...theme.typography.subtitle3,
-  fontWeight: theme.typography.fontWeightBold,
-  color: "#008000",
-})
-
-const ProgramSavingsDetailText = styled.span({
-  ...theme.typography.body3,
-  color: theme.custom.colors.silverGrayDark,
-})
-
-const ProgramPriceDivider = styled.div(({ theme }) => ({
-  width: "100%",
-  maxWidth: "346px",
-  borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
-  marginBottom: "20px",
-  flex: "none",
-  alignSelf: "stretch",
-}))
-
-const ProgramStartForFreeBox = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-  padding: "8px 16px",
-  borderRadius: "8px",
-  background: `linear-gradient(0deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.94)), ${theme.custom.colors.darkGreen}`,
-}))
-
-const ProgramStartForFreeIcon = styled.svg(() => ({
-  width: "24px",
-  height: "24px",
-  flexShrink: 0,
-  path: {
-    fill: "#008000",
-  },
-}))
-
-const ProgramStartForFreeTextContainer = styled.span(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: "4px",
-  ...theme.typography.body2,
-}))
-
-const ProgramStartForFreeTextStrong = styled.span({
-  ...theme.typography.subtitle2,
-  color: "#008000",
-})
-
-const ProgramStartForFreeTextRegular = styled.span({
-  ...theme.typography.body2,
-  color: theme.custom.colors.darkGray2,
-})
-
-const ProgramStartForFreeInfoIcon = styled.span(({ theme }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  flexShrink: 0,
-  color: theme.custom.colors.silverGrayDark,
-  "& svg": {
-    width: "20px",
-    height: "20px",
-  },
-}))
-
-const StrickenText = styled.span(({ theme }) => ({
-  textDecoration: "line-through",
-  color: theme.custom.colors.silverGrayDark,
-  ...theme.typography.body3,
-  [theme.breakpoints.down("sm")]: {
-    ...theme.typography.body4,
-  },
-}))
-
 enum TestIds {
   DatesRow = "dates-row",
   PaceRow = "pace-row",
@@ -883,187 +703,6 @@ const CertificateRow: React.FC<HTMLAttributes<HTMLDivElement>> = (props) => {
   )
 }
 
-const PROGRAM_CERT_INFO_HREF =
-  "https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
-
-type ProgramPriceRowProps = HTMLAttributes<HTMLDivElement> & {
-  program: V2ProgramDetail
-}
-const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
-  program,
-  ...others
-}) => {
-  const enrollmentType = getEnrollmentType(program.enrollment_modes)
-  const isAuthenticated = useUserIsAuthenticated()
-
-  const product = program.products[0]
-  const currentPrice = product?.price
-  const listPrice = program.page?.list_price
-  const financialAidUrl = program.page?.financial_assistance_form_url
-  const hasFinancialAid = !!(financialAidUrl && product)
-  const userFlexiblePrice = useQuery({
-    ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
-    enabled:
-      (enrollmentType === "paid" || enrollmentType === "both") &&
-      isAuthenticated &&
-      hasFinancialAid,
-  })
-
-  if (enrollmentType === "none") return null
-  const price = product
-    ? priceWithDiscount({
-        product,
-        flexiblePrice: userFlexiblePrice.data,
-        avoidCents: true,
-      })
-    : null
-
-  const currentAmount =
-    userFlexiblePrice.data && price?.isDiscounted
-      ? getFlexiblePriceForProduct(userFlexiblePrice.data)
-      : toNumericPrice(currentPrice)
-  const listAmount = toNumericPrice(listPrice)
-  const hasSavings =
-    currentAmount !== null && listAmount !== null && listAmount > currentAmount
-  const savingsAmount = hasSavings ? listAmount - currentAmount : null
-
-  const totalRequired = getTotalRequiredCourses(program)
-
-  const paidSection = currentPrice ? (
-    <ProgramPaySection>
-      <ProgramPayLabel>Price</ProgramPayLabel>
-      <ProgramPriceRowInner>
-        <ProgramCurrentPriceBlock
-          {...(price?.isDiscounted
-            ? {
-                role: "group",
-                "aria-label": `Discounted price: ${price.finalPrice}, was ${price.originalPrice}`,
-              }
-            : {})}
-        >
-          <ProgramPriceAmount aria-hidden={price?.isDiscounted || undefined}>
-            {price?.isDiscounted ? (
-              <>
-                {price.finalPrice}{" "}
-                <StrickenText>{price.originalPrice}</StrickenText>
-              </>
-            ) : (
-              formatPrice(currentPrice, { avoidCents: true })
-            )}
-          </ProgramPriceAmount>
-          <ProgramPriceSuffix>full program</ProgramPriceSuffix>
-        </ProgramCurrentPriceBlock>
-        {hasSavings && listAmount !== null ? (
-          <>
-            <ProgramVerticalDivider />
-            <ProgramListPriceBlock
-              role="group"
-              aria-label={`Original price: ${formatPrice(listAmount, { avoidCents: true })} purchased separately`}
-            >
-              <ProgramListPriceAmount aria-hidden="true">
-                {formatPrice(listAmount, { avoidCents: true })}
-              </ProgramListPriceAmount>
-              <ProgramListPriceSubLabel aria-hidden="true">
-                purchased separately
-              </ProgramListPriceSubLabel>
-            </ProgramListPriceBlock>
-          </>
-        ) : null}
-      </ProgramPriceRowInner>
-      {hasSavings && savingsAmount !== null ? (
-        <ProgramDiscountRow>
-          <ProgramSavingsText>
-            Save {formatPrice(savingsAmount, { avoidCents: true })}
-          </ProgramSavingsText>
-          <ProgramSavingsDetailText>
-            compared to purchasing {totalRequired}{" "}
-            {pluralize("course", totalRequired)} separately
-          </ProgramSavingsDetailText>
-        </ProgramDiscountRow>
-      ) : null}
-      {hasFinancialAid ? (
-        <SecondaryUnderlinedLink
-          color="black"
-          href={mitxonlineLegacyUrl(financialAidUrl!)}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ minWidth: "fit-content" }}
-        >
-          {price?.approvedFinancialAid
-            ? "Financial assistance applied"
-            : "Financial assistance available"}
-        </SecondaryUnderlinedLink>
-      ) : null}
-      {enrollmentType === "both" ? (
-        <ProgramStartForFreeBox>
-          <ProgramStartForFreeIcon
-            width="24"
-            height="24"
-            viewBox="0 0 22 19"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
-          >
-            <path d="M14 0C16.2091 0 18 1.79086 18 4C18 4.72903 17.8049 5.41251 17.4642 6.00111L22 6V7.99999H20V18C20 18.5523 19.5523 19 19 19H3C2.44772 19 2 18.5523 2 18V7.99999H0V6L4.53577 6.00111C4.19504 5.41251 4 4.72903 4 4C4 1.79086 5.79086 0 8 0C9.19522 0 10.268 0.52421 11.0009 1.35526C11.732 0.52421 12.8048 0 14 0ZM10 7.99999H4V17H10V7.99999ZM18 7.99999H12V17H18V7.99999ZM8 2C6.89543 2 6 2.89543 6 4C6 5.05436 6.81588 5.91816 7.85074 5.99451L8 6H10V4C10 2.99835 9.26372 2.16869 8.30278 2.02277L8.14927 2.00548L8 2ZM14 2C12.9456 2 12.0818 2.81588 12.0055 3.85074L12 4V6H14C15.0543 6 15.9181 5.18412 15.9945 4.14926L16 4C16 2.89543 15.1046 2 14 2Z" />
-          </ProgramStartForFreeIcon>
-          <ProgramStartForFreeTextContainer>
-            <ProgramStartForFreeTextStrong>
-              Audit for free
-            </ProgramStartForFreeTextStrong>
-            <ProgramStartForFreeTextRegular>
-              or upgrade to certificate
-            </ProgramStartForFreeTextRegular>
-          </ProgramStartForFreeTextContainer>
-          <a
-            href={PROGRAM_CERT_INFO_HREF}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Learn more about program certificates"
-            style={{ display: "inline-flex", alignItems: "center" }}
-          >
-            <ProgramStartForFreeInfoIcon>
-              <RiInformation2Line aria-hidden="true" />
-            </ProgramStartForFreeInfoIcon>
-          </a>
-        </ProgramStartForFreeBox>
-      ) : null}
-    </ProgramPaySection>
-  ) : (
-    <InfoLabelValue label="Price" value="Price unavailable" />
-  )
-
-  return (
-    <Stack {...others} gap="0px" width="100%">
-      {enrollmentType === "paid" || enrollmentType === "both" ? (
-        <ProgramPriceDivider />
-      ) : null}
-      <InfoRow>
-        {enrollmentType === "paid" || enrollmentType === "both" ? (
-          paidSection
-        ) : (
-          <>
-            <InfoRowIcon>
-              <RiPriceTag3Line aria-hidden="true" />
-            </InfoRowIcon>
-            <InfoRowInner>
-              <InfoLabelValue label="Price" value="Free to Learn" />
-            </InfoRowInner>
-          </>
-        )}
-      </InfoRow>
-    </Stack>
-  )
-}
-
-const toNumericPrice = (value: unknown): number | null => {
-  if (typeof value === "number" && Number.isFinite(value)) return value
-  if (typeof value === "string") {
-    const parsed = Number.parseFloat(value)
-    if (Number.isFinite(parsed)) return parsed
-  }
-  return null
-}
-
 const ProgramSummary: React.FC<{
   program: V2ProgramDetail
   /**
@@ -1103,7 +742,6 @@ export {
   ProgramAsCourseSummary,
   ProgramDurationRow,
   ProgramPaceRow,
-  ProgramPriceRow,
   SummaryRows,
   UnderlinedLink,
   TestIds,

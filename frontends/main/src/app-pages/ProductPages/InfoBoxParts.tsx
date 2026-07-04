@@ -16,23 +16,6 @@ export const InfoBoxCard = styled.div(({ theme }) => ({
   overflow: "hidden",
 }))
 
-/** Padded content area inside the summary card. */
-export const InfoBoxContent = styled.div(({ theme }) => ({
-  padding: "24px",
-  [theme.breakpoints.up("md")]: {
-    padding: "24px 32px",
-  },
-  [theme.breakpoints.down("sm")]: {
-    padding: "16px",
-  },
-}))
-
-export const InfoBoxActionStack = styled.div({
-  display: "flex",
-  flexDirection: "column",
-  width: "100%",
-})
-
 export const InfoBoxColumn = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
@@ -41,16 +24,5 @@ export const InfoBoxColumn = styled.div(({ theme }) => ({
   /** Tablet: Ask TIM card is 320px wide, left-aligned below the InfoBox. */
   [theme.breakpoints.between("sm", "md")]: {
     alignItems: "flex-start",
-  },
-}))
-
-export const InfoBoxEnrollArea = styled.div(({ theme }) => ({
-  padding: "8px 24px 24px",
-  width: "100%",
-  [theme.breakpoints.up("md")]: {
-    padding: "8px 32px 24px",
-  },
-  [theme.breakpoints.down("sm")]: {
-    padding: "8px 16px 16px",
   },
 }))
