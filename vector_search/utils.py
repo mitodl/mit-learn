@@ -704,9 +704,16 @@ def _generate_content_file_points(serialized_content):
     300,000 tokens per request
     max array size: 2048
     see: https://platform.openai.com/docs/guides/rate-limits
+
+    The 0.9 factor leaves headroom: markdown header prefixes are prepended
+    after the chunk-size split, so real chunks can exceed the nominal size.
     """
-    request_chunk_size = int(
-        300000 / settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+    request_chunk_size = max(
+        1,
+        min(
+            2048,
+            int(300000 * 0.9 / settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE),
+        ),
     )
 
     for doc in serialized_content:
