@@ -85,12 +85,12 @@ const ProgramListPriceSubLabel = styled.span({
   color: theme.custom.colors.silverGrayDark,
 })
 
-/** Inline row: "Save $X  compared to purchasing N courses separately" */
+/**
+ * "Save $X compared to purchasing N courses separately" as one flowing
+ * paragraph — the spans must stay inline so the sentence wraps as text, not
+ * as side-by-side boxes.
+ */
 const ProgramDiscountRow = styled.div({
-  display: "flex",
-  flexDirection: "row" as const,
-  alignItems: "center" as const,
-  gap: "4px",
   width: "100%",
 })
 
@@ -208,7 +208,7 @@ export const useProgramCertificatePrice = (
         <ProgramDiscountRow>
           <ProgramSavingsText>
             Save {formatPrice(savingsAmount, { avoidCents: true })}
-          </ProgramSavingsText>
+          </ProgramSavingsText>{" "}
           <ProgramSavingsDetailText>
             compared to purchasing {totalRequired}{" "}
             {pluralize("course", totalRequired)} separately
