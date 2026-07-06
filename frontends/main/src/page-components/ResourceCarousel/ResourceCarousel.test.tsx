@@ -518,7 +518,10 @@ describe("ResourceCarousel", () => {
       slides[0].focus()
       // Tab through every focusable element inside the active card (title
       // link, bookmark button, etc.) plus one more Tab to leave the carousel.
-      for (let i = 0; i < 10 && document.activeElement !== outsideButton; i++) {
+      const focusableInActiveSlide = slides[0].querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )
+      for (let i = 0; i < focusableInActiveSlide.length + 1; i++) {
         // eslint-disable-next-line no-await-in-loop
         await user.tab()
         expect(slides[1].contains(document.activeElement)).toBe(false)
