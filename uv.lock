@@ -2778,7 +2778,7 @@ requires-dist = [
     { name = "python-dateutil", specifier = ">=2.8.2,<3" },
     { name = "python-rapidjson", specifier = ">=1.8,<2" },
     { name = "pyyaml", specifier = ">=6.0.0,<7" },
-    { name = "qdrant-client", extras = ["fastembed"], specifier = "==1.18.0,<2" },
+    { name = "qdrant-client", extras = ["fastembed"], specifier = "~=1.18.0" },
     { name = "redis", specifier = ">=7.0.0,<8" },
     { name = "requests", specifier = ">=2.31.0,<3" },
     { name = "retry2", specifier = ">=0.9.5,<0.10" },
