@@ -122,6 +122,27 @@ describe("ProgramAsCourseCard", () => {
     ).toBeGreaterThan(0)
   })
 
+  test("module rows show 'Module' as the card type label", async () => {
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={cardData.courseProgramEnrollment}
+      />,
+    )
+
+    await screen.findByRole("heading", {
+      name: cardData.courseProgram.title,
+      level: 3,
+    })
+    // One label per module row (desktop card only)
+    expect(screen.getAllByText("Module")).toHaveLength(2)
+    expect(screen.queryByText("Course")).not.toBeInTheDocument()
+  })
+
   test("renders when user is not enrolled in the ProgramAsCourse", async () => {
     const cardData = setupCardData()
 

@@ -30,6 +30,7 @@ type UnenrolledCourseCardProps = {
   }
   layout?: "default" | "compact"
   headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
+  isModule?: boolean
   Component?: React.ElementType
   className?: string
 }
@@ -41,6 +42,7 @@ export const UnenrolledCourseCard = ({
   ancestorContext,
   layout = "default",
   headingLevel,
+  isModule,
   Component,
   className,
 }: UnenrolledCourseCardProps) => {
@@ -54,6 +56,7 @@ export const UnenrolledCourseCard = ({
   const title =
     layout === "compact" ? course.title : courseRun?.title || course.title
   const isContractPageResource = Boolean(contractId)
+  const cardTypeLabel = isModule || isContractPageResource ? "Module" : "Course"
   const handleEnrollmentClick = React.useCallback(() => {
     const isVerifiedProgramEnrollment =
       Boolean(ancestorContext?.useVerifiedEnrollment) ||
@@ -172,7 +175,7 @@ export const UnenrolledCourseCard = ({
         layout={layout}
       >
         <Stack justifyContent="start" alignItems="stretch" gap="6px" flex={1}>
-          <CardTypeText>Course</CardTypeText>
+          <CardTypeText>{cardTypeLabel}</CardTypeText>
           {titleSection}
           {!isCompact && courseDateText}
         </Stack>

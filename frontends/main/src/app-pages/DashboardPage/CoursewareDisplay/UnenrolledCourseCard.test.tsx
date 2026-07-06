@@ -819,3 +819,53 @@ describe.each([
     })
   })
 })
+
+describe("UnenrolledCourseCard card type label", () => {
+  setupLocationMock()
+
+  const getDesktopCard = () => screen.getByTestId("enrollment-card-desktop")
+
+  const setupCourse = (b2bContractId: number | null = null) => {
+    const run = mitxonline.factories.courses.courseRun({
+      b2b_contract: b2bContractId,
+      is_enrollable: true,
+    })
+    return mitxOnlineCourse({
+      title: run.title,
+      courseruns: [run],
+      next_run_id: run.id,
+    })
+  }
+
+  test("shows 'Course' for a non-B2B card", () => {
+    setupUserApis()
+    renderWithProviders(<UnenrolledCourseCard course={setupCourse()} />)
+    expect(within(getDesktopCard()).getByText("Course")).toBeInTheDocument()
+    expect(
+      within(getDesktopCard()).queryByText("Module"),
+    ).not.toBeInTheDocument()
+  })
+
+  test("shows 'Module' for a B2B card", () => {
+    setupUserApis()
+    const b2bContractId = faker.number.int()
+    renderWithProviders(
+      <UnenrolledCourseCard
+        course={setupCourse(b2bContractId)}
+        contractId={b2bContractId}
+      />,
+    )
+    expect(within(getDesktopCard()).getByText("Module")).toBeInTheDocument()
+    expect(
+      within(getDesktopCard()).queryByText("Course"),
+    ).not.toBeInTheDocument()
+  })
+
+  test("shows 'Module' when isModule is set", () => {
+    setupUserApis()
+    renderWithProviders(
+      <UnenrolledCourseCard course={setupCourse()} isModule />,
+    )
+    expect(within(getDesktopCard()).getByText("Module")).toBeInTheDocument()
+  })
+})

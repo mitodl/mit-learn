@@ -391,6 +391,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
               entry={entry}
               layout="compact"
               headingLevel="h4"
+              isModule
               onUpgradeError={onUpgradeError}
             />
           )

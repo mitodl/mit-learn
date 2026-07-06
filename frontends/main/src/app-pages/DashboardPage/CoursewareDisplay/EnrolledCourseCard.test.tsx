@@ -808,3 +808,42 @@ describe("EnrolledCourseCard — multiple enrollment runs", () => {
     expect(screen.getAllByText("Course runs (5)").length).toBeGreaterThan(0)
   })
 })
+
+describe("EnrolledCourseCard card type label", () => {
+  setupLocationMock()
+
+  const getDesktopCard = () => screen.getByTestId("enrollment-card-desktop")
+
+  test("shows 'Course' for a non-B2B enrollment", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(within(getDesktopCard()).getByText("Course")).toBeInTheDocument()
+    expect(
+      within(getDesktopCard()).queryByText("Module"),
+    ).not.toBeInTheDocument()
+  })
+
+  test("shows 'Module' for a B2B enrollment", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: faker.number.int(),
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(within(getDesktopCard()).getByText("Module")).toBeInTheDocument()
+    expect(
+      within(getDesktopCard()).queryByText("Course"),
+    ).not.toBeInTheDocument()
+  })
+
+  test("shows 'Module' when isModule is set", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} isModule />)
+    expect(within(getDesktopCard()).getByText("Module")).toBeInTheDocument()
+  })
+})

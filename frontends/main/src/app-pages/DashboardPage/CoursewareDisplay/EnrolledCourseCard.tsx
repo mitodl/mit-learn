@@ -152,6 +152,7 @@ type EnrolledCourseCardProps = {
   layout?: "default" | "compact"
   headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
   onUpgradeError?: (error: string) => void
+  isModule?: boolean
   Component?: React.ElementType
   className?: string
 }
@@ -162,12 +163,14 @@ export const EnrolledCourseCard = ({
   layout = "default",
   headingLevel,
   onUpgradeError,
+  isModule,
   Component,
   className,
 }: EnrolledCourseCardProps) => {
   const course = enrollment.run.course
   const run = enrollment.run
   const isContractPageResource = Boolean(enrollment.b2b_contract_id)
+  const cardTypeLabel = isModule || isContractPageResource ? "Module" : "Course"
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const isStaff = mitxOnlineUser.data?.is_staff
   const isCompact = layout === "compact"
@@ -399,7 +402,7 @@ export const EnrolledCourseCard = ({
         >
           <CardHeaderContent>
             <Stack justifyContent="start" alignItems="stretch" flex={1}>
-              <CardTypeText>Course</CardTypeText>
+              <CardTypeText>{cardTypeLabel}</CardTypeText>
               {titleSection}
             </Stack>
             <Stack direction="row" gap="8px" alignItems="center">
@@ -421,7 +424,7 @@ export const EnrolledCourseCard = ({
           layout={layout}
         >
           <Stack justifyContent="start" alignItems="stretch" flex={1}>
-            <CardTypeText>Course</CardTypeText>
+            <CardTypeText>{cardTypeLabel}</CardTypeText>
             {titleSection}
           </Stack>
           <Stack direction="row" gap="8px" alignItems="center">
