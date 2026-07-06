@@ -1585,3 +1585,42 @@ def test_fetch_courses_by_ids_preserves_requested_order(mocker, settings):
             "headers": {"Authorization": "Api-Key secret-key"},
             "timeout": settings.REQUESTS_TIMEOUT,
         }
+
+
+def test_fetch_courses_by_ids_skips_error_responses(mocker, settings):
+    """API error responses should not be returned as course data."""
+    settings.MITX_ONLINE_COURSES_API_URL = "http://localhost/test/courses/api/"
+    settings.REQUESTS_TIMEOUT = 5
+    mock_log_warning = mocker.patch("learning_resources.etl.mitxonline.log.warning")
+    mocker.patch(
+        "learning_resources.etl.mitxonline.requests.get",
+        side_effect=[
+            mocker.Mock(
+                status_code=200,
+                json=mocker.Mock(
+                    return_value={"id": 10, "readable_id": "course-v1:T+A"}
+                ),
+            ),
+            mocker.Mock(
+                status_code=500,
+                json=mocker.Mock(return_value={"detail": "Internal server error"}),
+            ),
+            mocker.Mock(
+                status_code=200,
+                json=mocker.Mock(return_value={"detail": "Permission denied"}),
+            ),
+        ],
+    )
+
+    result = _fetch_courses_by_ids([10, 20, 30])
+
+    assert [course["id"] for course in result] == [10]
+    mock_log_warning.assert_any_call(
+        "Failed to fetch MITx Online course id=%s: status=%s",
+        20,
+        500,
+    )
+    mock_log_warning.assert_any_call(
+        "Skipping invalid MITx Online course response for id=%s",
+        30,
+    )

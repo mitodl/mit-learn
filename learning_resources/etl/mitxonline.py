@@ -601,9 +601,22 @@ def _fetch_courses_by_ids(course_ids):
                 headers=headers,
                 timeout=settings.REQUESTS_TIMEOUT,
             )
-            if response.status_code == requests.codes.not_found:
+            if response.status_code >= requests.codes.bad_request:
+                if response.status_code != requests.codes.not_found:
+                    log.warning(
+                        "Failed to fetch MITx Online course id=%s: status=%s",
+                        course_id,
+                        response.status_code,
+                    )
                 continue
-            courses.append(response.json())
+            course = response.json()
+            if not isinstance(course, dict) or "id" not in course:
+                log.warning(
+                    "Skipping invalid MITx Online course response for id=%s",
+                    course_id,
+                )
+                continue
+            courses.append(course)
         return courses
 
     log.warning("Missing required setting MITX_ONLINE_COURSES_API_URL")
