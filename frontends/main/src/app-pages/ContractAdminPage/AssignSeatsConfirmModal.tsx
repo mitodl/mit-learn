@@ -9,7 +9,7 @@ import {
   alpha,
   styled,
 } from "ol-components"
-import { Button, VisuallyHidden } from "@mitodl/smoot-design"
+import { Alert, Button, VisuallyHidden } from "@mitodl/smoot-design"
 import { pluralize } from "ol-utilities"
 import {
   RiAlertFill,
@@ -157,6 +157,26 @@ const StatLabel = styled(Typography)(({ theme }) => ({
   width: "100%",
 })) as typeof Typography
 
+const EmailPreviewLabel = styled(Typography)(({ theme }) => ({
+  ...theme.typography.subtitle2,
+  color: theme.custom.colors.darkGray2,
+})) as typeof Typography
+
+// ─── Confirm-step email preview block ──────────────────────────────────────────
+
+const EmailPreviewSection = styled("div")({
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+})
+
+const EmailPreviewRow = styled("div")({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "16px",
+})
+
 // ─── Small helpers ────────────────────────────────────────────────────────────
 
 const SHOW_MORE_THRESHOLD = 3
@@ -214,6 +234,8 @@ const copyToClipboard = async (text: string): Promise<boolean> => {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+type TestEmailStatus = "idle" | "sending" | "success" | "error"
+
 type AssignSeatsConfirmModalProps = {
   open: boolean
   onClose: () => void
@@ -223,6 +245,13 @@ type AssignSeatsConfirmModalProps = {
   invalidEmails: string[]
   duplicateEmails: string[]
   skippedCount: number
+  /** Email of the logged-in user, shown in the test-email success message. */
+  userEmail?: string | null
+  /**
+   * When provided, renders the "Email Preview" section with a "Send Test Email
+   * to Me" button that calls this handler. Omit to hide the section entirely.
+   */
+  onSendTestEmail?: () => Promise<void>
 }
 
 type Step = "review" | "confirm"
@@ -236,6 +265,8 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   invalidEmails,
   duplicateEmails,
   skippedCount,
+  userEmail,
+  onSendTestEmail,
 }) => {
   const descriptionId = useId()
   const overCapacitySummaryId = `${descriptionId}-summary`
@@ -252,6 +283,8 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   const [copiedDuplicate, setCopiedDuplicate] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
+  const [testEmailStatus, setTestEmailStatus] =
+    useState<TestEmailStatus>("idle")
   // Assertive live region text for step transitions. Using reset-then-set (100ms
   // delay) so NVDA picks up the content change cleanly after focus settles on the
   // new step's first focusable element inside the same persistent dialog.
@@ -268,6 +301,10 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   const sendErrorAnnouncementTimerRef = useRef<ReturnType<
     typeof setTimeout
   > | null>(null)
+  const testEmailAnnouncementTimerRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null)
+  const [testEmailAnnouncement, setTestEmailAnnouncement] = useState("")
 
   // Only reset step and copy state when the dialog transitions from closed to
   // open. Without prevOpenRef the effect would also fire when hasIssues or
@@ -283,6 +320,8 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
       setSendError(null)
       setSendErrorAnnouncement("")
       setStepAnnouncement("")
+      setTestEmailStatus("idle")
+      setTestEmailAnnouncement("")
     }
   }, [open, hasIssues, overCapacity])
 
@@ -295,6 +334,8 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
         clearTimeout(stepAnnouncementTimerRef.current)
       if (sendErrorAnnouncementTimerRef.current)
         clearTimeout(sendErrorAnnouncementTimerRef.current)
+      if (testEmailAnnouncementTimerRef.current)
+        clearTimeout(testEmailAnnouncementTimerRef.current)
     }
   }, [])
 
@@ -319,6 +360,34 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
       () => setCopiedDuplicate(false),
       2000,
     )
+  }
+
+  const handleSendTestEmail = async () => {
+    if (!onSendTestEmail) return
+    setTestEmailStatus("sending")
+    try {
+      await onSendTestEmail()
+      setTestEmailStatus("success")
+      const msg = `Test email successfully sent to ${userEmail}.`
+      setTestEmailAnnouncement("")
+      if (testEmailAnnouncementTimerRef.current)
+        clearTimeout(testEmailAnnouncementTimerRef.current)
+      testEmailAnnouncementTimerRef.current = setTimeout(
+        () => setTestEmailAnnouncement(msg),
+        100,
+      )
+    } catch {
+      setTestEmailStatus("error")
+      const msg =
+        "Something went wrong sending the test email. Please try again."
+      setTestEmailAnnouncement("")
+      if (testEmailAnnouncementTimerRef.current)
+        clearTimeout(testEmailAnnouncementTimerRef.current)
+      testEmailAnnouncementTimerRef.current = setTimeout(
+        () => setTestEmailAnnouncement(msg),
+        100,
+      )
+    }
   }
 
   const handleSend = async () => {
@@ -470,6 +539,10 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
       <VisuallyHidden aria-live="assertive" aria-atomic="true">
         {sendErrorAnnouncement}
       </VisuallyHidden>
+      {/* Test email announcement — same reset-then-set pattern for NVDA */}
+      <VisuallyHidden aria-live="assertive" aria-atomic="true">
+        {testEmailAnnouncement}
+      </VisuallyHidden>
       {/* Copy-success announcement — polite so it doesn't interrupt ongoing speech */}
       <VisuallyHidden aria-live="polite" aria-atomic="true">
         {copiedInvalid
@@ -603,6 +676,35 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
             receive an email with secure link to claim their seat and access the
             materials.
           </DescriptionText>
+          {onSendTestEmail && (
+            <EmailPreviewSection>
+              <EmailPreviewLabel component="p">Email Preview</EmailPreviewLabel>
+              <EmailPreviewRow>
+                <DescriptionText component="p">
+                  This is the email learners will receive.
+                </DescriptionText>
+                <Button
+                  variant="bordered"
+                  onClick={handleSendTestEmail}
+                  disabled={!userEmail || testEmailStatus === "sending"}
+                >
+                  {testEmailStatus === "sending"
+                    ? "Sending…"
+                    : "Send Test Email to Me"}
+                </Button>
+              </EmailPreviewRow>
+            </EmailPreviewSection>
+          )}
+          {onSendTestEmail && testEmailStatus === "success" && (
+            <Alert severity="success">
+              Test email successfully sent to {userEmail}.
+            </Alert>
+          )}
+          {onSendTestEmail && testEmailStatus === "error" && (
+            <Alert severity="error">
+              Something went wrong sending the test email. Please try again.
+            </Alert>
+          )}
           <StatsCard $variant="default">
             <StatColumn
               role="group"

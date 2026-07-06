@@ -57,6 +57,10 @@ describe("ContractAdminPage", () => {
   beforeEach(() => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(false)
     mockedUseFeatureFlagEnabled.mockReturnValue(undefined)
+    setMockResponse.get(
+      urls.userMe.get(),
+      factories.user.user({ email: "manager@test.com" }),
+    )
   })
 
   test("throws ForbiddenError when feature flag is disabled", () => {
