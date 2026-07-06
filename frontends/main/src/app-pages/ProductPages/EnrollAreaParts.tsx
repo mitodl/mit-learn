@@ -28,6 +28,17 @@ export const OfferingCell = styled.div({
 })
 
 /**
+ * Grid cell spanning the full row of BoxGrid. For enroll-area children that are
+ * not one of the counted offering boxes (e.g. the enrollment error alert):
+ * BoxGrid's tablet layout is two-column with auto-flow, so an uncounted child
+ * would otherwise land in a half-width column slot. Spanning `1 / -1` is a
+ * no-op in the single-column layouts.
+ */
+export const FullRowCell = styled.div({
+  gridColumn: "1 / -1",
+})
+
+/**
  * The page-header enroll button uses the `bordered` variant but with darkGray2
  * text (matching production), not the variant's default silverGrayDark. Disabled
  * buttons keep the variant default. `display: contents` adds no layout box.

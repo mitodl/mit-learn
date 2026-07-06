@@ -8,7 +8,7 @@ import { enrollmentAlertSuccessUrl } from "@/common/mitxonline"
 import { useRouter } from "next-nprogress-bar"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
-import { trackCourseEnrolled } from "@/common/analytics/gtm"
+import { trackProgramEnrolled } from "@/common/analytics/gtm"
 import { env } from "@/env"
 import { programView } from "@/common/urls"
 import { getProgramOffering, type ProgramOffering } from "./programOffering"
@@ -98,7 +98,7 @@ export const useProgramEnrollment = (
           { V3ProgramEnrollmentRequestRequest: { program_id: program.id } },
           {
             onSuccess: () => {
-              trackCourseEnrolled(program.title)
+              trackProgramEnrolled(program.title)
               router.push(
                 enrollmentAlertSuccessUrl({
                   title: program.title ?? "your enrollment",

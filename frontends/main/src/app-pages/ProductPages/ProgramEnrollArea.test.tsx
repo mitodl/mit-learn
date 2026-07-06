@@ -25,7 +25,7 @@ jest.mock("posthog-js/react", () => ({
 }))
 
 jest.mock("@/common/analytics/gtm", () => ({
-  trackCourseEnrolled: jest.fn(),
+  trackProgramEnrolled: jest.fn(),
 }))
 
 const makeProgram = mitxFactories.programs.program

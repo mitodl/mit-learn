@@ -7,7 +7,12 @@ import { useProgramCertificatePrice } from "./useProgramCertificatePrice"
 import CertificateTrackCard from "./CertificateTrackCard"
 import LearnForFreeCard from "./LearnForFreeCard"
 import EnrolledLink from "./EnrolledLink"
-import { EnrollButton, OfferingCell, ChooseYourPath } from "./EnrollAreaParts"
+import {
+  EnrollButton,
+  OfferingCell,
+  ChooseYourPath,
+  FullRowCell,
+} from "./EnrollAreaParts"
 
 type ProgramEnrollAreaProps = {
   program: V2ProgramDetail
@@ -147,9 +152,11 @@ const ProgramEnrollArea: React.FC<ProgramEnrollAreaProps> = ({
       {renderPaidBox()}
       {renderFreeBox()}
       {isError && (
-        <Alert severity="error">
-          There was a problem processing your enrollment. Please try again.
-        </Alert>
+        <FullRowCell>
+          <Alert severity="error">
+            There was a problem processing your enrollment. Please try again.
+          </Alert>
+        </FullRowCell>
       )}
       <SignupPopover anchorEl={anchor} onClose={() => setAnchor(null)} />
     </>

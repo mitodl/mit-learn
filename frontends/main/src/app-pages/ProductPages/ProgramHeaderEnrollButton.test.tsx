@@ -18,7 +18,7 @@ jest.mock("posthog-js/react", () => ({
 }))
 
 jest.mock("@/common/analytics/gtm", () => ({
-  trackCourseEnrolled: jest.fn(),
+  trackProgramEnrolled: jest.fn(),
 }))
 
 const makeProgram = mitxFactories.programs.program
@@ -157,5 +157,32 @@ describe("ProgramHeaderEnrollButton", () => {
     })
 
     expect(screen.getByTestId("signup-popover")).toBeInTheDocument()
+  })
+
+  test("shows an error alert below the button when enrollment fails", async () => {
+    setupAuth()
+    const program = makeProgram({
+      enrollment_modes: [makeMode({ requires_payment: false })],
+    })
+    setMockResponse.post(
+      mitxUrls.programEnrollments.enrollmentsListV3(),
+      undefined,
+      { code: 500 },
+    )
+
+    renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
+
+    const startBtn = await screen.findByRole("button", {
+      name: "Start Learning",
+    })
+    await act(async () => {
+      startBtn.click()
+    })
+
+    expect(
+      await screen.findByText(
+        "There was a problem processing your enrollment. Please try again.",
+      ),
+    ).toBeInTheDocument()
   })
 })

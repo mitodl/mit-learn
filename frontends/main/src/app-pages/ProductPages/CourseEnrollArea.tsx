@@ -10,7 +10,12 @@ import { useCertificatePrice } from "./useCertificatePrice"
 import CertificateTrackCard from "./CertificateTrackCard"
 import LearnForFreeCard from "./LearnForFreeCard"
 import EnrolledLink from "./EnrolledLink"
-import { EnrollButton, OfferingCell, ChooseYourPath } from "./EnrollAreaParts"
+import {
+  EnrollButton,
+  OfferingCell,
+  ChooseYourPath,
+  FullRowCell,
+} from "./EnrollAreaParts"
 
 type CourseEnrollAreaProps = {
   course: CourseWithCourseRunsSerializerV2
@@ -153,9 +158,11 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
       {renderPaidBox()}
       {renderFreeBox()}
       {isError && (
-        <Alert severity="error">
-          There was a problem processing your enrollment. Please try again.
-        </Alert>
+        <FullRowCell>
+          <Alert severity="error">
+            There was a problem processing your enrollment. Please try again.
+          </Alert>
+        </FullRowCell>
       )}
       <SignupPopover anchorEl={anchor} onClose={() => setAnchor(null)} />
     </>

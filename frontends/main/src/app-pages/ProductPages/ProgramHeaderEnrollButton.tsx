@@ -1,5 +1,6 @@
 import React from "react"
-import { Button } from "@mitodl/smoot-design"
+import { Alert, Button } from "@mitodl/smoot-design"
+import { Stack } from "ol-components"
 import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 import { EnrollButton, HeaderButtonSlot } from "./EnrollAreaParts"
@@ -22,11 +23,14 @@ const ProgramHeaderEnrollButton: React.FC<ProgramHeaderEnrollButtonProps> = ({
 }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
 
-  const { state, isStatusLoading, isPending } = useProgramEnrollment(program, {
-    tracking: { placement: "header" },
-    displayAsCourse,
-    onRequireSignup: (el) => setAnchor(el),
-  })
+  const { state, isStatusLoading, isPending, isError } = useProgramEnrollment(
+    program,
+    {
+      tracking: { placement: "header" },
+      displayAsCourse,
+      onRequireSignup: (el) => setAnchor(el),
+    },
+  )
 
   if (state.status === "enrolled") {
     return (
@@ -39,14 +43,24 @@ const ProgramHeaderEnrollButton: React.FC<ProgramHeaderEnrollButtonProps> = ({
   if (state.status === "options") {
     return (
       <HeaderButtonSlot>
-        <EnrollButton
-          action={state.options[0]}
-          size="large"
-          loading={isStatusLoading}
-          pending={isPending}
-          variant="bordered"
-          announceStatus={false}
-        />
+        <Stack gap="12px">
+          <EnrollButton
+            action={state.options[0]}
+            size="large"
+            loading={isStatusLoading}
+            pending={isPending}
+            variant="bordered"
+            announceStatus={false}
+          />
+          {/* This hook instance's mutations are local to the header button, so
+              failures must surface here — the InfoBox alert observes its own
+              separate mutation instances and never fires for header clicks. */}
+          {isError && (
+            <Alert severity="error">
+              There was a problem processing your enrollment. Please try again.
+            </Alert>
+          )}
+        </Stack>
         <SignupPopover anchorEl={anchor} onClose={() => setAnchor(null)} />
       </HeaderButtonSlot>
     )

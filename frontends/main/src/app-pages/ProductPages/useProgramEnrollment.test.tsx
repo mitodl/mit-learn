@@ -16,11 +16,11 @@ import { useProgramEnrollment } from "./useProgramEnrollment"
 import { programView } from "@/common/urls"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
-import { trackCourseEnrolled } from "@/common/analytics/gtm"
+import { trackProgramEnrolled } from "@/common/analytics/gtm"
 import { PlatformEnum } from "api"
 
 jest.mock("@/common/analytics/gtm", () => ({
-  trackCourseEnrolled: jest.fn(),
+  trackProgramEnrolled: jest.fn(),
 }))
 
 jest.mock("posthog-js/react", () => ({
@@ -349,7 +349,7 @@ describe("useProgramEnrollment — actions", () => {
     )
 
     await waitFor(() =>
-      expect(trackCourseEnrolled).toHaveBeenCalledWith(program.title),
+      expect(trackProgramEnrolled).toHaveBeenCalledWith(program.title),
     )
     await waitFor(() =>
       expect(mockPush).toHaveBeenCalledWith(
