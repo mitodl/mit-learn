@@ -39,7 +39,7 @@ const CarouselSlide = styled.div(({ theme }) => ({
   },
 }))
 
-/* Leaving for reference while we determine wether to swap out for CarouselV2
+/* Leaving for reference while we determine whether to swap out for CarouselV2
 const StyledCarousel = styled(Carousel)({
   /**
    * Our cards have a hover shadow that gets clipped by the carousel container.
