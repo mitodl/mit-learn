@@ -96,6 +96,19 @@ def mocked_mitxonline_courses_responses(
     return mocked_responses
 
 
+def mock_fetch_courses_by_ids(mocker, courses):
+    """Mock course lookup by id while preserving the requested order."""
+    courses_by_id = {course["id"]: course for course in courses}
+    return mocker.patch(
+        "learning_resources.etl.mitxonline._fetch_courses_by_ids",
+        side_effect=lambda course_ids: [
+            courses_by_id[course_id]
+            for course_id in course_ids
+            if course_id in courses_by_id
+        ],
+    )
+
+
 @pytest.mark.usefixtures("mocked_mitxonline_programs_responses")
 def test_mitxonline_extract_programs(mock_mitxonline_programs_data):
     """Verify that the extraction function calls the mitxonline programs API and returns the responses"""
@@ -631,10 +644,7 @@ def test_mitxonline_transform_programs(
     settings.MITX_ONLINE_PROGRAMS_API_URL = "http://localhost/test/programs/api"
     settings.MITX_ONLINE_COURSES_API_URL = "http://localhost/test/courses/api"
     settings.APP_BASE_URL = "https://learn.example.test/"
-    mocker.patch(
-        "learning_resources.etl.mitxonline._fetch_data",
-        return_value=mock_mitxonline_courses_data["results"],
-    )
+    mock_fetch_courses_by_ids(mocker, mock_mitxonline_courses_data["results"])
 
     result = transform_programs(mock_mitxonline_programs_data["results"])
     expected = []
@@ -1001,10 +1011,7 @@ def test_mitxonline_transform_programs_not_in_catalog(
     settings.MITX_ONLINE_COURSES_API_URL = "http://localhost/test/courses/api"
     mock_now = datetime(2023, 1, 1, tzinfo=UTC)
     mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
-    mocker.patch(
-        "learning_resources.etl.mitxonline._fetch_data",
-        return_value=mock_mitxonline_courses_data["results"],
-    )
+    mock_fetch_courses_by_ids(mocker, mock_mitxonline_courses_data["results"])
 
     # Use only the first program and set include_in_learn_catalog to True/False/None
     program = mock_mitxonline_programs_data["results"][0]
@@ -1070,12 +1077,9 @@ def test_program_run_start_date_value(  # noqa: PLR0913
     enrollment_dt,
     expected_dt,
 ):
-    mocker.patch(
-        "learning_resources.etl.mitxonline._fetch_data",
-        return_value=mock_mitxonline_courses_data["results"],
-    )
-
     """Test that the start date value is correctly determined for program runs"""
+    mock_fetch_courses_by_ids(mocker, mock_mitxonline_courses_data["results"])
+
     mock_mitxonline_programs_data["results"][0]["start_date"] = start_dt
     mock_mitxonline_programs_data["results"][0]["enrollment_start"] = enrollment_dt
 
@@ -1520,10 +1524,7 @@ def test_transform_program_certification_by_enrollment_modes(
     """
     mock_now = datetime(2023, 1, 1, tzinfo=UTC)
     mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
-    mocker.patch(
-        "learning_resources.etl.mitxonline._fetch_data",
-        return_value=mock_mitxonline_courses_data["results"],
-    )
+    mock_fetch_courses_by_ids(mocker, mock_mitxonline_courses_data["results"])
 
     program = mock_mitxonline_programs_data["results"][0].copy()
     program["page"] = {**program["page"]}
@@ -1542,22 +1543,45 @@ def test_transform_program_certification_by_enrollment_modes(
 def test_fetch_courses_by_ids_empty_list(mocker, settings):
     """Test that _fetch_courses_by_ids returns [] for empty input"""
     settings.MITX_ONLINE_COURSES_API_URL = "http://localhost/test/courses/api"
-    mock_fetch = mocker.patch("learning_resources.etl.mitxonline._fetch_data")
+    mock_get = mocker.patch("learning_resources.etl.mitxonline.requests.get")
     result = _fetch_courses_by_ids([])
     assert result == []
-    mock_fetch.assert_not_called()
+    mock_get.assert_not_called()
 
 
 def test_fetch_courses_by_ids_preserves_requested_order(mocker, settings):
-    """Requested ID order must be restored from the API response, with missing IDs silently dropped."""
-    settings.MITX_ONLINE_COURSES_API_URL = "http://localhost/test/courses/api"
-    # API returns reversed order, and omits id=30 (e.g. no longer live).
-    mocker.patch(
-        "learning_resources.etl.mitxonline._fetch_data",
-        return_value=[
-            {"id": 20, "readable_id": "course-v1:T+B"},
-            {"id": 10, "readable_id": "course-v1:T+A"},
+    """Requested ID order is preserved, with missing IDs silently dropped."""
+    settings.MITX_ONLINE_COURSES_API_URL = "http://localhost/test/courses/api/"
+    settings.MITX_ONLINE_ETL_API_KEY = "secret-key"
+    settings.REQUESTS_TIMEOUT = 5
+    mock_get = mocker.patch(
+        "learning_resources.etl.mitxonline.requests.get",
+        side_effect=[
+            mocker.Mock(
+                status_code=200,
+                json=mocker.Mock(
+                    return_value={"id": 10, "readable_id": "course-v1:T+A"}
+                ),
+            ),
+            mocker.Mock(
+                status_code=200,
+                json=mocker.Mock(
+                    return_value={"id": 20, "readable_id": "course-v1:T+B"}
+                ),
+            ),
+            mocker.Mock(status_code=404),
         ],
     )
+
     result = _fetch_courses_by_ids([10, 20, 30])
-    assert [c["id"] for c in result] == [10, 20]
+    assert [course["id"] for course in result] == [10, 20]
+    assert [call.args[0] for call in mock_get.mock_calls] == [
+        "http://localhost/test/courses/api/10",
+        "http://localhost/test/courses/api/20",
+        "http://localhost/test/courses/api/30",
+    ]
+    for call in mock_get.mock_calls:
+        assert call.kwargs == {
+            "headers": {"Authorization": "Api-Key secret-key"},
+            "timeout": settings.REQUESTS_TIMEOUT,
+        }
