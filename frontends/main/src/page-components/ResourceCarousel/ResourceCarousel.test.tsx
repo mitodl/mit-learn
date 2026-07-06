@@ -8,6 +8,7 @@ import {
   screen,
   user,
   waitFor,
+  within,
 } from "@/test-utils"
 import { factories, setMockResponse, makeRequest, urls } from "api/test-utils"
 import { LearningResourceCard } from "ol-components"
@@ -397,5 +398,156 @@ describe("ResourceCarousel", () => {
       }),
     )
     delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+  })
+
+  describe("keyboard accessibility (roving tabindex)", () => {
+    const setupCarousel = async (count = 3) => {
+      const config: ResourceCarouselProps["config"] = [
+        {
+          label: "Resources",
+          data: {
+            type: "resources",
+            params: { resource_type: ["course"] },
+          },
+        },
+      ]
+      const { resources } = setupApis({ count })
+      renderWithProviders(
+        <>
+          <ResourceCarousel
+            titleComponent="h2"
+            title="Test Carousel"
+            config={config}
+          />
+          <button>Outside the carousel</button>
+        </>,
+      )
+      await screen.findByText(resources.list.results[0].title)
+      const getSlides = () =>
+        screen.getAllByRole("group", { name: /^\d+ of \d+:/ })
+      return { resources, getSlides }
+    }
+
+    it("exposes each card as a single tab stop with slide semantics, only the active card tabbable", async () => {
+      const { resources, getSlides } = await setupCarousel(3)
+      const slides = getSlides()
+
+      expect(slides).toHaveLength(3)
+      slides.forEach((slide, index) => {
+        expect(slide).toHaveAttribute("aria-roledescription", "slide")
+        expect(slide).toHaveAttribute(
+          "aria-label",
+          `${index + 1} of 3: ${resources.list.results[index].title}`,
+        )
+        expect(slide).toHaveAttribute("tabindex", index === 0 ? "0" : "-1")
+      })
+    })
+
+    it("moves focus and the roving tabindex to the next/previous card on ArrowRight/ArrowLeft", async () => {
+      const { getSlides } = await setupCarousel(3)
+      const slides = getSlides()
+
+      slides[0].focus()
+      await user.keyboard("{ArrowRight}")
+      expect(document.activeElement).toBe(slides[1])
+      expect(slides[0]).toHaveAttribute("tabindex", "-1")
+      expect(slides[1]).toHaveAttribute("tabindex", "0")
+
+      await user.keyboard("{ArrowLeft}")
+      expect(document.activeElement).toBe(slides[0])
+      expect(slides[0]).toHaveAttribute("tabindex", "0")
+      expect(slides[1]).toHaveAttribute("tabindex", "-1")
+    })
+
+    it("does not move past the first/last card on ArrowLeft/ArrowRight", async () => {
+      const { getSlides } = await setupCarousel(2)
+      const slides = getSlides()
+
+      slides[0].focus()
+      await user.keyboard("{ArrowLeft}")
+      expect(document.activeElement).toBe(slides[0])
+
+      slides[1].focus()
+      await user.keyboard("{ArrowRight}")
+      expect(document.activeElement).toBe(slides[1])
+    })
+
+    it("jumps to the first/last card on Home/End", async () => {
+      const { getSlides } = await setupCarousel(3)
+      const slides = getSlides()
+
+      slides[1].focus()
+      await user.keyboard("{End}")
+      expect(document.activeElement).toBe(slides[2])
+
+      await user.keyboard("{Home}")
+      expect(document.activeElement).toBe(slides[0])
+    })
+
+    it("does not intercept arrow keys when focus is on a nested element like the bookmark button", async () => {
+      const { getSlides } = await setupCarousel(2)
+      const slides = getSlides()
+      const bookmarkButton = within(slides[0]).getByRole("button", {
+        name: /Bookmark/i,
+      })
+
+      bookmarkButton.focus()
+      await user.keyboard("{ArrowRight}")
+      expect(document.activeElement).toBe(bookmarkButton)
+      expect(slides[0]).toHaveAttribute("tabindex", "0")
+      expect(slides[1]).toHaveAttribute("tabindex", "-1")
+    })
+
+    it("tabs from the focused card into its own title link, not into the next card", async () => {
+      const { getSlides } = await setupCarousel(2)
+      const slides = getSlides()
+
+      slides[0].focus()
+      await user.tab()
+      expect(document.activeElement).toBe(
+        within(slides[0]).getByRole("link"),
+      )
+      expect(document.activeElement).not.toBe(slides[1])
+    })
+
+    it("exits the carousel entirely after tabbing through the active card, skipping every inactive card's internal links/buttons", async () => {
+      const { getSlides } = await setupCarousel(2)
+      const slides = getSlides()
+      const outsideButton = screen.getByRole("button", {
+        name: "Outside the carousel",
+      })
+
+      slides[0].focus()
+      // Tab through every focusable element inside the active card (title
+      // link, bookmark button, etc.) plus one more Tab to leave the carousel.
+      for (let i = 0; i < 10 && document.activeElement !== outsideButton; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        await user.tab()
+        expect(slides[1].contains(document.activeElement)).toBe(false)
+      }
+      expect(document.activeElement).toBe(outsideButton)
+    })
+
+    test("pressing Enter on the focused card opens it, mirroring a click", async () => {
+      allowConsoleErrors()
+      process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+      mockCapture.mockClear()
+      const { resources, getSlides } = await setupCarousel(2)
+      const slides = getSlides()
+      const firstResource = resources.list.results[0]
+
+      slides[0].focus()
+      await user.keyboard("{Enter}")
+
+      expect(mockCapture).toHaveBeenCalledWith(
+        PostHogEvents.CourseCardClicked,
+        expect.objectContaining({
+          label: "Test Carousel",
+          resourceId: firstResource.id,
+          readableId: firstResource.readable_id,
+        }),
+      )
+      delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+    })
   })
 })

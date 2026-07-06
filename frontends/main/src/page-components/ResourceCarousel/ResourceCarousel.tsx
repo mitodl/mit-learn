@@ -30,6 +30,15 @@ const StyledCarouselV2 = styled(CarouselV2)({
   },
 })
 
+const CarouselSlide = styled.div(({ theme }) => ({
+  flexShrink: 0,
+  borderRadius: "8px",
+  "&:focus-visible": {
+    outline: `2px solid ${theme.custom.colors.darkGray2}`,
+    outlineOffset: "2px",
+  },
+}))
+
 /* Leaving for reference while we determine wether to swap out for CarouselV2
 const StyledCarousel = styled(Carousel)({
   /**
@@ -162,6 +171,165 @@ const PanelChildren: React.FC<PanelChildrenProps> = ({
         )
       })}
     </>
+  )
+}
+
+type CarouselCardsProps = {
+  resources: LearningResource[]
+  childrenLoading?: boolean
+  tabConfig: TabConfig
+  isLoading?: boolean
+  titleComponent: ResourceCarouselProps["titleComponent"]
+  arrowsContainer: HTMLDivElement | null
+  onCardClick: (resource: LearningResource, index: number) => void
+}
+
+/**
+ * Renders the cards for a single carousel tab panel, implementing the ARIA
+ * carousel composite widget pattern: each card is a single tab stop (roving
+ * tabindex), with its internal focusable elements (title link, bookmark
+ * button) only reachable by tabbing further into the focused card. Arrow/
+ * Home/End keys move focus between cards; Tab exits the carousel as a unit.
+ * https://www.w3.org/WAI/ARIA/apg/patterns/carousel/
+ */
+const CarouselCards: React.FC<CarouselCardsProps> = ({
+  resources,
+  childrenLoading,
+  tabConfig,
+  isLoading,
+  titleComponent,
+  arrowsContainer,
+  onCardClick,
+}) => {
+  const cardRefs = React.useRef<(HTMLDivElement | null)[]>([])
+  const [activeIndex, setActiveIndex] = React.useState(0)
+
+  // The same CarouselCards instance is reused across resource navigations
+  // (e.g. clicking a "similar resources" card within the drawer), which can
+  // swap in a shorter `resources` list. Clamp so a stale index doesn't leave
+  // every slide at tabIndex=-1 and the carousel permanently untabbable.
+  React.useEffect(() => {
+    setActiveIndex((current) =>
+      Math.min(current, Math.max(resources.length - 1, 0)),
+    )
+  }, [resources.length])
+
+  const moveFocus = (index: number) => {
+    setActiveIndex(index)
+    // Embla's `activeIndex` prop (passed to StyledCarouselV2 below) already
+    // handles scrolling the target slide into view, so avoid letting the
+    // browser's native focus-scroll fight with it.
+    cardRefs.current[index]?.focus({ preventScroll: true })
+  }
+
+  // Setting tabIndex=-1 on a slide wrapper only removes the wrapper itself
+  // from the tab order — native descendants (the title link, bookmark
+  // button) keep their own implicit tabIndex=0 and remain reachable by Tab.
+  // Card/BaseLearningResourceCard are shared far beyond this carousel, so
+  // rather than threading a tabIndex override prop through every layer,
+  // sync each inactive slide's focusable descendants imperatively.
+  React.useEffect(() => {
+    cardRefs.current.forEach((slide, index) => {
+      if (!slide) {
+        return
+      }
+      const focusableDescendants = slide.querySelectorAll<HTMLElement>(
+        "a[href], button, [tabindex]",
+      )
+      focusableDescendants.forEach((el) => {
+        el.tabIndex = index === activeIndex ? 0 : -1
+      })
+    })
+  }, [activeIndex, resources])
+
+  const handleSlideKeyDown = (
+    event: React.KeyboardEvent<HTMLDivElement>,
+    index: number,
+  ) => {
+    // Only steal these keys when the slide itself is focused, not when focus
+    // is on a nested element like the title link or bookmark button.
+    if (event.target !== event.currentTarget) {
+      return
+    }
+    switch (event.key) {
+      case "ArrowLeft":
+        if (index > 0) {
+          event.preventDefault()
+          moveFocus(index - 1)
+        }
+        break
+      case "ArrowRight":
+        if (index < resources.length - 1) {
+          event.preventDefault()
+          moveFocus(index + 1)
+        }
+        break
+      case "Home":
+        event.preventDefault()
+        moveFocus(0)
+        break
+      case "End":
+        event.preventDefault()
+        moveFocus(resources.length - 1)
+        break
+      case "Enter":
+        // Mirrors the mouse behavior (forwardClicksToLink): open the card's
+        // resource without requiring an extra Tab into the title link.
+        event.currentTarget
+          .querySelector<HTMLAnchorElement>('a[data-card-link="true"]')
+          ?.click()
+        break
+    }
+  }
+
+  if (isLoading || childrenLoading) {
+    return (
+      <StyledCarouselV2
+        arrowsContainer={arrowsContainer}
+        mobileBleed="symmetric"
+        mobileGutter={16}
+      >
+        {Array.from({ length: 6 }).map((_, index) => (
+          <ResourceCard
+            isLoading
+            key={index}
+            resource={null}
+            parentHeadingEl={titleComponent}
+            {...tabConfig.cardProps}
+          />
+        ))}
+      </StyledCarouselV2>
+    )
+  }
+
+  return (
+    <StyledCarouselV2
+      arrowsContainer={arrowsContainer}
+      mobileBleed="symmetric"
+      mobileGutter={16}
+      activeIndex={activeIndex}
+    >
+      {resources.map((resource, index) => (
+        <CarouselSlide
+          key={resource.id}
+          ref={(el: HTMLDivElement | null) => {
+            cardRefs.current[index] = el
+          }}
+          role="group"
+          aria-roledescription="slide"
+          aria-label={`${index + 1} of ${resources.length}: ${resource.title}`}
+          tabIndex={index === activeIndex ? 0 : -1}
+          onKeyDown={(event) => handleSlideKeyDown(event, index)}
+        >
+          <ResourceCard
+            resource={resource}
+            parentHeadingEl={titleComponent}
+            {...tabConfig.cardProps}
+            onCardClick={() => onCardClick(resource, index)}
+          />
+        </CarouselSlide>
+      ))}
+    </StyledCarouselV2>
   )
 }
 
@@ -303,48 +471,30 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
             >[]
           }
         >
-          {({ resources, childrenLoading, tabConfig }) => {
-            return (
-              <StyledCarouselV2
-                arrowsContainer={ref}
-                mobileBleed="symmetric"
-                mobileGutter={16}
-              >
-                {isLoading || childrenLoading
-                  ? Array.from({ length: 6 }).map((_, index) => (
-                      <ResourceCard
-                        isLoading
-                        key={index}
-                        resource={null}
-                        parentHeadingEl={titleComponent}
-                        {...tabConfig.cardProps}
-                      />
-                    ))
-                  : resources
-                      .filter((resource) => resource.id !== excludeResourceId)
-                      .map((resource, index) => (
-                        <ResourceCard
-                          key={resource.id}
-                          resource={resource}
-                          parentHeadingEl={titleComponent}
-                          {...tabConfig.cardProps}
-                          onCardClick={() => {
-                            if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-                              posthog.capture(PostHogEvents.CourseCardClicked, {
-                                label: title,
-                                resourceId: resource.id,
-                                readableId: resource.readable_id,
-                                resourceType: resource.resource_type,
-                                platformCode: resource.platform?.code,
-                                position: index,
-                              })
-                            }
-                          }}
-                        />
-                      ))}
-              </StyledCarouselV2>
-            )
-          }}
+          {({ resources, childrenLoading, tabConfig }) => (
+            <CarouselCards
+              resources={resources.filter(
+                (resource) => resource.id !== excludeResourceId,
+              )}
+              childrenLoading={childrenLoading}
+              tabConfig={tabConfig}
+              isLoading={isLoading}
+              titleComponent={titleComponent}
+              arrowsContainer={ref}
+              onCardClick={(resource, index) => {
+                if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
+                  posthog.capture(PostHogEvents.CourseCardClicked, {
+                    label: title,
+                    resourceId: resource.id,
+                    readableId: resource.readable_id,
+                    resourceType: resource.resource_type,
+                    platformCode: resource.platform?.code,
+                    position: index,
+                  })
+                }
+              }}
+            />
+          )}
         </PanelChildren>
       </TabContext>
     </div>
