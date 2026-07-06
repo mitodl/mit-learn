@@ -504,9 +504,7 @@ describe("ResourceCarousel", () => {
 
       slides[0].focus()
       await user.tab()
-      expect(document.activeElement).toBe(
-        within(slides[0]).getByRole("link"),
-      )
+      expect(document.activeElement).toBe(within(slides[0]).getByRole("link"))
       expect(document.activeElement).not.toBe(slides[1])
     })
 
