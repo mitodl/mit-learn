@@ -16,11 +16,18 @@ import { buildVideoStructuredData } from "./videoStructuredData"
 import VideoResourcePlayer from "./VideoResourcePlayer"
 import type { VideoPlayerHandle } from "./VideoResourcePlayer"
 
+import VideoShareButton from "./VideoShareButton"
+
 const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 const StyledVideoResourcePlayer = styled(VideoResourcePlayer)(({ theme }) => ({
   borderBottom: `3px solid ${theme.custom.colors.darkGray2}`,
 }))
+
+const StyledVideoShareButton = styled(VideoShareButton)({
+  height: "40px",
+  padding: "18px 12px",
+})
 
 type VideoSeriesDetailPageProps = {
   videoId: number
@@ -168,9 +175,20 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               {video?.title}
             </Styled.VideoTitle>
           )}
-          {duration && (
-            <Styled.StyledDuration>{duration}</Styled.StyledDuration>
-          )}
+
+          <Styled.VideoShareSection>
+            {duration && (
+              <Styled.StyledDuration>{duration}</Styled.StyledDuration>
+            )}
+            {!itemsLoading && video && (
+              <StyledVideoShareButton
+                video={video}
+                title={video?.title ?? ""}
+                pageUrl={`${NEXT_PUBLIC_ORIGIN}${videoDetailPageView(video.id, playlistId ?? undefined, video.title)}`}
+                playerRef={playerRef}
+              />
+            )}
+          </Styled.VideoShareSection>
           {/* Video player */}
           <StyledVideoResourcePlayer
             ref={playerRef}
@@ -183,13 +201,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
 
           {/* UP NEXT */}
           {!itemsLoading && nextVideo && video && (
-            <UpNextSection
-              nextVideo={nextVideo}
-              getVideoHref={getVideoHref}
-              currentVideo={video}
-              playerRef={playerRef}
-              shareUrl={`${NEXT_PUBLIC_ORIGIN}${videoDetailPageView(video.id, playlistId ?? undefined, video.title)}`}
-            />
+            <UpNextSection nextVideo={nextVideo} getVideoHref={getVideoHref} />
           )}
 
           {/* Description */}

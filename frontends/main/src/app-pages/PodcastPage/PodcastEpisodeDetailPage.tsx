@@ -19,7 +19,7 @@ import {
 } from "api/hooks/learningResources"
 
 import { ResourceTypeEnum } from "api/v1"
-import type { LearningResource } from "api/v1"
+import type { LearningResource, PodcastEpisodeResource } from "api/v1"
 import moment from "moment"
 import { formatDate } from "ol-utilities"
 import { HOME, podcastPageView, podcastEpisodePageView } from "@/common/urls"
@@ -27,7 +27,10 @@ import DOMPurify from "isomorphic-dompurify"
 import { EpisodeItem } from "./PodcastDetailPage"
 import PodcastContainer from "./PodcastContainer"
 import Link from "next/link"
+import PodcastShareButton from "./PodcastShareButton"
+import { env } from "@/env"
 
+const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 /* ── Layout ── */
 
 const EpisodeContainer = styled(Container)(({ theme }) => ({
@@ -142,6 +145,10 @@ const EpisodeList = styled.ul({
   display: "grid",
   gridTemplateColumns: "1fr",
 })
+const StyledPodcastShareButton = styled(PodcastShareButton)({
+  padding: "18px 12px",
+  margin: "0 0 24px",
+})
 
 export const BreadcrumbBar = styled.div(({ theme }) => ({
   padding: "18px 0 2px 0",
@@ -180,6 +187,14 @@ const StyledButton = styled(Button)(({ theme }) => ({
     marginBottom: "16px",
   },
 }))
+
+export const PodcastShareSection = styled("div")({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  flexWrap: "wrap",
+  gap: "8px",
+})
 
 /* ── Component ── */
 
@@ -285,6 +300,11 @@ export const PodcastEpisodeDetailPage: React.FC<
     ? podcastPageView(podcastId, podcast?.title)
     : "/"
 
+  const sharePageUrl =
+    episode && podcastId
+      ? `${NEXT_PUBLIC_ORIGIN}${podcastEpisodePageView(String(episode!.id), podcastId, episode?.title)}`
+      : ""
+
   return (
     <>
       <PageSection>
@@ -315,19 +335,28 @@ export const PodcastEpisodeDetailPage: React.FC<
               </MetaLine>
             )}
             {isMobile && <Topics>{topicString}</Topics>}
-            {episode && (
-              <StyledButton
-                onClick={handlePlay}
-                variant="primary"
-                startIcon={
-                  isCurrentEpisodePlaying ? <RiPauseFill /> : <RiPlayFill />
-                }
-                disabled={!episode || !getAudioUrl(episode)}
-              >
-                {isCurrentEpisodePlaying ? "Pause Episode" : "Play Episode"}
-              </StyledButton>
-            )}
+            <PodcastShareSection>
+              {episode && podcastId && (
+                <StyledButton
+                  onClick={handlePlay}
+                  variant="primary"
+                  startIcon={
+                    isCurrentEpisodePlaying ? <RiPauseFill /> : <RiPlayFill />
+                  }
+                  disabled={!episode || !getAudioUrl(episode)}
+                >
+                  {isCurrentEpisodePlaying ? "Pause Episode" : "Play Episode"}
+                </StyledButton>
+              )}
 
+              {episode && podcastId && (
+                <StyledPodcastShareButton
+                  resource={episode as PodcastEpisodeResource}
+                  title={episode.title ?? "episode"}
+                  sharePageUrl={sharePageUrl}
+                />
+              )}
+            </PodcastShareSection>
             {episode?.description && (
               <Description
                 variant="body1"
