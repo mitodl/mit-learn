@@ -780,6 +780,89 @@ def test_scrape_marketing_pages(mocker, settings, mocked_celery):
     mock_group.assert_called_once()
 
 
+@pytest.mark.django_db
+def test_scrape_marketing_pages_orders_courses_before_programs(
+    mocker, settings, mocked_celery
+):
+    """Courses are scraped in a group that runs before the programs group."""
+    settings.QDRANT_CHUNK_SIZE = 10
+    course = models.LearningResource.objects.create(
+        title="Course",
+        url="https://example.com/course",
+        resource_type="course",
+        published=True,
+    )
+    program = models.LearningResource.objects.create(
+        title="Program",
+        url="https://example.com/program",
+        resource_type="program",
+        published=True,
+    )
+    si_mock = mocker.patch("learning_resources.tasks.marketing_page_for_resources.si")
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        scrape_marketing_pages.delay()
+
+    # A chain enforces ordering (not a single flat group).
+    assert mocked_celery.chain.called
+    # Course task built before program task; each in its own chunk here.
+    queued_ids = [call.args[0] for call in si_mock.call_args_list]
+    assert queued_ids[0] == [course.id]
+    assert [program.id] in queued_ids
+    assert queued_ids.index([course.id]) < queued_ids.index([program.id])
+
+
+@pytest.mark.django_db
+def test_scrape_marketing_pages_queues_healable_programs(
+    mocker, settings, mocked_celery
+):
+    """A program that already has a page but is missing its children section
+    (with a child course page available) is queued for re-scrape.
+    """
+    settings.QDRANT_CHUNK_SIZE = 10
+    course = models.LearningResource.objects.create(
+        title="Course",
+        url="https://example.com/course",
+        resource_type="course",
+        published=True,
+    )
+    ContentFile.objects.create(
+        learning_resource=course,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        file_extension=".md",
+        key=course.url,
+        content="Child copy.",
+        published=True,
+    )
+    program = models.LearningResource.objects.create(
+        title="Program",
+        url="https://example.com/program",
+        resource_type="program",
+        published=True,
+    )
+    models.LearningResourceRelationship.objects.create(
+        parent=program, child=course, relation_type="PROGRAM_COURSES"
+    )
+    # Program already has a page, but WITHOUT the children marker.
+    ContentFile.objects.create(
+        learning_resource=program,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        file_extension=".md",
+        key=program.url,
+        content="Program page, no children yet.",
+        published=True,
+    )
+    si_mock = mocker.patch("learning_resources.tasks.marketing_page_for_resources.si")
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        scrape_marketing_pages.delay()
+
+    queued_ids = [i for call in si_mock.call_args_list for i in call.args[0]]
+    # Program re-queued for healing; course already has a page so it is NOT queued.
+    assert program.id in queued_ids
+    assert course.id not in queued_ids
+
+
 @pytest.mark.parametrize("canvas_ids", [["1"], None])
 def test_sync_canvas_courses(settings, mocker, django_assert_num_queries, canvas_ids):
     """

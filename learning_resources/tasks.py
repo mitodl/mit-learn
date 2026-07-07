@@ -45,6 +45,7 @@ from learning_resources.utils import (
     build_program_children_content_bulk,
     html_to_markdown,
     load_course_blocklist,
+    programs_needing_children_heal,
     resource_unpublished_actions,
     resource_upserted_actions,
     strip_markdown_images,
@@ -670,31 +671,53 @@ def sync_canvas_courses(canvas_course_ids, overwrite):
 @app.task(bind=True)
 def scrape_marketing_pages(self):
     """
-    Scrape marketing pages (for programs and courses)
-    and store them as content files if they dont exist
+    Scrape marketing pages for programs and courses and store them as content
+    files. Child courses are scraped before their parent programs so a program's
+    children section is built from child marketing pages that already exist.
+    Programs whose stored page is missing its children section (and whose
+    children content is now available) are re-scraped to heal them.
     """
     log.info("Running scrape_marketing_pages task")
-    resource_ids = set(
+    resource_types = dict(
         LearningResource.objects.filter(
             published=True, resource_type__in=["course", "program"]
-        ).values_list("id", flat=True)
+        ).values_list("id", "resource_type")
     )
-
     existing_page_resource_ids = set(
-        ContentFile.objects.filter(file_type="marketing_page").values_list(
+        ContentFile.objects.filter(file_type=MARKETING_PAGE_FILE_TYPE).values_list(
             "learning_resource_id", flat=True
         )
     )
-    missing_pages = list(resource_ids.difference(existing_page_resource_ids))
 
-    tasks = [
+    missing_ids = set(resource_types) - existing_page_resource_ids
+    missing_course_ids = [rid for rid in missing_ids if resource_types[rid] == "course"]
+    program_ids_with_pages = {
+        rid
+        for rid in existing_page_resource_ids
+        if resource_types.get(rid) == "program"
+    }
+    program_ids = {rid for rid in missing_ids if resource_types[rid] == "program"}
+    program_ids |= programs_needing_children_heal(program_ids_with_pages)
+
+    course_tasks = [
         marketing_page_for_resources.si(ids)
-        for ids in chunks(
-            missing_pages,
-            chunk_size=settings.QDRANT_CHUNK_SIZE,
-        )
+        for ids in chunks(missing_course_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
     ]
-    scrape_tasks = celery.group(tasks)
+    program_tasks = [
+        marketing_page_for_resources.si(ids)
+        for ids in chunks(sorted(program_ids), chunk_size=settings.QDRANT_CHUNK_SIZE)
+    ]
+
+    if course_tasks and program_tasks:
+        scrape_tasks = celery.chain(
+            celery.group(course_tasks), celery.group(program_tasks)
+        )
+    elif course_tasks:
+        scrape_tasks = celery.group(course_tasks)
+    elif program_tasks:
+        scrape_tasks = celery.group(program_tasks)
+    else:
+        return None
     return self.replace(scrape_tasks)
 
 
