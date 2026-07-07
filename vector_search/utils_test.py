@@ -515,10 +515,9 @@ def test_expected_document_chunks(mocker):
 
 def test_embed_learning_resources_chunks_content_file_serialization(mocker, settings):
     """
-    QDRANT_CHUNK_SIZE controls Celery task fanout; content files are serialized in
-    smaller batches so large task chunks do not hydrate every content blob at once.
+    QDRANT_CONTENT_FILE_SERIALIZATION_CHUNK_SIZE controls how many content files are serialized at once for embedding.
     """
-    settings.QDRANT_CHUNK_SIZE = 50
+
     settings.QDRANT_CONTENT_FILE_SERIALIZATION_CHUNK_SIZE = 2
     mocker.patch("vector_search.utils.qdrant_client", return_value=MagicMock())
     mocker.patch("vector_search.utils.ensure_qdrant_collections")
