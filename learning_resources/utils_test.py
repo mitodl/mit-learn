@@ -35,6 +35,7 @@ from learning_resources.models import (
     LearningResource,
     LearningResourceOfferor,
     LearningResourcePlatform,
+    LearningResourceRelationship,
     LearningResourceTopic,
     LearningResourceTopicMapping,
 )
@@ -992,6 +993,85 @@ def test_build_program_children_content_bulk_excludes_unpublished_marketing_page
     result = build_program_children_content_bulk([program_lr])
     assert "Visible marketing copy." in result[program_lr.id]
     assert "Hidden marketing copy." not in result[program_lr.id]
+
+
+@pytest.mark.django_db
+def test_reachable_published_course_ids_direct_and_subprogram():
+    """Maps a program to its direct courses and courses via child programs."""
+    direct_course = CourseFactory.create(
+        learning_resource__title="Direct"
+    ).learning_resource
+    grandchild_course = CourseFactory.create(
+        learning_resource__title="Grandchild"
+    ).learning_resource
+    child_program = ProgramFactory.create(
+        courses=[grandchild_course], learning_resource__title="Child Program"
+    ).learning_resource
+    program = ProgramFactory.create(courses=[direct_course]).learning_resource
+    LearningResourceRelationship.objects.create(
+        parent=program, child=child_program, relation_type="PROGRAM_PROGRAMS"
+    )
+
+    result = utils.reachable_published_course_ids([program.id])
+    assert result[program.id] == {direct_course.id, grandchild_course.id}
+
+
+@pytest.mark.django_db
+def test_reachable_published_course_ids_empty_input():
+    """Empty program id input maps to an empty result."""
+    assert utils.reachable_published_course_ids([]) == {}
+
+
+def _add_program_marketing_page(program_lr, content):
+    """Attach a published marketing-page content file to a program."""
+    from learning_resources.models import ContentFile
+
+    return ContentFile.objects.create(
+        learning_resource=program_lr,
+        file_type="marketing_page",
+        file_extension=".md",
+        key=f"mktg-{program_lr.id}",
+        content=content,
+        published=True,
+    )
+
+
+@pytest.mark.django_db
+def test_programs_needing_children_heal_selects_missing_marker():
+    """A program whose page lacks the marker but has an available child page
+    is selected for healing.
+    """
+    course_lr = CourseFactory.create().learning_resource
+    _add_course_marketing_page(course_lr, "Child marketing copy.")
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+    _add_program_marketing_page(program_lr, "Program page with no children yet.")
+
+    assert utils.programs_needing_children_heal([program_lr.id]) == {program_lr.id}
+
+
+@pytest.mark.django_db
+def test_programs_needing_children_heal_skips_when_no_child_page():
+    """A program with no reachable child course page is NOT selected
+    (termination guard).
+    """
+    course_lr = CourseFactory.create().learning_resource  # no marketing page
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+    _add_program_marketing_page(program_lr, "Program page with no children yet.")
+
+    assert utils.programs_needing_children_heal([program_lr.id]) == set()
+
+
+@pytest.mark.django_db
+def test_programs_needing_children_heal_skips_when_marker_present():
+    """A program whose page already contains the children marker is skipped."""
+    course_lr = CourseFactory.create().learning_resource
+    _add_course_marketing_page(course_lr, "Child marketing copy.")
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+    _add_program_marketing_page(
+        program_lr, "Program page.\n\n## Program Contents\n\n### Child"
+    )
+
+    assert utils.programs_needing_children_heal([program_lr.id]) == set()
 
 
 @pytest.mark.parametrize(

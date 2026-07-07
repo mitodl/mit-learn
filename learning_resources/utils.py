@@ -747,6 +747,8 @@ def build_resource_summary_dict(resource):
 # overflowing the embedding API's per-request token limit.
 PROGRAM_CHILDREN_CONTENT_MAX_CHARS = 1_000_000
 
+PROGRAM_CHILDREN_CONTENT_MARKER = "## Program Contents"
+
 
 def _course_ids_by_program(relationships, course_type):
     """Map program id -> reachable published course ids (direct + via subprograms)."""
@@ -761,6 +763,82 @@ def _course_ids_by_program(relationships, course_type):
                 if sub_rel.child.resource_type == course_type
             )
     return result
+
+
+def reachable_published_course_ids(program_ids):
+    """Map program id -> set of reachable published child-course ids.
+
+    Includes courses reached directly and courses reached through child
+    programs. Read-only and id-level only (loads no content).
+    """
+    program_ids = list(program_ids)
+    if not program_ids:
+        return {}
+    program_relation_types = [
+        LearningResourceRelationTypes.PROGRAM_COURSES,
+        LearningResourceRelationTypes.PROGRAM_PROGRAMS,
+    ]
+    child_visibility = Q(child__published=True) | Q(child__test_mode=True)
+    relationships = list(
+        LearningResourceRelationship.objects.filter(
+            parent_id__in=program_ids,
+            relation_type__in=program_relation_types,
+        )
+        .filter(child_visibility)
+        .select_related("child")
+        .prefetch_related(
+            Prefetch(
+                "child__children",
+                queryset=LearningResourceRelationship.objects.filter(
+                    relation_type__in=program_relation_types,
+                )
+                .filter(child_visibility)
+                .select_related("child"),
+                to_attr="program_children",
+            ),
+        )
+    )
+    return _course_ids_by_program(relationships, LearningResourceType.course.name)
+
+
+def programs_needing_children_heal(program_ids):
+    """Return the subset of the given program ids whose marketing page lacks a
+    children section but whose children content is now available.
+
+    A program qualifies only when it has a reachable published child course with
+    a non-empty marketing page, which guarantees re-scraping will populate the
+    section and prevents childless programs from being re-scraped every run.
+    Read-only and id-level only.
+    """
+    program_ids = list(program_ids)
+    if not program_ids:
+        return set()
+    candidate_ids = set(
+        ContentFile.objects.filter(
+            learning_resource_id__in=program_ids,
+            file_type=MARKETING_PAGE_FILE_TYPE,
+        )
+        .exclude(content__contains=PROGRAM_CHILDREN_CONTENT_MARKER)
+        .values_list("learning_resource_id", flat=True)
+    )
+    if not candidate_ids:
+        return set()
+    reachable = reachable_published_course_ids(candidate_ids)
+    all_course_ids = set().union(*reachable.values())
+    course_ids_with_pages = set(
+        ContentFile.objects.filter(
+            learning_resource_id__in=all_course_ids,
+            file_type=MARKETING_PAGE_FILE_TYPE,
+            published=True,
+        )
+        .exclude(content="")
+        .values_list("learning_resource_id", flat=True)
+    )
+    return {
+        program_id
+        for program_id, course_ids in reachable.items()
+        if course_ids & course_ids_with_pages
+    }
 
 
 def build_program_children_content(learning_resource):
@@ -789,34 +867,7 @@ def build_program_children_content_bulk(program_resources):
         return {}
 
     program_ids = [program.id for program in programs]
-    program_relation_types = [
-        LearningResourceRelationTypes.PROGRAM_COURSES,
-        LearningResourceRelationTypes.PROGRAM_PROGRAMS,
-    ]
-
-    child_visibility = Q(child__published=True) | Q(child__test_mode=True)
-    relationships = list(
-        LearningResourceRelationship.objects.filter(
-            parent_id__in=program_ids,
-            relation_type__in=program_relation_types,
-        )
-        .filter(child_visibility)
-        .select_related("child")
-        .prefetch_related(
-            Prefetch(
-                "child__children",
-                queryset=LearningResourceRelationship.objects.filter(
-                    relation_type__in=program_relation_types,
-                )
-                .filter(child_visibility)
-                .select_related("child"),
-                to_attr="program_children",
-            ),
-        )
-    )
-
-    course_type = LearningResourceType.course.name
-    course_ids_by_program = _course_ids_by_program(relationships, course_type)
+    course_ids_by_program = reachable_published_course_ids(program_ids)
     all_course_ids = set().union(*course_ids_by_program.values())
 
     # One marketing-page content file per course (published), fetched in bulk
@@ -846,7 +897,7 @@ def build_program_children_content_bulk(program_resources):
         if not sections:
             content_by_program_id[program.id] = ""
             continue
-        body = "\n\n".join(["\n\n## Program Contents\n", *sections])
+        body = "\n\n".join([f"\n\n{PROGRAM_CHILDREN_CONTENT_MARKER}\n", *sections])
         content_by_program_id[program.id] = body[:PROGRAM_CHILDREN_CONTENT_MAX_CHARS]
 
     return content_by_program_id
