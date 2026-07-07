@@ -425,6 +425,24 @@ def test_serialize_run_related_models():
         assert attr in serializer.data["instructors"][0]
 
 
+def test_serialize_resource_excludes_b2b_runs():
+    """B2B runs should not be visible in resource API results."""
+    resource = LearningResourceFactory.create(
+        resource_type=LearningResourceType.course.name
+    )
+    resource.runs.all().delete()
+    public_run = LearningResourceRunFactory.create(
+        learning_resource=resource, published=True, is_b2b=False
+    )
+    LearningResourceRunFactory.create(
+        learning_resource=resource, published=True, is_b2b=True
+    )
+
+    serialized_resource = serializers.LearningResourceSerializer(resource).data
+
+    assert [run["id"] for run in serialized_resource["runs"]] == [public_run.id]
+
+
 @pytest.mark.parametrize(
     ("data", "error"),
     [
