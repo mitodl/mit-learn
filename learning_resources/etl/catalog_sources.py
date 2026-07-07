@@ -344,6 +344,15 @@ def transform_micromasters_program(row: dict) -> dict:
         "resource_type": LearningResourceType.program.name,
         "title": title,
         "offered_by": {"code": OfferedBy.mitx.name},
+        # integrations__learn__micromasters_programs exposes no topics
+        # column (unlike the other Cohort 1 views) — omitting this key
+        # entirely would still default to [] in loaders.load_program's
+        # `program_data.pop("topics", [])`, which load_topics treats as
+        # "clear all topics", wiping out whatever's curated today on every
+        # sync. `None` is loaders.py's existing sentinel for "not provided,
+        # leave alone" (see the analogous `departments_data = ... pop(...,
+        # None)` a few lines below load_program's topics handling).
+        "topics": None,
         "courses": [
             _course_stub(course_id, PlatformType.edx.name)
             for course_id in _split(row.get("courses"))
