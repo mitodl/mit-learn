@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.73.1
+Version 0.73.1 (Released July 07, 2026)
 --------------
 
 - multiple enrollment display (#3534)
