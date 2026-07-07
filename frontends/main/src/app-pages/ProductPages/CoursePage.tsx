@@ -5,7 +5,7 @@ import { Typography } from "ol-components"
 
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
-import { styled, Button } from "@mitodl/smoot-design"
+import { styled } from "@mitodl/smoot-design"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -25,11 +25,9 @@ import {
   trackViewCoursePage,
   trackCourseProgramView,
 } from "@/common/analytics/gtm"
-import { EnrollButton, HeaderButtonSlot } from "./EnrollAreaParts"
+import HeaderEnrollButton from "./HeaderEnrollButton"
 import { useCourseEnrollment } from "./useCourseEnrollment"
 import { getSelectedRun } from "./courseRun"
-import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
-import EnrolledLink from "./EnrolledLink"
 import type {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
@@ -51,46 +49,24 @@ const CourseHeaderEnrollButton: React.FC<{
 }> = ({ course, selectedRun }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
 
-  const { state, isStatusLoading, isPending } = useCourseEnrollment(
+  const { state, isStatusLoading, isPending, isError } = useCourseEnrollment(
     course,
     selectedRun,
     {
       tracking: { placement: "header" },
-      onRequireSignup: (el) => setAnchor(el),
+      onRequireSignup: setAnchor,
     },
   )
 
-  if (state.status === "enrolled") {
-    return (
-      <HeaderButtonSlot>
-        <EnrolledLink variant="bordered" href={state.href} />
-      </HeaderButtonSlot>
-    )
-  }
-
-  if (state.status === "options") {
-    return (
-      <HeaderButtonSlot>
-        <EnrollButton
-          action={state.options[0]}
-          size="large"
-          loading={isStatusLoading}
-          pending={isPending}
-          variant="bordered"
-          announceStatus={false}
-        />
-        <SignupPopover anchorEl={anchor} onClose={() => setAnchor(null)} />
-      </HeaderButtonSlot>
-    )
-  }
-
-  // status === "none"
   return (
-    <HeaderButtonSlot>
-      <Button variant="bordered" size="large" disabled>
-        Enroll
-      </Button>
-    </HeaderButtonSlot>
+    <HeaderEnrollButton
+      state={state}
+      isStatusLoading={isStatusLoading}
+      isPending={isPending}
+      isError={isError}
+      anchor={anchor}
+      onAnchorClose={() => setAnchor(null)}
+    />
   )
 }
 

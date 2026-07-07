@@ -15,7 +15,7 @@ import type {
   CourseRunV2,
   V2ProgramDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { HeadingIds, parseReqTree } from "./util"
+import { HeadingIds, getTotalRequiredCourses } from "./util"
 import {
   getCourseScenario,
   runStartsAnytime,
@@ -433,8 +433,8 @@ const ArchivedAlert: React.FC = () => {
  * with an offering box (the 2-box course case) it occupies a half-width cell, so
  * a further 2-column split would cram the rows — pass 1 there to keep it linear.
  */
-const SummaryRows = styled.div<{ $tabletColumns?: 1 | 2 }>(
-  ({ theme, $tabletColumns = 2 }) => ({
+const SummaryRows = styled.div<{ $tabletColumns: 1 | 2 }>(
+  ({ theme, $tabletColumns }) => ({
     display: "flex",
     flexDirection: "column",
     gap: "24px",
@@ -466,7 +466,7 @@ const CourseSummary: React.FC<{
   selectedRun: CourseRunV2 | undefined
   sessionSelect?: React.ReactNode
   /** Tablet metadata column count — 1 when the block is half-width (see SummaryRows). */
-  tabletColumns?: 1 | 2
+  tabletColumns: 1 | 2
 }> = ({ course, selectedRun, sessionSelect, tabletColumns }) => {
   const scenario = getCourseScenario(selectedRun)
   // Archived courses have no live schedule, so the date row leads with "content
@@ -556,11 +556,6 @@ const CourseSummary: React.FC<{
 type ProgramInfoRowProps = {
   program: V2ProgramDetail
 } & HTMLAttributes<HTMLDivElement>
-
-const getTotalRequiredCourses = (program: V2ProgramDetail) => {
-  const parsedReqs = parseReqTree(program.req_tree)
-  return parsedReqs.reduce((sum, req) => sum + req.requiredCount, 0)
-}
 
 const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
   program,
@@ -709,9 +704,11 @@ const ProgramSummary: React.FC<{
    * Avoid using this. Ideally, ProgramSummary should be based on `program` data.
    */
   courses?: CourseWithCourseRunsSerializerV2[]
-}> = ({ program, courses }) => {
+  /** Tablet metadata column count — 1 when the block is half-width (see SummaryRows). */
+  tabletColumns: 1 | 2
+}> = ({ program, courses, tabletColumns }) => {
   return (
-    <SummaryRows>
+    <SummaryRows $tabletColumns={tabletColumns}>
       <RequirementsRow
         program={program}
         data-testid={TestIds.RequirementsRow}
@@ -726,9 +723,11 @@ const ProgramSummary: React.FC<{
 const ProgramAsCourseSummary: React.FC<{
   program: V2ProgramDetail
   courses?: CourseWithCourseRunsSerializerV2[]
-}> = ({ program, courses }) => {
+  /** Tablet metadata column count — 1 when the block is half-width (see SummaryRows). */
+  tabletColumns: 1 | 2
+}> = ({ program, courses, tabletColumns }) => {
   return (
-    <SummaryRows>
+    <SummaryRows $tabletColumns={tabletColumns}>
       <ProgramPaceRow courses={courses} data-testid={TestIds.PaceRow} />
       <ProgramDurationRow program={program} data-testid={TestIds.DurationRow} />
       <ProgramDatesRow program={program} data-testid={TestIds.DatesRow} />
@@ -740,10 +739,6 @@ export {
   CourseSummary,
   ProgramSummary,
   ProgramAsCourseSummary,
-  ProgramDurationRow,
-  ProgramPaceRow,
-  SummaryRows,
   UnderlinedLink,
   TestIds,
-  getTotalRequiredCourses,
 }

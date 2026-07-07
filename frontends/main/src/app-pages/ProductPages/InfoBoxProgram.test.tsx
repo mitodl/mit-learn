@@ -29,6 +29,7 @@ jest.mock("@/common/analytics/gtm", () => ({
 const makeProgram = mitxFactories.programs.program
 const makeMode = mitxFactories.courses.enrollmentMode
 const makeProduct = mitxFactories.courses.product
+const makeProgramEnrollment = mitxFactories.enrollment.programEnrollmentV3
 
 function setupAuth(enrollments: unknown[] = []) {
   setMockResponse.get(
@@ -98,6 +99,62 @@ describe("InfoBoxProgram — savings", () => {
 
     await screen.findByRole("button", { name: "Enroll in Program" })
     expect(screen.getByText("Save $200")).toBeInTheDocument()
+  })
+})
+
+describe("InfoBoxProgram — enrolled offering", () => {
+  test("data-boxes=2 for enrolled scenario (enrolled link = 1 offering box)", async () => {
+    const program = makeProgram({
+      enrollment_modes: [makeMode({ requires_payment: false })],
+    })
+    setupAuth([makeProgramEnrollment({ program: { id: program.id } })])
+
+    renderWithProviders(<InfoBoxProgram program={program} />)
+
+    await screen.findByRole("link", { name: /Enrolled/ })
+
+    const grid = getBoxGrid()
+    expect(grid).toHaveAttribute("data-boxes", "2")
+  })
+})
+
+describe("InfoBoxProgram — grid structure", () => {
+  test("paidOnly: grid has exactly meta + divider + one offering wrapper; Enroll button shares the wrapper with the Certificate Track card", async () => {
+    setupAuth()
+    const program = makeProgram({
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [makeProduct()],
+    })
+
+    renderWithProviders(<InfoBoxProgram program={program} />)
+
+    await screen.findByRole("button", { name: "Enroll in Program" })
+
+    const grid = getBoxGrid()
+    expect(grid).not.toBeNull()
+
+    // Exactly 3 direct element children: [data-grid-meta], the section divider
+    // (hr), and the single offering wrapper [data-card="cert"]. The card and its
+    // Enroll button must live in ONE wrapper, not as separate grid children.
+    expect(Array.from(grid.children)).toHaveLength(3)
+    expect(grid.querySelector("[data-grid-meta]")).not.toBeNull()
+    expect(grid.querySelector("hr")).not.toBeNull()
+
+    const offeringWrapper = grid.querySelector(
+      "[data-card='cert']",
+    ) as HTMLElement
+    expect(offeringWrapper).not.toBeNull()
+    expect(
+      within(offeringWrapper).getByRole("heading", {
+        name: "Certificate Track",
+        level: 3,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(offeringWrapper).getByRole("button", {
+        name: "Enroll in Program",
+      }),
+    ).toBeInTheDocument()
   })
 })
 

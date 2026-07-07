@@ -1,21 +1,17 @@
 import React from "react"
-import { VisuallyHidden } from "@mitodl/smoot-design"
 import type { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
-import { HeadingIds } from "./util"
 import { CourseSummary } from "./ProductSummary"
 import {
   getCourseScenario,
   getEnrollableRuns,
   getSelectedRun,
-  offeringBoxCount,
 } from "./courseRun"
+import { offeringBoxCount } from "./enrollTypes"
 import { useCourseEnrolledRunIds } from "./useCourseEnrolledRunIds"
 import ProgramBundleUpsell from "./ProgramBundleUpsell"
 import CourseEnrollArea from "./CourseEnrollArea"
 import SessionSelect from "./SessionSelect"
-import { InfoBoxCard, InfoBoxColumn } from "./InfoBoxParts"
-import { ProductPageAskTimSection } from "./ProductPageAskTim"
-import { BoxGrid, SectionDivider } from "./InfoBoxGrid"
+import InfoBoxLayout from "./InfoBoxLayout"
 
 type CourseInfoBoxProps = {
   course: CourseWithCourseRunsSerializerV2
@@ -42,44 +38,33 @@ const CourseInfoBox: React.FC<CourseInfoBoxProps> = ({
       />
     ) : undefined
 
-  // data-boxes drives the count-aware grid CSS below; offeringBoxCount owns the
-  // enrolled/offering → count mapping.
   const scenario = getCourseScenario(selectedRun)
   const isEnrolled =
     selectedRun !== undefined && enrolledRunIds.includes(selectedRun.id)
-  const offeringBoxes = offeringBoxCount(scenario, isEnrolled)
-  const boxCount = 1 + offeringBoxes // 1 | 2 | 3
+  const offeringBoxes = offeringBoxCount(scenario.offering, isEnrolled)
 
   const upsell = course.programs?.length ? (
     <ProgramBundleUpsell programs={course.programs} />
   ) : null
 
   return (
-    <InfoBoxColumn>
-      <InfoBoxCard as="section" aria-labelledby={HeadingIds.Summary}>
-        <VisuallyHidden>
-          <h2 id={HeadingIds.Summary}>Course Information</h2>
-        </VisuallyHidden>
-        <BoxGrid data-boxes={boxCount}>
-          <div data-grid-meta>
-            <CourseSummary
-              course={course}
-              selectedRun={selectedRun}
-              sessionSelect={sessionSelect}
-              // 2-box layout puts metadata in a half-width cell — keep it linear.
-              tabletColumns={boxCount === 2 ? 1 : 2}
-            />
-          </div>
-          {offeringBoxes > 0 ? <SectionDivider /> : null}
-          <CourseEnrollArea course={course} selectedRun={selectedRun} />
-        </BoxGrid>
-        {upsell}
-      </InfoBoxCard>
-      <ProductPageAskTimSection
-        readableId={course.readable_id}
-        resourceType="course"
-      />
-    </InfoBoxColumn>
+    <InfoBoxLayout
+      heading="Course Information"
+      offeringBoxes={offeringBoxes}
+      summary={({ tabletColumns }) => (
+        <CourseSummary
+          course={course}
+          selectedRun={selectedRun}
+          sessionSelect={sessionSelect}
+          tabletColumns={tabletColumns}
+        />
+      )}
+      enrollArea={
+        <CourseEnrollArea course={course} selectedRun={selectedRun} />
+      }
+      upsell={upsell}
+      askTim={{ readableId: course.readable_id, resourceType: "course" }}
+    />
   )
 }
 

@@ -22,7 +22,9 @@ describe("ProgramAsCourseSummary", () => {
 
   test("Renders duration row and does not render price row", () => {
     const program = makeProgram()
-    renderWithProviders(<ProgramAsCourseSummary program={program} />)
+    renderWithProviders(
+      <ProgramAsCourseSummary tabletColumns={2} program={program} />,
+    )
     expect(screen.getByTestId(TestIds.DurationRow)).toBeInTheDocument()
     expect(screen.queryByTestId(TestIds.PriceRow)).not.toBeInTheDocument()
   })
@@ -37,14 +39,20 @@ describe("ProgramAsCourseSummary", () => {
     })
     const program = makeProgram()
     renderWithProviders(
-      <ProgramAsCourseSummary program={program} courses={[course]} />,
+      <ProgramAsCourseSummary
+        tabletColumns={2}
+        program={program}
+        courses={[course]}
+      />,
     )
     expect(screen.getByTestId(TestIds.PaceRow)).toBeInTheDocument()
   })
 
   test("Does NOT render requirements or certificate row", () => {
     const program = makeProgram()
-    renderWithProviders(<ProgramAsCourseSummary program={program} />)
+    renderWithProviders(
+      <ProgramAsCourseSummary tabletColumns={2} program={program} />,
+    )
     expect(
       screen.queryByTestId(TestIds.RequirementsRow),
     ).not.toBeInTheDocument()
@@ -56,7 +64,9 @@ describe("ProgramAsCourseSummary", () => {
       start_date: "2026-09-01T00:00:00Z",
       end_date: "2026-12-15T00:00:00Z",
     })
-    renderWithProviders(<ProgramAsCourseSummary program={program} />)
+    renderWithProviders(
+      <ProgramAsCourseSummary tabletColumns={2} program={program} />,
+    )
     const datesRow = screen.getByTestId(TestIds.DatesRow)
     invariant(program.start_date)
     expect(datesRow).toHaveTextContent(
@@ -74,7 +84,11 @@ describe("ProgramAsCourseSummary", () => {
     })
     const program = makeProgram({ start_date: null, end_date: null })
     renderWithProviders(
-      <ProgramAsCourseSummary program={program} courses={[course]} />,
+      <ProgramAsCourseSummary
+        tabletColumns={2}
+        program={program}
+        courses={[course]}
+      />,
     )
     expect(screen.queryByTestId(TestIds.DatesRow)).not.toBeInTheDocument()
     expect(screen.getByTestId(TestIds.DurationRow)).toBeInTheDocument()
@@ -89,7 +103,11 @@ describe("ProgramAsCourseSummary", () => {
     })
     const program = makeProgram()
     renderWithProviders(
-      <ProgramAsCourseSummary program={program} courses={[course]} />,
+      <ProgramAsCourseSummary
+        tabletColumns={2}
+        program={program}
+        courses={[course]}
+      />,
     )
     const rows = screen.getAllByTestId(/-row$/)
     expect(rows.map((row) => row.getAttribute("data-testid"))).toEqual([
