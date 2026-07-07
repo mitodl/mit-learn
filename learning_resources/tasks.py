@@ -690,7 +690,9 @@ def scrape_marketing_pages(self):
     )
 
     missing_ids = set(resource_types) - existing_page_resource_ids
-    missing_course_ids = [rid for rid in missing_ids if resource_types[rid] == "course"]
+    missing_course_ids = sorted(
+        rid for rid in missing_ids if resource_types[rid] == "course"
+    )
     program_ids_with_pages = {
         rid
         for rid in existing_page_resource_ids
