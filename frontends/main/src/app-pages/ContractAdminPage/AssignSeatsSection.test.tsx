@@ -650,4 +650,63 @@ describe("AssignSeatsSection", () => {
       )
     })
   })
+
+  // availableSeats === null means the contract has no max_learners cap, so the
+  // over-capacity gating and error alert must never engage regardless of count.
+  describe("uncapped contract (availableSeats null)", () => {
+    test("Assign Seats button is enabled with valid emails and is never over-capacity", async () => {
+      renderWithProviders(
+        <AssignSeatsSection
+          orgId={1}
+          contractId={2}
+          availableSeats={null}
+          isLoadingSeats={false}
+        />,
+      )
+
+      const textarea = screen.getByPlaceholderText(/enter employee emails/i)
+      // More emails than any small cap would allow — with no cap this is fine.
+      await user.type(
+        textarea,
+        "a@example.com, b@example.com, c@example.com, d@example.com",
+      )
+
+      expect(
+        screen.getByRole("button", { name: "Assign Seats" }),
+      ).not.toBeDisabled()
+    })
+
+    test("does not render the over-capacity error alert or announce it", async () => {
+      renderWithProviders(
+        <AssignSeatsSection
+          orgId={1}
+          contractId={2}
+          availableSeats={null}
+          isLoadingSeats={false}
+        />,
+      )
+
+      const textarea = screen.getByPlaceholderText(/enter employee emails/i)
+      await user.type(
+        textarea,
+        "a@example.com, b@example.com, c@example.com, d@example.com",
+      )
+
+      // No over-capacity Alert is rendered (all emails valid, no cap → no alert).
+      expect(
+        screen.queryByText(/unassigned seat.* available/i),
+      ).not.toBeInTheDocument()
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+
+      // The polite live region announces the valid count but never the
+      // over-capacity error clause.
+      const liveRegion = document.querySelector("[aria-live='polite']")
+      await waitFor(
+        () =>
+          expect(liveRegion as HTMLElement).toHaveTextContent("4 valid emails"),
+        { timeout: 1000 },
+      )
+      expect(liveRegion as HTMLElement).not.toHaveTextContent(/only .* seat/i)
+    })
+  })
 })
