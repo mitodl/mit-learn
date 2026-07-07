@@ -51,10 +51,10 @@ def _fetch_data(url, params=None):
     if not params:
         params = {}
     headers = _mitxonline_api_headers()
+    # Preserve the scheme of the initial request: the upstream API can return
+    # an http "next" URL even when we requested over https.
+    scheme = urlparse(url).scheme
     while url:
-        # Preserve the scheme of the current request: the upstream API can
-        # return an http "next" URL even when we requested over https.
-        scheme = urlparse(url).scheme
         response = requests.get(
             url,
             params=params,
