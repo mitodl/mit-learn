@@ -1256,6 +1256,48 @@ def test_transform_run_prices_not_fully_enrollable(mocker):
         )
 
 
+def test_transform_run_with_b2b_contract_is_unpublished(mocker):
+    """B2B contract runs should be stored but never published."""
+    mock_now = datetime(2023, 1, 1, tzinfo=UTC)
+    mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
+    course = {
+        "min_price": 100,
+        "max_price": 200,
+        "page": {
+            "page_url": "/courses/test/",
+            "live": True,
+            "description": "Test",
+            "feature_image_src": None,
+            "instructors": [],
+        },
+        "availability": "dated",
+        "duration": "",
+        "time_commitment": "",
+        "min_weeks": None,
+        "max_weeks": None,
+        "min_weekly_hours": None,
+        "max_weekly_hours": None,
+    }
+    run = {
+        "title": "B2B Run",
+        "courseware_id": "course-v1:MITxT+TEST+B2B",
+        "start_date": "2024-01-01T00:00:00Z",
+        "end_date": "2024-06-01T00:00:00Z",
+        "enrollment_start": "2023-12-01T00:00:00Z",
+        "enrollment_end": "2024-05-01T00:00:00Z",
+        "is_enrollable": True,
+        "is_self_paced": False,
+        "enrollment_modes": [{"mode_slug": "verified"}],
+        "b2b_contract": 123,
+        "page": {},
+    }
+
+    result = _transform_run(run, course)
+
+    assert result["is_b2b"] is True
+    assert result["published"] is False
+
+
 @pytest.mark.parametrize(
     ("cert_type", "expected_cert_type", "error"),
     [
