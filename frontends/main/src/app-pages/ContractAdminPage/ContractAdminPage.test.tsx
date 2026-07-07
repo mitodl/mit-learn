@@ -480,6 +480,150 @@ describe("ContractAdminPage", () => {
     })
   })
 
+  describe("header stat counts refresh after mutations", () => {
+    test("bulk-assigning seats updates Unassigned and Pending claim counts", async () => {
+      mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+      const { org, contract } = makeOrgWithContract()
+      setMockResponse.get(managerOrgsUrl, {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [org],
+      })
+
+      let contractDetailCalls = 0
+      setMockResponse.get(managerContractDetailUrl(org.id, contract.id), () => {
+        contractDetailCalls += 1
+        return contractDetailCalls === 1
+          ? makeContractDetail(contract, {
+              total_codes: 10,
+              assigned_codes: 2,
+              unassigned_codes: 6,
+              redeemed_codes: 2,
+            })
+          : makeContractDetail(contract, {
+              total_codes: 10,
+              assigned_codes: 3,
+              unassigned_codes: 5,
+              redeemed_codes: 2,
+            })
+      })
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 1,
+          page_size: 25,
+        }),
+        factories.contracts.paginatedContractCodes([]),
+      )
+      setMockResponse.post(
+        urls.contracts.managerContractBulkAssign(org.id, contract.id),
+        factories.contracts.bulkAssignResult({
+          assigned: [factories.contracts.contractCode()],
+          errors: [],
+        }),
+      )
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      expect(
+        await screen.findByRole("group", { name: "Unassigned" }),
+      ).toHaveTextContent("6")
+
+      const textarea = screen.getByPlaceholderText(/enter employee emails/i)
+      await user.click(textarea)
+      await user.paste("alice@example.com")
+      await user.click(screen.getByRole("button", { name: "Assign Seats" }))
+      await user.click(
+        screen.getByRole("button", { name: /send 1 invitation/i }),
+      )
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("group", { name: "Unassigned" }),
+        ).toHaveTextContent("5")
+      })
+      expect(
+        screen.getByRole("group", { name: "Pending claim" }),
+      ).toHaveTextContent("3")
+    })
+
+    test("releasing a seat updates Unassigned and Pending claim counts", async () => {
+      mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+      const { org, contract } = makeOrgWithContract()
+      setMockResponse.get(managerOrgsUrl, {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [org],
+      })
+
+      let contractDetailCalls = 0
+      setMockResponse.get(managerContractDetailUrl(org.id, contract.id), () => {
+        contractDetailCalls += 1
+        return contractDetailCalls === 1
+          ? makeContractDetail(contract, {
+              total_codes: 10,
+              assigned_codes: 2,
+              unassigned_codes: 6,
+              redeemed_codes: 2,
+            })
+          : makeContractDetail(contract, {
+              total_codes: 10,
+              assigned_codes: 1,
+              unassigned_codes: 7,
+              redeemed_codes: 2,
+            })
+      })
+
+      const assignedCode = factories.contracts.contractCode({
+        redemption_status: "assigned",
+        assigned_to: "pending@example.com",
+      })
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 1,
+          page_size: 25,
+        }),
+        factories.contracts.paginatedContractCodes([assignedCode]),
+      )
+      setMockResponse.delete(
+        urls.contracts.managerContractCodeRevoke(
+          org.id,
+          contract.id,
+          assignedCode.code,
+        ),
+        assignedCode,
+      )
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      expect(
+        await screen.findByRole("group", { name: "Unassigned" }),
+      ).toHaveTextContent("6")
+
+      await user.click(screen.getByRole("button", { name: /more actions/i }))
+      await user.click(screen.getByRole("menuitem", { name: "Release seat" }))
+      await user.click(screen.getByRole("button", { name: "Release seat" }))
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("group", { name: "Unassigned" }),
+        ).toHaveTextContent("7")
+      })
+      expect(
+        screen.getByRole("group", { name: "Pending claim" }),
+      ).toHaveTextContent("1")
+    })
+  })
+
   test("Pending claim tab filters to assigned codes only", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
