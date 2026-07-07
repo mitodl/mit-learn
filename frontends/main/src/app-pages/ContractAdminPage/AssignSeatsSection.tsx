@@ -11,7 +11,12 @@ import {
 } from "ol-utilities"
 import Papa from "papaparse"
 import { AssignSeatsConfirmModal } from "./AssignSeatsConfirmModal"
-import { useBulkAssignSeats } from "api/mitxonline-hooks/organizations"
+import {
+  useBulkAssignSeats,
+  useSendTestEmail,
+} from "api/mitxonline-hooks/organizations"
+import { mitxUserQueries } from "api/mitxonline-hooks/user"
+import { useQuery } from "@tanstack/react-query"
 import type { BulkAssignError } from "@mitodl/mitxonline-api-axios/v2"
 
 // Shared metrics — must be identical between EmailHighlightLayer and EmailTextarea
@@ -228,6 +233,8 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const bulkAssign = useBulkAssignSeats()
+  const sendTestEmail = useSendTestEmail()
+  const { data: user } = useQuery(mitxUserQueries.me())
 
   const submitResult = useMemo(
     () => parseEmailsForSubmit(emailInput),
@@ -392,6 +399,16 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
   }
 
   const handleModalClose = () => setModalData(null)
+
+  const handleSendTestEmail = async () => {
+    const email = user?.email
+    if (!email) throw new Error("Logged-in user email is unavailable")
+    await sendTestEmail.mutateAsync({
+      id: contractId,
+      parent_lookup_organization: orgId,
+      SendTestEmailRequest: { email },
+    })
+  }
 
   const handleModalConfirm = async () => {
     const emails = modalData?.validEmails ?? []
@@ -613,6 +630,8 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
           invalidEmails={modalData.invalidEmails}
           duplicateEmails={modalData.duplicateEmails}
           skippedCount={modalData.skippedCount}
+          userEmail={user?.email}
+          onSendTestEmail={handleSendTestEmail}
         />
       )}
     </SectionCard>

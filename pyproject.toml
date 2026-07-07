@@ -32,7 +32,7 @@ dependencies = [
     "django-cors-headers>=4.0.0,<5",
     "django-filter>=2.4.0,<3",
     "django-guardian>=3.0.0,<4",
-    "django-health-check",
+    "django-health-check>=3.24.0,<4",
     "django-imagekit>=6.0.0,<7",
     "django-ipware>=7.0.0,<8",
     "django-json-widget>=2.0.0,<3",
@@ -88,7 +88,14 @@ dependencies = [
     "python-dateutil>=2.8.2,<3",
     "python-rapidjson>=1.8,<2",
     "pyyaml>=6.0.0,<7",
-    "qdrant-client[fastembed]==1.18.0,<2",
+    # Minimum server version for the Query API (QueryResponse gRPC type): qdrant v1.7.0.
+    # qdrant-client ~=1.18.0 targets qdrant server v1.18.x; deployed server is v1.18.2
+    # (ol-infrastructure/src/bridge/lib/versions.py QDRANT_VERSION).
+    # The prior ==1.18.0 pin blocked automatic pickup of future 1.18.x patch releases;
+    # switching to ~= lets uv upgrade within 1.18.x when the qdrant team publishes a
+    # client that resolves the gRPC QueryResponse DecodeError observed against server
+    # v1.18.2 with cloud_inference=True + prefer_grpc=True.
+    "qdrant-client[fastembed]~=1.18.0",
     "redis>=7.0.0,<8",
     "requests>=2.31.0,<3",
     "retry2>=0.9.5,<0.10",
@@ -153,9 +160,6 @@ dev = [
 package = false
 default-groups = "all"
 override-dependencies = ["setuptools<80"]
-
-[tool.uv.sources]
-django-health-check = { git = "https://github.com/revsys/django-health-check", rev = "53f9bdc3a7acc8a577319987fef0bd3040eef4b4" } # pragma: allowlist secret
 
 [tool.uv.build-backend]
 module-root = ""

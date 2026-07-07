@@ -17,7 +17,7 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, re_path
+from django.urls import include, path, re_path
 from django.views.generic.base import RedirectView
 from rest_framework.routers import DefaultRouter
 
@@ -60,7 +60,7 @@ urlpatterns = (
         re_path(r"", include("webhooks.urls", namespace="webhooks")),
         re_path(r"", include(features_router.urls)),
         re_path(r"^app", RedirectView.as_view(url=settings.APP_BASE_URL)),
-        re_path(r"^health/", include("health_check.urls")),
+        path("", include("main.urls_healthcheck")),
     ]
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
