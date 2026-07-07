@@ -1330,16 +1330,20 @@ def remove_qdrant_records(ids, resource_type):
     if resource_type != CONTENT_FILE_TYPE:
         serialized_documents = serialize_bulk_learning_resources(ids)
         collection_name = RESOURCES_COLLECTION_NAME
-        lookup_keys = ["readable_id"]
+        lookup_keys = ["readable_id", "platform"]
     else:
         serialized_documents = serialize_bulk_content_files(ids)
         collection_name = CONTENT_FILES_COLLECTION_NAME
-        lookup_keys = ["run_readable_id", "resource_readable_id", "key"]
+        lookup_keys = ["platform", "run_readable_id", "resource_readable_id", "key"]
     for doc in serialized_documents:
         params = {}
         for key in lookup_keys:
             if key in doc:
-                params[key] = doc[key]
+                value = doc[key]
+                if key == "platform" and isinstance(value, dict):
+                    value = value.get("code")
+                if value is not None:
+                    params[key] = value
         if params:
             remove_points_matching_params(params, collection_name=collection_name)
 
