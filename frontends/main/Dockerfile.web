@@ -91,6 +91,13 @@ ENV NEXT_BUILD_CI=1
 
 RUN yarn build
 
+# STAGE: local-dev
+# Local-dev target (ol-infrastructure local-dev k8s/Tilt stack): runs `next dev`
+FROM base AS local-dev
+
+ENV NODE_ENV=development
+CMD ["yarn", "dev"]
+
 # STAGE: runner (default)
 # Copies only the standalone server, static assets, and public directory from
 # the build stage into a clean image. No workspace install is needed; the
