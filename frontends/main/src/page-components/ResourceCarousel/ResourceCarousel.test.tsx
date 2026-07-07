@@ -529,6 +529,65 @@ describe("ResourceCarousel", () => {
       expect(document.activeElement).toBe(outsideButton)
     })
 
+    it("keeps a late-mounting bookmark button (gated on the user query) out of inactive cards' tab order", async () => {
+      const config: ResourceCarouselProps["config"] = [
+        {
+          label: "Resources",
+          data: {
+            type: "resources",
+            params: { resource_type: ["course"] },
+          },
+        },
+      ]
+      const resources = factories.learningResources.resources({ count: 2 })
+      const userMeResponse = new ControlledPromise()
+      setMockResponse.get(urls.userMe.get(), userMeResponse)
+      setMockResponse.get(urls.userLists.membershipList(), [])
+      setMockResponse.get(urls.learningPaths.membershipList(), [])
+      setMockResponse.get(
+        expect.stringContaining(urls.learningResources.list()),
+        resources,
+      )
+
+      renderWithProviders(
+        <>
+          <ResourceCarousel
+            titleComponent="h2"
+            title="Test Carousel"
+            config={config}
+          />
+          <button>Outside the carousel</button>
+        </>,
+      )
+      await screen.findByText(resources.results[0].title)
+      const slides = screen.getAllByRole("group", { name: /^\d+ of \d+:/ })
+
+      // The bookmark button doesn't exist yet: it's gated on `useUserMe()`,
+      // which hasn't resolved. This mirrors a real browser, where the
+      // initial paint (and this component's tabIndex-sync effect) happens
+      // well before the network round-trip completes, unlike jsdom's
+      // near-instant mocks -- the scenario that slipped past the original
+      // effect-based fix.
+      expect(
+        screen.queryAllByRole("button", { name: /Bookmark/i }),
+      ).toHaveLength(0)
+
+      await act(async () => {
+        userMeResponse.resolve({ is_authenticated: true })
+        await Promise.resolve()
+      })
+      const bookmarkButtons = await screen.findAllByRole("button", {
+        name: /Bookmark/i,
+      })
+      expect(bookmarkButtons).toHaveLength(2)
+      expect(
+        within(slides[0]).getByRole("button", { name: /Bookmark/i }),
+      ).toHaveAttribute("tabindex", "0")
+      expect(
+        within(slides[1]).getByRole("button", { name: /Bookmark/i }),
+      ).toHaveAttribute("tabindex", "-1")
+    })
+
     test("pressing Enter on the focused card opens it, mirroring a click", async () => {
       allowConsoleErrors()
       process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"

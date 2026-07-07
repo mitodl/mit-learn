@@ -11,7 +11,7 @@ import {
   TypographyProps,
 } from "ol-components"
 import { CarouselV2 } from "ol-components/CarouselV2"
-import { TabButton, TabButtonList } from "@mitodl/smoot-design"
+import { TabButton, TabButtonList, VisuallyHidden } from "@mitodl/smoot-design"
 import type { TabConfig } from "./types"
 import { LearningResource, PaginatedLearningResourceList } from "api"
 import { ResourceCard } from "../ResourceCard/ResourceCard"
@@ -203,6 +203,14 @@ const CarouselCards: React.FC<CarouselCardsProps> = ({
 }) => {
   const cardRefs = React.useRef<(HTMLDivElement | null)[]>([])
   const [activeIndex, setActiveIndex] = React.useState(0)
+  const [announcement, setAnnouncement] = React.useState("")
+
+  // `resources` is a freshly-filtered array on every render, so hold the latest
+  // in a ref and keep `handleSettle` referentially stable — otherwise passing a
+  // new `onSettle` each render would make CarouselV2 tear down and re-subscribe
+  // its Embla listeners on every keystroke.
+  const resourcesRef = React.useRef(resources)
+  resourcesRef.current = resources
 
   // The same CarouselCards instance is reused across resource navigations
   // (e.g. clicking a "similar resources" card within the drawer), which can
@@ -222,24 +230,59 @@ const CarouselCards: React.FC<CarouselCardsProps> = ({
     cardRefs.current[index]?.focus({ preventScroll: true })
   }
 
+  // The Prev/Next buttons page by a full viewport (fast mouse browsing), which
+  // leaves DOM focus on the button rather than moving it into a card. When the
+  // scroll settles, move the single roving tab stop onto the first now-visible
+  // card so the next Tab into the carousel lands on a card the user can see,
+  // and announce the position for screen reader users (whose focus stays on the
+  // button). Don't override when the active card is already in view (e.g. arrow-
+  // key navigation), so we never yank the tab stop off a card the user just
+  // moved to.
+  const handleSettle = React.useCallback((slidesInView: number[]) => {
+    if (slidesInView.length === 0) {
+      return
+    }
+    const firstInView = slidesInView[0]
+    const list = resourcesRef.current
+    setActiveIndex((current) =>
+      slidesInView.includes(current) ? current : firstInView,
+    )
+    setAnnouncement(
+      `${firstInView + 1} of ${list.length}: ${list[firstInView]?.title ?? ""}`,
+    )
+  }, [])
+
   // Setting tabIndex=-1 on a slide wrapper only removes the wrapper itself
   // from the tab order — native descendants (the title link, bookmark
   // button) keep their own implicit tabIndex=0 and remain reachable by Tab.
   // Card/BaseLearningResourceCard are shared far beyond this carousel, so
-  // rather than threading a tabIndex override prop through every layer,
-  // sync each inactive slide's focusable descendants imperatively.
+  // rather than threading a tabIndex override prop through every layer, sync
+  // each slide's focusable descendants imperatively. A MutationObserver (not
+  // just an effect keyed on activeIndex/resources) is required because
+  // action buttons like "Bookmark" mount asynchronously once the current
+  // user's data loads, which can happen well after this effect's first run.
   React.useEffect(() => {
-    cardRefs.current.forEach((slide, index) => {
+    const syncTabIndex = (slide: HTMLDivElement, index: number) => {
+      slide
+        .querySelectorAll<HTMLElement>("a[href], button, [tabindex]")
+        .forEach((el) => {
+          el.tabIndex = index === activeIndex ? 0 : -1
+        })
+    }
+
+    const observers = cardRefs.current.map((slide, index) => {
       if (!slide) {
-        return
+        return null
       }
-      const focusableDescendants = slide.querySelectorAll<HTMLElement>(
-        "a[href], button, [tabindex]",
-      )
-      focusableDescendants.forEach((el) => {
-        el.tabIndex = index === activeIndex ? 0 : -1
-      })
+      syncTabIndex(slide, index)
+      const observer = new MutationObserver(() => syncTabIndex(slide, index))
+      observer.observe(slide, { childList: true, subtree: true })
+      return observer
     })
+
+    return () => {
+      observers.forEach((observer) => observer?.disconnect())
+    }
   }, [activeIndex, resources])
 
   const handleSlideKeyDown = (
@@ -303,33 +346,39 @@ const CarouselCards: React.FC<CarouselCardsProps> = ({
   }
 
   return (
-    <StyledCarouselV2
-      arrowsContainer={arrowsContainer}
-      mobileBleed="symmetric"
-      mobileGutter={16}
-      activeIndex={activeIndex}
-    >
-      {resources.map((resource, index) => (
-        <CarouselSlide
-          key={resource.id}
-          ref={(el: HTMLDivElement | null) => {
-            cardRefs.current[index] = el
-          }}
-          role="group"
-          aria-roledescription="slide"
-          aria-label={`${index + 1} of ${resources.length}: ${resource.title}`}
-          tabIndex={index === activeIndex ? 0 : -1}
-          onKeyDown={(event) => handleSlideKeyDown(event, index)}
-        >
-          <ResourceCard
-            resource={resource}
-            parentHeadingEl={titleComponent}
-            {...tabConfig.cardProps}
-            onCardClick={() => onCardClick(resource, index)}
-          />
-        </CarouselSlide>
-      ))}
-    </StyledCarouselV2>
+    <>
+      <VisuallyHidden aria-live="polite" aria-atomic="true">
+        {announcement}
+      </VisuallyHidden>
+      <StyledCarouselV2
+        arrowsContainer={arrowsContainer}
+        mobileBleed="symmetric"
+        mobileGutter={16}
+        activeIndex={activeIndex}
+        onSettle={handleSettle}
+      >
+        {resources.map((resource, index) => (
+          <CarouselSlide
+            key={resource.id}
+            ref={(el: HTMLDivElement | null) => {
+              cardRefs.current[index] = el
+            }}
+            role="group"
+            aria-roledescription="slide"
+            aria-label={`${index + 1} of ${resources.length}: ${resource.title}`}
+            tabIndex={index === activeIndex ? 0 : -1}
+            onKeyDown={(event) => handleSlideKeyDown(event, index)}
+          >
+            <ResourceCard
+              resource={resource}
+              parentHeadingEl={titleComponent}
+              {...tabConfig.cardProps}
+              onCardClick={() => onCardClick(resource, index)}
+            />
+          </CarouselSlide>
+        ))}
+      </StyledCarouselV2>
+    </>
   )
 }
 
