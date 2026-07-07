@@ -38,18 +38,6 @@ export const FullRowCell = styled.div({
   gridColumn: "1 / -1",
 })
 
-/**
- * The page-header enroll button uses the `bordered` variant but with darkGray2
- * text (matching production), not the variant's default silverGrayDark. Disabled
- * buttons keep the variant default. `display: contents` adds no layout box.
- */
-export const HeaderButtonSlot = styled.div(({ theme }) => ({
-  display: "contents",
-  "& button:not(:disabled), & a": {
-    color: theme.custom.colors.darkGray2,
-  },
-}))
-
 export type EnrollButtonProps = {
   action: EnrollAction
   size: "medium" | "large"

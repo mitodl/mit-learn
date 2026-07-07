@@ -116,6 +116,23 @@ export const FeatureIcon = styled(RiCheckLine)(({ theme }) => ({
   flexShrink: 0,
 }))
 
+/**
+ * The "Access to this course/program & materials" bullet shared by both track
+ * cards — identical wording in each, so it lives here to stay in sync.
+ */
+export const AccessFeatureRow: React.FC<{
+  productNoun: "course" | "program"
+}> = ({ productNoun }) => (
+  <FeatureRow>
+    <FeatureIcon aria-hidden="true" />
+    <span>
+      {productNoun === "program"
+        ? "Access to this program & materials"
+        : "Access to this course & course materials"}
+    </span>
+  </FeatureRow>
+)
+
 type TrackCardProps = {
   variant: CardVariant
   title: string
