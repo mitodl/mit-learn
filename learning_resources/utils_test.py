@@ -1028,7 +1028,7 @@ def _add_program_marketing_page(program_lr, content):
 
     return ContentFile.objects.create(
         learning_resource=program_lr,
-        file_type="marketing_page",
+        file_type=MARKETING_PAGE_FILE_TYPE,
         file_extension=".md",
         key=f"mktg-{program_lr.id}",
         content=content,
@@ -1037,41 +1037,29 @@ def _add_program_marketing_page(program_lr, content):
 
 
 @pytest.mark.django_db
-def test_programs_needing_children_heal_selects_missing_marker():
-    """A program whose page lacks the marker but has an available child page
-    is selected for healing.
-    """
+@pytest.mark.parametrize(
+    ("child_has_page", "program_content", "expected_selected"),
+    [
+        # missing marker + an available child page → heal
+        (True, "Program page with no children yet.", True),
+        # no reachable child page → skip (termination guard)
+        (False, "Program page with no children yet.", False),
+        # marker already present → skip
+        (True, "Program page.\n\n## Program Contents\n\n### Child", False),
+    ],
+)
+def test_programs_needing_children_heal(
+    child_has_page, program_content, expected_selected
+):
+    """Heal a program only when its page lacks the marker AND a child page exists."""
     course_lr = CourseFactory.create().learning_resource
-    _add_course_marketing_page(course_lr, "Child marketing copy.")
+    if child_has_page:
+        _add_course_marketing_page(course_lr, "Child marketing copy.")
     program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
-    _add_program_marketing_page(program_lr, "Program page with no children yet.")
+    _add_program_marketing_page(program_lr, program_content)
 
-    assert utils.programs_needing_children_heal([program_lr.id]) == {program_lr.id}
-
-
-@pytest.mark.django_db
-def test_programs_needing_children_heal_skips_when_no_child_page():
-    """A program with no reachable child course page is NOT selected
-    (termination guard).
-    """
-    course_lr = CourseFactory.create().learning_resource  # no marketing page
-    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
-    _add_program_marketing_page(program_lr, "Program page with no children yet.")
-
-    assert utils.programs_needing_children_heal([program_lr.id]) == set()
-
-
-@pytest.mark.django_db
-def test_programs_needing_children_heal_skips_when_marker_present():
-    """A program whose page already contains the children marker is skipped."""
-    course_lr = CourseFactory.create().learning_resource
-    _add_course_marketing_page(course_lr, "Child marketing copy.")
-    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
-    _add_program_marketing_page(
-        program_lr, "Program page.\n\n## Program Contents\n\n### Child"
-    )
-
-    assert utils.programs_needing_children_heal([program_lr.id]) == set()
+    expected = {program_lr.id} if expected_selected else set()
+    assert utils.programs_needing_children_heal([program_lr.id]) == expected
 
 
 @pytest.mark.parametrize(
