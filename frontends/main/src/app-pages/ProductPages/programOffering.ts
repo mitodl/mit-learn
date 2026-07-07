@@ -1,5 +1,6 @@
 import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import { getEnrollmentType } from "@/common/mitxonline"
+import type { Offering } from "./enrollTypes"
 
 /**
  * What a program lets you enroll in right now:
@@ -13,7 +14,7 @@ import { getEnrollmentType } from "@/common/mitxonline"
  * Without one, "paid" demotes to "none" and "both" demotes to "free" — there's
  * nothing to sell, so the paid card/button can't be rendered.
  */
-export type ProgramOffering = "none" | "free" | "paid" | "both"
+export type ProgramOffering = Offering
 
 export const getProgramOffering = (
   program: V2ProgramDetail,
@@ -26,23 +27,4 @@ export const getProgramOffering = (
   if (purchasable) return hasFree ? "both" : "paid"
   if (hasFree) return "free"
   return "none"
-}
-
-/**
- * How many offering boxes the enroll area renders: an enrolled user collapses
- * to a single box regardless of offering. Mirrors courseRun.offeringBoxCount.
- */
-export const programOfferingBoxCount = (
-  offering: ProgramOffering,
-  isEnrolled: boolean,
-): 0 | 1 | 2 => {
-  if (isEnrolled) return 1
-  switch (offering) {
-    case "none":
-      return 0
-    case "both":
-      return 2
-    default:
-      return 1
-  }
 }

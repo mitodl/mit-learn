@@ -1,12 +1,6 @@
 import React from "react"
 import { QueryClientProvider } from "@tanstack/react-query"
-import {
-  renderHook,
-  renderWithProviders,
-  screen,
-  waitFor,
-  setMockResponse,
-} from "@/test-utils"
+import { renderHook, waitFor, setMockResponse } from "@/test-utils"
 import { makeBrowserQueryClient } from "@/app/getQueryClient"
 import {
   makeRequest,
@@ -15,6 +9,7 @@ import {
 } from "api/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
 import { formatPrice } from "@/common/mitxonline"
+import { getTotalRequiredCourses } from "./util"
 import { useProgramCertificatePrice } from "./useProgramCertificatePrice"
 
 const programs = factories.programs
@@ -49,12 +44,12 @@ describe("useProgramCertificatePrice", () => {
 
     expect(result.current).toEqual({
       price: null,
-      priceBlock: null,
+      savings: null,
       financialAid: null,
     })
   })
 
-  test("plain price (no savings): price is set, priceBlock and financialAid are null", () => {
+  test("no savings (list price not above product price): price set, savings null", () => {
     const program = programs.program({
       products: [courses.product({ price: "800" })],
       page: { list_price: "800" },
@@ -65,11 +60,11 @@ describe("useProgramCertificatePrice", () => {
     })
 
     expect(result.current.price).toBe(formatPrice(800, { avoidCents: true }))
-    expect(result.current.priceBlock).toBeNull()
+    expect(result.current.savings).toBeNull()
     expect(result.current.financialAid).toBeNull()
   })
 
-  test("savings: full price shown, list price struck, savings line present, price is null", () => {
+  test("savings when list price exceeds product price; price still the full price", () => {
     const program = programs.program({
       products: [courses.product({ price: "800" })],
       page: { list_price: "1000" },
@@ -78,29 +73,13 @@ describe("useProgramCertificatePrice", () => {
     const { result } = renderHook(() => useProgramCertificatePrice(program), {
       wrapper,
     })
-    renderWithProviders(<>{result.current.priceBlock}</>)
 
-    expect(screen.getByText("$800")).toBeInTheDocument()
-    expect(
-      screen.getByText("purchased separately", { exact: false }),
-    ).toBeInTheDocument()
-    expect(screen.getByText("Save $200")).toBeInTheDocument()
-    expect(result.current.price).toBeNull()
-  })
-
-  test("showSavings: false suppresses the savings block even when savings data is present", () => {
-    const program = programs.program({
-      products: [courses.product({ price: "800" })],
-      page: { list_price: "1000" },
+    expect(result.current.savings).toEqual({
+      currentAmount: 800,
+      listAmount: 1000,
+      totalCourses: getTotalRequiredCourses(program),
     })
-
-    const { result } = renderHook(
-      () => useProgramCertificatePrice(program, { showSavings: false }),
-      { wrapper },
-    )
-
     expect(result.current.price).toBe(formatPrice(800, { avoidCents: true }))
-    expect(result.current.priceBlock).toBeNull()
   })
 
   describe("financial aid", () => {

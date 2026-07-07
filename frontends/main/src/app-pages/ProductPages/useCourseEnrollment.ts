@@ -3,19 +3,17 @@ import type {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { PlatformEnum } from "api"
 import { userQueries } from "api/hooks/user"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { enrollmentAlertSuccessUrl } from "@/common/mitxonline"
 import { useRouter } from "next-nprogress-bar"
 import { usePostHog } from "posthog-js/react"
-import { PostHogEvents } from "@/common/constants"
 import { trackCourseEnrolled } from "@/common/analytics/gtm"
-import { env } from "@/env"
 import { DASHBOARD_HOME } from "@/common/urls"
 import { getCourseScenario, type CourseScenario } from "./courseRun"
 import { useCourseEnrolledRunIds } from "./useCourseEnrolledRunIds"
+import { fireEnrollCta, type EnrollCtaPlacement } from "./enrollAnalytics"
 import type {
   EnrollAction,
   EnrollActionKind,
@@ -38,7 +36,7 @@ export type UseCourseEnrollment = {
 
 type UseCourseEnrollmentOptions = {
   /** Analytics-only metadata for the `enroll_cta_clicked` event; no behavior. */
-  tracking: { placement: "header" | "infobox" }
+  tracking: { placement: EnrollCtaPlacement }
   /** Behavioral: called when an unauthenticated user clicks an enroll action. */
   onRequireSignup?: (anchor: HTMLButtonElement) => void
 }
@@ -78,27 +76,16 @@ export const useCourseEnrollment = (
   // a misleading "problem processing your enrollment" message.
   const isError = replaceBasketItem.isError || createEnrollment.isError
 
-  // Dedicated, semantically-named enrollment event (hq#11941). Replaces the
-  // generic cta_clicked for enroll CTAs so analytics can slice by placement /
-  // enrollment_mode instead of the drifting button copy. `label` is retained
-  // for human readability, not as the analytics key.
-  const firePostHog = (kind: EnrollActionKind, label: string) => {
-    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-      posthog.capture(PostHogEvents.EnrollCtaClicked, {
-        placement: opts?.tracking.placement,
-        enrollmentMode: kind === "paid" ? "verified" : "audit",
-        resourceType: "course",
-        readableId: course.readable_id,
-        platform: PlatformEnum.Mitxonline,
-        label,
-      })
-    }
-  }
-
   const makeOnClick =
     (kind: EnrollActionKind, label: string): EnrollAction["onClick"] =>
     (e) => {
-      firePostHog(kind, label)
+      fireEnrollCta(posthog, {
+        placement: opts?.tracking.placement,
+        kind,
+        label,
+        resourceType: "course",
+        readableId: course.readable_id,
+      })
       if (!me.data?.is_authenticated) {
         opts?.onRequireSignup?.(e.currentTarget)
         return

@@ -16,3 +16,31 @@ export type EnrollAreaState =
   | { status: "enrolled"; href: string }
   | { status: "options"; options: EnrollAction[] }
   | { status: "none" }
+
+/**
+ * What a product lets you enroll in right now — the ACTIONABLE offering, not
+ * the raw enrollment modes (a paid path additionally requires a purchasable
+ * product). Derived by courseRun.getCourseScenario (per selected run) and
+ * programOffering.getProgramOffering (per program).
+ */
+export type Offering = "none" | "free" | "paid" | "both"
+
+/**
+ * How many offering boxes the enroll area renders: an enrolled user collapses
+ * to a single box regardless of offering. The count-aware grid layout reads
+ * this so it can't disagree with what the enroll areas render.
+ */
+export const offeringBoxCount = (
+  offering: Offering,
+  isEnrolled: boolean,
+): 0 | 1 | 2 => {
+  if (isEnrolled) return 1
+  switch (offering) {
+    case "none":
+      return 0
+    case "both":
+      return 2
+    default:
+      return 1
+  }
+}

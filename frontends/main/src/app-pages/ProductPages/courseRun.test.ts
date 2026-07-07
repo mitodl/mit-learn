@@ -3,9 +3,7 @@ import {
   getEnrollableRuns,
   getSelectedRun,
   getCourseScenario,
-  offeringBoxCount,
 } from "./courseRun"
-import type { CourseOffering } from "./courseRun"
 
 const makeRun = factories.courses.courseRun
 const makeMode = factories.courses.enrollmentMode
@@ -163,28 +161,4 @@ describe("getCourseScenario", () => {
       offeredCertificate: true,
     })
   })
-})
-
-describe("offeringBoxCount", () => {
-  it("returns 1 when enrolled, regardless of offering", () => {
-    expect(offeringBoxCount({ status: "active", offering: "both" }, true)).toBe(
-      1,
-    )
-  })
-
-  it.each([
-    { offering: "none", expected: 0 },
-    { offering: "free", expected: 1 },
-    { offering: "both", expected: 2 },
-  ])(
-    "maps offering '$offering' to $expected boxes when not enrolled",
-    ({ offering, expected }) => {
-      expect(
-        offeringBoxCount(
-          { status: "active", offering: offering as CourseOffering },
-          false,
-        ),
-      ).toBe(expected)
-    },
-  )
 })
