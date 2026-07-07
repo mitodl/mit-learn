@@ -1,5 +1,7 @@
 """Tests for learning_resources.models"""
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 
 from channels.factories import ChannelFactory
@@ -10,6 +12,8 @@ from learning_resources.constants import (
 from learning_resources.factories import (
     CourseFactory,
     LearningPathFactory,
+    LearningResourceFactory,
+    LearningResourceRunFactory,
     LearningResourceViewEventFactory,
     ProgramFactory,
 )
@@ -56,6 +60,41 @@ def test_course_creation():
     assert resource.offered_by is not None
     assert resource.runs.count() == course.runs.count()
     assert len(resource.resource_prices.all()) == 0
+
+
+def test_best_run_and_published_runs_ignore_b2b_runs():
+    """B2B runs should not drive displayed run data."""
+    resource = LearningResourceFactory.create(
+        resource_type=LearningResourceType.course.name
+    )
+    resource.runs.all().delete()
+    now = datetime.now(tz=UTC)
+    b2b_run = LearningResourceRunFactory.create(
+        learning_resource=resource,
+        published=True,
+        is_b2b=True,
+        start_date=now + timedelta(days=1),
+        end_date=now + timedelta(days=90),
+        enrollment_start=now - timedelta(days=1),
+        enrollment_end=now + timedelta(days=30),
+    )
+    public_run = LearningResourceRunFactory.create(
+        learning_resource=resource,
+        published=True,
+        is_b2b=False,
+        start_date=now + timedelta(days=10),
+        end_date=now + timedelta(days=100),
+        enrollment_start=now - timedelta(days=1),
+        enrollment_end=now + timedelta(days=30),
+    )
+
+    serialized_resource = LearningResource.objects.for_serialization().get(
+        id=resource.id
+    )
+
+    assert serialized_resource.best_run == public_run
+    assert serialized_resource.published_runs == [public_run]
+    assert b2b_run not in serialized_resource.published_runs
 
 
 def test_learning_resources_views_count():
