@@ -53,7 +53,9 @@ def _fetch_data(url, params=None):
     headers = _mitxonline_api_headers()
     # Preserve the scheme of the initial request: the upstream API can return
     # an http "next" URL even when we requested over https.
-    scheme = urlparse(url).scheme
+    initial_url = urlparse(url)
+    scheme = initial_url.scheme
+    netloc = initial_url.netloc
     while url:
         response = requests.get(
             url,
@@ -65,8 +67,14 @@ def _fetch_data(url, params=None):
         yield from results
         next_url = response.get("next")
         if next_url:
-            parsed = urlparse(next_url)._replace(scheme=scheme)
-            url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+            parsed = urlparse(next_url)
+            if parsed.netloc and parsed.netloc.lower() != netloc.lower():
+                msg = (
+                    "MITx Online pagination attempted to leave the configured host: "
+                    f"{parsed.netloc}"
+                )
+                raise ValueError(msg)
+            url = f"{scheme}://{netloc}{parsed.path}"
             params = parse_qs(parsed.query)
         else:
             url = None

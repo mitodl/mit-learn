@@ -1416,6 +1416,31 @@ def test_fetch_data_preserves_scheme(mocker, settings):
     )
 
 
+def test_fetch_data_rejects_cross_host_next_url(mocker, settings):
+    """_fetch_data should not send API credentials to an unexpected next host."""
+    settings.REQUESTS_TIMEOUT = 5
+    settings.MITX_ONLINE_ETL_API_KEY = "secret-key"
+    mock_get = mocker.patch(
+        "learning_resources.etl.mitxonline.requests.get",
+        return_value=mocker.Mock(
+            json=mocker.Mock(
+                return_value={
+                    "results": [{"id": 1}],
+                    "next": "https://evil.example.com/api/courses?page=2",
+                }
+            )
+        ),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="MITx Online pagination attempted to leave the configured host",
+    ):
+        list(_fetch_data("https://mitxonline.example.com/api/courses"))
+
+    assert mock_get.call_count == 1
+
+
 @pytest.mark.parametrize("api_key", [None, "", "secret-key"])
 def test_fetch_data_authorization_header(mocker, settings, api_key):
     """_fetch_data should send an Api-Key Authorization header when a key is set"""
