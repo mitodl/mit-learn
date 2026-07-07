@@ -799,6 +799,9 @@ def test_scrape_marketing_pages_orders_courses_before_programs(
         published=True,
     )
     si_mock = mocker.patch("learning_resources.tasks.marketing_page_for_resources.si")
+    # Make each .si(...) call's return value identify which ids it was built
+    # from, so the args passed into celery.group(...) can be told apart.
+    si_mock.side_effect = lambda ids: ("si", tuple(ids))
 
     with pytest.raises(mocked_celery.replace_exception_class):
         scrape_marketing_pages.delay()
@@ -810,6 +813,18 @@ def test_scrape_marketing_pages_orders_courses_before_programs(
     assert queued_ids[0] == [course.id]
     assert [program.id] in queued_ids
     assert queued_ids.index([course.id]) < queued_ids.index([program.id])
+
+    # Pin the guarantee to what is actually fed into celery.chain via
+    # celery.group: Python evaluates chain's positional args left-to-right,
+    # so the first group(...) call must be the course tasks and the second
+    # must be the program tasks. This fails if the two arguments to
+    # celery.chain(celery.group(...), celery.group(...)) are ever swapped.
+    assert mocked_celery.group.call_count == 2
+    first_group_tasks, second_group_tasks = (
+        call.args[0] for call in mocked_celery.group.call_args_list
+    )
+    assert first_group_tasks == [("si", (course.id,))]
+    assert second_group_tasks == [("si", (program.id,))]
 
 
 @pytest.mark.django_db
