@@ -1,6 +1,17 @@
 Release Notes
 =============
 
+Version 0.73.2
+--------------
+
+- fix: handle no-max-learners contracts in B2B seat assignment UI (#3564)
+- feat: local-dev Docker targets and granian kill timeout (#3579)
+- fix: changing the positions of share feature on videos and podcasts episode (#3540)
+- Bound program marketing-page embedding input to avoid token overflow (#3562)
+- fix(vector-search): relax qdrant-client pin to allow 1.18.x patches (#3546)
+- feat: Add "Send Test Email to Me" to the seat assignment confirmation modal (#3558)
+- Upgrade django-health-check from pinned git commit to PyPI 3.24.0 (#3556)
+
 Version 0.73.1 (Released July 07, 2026)
 --------------
 
