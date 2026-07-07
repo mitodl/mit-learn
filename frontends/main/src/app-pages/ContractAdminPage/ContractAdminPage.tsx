@@ -497,6 +497,13 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const unassignedCount = contractDetail?.unassigned_codes
   const assignedCount = contractDetail?.assigned_codes
   const redeemedCount = contractDetail?.redeemed_codes
+  // total_codes mirrors the contract's max_learners (null/0 means no seat cap).
+  const isUnlimited = totalPurchased === null || totalPurchased === 0
+  // assigned_codes/redeemed_codes are always real numbers (never null), even on
+  // uncapped contracts, so they're a safe stand-in for "is there anything to
+  // export" — unlike total_codes, which is null/0 for every uncapped contract
+  // regardless of how many seats have actually been assigned or redeemed.
+  const hasExportableRows = (assignedCount ?? 0) + (redeemedCount ?? 0) > 0
 
   const pageResults = codes?.results ?? []
 
@@ -513,7 +520,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   }
 
   const handleExportCsv = async () => {
-    if (!totalPurchased) return
+    if (!hasExportableRows) return
     setIsExporting(true)
     try {
       const allRows: ManagerEnrollmentCode[] = []
@@ -598,29 +605,38 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                 {!isLoadingContractDetail && totalPurchased !== undefined ? (
                   <>
                     {" "}
-                    · <span>{totalPurchased} seats</span>
+                    ·{" "}
+                    <span>
+                      {isUnlimited
+                        ? "Unlimited seats"
+                        : `${totalPurchased} seats`}
+                    </span>
                   </>
                 ) : null}
               </ContractSubtitle>
             </div>
           </OrgDetailsContainer>
           <StatsSide>
-            <StatBlock role="group" aria-label="Total purchased">
-              {isLoadingContractDetail ? (
-                <Skeleton width="48px" height="36px" />
-              ) : (
-                <StatValue>{totalPurchased}</StatValue>
-              )}
-              <StatLabel>Total purchased</StatLabel>
-            </StatBlock>
-            <StatBlock role="group" aria-label="Unassigned">
-              {isLoadingContractDetail ? (
-                <Skeleton width="48px" height="36px" />
-              ) : (
-                <StatValue>{unassignedCount}</StatValue>
-              )}
-              <StatLabel>Unassigned</StatLabel>
-            </StatBlock>
+            {(isLoadingContractDetail || !isUnlimited) && (
+              <StatBlock role="group" aria-label="Total purchased">
+                {isLoadingContractDetail ? (
+                  <Skeleton width="48px" height="36px" />
+                ) : (
+                  <StatValue>{totalPurchased}</StatValue>
+                )}
+                <StatLabel>Total purchased</StatLabel>
+              </StatBlock>
+            )}
+            {(isLoadingContractDetail || !isUnlimited) && (
+              <StatBlock role="group" aria-label="Unassigned">
+                {isLoadingContractDetail ? (
+                  <Skeleton width="48px" height="36px" />
+                ) : (
+                  <StatValue>{unassignedCount}</StatValue>
+                )}
+                <StatLabel>Unassigned</StatLabel>
+              </StatBlock>
+            )}
             <StatBlock role="group" aria-label="Pending claim">
               {isLoadingContractDetail ? (
                 <Skeleton width="48px" height="36px" />
@@ -643,7 +659,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
         <AssignSeatsSection
           orgId={org.id}
           contractId={contract.id}
-          availableSeats={unassignedCount ?? 0}
+          availableSeats={unassignedCount ?? null}
           isLoadingSeats={isLoadingContractDetail}
         />
 
@@ -690,7 +706,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                 variant="bordered"
                 onClick={handleExportCsv}
                 disabled={
-                  isLoadingContractDetail || !totalPurchased || isExporting
+                  isLoadingContractDetail || !hasExportableRows || isExporting
                 }
                 aria-busy={isExporting}
               >

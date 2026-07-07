@@ -241,7 +241,8 @@ type AssignSeatsConfirmModalProps = {
   onClose: () => void
   onConfirm: () => void | Promise<void>
   validCount: number
-  availableSeats: number
+  /** Null means the contract has no max_learners cap — never over capacity. */
+  availableSeats: number | null
   invalidEmails: string[]
   duplicateEmails: string[]
   skippedCount: number
@@ -274,7 +275,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   const hasInvalid = invalidEmails.length > 0
   const hasDuplicates = duplicateEmails.length > 0
   const hasIssues = hasInvalid || hasDuplicates || skippedCount > 0
-  const overCapacity = validCount > availableSeats
+  const overCapacity = availableSeats !== null && validCount > availableSeats
 
   const [step, setStep] = useState<Step>(() =>
     hasIssues && !overCapacity ? "review" : "confirm",
@@ -414,8 +415,15 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
     }
   }
 
-  const seatsAfterSending = availableSeats - validCount
-  const overLimit = validCount - availableSeats
+  const seatsAfterSending =
+    availableSeats !== null ? availableSeats - validCount : null
+  const seatsAfterSendingText =
+    seatsAfterSending !== null
+      ? `${seatsAfterSending} seats remaining after sending.`
+      : "No seat limit on this contract."
+  // Only ever read from the overCapacity branches below, and overCapacity is
+  // false whenever availableSeats is null, so this fallback is never shown.
+  const overLimit = availableSeats !== null ? validCount - availableSeats : 0
 
   const reviewTitle = hasInvalid
     ? "Some learners could not be added"
@@ -429,7 +437,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   // to re-discover a new role="dialog" element.
   const handleReviewAndConfirm = () => {
     setStep("confirm")
-    const confirmText = `Ready to send invitations. You are about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with a secure link to claim their seat and access the materials. ${seatsAfterSending} seats remaining after sending. Emails will be sent immediately and cannot be recalled.`
+    const confirmText = `Ready to send invitations. You are about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with a secure link to claim their seat and access the materials. ${seatsAfterSendingText} Emails will be sent immediately and cannot be recalled.`
     setStepAnnouncement("")
     if (stepAnnouncementTimerRef.current)
       clearTimeout(stepAnnouncementTimerRef.current)
@@ -503,7 +511,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
             : "",
           " Only valid, unique emails will be assigned.",
         ].join("")
-      : `You are about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with secure link to claim their seat and access the materials. ${seatsAfterSending} seats remaining after sending. Emails will be sent immediately and cannot be recalled.`
+      : `You are about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with secure link to claim their seat and access the materials. ${seatsAfterSendingText} Emails will be sent immediately and cannot be recalled.`
 
   // For overCapacity we point aria-describedby at the visible paragraph so
   // role="alertdialog" reads it exactly once on open. We do NOT programmatically
@@ -716,11 +724,19 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
             <StatDivider aria-hidden="true" />
             <StatColumn
               role="group"
-              aria-label={`${seatsAfterSending} seats remaining after sending`}
+              aria-label={
+                seatsAfterSending !== null
+                  ? `${seatsAfterSending} seats remaining after sending`
+                  : "No seat limit on this contract"
+              }
             >
-              <StatValue aria-hidden="true">{seatsAfterSending}</StatValue>
+              <StatValue aria-hidden="true">
+                {seatsAfterSending !== null ? seatsAfterSending : "—"}
+              </StatValue>
               <StatLabel aria-hidden="true">
-                Seats remaining after sending
+                {seatsAfterSending !== null
+                  ? "Seats remaining after sending"
+                  : "No seat limit"}
               </StatLabel>
             </StatColumn>
             <StatDivider aria-hidden="true" />

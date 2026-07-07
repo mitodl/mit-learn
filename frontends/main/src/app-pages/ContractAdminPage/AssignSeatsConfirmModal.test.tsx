@@ -297,6 +297,69 @@ describe("AssignSeatsConfirmModal — over-capacity state (CSV only)", () => {
   })
 })
 
+describe("AssignSeatsConfirmModal — unlimited contract (availableSeats null)", () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  const unlimitedProps = { ...baseProps, availableSeats: null }
+
+  test("shows unlimited messaging in the seats stat instead of a number", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal {...unlimitedProps} validCount={3} />,
+    )
+
+    // Confirm step still renders normally.
+    expect(
+      screen.getByRole("heading", { name: /ready to send invitations/i }),
+    ).toBeInTheDocument()
+
+    // Stat value is a dash and the label / group name convey no seat limit.
+    expect(screen.getByText("—")).toBeInTheDocument()
+    expect(screen.getByText("No seat limit")).toBeInTheDocument()
+    expect(
+      screen.getByRole("group", { name: /no seat limit on this contract/i }),
+    ).toBeInTheDocument()
+  })
+
+  test("does not display a numeric or negative 'seats remaining after sending'", () => {
+    // validCount far exceeds any real cap; with no cap there must be no negative.
+    renderWithTheme(
+      <AssignSeatsConfirmModal {...unlimitedProps} validCount={100} />,
+    )
+
+    expect(
+      screen.queryByText(/seats remaining after sending/i),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("group", { name: /seats remaining after sending/i }),
+    ).not.toBeInTheDocument()
+    // A cap of null run through `availableSeats - validCount` would render -100.
+    expect(screen.queryByText("-100")).not.toBeInTheDocument()
+  })
+
+  test("never enters the over-capacity 'Not enough seats available' state", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal {...unlimitedProps} validCount={9999} />,
+    )
+
+    expect(
+      screen.getByRole("heading", { name: /ready to send invitations/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("heading", { name: /not enough seats available/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("dialog accessible description conveys no seat limit", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal {...unlimitedProps} validCount={3} />,
+    )
+
+    expect(screen.getByRole("dialog")).toHaveAccessibleDescription(
+      /no seat limit on this contract/i,
+    )
+  })
+})
+
 describe("AssignSeatsConfirmModal — email preview (send test email)", () => {
   const sendTestEmailProps = {
     ...baseProps,

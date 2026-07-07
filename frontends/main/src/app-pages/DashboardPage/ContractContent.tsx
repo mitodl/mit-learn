@@ -406,6 +406,21 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
     managerOrgs?.some(matchOrganizationBySlug(stripOrgPrefix(org.slug))) ??
     false
 
+  // TEMPORARY: hide the Manage button for contracts with no seat cap
+  // (max_learners null/0). The seat-assignment admin page doesn't yet support
+  // uncapped contracts, so we gate the entry point until it does.
+  // total_codes mirrors the contract's max_learners (null/0 means no seat cap).
+  const { data: managerContractDetail } = useQuery({
+    ...managerOrganizationQueries.managerContractDetail({
+      id: contract.id,
+      parent_lookup_organization: org.id,
+    }),
+    enabled: managerDashboardFlag === true && isManager,
+  })
+  const hasSeatCap =
+    typeof managerContractDetail?.total_codes === "number" &&
+    managerContractDetail.total_codes > 0
+
   const skeleton = (
     <Stack gap="16px">
       {Array.from({ length: 2 }).map((_, index) => (
@@ -445,7 +460,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
       <Stack>
         <ContractHeaderSection>
           <ContractHeader org={org} contract={contract} />
-          {managerDashboardFlag && isManager && (
+          {managerDashboardFlag && isManager && hasSeatCap && (
             <ManageButtonWrapper>
               <ButtonLink
                 size="small"
