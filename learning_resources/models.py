@@ -583,7 +583,9 @@ class LearningResource(TimestampedModel):
         """Returns the most current/upcoming enrollable run for the learning resource"""
         if hasattr(self, "_published_runs"):
             published_runs = [
-                run for run in self._published_runs if run.published and not run.is_b2b
+                run
+                for run in self._published_runs
+                if run.published and not run.is_variant
             ]
         else:
             published_runs = list(self.runs.public())
@@ -640,7 +642,9 @@ class LearningResource(TimestampedModel):
         """Return a list of published runs for the resource"""
         if hasattr(self, "_published_runs"):
             return [
-                run for run in self._published_runs if run.published and not run.is_b2b
+                run
+                for run in self._published_runs
+                if run.published and not run.is_variant
             ]
         return list(
             self.runs.public()
@@ -771,7 +775,7 @@ class LearningResourceRunQuerySet(TimestampedModelQuerySet):
 
     def public(self):
         """Return published runs that should be visible to learners."""
-        return self.filter(published=True, is_b2b=False)
+        return self.filter(published=True, is_variant=False)
 
     def for_serialization(self):
         """QuerySet for serialization"""
@@ -797,6 +801,7 @@ class LearningResourceRun(TimestampedModel):
     last_modified = models.DateTimeField(null=True, blank=True)
     published = models.BooleanField(default=True, db_index=True)
     is_b2b = models.BooleanField(default=False, db_index=True)
+    is_variant = models.BooleanField(default=False, db_index=True)
     languages = ArrayField(models.CharField(max_length=24), null=True, blank=True)
     url = models.URLField(null=True, max_length=2048)  # noqa: DJ001
     image = models.ForeignKey(

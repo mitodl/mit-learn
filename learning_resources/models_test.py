@@ -62,8 +62,8 @@ def test_course_creation():
     assert len(resource.resource_prices.all()) == 0
 
 
-def test_best_run_and_published_runs_ignore_b2b_runs():
-    """B2B runs should not drive displayed run data."""
+def test_best_run_and_published_runs_ignore_variant_runs():
+    """Variant runs should not drive displayed run data."""
     resource = LearningResourceFactory.create(
         resource_type=LearningResourceType.course.name
     )
@@ -73,6 +73,7 @@ def test_best_run_and_published_runs_ignore_b2b_runs():
         learning_resource=resource,
         published=True,
         is_b2b=True,
+        is_variant=True,
         start_date=now + timedelta(days=1),
         end_date=now + timedelta(days=90),
         enrollment_start=now - timedelta(days=1),
@@ -82,6 +83,7 @@ def test_best_run_and_published_runs_ignore_b2b_runs():
         learning_resource=resource,
         published=True,
         is_b2b=False,
+        is_variant=False,
         start_date=now + timedelta(days=10),
         end_date=now + timedelta(days=100),
         enrollment_start=now - timedelta(days=1),

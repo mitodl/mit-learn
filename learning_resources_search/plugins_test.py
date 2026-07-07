@@ -434,16 +434,16 @@ def test_content_files_loaded_test_mode_published_run_indexes_opensearch(
 
 
 @pytest.mark.django_db
-def test_content_files_loaded_b2b_run_skips_opensearch(
+def test_content_files_loaded_variant_run_skips_opensearch(
     mock_search_index_helpers, settings
 ):
-    """B2B runs should be embedded in Qdrant but skipped in OpenSearch."""
+    """Variant runs should be embedded in Qdrant but skipped in OpenSearch."""
     settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
     course = LearningResourceFactory.create(
         published=False, test_mode=True, create_runs=False
     )
     run = LearningResourceRunFactory.create(
-        learning_resource=course, published=True, is_b2b=True
+        learning_resource=course, published=True, is_b2b=True, is_variant=True
     )
     ContentFileFactory.create(run=run)
 

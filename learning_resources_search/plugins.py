@@ -227,7 +227,7 @@ class SearchIndexPlugin:
 
         Qdrant: embed every loaded run (all runs of a published/test_mode course)
         and drop stale files. OpenSearch: index only the best published non-B2B
-        run, or any published non-B2B run of a test_mode course.
+        run, or any published non-variant run of a test_mode course.
 
          Args:
              run(LearningResourceRun): The LearningResourceRun that was upserted
@@ -241,7 +241,7 @@ class SearchIndexPlugin:
         if resource.published or resource.test_mode:
             if (
                 run.published
-                and not run.is_b2b
+                and not run.is_variant
                 and (resource.test_mode or resource.best_run == run)
             ):
                 index_tasks.append(tasks.index_run_content_files.si(run.id))
