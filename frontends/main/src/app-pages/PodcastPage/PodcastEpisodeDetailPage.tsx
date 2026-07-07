@@ -349,7 +349,7 @@ export const PodcastEpisodeDetailPage: React.FC<
                 </StyledButton>
               )}
 
-              {episode && (
+              {episode && podcastId && (
                 <StyledPodcastShareButton
                   resource={episode as PodcastEpisodeResource}
                   title={episode.title ?? "episode"}
