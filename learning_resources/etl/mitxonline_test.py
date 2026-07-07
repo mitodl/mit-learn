@@ -1602,13 +1602,21 @@ def test_fetch_courses_by_ids_preserves_requested_order(mocker, settings):
             mocker.Mock(
                 status_code=200,
                 json=mocker.Mock(
-                    return_value={"id": 10, "readable_id": "course-v1:T+A"}
+                    return_value={
+                        "id": 10,
+                        "readable_id": "course-v1:T+A",
+                        "page": {"live": True},
+                    }
                 ),
             ),
             mocker.Mock(
                 status_code=200,
                 json=mocker.Mock(
-                    return_value={"id": 20, "readable_id": "course-v1:T+B"}
+                    return_value={
+                        "id": 20,
+                        "readable_id": "course-v1:T+B",
+                        "page": {"live": True},
+                    }
                 ),
             ),
             mocker.Mock(status_code=404),
@@ -1625,6 +1633,7 @@ def test_fetch_courses_by_ids_preserves_requested_order(mocker, settings):
     for call in mock_get.mock_calls:
         assert call.kwargs == {
             "headers": {"Authorization": "Api-Key secret-key"},
+            "params": {"live": True},
             "timeout": settings.REQUESTS_TIMEOUT,
         }
 
@@ -1640,7 +1649,11 @@ def test_fetch_courses_by_ids_skips_error_responses(mocker, settings):
             mocker.Mock(
                 status_code=200,
                 json=mocker.Mock(
-                    return_value={"id": 10, "readable_id": "course-v1:T+A"}
+                    return_value={
+                        "id": 10,
+                        "readable_id": "course-v1:T+A",
+                        "page": {"live": True},
+                    }
                 ),
             ),
             mocker.Mock(
@@ -1666,3 +1679,44 @@ def test_fetch_courses_by_ids_skips_error_responses(mocker, settings):
         "Skipping invalid MITx Online course response for id=%s",
         30,
     )
+
+
+def test_fetch_courses_by_ids_skips_unpublished_courses(mocker, settings):
+    """Program course lookup should match standalone live course filtering."""
+    settings.MITX_ONLINE_COURSES_API_URL = "http://localhost/test/courses/api/"
+    settings.REQUESTS_TIMEOUT = 5
+    mocker.patch(
+        "learning_resources.etl.mitxonline.requests.get",
+        side_effect=[
+            mocker.Mock(
+                status_code=200,
+                json=mocker.Mock(
+                    return_value={
+                        "id": 10,
+                        "readable_id": "course-v1:T+A",
+                        "page": {"live": True},
+                    }
+                ),
+            ),
+            mocker.Mock(
+                status_code=200,
+                json=mocker.Mock(
+                    return_value={
+                        "id": 20,
+                        "readable_id": "course-v1:T+B",
+                        "page": {"live": False},
+                    }
+                ),
+            ),
+            mocker.Mock(
+                status_code=200,
+                json=mocker.Mock(
+                    return_value={"id": 30, "readable_id": "course-v1:T+C"}
+                ),
+            ),
+        ],
+    )
+
+    result = _fetch_courses_by_ids([10, 20, 30])
+
+    assert [course["id"] for course in result] == [10]

@@ -602,6 +602,7 @@ def _fetch_courses_by_ids(course_ids):
             response = requests.get(
                 f"{base_url}/{course_id}",
                 headers=headers,
+                params={"live": True},
                 timeout=settings.REQUESTS_TIMEOUT,
             )
             if response.status_code >= requests.codes.bad_request:
@@ -618,6 +619,8 @@ def _fetch_courses_by_ids(course_ids):
                     "Skipping invalid MITx Online course response for id=%s",
                     course_id,
                 )
+                continue
+            if not (course.get("page") or {}).get("live", False):
                 continue
             courses.append(course)
         return courses
