@@ -766,7 +766,7 @@ def _course_ids_by_program(relationships, course_type):
 
 
 def reachable_published_course_ids(program_ids):
-    """Map program id -> set of reachable published child-course ids.
+    """Map program id -> set of reachable published (or test-mode) child-course ids.
 
     Includes courses reached directly and courses reached through child
     programs. Read-only and id-level only (loads no content).
@@ -805,10 +805,10 @@ def programs_needing_children_heal(program_ids):
     """Return the subset of the given program ids whose marketing page lacks a
     children section but whose children content is now available.
 
-    A program qualifies only when it has a reachable published child course with
-    a non-empty marketing page, which guarantees re-scraping will populate the
-    section and prevents childless programs from being re-scraped every run.
-    Read-only and id-level only.
+    A program qualifies only when it has a reachable published (or test-mode)
+    child course with a non-empty marketing page, which guarantees re-scraping
+    will populate the section and prevents childless programs from being
+    re-scraped every run. Read-only and id-level only.
     """
     program_ids = list(program_ids)
     if not program_ids:
