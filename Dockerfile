@@ -47,8 +47,16 @@ EXPOSE 8061
 ENV PORT=8061
 CMD ["sh", "-c", "exec granian --interface asginl --reload --host 0.0.0.0 --port ${PORT:-8061} --workers ${GRANIAN_WORKERS:-3} --blocking-threads 1 main.asgi:application"]
 
-# ─── Development target ───────────────────────────────────────────────────────
+# ─── Development target (docker compose) ─────────────────────────────────────
 FROM final AS development
 
 RUN --mount=type=cache,target=/opt/uv-cache,uid=1000,gid=1000 \
     uv sync --frozen --no-install-project
+
+# ─── Local-dev target (ol-infrastructure local-dev k8s/Tilt stack) ───────────
+# Runtime user owns /src (live-synced source); dev deps come from `development`.
+FROM development AS local-dev
+
+USER root
+RUN chown -R mitodl:mitodl /src
+USER mitodl
