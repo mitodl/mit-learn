@@ -1,30 +1,26 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import {
-  Breadcrumbs,
-  Typography,
-  styled,
-  useMediaQuery,
-} from "ol-components"
+import { Breadcrumbs, Typography, styled, useMediaQuery } from "ol-components"
 import type { Theme } from "ol-components"
 import { Button, ButtonLink, ActionButton } from "@mitodl/smoot-design"
 import { RiPlayFill, RiPauseFill, RiArrowRightLine } from "@remixicon/react"
 import moment from "moment"
 import { formatDate } from "ol-utilities"
 import { useLearningResourcesList } from "api/hooks/learningResources"
-import {
-  ResourceTypeEnum,
-  LearningResourcesListSortbyEnum,
-} from "api/v1"
+import { useInfiniteLearningPathItems } from "api/hooks/learningPaths"
+import { ResourceTypeEnum, LearningResourcesListSortbyEnum } from "api/v1"
 import type { LearningResource } from "api/v1"
+import { env } from "@/env"
 import {
   HOME,
   SEARCH_PODCASTS,
+  SEARCH_PODCAST_EPISODES,
   podcastPageView,
   podcastEpisodePageView,
 } from "@/common/urls"
+import DOMPurify from "isomorphic-dompurify"
 import PodcastContainer from "./PodcastContainer"
 import PodcastPlayer, { PLAYER_HEIGHT } from "./PodcastPlayer"
 import type { PodcastTrack, PodcastPlayerHandle } from "./PodcastPlayer"
@@ -37,6 +33,9 @@ const SERIES_MORE_COUNT = 5
 
 const PageSection = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
+  [theme.breakpoints.down("sm")]: {
+    backgroundColor: theme.custom.colors.lightGray1,
+  },
 }))
 
 const BreadcrumbBar = styled.div(({ theme }) => ({
@@ -48,11 +47,11 @@ const BreadcrumbBar = styled.div(({ theme }) => ({
 }))
 
 const StyledPodcastContainer = styled(PodcastContainer)(({ theme }) => ({
-    maxWidth: "1320px !important",
-    padding: "0px 24px !important",
-    [theme.breakpoints.down("sm")]: {
-      padding: "0px 16px !important",
-    },
+  maxWidth: "1320px !important",
+  padding: "0px 24px !important",
+  [theme.breakpoints.down("sm")]: {
+    padding: "0px 16px !important",
+  },
 }))
 
 const HeroSection = styled.div(({ theme }) => ({
@@ -118,7 +117,7 @@ const SectionHeader = styled.div(({ theme }) => ({
   borderBottom: `2px solid ${theme.custom.colors.silverGray}`,
   paddingBottom: "21px",
   [theme.breakpoints.down("sm")]: {
-    paddingBottom: "24px",
+    paddingBottom: "22px",
   },
 }))
 
@@ -159,7 +158,7 @@ const NowPlayingLabel = styled(Typography)(({ theme }) => ({
   whiteSpace: "nowrap",
   lineHeight: "24px",
   [theme.breakpoints.down("sm")]: {
-   lineHeight: "18px",
+    lineHeight: "18px",
   },
 }))
 
@@ -265,10 +264,10 @@ const NowPlayingRight = styled.div(({ theme }) => ({
 const PlayEpisodeButton = styled(Button)({
   width: "100%",
   padding: "12px 24px 12px 20px",
-  height: "48px"
+  height: "48px",
 })
 
-const LoadMoreEpisodeButton = styled(Button)(({ theme }) => ({
+const LoadMoreEpisodeButton = styled(ButtonLink)(({ theme }) => ({
   padding: "12px 32px",
   height: "48px",
   fontSize: "16px",
@@ -296,6 +295,7 @@ const LoadMoreContainer = styled.div(({ theme }) => ({
   paddingTop: "40px",
   [theme.breakpoints.down("sm")]: {
     width: "100%",
+    paddingTop: "32px",
   },
 }))
 
@@ -319,6 +319,9 @@ const SeriesGroup = styled.div({
 const FeaturedLabel = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   padding: "24px 2px 24px 0",
+  [theme.breakpoints.down("sm")]: {
+    padding: "0px 2px 22px 0",
+  },
 }))
 
 const FeaturedSeriesRow = styled.div(({ theme }) => ({
@@ -363,12 +366,6 @@ const FeaturedSeriesImage = styled.img({
   marginBottom: "24px",
 })
 
-const FeaturedSeriesOfferedBy = styled(Typography)(({ theme }) => ({
-  color: theme.custom.colors.silverGrayDark,
-  lineHeight: "22px",
-  marginBottom: "8px",
-}))
-
 const FeaturedSeriesTitle = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   marginBottom: "8px",
@@ -403,7 +400,7 @@ const MoreSeriesRow = styled(Link)(({ theme }) => ({
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
     alignItems: "flex-start",
-    gap: "8px",
+    gap: "16px",
   },
 }))
 
@@ -457,8 +454,8 @@ const ViewAllButton = styled(ButtonLink)(({ theme }) => ({
   },
 }))
 
-const StyledRiArrowRightLine = styled(RiArrowRightLine)(({ theme }) => ({
-    fontSize: "24px",
+const StyledRiArrowRightLine = styled(RiArrowRightLine)(() => ({
+  fontSize: "24px",
 }))
 
 const EpisodeRow = styled(Link, {
@@ -519,7 +516,7 @@ const EpisodeOverline = styled.span(({ theme }) => ({
   textTransform: "uppercase",
   display: "block",
   marginBottom: "8px",
-  lineHeight: "16px"
+  lineHeight: "16px",
 }))
 
 const EpisodeTitleLink = styled.span(({ theme }) => ({
@@ -532,7 +529,7 @@ const EpisodeTitleLink = styled.span(({ theme }) => ({
   fontWeight: theme.typography.fontWeightBold,
   lineHeight: "26px",
   [theme.breakpoints.down("sm")]: {
-    marginBottom: "8px"
+    marginBottom: "8px",
   },
 }))
 
@@ -556,13 +553,16 @@ const StyledDot = styled.span(({ theme }) => ({
   fontWeight: theme.typography.fontWeightBold,
 }))
 
-const EpisodeDescription = styled(Typography)(({ theme }) => ({ 
+const EpisodeDescription = styled(Typography)(({ theme }) => ({
+  display: "-webkit-box",
+  WebkitBoxOrient: "vertical",
+  WebkitLineClamp: 2,
+  overflow: "hidden",
   [theme.breakpoints.down("sm")]: {
-   ...theme.typography.body1,
-   lineHeight: "20px",
+    ...theme.typography.body1,
+    lineHeight: "20px",
   },
 }))
-
 
 const EpisodeMeta = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray1,
@@ -595,7 +595,6 @@ const PlayButton = styled(ActionButton, {
   },
 ])
 
-
 /* ── Episode row component ── */
 
 export type EpisodeItemProps = {
@@ -621,7 +620,7 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
   isPlaying,
   isPlayable,
   isEpisodePage = false,
-  isMobile
+  isMobile,
 }) => {
   const podcastEpisode =
     episode.resource_type === "podcast_episode" ? episode.podcast_episode : null
@@ -639,15 +638,19 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
   return (
     <EpisodeRow href={href} role={role} isEpisodePage={isEpisodePage}>
       <EpisodeInfo>
-        {isMobile && overline && <EpisodeOverline>TILCLIMATE  •  NVIRONMENTAL SOLUTIONS INITIATIVE</EpisodeOverline>}
+        {isMobile && overline && <EpisodeOverline>{overline}</EpisodeOverline>}
+
         <EpisodeTitleLink className="episode-title">
-          {/* {episode.title} */}
-          Where We’ve Been and Where We’re Going
+          {episode.title}
         </EpisodeTitleLink>
-        <EpisodeDescription className="episode-description">
-          {/* {episode.description} */}
-          The team reflects on four seasons of climate conversations and what's ahead.
-        </EpisodeDescription>
+        {isMobile && episode?.description && (
+          <EpisodeDescription
+            className="episode-description"
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(episode.description),
+            }}
+          />
+        )}
       </EpisodeInfo>
 
       <EpisodeRight>
@@ -722,15 +725,14 @@ export const PodcastsListingPage: React.FC = () => {
   )
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
   const playerRef = useRef<PodcastPlayerHandle>(null)
-  const [episodesLimit, setEpisodesLimit] = useState(EPISODES_PAGE_SIZE + 1)
-  const seriesLimit = SERIES_FEATURED_COUNT + SERIES_MORE_COUNT
+  const episodesLimit = EPISODES_PAGE_SIZE + 1
+  const seriesLimit = SERIES_MORE_COUNT
 
-  const { data: episodesData, isFetching: isFetchingEpisodes } =
-    useLearningResourcesList({
-      resource_type: [ResourceTypeEnum.PodcastEpisode],
-      sortby: LearningResourcesListSortbyEnum.LastModified,
-      limit: episodesLimit,
-    })
+  const { data: episodesData } = useLearningResourcesList({
+    resource_type: [ResourceTypeEnum.PodcastEpisode],
+    sortby: LearningResourcesListSortbyEnum.LastModified,
+    limit: episodesLimit,
+  })
 
   const { data: seriesData } = useLearningResourcesList({
     resource_type: [ResourceTypeEnum.Podcast],
@@ -738,16 +740,41 @@ export const PodcastsListingPage: React.FC = () => {
     limit: seriesLimit,
   })
 
+  const featuredLearningPathId = Number(
+    env("NEXT_PUBLIC_PODCASTS_FEATURED_LIST_LEARNINGPATH_ID"),
+  )
+  const hasFeaturedLearningPathId =
+    Number.isFinite(featuredLearningPathId) && featuredLearningPathId > 0
+
+  const { data: featuredPodcastsData } = useInfiniteLearningPathItems(
+    {
+      learning_resource_id: featuredLearningPathId,
+      limit: SERIES_FEATURED_COUNT,
+    },
+    { enabled: hasFeaturedLearningPathId },
+  )
+
   const episodes = episodesData?.results ?? []
   const totalEpisodes = episodesData?.count ?? 0
   const nowPlaying = episodes[0]
   const latestEpisodes = episodes.slice(1)
   const hasMoreEpisodes = episodes.length < totalEpisodes
 
+  const featuredSeries = useMemo(() => {
+    const items =
+      featuredPodcastsData?.pages.flatMap((page) => page.results ?? []) ?? []
+    return items
+      .map((item) => item.resource)
+      .filter(
+        (resource): resource is LearningResource =>
+          resource?.resource_type === ResourceTypeEnum.Podcast,
+      )
+      .slice(0, SERIES_FEATURED_COUNT)
+  }, [featuredPodcastsData])
+
   const series = seriesData?.results ?? []
   const totalSeries = seriesData?.count ?? 0
-  const featuredSeries = series.slice(0, SERIES_FEATURED_COUNT)
-  const moreSeries = series.slice(SERIES_FEATURED_COUNT)
+  const moreSeries = series
   const hasMoreSeries = series.length < totalSeries
 
   const handlePlayClick = (episode: LearningResource) => {
@@ -844,30 +871,26 @@ export const PodcastsListingPage: React.FC = () => {
                 <NowPlayingBody>
                   <FeaturedBadge>FEATURED</FeaturedBadge>
                   <NowPlayingTitle variant="h4">
-                    {/* {nowPlaying.title} */}
-                    Shifting AI From Fear to Optimism: U.S. Department of Labor’s Taylor Stockton
+                    {nowPlaying.title}
                   </NowPlayingTitle>
-                  
-                    <NowPlayingMeta variant="subtitle1">
-                      Chalk Radio  •  OCW
-                    </NowPlayingMeta>
-                  
+
+                  <NowPlayingMeta variant="subtitle1">
+                    Chalk Radio • OCW
+                  </NowPlayingMeta>
                   <NowPlayingBottom>
                     {nowPlaying.description && (
-                      <NowPlayingDescription variant="body2">
-                        {/* {nowPlaying.description} */}
-                        March 24, 2026 / AI’s real impact depends less on technological breakthroughs and more on the economic incentives, institutional choices, and human-centered paths we choose to pursue.
-                      </NowPlayingDescription>
+                      <NowPlayingDescription
+                        variant="body2"
+                        dangerouslySetInnerHTML={{
+                          __html: DOMPurify.sanitize(nowPlaying.description),
+                        }}
+                      />
                     )}
                     <NowPlayingRight>
                       <PlayEpisodeButton
                         variant="primary"
                         startIcon={
-                          nowPlayingIsPlaying ? (
-                            <RiPauseFill />
-                          ) : (
-                            <RiPlayFill />
-                          )
+                          nowPlayingIsPlaying ? <RiPauseFill /> : <RiPlayFill />
                         }
                         disabled={!getEpisodeAudioUrl(nowPlaying)}
                         onClick={() => {
@@ -939,12 +962,9 @@ export const PodcastsListingPage: React.FC = () => {
               <LoadMoreContainer>
                 <LoadMoreEpisodeButton
                   variant="secondary"
-                  onClick={() =>
-                    setEpisodesLimit((limit) => limit + EPISODES_PAGE_SIZE)
-                  }
-                  disabled={isFetchingEpisodes}
+                  href={SEARCH_PODCAST_EPISODES}
                 >
-                  {isFetchingEpisodes ? "Loading..." : "Load more episodes"}
+                  Load more episodes
                 </LoadMoreEpisodeButton>
               </LoadMoreContainer>
             )}
@@ -960,8 +980,8 @@ export const PodcastsListingPage: React.FC = () => {
               </Link>
             </SectionHeader>
             <SeriesDescription variant="subtitle1">
-              Departments, labs, and centers across MIT produce their own
-              audio series. Each reflects a different part of the Institute.
+              Departments, labs, and centers across MIT produce their own audio
+              series. Each reflects a different part of the Institute.
             </SeriesDescription>
 
             <SeriesGroup>
@@ -1039,8 +1059,7 @@ export const PodcastsListingPage: React.FC = () => {
                             className="series-row-title"
                             variant="h5"
                           >
-                            {/* {item.title} */}
-                            The Playbook, an MIT LGO podcast
+                            {item.title}
                           </MoreSeriesTitle>
                           {item.offered_by?.name && (
                             <MoreSeriesOfferedBy variant="subtitle3">
@@ -1063,7 +1082,7 @@ export const PodcastsListingPage: React.FC = () => {
                     <ViewAllContainer>
                       <ViewAllButton
                         variant="bordered"
-                        endIcon={<StyledRiArrowRightLine size={24}/>}
+                        endIcon={<StyledRiArrowRightLine size={24} />}
                         href={SEARCH_PODCASTS}
                       >
                         {`View all ${formatApproxCount(totalSeries)}+ podcasts`}

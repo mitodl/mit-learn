@@ -196,6 +196,12 @@ export const SEARCH_PODCASTS = querifiedSearchUrl({
   sortby: "new",
 })
 
+export const SEARCH_PODCAST_EPISODES = querifiedSearchUrl({
+  resource_category: "Podcast Episode",
+  resource_type_group: "learning_material",
+  sortby: "new",
+})
+
 const CERTIFICATION_SEARCH_PARAMS = new URLSearchParams()
 CERTIFICATION_SEARCH_PARAMS.append("certification_type", "professional")
 CERTIFICATION_SEARCH_PARAMS.append("certification_type", "completion")
