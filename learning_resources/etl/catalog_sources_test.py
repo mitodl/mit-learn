@@ -263,3 +263,21 @@ def test_transform_micromasters_program_uses_edx_platform_for_courses():
         {"readable_id": "MITx/1.1x", "platform": PlatformType.edx.name},
         {"readable_id": "MITx/1.2x", "platform": PlatformType.edx.name},
     ]
+
+
+def test_transform_micromasters_program_topics_is_none_not_empty_list():
+    """topics=None (not []) so loaders.load_program's load_topics skips and
+    leaves existing topics alone — the view has no topics column, and a []
+    here would make load_topics call resource.topics.set([]), silently
+    wiping out whatever's curated today on every sync.
+    """
+    row = {
+        "readable_id": "1",
+        "title": "MicroMasters Program",
+        "published": True,
+        "url": "https://micromasters.mit.edu/1",
+        "courses": "",
+    }
+    result = catalog_sources.transform_micromasters_program(row)
+
+    assert result["topics"] is None
