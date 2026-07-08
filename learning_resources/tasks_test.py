@@ -620,6 +620,55 @@ def test_marketing_page_for_resources_with_webdriver(mocker, settings):
 
 
 @pytest.mark.django_db
+def test_marketing_page_for_resources_isolates_scrape_failures(mocker):
+    """A single resource's scrape failure must not fail the whole chunk.
+
+    When course and program tasks are chained, a chunk that raises poisons the
+    chord header and the program group never runs, so per-resource failures are
+    logged and skipped rather than propagated.
+    """
+    bad_course = models.LearningResource.objects.create(
+        title="Bad Course",
+        url="https://example.com/bad-course",
+        resource_type="course",
+        published=True,
+    )
+    good_course = models.LearningResource.objects.create(
+        title="Good Course",
+        url="https://example.com/good-course",
+        resource_type="course",
+        published=True,
+    )
+
+    good_scraper = mocker.Mock()
+    good_scraper.scrape.return_value = "<html><body><p>ok</p></body></html>"
+
+    def fake_scraper_for_site(url):
+        if url == bad_course.url:
+            msg = "scraper boom"
+            raise RuntimeError(msg)
+        return good_scraper
+
+    mocker.patch(
+        "learning_resources.tasks.scraper_for_site",
+        side_effect=fake_scraper_for_site,
+    )
+    mocker.patch("learning_resources.tasks.html_to_markdown", return_value="ok")
+    mock_generate_embeddings = mocker.patch("vector_search.tasks.generate_embeddings")
+
+    # Must not raise despite the bad course failing
+    marketing_page_for_resources([bad_course.id, good_course.id])
+
+    assert not models.ContentFile.objects.filter(learning_resource=bad_course).exists()
+    good_cf = models.ContentFile.objects.get(
+        learning_resource=good_course, file_type=MARKETING_PAGE_FILE_TYPE
+    )
+    mock_generate_embeddings.delay.assert_called_once_with(
+        [good_cf.id], "content_file", overwrite=True
+    )
+
+
+@pytest.mark.django_db
 def test_marketing_page_for_program_appends_children(mocker, settings):
     """Test that marketing_page_for_resources appends program children content"""
 

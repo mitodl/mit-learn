@@ -748,8 +748,20 @@ def marketing_page_for_resources(resource_ids):
 
     for learning_resource in resources:
         marketing_page_url = learning_resource.url
-        scraper = scraper_for_site(marketing_page_url)
-        page_content = scraper.scrape()
+        try:
+            scraper = scraper_for_site(marketing_page_url)
+            page_content = scraper.scrape()
+        except Exception:
+            # Isolate per-resource failures so one bad page can't fail the whole
+            # chunk. When these tasks are chained (course group -> program group),
+            # a failed task poisons the chord header and the program group never
+            # runs, so keep this batch succeeding for pages that do scrape.
+            log.exception(
+                "Failed to scrape marketing page for resource %s (%s)",
+                learning_resource.id,
+                marketing_page_url,
+            )
+            continue
         if page_content:
             content_file, _ = ContentFile.objects.update_or_create(
                 learning_resource=learning_resource,
