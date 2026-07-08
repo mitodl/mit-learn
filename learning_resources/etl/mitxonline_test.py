@@ -1700,9 +1700,9 @@ def test_fetch_courses_by_ids_preserves_requested_order(mocker, settings):
     result = _fetch_courses_by_ids([10, 20, 30])
     assert [course["id"] for course in result] == [10, 20]
     assert [call.args[0] for call in mock_get.mock_calls] == [
-        "http://localhost/test/courses/api/10",
-        "http://localhost/test/courses/api/20",
-        "http://localhost/test/courses/api/30",
+        "http://localhost/test/courses/api/10/",
+        "http://localhost/test/courses/api/20/",
+        "http://localhost/test/courses/api/30/",
     ]
     for call in mock_get.mock_calls:
         assert call.kwargs == {
