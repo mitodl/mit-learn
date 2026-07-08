@@ -3,7 +3,7 @@ import { Link, styled } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import type { LearningResource } from "api/v1"
 import { SEARCH_PODCAST_EPISODES, podcastEpisodePageView } from "@/common/urls"
-import { Section, SectionHeader, SectionTitle, SectionLink } from "./styled"
+import { Section, SectionHeader, SectionTitle } from "./styled"
 import { EpisodeItem } from "./EpisodeItem"
 import { getEpisodeParentPodcastId } from "./helpers"
 
@@ -32,6 +32,18 @@ const LoadMoreEpisodeButton = styled(ButtonLink)(({ theme }) => ({
   },
 }))
 
+const StyledLink = styled(Link)(({ theme }) => ({
+  ...theme.typography.body1,
+  fontWeight: theme.typography.fontWeightMedium,
+  lineHeight: "150%", // 24px
+  textDecorationLine: "underline",
+  textDecorationStyle: "solid",
+  textDecorationSkipInk: "none",
+  textDecorationThickness: "auto",
+  textUnderlineOffset: "auto",
+  textUnderlinePosition: "from-font",
+}))
+
 export type LatestEpisodesSectionProps = {
   episodes: LearningResource[]
   isMobile: boolean
@@ -57,9 +69,9 @@ const LatestEpisodesSection: React.FC<LatestEpisodesSectionProps> = ({
     <Section>
       <SectionHeader>
         <SectionTitle variant="subtitle1">Latest Episodes</SectionTitle>
-        <Link color="red" href={SEARCH_PODCAST_EPISODES}>
-          <SectionLink>All episodes</SectionLink>
-        </Link>
+        <StyledLink color="red" href={SEARCH_PODCAST_EPISODES}>
+          All episodes
+        </StyledLink>
       </SectionHeader>
       {episodes.length > 0 && (
         <EpisodeList role="list">

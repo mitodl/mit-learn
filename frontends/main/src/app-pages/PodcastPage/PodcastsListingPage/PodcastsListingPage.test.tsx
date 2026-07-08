@@ -12,38 +12,9 @@ import { PodcastsListingPage } from "./PodcastsListingPage"
 
 const ENV_KEY = "NEXT_PUBLIC_PODCASTS_FEATURED_LIST_LEARNINGPATH_ID"
 
-jest.mock("../PodcastPlayer", () => {
-  const ActualReact = jest.requireActual("react")
-  return {
-    __esModule: true,
-    PLAYER_HEIGHT: { desktop: 104, mobile: 220 },
-    default: ActualReact.forwardRef(
-      (
-        {
-          track,
-          onPlayStateChange,
-        }: {
-          track: { title: string; podcastName: string }
-          onPlayStateChange?: (isPlaying: boolean) => void
-        },
-        ref: React.Ref<{ pause: () => void; resume: () => void }>,
-      ) => {
-        const pause = jest.fn()
-        const resume = jest.fn()
-        ActualReact.useImperativeHandle(ref, () => ({ pause, resume }))
-        ActualReact.useEffect(() => {
-          onPlayStateChange?.(true)
-          // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [])
-        return (
-          <div data-testid="podcast-player">
-            <span data-testid="player-track-title">{track.title}</span>
-          </div>
-        )
-      },
-    ),
-  }
-})
+jest.mock("../PodcastPlayer", () =>
+  jest.requireActual("../PodcastPlayer.test-utils").mockPodcastPlayer(),
+)
 
 const makeEpisode = (overrides = {}): LearningResource =>
   factories.learningResources.podcastEpisode({

@@ -78,10 +78,11 @@ const FeaturedBadge = styled.div(({ theme }) => ({
   ...theme.typography.subtitle3,
 }))
 
-const NowPlayingTitle = styled(Typography)(({ theme }) => ({
+const NowPlayingTitle = styled("h2")(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   fontSize: "28px",
   lineHeight: "40px",
+  margin: 0,
   [theme.breakpoints.down("sm")]: {
     fontSize: "18px",
     lineHeight: "26px",
@@ -183,7 +184,7 @@ const NowPlayingSection: React.FC<NowPlayingSectionProps> = ({
         )}
         <NowPlayingBody>
           <FeaturedBadge>FEATURED</FeaturedBadge>
-          <NowPlayingTitle variant="h4">{nowPlaying.title}</NowPlayingTitle>
+          <NowPlayingTitle>{nowPlaying.title}</NowPlayingTitle>
 
           <NowPlayingMeta variant="subtitle1">
             {[nowPlaying.offered_by?.name, nowPlaying.platform?.name]

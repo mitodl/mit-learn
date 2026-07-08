@@ -1,13 +1,12 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
-import Link from "next/link"
+import React, { useRef } from "react"
 import { Breadcrumbs, Typography, styled, useMediaQuery } from "ol-components"
 import type { Theme } from "ol-components"
-import { Button, ActionButton } from "@mitodl/smoot-design"
-import { RiPlayFill, RiPauseFill } from "@remixicon/react"
-import PodcastPlayer, { PLAYER_HEIGHT } from "./PodcastPlayer"
-import type { PodcastTrack, PodcastPlayerHandle } from "./PodcastPlayer"
+import { Button } from "@mitodl/smoot-design"
+import { RiPlayFill } from "@remixicon/react"
+import PodcastPlayer from "./PodcastPlayer"
+import type { PodcastPlayerHandle } from "./PodcastPlayer"
 import {
   useLearningResourcesDetail,
   useInfiniteLearningResourceItems,
@@ -18,6 +17,9 @@ import moment from "moment"
 import { formatDate } from "ol-utilities"
 import { HOME, podcastEpisodePageView } from "@/common/urls"
 import PodcastContainer from "./PodcastContainer"
+import { usePodcastPlayer } from "./usePodcastPlayer"
+import { getEpisodeAudioUrl } from "./PodcastsListingPage/helpers"
+import { EpisodeItem } from "./PodcastsListingPage/EpisodeItem"
 
 const HeaderSection = styled.div(({ theme }) => ({
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -154,70 +156,6 @@ const EpisodeList = styled.div({
   gridTemplateColumns: "1fr",
 })
 
-const EpisodeRow = styled(Link, {
-  shouldForwardProp: (prop) => prop !== "isEpisodePage",
-})<{ isEpisodePage?: boolean }>(({ theme, isEpisodePage }) => ({
-  textDecoration: "none",
-  margin: 0,
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  padding: !isEpisodePage ? "28px 16px" : "28px 0px",
-  ...(isEpisodePage && {
-    "&:first-of-type": { paddingTop: 0, boxShadow: "none" },
-    // When there is only one episode (first AND last), keep only the bottom
-    // shadow — the top shadow from :first-of-type should remain removed.
-    "&:first-of-type:last-child": {
-      boxShadow: `0 1px 0 ${theme.custom.colors.lightGray2}`,
-    },
-  }),
-  boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}`,
-  gap: "16px",
-  "&:last-child": {
-    boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}, 0 1px 0 ${theme.custom.colors.lightGray2}`,
-  },
-  "&:hover": {
-    backgroundColor: theme.custom.colors.lightGray1,
-    cursor: "pointer",
-  },
-  "&:focus-visible": {
-    outline: `2px solid ${theme.custom.colors.red}`,
-    outlineOffset: "-2px",
-  },
-  "&:hover .episode-title, &:focus-visible .episode-title": {
-    color: theme.custom.colors.red,
-  },
-  "&:hover .play-button, &:focus-visible .play-button": {
-    color: theme.custom.colors.red,
-  },
-  [theme.breakpoints.down("sm")]: {
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: "16px",
-    padding: "24px 16px",
-  },
-}))
-
-const EpisodeInfo = styled.div(({ theme }) => ({
-  flex: 1,
-  minWidth: 0,
-  [theme.breakpoints.down("sm")]: {
-    width: "100%",
-  },
-}))
-
-const EpisodeTitleLink = styled.span(({ theme }) => ({
-  ...theme.typography.subtitle1,
-  color: theme.custom.colors.darkGray2,
-  textDecoration: "none",
-  display: "block",
-  fontSize: "18px",
-  fontStyle: "normal",
-  fontWeight: theme.typography.fontWeightBold,
-  lineHeight: "26px",
-}))
-
 const StyledButton = styled(Button)(({ theme }) => ({
   padding: "16px 20px",
   ...theme.typography.body1,
@@ -254,140 +192,9 @@ const BreadcrumbBar = styled.div(({ theme }) => ({
   },
 }))
 
-const EpisodeRight = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  gap: "28px",
-  flexShrink: 0,
-  [theme.breakpoints.down("sm")]: {
-    alignItems: "center",
-    justifyContent: "flex-end",
-    width: "100%",
-  },
-}))
-
-const StyledDot = styled.span(({ theme }) => ({
-  display: "inline-block",
-  fontSize: "14px",
-  padding: "0 6px",
-  fontWeight: theme.typography.fontWeightBold,
-}))
-
 const PageSection = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
 }))
-
-const EpisodeMeta = styled(Typography)(({ theme }) => ({
-  color: theme.custom.colors.darkGray1,
-  whiteSpace: "nowrap",
-  textAlign: "right",
-}))
-
-const PlayButton = styled(ActionButton, {
-  shouldForwardProp: (prop) => prop !== "isPlaying",
-})<{
-  isPlaying: boolean
-}>(({ theme, isPlaying }) => [
-  {
-    width: "48px",
-    height: "48px",
-    color: theme.custom.colors.darkGray2,
-    backgroundColor: theme.custom.colors.white,
-    borderColor: "currentColor",
-    "&:hover:not(:disabled)": {
-      color: theme.custom.colors.red,
-    },
-    [theme.breakpoints.down("sm")]: {
-      width: "80px",
-      height: "48px",
-      backgroundColor: theme.custom.colors.white,
-    },
-  },
-  isPlaying && {
-    color: theme.custom.colors.red,
-  },
-])
-
-/* ── Episode row component ── */
-
-export type EpisodeItemProps = {
-  episode: LearningResource
-  href: string
-  role?: string
-  onPlayClick: (episode: LearningResource) => void
-  onPauseClick?: () => void
-  isPlaying: boolean
-  isPlayable: boolean
-  isEpisodePage?: boolean
-}
-
-export const EpisodeItem: React.FC<EpisodeItemProps> = ({
-  episode,
-  href,
-  role,
-  onPlayClick,
-  onPauseClick,
-  isPlaying,
-  isPlayable,
-  isEpisodePage = false,
-}) => {
-  const podcastEpisode =
-    episode.resource_type === "podcast_episode" ? episode.podcast_episode : null
-
-  const duration = podcastEpisode?.duration
-    ? Math.round(moment.duration(podcastEpisode.duration).asMinutes())
-    : null
-
-  const date = episode.last_modified
-    ? formatDate(episode.last_modified, "MMM D")
-    : null
-
-  const metaParts = [duration ? `${duration} min` : null, date].filter(Boolean)
-
-  return (
-    <EpisodeRow href={href} role={role} isEpisodePage={isEpisodePage}>
-      <EpisodeInfo>
-        <EpisodeTitleLink className="episode-title">
-          {episode.title}
-        </EpisodeTitleLink>
-      </EpisodeInfo>
-
-      <EpisodeRight>
-        {metaParts.length > 0 && (
-          <EpisodeMeta variant="body3">
-            {metaParts.map((part, i) => (
-              <React.Fragment key={i}>
-                {i > 0 && <StyledDot>&middot;</StyledDot>}
-                {part}
-              </React.Fragment>
-            ))}
-          </EpisodeMeta>
-        )}
-        <PlayButton
-          aria-label={
-            isPlaying ? `Pause ${episode.title}` : `Play ${episode.title}`
-          }
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            if (isPlaying) {
-              onPauseClick?.()
-            } else {
-              onPlayClick(episode)
-            }
-          }}
-          isPlaying={isPlaying}
-          disabled={!isPlayable}
-          variant="secondary"
-          className="play-button"
-        >
-          {isPlaying ? <RiPauseFill size={20} /> : <RiPlayFill size={20} />}
-        </PlayButton>
-      </EpisodeRight>
-    </EpisodeRow>
-  )
-}
 
 /* ── Page ── */
 
@@ -402,11 +209,16 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
 }) => {
   const id = Number(podcastId)
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"))
-  const [playingEpisode, setPlayingEpisode] = useState<LearningResource | null>(
-    null,
-  )
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
   const playerRef = useRef<PodcastPlayerHandle>(null)
+  const {
+    playingEpisode,
+    isAudioPlaying,
+    setIsAudioPlaying,
+    currentTrack,
+    toggle,
+    pause,
+    close,
+  } = usePodcastPlayer(playerRef, isMobile)
 
   const { data: resource } = useLearningResourcesDetail(id)
 
@@ -454,54 +266,8 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
     ? formatDate(latestEpisode.last_modified, "MMM D")
     : null
 
-  const getEpisodeAudioUrl = (episode: LearningResource): string | null => {
-    if (episode.resource_type !== "podcast_episode") return null
-
-    const candidateUrl =
-      episode.podcast_episode?.audio_url ??
-      episode.podcast_episode?.episode_link
-
-    return candidateUrl?.trim() ? candidateUrl : null
-  }
-
-  const handlePlayClick = (episode: LearningResource) => {
-    if (!getEpisodeAudioUrl(episode)) return
-    if (playingEpisode?.id === episode.id) {
-      playerRef.current?.resume()
-    } else {
-      setPlayingEpisode(episode)
-    }
-  }
-
-  const currentTrack: PodcastTrack | null = playingEpisode
-    ? (() => {
-        const audioUrl = getEpisodeAudioUrl(playingEpisode)
-        if (!audioUrl) return null
-
-        return {
-          audioUrl,
-          title: playingEpisode.title || "Untitled Episode",
-          podcastName: resource?.title || "Podcast",
-        }
-      })()
-    : null
-
-  // When the player is active, shrink the page layout so the footer is
-  // visible above the fixed player bar.
-  useEffect(() => {
-    const root = document.documentElement
-
-    if (currentTrack) {
-      const height = isMobile ? PLAYER_HEIGHT.mobile : PLAYER_HEIGHT.desktop
-      root.style.setProperty("--mit-player-height", `${height}px`)
-    } else {
-      root.style.removeProperty("--mit-player-height")
-    }
-
-    return () => {
-      root.style.removeProperty("--mit-player-height")
-    }
-  }, [currentTrack, isMobile])
+  const handlePlayClick = (episode: LearningResource) =>
+    toggle(episode, resource?.title)
 
   return (
     <>
@@ -580,6 +346,7 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
                   <EpisodeItem
                     role="listitem"
                     key={episode.id}
+                    isMobile={isMobile}
                     episode={episode}
                     href={podcastEpisodePageView(
                       String(episode.id),
@@ -587,7 +354,7 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
                       episode.title,
                     )}
                     onPlayClick={handlePlayClick}
-                    onPauseClick={() => playerRef.current?.pause()}
+                    onPauseClick={pause}
                     isPlaying={
                       playingEpisode?.id === episode.id && isAudioPlaying
                     }
@@ -620,7 +387,7 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
         <PodcastPlayer
           ref={playerRef}
           track={currentTrack}
-          onClose={() => setPlayingEpisode(null)}
+          onClose={close}
           onPlayStateChange={setIsAudioPlaying}
         />
       )}

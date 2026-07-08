@@ -4,7 +4,7 @@ import { standardizeMetadata } from "@/common/metadata"
 import { PodcastsListingPage } from "@/app-pages/PodcastPage/PodcastsListingPage"
 
 export const metadata: Metadata = standardizeMetadata({
-  title: "MIT Learn | Podcasts",
+  title: "Podcasts",
 })
 
 const Page: React.FC<PageProps<"/podcasts">> = () => {

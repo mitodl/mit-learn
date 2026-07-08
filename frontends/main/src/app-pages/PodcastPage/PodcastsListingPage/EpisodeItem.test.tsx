@@ -1,23 +1,9 @@
 import React from "react"
 import { factories } from "api/test-utils"
-import type { LearningResource } from "api/v1"
 import { renderWithProviders, screen, user } from "@/test-utils"
 import { EpisodeItem } from "./EpisodeItem"
 
-const makeEpisode = (overrides = {}): LearningResource =>
-  factories.learningResources.podcastEpisode({
-    title: "Episode Title",
-    description: "<p>Some episode description</p>",
-    last_modified: "2024-05-03T00:00:00Z",
-    podcast_episode: {
-      id: 1,
-      podcasts: [1],
-      duration: "PT2H",
-      audio_url: "https://example.com/audio.mp3",
-      episode_link: "https://example.com/link",
-    },
-    ...overrides,
-  }) as unknown as LearningResource
+const makeEpisode = factories.learningResources.podcastEpisode
 
 describe("EpisodeItem", () => {
   it("renders the episode title", () => {
@@ -32,7 +18,7 @@ describe("EpisodeItem", () => {
         isMobile={false}
       />,
     )
-    expect(screen.getByText("Episode Title")).toBeInTheDocument()
+    expect(screen.getByText(episode.title)).toBeInTheDocument()
   })
 
   it("shows the overline only on mobile", () => {
@@ -83,7 +69,9 @@ describe("EpisodeItem", () => {
   })
 
   it("does not render a description when not on mobile", () => {
-    const episode = makeEpisode()
+    const episode = makeEpisode({
+      description: "<p>Some episode description</p>",
+    })
     renderWithProviders(
       <EpisodeItem
         episode={episode}
@@ -100,7 +88,10 @@ describe("EpisodeItem", () => {
   })
 
   it("renders the duration and formatted date", () => {
-    const episode = makeEpisode()
+    const episode = makeEpisode({
+      last_modified: "2024-05-03T00:00:00Z",
+      podcast_episode: { duration: "PT2H" },
+    })
     renderWithProviders(
       <EpisodeItem
         episode={episode}
@@ -128,7 +119,9 @@ describe("EpisodeItem", () => {
         isMobile={false}
       />,
     )
-    await user.click(screen.getByRole("button", { name: "Play Episode Title" }))
+    await user.click(
+      screen.getByRole("button", { name: `Play ${episode.title}` }),
+    )
     expect(onPlayClick).toHaveBeenCalledWith(episode)
   })
 
@@ -147,7 +140,7 @@ describe("EpisodeItem", () => {
       />,
     )
     await user.click(
-      screen.getByRole("button", { name: "Pause Episode Title" }),
+      screen.getByRole("button", { name: `Pause ${episode.title}` }),
     )
     expect(onPauseClick).toHaveBeenCalled()
   })
@@ -165,7 +158,7 @@ describe("EpisodeItem", () => {
       />,
     )
     expect(
-      screen.getByRole("button", { name: "Play Episode Title" }),
+      screen.getByRole("button", { name: `Play ${episode.title}` }),
     ).toBeDisabled()
   })
 

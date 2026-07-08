@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useMemo, useRef } from "react"
 import { Breadcrumbs, useMediaQuery } from "ol-components"
 import type { Theme } from "ol-components"
 import { useLearningResourcesList } from "api/hooks/learningResources"
@@ -10,8 +10,9 @@ import type { LearningResource } from "api/v1"
 import { env } from "@/env"
 import { HOME } from "@/common/urls"
 import PodcastContainer from "../PodcastContainer"
-import PodcastPlayer, { PLAYER_HEIGHT } from "../PodcastPlayer"
-import type { PodcastTrack, PodcastPlayerHandle } from "../PodcastPlayer"
+import PodcastPlayer from "../PodcastPlayer"
+import type { PodcastPlayerHandle } from "../PodcastPlayer"
+import { usePodcastPlayer } from "../usePodcastPlayer"
 import {
   PageSection,
   BreadcrumbBar,
@@ -31,11 +32,16 @@ import {
 
 export const PodcastsListingPage: React.FC = () => {
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"))
-  const [playingEpisode, setPlayingEpisode] = useState<LearningResource | null>(
-    null,
-  )
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
   const playerRef = useRef<PodcastPlayerHandle>(null)
+  const {
+    playingEpisode,
+    isAudioPlaying,
+    setIsAudioPlaying,
+    currentTrack,
+    toggle,
+    pause,
+    close,
+  } = usePodcastPlayer(playerRef, isMobile)
   const episodesLimit = EPISODES_PAGE_SIZE + 1
   const seriesLimit = SERIES_MORE_COUNT
 
@@ -88,41 +94,8 @@ export const PodcastsListingPage: React.FC = () => {
   const moreSeries = series
   const hasMoreSeries = series.length < totalSeries
 
-  const handlePlayClick = (episode: LearningResource) => {
-    if (!getEpisodeAudioUrl(episode)) return
-    if (playingEpisode?.id === episode.id) {
-      playerRef.current?.resume()
-    } else {
-      setPlayingEpisode(episode)
-    }
-  }
-
-  const handlePauseClick = () => playerRef.current?.pause()
-
-  const currentTrack: PodcastTrack | null = playingEpisode
-    ? (() => {
-        const audioUrl = getEpisodeAudioUrl(playingEpisode)
-        if (!audioUrl) return null
-        return {
-          audioUrl,
-          title: playingEpisode.title || "Untitled Episode",
-          podcastName: playingEpisode.offered_by?.name || "Podcast",
-        }
-      })()
-    : null
-
-  useEffect(() => {
-    const root = document.documentElement
-    if (currentTrack) {
-      const height = isMobile ? PLAYER_HEIGHT.mobile : PLAYER_HEIGHT.desktop
-      root.style.setProperty("--mit-player-height", `${height}px`)
-    } else {
-      root.style.removeProperty("--mit-player-height")
-    }
-    return () => {
-      root.style.removeProperty("--mit-player-height")
-    }
-  }, [currentTrack, isMobile])
+  const handlePlayClick = (episode: LearningResource) =>
+    toggle(episode, episode.offered_by?.name)
 
   const nowPlayingIsPlaying =
     !!nowPlaying && playingEpisode?.id === nowPlaying.id && isAudioPlaying
@@ -149,7 +122,7 @@ export const PodcastsListingPage: React.FC = () => {
             nowPlaying={nowPlaying}
             isPlaying={nowPlayingIsPlaying}
             onPlayClick={handlePlayClick}
-            onPauseClick={handlePauseClick}
+            onPauseClick={pause}
           />
 
           <LatestEpisodesSection
@@ -158,7 +131,7 @@ export const PodcastsListingPage: React.FC = () => {
             playingEpisodeId={playingEpisode?.id}
             isAudioPlaying={isAudioPlaying}
             onPlayClick={handlePlayClick}
-            onPauseClick={handlePauseClick}
+            onPauseClick={pause}
             hasMoreEpisodes={hasMoreEpisodes}
             isPlayable={(episode) => Boolean(getEpisodeAudioUrl(episode))}
           />
@@ -176,7 +149,7 @@ export const PodcastsListingPage: React.FC = () => {
         <PodcastPlayer
           ref={playerRef}
           track={currentTrack}
-          onClose={() => setPlayingEpisode(null)}
+          onClose={close}
           onPlayStateChange={setIsAudioPlaying}
         />
       )}

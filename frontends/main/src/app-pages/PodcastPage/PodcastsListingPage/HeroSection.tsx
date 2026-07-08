@@ -15,7 +15,7 @@ const HeroSectionWrap = styled.div(({ theme }) => ({
   },
 }))
 
-const HeroHeading = styled(Typography)(({ theme }) => ({
+const HeroHeading = styled("h1")(({ theme }) => ({
   ...theme.typography.h1,
   fontSize: "64px",
   lineHeight: 1.2,
@@ -60,7 +60,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   return (
     <HeroSectionWrap>
       <PodcastContainer>
-        <HeroHeading variant="h1">Podcasts from across MIT</HeroHeading>
+        <HeroHeading>Podcasts from across MIT</HeroHeading>
         <HeroDescription variant="body1">
           New podcast episodes and series.
         </HeroDescription>

@@ -5,18 +5,9 @@ import type { LearningResource, PodcastEpisodeResource } from "api/v1"
 import { renderWithProviders, screen, user } from "@/test-utils"
 import { PodcastEpisodeDetailPage } from "./PodcastEpisodeDetailPage"
 
-jest.mock("./PodcastPlayer", () => ({
-  __esModule: true,
-  PLAYER_HEIGHT: { desktop: 104, mobile: 220 },
-  default: jest.fn(
-    ({ track }: { track: { title: string; podcastName: string } }) => (
-      <div data-testid="podcast-player">
-        <span data-testid="player-track-title">{track.title}</span>
-        <span data-testid="player-podcast-name">{track.podcastName}</span>
-      </div>
-    ),
-  ),
-}))
+jest.mock("./PodcastPlayer", () =>
+  jest.requireActual("./PodcastPlayer.test-utils").mockPodcastPlayer(),
+)
 
 const EPISODES_PAGE_SIZE = 5
 
