@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.73.4
+Version 0.73.4 (Released July 08, 2026)
 --------------
 
 - Fix embedding summarizer task when overwrite=True (#3585)
