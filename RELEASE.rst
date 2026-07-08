@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.73.3
+--------------
+
+- Pin chromium to 149.0.7827.196 to avoid broken 150 headless build (#3584)
+- Fix embeddings task oom thrashing (#3561)
+
 Version 0.73.2 (Released July 08, 2026)
 --------------
 
