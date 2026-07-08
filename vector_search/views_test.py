@@ -1085,14 +1085,15 @@ def test_content_file_vector_search_logs_missing_edx_module_id(
 ):
     """Vector search for an edx_module_id with no ContentFile logs not_in_db."""
     mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
+    absent_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@absent"
 
     client.get(
         reverse("vector_search:v0:vector_content_files_search"),
-        data={"q": "test", "edx_module_id": ["block_absent"]},
+        data={"q": "test", "edx_module_id": [absent_id]},
     )
 
     mock_log.assert_any_call(
-        "block_absent", reason="not_in_db", source="vector_content_files_search"
+        absent_id, reason="not_in_db", source="vector_content_files_search"
     )
 
 
