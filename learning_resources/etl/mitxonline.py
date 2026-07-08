@@ -621,7 +621,7 @@ def _fetch_courses_by_ids(course_ids):
         courses = []
         for course_id in course_ids:
             response = requests.get(
-                f"{base_url}/{course_id}",
+                f"{base_url}/{course_id}/",
                 headers=headers,
                 params={"live": True},
                 timeout=settings.REQUESTS_TIMEOUT,
