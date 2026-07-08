@@ -42,6 +42,7 @@ from learning_resources.utils import (
     add_parent_topics_to_learning_resource,
     build_program_children_content,
     build_program_children_content_bulk,
+    is_loggable_missing_content_id,
     log_missing_content_file,
     strip_markdown_images,
     transfer_list_resources,
@@ -1021,12 +1022,48 @@ def test_strip_markdown_images(input_md, expected):
 def test_log_missing_content_file_logs_error(mocker):
     """Logs an error with the reason, identifier, and source."""
     mock_log = mocker.patch("learning_resources.utils.log")
+    identifier = "block-v1:MITx+6.00x+2T2020+type@problem+block@abc"
 
-    log_missing_content_file("block_x", reason="not_in_db", source="contentfiles_api")
+    log_missing_content_file(identifier, reason="not_in_db", source="contentfiles_api")
 
     mock_log.error.assert_called_once_with(
         "Missing ContentFile (%s) for edx_module_id=%s [source=%s]",
         "not_in_db",
-        "block_x",
+        identifier,
         "contentfiles_api",
     )
+
+
+@pytest.mark.parametrize(
+    ("edx_module_id", "loggable"),
+    [
+        ("block-v1:MITx+6.00x+2T2020+type@problem+block@abc", True),
+        ("block-v1:MITx+6.00x+2T2020+type@video+block@abc", True),
+        ("block-v1:MITx+6.00x+2T2020+type@html+block@abc", True),
+        ("asset-v1:MITx+6.00x+2T2020+type@asset+block@transcript.srt", True),
+        ("asset-v1:MITx+6.00x+2T2020+type@asset+block@transcript.vtt", True),
+        ("asset-v1:MITx+6.00x+2T2020+type@asset+block@TRANSCRIPT.SRT", True),
+        ("asset-v1:MITx+6.00x+2T2020+type@asset+block@image.png", False),
+        ("block-v1:MITx+6.00x+2T2020+type@discussion+block@abc", False),
+        ("block-v1:MITx+6.00x+2T2020+type@folder+block@abc", False),
+        ("does-not-exist", False),
+        ("", False),
+        (None, False),
+    ],
+)
+def test_is_loggable_missing_content_id(edx_module_id, loggable):
+    """Only important block types (problem/video/html/.srt/.vtt) are loggable."""
+    assert is_loggable_missing_content_id(edx_module_id) is loggable
+
+
+def test_log_missing_content_file_skips_unimportant_block_type(mocker):
+    """An unimportant block type is not logged at all."""
+    mock_log = mocker.patch("learning_resources.utils.log")
+
+    log_missing_content_file(
+        "block-v1:MITx+6.00x+2T2020+type@discussion+block@abc",
+        reason="not_in_db",
+        source="contentfiles_api",
+    )
+
+    mock_log.error.assert_not_called()

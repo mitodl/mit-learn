@@ -2371,17 +2371,18 @@ def test_embed_learning_resources_uses_collection_guard(mocker):
 @pytest.mark.django_db
 def test_check_missing_content_file_ids_not_in_db(mocker):
     """An edx_module_id with no ContentFile row is logged not_in_db."""
+    absent_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@absent"
     mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
     mock_client = mocker.AsyncMock()
     mock_client.count = mocker.AsyncMock(return_value=CountResult(count=5))
     mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
 
     async_to_sync(check_missing_content_file_ids)(
-        ["block_absent"], CONTENT_FILES_COLLECTION_NAME
+        [absent_id], CONTENT_FILES_COLLECTION_NAME
     )
 
     mock_log.assert_called_once_with(
-        "block_absent", reason="not_in_db", source="vector_content_files_search"
+        absent_id, reason="not_in_db", source="vector_content_files_search"
     )
     mock_client.count.assert_not_called()
 
@@ -2389,18 +2390,19 @@ def test_check_missing_content_file_ids_not_in_db(mocker):
 @pytest.mark.django_db
 def test_check_missing_content_file_ids_not_in_index(mocker):
     """An edx_module_id present in the DB but with zero Qdrant points -> not_in_index."""
-    ContentFileFactory.create(edx_module_id="block_present")
+    present_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@present"
+    ContentFileFactory.create(edx_module_id=present_id)
     mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
     mock_client = mocker.AsyncMock()
     mock_client.count = mocker.AsyncMock(return_value=CountResult(count=0))
     mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
 
     async_to_sync(check_missing_content_file_ids)(
-        ["block_present"], CONTENT_FILES_COLLECTION_NAME
+        [present_id], CONTENT_FILES_COLLECTION_NAME
     )
 
     mock_log.assert_called_once_with(
-        "block_present", reason="not_in_index", source="vector_content_files_search"
+        present_id, reason="not_in_index", source="vector_content_files_search"
     )
     assert mock_client.count.call_args.kwargs["exact"] is True
 
@@ -2408,14 +2410,37 @@ def test_check_missing_content_file_ids_not_in_index(mocker):
 @pytest.mark.django_db
 def test_check_missing_content_file_ids_present_and_indexed_silent(mocker):
     """An id present in DB and present in Qdrant logs nothing."""
-    ContentFileFactory.create(edx_module_id="block_ok")
+    present_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@ok"
+    ContentFileFactory.create(edx_module_id=present_id)
     mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
     mock_client = mocker.AsyncMock()
     mock_client.count = mocker.AsyncMock(return_value=CountResult(count=3))
     mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
 
     async_to_sync(check_missing_content_file_ids)(
-        ["block_ok"], CONTENT_FILES_COLLECTION_NAME
+        [present_id], CONTENT_FILES_COLLECTION_NAME
     )
 
+    mock_log.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_check_missing_content_file_ids_skips_unimportant_block_types(mocker):
+    """Unimportant block types are filtered out before any DB or Qdrant probe."""
+    mock_present = mocker.patch("vector_search.utils.present_edx_module_ids")
+    mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
+    mock_client = mocker.AsyncMock()
+    mock_client.count = mocker.AsyncMock(return_value=CountResult(count=0))
+    mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
+
+    async_to_sync(check_missing_content_file_ids)(
+        [
+            "block-v1:MITx+6.00x+2T2020+type@discussion+block@abc",
+            "does-not-exist",
+        ],
+        CONTENT_FILES_COLLECTION_NAME,
+    )
+
+    mock_present.assert_not_called()
+    mock_client.count.assert_not_called()
     mock_log.assert_not_called()

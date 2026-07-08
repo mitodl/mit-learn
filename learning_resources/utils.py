@@ -45,14 +45,32 @@ from main.utils import generate_filepath
 log = logging.getLogger()
 
 
+LOGGED_MISSING_CONTENT_REGEX = re.compile(
+    r"\+type@(?:problem|video|html)\+block@"
+    r"|\+type@asset\+block@.+\.(?:srt|vtt)$",
+    re.IGNORECASE,
+)
+
+
+def is_loggable_missing_content_id(edx_module_id):
+    """Return whether this id's block type warrants a missing-contentfile log."""
+    return bool(LOGGED_MISSING_CONTENT_REGEX.search(edx_module_id or ""))
+
+
 def log_missing_content_file(identifier, *, reason, source):
     """
     Log that a request referenced an edx_module_id with no backing ContentFile.
+
+    Only important block types (problem, video, html, .srt/.vtt transcripts) are
+    logged; everything else (and malformed ids) is silently ignored to keep the
+    Sentry signal meaningful.
 
     reason: "not_in_db" (no ContentFile row) or "not_in_index" (row exists but
     not embedded in Qdrant). LoggingIntegration forwards the error to Sentry,
     which groups by the stable message template and applies its own rate limiting.
     """
+    if not is_loggable_missing_content_id(identifier):
+        return
     log.error(
         "Missing ContentFile (%s) for edx_module_id=%s [source=%s]",
         reason,
