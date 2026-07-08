@@ -118,7 +118,12 @@ const Container = styled.div<{
       },
     },
     a: {
-      color: theme.custom.colors.darkGray2,
+      textDecoration: "underline",
+      color: theme.custom.colors.red,
+      fontWeight: theme.typography.fontWeightMedium,
+    },
+    "a:hover": {
+      textDecoration: "none",
     },
     "ul:not([data-style-boundary] *)": {
       ...theme.typography.body1,

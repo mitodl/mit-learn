@@ -33,6 +33,16 @@ const pageCss = (theme: Theme) => css`
     color: inherit;
   }
 
+  .raw-html a {
+    text-decoration: underline;
+    color: ${theme.custom.colors.red};
+    font-weight: ${theme.typography.fontWeightMedium};
+
+    &:hover {
+      text-decoration: none;
+    }
+  }
+
   h1 {
     font-size: ${theme.typography.h1.fontSize};
   }
