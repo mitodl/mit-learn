@@ -1,5 +1,11 @@
 import React from "react"
-import { SimpleMenu, SimpleMenuItem, Typography, styled } from "ol-components"
+import {
+  SimpleMenu,
+  SimpleMenuItem,
+  Stack,
+  Typography,
+  styled,
+} from "ol-components"
 import {
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
@@ -345,7 +351,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
             {courseProgram?.title}
           </Typography>
         </ProgramCardHeaderInner>
-        <>
+        <Stack direction="row" gap="0">
           {programCertificateUrl ? (
             <ProgramCertificateButton
               variant="bordered"
@@ -359,7 +365,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
             <UpgradedBanner />
           ) : null}
           {contextMenu}
-        </>
+        </Stack>
       </ProgramCardHeaderOuter>
       <ProgramCardSubHeader>
         <ProgramCardSubHeaderText variant="subtitle3">
