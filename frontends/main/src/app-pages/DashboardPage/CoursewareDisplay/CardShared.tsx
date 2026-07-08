@@ -64,18 +64,21 @@ const CardRoot = styled.div<{
 ])
 
 const CardTypeText = styled(Typography)(({ theme }) => ({
-  ...theme.typography.subtitle4,
+  ...theme.typography.body3,
   color: theme.custom.colors.silverGrayDark,
 }))
 
 const TitleHeading = styled.h3(({ theme }) => ({
   margin: 0,
+  ...theme.typography.subtitle2,
   [theme.breakpoints.down("md")]: {
     maxWidth: "calc(100% - 16px)",
   },
 }))
 
-const TitleLink = styled(Link)()
+const TitleLink = styled(Link)(({ theme }) => ({
+  ...theme.typography.subtitle2,
+}))
 
 const TitleText = styled.h3<{ clickable?: boolean }>(
   ({ theme, clickable }) => ({
@@ -89,41 +92,29 @@ const TitleText = styled.h3<{ clickable?: boolean }>(
   }),
 )
 
-const SubtitleLinkRoot = styled.div<{ layout?: "default" | "compact" }>(
-  ({ theme, layout = "default" }) => ({
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    flex: 1,
-    color:
-      layout === "compact"
-        ? theme.custom.colors.silverGrayDark
-        : theme.custom.colors.darkGray2,
-    ...theme.typography.subtitle3,
-  }),
-)
+const SubtitleLinkRoot = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  flex: 1,
+  color: theme.custom.colors.red,
+  ...theme.typography.body3,
+}))
 
-const SubtitleLink = styled(NextLink)<{ layout?: "default" | "compact" }>(
-  ({ theme, layout = "default" }) => ({
-    ...theme.typography.subtitle3,
-    color:
-      layout === "compact"
-        ? theme.custom.colors.silverGrayDark
-        : theme.custom.colors.mitRed,
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-    ":hover": {
-      textDecoration: "underline",
-    },
-  }),
-)
+const SubtitleLink = styled(NextLink)(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.red,
+  display: "flex",
+  alignItems: "center",
+  gap: "2px",
+  ":hover": {
+    textDecoration: "underline",
+  },
+}))
 
 const MenuButton = styled(ActionButton)<{
   status: EnrollmentStatus
 }>(({ theme, status }) => [
   {
-    marginLeft: "-8px",
     [theme.breakpoints.down("md")]: {
       position: "absolute",
       top: "0",
@@ -170,6 +161,14 @@ const Separator = styled.span(({ theme }) => ({
   backgroundColor: theme.custom.colors.silverGrayLight,
 }))
 
+const Ellipse = styled.span(({ theme }) => ({
+  display: "inline-block",
+  width: "4px",
+  height: "4px",
+  borderRadius: "50%",
+  backgroundColor: theme.custom.colors.silverGrayLight,
+}))
+
 const DateText = styled(Typography)(({ theme }) => ({
   ...theme.typography.subtitle3,
   color: theme.custom.colors.silverGrayDark,
@@ -190,7 +189,7 @@ const UpgradedBannerRoot = styled.div(({ theme }) => ({
   alignItems: "center",
   gap: "4px",
   color: theme.custom.colors.silverGrayDark,
-  ...theme.typography.subtitle3,
+  ...theme.typography.body3,
 }))
 
 const UpgradedBanner: React.FC<{ className?: string }> = ({ className }) => (
@@ -212,7 +211,7 @@ const DatePopoverContent = styled.div({
 
 const DatePopoverTrigger = styled("button")<{ $upcoming: boolean }>(
   ({ theme, $upcoming }) => ({
-    ...theme.typography.body2,
+    ...theme.typography.subtitle3,
     color: $upcoming
       ? theme.custom.colors.red
       : theme.custom.colors.silverGrayDark,
@@ -332,6 +331,7 @@ export {
   CoursewareButton,
   CoursewareButtonLink,
   Separator,
+  Ellipse,
   DateText,
   CourseDateText,
   CourseDateSummary,
