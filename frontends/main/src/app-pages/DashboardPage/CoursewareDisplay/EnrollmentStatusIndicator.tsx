@@ -1,16 +1,24 @@
 import React from "react"
-import Image from "next/image"
 import { styled } from "ol-components"
 import { VisuallyHidden } from "@mitodl/smoot-design"
-import CourseComplete from "@/public/images/icons/course-complete.svg"
-import CourseInProgress from "@/public/images/icons/course-in-progress.svg"
-import CourseUnenrolled from "@/public/images/icons/course-unenrolled.svg"
 import { EnrollmentStatus } from "./helpers"
+import {
+  RiCheckboxBlankCircleFill,
+  RiCheckboxCircleFill,
+} from "@remixicon/react"
 
-const CompletedImage = styled(Image)({
+const CompleteIcon = styled(RiCheckboxCircleFill)(({ theme }) => ({
+  color: theme.custom.colors.red,
   width: "16px",
   height: "16px",
-})
+}))
+
+const InProgressIcon = styled(RiCheckboxBlankCircleFill)(({ theme }) => ({
+  color: theme.custom.colors.red,
+  width: "16px",
+  height: "16px",
+}))
+
 const Ring = styled.div(({ theme }) => ({
   width: "16px",
   height: "16px",
@@ -37,12 +45,7 @@ const EnrollmentStatusIndicator: React.FC<EnrollmentStatusIndicatorProps> = ({
   if (status === EnrollmentStatus.Completed) {
     return (
       <span data-testid="enrollment-status">
-        <CompletedImage
-          src={CourseComplete}
-          alt=""
-          // use VisuallyHidden text for consistency with the non-image case.
-          aria-hidden
-        />
+        <CompleteIcon aria-hidden />
         <VisuallyHidden>Completed</VisuallyHidden>
       </span>
     )
@@ -52,12 +55,7 @@ const EnrollmentStatusIndicator: React.FC<EnrollmentStatusIndicatorProps> = ({
   if (status === EnrollmentStatus.Enrolled) {
     return (
       <Ring data-testid="enrollment-status">
-        <Image
-          src={CourseInProgress}
-          alt=""
-          // use VisuallyHidden text for consistency with the non-image case.
-          aria-hidden
-        />
+        <InProgressIcon aria-hidden />
         <VisuallyHidden>Enrolled</VisuallyHidden>
       </Ring>
     )
@@ -65,12 +63,6 @@ const EnrollmentStatusIndicator: React.FC<EnrollmentStatusIndicatorProps> = ({
 
   return (
     <Ring data-testid="enrollment-status">
-      <Image
-        src={CourseUnenrolled}
-        alt=""
-        // use VisuallyHidden text for consistency with the non-image case.
-        aria-hidden
-      />
       <VisuallyHidden>Not Enrolled</VisuallyHidden>
     </Ring>
   )
