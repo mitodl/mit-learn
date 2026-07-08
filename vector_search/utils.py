@@ -827,6 +827,42 @@ def _iter_serialized_content_files(ids):
         yield from serialize_bulk_content_files(id_batch)
 
 
+def _summarize_content_files_for_embedding(
+    docs_batch, fill_summary_content_ids, changed_summary_content_ids
+):
+    if not fill_summary_content_ids and not changed_summary_content_ids:
+        return docs_batch
+
+    summarizer = ContentSummarizer()
+    if fill_summary_content_ids:
+        summarizer.summarize_content_files_by_ids(
+            fill_summary_content_ids, overwrite=False
+        )
+
+    failed_changed_ids = set()
+    if changed_summary_content_ids:
+        statuses = summarizer.summarize_content_files_by_ids(
+            changed_summary_content_ids, overwrite=True
+        )
+        failed_changed_ids = {
+            content_file_id
+            for content_file_id, status in zip(
+                changed_summary_content_ids, statuses or []
+            )
+            if "failed" in str(status).lower()
+        }
+
+    refreshed_docs = list(
+        _iter_serialized_content_files([doc["id"] for doc in docs_batch])
+    )
+    if failed_changed_ids:
+        # Keep the old Qdrant checksum so the next run retries summary generation.
+        refreshed_docs = [
+            doc for doc in refreshed_docs if doc["id"] not in failed_changed_ids
+        ]
+    return refreshed_docs
+
+
 def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C901
     """
     Embed learning resources
@@ -866,18 +902,17 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
     else:
         serialized_resources = _iter_serialized_content_files(ids)
 
-        # populated/modified by reference in process_batch
-        fill_summary_content_ids = []
-        changed_summary_content_ids = []
-
         # Batching parameters
         current_batch_docs = []
         current_batch_size = 0
 
         collection_name = CONTENT_FILES_COLLECTION_NAME
 
-        def process_batch(docs_batch, fill_summaries_list, changed_summaries_list):
+        def process_batch(docs_batch):
             """Process a batch of documents"""
+            fill_summary_content_ids = []
+            changed_summary_content_ids = []
+
             # Collect IDs for summarization
             contentfile_points = [
                 (
@@ -909,9 +944,15 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
                     .exists()
                 ):
                     if overwrite and _content_file_stored_checksum_changed(resource):
-                        changed_summaries_list.append(resource["id"])
+                        changed_summary_content_ids.append(resource["id"])
                     else:
-                        fill_summaries_list.append(resource["id"])
+                        fill_summary_content_ids.append(resource["id"])
+
+            docs_batch = _summarize_content_files_for_embedding(
+                docs_batch,
+                fill_summary_content_ids,
+                changed_summary_content_ids,
+            )
 
             points_generator_iter = _generate_content_file_points(docs_batch)
             points_upload_batch = []
@@ -957,33 +998,16 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
             current_batch_size += len(doc.get("content", "") or "")
 
             if current_batch_size >= settings.QDRANT_BATCH_SIZE_BYTES:
-                process_batch(
-                    current_batch_docs,
-                    fill_summary_content_ids,
-                    changed_summary_content_ids,
-                )
+                process_batch(current_batch_docs)
                 current_batch_docs = []
                 current_batch_size = 0
                 gc.collect()
 
         # Process remaining
         if current_batch_docs:
-            process_batch(
-                current_batch_docs,
-                fill_summary_content_ids,
-                changed_summary_content_ids,
-            )
+            process_batch(current_batch_docs)
             current_batch_docs = []
             gc.collect()
-
-        if fill_summary_content_ids:
-            ContentSummarizer().summarize_content_files_by_ids(
-                fill_summary_content_ids, overwrite=False
-            )
-        if changed_summary_content_ids:
-            ContentSummarizer().summarize_content_files_by_ids(
-                changed_summary_content_ids, overwrite=True
-            )
 
         points = None  # Handled inside the loop
     if points:
