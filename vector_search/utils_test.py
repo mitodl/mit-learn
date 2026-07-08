@@ -979,6 +979,45 @@ def test_should_generate_for_changed_content_file(mocker):
     assert result is True
 
 
+@pytest.mark.parametrize(
+    ("stored_payload", "expected"),
+    [
+        ({"checksum": "previous-checksum"}, True),
+        ({"checksum": "current-checksum"}, False),
+        ({}, False),
+        (None, False),
+    ],
+)
+def test_content_file_stored_checksum_changed(mocker, stored_payload, expected):
+    """Only an existing, different stored checksum counts as changed for summaries."""
+    serialized_document = {
+        "resource_readable_id": "resource-1",
+        "run_readable_id": "run-1",
+        "key": "transcript.txt",
+        "checksum": "current-checksum",
+    }
+    mock_qdrant = mocker.MagicMock()
+    if stored_payload is None:
+        mock_qdrant.retrieve.return_value = []
+    else:
+        mock_point = mocker.MagicMock()
+        mock_point.payload = stored_payload
+        mock_qdrant.retrieve.return_value = [mock_point]
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+
+    assert (
+        vs_utils._content_file_stored_checksum_changed(  # noqa: SLF001
+            serialized_document
+        )
+        is expected
+    )
+    mock_qdrant.retrieve.assert_called_once()
+    assert (
+        mock_qdrant.retrieve.call_args.kwargs["collection_name"]
+        == CONTENT_FILES_COLLECTION_NAME
+    )
+
+
 def test_should_not_generate_for_unchanged_content_file(mocker):
     """Should not generate embeddings when content file hasn't changed"""
 
