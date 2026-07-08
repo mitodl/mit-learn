@@ -46,8 +46,8 @@ log = logging.getLogger()
 
 
 LOGGED_MISSING_CONTENT_REGEX = re.compile(
-    r"block-v1:.+\+type@(?:problem|video|html)\+block@.+"
-    r"|asset-v1:.+\+type@asset\+block@.+\.(?:srt|vtt)",
+    r"(?:block-v1:\S+\+type@(?:problem|video|html)\+block@\S+)"
+    r"|(?:asset-v1:\S+\+type@asset\+block@\S+\.(?:srt|vtt))",
     re.IGNORECASE,
 )
 
