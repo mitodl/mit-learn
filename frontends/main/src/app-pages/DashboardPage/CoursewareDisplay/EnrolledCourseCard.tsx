@@ -29,7 +29,7 @@ import { RiArrowUpCircleLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { isInPast, calendarDaysUntil, NoSSR } from "ol-utilities"
 import { SiblingRunsAccordion } from "./SiblingRunsAccordion"
-import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
+import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { Button, ButtonLink } from "@mitodl/smoot-design"
@@ -38,6 +38,7 @@ import NiceModal from "@ebay/nice-modal-react"
 import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
 import { getReceiptMenuItem } from "./receiptMenuItem"
 import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
+import { ProgressBadge } from "./ProgressBadge"
 
 const formatUpgradeTime = (daysFloat: number) => {
   if (daysFloat < 0) return ""
@@ -419,7 +420,18 @@ export const EnrolledCourseCard = ({
     />
   )
 
+  const progressBadgeSection =
+    isModule && isCompact ? null : (
+      <Stack direction="row" gap="4px" alignItems="center">
+        <ProgressBadge enrollmentStatus={enrollmentStatus} />
+        <Separator />
+        {cardTypeLabel}
+      </Stack>
+    )
+
   const hasMultipleRuns = (siblingEnrollments?.length ?? 0) > 0
+  const showEnrollmentStatusIcon =
+    !isContractPageResource && isModule && isCompact
 
   return (
     <>
@@ -431,19 +443,18 @@ export const EnrolledCourseCard = ({
           as={Component}
         >
           <CardHeaderContent>
-            <Stack>
-              <EnrollmentStatusIndicator
-                status={enrollmentStatus}
-                showNotComplete={Boolean(isContractPageResource)}
-              />
-            </Stack>
+            {showEnrollmentStatusIcon && (
+              <Stack>
+                <EnrollmentStatusIcon status={enrollmentStatus} />
+              </Stack>
+            )}
             <Stack
               gap="4px"
               justifyContent="start"
               alignItems="stretch"
               flex={1}
             >
-              {cardTypeLabel}
+              {progressBadgeSection}
               {titleSection}
             </Stack>
             <Stack direction="row" gap="8px" alignItems="center">
@@ -464,16 +475,13 @@ export const EnrolledCourseCard = ({
           className={className}
           layout={layout}
         >
-          {isModule && isCompact && (
+          {showEnrollmentStatusIcon && (
             <Stack alignSelf="start">
-              <EnrollmentStatusIndicator
-                status={enrollmentStatus}
-                showNotComplete={true}
-              />
+              <EnrollmentStatusIcon status={enrollmentStatus} />
             </Stack>
           )}
           <Stack gap="4px" justifyContent="start" alignItems="stretch" flex={1}>
-            {cardTypeLabel}
+            {progressBadgeSection}
             {titleSection}
           </Stack>
           <Stack direction="row" gap="8px" alignItems="center">

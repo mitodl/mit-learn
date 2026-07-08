@@ -8,6 +8,7 @@ import {
   CardRoot,
   CardTypeText,
   MenuButton,
+  Separator,
   SubtitleLink,
   TitleHeading,
   TitleLink,
@@ -26,6 +27,7 @@ import { UnenrollProgramDialog } from "./DashboardDialogs"
 import { getReceiptMenuItem } from "./receiptMenuItem"
 import { SimpleMenu, Stack } from "ol-components"
 import { EnrollmentStatus } from "./helpers"
+import { ProgressBadge } from "./ProgressBadge"
 
 type ProgramEnrollmentCardProps = {
   programEnrollment: V3UserProgramEnrollment
@@ -65,25 +67,26 @@ export const ProgramEnrollmentCard = ({
       ) : (
         <TitleText>{title}</TitleText>
       )}
-      {certificateLink ? (
+      {upgradedAndIncomplete ? <UpgradedBanner /> : null}
+    </Stack>
+  )
+  const buttonSection = (
+    <>
+      {certificateLink && (
         <SubtitleLink href={certificateLink}>
           <RiAwardLine size="16px" />
           View Certificate
         </SubtitleLink>
-      ) : upgradedAndIncomplete ? (
-        <UpgradedBanner />
-      ) : null}
-    </Stack>
-  )
-  const buttonSection = (
-    <ButtonLink
-      size="small"
-      variant="primary"
-      href={programView(program.id)}
-      aria-label={`View program: ${title}`}
-    >
-      View
-    </ButtonLink>
+      )}
+      <ButtonLink
+        size="small"
+        variant="primary"
+        href={programView(program.id)}
+        aria-label={`View program: ${title}`}
+      >
+        View
+      </ButtonLink>
+    </>
   )
   const detailsUrl = programPageView({
     readable_id: readableId,
@@ -142,6 +145,14 @@ export const ProgramEnrollmentCard = ({
     />
   )
 
+  const progressBadgeSection = (
+    <Stack direction="row" gap="4px" alignItems="center">
+      <ProgressBadge enrollmentStatus={enrollmentStatus} />
+      <Separator />
+      <CardTypeText>Program</CardTypeText>
+    </Stack>
+  )
+
   return (
     <>
       <CardRoot
@@ -151,7 +162,7 @@ export const ProgramEnrollmentCard = ({
         className={className}
       >
         <Stack gap="4px" justifyContent="start" alignItems="stretch" flex={1}>
-          <CardTypeText>Program</CardTypeText>
+          {progressBadgeSection}
           {titleSection}
         </Stack>
         <Stack gap="8px">

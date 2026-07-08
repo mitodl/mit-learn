@@ -34,13 +34,11 @@ const Ring = styled.div(({ theme }) => ({
   },
 }))
 
-type EnrollmentStatusIndicatorProps = {
+type EnrollmentStatusIconProps = {
   status: EnrollmentStatus
-  showNotComplete?: boolean
 }
-const EnrollmentStatusIndicator: React.FC<EnrollmentStatusIndicatorProps> = ({
+const EnrollmentStatusIcon: React.FC<EnrollmentStatusIconProps> = ({
   status,
-  showNotComplete,
 }) => {
   if (status === EnrollmentStatus.Completed) {
     return (
@@ -50,7 +48,6 @@ const EnrollmentStatusIndicator: React.FC<EnrollmentStatusIndicatorProps> = ({
       </span>
     )
   }
-  if (!showNotComplete) return
 
   if (status === EnrollmentStatus.Enrolled) {
     return (
@@ -68,5 +65,5 @@ const EnrollmentStatusIndicator: React.FC<EnrollmentStatusIndicatorProps> = ({
   )
 }
 
-export { EnrollmentStatusIndicator }
-export type { EnrollmentStatusIndicatorProps }
+export { EnrollmentStatusIcon }
+export type { EnrollmentStatusIconProps }

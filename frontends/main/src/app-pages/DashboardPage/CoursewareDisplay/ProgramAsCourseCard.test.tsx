@@ -122,7 +122,7 @@ describe("ProgramAsCourseCard", () => {
     ).toBeGreaterThan(0)
   })
 
-  test("module rows show 'Module' as the card type label", async () => {
+  test("module rows show an enrollment status indicator instead of a 'Module' label", async () => {
     const cardData = setupCardData({ includeProgramEnrollment: true })
 
     renderWithProviders(
@@ -138,9 +138,86 @@ describe("ProgramAsCourseCard", () => {
       name: cardData.courseProgram.title,
       level: 3,
     })
-    // One label per module row (desktop card only)
-    expect(screen.getAllByText("Module")).toHaveLength(2)
-    expect(screen.queryByText("Course")).not.toBeInTheDocument()
+    // One status indicator per module row (desktop card only), replacing the type label
+    expect(screen.getAllByTestId("enrollment-status")).toHaveLength(2)
+    expect(screen.queryByText("Module")).not.toBeInTheDocument()
+    // The outer program-as-course card still shows its own 'Course' type label
+    // next to a progress badge; only the per-module rows omit it.
+    expect(screen.getByText("Course")).toBeInTheDocument()
+  })
+
+  test("progress badge reflects program enrollment status ('In Progress')", async () => {
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+    invariant(cardData.courseProgramEnrollment)
+    const programEnrollmentWithoutCert = {
+      ...cardData.courseProgramEnrollment,
+      certificate: null,
+    }
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={programEnrollmentWithoutCert}
+      />,
+    )
+
+    await screen.findByRole("heading", {
+      name: cardData.courseProgram.title,
+      level: 3,
+    })
+    expect(screen.getByTestId("progress-badge")).toHaveTextContent(
+      "In Progress",
+    )
+  })
+
+  test("progress badge reflects program enrollment status ('Not Started')", async () => {
+    const cardData = setupCardData()
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={{}}
+        courseProgramEnrollment={cardData.courseProgramEnrollment}
+      />,
+    )
+
+    await screen.findByRole("heading", {
+      name: cardData.courseProgram.title,
+      level: 3,
+    })
+    expect(screen.getByTestId("progress-badge")).toHaveTextContent(
+      "Not Started",
+    )
+  })
+
+  test("progress badge reflects program enrollment status ('Completed')", async () => {
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+    invariant(cardData.courseProgramEnrollment)
+    const programEnrollmentWithCert = {
+      ...cardData.courseProgramEnrollment,
+      certificate: {
+        uuid: "test-certificate-uuid-456",
+        link: "/certificate/test-certificate-uuid-456/",
+      },
+    }
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={programEnrollmentWithCert}
+      />,
+    )
+
+    await screen.findByRole("heading", {
+      name: cardData.courseProgram.title,
+      level: 3,
+    })
+    expect(screen.getByTestId("progress-badge")).toHaveTextContent("Completed")
   })
 
   test("renders when user is not enrolled in the ProgramAsCourse", async () => {

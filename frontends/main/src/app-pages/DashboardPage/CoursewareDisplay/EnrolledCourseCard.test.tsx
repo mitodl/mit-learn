@@ -245,77 +245,6 @@ describe.each([
   })
 
   // ---------------------------------------------------------------------------
-  // Enrollment status indicator
-  // ---------------------------------------------------------------------------
-
-  test.each([
-    {
-      enrollmentData: {
-        grades: [],
-        certificate: null,
-        b2b_contract_id: faker.number.int(), // B2B so showNotComplete=true
-      },
-      expectedLabel: "Enrolled",
-    },
-    {
-      enrollmentData: {
-        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
-        certificate: {
-          uuid: faker.string.uuid(),
-          link: faker.internet.url(),
-        },
-        b2b_contract_id: null,
-      },
-      expectedLabel: "Completed",
-    },
-    {
-      enrollmentData: {
-        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
-        certificate: null,
-        b2b_contract_id: faker.number.int(), // B2B so indicator is visible
-      },
-      expectedLabel: "Completed",
-    },
-  ])(
-    "Enrollment status indicator shows '$expectedLabel'",
-    ({ enrollmentData, expectedLabel }) => {
-      setupUserApis()
-      const enrollment =
-        mitxonline.factories.enrollment.courseEnrollment(enrollmentData)
-      renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
-      expect(
-        within(getCard()).getByTestId("enrollment-status"),
-      ).toHaveTextContent(expectedLabel)
-    },
-  )
-
-  test("showNotComplete: status indicator visible for enrolled (not completed) B2B enrollment", () => {
-    setupUserApis()
-    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
-      grades: [],
-      certificate: null,
-      b2b_contract_id: faker.number.int(),
-    })
-    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
-    expect(
-      within(getCard()).getByTestId("enrollment-status"),
-    ).toBeInTheDocument()
-  })
-
-  test("showNotComplete: status indicator hidden for enrolled (not completed) non-B2B enrollment", () => {
-    setupUserApis()
-    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
-      grades: [],
-      certificate: null,
-      b2b_contract_id: null,
-    })
-    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
-    expect(
-      within(getCard()).queryByTestId("enrollment-status"),
-    ).not.toBeInTheDocument()
-  })
-
-  // ---------------------------------------------------------------------------
   // Upgrade banner
   // ---------------------------------------------------------------------------
 
@@ -584,7 +513,7 @@ describe.each([
     )
   })
 
-  test("Does not show 'Certificate track' when verified enrollment has a certificate", () => {
+  test("Shows 'Certificate track' alongside 'View Certificate' when verified enrollment has a certificate", () => {
     setupUserApis()
     const certUuid = faker.string.uuid()
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
@@ -593,9 +522,9 @@ describe.each([
       run: currentRunDates,
     })
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
-    expect(
-      within(getCard()).queryByTestId("upgraded-banner"),
-    ).not.toBeInTheDocument()
+    expect(within(getCard()).getByTestId("upgraded-banner")).toHaveTextContent(
+      "Certificate track",
+    )
     expect(
       within(getCard()).getByRole("link", { name: /View Certificate/ }),
     ).toBeInTheDocument()
@@ -809,6 +738,78 @@ describe("EnrolledCourseCard — multiple enrollment runs", () => {
   })
 })
 
+// The enrollment status icon only renders for compact program module rows
+// (i.e. within ProgramAsCourseCard), and even then only for non-B2B
+// enrollments. Every other card conveys progress via the ProgressBadge shown
+// next to the card type label instead.
+describe("EnrolledCourseCard enrollment status icon (module rows)", () => {
+  setupLocationMock()
+
+  const getDesktopCard = () => screen.getByTestId("enrollment-card-desktop")
+
+  test.each([
+    {
+      enrollmentData: { grades: [], certificate: null },
+      expectedLabel: "Enrolled",
+    },
+    {
+      enrollmentData: {
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+        certificate: {
+          uuid: faker.string.uuid(),
+          link: faker.internet.url(),
+        },
+      },
+      expectedLabel: "Completed",
+    },
+  ])(
+    "Module row shows '$expectedLabel' status icon",
+    ({ enrollmentData, expectedLabel }) => {
+      setupUserApis()
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        ...enrollmentData,
+        b2b_contract_id: null,
+      })
+      renderWithProviders(
+        <EnrolledCourseCard
+          enrollment={enrollment}
+          isModule
+          layout="compact"
+        />,
+      )
+      expect(
+        within(getDesktopCard()).getByTestId("enrollment-status"),
+      ).toHaveTextContent(expectedLabel)
+    },
+  )
+
+  test("hidden for B2B module rows", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      grades: [],
+      certificate: null,
+      b2b_contract_id: faker.number.int(),
+    })
+    renderWithProviders(
+      <EnrolledCourseCard enrollment={enrollment} isModule layout="compact" />,
+    )
+    expect(
+      within(getDesktopCard()).queryByTestId("enrollment-status"),
+    ).not.toBeInTheDocument()
+  })
+
+  test("hidden for non-module cards", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(
+      within(getDesktopCard()).queryByTestId("enrollment-status"),
+    ).not.toBeInTheDocument()
+  })
+})
+
 describe("EnrolledCourseCard card type label", () => {
   setupLocationMock()
 
@@ -838,12 +839,70 @@ describe("EnrolledCourseCard card type label", () => {
     ).not.toBeInTheDocument()
   })
 
-  test("shows 'Module' when isModule is set", () => {
+  test("shows enrollment status indicator instead of 'Module' text when isModule is set (compact layout)", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+      grades: [],
+      certificate: null,
+    })
+    renderWithProviders(
+      <EnrolledCourseCard enrollment={enrollment} isModule layout="compact" />,
+    )
+    expect(
+      within(getDesktopCard()).getByTestId("enrollment-status"),
+    ).toBeInTheDocument()
+    expect(
+      within(getDesktopCard()).queryByText("Module"),
+    ).not.toBeInTheDocument()
+  })
+})
+
+describe("EnrolledCourseCard progress badge", () => {
+  setupLocationMock()
+
+  const getDesktopCard = () => screen.getByTestId("enrollment-card-desktop")
+
+  test.each([
+    {
+      enrollmentData: { grades: [], certificate: null },
+      expectedLabel: "In Progress",
+    },
+    {
+      enrollmentData: {
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+        certificate: {
+          uuid: faker.string.uuid(),
+          link: faker.internet.url(),
+        },
+      },
+      expectedLabel: "Completed",
+    },
+  ])(
+    "shows '$expectedLabel' next to the card type label",
+    ({ enrollmentData, expectedLabel }) => {
+      setupUserApis()
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        ...enrollmentData,
+        b2b_contract_id: null,
+      })
+      renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+      expect(
+        within(getDesktopCard()).getByTestId("progress-badge"),
+      ).toHaveTextContent(expectedLabel)
+    },
+  )
+
+  test("hidden on compact module rows, where the status icon takes over", () => {
     setupUserApis()
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       b2b_contract_id: null,
     })
-    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} isModule />)
-    expect(within(getDesktopCard()).getByText("Module")).toBeInTheDocument()
+    renderWithProviders(
+      <EnrolledCourseCard enrollment={enrollment} isModule layout="compact" />,
+    )
+    expect(
+      within(getDesktopCard()).queryByTestId("progress-badge"),
+    ).not.toBeInTheDocument()
   })
 })

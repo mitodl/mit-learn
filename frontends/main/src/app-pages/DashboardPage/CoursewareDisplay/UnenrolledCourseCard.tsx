@@ -11,11 +11,13 @@ import {
   CoursewareButton,
   TitleText,
   CourseDateSummary,
+  Separator,
 } from "./CardShared"
 import { EnrollmentStatus, getBestRun } from "./helpers"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { useEnrollmentHandler } from "./hooks/useEnrollmentHandler"
-import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
+import { EnrollmentStatusIcon } from "./EnrollmentStatus"
+import { ProgressBadge } from "./ProgressBadge"
 import { Button } from "@mitodl/smoot-design"
 
 type UnenrolledCourseCardProps = {
@@ -156,6 +158,18 @@ export const UnenrolledCourseCard = ({
     </Stack>
   )
 
+  const progressBadgeSection =
+    isModule && isCompact ? null : (
+      <Stack direction="row" gap="4px" alignItems="center">
+        <ProgressBadge enrollmentStatus={EnrollmentStatus.NotEnrolled} />
+        <Separator />
+        {cardTypeLabel}
+      </Stack>
+    )
+
+  const showEnrollmentStatusIcon =
+    !isContractPageResource && isModule && isCompact
+
   return (
     <>
       <CardRoot
@@ -165,16 +179,13 @@ export const UnenrolledCourseCard = ({
         className={className}
         layout={layout}
       >
-        {isModule && isCompact && (
+        {showEnrollmentStatusIcon && (
           <Stack alignSelf="start">
-            <EnrollmentStatusIndicator
-              status={EnrollmentStatus.NotEnrolled}
-              showNotComplete={true}
-            />
+            <EnrollmentStatusIcon status={EnrollmentStatus.NotEnrolled} />
           </Stack>
         )}
         <Stack justifyContent="start" alignItems="stretch" gap="4px" flex={1}>
-          {cardTypeLabel}
+          {progressBadgeSection}
           <Stack gap="6px">
             {titleSection}
             {courseDateText}
