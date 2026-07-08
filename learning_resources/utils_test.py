@@ -1047,6 +1047,8 @@ def test_log_missing_content_file_logs_error(mocker):
         ("block-v1:MITx+6.00x+2T2020+type@discussion+block@abc", False),
         ("block-v1:MITx+6.00x+2T2020+type@folder+block@abc", False),
         ("does-not-exist", False),
+        ("junk+type@problem+block@abc", False),
+        ("prefix block-v1:MITx+6.00x+2T2020+type@video+block@abc", False),
         ("", False),
         (None, False),
     ],
