@@ -591,12 +591,9 @@ def should_generate_resource_embeddings(serialized_document):
     return True
 
 
-def should_generate_content_embeddings(
+def _retrieve_content_file_point(
     serialized_document: dict, point_id: str | None = None
-) -> bool:
-    """
-    Determine if we should generate embeddings for a content file
-    """
+):
     client = qdrant_client()
     if not point_id:
         # we just need metadata from the first chunk
@@ -610,10 +607,34 @@ def should_generate_content_embeddings(
         ids=[point_id],
     )
     if len(response) > 0:
-        qdrant_checksum = response[0].payload.get("checksum")
-        if qdrant_checksum == serialized_document["checksum"]:
-            return False
-    return True
+        return response[0]
+    return None
+
+
+def _content_file_stored_checksum_changed(serialized_document: dict) -> bool:
+    point = _retrieve_content_file_point(serialized_document)
+    if not point:
+        return False
+    stored_checksum = (point.payload or {}).get("checksum")
+    # Missing checksums should not force an expensive summary rewrite by themselves.
+    # should_generate_content_embeddings still treats them as changed so embeddings
+    # can repair older Qdrant points without overwriting existing summaries.
+    return stored_checksum is not None and stored_checksum != serialized_document.get(
+        "checksum"
+    )
+
+
+def should_generate_content_embeddings(
+    serialized_document: dict, point_id: str | None = None
+) -> bool:
+    """
+    Determine if we should generate embeddings for a content file
+    """
+    point = _retrieve_content_file_point(serialized_document, point_id=point_id)
+    if not point:
+        return True
+    qdrant_checksum = (point.payload or {}).get("checksum")
+    return qdrant_checksum != serialized_document["checksum"]
 
 
 def _embed_course_metadata_as_contentfile(serialized_resources):
@@ -809,6 +830,42 @@ def _iter_serialized_content_files(ids):
         yield from serialize_bulk_content_files(id_batch)
 
 
+def _summarize_content_files_for_embedding(
+    docs_batch, fill_summary_content_ids, changed_summary_content_ids
+):
+    if not fill_summary_content_ids and not changed_summary_content_ids:
+        return docs_batch
+
+    summarizer = ContentSummarizer()
+    if fill_summary_content_ids:
+        summarizer.summarize_content_files_by_ids(
+            fill_summary_content_ids, overwrite=False
+        )
+
+    failed_changed_ids = set()
+    if changed_summary_content_ids:
+        statuses = summarizer.summarize_content_files_by_ids(
+            changed_summary_content_ids, overwrite=True
+        )
+        failed_changed_ids = {
+            content_file_id
+            for content_file_id, status in zip(
+                changed_summary_content_ids, statuses or []
+            )
+            if "failed" in str(status).lower()
+        }
+
+    refreshed_docs = list(
+        _iter_serialized_content_files([doc["id"] for doc in docs_batch])
+    )
+    if failed_changed_ids:
+        # Keep the old Qdrant checksum so the next run retries summary generation.
+        refreshed_docs = [
+            doc for doc in refreshed_docs if doc["id"] not in failed_changed_ids
+        ]
+    return refreshed_docs
+
+
 def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C901
     """
     Embed learning resources
@@ -848,17 +905,17 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
     else:
         serialized_resources = _iter_serialized_content_files(ids)
 
-        # populated/modified by reference in process_batch
-        summary_content_ids = []
-
         # Batching parameters
         current_batch_docs = []
         current_batch_size = 0
 
         collection_name = CONTENT_FILES_COLLECTION_NAME
 
-        def process_batch(docs_batch, summaries_list):
+        def process_batch(docs_batch):
             """Process a batch of documents"""
+            fill_summary_content_ids = []
+            changed_summary_content_ids = []
+
             # Collect IDs for summarization
             contentfile_points = [
                 (
@@ -889,7 +946,16 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
                     .filter(run__id=resource.get("run_id"))
                     .exists()
                 ):
-                    summaries_list.append(resource["id"])
+                    if overwrite and _content_file_stored_checksum_changed(resource):
+                        changed_summary_content_ids.append(resource["id"])
+                    else:
+                        fill_summary_content_ids.append(resource["id"])
+
+            docs_batch = _summarize_content_files_for_embedding(
+                docs_batch,
+                fill_summary_content_ids,
+                changed_summary_content_ids,
+            )
 
             points_generator_iter = _generate_content_file_points(docs_batch)
             points_upload_batch = []
@@ -935,21 +1001,16 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
             current_batch_size += len(doc.get("content", "") or "")
 
             if current_batch_size >= settings.QDRANT_BATCH_SIZE_BYTES:
-                process_batch(current_batch_docs, summary_content_ids)
+                process_batch(current_batch_docs)
                 current_batch_docs = []
                 current_batch_size = 0
                 gc.collect()
 
         # Process remaining
         if current_batch_docs:
-            process_batch(current_batch_docs, summary_content_ids)
+            process_batch(current_batch_docs)
             current_batch_docs = []
             gc.collect()
-
-        if summary_content_ids:
-            ContentSummarizer().summarize_content_files_by_ids(
-                summary_content_ids, overwrite
-            )
 
         points = None  # Handled inside the loop
     if points:
