@@ -9,7 +9,7 @@ from enum import Enum
 from django.conf import settings
 from named_enum import ExtendedEnum
 
-from learning_resources.constants import LearningResourceDelivery
+from learning_resources.constants import LearningResourceDelivery, PlatformType
 from learning_resources.models import LearningResourcePrice
 
 # A custom UA so that operators of OpenEdx will know who is pinging their service
@@ -20,6 +20,18 @@ COMMON_HEADERS = {
 READABLE_ID_FIELD = "readable_id"
 
 MIT_OWNER_KEYS = ["MITx", "MITx_PRO"]
+
+# Shared by xpro.py (API-based ETL) and catalog_sources.py (warehouse-pull
+# ETL) — both need to map xPRO's CMS platform display name to a PlatformType.
+# This needs to be kept up to date with valid xpro platforms.
+XPRO_PLATFORM_TRANSFORM = {
+    "Emeritus": PlatformType.emeritus.name,
+    "Global Alumni": PlatformType.globalalumni.name,
+    "Simplilearn": PlatformType.simplilearn.name,
+    "Susskind": PlatformType.susskind.name,
+    "WHU": PlatformType.whu.name,
+    "xPRO": PlatformType.xpro.name,
+}
 
 TIME_INTERVAL_MAPPING = {
     "half-days": ["days"],

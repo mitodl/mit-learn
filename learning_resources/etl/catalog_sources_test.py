@@ -27,10 +27,12 @@ def test_split_defaults_and_strips():
         ("false", False),
         ("", False),
         (None, False),
+        (1, True),
+        (0, False),
     ],
 )
 def test_parse_bool(value, expected):
-    """_parse_bool handles native bools and textual 'true'/'false' alike."""
+    """_parse_bool handles native bools, ints (StarRocks), and 'true'/'false' text."""
     assert catalog_sources._parse_bool(value) is expected  # noqa: SLF001
 
 
@@ -56,9 +58,21 @@ def test_parse_runs_splits_and_parses_pipe_delimited_string():
     assert runs[0]["start_date"].year == 2026
     assert runs[0]["end_date"].year == 2026
     assert runs[0]["instructors"] == [{"full_name": "Jane Doe"}]
+    assert runs[0]["prices"] is None
     assert runs[1]["run_id"] == "run-2"
     assert runs[1]["published"] is False
     assert runs[1]["end_date"] is None
+
+
+def test_parse_runs_prices_is_none_not_empty_list():
+    """prices=None (not []) so loaders.load_run's None-sentinel leaves
+    existing run prices alone — the views have no pricing data, and a []
+    here would wipe out prices the API-based ETL already set on this run.
+    """
+    runs = catalog_sources._parse_runs(  # noqa: SLF001
+        "run-1|2026-01-01|2026-06-01|true", "T", instructors=[]
+    )
+    assert runs[0]["prices"] is None
 
 
 def test_parse_runs_skips_malformed_chunks():
@@ -142,6 +156,10 @@ def test_transform_mitxonline_program():
     ]
     assert len(result["runs"]) == 1
     assert result["runs"][0]["run_id"] == MITXONLINE_PROGRAM_ROW["readable_id"]
+    # No instructor/price data for program runs in the views either; None
+    # (not []) so loaders.load_run leaves any existing values alone.
+    assert result["runs"][0]["instructors"] is None
+    assert result["runs"][0]["prices"] is None
 
 
 @pytest.mark.parametrize(
@@ -229,9 +247,24 @@ def test_transform_ocw_course_single_synthetic_run_and_departments():
     run = result["runs"][0]
     assert run["run_id"] == row["readable_id"]
     assert run["semester"] == "Fall"
-    assert run["year"] == "2025"
+    assert run["year"] == 2025
     assert run["instructors"] == [{"full_name": "Grace Hopper"}]
     assert result["course"]["course_numbers"]
+
+
+def test_transform_ocw_course_empty_year_coerces_to_none():
+    """An empty-string year (LearningResourceRun.year is an IntegerField)
+    coerces to None instead of raising on save.
+    """
+    row = {
+        "readable_id": "6-00-1x-fall-2025",
+        "title": "OCW Course",
+        "published": True,
+        "term": "Fall",
+        "year": "",
+    }
+    result = catalog_sources.transform_ocw_course(row)
+    assert result["runs"][0]["year"] is None
 
 
 def test_transform_ocw_course_unknown_department_is_dropped():
@@ -263,6 +296,26 @@ def test_transform_micromasters_program_uses_edx_platform_for_courses():
         {"readable_id": "MITx/1.1x", "platform": PlatformType.edx.name},
         {"readable_id": "MITx/1.2x", "platform": PlatformType.edx.name},
     ]
+
+
+def test_transform_micromasters_program_prefixes_readable_id():
+    """readable_id/run_id get the same "micromasters-program-" prefix the
+    API-based ETL (learning_resources.etl.micromasters) uses, since the
+    view emits the bare program_id — passing it through unprefixed would
+    create a duplicate program and the prune step would unpublish the real
+    one (prod already has "micromasters-program-1").
+    """
+    row = {
+        "readable_id": "1",
+        "title": "MicroMasters Program",
+        "published": True,
+        "url": "https://micromasters.mit.edu/1",
+        "courses": "",
+    }
+    result = catalog_sources.transform_micromasters_program(row)
+
+    assert result["readable_id"] == "micromasters-program-1"
+    assert result["runs"][0]["run_id"] == "micromasters-program-1"
 
 
 def test_transform_micromasters_program_topics_is_none_not_empty_list():

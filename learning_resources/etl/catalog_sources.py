@@ -9,8 +9,10 @@ These functions operate on plain row dicts and have no dependency on the
 query engine (Trino today) behind them. The views deliberately expose a
 flattened contract (delimited strings instead of nested JSON) so detail
 that the platform can't or doesn't compute — per-run pricing, certification
-eligibility, program requirement trees — is intentionally left at its model
-default rather than reconstructed here.
+eligibility, program requirement trees — is intentionally left untouched
+(via loaders.load_run's `None`-means-"not provided" sentinel, not `[]`)
+rather than reconstructed here, so a sync doesn't wipe values the
+API-based ETL already set.
 """
 
 from datetime import UTC
@@ -22,25 +24,16 @@ from learning_resources.constants import (
     OfferedBy,
     PlatformType,
 )
-from learning_resources.etl.constants import ETLSource
+from learning_resources.etl.constants import XPRO_PLATFORM_TRANSFORM, ETLSource
+from learning_resources.etl.micromasters import (
+    READABLE_ID_PREFIX as MICROMASTERS_READABLE_ID_PREFIX,
+)
 from learning_resources.etl.utils import (
     generate_course_numbers_json,
     get_department_id_by_name,
     transform_topics,
 )
 from main.utils import clean_data
-
-# xPRO's Trino view exposes the CMS platform display name (matches
-# XPRO_PLATFORM_TRANSFORM in learning_resources.etl.xpro); course/program
-# rows for the same xPRO program share one platform.
-XPRO_PLATFORM_TRANSFORM = {
-    "Emeritus": PlatformType.emeritus.name,
-    "Global Alumni": PlatformType.globalalumni.name,
-    "Simplilearn": PlatformType.simplilearn.name,
-    "Susskind": PlatformType.susskind.name,
-    "WHU": PlatformType.whu.name,
-    "xPRO": PlatformType.xpro.name,
-}
 
 
 def _split(value: str | None, sep: str = ",") -> list[str]:
@@ -59,8 +52,12 @@ def _split(value: str | None, sep: str = ",") -> list[str]:
 
 
 def _parse_bool(value) -> bool:
-    if isinstance(value, bool):
-        return value
+    # Trino returns native bools; StarRocks (MySQL wire protocol, the
+    # planned next backend per learning_resources.lib.warehouse) returns
+    # 1/0 for BOOLEAN columns, which `str(1).lower() == "true"` would
+    # silently treat as False for every row.
+    if isinstance(value, bool | int):
+        return bool(value)
     return str(value).strip().lower() == "true"
 
 
@@ -104,7 +101,11 @@ def _parse_runs(value: str | None, title: str, instructors: list[dict]) -> list[
                 "start_date": _parse_datetime(start_on),
                 "end_date": _parse_datetime(end_on),
                 "instructors": instructors,
-                "prices": [],
+                # The views expose no pricing data. `None` (loaders.load_run's
+                # sentinel for "not provided, leave alone") rather than `[]`
+                # so a warehouse sync doesn't wipe prices the API-based ETL
+                # already populated for this run.
+                "prices": None,
             }
         )
     return runs
@@ -115,12 +116,16 @@ def _course_stub(readable_id: str, platform: str) -> dict:
     return {"readable_id": readable_id, "platform": platform}
 
 
-def _program_run(row: dict, title: str) -> dict:
+def _program_run(run_id: str, title: str, row: dict) -> dict:
     return {
-        "run_id": row["readable_id"],
+        "run_id": run_id,
         "title": title,
         "published": _parse_bool(row.get("published")),
         "url": row.get("url"),
+        # No instructor/price data in the views for program runs either;
+        # see the comment on `_parse_runs`'s "prices" key above.
+        "instructors": None,
+        "prices": None,
     }
 
 
@@ -169,7 +174,7 @@ def transform_mitxonline_program(row: dict) -> dict:
             _course_stub(course_id, PlatformType.mitxonline.name)
             for course_id in _split(row.get("courses"))
         ],
-        "runs": [_program_run(row, title)],
+        "runs": [_program_run(row["readable_id"], title, row)],
         "published": _parse_bool(row.get("published")),
         "image": _image(row.get("image_url")),
         "url": row.get("url"),
@@ -228,7 +233,7 @@ def transform_xpro_program(row: dict) -> dict:
             _course_stub(course_id, platform)
             for course_id in _split(row.get("courses"))
         ],
-        "runs": [_program_run(row, title)],
+        "runs": [_program_run(row["readable_id"], title, row)],
         "published": _parse_bool(row.get("published")),
         "image": _image(row.get("image_url")),
         "url": row.get("url"),
@@ -313,7 +318,10 @@ def transform_ocw_course(row: dict) -> dict:
                 "published": published,
                 "url": row.get("url"),
                 "semester": row.get("term"),
-                "year": row.get("year"),
+                # LearningResourceRun.year is an IntegerField; an empty
+                # string coerces fine as "" -> falsy -> None below, but
+                # would otherwise raise on save.
+                "year": int(row["year"]) if row.get("year") else None,
                 "instructors": _instructors(row.get("instructors")),
             }
         ],
@@ -337,8 +345,14 @@ def transform_micromasters_program(row: dict) -> dict:
     ``PlatformType.edx``, same as the API-based MicroMasters ETL.
     """
     title = row["title"]
+    # The view emits the bare `program_id` (e.g. "3"); the API-based ETL
+    # (learning_resources.etl.micromasters) prefixes it to
+    # "micromasters-program-3", which is what's already in prod. Passing
+    # the bare id through would create a duplicate program and the prune
+    # step would then unpublish the real one.
+    readable_id = f"{MICROMASTERS_READABLE_ID_PREFIX}{row['readable_id']}"
     return {
-        "readable_id": row["readable_id"],
+        "readable_id": readable_id,
         "platform": PlatformType.edx.name,
         "etl_source": ETLSource.micromasters.name,
         "resource_type": LearningResourceType.program.name,
@@ -357,7 +371,7 @@ def transform_micromasters_program(row: dict) -> dict:
             _course_stub(course_id, PlatformType.edx.name)
             for course_id in _split(row.get("courses"))
         ],
-        "runs": [_program_run(row, title)],
+        "runs": [_program_run(readable_id, title, row)],
         "published": _parse_bool(row.get("published")),
         "image": _image(row.get("image_url")),
         "url": row.get("url"),

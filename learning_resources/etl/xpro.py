@@ -15,9 +15,8 @@ from learning_resources.constants import (
     LearningResourceType,
     OfferedBy,
     Pace,
-    PlatformType,
 )
-from learning_resources.etl.constants import ETLSource
+from learning_resources.etl.constants import XPRO_PLATFORM_TRANSFORM, ETLSource
 from learning_resources.etl.utils import (
     generate_course_numbers_json,
     parse_string_to_int,
@@ -30,16 +29,6 @@ from main.utils import clean_data
 log = logging.getLogger(__name__)
 
 OFFERED_BY = {"code": OfferedBy.xpro.name}
-
-# This needs to be kept up to date with valid xpro platforms
-XPRO_PLATFORM_TRANSFORM = {
-    "Emeritus": PlatformType.emeritus.name,
-    "Global Alumni": PlatformType.globalalumni.name,
-    "Simplilearn": PlatformType.simplilearn.name,
-    "Susskind": PlatformType.susskind.name,
-    "WHU": PlatformType.whu.name,
-    "xPRO": PlatformType.xpro.name,
-}
 
 
 def _parse_datetime(value):

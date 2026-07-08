@@ -193,9 +193,17 @@ def load_run_dependent_values(
 
 
 def load_instructors(
-    run: LearningResourceRun, instructors_data: list[dict]
+    run: LearningResourceRun, instructors_data: list[dict] | None
 ) -> list[LearningResourceInstructor]:
-    """Load the instructors for a resource run into the database"""
+    """Load the instructors for a resource run into the database.
+
+    `None` (as opposed to `[]`) means the source didn't provide instructor
+    data at all; leave whatever's already on the run alone rather than
+    clearing it — same convention as load_topics's `topics_data`.
+    """
+    if instructors_data is None:
+        return list(run.instructors.all())
+
     instructors = []
     valid_attributes = ["first_name", "last_name"]
     relations = []
@@ -227,9 +235,17 @@ def load_instructors(
 
 
 def load_prices(
-    run: LearningResourceRun, prices_data: list[dict]
+    run: LearningResourceRun, prices_data: list[dict] | None
 ) -> list[LearningResourcePrice]:
-    """Load the prices for a resource run into the database"""
+    """Load the prices for a resource run into the database.
+
+    `None` (as opposed to `[]`) means the source didn't provide price data
+    at all; leave whatever's already on the run alone rather than clearing
+    it — same convention as load_topics's `topics_data`.
+    """
+    if prices_data is None:
+        return list(run.resource_prices.all())
+
     prices = []
     for price in prices_data:
         lr_price, _ = LearningResourcePrice.objects.get_or_create(
@@ -305,6 +321,29 @@ def load_content_tags(
     )
 
 
+def _resolve_run_prices(
+    run_data: dict,
+    resource_prices: list[dict] | None,
+    status: str | None,
+    learning_resource: LearningResource,
+) -> list[dict] | None:
+    """Normalize run_data's "prices" summary field for one run.
+
+    Returns the resource_prices list to pass to load_prices, or None if no
+    price data was provided by this source (leave existing values alone).
+    """
+    if resource_prices is None:
+        return None
+
+    run_data["prices"] = sorted({price["amount"] for price in resource_prices})
+    if status == RunStatus.archived.value or learning_resource.certification is False:
+        # Archived runs or runs of resources w/out certificates should not
+        # have prices
+        run_data["prices"] = []
+        return []
+    return resource_prices
+
+
 def load_run(
     learning_resource: LearningResource, run_data: dict
 ) -> LearningResourceRun:
@@ -322,15 +361,16 @@ def load_run(
 
     image_data = run_data.pop("image", None)
     status = run_data.pop("status", None)
+    # `None` (as opposed to an omitted key, which defaults to `[]`) is the
+    # sentinel for "not provided by this source, leave existing value
+    # alone" — same convention load_topics uses for `topics_data`. Sources
+    # that don't have instructor/price data (e.g. the warehouse-pull
+    # transforms, which lack pricing entirely) pass `None` explicitly
+    # rather than `[]`, so a sync doesn't wipe data another pipeline wrote.
     instructors_data = run_data.pop("instructors", [])
-
-    resource_prices = run_data.get("prices", [])
-    run_data["prices"] = sorted({price["amount"] for price in resource_prices})
-
-    if status == RunStatus.archived.value or learning_resource.certification is False:
-        # Archived runs or runs of resources w/out certificates should not have prices
-        run_data["prices"] = []
-        resource_prices = []
+    resource_prices = _resolve_run_prices(
+        run_data, run_data.pop("prices", []), status, learning_resource
+    )
 
     if learning_resource.test_mode:
         run_data["published"] = True
