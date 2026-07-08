@@ -391,7 +391,7 @@ class LearningResourceRunSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.LearningResourceRun
-        exclude = ["learning_resource", *COMMON_IGNORED_FIELDS]
+        exclude = ["learning_resource", "is_b2b", "is_variant", *COMMON_IGNORED_FIELDS]
 
 
 class ResourceListMixin(serializers.Serializer):

@@ -8,7 +8,6 @@ from typing import TypedDict
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db.models import Q
 from drf_spectacular.plumbing import build_choice_description_list
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -82,11 +81,7 @@ def get_resource_age_date(learning_resource_obj, resource_type_group):
         learning_resource_obj.resource_type == LearningResourceType.course.name
         and not learning_resource_obj.next_start_date
     ):
-        last_run = (
-            learning_resource_obj.runs.filter(Q(published=True))
-            .order_by("start_date")
-            .last()
-        )
+        last_run = learning_resource_obj.runs.public().order_by("start_date").last()
 
         if last_run:
             if (

@@ -434,6 +434,33 @@ def test_content_files_loaded_test_mode_published_run_indexes_opensearch(
 
 
 @pytest.mark.django_db
+def test_content_files_loaded_variant_run_skips_opensearch(
+    mock_search_index_helpers, settings
+):
+    """Variant runs should be embedded in Qdrant but skipped in OpenSearch."""
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    course = LearningResourceFactory.create(
+        published=False, test_mode=True, create_runs=False
+    )
+    run = LearningResourceRunFactory.create(
+        learning_resource=course, published=True, is_b2b=True, is_variant=True
+    )
+    ContentFileFactory.create(run=run)
+
+    SearchIndexPlugin().content_files_loaded(run)
+
+    mock_search_index_helpers.mock_upsert_contentfiles_immutable_signature.assert_not_called()
+    mock_search_index_helpers.mock_embed_run_contentfiles_immutable_signature.assert_called_once_with(
+        run.id
+    )
+    mock_search_index_helpers.mock_remove_unpublished_run_contentfiles_immutable_signature.assert_called_once_with(
+        run.id
+    )
+    mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_not_called()
+    mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_not_called()
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize("qdrant_enabled", [True, False])
 def test_content_files_loaded_retired_course_does_nothing(
     mock_search_index_helpers, settings, qdrant_enabled

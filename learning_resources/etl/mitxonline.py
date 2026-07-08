@@ -40,19 +40,41 @@ EXCLUDE_REGEX = r"PROCTORED EXAM"
 OFFERED_BY = {"code": OfferedBy.mitx.name}
 
 
+def _mitxonline_api_headers():
+    headers = {}
+    if settings.MITX_ONLINE_ETL_API_KEY:
+        headers["Authorization"] = f"Api-Key {settings.MITX_ONLINE_ETL_API_KEY}"
+    return headers
+
+
 def _fetch_data(url, params=None):
     if not params:
         params = {}
+    headers = _mitxonline_api_headers()
+    # Preserve the scheme of the initial request: the upstream API can return
+    # an http "next" URL even when we requested over https.
+    initial_url = urlparse(url)
+    scheme = initial_url.scheme
+    netloc = initial_url.netloc
     while url:
         response = requests.get(
-            url, params=params, timeout=settings.REQUESTS_TIMEOUT
+            url,
+            params=params,
+            headers=headers,
+            timeout=settings.REQUESTS_TIMEOUT,
         ).json()
         results = response["results"]
         yield from results
         next_url = response.get("next")
         if next_url:
             parsed = urlparse(next_url)
-            url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+            if parsed.netloc and parsed.netloc.lower() != netloc.lower():
+                msg = (
+                    "MITx Online pagination attempted to leave the configured host: "
+                    f"{parsed.netloc}"
+                )
+                raise ValueError(msg)
+            url = f"{scheme}://{netloc}{parsed.path}"
             params = parse_qs(parsed.query)
         else:
             url = None
@@ -274,6 +296,17 @@ def _transform_image(mitxonline_data: dict) -> dict:
     return {"url": image_url} if image_url else None
 
 
+def _is_non_default_variant(course_run: dict) -> bool:
+    """Return True if this run matches a non-default variant set."""
+    language = course_run.get("language")
+    if not language:
+        return False
+    for variant_set in course_run.get("possible_variant_sets") or []:
+        if variant_set.get("language") == language:
+            return not variant_set.get("default_variant", False)
+    return False
+
+
 def _transform_run(course_run: dict, course: dict) -> dict:
     """
     Transforms a course run into our normalized data structure
@@ -286,6 +319,8 @@ def _transform_run(course_run: dict, course: dict) -> dict:
     """  # noqa: D401
     fully_enrollable = is_fully_enrollable(course_run)
     has_product_page = bool(parse_page_attribute(course, "page_url"))
+    is_b2b = bool(course_run.get("b2b_contract"))
+    is_variant = is_b2b or _is_non_default_variant(course_run)
     return {
         "title": course_run["title"],
         "run_id": course_run["courseware_id"],
@@ -299,9 +334,12 @@ def _transform_run(course_run: dict, course: dict) -> dict:
             course.get("readable_id"), has_product_page=has_product_page
         ),
         "published": bool(
-            course_run.get("is_enrollable", False)
+            not is_variant
+            and course_run.get("is_enrollable", False)
             and (course.get("page") or {}).get("live", False)
         ),
+        "is_b2b": is_b2b,
+        "is_variant": is_variant,
         "description": clean_data(parse_page_attribute(course_run, "description")),
         "image": _transform_image(course_run),
         "enrollment_modes": course_run.get("enrollment_modes", []),
@@ -578,17 +616,35 @@ def _fetch_courses_by_ids(course_ids):
     if not course_ids:
         return []
     if settings.MITX_ONLINE_COURSES_API_URL:
-        fetched = list(
-            _fetch_data(
-                settings.MITX_ONLINE_COURSES_API_URL,
-                params={
-                    "id": ",".join([str(courseid) for courseid in course_ids]),
-                    "live": True,
-                },
+        base_url = settings.MITX_ONLINE_COURSES_API_URL.rstrip("/")
+        headers = _mitxonline_api_headers()
+        courses = []
+        for course_id in course_ids:
+            response = requests.get(
+                f"{base_url}/{course_id}/",
+                headers=headers,
+                params={"live": True},
+                timeout=settings.REQUESTS_TIMEOUT,
             )
-        )
-        courses_by_id = {course["id"]: course for course in fetched}
-        return [courses_by_id[cid] for cid in course_ids if cid in courses_by_id]
+            if response.status_code >= requests.codes.bad_request:
+                if response.status_code != requests.codes.not_found:
+                    log.warning(
+                        "Failed to fetch MITx Online course id=%s: status=%s",
+                        course_id,
+                        response.status_code,
+                    )
+                continue
+            course = response.json()
+            if not isinstance(course, dict) or "id" not in course:
+                log.warning(
+                    "Skipping invalid MITx Online course response for id=%s",
+                    course_id,
+                )
+                continue
+            if not (course.get("page") or {}).get("live", False):
+                continue
+            courses.append(course)
+        return courses
 
     log.warning("Missing required setting MITX_ONLINE_COURSES_API_URL")
     return []
