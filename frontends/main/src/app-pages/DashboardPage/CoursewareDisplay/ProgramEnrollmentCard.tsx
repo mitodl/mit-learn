@@ -150,7 +150,7 @@ export const ProgramEnrollmentCard = ({
         as={Component}
         className={className}
       >
-        <Stack justifyContent="start" alignItems="stretch" flex={1}>
+        <Stack gap="4px" justifyContent="start" alignItems="stretch" flex={1}>
           <CardTypeText>Program</CardTypeText>
           {titleSection}
         </Stack>
