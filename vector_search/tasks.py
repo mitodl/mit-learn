@@ -468,7 +468,7 @@ def embed_run_content_files(self, run_id):
         ContentFile.objects.filter(run__id=run_id).values_list("id", flat=True)
     )
 
-    return _replace_with_finalized_chain(self, content_file_ids, overwrite=False)
+    return _replace_with_finalized_chain(self, content_file_ids, overwrite=True)
 
 
 @app.task(bind=True)
