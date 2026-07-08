@@ -119,6 +119,7 @@ INSTALLED_APPS = (
     "django_json_widget",
     "django_filters",
     "drf_spectacular",
+    "django_aqueduct",
     "mitol.observability.apps.ObservabilityConfig",
     # Put our apps after this point
     "main",
