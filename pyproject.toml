@@ -197,6 +197,7 @@ parity_ignore = [
     "OPTIONS",                 # a leaked local inside legacy's `if MITOL_USE_S3` block, not a real Django setting
     "IPWARE_PRIVATE_IP_PREFIX",# legacy sets this only under `if DEBUG`
     # --- Model-only typed inputs (legacy reads these inline, never as a module global) ---
+    "HOST_IP",                 # legacy: INTERNAL_IPS = (get_string("HOST_IP", ...),)
     "DATABASE_URL",
     "REDISCLOUD_URL",
     "MITOL_DB_CONN_MAX_AGE",

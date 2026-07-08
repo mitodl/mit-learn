@@ -1353,6 +1353,31 @@ class AqueductSettings(BaseSettings):
         validation_alias=AliasChoices("MITOL_SCIM_KEYCLOAK_BULK_OPERATIONS_COUNT"),
         description="Number of operations to perform per bulk request",
     )
+    # Overrides of generated fields whose default_factory read os.environ
+    # directly (via get_string/get_int), which bypasses the pydantic source
+    # chain so a Vault/SSM-supplied value would be invisible. Declared here as
+    # real fields sourced through the chain; the paired validators below derive
+    # the dependent settings from `self`, never os.environ.
+    #
+    # HOST_IP backs INTERNAL_IPS (legacy: `(get_string("HOST_IP", ...),)`).
+    HOST_IP: str = Field(
+        default="127.0.0.1", validation_alias=AliasChoices("HOST_IP")
+    )
+    INTERNAL_IPS: tuple[str, ...] = Field(default_factory=lambda: ("127.0.0.1",))
+    # Legacy: get_int("OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE",
+    #                 get_int("OPENSEARCH_INDEXING_CHUNK_SIZE", 100)).
+    # None sentinel → the validator falls back to OPENSEARCH_INDEXING_CHUNK_SIZE
+    # read through the model.
+    OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE"),
+    )
+    # Legacy: parse_cookie_tombstones(get_string("COOKIE_TOMBSTONES", "[]")).
+    # Keep the raw string default so no os.environ read happens in a factory;
+    # build_cookie_tombstones() parses whatever a source supplies.
+    COOKIE_TOMBSTONES: Any = Field(
+        default="[]", validation_alias=AliasChoices("COOKIE_TOMBSTONES")
+    )
 
     # ------------------------------------------------------------------ #
     # Derived settings                                                   #
@@ -1794,6 +1819,29 @@ class AqueductSettings(BaseSettings):
                 value if isinstance(value, bool) else str(value).lower() == "true"
             )
         self.FEATURES = features
+        return self
+
+    @model_validator(mode="after")
+    def build_internal_ips(self) -> AqueductSettings:
+        """Mirror main/settings.py's ``INTERNAL_IPS = (HOST_IP,)``.
+
+        Reads HOST_IP through the model (sourced from env/Vault/SSM) rather than
+        os.environ directly, so a sourced HOST_IP is honored.
+        """
+        self.INTERNAL_IPS = (self.HOST_IP,)
+        return self
+
+    @model_validator(mode="after")
+    def build_opensearch_document_chunk_size(self) -> AqueductSettings:
+        """Fall back to OPENSEARCH_INDEXING_CHUNK_SIZE when the doc size is unset.
+
+        Mirrors legacy's nested ``get_int`` fallback, but reads the fallback
+        through the model instead of os.environ.
+        """
+        if self.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE is None:
+            self.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE = (
+                self.OPENSEARCH_INDEXING_CHUNK_SIZE
+            )
         return self
 
     @model_validator(mode="after")
