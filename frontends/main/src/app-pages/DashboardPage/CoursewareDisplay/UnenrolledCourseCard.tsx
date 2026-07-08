@@ -8,7 +8,6 @@ import { LoadingSpinner, Stack } from "ol-components"
 import {
   CardRoot,
   CardTypeText,
-  CoursewareActionColumn,
   CoursewareButton,
   TitleText,
   CourseDateSummary,
@@ -56,7 +55,12 @@ export const UnenrolledCourseCard = ({
   const title =
     layout === "compact" ? course.title : courseRun?.title || course.title
   const isContractPageResource = Boolean(contractId)
-  const cardTypeLabel = isModule || isContractPageResource ? "Module" : "Course"
+  const cardTypeLabelText =
+    isModule || isContractPageResource ? "Module" : "Course"
+  const cardTypeLabel =
+    isModule && layout === "compact" ? null : (
+      <CardTypeText>{cardTypeLabelText}</CardTypeText>
+    )
   const handleEnrollmentClick = React.useCallback(() => {
     const isVerifiedProgramEnrollment =
       Boolean(ancestorContext?.useVerifiedEnrollment) ||
@@ -141,26 +145,13 @@ export const UnenrolledCourseCard = ({
       Start
     </Button>
   )
-  const buttonSection = isCompact ? (
-    <Stack direction="column" gap="4px" alignItems="stretch">
-      <Stack
-        direction="row"
-        gap="8px"
-        alignItems="center"
-        data-testid="compact-meta-row"
-      >
-        {courseDateText}
-        <CoursewareActionColumn direction="row" justifyContent="end">
-          {startButton}
-        </CoursewareActionColumn>
-      </Stack>
-    </Stack>
-  ) : (
-    <Stack direction="row" gap="8px" alignItems="center" justifyContent="end">
-      <EnrollmentStatusIndicator
-        status={EnrollmentStatus.NotEnrolled}
-        showNotComplete={Boolean(isContractPageResource)}
-      />
+  const buttonSection = (
+    <Stack
+      direction="row"
+      marginRight="8px"
+      alignItems="center"
+      justifyContent="end"
+    >
       {startButton}
     </Stack>
   )
@@ -174,10 +165,20 @@ export const UnenrolledCourseCard = ({
         className={className}
         layout={layout}
       >
-        <Stack justifyContent="start" alignItems="stretch" gap="6px" flex={1}>
-          <CardTypeText>{cardTypeLabel}</CardTypeText>
-          {titleSection}
-          {!isCompact && courseDateText}
+        {isModule && isCompact && (
+          <Stack alignSelf="start">
+            <EnrollmentStatusIndicator
+              status={EnrollmentStatus.NotEnrolled}
+              showNotComplete={true}
+            />
+          </Stack>
+        )}
+        <Stack justifyContent="start" alignItems="stretch" gap="4px" flex={1}>
+          {cardTypeLabel}
+          <Stack gap="6px">
+            {titleSection}
+            {courseDateText}
+          </Stack>
         </Stack>
         <Stack
           direction="row"
