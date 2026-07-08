@@ -27,7 +27,7 @@ dependencies = [
     "dj-database-url>=3.0.0,<4",
     "dj-static>=0.0.6,<0.0.7",
     "django-anymail[mailgun]>=13.0,<14",
-    "django-aqueduct[derivations,vault]>=0.8.0",
+    "django-aqueduct[derivations,vault]>=0.9.0",
     "django-bitfield>=2.2.0,<3",
     "django-cache-memoize>=0.2.0,<0.3",
     "django-cors-headers>=4.0.0,<5",
@@ -168,6 +168,13 @@ output = "main/aqueduct_settings.py"
 include_envparser = true
 class_name = "AqueductSettings"
 extra = "allow"
+# `enrich_url_types` (0.9.0 str -> AnyUrl promotion) is intentionally left OFF.
+# It correctly excludes Django's relative-URL settings and pairs a str
+# serializer for model_dump(), but it still promotes APP_BASE_URL (default
+# None, promoted via the name-suffix fallback), whose stored value is then a
+# pydantic.Url object — and this model's own `build_urls` validator consumes it
+# with `urljoin(self.APP_BASE_URL, ...)`, which rejects non-str. Keeping the
+# URL fields as plain str preserves the drop-in contract with no workarounds.
 parity_model = "main.aqueduct_settings:AqueductSettings"
 parity_legacy = "main.settings"
 # Deliberate, documented divergences from main/settings.py. Every entry is a
@@ -180,10 +187,11 @@ parity_ignore = [
     "AWS_ACCESS_KEY_ID",       # CRITICAL fix: legacy typed this bool (default False); model is str | None
     "AWS_SECRET_ACCESS_KEY",   # CRITICAL fix: legacy typed this bool (default False); model is str | None
     "BASE_DIR",                # computed identically, via os.path on this file
-    # --- Framework mutates settings.X after load (not real model misses) ---
-    "DATABASES",               # Django ConnectionHandler injects ATOMIC_REQUESTS/AUTOCOMMIT/TEST/TIME_ZONE; model also omits sslmode under sqlite (derivations.database_config, a fix)
-    "DEFAULT_DATABASE_CONFIG", # same DATABASES dict, same reasons
-    "HEALTH_CHECK",            # django-health-check AppConfig.ready() adds DISK_USAGE_MAX/MEMORY_MIN/WARNINGS_AS_ERRORS/DISABLE_THREADING
+    # NOTE: DATABASES / DEFAULT_DATABASE_CONFIG / HEALTH_CHECK were previously
+    # ignored here because Django's ConnectionHandler and django-health-check
+    # inject extra dict keys at runtime; 0.9.0's parity check does a one-way
+    # subset compare for dict settings, so they no longer diverge and were
+    # dropped from this list.
     # --- Conditional / leaked module locals (legacy only sets these in a branch) ---
     "STORAGES",                # legacy sets STORAGES only under MITOL_USE_S3; model carries Django's default explicitly (the adapter injects every value)
     "OPTIONS",                 # a leaked local inside legacy's `if MITOL_USE_S3` block, not a real Django setting
@@ -232,8 +240,12 @@ build-backend = "uv_build"
 [tool.ruff]
 target-version = "py311"
 line-length = 88
-# main/aqueduct_settings.py carries machine-owned `aqueduct:generated` regions;
-# reformatting them would make `generate_aqueduct_settings --check` report drift.
+# main/aqueduct_settings.py carries machine-owned `aqueduct:generated` regions.
+# 0.8.1 made the generator's output ruff-format-stable for the ~9 rule groups it
+# validated against, but mit-learn selects a much broader set: `ruff check` flags
+# 68 issues in the generated regions and `ruff format` would rewrite them (which
+# then makes `generate_aqueduct_settings --check` report drift). Per the upstream
+# note, extend-exclude remains the documented fallback for such rulesets.
 extend-exclude = ["main/aqueduct_settings.py"]
 lint.select = [
     "A",  # flake8-builtins
