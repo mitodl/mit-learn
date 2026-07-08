@@ -5,12 +5,13 @@ django.conf.settings directly so these tests run in milliseconds with no
 database setup required.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import django
 import pytest
 from django.conf import settings as django_settings
+from freezegun import freeze_time
 
 # Configure Django minimally if not already configured — keeps this test
 # module self-contained and fast (no database, no app registry needed).
@@ -232,6 +233,32 @@ def test_iter_rows_accepts_dotted_identifiers():
     )
 
 
+def test_iter_rows_defers_description_until_first_fetch():
+    """Some DB-API drivers only populate cursor.description once results
+    start arriving, not immediately after execute() (PEP 249 leaves this
+    driver-defined) — iter_rows must not read it until after the first
+    fetchmany call.
+    """
+    conn = MagicMock()
+    cursor = MagicMock()
+    cursor.description = None
+    calls = []
+
+    def _fetchmany(size):
+        if not calls:
+            calls.append(1)
+            cursor.description = [("id",), ("title",)]
+            return [(1, "Course A")]
+        return []
+
+    cursor.fetchmany.side_effect = _fetchmany
+    conn.cursor.return_value = cursor
+
+    rows = list(iter_rows(conn, "catalog.schema.my_view"))
+
+    assert rows == [{"id": 1, "title": "Course A"}]
+
+
 # ---------------------------------------------------------------------------
 # BaseWarehouseETLTask
 # ---------------------------------------------------------------------------
@@ -317,6 +344,14 @@ def test_base_warehouse_etl_task_fetch_and_upsert_is_abstract():
     task.view_name = "catalog.schema.view"
     with pytest.raises(NotImplementedError):
         task.fetch_and_upsert(conn=None)
+
+
+def test_base_warehouse_etl_task_acks_late():
+    """acks_late=True, matching the rest of the ETL task fleet (get_ocw_data,
+    ingest_edx_run_archive, etc.) — a worker lost mid-pull shouldn't lose
+    the message.
+    """
+    assert BaseWarehouseETLTask.acks_late is True
 
 
 # ---------------------------------------------------------------------------
@@ -414,6 +449,40 @@ def test_full_refresh_does_not_advance_watermark(mock_connect):
         task.run(full_refresh=True)
 
     mock_caches.__getitem__.assert_not_called()
+
+
+@patch("learning_resources.lib.warehouse.connect_to_warehouse")
+def test_incremental_watermark_is_stamped_before_fetch_not_after(mock_connect):
+    """The watermark records when the fetch *started*, not when it finished.
+
+    Otherwise a row modified while a long-running fetch is in flight would
+    fall in the gap between this pull's window and the next incremental
+    run's `since` — invisible until the next full_refresh heals it.
+    """
+    mock_connect.return_value = MagicMock()
+    fetch_started_at = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
+
+    with freeze_time(fetch_started_at) as frozen_time:
+
+        class _SlowTask(BaseWarehouseETLTask):
+            name = "test.SlowTask"
+            view_name = "ol_warehouse_production.integrations.integrations__learn__test"
+
+            def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
+                # Simulate a fetch that takes real wall-clock time.
+                frozen_time.tick(timedelta(minutes=10))
+                return 3
+
+        task = _SlowTask()
+        mock_cache = MagicMock()
+        mock_cache.get.return_value = None
+
+        with patch("learning_resources.lib.warehouse.caches") as mock_caches:
+            mock_caches.__getitem__.return_value = mock_cache
+            task.run(full_refresh=False)
+
+    stored_watermark = mock_cache.set.call_args.args[1]
+    assert stored_watermark == fetch_started_at
 
 
 @patch("learning_resources.lib.warehouse.connect_to_warehouse")

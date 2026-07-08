@@ -161,11 +161,17 @@ def iter_rows(conn, view_name, *, since=None, batch_size=1000):
     cur = conn.cursor()
     try:
         cur.execute(query)
-        columns = [d[0] for d in cur.description]
+        # Read columns from the first non-empty batch rather than
+        # immediately after execute(): some DB-API drivers only populate
+        # `description` once results start arriving, not at execute()
+        # time (PEP 249 leaves this driver-defined).
+        columns = None
         while True:
             batch = cur.fetchmany(batch_size)
             if not batch:
                 break
+            if columns is None:
+                columns = [d[0] for d in cur.description]
             for row in batch:
                 yield dict(zip(columns, row))
     finally:
@@ -213,6 +219,7 @@ class BaseWarehouseETLTask(Task):
     """
 
     abstract = True
+    acks_late = True
     view_name: str = ""
 
     def run(self, *args, full_refresh: bool = True, **kwargs):  # noqa: ARG002
@@ -222,6 +229,12 @@ class BaseWarehouseETLTask(Task):
             raise ValueError(msg)
 
         since = None if full_refresh else self._get_watermark()
+        # Captured before the fetch, not after: a row modified while the
+        # fetch is in flight must still be picked up by the *next*
+        # incremental run. Stamping the watermark post-fetch would let it
+        # fall between this window and the next, invisible until the next
+        # full_refresh heals it.
+        fetch_started_at = datetime.now(tz=UTC)
 
         conn = connect_to_warehouse()
         start = time.monotonic()
@@ -240,7 +253,7 @@ class BaseWarehouseETLTask(Task):
             conn.close()
 
         if not full_refresh:
-            self._set_watermark(datetime.now(tz=UTC))
+            self._set_watermark(fetch_started_at)
 
         elapsed = time.monotonic() - start
         log.info(
