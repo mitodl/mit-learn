@@ -98,10 +98,12 @@ export const UnenrolledCourseCard = ({
     </TitleText>
   )
   const courseDateText = (
-    <CourseDateSummary
-      startDate={courseRun?.start_date}
-      endDate={courseRun?.end_date}
-    />
+    <Stack direction="row" gap="8px" alignItems="start">
+      <CourseDateSummary
+        startDate={courseRun?.start_date}
+        endDate={courseRun?.end_date}
+      />
+    </Stack>
   )
   const startButton = isCompact ? (
     <CoursewareButton

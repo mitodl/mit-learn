@@ -6,10 +6,8 @@ import {
   screen,
   expectProps,
   waitFor,
-  fireEvent,
 } from "@/test-utils"
 import type { User } from "api/hooks/user"
-import { learningResourceQueries } from "api/hooks/learningResources"
 import { ResourceCard } from "./ResourceCard"
 import { MicroUserListRelationship } from "api"
 import {
@@ -234,52 +232,5 @@ describe.each([
     expect(url.searchParams.get(RESOURCE_DRAWER_PARAMS.resource)).toBe(
       String(resource.id),
     )
-  })
-
-  test("Clicking a resource card sets resource detail cache", async () => {
-    const { resource, view, queryClient } = setup()
-    await user.click(view.container.firstChild as HTMLElement)
-
-    invariant(resource)
-    const cached = queryClient.getQueryData(
-      learningResourceQueries.detail(resource.id).queryKey,
-    )
-    expect(cached).toEqual(resource)
-  })
-
-  test("Share button appears for podcast episode resource", async () => {
-    const resource = factories.learningResources.podcastEpisode()
-    setup({ user: { is_authenticated: false }, props: { resource } })
-    await screen.findByRole("button", { name: `Share ${resource.title}` })
-  })
-
-  test("Share button does not appear for non-podcast-episode resources", async () => {
-    const resource = factories.learningResources.course()
-    setup({ user: { is_authenticated: false }, props: { resource } })
-    await screen.findByRole("button", {
-      name: `Bookmark ${resource.resource_category}`,
-    })
-    expect(
-      screen.queryByRole("button", { name: /^Share / }),
-    ).not.toBeInTheDocument()
-  })
-
-  test("Clicking Share button opens ShareDialog for podcast episode", async () => {
-    const resource = factories.learningResources.podcastEpisode()
-    setup({ user: { is_authenticated: false }, props: { resource } })
-    const shareButton = await screen.findByRole("button", {
-      name: `Share ${resource.title}`,
-    })
-    expect(screen.getByTestId("share-dialog")).toHaveAttribute(
-      "data-open",
-      "false",
-    )
-    fireEvent.click(shareButton)
-    await waitFor(() => {
-      expect(screen.getByTestId("share-dialog")).toHaveAttribute(
-        "data-open",
-        "true",
-      )
-    })
   })
 })

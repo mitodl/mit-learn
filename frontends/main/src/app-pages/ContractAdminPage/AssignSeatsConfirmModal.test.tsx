@@ -1,5 +1,5 @@
 import React, { act } from "react"
-import { renderWithTheme, screen, user } from "@/test-utils"
+import { renderWithTheme, screen, user, waitFor } from "@/test-utils"
 import { AssignSeatsConfirmModal } from "./AssignSeatsConfirmModal"
 
 const baseProps = {
@@ -294,6 +294,222 @@ describe("AssignSeatsConfirmModal — over-capacity state (CSV only)", () => {
 
     expect(baseProps.onClose).toHaveBeenCalledTimes(1)
     expect(baseProps.onConfirm).not.toHaveBeenCalled()
+  })
+})
+
+describe("AssignSeatsConfirmModal — unlimited contract (availableSeats null)", () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  const unlimitedProps = { ...baseProps, availableSeats: null }
+
+  test("shows unlimited messaging in the seats stat instead of a number", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal {...unlimitedProps} validCount={3} />,
+    )
+
+    // Confirm step still renders normally.
+    expect(
+      screen.getByRole("heading", { name: /ready to send invitations/i }),
+    ).toBeInTheDocument()
+
+    // Stat value is a dash and the label / group name convey no seat limit.
+    expect(screen.getByText("—")).toBeInTheDocument()
+    expect(screen.getByText("No seat limit")).toBeInTheDocument()
+    expect(
+      screen.getByRole("group", { name: /no seat limit on this contract/i }),
+    ).toBeInTheDocument()
+  })
+
+  test("does not display a numeric or negative 'seats remaining after sending'", () => {
+    // validCount far exceeds any real cap; with no cap there must be no negative.
+    renderWithTheme(
+      <AssignSeatsConfirmModal {...unlimitedProps} validCount={100} />,
+    )
+
+    expect(
+      screen.queryByText(/seats remaining after sending/i),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("group", { name: /seats remaining after sending/i }),
+    ).not.toBeInTheDocument()
+    // A cap of null run through `availableSeats - validCount` would render -100.
+    expect(screen.queryByText("-100")).not.toBeInTheDocument()
+  })
+
+  test("never enters the over-capacity 'Not enough seats available' state", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal {...unlimitedProps} validCount={9999} />,
+    )
+
+    expect(
+      screen.getByRole("heading", { name: /ready to send invitations/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("heading", { name: /not enough seats available/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("dialog accessible description conveys no seat limit", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal {...unlimitedProps} validCount={3} />,
+    )
+
+    expect(screen.getByRole("dialog")).toHaveAccessibleDescription(
+      /no seat limit on this contract/i,
+    )
+  })
+})
+
+describe("AssignSeatsConfirmModal — email preview (send test email)", () => {
+  const sendTestEmailProps = {
+    ...baseProps,
+    userEmail: "manager@test.com",
+    onSendTestEmail: jest.fn(),
+  }
+
+  beforeEach(() => jest.clearAllMocks())
+
+  test("does not show Email Preview section when onSendTestEmail is not provided", () => {
+    renderWithTheme(<AssignSeatsConfirmModal {...baseProps} />)
+
+    expect(screen.queryByText("Email Preview")).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /send test email to me/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("shows Email Preview section with button when onSendTestEmail is provided", () => {
+    renderWithTheme(<AssignSeatsConfirmModal {...sendTestEmailProps} />)
+
+    expect(screen.getByText("Email Preview")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: /send test email to me/i }),
+    ).toBeInTheDocument()
+  })
+
+  test("button is disabled when userEmail is not provided", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal {...baseProps} onSendTestEmail={jest.fn()} />,
+    )
+
+    expect(
+      screen.getByRole("button", { name: /send test email to me/i }),
+    ).toBeDisabled()
+  })
+
+  test("shows 'Sending…' while test email is being sent", async () => {
+    const { promise, resolve } = Promise.withResolvers<void>()
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...sendTestEmailProps}
+        onSendTestEmail={() => promise}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: /send test email to me/i }),
+    )
+
+    expect(
+      screen.getByRole("button", { name: /sending…/i }),
+    ).toBeInTheDocument()
+
+    await act(async () => resolve())
+  })
+
+  test("shows success alert after test email is sent successfully", async () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...sendTestEmailProps}
+        onSendTestEmail={jest.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: /send test email to me/i }),
+    )
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /test email successfully sent to manager@test\.com/i,
+    )
+  })
+
+  test("shows error alert when test email fails", async () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...sendTestEmailProps}
+        onSendTestEmail={jest
+          .fn()
+          .mockRejectedValue(new Error("Network error"))}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: /send test email to me/i }),
+    )
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /something went wrong sending the test email/i,
+    )
+  })
+
+  test("Email Preview section is not shown in review step", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...sendTestEmailProps}
+        invalidEmails={["bad@"]}
+      />,
+    )
+
+    expect(screen.queryByText("Email Preview")).not.toBeInTheDocument()
+  })
+
+  test("Email Preview section is not shown in over-capacity state", () => {
+    renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...sendTestEmailProps}
+        validCount={15}
+        availableSeats={10}
+      />,
+    )
+
+    expect(screen.queryByText("Email Preview")).not.toBeInTheDocument()
+  })
+
+  test("resets to idle state when modal is reopened", async () => {
+    const { rerender } = renderWithTheme(
+      <AssignSeatsConfirmModal
+        {...sendTestEmailProps}
+        onSendTestEmail={jest.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: /send test email to me/i }),
+    )
+    await screen.findByRole("alert")
+
+    // Close then reopen
+    rerender(
+      <AssignSeatsConfirmModal
+        {...sendTestEmailProps}
+        open={false}
+        onSendTestEmail={jest.fn().mockResolvedValue(undefined)}
+      />,
+    )
+    rerender(
+      <AssignSeatsConfirmModal
+        {...sendTestEmailProps}
+        onSendTestEmail={jest.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    await waitFor(() =>
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
+    )
+    expect(
+      screen.getByRole("button", { name: /send test email to me/i }),
+    ).not.toBeDisabled()
   })
 })
 

@@ -73,22 +73,47 @@ describe("HomeEnrollmentsDisplay", () => {
     })
   })
 
-  test("Renders one card per enrollment when a single course has multiple enrollments", async () => {
+  test("shows a loading skeleton until dashboard data resolves, then renders cards", async () => {
+    setupApis()
+    renderWithProviders(<HomeEnrollmentsDisplay />)
+
+    // While the home queries are still loading, a skeleton is shown and no
+    // enrollment cards have rendered yet (prevents the accordion-then-program
+    // card flash).
+    expect(
+      document.querySelectorAll(".MuiSkeleton-root").length,
+    ).toBeGreaterThan(0)
+    expect(
+      screen.queryByTestId("enrollment-card-desktop"),
+    ).not.toBeInTheDocument()
+
+    // Once data resolves, cards render and the skeleton is gone.
+    await screen.findAllByTestId("enrollment-card-desktop")
+    expect(document.querySelectorAll(".MuiSkeleton-root")).toHaveLength(0)
+  })
+
+  test("Deduplicates same-variant enrollments to one card with an accordion", async () => {
     const mitxOnlineUser = mitxonline.factories.user.user()
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
     const sharedCourseId = faker.number.int()
+    // Both enrollments share the same course and have identical default variant
+    // fields, so they should collapse to a single card.
     const enrollmentA = mitxonline.factories.enrollment.courseEnrollment({
       run: {
         title: "Same Course — Run A",
         course: { id: sharedCourseId },
       },
+      certificate: null,
+      grades: [],
     })
     const enrollmentB = mitxonline.factories.enrollment.courseEnrollment({
       run: {
         title: "Same Course — Run B",
         course: { id: sharedCourseId },
       },
+      certificate: null,
+      grades: [],
     })
 
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
@@ -104,13 +129,57 @@ describe("HomeEnrollmentsDisplay", () => {
 
     await screen.findByRole("heading", { name: "My Learning" })
     const cards = await screen.findAllByTestId("enrollment-card-desktop")
-    expect(cards).toHaveLength(2)
-    expect(
-      cards.find((c) => c.textContent?.includes("Same Course — Run A")),
-    ).toBeDefined()
-    expect(
-      cards.find((c) => c.textContent?.includes("Same Course — Run B")),
-    ).toBeDefined()
+    // Only one card rendered; the sibling appears in the accordion.
+    expect(cards).toHaveLength(1)
+    expect(cards[0]).toHaveTextContent("Same Course — Run A")
+    expect(cards[0]).toHaveTextContent("Course runs (2)")
+  })
+
+  test("sibling enrollments are wired into the card's accordion", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const sharedCourseId = faker.number.int()
+    const enrollmentA = mitxonline.factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: sharedCourseId },
+        language: undefined,
+        variant_industry: undefined,
+        variant_length: undefined,
+      },
+      certificate: null,
+      grades: [],
+    })
+    const enrollmentB = mitxonline.factories.enrollment.courseEnrollment({
+      run: {
+        course: { id: sharedCourseId },
+        language: undefined,
+        variant_industry: undefined,
+        variant_length: undefined,
+      },
+      certificate: null,
+      grades: [],
+    })
+
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      enrollmentA,
+      enrollmentB,
+    ])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [],
+    )
+
+    renderWithProviders(<HomeEnrollmentsDisplay />)
+
+    await screen.findByRole("heading", { name: "My Learning" })
+    // Scope to the desktop card — both desktop and mobile render their own
+    // accordion, so a global findByRole would find two buttons and throw.
+    const card = await screen.findByTestId("enrollment-card-desktop")
+    const accordionButton = within(card).getByRole("button", {
+      name: /Course runs/,
+    })
+    expect(accordionButton).toHaveTextContent("Course runs (2)")
   })
 
   test("Renders the proper amount of unenroll and email settings buttons in the context menus", async () => {

@@ -833,10 +833,15 @@ wheels = [
 
 [[package]]
 name = "django-health-check"
-version = "3.20.1.dev10+g53f9bdc3a"
-source = { git = "https://github.com/revsys/django-health-check?rev=53f9bdc3a7acc8a577319987fef0bd3040eef4b4#53f9bdc3a7acc8a577319987fef0bd3040eef4b4" }
+version = "3.24.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
+    { name = "psutil" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/98/a6/f474f443b0a7f9e7e52a25a3773a31c5c061bdb28cf311b7801fc250db9b/django_health_check-3.24.0.tar.gz", hash = "sha256:b5e01d2013a254cc5a2c7b19c62f11ea6fd2624c87a9d990e11a1b3874df78b5", size = 20807, upload-time = "2026-02-12T10:02:18.482Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/38/17/51aabb4908e007accf3c596b92a62ed7e456c581a1e45f06e0f2219dc6c0/django_health_check-3.24.0-py3-none-any.whl", hash = "sha256:bd568d7d3813980668dfbe730214aef5da7c8da73bc2aa60ec2eeca8a3788da6", size = 37964, upload-time = "2026-02-12T10:02:17.08Z" },
 ]
 
 [[package]]
@@ -2705,7 +2710,7 @@ requires-dist = [
     { name = "django-cors-headers", specifier = ">=4.0.0,<5" },
     { name = "django-filter", specifier = ">=2.4.0,<3" },
     { name = "django-guardian", specifier = ">=3.0.0,<4" },
-    { name = "django-health-check", git = "https://github.com/revsys/django-health-check?rev=53f9bdc3a7acc8a577319987fef0bd3040eef4b4" },
+    { name = "django-health-check", specifier = ">=3.24.0,<4" },
     { name = "django-imagekit", specifier = ">=6.0.0,<7" },
     { name = "django-ipware", specifier = ">=7.0.0,<8" },
     { name = "django-json-widget", specifier = ">=2.0.0,<3" },
@@ -2773,7 +2778,7 @@ requires-dist = [
     { name = "python-dateutil", specifier = ">=2.8.2,<3" },
     { name = "python-rapidjson", specifier = ">=1.8,<2" },
     { name = "pyyaml", specifier = ">=6.0.0,<7" },
-    { name = "qdrant-client", extras = ["fastembed"], specifier = "==1.18.0,<2" },
+    { name = "qdrant-client", extras = ["fastembed"], specifier = "~=1.18.0" },
     { name = "redis", specifier = ">=7.0.0,<8" },
     { name = "requests", specifier = ">=2.31.0,<3" },
     { name = "retry2", specifier = ">=0.9.5,<0.10" },

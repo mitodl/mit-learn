@@ -35,7 +35,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.72.3"
+VERSION = "0.73.1"
 
 log = logging.getLogger()
 
@@ -140,47 +140,9 @@ INSTALLED_APPS = (
     "ol_hubspot",
     "mitol.scim.apps.ScimApp",
     "health_check",
-    "health_check.cache",
-    "health_check.contrib.migrations",
-    "health_check.contrib.celery_ping",
-    "health_check.contrib.redis",
-    "health_check.contrib.db_heartbeat",
 )
 
 WEBHOOK_SECRET = get_string("WEBHOOK_SECRET", "please-change-this")
-
-HEALTH_CHECK = {
-    "SUBSETS": {
-        # The 'startup' subset includes checks that must pass before the application can
-        # start.
-        "startup": [
-            "MigrationsHealthCheck",  # Ensures database migrations are applied.
-            "CacheBackend",  # Verifies the cache backend is operational.
-            "RedisHealthCheck",  # Confirms Redis is reachable and functional.
-            "DatabaseHeartBeatCheck",  # Checks the database connection is alive.
-        ],
-        # The 'liveness' subset includes checks to determine if the application is
-        # running.
-        "liveness": ["DatabaseHeartBeatCheck"],  # Minimal check to ensure the app is
-        # alive.
-        # The 'readiness' subset includes checks to determine if the application is
-        # ready to serve requests.
-        "readiness": [
-            "CacheBackend",  # Ensures the cache is ready for use.
-            "RedisHealthCheck",  # Confirms Redis is ready for use.
-            "DatabaseHeartBeatCheck",  # Verifies the database is ready for queries.
-        ],
-        # The 'full' subset includes all available health checks for a comprehensive
-        # status report.
-        "full": [
-            "MigrationsHealthCheck",  # Ensures database migrations are applied.
-            "CacheBackend",  # Verifies the cache backend is operational.
-            "RedisHealthCheck",  # Confirms Redis is reachable and functional.
-            "DatabaseHeartBeatCheck",  # Checks the database connection is alive.
-            "CeleryPingHealthCheck",  # Verifies Celery workers are responsive.
-        ],
-    }
-}
 
 if not get_bool("RUN_DATA_MIGRATIONS", default=False):
     MIGRATION_MODULES = {"data_fixtures": None}
@@ -824,6 +786,10 @@ QDRANT_POINT_UPLOAD_BATCH_SIZE = get_int(
 QDRANT_BATCH_SIZE_BYTES = get_int(
     name="QDRANT_BATCH_SIZE_BYTES", default=10 * 1024 * 1024
 )  # default 10 MB limit for batch processing
+
+QDRANT_CONTENT_FILE_SERIALIZATION_CHUNK_SIZE = get_int(
+    name="QDRANT_CONTENT_FILE_SERIALIZATION_CHUNK_SIZE", default=5
+)
 
 QDRANT_CLIENT_TIMEOUT = get_int(name="QDRANT_CLIENT_TIMEOUT", default=10)
 

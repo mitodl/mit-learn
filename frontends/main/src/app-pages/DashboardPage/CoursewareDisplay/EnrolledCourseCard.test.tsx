@@ -379,6 +379,7 @@ describe.each([
       const enrollment = mitxonline.factories.enrollment.courseEnrollment({
         enrollment_mode: enrollmentMode,
         b2b_contract_id: b2bContractId,
+        certificate: null,
         run,
       })
       renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
@@ -454,6 +455,7 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
       b2b_contract_id: null,
+      certificate: null,
       run: {
         is_upgradable: true,
         upgrade_deadline: deadline,
@@ -464,7 +466,7 @@ describe.each([
     })
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
     const banner = within(getCard()).getByTestId("upgrade-root")
-    expect(banner).toHaveTextContent(`Add a certificate for $${price}`)
+    expect(banner).toHaveTextContent(`Upgrade for certificate - $${price}`)
     expect(banner).toHaveTextContent(/5 days remaining/)
   })
 
@@ -474,6 +476,7 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
       b2b_contract_id: null,
+      certificate: null,
       run: {
         is_upgradable: true,
         upgrade_deadline: null,
@@ -484,7 +487,7 @@ describe.each([
     })
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
     const banner = within(getCard()).getByTestId("upgrade-root")
-    expect(banner).toHaveTextContent(`Add a certificate for $${price}`)
+    expect(banner).toHaveTextContent(`Upgrade for certificate - $${price}`)
     expect(banner).not.toHaveTextContent(/days? remaining/)
   })
 
@@ -496,6 +499,7 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
       b2b_contract_id: null,
+      certificate: null,
       run: {
         is_upgradable: true,
         upgrade_deadline: faker.date.future().toISOString(),
@@ -511,7 +515,7 @@ describe.each([
 
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
     await user.click(
-      within(getCard()).getByRole("link", { name: /Add a certificate/ }),
+      within(getCard()).getByRole("link", { name: /Upgrade for certificate/ }),
     )
 
     expect(makeRequest).toHaveBeenCalledWith(
@@ -529,6 +533,7 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
       b2b_contract_id: null,
+      certificate: null,
       run: {
         is_upgradable: true,
         upgrade_deadline: faker.date.future().toISOString(),
@@ -552,13 +557,77 @@ describe.each([
       />,
     )
     await user.click(
-      within(getCard()).getByRole("link", { name: /Add a certificate/ }),
+      within(getCard()).getByRole("link", { name: /Upgrade for certificate/ }),
     )
     await waitFor(() => {
       expect(onUpgradeError).toHaveBeenCalledWith(
         "There was a problem adding the certificate to your cart.",
       )
     })
+  })
+
+  // ---------------------------------------------------------------------------
+  // Upgraded (paid, certificate not yet earned) banner
+  // ---------------------------------------------------------------------------
+
+  test("Shows 'Certificate track' for verified enrollment without a certificate", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Verified,
+      certificate: null,
+      grades: [],
+      run: currentRunDates,
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(within(getCard()).getByTestId("upgraded-banner")).toHaveTextContent(
+      "Certificate track",
+    )
+  })
+
+  test("Does not show 'Certificate track' when verified enrollment has a certificate", () => {
+    setupUserApis()
+    const certUuid = faker.string.uuid()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Verified,
+      certificate: { uuid: certUuid, link: faker.internet.url() },
+      run: currentRunDates,
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(
+      within(getCard()).queryByTestId("upgraded-banner"),
+    ).not.toBeInTheDocument()
+    expect(
+      within(getCard()).getByRole("link", { name: /View Certificate/ }),
+    ).toBeInTheDocument()
+  })
+
+  test("Does not show 'Certificate track' for audit enrollment", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      certificate: null,
+      grades: [],
+      run: currentRunDates,
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(
+      within(getCard()).queryByTestId("upgraded-banner"),
+    ).not.toBeInTheDocument()
+  })
+
+  test("Does not show 'Certificate track' for B2B verified enrollment", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Verified,
+      b2b_contract_id: faker.number.int(),
+      certificate: null,
+      grades: [],
+      run: currentRunDates,
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(
+      within(getCard()).queryByTestId("upgraded-banner"),
+    ).not.toBeInTheDocument()
   })
 
   // ---------------------------------------------------------------------------
@@ -668,5 +737,74 @@ describe.each([
       "noopener,noreferrer",
     )
     windowOpenSpy.mockRestore()
+  })
+})
+
+describe("EnrolledCourseCard — multiple enrollment runs", () => {
+  setupLocationMock()
+
+  test("shows accordion on desktop when siblingEnrollments is non-empty", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      run: currentRunDates,
+    })
+    const siblings = [
+      mitxonline.factories.enrollment.courseEnrollment(),
+      mitxonline.factories.enrollment.courseEnrollment(),
+    ]
+    renderWithProviders(
+      <EnrolledCourseCard
+        enrollment={enrollment}
+        siblingEnrollments={siblings}
+      />,
+    )
+    const desktopCard = screen.getByTestId("enrollment-card-desktop")
+    // 2 siblings + 1 current = 3
+    expect(within(desktopCard).getByText("Course runs (3)")).toBeInTheDocument()
+  })
+
+  test("does not show accordion on desktop when siblingEnrollments is empty", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment()
+    renderWithProviders(
+      <EnrolledCourseCard enrollment={enrollment} siblingEnrollments={[]} />,
+    )
+    expect(screen.queryByText(/Course runs/)).not.toBeInTheDocument()
+  })
+
+  test("does not show accordion when siblingEnrollments is omitted", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment()
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(screen.queryByText(/Course runs/)).not.toBeInTheDocument()
+  })
+
+  test("shows accordion on mobile when siblingEnrollments is non-empty", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment()
+    const sibling = mitxonline.factories.enrollment.courseEnrollment()
+    renderWithProviders(
+      <EnrolledCourseCard
+        enrollment={enrollment}
+        siblingEnrollments={[sibling]}
+      />,
+    )
+    const mobileCard = screen.getByTestId("enrollment-card-mobile")
+    expect(within(mobileCard).getByText("Course runs (2)")).toBeInTheDocument()
+  })
+
+  test("accordion count reflects total runs (siblings + current)", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment()
+    const siblings = Array.from({ length: 4 }, () =>
+      mitxonline.factories.enrollment.courseEnrollment(),
+    )
+    renderWithProviders(
+      <EnrolledCourseCard
+        enrollment={enrollment}
+        siblingEnrollments={siblings}
+      />,
+    )
+    expect(screen.getAllByText("Course runs (5)").length).toBeGreaterThan(0)
   })
 })

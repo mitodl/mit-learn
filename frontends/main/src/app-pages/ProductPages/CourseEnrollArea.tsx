@@ -103,6 +103,7 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
 
   const { state, scenario, isStatusLoading, isPending, isError } =
     useCourseEnrollment(course, selectedRun, {
+      tracking: { placement: "infobox" },
       onRequireSignup: (el) => setAnchor(el),
     })
 

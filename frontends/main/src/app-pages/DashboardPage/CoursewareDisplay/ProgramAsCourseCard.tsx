@@ -16,7 +16,7 @@ import {
 } from "./helpers"
 import { ProgressBadge } from "./ProgressBadge"
 import { CoursewareCard } from "./CoursewareCard"
-import { CourseDateSummary } from "./CardShared"
+import { CourseDateSummary, UpgradedBanner } from "./CardShared"
 import {
   getCertificateLink,
   buildCourseEntry,
@@ -299,6 +299,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
     courseProgramEnrollment?.certificate?.link,
     "program",
   )
+  const upgradedAndIncomplete = useVerifiedEnrollment && !programCertificateUrl
 
   // Build context menu
   const menuItems = getContextMenuItems(
@@ -345,7 +346,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
           </Typography>
         </ProgramCardHeaderInner>
         <>
-          {programCertificateUrl && (
+          {programCertificateUrl ? (
             <ProgramCertificateButton
               variant="bordered"
               size="small"
@@ -354,7 +355,9 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
             >
               Certificate
             </ProgramCertificateButton>
-          )}
+          ) : upgradedAndIncomplete ? (
+            <UpgradedBanner />
+          ) : null}
           {contextMenu}
         </>
       </ProgramCardHeaderOuter>

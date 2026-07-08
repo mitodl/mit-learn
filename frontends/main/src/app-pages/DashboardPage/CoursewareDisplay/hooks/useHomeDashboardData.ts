@@ -20,6 +20,7 @@ import {
   groupModuleCoursesByProgramId,
   isNonContractEnrollment,
   isProgramAsCourse,
+  pickDisplayedHomeEnrollments,
 } from "../model/dashboardViewModel"
 
 export type HomeDashboardData = {
@@ -91,7 +92,9 @@ const useHomeDashboardData = (): HomeDashboardData => {
   const bucketableEnrollments = (enrolledCourses ?? [])
     .filter(isNonContractEnrollment)
     .filter((enrollment) => !isCovered(enrollment))
-  const buckets = bucketAndSortHomeEnrollments(bucketableEnrollments)
+  const buckets = bucketAndSortHomeEnrollments(
+    pickDisplayedHomeEnrollments(bucketableEnrollments),
+  )
 
   const programEnrollmentsToRender = enrolledPrograms
     ? getTopLevelProgramEnrollments(
@@ -106,7 +109,7 @@ const useHomeDashboardData = (): HomeDashboardData => {
       programEnrollments: programEnrollmentsToRender,
     }),
     enrollmentsByCourseId: groupCourseRunEnrollmentsByCourseId(
-      enrolledCourses ?? [],
+      (enrolledCourses ?? []).filter(isNonContractEnrollment),
     ),
     courseProgramsById: new Map(coursePrograms.map((p) => [p.id, p])),
     moduleCoursesByProgramId: groupModuleCoursesByProgramId(

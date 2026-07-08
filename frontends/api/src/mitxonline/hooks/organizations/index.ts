@@ -6,6 +6,7 @@ import {
   B2bApiB2bManagerOrganizationsContractsCodesReassignUpdateRequest,
   B2bApiB2bManagerOrganizationsContractsCodesRemindCreateRequest,
   B2bApiB2bManagerOrganizationsContractsCodesRevokeDestroyRequest,
+  B2bApiB2bManagerOrganizationsContractsCodesSendTestEmailCreateRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
 import {
   organizationQueries,
@@ -106,6 +107,14 @@ const useReassignCode = () => {
   })
 }
 
+/** Send a test enrollment code to the given email address. */
+const useSendTestEmail = () =>
+  useMutation({
+    mutationFn: (
+      opts: B2bApiB2bManagerOrganizationsContractsCodesSendTestEmailCreateRequest,
+    ) => b2bApi.b2bManagerOrganizationsContractsCodesSendTestEmailCreate(opts),
+  })
+
 export {
   organizationQueries,
   managerOrganizationQueries,
@@ -114,6 +123,7 @@ export {
   useReassignCode,
   useRemindCode,
   useRevokeCode,
+  useSendTestEmail,
 }
 export type {
   ManagerEnrollmentCode,

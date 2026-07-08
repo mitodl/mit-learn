@@ -12,7 +12,10 @@
  *   - "program-enrollment" → a program enrollment.
  */
 import React from "react"
-import { type DashboardCourseEntry } from "./model/dashboardViewModel"
+import {
+  type DashboardCourseEntry,
+  filterVariantSiblings,
+} from "./model/dashboardViewModel"
 import type {
   CourseRunEnrollmentV3,
   V3UserProgramEnrollment,
@@ -57,6 +60,7 @@ type CoursewareCardEnrollmentProps = StyledComponentBaseProps &
   CourseDisplayProps & {
     kind: "enrollment"
     enrollment: CourseRunEnrollmentV3
+    siblingEnrollments?: CourseRunEnrollmentV3[]
   }
 
 /** A program enrollment. */
@@ -93,6 +97,7 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
     return (
       <EnrolledCourseCard
         enrollment={props.enrollment}
+        siblingEnrollments={props.siblingEnrollments}
         layout={layout}
         headingLevel={headingLevel}
         onUpgradeError={onUpgradeError}
@@ -108,6 +113,10 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
     // Will likely diverge with multiple enrollment display.
     <EnrolledCourseCard
       enrollment={entry.displayedEnrollment}
+      siblingEnrollments={filterVariantSiblings(
+        entry.enrollments,
+        entry.displayedEnrollment,
+      )}
       layout={layout}
       headingLevel={headingLevel}
       onUpgradeError={onUpgradeError}

@@ -9,7 +9,7 @@ import {
   alpha,
   styled,
 } from "ol-components"
-import { Button, VisuallyHidden } from "@mitodl/smoot-design"
+import { Alert, Button, VisuallyHidden } from "@mitodl/smoot-design"
 import { pluralize } from "ol-utilities"
 import {
   RiAlertFill,
@@ -157,6 +157,26 @@ const StatLabel = styled(Typography)(({ theme }) => ({
   width: "100%",
 })) as typeof Typography
 
+const EmailPreviewLabel = styled(Typography)(({ theme }) => ({
+  ...theme.typography.subtitle2,
+  color: theme.custom.colors.darkGray2,
+})) as typeof Typography
+
+// ─── Confirm-step email preview block ──────────────────────────────────────────
+
+const EmailPreviewSection = styled("div")({
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+})
+
+const EmailPreviewRow = styled("div")({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "16px",
+})
+
 // ─── Small helpers ────────────────────────────────────────────────────────────
 
 const SHOW_MORE_THRESHOLD = 3
@@ -214,15 +234,25 @@ const copyToClipboard = async (text: string): Promise<boolean> => {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+type TestEmailStatus = "idle" | "sending" | "success" | "error"
+
 type AssignSeatsConfirmModalProps = {
   open: boolean
   onClose: () => void
   onConfirm: () => void | Promise<void>
   validCount: number
-  availableSeats: number
+  /** Null means the contract has no max_learners cap — never over capacity. */
+  availableSeats: number | null
   invalidEmails: string[]
   duplicateEmails: string[]
   skippedCount: number
+  /** Email of the logged-in user, shown in the test-email success message. */
+  userEmail?: string | null
+  /**
+   * When provided, renders the "Email Preview" section with a "Send Test Email
+   * to Me" button that calls this handler. Omit to hide the section entirely.
+   */
+  onSendTestEmail?: () => Promise<void>
 }
 
 type Step = "review" | "confirm"
@@ -236,6 +266,8 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   invalidEmails,
   duplicateEmails,
   skippedCount,
+  userEmail,
+  onSendTestEmail,
 }) => {
   const descriptionId = useId()
   const overCapacitySummaryId = `${descriptionId}-summary`
@@ -243,7 +275,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   const hasInvalid = invalidEmails.length > 0
   const hasDuplicates = duplicateEmails.length > 0
   const hasIssues = hasInvalid || hasDuplicates || skippedCount > 0
-  const overCapacity = validCount > availableSeats
+  const overCapacity = availableSeats !== null && validCount > availableSeats
 
   const [step, setStep] = useState<Step>(() =>
     hasIssues && !overCapacity ? "review" : "confirm",
@@ -252,6 +284,8 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   const [copiedDuplicate, setCopiedDuplicate] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
+  const [testEmailStatus, setTestEmailStatus] =
+    useState<TestEmailStatus>("idle")
   // Assertive live region text for step transitions. Using reset-then-set (100ms
   // delay) so NVDA picks up the content change cleanly after focus settles on the
   // new step's first focusable element inside the same persistent dialog.
@@ -268,6 +302,10 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   const sendErrorAnnouncementTimerRef = useRef<ReturnType<
     typeof setTimeout
   > | null>(null)
+  const testEmailAnnouncementTimerRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null)
+  const [testEmailAnnouncement, setTestEmailAnnouncement] = useState("")
 
   // Only reset step and copy state when the dialog transitions from closed to
   // open. Without prevOpenRef the effect would also fire when hasIssues or
@@ -283,6 +321,8 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
       setSendError(null)
       setSendErrorAnnouncement("")
       setStepAnnouncement("")
+      setTestEmailStatus("idle")
+      setTestEmailAnnouncement("")
     }
   }, [open, hasIssues, overCapacity])
 
@@ -295,6 +335,8 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
         clearTimeout(stepAnnouncementTimerRef.current)
       if (sendErrorAnnouncementTimerRef.current)
         clearTimeout(sendErrorAnnouncementTimerRef.current)
+      if (testEmailAnnouncementTimerRef.current)
+        clearTimeout(testEmailAnnouncementTimerRef.current)
     }
   }, [])
 
@@ -321,6 +363,34 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
     )
   }
 
+  const handleSendTestEmail = async () => {
+    if (!onSendTestEmail) return
+    setTestEmailStatus("sending")
+    try {
+      await onSendTestEmail()
+      setTestEmailStatus("success")
+      const msg = `Test email successfully sent to ${userEmail}.`
+      setTestEmailAnnouncement("")
+      if (testEmailAnnouncementTimerRef.current)
+        clearTimeout(testEmailAnnouncementTimerRef.current)
+      testEmailAnnouncementTimerRef.current = setTimeout(
+        () => setTestEmailAnnouncement(msg),
+        100,
+      )
+    } catch {
+      setTestEmailStatus("error")
+      const msg =
+        "Something went wrong sending the test email. Please try again."
+      setTestEmailAnnouncement("")
+      if (testEmailAnnouncementTimerRef.current)
+        clearTimeout(testEmailAnnouncementTimerRef.current)
+      testEmailAnnouncementTimerRef.current = setTimeout(
+        () => setTestEmailAnnouncement(msg),
+        100,
+      )
+    }
+  }
+
   const handleSend = async () => {
     setIsSubmitting(true)
     setSendError(null)
@@ -345,8 +415,15 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
     }
   }
 
-  const seatsAfterSending = availableSeats - validCount
-  const overLimit = validCount - availableSeats
+  const seatsAfterSending =
+    availableSeats !== null ? availableSeats - validCount : null
+  const seatsAfterSendingText =
+    seatsAfterSending !== null
+      ? `${seatsAfterSending} seats remaining after sending.`
+      : "No seat limit on this contract."
+  // Only ever read from the overCapacity branches below, and overCapacity is
+  // false whenever availableSeats is null, so this fallback is never shown.
+  const overLimit = availableSeats !== null ? validCount - availableSeats : 0
 
   const reviewTitle = hasInvalid
     ? "Some learners could not be added"
@@ -360,7 +437,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   // to re-discover a new role="dialog" element.
   const handleReviewAndConfirm = () => {
     setStep("confirm")
-    const confirmText = `Ready to send invitations. You are about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with a secure link to claim their seat and access the materials. ${seatsAfterSending} seats remaining after sending. Emails will be sent immediately and cannot be recalled.`
+    const confirmText = `Ready to send invitations. You are about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with a secure link to claim their seat and access the materials. ${seatsAfterSendingText} Emails will be sent immediately and cannot be recalled.`
     setStepAnnouncement("")
     if (stepAnnouncementTimerRef.current)
       clearTimeout(stepAnnouncementTimerRef.current)
@@ -434,7 +511,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
             : "",
           " Only valid, unique emails will be assigned.",
         ].join("")
-      : `You are about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with secure link to claim their seat and access the materials. ${seatsAfterSending} seats remaining after sending. Emails will be sent immediately and cannot be recalled.`
+      : `You are about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with secure link to claim their seat and access the materials. ${seatsAfterSendingText} Emails will be sent immediately and cannot be recalled.`
 
   // For overCapacity we point aria-describedby at the visible paragraph so
   // role="alertdialog" reads it exactly once on open. We do NOT programmatically
@@ -469,6 +546,10 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
           not being consistently picked up by NVDA when other live regions are active */}
       <VisuallyHidden aria-live="assertive" aria-atomic="true">
         {sendErrorAnnouncement}
+      </VisuallyHidden>
+      {/* Test email announcement — same reset-then-set pattern for NVDA */}
+      <VisuallyHidden aria-live="assertive" aria-atomic="true">
+        {testEmailAnnouncement}
       </VisuallyHidden>
       {/* Copy-success announcement — polite so it doesn't interrupt ongoing speech */}
       <VisuallyHidden aria-live="polite" aria-atomic="true">
@@ -603,6 +684,35 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
             receive an email with secure link to claim their seat and access the
             materials.
           </DescriptionText>
+          {onSendTestEmail && (
+            <EmailPreviewSection>
+              <EmailPreviewLabel component="p">Email Preview</EmailPreviewLabel>
+              <EmailPreviewRow>
+                <DescriptionText component="p">
+                  This is the email learners will receive.
+                </DescriptionText>
+                <Button
+                  variant="bordered"
+                  onClick={handleSendTestEmail}
+                  disabled={!userEmail || testEmailStatus === "sending"}
+                >
+                  {testEmailStatus === "sending"
+                    ? "Sending…"
+                    : "Send Test Email to Me"}
+                </Button>
+              </EmailPreviewRow>
+            </EmailPreviewSection>
+          )}
+          {onSendTestEmail && testEmailStatus === "success" && (
+            <Alert severity="success">
+              Test email successfully sent to {userEmail}.
+            </Alert>
+          )}
+          {onSendTestEmail && testEmailStatus === "error" && (
+            <Alert severity="error">
+              Something went wrong sending the test email. Please try again.
+            </Alert>
+          )}
           <StatsCard $variant="default">
             <StatColumn
               role="group"
@@ -614,11 +724,19 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
             <StatDivider aria-hidden="true" />
             <StatColumn
               role="group"
-              aria-label={`${seatsAfterSending} seats remaining after sending`}
+              aria-label={
+                seatsAfterSending !== null
+                  ? `${seatsAfterSending} seats remaining after sending`
+                  : "No seat limit on this contract"
+              }
             >
-              <StatValue aria-hidden="true">{seatsAfterSending}</StatValue>
+              <StatValue aria-hidden="true">
+                {seatsAfterSending !== null ? seatsAfterSending : "—"}
+              </StatValue>
               <StatLabel aria-hidden="true">
-                Seats remaining after sending
+                {seatsAfterSending !== null
+                  ? "Seats remaining after sending"
+                  : "No seat limit"}
               </StatLabel>
             </StatColumn>
             <StatDivider aria-hidden="true" />

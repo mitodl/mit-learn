@@ -3,8 +3,9 @@ import { Link, Popover, Stack, styled, Typography } from "ol-components"
 import NextLink from "next/link"
 import { EnrollmentStatus } from "./helpers"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
-import { formatDate, getTimezone } from "ol-utilities"
+import { formatDate, getTimezone, isInPast } from "ol-utilities"
 import { getCourseDateText, getRelativeDateContent } from "./courseDateUtils"
+import { RiAwardLine } from "@remixicon/react"
 
 const CardRoot = styled.div<{
   screenSize: "desktop" | "mobile"
@@ -137,14 +138,6 @@ const MenuButton = styled(ActionButton)<{
 
 const COURSEWARE_BUTTON_WIDTH = "88px"
 
-// Thin vertical divider shown between the certificate/upgrade links and the
-// courseware action button in the compact (module row) layout.
-const HorizontalSeparator = styled.div(({ theme }) => ({
-  width: "1px",
-  height: "12px",
-  backgroundColor: theme.custom.colors.lightGray2,
-}))
-
 // Fixed-width column that keeps the courseware button (and countdown) aligned
 // in the compact (module row) layout.
 const CoursewareActionColumn = styled(Stack)({
@@ -192,6 +185,21 @@ const CourseDateText: React.FC<{
   return <DateText className={className}>{text}</DateText>
 }
 
+const UpgradedBannerRoot = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: "4px",
+  color: theme.custom.colors.silverGrayDark,
+  ...theme.typography.subtitle3,
+}))
+
+const UpgradedBanner: React.FC<{ className?: string }> = ({ className }) => (
+  <UpgradedBannerRoot data-testid="upgraded-banner" className={className}>
+    <RiAwardLine size="16px" />
+    Certificate track
+  </UpgradedBannerRoot>
+)
+
 const DatePopoverContent = styled.div({
   maxWidth: "240px",
   display: "flex",
@@ -202,18 +210,22 @@ const DatePopoverContent = styled.div({
   alignSelf: "stretch",
 })
 
-const DatePopoverTrigger = styled("button")(({ theme }) => ({
-  ...theme.typography.body2,
-  color: theme.custom.colors.silverGrayDark,
-  background: "none",
-  border: "none",
-  padding: 0,
-  cursor: "pointer",
-  "&:hover": {
-    color: theme.custom.colors.silverGrayDark,
-    textDecoration: "underline",
-  },
-}))
+const DatePopoverTrigger = styled("button")<{ $upcoming: boolean }>(
+  ({ theme, $upcoming }) => ({
+    ...theme.typography.body2,
+    color: $upcoming
+      ? theme.custom.colors.red
+      : theme.custom.colors.silverGrayDark,
+    background: "none",
+    border: "none",
+    padding: 0,
+    cursor: "pointer",
+    "&:hover": {
+      color: $upcoming ? theme.custom.colors.red : theme.custom.colors.black,
+      textDecoration: "underline",
+    },
+  }),
+)
 
 const DatePopoverHeading = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.black,
@@ -236,6 +248,7 @@ const CourseDateSummary: React.FC<{
     React.useState<HTMLButtonElement | null>(null)
 
   const triggerText = getCourseDateText(startDate, endDate)
+  const isUpcoming = startDate ? isInPast(startDate) === false : false
   const startDateFormatted = startDate
     ? `${formatDate(startDate, "MMMM D, YYYY h:mm A")} ${getTimezone(startDate)}`
     : null
@@ -294,6 +307,7 @@ const CourseDateSummary: React.FC<{
         </DatePopoverContent>
       </Popover>
       <DatePopoverTrigger
+        $upcoming={isUpcoming}
         aria-expanded={!!popoverAnchorEl}
         aria-haspopup="dialog"
         aria-controls={popoverAnchorEl ? popoverId : undefined}
@@ -314,7 +328,6 @@ export {
   SubtitleLinkRoot,
   SubtitleLink,
   MenuButton,
-  HorizontalSeparator,
   CoursewareActionColumn,
   CoursewareButton,
   CoursewareButtonLink,
@@ -322,4 +335,5 @@ export {
   DateText,
   CourseDateText,
   CourseDateSummary,
+  UpgradedBanner,
 }

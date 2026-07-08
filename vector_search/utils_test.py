@@ -513,6 +513,27 @@ def test_expected_document_chunks(mocker):
     assert len(chunked) == num_points_uploaded
 
 
+def test_embed_learning_resources_chunks_content_file_serialization(mocker, settings):
+    """
+    QDRANT_CONTENT_FILE_SERIALIZATION_CHUNK_SIZE controls how many content files are serialized at once for embedding.
+    """
+
+    settings.QDRANT_CONTENT_FILE_SERIALIZATION_CHUNK_SIZE = 2
+    mocker.patch("vector_search.utils.qdrant_client", return_value=MagicMock())
+    mocker.patch("vector_search.utils.ensure_qdrant_collections")
+    serialize_mock = mocker.patch(
+        "vector_search.utils.serialize_bulk_content_files", return_value=[]
+    )
+
+    embed_learning_resources([1, 2, 3, 4, 5], CONTENT_FILE_TYPE, overwrite=True)
+
+    assert [mock_call.args[0] for mock_call in serialize_mock.mock_calls] == [
+        [1, 2],
+        [3, 4],
+        [5],
+    ]
+
+
 def test_document_chunker_tiktoken(mocker):
     """
     Test that we use tiktoken if a token encoding is specified
@@ -752,6 +773,101 @@ def test_generate_content_points_uses_standard_chunking_for_non_markdown(mocker)
     list(_generate_content_file_points([doc]))
     mock_chunk.assert_called_once()
     mock_md_chunk.assert_not_called()
+
+
+def test_generate_content_points_leaves_headroom_under_token_limit(mocker):
+    """
+    Embedding request batches must leave headroom under OpenAI's 300k
+    tokens-per-request limit, since markdown header prefixes are prepended
+    after the chunk-size split and inflate chunks past the nominal size
+    """
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 500
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 50
+
+    # 600 chunks * 500 tokens == exactly 300k if packed with no headroom
+    num_chunks = 600
+    mocker.patch(
+        "vector_search.utils._chunk_documents",
+        return_value=[
+            Document(page_content=f"chunk{i}", metadata={"key": "k1"})
+            for i in range(num_chunks)
+        ],
+    )
+    mocker.patch(
+        "vector_search.utils.should_generate_content_embeddings", return_value=True
+    )
+    mocker.patch("vector_search.utils.remove_points_matching_params")
+
+    mock_dense = mocker.MagicMock()
+    mock_dense.embed_documents.side_effect = lambda texts: [[0.1] for _ in texts]
+    mock_dense.model_short_name.return_value = "dense"
+    mock_sparse = mocker.MagicMock()
+    mock_sparse.embed_documents.side_effect = lambda texts: [[0.2] for _ in texts]
+    mock_sparse.model_short_name.return_value = "sparse"
+    mocker.patch("vector_search.utils.dense_encoder", return_value=mock_dense)
+    mocker.patch("vector_search.utils.sparse_encoder", return_value=mock_sparse)
+
+    doc = {
+        "content": "Some plain text content",
+        "file_type": "page",
+        "file_extension": ".html",
+        "platform": {"code": "x"},
+        "resource_readable_id": "r1",
+        "run_readable_id": "run1",
+        "key": "k1",
+    }
+
+    points = list(_generate_content_file_points([doc]))
+
+    batch_sizes = [
+        len(call.args[0]) for call in mock_dense.embed_documents.call_args_list
+    ]
+    assert sum(batch_sizes) == num_chunks
+    assert len(points) == num_chunks
+    # nominal tokens per request must stay at least ~5% under the 300k limit
+    assert max(batch_sizes) * 500 <= 285000
+
+
+def test_generate_content_points_request_chunk_size_never_zero(mocker):
+    """
+    A misconfigured (huge) chunk-size override must not make request_chunk_size 0,
+    which would raise ValueError in the range() batching loop
+    """
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 500000
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 50
+
+    mocker.patch(
+        "vector_search.utils._chunk_documents",
+        return_value=[
+            Document(page_content=f"chunk{i}", metadata={"key": "k1"}) for i in range(3)
+        ],
+    )
+    mocker.patch(
+        "vector_search.utils.should_generate_content_embeddings", return_value=True
+    )
+    mocker.patch("vector_search.utils.remove_points_matching_params")
+
+    mock_dense = mocker.MagicMock()
+    mock_dense.embed_documents.side_effect = lambda texts: [[0.1] for _ in texts]
+    mock_dense.model_short_name.return_value = "dense"
+    mock_sparse = mocker.MagicMock()
+    mock_sparse.embed_documents.side_effect = lambda texts: [[0.2] for _ in texts]
+    mock_sparse.model_short_name.return_value = "sparse"
+    mocker.patch("vector_search.utils.dense_encoder", return_value=mock_dense)
+    mocker.patch("vector_search.utils.sparse_encoder", return_value=mock_sparse)
+
+    doc = {
+        "content": "Some plain text content",
+        "file_type": "page",
+        "file_extension": ".html",
+        "platform": {"code": "x"},
+        "resource_readable_id": "r1",
+        "run_readable_id": "run1",
+        "key": "k1",
+    }
+
+    points = list(_generate_content_file_points([doc]))
+    assert len(points) == 3
 
 
 def test_course_metadata_indexed_with_learning_resources(mocker):

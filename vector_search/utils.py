@@ -38,7 +38,7 @@ from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
 )
-from main.utils import checksum_for_content
+from main.utils import checksum_for_content, chunks
 from vector_search.constants import (
     COLLECTION_PARAM_MAP,
     CONTENT_FILES_COLLECTION_NAME,
@@ -704,9 +704,16 @@ def _generate_content_file_points(serialized_content):
     300,000 tokens per request
     max array size: 2048
     see: https://platform.openai.com/docs/guides/rate-limits
+
+    The 0.9 factor leaves headroom: markdown header prefixes are prepended
+    after the chunk-size split, so real chunks can exceed the nominal size.
     """
-    request_chunk_size = int(
-        300000 / settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+    request_chunk_size = max(
+        1,
+        min(
+            2048,
+            int(300000 * 0.9 / settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE),
+        ),
     )
 
     for doc in serialized_content:
@@ -795,6 +802,13 @@ def _generate_content_file_points(serialized_content):
             gc.collect()
 
 
+def _iter_serialized_content_files(ids):
+    for id_batch in chunks(
+        ids, chunk_size=settings.QDRANT_CONTENT_FILE_SERIALIZATION_CHUNK_SIZE
+    ):
+        yield from serialize_bulk_content_files(id_batch)
+
+
 def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C901
     """
     Embed learning resources
@@ -832,7 +846,7 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
         points = _process_resource_embeddings(serialized_resources)
         _embed_course_metadata_as_contentfile(serialized_resources)
     else:
-        serialized_resources = serialize_bulk_content_files(ids)
+        serialized_resources = _iter_serialized_content_files(ids)
 
         # populated/modified by reference in process_batch
         summary_content_ids = []

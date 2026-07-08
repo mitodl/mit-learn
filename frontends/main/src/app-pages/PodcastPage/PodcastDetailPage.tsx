@@ -4,7 +4,7 @@ import React, { useRef } from "react"
 import { Breadcrumbs, Typography, styled, useMediaQuery } from "ol-components"
 import type { Theme } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
-import { RiPlayFill } from "@remixicon/react"
+import { RiPlayFill, RiPauseFill } from "@remixicon/react"
 import PodcastPlayer from "./PodcastPlayer"
 import type { PodcastPlayerHandle } from "./PodcastPlayer"
 import {
@@ -184,6 +184,11 @@ const StyledIcon = styled(RiPlayFill)({
   height: "24px !important",
 })
 
+const StyledPauseIcon = styled(RiPauseFill)({
+  width: "24px !important",
+  height: "24px !important",
+})
+
 const BreadcrumbBar = styled.div(({ theme }) => ({
   padding: "18px 0 2px 0",
   borderBottom: `1px solid ${theme.custom.colors.red}`,
@@ -257,6 +262,8 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
   ].filter(Boolean)
 
   const latestEpisode = episodes?.[0]
+  const isLatestEpisodePlaying =
+    !!latestEpisode && playingEpisode?.id === latestEpisode.id && isAudioPlaying
   const latestEpisodeDuration = latestEpisode?.podcast_episode?.duration
     ? Math.round(
         moment.duration(latestEpisode.podcast_episode.duration).asMinutes(),
@@ -324,10 +331,18 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
                     <StyledButton
                       onClick={() => handlePlayClick(latestEpisode)}
                       variant="primary"
-                      startIcon={<StyledIcon />}
+                      startIcon={
+                        isLatestEpisodePlaying ? (
+                          <StyledPauseIcon />
+                        ) : (
+                          <StyledIcon />
+                        )
+                      }
                       disabled={!getEpisodeAudioUrl(latestEpisode)}
                     >
-                      Play Latest Episode
+                      {isLatestEpisodePlaying
+                        ? "Pause Latest Episode"
+                        : "Play Latest Episode"}
                     </StyledButton>
                   )}
                 </HeaderTextContent>

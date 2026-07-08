@@ -4,6 +4,8 @@ import { setMockResponse } from "api/test-utils"
 import { factories, urls } from "api/mitxonline-test-utils"
 import { AssignSeatsSection } from "./AssignSeatsSection"
 
+const USER_EMAIL = "manager@test.com"
+
 // jsdom's File/Blob has no .text() or .arrayBuffer(), so FileReader.readAsText
 // always fires onerror. Tests set mockFileContent before each upload so the mock
 // can return the expected text.
@@ -11,6 +13,13 @@ let mockFileContent: string | null = null
 
 describe("AssignSeatsSection", () => {
   let originalFileReader: typeof FileReader
+
+  beforeEach(() => {
+    setMockResponse.get(
+      urls.userMe.get(),
+      factories.user.user({ email: USER_EMAIL }),
+    )
+  })
 
   beforeAll(() => {
     originalFileReader = window.FileReader
@@ -555,6 +564,96 @@ describe("AssignSeatsSection", () => {
     expect(screen.getByText("1 invalid")).toBeInTheDocument()
   })
 
+  describe("send test email", () => {
+    const ORG_ID = 1
+    const CONTRACT_ID = 2
+
+    const openConfirmModal = async () => {
+      const textarea = screen.getByPlaceholderText(/enter employee emails/i)
+      await user.type(textarea, "alice@example.com")
+      await user.click(screen.getByRole("button", { name: "Assign Seats" }))
+      await screen.findByRole("heading", { name: /ready to send invitations/i })
+    }
+
+    test("shows 'Send Test Email to Me' button in the confirm modal", async () => {
+      renderWithProviders(
+        <AssignSeatsSection
+          orgId={ORG_ID}
+          contractId={CONTRACT_ID}
+          availableSeats={50}
+          isLoadingSeats={false}
+        />,
+      )
+
+      await openConfirmModal()
+
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: /send test email to me/i }),
+        ).not.toBeDisabled(),
+      )
+    })
+
+    test("sends test email to the user's address and shows success alert", async () => {
+      setMockResponse.post(
+        urls.contracts.managerContractSendTestEmail(ORG_ID, CONTRACT_ID),
+        null,
+      )
+      renderWithProviders(
+        <AssignSeatsSection
+          orgId={ORG_ID}
+          contractId={CONTRACT_ID}
+          availableSeats={50}
+          isLoadingSeats={false}
+        />,
+      )
+
+      await openConfirmModal()
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: /send test email to me/i }),
+        ).not.toBeDisabled(),
+      )
+      await user.click(
+        screen.getByRole("button", { name: /send test email to me/i }),
+      )
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        new RegExp(`test email successfully sent to ${USER_EMAIL}`, "i"),
+      )
+    })
+
+    test("shows error alert when test email request fails", async () => {
+      setMockResponse.post(
+        urls.contracts.managerContractSendTestEmail(ORG_ID, CONTRACT_ID),
+        { detail: "Internal server error" },
+        { code: 500 },
+      )
+      renderWithProviders(
+        <AssignSeatsSection
+          orgId={ORG_ID}
+          contractId={CONTRACT_ID}
+          availableSeats={50}
+          isLoadingSeats={false}
+        />,
+      )
+
+      await openConfirmModal()
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: /send test email to me/i }),
+        ).not.toBeDisabled(),
+      )
+      await user.click(
+        screen.getByRole("button", { name: /send test email to me/i }),
+      )
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        /something went wrong sending the test email/i,
+      )
+    })
+  })
+
   describe("submitting the assignment", () => {
     const ORG_ID = 1
     const CONTRACT_ID = 2
@@ -648,6 +747,65 @@ describe("AssignSeatsSection", () => {
       expect(await screen.findByRole("alert")).toHaveTextContent(
         /something went wrong/i,
       )
+    })
+  })
+
+  // availableSeats === null means the contract has no max_learners cap, so the
+  // over-capacity gating and error alert must never engage regardless of count.
+  describe("uncapped contract (availableSeats null)", () => {
+    test("Assign Seats button is enabled with valid emails and is never over-capacity", async () => {
+      renderWithProviders(
+        <AssignSeatsSection
+          orgId={1}
+          contractId={2}
+          availableSeats={null}
+          isLoadingSeats={false}
+        />,
+      )
+
+      const textarea = screen.getByPlaceholderText(/enter employee emails/i)
+      // More emails than any small cap would allow — with no cap this is fine.
+      await user.type(
+        textarea,
+        "a@example.com, b@example.com, c@example.com, d@example.com",
+      )
+
+      expect(
+        screen.getByRole("button", { name: "Assign Seats" }),
+      ).not.toBeDisabled()
+    })
+
+    test("does not render the over-capacity error alert or announce it", async () => {
+      renderWithProviders(
+        <AssignSeatsSection
+          orgId={1}
+          contractId={2}
+          availableSeats={null}
+          isLoadingSeats={false}
+        />,
+      )
+
+      const textarea = screen.getByPlaceholderText(/enter employee emails/i)
+      await user.type(
+        textarea,
+        "a@example.com, b@example.com, c@example.com, d@example.com",
+      )
+
+      // No over-capacity Alert is rendered (all emails valid, no cap → no alert).
+      expect(
+        screen.queryByText(/unassigned seat.* available/i),
+      ).not.toBeInTheDocument()
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+
+      // The polite live region announces the valid count but never the
+      // over-capacity error clause.
+      const liveRegion = document.querySelector("[aria-live='polite']")
+      await waitFor(
+        () =>
+          expect(liveRegion as HTMLElement).toHaveTextContent("4 valid emails"),
+        { timeout: 1000 },
+      )
+      expect(liveRegion as HTMLElement).not.toHaveTextContent(/only .* seat/i)
     })
   })
 })
