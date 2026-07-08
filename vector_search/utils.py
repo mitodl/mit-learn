@@ -908,7 +908,7 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
                     .filter(run__id=resource.get("run_id"))
                     .exists()
                 ):
-                    if _content_file_stored_checksum_changed(resource):
+                    if overwrite and _content_file_stored_checksum_changed(resource):
                         changed_summaries_list.append(resource["id"])
                     else:
                         fill_summaries_list.append(resource["id"])
