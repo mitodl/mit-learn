@@ -49,15 +49,15 @@ BLOCKLIST_CACHE_TIMEOUT = 60 * 60 * 24
 
 
 LOGGED_MISSING_CONTENT_REGEX = re.compile(
-    r"\+type@(?:problem|video|html)\+block@"
-    r"|\+type@asset\+block@.+\.(?:srt|vtt)$",
+    r"block-v1:.+\+type@(?:problem|video|html)\+block@.+"
+    r"|asset-v1:.+\+type@asset\+block@.+\.(?:srt|vtt)",
     re.IGNORECASE,
 )
 
 
 def is_loggable_missing_content_id(edx_module_id):
     """Return whether this id's block type warrants a missing-contentfile log."""
-    return bool(LOGGED_MISSING_CONTENT_REGEX.search(edx_module_id or ""))
+    return bool(LOGGED_MISSING_CONTENT_REGEX.fullmatch(edx_module_id or ""))
 
 
 def log_missing_content_file(identifier, *, reason, source):
