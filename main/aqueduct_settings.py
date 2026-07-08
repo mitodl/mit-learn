@@ -319,31 +319,6 @@ class AqueductSettings(BaseSettings):
     GA_TRACKING_ID: str = Field(
         default="", validation_alias=AliasChoices("GA_TRACKING_ID")
     )
-    HEALTH_CHECK: Annotated[dict[str, Any], NoDecode] = Field(
-        default_factory=lambda: {
-            "SUBSETS": {
-                "startup": [
-                    "MigrationsHealthCheck",
-                    "CacheBackend",
-                    "RedisHealthCheck",
-                    "DatabaseHeartBeatCheck",
-                ],
-                "liveness": ["DatabaseHeartBeatCheck"],
-                "readiness": [
-                    "CacheBackend",
-                    "RedisHealthCheck",
-                    "DatabaseHeartBeatCheck",
-                ],
-                "full": [
-                    "MigrationsHealthCheck",
-                    "CacheBackend",
-                    "RedisHealthCheck",
-                    "DatabaseHeartBeatCheck",
-                    "CeleryPingHealthCheck",
-                ],
-            }
-        },
-    )
     HOSTNAME: Any = Field(
         default_factory=lambda: platform.node().split(".")[0]
     )  # TODO: refine type
@@ -405,11 +380,6 @@ class AqueductSettings(BaseSettings):
             "ol_hubspot",
             "mitol.scim.apps.ScimApp",
             "health_check",
-            "health_check.cache",
-            "health_check.contrib.migrations",
-            "health_check.contrib.celery_ping",
-            "health_check.contrib.redis",
-            "health_check.contrib.db_heartbeat",
         ),
     )  # TODO: refine type
     INTERNAL_IPS: Any = Field(
@@ -700,6 +670,10 @@ class AqueductSettings(BaseSettings):
     QDRANT_CLIENT_TIMEOUT: int = Field(
         default=10, validation_alias=AliasChoices("QDRANT_CLIENT_TIMEOUT")
     )
+    QDRANT_CONTENT_FILE_SERIALIZATION_CHUNK_SIZE: int = Field(
+        default=5,
+        validation_alias=AliasChoices("QDRANT_CONTENT_FILE_SERIALIZATION_CHUNK_SIZE"),
+    )
     QDRANT_DENSE_MODEL: str | None = Field(
         default=None, validation_alias=AliasChoices("QDRANT_DENSE_MODEL")
     )
@@ -869,7 +843,7 @@ class AqueductSettings(BaseSettings):
         validation_alias=AliasChoices("VECTOR_SEARCH_PAGE_MAX_LIMIT"),
         description="hard limit for special cases where we need to return all results without pagination",  # noqa: E501
     )
-    VERSION: str = Field(default="0.72.3")
+    VERSION: str = Field(default="0.73.4")
     WEBDRIVER_WAIT_SECONDS: int = Field(
         default=10, validation_alias=AliasChoices("WEBDRIVER_WAIT_SECONDS")
     )
@@ -1035,6 +1009,11 @@ class AqueductSettings(BaseSettings):
         validation_alias=AliasChoices("MITX_ONLINE_COURSE_BUCKET_PREFIX"),
         description="MITx Online settings for course/resource ingestion",
     )
+    MITX_ONLINE_ETL_API_KEY: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("MITX_ONLINE_ETL_API_KEY"),
+        description='API key for the MITx Online internal-only secured endpoint. When set, it is\nsent as an "Authorization: Api-Key <key>" header on MITx Online ETL requests.',  # noqa: E501
+    )  # REDACTED: name looks secret-like — set via a source, not here
     MITX_ONLINE_PROGRAMS_API_URL: str | None = Field(
         default=None, validation_alias=AliasChoices("MITX_ONLINE_PROGRAMS_API_URL")
     )
@@ -1247,9 +1226,7 @@ class AqueductSettings(BaseSettings):
             return []
         return [item.strip() for item in stripped.split(",")]
 
-    @field_validator(
-        "APISIX_USERDATA_MAP", "HEALTH_CHECK", "REST_FRAMEWORK", mode="before"
-    )
+    @field_validator("APISIX_USERDATA_MAP", "REST_FRAMEWORK", mode="before")
     @classmethod
     def _aqueduct_decode_dict_fields(cls, value: object) -> object:
         """Parse a dict from a JSON or Python-literal env string."""
