@@ -10,16 +10,18 @@
 # >>> aqueduct:generated:imports
 from __future__ import annotations
 
+import ast
+import json
 import logging
 import platform
 
 from main.envs import get_int, get_list_of_str, get_string
 from main.middleware.cookie_tombstones import parse_cookie_tombstones
 from openapi.settings_spectacular import open_spectacular_settings
-from pydantic import AliasChoices, Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import AliasChoices, AnyUrl, Field, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 from redbeat import RedBeatScheduler
-from typing import Any
+from typing import Annotated, Any
 # <<< aqueduct:generated:imports
 
 # --- Hand-written imports (outside generated regions; survive regeneration) ---
@@ -41,39 +43,25 @@ from pydantic_settings import NoDecode
 from main.envs import get_bool
 
 
-def _parse_str_list(value: object) -> object:
-    """Parse a list-of-strings env value tolerant of mit-learn's env forms.
+def _parse_env_str_list(value: object) -> object:
+    """Parse a list from a JSON, Python-literal, or comma-separated env string.
 
-    pydantic-settings normally ``json.loads`` a complex-typed field's env
-    value. mit-learn's deployed ``.env`` files (and legacy ``get_list_of_str``)
-    use Python-literal forms JSON rejects — single-quoted lists like
-    ``['^regex$']`` and the bare wildcard ``[*]`` for ALLOWED_HOSTS. Pair this
-    with :class:`pydantic_settings.NoDecode` so the source hands us the raw
-    string and this runs instead of the JSON decoder.
-
-    Real lists (defaults, Vault/SSM JSON already decoded) pass straight
-    through.
+    Mirrors the generator's own ``_aqueduct_decode_list_fields`` decoder — used
+    for the ``get_list_of_str`` fields the generator can't cover (see the
+    override block below).
     """
-    if isinstance(value, list | tuple):
-        return [str(item) for item in value]
-    if value is None:
-        return []
     if not isinstance(value, str):
         return value
-    raw = value.strip()
-    if not raw:
-        return []
-    for parser in (json.loads, ast.literal_eval):
+    try:
+        parsed = json.loads(value)
+    except (ValueError, TypeError):
         try:
-            parsed = parser(raw)
+            parsed = ast.literal_eval(value)
         except (ValueError, SyntaxError):
-            continue
-        if isinstance(parsed, list | tuple):
-            return [str(item) for item in parsed]
-    # Bracketed but not literal-parseable (e.g. ALLOWED_HOSTS=[*]): strip the
-    # brackets and split on commas, tolerating bare/unquoted items.
-    inner = raw.removeprefix("[").removesuffix("]")
-    return [item.strip().strip("\"'") for item in inner.split(",") if item.strip()]
+            parsed = None
+    if isinstance(parsed, list):
+        return parsed
+    return [item.strip() for item in value.split(",")]
 
 
 class AqueductSettings(BaseSettings):
@@ -83,10 +71,10 @@ class AqueductSettings(BaseSettings):
 
     # >>> aqueduct:generated:fields
     # ===== main.settings =====
-    ACCESS_TOKEN_URL: str | None = Field(default=None, validation_alias=AliasChoices('ACCESS_TOKEN_URL'))  # REDACTED: name looks secret-like — set via a source, not here
+    ACCESS_TOKEN_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('ACCESS_TOKEN_URL'))  # REDACTED: name looks secret-like — set via a source, not here
     ADMINS: Any = Field(default=None)  # DERIVED: reproduce in a @model_validator (conditional/computed value)
     ADMIN_EMAIL: str = Field(default='', validation_alias=AliasChoices('MITOL_ADMIN_EMAIL'), description='e-mail configurable admins')
-    ALLOWED_HOSTS: list[Any] = Field(default_factory=lambda: ['*'])
+    ALLOWED_HOSTS: Annotated[list[Any], NoDecode] = Field(default_factory=lambda: ['*'])
     ALLOWED_REDIRECT_HOSTS: Any = Field(default_factory=lambda: get_list_of_str(
     "ALLOWED_REDIRECT_HOSTS",
     [
@@ -96,10 +84,10 @@ class AqueductSettings(BaseSettings):
 ))  # TODO: refine type
     ANONYMOUS_USER_NAME: Any = Field(default=None, description='Guardian\ndisable the anonymous user creation')  # TODO: refine type
     ANYMAIL: Any = Field(default=None)  # DERIVED: reproduce in a @model_validator (conditional/computed value)
-    APISIX_USERDATA_MAP: dict[str, Any] = Field(default_factory=lambda: {'users.User': {'email': 'email', 'global_id': 'sub', 'username': 'preferred_username', 'first_name': 'given_name', 'last_name': 'family_name', 'name': 'name', 'organizations': 'organization'}, 'profiles.Profile': {'name': 'name', 'email_optin': 'emailOptIn'}})
-    APP_BASE_URL: str | None = Field(default=None, validation_alias=AliasChoices('MITOL_APP_BASE_URL'))
+    APISIX_USERDATA_MAP: Annotated[dict[str, Any], NoDecode] = Field(default_factory=lambda: {'users.User': {'email': 'email', 'global_id': 'sub', 'username': 'preferred_username', 'first_name': 'given_name', 'last_name': 'family_name', 'name': 'name', 'organizations': 'organization'}, 'profiles.Profile': {'name': 'name', 'email_optin': 'emailOptIn'}})
+    APP_BASE_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('MITOL_APP_BASE_URL'))  # TODO: refine type
     AUTHENTICATION_BACKENDS: tuple[Any, ...] = Field(default=('oauth2_provider.backends.OAuth2Backend', 'django.contrib.auth.backends.ModelBackend', 'guardian.backends.ObjectPermissionBackend'))  # TODO: refine type
-    AUTHORIZATION_URL: str | None = Field(default=None, validation_alias=AliasChoices('AUTHORIZATION_URL'))
+    AUTHORIZATION_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('AUTHORIZATION_URL'))  # TODO: refine type
     AUTH_USER_MODEL: str = Field(default='users.User')
     AWS_ACCESS_KEY_ID: str | None = Field(default=None, validation_alias=AliasChoices('AWS_ACCESS_KEY_ID'))  # REDACTED: name looks secret-like — set via a source, not here
     AWS_QUERYSTRING_AUTH: str = Field(default=False, validation_alias=AliasChoices('AWS_QUERYSTRING_AUTH'))
@@ -112,7 +100,7 @@ class AqueductSettings(BaseSettings):
     CANVAS_TUTORBOT_FOLDER: str = Field(default='web_resources/ai/tutor/', validation_alias=AliasChoices('CANVAS_TUTORBOT_FOLDER'))
     CKEDITOR_ENVIRONMENT_ID: str | None = Field(default=None, validation_alias=AliasChoices('CKEDITOR_ENVIRONMENT_ID'), description='configuration for CKEditor token endpoint')
     CKEDITOR_SECRET_KEY: str | None = Field(default=None, validation_alias=AliasChoices('CKEDITOR_SECRET_KEY'))  # REDACTED: name looks secret-like — set via a source, not here
-    CKEDITOR_UPLOAD_URL: str | None = Field(default=None, validation_alias=AliasChoices('CKEDITOR_UPLOAD_URL'))
+    CKEDITOR_UPLOAD_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('CKEDITOR_UPLOAD_URL'))  # TODO: refine type
     CONTENT_FILE_CLEANUP_CHUNK_SIZE: int = Field(default=1000, validation_alias=AliasChoices('CONTENT_FILE_CLEANUP_CHUNK_SIZE'))
     CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP: int = Field(default=0, validation_alias=AliasChoices('CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP'))
     CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE: int = Field(default=512, validation_alias=AliasChoices('CONTENT_FILE_EMBEDDING_CHUNK_SIZE'))
@@ -132,7 +120,7 @@ class AqueductSettings(BaseSettings):
     CSRF_HEADER_NAME: str = Field(default='HTTP_X_CSRFTOKEN', validation_alias=AliasChoices('CSRF_HEADER_NAME'))
     CSRF_TRUSTED_ORIGINS: Any = Field(default_factory=lambda: get_list_of_str("CSRF_TRUSTED_ORIGINS", []))  # TODO: refine type
     DATABASES: Any = Field(default=None)  # DERIVED: reproduce in a @model_validator (conditional/computed value)
-    DATABASE_ROUTERS: list[Any] = Field(default_factory=lambda: ['main.routers.ExternalSchemaRouter'])
+    DATABASE_ROUTERS: Annotated[list[Any], NoDecode] = Field(default_factory=lambda: ['main.routers.ExternalSchemaRouter'])
     DEBUG: bool = Field(default=False, validation_alias=AliasChoices('DEBUG'), description="SECURITY WARNING: don't run with debug turned on in production!")
     DEFAULT_AUTO_FIELD: str = Field(default='django.db.models.AutoField')
     DEFAULT_DATABASE_CONFIG: Any = Field(default=None, description='Database\nhttps://docs.djangoproject.com/en/1.8/ref/settings/#databases\nUses DATABASE_URL to configure with sqlite default:\nFor URL structure:\nhttps://github.com/kennethreitz/dj-database-url')  # DERIVED: reproduce in a @model_validator (conditional/computed value)
@@ -157,13 +145,13 @@ class AqueductSettings(BaseSettings):
     EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER: bool = Field(default=False, validation_alias=AliasChoices('EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER'), description='toggle to use requests (default for local) or webdriver which renders js elements')
     EMBEDDING_SCHEDULE_MINUTES: int = Field(default=60, validation_alias=AliasChoices('EMBEDDING_SCHEDULE_MINUTES'))
     ENVIRONMENT: str = Field(default='dev', validation_alias=AliasChoices('MITOL_ENVIRONMENT'))
-    EXTERNAL_MODELS: list[Any] = Field(default_factory=lambda: ['programcertificate'])
+    EXTERNAL_MODELS: Annotated[list[Any], NoDecode] = Field(default_factory=lambda: ['programcertificate'])
     FASTLY_API_KEY: str | None = Field(default=None, validation_alias=AliasChoices('FASTLY_API_KEY'), description='Fastly CDN settings')  # REDACTED: name looks secret-like — set via a source, not here
-    FASTLY_URL: str = Field(default='https://api.fastly.com', validation_alias=AliasChoices('FASTLY_URL'))
+    FASTLY_URL: AnyUrl = Field(default='https://api.fastly.com', validation_alias=AliasChoices('FASTLY_URL'))  # TODO: refine type
     FEATURES: Any = Field(default=None)  # DERIVED: reproduce in a @model_validator (conditional/computed value)
     GA_G_TRACKING_ID: str = Field(default='', validation_alias=AliasChoices('GA_G_TRACKING_ID'))
     GA_TRACKING_ID: str = Field(default='', validation_alias=AliasChoices('GA_TRACKING_ID'))
-    HEALTH_CHECK: dict[str, Any] = Field(default_factory=lambda: {'SUBSETS': {'startup': ['MigrationsHealthCheck', 'CacheBackend', 'RedisHealthCheck', 'DatabaseHeartBeatCheck'], 'liveness': ['DatabaseHeartBeatCheck'], 'readiness': ['CacheBackend', 'RedisHealthCheck', 'DatabaseHeartBeatCheck'], 'full': ['MigrationsHealthCheck', 'CacheBackend', 'RedisHealthCheck', 'DatabaseHeartBeatCheck', 'CeleryPingHealthCheck']}})
+    HEALTH_CHECK: Annotated[dict[str, Any], NoDecode] = Field(default_factory=lambda: {'SUBSETS': {'startup': ['MigrationsHealthCheck', 'CacheBackend', 'RedisHealthCheck', 'DatabaseHeartBeatCheck'], 'liveness': ['DatabaseHeartBeatCheck'], 'readiness': ['CacheBackend', 'RedisHealthCheck', 'DatabaseHeartBeatCheck'], 'full': ['MigrationsHealthCheck', 'CacheBackend', 'RedisHealthCheck', 'DatabaseHeartBeatCheck', 'CeleryPingHealthCheck']}})
     HOSTNAME: Any = Field(default_factory=lambda: platform.node().split(".")[0])  # TODO: refine type
     HYBRID_VECTOR_SEARCH_MIN_SCORE: float = Field(default=0.1, validation_alias=AliasChoices('HYBRID_VECTOR_SEARCH_MIN_SCORE'), description='the minimum similarity score for hybrid search (Reciprocal Rank Fusion)')
     IMAGEKIT_CACHEFILE_DIR: str = Field(default='', validation_alias=AliasChoices('IMAGEKIT_CACHEFILE_DIR'))
@@ -174,16 +162,16 @@ class AqueductSettings(BaseSettings):
     INTERNAL_IPS: Any = Field(default_factory=lambda: (get_string("HOST_IP", "127.0.0.1"),), description='Important to define this so DEBUG works properly')  # TODO: refine type
     IPWARE_PRIVATE_IP_PREFIX: Any = Field(default=None, description='allow for all IPs to be routable, including localhost, for testing')  # DERIVED: reproduce in a @model_validator (conditional/computed value)
     JWT_AUTH: Any = Field(default=None)  # DERIVED: reproduce in a @model_validator (conditional/computed value)
-    KEYCLOAK_BASE_URL: str = Field(default='http://mit-keycloak-base-url.edu', validation_alias=AliasChoices('KEYCLOAK_BASE_URL'), description='Keycloak API settings')
+    KEYCLOAK_BASE_URL: AnyUrl = Field(default='http://mit-keycloak-base-url.edu', validation_alias=AliasChoices('KEYCLOAK_BASE_URL'), description='Keycloak API settings')  # TODO: refine type
     KEYCLOAK_REALM_NAME: str = Field(default='olapps', validation_alias=AliasChoices('KEYCLOAK_REALM_NAME'))
     LANGUAGE_CODE: str = Field(default='en-us')
     LITELLM_API_BASE: str | None = Field(default=None, validation_alias=AliasChoices('LITELLM_API_BASE'))
     LITELLM_CUSTOM_PROVIDER: str = Field(default='openai', validation_alias=AliasChoices('LITELLM_CUSTOM_PROVIDER'))
     LITELLM_TOKEN_ENCODING_NAME: str | None = Field(default=None, validation_alias=AliasChoices('LITELLM_TOKEN_ENCODING_NAME'))  # REDACTED: name looks secret-like — set via a source, not here
-    LOGIN_ERROR_URL: str = Field(default='/login')
-    LOGIN_REDIRECT_URL: str = Field(default='/app')
-    LOGIN_URL: str = Field(default='/login')
-    LOGOUT_REDIRECT_URL: str = Field(default='/app')
+    LOGIN_ERROR_URL: AnyUrl = Field(default='/login')  # TODO: refine type
+    LOGIN_REDIRECT_URL: AnyUrl = Field(default='/app')  # TODO: refine type
+    LOGIN_URL: AnyUrl = Field(default='/login')  # TODO: refine type
+    LOGOUT_REDIRECT_URL: AnyUrl = Field(default='/app')  # TODO: refine type
     LOG_LEVEL: str = Field(default='INFO', validation_alias=AliasChoices('MITOL_LOG_LEVEL'), description='Logging configuration')
     MAILGUN_BCC_TO_EMAIL: str | None = Field(default=None, validation_alias=AliasChoices('MAILGUN_BCC_TO_EMAIL'))
     MAILGUN_FROM_EMAIL: str = Field(default='no-reply@example.com', validation_alias=AliasChoices('MAILGUN_FROM_EMAIL'))
@@ -191,24 +179,24 @@ class AqueductSettings(BaseSettings):
     MAILGUN_RECIPIENT_OVERRIDE: str | None = Field(default=None, validation_alias=AliasChoices('MAILGUN_RECIPIENT_OVERRIDE'))
     MAILGUN_SENDER_DOMAIN: str | None = Field(default=None, validation_alias=AliasChoices('MAILGUN_SENDER_DOMAIN'))
     MEDIA_ROOT: str = Field(default='/var/media/', validation_alias=AliasChoices('MEDIA_ROOT'))
-    MEDIA_URL: str = Field(default='/media/')
-    MICROMASTERS_CMS_API_URL: str | None = Field(default=None, validation_alias=AliasChoices('MICROMASTERS_CMS_API_URL'))
+    MEDIA_URL: AnyUrl = Field(default='/media/')  # TODO: refine type
+    MICROMASTERS_CMS_API_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('MICROMASTERS_CMS_API_URL'))  # TODO: refine type
     MIDDLEWARE: tuple[Any, ...] = Field(default=('django.middleware.security.SecurityMiddleware', 'django.contrib.sessions.middleware.SessionMiddleware', 'django.middleware.common.CommonMiddleware', 'django.middleware.csrf.CsrfViewMiddleware', 'django.contrib.auth.middleware.AuthenticationMiddleware', 'main.middleware.apisix_user.ApisixUserMiddleware', 'django.contrib.messages.middleware.MessageMiddleware', 'django.middleware.clickjacking.XFrameOptionsMiddleware', 'corsheaders.middleware.CorsMiddleware', 'authentication.middleware.BlockedIPMiddleware', 'oauth2_provider.middleware.OAuth2TokenMiddleware', 'django_scim.middleware.SCIMAuthCheckMiddleware'), description='OAuth2TokenMiddleware must be before SCIMAuthCheckMiddleware\nin order to insert request.user into the request.')  # TODO: refine type
     MIDDLEWARE_FEATURE_FLAG_COOKIE_MAX_AGE_SECONDS: int = Field(default_factory=lambda: 60 * 60, validation_alias=AliasChoices('MIDDLEWARE_FEATURE_FLAG_COOKIE_MAX_AGE_SECONDS'))
     MIDDLEWARE_FEATURE_FLAG_COOKIE_NAME: str = Field(default='MITOL_FEATURE_FLAGS', validation_alias=AliasChoices('MIDDLEWARE_FEATURE_FLAG_COOKIE_NAME'))
     MIDDLEWARE_FEATURE_FLAG_QS_PREFIX: str | None = Field(default=None, validation_alias=AliasChoices('MIDDLEWARE_FEATURE_FLAG_QS_PREFIX'))
     MIGRATION_MODULES: Any = Field(default=None)  # DERIVED: reproduce in a @model_validator (conditional/computed value)
-    MITOL_API_BASE_URL: str = Field(default='', validation_alias=AliasChoices('MITOL_API_BASE_URL'))
+    MITOL_API_BASE_URL: AnyUrl = Field(default='', validation_alias=AliasChoices('MITOL_API_BASE_URL'))  # TODO: refine type
     MITOL_COOKIE_DOMAIN: str | None = Field(default=None, validation_alias=AliasChoices('MITOL_COOKIE_DOMAIN'))
     MITOL_COOKIE_NAME: str | None = Field(default=None, validation_alias=AliasChoices('MITOL_COOKIE_NAME'))
     MITOL_FEATURES_DEFAULT: bool = Field(default=False, validation_alias=AliasChoices('MITOL_FEATURES_DEFAULT'))
     MITOL_FEATURES_PREFIX: str = Field(default='FEATURE_', validation_alias=AliasChoices('MITOL_FEATURES_PREFIX'))
     MITOL_HUBSPOT_API_PRIVATE_TOKEN: str | None = Field(default=None, validation_alias=AliasChoices('MITOL_HUBSPOT_API_PRIVATE_TOKEN'), description='Hubspot settings')  # REDACTED: name looks secret-like — set via a source, not here
     MITOL_JWT_SECRET: str | None = Field(default=None, validation_alias=AliasChoices('MITOL_JWT_SECRET'), description='JWT authentication settings')  # REDACTED: name looks secret-like — set via a source, not here
-    MITOL_NEW_USER_LOGIN_URL: str = Field(default='http://open.odl.local:8062/onboarding', validation_alias=AliasChoices('MITOL_NEW_USER_LOGIN_URL'))
+    MITOL_NEW_USER_LOGIN_URL: AnyUrl = Field(default='http://open.odl.local:8062/onboarding', validation_alias=AliasChoices('MITOL_NEW_USER_LOGIN_URL'))  # TODO: refine type
     MITOL_SIMILAR_RESOURCES_COUNT: int = Field(default=3, validation_alias=AliasChoices('MITOL_SIMILAR_RESOURCES_COUNT'), description='Similar resources settings')
     MITOL_TITLE: str = Field(default='MIT Learn', validation_alias=AliasChoices('MITOL_TITLE'))
-    MITOL_TOS_URL: str | None = Field(default=None, validation_alias=AliasChoices('MITOL_TOS_URL'))  # DERIVED: reproduce in a @model_validator (conditional/computed value)
+    MITOL_TOS_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('MITOL_TOS_URL'))  # DERIVED: reproduce in a @model_validator (conditional/computed value)
     MITOL_UNSUBSCRIBE_TOKEN_MAX_AGE_SECONDS: int | None = Field(default=None, validation_alias=AliasChoices('MITOL_UNSUBSCRIBE_TOKEN_MAX_AGE_SECONDS'))  # REDACTED: name looks secret-like — set via a source, not here
     MITOL_USE_S3: bool = Field(default=False, validation_alias=AliasChoices('MITOL_USE_S3'))
     MIT_WS_CERTIFICATE_FILE: Any = Field(default=None, description='x509 filenames')  # DERIVED: reproduce in a @model_validator (conditional/computed value)
@@ -218,7 +206,7 @@ class AqueductSettings(BaseSettings):
     NOTIFICATION_EMAIL_BACKEND: str = Field(default='anymail.backends.test.EmailBackend', validation_alias=AliasChoices('MITOL_NOTIFICATION_EMAIL_BACKEND'))
     NPLUSONE_LOGGER: Any = Field(default_factory=lambda: logging.getLogger("nplusone"), description='nplusone profiler logger configuration')  # TODO: refine type
     NPLUSONE_LOG_LEVEL: Any = Field(default_factory=lambda: logging.ERROR)  # TODO: refine type
-    OIDC_LOGOUT_URL: str | None = Field(default=None, validation_alias=AliasChoices('OIDC_LOGOUT_URL'))  # DERIVED: reproduce in a @model_validator (conditional/computed value)
+    OIDC_LOGOUT_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('OIDC_LOGOUT_URL'))  # DERIVED: reproduce in a @model_validator (conditional/computed value)
     OPENAI_API_KEY: str | None = Field(default=None, validation_alias=AliasChoices('OPENAI_API_KEY'))  # REDACTED: name looks secret-like — set via a source, not here
     OPENSEARCH_CONNECTIONS_PER_NODE: int = Field(default=10, validation_alias=AliasChoices('OPENSEARCH_CONNECTIONS_PER_NODE'))
     OPENSEARCH_DEFAULT_PAGE_SIZE: int = Field(default=10, validation_alias=AliasChoices('OPENSEARCH_DEFAULT_PAGE_SIZE'), description='OpenSearch')
@@ -233,7 +221,7 @@ class AqueductSettings(BaseSettings):
     OPENSEARCH_MIN_QUERY_SIZE: int = Field(default=2, validation_alias=AliasChoices('OPENSEARCH_MIN_QUERY_SIZE'))
     OPENSEARCH_REPLICA_COUNT: int = Field(default=2, validation_alias=AliasChoices('OPENSEARCH_REPLICA_COUNT'))
     OPENSEARCH_SHARD_COUNT: int = Field(default=2, validation_alias=AliasChoices('OPENSEARCH_SHARD_COUNT'))
-    OPENSEARCH_URL: str | None = Field(default=None, validation_alias=AliasChoices('OPENSEARCH_URL'))
+    OPENSEARCH_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('OPENSEARCH_URL'))  # TODO: refine type
     OPENSEARCH_VECTOR_MODEL_BASE_NAME: str = Field(default='hybrid_search_model', validation_alias=AliasChoices('OPENSEARCH_VECTOR_MODEL_BASE_NAME'))
     OPENTELEMETRY_ENABLED: bool = Field(default=False, validation_alias=AliasChoices('OPENTELEMETRY_ENABLED'), description='OpenTelemetry configuration')
     OPENTELEMETRY_ENDPOINT: str | None = Field(default=None, validation_alias=AliasChoices('OPENTELEMETRY_ENDPOINT'))
@@ -252,7 +240,7 @@ class AqueductSettings(BaseSettings):
     OPEN_RESOURCES_MIN_TERM_FREQ: int = Field(default=1, validation_alias=AliasChoices('OPEN_RESOURCES_MIN_TERM_FREQ'))
     OPTIONS: Any = Field(default=None)  # DERIVED: reproduce in a @model_validator (conditional/computed value)
     OS_LOG_LEVEL: str = Field(default='INFO', validation_alias=AliasChoices('OS_LOG_LEVEL'))
-    POSTHOG_API_HOST: str = Field(default='https://us.posthog.com', validation_alias=AliasChoices('POSTHOG_API_HOST'))
+    POSTHOG_API_HOST: AnyUrl = Field(default='https://us.posthog.com', validation_alias=AliasChoices('POSTHOG_API_HOST'))  # TODO: refine type
     POSTHOG_EVENT_S3_BUCKET: str = Field(default='None', validation_alias=AliasChoices('POSTHOG_EVENT_S3_BUCKET'))
     POSTHOG_EVENT_S3_PREFIX: str = Field(default='None', validation_alias=AliasChoices('POSTHOG_EVENT_S3_PREFIX'))
     POSTHOG_PERSONAL_API_KEY: str | None = Field(default=None, validation_alias=AliasChoices('POSTHOG_PERSONAL_API_KEY'))  # REDACTED: name looks secret-like — set via a source, not here
@@ -268,7 +256,7 @@ class AqueductSettings(BaseSettings):
     QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW: Any = Field(default=None)  # DERIVED: reproduce in a @model_validator (conditional/computed value)
     QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS: bool = Field(default=False, validation_alias=AliasChoices('QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS'))
     QDRANT_ENCODER: str = Field(default='vector_search.encoders.gensim.GensimEncoder', validation_alias=AliasChoices('QDRANT_ENCODER'))
-    QDRANT_HOST: str = Field(default='http://qdrant:6333', validation_alias=AliasChoices('QDRANT_HOST'))
+    QDRANT_HOST: AnyUrl = Field(default='http://qdrant:6333', validation_alias=AliasChoices('QDRANT_HOST'))  # TODO: refine type
     QDRANT_POINT_UPLOAD_BATCH_SIZE: int = Field(default=1000, validation_alias=AliasChoices('QDRANT_POINT_UPLOAD_BATCH_SIZE'))
     QDRANT_QUERY_EMBEDDING_CACHE_TTL: int = Field(default_factory=lambda: 60 * 60 * 24 * 7, validation_alias=AliasChoices('QDRANT_QUERY_EMBEDDING_CACHE_TTL'), description='1 week default query cache ttl')
     QDRANT_SPARSE_ENCODER: str = Field(default='vector_search.encoders.sparse_hash.SparseHashEncoder', validation_alias=AliasChoices('QDRANT_SPARSE_ENCODER_V2'))
@@ -278,7 +266,7 @@ class AqueductSettings(BaseSettings):
     RECAPTCHA_SITE_KEY: str = Field(default='', validation_alias=AliasChoices('RECAPTCHA_SITE_KEY'))
     REDIS_VIEW_CACHE_DURATION: int = Field(default_factory=lambda: 60 * 60 * 24, validation_alias=AliasChoices('REDIS_VIEW_CACHE_DURATION'))
     REQUESTS_TIMEOUT: int = Field(default=30, validation_alias=AliasChoices('REQUESTS_TIMEOUT'))
-    REST_FRAMEWORK: dict[str, Any] = Field(default_factory=lambda: {'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAuthenticated',), 'DEFAULT_AUTHENTICATION_CLASSES': ('rest_framework.authentication.SessionAuthentication',), 'DEFAULT_PAGINATION_CLASS': 'main.pagination.DefaultPagination', 'EXCEPTION_HANDLER': 'main.exceptions.api_exception_handler', 'TEST_REQUEST_DEFAULT_FORMAT': 'json', 'TEST_REQUEST_RENDERER_CLASSES': ['rest_framework.renderers.JSONRenderer', 'rest_framework.renderers.MultiPartRenderer'], 'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema', 'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.NamespaceVersioning', 'ALLOWED_VERSIONS': ['v0', 'v1'], 'ORDERING_PARAM': 'sortby'})
+    REST_FRAMEWORK: Annotated[dict[str, Any], NoDecode] = Field(default_factory=lambda: {'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAuthenticated',), 'DEFAULT_AUTHENTICATION_CLASSES': ('rest_framework.authentication.SessionAuthentication',), 'DEFAULT_PAGINATION_CLASS': 'main.pagination.DefaultPagination', 'EXCEPTION_HANDLER': 'main.exceptions.api_exception_handler', 'TEST_REQUEST_DEFAULT_FORMAT': 'json', 'TEST_REQUEST_RENDERER_CLASSES': ['rest_framework.renderers.JSONRenderer', 'rest_framework.renderers.MultiPartRenderer'], 'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema', 'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.NamespaceVersioning', 'ALLOWED_VERSIONS': ['v0', 'v1'], 'ORDERING_PARAM': 'sortby'})
     REST_FRAMEWORK_EXTENSIONS: Any = Field(default=None)  # DERIVED: reproduce in a @model_validator (conditional/computed value)
     ROOT_URLCONF: str = Field(default='main.urls')
     RSS_FEED_CACHE_MINUTES: int = Field(default=15, validation_alias=AliasChoices('RSS_FEED_CACHE_MINUTES'))
@@ -286,7 +274,7 @@ class AqueductSettings(BaseSettings):
     SEARCH_PROGRAM_INDEX_BOOST: float = Field(default=3, validation_alias=AliasChoices('SEARCH_PROGRAM_INDEX_BOOST'))
     SECRET_KEY: str | None = Field(default=None, validation_alias=AliasChoices('SECRET_KEY'), description='SECURITY WARNING: keep the secret key used in production secret!')  # REDACTED: name looks secret-like — set via a source, not here
     SECURE_CROSS_ORIGIN_OPENER_POLICY: str = Field(default='same-origin', validation_alias=AliasChoices('SECURE_CROSS_ORIGIN_OPENER_POLICY'))
-    SECURE_REDIRECT_EXEMPT: list[Any] = Field(default_factory=lambda: ['^health/startup/$', '^health/liveness/$', '^health/readiness/$', '^health/full/$'])
+    SECURE_REDIRECT_EXEMPT: Annotated[list[Any], NoDecode] = Field(default_factory=lambda: ['^health/startup/$', '^health/liveness/$', '^health/readiness/$', '^health/full/$'])
     SECURE_SSL_REDIRECT: bool = Field(default=True, validation_alias=AliasChoices('MITOL_SECURE_SSL_REDIRECT'))
     SENTRY_DSN: str | None = Field(default=None, validation_alias=AliasChoices('SENTRY_DSN'), description='initialize Sentry before doing anything else so we capture any config errors')  # REDACTED: name looks secret-like — set via a source, not here
     SENTRY_LOG_LEVEL: str = Field(default='ERROR', validation_alias=AliasChoices('SENTRY_LOG_LEVEL'))
@@ -298,12 +286,12 @@ class AqueductSettings(BaseSettings):
     SITE_ID: int = Field(default=1)
     SPECTACULAR_SETTINGS: Any = Field(default_factory=lambda: open_spectacular_settings)  # TODO: refine type
     STATIC_ROOT: str = Field(default='staticfiles')
-    STATIC_URL: str = Field(default='/static/', description='Serve static files with dj-static')
+    STATIC_URL: AnyUrl = Field(default='/static/', description='Serve static files with dj-static')  # TODO: refine type
     STATUS_TOKEN: str | None = Field(default=None, validation_alias=AliasChoices('STATUS_TOKEN'))  # REDACTED: name looks secret-like — set via a source, not here
     STORAGES: Any = Field(default=None)  # DERIVED: reproduce in a @model_validator (conditional/computed value)
     TEMPLATES: Any = Field(default=None)  # DERIVED: reproduce in a @model_validator (conditional/computed value)
     TIME_ZONE: str = Field(default='UTC')
-    USERINFO_URL: str | None = Field(default=None, validation_alias=AliasChoices('USERINFO_URL'))
+    USERINFO_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('USERINFO_URL'))  # TODO: refine type
     USE_I18N: bool = Field(default=True)
     USE_L10N: bool = Field(default=True)
     USE_TZ: bool = Field(default=True)
@@ -317,15 +305,15 @@ class AqueductSettings(BaseSettings):
     WEBHOOK_SECRET: str | None = Field(default=None, validation_alias=AliasChoices('WEBHOOK_SECRET'))  # REDACTED: name looks secret-like — set via a source, not here
     WIDGETS_RSS_CACHE_TTL: int = Field(default_factory=lambda: 15 * 60, validation_alias=AliasChoices('WIDGETS_RSS_CACHE_TTL'), description='Widgets')
     WSGI_APPLICATION: str = Field(default='main.wsgi.application')
-    ZEAL_ALLOWLIST: list[Any] = Field(default_factory=lambda: [])
+    ZEAL_ALLOWLIST: Annotated[list[Any], NoDecode] = Field(default_factory=lambda: [])
     ZEAL_ENABLE: bool = Field(default=False, validation_alias=AliasChoices('ZEAL_ENABLE'))
     ZEAL_RAISE: bool = Field(default=False)
     # ===== main.settings_celery =====
-    CELERY_ACCEPT_CONTENT: list[Any] = Field(default_factory=lambda: ['json'])
+    CELERY_ACCEPT_CONTENT: Annotated[list[Any], NoDecode] = Field(default_factory=lambda: ['json'])
     CELERY_BEAT_DISABLED: bool = Field(default=False, validation_alias=AliasChoices('CELERY_BEAT_DISABLED'))
     CELERY_BEAT_SCHEDULE: Any = Field(default=None)  # DERIVED: reproduce in a @model_validator (conditional/computed value)
     CELERY_BEAT_SCHEDULER: Any = Field(default_factory=lambda: RedBeatScheduler)  # TODO: refine type
-    CELERY_BROKER_URL: str | None = Field(default=None, validation_alias=AliasChoices('CELERY_BROKER_URL'))  # REDACTED: name looks secret-like — set via a source, not here
+    CELERY_BROKER_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('CELERY_BROKER_URL'))  # REDACTED: name looks secret-like — set via a source, not here
     CELERY_RATE_LIMIT: str = Field(default='600/m', validation_alias=AliasChoices('CELERY_DEFAULT_RATE_LIMIT'))
     CELERY_RESULT_BACKEND: str | None = Field(default=None, validation_alias=AliasChoices('CELERY_RESULT_BACKEND'))  # DERIVED: reproduce in a @model_validator (conditional/computed value)
     CELERY_RESULT_SERIALIZER: str = Field(default='json')
@@ -339,44 +327,44 @@ class AqueductSettings(BaseSettings):
     CELERY_VECTOR_SEARCH_RATE_LIMIT: str | None = Field(default=None, validation_alias=AliasChoices('CELERY_VECTOR_SEARCH_RATE_LIMIT'))  # DERIVED: reproduce in a @model_validator (conditional/computed value)
     CELERY_WORKER_MAX_MEMORY_PER_CHILD: int = Field(default=250000, validation_alias=AliasChoices('CELERY_WORKER_MAX_MEMORY_PER_CHILD'))
     DEV_ENV: bool = Field(default=False, validation_alias=AliasChoices('DEV_ENV'))
-    REDIS_URL: str | None = Field(default=None, validation_alias=AliasChoices('REDIS_URL'))  # REDACTED: name looks secret-like — set via a source, not here
+    REDIS_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('REDIS_URL'))  # REDACTED: name looks secret-like — set via a source, not here
     USE_CELERY: bool = Field(default=True)
     # ===== main.settings_course_etl =====
     ASK_MIT_CLIMATE_API_URL: Any = Field(default=None)  # DERIVED: reproduce in a @model_validator (conditional/computed value)
-    BLOCKLISTED_COURSES_URL: str = Field(default='https://raw.githubusercontent.com/mitodl/open-resource-blocklists/master/courses.txt', validation_alias=AliasChoices('BLOCKLISTED_COURSES_URL'))
+    BLOCKLISTED_COURSES_URL: AnyUrl = Field(default='https://raw.githubusercontent.com/mitodl/open-resource-blocklists/master/courses.txt', validation_alias=AliasChoices('BLOCKLISTED_COURSES_URL'))  # TODO: refine type
     CANVAS_COURSE_BUCKET_PREFIX: str = Field(default='canvas/course_content', validation_alias=AliasChoices('CANVAS_COURSE_BUCKET_PREFIX'))
-    CONTENT_BASE_URL_EDX: str = Field(default='https://courses.edx.org', validation_alias=AliasChoices('CONTENT_BASE_URL_EDX'))
-    CONTENT_BASE_URL_MITXONLINE: str = Field(default='https://courses.mitxonline.mit.edu', validation_alias=AliasChoices('CONTENT_BASE_URL_MITXONLINE'), description='Base content URLs for different sources')
-    CONTENT_BASE_URL_OLL: str = Field(default='https://openlearninglibrary.mit.edu', validation_alias=AliasChoices('CONTENT_BASE_URL_OLL'))
-    CONTENT_BASE_URL_XPRO: str = Field(default='https://courses.xpro.mit.edu', validation_alias=AliasChoices('CONTENT_BASE_URL_XPRO'))
+    CONTENT_BASE_URL_EDX: AnyUrl = Field(default='https://courses.edx.org', validation_alias=AliasChoices('CONTENT_BASE_URL_EDX'))  # TODO: refine type
+    CONTENT_BASE_URL_MITXONLINE: AnyUrl = Field(default='https://courses.mitxonline.mit.edu', validation_alias=AliasChoices('CONTENT_BASE_URL_MITXONLINE'), description='Base content URLs for different sources')  # TODO: refine type
+    CONTENT_BASE_URL_OLL: AnyUrl = Field(default='https://openlearninglibrary.mit.edu', validation_alias=AliasChoices('CONTENT_BASE_URL_OLL'))  # TODO: refine type
+    CONTENT_BASE_URL_XPRO: AnyUrl = Field(default='https://courses.xpro.mit.edu', validation_alias=AliasChoices('CONTENT_BASE_URL_XPRO'))  # TODO: refine type
     COURSE_ARCHIVE_BUCKET_NAME: str = Field(default='ol-data-lake-landing-zone-production', validation_alias=AliasChoices('COURSE_ARCHIVE_BUCKET_NAME'), description='Canvas course settings')
-    CSAIL_BASE_URL: str | None = Field(default=None, validation_alias=AliasChoices('CSAIL_BASE_URL'))
-    DUPLICATE_COURSES_URL: str | None = Field(default=None, validation_alias=AliasChoices('DUPLICATE_COURSES_URL'))
-    EDX_ALT_URL: str = Field(default='https://courses.edx.org/', validation_alias=AliasChoices('EDX_ALT_URL'))
-    EDX_API_ACCESS_TOKEN_URL: str | None = Field(default=None, validation_alias=AliasChoices('EDX_API_ACCESS_TOKEN_URL'))  # REDACTED: name looks secret-like — set via a source, not here
+    CSAIL_BASE_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('CSAIL_BASE_URL'))  # TODO: refine type
+    DUPLICATE_COURSES_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('DUPLICATE_COURSES_URL'))  # TODO: refine type
+    EDX_ALT_URL: AnyUrl = Field(default='https://courses.edx.org/', validation_alias=AliasChoices('EDX_ALT_URL'))  # TODO: refine type
+    EDX_API_ACCESS_TOKEN_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('EDX_API_ACCESS_TOKEN_URL'))  # REDACTED: name looks secret-like — set via a source, not here
     EDX_API_CLIENT_ID: str | None = Field(default=None, validation_alias=AliasChoices('EDX_API_CLIENT_ID'))
     EDX_API_CLIENT_SECRET: str | None = Field(default=None, validation_alias=AliasChoices('EDX_API_CLIENT_SECRET'))  # REDACTED: name looks secret-like — set via a source, not here
-    EDX_API_URL: str | None = Field(default=None, validation_alias=AliasChoices('EDX_API_URL'), description='EDX API Credentials')
-    EDX_BASE_URL: str = Field(default='https://www.edx.org/', validation_alias=AliasChoices('EDX_BASE_URL'))
+    EDX_API_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('EDX_API_URL'), description='EDX API Credentials')  # TODO: refine type
+    EDX_BASE_URL: AnyUrl = Field(default='https://www.edx.org/', validation_alias=AliasChoices('EDX_BASE_URL'))  # TODO: refine type
     EDX_COURSE_BUCKET_PREFIX: str = Field(default='edxorg-raw-data/edxorg/raw_data/course_xml/', validation_alias=AliasChoices('EDX_COURSE_BUCKET_PREFIX'))
-    EDX_PROGRAMS_API_URL: str | None = Field(default=None, validation_alias=AliasChoices('EDX_PROGRAMS_API_URL'))
+    EDX_PROGRAMS_API_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('EDX_PROGRAMS_API_URL'))  # TODO: refine type
     GITHUB_ACCESS_TOKEN: str | None = Field(default=None, validation_alias=AliasChoices('GITHUB_ACCESS_TOKEN'), description='Authentication for the github api')  # REDACTED: name looks secret-like — set via a source, not here
     LEARNING_COURSE_ITERATOR_CHUNK_SIZE: int = Field(default=20, validation_alias=AliasChoices('LEARNING_COURSE_ITERATOR_CHUNK_SIZE'), description='Iterator chunk size for MITx and xPRO courses')
     MAX_S3_GET_ITERATIONS: int = Field(default=3, validation_alias=AliasChoices('MAX_S3_GET_ITERATIONS'))
-    MICROMASTERS_CATALOG_API_URL: str | None = Field(default=None, validation_alias=AliasChoices('MICROMASTERS_CATALOG_API_URL'), description='Base URL for Micromasters data')
-    MITPE_BASE_URL: str = Field(default='https://professional.mit.edu/', validation_alias=AliasChoices('MITPE_BASE_URL'))
-    MITX_ONLINE_BASE_URL: str | None = Field(default=None, validation_alias=AliasChoices('MITX_ONLINE_BASE_URL'))
-    MITX_ONLINE_COURSES_API_URL: str | None = Field(default=None, validation_alias=AliasChoices('MITX_ONLINE_COURSES_API_URL'))
+    MICROMASTERS_CATALOG_API_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('MICROMASTERS_CATALOG_API_URL'), description='Base URL for Micromasters data')  # TODO: refine type
+    MITPE_BASE_URL: AnyUrl = Field(default='https://professional.mit.edu/', validation_alias=AliasChoices('MITPE_BASE_URL'))  # TODO: refine type
+    MITX_ONLINE_BASE_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('MITX_ONLINE_BASE_URL'))  # TODO: refine type
+    MITX_ONLINE_COURSES_API_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('MITX_ONLINE_COURSES_API_URL'))  # TODO: refine type
     MITX_ONLINE_COURSE_BUCKET_PREFIX: str = Field(default='mitxonline/openedx/raw_data/course_xml/', validation_alias=AliasChoices('MITX_ONLINE_COURSE_BUCKET_PREFIX'), description='MITx Online settings for course/resource ingestion')
-    MITX_ONLINE_PROGRAMS_API_URL: str | None = Field(default=None, validation_alias=AliasChoices('MITX_ONLINE_PROGRAMS_API_URL'))
-    MIT_CLIMATE_BASE_URL: str = Field(default='https://climate.mit.edu')
+    MITX_ONLINE_PROGRAMS_API_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('MITX_ONLINE_PROGRAMS_API_URL'))  # TODO: refine type
+    MIT_CLIMATE_BASE_URL: AnyUrl = Field(default='https://climate.mit.edu')  # TODO: refine type
     MIT_CLIMATE_EXPLAINERS_API_URL: Any = Field(default=None)  # DERIVED: reproduce in a @model_validator (conditional/computed value)
     OCR_DEBUG_DIRECTORY: str = Field(default='ocr_debug', validation_alias=AliasChoices('OCR_DEBUG_DIRECTORY'))
     OCR_MATH_DENSITY_THRESHOLD: int = Field(default=5, validation_alias=AliasChoices('OCR_MATH_DENSITY_THRESHOLD'), description='OCR the entire page if the density of math formulas exceeds this threshold')
     OCR_MODEL: str | None = Field(default=None, validation_alias=AliasChoices('OCR_MODEL'))
     OCR_PDF_MAX_PAGE_THRESHOLD: int = Field(default=10, validation_alias=AliasChoices('OCR_PDF_MAX_PAGE_THRESHOLD'), description='Do not OCR if the PDF has exceeds this many pages')
     OCR_PROMPT: str = Field(default='Transcribe this image to markdown. Properly format text, formulas, tables, and code into markdown format.Include a markdown comment for elements that cannot be transcribed such as photos and other visual elements.Do not include any indications your output is the result of a transcription.Do not include extra commentary - ONLY include the resulting transcribed markdown.', validation_alias=AliasChoices('OCR_PROMPT'))
-    OCW_BASE_URL: str = Field(default='http://ocw.mit.edu/', validation_alias=AliasChoices('OCW_BASE_URL'), description="Base URL's for courses")
+    OCW_BASE_URL: AnyUrl = Field(default='http://ocw.mit.edu/', validation_alias=AliasChoices('OCW_BASE_URL'), description="Base URL's for courses")  # TODO: refine type
     OCW_ITERATOR_CHUNK_SIZE: int = Field(default=1000, validation_alias=AliasChoices('OCW_ITERATOR_CHUNK_SIZE'))
     OCW_LIVE_BUCKET: str | None = Field(default=None, validation_alias=AliasChoices('OCW_LIVE_BUCKET'), description='OCW settings')
     OCW_OFFLINE_DELIVERY: bool = Field(default=False, validation_alias=AliasChoices('OCW_OFFLINE_DELIVERY'))
@@ -389,20 +377,20 @@ class AqueductSettings(BaseSettings):
     OPEN_VIDEO_MIN_DOC_FREQ: int = Field(default=15, validation_alias=AliasChoices('OPEN_VIDEO_MIN_DOC_FREQ'))
     OPEN_VIDEO_MIN_TERM_FREQ: int = Field(default=1, validation_alias=AliasChoices('OPEN_VIDEO_MIN_TERM_FREQ'))
     OPEN_VIDEO_USER_LIST_OWNER: str | None = Field(default=None, validation_alias=AliasChoices('OPEN_VIDEO_USER_LIST_OWNER'))
-    OVS_API_BASE_URL: str | None = Field(default=None, validation_alias=AliasChoices('OVS_API_BASE_URL'), description='OVS (ODL Video Service) settings — public API, no auth required')
-    SEE_API_ACCESS_TOKEN_URL: str | None = Field(default=None, validation_alias=AliasChoices('SEE_API_ACCESS_TOKEN_URL'))  # REDACTED: name looks secret-like — set via a source, not here
+    OVS_API_BASE_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('OVS_API_BASE_URL'), description='OVS (ODL Video Service) settings — public API, no auth required')  # TODO: refine type
+    SEE_API_ACCESS_TOKEN_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('SEE_API_ACCESS_TOKEN_URL'))  # REDACTED: name looks secret-like — set via a source, not here
     SEE_API_CLIENT_ID: str | None = Field(default=None, validation_alias=AliasChoices('SEE_API_CLIENT_ID'))
     SEE_API_CLIENT_SECRET: str | None = Field(default=None, validation_alias=AliasChoices('SEE_API_CLIENT_SECRET'))  # REDACTED: name looks secret-like — set via a source, not here
-    SEE_API_URL: str | None = Field(default=None, validation_alias=AliasChoices('SEE_API_URL'), description='More MIT URLs')
-    SEE_BASE_URL: str | None = Field(default=None, validation_alias=AliasChoices('SEE_BASE_URL'))
+    SEE_API_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('SEE_API_URL'), description='More MIT URLs')  # TODO: refine type
+    SEE_BASE_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('SEE_BASE_URL'))  # TODO: refine type
     SKIP_TIKA: bool = Field(default=False, validation_alias=AliasChoices('SKIP_TIKA'))
     TIKA_ACCESS_TOKEN: str | None = Field(default=None, validation_alias=AliasChoices('TIKA_ACCESS_TOKEN'), description='Tika settings')  # REDACTED: name looks secret-like — set via a source, not here
     TIKA_OCR_STRATEGY: str = Field(default='no_ocr', validation_alias=AliasChoices('TIKA_OCR_STRATEGY'))
     TIKA_TIMEOUT: int = Field(default=60, validation_alias=AliasChoices('TIKA_TIMEOUT'))
-    XPRO_CATALOG_API_URL: str | None = Field(default=None, validation_alias=AliasChoices('XPRO_CATALOG_API_URL'))
-    XPRO_COURSES_API_URL: str | None = Field(default=None, validation_alias=AliasChoices('XPRO_COURSES_API_URL'))
+    XPRO_CATALOG_API_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('XPRO_CATALOG_API_URL'))  # TODO: refine type
+    XPRO_COURSES_API_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('XPRO_COURSES_API_URL'))  # TODO: refine type
     XPRO_COURSE_BUCKET_PREFIX: str = Field(default='xpro/openedx/raw_data/course_xml/', validation_alias=AliasChoices('XPRO_COURSE_BUCKET_PREFIX'), description='xPRO settings for course/resource ingestion')
-    YOUTUBE_CONFIG_URL: str | None = Field(default=None, validation_alias=AliasChoices('YOUTUBE_CONFIG_URL'))
+    YOUTUBE_CONFIG_URL: AnyUrl | None = Field(default=None, validation_alias=AliasChoices('YOUTUBE_CONFIG_URL'))  # TODO: refine type
     YOUTUBE_DEVELOPER_KEY: str | None = Field(default=None, validation_alias=AliasChoices('YOUTUBE_DEVELOPER_KEY'))
     # ===== main.settings_pluggy =====
     MITOL_AUTHENTICATION_PLUGINS: str = Field(default='learning_resources.plugins.FavoritesListPlugin,profiles.plugins.CreateProfilePlugin', validation_alias=AliasChoices('MITOL_AUTHENTICATION_PLUGINS'))
@@ -418,6 +406,39 @@ class AqueductSettings(BaseSettings):
     MITOL_SCIM_REQUESTS_TIMEOUT_SECONDS: int = Field(default=60, validation_alias=AliasChoices('MITOL_SCIM_REQUESTS_TIMEOUT_SECONDS'), description='Number of seconds to timeout requests to Keycloak')
     # <<< aqueduct:generated:fields
 
+    # >>> aqueduct:generated:container_decoders
+    @field_validator('ALLOWED_HOSTS', 'CELERY_ACCEPT_CONTENT', 'DATABASE_ROUTERS', 'EXTERNAL_MODELS', 'SECURE_REDIRECT_EXEMPT', 'ZEAL_ALLOWLIST', mode="before")
+    @classmethod
+    def _aqueduct_decode_list_fields(cls, value: object) -> object:
+        """Parse a list from a JSON, Python-literal, or comma-separated env string."""
+        if not isinstance(value, str):
+            return value
+        try:
+            parsed = json.loads(value)
+        except (ValueError, TypeError):
+            try:
+                parsed = ast.literal_eval(value)
+            except (ValueError, SyntaxError):
+                parsed = None
+        if isinstance(parsed, list):
+            return parsed
+        return [item.strip() for item in value.split(",")]
+
+    @field_validator('APISIX_USERDATA_MAP', 'HEALTH_CHECK', 'REST_FRAMEWORK', mode="before")
+    @classmethod
+    def _aqueduct_decode_dict_fields(cls, value: object) -> object:
+        """Parse a dict from a JSON or Python-literal env string."""
+        if not isinstance(value, str):
+            return value
+        try:
+            parsed = json.loads(value)
+        except (ValueError, TypeError):
+            parsed = None
+        if isinstance(parsed, dict):
+            return parsed
+        return ast.literal_eval(value)
+    # <<< aqueduct:generated:container_decoders
+
     # >>> aqueduct:preserved:validators
     # ------------------------------------------------------------------ #
     # Hand-maintained fields                                             #
@@ -427,19 +448,38 @@ class AqueductSettings(BaseSettings):
     # them as fields makes them sourceable from env/Vault/SSM instead of #
     # being read straight from os.environ.                               #
     # ------------------------------------------------------------------ #
-    # Overrides of the generated list fields. These are complex-typed, so
-    # pydantic-settings would `json.loads` any colliding env var — but
-    # mit-learn's .env carries Python-literal / bare-wildcard list forms
-    # (ALLOWED_HOSTS=[*], single-quoted regex lists) that are not JSON, which
-    # crashes model construction. `NoDecode` + `_parse_str_list` handle the
-    # env forms the legacy `get_list_of_str` accepted, and route the value
-    # through the source chain (env/Vault/SSM) instead of reading os.environ.
-    # ALLOWED_HOSTS is hardcoded ["*"] in legacy; binding it here is parity-
-    # equivalent (a .env [*] parses back to ["*"]).
-    ALLOWED_HOSTS: Annotated[list[str], NoDecode] = Field(
-        default_factory=lambda: ["*"],
-        validation_alias=AliasChoices("ALLOWED_HOSTS"),
-    )
+    # 0.8.0 generator gap: the auto-generated list decoder
+    # (`_aqueduct_decode_list_fields`) parses JSON, Python-literal, and
+    # comma-separated env strings — covering every list field mit-learn's .env
+    # feeds (single-quoted regex lists, etc.). The one form it does NOT parse
+    # is the bare-wildcard `ALLOWED_HOSTS=[*]` in the deployed .env: json and
+    # ast.literal_eval both reject it, and the comma-split fallback keeps the
+    # brackets, yielding ["[*]"] instead of the ["*"] the legacy settings
+    # hardcode. Normalize just that case here (order-independent: handles both
+    # the raw string and the decoder's mis-parsed single-element list).
+    @field_validator("ALLOWED_HOSTS", mode="before")
+    @classmethod
+    def _normalize_wildcard_allowed_hosts(cls, value: object) -> object:
+        """Map the bare-wildcard ALLOWED_HOSTS=[*] env form back to ["*"]."""
+        if isinstance(value, str) and value.strip() in ("[*]", "[ * ]"):
+            return ["*"]
+        if (
+            isinstance(value, list | tuple)
+            and len(value) == 1
+            and str(value[0]).strip() in ("[*]", "*")
+        ):
+            return ["*"]
+        return value
+
+    # 0.8.0 generator gap: mit-learn's list settings are read with mitol's
+    # `get_list_of_str`, which static discovery does not recognize as a reader,
+    # so these fields are discovered as `Any` (with a factory that reads
+    # os.environ directly) rather than list — the generator's auto NoDecode +
+    # list decoder therefore skips them, and as name-bound `Any` fields
+    # pydantic-settings stores the raw env string instead of a parsed list.
+    # Declare them explicitly as list[str] + NoDecode so they parse the same
+    # env forms the generated decoder does (JSON, Python-literal single-quoted
+    # lists, comma-separated) and route through the source chain (env/Vault).
     ALLOWED_REDIRECT_HOSTS: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["open.odl.local:8062", "ocw.mit.edu"],
         validation_alias=AliasChoices("ALLOWED_REDIRECT_HOSTS"),
@@ -463,7 +503,6 @@ class AqueductSettings(BaseSettings):
     )
 
     @field_validator(
-        "ALLOWED_HOSTS",
         "ALLOWED_REDIRECT_HOSTS",
         "CORS_ALLOWED_ORIGINS",
         "CORS_ALLOWED_ORIGIN_REGEXES",
@@ -472,9 +511,70 @@ class AqueductSettings(BaseSettings):
         mode="before",
     )
     @classmethod
-    def _coerce_str_list(cls, value: object) -> object:
-        """Parse the tolerant list env forms (see ``_parse_str_list``)."""
-        return _parse_str_list(value)
+    def _decode_get_list_of_str_fields(cls, value: object) -> object:
+        """Parse the env string forms for the `get_list_of_str` fields above."""
+        return _parse_env_str_list(value)
+
+    # Revert the 0.8.0 unconditional *_URL/*_URI -> AnyUrl promotion back to
+    # str. This model's values are injected verbatim into Django settings
+    # (the adapter does `scope.update(instance.model_dump())`), and Django
+    # settings must be plain strings: several of these hold relative paths
+    # ('/login', '/media/') or an empty base that AnyUrl rejects outright, and
+    # this model's own validators consume others with string ops
+    # (`APP_BASE_URL` via urljoin, `MITOL_API_BASE_URL` via .rstrip). AnyUrl
+    # would also inject `Url` objects instead of str, changing runtime type
+    # and breaking parity with the str-valued legacy settings. Keeping these
+    # as str preserves the drop-in contract; the AnyUrl schema hint has no
+    # payoff here.
+    ACCESS_TOKEN_URL: str | None = Field(default=None, validation_alias=AliasChoices('ACCESS_TOKEN_URL'))
+    APP_BASE_URL: str | None = Field(default=None, validation_alias=AliasChoices('MITOL_APP_BASE_URL'))
+    AUTHORIZATION_URL: str | None = Field(default=None, validation_alias=AliasChoices('AUTHORIZATION_URL'))
+    CKEDITOR_UPLOAD_URL: str | None = Field(default=None, validation_alias=AliasChoices('CKEDITOR_UPLOAD_URL'))
+    FASTLY_URL: str = Field(default='https://api.fastly.com', validation_alias=AliasChoices('FASTLY_URL'))
+    KEYCLOAK_BASE_URL: str = Field(default='http://mit-keycloak-base-url.edu', validation_alias=AliasChoices('KEYCLOAK_BASE_URL'))
+    LOGIN_ERROR_URL: str = Field(default='/login')
+    LOGIN_REDIRECT_URL: str = Field(default='/app')
+    LOGIN_URL: str = Field(default='/login')
+    LOGOUT_REDIRECT_URL: str = Field(default='/app')
+    MEDIA_URL: str = Field(default='/media/')
+    MICROMASTERS_CMS_API_URL: str | None = Field(default=None, validation_alias=AliasChoices('MICROMASTERS_CMS_API_URL'))
+    MITOL_API_BASE_URL: str = Field(default='', validation_alias=AliasChoices('MITOL_API_BASE_URL'))
+    MITOL_NEW_USER_LOGIN_URL: str = Field(default='http://open.odl.local:8062/onboarding', validation_alias=AliasChoices('MITOL_NEW_USER_LOGIN_URL'))
+    MITOL_TOS_URL: str | None = Field(default=None, validation_alias=AliasChoices('MITOL_TOS_URL'))
+    OIDC_LOGOUT_URL: str | None = Field(default=None, validation_alias=AliasChoices('OIDC_LOGOUT_URL'))
+    OPENSEARCH_URL: str | None = Field(default=None, validation_alias=AliasChoices('OPENSEARCH_URL'))
+    POSTHOG_API_HOST: str = Field(default='https://us.posthog.com', validation_alias=AliasChoices('POSTHOG_API_HOST'))
+    QDRANT_HOST: str = Field(default='http://qdrant:6333', validation_alias=AliasChoices('QDRANT_HOST'))
+    STATIC_URL: str = Field(default='/static/')
+    USERINFO_URL: str | None = Field(default=None, validation_alias=AliasChoices('USERINFO_URL'))
+    CELERY_BROKER_URL: str | None = Field(default=None, validation_alias=AliasChoices('CELERY_BROKER_URL'))
+    REDIS_URL: str | None = Field(default=None, validation_alias=AliasChoices('REDIS_URL'))
+    BLOCKLISTED_COURSES_URL: str = Field(default='https://raw.githubusercontent.com/mitodl/open-resource-blocklists/master/courses.txt', validation_alias=AliasChoices('BLOCKLISTED_COURSES_URL'))
+    CONTENT_BASE_URL_EDX: str = Field(default='https://courses.edx.org', validation_alias=AliasChoices('CONTENT_BASE_URL_EDX'))
+    CONTENT_BASE_URL_MITXONLINE: str = Field(default='https://courses.mitxonline.mit.edu', validation_alias=AliasChoices('CONTENT_BASE_URL_MITXONLINE'))
+    CONTENT_BASE_URL_OLL: str = Field(default='https://openlearninglibrary.mit.edu', validation_alias=AliasChoices('CONTENT_BASE_URL_OLL'))
+    CONTENT_BASE_URL_XPRO: str = Field(default='https://courses.xpro.mit.edu', validation_alias=AliasChoices('CONTENT_BASE_URL_XPRO'))
+    CSAIL_BASE_URL: str | None = Field(default=None, validation_alias=AliasChoices('CSAIL_BASE_URL'))
+    DUPLICATE_COURSES_URL: str | None = Field(default=None, validation_alias=AliasChoices('DUPLICATE_COURSES_URL'))
+    EDX_ALT_URL: str = Field(default='https://courses.edx.org/', validation_alias=AliasChoices('EDX_ALT_URL'))
+    EDX_API_ACCESS_TOKEN_URL: str | None = Field(default=None, validation_alias=AliasChoices('EDX_API_ACCESS_TOKEN_URL'))
+    EDX_API_URL: str | None = Field(default=None, validation_alias=AliasChoices('EDX_API_URL'))
+    EDX_BASE_URL: str = Field(default='https://www.edx.org/', validation_alias=AliasChoices('EDX_BASE_URL'))
+    EDX_PROGRAMS_API_URL: str | None = Field(default=None, validation_alias=AliasChoices('EDX_PROGRAMS_API_URL'))
+    MICROMASTERS_CATALOG_API_URL: str | None = Field(default=None, validation_alias=AliasChoices('MICROMASTERS_CATALOG_API_URL'))
+    MITPE_BASE_URL: str = Field(default='https://professional.mit.edu/', validation_alias=AliasChoices('MITPE_BASE_URL'))
+    MITX_ONLINE_BASE_URL: str | None = Field(default=None, validation_alias=AliasChoices('MITX_ONLINE_BASE_URL'))
+    MITX_ONLINE_COURSES_API_URL: str | None = Field(default=None, validation_alias=AliasChoices('MITX_ONLINE_COURSES_API_URL'))
+    MITX_ONLINE_PROGRAMS_API_URL: str | None = Field(default=None, validation_alias=AliasChoices('MITX_ONLINE_PROGRAMS_API_URL'))
+    MIT_CLIMATE_BASE_URL: str = Field(default='https://climate.mit.edu')
+    OCW_BASE_URL: str = Field(default='http://ocw.mit.edu/', validation_alias=AliasChoices('OCW_BASE_URL'))
+    OVS_API_BASE_URL: str | None = Field(default=None, validation_alias=AliasChoices('OVS_API_BASE_URL'))
+    SEE_API_ACCESS_TOKEN_URL: str | None = Field(default=None, validation_alias=AliasChoices('SEE_API_ACCESS_TOKEN_URL'))
+    SEE_API_URL: str | None = Field(default=None, validation_alias=AliasChoices('SEE_API_URL'))
+    SEE_BASE_URL: str | None = Field(default=None, validation_alias=AliasChoices('SEE_BASE_URL'))
+    XPRO_CATALOG_API_URL: str | None = Field(default=None, validation_alias=AliasChoices('XPRO_CATALOG_API_URL'))
+    XPRO_COURSES_API_URL: str | None = Field(default=None, validation_alias=AliasChoices('XPRO_COURSES_API_URL'))
+    YOUTUBE_CONFIG_URL: str | None = Field(default=None, validation_alias=AliasChoices('YOUTUBE_CONFIG_URL'))
 
     # Overrides of generated fields: legacy uses get_string(name, False), so
     # the value is `False` when unset and a string when set — the generated
