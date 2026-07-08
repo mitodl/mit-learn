@@ -637,7 +637,10 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         )
         serialized_document = serializer.render_document()
         checksum = checksum_for_content(str(serialized_document))
-        key = f"{doc['readable_id']}.course_metadata"
+        key = (
+            f"{(doc.get('platform') or {}).get('code', '')}."
+            "{doc['readable_id']}.course_metadata"
+        )
         serialized_document["checksum"] = checksum
         serialized_document["key"] = key
         document_point_id = vector_point_id(
@@ -647,6 +650,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
             serialized_document, document_point_id
         ):
             continue
+
         # remove existing course info docs
         remove_points_matching_params(
             {"key": key}, collection_name=CONTENT_FILES_COLLECTION_NAME
@@ -736,6 +740,7 @@ def _generate_content_file_points(serialized_content):
         remove_params = {
             "key": doc["key"],
             "resource_readable_id": doc["resource_readable_id"],
+            "platform": doc.get("platform"),
         }
         if doc.get("run_readable_id"):
             remove_params["run_readable_id"] = doc["run_readable_id"]
