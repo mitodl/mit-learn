@@ -616,6 +616,9 @@ def _content_file_stored_checksum_changed(serialized_document: dict) -> bool:
     if not point:
         return False
     stored_checksum = (point.payload or {}).get("checksum")
+    # Missing checksums should not force an expensive summary rewrite by themselves.
+    # should_generate_content_embeddings still treats them as changed so embeddings
+    # can repair older Qdrant points without overwriting existing summaries.
     return stored_checksum is not None and stored_checksum != serialized_document.get(
         "checksum"
     )
