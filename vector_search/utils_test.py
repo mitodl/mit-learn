@@ -320,7 +320,9 @@ def test_remove_qdrant_records_filters_learning_resources_by_platform(
     """Learning resource deletes should not cross platform boundaries."""
     mocker.patch(
         "vector_search.utils.serialize_bulk_learning_resources",
-        return_value=[{"readable_id": "shared-readable-id", "platform": platform_value}],
+        return_value=[
+            {"readable_id": "shared-readable-id", "platform": platform_value}
+        ],
     )
     mock_remove_points_matching_params = mocker.patch(
         "vector_search.utils.remove_points_matching_params"
@@ -332,6 +334,7 @@ def test_remove_qdrant_records_filters_learning_resources_by_platform(
         expected_params,
         collection_name=RESOURCES_COLLECTION_NAME,
     )
+
 
 def test_remove_qdrant_records_filters_content_files_by_platform(mocker):
     """Content file deletes should include the platform in their identity filter."""
