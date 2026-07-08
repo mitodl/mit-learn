@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.73.2
+Version 0.73.2 (Released July 08, 2026)
 --------------
 
 - fix: handle no-max-learners contracts in B2B seat assignment UI (#3564)
