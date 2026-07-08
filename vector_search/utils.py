@@ -639,7 +639,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         checksum = checksum_for_content(str(serialized_document))
         key = (
             f"{(doc.get('platform') or {}).get('code', '')}."
-            "{doc['readable_id']}.course_metadata"
+            f"{doc['readable_id']}.course_metadata"
         )
         serialized_document["checksum"] = checksum
         serialized_document["key"] = key
