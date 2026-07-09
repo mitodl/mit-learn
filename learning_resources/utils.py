@@ -45,7 +45,7 @@ from main.utils import generate_filepath
 
 log = logging.getLogger()
 
-BLOCKLIST_CACHE_TIMEOUT = 60 * 60 * 6
+BLOCKLIST_CACHE_TIMEOUT = 60 * 60 * 24
 
 
 def log_missing_content_file(identifier, *, reason, source):
