@@ -4068,7 +4068,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PodcastEpisodeParent'
-          description: Get summary info for the podcast(s) the episode belongs to
           readOnly: true
         transcript:
           type: string

@@ -6667,37 +6667,6 @@ export interface Podcast {
   rss_url?: string | null
 }
 /**
- * Minimal parent-podcast summary embedded in an episode.
- * @export
- * @interface PodcastEpisodeParent
- */
-export interface PodcastEpisodeParent {
-  /**
-   *
-   * @type {number}
-   * @memberof PodcastEpisodeParent
-   */
-  id: number
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastEpisodeParent
-   */
-  title: string
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastEpisodeParent
-   */
-  readable_id: string
-  /**
-   *
-   * @type {LearningResourceImage}
-   * @memberof PodcastEpisodeParent
-   */
-  image: LearningResourceImage | null
-}
-/**
  * Serializer for PodcastEpisode
  * @export
  * @interface PodcastEpisode
@@ -6716,7 +6685,7 @@ export interface PodcastEpisode {
    */
   podcasts: Array<number>
   /**
-   * Get summary info for the podcast(s) the episode belongs to
+   *
    * @type {Array<PodcastEpisodeParent>}
    * @memberof PodcastEpisode
    */
@@ -6751,6 +6720,37 @@ export interface PodcastEpisode {
    * @memberof PodcastEpisode
    */
   rss?: string | null
+}
+/**
+ * Minimal parent-podcast summary embedded in an episode.
+ * @export
+ * @interface PodcastEpisodeParent
+ */
+export interface PodcastEpisodeParent {
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastEpisodeParent
+   */
+  id: number
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeParent
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeParent
+   */
+  readable_id: string
+  /**
+   *
+   * @type {LearningResourceImage}
+   * @memberof PodcastEpisodeParent
+   */
+  image: LearningResourceImage | null
 }
 /**
  * Serializer for PodcastEpisode
