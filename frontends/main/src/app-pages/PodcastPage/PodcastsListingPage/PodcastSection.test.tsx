@@ -3,7 +3,7 @@ import { factories } from "api/test-utils"
 import type { LearningResource } from "api/v1"
 import { SEARCH_PODCASTS, podcastPageView } from "@/common/urls"
 import { renderWithProviders, screen } from "@/test-utils"
-import PodcastSeriesSection from "./PodcastSeriesSection"
+import PodcastSection from "./PodcastSection"
 
 const makeSeries = (overrides = {}): LearningResource =>
   factories.learningResources.podcast({
@@ -16,14 +16,14 @@ const makeSeries = (overrides = {}): LearningResource =>
     ...overrides,
   }) as unknown as LearningResource
 
-describe("PodcastSeriesSection", () => {
+describe("PodcastSection", () => {
   it("renders the section header and 'All podcasts' link", () => {
     renderWithProviders(
-      <PodcastSeriesSection
-        featuredSeries={[]}
-        moreSeries={[]}
-        hasMoreSeries={false}
-        totalSeries={0}
+      <PodcastSection
+        featuredPodcasts={[]}
+        morePodcasts={[]}
+        hasMorePodcasts={false}
+        totalPodcasts={0}
         isMobile={false}
       />,
     )
@@ -36,11 +36,11 @@ describe("PodcastSeriesSection", () => {
 
   it("does not render the featured block when there is no featured series", () => {
     renderWithProviders(
-      <PodcastSeriesSection
-        featuredSeries={[]}
-        moreSeries={[]}
-        hasMoreSeries={false}
-        totalSeries={0}
+      <PodcastSection
+        featuredPodcasts={[]}
+        morePodcasts={[]}
+        hasMorePodcasts={false}
+        totalPodcasts={0}
         isMobile={false}
       />,
     )
@@ -50,11 +50,11 @@ describe("PodcastSeriesSection", () => {
   it("renders featured series cards with title, summary, and meta", () => {
     const series = makeSeries()
     renderWithProviders(
-      <PodcastSeriesSection
-        featuredSeries={[series]}
-        moreSeries={[]}
-        hasMoreSeries={false}
-        totalSeries={0}
+      <PodcastSection
+        featuredPodcasts={[series]}
+        morePodcasts={[]}
+        hasMorePodcasts={false}
+        totalPodcasts={0}
         isMobile={false}
       />,
     )
@@ -78,11 +78,11 @@ describe("PodcastSeriesSection", () => {
       podcast: { id: 2, episode_count: 5 },
     })
     renderWithProviders(
-      <PodcastSeriesSection
-        featuredSeries={[]}
-        moreSeries={[series]}
-        hasMoreSeries={false}
-        totalSeries={1}
+      <PodcastSection
+        featuredPodcasts={[]}
+        morePodcasts={[series]}
+        hasMorePodcasts={false}
+        totalPodcasts={1}
         isMobile={false}
       />,
     )
@@ -95,11 +95,11 @@ describe("PodcastSeriesSection", () => {
   it("shows the 'View all' button only when hasMoreSeries is true", () => {
     const series = makeSeries()
     const { view } = renderWithProviders(
-      <PodcastSeriesSection
-        featuredSeries={[]}
-        moreSeries={[series]}
-        hasMoreSeries={false}
-        totalSeries={150}
+      <PodcastSection
+        featuredPodcasts={[]}
+        morePodcasts={[series]}
+        hasMorePodcasts={false}
+        totalPodcasts={150}
         isMobile={false}
       />,
     )
@@ -108,11 +108,11 @@ describe("PodcastSeriesSection", () => {
     ).not.toBeInTheDocument()
 
     view.rerender(
-      <PodcastSeriesSection
-        featuredSeries={[]}
-        moreSeries={[series]}
-        hasMoreSeries={true}
-        totalSeries={150}
+      <PodcastSection
+        featuredPodcasts={[]}
+        morePodcasts={[series]}
+        hasMorePodcasts={true}
+        totalPodcasts={150}
         isMobile={false}
       />,
     )

@@ -5,8 +5,8 @@ import type { LearningResource } from "api/v1"
 import { renderWithProviders, screen, user, waitFor } from "@/test-utils"
 import {
   EPISODES_PAGE_SIZE,
-  SERIES_FEATURED_COUNT,
-  SERIES_MORE_COUNT,
+  PODCAST_FEATURED_COUNT,
+  PODCAST_MORE_COUNT,
 } from "./constants"
 import { PodcastsListingPage } from "./PodcastsListingPage"
 
@@ -28,7 +28,7 @@ const makeEpisode = (overrides = {}): LearningResource =>
     ...overrides,
   }) as unknown as LearningResource
 
-const makeSeries = (overrides = {}): LearningResource =>
+const makePodcast = (overrides = {}): LearningResource =>
   factories.learningResources.podcast({
     podcast: { id: 1, episode_count: 10 },
     ...overrides,
@@ -50,17 +50,17 @@ const makeLearningPathItemsResponse = (resources: LearningResource[]) => ({
 const setupApis = ({
   episodes = [],
   totalEpisodes = episodes.length,
-  series = [],
-  totalSeries = series.length,
+  podcasts = [],
+  totalPodcasts = podcasts.length,
   featuredLearningPathId,
-  featuredSeries = [],
+  featuredPodcast = [],
 }: {
   episodes?: LearningResource[]
   totalEpisodes?: number
-  series?: LearningResource[]
-  totalSeries?: number
+  podcasts?: LearningResource[]
+  totalPodcasts?: number
   featuredLearningPathId?: number
-  featuredSeries?: LearningResource[]
+  featuredPodcast?: LearningResource[]
 }) => {
   setMockResponse.get(
     urls.learningResources.list({
@@ -75,18 +75,18 @@ const setupApis = ({
     urls.learningResources.list({
       resource_type: [ResourceTypeEnum.Podcast],
       sortby: LearningResourcesListSortbyEnum.New,
-      limit: SERIES_MORE_COUNT,
+      limit: PODCAST_MORE_COUNT,
     }),
-    { count: totalSeries, next: null, previous: null, results: series },
+    { count: totalPodcasts, next: null, previous: null, results: podcasts },
   )
 
   if (featuredLearningPathId) {
     setMockResponse.get(
       urls.learningPaths.resources({
         learning_resource_id: featuredLearningPathId,
-        limit: SERIES_FEATURED_COUNT,
+        limit: PODCAST_FEATURED_COUNT,
       }),
-      makeLearningPathItemsResponse(featuredSeries),
+      makeLearningPathItemsResponse(featuredPodcast),
     )
   }
 }
@@ -104,12 +104,12 @@ describe("PodcastsListingPage", () => {
 
   it("renders hero stats from the episode and series counts", async () => {
     delete process.env[ENV_KEY]
-    setupApis({ totalEpisodes: 1234, totalSeries: 250 })
+    setupApis({ totalEpisodes: 1234, totalPodcasts: 250 })
 
     renderWithProviders(<PodcastsListingPage />)
 
     expect(await screen.findByText(/1200\+ episodes/)).toBeInTheDocument()
-    expect(screen.getByText(/200\+ series/)).toBeInTheDocument()
+    expect(screen.getByText(/200\+ podcasts/)).toBeInTheDocument()
   })
 
   it("renders the first episode as 'Now Playing' and the rest as 'Latest Episodes'", async () => {
@@ -182,11 +182,11 @@ describe("PodcastsListingPage", () => {
 
   it("does not render the featured podcasts section when the env var is unset", async () => {
     delete process.env[ENV_KEY]
-    setupApis({ series: [makeSeries({ title: "Regular Series" })] })
+    setupApis({ podcasts: [makePodcast({ title: "Regular Podcast" })] })
 
     renderWithProviders(<PodcastsListingPage />)
 
-    await screen.findByText("Regular Series")
+    await screen.findByText("Regular Podcast")
     expect(screen.queryByText("FEATURED")).not.toBeInTheDocument()
   })
 
@@ -194,13 +194,13 @@ describe("PodcastsListingPage", () => {
     process.env[ENV_KEY] = "99"
     setupApis({
       featuredLearningPathId: 99,
-      featuredSeries: [makeSeries({ title: "Featured Series" })],
+      featuredPodcast: [makePodcast({ title: "Featured Podcast" })],
     })
 
     renderWithProviders(<PodcastsListingPage />)
 
     expect(await screen.findByText("FEATURED")).toBeInTheDocument()
-    expect(screen.getByText("Featured Series")).toBeInTheDocument()
+    expect(screen.getByText("Featured Podcast")).toBeInTheDocument()
   })
 
   it("plays an episode and toggles the button to 'Pause' once playback starts", async () => {

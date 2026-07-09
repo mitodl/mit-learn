@@ -49,12 +49,12 @@ const HeroStats = styled(Typography)(({ theme }) => ({
 }))
 
 export type HeroSectionProps = {
-  totalSeries: number
+  totalPodcasts: number
   totalEpisodes: number
 }
 
 const HeroSection: React.FC<HeroSectionProps> = ({
-  totalSeries,
+  totalPodcasts,
   totalEpisodes,
 }) => {
   return (
@@ -62,10 +62,10 @@ const HeroSection: React.FC<HeroSectionProps> = ({
       <PodcastContainer>
         <HeroHeading>Podcasts from across MIT</HeroHeading>
         <HeroDescription variant="body1">
-          New podcast episodes and series.
+          New podcast episodes and podcasts.
         </HeroDescription>
         <HeroStats variant="body3">
-          {`${formatApproxCount(totalSeries)} series  •  ${formatApproxCount(totalEpisodes)} episodes  •  Updated daily`}
+          {`${formatApproxCount(totalPodcasts)} podcasts  •  ${formatApproxCount(totalEpisodes)} episodes  •  Updated daily`}
         </HeroStats>
       </PodcastContainer>
     </HeroSectionWrap>

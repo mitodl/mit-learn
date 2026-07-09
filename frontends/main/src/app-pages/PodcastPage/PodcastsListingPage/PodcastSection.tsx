@@ -9,7 +9,7 @@ import { SEARCH_PODCASTS, podcastPageView } from "@/common/urls"
 import { Section, SectionHeader, SectionTitle, SectionLink } from "./styled"
 import { formatApproxCount } from "./helpers"
 
-const SeriesDescription = styled(Typography)(({ theme }) => ({
+const PodcastDescription = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   padding: "40px 0",
   lineHeight: "24px",
@@ -18,7 +18,7 @@ const SeriesDescription = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const SeriesGroup = styled.div({
+const PodcastGroup = styled.div({
   display: "flex",
   flexDirection: "column",
   gap: "56px",
@@ -32,14 +32,14 @@ const FeaturedLabel = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const FeaturedSeriesRow = styled.div(({ theme }) => ({
+const FeaturedPodcastRow = styled.div(({ theme }) => ({
   display: "flex",
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
   },
 }))
 
-const FeaturedSeriesCard = styled(Link)(({ theme }) => ({
+const FeaturedPodcastCard = styled(Link)(({ theme }) => ({
   flex: 1,
   minWidth: 0,
   display: "flex",
@@ -52,7 +52,7 @@ const FeaturedSeriesCard = styled(Link)(({ theme }) => ({
   "&:not(:first-of-type)": {
     borderLeft: "none",
   },
-  "&:hover .series-card-title": {
+  "&:hover .podcast-card-title": {
     color: theme.custom.colors.red,
   },
   [theme.breakpoints.down("sm")]: {
@@ -66,7 +66,7 @@ const FeaturedSeriesCard = styled(Link)(({ theme }) => ({
   },
 }))
 
-const FeaturedSeriesImage = styled.img({
+const FeaturedPodcastImage = styled.img({
   width: "72px",
   height: "72px",
   objectFit: "cover",
@@ -74,12 +74,12 @@ const FeaturedSeriesImage = styled.img({
   marginBottom: "24px",
 })
 
-const FeaturedSeriesTitle = styled(Typography)(({ theme }) => ({
+const FeaturedPodcastTitle = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   marginBottom: "8px",
 }))
 
-const FeaturedSeriesSummary = styled(Typography)(({ theme }) => ({
+const FeaturedPodcastSummary = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
   lineHeight: "24px",
   marginBottom: "16px",
@@ -89,12 +89,12 @@ const FeaturedSeriesSummary = styled(Typography)(({ theme }) => ({
   overflow: "hidden",
 }))
 
-const FeaturedSeriesMeta = styled(Typography)(({ theme }) => ({
+const FeaturedPodcastMeta = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
   lineHeight: "22px",
 }))
 
-const MoreSeriesRow = styled(Link)(({ theme }) => ({
+const MorePodcastRow = styled(Link)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
@@ -112,25 +112,25 @@ const MoreSeriesRow = styled(Link)(({ theme }) => ({
   },
 }))
 
-const MoreSeriesLeft = styled.div({
+const MorePodcastLeft = styled.div({
   display: "flex",
   alignItems: "center",
   gap: "16px",
   minWidth: 0,
 })
 
-const MoreSeriesTitle = styled(Typography)(({ theme }) => ({
+const MorePodcastTitle = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   whiteSpace: "normal",
 }))
 
-const MoreSeriesOfferedBy = styled(Typography)(({ theme }) => ({
+const MorePodcastOfferedBy = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
   textTransform: "uppercase",
   whiteSpace: "nowrap",
 }))
 
-const MoreSeriesMeta = styled(Typography)(({ theme }) => ({
+const MorePodcastMeta = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray1,
   whiteSpace: "nowrap",
 }))
@@ -166,19 +166,19 @@ const StyledRiArrowRightLine = styled(RiArrowRightLine)(() => ({
   fontSize: "24px",
 }))
 
-export type PodcastSeriesSectionProps = {
-  featuredSeries: LearningResource[]
-  moreSeries: LearningResource[]
-  hasMoreSeries: boolean
-  totalSeries: number
+export type PodcastSectionProps = {
+  featuredPodcasts: LearningResource[]
+  morePodcasts: LearningResource[]
+  hasMorePodcasts: boolean
+  totalPodcasts: number
   isMobile: boolean
 }
 
-const PodcastSeriesSection: React.FC<PodcastSeriesSectionProps> = ({
-  featuredSeries,
-  moreSeries,
-  hasMoreSeries,
-  totalSeries,
+const PodcastSection: React.FC<PodcastSectionProps> = ({
+  featuredPodcasts,
+  morePodcasts,
+  hasMorePodcasts,
+  totalPodcasts,
   isMobile,
 }) => {
   return (
@@ -189,17 +189,17 @@ const PodcastSeriesSection: React.FC<PodcastSeriesSectionProps> = ({
           <SectionLink variant="subtitle1">All podcasts</SectionLink>
         </Link>
       </SectionHeader>
-      <SeriesDescription variant="subtitle1">
+      <PodcastDescription variant="subtitle1">
         Departments, labs, and centers across MIT produce their own audio
         series. Each reflects a different part of the Institute.
-      </SeriesDescription>
+      </PodcastDescription>
 
-      <SeriesGroup>
-        {featuredSeries.length > 0 && (
+      <PodcastGroup>
+        {featuredPodcasts.length > 0 && (
           <div>
             <FeaturedLabel variant="subtitle2">FEATURED</FeaturedLabel>
-            <FeaturedSeriesRow>
-              {featuredSeries.map((item) => {
+            <FeaturedPodcastRow>
+              {featuredPodcasts.map((item) => {
                 const episodeCount =
                   item.resource_type === "podcast"
                     ? item.podcast?.episode_count
@@ -208,48 +208,48 @@ const PodcastSeriesSection: React.FC<PodcastSeriesSectionProps> = ({
                   ? formatDate(item.last_modified, "MMM D")
                   : null
                 return (
-                  <FeaturedSeriesCard
+                  <FeaturedPodcastCard
                     key={item.id}
                     href={podcastPageView(String(item.id), item.title)}
                   >
                     {item.image?.url && (
-                      <FeaturedSeriesImage
+                      <FeaturedPodcastImage
                         src={item.image.url}
                         alt={item.image.alt ?? item.title}
                       />
                     )}
-                    <FeaturedSeriesTitle
-                      className="series-card-title"
+                    <FeaturedPodcastTitle
+                      className="podcast-card-title"
                       variant="h4"
                     >
                       {item.title}
-                    </FeaturedSeriesTitle>
+                    </FeaturedPodcastTitle>
                     {item.description && (
-                      <FeaturedSeriesSummary variant="body1">
+                      <FeaturedPodcastSummary variant="body1">
                         {item.description}
-                      </FeaturedSeriesSummary>
+                      </FeaturedPodcastSummary>
                     )}
-                    <FeaturedSeriesMeta variant="body2">
+                    <FeaturedPodcastMeta variant="body2">
                       {[
                         episodeCount ? `${episodeCount} episodes` : null,
                         updated ? `Updated ${updated}` : null,
                       ]
                         .filter(Boolean)
                         .join("  •  ")}
-                    </FeaturedSeriesMeta>
-                  </FeaturedSeriesCard>
+                    </FeaturedPodcastMeta>
+                  </FeaturedPodcastCard>
                 )
               })}
-            </FeaturedSeriesRow>
+            </FeaturedPodcastRow>
           </div>
         )}
 
-        {moreSeries.length > 0 && (
+        {morePodcasts.length > 0 && (
           <div>
             <SectionHeader>
               <SectionTitle variant="subtitle1">More Podcasts</SectionTitle>
             </SectionHeader>
-            {moreSeries.map((item) => {
+            {morePodcasts.map((item) => {
               const episodeCount =
                 item.resource_type === "podcast"
                   ? item.podcast?.episode_count
@@ -258,44 +258,44 @@ const PodcastSeriesSection: React.FC<PodcastSeriesSectionProps> = ({
                 ? formatDate(item.last_modified, "MMM D")
                 : null
               return (
-                <MoreSeriesRow
+                <MorePodcastRow
                   key={item.id}
                   href={podcastPageView(String(item.id), item.title)}
                 >
-                  <MoreSeriesLeft>
-                    <MoreSeriesTitle className="series-row-title" variant="h5">
+                  <MorePodcastLeft>
+                    <MorePodcastTitle className="series-row-title" variant="h5">
                       {item.title}
-                    </MoreSeriesTitle>
+                    </MorePodcastTitle>
                     {item.offered_by?.name && (
-                      <MoreSeriesOfferedBy variant="subtitle3">
+                      <MorePodcastOfferedBy variant="subtitle3">
                         {item.offered_by.name}
-                      </MoreSeriesOfferedBy>
+                      </MorePodcastOfferedBy>
                     )}
-                  </MoreSeriesLeft>
-                  <MoreSeriesMeta variant="body3">
+                  </MorePodcastLeft>
+                  <MorePodcastMeta variant="body3">
                     {[episodeCount ? `${episodeCount} episodes` : null, updated]
                       .filter(Boolean)
                       .join("  •  ")}
-                  </MoreSeriesMeta>
-                </MoreSeriesRow>
+                  </MorePodcastMeta>
+                </MorePodcastRow>
               )
             })}
-            {hasMoreSeries && (
+            {hasMorePodcasts && (
               <ViewAllContainer>
                 <ViewAllButton
                   variant="bordered"
                   endIcon={<StyledRiArrowRightLine size={24} />}
                   href={SEARCH_PODCASTS}
                 >
-                  {`View all ${formatApproxCount(totalSeries)} podcasts`}
+                  {`View all ${formatApproxCount(totalPodcasts)} podcasts`}
                 </ViewAllButton>
               </ViewAllContainer>
             )}
           </div>
         )}
-      </SeriesGroup>
+      </PodcastGroup>
     </Section>
   )
 }
 
-export default PodcastSeriesSection
+export default PodcastSection

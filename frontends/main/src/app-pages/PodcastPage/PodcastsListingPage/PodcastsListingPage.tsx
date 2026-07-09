@@ -22,12 +22,12 @@ import {
 import HeroSection from "./HeroSection"
 import NowPlayingSection from "./NowPlayingSection"
 import LatestEpisodesSection from "./LatestEpisodesSection"
-import PodcastSeriesSection from "./PodcastSeriesSection"
+import PodcastSection from "./PodcastSection"
 import { getEpisodeAudioUrl } from "./helpers"
 import {
   EPISODES_PAGE_SIZE,
-  SERIES_FEATURED_COUNT,
-  SERIES_MORE_COUNT,
+  PODCAST_FEATURED_COUNT,
+  PODCAST_MORE_COUNT,
 } from "./constants"
 
 export const PodcastsListingPage: React.FC = () => {
@@ -43,7 +43,7 @@ export const PodcastsListingPage: React.FC = () => {
     close,
   } = usePodcastPlayer(playerRef, isMobile)
   const episodesLimit = EPISODES_PAGE_SIZE + 1
-  const seriesLimit = SERIES_MORE_COUNT
+  const podcastLimit = PODCAST_MORE_COUNT
 
   const { data: episodesData } = useLearningResourcesList({
     resource_type: [ResourceTypeEnum.PodcastEpisode],
@@ -51,10 +51,10 @@ export const PodcastsListingPage: React.FC = () => {
     limit: episodesLimit,
   })
 
-  const { data: seriesData } = useLearningResourcesList({
+  const { data: podcastData } = useLearningResourcesList({
     resource_type: [ResourceTypeEnum.Podcast],
     sortby: LearningResourcesListSortbyEnum.New,
-    limit: seriesLimit,
+    limit: podcastLimit,
   })
 
   const featuredLearningPathId = Number(
@@ -66,7 +66,7 @@ export const PodcastsListingPage: React.FC = () => {
   const { data: featuredPodcastsData } = useInfiniteLearningPathItems(
     {
       learning_resource_id: featuredLearningPathId,
-      limit: SERIES_FEATURED_COUNT,
+      limit: PODCAST_FEATURED_COUNT,
     },
     { enabled: hasFeaturedLearningPathId },
   )
@@ -77,7 +77,7 @@ export const PodcastsListingPage: React.FC = () => {
   const latestEpisodes = episodes.slice(1)
   const hasMoreEpisodes = episodes.length < totalEpisodes
 
-  const featuredSeries = useMemo(() => {
+  const featuredPodcasts = useMemo(() => {
     const items =
       featuredPodcastsData?.pages.flatMap((page) => page.results ?? []) ?? []
     return items
@@ -86,13 +86,13 @@ export const PodcastsListingPage: React.FC = () => {
         (resource): resource is LearningResource =>
           resource?.resource_type === ResourceTypeEnum.Podcast,
       )
-      .slice(0, SERIES_FEATURED_COUNT)
+      .slice(0, PODCAST_FEATURED_COUNT)
   }, [featuredPodcastsData])
 
-  const series = seriesData?.results ?? []
-  const totalSeries = seriesData?.count ?? 0
-  const moreSeries = series
-  const hasMoreSeries = series.length < totalSeries
+  const podcasts = podcastData?.results ?? []
+  const totalPodcasts = podcastData?.count ?? 0
+  const morePodcasts = podcasts
+  const hasMorePodcasts = podcasts.length < totalPodcasts
 
   const handlePlayClick = (episode: LearningResource) =>
     toggle(episode, episode.offered_by?.name)
@@ -113,7 +113,10 @@ export const PodcastsListingPage: React.FC = () => {
           </StyledPodcastContainer>
         </BreadcrumbBar>
 
-        <HeroSection totalSeries={totalSeries} totalEpisodes={totalEpisodes} />
+        <HeroSection
+          totalPodcasts={totalPodcasts}
+          totalEpisodes={totalEpisodes}
+        />
 
         <SectionDivider />
 
@@ -136,11 +139,11 @@ export const PodcastsListingPage: React.FC = () => {
             isPlayable={(episode) => Boolean(getEpisodeAudioUrl(episode))}
           />
 
-          <PodcastSeriesSection
-            featuredSeries={featuredSeries}
-            moreSeries={moreSeries}
-            hasMoreSeries={hasMoreSeries}
-            totalSeries={totalSeries}
+          <PodcastSection
+            featuredPodcasts={featuredPodcasts}
+            morePodcasts={morePodcasts}
+            hasMorePodcasts={hasMorePodcasts}
+            totalPodcasts={totalPodcasts}
             isMobile={isMobile}
           />
         </PodcastContainer>
