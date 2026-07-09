@@ -740,7 +740,7 @@ def _generate_content_file_points(serialized_content):
         remove_params = {
             "key": doc["key"],
             "resource_readable_id": doc["resource_readable_id"],
-            "platform": (doc.get("platform") or {}).get("code", ""),
+            "platform": (doc.get("platform") or {}).get("code"),
         }
         if doc.get("run_readable_id"):
             remove_params["run_readable_id"] = doc["run_readable_id"]

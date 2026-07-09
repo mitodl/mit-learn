@@ -311,7 +311,7 @@ def test_filter_existing_qdrant_points(mocker):
     ("platform_value", "expected_params"),
     [
         ({"code": "ocw"}, {"readable_id": "shared-readable-id", "platform": "ocw"}),
-        (None, {"readable_id": "shared-readable-id", "platform__isnull": True}),
+        (None, {"readable_id": "shared-readable-id"}),
     ],
 )
 def test_remove_qdrant_records_filters_learning_resources_by_platform(
