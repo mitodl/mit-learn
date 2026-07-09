@@ -288,7 +288,10 @@ const enrollmentBelongsToCourse = (
  * Priority:
  * 1. Prefer enrollment with a certificate
  * 2. If tied, prefer highest grade
- * 3. Otherwise take first match
+ * 3. If tied, prefer the run matching `course.next_run_id`, then the run
+ *    with the later `start_date` (runs without a valid `start_date` sort
+ *    last). Mirrors `getBestRun`'s recency policy so the fallback here is
+ *    never an arbitrary (e.g. database-order) run.
  */
 const pickDisplayedEnrollmentForLegacyDashboard = (
   course: CourseWithCourseRunsSerializerV2,
@@ -310,7 +313,24 @@ const pickDisplayedEnrollmentForLegacyDashboard = (
 
     const bestGrade = getMaxEnrollmentGrade(best)
     const currentGrade = getMaxEnrollmentGrade(current)
-    return currentGrade > bestGrade ? current : best
+    if (currentGrade !== bestGrade) {
+      return currentGrade > bestGrade ? current : best
+    }
+
+    if (course.next_run_id !== null && course.next_run_id !== undefined) {
+      if (current.run.id === course.next_run_id) return current
+      if (best.run.id === course.next_run_id) return best
+    }
+
+    const bestMs = best.run.start_date
+      ? new Date(best.run.start_date).getTime()
+      : NaN
+    const currentMs = current.run.start_date
+      ? new Date(current.run.start_date).getTime()
+      : NaN
+    if (isNaN(bestMs) && !isNaN(currentMs)) return current
+    if (!isNaN(bestMs) && isNaN(currentMs)) return best
+    return currentMs > bestMs ? current : best
   }, courseEnrollments[0])
 }
 

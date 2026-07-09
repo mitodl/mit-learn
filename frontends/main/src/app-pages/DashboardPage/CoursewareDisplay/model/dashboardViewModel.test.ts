@@ -118,6 +118,82 @@ describe("dashboardViewModel", () => {
         pickDisplayedEnrollmentForLegacyDashboard(course, [olderEnrollment]),
       ).toEqual(olderEnrollment)
     })
+
+    test("prefers the run matching next_run_id when certificate and grade are tied", () => {
+      const olderRun = factories.courses.courseRun({
+        id: 101,
+        start_date: "2020-01-01T00:00:00Z",
+      })
+      const newerRun = factories.courses.courseRun({
+        id: 202,
+        start_date: "2024-01-01T00:00:00Z",
+      })
+      const course = factories.courses.course({
+        courseruns: [olderRun, newerRun],
+        next_run_id: newerRun.id,
+      })
+      const olderEnrollment = factories.enrollment.courseEnrollment({
+        run: { id: olderRun.id },
+        certificate: null,
+        grades: [],
+      })
+      const newerEnrollment = factories.enrollment.courseEnrollment({
+        run: { id: newerRun.id },
+        certificate: null,
+        grades: [],
+      })
+
+      expect(
+        pickDisplayedEnrollmentForLegacyDashboard(course, [
+          olderEnrollment,
+          newerEnrollment,
+        ]),
+      ).toEqual(newerEnrollment)
+      expect(
+        pickDisplayedEnrollmentForLegacyDashboard(course, [
+          newerEnrollment,
+          olderEnrollment,
+        ]),
+      ).toEqual(newerEnrollment)
+    })
+
+    test("prefers the run with the later start_date when certificate, grade, and next_run_id don't distinguish", () => {
+      const olderRun = factories.courses.courseRun({
+        id: 101,
+        start_date: "2020-01-01T00:00:00Z",
+      })
+      const newerRun = factories.courses.courseRun({
+        id: 202,
+        start_date: "2024-01-01T00:00:00Z",
+      })
+      const course = factories.courses.course({
+        courseruns: [olderRun, newerRun],
+        next_run_id: null,
+      })
+      const olderEnrollment = factories.enrollment.courseEnrollment({
+        run: { id: olderRun.id, start_date: olderRun.start_date },
+        certificate: null,
+        grades: [],
+      })
+      const newerEnrollment = factories.enrollment.courseEnrollment({
+        run: { id: newerRun.id, start_date: newerRun.start_date },
+        certificate: null,
+        grades: [],
+      })
+
+      expect(
+        pickDisplayedEnrollmentForLegacyDashboard(course, [
+          olderEnrollment,
+          newerEnrollment,
+        ]),
+      ).toEqual(newerEnrollment)
+      expect(
+        pickDisplayedEnrollmentForLegacyDashboard(course, [
+          newerEnrollment,
+          olderEnrollment,
+        ]),
+      ).toEqual(newerEnrollment)
+    })
   })
 
   describe("groupCourseRunEnrollmentsByCourseId", () => {
