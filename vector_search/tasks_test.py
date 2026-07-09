@@ -865,11 +865,15 @@ def test_generate_embeddings_retries_on_unavailable(mocker):
     retry.assert_called_once()
 
 
-def test_retry_countdown_is_minutes_scale():
-    """Backoff is minutes-scale so retries land after a qdrant throttle episode."""
-    samples = [_retry_countdown(0) for _ in range(50)]
-    assert max(samples) > 60  # jittered up to 2 minutes, not seconds
-    assert max(samples) <= 120
+def test_retry_countdown_is_minutes_scale(mocker):
+    """Backoff is jittered exponential at minutes scale, capped at 10m."""
+    backoff = mocker.patch(
+        "vector_search.tasks.get_exponential_backoff_interval", return_value=42
+    )
+    assert _retry_countdown(2) == 42
+    backoff.assert_called_once_with(
+        factor=120, retries=2, maximum=600, full_jitter=True
+    )
 
 
 def test_generate_embeddings_records_on_exhaustion(mocker):
