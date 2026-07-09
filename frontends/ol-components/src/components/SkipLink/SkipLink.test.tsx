@@ -28,18 +28,14 @@ describe("SkipLink", () => {
     expect(target).toHaveAttribute("tabindex", "-1")
   })
 
-  it("moves focus to the target when activated, so the next Tab exits the block", async () => {
+  it("moves focus past the block to the first focusable element after it", async () => {
     renderBlock()
     const trigger = screen.getByRole("link", { name: "Skip Featured Courses" })
-    const targetId = trigger.getAttribute("href")?.slice(1)
-    const target = document.getElementById(targetId as string)
 
+    // Activating the skip link lands focus directly on the first focusable
+    // element after the block (not the empty end marker), so the repeated cards
+    // are skipped and the user arrives on real, announced content.
     await user.click(trigger)
-    expect(target).toHaveFocus()
-
-    // From the target, the next focusable element is after the block — the
-    // repeated cards have been skipped entirely.
-    await user.tab()
     expect(screen.getByRole("link", { name: "After the block" })).toHaveFocus()
   })
 
@@ -115,6 +111,14 @@ describe("SkipLink", () => {
       expect(() =>
         renderWithTheme(<SkipLink.Trigger>Skip</SkipLink.Trigger>),
       ).toThrow(/targetId/)
+      spy.mockRestore()
+    })
+
+    it("throws if a standalone Trigger has no children (would be a nameless link)", () => {
+      const spy = jest.spyOn(console, "error").mockImplementation(() => {})
+      expect(() =>
+        renderWithTheme(<SkipLink.Trigger targetId="somewhere" />),
+      ).toThrow(/children/)
       spy.mockRestore()
     })
   })

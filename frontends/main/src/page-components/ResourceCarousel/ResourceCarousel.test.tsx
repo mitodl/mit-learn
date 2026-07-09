@@ -441,9 +441,8 @@ describe("ResourceCarousel", () => {
       const skip = screen.getByRole("link", { name: "Skip My Carousel" })
       await user.click(skip)
 
-      // Focus lands on the skip target, which sits after every card, so the
-      // next Tab leaves the carousel entirely rather than entering a card.
-      await user.tab()
+      // Activating the skip link lands focus directly on the first focusable
+      // element after the carousel, skipping every card.
       expect(screen.getByRole("link", { name: "After carousel" })).toHaveFocus()
     })
   })

@@ -20,10 +20,10 @@ import type { Theme } from "@mui/material/styles"
  *
  * 2. Skip TO existing landmarks (WCAG 2.4.1) — you own the targets. Use standalone
  *    triggers pointing at elements already in the page by id (each target should
- *    be focusable, e.g. `tabIndex={-1}`). Revealed at the top-left corner of the
- *    nearest positioned ancestor, so group them in a positioned nav:
+ *    be focusable, e.g. `tabIndex={-1}`). The reveal anchors to the top-left of
+ *    the nearest positioned ancestor, so the grouping nav must be positioned:
  *
- *      <nav aria-label="Skip links">
+ *      <nav aria-label="Skip links" style={{ position: "relative" }}>
  *        <SkipLink.Trigger targetId="main-content">Skip to main content</SkipLink.Trigger>
  *        <SkipLink.Trigger targetId="player">Skip to video player</SkipLink.Trigger>
  *      </nav>
@@ -69,12 +69,42 @@ const revealBase = {
   overflow: "visible",
 }
 
+// Keyboard-focusable elements, used to move focus onto real content past a block.
+const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+].join(",")
+
+/** The first keyboard-focusable element after `marker` in DOM order, if any. */
+const firstFocusableAfter = (marker: HTMLElement): HTMLElement | null => {
+  const candidates = Array.from(
+    marker.ownerDocument.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+  )
+  return (
+    candidates.find(
+      (el) =>
+        !!(
+          marker.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING
+        ),
+    ) ?? null
+  )
+}
+
 /**
  * Block variant (inside a Container): revealed floating fully above the block,
  * so it neither covers the block's heading nor shifts layout.
  */
 const BlockTriggerAnchor = styled.a(({ theme }) => ({
   ...skipLinkChrome(theme),
+  // The reveal floats up via translateY. The app's global scroll-padding-top
+  // already reserves header space for focus scrolling; reserve a little extra
+  // here so the upward-floated box also stays clear of a fixed header when the
+  // block is focus-scrolled from below (WCAG 2.4.11 Focus Not Obscured).
+  scrollMarginTop: "48px",
   "&:focus": {
     ...revealBase,
     left: "0",
@@ -98,9 +128,13 @@ const PageTriggerAnchor = styled.a(({ theme }) => ({
 }))
 
 /**
- * A focusable, visually-empty sentinel used as a Container's target. It carries
- * no accessible name so screen readers move straight on to the content that
- * follows it.
+ * Zero-size marker at the end of a Container's block. Focus doesn't normally
+ * land here — the Trigger moves focus to the first focusable element AFTER this
+ * marker, so the user arrives on real, announced content instead of an empty
+ * node (which screen readers read as "blank"/"group"). It stays focusable
+ * (tabindex=-1) only as a fallback for when nothing focusable follows the block,
+ * and is intentionally unnamed (its generic role prohibits an accessible name
+ * under ARIA).
  */
 const TargetSentinel = styled.div({
   outline: "none",
@@ -155,22 +189,38 @@ const Trigger: React.FC<SkipLinkTriggerProps> = ({
       "SkipLink.Trigger needs a `targetId` prop or a SkipLink.Container ancestor",
     )
   }
+  // A Container supplies default "Skip {label}" text; a standalone trigger must
+  // pass its own children, or the link would have no accessible name.
+  const content = children ?? (context ? `Skip ${context.label}` : undefined)
+  if (content === undefined) {
+    throw new Error(
+      "SkipLink.Trigger needs `children` (link text) when used without a SkipLink.Container",
+    )
+  }
   // Inside a Container we skip past a block, so float the reveal above it;
   // standalone we're a page-level skip-to-landmark link, revealed in the corner.
   const Anchor = context ? BlockTriggerAnchor : PageTriggerAnchor
   const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
-    // Native hash navigation would focus a tabindex=-1 target in modern
-    // browsers, but move focus explicitly so it's reliable everywhere (and in
-    // tests) and so the URL is left untouched.
     const target = event.currentTarget.ownerDocument.getElementById(targetId)
-    if (target) {
-      event.preventDefault()
-      target.focus()
+    if (!target) {
+      return
     }
+    // Move focus explicitly (rather than relying on native hash navigation) so
+    // it's reliable everywhere, including tests, and leaves the URL untouched.
+    //
+    // Block mode: `target` is an empty end-of-block marker; focusing it directly
+    // just reads as "blank"/"group" and strands the user, so move focus to the
+    // first real focusable element after the block. Standalone mode: `target` is
+    // a real landmark, so focus it directly.
+    const destination = context
+      ? (firstFocusableAfter(target) ?? target)
+      : target
+    event.preventDefault()
+    destination.focus()
   }
   return (
     <Anchor href={`#${targetId}`} className={className} onClick={handleClick}>
-      {children ?? (context ? `Skip ${context.label}` : null)}
+      {content}
     </Anchor>
   )
 }
