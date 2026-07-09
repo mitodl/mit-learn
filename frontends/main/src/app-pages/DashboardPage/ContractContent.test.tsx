@@ -334,16 +334,14 @@ describe("ContractContent", () => {
     expect(completedCard).toBeDefined()
     expect(enrolledCard).toBeDefined()
 
-    // Check enrollment status indicators
-    const completedIndicator = within(completedCard!).getByTestId(
-      "enrollment-status",
-    )
-    const enrolledIndicator = within(enrolledCard!).getByTestId(
-      "enrollment-status",
-    )
+    // Check progress badges (the enrollment-status icon is reserved for
+    // compact program module rows; contract cards convey status via the
+    // ProgressBadge next to the card type label instead)
+    const completedBadge = within(completedCard!).getByTestId("progress-badge")
+    const enrolledBadge = within(enrolledCard!).getByTestId("progress-badge")
 
-    expect(completedIndicator).toHaveTextContent(/^Completed$/)
-    expect(enrolledIndicator).toHaveTextContent(/^Enrolled$/)
+    expect(completedBadge).toHaveTextContent(/^Completed$/)
+    expect(enrolledBadge).toHaveTextContent(/^In Progress$/)
   })
 
   test("Renders program collections", async () => {
@@ -1271,15 +1269,17 @@ describe("ContractContent", () => {
     ).findAllByTestId("enrollment-card-desktop")
 
     expect(cards.length).toBe(3)
-    // First card should show enrolled status
-    const cardStatus0 = within(cards[0]).getByTestId("enrollment-status")
+    // Progress badges (the enrollment-status icon is reserved for compact
+    // program module rows; contract cards convey status via the
+    // ProgressBadge next to the card type label instead)
+    const cardStatus0 = within(cards[0]).getByTestId("progress-badge")
     expect(cardStatus0).toHaveTextContent(/^Completed$/)
 
-    const cardStatus1 = within(cards[1]).getByTestId("enrollment-status")
-    expect(cardStatus1).toHaveTextContent(/^Enrolled$/)
+    const cardStatus1 = within(cards[1]).getByTestId("progress-badge")
+    expect(cardStatus1).toHaveTextContent(/^In Progress$/)
 
-    const cardStatus2 = within(cards[2]).getByTestId("enrollment-status")
-    expect(cardStatus2).toHaveTextContent(/^Not Enrolled$/)
+    const cardStatus2 = within(cards[2]).getByTestId("progress-badge")
+    expect(cardStatus2).toHaveTextContent(/^Not Started$/)
   })
 
   test("shows the not found screen if the organization is not found by orgSlug", async () => {

@@ -42,6 +42,8 @@ type CourseDisplayProps = {
   layout?: "default" | "compact"
   headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
   onUpgradeError?: (error: string) => void
+  /** Display "Module" instead of "Course" as the card type label. */
+  isModule?: boolean
 }
 
 /** A course row from a program/contract dashboard (full entry available). */
@@ -91,7 +93,7 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
     )
   }
 
-  const { layout, headingLevel, onUpgradeError } = props
+  const { layout, headingLevel, onUpgradeError, isModule } = props
 
   if (props.kind === "enrollment") {
     return (
@@ -101,6 +103,7 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
         layout={layout}
         headingLevel={headingLevel}
         onUpgradeError={onUpgradeError}
+        isModule={isModule}
         Component={Component}
         className={className}
       />
@@ -120,6 +123,7 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
       layout={layout}
       headingLevel={headingLevel}
       onUpgradeError={onUpgradeError}
+      isModule={isModule}
       Component={Component}
       className={className}
     />
@@ -131,6 +135,7 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
       ancestorContext={entry.ancestorContext}
       layout={layout}
       headingLevel={headingLevel}
+      isModule={isModule}
       Component={Component}
       className={className}
     />
