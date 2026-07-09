@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.73.6
+--------------
+
+- desktop dashboard design updates (#3578)
+- chore: Remove temporary seat-cap gate on B2B Manage button (#3587)
+- Fix: header stat counts not updating after bulk-assign or revoke on Contract Admin page #3581
+- Mitxonline ETL: switch to consuming internal courses endpoint (#3543)
+
 Version 0.73.4 (Released July 08, 2026)
 --------------
 
