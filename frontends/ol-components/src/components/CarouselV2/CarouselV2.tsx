@@ -102,12 +102,6 @@ type CarouselV2Props = {
    * currently in view. Use to drive live-region announcements and roving tabindex.
    */
   onSettle?: (slidesInView: number[]) => void
-  /**
-   * Scrolls the given slide index into view whenever it changes (unless it is
-   * already in view). Use alongside a roving tabindex implementation to keep
-   * the focused slide visible when navigating via keyboard.
-   */
-  activeIndex?: number
 }
 
 /**
@@ -143,7 +137,6 @@ const CarouselV2: React.FC<CarouselV2Props> = ({
   mobileGutter = 16,
   "data-testid": testId,
   onSettle,
-  activeIndex,
 }) => {
   const [emblaRef, emblaApi] = useEmblaCarousel(
     {
@@ -205,15 +198,6 @@ const CarouselV2: React.FC<CarouselV2Props> = ({
       emblaApi.off("settle", handleSettle)
     }
   }, [emblaApi, updateCanScroll, onSettle])
-
-  useEffect(() => {
-    if (!emblaApi || activeIndex === undefined) {
-      return
-    }
-    if (!emblaApi.slidesInView().includes(activeIndex)) {
-      emblaApi.scrollTo(activeIndex)
-    }
-  }, [emblaApi, activeIndex])
 
   const arrows = (
     <>

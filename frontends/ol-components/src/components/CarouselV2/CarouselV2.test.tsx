@@ -85,21 +85,4 @@ describe("CarouselV2", () => {
 
     expect(onSettle).toHaveBeenCalledWith([4, 5, 6, 7])
   })
-
-  it("scrolls to the active index via Embla when it changes and is not already in view", () => {
-    mockSlidesInView.mockReturnValue([0])
-    const { rerender } = renderWithTheme(
-      <CarouselV2 activeIndex={0}>
-        <div>slide</div>
-      </CarouselV2>,
-    )
-    mockScrollTo.mockClear()
-
-    rerender(
-      <CarouselV2 activeIndex={3}>
-        <div>slide</div>
-      </CarouselV2>,
-    )
-    expect(mockScrollTo).toHaveBeenCalledWith(3)
-  })
 })

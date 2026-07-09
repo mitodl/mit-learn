@@ -4,7 +4,6 @@ import { ButtonLink } from "@mitodl/smoot-design"
 import VideoContainer from "./VideoContainer"
 export {
   SkipLinksNav,
-  SkipLink,
   StyledBreadcrumbs,
   NoVideoMessage,
 } from "./shared.styled"
