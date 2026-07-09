@@ -374,7 +374,7 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                 "parents",
                 queryset=LearningResourceRelationship.objects.filter(
                     relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
-                ),
+                ).select_related("parent__image"),
                 to_attr="_podcasts",
             ),
             Prefetch(

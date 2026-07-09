@@ -441,16 +441,33 @@ class LearningPathSerializer(serializers.ModelSerializer, ResourceListMixin):
         exclude = ("learning_resource", "author", *COMMON_IGNORED_FIELDS)
 
 
+class PodcastEpisodeParentSerializer(serializers.Serializer):
+    """Minimal parent-podcast summary embedded in an episode."""
+
+    id = serializers.IntegerField(source="parent_id")
+    title = serializers.CharField(source="parent.title")
+    readable_id = serializers.CharField(source="parent.readable_id")
+    image = LearningResourceImageSerializer(source="parent.image", allow_null=True)
+
+
 class PodcastEpisodeSerializer(serializers.ModelSerializer):
     """
     Serializer for PodcastEpisode
     """
 
     podcasts = serializers.SerializerMethodField()
+    parent_podcasts = serializers.SerializerMethodField()
 
     def get_podcasts(self, instance) -> list[int]:
         """Get the podcast id(s) the episode belongs to"""
         return [podcast.parent_id for podcast in instance.learning_resource.podcasts]
+
+    @extend_schema_field(PodcastEpisodeParentSerializer(many=True))
+    def get_parent_podcasts(self, instance):
+        """Get summary info for the podcast(s) the episode belongs to"""
+        return PodcastEpisodeParentSerializer(
+            instance.learning_resource.podcasts, many=True
+        ).data
 
     class Meta:
         model = models.PodcastEpisode

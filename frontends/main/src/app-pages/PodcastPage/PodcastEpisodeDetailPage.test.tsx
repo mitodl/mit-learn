@@ -52,7 +52,24 @@ const setupApis = ({
   moreEpisodes,
 }: SetupOptions = {}) => {
   const podcast = makePodcast(podcastOverrides)
-  const episode = makePodcastEpisode(episodeOverrides)
+  const episodeOverridesEpisode = (
+    episodeOverrides as Partial<PodcastEpisodeResource>
+  ).podcast_episode
+  const episode = makePodcastEpisode({
+    ...episodeOverrides,
+    podcast_episode: {
+      podcasts: [podcast.id],
+      parent_podcasts: [
+        {
+          id: podcast.id,
+          title: podcast.title!,
+          readable_id: podcast.readable_id!,
+          image: podcast.image ?? null,
+        },
+      ],
+      ...episodeOverridesEpisode,
+    },
+  } as Partial<LearningResource>)
 
   setMockResponse.get(
     urls.learningResources.details({ id: episode.id }),
@@ -189,6 +206,15 @@ describe("PodcastEpisodeDetailPage", () => {
     const episode = makePodcastEpisode()
     episode.podcast_episode.audio_url = "https://example.com/ep.mp3"
     const podcast = makePodcast()
+    episode.podcast_episode.podcasts = [podcast.id]
+    episode.podcast_episode.parent_podcasts = [
+      {
+        id: podcast.id,
+        title: podcast.title!,
+        readable_id: podcast.readable_id!,
+        image: podcast.image ?? null,
+      },
+    ]
 
     setMockResponse.get(
       urls.learningResources.details({ id: episode.id }),

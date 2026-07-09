@@ -610,6 +610,7 @@ const document: LearningResourceFactory<DocumentResource> = (
 const podcastEpisode: LearningResourceFactory<PodcastEpisodeResource> = (
   overrides = {},
 ): PodcastEpisodeResource => {
+  const parentPodcastId = uniqueEnforcerId.enforce(() => faker.number.int())
   return mergeOverrides<PodcastEpisodeResource>(
     _learningResourceShared(),
     {
@@ -620,7 +621,15 @@ const podcastEpisode: LearningResourceFactory<PodcastEpisodeResource> = (
     {
       podcast_episode: {
         id: uniqueEnforcerId.enforce(() => faker.number.int()),
-        podcasts: [uniqueEnforcerId.enforce(() => faker.number.int())],
+        podcasts: [parentPodcastId],
+        parent_podcasts: [
+          {
+            id: parentPodcastId,
+            title: faker.lorem.words(3),
+            readable_id: faker.string.uuid(),
+            image: null,
+          },
+        ],
         duration: faker.helpers.arrayElement(["PT1H13M44S", "PT2H30M", "PT1M"]),
         audio_url: faker.internet.url(),
         episode_link: faker.internet.url(),
