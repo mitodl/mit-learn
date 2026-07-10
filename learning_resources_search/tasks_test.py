@@ -305,19 +305,17 @@ def test_start_recreate_index_excludes_blocklisted_courses(
         "learning_resources_search.tasks.index_content_files", autospec=True
     )
     mocker.patch(
-        "learning_resources_search.indexing_api.create_backing_index",
-        autospec=True,
-        return_value="backing",
-    )
-    mocker.patch(
         "learning_resources_search.indexing_api.get_existing_reindexing_indexes",
         autospec=True,
         return_value=[],
     )
-    mocker.patch(
-        "learning_resources_search.indexing_api.delete_orphaned_indexes", autospec=True
-    )
-    mocker.patch("learning_resources_search.tasks.finish_recreate_index", autospec=True)
+    # ponytail: no assertions on these; they just keep the task off OpenSearch
+    for target in (
+        "learning_resources_search.indexing_api.create_backing_index",
+        "learning_resources_search.indexing_api.delete_orphaned_indexes",
+        "learning_resources_search.tasks.finish_recreate_index",
+    ):
+        mocker.patch(target, autospec=True)
 
     with pytest.raises(mocked_celery.replace_exception_class):
         start_recreate_index.delay(indexes, remove_existing_reindexing_tags=False)
