@@ -207,9 +207,15 @@ describe("PodcastsListingPage", () => {
     delete process.env[ENV_KEY]
     const episode = makeEpisode({
       title: "Playable Episode",
+      // The producing org differs from the show name, to prove the player uses
+      // the parent podcast title rather than `offered_by`.
+      offered_by: { name: "MIT OpenCourseWare", code: "ocw" },
       podcast_episode: {
         id: 1,
         podcasts: [1],
+        parent_podcasts: [
+          { id: 1, title: "The Show Name", readable_id: "the-show" },
+        ],
         duration: "PT1M",
         audio_url: "https://example.com/audio.mp3",
         episode_link: "",
@@ -228,6 +234,10 @@ describe("PodcastsListingPage", () => {
       expect(screen.getByTestId("player-track-title")).toHaveTextContent(
         "Playable Episode",
       ),
+    )
+    // The player shows the parent podcast series title, not `offered_by.name`.
+    expect(screen.getByTestId("player-podcast-name")).toHaveTextContent(
+      "The Show Name",
     )
     expect(
       await screen.findByRole("button", { name: "Pause episode" }),

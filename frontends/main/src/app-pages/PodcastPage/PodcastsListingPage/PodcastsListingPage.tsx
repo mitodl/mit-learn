@@ -94,8 +94,7 @@ export const PodcastsListingPage: React.FC = () => {
   const morePodcasts = podcasts
   const hasMorePodcasts = podcasts.length < totalPodcasts
 
-  const handlePlayClick = (episode: LearningResource) =>
-    toggle(episode, episode.offered_by?.name)
+  const handlePlayClick = (episode: LearningResource) => toggle(episode)
 
   const nowPlayingIsPlaying =
     !!nowPlaying && playingEpisode?.id === nowPlaying.id && isAudioPlaying
