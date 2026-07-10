@@ -48,9 +48,11 @@ export const SectionHeader = styled.div(({ theme }) => ({
   },
 }))
 
-export const SectionTitle = styled(Typography)(({ theme }) => ({
+export const SectionTitle = styled("h2")(({ theme }) => ({
   color: theme.custom.colors.black,
+  ...theme.typography.body1,
   lineHeight: "24px",
+  margin: 0,
 }))
 
 export const SectionLink = styled(Typography)(({ theme }) => ({

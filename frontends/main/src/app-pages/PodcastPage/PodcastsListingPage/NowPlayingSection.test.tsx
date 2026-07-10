@@ -8,7 +8,7 @@ import NowPlayingSection from "./NowPlayingSection"
 const makeEpisode = (overrides = {}): LearningResource =>
   factories.learningResources.podcastEpisode({
     title: "Now Playing Episode",
-    description: "<p>Featured episode description</p>",
+    description: "<p>Now Playing Episode description</p>",
     last_modified: "2024-05-03T00:00:00Z",
     podcast_episode: {
       id: 1,

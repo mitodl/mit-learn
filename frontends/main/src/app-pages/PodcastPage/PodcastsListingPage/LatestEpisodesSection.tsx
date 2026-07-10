@@ -68,7 +68,7 @@ const LatestEpisodesSection: React.FC<LatestEpisodesSectionProps> = ({
   return (
     <Section>
       <SectionHeader>
-        <SectionTitle variant="subtitle1">Latest Episodes</SectionTitle>
+        <SectionTitle>Latest Episodes</SectionTitle>
         <StyledLink color="red" href={SEARCH_PODCAST_EPISODES}>
           All episodes
         </StyledLink>

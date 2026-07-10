@@ -184,7 +184,7 @@ const PodcastSection: React.FC<PodcastSectionProps> = ({
   return (
     <Section style={{ paddingBottom: isMobile ? "32px" : "80px" }}>
       <SectionHeader>
-        <SectionTitle variant="subtitle1">Podcasts across MIT</SectionTitle>
+        <SectionTitle>Podcasts across MIT</SectionTitle>
         <Link href={SEARCH_PODCASTS}>
           <SectionLink variant="subtitle1">All podcasts</SectionLink>
         </Link>
@@ -247,7 +247,7 @@ const PodcastSection: React.FC<PodcastSectionProps> = ({
         {morePodcasts.length > 0 && (
           <div>
             <SectionHeader>
-              <SectionTitle variant="subtitle1">More Podcasts</SectionTitle>
+              <SectionTitle>More Podcasts</SectionTitle>
             </SectionHeader>
             {morePodcasts.map((item) => {
               const episodeCount =

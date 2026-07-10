@@ -195,7 +195,6 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
     <EpisodeRow href={href} role={role} isEpisodePage={isEpisodePage}>
       <EpisodeInfo>
         {isMobile && overline && <EpisodeOverline>{overline}</EpisodeOverline>}
-
         <EpisodeTitleLink className="episode-title">
           {episode.title}
         </EpisodeTitleLink>
