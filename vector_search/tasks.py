@@ -251,7 +251,7 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):  # noqa
                 generate_embeddings.si(ids, COURSE_TYPE, overwrite)
                 for ids in chunks(
                     Course.objects.filter(learning_resource__published=True)
-                    .exclude(learning_resource__readable_id=blocklisted_ids)
+                    .exclude(learning_resource__readable_id__in=blocklisted_ids)
                     .order_by("learning_resource_id")
                     .values_list("learning_resource_id", flat=True),
                     chunk_size=settings.QDRANT_CHUNK_SIZE,
@@ -264,7 +264,7 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):  # noqa
                         resource_type=COURSE_TYPE,
                     )
                     .filter(Q(published=True) | Q(test_mode=True))
-                    .exclude(readable_id=blocklisted_ids)
+                    .exclude(readable_id__in=blocklisted_ids)
                     .order_by("id")
                 ):
                     # Embed published content files across all runs of the course

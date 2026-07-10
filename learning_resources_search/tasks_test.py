@@ -285,6 +285,59 @@ def test_start_recreate_index(mocker, mocked_celery, user, indexes):  # noqa: C9
     assert mocked_celery.replace.call_args[0][1] == mocked_celery.chain.return_value
 
 
+@pytest.mark.parametrize("indexes", [["course"], ["combined_hybrid"]])
+def test_start_recreate_index_excludes_blocklisted_courses(
+    mocker, mocked_celery, indexes
+):
+    """start_recreate_index should not index courses whose readable_id is blocklisted"""
+    courses = CourseFactory.create_batch(3, etl_source=ETLSource.ocw.value)
+    blocked = courses[0]
+    for course in courses:
+        ContentFileFactory.create_batch(2, run=course.learning_resource.runs.first())
+    mocker.patch(
+        "learning_resources_search.tasks.load_course_blocklist",
+        return_value=[blocked.learning_resource.readable_id],
+    )
+    index_learning_resources_mock = mocker.patch(
+        "learning_resources_search.tasks.index_learning_resources", autospec=True
+    )
+    index_files_mock = mocker.patch(
+        "learning_resources_search.tasks.index_content_files", autospec=True
+    )
+    mocker.patch(
+        "learning_resources_search.indexing_api.create_backing_index",
+        autospec=True,
+        return_value="backing",
+    )
+    mocker.patch(
+        "learning_resources_search.indexing_api.get_existing_reindexing_indexes",
+        autospec=True,
+        return_value=[],
+    )
+    mocker.patch(
+        "learning_resources_search.indexing_api.delete_orphaned_indexes", autospec=True
+    )
+    mocker.patch("learning_resources_search.tasks.finish_recreate_index", autospec=True)
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        start_recreate_index.delay(indexes, remove_existing_reindexing_tags=False)
+
+    indexed_resource_ids = {
+        resource_id
+        for call in index_learning_resources_mock.si.call_args_list
+        for resource_id in call.args[0]
+    }
+    assert indexed_resource_ids == {
+        course.learning_resource_id for course in courses[1:]
+    }
+
+    if COURSE_TYPE in indexes:
+        file_course_ids = {call.args[1] for call in index_files_mock.si.call_args_list}
+        assert file_course_ids == {
+            course.learning_resource_id for course in courses[1:]
+        }
+
+
 @pytest.mark.parametrize(
     "remove_existing_reindexing_tags",
     [True, False],
