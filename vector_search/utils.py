@@ -658,7 +658,10 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         )
         serialized_document = serializer.render_document()
         checksum = checksum_for_content(str(serialized_document))
-        key = f"{doc['readable_id']}.course_metadata"
+        key = (
+            f"{(doc.get('platform') or {}).get('code', '')}."
+            f"{doc['readable_id']}.course_metadata"
+        )
         serialized_document["checksum"] = checksum
         serialized_document["key"] = key
         document_point_id = vector_point_id(
@@ -668,6 +671,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
             serialized_document, document_point_id
         ):
             continue
+
         # remove existing course info docs
         remove_points_matching_params(
             {"key": key}, collection_name=CONTENT_FILES_COLLECTION_NAME
@@ -757,6 +761,7 @@ def _generate_content_file_points(serialized_content):
         remove_params = {
             "key": doc["key"],
             "resource_readable_id": doc["resource_readable_id"],
+            "platform": (doc.get("platform") or {}).get("code"),
         }
         if doc.get("run_readable_id"):
             remove_params["run_readable_id"] = doc["run_readable_id"]
@@ -1398,16 +1403,20 @@ def remove_qdrant_records(ids, resource_type):
     if resource_type != CONTENT_FILE_TYPE:
         serialized_documents = serialize_bulk_learning_resources(ids)
         collection_name = RESOURCES_COLLECTION_NAME
-        lookup_keys = ["readable_id"]
+        lookup_keys = ["readable_id", "platform"]
     else:
         serialized_documents = serialize_bulk_content_files(ids)
         collection_name = CONTENT_FILES_COLLECTION_NAME
-        lookup_keys = ["run_readable_id", "resource_readable_id", "key"]
+        lookup_keys = ["platform", "run_readable_id", "resource_readable_id", "key"]
     for doc in serialized_documents:
         params = {}
         for key in lookup_keys:
             if key in doc:
-                params[key] = doc[key]
+                value = doc[key]
+                if key == "platform" and isinstance(value, dict):
+                    value = value.get("code")
+                if value is not None:
+                    params[key] = value
         if params:
             remove_points_matching_params(params, collection_name=collection_name)
 

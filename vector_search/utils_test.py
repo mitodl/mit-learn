@@ -27,6 +27,7 @@ from learning_resources.models import LearningResource
 from learning_resources.serializers import LearningResourceMetadataDisplaySerializer
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
+    COURSE_TYPE,
 )
 from learning_resources_search.serializers import (
     serialize_bulk_content_files,
@@ -72,6 +73,7 @@ from vector_search.utils import (
     embed_topics,
     filter_existing_qdrant_points,
     qdrant_query_conditions,
+    remove_qdrant_records,
     should_generate_content_embeddings,
     should_generate_resource_embeddings,
     update_content_file_payload,
@@ -303,6 +305,65 @@ def test_filter_existing_qdrant_points(mocker):
         == 0
     )
     assert filtered_resources.count() == 7
+
+
+@pytest.mark.parametrize(
+    ("platform_value", "expected_params"),
+    [
+        ({"code": "ocw"}, {"readable_id": "shared-readable-id", "platform": "ocw"}),
+        (None, {"readable_id": "shared-readable-id"}),
+    ],
+)
+def test_remove_qdrant_records_filters_learning_resources_by_platform(
+    mocker, platform_value, expected_params
+):
+    """Learning resource deletes should not cross platform boundaries."""
+    mocker.patch(
+        "vector_search.utils.serialize_bulk_learning_resources",
+        return_value=[
+            {"readable_id": "shared-readable-id", "platform": platform_value}
+        ],
+    )
+    mock_remove_points_matching_params = mocker.patch(
+        "vector_search.utils.remove_points_matching_params"
+    )
+
+    remove_qdrant_records([1], COURSE_TYPE)
+
+    mock_remove_points_matching_params.assert_called_once_with(
+        expected_params,
+        collection_name=RESOURCES_COLLECTION_NAME,
+    )
+
+
+def test_remove_qdrant_records_filters_content_files_by_platform(mocker):
+    """Content file deletes should include the platform in their identity filter."""
+    mocker.patch(
+        "vector_search.utils.serialize_bulk_content_files",
+        return_value=[
+            {
+                "platform": {"code": "mitxonline"},
+                "run_readable_id": "shared-run-id",
+                "resource_readable_id": "shared-readable-id",
+                "key": "documents/syllabus.pdf",
+            }
+        ],
+    )
+    mock_remove_points_matching_params = mocker.patch(
+        "vector_search.utils.remove_points_matching_params"
+    )
+
+    remove_qdrant_records([1], CONTENT_FILE_TYPE)
+
+    mock_remove_points_matching_params.assert_called_once_with(
+        {
+            "platform": "mitxonline",
+            "run_readable_id": "shared-run-id",
+            "resource_readable_id": "shared-readable-id",
+            "key": "documents/syllabus.pdf",
+        },
+        collection_name=CONTENT_FILES_COLLECTION_NAME,
+    )
 
 
 def test_force_create_qdrant_collections(mocker):
