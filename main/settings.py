@@ -15,6 +15,8 @@ import datetime
 import logging
 import os
 import platform
+import tomllib
+from pathlib import Path
 from urllib.parse import urljoin
 
 import dj_database_url
@@ -35,7 +37,10 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.73.4"
+# Single source of truth for the app version is pyproject.toml, bumped by the
+# Concourse release pipeline via bump-my-version.
+with (Path(__file__).resolve().parent.parent / "pyproject.toml").open("rb") as f:
+    VERSION = tomllib.load(f)["project"]["version"]
 
 log = logging.getLogger()
 
