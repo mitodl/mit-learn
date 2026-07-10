@@ -14741,6 +14741,11 @@ components:
             type: integer
           description: Get the podcast id(s) the episode belongs to
           readOnly: true
+        parent_podcasts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PodcastEpisodeParent'
+          readOnly: true
         transcript:
           type: string
         audio_url:
@@ -14762,7 +14767,22 @@ components:
       required:
       - audio_url
       - id
+      - parent_podcasts
       - podcasts
+    PodcastEpisodeParent:
+      type: object
+      description: Minimal parent-podcast summary embedded in an episode.
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        readable_id:
+          type: string
+      required:
+      - id
+      - readable_id
+      - title
     PodcastEpisodeRequest:
       type: object
       description: Serializer for PodcastEpisode

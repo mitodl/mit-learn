@@ -222,17 +222,22 @@ export const PodcastEpisodeDetailPage: React.FC<
   } = usePodcastPlayer(playerRef, isMobile)
 
   const { data: episode } = useLearningResourcesDetail(Number(episodeId))
-  const { data: podcast } = useLearningResourcesDetail(Number(podcastId))
 
   const podcastEpisode =
     episode?.resource_type === ResourceTypeEnum.PodcastEpisode
       ? episode.podcast_episode
       : null
 
+  // Parent podcast summary comes embedded in the episode response — prefer the
+  // one matching the URL's podcastId, else fall back to the first parent.
+  const parentPodcast =
+    podcastEpisode?.parent_podcasts?.find((p) => p.id === Number(podcastId)) ??
+    podcastEpisode?.parent_podcasts?.[0]
+
   const { data: episodesData } = useInfiniteLearningResourceItems(
     Number(podcastId),
     { learning_resource_id: Number(podcastId), limit: 5 },
-    { enabled: !!podcast },
+    { enabled: !!podcastId },
   )
   const episodes =
     episodesData?.pages.flatMap((page) =>
@@ -261,11 +266,11 @@ export const PodcastEpisodeDetailPage: React.FC<
 
   const handlePlay = () => {
     if (!episode) return
-    toggle(episode, podcast?.title)
+    toggle(episode, parentPodcast?.title)
   }
 
   const podcastHref = podcastId
-    ? podcastPageView(podcastId, podcast?.title)
+    ? podcastPageView(podcastId, parentPodcast?.title)
     : "/"
 
   const sharePageUrl =
@@ -282,7 +287,7 @@ export const PodcastEpisodeDetailPage: React.FC<
               variant="light"
               ancestors={[
                 { href: HOME, label: "Home" },
-                { href: podcastHref, label: podcast?.title ?? "Podcast" },
+                { href: podcastHref, label: parentPodcast?.title ?? "Podcast" },
               ]}
               current={episode?.title}
             />
@@ -290,8 +295,10 @@ export const PodcastEpisodeDetailPage: React.FC<
         </BreadcrumbBar>
         <HeaderSection hasEpisodes={episodes.length > 0}>
           <EpisodeContainer>
-            {podcast?.title && (
-              <EpisodeLabel href={podcastHref}>{podcast.title}</EpisodeLabel>
+            {parentPodcast?.title && (
+              <EpisodeLabel href={podcastHref}>
+                {parentPodcast.title}
+              </EpisodeLabel>
             )}
 
             <EpisodeTitle variant="h1">{episode?.title ?? ""}</EpisodeTitle>
@@ -337,7 +344,7 @@ export const PodcastEpisodeDetailPage: React.FC<
         {episodes && episodes.length > 0 && (
           <EpisodeContainer>
             <MoreItemDescription>
-              More from {podcast?.title ?? "Podcast"}
+              More from {parentPodcast?.title ?? "Podcast"}
             </MoreItemDescription>
 
             <EpisodeList>
@@ -358,7 +365,7 @@ export const PodcastEpisodeDetailPage: React.FC<
                   isPlaying={
                     playingEpisode?.id === episode.id && isAudioPlaying
                   }
-                  onPlayClick={(ep) => toggle(ep, podcast?.title)}
+                  onPlayClick={(ep) => toggle(ep, parentPodcast?.title)}
                   onPauseClick={pause}
                   isPlayable={Boolean(getEpisodeAudioUrl(episode))}
                   isEpisodePage
