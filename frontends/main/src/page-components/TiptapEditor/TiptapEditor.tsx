@@ -119,7 +119,7 @@ const Container = styled.div<{
     },
     a: {
       textDecoration: "underline",
-      color: theme.custom.colors.red,
+      color: theme.custom.colors.darkGray2,
       fontWeight: theme.typography.fontWeightMedium,
     },
     "a:hover": {

@@ -35,7 +35,7 @@ const pageCss = (theme: Theme) => css`
 
   .raw-html a {
     text-decoration: underline;
-    color: ${theme.custom.colors.red};
+    color: ${theme.custom.colors.darkGray2};
     font-weight: ${theme.typography.fontWeightMedium};
 
     &:hover {
