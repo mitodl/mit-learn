@@ -715,7 +715,9 @@ const ProgramSummary: React.FC<{
       />
       <ProgramPaceRow courses={courses} data-testid={TestIds.PaceRow} />
       <ProgramDurationRow program={program} data-testid={TestIds.DurationRow} />
-      <CertificateRow data-testid={TestIds.CertificateRow} />
+      {program.certificate_available ? (
+        <CertificateRow data-testid={TestIds.CertificateRow} />
+      ) : null}
     </SummaryRows>
   )
 }

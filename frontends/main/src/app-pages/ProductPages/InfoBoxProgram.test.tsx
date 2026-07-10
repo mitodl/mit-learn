@@ -53,6 +53,7 @@ describe("InfoBoxProgram — both offering", () => {
         makeMode({ requires_payment: true }),
       ],
       products: [makeProduct()],
+      certificate_available: true,
     })
 
     renderWithProviders(<InfoBoxProgram program={program} />)
@@ -72,6 +73,7 @@ describe("InfoBoxProgram — paid-only offering", () => {
     const program = makeProgram({
       enrollment_modes: [makeMode({ requires_payment: true })],
       products: [makeProduct()],
+      certificate_available: true,
     })
 
     renderWithProviders(<InfoBoxProgram program={program} />)
@@ -161,9 +163,14 @@ describe("InfoBoxProgram — grid structure", () => {
 describe("InfoBoxProgram — no offering", () => {
   test("data-boxes=1 and no section divider when there's nothing to enroll in", async () => {
     setupAuth()
+    // Paid mode but no purchasable product: nothing enrollable, so one box and
+    // no divider. certificate_available tracks the paid mode independently of
+    // products, so the certificate row still renders — we don't police this
+    // bad-data combination.
     const program = makeProgram({
       enrollment_modes: [makeMode({ requires_payment: true })],
       products: [],
+      certificate_available: true,
     })
 
     renderWithProviders(<InfoBoxProgram program={program} />)

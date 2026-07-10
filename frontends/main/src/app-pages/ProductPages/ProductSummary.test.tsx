@@ -1109,7 +1109,7 @@ describe("ProgramSummary", () => {
   })
 
   test("shows the certificate row and no price row", () => {
-    const program = factories.programs.program()
+    const program = factories.programs.program({ certificate_available: true })
     renderWithProviders(<ProgramSummary tabletColumns={2} program={program} />)
 
     expect(
@@ -1118,6 +1118,13 @@ describe("ProgramSummary", () => {
       }),
     ).toBeInTheDocument()
     expect(screen.queryByTestId(TestIds.PriceRow)).not.toBeInTheDocument()
+  })
+
+  test("hides the certificate row when no certificate is available", () => {
+    const program = factories.programs.program({ certificate_available: false })
+    renderWithProviders(<ProgramSummary tabletColumns={2} program={program} />)
+
+    expect(screen.queryByTestId(TestIds.CertificateRow)).not.toBeInTheDocument()
   })
 
   test("orders metadata rows as requirements, format, duration, certificate", () => {
@@ -1137,6 +1144,7 @@ describe("ProgramSummary", () => {
         programs: { required: [], electives: [] },
       },
       req_tree: requirements.serialize(),
+      certificate_available: true,
     })
     const course = makeCourse({
       courseruns: [makeRun()],
