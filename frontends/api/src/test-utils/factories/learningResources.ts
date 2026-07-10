@@ -627,7 +627,6 @@ const podcastEpisode: LearningResourceFactory<PodcastEpisodeResource> = (
             id: parentPodcastId,
             title: faker.lorem.words(3),
             readable_id: faker.string.uuid(),
-            image: null,
           },
         ],
         duration: faker.helpers.arrayElement(["PT1H13M44S", "PT2H30M", "PT1M"]),

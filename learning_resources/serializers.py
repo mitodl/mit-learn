@@ -447,7 +447,6 @@ class PodcastEpisodeParentSerializer(serializers.Serializer):
     id = serializers.IntegerField(source="parent_id")
     title = serializers.CharField(source="parent.title")
     readable_id = serializers.CharField(source="parent.readable_id")
-    image = LearningResourceImageSerializer(source="parent.image", allow_null=True)
 
 
 class PodcastEpisodeSerializer(serializers.ModelSerializer):

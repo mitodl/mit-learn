@@ -234,9 +234,6 @@ def test_serialize_podcast_episode_playlists_to_json():
             "id": podcast.learning_resource.id,
             "title": podcast.learning_resource.title,
             "readable_id": podcast.learning_resource.readable_id,
-            "image": serializers.LearningResourceImageSerializer(
-                instance=podcast.learning_resource.image
-            ).data,
         }
     ]
 

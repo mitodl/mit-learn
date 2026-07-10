@@ -63,8 +63,7 @@ const setupApis = ({
         {
           id: podcast.id,
           title: podcast.title!,
-          readable_id: podcast.readable_id!,
-          image: podcast.image ?? null,
+          readable_id: podcast.readable_id,
         },
       ],
       ...episodeOverridesEpisode,
@@ -211,8 +210,7 @@ describe("PodcastEpisodeDetailPage", () => {
       {
         id: podcast.id,
         title: podcast.title!,
-        readable_id: podcast.readable_id!,
-        image: podcast.image ?? null,
+        readable_id: podcast.readable_id,
       },
     ]
 

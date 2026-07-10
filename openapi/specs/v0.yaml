@@ -4102,13 +4102,8 @@ components:
           type: string
         readable_id:
           type: string
-        image:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceImage'
-          nullable: true
       required:
       - id
-      - image
       - readable_id
       - title
     PodcastEpisodeResource:

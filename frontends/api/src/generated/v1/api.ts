@@ -6745,12 +6745,6 @@ export interface PodcastEpisodeParent {
    * @memberof PodcastEpisodeParent
    */
   readable_id: string
-  /**
-   *
-   * @type {LearningResourceImage}
-   * @memberof PodcastEpisodeParent
-   */
-  image: LearningResourceImage | null
 }
 /**
  * Serializer for PodcastEpisode
