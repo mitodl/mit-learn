@@ -20,6 +20,7 @@ import type {
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { isInPast } from "ol-utilities"
 import {
   getBestRun,
   getIdsFromReqTree,
@@ -145,18 +146,20 @@ export const filterEnrollmentsByOrganization = (
 
 /**
  * Selects the best enrollment from multiple enrollments for the same course.
- * Priority:
- * 1. Prefer enrollment with a certificate
- * 2. If tied, prefer highest grade
- * 3. Otherwise take first match
- *
- * Delegates to `pickDisplayedEnrollmentForLegacyDashboard`.
+ * See `pickBestEnrollmentFromGroup` for the selection policy.
  */
 export const selectBestEnrollment = (
   course: CourseWithCourseRunsSerializerV2,
   enrollments: CourseRunEnrollmentV3[],
 ): CourseRunEnrollmentV3 | null => {
-  return pickDisplayedEnrollmentForLegacyDashboard(course, enrollments)
+  const courseEnrollments = enrollments.filter((enrollment) =>
+    enrollmentBelongsToCourse(course, enrollment),
+  )
+  if (courseEnrollments.length === 0) {
+    return null
+  }
+
+  return pickBestEnrollmentFromGroup(courseEnrollments)
 }
 
 export const getEnrollmentStatus = (
@@ -283,32 +286,63 @@ const enrollmentBelongsToCourse = (
 }
 
 /**
- * Legacy display policy used by dashboard cards.
+ * Sorts enrollments by their run's `start_date`, most recent first. Runs
+ * without a valid `start_date` sort last. Shared by `selectBestEnrollment`
+ * (as its recency tiebreak) and `filterVariantSiblings` (so the "other
+ * runs" list a card renders is in a stable, meaningful order rather than
+ * arbitrary database order).
+ */
+const sortEnrollmentsByStartDateDesc = (
+  enrollments: CourseRunEnrollmentV3[],
+): CourseRunEnrollmentV3[] => {
+  return [...enrollments].sort((a, b) => {
+    const aMs = a.run.start_date ? new Date(a.run.start_date).getTime() : NaN
+    const bMs = b.run.start_date ? new Date(b.run.start_date).getTime() : NaN
+    if (isNaN(aMs) && isNaN(bMs)) return 0
+    if (isNaN(aMs)) return 1
+    if (isNaN(bMs)) return -1
+    return bMs - aMs
+  })
+}
+
+/**
+ * Picks the single best enrollment from a group of enrollments that all
+ * represent the same underlying course (e.g. multiple runs a learner has
+ * enrolled in). Used by `selectBestEnrollment` (single course) and
+ * `pickDisplayedHomeEnrollments` (one group per course+variant).
  *
  * Priority:
  * 1. Prefer enrollment with a certificate
  * 2. If tied, prefer highest grade
- * 3. If tied and the enrollments are for different runs, prefer the run
- *    matching `course.next_run_id`, then the run with the later
- *    `start_date` (runs without a valid `start_date` sort last). Mirrors
- *    `getBestRun`'s recency policy so the fallback here is never an
- *    arbitrary (e.g. database-order) run.
+ * 3. If still tied (including "neither has a certificate or grade"),
+ *    prefer the more recent run — see `sortEnrollmentsByStartDateDesc`.
+ *    When NEITHER candidate has a certificate or grade at all, "more
+ *    recent" specifically means the most recent run that isn't upcoming
+ *    (i.e. the current/in-progress or most recently completed run, never
+ *    an unstarted future run); if every run is upcoming, the soonest one
+ *    is used.
  */
-const pickDisplayedEnrollmentForLegacyDashboard = (
-  course: CourseWithCourseRunsSerializerV2,
+const pickBestEnrollmentFromGroup = (
   enrollments: CourseRunEnrollmentV3[],
-): CourseRunEnrollmentV3 | null => {
-  const courseEnrollments = enrollments.filter((enrollment) =>
-    enrollmentBelongsToCourse(course, enrollment),
+): CourseRunEnrollmentV3 => {
+  const sorted = sortEnrollmentsByStartDateDesc(enrollments)
+  const hasAnyAchievement = sorted.some(
+    (e) => !!e.certificate?.uuid || getMaxEnrollmentGrade(e) > 0,
   )
-  if (courseEnrollments.length === 0) {
-    return null
+
+  if (!hasAnyAchievement) {
+    const withStartDate = sorted.filter((e) => e.run.start_date)
+    const started = withStartDate.filter(
+      (e) => e.run.start_date && isInPast(e.run.start_date),
+    )
+    // `withStartDate`/`sorted` are ordered most-recent-first, so the last
+    // entry is the earliest (soonest upcoming) when nothing has started yet.
+    return started[0] ?? withStartDate[withStartDate.length - 1] ?? sorted[0]
   }
 
-  return courseEnrollments.reduce((best, current) => {
+  return sorted.reduce((best, current) => {
     const bestHasCert = !!best.certificate?.uuid
     const currentHasCert = !!current.certificate?.uuid
-
     if (currentHasCert && !bestHasCert) return current
     if (bestHasCert && !currentHasCert) return best
 
@@ -318,23 +352,10 @@ const pickDisplayedEnrollmentForLegacyDashboard = (
       return currentGrade > bestGrade ? current : best
     }
 
-    if (best.run.id === current.run.id) return best
-
-    if (course.next_run_id !== null && course.next_run_id !== undefined) {
-      if (current.run.id === course.next_run_id) return current
-      if (best.run.id === course.next_run_id) return best
-    }
-
-    const bestMs = best.run.start_date
-      ? new Date(best.run.start_date).getTime()
-      : NaN
-    const currentMs = current.run.start_date
-      ? new Date(current.run.start_date).getTime()
-      : NaN
-    if (isNaN(bestMs) && !isNaN(currentMs)) return current
-    if (!isNaN(bestMs) && isNaN(currentMs)) return best
-    return currentMs > bestMs ? current : best
-  }, courseEnrollments[0])
+    // Cert state and grade are tied; `sorted` is ordered most-recent-first,
+    // so `best` (encountered first) is already the more recent candidate.
+    return best
+  })
 }
 
 const groupCourseRunEnrollmentsByCourseId = (
@@ -1249,8 +1270,8 @@ const getCollectionFirstCoursesInDisplayOrder = (
  *
  * Groups by (courseId × language × variant_industry × variant_length) — the
  * same key used by filterVariantSiblings — then picks the single best
- * enrollment per group (certificate first, then highest grade). Siblings are
- * NOT returned here; callers retrieve them at render time via
+ * enrollment per group via `pickBestEnrollmentFromGroup`. Siblings are NOT
+ * returned here; callers retrieve them at render time via
  * filterVariantSiblings + enrollmentsByCourseId so the full sibling list is
  * always fresh.
  */
@@ -1273,30 +1294,22 @@ const pickDisplayedHomeEnrollments = (
       groups.set(key, [enrollment])
     }
   }
-  return [...groups.values()].map((group) =>
-    group.reduce((best, current) => {
-      const bestHasCert = !!best.certificate?.uuid
-      const currentHasCert = !!current.certificate?.uuid
-      if (currentHasCert && !bestHasCert) return current
-      if (bestHasCert && !currentHasCert) return best
-      return getMaxEnrollmentGrade(current) > getMaxEnrollmentGrade(best)
-        ? current
-        : best
-    }),
-  )
+  return [...groups.values()].map(pickBestEnrollmentFromGroup)
 }
 
 /**
  * Returns all enrollments in `enrollments` that share the same variant
  * (language × variant_industry × variant_length) as `currentEnrollment`,
- * excluding `currentEnrollment` itself.
+ * excluding `currentEnrollment` itself. Ordered most-recent-first (see
+ * `sortEnrollmentsByStartDateDesc`) so cards render the "other runs" list
+ * in a stable, meaningful order rather than arbitrary database order.
  */
 const filterVariantSiblings = (
   enrollments: CourseRunEnrollmentV3[],
   currentEnrollment: CourseRunEnrollmentV3,
 ): CourseRunEnrollmentV3[] => {
   const run = currentEnrollment.run
-  return enrollments.filter(
+  const siblings = enrollments.filter(
     (e) =>
       e.id !== currentEnrollment.id &&
       e.run.course.id === run.course.id &&
@@ -1304,10 +1317,10 @@ const filterVariantSiblings = (
       (e.run.variant_industry ?? "") === (run.variant_industry ?? "") &&
       (e.run.variant_length ?? "") === (run.variant_length ?? ""),
   )
+  return sortEnrollmentsByStartDateDesc(siblings)
 }
 
 export {
-  pickDisplayedEnrollmentForLegacyDashboard,
   groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
   resolveDisplayedRunAndEnrollment,
