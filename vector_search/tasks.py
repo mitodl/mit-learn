@@ -131,9 +131,12 @@ def _queue_program_content_file_embedding_tasks(index_tasks, program_ids, overwr
 
 
 def _retry_countdown(retries: int) -> int:
-    """Full-jitter exponential backoff (mirrors retry_backoff=True), capped at 10m."""
+    """
+    Full-jitter exponential backoff capped at 10m. Minutes-scale so retries land
+    after a qdrant CPU-throttle episode instead of hammering it while saturated.
+    """
     return get_exponential_backoff_interval(
-        factor=1, retries=retries, maximum=600, full_jitter=True
+        factor=120, retries=retries, maximum=600, full_jitter=True
     )
 
 
@@ -168,11 +171,11 @@ def generate_embeddings(
             raise self.retry(exc=err, countdown=_retry_countdown(self.request.retries))  # noqa: B904
         raise
     except Exception as err:
-        is_deadline = (
-            isinstance(err, grpc.RpcError)
-            and err.code() == grpc.StatusCode.DEADLINE_EXCEEDED
+        is_transient_grpc = isinstance(err, grpc.RpcError) and err.code() in (
+            grpc.StatusCode.DEADLINE_EXCEEDED,
+            grpc.StatusCode.UNAVAILABLE,
         )
-        if (isinstance(err, RetryError) or is_deadline) and (
+        if (isinstance(err, RetryError) or is_transient_grpc) and (
             self.request.retries < self.max_retries
         ):
             raise self.retry(exc=err, countdown=_retry_countdown(self.request.retries))  # noqa: B904
