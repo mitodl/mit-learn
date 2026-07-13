@@ -77,13 +77,21 @@ const LatestEpisodesSection: React.FC<LatestEpisodesSectionProps> = ({
         <EpisodeList role="list">
           {episodes.map((episode) => {
             const parentPodcastId = getEpisodeParentPodcastId(episode)
+            const podcastTitles = (
+              episode as PodcastEpisodeResource
+            ).podcast_episode?.parent_podcasts
+              ?.map((p) => p.title)
+              .join(", ")
+            const overline = [podcastTitles, episode.offered_by?.name]
+              .filter(Boolean)
+              .join(" · ")
             return (
               <EpisodeItem
                 role="listitem"
                 key={episode.id}
                 isMobile={isMobile}
                 episode={episode}
-                overline={`${(episode as PodcastEpisodeResource).podcast_episode?.parent_podcasts?.map((p) => p.title).join(", ")}  ·  ${episode.offered_by?.name}`}
+                overline={overline}
                 href={
                   parentPodcastId
                     ? podcastEpisodePageView(

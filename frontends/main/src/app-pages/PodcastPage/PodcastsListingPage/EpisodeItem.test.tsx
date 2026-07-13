@@ -21,7 +21,7 @@ describe("EpisodeItem", () => {
     expect(screen.getByText(episode.title)).toBeInTheDocument()
   })
 
-  it("shows the overline only on mobile", () => {
+  it("shows the overline only when not on mobile", () => {
     const episode = makeEpisode()
     const { view } = renderWithProviders(
       <EpisodeItem
@@ -31,7 +31,7 @@ describe("EpisodeItem", () => {
         onPlayClick={jest.fn()}
         isPlaying={false}
         isPlayable={true}
-        isMobile={false}
+        isMobile={true}
       />,
     )
     expect(screen.queryByText("MIT Radio")).not.toBeInTheDocument()
@@ -44,7 +44,7 @@ describe("EpisodeItem", () => {
         onPlayClick={jest.fn()}
         isPlaying={false}
         isPlayable={true}
-        isMobile={true}
+        isMobile={false}
       />,
     )
     expect(screen.getByText("MIT Radio")).toBeInTheDocument()
