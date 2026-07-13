@@ -13,7 +13,10 @@ from langchain_text_splitters import (
 )
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
-from learning_resources.constants import PROGRAM_COURSE_CACHE_KEY_TEST_MODE
+from learning_resources.constants import (
+    LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
+    PROGRAM_COURSE_CACHE_KEY_TEST_MODE,
+)
 from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.models import (
     ContentFile,
@@ -464,10 +467,17 @@ def _learning_resource_embedding_context(document):
     """
     Get the embedding context for a learning resource
     """
-    return (
+    context = (
         f"{document.get('title')} "
         f"{document.get('description')} {document.get('full_description')}"
     )
+    if document.get("resource_type_group") == LEARNING_MATERIAL_RESOURCE_TYPE_GROUP:
+        content_files = document.get("content_files", [])
+        if content_files:
+            content = content_files[0].get("content")
+            if content:
+                context = f"{context} {content}"
+    return context
 
 
 def _content_file_embedding_context(document):
