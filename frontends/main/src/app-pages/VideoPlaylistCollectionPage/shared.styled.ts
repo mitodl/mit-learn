@@ -1,29 +1,20 @@
-import { styled, Breadcrumbs } from "ol-components"
+import {
+  styled,
+  Breadcrumbs,
+  HEADER_HEIGHT,
+  HEADER_HEIGHT_MD,
+} from "ol-components"
 
-export const SkipLinksNav = styled.nav({
+export const SkipLinksNav = styled.nav(({ theme }) => ({
   position: "absolute",
-  top: 0,
+  // Reveal skip links just below the fixed site header rather than over it, so
+  // they don't overlap the logo/nav. Kept above the header's z-index too, as a
+  // safeguard against any boundary overlap.
+  top: HEADER_HEIGHT,
   left: 0,
-  zIndex: 1000,
-})
-
-export const SkipLink = styled.a(({ theme }) => ({
-  position: "absolute",
-  left: "-9999px",
-  top: "auto",
-  width: 1,
-  height: 1,
-  overflow: "hidden",
-  backgroundColor: theme.custom.colors.white,
-  color: theme.custom.colors.black,
-  padding: "8px 12px",
-  border: `2px solid ${theme.custom.colors.red}`,
-  textDecoration: "none",
-  "&:focus": {
-    left: "16px",
-    top: "16px",
-    width: "auto",
-    height: "auto",
+  zIndex: theme.zIndex.appBar + 1,
+  [theme.breakpoints.down("md")]: {
+    top: HEADER_HEIGHT_MD,
   },
 }))
 

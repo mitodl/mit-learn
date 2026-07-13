@@ -4,10 +4,10 @@ import { env } from "@/env"
 import React, { useEffect, useRef } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Typography, styled, theme, Skeleton } from "ol-components"
+import { Typography, styled, theme, Skeleton, SkipLink } from "ol-components"
 import VideoContainer from "./VideoContainer"
 import { RiPlayCircleFill } from "@remixicon/react"
-import { SkipLinksNav, SkipLink, StyledBreadcrumbs } from "./shared.styled"
+import { SkipLinksNav, StyledBreadcrumbs } from "./shared.styled"
 import VideoShareButton from "./VideoShareButton"
 import { useQuery } from "@tanstack/react-query"
 import {
@@ -387,10 +387,16 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
         />
       )}
       <SkipLinksNav aria-label="Skip links">
-        <SkipLink href="#video-detail-main">Skip to main content</SkipLink>
-        <SkipLink href="#video-player-region">Skip to video player</SkipLink>
+        <SkipLink.Trigger targetId="video-detail-main">
+          Skip to main content
+        </SkipLink.Trigger>
+        <SkipLink.Trigger targetId="video-player-region">
+          Skip to video player
+        </SkipLink.Trigger>
         {playlistId && (
-          <SkipLink href="#more-from-playlist">Skip to more videos</SkipLink>
+          <SkipLink.Trigger targetId="more-from-playlist">
+            Skip to more videos
+          </SkipLink.Trigger>
         )}
       </SkipLinksNav>
 

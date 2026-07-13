@@ -9,6 +9,7 @@ import {
   styled,
   Typography,
   TypographyProps,
+  SkipLink,
 } from "ol-components"
 import { CarouselV2 } from "ol-components/CarouselV2"
 import { TabButton, TabButtonList } from "@mitodl/smoot-design"
@@ -23,6 +24,14 @@ import {
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 
+/**
+ * Only surface the "Skip {title}" affordance once the active tab holds enough
+ * cards that tabbing past them is a real burden. At or below this count the
+ * skip mechanism (its own trigger + return link) would add more tab stops than
+ * it saves, so we leave the short list in the natural tab order.
+ */
+const SKIP_LINK_CARD_THRESHOLD = 3
+
 const StyledCarouselV2 = styled(CarouselV2)({
   margin: "24px 0",
   ".MitCarousel-track": {
@@ -30,7 +39,7 @@ const StyledCarouselV2 = styled(CarouselV2)({
   },
 })
 
-/* Leaving for reference while we determine wether to swap out for CarouselV2
+/* Leaving for reference while we determine whether to swap out for CarouselV2
 const StyledCarousel = styled(Carousel)({
   /**
    * Our cards have a hover shadow that gets clipped by the carousel container.
@@ -217,6 +226,11 @@ const getTabQuery = (tab: TabConfig): CarouselQuery => {
  *
  * If there is only one tab, the carousel will not have tabs, and will just show
  * the content.
+ *
+ * Keyboard users can bypass the whole carousel via a "Skip {title}" link
+ * (SkipLink) that appears as the first focusable element in the section — this
+ * is the WCAG G123 escape hatch for the block of repeated card links, so cards
+ * stay in the natural tab order without forcing a long traversal.
  */
 const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
   config,
@@ -259,94 +273,107 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
     <ButtonsContainer role="group" aria-label="Slide navigation" ref={setRef} />
   )
 
+  // Base the decision on the tab actually on screen: that's the set of card
+  // links a keyboard user would tab through right now, and it's what the skip
+  // link would bypass.
+  const showSkipLink =
+    getVisibleCount(queries[Number(tab)]?.data) > SKIP_LINK_CARD_THRESHOLD
+
   return (
     <div className={className} data-testid="resource-carousel">
-      <TabContext value={tab}>
-        <HeaderRow>
-          <HeaderText component={titleComponent} variant={titleVariant}>
-            {title}
-          </HeaderText>
-          {config.length === 1 ? buttonsContainerElement : null}
-          {config.length > 1 ? (
-            <ControlsContainer>
-              <TabsList
-                aria-label="Carousel Filters"
-                onChange={(e, newValue) => setTab(newValue)}
-              >
-                {config
-                  .map((tabConfig, index) => ({
-                    tabConfig,
-                    index,
-                    shouldShow:
-                      isLoading ||
-                      queries[index].isLoading ||
-                      getVisibleCount(queries[index].data) > 0,
-                  }))
-                  .filter(({ shouldShow }) => shouldShow)
-                  .map(({ tabConfig, index }) => (
-                    <TabButton
-                      key={index}
-                      label={tabConfig.label}
-                      value={index.toString()}
-                    />
-                  ))}
-              </TabsList>
-              {buttonsContainerElement}
-            </ControlsContainer>
-          ) : null}
-        </HeaderRow>
-        <PanelChildren
-          config={config}
-          queries={
-            queries as UseQueryResult<
-              PaginatedLearningResourceList | LearningResource[]
-            >[]
-          }
-        >
-          {({ resources, childrenLoading, tabConfig }) => {
-            return (
-              <StyledCarouselV2
-                arrowsContainer={ref}
-                mobileBleed="symmetric"
-                mobileGutter={16}
-              >
-                {isLoading || childrenLoading
-                  ? Array.from({ length: 6 }).map((_, index) => (
-                      <ResourceCard
-                        isLoading
+      <SkipLink.Container label={title}>
+        {showSkipLink ? <SkipLink.Trigger /> : null}
+        <TabContext value={tab}>
+          <HeaderRow>
+            <HeaderText component={titleComponent} variant={titleVariant}>
+              {title}
+            </HeaderText>
+            {config.length === 1 ? buttonsContainerElement : null}
+            {config.length > 1 ? (
+              <ControlsContainer>
+                <TabsList
+                  aria-label="Carousel Filters"
+                  onChange={(e, newValue) => setTab(newValue)}
+                >
+                  {config
+                    .map((tabConfig, index) => ({
+                      tabConfig,
+                      index,
+                      shouldShow:
+                        isLoading ||
+                        queries[index].isLoading ||
+                        getVisibleCount(queries[index].data) > 0,
+                    }))
+                    .filter(({ shouldShow }) => shouldShow)
+                    .map(({ tabConfig, index }) => (
+                      <TabButton
                         key={index}
-                        resource={null}
-                        parentHeadingEl={titleComponent}
-                        {...tabConfig.cardProps}
+                        label={tabConfig.label}
+                        value={index.toString()}
                       />
-                    ))
-                  : resources
-                      .filter((resource) => resource.id !== excludeResourceId)
-                      .map((resource, index) => (
+                    ))}
+                </TabsList>
+                {buttonsContainerElement}
+              </ControlsContainer>
+            ) : null}
+          </HeaderRow>
+          <PanelChildren
+            config={config}
+            queries={
+              queries as UseQueryResult<
+                PaginatedLearningResourceList | LearningResource[]
+              >[]
+            }
+          >
+            {({ resources, childrenLoading, tabConfig }) => {
+              return (
+                <StyledCarouselV2
+                  arrowsContainer={ref}
+                  mobileBleed="symmetric"
+                  mobileGutter={16}
+                >
+                  {isLoading || childrenLoading
+                    ? Array.from({ length: 6 }).map((_, index) => (
                         <ResourceCard
-                          key={resource.id}
-                          resource={resource}
+                          isLoading
+                          key={index}
+                          resource={null}
                           parentHeadingEl={titleComponent}
                           {...tabConfig.cardProps}
-                          onCardClick={() => {
-                            if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-                              posthog.capture(PostHogEvents.CourseCardClicked, {
-                                label: title,
-                                resourceId: resource.id,
-                                readableId: resource.readable_id,
-                                resourceType: resource.resource_type,
-                                platformCode: resource.platform?.code,
-                                position: index,
-                              })
-                            }
-                          }}
                         />
-                      ))}
-              </StyledCarouselV2>
-            )
-          }}
-        </PanelChildren>
-      </TabContext>
+                      ))
+                    : resources
+                        .filter((resource) => resource.id !== excludeResourceId)
+                        .map((resource, index) => (
+                          <ResourceCard
+                            key={resource.id}
+                            resource={resource}
+                            parentHeadingEl={titleComponent}
+                            {...tabConfig.cardProps}
+                            onCardClick={() => {
+                              if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
+                                posthog.capture(
+                                  PostHogEvents.CourseCardClicked,
+                                  {
+                                    label: title,
+                                    resourceId: resource.id,
+                                    readableId: resource.readable_id,
+                                    resourceType: resource.resource_type,
+                                    platformCode: resource.platform?.code,
+                                    position: index,
+                                  },
+                                )
+                              }
+                            }}
+                          />
+                        ))}
+                </StyledCarouselV2>
+              )
+            }}
+          </PanelChildren>
+        </TabContext>
+        {showSkipLink ? <SkipLink.Target /> : null}
+      </SkipLink.Container>
     </div>
   )
 }
