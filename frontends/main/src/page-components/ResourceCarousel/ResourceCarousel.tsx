@@ -24,6 +24,14 @@ import {
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 
+/**
+ * Only surface the "Skip {title}" affordance once the active tab holds enough
+ * cards that tabbing past them is a real burden. At or below this count the
+ * skip mechanism (its own trigger + return link) would add more tab stops than
+ * it saves, so we leave the short list in the natural tab order.
+ */
+const SKIP_LINK_CARD_THRESHOLD = 3
+
 const StyledCarouselV2 = styled(CarouselV2)({
   margin: "24px 0",
   ".MitCarousel-track": {
@@ -265,10 +273,16 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
     <ButtonsContainer role="group" aria-label="Slide navigation" ref={setRef} />
   )
 
+  // Base the decision on the tab actually on screen: that's the set of card
+  // links a keyboard user would tab through right now, and it's what the skip
+  // link would bypass.
+  const showSkipLink =
+    getVisibleCount(queries[Number(tab)]?.data) > SKIP_LINK_CARD_THRESHOLD
+
   return (
     <div className={className} data-testid="resource-carousel">
       <SkipLink.Container label={title}>
-        <SkipLink.Trigger />
+        {showSkipLink ? <SkipLink.Trigger /> : null}
         <TabContext value={tab}>
           <HeaderRow>
             <HeaderText component={titleComponent} variant={titleVariant}>
@@ -358,7 +372,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
             }}
           </PanelChildren>
         </TabContext>
-        <SkipLink.Target />
+        {showSkipLink ? <SkipLink.Target /> : null}
       </SkipLink.Container>
     </div>
   )

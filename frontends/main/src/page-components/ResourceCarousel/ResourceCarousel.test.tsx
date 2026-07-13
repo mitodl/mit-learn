@@ -408,7 +408,7 @@ describe("ResourceCarousel", () => {
     ]
 
     it("renders a 'Skip {title}' link so keyboard users can bypass the cards", async () => {
-      const { resources } = setupApis({ count: 3 })
+      const { resources } = setupApis({ count: 4 })
       renderWithProviders(
         <ResourceCarousel
           titleComponent="h2"
@@ -424,8 +424,28 @@ describe("ResourceCarousel", () => {
       ).toBeInTheDocument()
     })
 
-    it("moves focus past the carousel when the skip link is activated", async () => {
+    it("omits the skip link when there are too few cards to be worth skipping", async () => {
       const { resources } = setupApis({ count: 3 })
+      renderWithProviders(
+        <ResourceCarousel
+          titleComponent="h2"
+          title="My Carousel"
+          config={skipConfig}
+        />,
+      )
+      // Wait for the carousel content to render.
+      await screen.findByText(resources.list.results[0].title)
+
+      expect(
+        screen.queryByRole("link", { name: "Skip My Carousel" }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("link", { name: "Return to My Carousel" }),
+      ).not.toBeInTheDocument()
+    })
+
+    it("moves focus past the carousel when the skip link is activated", async () => {
+      const { resources } = setupApis({ count: 4 })
       renderWithProviders(
         <>
           <ResourceCarousel
