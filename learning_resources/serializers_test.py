@@ -1130,6 +1130,25 @@ def test_metadata_display_serializer_show_start_anytime():
     assert metadata_serializer.show_start_anytime(serialized_resource) is False
 
 
+def test_runs_by_date_handles_dateless_runs():
+    """
+    runs_by_date should not crash when 2+ runs have no start_date (issue #12295);
+    dateless runs sort last.
+    """
+    serialized_resource = {
+        "runs": [
+            {"id": 1, "start_date": None},
+            {"id": 2, "start_date": "2024-01-01T00:00:00Z"},
+            {"id": 3, "start_date": None},
+        ]
+    }
+    serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    ordered = serializer.runs_by_date(serialized_resource)
+    assert [run["id"] for run in ordered] == [2, 1, 3]
+
+
 def test_total_runs_with_dates(mocker):
     """
     Test total_runs_with_dates method

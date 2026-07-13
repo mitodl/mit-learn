@@ -2,7 +2,7 @@
 
 import json
 import logging
-from datetime import UTC
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -708,8 +708,10 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         """Get runs sorted by date"""
         return sorted(
             serialized_resource.get("runs", []),
-            key=lambda run: dateparser.parse(
-                run["start_date"] if run.get("start_date", "") else ""
+            key=lambda run: (
+                dateparser.parse(run["start_date"]).replace(tzinfo=UTC)
+                if run.get("start_date")
+                else datetime.max.replace(tzinfo=UTC)
             ),
         )
 
