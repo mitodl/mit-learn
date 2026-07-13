@@ -1,7 +1,7 @@
 import React from "react"
 import { Link, styled } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
-import type { LearningResource } from "api/v1"
+import type { LearningResource, PodcastEpisodeResource } from "api/v1"
 import { SEARCH_PODCAST_EPISODES, podcastEpisodePageView } from "@/common/urls"
 import { Section, SectionHeader, SectionTitle } from "./styled"
 import { EpisodeItem } from "./EpisodeItem"
@@ -83,7 +83,7 @@ const LatestEpisodesSection: React.FC<LatestEpisodesSectionProps> = ({
                 key={episode.id}
                 isMobile={isMobile}
                 episode={episode}
-                overline={episode.offered_by?.name}
+                overline={`${(episode as PodcastEpisodeResource).podcast_episode?.parent_podcasts?.map((p) => p.title).join(", ")}  ·  ${episode.offered_by?.name}`}
                 href={
                   parentPodcastId
                     ? podcastEpisodePageView(
