@@ -1,6 +1,6 @@
 import React from "react"
 import { styled } from "@mitodl/smoot-design"
-import TrackCard, { FeatureRow, FeatureIcon } from "./TrackCard"
+import TrackCard, { AccessFeatureRow } from "./TrackCard"
 
 const DeadlineNote = styled.div(({ theme }) => ({
   ...theme.typography.body3,
@@ -36,10 +36,7 @@ const LearnForFreeCard: React.FC<LearnForFreeCardProps> = ({
         ) : undefined
       }
     >
-      <FeatureRow>
-        <FeatureIcon aria-hidden="true" />
-        <span>Access to this {productNoun} &amp; course materials</span>
-      </FeatureRow>
+      <AccessFeatureRow productNoun={productNoun} />
     </TrackCard>
   )
 }

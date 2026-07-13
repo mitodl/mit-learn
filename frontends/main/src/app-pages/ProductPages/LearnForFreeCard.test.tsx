@@ -35,7 +35,7 @@ describe("LearnForFreeCard", () => {
   test("renders the access bullet with program noun", () => {
     renderWithProviders(<LearnForFreeCard productNoun="program" />)
     expect(
-      screen.getByText("Access to this program & course materials"),
+      screen.getByText("Access to this program & materials"),
     ).toBeInTheDocument()
   })
 

@@ -527,6 +527,48 @@ describe("CoursePage", () => {
 
         expect(screen.getByTestId("signup-popover")).toBeInTheDocument()
       })
+
+      test("header enrollment failure shows an error alert below the header button", async () => {
+        const run = mitxFactories.courses.courseRun({
+          is_enrollable: true,
+          is_upgradable: false,
+          is_archived: false,
+          enrollment_modes: [freeMode],
+          products: [],
+        })
+        const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+        const page = makePage({ course_details: course })
+        setupApis({ course, page })
+
+        setMockResponse.get(
+          learnUrls.userMe.get(),
+          learnFactories.user.user({ is_authenticated: true }),
+        )
+        setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), [])
+        setMockResponse.post(
+          mitxUrls.enrollment.enrollmentsListV1(),
+          undefined,
+          { code: 500 },
+        )
+
+        renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+        // Target the header instance specifically — the InfoBox renders its
+        // own "Start Learning" with its own (separate) error alert.
+        const banner = await screen.findByTestId("banner-container")
+        const startBtn = await within(banner).findByRole("button", {
+          name: "Start Learning",
+        })
+        await act(async () => {
+          startBtn.click()
+        })
+
+        expect(
+          await within(banner).findByText(
+            "There was a problem processing your enrollment. Please try again.",
+          ),
+        ).toBeInTheDocument()
+      })
     })
   })
 

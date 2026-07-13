@@ -398,7 +398,7 @@ describe("CourseEnrollArea — financial assistance link", () => {
       name: "approved (applied at checkout), when aid is approved",
       // The factory already defaults product_flexible_price to a discount with a
       // real id, which is the only field the "approved" state keys off
-      // (useCertificatePrice: !!product_flexible_price?.id).
+      // (useCourseCertificatePrice: !!product_flexible_price?.id).
       flexiblePrice: () => makeFlexiblePrice(),
       linkText: "Financial assistance approved (applied at checkout)",
     },
