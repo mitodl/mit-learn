@@ -436,14 +436,18 @@ describe("ResourceCarousel", () => {
           <a href="#after">After carousel</a>
         </>,
       )
-      await screen.findByText(resources.list.results[0].title)
+      const firstCard = await screen.findByText(resources.list.results[0].title)
 
       const skip = screen.getByRole("link", { name: "Skip My Carousel" })
       await user.click(skip)
 
-      // Activating the skip link lands focus directly on the first focusable
-      // element after the carousel, skipping every card.
-      expect(screen.getByRole("link", { name: "After carousel" })).toHaveFocus()
+      // Activating the skip link lands focus on the carousel's own "Return to
+      // {title}" link at the end of the block — a deterministic, named
+      // destination — skipping every card.
+      expect(
+        screen.getByRole("link", { name: "Return to My Carousel" }),
+      ).toHaveFocus()
+      expect(firstCard.closest("a")).not.toHaveFocus()
     })
   })
 })

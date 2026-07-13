@@ -18,25 +18,43 @@ const renderBlock = (label = "Featured Courses") =>
   )
 
 describe("SkipLink", () => {
-  it("renders a link labelled 'Skip {label}' targeting the sentinel", () => {
+  it("renders a 'Skip {label}' trigger pointing at a focusable 'Return to {label}' target", () => {
     renderBlock()
     const trigger = screen.getByRole("link", { name: "Skip Featured Courses" })
-    const targetId = trigger.getAttribute("href")?.slice(1)
-    expect(targetId).toBeTruthy()
-    const target = document.getElementById(targetId as string)
-    expect(target).toBeInTheDocument()
+    const target = screen.getByRole("link", {
+      name: "Return to Featured Courses",
+    })
+    // The trigger points at the target the Container owns...
+    expect(trigger).toHaveAttribute("href", `#${target.id}`)
+    // ...and the target is a real, named, focusable element that stays out of
+    // the normal tab order (tabindex=-1), so it's only a focus stop for users
+    // who activate the skip.
     expect(target).toHaveAttribute("tabindex", "-1")
   })
 
-  it("moves focus past the block to the first focusable element after it", async () => {
+  it("lands focus on the named 'Return to {label}' target, skipping the block", async () => {
     renderBlock()
     const trigger = screen.getByRole("link", { name: "Skip Featured Courses" })
 
-    // Activating the skip link lands focus directly on the first focusable
-    // element after the block (not the empty end marker), so the repeated cards
-    // are skipped and the user arrives on real, announced content.
+    // Activating the skip link lands focus on the Container's own "Return to
+    // {label}" link at the end of the block — a deterministic, named
+    // destination — rather than the repeated card links inside it.
     await user.click(trigger)
-    expect(screen.getByRole("link", { name: "After the block" })).toHaveFocus()
+    expect(
+      screen.getByRole("link", { name: "Return to Featured Courses" }),
+    ).toHaveFocus()
+    expect(screen.getByRole("link", { name: "Card one" })).not.toHaveFocus()
+  })
+
+  it("sends focus back to the trigger when the 'Return to {label}' link is activated", async () => {
+    renderBlock()
+    const trigger = screen.getByRole("link", { name: "Skip Featured Courses" })
+    const returnLink = screen.getByRole("link", {
+      name: "Return to Featured Courses",
+    })
+
+    await user.click(returnLink)
+    expect(trigger).toHaveFocus()
   })
 
   it("allows custom trigger text", () => {

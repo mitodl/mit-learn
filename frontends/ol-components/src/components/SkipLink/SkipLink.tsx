@@ -1,5 +1,6 @@
 import React from "react"
 import styled from "@emotion/styled"
+import type { CSSObject } from "@emotion/react"
 import type { Theme } from "@mui/material/styles"
 
 /**
@@ -10,7 +11,8 @@ import type { Theme } from "@mui/material/styles"
  *
  * 1. Skip PAST a self-contained block (WCAG G123) — the component owns the
  *    target. Wrap the block; the trigger is revealed floating just above it and
- *    jumps focus to a sentinel rendered after it:
+ *    jumps focus to a "Return to {label}" link rendered after the block (which
+ *    itself sends focus back to the trigger):
  *
  *      <SkipLink.Container label="Featured Courses">
  *        <SkipLink.Trigger />
@@ -28,12 +30,15 @@ import type { Theme } from "@mui/material/styles"
  *        <SkipLink.Trigger targetId="player">Skip to video player</SkipLink.Trigger>
  *      </nav>
  *
- * Each `Container` generates its own id (via `useId`), so any number of block
+ * Each `Container` generates its own ids (via `useId`), so any number of block
  * instances coexist without colliding.
  */
 
 type SkipLinkContextValue = {
+  /** Id of the "Return to {label}" link the trigger lands focus on. */
   targetId: string
+  /** Id of the trigger, so the "Return to {label}" link can send focus back. */
+  triggerId: string
   label: string
 }
 
@@ -46,8 +51,8 @@ const Root = styled.div({
 // Shared visual chrome for every trigger — hidden but focusable by default,
 // styled to match the app's existing skip-link treatment. Only the `:focus`
 // reveal placement differs between the block and page variants below.
-const skipLinkChrome = (theme: Theme) => ({
-  position: "absolute" as const,
+const skipLinkChrome = (theme: Theme): CSSObject => ({
+  position: "absolute",
   left: "-9999px",
   width: "1px",
   height: "1px",
@@ -60,38 +65,13 @@ const skipLinkChrome = (theme: Theme) => ({
   border: `2px solid ${theme.custom.colors.red}`,
   borderRadius: "4px",
   textDecoration: "none",
-  whiteSpace: "nowrap" as const,
+  whiteSpace: "nowrap",
 })
 
-const revealBase = {
+const revealBase: CSSObject = {
   width: "auto",
   height: "auto",
   overflow: "visible",
-}
-
-// Keyboard-focusable elements, used to move focus onto real content past a block.
-const FOCUSABLE_SELECTOR = [
-  "a[href]",
-  "button:not([disabled])",
-  "input:not([disabled])",
-  "select:not([disabled])",
-  "textarea:not([disabled])",
-  '[tabindex]:not([tabindex="-1"])',
-].join(",")
-
-/** The first keyboard-focusable element after `marker` in DOM order, if any. */
-const firstFocusableAfter = (marker: HTMLElement): HTMLElement | null => {
-  const candidates = Array.from(
-    marker.ownerDocument.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-  )
-  return (
-    candidates.find(
-      (el) =>
-        !!(
-          marker.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING
-        ),
-    ) ?? null
-  )
 }
 
 /**
@@ -128,13 +108,30 @@ const PageTriggerAnchor = styled.a(({ theme }) => ({
 }))
 
 /**
- * Zero-size marker at the end of a Container's block. Focus doesn't normally
- * land here — the Trigger moves focus to the first focusable element AFTER this
- * marker, so the user arrives on real, announced content instead of an empty
- * node (which screen readers read as "blank"/"group"). It stays focusable
- * (tabindex=-1) only as a fallback for when nothing focusable follows the block,
- * and is intentionally unnamed (its generic role prohibits an accessible name
- * under ARIA).
+ * The Container-owned target: a real "Return to {label}" link at the end of the
+ * block. The Trigger always lands focus here (a deterministic, named, announced
+ * destination — no fragile "next focusable element" hunt), and activating it
+ * sends focus back to the Trigger. `tabIndex={-1}` keeps it out of the normal
+ * tab order, so it's only a focus stop for people who activated the skip.
+ * Mirrors the block Trigger's reveal, floated just BELOW the block instead of
+ * above, so it clears both the block and any following content.
+ */
+const ReturnAnchor = styled.a(({ theme }) => ({
+  ...skipLinkChrome(theme),
+  scrollMarginTop: "48px",
+  "&:focus": {
+    ...revealBase,
+    left: "0",
+    bottom: "0",
+    transform: "translateY(calc(100% + 4px))",
+  },
+}))
+
+/**
+ * Zero-size, unnamed marker for a STANDALONE Target (one given an explicit `id`
+ * with no Container). The caller owns what it points at and its surrounding
+ * semantics, so it stays a bare focusable node; inside a Container the Target
+ * renders a named `ReturnAnchor` instead.
  */
 const TargetSentinel = styled.div({
   outline: "none",
@@ -157,8 +154,15 @@ const Container: React.FC<SkipLinkContainerProps> = ({
   children,
   className,
 }) => {
-  const targetId = React.useId()
-  const value = React.useMemo(() => ({ targetId, label }), [targetId, label])
+  const baseId = React.useId()
+  const value = React.useMemo(
+    () => ({
+      targetId: `${baseId}-target`,
+      triggerId: `${baseId}-trigger`,
+      label,
+    }),
+    [baseId, label],
+  )
   return (
     <SkipLinkContext.Provider value={value}>
       <Root className={className}>{children}</Root>
@@ -207,19 +211,19 @@ const Trigger: React.FC<SkipLinkTriggerProps> = ({
     }
     // Move focus explicitly (rather than relying on native hash navigation) so
     // it's reliable everywhere, including tests, and leaves the URL untouched.
-    //
-    // Block mode: `target` is an empty end-of-block marker; focusing it directly
-    // just reads as "blank"/"group" and strands the user, so move focus to the
-    // first real focusable element after the block. Standalone mode: `target` is
-    // a real landmark, so focus it directly.
-    const destination = context
-      ? (firstFocusableAfter(target) ?? target)
-      : target
+    // The target is always a real, focusable, named element: in block mode the
+    // Container's "Return to {label}" link at the end of the block; standalone
+    // the landmark the caller pointed at.
     event.preventDefault()
-    destination.focus()
+    target.focus()
   }
   return (
-    <Anchor href={`#${targetId}`} className={className} onClick={handleClick}>
+    <Anchor
+      id={context?.triggerId}
+      href={`#${targetId}`}
+      className={className}
+      onClick={handleClick}
+    >
       {content}
     </Anchor>
   )
@@ -242,7 +246,35 @@ const Target: React.FC<SkipLinkTargetProps> = ({ className, id: idProp }) => {
       "SkipLink.Target needs an `id` prop or a SkipLink.Container ancestor",
     )
   }
-  return <TargetSentinel id={id} tabIndex={-1} className={className} />
+  // Standalone (explicit id, no Container): a bare focusable node the caller
+  // points at; the caller owns its surrounding semantics.
+  if (!context) {
+    return <TargetSentinel id={id} tabIndex={-1} className={className} />
+  }
+  // Inside a Container: a real, named "Return to {label}" link. It's the
+  // deterministic destination the Trigger focuses, and activating it returns
+  // focus to the Trigger. tabindex=-1 keeps it out of the normal tab order.
+  const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    const trigger = event.currentTarget.ownerDocument.getElementById(
+      context.triggerId,
+    )
+    if (!trigger) {
+      return
+    }
+    event.preventDefault()
+    trigger.focus()
+  }
+  return (
+    <ReturnAnchor
+      id={id}
+      tabIndex={-1}
+      href={`#${context.triggerId}`}
+      className={className}
+      onClick={handleClick}
+    >
+      Return to {context.label}
+    </ReturnAnchor>
+  )
 }
 
 const SkipLink = {
