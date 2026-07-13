@@ -147,6 +147,50 @@ def test_start_embed_resources_without_settings(mocker, mocked_celery, index):
     generate_embeddings_mock.si.assert_not_called()
 
 
+def test_start_embed_resources_excludes_blocklisted_courses(mocker, mocked_celery):
+    """start_embed_resources should not embed courses whose readable_id is blocklisted"""
+    courses = CourseFactory.create_batch(3, etl_source=ETLSource.ocw.value)
+    blocked = courses[0]
+    for course in courses:
+        ContentFileFactory.create_batch(2, run=course.learning_resource.runs.first())
+    mocker.patch(
+        "vector_search.tasks.load_course_blocklist",
+        return_value=[blocked.learning_resource.readable_id],
+    )
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        start_embed_resources.delay(
+            [COURSE_TYPE], skip_content_files=False, overwrite=True
+        )
+
+    embedded_resource_ids = {
+        resource_id
+        for call in generate_embeddings_mock.si.call_args_list
+        if call.args[1] == COURSE_TYPE
+        for resource_id in call.args[0]
+    }
+    assert embedded_resource_ids == {
+        course.learning_resource_id for course in courses[1:]
+    }
+
+    blocked_file_ids = set(
+        ContentFile.objects.filter(
+            run__learning_resource=blocked.learning_resource
+        ).values_list("id", flat=True)
+    )
+    embedded_file_ids = {
+        file_id
+        for call in generate_embeddings_mock.si.call_args_list
+        if call.args[1] == CONTENT_FILE_TYPE
+        for file_id in call.args[0]
+    }
+    assert embedded_file_ids
+    assert not embedded_file_ids & blocked_file_ids
+
+
 def test_embed_new_learning_resources(mocker, mocked_celery):
     """
     embed_new_learning_resources should generate embeddings for new resources
