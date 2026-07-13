@@ -14,7 +14,10 @@ from qdrant_client.http.models.models import CountResult
 from qdrant_client.models import PointStruct
 
 import vector_search.utils as vs_utils
-from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
+from learning_resources.constants import (
+    GROUP_CONTENT_FILE_CONTENT_VIEWERS,
+    LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
+)
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
@@ -1022,6 +1025,42 @@ def test_should_generate_for_changed_resource(mocker):
     mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
     result = should_generate_resource_embeddings(serialized_resources[0])
     assert result is True
+
+
+def test_learning_material_embedding_context_includes_content_file():
+    """Learning material resource embeddings should include direct content text."""
+    serialized_resource = {
+        "title": "A title",
+        "description": "A short description",
+        "full_description": "A full description",
+        "resource_type_group": LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
+        "content_files": [{"content": "The direct content file text"}],
+    }
+
+    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
+        serialized_resource
+    )
+
+    assert context == (
+        "A title A short description A full description The direct content file text"
+    )
+
+
+def test_course_embedding_context_ignores_content_file():
+    """Only learning material resource embeddings should include direct content text."""
+    serialized_resource = {
+        "title": "A title",
+        "description": "A short description",
+        "full_description": "A full description",
+        "resource_type_group": "course",
+        "content_files": [{"content": "The direct content file text"}],
+    }
+
+    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
+        serialized_resource
+    )
+
+    assert context == "A title A short description A full description"
 
 
 def test_should_generate_for_changed_content_file(mocker):
