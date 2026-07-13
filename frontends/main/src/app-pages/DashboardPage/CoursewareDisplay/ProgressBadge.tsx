@@ -1,6 +1,7 @@
 import React from "react"
 import { styled, Typography } from "ol-components"
 import { EnrollmentStatus } from "./helpers"
+import { RiCheckLine } from "@remixicon/react"
 
 const BadgeContainer = styled("div")<{
   status: EnrollmentStatus
@@ -17,6 +18,7 @@ const BadgeContainer = styled("div")<{
 
   return {
     display: "flex",
+    width: "100px",
     padding: "4px 8px",
     borderRadius: "4px",
     justifyContent: "center",
@@ -40,8 +42,11 @@ const ProgressBadge: React.FC<ProgressBadgeProps> = ({ enrollmentStatus }) => {
         : "Not Started"
 
   return (
-    <BadgeContainer status={enrollmentStatus}>
+    <BadgeContainer status={enrollmentStatus} data-testid="progress-badge">
       <Typography variant="body3">{label}</Typography>
+      {enrollmentStatus === EnrollmentStatus.Completed && (
+        <RiCheckLine size="16px" aria-hidden="true" />
+      )}
     </BadgeContainer>
   )
 }

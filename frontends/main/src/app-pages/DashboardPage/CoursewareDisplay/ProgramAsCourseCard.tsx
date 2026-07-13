@@ -1,5 +1,11 @@
 import React from "react"
-import { SimpleMenu, SimpleMenuItem, Typography, styled } from "ol-components"
+import {
+  SimpleMenu,
+  SimpleMenuItem,
+  Stack,
+  Typography,
+  styled,
+} from "ol-components"
 import {
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
@@ -16,7 +22,12 @@ import {
 } from "./helpers"
 import { ProgressBadge } from "./ProgressBadge"
 import { CoursewareCard } from "./CoursewareCard"
-import { CourseDateSummary, UpgradedBanner } from "./CardShared"
+import {
+  CardTypeText,
+  CourseDateSummary,
+  Separator,
+  UpgradedBanner,
+} from "./CardShared"
 import {
   getCertificateLink,
   buildCourseEntry,
@@ -326,6 +337,14 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
     />
   )
 
+  const progressBadgeSection = (
+    <Stack direction="row" gap="4px" alignItems="center">
+      <ProgressBadge enrollmentStatus={programEnrollmentStatus} />
+      <Separator />
+      <CardTypeText>Course</CardTypeText>
+    </Stack>
+  )
+
   return (
     <ProgramCardRoot
       as={Component}
@@ -335,7 +354,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
       <ProgramCardHeaderOuter>
         <ProgramCardHeaderInner>
           <StatusContainer>
-            <ProgressBadge enrollmentStatus={programEnrollmentStatus} />
+            {progressBadgeSection}
             <CourseDateSummary
               startDate={courseProgram?.start_date}
               endDate={courseProgram?.end_date}
@@ -345,7 +364,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
             {courseProgram?.title}
           </Typography>
         </ProgramCardHeaderInner>
-        <>
+        <Stack direction="row" gap="0">
           {programCertificateUrl ? (
             <ProgramCertificateButton
               variant="bordered"
@@ -359,7 +378,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
             <UpgradedBanner />
           ) : null}
           {contextMenu}
-        </>
+        </Stack>
       </ProgramCardHeaderOuter>
       <ProgramCardSubHeader>
         <ProgramCardSubHeaderText variant="subtitle3">
@@ -391,6 +410,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
               entry={entry}
               layout="compact"
               headingLevel="h4"
+              isModule
               onUpgradeError={onUpgradeError}
             />
           )

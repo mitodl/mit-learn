@@ -27,6 +27,7 @@ from learning_resources.constants import (
     LearningResourceType,
     semester_mapping,
 )
+from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE
 from learning_resources.hooks import get_plugin_manager
 from learning_resources.models import (
     ContentFile,
@@ -740,53 +741,104 @@ def build_resource_summary_dict(resource):
     }
 
 
-def _build_entry(resource, summaries_by_resource):
-    """Build a resource entry dict for markdown rendering."""
-    entry = build_resource_summary_dict(resource)
-    entry["summaries"] = summaries_by_resource.get(resource.id, [])
-    return entry
+# Bound the program marketing-page content assembled from child courses so it
+# stays a reasonable embedding input. A program page previously concatenated
+# every child-course content-file summary and ballooned to 23MB in prod,
+# overflowing the embedding API's per-request token limit.
+PROGRAM_CHILDREN_CONTENT_MAX_CHARS = 1_000_000
+
+PROGRAM_CHILDREN_CONTENT_MARKER = "## Program Contents"
 
 
-def _build_entries_from_relationships(relationships, summaries_by_resource):
-    """Build entry dicts from prefetched relationships, including grandchildren."""
-    entries = []
+def _course_ids_by_program(relationships, course_type):
+    """Map program id -> reachable published course ids (direct + via subprograms)."""
+    result = defaultdict(set)
     for rel in relationships:
-        entry = _build_entry(rel.child, summaries_by_resource)
-
-        if (
-            rel.child.resource_type == LearningResourceType.program.name
-            and rel.relation_type == LearningResourceRelationTypes.PROGRAM_PROGRAMS
-        ):
-            sub_entries = [
-                _build_entry(sub_rel.child, summaries_by_resource)
+        if rel.child.resource_type == course_type:
+            result[rel.parent_id].add(rel.child_id)
+        else:
+            result[rel.parent_id].update(
+                sub_rel.child_id
                 for sub_rel in getattr(rel.child, "program_children", [])
-            ]
-            if sub_entries:
-                entry["children"] = sub_entries
-
-        entries.append(entry)
-    return entries
-
-
-def _format_resource_entries(entries, heading_level=3):
-    """Recursively format resource entries as markdown sections."""
-    sections = []
-    for entry in entries:
-        prefix = "#" * heading_level
-        lines = [f"{prefix} {entry['title']}"]
-        if entry["description"]:
-            lines.append(entry["description"])
-        if entry["topics"]:
-            lines.append(f"Topics: {', '.join(entry['topics'])}")
-        if entry.get("summaries"):
-            lines.append("\n**Content summaries:**")
-            lines.extend(f"- {summary}" for summary in entry["summaries"])
-        sections.append("\n".join(lines))
-        if entry.get("children"):
-            sections.extend(
-                _format_resource_entries(entry["children"], heading_level + 1)
+                if sub_rel.child.resource_type == course_type
             )
-    return sections
+    return result
+
+
+def reachable_published_course_ids(program_ids):
+    """Map program id -> set of reachable published (or test-mode) child-course ids.
+
+    Includes courses reached directly and courses reached through child
+    programs. Read-only and id-level only (loads no content).
+    """
+    program_ids = list(program_ids)
+    if not program_ids:
+        return {}
+    program_relation_types = [
+        LearningResourceRelationTypes.PROGRAM_COURSES,
+        LearningResourceRelationTypes.PROGRAM_PROGRAMS,
+    ]
+    child_visibility = Q(child__published=True) | Q(child__test_mode=True)
+    relationships = list(
+        LearningResourceRelationship.objects.filter(
+            parent_id__in=program_ids,
+            relation_type__in=program_relation_types,
+        )
+        .filter(child_visibility)
+        .select_related("child")
+        .prefetch_related(
+            Prefetch(
+                "child__children",
+                queryset=LearningResourceRelationship.objects.filter(
+                    relation_type__in=program_relation_types,
+                )
+                .filter(child_visibility)
+                .select_related("child"),
+                to_attr="program_children",
+            ),
+        )
+    )
+    return _course_ids_by_program(relationships, LearningResourceType.course.name)
+
+
+def programs_needing_children_heal(program_ids):
+    """Return the subset of the given program ids whose marketing page lacks a
+    children section but whose children content is now available.
+
+    A program qualifies only when it has a reachable published (or test-mode)
+    child course with a non-empty marketing page, which guarantees re-scraping
+    will populate the section and prevents childless programs from being
+    re-scraped every run. Read-only and id-level only.
+    """
+    program_ids = list(program_ids)
+    if not program_ids:
+        return set()
+    candidate_ids = set(
+        ContentFile.objects.filter(
+            learning_resource_id__in=program_ids,
+            file_type=MARKETING_PAGE_FILE_TYPE,
+        )
+        .exclude(content__contains=PROGRAM_CHILDREN_CONTENT_MARKER)
+        .values_list("learning_resource_id", flat=True)
+    )
+    if not candidate_ids:
+        return set()
+    reachable = reachable_published_course_ids(candidate_ids)
+    all_course_ids = set().union(*reachable.values())
+    course_ids_with_pages = set(
+        ContentFile.objects.filter(
+            learning_resource_id__in=all_course_ids,
+            file_type=MARKETING_PAGE_FILE_TYPE,
+            published=True,
+        )
+        .exclude(content="")
+        .values_list("learning_resource_id", flat=True)
+    )
+    return {
+        program_id
+        for program_id, course_ids in reachable.items()
+        if course_ids & course_ids_with_pages
+    }
 
 
 def build_program_children_content(learning_resource):
@@ -801,8 +853,10 @@ def build_program_children_content(learning_resource):
 def build_program_children_content_bulk(program_resources):
     """Build program children markdown for many program resources in bulk.
 
-    Returns a dict keyed by learning_resource id with markdown content.
-    Non-program resources are ignored.
+    For each program, concatenates the marketing-page content of its published
+    (or test-mode) child courses, including courses reached through child
+    programs. Returns a dict keyed by learning_resource id. Non-program
+    resources are ignored.
     """
     programs = [
         resource
@@ -813,71 +867,37 @@ def build_program_children_content_bulk(program_resources):
         return {}
 
     program_ids = [program.id for program in programs]
-    program_relation_types = [
-        LearningResourceRelationTypes.PROGRAM_COURSES,
-        LearningResourceRelationTypes.PROGRAM_PROGRAMS,
-    ]
+    course_ids_by_program = reachable_published_course_ids(program_ids)
+    all_course_ids = set().union(*course_ids_by_program.values())
 
-    child_visibility = Q(child__published=True) | Q(child__test_mode=True)
-    relationships = list(
-        LearningResourceRelationship.objects.filter(
-            parent_id__in=program_ids,
-            relation_type__in=program_relation_types,
-        )
-        .filter(child_visibility)
-        .select_related("parent", "child")
-        .prefetch_related(
-            "child__topics",
-            Prefetch(
-                "child__children",
-                queryset=LearningResourceRelationship.objects.filter(
-                    relation_type__in=program_relation_types,
-                )
-                .filter(child_visibility)
-                .select_related("child")
-                .prefetch_related("child__topics"),
-                to_attr="program_children",
-            ),
-        )
-    )
-
-    child_ids = [rel.child_id for rel in relationships]
-    grandchild_ids = [
-        gc.child_id
-        for rel in relationships
-        for gc in getattr(rel.child, "program_children", [])
-    ]
-    all_ids = set(child_ids + grandchild_ids) - set(program_ids)
-
-    summaries_by_resource = {}
-    if all_ids:
-        summary_qs = (
+    # One marketing-page content file per course (published), fetched in bulk
+    marketing_by_course = {}
+    if all_course_ids:
+        marketing_qs = (
             ContentFile.objects.filter(
-                run__learning_resource_id__in=all_ids,
+                learning_resource_id__in=all_course_ids,
+                file_type=MARKETING_PAGE_FILE_TYPE,
                 published=True,
-                run__published=True,
             )
-            .exclude(summary="")
-            .values_list("run__learning_resource_id", "summary")
+            .exclude(content="")
+            .order_by("learning_resource_id", "id")
+            .values_list("learning_resource_id", "learning_resource__title", "content")
         )
-        for resource_id, summary in summary_qs:
-            summaries_by_resource.setdefault(resource_id, []).append(summary)
-
-    relationships_by_program = defaultdict(list)
-    for rel in relationships:
-        relationships_by_program[rel.parent_id].append(rel)
+        for lr_id, title, content in marketing_qs:
+            marketing_by_course.setdefault(lr_id, (title, content))
 
     content_by_program_id = {}
     for program in programs:
-        rels = relationships_by_program.get(program.id, [])
-        entries = _build_entries_from_relationships(rels, summaries_by_resource)
-
-        if not entries:
+        sections = []
+        for course_id in sorted(course_ids_by_program.get(program.id, set())):
+            page = marketing_by_course.get(course_id)
+            if page:
+                title, content = page
+                sections.append(f"### {title}\n\n{content}")
+        if not sections:
             content_by_program_id[program.id] = ""
             continue
-
-        sections = ["\n\n## Program Contents\n"]
-        sections.extend(_format_resource_entries(entries))
-        content_by_program_id[program.id] = "\n\n".join(sections)
+        body = "\n\n".join([f"\n\n{PROGRAM_CHILDREN_CONTENT_MARKER}\n", *sections])
+        content_by_program_id[program.id] = body[:PROGRAM_CHILDREN_CONTENT_MAX_CHARS]
 
     return content_by_program_id

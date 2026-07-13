@@ -19,6 +19,7 @@ from learning_resources.constants import (
     CONTENT_TYPE_VIDEO,
     LearningResourceRelationTypes,
 )
+from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE
 from learning_resources.etl.utils import get_content_type
 from learning_resources.factories import (
     CourseFactory,
@@ -34,6 +35,7 @@ from learning_resources.models import (
     LearningResource,
     LearningResourceOfferor,
     LearningResourcePlatform,
+    LearningResourceRelationship,
     LearningResourceTopic,
     LearningResourceTopicMapping,
 )
@@ -118,6 +120,20 @@ def fixture_test_instructors_data():
         return json.load(test_data)["instructors"]
 
 
+def _add_course_marketing_page(course_lr, content):
+    """Attach a published marketing-page content file to a course."""
+    from learning_resources.models import ContentFile
+
+    return ContentFile.objects.create(
+        learning_resource=course_lr,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        file_extension=".md",
+        key=f"mktg-{course_lr.id}",
+        content=content,
+        published=True,
+    )
+
+
 @pytest.fixture
 def program_with_visibility_children():
     """Program with published, unpublished, and test_mode child courses."""
@@ -135,6 +151,8 @@ def program_with_visibility_children():
         learning_resource__published=False,
         learning_resource__test_mode=True,
     ).learning_resource
+    for child in (published, unpublished, test_mode):
+        _add_course_marketing_page(child, f"Marketing copy for {child.title}.")
     program_lr = ProgramFactory.create(courses=[published]).learning_resource
     # Manually add unpublished/test_mode children since ProgramFactory
     # only creates PROGRAM_COURSES relationships for visible courses
@@ -687,27 +705,40 @@ def test_build_program_children_content_non_program():
     assert build_program_children_content(course_lr) == ""
 
 
-def test_build_program_children_content_direct_courses():
-    """Programs with direct course children should include them"""
+def test_build_program_children_content_includes_child_course_marketing_pages():
+    """A published child course's marketing-page content is included."""
     course_lr = CourseFactory.create(
         learning_resource__title="Test Course",
-        learning_resource__description="A test course",
     ).learning_resource
+    _add_course_marketing_page(course_lr, "Marketing copy for the test course.")
     program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
 
     result = build_program_children_content(program_lr)
     assert "## Program Contents" in result
-    assert "Test Course" in result
-    assert "A test course" in result
+    assert "### Test Course" in result
+    assert "Marketing copy for the test course." in result
 
 
-def test_build_program_children_content_child_programs_with_courses():
-    """Programs with child programs should recurse to find courses"""
+def test_build_program_children_content_omits_courses_without_marketing_page():
+    """Child courses lacking a marketing-page content file contribute nothing."""
+    course_lr = CourseFactory.create(
+        learning_resource__title="No Marketing Course",
+    ).learning_resource
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+
+    assert build_program_children_content(program_lr) == ""
+
+
+def test_build_program_children_content_recurses_child_program_courses():
+    """Courses reached through a child program are included; the child program
+    itself is not emitted as a heading.
+    """
     from learning_resources.models import LearningResourceRelationship
 
     grandchild_course_lr = CourseFactory.create(
         learning_resource__title="Grandchild Course"
     ).learning_resource
+    _add_course_marketing_page(grandchild_course_lr, "Grandchild marketing copy.")
     child_program_lr = ProgramFactory.create(
         courses=[grandchild_course_lr], learning_resource__title="Child Program"
     ).learning_resource
@@ -719,31 +750,58 @@ def test_build_program_children_content_child_programs_with_courses():
     )
 
     result = build_program_children_content(parent_lr)
-    assert "Child Program" in result
-    assert "Grandchild Course" in result
+    assert "### Grandchild Course" in result
+    assert "Grandchild marketing copy." in result
+    # Child programs are traversed only to reach courses, not emitted themselves.
+    assert "Child Program" not in result
 
 
-def test_build_program_children_content_with_summaries():
-    """Child course contentfile summaries should be included"""
-    from learning_resources.models import ContentFile, LearningResourceRun
+def test_build_program_children_content_excludes_unpublished_marketing_pages():
+    """Unpublished marketing-page content files are excluded."""
+    from learning_resources.models import ContentFile
 
     course_lr = CourseFactory.create(
-        learning_resource__title="Course With Summary"
+        learning_resource__title="Course With Unpublished Page"
     ).learning_resource
-    run = LearningResourceRun.objects.create(
-        learning_resource=course_lr,
-        run_id="test-run",
-    )
     ContentFile.objects.create(
-        run=run,
-        key="transcript.txt",
-        summary="This is a summary of the course content.",
+        learning_resource=course_lr,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        file_extension=".md",
+        key=f"mktg-{course_lr.id}",
+        content="Hidden marketing copy.",
+        published=False,
     )
     program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
 
     result = build_program_children_content(program_lr)
-    assert "This is a summary of the course content." in result
-    assert "Content summaries" in result
+    assert "Hidden marketing copy." not in result
+    assert result == ""
+
+
+def test_build_program_children_content_caps_total_length():
+    """Program children content is hard-capped in total size"""
+    course_lr = CourseFactory.create().learning_resource
+    _add_course_marketing_page(course_lr, "x" * 1_500_000)
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+
+    result = build_program_children_content(program_lr)
+    assert len(result) <= 1_000_000
+
+
+def test_build_program_children_content_deterministic_order():
+    """Child course sections appear in a stable order."""
+    courses = [
+        CourseFactory.create(learning_resource__title=f"Course {i}").learning_resource
+        for i in range(3)
+    ]
+    for i, course in enumerate(courses):
+        _add_course_marketing_page(course, f"body {i}")
+    program_lr = ProgramFactory.create(courses=courses).learning_resource
+
+    result = build_program_children_content(program_lr)
+    ordered_by_id = sorted(courses, key=lambda c: c.id)
+    positions = [result.index(f"### {c.title}") for c in ordered_by_id]
+    assert positions == sorted(positions)
 
 
 def test_build_program_children_content_ignores_non_program_relations():
@@ -753,12 +811,14 @@ def test_build_program_children_content_ignores_non_program_relations():
     course_lr = CourseFactory.create(
         learning_resource__title="Real Course"
     ).learning_resource
+    _add_course_marketing_page(course_lr, "Real course copy.")
     program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
 
     # Add a non-program relation (e.g. LEARNING_PATH_ITEMS)
     unrelated_lr = CourseFactory.create(
         learning_resource__title="Unrelated Item"
     ).learning_resource
+    _add_course_marketing_page(unrelated_lr, "Unrelated copy.")
     LearningResourceRelationship.objects.create(
         parent=program_lr,
         child=unrelated_lr,
@@ -766,30 +826,8 @@ def test_build_program_children_content_ignores_non_program_relations():
     )
 
     result = build_program_children_content(program_lr)
-    assert "Real Course" in result
-    assert "Unrelated Item" not in result
-
-
-def test_build_program_children_content_two_levels():
-    """Program -> child program -> courses are all included (2 levels)"""
-    from learning_resources.models import LearningResourceRelationship
-
-    nested_course = CourseFactory.create(
-        learning_resource__title="Nested Course"
-    ).learning_resource
-    mid_lr = ProgramFactory.create(
-        courses=[nested_course], learning_resource__title="Mid Program"
-    ).learning_resource
-    top_lr = ProgramFactory.create(courses=[]).learning_resource
-    LearningResourceRelationship.objects.create(
-        parent=top_lr,
-        child=mid_lr,
-        relation_type="PROGRAM_PROGRAMS",
-    )
-
-    result = build_program_children_content(top_lr)
-    assert "Mid Program" in result
-    assert "Nested Course" in result
+    assert "Real course copy." in result
+    assert "Unrelated copy." not in result
 
 
 # --- build_program_children_content_bulk tests ---
@@ -818,8 +856,8 @@ def test_build_program_children_content_bulk_single_program():
     """Bulk function produces same output as single-resource version."""
     course_lr = CourseFactory.create(
         learning_resource__title="Bulk Test Course",
-        learning_resource__description="A description",
     ).learning_resource
+    _add_course_marketing_page(course_lr, "Bulk marketing copy.")
     program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
 
     single_result = build_program_children_content(program_lr)
@@ -835,6 +873,8 @@ def test_build_program_children_content_bulk_multiple_programs():
     course2 = CourseFactory.create(
         learning_resource__title="Course For Prog2"
     ).learning_resource
+    _add_course_marketing_page(course1, "Prog1 course copy.")
+    _add_course_marketing_page(course2, "Prog2 course copy.")
     prog1, prog2 = (
         ProgramFactory.create(courses=[course]).learning_resource
         for course in [course1, course2]
@@ -843,9 +883,9 @@ def test_build_program_children_content_bulk_multiple_programs():
     result = build_program_children_content_bulk([prog1, prog2])
     assert prog1.id in result
     assert prog2.id in result
-    assert "Course For Prog1" in result[prog1.id]
-    assert "Course For Prog2" in result[prog2.id]
-    assert "Course For Prog2" not in result[prog1.id]
+    assert "Prog1 course copy." in result[prog1.id]
+    assert "Prog2 course copy." in result[prog2.id]
+    assert "Prog2 course copy." not in result[prog1.id]
 
 
 def test_build_program_children_content_bulk_mixed_resources():
@@ -853,6 +893,7 @@ def test_build_program_children_content_bulk_mixed_resources():
     course_child = CourseFactory.create(
         learning_resource__title="Child Course"
     ).learning_resource
+    _add_course_marketing_page(course_child, "Child course copy.")
     program_lr = ProgramFactory.create(courses=[course_child]).learning_resource
     non_program = CourseFactory.create().learning_resource
 
@@ -868,6 +909,7 @@ def test_build_program_children_content_bulk_with_grandchildren():
     grandchild = CourseFactory.create(
         learning_resource__title="Grandchild Course"
     ).learning_resource
+    _add_course_marketing_page(grandchild, "Grandchild copy.")
     child_prog = ProgramFactory.create(
         courses=[grandchild], learning_resource__title="Sub Program"
     ).learning_resource
@@ -877,8 +919,8 @@ def test_build_program_children_content_bulk_with_grandchildren():
     )
 
     result = build_program_children_content_bulk([parent_lr])
-    assert "Sub Program" in result[parent_lr.id]
-    assert "Grandchild Course" in result[parent_lr.id]
+    assert "### Grandchild Course" in result[parent_lr.id]
+    assert "Grandchild copy." in result[parent_lr.id]
 
 
 def test_build_program_children_content_excludes_unpublished_children(
@@ -902,6 +944,8 @@ def test_build_program_children_content_excludes_unpublished_grandchildren():
         is_unpublished=True,
         learning_resource__title="Unpublished Grandchild",
     ).learning_resource
+    _add_course_marketing_page(published_grandchild, "Published grandchild copy.")
+    _add_course_marketing_page(unpublished_grandchild, "Unpublished grandchild copy.")
     child_prog = ProgramFactory.create(
         courses=[published_grandchild], learning_resource__title="Sub Program"
     ).learning_resource
@@ -921,53 +965,101 @@ def test_build_program_children_content_excludes_unpublished_grandchildren():
     assert "Unpublished Grandchild" not in result[parent_lr.id]
 
 
-def test_build_program_children_content_bulk_excludes_unpublished_contentfiles():
-    """Unpublished content files and files on unpublished runs are excluded."""
-    from learning_resources.models import ContentFile, LearningResourceRun
+def test_build_program_children_content_bulk_excludes_unpublished_marketing_pages():
+    """Only published marketing-page content files are included."""
+    from learning_resources.models import ContentFile
 
-    course_lr = CourseFactory.create(
-        learning_resource__title="Course With Mixed Content"
+    published_course = CourseFactory.create(
+        learning_resource__title="Published Marketing Course"
+    ).learning_resource
+    _add_course_marketing_page(published_course, "Visible marketing copy.")
+
+    unpublished_course = CourseFactory.create(
+        learning_resource__title="Unpublished Marketing Course"
+    ).learning_resource
+    ContentFile.objects.create(
+        learning_resource=unpublished_course,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        file_extension=".md",
+        key=f"mktg-{unpublished_course.id}",
+        content="Hidden marketing copy.",
+        published=False,
+    )
+
+    program_lr = ProgramFactory.create(
+        courses=[published_course, unpublished_course]
     ).learning_resource
 
-    published_run = LearningResourceRun.objects.create(
-        learning_resource=course_lr,
-        run_id="published-run",
-        published=True,
-    )
-    unpublished_run = LearningResourceRun.objects.create(
-        learning_resource=course_lr,
-        run_id="unpublished-run",
-        published=False,
-    )
-
-    # Published content file on published run — should be included
-    ContentFile.objects.create(
-        run=published_run,
-        key="visible.txt",
-        summary="Visible summary",
-        published=True,
-    )
-    # Unpublished content file on published run — should be excluded
-    ContentFile.objects.create(
-        run=published_run,
-        key="hidden.txt",
-        summary="Hidden unpublished summary",
-        published=False,
-    )
-    # Published content file on unpublished run — should be excluded
-    ContentFile.objects.create(
-        run=unpublished_run,
-        key="hidden-run.txt",
-        summary="Hidden run summary",
-        published=True,
-    )
-
-    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
-
     result = build_program_children_content_bulk([program_lr])
-    assert "Visible summary" in result[program_lr.id]
-    assert "Hidden unpublished summary" not in result[program_lr.id]
-    assert "Hidden run summary" not in result[program_lr.id]
+    assert "Visible marketing copy." in result[program_lr.id]
+    assert "Hidden marketing copy." not in result[program_lr.id]
+
+
+@pytest.mark.django_db
+def test_reachable_published_course_ids_direct_and_subprogram():
+    """Maps a program to its direct courses and courses via child programs."""
+    direct_course = CourseFactory.create(
+        learning_resource__title="Direct"
+    ).learning_resource
+    grandchild_course = CourseFactory.create(
+        learning_resource__title="Grandchild"
+    ).learning_resource
+    child_program = ProgramFactory.create(
+        courses=[grandchild_course], learning_resource__title="Child Program"
+    ).learning_resource
+    program = ProgramFactory.create(courses=[direct_course]).learning_resource
+    LearningResourceRelationship.objects.create(
+        parent=program, child=child_program, relation_type="PROGRAM_PROGRAMS"
+    )
+
+    result = utils.reachable_published_course_ids([program.id])
+    assert result[program.id] == {direct_course.id, grandchild_course.id}
+
+
+@pytest.mark.django_db
+def test_reachable_published_course_ids_empty_input():
+    """Empty program id input maps to an empty result."""
+    assert utils.reachable_published_course_ids([]) == {}
+
+
+def _add_program_marketing_page(program_lr, content):
+    """Attach a published marketing-page content file to a program."""
+    from learning_resources.models import ContentFile
+
+    return ContentFile.objects.create(
+        learning_resource=program_lr,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        file_extension=".md",
+        key=f"mktg-{program_lr.id}",
+        content=content,
+        published=True,
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("child_has_page", "program_content", "expected_selected"),
+    [
+        # missing marker + an available child page → heal
+        (True, "Program page with no children yet.", True),
+        # no reachable child page → skip (termination guard)
+        (False, "Program page with no children yet.", False),
+        # marker already present → skip
+        (True, "Program page.\n\n## Program Contents\n\n### Child", False),
+    ],
+)
+def test_programs_needing_children_heal(
+    child_has_page, program_content, expected_selected
+):
+    """Heal a program only when its page lacks the marker AND a child page exists."""
+    course_lr = CourseFactory.create().learning_resource
+    if child_has_page:
+        _add_course_marketing_page(course_lr, "Child marketing copy.")
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+    _add_program_marketing_page(program_lr, program_content)
+
+    expected = {program_lr.id} if expected_selected else set()
+    assert utils.programs_needing_children_heal([program_lr.id]) == expected
 
 
 @pytest.mark.parametrize(

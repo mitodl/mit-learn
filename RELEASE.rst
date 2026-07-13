@@ -1,6 +1,43 @@
 Release Notes
 =============
 
+Version 0.73.6 (Released July 13, 2026)
+--------------
+
+- desktop dashboard design updates (#3578)
+- chore: Remove temporary seat-cap gate on B2B Manage button (#3587)
+- Fix: header stat counts not updating after bulk-assign or revoke on Contract Admin page #3581
+- Mitxonline ETL: switch to consuming internal courses endpoint (#3543)
+
+Version 0.73.4 (Released July 08, 2026)
+--------------
+
+- Fix embedding summarizer task when overwrite=True (#3585)
+- Pin chromium to 149.0.7827.196 to avoid broken 150 headless build (#3584)
+- Fix embeddings task oom thrashing (#3561)
+
+Version 0.73.2 (Released July 08, 2026)
+--------------
+
+- fix: handle no-max-learners contracts in B2B seat assignment UI (#3564)
+- feat: local-dev Docker targets and granian kill timeout (#3579)
+- fix: changing the positions of share feature on videos and podcasts episode (#3540)
+- Bound program marketing-page embedding input to avoid token overflow (#3562)
+- fix(vector-search): relax qdrant-client pin to allow 1.18.x patches (#3546)
+- feat: Add "Send Test Email to Me" to the seat assignment confirmation modal (#3558)
+- Upgrade django-health-check from pinned git commit to PyPI 3.24.0 (#3556)
+
+Version 0.73.1 (Released July 07, 2026)
+--------------
+
+- multiple enrollment display (#3534)
+- add upgraded banner (#3550)
+- Add posthog enrollment_cta_clicked event with enrollment-specific data (#3542)
+- Updated InfoBox for Course Product Pages (#3523)
+- hacksnack postinstall (#3555)
+- Make the Profile.email_optin field writable (#3552)
+- hacksnack game (#3489)
+
 Version 0.72.3 (Released July 01, 2026)
 --------------
 

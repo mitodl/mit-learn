@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
+import React, { useRef } from "react"
 import {
   Breadcrumbs,
   Typography,
@@ -11,23 +11,29 @@ import {
 import type { Theme } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import { RiPlayFill, RiPauseFill } from "@remixicon/react"
-import PodcastPlayer, { PLAYER_HEIGHT } from "./PodcastPlayer"
-import type { PodcastTrack, PodcastPlayerHandle } from "./PodcastPlayer"
+import PodcastPlayer from "./PodcastPlayer"
+import type { PodcastPlayerHandle } from "./PodcastPlayer"
 import {
   useLearningResourcesDetail,
   useInfiniteLearningResourceItems,
 } from "api/hooks/learningResources"
 
 import { ResourceTypeEnum } from "api/v1"
-import type { LearningResource } from "api/v1"
+import type { PodcastEpisodeResource } from "api/v1"
 import moment from "moment"
 import { formatDate } from "ol-utilities"
 import { HOME, podcastPageView, podcastEpisodePageView } from "@/common/urls"
 import DOMPurify from "isomorphic-dompurify"
-import { EpisodeItem } from "./PodcastDetailPage"
+import { EpisodeItem } from "./PodcastsListingPage/EpisodeItem"
 import PodcastContainer from "./PodcastContainer"
 import Link from "next/link"
+import { usePodcastPlayer } from "./usePodcastPlayer"
+import { getEpisodeAudioUrl } from "./PodcastsListingPage/helpers"
 
+import PodcastShareButton from "./PodcastShareButton"
+import { env } from "@/env"
+
+const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 /* ── Layout ── */
 
 const EpisodeContainer = styled(Container)(({ theme }) => ({
@@ -142,6 +148,10 @@ const EpisodeList = styled.ul({
   display: "grid",
   gridTemplateColumns: "1fr",
 })
+const StyledPodcastShareButton = styled(PodcastShareButton)({
+  padding: "18px 12px",
+  margin: "0 0 24px",
+})
 
 export const BreadcrumbBar = styled.div(({ theme }) => ({
   padding: "18px 0 2px 0",
@@ -181,6 +191,14 @@ const StyledButton = styled(Button)(({ theme }) => ({
   },
 }))
 
+export const PodcastShareSection = styled("div")({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  flexWrap: "wrap",
+  gap: "8px",
+})
+
 /* ── Component ── */
 
 type PodcastEpisodeDetailPageProps = {
@@ -192,24 +210,34 @@ export const PodcastEpisodeDetailPage: React.FC<
   PodcastEpisodeDetailPageProps
 > = ({ episodeId, podcastId }) => {
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"))
-  const [playingEpisode, setPlayingEpisode] = useState<LearningResource | null>(
-    null,
-  )
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
   const playerRef = useRef<PodcastPlayerHandle>(null)
+  const {
+    playingEpisode,
+    isAudioPlaying,
+    setIsAudioPlaying,
+    currentTrack,
+    toggle,
+    pause,
+    close,
+  } = usePodcastPlayer(playerRef, isMobile)
 
   const { data: episode } = useLearningResourcesDetail(Number(episodeId))
-  const { data: podcast } = useLearningResourcesDetail(Number(podcastId))
 
   const podcastEpisode =
     episode?.resource_type === ResourceTypeEnum.PodcastEpisode
       ? episode.podcast_episode
       : null
 
+  // Parent podcast summary comes embedded in the episode response — prefer the
+  // one matching the URL's podcastId, else fall back to the first parent.
+  const parentPodcast =
+    podcastEpisode?.parent_podcasts?.find((p) => p.id === Number(podcastId)) ??
+    podcastEpisode?.parent_podcasts?.[0]
+
   const { data: episodesData } = useInfiniteLearningResourceItems(
     Number(podcastId),
     { learning_resource_id: Number(podcastId), limit: 5 },
-    { enabled: !!podcast },
+    { enabled: !!podcastId },
   )
   const episodes =
     episodesData?.pages.flatMap((page) =>
@@ -233,57 +261,22 @@ export const PodcastEpisodeDetailPage: React.FC<
   const topicString = topics?.join("\u00A0\u00A0\u00A0\u00A0")
   const metaParts = [duration ? `${duration} min` : null, date].filter(Boolean)
 
-  const getAudioUrl = (ep: LearningResource): string | null => {
-    if (ep.resource_type !== ResourceTypeEnum.PodcastEpisode) return null
-    const candidate =
-      ep.podcast_episode?.audio_url ?? ep.podcast_episode?.episode_link
-    return candidate?.trim() ? candidate : null
-  }
-
   const isCurrentEpisodePlaying =
     !!episode && playingEpisode?.id === episode.id && isAudioPlaying
 
   const handlePlay = () => {
     if (!episode) return
-    if (playingEpisode?.id === episode.id) {
-      if (isAudioPlaying) {
-        playerRef.current?.pause()
-      } else {
-        playerRef.current?.resume()
-      }
-    } else if (getAudioUrl(episode)) {
-      setPlayingEpisode(episode)
-    }
+    toggle(episode, parentPodcast?.title)
   }
 
-  const currentTrack: PodcastTrack | null = playingEpisode
-    ? (() => {
-        const audioUrl = getAudioUrl(playingEpisode)
-        if (!audioUrl) return null
-        return {
-          audioUrl,
-          title: playingEpisode.title || "Untitled Episode",
-          podcastName: podcast?.title || "Podcast",
-        }
-      })()
-    : null
-
-  useEffect(() => {
-    const root = document.documentElement
-    if (currentTrack) {
-      const height = isMobile ? PLAYER_HEIGHT.mobile : PLAYER_HEIGHT.desktop
-      root.style.setProperty("--mit-player-height", `${height}px`)
-    } else {
-      root.style.removeProperty("--mit-player-height")
-    }
-    return () => {
-      root.style.removeProperty("--mit-player-height")
-    }
-  }, [currentTrack, isMobile])
-
   const podcastHref = podcastId
-    ? podcastPageView(podcastId, podcast?.title)
+    ? podcastPageView(podcastId, parentPodcast?.title)
     : "/"
+
+  const sharePageUrl =
+    episode && podcastId
+      ? `${NEXT_PUBLIC_ORIGIN}${podcastEpisodePageView(String(episode!.id), podcastId, episode?.title)}`
+      : ""
 
   return (
     <>
@@ -294,7 +287,7 @@ export const PodcastEpisodeDetailPage: React.FC<
               variant="light"
               ancestors={[
                 { href: HOME, label: "Home" },
-                { href: podcastHref, label: podcast?.title ?? "Podcast" },
+                { href: podcastHref, label: parentPodcast?.title ?? "Podcast" },
               ]}
               current={episode?.title}
             />
@@ -302,8 +295,10 @@ export const PodcastEpisodeDetailPage: React.FC<
         </BreadcrumbBar>
         <HeaderSection hasEpisodes={episodes.length > 0}>
           <EpisodeContainer>
-            {podcast?.title && (
-              <EpisodeLabel href={podcastHref}>{podcast.title}</EpisodeLabel>
+            {parentPodcast?.title && (
+              <EpisodeLabel href={podcastHref}>
+                {parentPodcast.title}
+              </EpisodeLabel>
             )}
 
             <EpisodeTitle variant="h1">{episode?.title ?? ""}</EpisodeTitle>
@@ -315,19 +310,27 @@ export const PodcastEpisodeDetailPage: React.FC<
               </MetaLine>
             )}
             {isMobile && <Topics>{topicString}</Topics>}
-            {episode && (
-              <StyledButton
-                onClick={handlePlay}
-                variant="primary"
-                startIcon={
-                  isCurrentEpisodePlaying ? <RiPauseFill /> : <RiPlayFill />
-                }
-                disabled={!episode || !getAudioUrl(episode)}
-              >
-                {isCurrentEpisodePlaying ? "Pause Episode" : "Play Episode"}
-              </StyledButton>
-            )}
-
+            <PodcastShareSection>
+              {episode && podcastId && (
+                <StyledButton
+                  onClick={handlePlay}
+                  variant="primary"
+                  startIcon={
+                    isCurrentEpisodePlaying ? <RiPauseFill /> : <RiPlayFill />
+                  }
+                  disabled={!episode || !getEpisodeAudioUrl(episode)}
+                >
+                  {isCurrentEpisodePlaying ? "Pause Episode" : "Play Episode"}
+                </StyledButton>
+              )}
+              {episode && podcastId && (
+                <StyledPodcastShareButton
+                  resource={episode as PodcastEpisodeResource}
+                  title={episode.title ?? "episode"}
+                  sharePageUrl={sharePageUrl}
+                />
+              )}
+            </PodcastShareSection>
             {episode?.description && (
               <Description
                 variant="body1"
@@ -341,13 +344,14 @@ export const PodcastEpisodeDetailPage: React.FC<
         {episodes && episodes.length > 0 && (
           <EpisodeContainer>
             <MoreItemDescription>
-              More from {podcast?.title ?? "Podcast"}
+              More from {parentPodcast?.title ?? "Podcast"}
             </MoreItemDescription>
 
             <EpisodeList>
               {episodes.map((episode) => (
                 <EpisodeItem
                   key={episode.id}
+                  isMobile={isMobile}
                   episode={episode}
                   href={
                     podcastId
@@ -361,16 +365,9 @@ export const PodcastEpisodeDetailPage: React.FC<
                   isPlaying={
                     playingEpisode?.id === episode.id && isAudioPlaying
                   }
-                  onPlayClick={(ep) => {
-                    if (!getAudioUrl(ep)) return
-                    if (playingEpisode?.id === ep.id) {
-                      playerRef.current?.resume()
-                    } else {
-                      setPlayingEpisode(ep)
-                    }
-                  }}
-                  onPauseClick={() => playerRef.current?.pause()}
-                  isPlayable={Boolean(getAudioUrl(episode))}
+                  onPlayClick={(ep) => toggle(ep, parentPodcast?.title)}
+                  onPauseClick={pause}
+                  isPlayable={Boolean(getEpisodeAudioUrl(episode))}
                   isEpisodePage
                 />
               ))}
@@ -386,7 +383,7 @@ export const PodcastEpisodeDetailPage: React.FC<
         <PodcastPlayer
           ref={playerRef}
           track={currentTrack}
-          onClose={() => setPlayingEpisode(null)}
+          onClose={close}
           onPlayStateChange={setIsAudioPlaying}
         />
       )}

@@ -21,6 +21,18 @@ export const BreadcrumbBar = styled.div(({ theme }) => ({
   },
 }))
 
+export const VideoShareSection = styled("div")({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  flexWrap: "wrap",
+  gap: "8px",
+  margin: "0 0 24px",
+  [theme.breakpoints.down("sm")]: {
+    margin: "0 0 16px",
+  },
+})
+
 export const ShareRow = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "flex-end",
@@ -35,27 +47,7 @@ export const UpNextRight = styled.div({
   gap: "24px",
 })
 
-export const ShareButton = styled.button(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-  borderRadius: "4px",
-  padding: "14px 12px",
-  height: "32px",
-  border: `1px solid ${theme.custom.colors.silverGrayLight}`,
-  background: `${theme.custom.colors.white}`,
-  cursor: "pointer",
-  ...theme.typography.body2,
-  color: theme.custom.colors.darkGray1,
-  fontWeight: theme.typography.fontWeightMedium,
-  "&:hover": {
-    color: theme.custom.colors.red,
-  },
-  [theme.breakpoints.down("sm")]: {
-    width: "100%",
-    justifyContent: "center",
-  },
-}))
+export { default as ShareButton } from "@/components/ShareButton/ShareButton"
 
 // ── Series navigation bar ──
 
@@ -288,10 +280,6 @@ export const MetaInstructorLine = styled.div(({ theme }) => ({
 export const StyledDuration = styled.div(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
-  margin: "0 0 40px",
-  [theme.breakpoints.down("sm")]: {
-    margin: "0 0 16px",
-  },
 }))
 
 export const DescriptionText = styled(Typography)(({ theme }) => ({

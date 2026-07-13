@@ -35,7 +35,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.72.3"
+VERSION = "0.73.6"
 
 log = logging.getLogger()
 
@@ -786,6 +786,10 @@ QDRANT_POINT_UPLOAD_BATCH_SIZE = get_int(
 QDRANT_BATCH_SIZE_BYTES = get_int(
     name="QDRANT_BATCH_SIZE_BYTES", default=10 * 1024 * 1024
 )  # default 10 MB limit for batch processing
+
+QDRANT_CONTENT_FILE_SERIALIZATION_CHUNK_SIZE = get_int(
+    name="QDRANT_CONTENT_FILE_SERIALIZATION_CHUNK_SIZE", default=5
+)
 
 QDRANT_CLIENT_TIMEOUT = get_int(name="QDRANT_CLIENT_TIMEOUT", default=10)
 

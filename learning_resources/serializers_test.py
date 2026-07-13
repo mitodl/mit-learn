@@ -145,6 +145,7 @@ def test_serialize_podcast_episode_to_json():
             "podcasts": podcast_episode.learning_resource.parents.filter(
                 relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value
             ).values_list("parent__id", flat=True),
+            "parent_podcasts": [],
             "id": podcast_episode.id,
             "rss": podcast_episode.rss,
             "transcript": podcast_episode.transcript,
@@ -228,6 +229,13 @@ def test_serialize_podcast_episode_playlists_to_json():
     )
     serializer = serializers.PodcastEpisodeSerializer(instance=podcast_episode)
     assert serializer.data["podcasts"] == [podcast.learning_resource.id]
+    assert serializer.data["parent_podcasts"] == [
+        {
+            "id": podcast.learning_resource.id,
+            "title": podcast.learning_resource.title,
+            "readable_id": podcast.learning_resource.readable_id,
+        }
+    ]
 
 
 @pytest.mark.parametrize("has_context", [True, False])
@@ -423,6 +431,24 @@ def test_serialize_run_related_models():
     assert len(serializer.data["instructors"]) > 0
     for attr in ("first_name", "last_name", "full_name"):
         assert attr in serializer.data["instructors"][0]
+
+
+def test_serialize_resource_excludes_variant_runs():
+    """Variant runs should not be visible in resource API results."""
+    resource = LearningResourceFactory.create(
+        resource_type=LearningResourceType.course.name
+    )
+    resource.runs.all().delete()
+    public_run = LearningResourceRunFactory.create(
+        learning_resource=resource, published=True, is_b2b=False, is_variant=False
+    )
+    LearningResourceRunFactory.create(
+        learning_resource=resource, published=True, is_b2b=True, is_variant=True
+    )
+
+    serialized_resource = serializers.LearningResourceSerializer(resource).data
+
+    assert [run["id"] for run in serialized_resource["runs"]] == [public_run.id]
 
 
 @pytest.mark.parametrize(

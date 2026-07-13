@@ -101,7 +101,7 @@ describe.each([
     )
   })
 
-  test("does not show 'Certificate track' when verified enrollment has a certificate", () => {
+  test("shows 'Certificate track' alongside 'View Certificate' when verified enrollment has a certificate", () => {
     const programEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
         enrollment_mode: "verified",
@@ -110,9 +110,12 @@ describe.each([
     renderWithProviders(
       <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
     )
+    expect(within(getCard()).getByTestId("upgraded-banner")).toHaveTextContent(
+      "Certificate track",
+    )
     expect(
-      within(getCard()).queryByTestId("upgraded-banner"),
-    ).not.toBeInTheDocument()
+      within(getCard()).getByRole("link", { name: /View Certificate/ }),
+    ).toBeInTheDocument()
   })
 
   test("does not show 'Certificate track' for audit enrollment", () => {
@@ -274,5 +277,36 @@ describe.each([
       "noopener,noreferrer",
     )
     windowOpenSpy.mockRestore()
+  })
+})
+
+// The progress badge only renders on the desktop card.
+describe("ProgramEnrollmentCard progress badge", () => {
+  const getDesktopCard = () => screen.getByTestId("enrollment-card-desktop")
+
+  test("shows 'In Progress' next to the 'Program' type label when no certificate is present", () => {
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        certificate: null,
+      })
+    renderWithProviders(
+      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
+    )
+    expect(
+      within(getDesktopCard()).getByTestId("progress-badge"),
+    ).toHaveTextContent("In Progress")
+  })
+
+  test("shows 'Completed' next to the 'Program' type label when a certificate is present", () => {
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        certificate: { uuid: "test-uuid", link: "/certificate/test-uuid/" },
+      })
+    renderWithProviders(
+      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
+    )
+    expect(
+      within(getDesktopCard()).getByTestId("progress-badge"),
+    ).toHaveTextContent("Completed")
   })
 })

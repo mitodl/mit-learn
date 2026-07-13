@@ -13,9 +13,15 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       libcairo2-dev \
       poppler-utils \
       default-jre && \
-    echo "deb http://deb.debian.org/debian/ sid main" >> /etc/apt/sources.list && \
+    # chromium 150.0.7871.46 crashes on startup in headless mode (Debian bug
+    # #1141488), breaking all chromedriver sessions. Pin the last working
+    # build from snapshot.debian.org; unpin once a fixed version ships.
+    echo "deb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/20260628T000000Z/ trixie-security main" >> /etc/apt/sources.list && \
     apt-get update -qqy && \
-    apt-get install -qqy --no-install-recommends chromium chromium-driver
+    apt-get install -qqy --no-install-recommends \
+      chromium=149.0.7827.196-1~deb13u1 \
+      chromium-common=149.0.7827.196-1~deb13u1 \
+      chromium-driver=149.0.7827.196-1~deb13u1
 
 FROM base AS deps
 
@@ -47,8 +53,16 @@ EXPOSE 8061
 ENV PORT=8061
 CMD ["sh", "-c", "exec granian --interface asginl --reload --host 0.0.0.0 --port ${PORT:-8061} --workers ${GRANIAN_WORKERS:-3} --blocking-threads 1 main.asgi:application"]
 
-# ─── Development target ───────────────────────────────────────────────────────
+# ─── Development target (docker compose) ─────────────────────────────────────
 FROM final AS development
 
 RUN --mount=type=cache,target=/opt/uv-cache,uid=1000,gid=1000 \
     uv sync --frozen --no-install-project
+
+# ─── Local-dev target (ol-infrastructure local-dev k8s/Tilt stack) ───────────
+# Runtime user owns /src (live-synced source); dev deps come from `development`.
+FROM development AS local-dev
+
+USER root
+RUN chown -R mitodl:mitodl /src
+USER mitodl

@@ -31,9 +31,12 @@ const managerContractDetailUrl = urls.contracts.managerContractDetail
 const makeContractDetail = (
   contract: ReturnType<typeof factories.contracts.contract>,
   overrides: {
-    total_codes?: number
+    // null is a meaningful value for uncapped contracts (no max_learners), so
+    // these use an explicit `=== undefined` check rather than `??` below — a
+    // nullish fallback would clobber an intentional null back to the default.
+    total_codes?: number | null
     assigned_codes?: number
-    unassigned_codes?: number
+    unassigned_codes?: number | null
     redeemed_codes?: number
     total_enrollments?: number
   } = {},
@@ -41,9 +44,10 @@ const makeContractDetail = (
   ...contract,
   attachment_percentage: null,
   total_enrollments: overrides.total_enrollments ?? 0,
-  total_codes: overrides.total_codes ?? 10,
+  total_codes: overrides.total_codes === undefined ? 10 : overrides.total_codes,
   assigned_codes: overrides.assigned_codes ?? 2,
-  unassigned_codes: overrides.unassigned_codes ?? 6,
+  unassigned_codes:
+    overrides.unassigned_codes === undefined ? 6 : overrides.unassigned_codes,
   redeemed_codes: overrides.redeemed_codes ?? 2,
 })
 
@@ -480,6 +484,150 @@ describe("ContractAdminPage", () => {
     })
   })
 
+  describe("header stat counts refresh after mutations", () => {
+    test("bulk-assigning seats updates Unassigned and Pending claim counts", async () => {
+      mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+      const { org, contract } = makeOrgWithContract()
+      setMockResponse.get(managerOrgsUrl, {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [org],
+      })
+
+      let contractDetailCalls = 0
+      setMockResponse.get(managerContractDetailUrl(org.id, contract.id), () => {
+        contractDetailCalls += 1
+        return contractDetailCalls === 1
+          ? makeContractDetail(contract, {
+              total_codes: 10,
+              assigned_codes: 2,
+              unassigned_codes: 6,
+              redeemed_codes: 2,
+            })
+          : makeContractDetail(contract, {
+              total_codes: 10,
+              assigned_codes: 3,
+              unassigned_codes: 5,
+              redeemed_codes: 2,
+            })
+      })
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 1,
+          page_size: 25,
+        }),
+        factories.contracts.paginatedContractCodes([]),
+      )
+      setMockResponse.post(
+        urls.contracts.managerContractBulkAssign(org.id, contract.id),
+        factories.contracts.bulkAssignResult({
+          assigned: [factories.contracts.contractCode()],
+          errors: [],
+        }),
+      )
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      expect(
+        await screen.findByRole("group", { name: "Unassigned" }),
+      ).toHaveTextContent("6")
+
+      const textarea = screen.getByPlaceholderText(/enter employee emails/i)
+      await user.click(textarea)
+      await user.paste("alice@example.com")
+      await user.click(screen.getByRole("button", { name: "Assign Seats" }))
+      await user.click(
+        screen.getByRole("button", { name: /send 1 invitation/i }),
+      )
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("group", { name: "Unassigned" }),
+        ).toHaveTextContent("5")
+      })
+      expect(
+        screen.getByRole("group", { name: "Pending claim" }),
+      ).toHaveTextContent("3")
+    })
+
+    test("releasing a seat updates Unassigned and Pending claim counts", async () => {
+      mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+      const { org, contract } = makeOrgWithContract()
+      setMockResponse.get(managerOrgsUrl, {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [org],
+      })
+
+      let contractDetailCalls = 0
+      setMockResponse.get(managerContractDetailUrl(org.id, contract.id), () => {
+        contractDetailCalls += 1
+        return contractDetailCalls === 1
+          ? makeContractDetail(contract, {
+              total_codes: 10,
+              assigned_codes: 2,
+              unassigned_codes: 6,
+              redeemed_codes: 2,
+            })
+          : makeContractDetail(contract, {
+              total_codes: 10,
+              assigned_codes: 1,
+              unassigned_codes: 7,
+              redeemed_codes: 2,
+            })
+      })
+
+      const assignedCode = factories.contracts.contractCode({
+        redemption_status: "assigned",
+        assigned_to: "pending@example.com",
+      })
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 1,
+          page_size: 25,
+        }),
+        factories.contracts.paginatedContractCodes([assignedCode]),
+      )
+      setMockResponse.delete(
+        urls.contracts.managerContractCodeRevoke(
+          org.id,
+          contract.id,
+          assignedCode.code,
+        ),
+        assignedCode,
+      )
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      expect(
+        await screen.findByRole("group", { name: "Unassigned" }),
+      ).toHaveTextContent("6")
+
+      await user.click(screen.getByRole("button", { name: /more actions/i }))
+      await user.click(screen.getByRole("menuitem", { name: "Release seat" }))
+      await user.click(screen.getByRole("button", { name: "Release seat" }))
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("group", { name: "Unassigned" }),
+        ).toHaveTextContent("7")
+      })
+      expect(
+        screen.getByRole("group", { name: "Pending claim" }),
+      ).toHaveTextContent("1")
+    })
+  })
+
   test("Pending claim tab filters to assigned codes only", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
@@ -540,5 +688,135 @@ describe("ContractAdminPage", () => {
       expect(screen.queryByText("redeemed@example.com")).not.toBeInTheDocument()
     })
     expect(screen.getByText("pending@example.com")).toBeInTheDocument()
+  })
+
+  // Uncapped contracts have no max_learners, so total_codes comes back null or 0.
+  // Existing tests only cover numeric caps; these lock in the "unlimited" branch.
+  describe("uncapped contract (no seat cap)", () => {
+    beforeEach(() => {
+      mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    })
+
+    const setupUncapped = (
+      overrides: Parameters<typeof makeContractDetail>[1] = {},
+    ) => {
+      const { org, contract } = makeOrgWithContract()
+      setMockResponse.get(managerOrgsUrl, {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [org],
+      })
+      setMockResponse.get(
+        managerContractDetailUrl(org.id, contract.id),
+        // Uncapped: no total_codes and no unassigned_codes cap.
+        makeContractDetail(contract, {
+          total_codes: null,
+          unassigned_codes: null,
+          ...overrides,
+        }),
+      )
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 1,
+          page_size: 25,
+        }),
+        factories.contracts.paginatedContractCodes([]),
+      )
+      return { org, contract }
+    }
+
+    test.each([{ totalCodes: null }, { totalCodes: 0 }])(
+      "shows 'Unlimited seats' subtitle and hides Total purchased / Unassigned stats (total_codes=$totalCodes)",
+      async ({ totalCodes }) => {
+        const { org, contract } = setupUncapped({
+          total_codes: totalCodes,
+          assigned_codes: 4,
+          redeemed_codes: 3,
+        })
+
+        renderWithProviders(
+          <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+        )
+
+        // Subtitle only renders once contract detail has loaded.
+        await screen.findByText("Unlimited seats")
+        expect(screen.queryByText(/\d+ seats/)).not.toBeInTheDocument()
+
+        // Seat-cap stat blocks are meaningless without a cap and are hidden.
+        expect(
+          screen.queryByRole("group", { name: "Total purchased" }),
+        ).not.toBeInTheDocument()
+        expect(
+          screen.queryByRole("group", { name: "Unassigned" }),
+        ).not.toBeInTheDocument()
+
+        // Per-status stats are still shown — they don't depend on the cap.
+        expect(
+          screen.getByRole("group", { name: "Pending claim" }),
+        ).toHaveTextContent("4")
+        expect(
+          screen.getByRole("group", { name: "Redeemed" }),
+        ).toHaveTextContent("3")
+      },
+    )
+
+    test("AssignSeatsSection is not over-capacity-blocked when there is no seat cap", async () => {
+      const { org, contract } = setupUncapped()
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByText("Unlimited seats")
+
+      const textarea = screen.getByPlaceholderText(/enter employee emails/i)
+      await user.type(
+        textarea,
+        "a@example.com, b@example.com, c@example.com, d@example.com",
+      )
+
+      // No cap → the Assign Seats button is enabled and no over-capacity error.
+      expect(
+        screen.getByRole("button", { name: "Assign Seats" }),
+      ).not.toBeDisabled()
+      expect(
+        screen.queryByText(/unassigned seat.* available/i),
+      ).not.toBeInTheDocument()
+    })
+
+    test("Export CSV is enabled when there are assigned/redeemed rows despite no seat cap", async () => {
+      const { org, contract } = setupUncapped({
+        assigned_codes: 3,
+        redeemed_codes: 2,
+      })
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByText("Unlimited seats")
+
+      // Export gating uses assigned+redeemed rows, not total_codes (null here).
+      expect(
+        screen.getByRole("button", { name: "Export CSV" }),
+      ).not.toBeDisabled()
+    })
+
+    test("Export CSV is disabled when there are no assigned/redeemed rows (uncapped)", async () => {
+      const { org, contract } = setupUncapped({
+        assigned_codes: 0,
+        redeemed_codes: 0,
+      })
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByText("Unlimited seats")
+
+      expect(screen.getByRole("button", { name: "Export CSV" })).toBeDisabled()
+    })
   })
 })

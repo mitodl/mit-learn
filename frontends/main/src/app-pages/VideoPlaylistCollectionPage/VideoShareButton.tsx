@@ -3,7 +3,7 @@
 import React, { useState } from "react"
 import { RiShareForwardFill } from "@remixicon/react"
 import type { VideoResource } from "api/v1"
-import ShareDialog from "./ShareDialog"
+import ShareDialog from "@/components/ShareDialog/ShareDialog"
 import type { VideoPlayerHandle } from "./VideoResourcePlayer"
 import * as Styled from "./VideoSeriesDetailPage.styled"
 

@@ -190,6 +190,18 @@ export const SEARCH_POPULAR = querifiedSearchUrl({ sortby: "-views" })
 
 export const SEARCH_FREE = querifiedSearchUrl({ free: "true" })
 
+export const SEARCH_PODCASTS = querifiedSearchUrl({
+  resource_category: "Podcast",
+  resource_type_group: "learning_material",
+  sortby: "new",
+})
+
+export const SEARCH_PODCAST_EPISODES = querifiedSearchUrl({
+  resource_category: "Podcast Episode",
+  resource_type_group: "learning_material",
+  sortby: "new",
+})
+
 const CERTIFICATION_SEARCH_PARAMS = new URLSearchParams()
 CERTIFICATION_SEARCH_PARAMS.append("certification_type", "professional")
 CERTIFICATION_SEARCH_PARAMS.append("certification_type", "completion")
@@ -292,6 +304,8 @@ export const videoPlaylistPageView = (
   const base = generatePath(VIDEO_PLAYLIST_PAGE_VIEW, { id })
   return title === undefined ? base : `${base}/${pathSlug(title)}`
 }
+export const PODCASTS_PAGE_VIEW = "/podcasts"
+
 export const PODCAST_PAGE_VIEW = "/podcast/[podcastId]"
 export const podcastPageView = (id: string, title: string | undefined) => {
   const base = generatePath(PODCAST_PAGE_VIEW, { podcastId: id })

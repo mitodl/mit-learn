@@ -1,6 +1,6 @@
 [project]
 name = "mit-learn"
-version = "0.71.0"
+version = "0.73.4"
 description = "Search index for use with other MIT applications."
 authors = [{ name = "MIT ODL" }]
 requires-python = ">=3.12,<3.13"
@@ -88,7 +88,14 @@ dependencies = [
     "python-dateutil>=2.8.2,<3",
     "python-rapidjson>=1.8,<2",
     "pyyaml>=6.0.0,<7",
-    "qdrant-client[fastembed]==1.18.0,<2",
+    # Minimum server version for the Query API (QueryResponse gRPC type): qdrant v1.7.0.
+    # qdrant-client ~=1.18.0 targets qdrant server v1.18.x; deployed server is v1.18.2
+    # (ol-infrastructure/src/bridge/lib/versions.py QDRANT_VERSION).
+    # The prior ==1.18.0 pin blocked automatic pickup of future 1.18.x patch releases;
+    # switching to ~= lets uv upgrade within 1.18.x when the qdrant team publishes a
+    # client that resolves the gRPC QueryResponse DecodeError observed against server
+    # v1.18.2 with cloud_inference=True + prefer_grpc=True.
+    "qdrant-client[fastembed]~=1.18.0",
     "redis>=7.0.0,<8",
     "requests>=2.31.0,<3",
     "retry2>=0.9.5,<0.10",
@@ -260,3 +267,36 @@ inline-quotes = "double"
 "*_test.py" = ["ARG001", "E501", "S101", "PLR2004"]
 "test_*.py" = ["ARG001", "E501", "S101", "PLR2004"]
 "**/migrations/**" = ["ARG001"]
+
+[tool.bumpversion]
+commit = false
+tag = false
+parse = "(?P<release>(?:[1-9][0-9]{3})\\.(?:1[0-2]|[1-9])\\.(?:3[0-1]|[12][0-9]|[1-9]))\\.(?P<build>\\d+)"
+serialize = ["{release}.{build}"]
+
+[tool.bumpversion.parts.release]
+calver_format = "{YYYY}.{MM}.{DD}"
+
+[tool.bumpversion.parts.build]
+first_value = "1"
+
+[[tool.bumpversion.files]]
+filename = "main/settings.py"
+search = 'VERSION = "{current_version}"'
+replace = 'VERSION = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "uv.lock"
+search = """
+name = "mit-learn"
+version = "{current_version}"
+source = {{ virtual = "." }}"""
+replace = """
+name = "mit-learn"
+version = "{new_version}"
+source = {{ virtual = "." }}"""
