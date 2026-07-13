@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.73.6
+Version 0.73.6 (Released July 13, 2026)
 --------------
 
 - desktop dashboard design updates (#3578)
