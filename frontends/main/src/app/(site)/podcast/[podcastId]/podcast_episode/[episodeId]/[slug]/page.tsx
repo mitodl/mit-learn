@@ -102,11 +102,6 @@ const Page: React.FC<Props> = async (props) => {
     redirect(carrySearchParams(canonical, await props.searchParams))
   }
 
-  // Hydrate the parent podcast (breadcrumb/header read its title client-side).
-  await queryClient.fetchQueryOr404(
-    learningResourceQueries.detail(canonicalPodcastId),
-  )
-
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <PodcastEpisodeDetailPage

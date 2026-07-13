@@ -145,6 +145,7 @@ def test_serialize_podcast_episode_to_json():
             "podcasts": podcast_episode.learning_resource.parents.filter(
                 relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value
             ).values_list("parent__id", flat=True),
+            "parent_podcasts": [],
             "id": podcast_episode.id,
             "rss": podcast_episode.rss,
             "transcript": podcast_episode.transcript,
@@ -228,6 +229,13 @@ def test_serialize_podcast_episode_playlists_to_json():
     )
     serializer = serializers.PodcastEpisodeSerializer(instance=podcast_episode)
     assert serializer.data["podcasts"] == [podcast.learning_resource.id]
+    assert serializer.data["parent_podcasts"] == [
+        {
+            "id": podcast.learning_resource.id,
+            "title": podcast.learning_resource.title,
+            "readable_id": podcast.learning_resource.readable_id,
+        }
+    ]
 
 
 @pytest.mark.parametrize("has_context", [True, False])

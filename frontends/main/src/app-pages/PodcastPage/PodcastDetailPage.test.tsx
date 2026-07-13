@@ -13,18 +13,9 @@ jest.mock(
   }),
 )
 
-jest.mock("./PodcastPlayer", () => ({
-  __esModule: true,
-  PLAYER_HEIGHT: { desktop: 104, mobile: 220 },
-  default: jest.fn(
-    ({ track }: { track: { title: string; podcastName: string } }) => (
-      <div data-testid="podcast-player">
-        <span data-testid="player-track-title">{track.title}</span>
-        <span data-testid="player-podcast-name">{track.podcastName}</span>
-      </div>
-    ),
-  ),
-}))
+jest.mock("./PodcastPlayer", () =>
+  jest.requireActual("./PodcastPlayer.test-utils").mockPodcastPlayer(),
+)
 
 const EPISODES_PAGE_SIZE = 5
 

@@ -5,18 +5,9 @@ import type { LearningResource, PodcastEpisodeResource } from "api/v1"
 import { renderWithProviders, screen, user } from "@/test-utils"
 import { PodcastEpisodeDetailPage } from "./PodcastEpisodeDetailPage"
 
-jest.mock("./PodcastPlayer", () => ({
-  __esModule: true,
-  PLAYER_HEIGHT: { desktop: 104, mobile: 220 },
-  default: jest.fn(
-    ({ track }: { track: { title: string; podcastName: string } }) => (
-      <div data-testid="podcast-player">
-        <span data-testid="player-track-title">{track.title}</span>
-        <span data-testid="player-podcast-name">{track.podcastName}</span>
-      </div>
-    ),
-  ),
-}))
+jest.mock("./PodcastPlayer", () =>
+  jest.requireActual("./PodcastPlayer.test-utils").mockPodcastPlayer(),
+)
 
 const EPISODES_PAGE_SIZE = 5
 
@@ -61,7 +52,23 @@ const setupApis = ({
   moreEpisodes,
 }: SetupOptions = {}) => {
   const podcast = makePodcast(podcastOverrides)
-  const episode = makePodcastEpisode(episodeOverrides)
+  const episodeOverridesEpisode = (
+    episodeOverrides as Partial<PodcastEpisodeResource>
+  ).podcast_episode
+  const episode = makePodcastEpisode({
+    ...episodeOverrides,
+    podcast_episode: {
+      podcasts: [podcast.id],
+      parent_podcasts: [
+        {
+          id: podcast.id,
+          title: podcast.title!,
+          readable_id: podcast.readable_id,
+        },
+      ],
+      ...episodeOverridesEpisode,
+    },
+  } as Partial<LearningResource>)
 
   setMockResponse.get(
     urls.learningResources.details({ id: episode.id }),
@@ -198,6 +205,14 @@ describe("PodcastEpisodeDetailPage", () => {
     const episode = makePodcastEpisode()
     episode.podcast_episode.audio_url = "https://example.com/ep.mp3"
     const podcast = makePodcast()
+    episode.podcast_episode.podcasts = [podcast.id]
+    episode.podcast_episode.parent_podcasts = [
+      {
+        id: podcast.id,
+        title: podcast.title!,
+        readable_id: podcast.readable_id,
+      },
+    ]
 
     setMockResponse.get(
       urls.learningResources.details({ id: episode.id }),
