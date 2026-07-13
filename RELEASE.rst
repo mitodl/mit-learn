@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.74.0
+Version 0.74.0 (Released July 13, 2026)
 --------------
 
 - feat: Podcasts Listing Page (#3576)
