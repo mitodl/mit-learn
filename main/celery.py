@@ -37,4 +37,8 @@ app.conf.task_routes = {
     "learning_resources_search.tasks.deindex_run_content_files": {
         "queue": "edx_content"
     },
+    "learning_resources.tasks.import_content_files": {"queue": "edx_content"},
+    "learning_resources.tasks.ingest_edx_run_archive": {"queue": "edx_content"},
+    "learning_resources.tasks.ingest_canvas_course": {"queue": "edx_content"},
+    "learning_resources.tasks.sync_canvas_courses": {"queue": "edx_content"},
 }

@@ -2,6 +2,7 @@ import React from "react"
 import { factories, setMockResponse, urls } from "api/test-utils"
 import { ResourceTypeEnum, LearningResourcesListSortbyEnum } from "api/v1"
 import type { LearningResource } from "api/v1"
+import { assertHeadings } from "ol-test-utilities"
 import { renderWithProviders, screen, user, waitFor } from "@/test-utils"
 import {
   EPISODES_PAGE_SIZE,
@@ -242,5 +243,46 @@ describe("PodcastsListingPage", () => {
     expect(
       await screen.findByRole("button", { name: "Pause episode" }),
     ).toBeInTheDocument()
+  })
+
+  it("renders a meaningful, well-nested heading hierarchy", async () => {
+    delete process.env[ENV_KEY]
+    const episodes = [
+      makeEpisode({ title: "First Episode" }),
+      makeEpisode({
+        title: "Second Episode",
+        podcast_episode: {
+          id: 2,
+          podcasts: [1],
+          duration: "PT1M",
+          audio_url: "https://example.com/2.mp3",
+          episode_link: "",
+        },
+      }),
+    ]
+    const podcasts = [makePodcast({ title: "Regular Podcast" })]
+    setupApis({
+      episodes,
+      totalEpisodes: episodes.length,
+      podcasts,
+      totalPodcasts: podcasts.length,
+    })
+
+    renderWithProviders(<PodcastsListingPage />)
+
+    // Wait for the async sections to render before asserting the hierarchy.
+    await screen.findByText("NOW PLAYING")
+
+    // Section headings only; Typography variants (h4/h5/h6) are excluded.
+    assertHeadings(
+      [
+        { level: 1, name: "Podcasts from across MIT" },
+        { level: 2, name: "First Episode" },
+        { level: 2, name: "Latest Episodes" },
+        { level: 2, name: "Podcasts across MIT" },
+        { level: 2, name: "More Podcasts" },
+      ],
+      { maxLevel: 2 },
+    )
   })
 })

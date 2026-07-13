@@ -37,7 +37,7 @@ const setupUserApis = (overrides?: Parameters<typeof mitxUser>[0]) => {
 describe.each([
   { display: "desktop", testId: "enrollment-card-desktop" },
   { display: "mobile", testId: "enrollment-card-mobile" },
-])("UnenrolledCourseCard $display", ({ testId }) => {
+])("UnenrolledCourseCard $display", ({ display, testId }) => {
   const getCard = () => screen.getByTestId(testId)
 
   setupLocationMock()
@@ -248,12 +248,9 @@ describe.each([
     ).not.toBeInTheDocument()
   })
 
-  test.each([
-    { layout: "compact" as const, testId: "courseware-button" },
-    { layout: "default" as const, testId: undefined },
-  ])(
+  test.each([{ layout: "compact" as const }, { layout: "default" as const }])(
     "End date shown in correct position for $layout layout",
-    ({ layout, testId }) => {
+    ({ layout }) => {
       setupUserApis()
       const run = mitxonline.factories.courses.courseRun({
         is_enrollable: true,
@@ -268,16 +265,18 @@ describe.each([
         <UnenrolledCourseCard course={course} layout={layout} />,
       )
       const card = getCard()
-      if (testId) {
-        // Compact: end date and button are both inside the compact-meta-row
-        const metaRow = within(card).getByTestId("compact-meta-row")
-        expect(metaRow).toHaveTextContent(/ends in 5 days/i)
-        expect(within(metaRow).getByTestId(testId)).toBeInTheDocument()
-      } else {
-        // Default layout has no compact-meta-row; end date appears below the title
+      // End date always appears below the title now; there's no separate meta row
+      expect(
+        within(card).queryByTestId("compact-meta-row"),
+      ).not.toBeInTheDocument()
+
+      const isMobileCompact = display === "mobile" && layout === "compact"
+      if (isMobileCompact) {
+        // Mobile compact rows omit the end date entirely to save space
         expect(
-          within(card).queryByTestId("compact-meta-row"),
+          within(card).queryByText(/ends in 5 days/i),
         ).not.toBeInTheDocument()
+      } else {
         expect(within(card).getByText(/ends in 5 days/i)).toBeInTheDocument()
       }
     },
@@ -817,5 +816,87 @@ describe.each([
         screen.queryByRole("dialog", { name: course.title }),
       ).not.toBeInTheDocument()
     })
+  })
+})
+
+describe("UnenrolledCourseCard card type label", () => {
+  setupLocationMock()
+
+  const getDesktopCard = () => screen.getByTestId("enrollment-card-desktop")
+
+  const setupCourse = (b2bContractId: number | null = null) => {
+    const run = mitxonline.factories.courses.courseRun({
+      b2b_contract: b2bContractId,
+      is_enrollable: true,
+    })
+    return mitxOnlineCourse({
+      title: run.title,
+      courseruns: [run],
+      next_run_id: run.id,
+    })
+  }
+
+  test("shows 'Course' for a non-B2B card", () => {
+    setupUserApis()
+    renderWithProviders(<UnenrolledCourseCard course={setupCourse()} />)
+    expect(within(getDesktopCard()).getByText("Course")).toBeInTheDocument()
+    expect(
+      within(getDesktopCard()).queryByText("Module"),
+    ).not.toBeInTheDocument()
+  })
+
+  test("shows 'Module' for a B2B card", () => {
+    setupUserApis()
+    const b2bContractId = faker.number.int()
+    renderWithProviders(
+      <UnenrolledCourseCard
+        course={setupCourse(b2bContractId)}
+        contractId={b2bContractId}
+      />,
+    )
+    expect(within(getDesktopCard()).getByText("Module")).toBeInTheDocument()
+    expect(
+      within(getDesktopCard()).queryByText("Course"),
+    ).not.toBeInTheDocument()
+  })
+
+  test("shows 'Module' when isModule is set", () => {
+    setupUserApis()
+    renderWithProviders(
+      <UnenrolledCourseCard course={setupCourse()} isModule />,
+    )
+    expect(within(getDesktopCard()).getByText("Module")).toBeInTheDocument()
+  })
+})
+
+describe("UnenrolledCourseCard progress badge", () => {
+  setupLocationMock()
+
+  const getDesktopCard = () => screen.getByTestId("enrollment-card-desktop")
+
+  test("shows 'Not Started' next to the card type label", () => {
+    setupUserApis()
+    const run = mitxonline.factories.courses.courseRun({
+      is_enrollable: true,
+    })
+    const course = mitxOnlineCourse({ courseruns: [run], next_run_id: run.id })
+    renderWithProviders(<UnenrolledCourseCard course={course} />)
+    expect(
+      within(getDesktopCard()).getByTestId("progress-badge"),
+    ).toHaveTextContent("Not Started")
+  })
+
+  test("hidden on compact module rows, where the status icon takes over", () => {
+    setupUserApis()
+    const run = mitxonline.factories.courses.courseRun({
+      is_enrollable: true,
+    })
+    const course = mitxOnlineCourse({ courseruns: [run], next_run_id: run.id })
+    renderWithProviders(
+      <UnenrolledCourseCard course={course} isModule layout="compact" />,
+    )
+    expect(
+      within(getDesktopCard()).queryByTestId("progress-badge"),
+    ).not.toBeInTheDocument()
   })
 })

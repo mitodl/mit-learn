@@ -620,6 +620,55 @@ def test_marketing_page_for_resources_with_webdriver(mocker, settings):
 
 
 @pytest.mark.django_db
+def test_marketing_page_for_resources_isolates_scrape_failures(mocker):
+    """A single resource's scrape failure must not fail the whole chunk.
+
+    When course and program tasks are chained, a chunk that raises poisons the
+    chord header and the program group never runs, so per-resource failures are
+    logged and skipped rather than propagated.
+    """
+    bad_course = models.LearningResource.objects.create(
+        title="Bad Course",
+        url="https://example.com/bad-course",
+        resource_type="course",
+        published=True,
+    )
+    good_course = models.LearningResource.objects.create(
+        title="Good Course",
+        url="https://example.com/good-course",
+        resource_type="course",
+        published=True,
+    )
+
+    good_scraper = mocker.Mock()
+    good_scraper.scrape.return_value = "<html><body><p>ok</p></body></html>"
+
+    def fake_scraper_for_site(url):
+        if url == bad_course.url:
+            msg = "scraper boom"
+            raise RuntimeError(msg)
+        return good_scraper
+
+    mocker.patch(
+        "learning_resources.tasks.scraper_for_site",
+        side_effect=fake_scraper_for_site,
+    )
+    mocker.patch("learning_resources.tasks.html_to_markdown", return_value="ok")
+    mock_generate_embeddings = mocker.patch("vector_search.tasks.generate_embeddings")
+
+    # Must not raise despite the bad course failing
+    marketing_page_for_resources([bad_course.id, good_course.id])
+
+    assert not models.ContentFile.objects.filter(learning_resource=bad_course).exists()
+    good_cf = models.ContentFile.objects.get(
+        learning_resource=good_course, file_type=MARKETING_PAGE_FILE_TYPE
+    )
+    mock_generate_embeddings.delay.assert_called_once_with(
+        [good_cf.id], "content_file", overwrite=True
+    )
+
+
+@pytest.mark.django_db
 def test_marketing_page_for_program_appends_children(mocker, settings):
     """Test that marketing_page_for_resources appends program children content"""
 
@@ -778,6 +827,104 @@ def test_scrape_marketing_pages(mocker, settings, mocked_celery):
         eid in mock_marketing_page_task.mock_calls[0].args[0] for eid in expected_ids
     )
     mock_group.assert_called_once()
+
+
+@pytest.mark.django_db
+def test_scrape_marketing_pages_orders_courses_before_programs(
+    mocker, settings, mocked_celery
+):
+    """Courses are scraped in a group that runs before the programs group."""
+    settings.QDRANT_CHUNK_SIZE = 10
+    course = models.LearningResource.objects.create(
+        title="Course",
+        url="https://example.com/course",
+        resource_type="course",
+        published=True,
+    )
+    program = models.LearningResource.objects.create(
+        title="Program",
+        url="https://example.com/program",
+        resource_type="program",
+        published=True,
+    )
+    si_mock = mocker.patch("learning_resources.tasks.marketing_page_for_resources.si")
+    # Make each .si(...) call's return value identify which ids it was built
+    # from, so the args passed into celery.group(...) can be told apart.
+    si_mock.side_effect = lambda ids: ("si", tuple(ids))
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        scrape_marketing_pages.delay()
+
+    # A chain enforces ordering (not a single flat group).
+    assert mocked_celery.chain.called
+    # Course task built before program task; each in its own chunk here.
+    queued_ids = [call.args[0] for call in si_mock.call_args_list]
+    assert queued_ids[0] == [course.id]
+    assert [program.id] in queued_ids
+    assert queued_ids.index([course.id]) < queued_ids.index([program.id])
+
+    # Pin the guarantee to what is actually fed into celery.chain via
+    # celery.group: Python evaluates chain's positional args left-to-right,
+    # so the first group(...) call must be the course tasks and the second
+    # must be the program tasks. This fails if the two arguments to
+    # celery.chain(celery.group(...), celery.group(...)) are ever swapped.
+    assert mocked_celery.group.call_count == 2
+    first_group_tasks, second_group_tasks = (
+        call.args[0] for call in mocked_celery.group.call_args_list
+    )
+    assert first_group_tasks == [("si", (course.id,))]
+    assert second_group_tasks == [("si", (program.id,))]
+
+
+@pytest.mark.django_db
+def test_scrape_marketing_pages_queues_healable_programs(
+    mocker, settings, mocked_celery
+):
+    """A program that already has a page but is missing its children section
+    (with a child course page available) is queued for re-scrape.
+    """
+    settings.QDRANT_CHUNK_SIZE = 10
+    course = models.LearningResource.objects.create(
+        title="Course",
+        url="https://example.com/course",
+        resource_type="course",
+        published=True,
+    )
+    ContentFile.objects.create(
+        learning_resource=course,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        file_extension=".md",
+        key=course.url,
+        content="Child copy.",
+        published=True,
+    )
+    program = models.LearningResource.objects.create(
+        title="Program",
+        url="https://example.com/program",
+        resource_type="program",
+        published=True,
+    )
+    models.LearningResourceRelationship.objects.create(
+        parent=program, child=course, relation_type="PROGRAM_COURSES"
+    )
+    # Program already has a page, but WITHOUT the children marker.
+    ContentFile.objects.create(
+        learning_resource=program,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        file_extension=".md",
+        key=program.url,
+        content="Program page, no children yet.",
+        published=True,
+    )
+    si_mock = mocker.patch("learning_resources.tasks.marketing_page_for_resources.si")
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        scrape_marketing_pages.delay()
+
+    queued_ids = [i for call in si_mock.call_args_list for i in call.args[0]]
+    # Program re-queued for healing; course already has a page so it is NOT queued.
+    assert program.id in queued_ids
+    assert course.id not in queued_ids
 
 
 @pytest.mark.parametrize("canvas_ids", [["1"], None])

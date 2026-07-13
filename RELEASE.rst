@@ -1,6 +1,24 @@
 Release Notes
 =============
 
+Version 0.73.4 (Released July 08, 2026)
+--------------
+
+- Fix embedding summarizer task when overwrite=True (#3585)
+- Pin chromium to 149.0.7827.196 to avoid broken 150 headless build (#3584)
+- Fix embeddings task oom thrashing (#3561)
+
+Version 0.73.2 (Released July 08, 2026)
+--------------
+
+- fix: handle no-max-learners contracts in B2B seat assignment UI (#3564)
+- feat: local-dev Docker targets and granian kill timeout (#3579)
+- fix: changing the positions of share feature on videos and podcasts episode (#3540)
+- Bound program marketing-page embedding input to avoid token overflow (#3562)
+- fix(vector-search): relax qdrant-client pin to allow 1.18.x patches (#3546)
+- feat: Add "Send Test Email to Me" to the seat assignment confirmation modal (#3558)
+- Upgrade django-health-check from pinned git commit to PyPI 3.24.0 (#3556)
+
 Version 0.73.1 (Released July 07, 2026)
 --------------
 

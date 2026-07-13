@@ -44,21 +44,6 @@ jest.mock("api/mitxonline-hooks/enrollment", () => ({
 const API_BASE_URL = process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL
 const managerOrganizationsUrl = `${API_BASE_URL}/api/v0/b2b/manager/organizations/`
 
-// ManagerContractDetail = ContractPage plus seat-count fields. total_codes
-// mirrors the contract's max_learners (null/0 means no seat cap).
-const makeContractDetail = (
-  contract: ReturnType<typeof factories.contracts.contract>,
-  overrides: { total_codes?: number | null } = {},
-) => ({
-  ...contract,
-  attachment_percentage: null,
-  total_enrollments: 0,
-  total_codes: overrides.total_codes ?? 10,
-  assigned_codes: 0,
-  unassigned_codes: 0,
-  redeemed_codes: 0,
-})
-
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
 
@@ -349,16 +334,14 @@ describe("ContractContent", () => {
     expect(completedCard).toBeDefined()
     expect(enrolledCard).toBeDefined()
 
-    // Check enrollment status indicators
-    const completedIndicator = within(completedCard!).getByTestId(
-      "enrollment-status",
-    )
-    const enrolledIndicator = within(enrolledCard!).getByTestId(
-      "enrollment-status",
-    )
+    // Check progress badges (the enrollment-status icon is reserved for
+    // compact program module rows; contract cards convey status via the
+    // ProgressBadge next to the card type label instead)
+    const completedBadge = within(completedCard!).getByTestId("progress-badge")
+    const enrolledBadge = within(enrolledCard!).getByTestId("progress-badge")
 
-    expect(completedIndicator).toHaveTextContent(/^Completed$/)
-    expect(enrolledIndicator).toHaveTextContent(/^Enrolled$/)
+    expect(completedBadge).toHaveTextContent(/^Completed$/)
+    expect(enrolledBadge).toHaveTextContent(/^In Progress$/)
   })
 
   test("Renders program collections", async () => {
@@ -1286,15 +1269,17 @@ describe("ContractContent", () => {
     ).findAllByTestId("enrollment-card-desktop")
 
     expect(cards.length).toBe(3)
-    // First card should show enrolled status
-    const cardStatus0 = within(cards[0]).getByTestId("enrollment-status")
+    // Progress badges (the enrollment-status icon is reserved for compact
+    // program module rows; contract cards convey status via the
+    // ProgressBadge next to the card type label instead)
+    const cardStatus0 = within(cards[0]).getByTestId("progress-badge")
     expect(cardStatus0).toHaveTextContent(/^Completed$/)
 
-    const cardStatus1 = within(cards[1]).getByTestId("enrollment-status")
-    expect(cardStatus1).toHaveTextContent(/^Enrolled$/)
+    const cardStatus1 = within(cards[1]).getByTestId("progress-badge")
+    expect(cardStatus1).toHaveTextContent(/^In Progress$/)
 
-    const cardStatus2 = within(cards[2]).getByTestId("enrollment-status")
-    expect(cardStatus2).toHaveTextContent(/^Not Enrolled$/)
+    const cardStatus2 = within(cards[2]).getByTestId("progress-badge")
+    expect(cardStatus2).toHaveTextContent(/^Not Started$/)
   })
 
   test("shows the not found screen if the organization is not found by orgSlug", async () => {
@@ -1488,11 +1473,6 @@ describe("ContractContent", () => {
       previous: null,
       results: [orgX],
     })
-    setMockResponse.get(
-      urls.contracts.managerContractDetail(orgX.id, orgX.contracts[0].id),
-      makeContractDetail(orgX.contracts[0], { total_codes: 10 }),
-    )
-
     renderWithProviders(
       <ContractContent
         orgSlug={orgX.slug}
@@ -1506,42 +1486,6 @@ describe("ContractContent", () => {
       contractAdminView(orgX.slug, orgX.contracts[0].slug),
     )
   })
-
-  // TEMPORARY: the Manage button is gated on the contract having a seat cap
-  // (max_learners / total_codes). Contracts with no cap (null/0) hide it until
-  // the seat-assignment admin page supports uncapped contracts.
-  test.each([{ totalCodes: null }, { totalCodes: 0 }])(
-    "does not render the Manage button when the contract has no seat cap (total_codes=$totalCodes)",
-    async ({ totalCodes }) => {
-      mockedUseFeatureFlagEnabled.mockImplementation(
-        (flag) => flag === FeatureFlags.B2BContractManagerDashboard,
-      )
-      const { orgX } = setupProgramsAndCourses()
-
-      setMockResponse.get(managerOrganizationsUrl, {
-        count: 1,
-        next: null,
-        previous: null,
-        results: [orgX],
-      })
-      setMockResponse.get(
-        urls.contracts.managerContractDetail(orgX.id, orgX.contracts[0].id),
-        makeContractDetail(orgX.contracts[0], { total_codes: totalCodes }),
-      )
-
-      renderWithProviders(
-        <ContractContent
-          orgSlug={orgX.slug}
-          contractSlug={orgX.contracts[0].slug}
-        />,
-      )
-
-      await screen.findByRole("heading", { name: orgX.name })
-      expect(
-        screen.queryByRole("link", { name: "Manage" }),
-      ).not.toBeInTheDocument()
-    },
-  )
 
   test("sanitizes HTML content in welcome_message_extra", async () => {
     const { orgX } = setupProgramsAndCourses()

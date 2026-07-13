@@ -36,7 +36,7 @@ const NowPlayingCard = styled.div(({ theme }) => ({
   gap: "48px",
   padding: "40px",
   alignItems: "flex-start",
-  backgroundColor: theme.custom.colors.lightGray1,
+  backgroundColor: theme.custom.colors.lightGray0,
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",

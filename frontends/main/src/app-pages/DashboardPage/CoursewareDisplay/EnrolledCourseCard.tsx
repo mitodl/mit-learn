@@ -8,6 +8,7 @@ import {
   CoursewareButtonLink,
   MenuButton,
   Separator,
+  Ellipse,
   SubtitleLink,
   SubtitleLinkRoot,
   TitleHeading,
@@ -28,7 +29,7 @@ import { RiArrowUpCircleLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { isInPast, calendarDaysUntil, NoSSR } from "ol-utilities"
 import { SiblingRunsAccordion } from "./SiblingRunsAccordion"
-import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
+import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { Button, ButtonLink } from "@mitodl/smoot-design"
@@ -37,17 +38,33 @@ import NiceModal from "@ebay/nice-modal-react"
 import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
 import { getReceiptMenuItem } from "./receiptMenuItem"
 import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
+import { ProgressBadge } from "./ProgressBadge"
 
 const formatUpgradeTime = (daysFloat: number) => {
   if (daysFloat < 0) return ""
   const days = Math.floor(daysFloat)
   if (days > 1) {
-    return ` · ${days} days remaining`
+    return `${days} days remaining`
   } else if (days === 1) {
-    return ` · ${days} day remaining`
+    return `${days} day remaining`
   }
-  return " · Less than a day remaining"
+  return "Less than a day remaining"
 }
+
+const RedEllipse = styled(Ellipse)(({ theme }) => ({
+  marginLeft: "6px",
+  marginRight: "6px",
+  backgroundColor: theme.custom.colors.red,
+}))
+
+const EnrolledTitleLink = styled(TitleLink)<{
+  enrollmentstatus: EnrollmentStatus
+}>(({ enrollmentstatus, theme }) => ({
+  color:
+    enrollmentstatus === EnrollmentStatus.Completed
+      ? theme.custom.colors.silverGrayDark
+      : theme.custom.colors.black,
+}))
 
 const UpgradeBanner: React.FC<
   {
@@ -56,7 +73,6 @@ const UpgradeBanner: React.FC<
     certificateUpgradePrice?: string | null
     productId?: number | null
     onError?: (error: Error) => void
-    layout?: "default" | "compact"
   } & React.HTMLAttributes<HTMLDivElement>
 > = ({
   canUpgrade,
@@ -64,7 +80,6 @@ const UpgradeBanner: React.FC<
   certificateUpgradePrice,
   productId,
   onError,
-  layout = "default",
   ...others
 }) => {
   const replaceBasketItem = useReplaceBasketItem()
@@ -95,16 +110,19 @@ const UpgradeBanner: React.FC<
     : null
 
   return (
-    <SubtitleLinkRoot layout={layout} {...others}>
-      <SubtitleLink layout={layout} href="#" onClick={handleUpgradeClick}>
+    <SubtitleLinkRoot {...others}>
+      <SubtitleLink href="#" onClick={handleUpgradeClick}>
         <RiArrowUpCircleLine size="16px" />
         {`Upgrade for certificate - ${formattedPrice}`}
       </SubtitleLink>
       {calendarDays !== null && (
-        <NoSSR>
-          {/* This uses local time. */}
-          {formatUpgradeTime(calendarDays)}
-        </NoSSR>
+        <>
+          <RedEllipse />
+          <NoSSR>
+            {/* This uses local time. */}
+            {formatUpgradeTime(calendarDays)}
+          </NoSSR>
+        </>
       )}
     </SubtitleLinkRoot>
   )
@@ -152,6 +170,7 @@ type EnrolledCourseCardProps = {
   layout?: "default" | "compact"
   headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
   onUpgradeError?: (error: string) => void
+  isModule?: boolean
   Component?: React.ElementType
   className?: string
 }
@@ -162,15 +181,22 @@ export const EnrolledCourseCard = ({
   layout = "default",
   headingLevel,
   onUpgradeError,
+  isModule,
   Component,
   className,
 }: EnrolledCourseCardProps) => {
   const course = enrollment.run.course
   const run = enrollment.run
+  const isCompact = layout === "compact"
   const isContractPageResource = Boolean(enrollment.b2b_contract_id)
+  const cardTypeLabelText =
+    isModule || isContractPageResource ? "Module" : "Course"
+  const cardTypeLabel =
+    !isModule && !isCompact ? (
+      <CardTypeText>{cardTypeLabelText}</CardTypeText>
+    ) : null
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const isStaff = mitxOnlineUser.data?.is_staff
-  const isCompact = layout === "compact"
   const title = isCompact ? course.title : run?.title || course.title
   const coursewareUrl = run?.courseware_url
   const certificateLink = getCertificateLink(
@@ -204,19 +230,21 @@ export const EnrolledCourseCard = ({
   })
   const upgradedAndIncomplete =
     !isContractPageResource && isVerifiedEnrollmentMode(enrollmentMode)
-  const certStatus = certificateLink ? (
-    <SubtitleLink href={certificateLink} layout={layout}>
-      <RiAwardLine size="16px" />
-      {isCompact ? "Certificate" : "View Certificate"}
-    </SubtitleLink>
-  ) : showUpgradeBanner ? (
+  const certButton = certificateLink ? (
+    <>
+      <SubtitleLink href={certificateLink}>
+        <RiAwardLine size="16px" />
+        {isCompact ? "Certificate" : "View Certificate"}
+      </SubtitleLink>
+    </>
+  ) : null
+  const certStatus = showUpgradeBanner ? (
     <UpgradeBanner
       data-testid="upgrade-root"
       canUpgrade={showUpgradeBanner}
       certificateUpgradeDeadline={run?.upgrade_deadline}
       certificateUpgradePrice={run?.upgrade_product_price}
       productId={run?.upgrade_product_id}
-      layout={layout}
       onError={() => {
         onUpgradeError?.(
           "There was a problem adding the certificate to your cart.",
@@ -232,12 +260,12 @@ export const EnrolledCourseCard = ({
     certStatus,
   ].filter(Boolean)
 
-  const endDateAndCertSection =
+  const endDateAndUpgradeSection =
     metaSegments.length > 0 ? (
-      <Stack direction="row" alignItems="center">
+      <Stack direction="row" alignItems="center" gap="12px">
         {metaSegments.map((segment, i) => (
           <React.Fragment key={i}>
-            {i > 0 && <Separator />}
+            {i > 0 && <Ellipse />}
             {segment}
           </React.Fragment>
         ))}
@@ -247,14 +275,19 @@ export const EnrolledCourseCard = ({
     <Stack gap="6px">
       {coursewareUrl ? (
         <TitleHeading as={headingLevel}>
-          <TitleLink size="medium" color="black" href={coursewareUrl}>
+          <EnrolledTitleLink
+            size="medium"
+            color="black"
+            href={coursewareUrl}
+            enrollmentstatus={enrollmentStatus}
+          >
             {title}
-          </TitleLink>
+          </EnrolledTitleLink>
         </TitleHeading>
       ) : (
         <TitleText as={headingLevel}>{title}</TitleText>
       )}
-      {isCompact ? null : endDateAndCertSection}
+      {endDateAndUpgradeSection}
     </Stack>
   )
   // Determine if button should be disabled
@@ -312,19 +345,20 @@ export const EnrolledCourseCard = ({
     </ButtonLink>
   )
   const buttonSection = isCompact ? (
-    <Stack direction="row" alignItems="center">
-      {endDateAndCertSection}
-      {endDateAndCertSection && <Separator />}
+    <Stack direction="row" gap="8px" alignItems="center">
+      {certButton && (
+        <>
+          {certButton}
+          <Separator />
+        </>
+      )}
       <CoursewareActionColumn direction="row" justifyContent="center">
         {ctaButton}
       </CoursewareActionColumn>
     </Stack>
   ) : (
     <>
-      <EnrollmentStatusIndicator
-        status={enrollmentStatus}
-        showNotComplete={Boolean(isContractPageResource)}
-      />
+      {certButton}
       {ctaButton}
     </>
   )
@@ -386,7 +420,18 @@ export const EnrolledCourseCard = ({
     />
   )
 
+  const progressBadgeSection =
+    isModule && isCompact ? null : (
+      <Stack direction="row" gap="4px" alignItems="center">
+        <ProgressBadge enrollmentStatus={enrollmentStatus} />
+        <Separator />
+        {cardTypeLabel}
+      </Stack>
+    )
+
   const hasMultipleRuns = (siblingEnrollments?.length ?? 0) > 0
+  const showEnrollmentStatusIcon =
+    !isContractPageResource && isModule && isCompact
 
   return (
     <>
@@ -398,8 +443,18 @@ export const EnrolledCourseCard = ({
           as={Component}
         >
           <CardHeaderContent>
-            <Stack justifyContent="start" alignItems="stretch" flex={1}>
-              <CardTypeText>Course</CardTypeText>
+            {showEnrollmentStatusIcon && (
+              <Stack>
+                <EnrollmentStatusIcon status={enrollmentStatus} />
+              </Stack>
+            )}
+            <Stack
+              gap="4px"
+              justifyContent="start"
+              alignItems="stretch"
+              flex={1}
+            >
+              {progressBadgeSection}
               {titleSection}
             </Stack>
             <Stack direction="row" gap="8px" alignItems="center">
@@ -420,8 +475,13 @@ export const EnrolledCourseCard = ({
           className={className}
           layout={layout}
         >
-          <Stack justifyContent="start" alignItems="stretch" flex={1}>
-            <CardTypeText>Course</CardTypeText>
+          {showEnrollmentStatusIcon && (
+            <Stack alignSelf="start">
+              <EnrollmentStatusIcon status={enrollmentStatus} />
+            </Stack>
+          )}
+          <Stack gap="4px" justifyContent="start" alignItems="stretch" flex={1}>
+            {progressBadgeSection}
             {titleSection}
           </Stack>
           <Stack direction="row" gap="8px" alignItems="center">
