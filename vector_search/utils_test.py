@@ -1040,9 +1040,8 @@ def test_learning_material_embedding_context_includes_content_file():
     context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
         serialized_resource
     )
-
     assert context == (
-        "A title A short description A full description The direct content file text"
+        "A title A short description A full description\n\n# Content\nThe direct content file text"
     )
 
 

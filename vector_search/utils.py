@@ -476,11 +476,7 @@ def _learning_resource_embedding_context(document):
         if content_files:
             content = content_files[0].get("content")
             if content:
-                context = f"""{context}
-
-                # Content:
-                {content}
-                """
+                context = f"{context}\n\n# Content\n{content}"
     return context
 
 
