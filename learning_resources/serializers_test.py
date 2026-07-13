@@ -1132,21 +1132,23 @@ def test_metadata_display_serializer_show_start_anytime():
 
 def test_runs_by_date_handles_dateless_runs():
     """
-    runs_by_date should not crash when 2+ runs have no start_date (issue #12295);
-    dateless runs sort last.
+    runs_by_date should not crash when runs have no usable start_date (issue #12295);
+    such runs sort last, whether the value is None, missing, empty, or unparseable.
     """
     serialized_resource = {
         "runs": [
             {"id": 1, "start_date": None},
             {"id": 2, "start_date": "2024-01-01T00:00:00Z"},
-            {"id": 3, "start_date": None},
+            {"id": 3},  # start_date key missing
+            {"id": 4, "start_date": ""},  # empty string
+            {"id": 5, "start_date": "not a date"},  # unparseable
         ]
     }
     serializer = serializers.LearningResourceMetadataDisplaySerializer(
         serialized_resource
     )
     ordered = serializer.runs_by_date(serialized_resource)
-    assert [run["id"] for run in ordered] == [2, 1, 3]
+    assert [run["id"] for run in ordered] == [2, 1, 3, 4, 5]
 
 
 def test_total_runs_with_dates(mocker):

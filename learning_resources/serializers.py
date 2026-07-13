@@ -704,16 +704,21 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             and serialized_resource.get("availability") == Availability.anytime.name
         )
 
+    def _run_sort_key(self, run):
+        """Sort key for a run; dateless or unparseable runs sort last."""
+        start_date = run.get("start_date")
+        parsed = dateparser.parse(start_date) if start_date else None
+        if parsed is None:
+            return datetime.max.replace(tzinfo=UTC)
+        return (
+            parsed.replace(tzinfo=UTC)
+            if parsed.tzinfo is None
+            else parsed.astimezone(UTC)
+        )
+
     def runs_by_date(self, serialized_resource):
         """Get runs sorted by date"""
-        return sorted(
-            serialized_resource.get("runs", []),
-            key=lambda run: (
-                dateparser.parse(run["start_date"]).replace(tzinfo=UTC)
-                if run.get("start_date")
-                else datetime.max.replace(tzinfo=UTC)
-            ),
-        )
+        return sorted(serialized_resource.get("runs", []), key=self._run_sort_key)
 
     def dates_for_runs(self, serialized_resource):
         """Get a list of sorted and formatted run dates"""
