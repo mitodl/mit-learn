@@ -31,6 +31,7 @@ from learning_resources_search.exceptions import RetryError
 from main.utils import now_in_utc
 from vector_search.tasks import (
     _record_embedding_failure,
+    _retry_countdown,
     embed_learning_resources_by_id,
     embed_new_content_files,
     embed_new_learning_resources,
@@ -850,6 +851,29 @@ def test_generate_embeddings_retries_on_deadline(mocker):
         generate_embeddings([1], CONTENT_FILE_TYPE, overwrite=True, failure_key="k")
     retry.assert_called_once()
     assert retry.call_args.kwargs["countdown"] >= 0
+
+
+def test_generate_embeddings_retries_on_unavailable(mocker):
+    """UNAVAILABLE (e.g. 502 from a throttled qdrant node) retries like a deadline."""
+    mocker.patch(
+        "vector_search.tasks.embed_learning_resources",
+        side_effect=_rpc_error(grpc.StatusCode.UNAVAILABLE),
+    )
+    retry = mocker.patch.object(generate_embeddings, "retry", side_effect=Retry())
+    with pytest.raises(Retry):
+        generate_embeddings([1], CONTENT_FILE_TYPE, overwrite=True, failure_key="k")
+    retry.assert_called_once()
+
+
+def test_retry_countdown_is_minutes_scale(mocker):
+    """Backoff is jittered exponential at minutes scale, capped at 10m."""
+    backoff = mocker.patch(
+        "vector_search.tasks.get_exponential_backoff_interval", return_value=42
+    )
+    assert _retry_countdown(2) == 42
+    backoff.assert_called_once_with(
+        factor=120, retries=2, maximum=600, full_jitter=True
+    )
 
 
 def test_generate_embeddings_records_on_exhaustion(mocker):

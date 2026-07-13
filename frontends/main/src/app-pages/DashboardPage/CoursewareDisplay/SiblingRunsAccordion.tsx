@@ -19,7 +19,7 @@ import {
   RiTimeLine,
 } from "@remixicon/react"
 import { isInPast, formatDate } from "ol-utilities"
-import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
+import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import NextLink from "next/link"
 import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
 
@@ -234,10 +234,7 @@ const SiblingRunsAccordion: React.FC<SiblingRunsAccordionProps> = ({
                     ) : isExpired ? (
                       <ExpiredRunIcon aria-hidden="true" />
                     ) : (
-                      <EnrollmentStatusIndicator
-                        status={runEnrollmentStatus}
-                        showNotComplete
-                      />
+                      <EnrollmentStatusIcon status={runEnrollmentStatus} />
                     )}
                     <Typography variant="subtitle3" color="darkGray2" noWrap>
                       {runLabel}

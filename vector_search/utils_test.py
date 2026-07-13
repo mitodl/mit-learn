@@ -27,6 +27,7 @@ from learning_resources.models import LearningResource
 from learning_resources.serializers import LearningResourceMetadataDisplaySerializer
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
+    COURSE_TYPE,
 )
 from learning_resources_search.serializers import (
     serialize_bulk_content_files,
@@ -72,6 +73,7 @@ from vector_search.utils import (
     embed_topics,
     filter_existing_qdrant_points,
     qdrant_query_conditions,
+    remove_qdrant_records,
     should_generate_content_embeddings,
     should_generate_resource_embeddings,
     update_content_file_payload,
@@ -303,6 +305,65 @@ def test_filter_existing_qdrant_points(mocker):
         == 0
     )
     assert filtered_resources.count() == 7
+
+
+@pytest.mark.parametrize(
+    ("platform_value", "expected_params"),
+    [
+        ({"code": "ocw"}, {"readable_id": "shared-readable-id", "platform": "ocw"}),
+        (None, {"readable_id": "shared-readable-id"}),
+    ],
+)
+def test_remove_qdrant_records_filters_learning_resources_by_platform(
+    mocker, platform_value, expected_params
+):
+    """Learning resource deletes should not cross platform boundaries."""
+    mocker.patch(
+        "vector_search.utils.serialize_bulk_learning_resources",
+        return_value=[
+            {"readable_id": "shared-readable-id", "platform": platform_value}
+        ],
+    )
+    mock_remove_points_matching_params = mocker.patch(
+        "vector_search.utils.remove_points_matching_params"
+    )
+
+    remove_qdrant_records([1], COURSE_TYPE)
+
+    mock_remove_points_matching_params.assert_called_once_with(
+        expected_params,
+        collection_name=RESOURCES_COLLECTION_NAME,
+    )
+
+
+def test_remove_qdrant_records_filters_content_files_by_platform(mocker):
+    """Content file deletes should include the platform in their identity filter."""
+    mocker.patch(
+        "vector_search.utils.serialize_bulk_content_files",
+        return_value=[
+            {
+                "platform": {"code": "mitxonline"},
+                "run_readable_id": "shared-run-id",
+                "resource_readable_id": "shared-readable-id",
+                "key": "documents/syllabus.pdf",
+            }
+        ],
+    )
+    mock_remove_points_matching_params = mocker.patch(
+        "vector_search.utils.remove_points_matching_params"
+    )
+
+    remove_qdrant_records([1], CONTENT_FILE_TYPE)
+
+    mock_remove_points_matching_params.assert_called_once_with(
+        {
+            "platform": "mitxonline",
+            "run_readable_id": "shared-run-id",
+            "resource_readable_id": "shared-readable-id",
+            "key": "documents/syllabus.pdf",
+        },
+        collection_name=CONTENT_FILES_COLLECTION_NAME,
+    )
 
 
 def test_force_create_qdrant_collections(mocker):
@@ -979,6 +1040,45 @@ def test_should_generate_for_changed_content_file(mocker):
     assert result is True
 
 
+@pytest.mark.parametrize(
+    ("stored_payload", "expected"),
+    [
+        ({"checksum": "previous-checksum"}, True),
+        ({"checksum": "current-checksum"}, False),
+        ({}, False),
+        (None, False),
+    ],
+)
+def test_content_file_stored_checksum_changed(mocker, stored_payload, expected):
+    """Only an existing, different stored checksum counts as changed for summaries."""
+    serialized_document = {
+        "resource_readable_id": "resource-1",
+        "run_readable_id": "run-1",
+        "key": "transcript.txt",
+        "checksum": "current-checksum",
+    }
+    mock_qdrant = mocker.MagicMock()
+    if stored_payload is None:
+        mock_qdrant.retrieve.return_value = []
+    else:
+        mock_point = mocker.MagicMock()
+        mock_point.payload = stored_payload
+        mock_qdrant.retrieve.return_value = [mock_point]
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+
+    assert (
+        vs_utils._content_file_stored_checksum_changed(  # noqa: SLF001
+            serialized_document
+        )
+        is expected
+    )
+    mock_qdrant.retrieve.assert_called_once()
+    assert (
+        mock_qdrant.retrieve.call_args.kwargs["collection_name"]
+        == CONTENT_FILES_COLLECTION_NAME
+    )
+
+
 def test_should_not_generate_for_unchanged_content_file(mocker):
     """Should not generate embeddings when content file hasn't changed"""
 
@@ -1056,7 +1156,7 @@ def test_update_payload_no_points(mocker):
 @pytest.mark.django_db
 def test_embed_learning_resources_summarizes_only_contentfiles_with_summary(mocker):
     """
-    Test that summarize_content_files_by_ids is only called with contentfiles that have an existing summary
+    Test that embedding overwrites don't overwrite existing summaries.
     """
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
     mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
@@ -1066,12 +1166,18 @@ def test_embed_learning_resources_summarizes_only_contentfiles_with_summary(mock
     )
     mocker.patch("vector_search.utils.remove_qdrant_records")
 
+    learning_resource = LearningResourceFactory.create(
+        resource_type="video", create_video=False, create_runs=False
+    )
     # Create ContentFiles, some with summary, some without
     contentfiles_with_summary = ContentFileFactory.create_batch(
-        2, content="abc", summary="summary text"
+        2,
+        content="abc",
+        learning_resource=learning_resource,
+        summary="summary text",
     )
     contentfiles_without_summary = ContentFileFactory.create_batch(
-        3, content="def", summary=""
+        3, content="def", learning_resource=learning_resource, summary=""
     )
     all_contentfiles = contentfiles_with_summary + contentfiles_without_summary
 
@@ -1081,6 +1187,7 @@ def test_embed_learning_resources_summarizes_only_contentfiles_with_summary(mock
         d = {
             "id": cf.id,
             "resource_readable_id": getattr(cf, "resource_readable_id", "resid"),
+            "run_id": cf.id,
             "run_readable_id": getattr(cf, "run_readable_id", "runid"),
             "key": getattr(cf, "key", "key"),
             "summary": cf.summary,
@@ -1090,6 +1197,9 @@ def test_embed_learning_resources_summarizes_only_contentfiles_with_summary(mock
         serialized.append(d)
     mocker.patch(
         "vector_search.utils.serialize_bulk_content_files", return_value=serialized
+    )
+    mocker.patch(
+        "vector_search.utils._content_file_stored_checksum_changed", return_value=False
     )
 
     summarize_mock = mocker.patch(
@@ -1101,7 +1211,120 @@ def test_embed_learning_resources_summarizes_only_contentfiles_with_summary(mock
 
     # Only contentfiles with summary should be passed
     expected_ids = [cf.id for cf in contentfiles_with_summary]
-    summarize_mock.assert_called_once_with(expected_ids, True)  # noqa: FBT003
+    summarize_mock.assert_called_once_with(expected_ids, overwrite=False)
+
+
+@pytest.mark.django_db
+def test_embed_learning_resources_overwrites_summaries_for_changed_content(mocker):
+    """Embedding overwrites regenerate summaries only when content changed."""
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+    mocker.patch("vector_search.utils.create_qdrant_collections")
+    mocker.patch("vector_search.utils.remove_qdrant_records")
+
+    learning_resource = LearningResourceFactory.create(
+        resource_type="video", create_video=False, create_runs=False
+    )
+    unchanged_content_file = ContentFileFactory.create(
+        content="unchanged content",
+        learning_resource=learning_resource,
+        summary="summary text",
+    )
+    changed_content_file = ContentFileFactory.create(
+        content="changed content",
+        learning_resource=learning_resource,
+        summary="old summary text",
+    )
+    all_contentfiles = [unchanged_content_file, changed_content_file]
+
+    serialized = [
+        {
+            "id": cf.id,
+            "resource_readable_id": "resid",
+            "run_id": cf.id,
+            "run_readable_id": "runid",
+            "key": cf.key,
+            "summary": cf.summary,
+            "content": cf.content,
+            "checksum": cf.checksum,
+        }
+        for cf in all_contentfiles
+    ]
+
+    mocker.patch(
+        "vector_search.utils.serialize_bulk_content_files", return_value=serialized
+    )
+    mocker.patch(
+        "vector_search.utils._content_file_stored_checksum_changed",
+        side_effect=lambda resource: resource["id"] == changed_content_file.id,
+    )
+
+    summarize_mock = mocker.patch(
+        "learning_resources.content_summarizer.ContentSummarizer.summarize_content_files_by_ids"
+    )
+
+    def summarize_before_upsert(content_file_ids, *, overwrite):
+        mock_qdrant.batch_update_points.assert_not_called()
+        return [
+            f"Summarization succeeded for CONTENT_FILE_ID: {content_file_id}"
+            for content_file_id in content_file_ids
+        ]
+
+    summarize_mock.side_effect = summarize_before_upsert
+    embed_learning_resources(
+        [cf.id for cf in all_contentfiles], "content_file", overwrite=True
+    )
+
+    assert summarize_mock.mock_calls == [
+        mocker.call([unchanged_content_file.id], overwrite=False),
+        mocker.call([changed_content_file.id], overwrite=True),
+    ]
+
+
+@pytest.mark.django_db
+def test_embed_learning_resources_keeps_old_checksum_when_summary_fails(mocker):
+    """A failed changed-content summary should be retried on the next embedding run."""
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+    mocker.patch("vector_search.utils.create_qdrant_collections")
+
+    learning_resource = LearningResourceFactory.create(
+        resource_type="video", create_video=False, create_runs=False
+    )
+    content_file = ContentFileFactory.create(
+        content="changed content",
+        learning_resource=learning_resource,
+        summary="old summary text",
+    )
+    serialized = [
+        {
+            "id": content_file.id,
+            "resource_readable_id": "resid",
+            "run_id": content_file.id,
+            "run_readable_id": "runid",
+            "key": content_file.key,
+            "summary": content_file.summary,
+            "content": content_file.content,
+            "checksum": content_file.checksum,
+        }
+    ]
+    mocker.patch(
+        "vector_search.utils.serialize_bulk_content_files", return_value=serialized
+    )
+    mocker.patch(
+        "vector_search.utils._content_file_stored_checksum_changed", return_value=True
+    )
+    summarize_mock = mocker.patch(
+        "learning_resources.content_summarizer.ContentSummarizer.summarize_content_files_by_ids",
+        return_value=[
+            f"Summary generation failed for CONTENT_FILE_ID: {content_file.id}"
+        ],
+    )
+
+    embed_learning_resources([content_file.id], "content_file", overwrite=True)
+
+    summarize_mock.assert_called_once_with([content_file.id], overwrite=True)
+    mock_qdrant.batch_update_points.assert_not_called()
 
 
 def test_vector_search_group_by(mocker, client, django_user_model):

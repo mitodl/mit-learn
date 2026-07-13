@@ -365,7 +365,7 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
             "resource_tags",
             Prefetch(
                 "runs",
-                queryset=LearningResourceRun.objects.filter(published=True)
+                queryset=LearningResourceRun.objects.public()
                 .order_by("start_date", "enrollment_start", "id")
                 .for_serialization(),
                 to_attr="_published_runs",
@@ -572,7 +572,8 @@ class LearningResource(TimestampedModel):
     def next_run(self) -> Optional["LearningResourceRun"]:
         """Returns the next run for the learning resource"""
         return (
-            self.runs.filter(Q(published=True) & Q(start_date__gt=timezone.now()))
+            self.runs.public()
+            .filter(start_date__gt=timezone.now())
             .order_by("start_date")
             .first()
         )
@@ -581,9 +582,13 @@ class LearningResource(TimestampedModel):
     def best_run(self) -> Optional["LearningResourceRun"]:
         """Returns the most current/upcoming enrollable run for the learning resource"""
         if hasattr(self, "_published_runs"):
-            published_runs = self._published_runs
+            published_runs = [
+                run
+                for run in self._published_runs
+                if run.published and not run.is_variant
+            ]
         else:
-            published_runs = list(self.runs.filter(published=True))
+            published_runs = list(self.runs.public())
 
         if not published_runs:
             return None
@@ -636,9 +641,13 @@ class LearningResource(TimestampedModel):
     def published_runs(self) -> list["LearningResourceRun"]:
         """Return a list of published runs for the resource"""
         if hasattr(self, "_published_runs"):
-            return self._published_runs
+            return [
+                run
+                for run in self._published_runs
+                if run.published and not run.is_variant
+            ]
         return list(
-            self.runs.filter(published=True)
+            self.runs.public()
             .order_by("start_date", "enrollment_start", "id")
             .for_serialization()
         )
@@ -764,6 +773,10 @@ class LearningResourceDetailModel(TimestampedModel):
 class LearningResourceRunQuerySet(TimestampedModelQuerySet):
     """QuerySet for LearningResourceRun"""
 
+    def public(self):
+        """Return published runs that should be visible to learners."""
+        return self.filter(published=True, is_variant=False)
+
     def for_serialization(self):
         """QuerySet for serialization"""
         return self.select_related("image").prefetch_related(
@@ -787,6 +800,8 @@ class LearningResourceRun(TimestampedModel):
     full_description = models.TextField(null=True, blank=True)  # noqa: DJ001
     last_modified = models.DateTimeField(null=True, blank=True)
     published = models.BooleanField(default=True, db_index=True)
+    is_b2b = models.BooleanField(default=False, db_index=True)
+    is_variant = models.BooleanField(default=False, db_index=True)
     languages = ArrayField(models.CharField(max_length=24), null=True, blank=True)
     url = models.URLField(null=True, max_length=2048)  # noqa: DJ001
     image = models.ForeignKey(

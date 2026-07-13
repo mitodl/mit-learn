@@ -45,6 +45,14 @@ const useBulkAssignSeats = () => {
           vars.parent_lookup_organization,
         ),
       })
+      // Assigning seats moves them from unassigned to assigned, which changes
+      // the header stat counts on the contract admin page.
+      queryClient.invalidateQueries({
+        queryKey: managerOrganizationKeys.contractDetail({
+          id: vars.id,
+          parent_lookup_organization: vars.parent_lookup_organization,
+        }),
+      })
     },
   })
 }
@@ -80,6 +88,14 @@ const useRevokeCode = () => {
           vars.id,
           vars.parent_lookup_organization,
         ),
+      })
+      // Revoking returns the seat to the unassigned pool, which changes the
+      // header stat counts on the contract admin page.
+      queryClient.invalidateQueries({
+        queryKey: managerOrganizationKeys.contractDetail({
+          id: vars.id,
+          parent_lookup_organization: vars.parent_lookup_organization,
+        }),
       })
     },
   })

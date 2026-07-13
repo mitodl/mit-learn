@@ -56,6 +56,9 @@ MITX_ONLINE_COURSE_BUCKET_PREFIX = get_string(
 MITX_ONLINE_BASE_URL = get_string("MITX_ONLINE_BASE_URL", None)
 MITX_ONLINE_PROGRAMS_API_URL = get_string("MITX_ONLINE_PROGRAMS_API_URL", None)
 MITX_ONLINE_COURSES_API_URL = get_string("MITX_ONLINE_COURSES_API_URL", None)
+# API key for the MITx Online internal-only secured endpoint. When set, it is
+# sent as an "Authorization: Api-Key <key>" header on MITx Online ETL requests.
+MITX_ONLINE_ETL_API_KEY = get_string("MITX_ONLINE_ETL_API_KEY", None)
 
 
 # Open Learning Library settings
