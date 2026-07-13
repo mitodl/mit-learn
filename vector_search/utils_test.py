@@ -1027,32 +1027,44 @@ def test_should_generate_for_changed_resource(mocker):
     assert result is True
 
 
-def test_learning_material_embedding_context_includes_content_file():
-    """Learning material resource embeddings should include direct content text."""
+@pytest.mark.parametrize(
+    "resource_type_group",
+    [LEARNING_MATERIAL_RESOURCE_TYPE_GROUP, "course", "program"],
+)
+def test_embedding_context_includes_content_files(resource_type_group):
+    """
+    Content file text should be folded into the embedding context for any
+    resource type, mirroring the OpenSearch query.
+    """
     serialized_resource = {
         "title": "A title",
         "description": "A short description",
         "full_description": "A full description",
-        "resource_type_group": LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
-        "content_files": [{"content": "The direct content file text"}],
+        "resource_type_group": resource_type_group,
+        "content_files": [
+            {"content": "The first content file text"},
+            {"content": None},
+            {"content": "The second content file text"},
+        ],
     }
 
     context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
         serialized_resource
     )
     assert context == (
-        "A title A short description A full description\n\n# Content\nThe direct content file text"
+        "A title A short description A full description\n\n# Content\n"
+        "The first content file text\n\nThe second content file text"
     )
 
 
-def test_course_embedding_context_ignores_content_file():
-    """Only learning material resource embeddings should include direct content text."""
+def test_embedding_context_without_content_files():
+    """Resources without content files should just use title/description text."""
     serialized_resource = {
         "title": "A title",
         "description": "A short description",
         "full_description": "A full description",
         "resource_type_group": "course",
-        "content_files": [{"content": "The direct content file text"}],
+        "content_files": [],
     }
 
     context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
@@ -1060,6 +1072,26 @@ def test_course_embedding_context_ignores_content_file():
     )
 
     assert context == "A title A short description A full description"
+
+
+def test_embedding_context_truncates_content(settings):
+    """Content folded into the embedding context should be truncated."""
+    settings.LEARNING_RESOURCE_EMBEDDING_CONTENT_MAX_CHARS = 10
+    serialized_resource = {
+        "title": "A title",
+        "description": "A short description",
+        "full_description": "A full description",
+        "resource_type_group": LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
+        "content_files": [{"content": "0123456789ABCDEF"}],
+    }
+
+    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
+        serialized_resource
+    )
+
+    assert context == (
+        "A title A short description A full description\n\n# Content\n0123456789"
+    )
 
 
 def test_should_generate_for_changed_content_file(mocker):

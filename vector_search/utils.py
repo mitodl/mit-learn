@@ -14,7 +14,6 @@ from langchain_text_splitters import (
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
 from learning_resources.constants import (
-    LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
     PROGRAM_COURSE_CACHE_KEY_TEST_MODE,
 )
 from learning_resources.content_summarizer import ContentSummarizer
@@ -466,17 +465,27 @@ def _chunk_markdown_documents(text, metadata):
 def _learning_resource_embedding_context(document):
     """
     Get the embedding context for a learning resource
+
+    Content from any attached content files is folded in, mirroring the
+    OpenSearch text query which matches against the content of all of a
+    resource's content files regardless of resource type. The combined content
+    is truncated to LEARNING_RESOURCE_EMBEDDING_CONTENT_MAX_CHARS so we don't
+    exceed embedding model limits.
     """
     context = (
         f"{document.get('title')} "
         f"{document.get('description')} {document.get('full_description')}"
     )
-    if document.get("resource_type_group") == LEARNING_MATERIAL_RESOURCE_TYPE_GROUP:
-        content_files = document.get("content_files", [])
-        if content_files:
-            content = content_files[0].get("content")
-            if content:
-                context = f"{context}\n\n# Content\n{content}"
+    content = "\n\n".join(
+        content_file["content"]
+        for content_file in document.get("content_files") or []
+        if content_file.get("content")
+    )
+    if content:
+        max_chars = settings.LEARNING_RESOURCE_EMBEDDING_CONTENT_MAX_CHARS
+        if max_chars and len(content) > max_chars:
+            content = content[:max_chars]
+        context = f"{context}\n\n# Content\n{content}"
     return context
 
 
