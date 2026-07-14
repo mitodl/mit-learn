@@ -45,9 +45,20 @@ type RequiredPublicEnvVar = Extract<
   `NEXT_PUBLIC_${string}`
 >
 
-// Populate window.__ENV from the x-public-env <meta> on first read. Error/
-// not-found pages are a client-rendered shell where PublicEnvScript never runs,
-// so window.__ENV is otherwise unset there. Shared by env() and fullEnv().
+// Populate window.__ENV on first read. Three tiers:
+//   1. window.__ENV — set by PublicEnvScript's inline <script> on normal pages.
+//   2. The x-public-env <meta> — on error/not-found pages PublicEnvScript's
+//      output is discarded, but the root layout metadata still reaches the
+//      document. It streams near the END of the body, so it is only visible
+//      once the parser has reached it.
+//   3. Synchronous fetch of /public-env.json — module evaluation (e.g.
+//      instrumentation-client.ts, module-scope env() captures) can run while
+//      the error-shell document is still streaming, before tier 2's <meta> has
+//      been parsed. A blocking XHR is the only way to resolve values
+//      synchronously at that point; it fires at most once, and never on normal
+//      pages (tier 1 short-circuits) or after parsing completes.
+// Shared by env() and fullEnv().
+let publicEnvFetchAttempted = false
 const bootstrapClientEnv = (): void => {
   if (window.__ENV) return
   const content = document
@@ -58,6 +69,20 @@ const bootstrapClientEnv = (): void => {
       window.__ENV = JSON.parse(content)
     } catch {
       /* malformed; leave unset and fall through to process.env */
+    }
+    return
+  }
+  if (document.readyState === "loading" && !publicEnvFetchAttempted) {
+    publicEnvFetchAttempted = true
+    try {
+      const xhr = new XMLHttpRequest()
+      xhr.open("GET", "/public-env.json", false)
+      xhr.send()
+      if (xhr.status === 200) {
+        window.__ENV = JSON.parse(xhr.responseText)
+      }
+    } catch {
+      /* leave unset; the <meta> (tier 2) can still succeed on a later read */
     }
   }
 }

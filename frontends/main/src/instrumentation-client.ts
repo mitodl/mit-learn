@@ -10,31 +10,42 @@ import * as Sentry from "@sentry/nextjs"
 import { bootstrapApiClients } from "./bootstrap/api"
 import { parseSampleRate } from "./sentry-utils"
 
-Sentry.init({
-  dsn: env("NEXT_PUBLIC_SENTRY_DSN"),
-  release: env("NEXT_PUBLIC_VERSION"),
-  environment: env("NEXT_PUBLIC_SENTRY_ENV"),
-  profilesSampleRate: parseSampleRate(
-    env("NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE"),
-    0,
-  ),
-  tracesSampleRate: parseSampleRate(
-    env("NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE"),
-    1,
-  ),
-  tracePropagationTargets: [
-    env("NEXT_PUBLIC_MITOL_API_BASE_URL"),
-    env("NEXT_PUBLIC_MITX_ONLINE_BASE_URL"),
-  ].filter((url) => url !== undefined),
-  integrations: [
-    Sentry.browserTracingIntegration(),
-    Sentry.browserProfilingIntegration(),
-  ],
-})
+// This module evaluates before React hydration, potentially while the document
+// is still streaming (env() then falls back to a synchronous /public-env.json
+// fetch — see src/env.ts). A throw here aborts the entire client runtime and
+// leaves the page blank, so nothing below may escape uncaught.
+try {
+  Sentry.init({
+    dsn: env("NEXT_PUBLIC_SENTRY_DSN"),
+    release: env("NEXT_PUBLIC_VERSION"),
+    environment: env("NEXT_PUBLIC_SENTRY_ENV"),
+    profilesSampleRate: parseSampleRate(
+      env("NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE"),
+      0,
+    ),
+    tracesSampleRate: parseSampleRate(
+      env("NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE"),
+      1,
+    ),
+    tracePropagationTargets: [
+      env("NEXT_PUBLIC_MITOL_API_BASE_URL"),
+      env("NEXT_PUBLIC_MITX_ONLINE_BASE_URL"),
+    ].filter((url) => url !== undefined),
+    integrations: [
+      Sentry.browserTracingIntegration(),
+      Sentry.browserProfilingIntegration(),
+    ],
+  })
 
-// Configure API clients before React hydration so child render paths can safely
-// fire React Query hooks on first paint. Runs after Sentry.init so that a
-// missing-env failure here is captured by Sentry rather than crashing silently.
-bootstrapApiClients()
+  // Configure API clients before React hydration so child render paths can
+  // safely fire React Query hooks on first paint. Runs after Sentry.init so
+  // that a missing-env failure here is captured by Sentry rather than crashing
+  // silently. If it does fail, getQueryClient() retries at first render
+  // (bootstrapApiClients is first-wins and re-callable).
+  bootstrapApiClients()
+} catch (error) {
+  console.error("Client bootstrap failed:", error)
+  Sentry.captureException(error)
+}
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart

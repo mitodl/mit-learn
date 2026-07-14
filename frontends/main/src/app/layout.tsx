@@ -18,6 +18,9 @@ const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
  *     above it, as long as this tag is delivered in the same HTML chunk as the async
  *     scripts above it. (In practice, this is true for metadata + HTML content
  *     down to the first suspense boundary.)
+ *  4. On error-shell responses this meta streams near the END of the body, so
+ *     scripts that evaluate mid-stream cannot see it yet; env() then falls back
+ *     to a synchronous fetch of /public-env.json (see src/env.ts).
  */
 export const metadata: Metadata = {
   metadataBase: NEXT_PUBLIC_ORIGIN ? new URL(NEXT_PUBLIC_ORIGIN) : null,
