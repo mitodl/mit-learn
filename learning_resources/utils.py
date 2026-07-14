@@ -78,13 +78,20 @@ LOGGED_TRANSCRIPT_EXTENSIONS = (".srt", ".vtt")
 def is_valid_edx_module_id(edx_module_id):
     """
     Return whether this id could reference indexable contentfiles.
+
+    Edge whitespace is ignored (stored ids never have any); internal
+    whitespace is preserved - Canvas run-ids contain spaces.
     """
-    return bool(VALID_EDX_MODULE_ID_REGEX.fullmatch(edx_module_id or ""))
+    return bool(VALID_EDX_MODULE_ID_REGEX.fullmatch((edx_module_id or "").strip()))
 
 
 def filter_valid_edx_module_ids(edx_module_ids):
-    """Return only ids that could reference content-bearing courseware."""
-    return [eid for eid in edx_module_ids if is_valid_edx_module_id(eid)]
+    """
+    Return only ids that could reference content-bearing courseware,
+    trimmed of edge whitespace so downstream exact-match lookups hit.
+    """
+    stripped = ((eid or "").strip() for eid in edx_module_ids)
+    return [eid for eid in stripped if is_valid_edx_module_id(eid)]
 
 
 def is_loggable_missing_content_id(edx_module_id):

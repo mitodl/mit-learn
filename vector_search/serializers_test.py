@@ -106,13 +106,14 @@ def test_content_file_vector_search_serializer_strips_invalid_edx_module_ids():
         data={
             "q": "test",
             "edx_module_id": [
-                valid_id,
+                f"{valid_id} ",
                 "block-v1:X+type@discussion+block@y",
                 "block_xpro",
             ],
         }
     )
     assert serializer.is_valid()
+    # Valid id survives with its edge whitespace trimmed
     assert serializer.validated_data["edx_module_id"] == [valid_id]
 
     all_invalid = ContentFileVectorSearchRequestSerializer(

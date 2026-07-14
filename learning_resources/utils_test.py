@@ -1151,8 +1151,11 @@ def test_log_missing_content_file_logs_error(mocker):
         ("prefix block-v1:MITx+6.00x+2T2020+type@video+block@abc", False),
         # Widening vs. the old \S+ regex: whitespace inside a valid id no
         # longer disqualifies it (Canvas run-ids contain spaces).
-        ("block-v1:MITx+6.00x+2T2020+type@problem+block@abc ", True),
         ("block-v1:MITx+6.00x +2T2020+type@problem+block@abc", True),
+        # Edge whitespace is trimmed before validation (transport junk,
+        # never part of a stored id).
+        ("block-v1:MITx+6.00x+2T2020+type@problem+block@abc ", True),
+        (" block-v1:MITx+6.00x+2T2020+type@problem+block@abc", True),
         # Third deliberate widening: asset-v1 ids no longer require a literal
         # type@asset segment - any valid asset-v1 id ending in .srt/.vtt logs.
         ("asset-v1:MITx+6.00x+2T2020+type@vertical+block@foo.srt", True),
@@ -1224,7 +1227,7 @@ def test_is_valid_edx_module_id(edx_module_id, valid):
 
 
 def test_filter_valid_edx_module_ids():
-    """Only the valid ids survive, order preserved."""
+    """Only the valid ids survive, edge-trimmed, order preserved."""
     valid_problem = "block-v1:MITx+6.00x+2T2020+type@problem+block@abc"
     valid_vertical = "block-v1:MITx+6.00x+2T2020+type@vertical+block@abc"
     assert filter_valid_edx_module_ids(
@@ -1232,7 +1235,7 @@ def test_filter_valid_edx_module_ids():
             valid_problem,
             "block-v1:X+type@discussion+block@y",
             "block_xpro",
-            valid_vertical,
+            f"{valid_vertical} ",
         ]
     ) == [valid_problem, valid_vertical]
 
