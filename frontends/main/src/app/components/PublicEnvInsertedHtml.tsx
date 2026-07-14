@@ -1,7 +1,7 @@
 "use client"
 
 /**
- * Emits an <meta name="x-public-env"> tag carrying all NEXT_PUBLIC_* values
+ * Emits a <meta name="x-public-env"> tag carrying all NEXT_PUBLIC_* values
  * (as JSON) into the server-inserted HTML stream, for env() (src/env.ts) to
  * read in the browser.
  *

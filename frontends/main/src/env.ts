@@ -8,7 +8,7 @@ import type { InferType } from "yup"
  * Our Docker image is built in CI without per-environment values, so compiled
  * bundles cannot read them from process.env even though the Kubernetes pod has
  * them set. Instead, the server delivers all NEXT_PUBLIC_* values as JSON in
- * an <meta name="x-public-env"> tag; in the browser env() reads that tag
+ * a <meta name="x-public-env"> tag; in the browser env() reads that tag
  * (cached on window.__ENV), on the server it reads process.env (dynamic
  * bracket access, not inlined).
  *
