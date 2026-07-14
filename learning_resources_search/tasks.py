@@ -1032,7 +1032,7 @@ def attempt_send_digest_email_batch(user_template_items):
                 shortform=True,
             )
             send_template_email(
-                [user.email],
+                user,
                 subject,
                 "email/subscribed_channel_digest.html",
                 context={
@@ -1042,4 +1042,5 @@ def attempt_send_digest_email_batch(user_template_items):
                     "resource_group": group,
                     "short_subject": short_subject,
                 },
+                is_transactional=False,
             )

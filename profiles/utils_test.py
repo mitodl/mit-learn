@@ -22,6 +22,7 @@ from profiles.utils import (
     profile_image_upload_uri,
     profile_image_upload_uri_medium,
     profile_image_upload_uri_small,
+    send_template_email,
     update_full_name,
 )
 
@@ -228,3 +229,61 @@ def test_fetch_program_letter_template_data_has_results(mocker, user, settings):
     cert = ProgramCertificateFactory(user_email=user.email, micromasters_program_id=1)
     program_letter = ProgramLetterFactory(user=user, certificate=cert)
     assert fetch_program_letter_template_data(program_letter) == expected_item
+
+
+# ---------------------------------------------------------------------------
+# send_template_email tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("email_optin", [True, None])
+def test_send_template_email_not_transactional_opted_in_sends(mocker, email_optin):
+    """When is_transactional=False and email_optin is True or None, the email sends."""
+    mock_send_email = mocker.patch("profiles.utils.send_email")
+    user = UserFactory.create(profile__email_optin=email_optin)
+
+    send_template_email(
+        user,
+        "Test",
+        "email/welcome_email.html",
+        context={"display_name": "Test"},
+        is_transactional=False,
+    )
+
+    mock_send_email.assert_called_once()
+
+
+@pytest.mark.django_db
+def test_send_template_email_not_transactional_opted_out_skips(mocker):
+    """When is_transactional=False and email_optin is False, the email is not sent."""
+    mock_send_email = mocker.patch("profiles.utils.send_email")
+    user = UserFactory.create(profile__email_optin=False)
+
+    result = send_template_email(
+        user,
+        "Test",
+        "email/welcome_email.html",
+        context={"display_name": "Test"},
+        is_transactional=False,
+    )
+
+    assert result is None
+    mock_send_email.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_send_template_email_transactional_opted_out_still_sends(mocker):
+    """Transactional emails bypass email_optin even when the user opted out."""
+    mock_send_email = mocker.patch("profiles.utils.send_email")
+    user = UserFactory.create(profile__email_optin=False)
+
+    send_template_email(
+        user,
+        "Test",
+        "email/welcome_email.html",
+        context={"display_name": "Test"},
+        is_transactional=True,
+    )
+
+    mock_send_email.assert_called_once()

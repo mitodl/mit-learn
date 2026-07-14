@@ -1,6 +1,7 @@
 """Utils for profiles"""
 
 import hashlib
+import logging
 import re
 import uuid
 from contextlib import contextmanager
@@ -18,6 +19,8 @@ from django.template.loader import render_to_string
 from PIL import Image
 
 from main.utils import generate_filepath
+
+log = logging.getLogger(__name__)
 
 # Max dimension of either height or width for small and medium images
 IMAGE_SMALL_MAX_DIMENSION = 64
@@ -390,32 +393,38 @@ def fetch_program_letter_template_data(letter):
     return None
 
 
-def send_template_email(recipients, subject, template, context):
+def send_template_email(user, subject, template, context, *, is_transactional: bool):
     """
     Send an html email using a provided template
     Args:
-        recipients(str[]): Emails to send to
+        user: User instance to send to
         subject(str): Subject line
         template(str): Path to an html template
         context(dict): context vars used in rendering the template
+        is_transactional(bool): If true the email bypasses the user's
+            email_optin setting and always sends.
     """
+    if not is_transactional and user.profile.email_optin is False:
+        log.debug("Not sending email to user %s: opted out of email", user.id)
+        return None
+
     if not context:
         context = {}
     context["APP_BASE_URL"] = settings.APP_BASE_URL
     context["ABSOLUTE_STATIC_URL"] = urljoin(settings.APP_BASE_URL, settings.STATIC_URL)
     html_content = render_to_string(template, context)
-    return send_email(recipients, subject, html_content, text_only=False)
+    return send_email(user, subject, html_content, text_only=False)
 
 
-def send_email(recipients, subject, content, text_only):
+def send_email(user, subject, content, text_only):
     """
     Send an email
     Args:
-        recipients(str[]): Emails to send to
+        user: User instance to send to
         subject(str): Subject line
         content(str): The html or plain text content of the email.
         text_only(bool): If True html from the 'content' arg
-        will be stripped and sent as plaint text
+        will be stripped and sent as plain text
     """
 
     if text_only:
@@ -429,7 +438,7 @@ def send_email(recipients, subject, content, text_only):
         msg = AnymailMessage(
             subject=subject,
             body=text_content,
-            to=recipients,
+            to=[user.email],
             from_email=settings.MAILGUN_FROM_EMAIL,
             connection=connection,
         )
