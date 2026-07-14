@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef } from "react"
+import React, { useRef, useMemo } from "react"
 import {
   Breadcrumbs,
   Typography,
@@ -24,6 +24,7 @@ import moment from "moment"
 import { formatDate } from "ol-utilities"
 import { HOME, podcastPageView, podcastEpisodePageView } from "@/common/urls"
 import DOMPurify from "isomorphic-dompurify"
+import { externalLinkProps } from "@/common/utils"
 import { EpisodeItem } from "./PodcastsListingPage/EpisodeItem"
 import PodcastContainer from "./PodcastContainer"
 import Link from "next/link"
@@ -34,6 +35,26 @@ import PodcastShareButton from "./PodcastShareButton"
 import { env } from "@/env"
 
 const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
+
+// Runs after DOMPurify scrubs attributes. Promotes external links to open in a
+// new tab, matching the app-wide externalLinkProps convention; internal/relative
+// links are left alone. Scoped via add/removeHook below because addHook is global
+// (safe today: no other afterSanitizeAttributes hooks exist in the app).
+const openExternalLinksInNewTab = (node: Element) => {
+  if (node.tagName === "A" && node.hasAttribute("href")) {
+    const { target, rel } = externalLinkProps(node.getAttribute("href") ?? "")
+    if (target) node.setAttribute("target", target)
+    if (rel) node.setAttribute("rel", rel)
+  }
+}
+
+export const sanitizeDescription = (html: string): string => {
+  DOMPurify.addHook("afterSanitizeAttributes", openExternalLinksInNewTab)
+  const clean = DOMPurify.sanitize(html)
+  DOMPurify.removeHook("afterSanitizeAttributes")
+  return clean
+}
+
 /* ── Layout ── */
 
 const EpisodeContainer = styled(Container)(({ theme }) => ({
@@ -134,6 +155,14 @@ const Description = styled(Typography)(({ theme }) => ({
   fontSize: "18px",
   fontStyle: "normal",
   lineHeight: "32px",
+  a: {
+    textDecoration: "underline",
+    color: theme.custom.colors.darkGray2,
+    fontWeight: theme.typography.fontWeightMedium,
+  },
+  "a:hover": {
+    textDecoration: "none",
+  },
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.body1,
     lineHeight: "24px",
@@ -278,6 +307,12 @@ export const PodcastEpisodeDetailPage: React.FC<
       ? `${NEXT_PUBLIC_ORIGIN}${podcastEpisodePageView(String(episode!.id), podcastId, episode?.title)}`
       : ""
 
+  const cleanDescription = useMemo(
+    () =>
+      episode?.description ? sanitizeDescription(episode.description) : "",
+    [episode?.description],
+  )
+
   return (
     <>
       <PageSection>
@@ -335,7 +370,7 @@ export const PodcastEpisodeDetailPage: React.FC<
               <Description
                 variant="body1"
                 dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(episode.description),
+                  __html: cleanDescription,
                 }}
               />
             )}

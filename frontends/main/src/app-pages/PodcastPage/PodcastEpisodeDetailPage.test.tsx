@@ -3,7 +3,10 @@ import { factories, setMockResponse, urls } from "api/test-utils"
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource, PodcastEpisodeResource } from "api/v1"
 import { renderWithProviders, screen, user } from "@/test-utils"
-import { PodcastEpisodeDetailPage } from "./PodcastEpisodeDetailPage"
+import {
+  PodcastEpisodeDetailPage,
+  sanitizeDescription,
+} from "./PodcastEpisodeDetailPage"
 
 jest.mock("./PodcastPlayer", () =>
   jest.requireActual("./PodcastPlayer.test-utils").mockPodcastPlayer(),
@@ -272,5 +275,17 @@ describe("PodcastEpisodeDetailPage", () => {
     expect(screen.getByTestId("player-track-title")).toHaveTextContent(
       moreEpisode.title!,
     )
+  })
+})
+describe("sanitizeDescription", () => {
+  test("opens external links in a new tab", () => {
+    const html = sanitizeDescription('<a href="https://ocw.mit.edu">OCW</a>')
+    expect(html).toContain('target="_blank"')
+    expect(html).toContain('rel="noopener noreferrer"')
+  })
+
+  test("leaves internal links in the same tab", () => {
+    const html = sanitizeDescription('<a href="/search">Search</a>')
+    expect(html).not.toContain("target=")
   })
 })
