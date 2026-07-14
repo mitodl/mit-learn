@@ -1156,6 +1156,7 @@ def test_log_missing_content_file_logs_error(mocker):
         # never part of a stored id).
         ("block-v1:MITx+6.00x+2T2020+type@problem+block@abc ", True),
         (" block-v1:MITx+6.00x+2T2020+type@problem+block@abc", True),
+        (" asset-v1:MITx+6.00x+2T2020+type@asset+block@transcript.srt ", True),
         # Third deliberate widening: asset-v1 ids no longer require a literal
         # type@asset segment - any valid asset-v1 id ending in .srt/.vtt logs.
         ("asset-v1:MITx+6.00x+2T2020+type@vertical+block@foo.srt", True),

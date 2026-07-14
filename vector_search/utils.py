@@ -1071,8 +1071,12 @@ async def check_missing_content_file_ids(edx_module_ids, collection_name):
     the DB but absent from the Qdrant index (not_in_index). Probes existence
     directly, independent of q/other request filters.
     """
+    # Trim edge whitespace so the exact-match DB/Qdrant probes below can't
+    # produce false misses for ids that differ only by transport junk.
     edx_module_ids = [
-        eid for eid in edx_module_ids if is_loggable_missing_content_id(eid)
+        eid
+        for eid in ((eid or "").strip() for eid in edx_module_ids)
+        if is_loggable_missing_content_id(eid)
     ]
     if not edx_module_ids:
         return

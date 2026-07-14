@@ -2449,6 +2449,24 @@ def test_check_missing_content_file_ids_not_in_db(mocker):
 
 
 @pytest.mark.django_db
+def test_check_missing_content_file_ids_trims_edge_whitespace(mocker):
+    """Edge whitespace is trimmed before probing, and the trimmed id is logged."""
+    absent_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@absent"
+    mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
+    mock_client = mocker.AsyncMock()
+    mock_client.count = mocker.AsyncMock(return_value=CountResult(count=5))
+    mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
+
+    async_to_sync(check_missing_content_file_ids)(
+        [f" {absent_id} "], CONTENT_FILES_COLLECTION_NAME
+    )
+
+    mock_log.assert_called_once_with(
+        absent_id, reason="not_in_db", source="vector_content_files_search"
+    )
+
+
+@pytest.mark.django_db
 def test_check_missing_content_file_ids_not_in_index(mocker):
     """An edx_module_id present in the DB but with zero Qdrant points -> not_in_index."""
     present_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@present"

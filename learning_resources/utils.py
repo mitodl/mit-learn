@@ -96,6 +96,7 @@ def filter_valid_edx_module_ids(edx_module_ids):
 
 def is_loggable_missing_content_id(edx_module_id):
     """Missing-contentfile logs are limited to block types bots depend on."""
+    edx_module_id = (edx_module_id or "").strip()
     if not is_valid_edx_module_id(edx_module_id):
         return False
     id_lower = edx_module_id.lower()
