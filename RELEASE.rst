@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.74.1
+Version 0.74.1 (Released July 14, 2026)
 --------------
 
 - fix: link styling in CMS rich text and News/Article content (#3591)
