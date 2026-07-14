@@ -9,11 +9,12 @@ import type { InferType } from "yup"
  * values, every NEXT_PUBLIC_* reference in the compiled bundle becomes an
  * empty string, even though the Kubernetes pod has the correct values set.
  *
- * Solution: `PublicEnvScript` (a Server Component in app/layout.tsx) renders
- * a synchronous inline <script> that sets `window.__ENV = { NEXT_PUBLIC_*:
- * <runtime value> }` before any JS bundle loads. This function reads from
- * that object in the browser and from process.env (dynamic bracket access,
- * not inlined by DefinePlugin) on the server.
+ * Solution: the server delivers all NEXT_PUBLIC_* values as JSON in an
+ * <meta name="x-public-env"> tag (PublicEnvInsertedHtml, injected via
+ * useServerInsertedHTML so it reaches the <head> of error-shell responses
+ * too). In the browser this function reads that tag (cached on window.__ENV);
+ * on the server it reads process.env (dynamic bracket access, not inlined by
+ * DefinePlugin).
  *
  * Test compatibility: jsdom sets `window` but not `window.__ENV`. The
  * `?? process.env[key]` fallback lets existing tests that mutate
@@ -45,18 +46,21 @@ type RequiredPublicEnvVar = Extract<
   `NEXT_PUBLIC_${string}`
 >
 
-// Populate window.__ENV on first read. Three tiers:
-//   1. window.__ENV — set by PublicEnvScript's inline <script> on normal pages.
-//   2. The x-public-env <meta> — on error/not-found pages PublicEnvScript's
-//      output is discarded, but the root layout metadata still reaches the
-//      document. It streams near the END of the body, so it is only visible
-//      once the parser has reached it.
+// Populate window.__ENV on first read. Tiers:
+//   1. window.__ENV — cache of a previous successful read.
+//   2. The x-public-env <meta>. Two copies exist: PublicEnvInsertedHtml's
+//      (early in <head> on normal AND error-shell responses — the copy that
+//      matters) and the root layout metadata's (streams near the END of the
+//      body on error shells; the surviving copy when the root layout itself
+//      errors and Providers never renders). Either is only visible once the
+//      parser has reached it.
 //   3. Synchronous fetch of /public-env.json — module evaluation (e.g.
 //      instrumentation-client.ts, module-scope env() captures) can run while
-//      the error-shell document is still streaming, before tier 2's <meta> has
-//      been parsed. A blocking XHR is the only way to resolve values
-//      synchronously at that point; it fires at most once, and never on normal
-//      pages (tier 1 short-circuits) or after parsing completes.
+//      the document is still streaming, before any <meta> has been parsed. A
+//      blocking XHR is the only way to resolve values synchronously at that
+//      point; it fires at most once, and only when the document is still
+//      parsing with no <meta> available — in practice only when the head copy
+//      is missing entirely (global-error).
 // Shared by env() and fullEnv().
 let publicEnvFetchAttempted = false
 const bootstrapClientEnv = (): void => {
@@ -139,7 +143,7 @@ export const requiredEnv = (key: RequiredPublicEnvVar): string => {
 
 /**
  * Server-side { NEXT_PUBLIC_*: value } map from process.env. Shared by
- * PublicEnvScript and the x-public-env <meta> so the two can't drift.
+ * the x-public-env <meta> emitters and /public-env.json so they can't drift.
  */
 export const publicEnvObject = (): Record<string, string | undefined> =>
   Object.fromEntries(

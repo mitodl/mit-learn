@@ -7,8 +7,8 @@ test("env() reads from window.__ENV", () => {
 })
 
 test("env() falls back to the x-public-env <meta> when window.__ENV is unset", () => {
-  // Error/not-found pages are client-rendered shells where PublicEnvScript never
-  // runs; env() must read the value from the <meta> the root layout emits.
+  // The x-public-env <meta> is the primary delivery mechanism for runtime env
+  // vars; env() reads it on first access and caches it on window.__ENV.
   const meta = document.createElement("meta")
   meta.setAttribute("name", "x-public-env")
   meta.setAttribute(
