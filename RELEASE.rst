@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.74.1
+--------------
+
+- fix: link styling in CMS rich text and News/Article content (#3591)
+- Cache course blocklist in Redis to avoid GitHub rate limits (#3594)
+- fix: let keyboard users skip resource carousels via a reusable skip link (#3577)
+- Program Infobox Updates (#3589)
+
 Version 0.74.0 (Released July 13, 2026)
 --------------
 
