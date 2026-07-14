@@ -39,7 +39,7 @@ ALLOWED_HTML_TAGS = {
     "u",
     "ul",
 }
-ALLOWED_HTML_ATTRIBUTES = {} 
+ALLOWED_HTML_ATTRIBUTES = {}
 # Podcast RSS "show notes" often contain resource links we want to keep.
 ALLOWED_HTML_TAGS_WITH_LINKS = ALLOWED_HTML_TAGS | {"a"}
 ALLOWED_HTML_ATTRIBUTES_WITH_LINKS = {"a": {"href", "title"}}
