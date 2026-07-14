@@ -882,7 +882,7 @@ def test_build_search_params_sort_with_cutoff_score(
             assert search_params["query"].order_by.direction == models.Direction.ASC
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_content_file_search_restricts_resource_query_to_best_run(
     mocker, client, django_user_model
 ):
@@ -940,7 +940,7 @@ def test_content_file_search_restricts_resource_query_to_best_run(
     assert not any(getattr(c, "key", None) == "resource_readable_id" for c in must)
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_content_file_search_test_mode_not_restricted(
     mocker, client, django_user_model
 ):
