@@ -1,24 +1,15 @@
 "use client"
 
 /**
- * Injects an <meta name="x-public-env"> tag carrying all NEXT_PUBLIC_* values
- * (as JSON) into the server-inserted HTML stream. env() (src/env.ts) reads it
- * on first access in the browser.
+ * Emits an <meta name="x-public-env"> tag carrying all NEXT_PUBLIC_* values
+ * (as JSON) into the server-inserted HTML stream, for env() (src/env.ts) to
+ * read in the browser.
  *
- * Why server-inserted HTML: when a server error is thrown mid-render, Next.js
- * discards the server-rendered document and responds with its error shell, so
- * anything rendered by the layout arrives only via the RSC payload near the
- * END of the body — too late for scripts that evaluate while the document is
- * still streaming (e.g. instrumentation-client.ts). Server-inserted HTML (the
- * channel used by emotion/MUI style flushing and Next's sentry-trace/baggage
- * metas) is NOT discarded: it is injected into the <head> of the error shell
- * as well as normal documents, arriving with the first bytes of the response.
- *
- * A static <meta> rather than an executable <script>: env() only needs a
- * readable value, and inert markup avoids React's "script tag while rendering"
- * warning when the layout is client-rendered on error pages.
- *
- * The callback only runs during SSR; on the client it is a no-op.
+ * Server-inserted HTML reaches the <head> of error responses too, unlike
+ * rendered markup, which Next discards when a server error is thrown
+ * mid-render. A <meta> rather than a <script>: env() only needs a readable
+ * value, and inert markup avoids React's "script tag while rendering" warning
+ * on client-rendered error pages.
  */
 import React, { useRef } from "react"
 import { useServerInsertedHTML } from "next/navigation"

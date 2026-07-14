@@ -10,10 +10,9 @@ import * as Sentry from "@sentry/nextjs"
 import { bootstrapApiClients } from "./bootstrap/api"
 import { parseSampleRate } from "./sentry-utils"
 
-// This module evaluates before React hydration, potentially while the document
-// is still streaming (env() then falls back to a synchronous /public-env.json
-// fetch — see src/env.ts). A throw here aborts the entire client runtime and
-// leaves the page blank, so nothing below may escape uncaught.
+// This module evaluates before React hydration. A throw here aborts the
+// entire client runtime and leaves the page blank, so nothing below may
+// escape uncaught.
 try {
   Sentry.init({
     dsn: env("NEXT_PUBLIC_SENTRY_DSN"),
@@ -37,10 +36,8 @@ try {
     ],
   })
 
-  // Configure API clients before React hydration so child render paths can
-  // safely fire React Query hooks on first paint. Runs after Sentry.init so
-  // that a missing-env failure here is captured by Sentry rather than crashing
-  // silently. If it does fail, getQueryClient() retries at first render
+  // Runs after Sentry.init so a failure here is captured rather than lost.
+  // If it does fail, getQueryClient() retries at first render
   // (bootstrapApiClients is first-wins and re-callable).
   bootstrapApiClients()
 } catch (error) {

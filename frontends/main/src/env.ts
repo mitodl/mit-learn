@@ -4,17 +4,13 @@ import type { InferType } from "yup"
 /**
  * Runtime environment variable accessor for NEXT_PUBLIC_* vars.
  *
- * Problem: webpack's DefinePlugin inlines `process.env.NEXT_PUBLIC_FOO` at
- * *build* time. When the Docker image is built in CI without per-environment
- * values, every NEXT_PUBLIC_* reference in the compiled bundle becomes an
- * empty string, even though the Kubernetes pod has the correct values set.
- *
- * Solution: the server delivers all NEXT_PUBLIC_* values as JSON in an
- * <meta name="x-public-env"> tag (PublicEnvInsertedHtml, injected via
- * useServerInsertedHTML so it reaches the <head> of error-shell responses
- * too). In the browser this function reads that tag (cached on window.__ENV);
- * on the server it reads process.env (dynamic bracket access, not inlined by
- * DefinePlugin).
+ * Problem: the bundler inlines `process.env.NEXT_PUBLIC_FOO` at *build* time.
+ * Our Docker image is built in CI without per-environment values, so compiled
+ * bundles cannot read them from process.env even though the Kubernetes pod has
+ * them set. Instead, the server delivers all NEXT_PUBLIC_* values as JSON in
+ * an <meta name="x-public-env"> tag; in the browser env() reads that tag
+ * (cached on window.__ENV), on the server it reads process.env (dynamic
+ * bracket access, not inlined).
  *
  * Test compatibility: jsdom sets `window` but not `window.__ENV`. The
  * `?? process.env[key]` fallback lets existing tests that mutate
@@ -46,24 +42,14 @@ type RequiredPublicEnvVar = Extract<
   `NEXT_PUBLIC_${string}`
 >
 
-// Populate window.__ENV on first read. Tiers:
+// Populate window.__ENV on first read, from (in order):
 //   1. window.__ENV — cache of a previous successful read.
-//   2. The x-public-env <meta>. Two copies exist: PublicEnvInsertedHtml's
-//      (early in <head> on normal AND error-shell responses — the copy that
-//      matters) and the root layout metadata's (streams near the END of the
-//      body on error shells; the surviving copy when the root layout itself
-//      errors and Providers never renders). Either is only visible once the
-//      parser has reached it.
-//   3. Synchronous fetch of /public-env.json — the unconditional floor. Two
-//      real gaps it covers: (a) module evaluation (instrumentation-client.ts,
-//      module-scope env() captures) can run while the document is still
-//      streaming, before any <meta> has been parsed; (b) in the deepest
-//      failure mode (root layout AND generateMetadata both throw) the served
-//      document contains no x-public-env <meta> at all, at any point. A
-//      blocking XHR is the only way to resolve values synchronously in either
-//      case; it fires at most once and never when a <meta> was found. Skipped
+//   2. An x-public-env <meta>, if the parser has reached one yet.
+//   3. Synchronous fetch of /public-env.json — last resort, for reads that
+//      happen before any <meta> has been parsed (or on documents that never
+//      carry one). At most once, and never when a <meta> was found. Skipped
 //      under jest (NODE_ENV=test) so jsdom suites fall through to the
-//      process.env test fallback instead of attempting network I/O.
+//      process.env fallback instead of attempting network I/O.
 // Shared by env() and fullEnv().
 let publicEnvFetchAttempted = false
 const bootstrapClientEnv = (): void => {
@@ -89,7 +75,7 @@ const bootstrapClientEnv = (): void => {
         window.__ENV = JSON.parse(xhr.responseText)
       }
     } catch {
-      /* leave unset; the <meta> (tier 2) can still succeed on a later read */
+      /* leave unset; a later read may find the <meta> */
     }
   }
 }
@@ -145,8 +131,7 @@ export const requiredEnv = (key: RequiredPublicEnvVar): string => {
 }
 
 /**
- * Server-side { NEXT_PUBLIC_*: value } map from process.env. Shared by
- * the x-public-env <meta> emitters and /public-env.json so they can't drift.
+ * Server-side { NEXT_PUBLIC_*: value } map from process.env.
  */
 export const publicEnvObject = (): Record<string, string | undefined> =>
   Object.fromEntries(

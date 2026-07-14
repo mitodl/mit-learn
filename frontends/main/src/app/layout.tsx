@@ -8,17 +8,11 @@ import { Metadata } from "next"
 const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 /**
- * Site-wide metadata defaults plus an x-public-env meta tag carrying all
- * NEXT_PUBLIC_* values as JSON, for runtime (not buildtime) env vars. NOTES:
- *  1. The PRIMARY delivery of x-public-env is PublicEnvInsertedHtml (rendered
- *     by Providers via useServerInsertedHTML), which lands early in <head> on
- *     normal AND error-shell responses. See src/env.ts for the full fallback
- *     chain.
- *  2. This metadata copy is the fallback for errors thrown in the root layout
- *     itself (global-error), where Providers never renders but layout metadata
- *     still reaches the document — albeit streamed near the END of the body,
- *     so early-evaluating scripts cover the gap via env()'s synchronous
- *     /public-env.json fetch.
+ * Site-wide metadata defaults plus an x-public-env <meta> carrying all
+ * NEXT_PUBLIC_* values as JSON, for runtime (not buildtime) env vars — see
+ * src/env.ts. This is a secondary copy (PublicEnvInsertedHtml is primary):
+ * a metadata export still reaches the document when the root layout render
+ * itself fails, which no rendered component can guarantee.
  */
 export const metadata: Metadata = {
   metadataBase: NEXT_PUBLIC_ORIGIN ? new URL(NEXT_PUBLIC_ORIGIN) : null,

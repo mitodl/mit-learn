@@ -7,8 +7,6 @@ test("env() reads from window.__ENV", () => {
 })
 
 test("env() falls back to the x-public-env <meta> when window.__ENV is unset", () => {
-  // The x-public-env <meta> is the primary delivery mechanism for runtime env
-  // vars; env() reads it on first access and caches it on window.__ENV.
   const meta = document.createElement("meta")
   meta.setAttribute("name", "x-public-env")
   meta.setAttribute(
@@ -60,11 +58,9 @@ test("fullEnv() returns the full map, bootstrapping from the <meta> like env()",
 
 describe("env() while the document is still streaming (error-shell pages)", () => {
   /*
-   * On SSR-error responses the x-public-env <meta> streams near the END of the
-   * body, but module evaluation (instrumentation-client, module-scope env()
-   * captures) can run before the parser reaches it. env() must then fetch the
-   * values synchronously from /public-env.json rather than returning undefined
-   * or throwing.
+   * Module evaluation can run before the parser reaches any x-public-env
+   * <meta>; env() must then fetch the values synchronously from
+   * /public-env.json rather than returning undefined or throwing.
    */
   const RealXHR = window.XMLHttpRequest
   const REAL_NODE_ENV = process.env.NODE_ENV
@@ -148,9 +144,8 @@ describe("env() while the document is still streaming (error-shell pages)", () =
   })
 
   test("fetches even after parsing completes when no <meta> was ever delivered", async () => {
-    // Deepest failure mode (root layout AND generateMetadata both throw): the
-    // document never contains an x-public-env <meta>, so the fetch is the only
-    // remaining transport regardless of when the first read happens.
+    // When the document never contains an x-public-env <meta>, the fetch is
+    // the only transport regardless of when the first read happens.
     const { send } = mockXhr({
       status: 200,
       responseText: JSON.stringify({ NEXT_PUBLIC_ORIGIN: "https://xhr.test" }),

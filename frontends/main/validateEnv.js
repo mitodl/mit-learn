@@ -29,8 +29,6 @@ const schema = yup.object().shape({
       (value) => {
         if (!value) return true // absence is .required()'s error to report
         try {
-          // Mirrors the consumer: layout.tsx passes this to `new URL()`, which
-          // would otherwise throw during module evaluation on every request.
           const url = new URL(value)
           return url.protocol === "http:" || url.protocol === "https:"
         } catch {
