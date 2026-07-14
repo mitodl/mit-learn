@@ -1132,8 +1132,13 @@ def test_log_missing_content_file_logs_error(mocker):
     ("edx_module_id", "loggable"),
     [
         ("block-v1:MITx+6.00x+2T2020+type@problem+block@abc", True),
+        ("block-v1:MITxT+6.431x+3T2026+type@problemset+block@pset1", True),
         ("block-v1:MITx+6.00x+2T2020+type@video+block@abc", True),
         ("block-v1:MITx+6.00x+2T2020+type@html+block@abc", True),
+        # Exact-segment matching: problem-prefixed folder names other than
+        # the listed types do not alert.
+        ("block-v1:MITx+6.00x+2T2020+type@problem_sets+block@abc", False),
+        ("block-v1:MITx+6.00x+2T2020+type@problemsets+block@abc", False),
         ("asset-v1:MITx+6.00x+2T2020+type@asset+block@transcript.srt", True),
         ("asset-v1:MITx+6.00x+2T2020+type@asset+block@transcript.vtt", True),
         ("asset-v1:MITx+6.00x+2T2020+type@asset+block@TRANSCRIPT.SRT", True),

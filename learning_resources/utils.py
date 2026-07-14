@@ -71,7 +71,7 @@ VALID_EDX_MODULE_ID_REGEX = re.compile(
     re.IGNORECASE,
 )
 
-LOGGED_BLOCK_TYPES = ("problem", "video", "html")
+LOGGED_BLOCK_TYPES = ("problem", "problemset", "video", "html")
 LOGGED_TRANSCRIPT_EXTENSIONS = (".srt", ".vtt")
 
 
