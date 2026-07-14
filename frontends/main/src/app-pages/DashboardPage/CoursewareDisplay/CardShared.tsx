@@ -25,8 +25,8 @@ const CardRoot = styled.div<{
     [theme.breakpoints.down("md")]: {
       border: "none",
       borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
-      borderRadius: "0px",
-      boxShadow: "none",
+      borderRadius: "8px",
+      boxShadow: "0 4px 8px 0 rgba(19, 20, 21, 0.08)",
       flexDirection: "column",
       gap: "16px",
     },

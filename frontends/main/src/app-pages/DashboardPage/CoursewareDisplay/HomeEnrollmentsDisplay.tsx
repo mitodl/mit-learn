@@ -39,8 +39,7 @@ const Wrapper = styled.div(({ theme }) => ({
   boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.08)",
   borderRadius: "8px",
   [theme.breakpoints.down("md")]: {
-    border: `1px solid ${theme.custom.colors.lightGray2}`,
-    backgroundColor: "rgba(243, 244, 248, 0.60);", // TODO: use theme color
+    backgroundColor: theme.custom.colors.lightGray1,
     marginTop: "16px",
     padding: "0",
   },
@@ -59,10 +58,6 @@ const Title = styled(Typography)<Pick<TypographyProps, "component">>(
   ({ theme }) => ({
     ...theme.typography.h5,
     marginBottom: "16px",
-    [theme.breakpoints.down("md")]: {
-      padding: "16px",
-      marginBottom: "0",
-    },
   }),
 )
 
@@ -72,6 +67,9 @@ const EnrollmentsList = styled(PlainList)<Pick<PlainListProps, "itemSpacing">>(
       borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
       ">li+li": {
         marginTop: "0",
+      },
+      ">li+li:not(:last-of-type)": {
+        marginBottom: "16px",
       },
     },
   }),
