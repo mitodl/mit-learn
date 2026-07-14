@@ -301,10 +301,7 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
     edx_module_id = serializers.ListField(
         required=False,
         child=serializers.CharField(),
-        help_text=(
-            "The edX module id of the content file. Ids that cannot "
-            "reference content-bearing courseware are ignored."
-        ),
+        help_text="The edX module id of the content file",
     )
     offered_by = serializers.ListField(
         required=False,
