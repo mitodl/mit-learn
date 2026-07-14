@@ -733,7 +733,8 @@ paths:
           items:
             type: string
             minLength: 1
-        description: The edX module id of the content file
+        description: The edX module id of the content file. Ids that cannot reference
+          content-bearing courseware are ignored.
       - in: query
         name: file_extension
         schema:

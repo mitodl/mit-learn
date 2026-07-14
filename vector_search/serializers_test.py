@@ -96,3 +96,31 @@ def test_content_file_vector_search_result_window_validation():
     data = {"offset": MAX_RESULT_WINDOW - 10, "limit": 10}
     s = ContentFileVectorSearchRequestSerializer(data=data)
     assert s.is_valid(), s.errors
+
+
+def test_content_file_vector_search_serializer_strips_invalid_edx_module_ids():
+    """Invalid edx_module_ids are stripped; valid ones survive; absent stays absent."""
+    valid_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@abc"
+
+    serializer = ContentFileVectorSearchRequestSerializer(
+        data={
+            "q": "test",
+            "edx_module_id": [
+                valid_id,
+                "block-v1:X+type@discussion+block@y",
+                "block_xpro",
+            ],
+        }
+    )
+    assert serializer.is_valid()
+    assert serializer.validated_data["edx_module_id"] == [valid_id]
+
+    all_invalid = ContentFileVectorSearchRequestSerializer(
+        data={"q": "test", "edx_module_id": ["block_xpro"]}
+    )
+    assert all_invalid.is_valid()
+    assert all_invalid.validated_data["edx_module_id"] == []
+
+    not_sent = ContentFileVectorSearchRequestSerializer(data={"q": "test"})
+    assert not_sent.is_valid()
+    assert "edx_module_id" not in not_sent.validated_data

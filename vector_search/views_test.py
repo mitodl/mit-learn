@@ -188,7 +188,7 @@ def test_content_file_vector_search_filters(
         "offered_by": ["ocw"],
         "platform": ["edx"],
         "key": ["testfilename.pdf"],
-        "edx_module_id": ["test_module_id"],
+        "edx_module_id": ["block-v1:MITx+6.00x+2T2020+type@problem+block@abc"],
         "course_number": ["test"],
         "content_feature_type": ["test_feature"],
         "run_readable_id": ["test_run_id"],
@@ -222,7 +222,10 @@ def test_content_file_vector_search_filters(
                     key="platform.code", match=models.MatchAny(any=["edx"])
                 ),
                 models.FieldCondition(
-                    key="edx_module_id", match=models.MatchAny(any=["test_module_id"])
+                    key="edx_module_id",
+                    match=models.MatchAny(
+                        any=["block-v1:MITx+6.00x+2T2020+type@problem+block@abc"]
+                    ),
                 ),
                 models.FieldCondition(
                     key="run_readable_id", match=models.MatchAny(any=["test_run_id"])
@@ -269,7 +272,7 @@ def test_content_file_vector_search_filters_empty_query(
         "offered_by": ["ocw"],
         "platform": ["edx"],
         "key": ["testfilename.pdf"],
-        "edx_module_id": ["test_module_id"],
+        "edx_module_id": ["block-v1:MITx+6.00x+2T2020+type@problem+block@abc"],
         "course_number": ["test"],
         "content_feature_type": ["test_feature"],
         "run_readable_id": ["test_run_id"],
@@ -292,7 +295,10 @@ def test_content_file_vector_search_filters_empty_query(
                 key="platform.code", match=models.MatchAny(any=["edx"])
             ),
             models.FieldCondition(
-                key="edx_module_id", match=models.MatchAny(any=["test_module_id"])
+                key="edx_module_id",
+                match=models.MatchAny(
+                    any=["block-v1:MITx+6.00x+2T2020+type@problem+block@abc"]
+                ),
             ),
             models.FieldCondition(
                 key="run_readable_id", match=models.MatchAny(any=["test_run_id"])
@@ -1109,7 +1115,10 @@ def test_content_file_vector_search_probe_failure_does_not_break_search(
 
     response = client.get(
         reverse("vector_search:v0:vector_content_files_search"),
-        data={"q": "test", "edx_module_id": ["block_absent"]},
+        data={
+            "q": "test",
+            "edx_module_id": ["block-v1:MITx+6.00x+2T2020+type@problem+block@absent"],
+        },
     )
 
     assert response.status_code == 200
@@ -1125,7 +1134,7 @@ def test_content_file_vector_search_skips_probe_when_results_present(
     mock_point.payload = {
         "run_readable_id": "run-present",
         "key": "present.pdf",
-        "edx_module_id": "block_present",
+        "edx_module_id": "block-v1:MITx+6.00x+2T2020+type@problem+block@present",
     }
     non_empty_result = mocker.MagicMock()
     non_empty_result.points = [mock_point]
@@ -1139,8 +1148,64 @@ def test_content_file_vector_search_skips_probe_when_results_present(
 
     response = client.get(
         reverse("vector_search:v0:vector_content_files_search"),
-        data={"q": "test", "edx_module_id": ["block_present"]},
+        data={
+            "q": "test",
+            "edx_module_id": ["block-v1:MITx+6.00x+2T2020+type@problem+block@present"],
+        },
     )
 
     assert response.status_code == 200
     mock_probe.assert_not_awaited()
+
+
+@pytest.mark.django_db
+def test_content_file_vector_search_all_invalid_ids_returns_empty(
+    mocker, client, mock_qdrant, content_file_viewer
+):
+    """If every requested edx_module_id is invalid, return empty results
+    without querying Qdrant or probing for missing content.
+    """
+    mock_probe = mocker.patch(
+        "vector_search.views.check_missing_content_file_ids",
+        new=mocker.AsyncMock(),
+    )
+
+    response = client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={
+            "q": "test",
+            "edx_module_id": [
+                "block-v1:X+type@discussion+block@y",
+                "block_xpro",
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["results"] == []
+    assert data["count"] == 0
+    mock_qdrant.query_points.assert_not_called()
+    mock_probe.assert_not_awaited()
+
+
+@pytest.mark.django_db
+def test_content_file_vector_search_partial_invalid_ids_searches_survivors(
+    mocker, client, mock_qdrant, content_file_viewer
+):
+    """Invalid ids are dropped from the Qdrant filter; valid ones searched."""
+    valid_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@abc"
+
+    response = client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={
+            "q": "test",
+            "edx_module_id": [valid_id, "block-v1:X+type@discussion+block@y"],
+        },
+    )
+
+    assert response.status_code == 200
+    must = mock_qdrant.query_points.mock_calls[0].kwargs["query_filter"].must
+    id_conditions = [c for c in must if getattr(c, "key", None) == "edx_module_id"]
+    assert len(id_conditions) == 1
+    assert list(id_conditions[0].match.any) == [valid_id]

@@ -43,7 +43,9 @@ from learning_resources.utils import (
     add_parent_topics_to_learning_resource,
     build_program_children_content,
     build_program_children_content_bulk,
+    filter_valid_edx_module_ids,
     is_loggable_missing_content_id,
+    is_valid_edx_module_id,
     log_missing_content_file,
     strip_markdown_images,
     transfer_list_resources,
@@ -1136,13 +1138,19 @@ def test_log_missing_content_file_logs_error(mocker):
         ("asset-v1:MITx+6.00x+2T2020+type@asset+block@transcript.vtt", True),
         ("asset-v1:MITx+6.00x+2T2020+type@asset+block@TRANSCRIPT.SRT", True),
         ("asset-v1:MITx+6.00x+2T2020+type@asset+block@image.png", False),
+        ("block-v1:MITx+6.00x+2T2020+type@vertical+block@abc", False),
         ("block-v1:MITx+6.00x+2T2020+type@discussion+block@abc", False),
         ("block-v1:MITx+6.00x+2T2020+type@folder+block@abc", False),
         ("does-not-exist", False),
         ("junk+type@problem+block@abc", False),
         ("prefix block-v1:MITx+6.00x+2T2020+type@video+block@abc", False),
-        ("block-v1:MITx+6.00x+2T2020+type@problem+block@abc ", False),
-        ("block-v1:MITx+6.00x +2T2020+type@problem+block@abc", False),
+        # Widening vs. the old \S+ regex: whitespace inside a valid id no
+        # longer disqualifies it (Canvas run-ids contain spaces).
+        ("block-v1:MITx+6.00x+2T2020+type@problem+block@abc ", True),
+        ("block-v1:MITx+6.00x +2T2020+type@problem+block@abc", True),
+        # Third deliberate widening: asset-v1 ids no longer require a literal
+        # type@asset segment - any valid asset-v1 id ending in .srt/.vtt logs.
+        ("asset-v1:MITx+6.00x+2T2020+type@vertical+block@foo.srt", True),
         ("", False),
         (None, False),
     ],
@@ -1150,6 +1158,84 @@ def test_log_missing_content_file_logs_error(mocker):
 def test_is_loggable_missing_content_id(edx_module_id, loggable):
     """Only important block types (problem/video/html/.srt/.vtt) are loggable."""
     assert is_loggable_missing_content_id(edx_module_id) is loggable
+
+
+@pytest.mark.parametrize(
+    ("edx_module_id", "valid"),
+    [
+        # Standard shapes produced by the ETL
+        ("block-v1:MITx+6.00x+2T2020+type@problem+block@abc", True),
+        ("block-v1:MITx+6.00x+2T2020+type@vertical+block@abc", True),
+        ("block-v1:MITx+6.00x+2T2020+type@tabs+block@abc", True),
+        ("asset-v1:MITx+6.00x+2T2020+type@asset+block@handout.pdf", True),
+        # Real prod shapes: Canvas run-ids with spaces, empty type
+        # segment, '+' inside the type name, tab in an asset filename.
+        ("block-v1:34819-FA25 18.01L+canvas+type@g085f027c+block@2-dot-11", True),
+        ("block-v1:33414-21H.363+canvas+type@+block@gfaf809b", True),
+        (
+            "block-v1:28770-15.060_FA24+canvas"
+            "+type@Discrete+Nonlinear_Optimization+block@x",
+            True,
+        ),
+        ("asset-v1:MITxT+16.00x+0T2026+type@asset+block@lec_\t.srt", True),
+        # Prefix collisions with blocklist entries are NOT blocked
+        ("block-v1:X+type@discussion_forum+block@y", True),
+        ("block-v1:X+type@polling+block@y", True),
+        # Content-bearing types resembling blocklist entries stay allowed
+        ("block-v1:X+type@word_cloud+block@y", True),
+        ("block-v1:X+type@library_content+block@y", True),
+        # Never-content block types are rejected (case-insensitive)
+        (
+            "block-v1:MITxT+18.03.2x+1T2025+type@discussion"
+            "+block@discussion_recitation13-tab3",
+            False,
+        ),
+        ("block-v1:X+type@DISCUSSION+block@y", False),
+        ("block-v1:X+type@openassessment+block@y", False),
+        ("block-v1:X+type@poll+block@y", False),
+        ("block-v1:X+type@survey+block@y", False),
+        ("block-v1:X+type@drag-and-drop-v2+block@y", False),
+        ("block-v1:X+type@lti_consumer+block@y", False),
+        ("block-v1:X+type@done+block@y", False),
+        ("block-v1:X+type@completion+block@y", False),
+        ("block-v1:X+type@edx_sga+block@y", False),
+        ("block-v1:X+type@recap+block@y", False),
+        ("block-v1:X+type@ubcpi+block@y", False),
+        ("block-v1:X+type@qualtricssurvey+block@y", False),
+        # Garbage: wrong/missing prefix or missing markers
+        ("block_xpro", False),
+        ("does-not-exist", False),
+        ("junk+type@problem+block@abc", False),
+        ("prefix block-v1:X+type@problem+block@abc", False),
+        ("block-v1:X+type@problem", False),
+        ("block-v1:", False),
+        ("", False),
+        (None, False),
+    ],
+)
+def test_is_valid_edx_module_id(edx_module_id, valid):
+    """Valid ids are well-formed opaque keys of types that can have content."""
+    assert is_valid_edx_module_id(edx_module_id) is valid
+
+
+def test_filter_valid_edx_module_ids():
+    """Only the valid ids survive, order preserved."""
+    valid_problem = "block-v1:MITx+6.00x+2T2020+type@problem+block@abc"
+    valid_vertical = "block-v1:MITx+6.00x+2T2020+type@vertical+block@abc"
+    assert filter_valid_edx_module_ids(
+        [
+            valid_problem,
+            "block-v1:X+type@discussion+block@y",
+            "block_xpro",
+            valid_vertical,
+        ]
+    ) == [valid_problem, valid_vertical]
+
+
+def test_loggable_is_subset_of_valid():
+    """An invalid id is never loggable, whatever its type segment claims."""
+    assert not is_loggable_missing_content_id("junk+type@problem+block@abc")
+    assert not is_loggable_missing_content_id("block-v1:X+type@discussion+block@y")
 
 
 def test_log_missing_content_file_skips_unimportant_block_type(mocker):

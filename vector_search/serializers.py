@@ -13,6 +13,7 @@ from learning_resources.constants import (
     PlatformType,
 )
 from learning_resources.serializers import LearningResourceSerializer
+from learning_resources.utils import filter_valid_edx_module_ids
 from learning_resources_search.serializers import (
     ArrayWrappedBoolean,
     ContentFileSerializer,
@@ -300,7 +301,10 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
     edx_module_id = serializers.ListField(
         required=False,
         child=serializers.CharField(),
-        help_text="The edX module id of the content file",
+        help_text=(
+            "The edX module id of the content file. Ids that cannot "
+            "reference content-bearing courseware are ignored."
+        ),
     )
     offered_by = serializers.ListField(
         required=False,
@@ -361,6 +365,10 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
         default=False,
         help_text="Whether to use a hybrid search",
     )
+
+    def validate_edx_module_id(self, value):
+        """Drop ids that cannot reference content-bearing courseware."""
+        return filter_valid_edx_module_ids(value)
 
     def validate(self, attrs):
         return _validate_result_window(attrs)

@@ -48,16 +48,53 @@ log = logging.getLogger()
 BLOCKLIST_CACHE_TIMEOUT = 60 * 60 * 24
 
 
-LOGGED_MISSING_CONTENT_REGEX = re.compile(
-    r"(?:block-v1:\S+\+type@(?:problem|video|html)\+block@\S+)"
-    r"|(?:asset-v1:\S+\+type@asset\+block@\S+\.(?:srt|vtt))",
+# edX block types that never have content
+NO_CONTENT_BLOCK_TYPES = (
+    "discussion",
+    "openassessment",
+    "poll",
+    "survey",
+    "drag-and-drop-v2",
+    "lti_consumer",
+    "done",
+    "completion",
+    "edx_sga",
+    "recap",
+    "ubcpi",
+    "qualtricssurvey",
+)
+
+VALID_EDX_MODULE_ID_REGEX = re.compile(
+    r"(?:block-v1|asset-v1):.+\+type@"
+    rf"(?!(?:{'|'.join(map(re.escape, NO_CONTENT_BLOCK_TYPES))})\+block@)"
+    r".*\+block@.+",
     re.IGNORECASE,
 )
 
+LOGGED_BLOCK_TYPES = ("problem", "video", "html")
+LOGGED_TRANSCRIPT_EXTENSIONS = (".srt", ".vtt")
+
+
+def is_valid_edx_module_id(edx_module_id):
+    """
+    Return whether this id could reference indexable contentfiles.
+    """
+    return bool(VALID_EDX_MODULE_ID_REGEX.fullmatch(edx_module_id or ""))
+
+
+def filter_valid_edx_module_ids(edx_module_ids):
+    """Return only ids that could reference content-bearing courseware."""
+    return [eid for eid in edx_module_ids if is_valid_edx_module_id(eid)]
+
 
 def is_loggable_missing_content_id(edx_module_id):
-    """Return whether this id's block type warrants a missing-contentfile log."""
-    return bool(LOGGED_MISSING_CONTENT_REGEX.fullmatch(edx_module_id or ""))
+    """Missing-contentfile logs are limited to block types bots depend on."""
+    if not is_valid_edx_module_id(edx_module_id):
+        return False
+    id_lower = edx_module_id.lower()
+    if id_lower.startswith("asset-v1:"):
+        return id_lower.endswith(LOGGED_TRANSCRIPT_EXTENSIONS)
+    return any(f"+type@{t}+block@" in id_lower for t in LOGGED_BLOCK_TYPES)
 
 
 def log_missing_content_file(identifier, *, reason, source):
