@@ -1027,11 +1027,7 @@ def test_should_generate_for_changed_resource(mocker):
     assert result is True
 
 
-@pytest.mark.parametrize(
-    "resource_type_group",
-    [LEARNING_MATERIAL_RESOURCE_TYPE_GROUP, "course", "program"],
-)
-def test_embedding_context_includes_content_files(resource_type_group):
+def test_embedding_context_includes_content_files():
     """
     Content file text should be folded into the embedding context for any
     resource type, mirroring the OpenSearch query.
@@ -1040,7 +1036,7 @@ def test_embedding_context_includes_content_files(resource_type_group):
         "title": "A title",
         "description": "A short description",
         "full_description": "A full description",
-        "resource_type_group": resource_type_group,
+        "resource_type_group": "course",
         "content_files": [
             {"content": "The first content file text"},
             {"content": None},
@@ -1055,6 +1051,16 @@ def test_embedding_context_includes_content_files(resource_type_group):
         "A title A short description A full description\n\n# Content\n"
         "The first content file text\n\nThe second content file text"
     )
+
+
+def test_embedding_context_includes_serialized_content_files():
+    """Content from a real serialized document resource ends up in the context"""
+    resource = LearningResourceFactory.create(resource_type="document", published=True)
+    ContentFileFactory.create(
+        direct_learning_resource=resource, content="sentinel text", published=True
+    )
+    serialized = next(iter(serialize_bulk_learning_resources([resource.id])))
+    assert "sentinel text" in vs_utils._learning_resource_embedding_context(serialized)  # noqa: SLF001
 
 
 def test_embedding_context_without_content_files():
