@@ -151,8 +151,8 @@ describe("PodcastsListingPage", () => {
 
     renderWithProviders(<PodcastsListingPage />)
 
-    await screen.findByText("NOW PLAYING")
-    expect(screen.getByText("First Episode")).toBeInTheDocument()
+    await screen.findByText("First Episode")
+    expect(screen.getByText("NOW PLAYING")).toBeInTheDocument()
     expect(screen.getByText("Second Episode")).toBeInTheDocument()
     expect(screen.getByText("Third Episode")).toBeInTheDocument()
     // The now-playing episode should not be duplicated in the latest list.
@@ -165,7 +165,8 @@ describe("PodcastsListingPage", () => {
 
     renderWithProviders(<PodcastsListingPage />)
 
-    await screen.findByText("Latest Episodes")
+    // Wait for loading to settle (the empty state replaces the skeleton).
+    await screen.findByText("No episodes available right now.")
     expect(screen.queryByText("NOW PLAYING")).not.toBeInTheDocument()
   })
 
@@ -200,8 +201,27 @@ describe("PodcastsListingPage", () => {
 
     renderWithProviders(<PodcastsListingPage />)
 
-    expect(await screen.findByText("FEATURED")).toBeInTheDocument()
-    expect(screen.getByText("Featured Podcast")).toBeInTheDocument()
+    expect(await screen.findByText("Featured Podcast")).toBeInTheDocument()
+    expect(screen.getByText("FEATURED")).toBeInTheDocument()
+  })
+
+  it("does not repeat a featured podcast in the 'More Podcasts' list", async () => {
+    process.env[ENV_KEY] = "99"
+    const shared = makePodcast({ id: 42, title: "Shared Podcast" })
+    const other = makePodcast({ id: 7, title: "Another Podcast" })
+    setupApis({
+      // The shared podcast is both featured and among the newest podcasts.
+      podcasts: [shared, other],
+      totalPodcasts: 2,
+      featuredLearningPathId: 99,
+      featuredPodcast: [shared],
+    })
+
+    renderWithProviders(<PodcastsListingPage />)
+
+    // Featured + More list should render the shared podcast exactly once.
+    await screen.findByText("Another Podcast")
+    expect(screen.getAllByText("Shared Podcast")).toHaveLength(1)
   })
 
   it("plays an episode and toggles the button to 'Pause' once playback starts", async () => {
@@ -245,6 +265,42 @@ describe("PodcastsListingPage", () => {
     ).toBeInTheDocument()
   })
 
+  it("renders error states when the episode and podcast requests fail", async () => {
+    delete process.env[ENV_KEY]
+    setMockResponse.get(
+      urls.learningResources.list({
+        resource_type: [ResourceTypeEnum.PodcastEpisode],
+        sortby: LearningResourcesListSortbyEnum.New,
+        limit: EPISODES_PAGE_SIZE + 1,
+      }),
+      "Server error",
+      { code: 500 },
+    )
+    setMockResponse.get(
+      urls.learningResources.list({
+        resource_type: [ResourceTypeEnum.Podcast],
+        sortby: LearningResourcesListSortbyEnum.New,
+        limit: PODCAST_MORE_COUNT,
+      }),
+      "Server error",
+      { code: 500 },
+    )
+
+    renderWithProviders(<PodcastsListingPage />)
+
+    expect(
+      await screen.findByText(
+        "Something went wrong loading episodes. Please try again later.",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "Something went wrong loading podcasts. Please try again later.",
+      ),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("NOW PLAYING")).not.toBeInTheDocument()
+  })
+
   it("renders a meaningful, well-nested heading hierarchy", async () => {
     delete process.env[ENV_KEY]
     const episodes = [
@@ -271,7 +327,7 @@ describe("PodcastsListingPage", () => {
     renderWithProviders(<PodcastsListingPage />)
 
     // Wait for the async sections to render before asserting the hierarchy.
-    await screen.findByText("NOW PLAYING")
+    await screen.findByText("First Episode")
 
     // Section headings only; Typography variants (h4/h5/h6) are excluded.
     assertHeadings(

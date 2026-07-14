@@ -1,5 +1,5 @@
 import React from "react"
-import { Typography, styled } from "ol-components"
+import { Typography, Skeleton, styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import { RiPlayFill, RiPauseFill } from "@remixicon/react"
 import DOMPurify from "isomorphic-dompurify"
@@ -147,14 +147,41 @@ export type NowPlayingSectionProps = {
   isPlaying: boolean
   onPlayClick: (episode: LearningResource) => void
   onPauseClick: () => void
+  isLoading?: boolean
 }
+
+const NowPlayingHeaderRow = () => (
+  <NowPlayingHeader>
+    <NowPlayingTitleWrap>
+      <NowPlayingLabel variant="subtitle2">NOW PLAYING</NowPlayingLabel>
+    </NowPlayingTitleWrap>
+  </NowPlayingHeader>
+)
 
 const NowPlayingSection: React.FC<NowPlayingSectionProps> = ({
   nowPlaying,
   isPlaying,
   onPlayClick,
   onPauseClick,
+  isLoading = false,
 }) => {
+  if (isLoading) {
+    return (
+      <Section style={{ paddingTop: "0" }}>
+        <NowPlayingHeaderRow />
+        <NowPlayingCard>
+          <Skeleton variant="rectangular" width={250} height={250} />
+          <NowPlayingBody>
+            <Skeleton variant="rectangular" width={96} height={33} />
+            <Skeleton variant="text" width="80%" height={40} />
+            <Skeleton variant="text" width="40%" height={24} />
+            <Skeleton variant="text" width="100%" height={66} />
+          </NowPlayingBody>
+        </NowPlayingCard>
+      </Section>
+    )
+  }
+
   if (!nowPlaying || nowPlaying.resource_type !== "podcast_episode") {
     return null
   }
@@ -166,11 +193,7 @@ const NowPlayingSection: React.FC<NowPlayingSectionProps> = ({
 
   return (
     <Section style={{ paddingTop: "0" }}>
-      <NowPlayingHeader>
-        <NowPlayingTitleWrap>
-          <NowPlayingLabel variant="subtitle2">NOW PLAYING</NowPlayingLabel>
-        </NowPlayingTitleWrap>
-      </NowPlayingHeader>
+      <NowPlayingHeaderRow />
       <NowPlayingCard>
         {nowPlaying.image?.url && (
           <NowPlayingImage

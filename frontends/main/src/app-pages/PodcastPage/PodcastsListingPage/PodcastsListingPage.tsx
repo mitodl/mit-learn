@@ -45,13 +45,21 @@ export const PodcastsListingPage: React.FC = () => {
   const episodesLimit = EPISODES_PAGE_SIZE + 1
   const podcastLimit = PODCAST_MORE_COUNT
 
-  const { data: episodesData } = useLearningResourcesList({
+  const {
+    data: episodesData,
+    isLoading: episodesLoading,
+    isError: episodesError,
+  } = useLearningResourcesList({
     resource_type: [ResourceTypeEnum.PodcastEpisode],
     sortby: LearningResourcesListSortbyEnum.New,
     limit: episodesLimit,
   })
 
-  const { data: podcastData } = useLearningResourcesList({
+  const {
+    data: podcastData,
+    isLoading: podcastsLoading,
+    isError: podcastsError,
+  } = useLearningResourcesList({
     resource_type: [ResourceTypeEnum.Podcast],
     sortby: LearningResourcesListSortbyEnum.New,
     limit: podcastLimit,
@@ -63,13 +71,14 @@ export const PodcastsListingPage: React.FC = () => {
   const hasFeaturedLearningPathId =
     Number.isFinite(featuredLearningPathId) && featuredLearningPathId > 0
 
-  const { data: featuredPodcastsData } = useInfiniteLearningPathItems(
-    {
-      learning_resource_id: featuredLearningPathId,
-      limit: PODCAST_FEATURED_COUNT,
-    },
-    { enabled: hasFeaturedLearningPathId },
-  )
+  const { data: featuredPodcastsData, isLoading: featuredLoading } =
+    useInfiniteLearningPathItems(
+      {
+        learning_resource_id: featuredLearningPathId,
+        limit: PODCAST_FEATURED_COUNT,
+      },
+      { enabled: hasFeaturedLearningPathId },
+    )
 
   const episodes = episodesData?.results ?? []
   const totalEpisodes = episodesData?.count ?? 0
@@ -91,7 +100,14 @@ export const PodcastsListingPage: React.FC = () => {
 
   const podcasts = podcastData?.results ?? []
   const totalPodcasts = podcastData?.count ?? 0
-  const morePodcasts = podcasts
+  // A featured podcast can also be among the newest, so exclude the featured
+  // ids from "More Podcasts" to avoid rendering the same series twice.
+  const morePodcasts = useMemo(() => {
+    const featuredIds = new Set(featuredPodcasts.map((podcast) => podcast.id))
+    return (podcastData?.results ?? []).filter(
+      (podcast) => !featuredIds.has(podcast.id),
+    )
+  }, [podcastData, featuredPodcasts])
   const hasMorePodcasts = podcasts.length < totalPodcasts
 
   const handlePlayClick = (episode: LearningResource) => toggle(episode)
@@ -115,6 +131,7 @@ export const PodcastsListingPage: React.FC = () => {
         <HeroSection
           totalPodcasts={totalPodcasts}
           totalEpisodes={totalEpisodes}
+          isLoading={episodesLoading || podcastsLoading}
         />
 
         <SectionDivider />
@@ -125,6 +142,7 @@ export const PodcastsListingPage: React.FC = () => {
             isPlaying={nowPlayingIsPlaying}
             onPlayClick={handlePlayClick}
             onPauseClick={pause}
+            isLoading={episodesLoading}
           />
 
           <LatestEpisodesSection
@@ -136,6 +154,8 @@ export const PodcastsListingPage: React.FC = () => {
             onPauseClick={pause}
             hasMoreEpisodes={hasMoreEpisodes}
             isPlayable={(episode) => Boolean(getEpisodeAudioUrl(episode))}
+            isLoading={episodesLoading}
+            isError={episodesError}
           />
 
           <PodcastSection
@@ -144,6 +164,9 @@ export const PodcastsListingPage: React.FC = () => {
             hasMorePodcasts={hasMorePodcasts}
             totalPodcasts={totalPodcasts}
             isMobile={isMobile}
+            isLoading={podcastsLoading}
+            isError={podcastsError}
+            isFeaturedLoading={featuredLoading}
           />
         </PodcastContainer>
       </PageSection>

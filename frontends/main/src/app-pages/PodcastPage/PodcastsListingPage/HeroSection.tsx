@@ -1,5 +1,5 @@
 import React from "react"
-import { Typography, styled } from "ol-components"
+import { Typography, Skeleton, styled } from "ol-components"
 import PodcastContainer from "../PodcastContainer"
 import { formatApproxCount } from "./helpers"
 
@@ -51,11 +51,13 @@ const HeroStats = styled(Typography)(({ theme }) => ({
 export type HeroSectionProps = {
   totalPodcasts: number
   totalEpisodes: number
+  isLoading?: boolean
 }
 
 const HeroSection: React.FC<HeroSectionProps> = ({
   totalPodcasts,
   totalEpisodes,
+  isLoading = false,
 }) => {
   return (
     <HeroSectionWrap>
@@ -64,9 +66,13 @@ const HeroSection: React.FC<HeroSectionProps> = ({
         <HeroDescription variant="body1">
           New podcast episodes and podcasts.
         </HeroDescription>
-        <HeroStats variant="body3">
-          {`${formatApproxCount(totalPodcasts)} podcasts  •  ${formatApproxCount(totalEpisodes)} episodes  •  Updated daily`}
-        </HeroStats>
+        {isLoading ? (
+          <Skeleton variant="text" width={280} height={22} />
+        ) : (
+          <HeroStats variant="body3">
+            {`${formatApproxCount(totalPodcasts)} podcasts  •  ${formatApproxCount(totalEpisodes)} episodes  •  Updated daily`}
+          </HeroStats>
+        )}
       </PodcastContainer>
     </HeroSectionWrap>
   )

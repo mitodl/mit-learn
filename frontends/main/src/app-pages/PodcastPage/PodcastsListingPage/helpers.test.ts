@@ -194,4 +194,36 @@ describe("getEpisodeParentPodcastName", () => {
     }) as unknown as LearningResource
     expect(getEpisodeParentPodcastName(episode)).toBeNull()
   })
+
+  describe("when an episode belongs to multiple podcasts", () => {
+    const multiParentEpisode = factories.learningResources.podcastEpisode({
+      podcast_episode: {
+        id: 1,
+        podcasts: [1, 2],
+        parent_podcasts: [
+          { id: 1, title: "Podcast A", readable_id: "podcast-a" },
+          { id: 2, title: "Podcast B", readable_id: "podcast-b" },
+        ],
+        duration: "PT1M",
+        audio_url: "https://example.com/audio.mp3",
+        episode_link: "https://example.com/link",
+      },
+    }) as unknown as LearningResource
+
+    it("names the parent matching the given podcastId", () => {
+      expect(getEpisodeParentPodcastName(multiParentEpisode, 2)).toBe(
+        "Podcast B",
+      )
+    })
+
+    it("falls back to the first parent when no podcastId is given", () => {
+      expect(getEpisodeParentPodcastName(multiParentEpisode)).toBe("Podcast A")
+    })
+
+    it("falls back to the first parent when the podcastId does not match", () => {
+      expect(getEpisodeParentPodcastName(multiParentEpisode, 999)).toBe(
+        "Podcast A",
+      )
+    })
+  })
 })
