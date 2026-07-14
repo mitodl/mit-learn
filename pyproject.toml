@@ -125,6 +125,7 @@ dependencies = [
     "gensim>=4.4.0",
     "langchain-community>=0.4.2",
     "langchain-text-splitters>=1.1.2",
+    "mitol-django-keycloak>=2026.7.13,<2027",
 ]
 
 [dependency-groups]
@@ -160,6 +161,9 @@ dev = [
 package = false
 default-groups = "all"
 override-dependencies = ["setuptools<80"]
+
+[tool.uv.sources]
+mitol-django-keycloak = { git = "https://github.com/mitodl/ol-django", branch = "nl/fix-keycloak-email_optin", subdirectory = "src/keycloak" }
 
 [tool.uv.build-backend]
 module-root = ""

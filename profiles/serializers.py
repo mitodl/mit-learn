@@ -2,6 +2,7 @@
 Serializers for profile REST APIs
 """
 
+import logging
 import re
 
 import ulid
@@ -9,6 +10,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.urls import reverse
 from drf_spectacular.utils import extend_schema_field
+from keycloak.exceptions import KeycloakError
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -16,7 +18,7 @@ from authentication import api as auth_api
 from learning_resources.models import LearningResourceTopic
 from learning_resources.permissions import is_admin_user, is_learning_path_editor
 from learning_resources.serializers import LearningResourceTopicSerializer
-from profiles.api import get_site_type_from_url
+from profiles.api import get_site_type_from_url, sync_email_optin_to_keycloak
 from profiles.models import (
     PERSONAL_SITE_TYPE,
     PROFILE_PROPS,
@@ -33,6 +35,8 @@ from profiles.utils import (
     image_uri,
 )
 from website_content.permissions import is_website_content_editor
+
+log = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -151,8 +155,31 @@ class ProfileSerializer(serializers.ModelSerializer):
             if topic_interests is not None:
                 instance.topic_interests.set(topic_interests)
 
+            email_optin_changed = (
+                "email_optin" in validated_data
+                and validated_data["email_optin"] != instance.email_optin
+            )
+
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
+
+            if email_optin_changed:
+                try:
+                    sync_email_optin_to_keycloak(
+                        instance.user, email_optin=instance.email_optin
+                    )
+                except KeycloakError as exc:
+                    log.exception(
+                        "Failed to sync email_optin to Keycloak for user %s",
+                        instance.user.id,
+                    )
+                    raise ValidationError(
+                        {
+                            "email_optin": (
+                                "Unable to update email preferences at this time."
+                            )
+                        }
+                    ) from exc
 
             update_image = "image_file" in validated_data
             instance.save(update_image=update_image)

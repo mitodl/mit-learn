@@ -5,6 +5,7 @@ Tests for serializers for profiles REST APIS
 
 import factory
 import pytest
+from keycloak.exceptions import KeycloakError
 from rest_framework.exceptions import ValidationError
 
 from learning_resources.factories import LearningResourceTopicFactory
@@ -140,6 +141,58 @@ def test_update_user_profile(mocker, user, key, value):
                 assert getattr(profile2, prop) == value
         else:
             assert getattr(profile2, prop) == getattr(profile, prop)
+
+
+def test_update_profile_syncs_email_optin_change(mocker, user):
+    """Test that changing email_optin via ProfileSerializer syncs the new value to Keycloak"""
+    sync_mock = mocker.patch("profiles.serializers.sync_email_optin_to_keycloak")
+    profile = user.profile
+    profile.email_optin = False
+    profile.save(update_fields=["email_optin"])
+
+    serializer = ProfileSerializer(
+        instance=profile, data={"email_optin": True}, partial=True
+    )
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+
+    sync_mock.assert_called_once_with(user, email_optin=True)
+
+
+def test_update_profile_skips_keycloak_sync_when_unchanged(mocker, user):
+    """Test that resubmitting the same email_optin value doesn't call Keycloak"""
+    sync_mock = mocker.patch("profiles.serializers.sync_email_optin_to_keycloak")
+    profile = user.profile
+    profile.email_optin = True
+    profile.save(update_fields=["email_optin"])
+
+    serializer = ProfileSerializer(
+        instance=profile, data={"email_optin": True}, partial=True
+    )
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+
+    sync_mock.assert_not_called()
+
+
+def test_update_profile_email_optin_sync_failure_prevents_save(mocker, user):
+    """Test that a Keycloak sync failure is translated into a ValidationError and rolls back the profile update"""
+    mocker.patch(
+        "profiles.serializers.sync_email_optin_to_keycloak",
+        side_effect=KeycloakError("boom"),
+    )
+    profile = user.profile
+    profile.email_optin = False
+    profile.save(update_fields=["email_optin"])
+
+    serializer = ProfileSerializer(
+        instance=profile, data={"email_optin": True}, partial=True
+    )
+    serializer.is_valid(raise_exception=True)
+    with pytest.raises(ValidationError):
+        serializer.save()
+
+    assert Profile.objects.get(user=user).email_optin is False
 
 
 @pytest.mark.parametrize(

@@ -8,15 +8,20 @@ type SetupApisOptions = {
   isAuthenticated?: boolean
   isSubscribed?: boolean
   subscriptionRequest?: CheckSubscriptionRequest
+  emailOptin?: boolean | null
 }
 const setupApis = ({
   isAuthenticated = false,
   isSubscribed = false,
   subscriptionRequest = {},
+  emailOptin = null,
 }: SetupApisOptions = {}) => {
   setMockResponse.get(urls.userMe.get(), {
     is_authenticated: isAuthenticated,
   })
+
+  setMockResponse.get(urls.profileMe.get(), { email_optin: emailOptin })
+  setMockResponse.patch(urls.profileMe.patch(), {})
 
   const subscribeResponse = isSubscribed
     ? factories.percolateQueries.percolateQueryList({ count: 5 }).results
@@ -99,5 +104,49 @@ describe("SettingsPage", () => {
     renderWithProviders(<SettingsContent />)
     const unfollowButton = screen.queryByText("Unfollow All")
     expect(unfollowButton).not.toBeInTheDocument()
+  })
+})
+
+describe("SettingsPage email preferences", () => {
+  it("renders the email opt-in checkbox checked when email_optin is true", async () => {
+    setupApis({ isAuthenticated: true, emailOptin: true })
+    renderWithProviders(<SettingsContent />)
+    const checkbox = await screen.findByRole("checkbox", {
+      name: /receive emails from mit learn/i,
+    })
+    expect(checkbox).toBeChecked()
+  })
+
+  it("renders the email opt-in checkbox checked when email_optin is null (default)", async () => {
+    setupApis({ isAuthenticated: true, emailOptin: null })
+    renderWithProviders(<SettingsContent />)
+    const checkbox = await screen.findByRole("checkbox", {
+      name: /receive emails from mit learn/i,
+    })
+    expect(checkbox).toBeChecked()
+  })
+
+  it("renders the email opt-in checkbox unchecked when email_optin is false", async () => {
+    setupApis({ isAuthenticated: true, emailOptin: false })
+    renderWithProviders(<SettingsContent />)
+    const checkbox = await screen.findByRole("checkbox", {
+      name: /receive emails from mit learn/i,
+    })
+    expect(checkbox).not.toBeChecked()
+  })
+
+  it("PATCHes the profile when the email opt-in checkbox is toggled", async () => {
+    setupApis({ isAuthenticated: true, emailOptin: true })
+    renderWithProviders(<SettingsContent />)
+    const checkbox = await screen.findByRole("checkbox", {
+      name: /receive emails from mit learn/i,
+    })
+    await user.click(checkbox)
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "patch",
+        url: urls.profileMe.patch(),
+      }),
+    )
   })
 })
