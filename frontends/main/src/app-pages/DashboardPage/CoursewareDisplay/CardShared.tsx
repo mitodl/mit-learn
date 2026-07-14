@@ -16,6 +16,8 @@ const CardRoot = styled.div<{
     border: `1px solid ${theme.custom.colors.lightGray2}`,
     backgroundColor: theme.custom.colors.white,
     padding: "16px",
+    borderRadius: "8px",
+    boxShadow: "0 4px 8px 0 rgba(19, 20, 21, 0.08)",
     display: "flex",
     gap: "8px",
     alignItems: "center",
@@ -24,9 +26,6 @@ const CardRoot = styled.div<{
   layout === "default" && {
     [theme.breakpoints.down("md")]: {
       border: "none",
-      borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
-      borderRadius: "8px",
-      boxShadow: "0 4px 8px 0 rgba(19, 20, 21, 0.08)",
       flexDirection: "column",
       gap: "16px",
     },

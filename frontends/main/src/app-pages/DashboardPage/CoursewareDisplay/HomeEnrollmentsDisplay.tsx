@@ -49,11 +49,6 @@ const AlertBanner = styled(Alert)({
   marginBottom: "16px",
 })
 
-const CoursewareCardStyled = styled(CoursewareCard)({
-  borderRadius: "8px",
-  boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
-})
-
 const Title = styled(Typography)<Pick<TypographyProps, "component">>(
   ({ theme }) => ({
     ...theme.typography.h5,
@@ -176,7 +171,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
         }
       }
       return (
-        <CoursewareCardStyled
+        <CoursewareCard
           key={getResourceKey(resource)}
           Component="li"
           kind="program-enrollment"
@@ -188,7 +183,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
       const allCourseEnrollments =
         enrollmentsByCourseId[enrollment.run.course.id] ?? []
       return (
-        <CoursewareCardStyled
+        <CoursewareCard
           key={getResourceKey(resource)}
           Component="li"
           kind="enrollment"
