@@ -1,5 +1,5 @@
 import React from "react"
-import { factories, urls } from "api/mitxonline-test-utils"
+import { factories } from "api/mitxonline-test-utils"
 import {
   setMockResponse,
   urls as apiUrls,
@@ -8,7 +8,6 @@ import {
 import { renderWithProviders, screen, within, user } from "@/test-utils"
 import { CourseSummary, ProgramSummary, TestIds } from "./ProductSummary"
 import { formatDate } from "ol-utilities"
-import { formatPrice, mitxonlineLegacyUrl } from "@/common/mitxonline"
 import invariant from "tiny-invariant"
 import { faker } from "@faker-js/faker/locale/en"
 
@@ -16,8 +15,6 @@ const shuffle = faker.helpers.shuffle
 const makeRun = factories.courses.courseRun
 const makeCourse = factories.courses.course
 const makeProduct = factories.courses.product
-const makeFlexiblePrice = factories.products.flexiblePrice
-const makeDiscount = factories.products.discount
 const makeEnrollmentMode = factories.courses.enrollmentMode
 const { RequirementTreeBuilder } = factories.requirements
 
@@ -44,7 +41,11 @@ describe("CourseSummary", () => {
       const course = makeCourse({ courseruns: hasRun ? [run] : [] })
       const selectedRun = hasRun ? run : undefined
       renderWithProviders(
-        <CourseSummary course={course} selectedRun={selectedRun} />,
+        <CourseSummary
+          tabletColumns={2}
+          course={course}
+          selectedRun={selectedRun}
+        />,
       )
       const alertMessage = screen.queryByText(
         /No sessions of this course are currently open for enrollment/,
@@ -68,7 +69,9 @@ describe("CourseSummary", () => {
     ({ overrides, expectAlert }) => {
       const run = makeRun(overrides)
       const course = makeCourse({ courseruns: [run] })
-      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+      renderWithProviders(
+        <CourseSummary tabletColumns={2} course={course} selectedRun={run} />,
+      )
       // Scope to the archived alert specifically — a non-archived run can show
       // an unrelated alert (e.g. deadline-passed) depending on factory randomness.
       const archivedAlert = screen.queryByText(
@@ -98,7 +101,9 @@ describe("CourseSummary", () => {
         next_run_id: run.id,
         courseruns: shuffle([run, nonEnrollableRun]),
       })
-      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+      renderWithProviders(
+        <CourseSummary tabletColumns={2} course={course} selectedRun={run} />,
+      )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -124,7 +129,9 @@ describe("CourseSummary", () => {
         courseruns: [run],
         next_run_id: run.id,
       })
-      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+      renderWithProviders(
+        <CourseSummary tabletColumns={2} course={course} selectedRun={run} />,
+      )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -149,7 +156,9 @@ describe("CourseSummary", () => {
         courseruns: shuffle([run, nonEnrollableRun]),
         next_run_id: run.id,
       })
-      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+      renderWithProviders(
+        <CourseSummary tabletColumns={2} course={course} selectedRun={run} />,
+      )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -165,7 +174,9 @@ describe("CourseSummary", () => {
         courseruns: shuffle([run, makeRun()]),
         next_run_id: run.id,
       })
-      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+      renderWithProviders(
+        <CourseSummary tabletColumns={2} course={course} selectedRun={run} />,
+      )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -187,7 +198,9 @@ describe("CourseSummary", () => {
         next_run_id: run.id,
         courseruns: [run, nonEnrollableRun],
       })
-      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+      renderWithProviders(
+        <CourseSummary tabletColumns={2} course={course} selectedRun={run} />,
+      )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -217,7 +230,9 @@ describe("CourseSummary", () => {
         next_run_id: run1.id,
         courseruns: [run1, run2],
       })
-      renderWithProviders(<CourseSummary course={course} selectedRun={run1} />)
+      renderWithProviders(
+        <CourseSummary tabletColumns={2} course={course} selectedRun={run1} />,
+      )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -256,7 +271,9 @@ describe("CourseSummary", () => {
         next_run_id: run1.id,
         courseruns: [run1, run2, run3],
       })
-      renderWithProviders(<CourseSummary course={course} selectedRun={run1} />)
+      renderWithProviders(
+        <CourseSummary tabletColumns={2} course={course} selectedRun={run1} />,
+      )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -330,7 +347,11 @@ describe("CourseSummary", () => {
         courseruns: shuffle([oldestRun, middleRun, newestRun]),
       })
       renderWithProviders(
-        <CourseSummary course={course} selectedRun={middleRun} />,
+        <CourseSummary
+          tabletColumns={2}
+          course={course}
+          selectedRun={middleRun}
+        />,
       )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
@@ -389,7 +410,9 @@ describe("CourseSummary", () => {
         next_run_id: run2.id, // Select the middle run as next
         courseruns: shuffle([run1, run2, run3]),
       })
-      renderWithProviders(<CourseSummary course={course} selectedRun={run2} />)
+      renderWithProviders(
+        <CourseSummary tabletColumns={2} course={course} selectedRun={run2} />,
+      )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -423,7 +446,9 @@ describe("CourseSummary", () => {
         courseruns: shuffle([runA, runB]),
       })
       // User has selected run B — collapsed view must show run B, not run A
-      renderWithProviders(<CourseSummary course={course} selectedRun={runB} />)
+      renderWithProviders(
+        <CourseSummary tabletColumns={2} course={course} selectedRun={runB} />,
+      )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -463,7 +488,11 @@ describe("CourseSummary", () => {
         ]),
       })
       renderWithProviders(
-        <CourseSummary course={course} selectedRun={enrollableRun} />,
+        <CourseSummary
+          tabletColumns={2}
+          course={course}
+          selectedRun={enrollableRun}
+        />,
       )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
@@ -501,7 +530,9 @@ describe("CourseSummary", () => {
         next_run_id: run1.id,
         courseruns: [run1, run2],
       })
-      renderWithProviders(<CourseSummary course={course} selectedRun={run1} />)
+      renderWithProviders(
+        <CourseSummary tabletColumns={2} course={course} selectedRun={run1} />,
+      )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
 
@@ -530,7 +561,11 @@ describe("CourseSummary", () => {
         courseruns: shuffle([runWithDate, runWithoutDate, anotherRunWithDate]),
       })
       renderWithProviders(
-        <CourseSummary course={course} selectedRun={runWithDate} />,
+        <CourseSummary
+          tabletColumns={2}
+          course={course}
+          selectedRun={runWithDate}
+        />,
       )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
@@ -569,7 +604,11 @@ describe("CourseSummary", () => {
         courseruns: [runWithEndDate, runWithoutEndDate],
       })
       renderWithProviders(
-        <CourseSummary course={course} selectedRun={runWithEndDate} />,
+        <CourseSummary
+          tabletColumns={2}
+          course={course}
+          selectedRun={runWithEndDate}
+        />,
       )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
@@ -633,7 +672,11 @@ describe("CourseSummary", () => {
         courseruns: [anytimeRun, instructorPacedRun, futureRun],
       })
       renderWithProviders(
-        <CourseSummary course={course} selectedRun={anytimeRun} />,
+        <CourseSummary
+          tabletColumns={2}
+          course={course}
+          selectedRun={anytimeRun}
+        />,
       )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
@@ -690,7 +733,11 @@ describe("CourseSummary", () => {
         courseruns: [archivedRun, anytimeRun],
       })
       renderWithProviders(
-        <CourseSummary course={course} selectedRun={archivedRun} />,
+        <CourseSummary
+          tabletColumns={2}
+          course={course}
+          selectedRun={archivedRun}
+        />,
       )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
@@ -727,7 +774,11 @@ describe("CourseSummary", () => {
         courseruns: [archivedRun],
       })
       renderWithProviders(
-        <CourseSummary course={course} selectedRun={archivedRun} />,
+        <CourseSummary
+          tabletColumns={2}
+          course={course}
+          selectedRun={archivedRun}
+        />,
       )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
@@ -760,7 +811,9 @@ describe("CourseSummary", () => {
           next_run_id: run.id,
           courseruns: shuffle([run, makeRun()]),
         })
-        renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+        renderWithProviders(
+          <CourseSummary tabletColumns={2} course={course} selectedRun={run} />,
+        )
 
         const formatRow = screen.getByTestId(TestIds.PaceRow)
         expect(formatRow).toHaveTextContent("Format: Self-Paced")
@@ -787,7 +840,9 @@ describe("CourseSummary", () => {
         next_run_id: run.id,
         courseruns: shuffle([run, makeRun()]),
       })
-      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+      renderWithProviders(
+        <CourseSummary tabletColumns={2} course={course} selectedRun={run} />,
+      )
 
       const formatRow = screen.getByTestId(TestIds.PaceRow)
       expect(formatRow).toHaveTextContent("Format: Instructor-Paced")
@@ -825,7 +880,11 @@ describe("CourseSummary", () => {
         })
 
         renderWithProviders(
-          <CourseSummary course={course} selectedRun={undefined} />,
+          <CourseSummary
+            tabletColumns={2}
+            course={course}
+            selectedRun={undefined}
+          />,
         )
 
         if (!length) {
@@ -847,7 +906,11 @@ describe("CourseSummary", () => {
         },
       })
       renderWithProviders(
-        <CourseSummary course={course} selectedRun={undefined} />,
+        <CourseSummary
+          tabletColumns={2}
+          course={course}
+          selectedRun={undefined}
+        />,
       )
 
       const durationRow = screen.getByTestId(TestIds.DurationRow)
@@ -868,7 +931,9 @@ describe("CourseSummary", () => {
         is_upgradable: true,
       })
       const course = makeCourse({ courseruns: [run] })
-      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+      renderWithProviders(
+        <CourseSummary tabletColumns={2} course={course} selectedRun={run} />,
+      )
       expect(screen.getByText(/Payment deadline/)).toBeInTheDocument()
       expect(
         screen.getByText(new RegExp(formatDate(upgradeDeadline))),
@@ -881,14 +946,18 @@ describe("CourseSummary", () => {
         is_archived: true,
       })
       const course = makeCourse({ courseruns: [run] })
-      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+      renderWithProviders(
+        <CourseSummary tabletColumns={2} course={course} selectedRun={run} />,
+      )
       expect(screen.queryByText(/Payment deadline/)).toBeNull()
     })
 
     test("Does not show payment deadline when selected run has no upgrade_deadline", () => {
       const run = makeRun({ upgrade_deadline: null, is_archived: false })
       const course = makeCourse({ courseruns: [run] })
-      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+      renderWithProviders(
+        <CourseSummary tabletColumns={2} course={course} selectedRun={run} />,
+      )
       expect(screen.queryByText(/Payment deadline/)).toBeNull()
     })
 
@@ -904,6 +973,7 @@ describe("CourseSummary", () => {
       const course = makeCourse({ courseruns: [run] })
       renderWithProviders(
         <CourseSummary
+          tabletColumns={2}
           course={course}
           selectedRun={run}
           sessionSelect={
@@ -938,7 +1008,9 @@ describe("CourseSummary", () => {
     test("Shows the 'Certificate deadline has passed.' warning alert", () => {
       const run = makeDeadlinePassedRun()
       const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
-      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+      renderWithProviders(
+        <CourseSummary tabletColumns={2} course={course} selectedRun={run} />,
+      )
 
       const alert = screen.getByRole("alert")
       expect(alert).toHaveTextContent("Certificate deadline has passed.")
@@ -949,7 +1021,9 @@ describe("CourseSummary", () => {
       // the self-paced "Anytime" start.
       const run = makeDeadlinePassedRun({ is_self_paced: false })
       const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
-      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+      renderWithProviders(
+        <CourseSummary tabletColumns={2} course={course} selectedRun={run} />,
+      )
 
       const datesRow = screen.getByTestId(TestIds.DatesRow)
       expect(datesRow).not.toHaveTextContent("Course content available anytime")
@@ -962,7 +1036,9 @@ describe("CourseSummary", () => {
     test("Suppresses the payment deadline line", () => {
       const run = makeDeadlinePassedRun()
       const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
-      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+      renderWithProviders(
+        <CourseSummary tabletColumns={2} course={course} selectedRun={run} />,
+      )
 
       expect(screen.queryByText(/Payment deadline/)).toBeNull()
     })
@@ -973,7 +1049,9 @@ describe("CourseSummary", () => {
       // "none" scenario).
       const run = makeDeadlinePassedRun({ enrollment_modes: [paidMode()] })
       const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
-      renderWithProviders(<CourseSummary course={course} selectedRun={run} />)
+      renderWithProviders(
+        <CourseSummary tabletColumns={2} course={course} selectedRun={run} />,
+      )
 
       expect(screen.getByRole("alert")).toHaveTextContent(
         "Certificate deadline has passed.",
@@ -986,6 +1064,7 @@ describe("CourseSummary", () => {
     const course = makeCourse({ courseruns: [run], next_run_id: run.id })
     renderWithProviders(
       <CourseSummary
+        tabletColumns={2}
         course={course}
         selectedRun={run}
         sessionSelect={
@@ -1009,6 +1088,7 @@ describe("CourseSummary", () => {
     const course = makeCourse({ courseruns: [run], next_run_id: run.id })
     renderWithProviders(
       <CourseSummary
+        tabletColumns={2}
         course={course}
         selectedRun={run}
         sessionSelect={
@@ -1028,13 +1108,58 @@ describe("ProgramSummary", () => {
     )
   })
 
-  test("renders program summary rows", async () => {
-    const program = factories.programs.program({
-      enrollment_modes: bothModes(),
-    })
-    renderWithProviders(<ProgramSummary program={program} />)
+  test("shows the certificate row and no price row", () => {
+    const program = factories.programs.program({ certificate_available: true })
+    renderWithProviders(<ProgramSummary tabletColumns={2} program={program} />)
 
-    screen.getByTestId(TestIds.PriceRow)
+    expect(
+      screen.getByText("Program certificate on completion", {
+        exact: false,
+      }),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId(TestIds.PriceRow)).not.toBeInTheDocument()
+  })
+
+  test("hides the certificate row when no certificate is available", () => {
+    const program = factories.programs.program({ certificate_available: false })
+    renderWithProviders(<ProgramSummary tabletColumns={2} program={program} />)
+
+    expect(screen.queryByTestId(TestIds.CertificateRow)).not.toBeInTheDocument()
+  })
+
+  test("orders metadata rows as requirements, format, duration, certificate", () => {
+    const requirements = new RequirementTreeBuilder()
+    const required = requirements.addOperator({ operator: "all_of" })
+    required.addCourse()
+    const program = factories.programs.program({
+      requirements: {
+        courses: {
+          required:
+            required.children?.map((n) => ({
+              id: n.id,
+              readable_id: `readable-${n.id}`,
+            })) ?? [],
+          electives: [],
+        },
+        programs: { required: [], electives: [] },
+      },
+      req_tree: requirements.serialize(),
+      certificate_available: true,
+    })
+    const course = makeCourse({
+      courseruns: [makeRun()],
+    })
+    renderWithProviders(
+      <ProgramSummary tabletColumns={2} program={program} courses={[course]} />,
+    )
+
+    const rows = screen.getAllByTestId(/-row$/)
+    expect(rows.map((row) => row.getAttribute("data-testid"))).toEqual([
+      TestIds.RequirementsRow,
+      TestIds.PaceRow,
+      TestIds.DurationRow,
+      TestIds.CertificateRow,
+    ])
   })
 
   describe("RequirementsRow", () => {
@@ -1072,7 +1197,9 @@ describe("ProgramSummary", () => {
         req_tree: requirements.serialize(),
       })
 
-      renderWithProviders(<ProgramSummary program={program} />)
+      renderWithProviders(
+        <ProgramSummary tabletColumns={2} program={program} />,
+      )
 
       const reqRow = screen.getByTestId(TestIds.RequirementsRow)
 
@@ -1102,7 +1229,9 @@ describe("ProgramSummary", () => {
         req_tree: requirements.serialize(),
       })
 
-      renderWithProviders(<ProgramSummary program={program} />)
+      renderWithProviders(
+        <ProgramSummary tabletColumns={2} program={program} />,
+      )
 
       const reqRow = screen.getByTestId(TestIds.RequirementsRow)
 
@@ -1126,7 +1255,9 @@ describe("ProgramSummary", () => {
           page: { length, effort },
         })
 
-        renderWithProviders(<ProgramSummary program={program} />)
+        renderWithProviders(
+          <ProgramSummary tabletColumns={2} program={program} />,
+        )
 
         if (!length) {
           expect(screen.queryByTestId(TestIds.DurationRow)).toBeNull()
@@ -1139,7 +1270,9 @@ describe("ProgramSummary", () => {
 
     test("Does not crash and hides duration row when program page is null", () => {
       const program = factories.programs.program({ page: null })
-      renderWithProviders(<ProgramSummary program={program} />)
+      renderWithProviders(
+        <ProgramSummary tabletColumns={2} program={program} />,
+      )
 
       expect(screen.queryByTestId(TestIds.DurationRow)).toBeNull()
     })
@@ -1181,7 +1314,11 @@ describe("ProgramSummary", () => {
     ])("Shows correct pacing information", ({ courses, expected }) => {
       const program = factories.programs.program()
       renderWithProviders(
-        <ProgramSummary program={program} courses={courses} />,
+        <ProgramSummary
+          tabletColumns={2}
+          program={program}
+          courses={courses}
+        />,
       )
       const paceRow = screen.getByTestId(TestIds.PaceRow)
       expect(paceRow).toHaveTextContent(`Course Format: ${expected}`)
@@ -1204,7 +1341,11 @@ describe("ProgramSummary", () => {
     ])("Renders expected dialog", async ({ courses, dialogName }) => {
       const program = factories.programs.program()
       renderWithProviders(
-        <ProgramSummary program={program} courses={courses} />,
+        <ProgramSummary
+          tabletColumns={2}
+          program={program}
+          courses={courses}
+        />,
       )
       const paceRow = screen.getByTestId(TestIds.PaceRow)
       const button = within(paceRow).getByRole("button", { name: dialogName })
@@ -1216,179 +1357,6 @@ describe("ProgramSummary", () => {
       await user.click(within(dialog).getByRole("button", { name: "Close" }))
 
       expect(dialog).not.toBeVisible()
-    })
-  })
-
-  describe("Price & Certificate Row", () => {
-    test("Price row does not render when enrollment_modes is empty", () => {
-      const program = factories.programs.program({ enrollment_modes: [] })
-      renderWithProviders(<ProgramSummary program={program} />)
-
-      expect(screen.queryByTestId(TestIds.PriceRow)).toBeNull()
-    })
-
-    test("Shows only 'Free to Learn' with no cert box when all enrollment modes are free", () => {
-      const program = factories.programs.program({
-        enrollment_modes: [freeMode()],
-      })
-      renderWithProviders(<ProgramSummary program={program} />)
-
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
-      expect(priceRow).toHaveTextContent("Free to Learn")
-      expect(priceRow).not.toHaveTextContent("Earn a certificate")
-    })
-
-    test("Shows paid price with no cert box when all enrollment modes are paid", () => {
-      const product = factories.courses.product()
-      const program = factories.programs.program({
-        enrollment_modes: [paidMode()],
-        products: [product],
-      })
-      renderWithProviders(<ProgramSummary program={program} />)
-
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
-      expect(priceRow).toHaveTextContent(
-        formatPrice(product.price, { avoidCents: true }),
-      )
-      expect(priceRow).toHaveTextContent("full program")
-      expect(priceRow).not.toHaveTextContent("Free to Learn")
-      expect(priceRow).not.toHaveTextContent("Earn a certificate")
-      expect(priceRow).not.toHaveTextContent("Audit for free")
-    })
-
-    test("Shows paid price and 'Start for free' callout when enrollment modes include both free and paid", () => {
-      const program = factories.programs.program({
-        enrollment_modes: bothModes(),
-      })
-      invariant(program.products[0])
-      renderWithProviders(<ProgramSummary program={program} />)
-
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
-      expect(priceRow).toHaveTextContent("Audit for free")
-      expect(priceRow).toHaveTextContent("or upgrade to")
-      expect(priceRow).toHaveTextContent("certificate")
-      expect(priceRow).toHaveTextContent(
-        formatPrice(program.products[0].price, { avoidCents: true }),
-      )
-      expect(priceRow).not.toHaveTextContent("Free to Learn")
-      expect(priceRow).not.toHaveTextContent("Earn a certificate")
-    })
-
-    test.each([
-      { hasFinancialAid: true, expectLink: true },
-      { hasFinancialAid: false, expectLink: false },
-    ])(
-      "Program financial aid link is displayed if and only if URL is non-empty (hasFinancialAid=$hasFinancialAid)",
-      ({ hasFinancialAid, expectLink }) => {
-        const financialAidUrl = hasFinancialAid
-          ? `/financial-aid/${faker.string.alphanumeric(10)}`
-          : ""
-        const program = factories.programs.program({
-          enrollment_modes: bothModes(),
-          page: { financial_assistance_form_url: financialAidUrl },
-        })
-
-        if (hasFinancialAid) {
-          const product = program.products[0]
-          invariant(product)
-          setMockResponse.get(
-            urls.products.userFlexiblePriceDetail(product.id),
-            makeFlexiblePrice({ id: product.id, price: product.price }),
-          )
-        }
-
-        renderWithProviders(<ProgramSummary program={program} />, {
-          user: { is_authenticated: true },
-        })
-
-        const priceRow = screen.getByTestId(TestIds.PriceRow)
-
-        if (expectLink) {
-          const link = within(priceRow).getByRole("link", {
-            name: /financial assistance/i,
-          })
-          const expectedUrl = mitxonlineLegacyUrl(financialAidUrl)
-          expect(link).toHaveAttribute("href", expectedUrl)
-          expect(link).toHaveTextContent("Financial assistance available")
-        } else {
-          const link = within(priceRow).queryByRole("link", {
-            name: /financial assistance/i,
-          })
-          expect(link).toBeNull()
-        }
-      },
-    )
-
-    test("Displays discounted price with strikethrough original when approved financial aid exists", async () => {
-      const originalPrice = "200.00"
-      const discountedAmount = "75.00"
-      const product = makeProduct({ price: originalPrice })
-      const financialAidUrl = `/financial-aid/${faker.string.alphanumeric(10)}`
-      const program = factories.programs.program({
-        enrollment_modes: bothModes(),
-        products: [product],
-        page: { financial_assistance_form_url: financialAidUrl },
-      })
-      const flexiblePrice = makeFlexiblePrice({
-        id: product.id,
-        price: originalPrice,
-        // Only the discount amount + type drive the asserted $125 (= $200 − $75)
-        // and the "applied" label (gated on the discount's id); the factory fills
-        // the rest.
-        product_flexible_price: makeDiscount({
-          amount: discountedAmount,
-          discount_type: "dollars-off",
-        }),
-      })
-
-      setMockResponse.get(
-        urls.products.userFlexiblePriceDetail(product.id),
-        flexiblePrice,
-      )
-
-      renderWithProviders(<ProgramSummary program={program} />, {
-        user: { is_authenticated: true },
-      })
-
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
-
-      // Wait for flexible price API response and label update
-      // Discounted price: $200 - $75 = $125
-      await within(priceRow).findByText("Financial assistance applied")
-      expect(priceRow).toHaveTextContent("$125")
-      expect(priceRow).toHaveTextContent("$200")
-    })
-
-    test("Shows 'Financial assistance available' when financial aid URL exists but no discount is applied", async () => {
-      const product = makeProduct({ price: "300.00" })
-      const financialAidUrl = `/financial-aid/${faker.string.alphanumeric(10)}`
-      const program = factories.programs.program({
-        enrollment_modes: bothModes(),
-        products: [product],
-        page: { financial_assistance_form_url: financialAidUrl },
-      })
-
-      setMockResponse.get(
-        urls.products.userFlexiblePriceDetail(product.id),
-        makeFlexiblePrice({
-          id: product.id,
-          price: product.price,
-          product_flexible_price: null,
-        }),
-      )
-
-      renderWithProviders(<ProgramSummary program={program} />, {
-        user: { is_authenticated: true },
-      })
-
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
-      const link = await within(priceRow).findByRole("link", {
-        name: /financial assistance/i,
-      })
-      expect(link).toHaveTextContent("Financial assistance available")
-      expect(priceRow).toHaveTextContent(
-        formatPrice(product.price, { avoidCents: true }),
-      )
     })
   })
 })

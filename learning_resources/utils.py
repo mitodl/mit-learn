@@ -15,6 +15,7 @@ import yaml
 from botocore.exceptions import ClientError
 from django.conf import settings
 from django.contrib.auth.models import Group
+from django.core.cache import caches
 from django.db import transaction
 from django.db.models import Prefetch, Q
 from retry import retry
@@ -43,6 +44,8 @@ from learning_resources.models import (
 from main.utils import generate_filepath
 
 log = logging.getLogger()
+
+BLOCKLIST_CACHE_TIMEOUT = 60 * 60 * 24
 
 
 def log_missing_content_file(identifier, *, reason, source):
@@ -149,11 +152,17 @@ def load_course_blocklist():
 
     """
     blocklist_url = settings.BLOCKLISTED_COURSES_URL
-    if blocklist_url is not None:
-        response = requests.get(blocklist_url, timeout=settings.REQUESTS_TIMEOUT)
-        response.raise_for_status()
-        return [str(line, "utf-8") for line in response.iter_lines()]
-    return []
+    if blocklist_url is None:
+        return []
+    redis_cache = caches["redis"]
+    blocklist = redis_cache.get("course_blocklist")
+    if blocklist is not None:
+        return blocklist
+    response = requests.get(blocklist_url, timeout=settings.REQUESTS_TIMEOUT)
+    response.raise_for_status()
+    blocklist = [str(line, "utf-8") for line in response.iter_lines()]
+    redis_cache.set("course_blocklist", blocklist, timeout=BLOCKLIST_CACHE_TIMEOUT)
+    return blocklist
 
 
 def load_course_duplicates(etl_source: str) -> list:

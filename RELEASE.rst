@@ -1,6 +1,28 @@
 Release Notes
 =============
 
+Version 0.74.0 (Released July 13, 2026)
+--------------
+
+- feat: Podcasts Listing Page (#3576)
+- Route content archive ingestion tasks to the edx_content queue (#3602)
+- Retry generate_embeddings on gRPC UNAVAILABLE with minutes-scale backoff (#3595)
+- Scrape child courses before programs and fix missing child course sections (#3580)
+- Ensure remove_qdrant_records includes platform code when deleting points from qdrant   (#3582)
+- Ignore POM micromasters programs (#3597)
+- bump smoot-design (#3600)
+- fix: Disable failing test until new release workflow takes over
+- Sync pyproject.toml version with settings.py VERSION (0.73.4) (#3604)
+- Configure bump-my-version for Concourse release pipeline (#3220)
+
+Version 0.73.6 (Released July 13, 2026)
+--------------
+
+- desktop dashboard design updates (#3578)
+- chore: Remove temporary seat-cap gate on B2B Manage button (#3587)
+- Fix: header stat counts not updating after bulk-assign or revoke on Contract Admin page #3581
+- Mitxonline ETL: switch to consuming internal courses endpoint (#3543)
+
 Version 0.73.4 (Released July 08, 2026)
 --------------
 

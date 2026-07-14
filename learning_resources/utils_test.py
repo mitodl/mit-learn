@@ -166,9 +166,12 @@ def program_with_visibility_children():
 
 @pytest.mark.parametrize("url", [None, "http://test.me"])
 def test_load_blocklist(url, settings, mocker):
-    """Test that a list of course ids is returned if a URL is set"""
+    """Test that a list of course ids is fetched, returned, and cached on a cache miss"""
     settings.BLOCKLISTED_COURSES_URL = url
     file_content = [b"MITX_Test1_FAKE", b"MITX_Test2_Fake", b"OCW_Test_Fake"]
+    mock_caches = mocker.patch("learning_resources.utils.caches")
+    mock_cache = mock_caches.__getitem__.return_value
+    mock_cache.get.return_value = None
     mock_request = mocker.patch(
         "requests.get",
         autospec=True,
@@ -177,10 +180,31 @@ def test_load_blocklist(url, settings, mocker):
     blocklist = utils.load_course_blocklist()
     if url is None:
         mock_request.assert_not_called()
+        mock_caches.__getitem__.assert_not_called()
         assert blocklist == []
     else:
+        mock_caches.__getitem__.assert_called_with("redis")
+        mock_cache.get.assert_called_once_with("course_blocklist")
         mock_request.assert_called_once_with(url, timeout=settings.REQUESTS_TIMEOUT)
         assert blocklist == [str(id, "utf-8") for id in file_content]  # noqa: A001
+        mock_cache.set.assert_called_once_with(
+            "course_blocklist", blocklist, timeout=utils.BLOCKLIST_CACHE_TIMEOUT
+        )
+
+
+@pytest.mark.parametrize("cached_ids", [[], ["MITX_Test1_FAKE"]])
+def test_load_blocklist_cached(cached_ids, settings, mocker):
+    """A cached blocklist (even an empty one) is returned without fetching from GitHub"""
+    settings.BLOCKLISTED_COURSES_URL = "http://test.me"
+    mock_caches = mocker.patch("learning_resources.utils.caches")
+    mock_cache = mock_caches.__getitem__.return_value
+    mock_cache.get.return_value = cached_ids
+    mock_request = mocker.patch("requests.get", autospec=True)
+    assert utils.load_course_blocklist() == cached_ids
+    mock_caches.__getitem__.assert_called_with("redis")
+    mock_cache.get.assert_called_once_with("course_blocklist")
+    mock_request.assert_not_called()
+    mock_cache.set.assert_not_called()
 
 
 @pytest.mark.parametrize("url", [None, "http://test.me"])

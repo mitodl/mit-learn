@@ -1,6 +1,10 @@
 import React from "react"
 import { styled } from "@mitodl/smoot-design"
-import TrackCard, { FeatureRow, FeatureIcon } from "./TrackCard"
+import TrackCard, {
+  FeatureRow,
+  FeatureIcon,
+  AccessFeatureRow,
+} from "./TrackCard"
 
 const FinancialAidLink = styled.a(({ theme }) => ({
   ...theme.typography.body3,
@@ -12,6 +16,7 @@ type CertificateTrackCardProps = {
   price: React.ReactNode
   financialAid?: { href: string; applied: boolean } | null
   productNoun: "course" | "program"
+  priceBlock?: React.ReactNode
   action?: React.ReactNode
   fill?: boolean
 }
@@ -20,6 +25,7 @@ const CertificateTrackCard: React.FC<CertificateTrackCardProps> = ({
   price,
   financialAid,
   productNoun,
+  priceBlock,
   action,
   fill,
 }) => {
@@ -29,13 +35,11 @@ const CertificateTrackCard: React.FC<CertificateTrackCardProps> = ({
       title="Certificate Track"
       subtitle="Earn a verified certificate of completion"
       price={price}
+      priceBlock={priceBlock}
       action={action}
       fill={fill}
     >
-      <FeatureRow>
-        <FeatureIcon aria-hidden="true" />
-        <span>Access to this {productNoun} &amp; course materials</span>
-      </FeatureRow>
+      <AccessFeatureRow productNoun={productNoun} />
       <FeatureRow>
         <FeatureIcon aria-hidden="true" />
         <span>Graded assignments &amp; exams</span>

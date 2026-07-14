@@ -40,7 +40,7 @@ describe("CertificateTrackCard", () => {
       <CertificateTrackCard price={<span>$250</span>} productNoun="program" />,
     )
     expect(
-      screen.getByText("Access to this program & course materials"),
+      screen.getByText("Access to this program & materials"),
     ).toBeInTheDocument()
   })
 
@@ -99,5 +99,18 @@ describe("CertificateTrackCard", () => {
       <CertificateTrackCard price={<span>$250</span>} productNoun="course" />,
     )
     expect(screen.queryByRole("button")).toBeNull()
+  })
+
+  test("omits top-right price when priceBlock is provided", () => {
+    const priceNode = <span>$250</span>
+    renderWithProviders(
+      <CertificateTrackCard
+        price={priceNode}
+        priceBlock={<div data-testid="savings-block">savings</div>}
+        productNoun="program"
+      />,
+    )
+    expect(screen.queryByText("$250")).not.toBeInTheDocument()
+    expect(screen.getByTestId("savings-block")).toBeInTheDocument()
   })
 })

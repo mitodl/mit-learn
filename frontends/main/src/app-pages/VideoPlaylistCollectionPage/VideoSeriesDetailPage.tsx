@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useRef } from "react"
-import { Skeleton, styled } from "ol-components"
+import { Skeleton, styled, SkipLink } from "ol-components"
 import VideoContainer from "./VideoContainer"
 import { useLearningResourcesDetail } from "api/hooks/learningResources"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
@@ -101,12 +101,12 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
         />
       )}
       <Styled.SkipLinksNav aria-label="Skip links">
-        <Styled.SkipLink href="#video-detail-main">
+        <SkipLink.Trigger targetId="video-detail-main">
           Skip to main content
-        </Styled.SkipLink>
-        <Styled.SkipLink href="#video-player-region">
+        </SkipLink.Trigger>
+        <SkipLink.Trigger targetId="video-player-region">
           Skip to video player
-        </Styled.SkipLink>
+        </SkipLink.Trigger>
       </Styled.SkipLinksNav>
 
       <Styled.ScreenReaderOnly
