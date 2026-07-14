@@ -7,6 +7,7 @@ from freezegun import freeze_time
 from opensearch_dsl import response
 from opensearch_dsl.query import Percolate
 
+from learning_resources.constants import OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS
 from learning_resources.factories import LearningResourceFactory
 from learning_resources_search.api import (
     Search,
@@ -2482,6 +2483,11 @@ def test_execute_learn_search_for_learning_resource_query_filter_ocw_files(
                                 },
                                 {"term": {"resource_type": "course"}},
                                 {"term": {"resource_type": "video"}},
+                                {
+                                    "term": {
+                                        "resource_category": OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS
+                                    }
+                                },
                             ],
                             "minimum_should_match": 1,
                         }

@@ -1031,15 +1031,10 @@ def test_ingest_edx_course(mocker, etl_source, archive_path, overwrite):
     )
 
 
-@pytest.mark.parametrize("create_ocw_learning_materials", [True, False])
-def test_update_ocw_learning_material_resources(
-    mocker, settings, create_ocw_learning_materials
-):
+def test_update_ocw_learning_material_resources(mocker, settings):
     """
     Test that update_ocw_learning_material_resources calls the correct loader method
     """
-    settings.CREATE_OCW_LEARNING_MATERIALS = create_ocw_learning_materials
-
     ocw_resource = LearningResourceFactory.create(
         etl_source=ETLSource.ocw.name,
         resource_type=LearningResourceType.course.name,
@@ -1059,17 +1054,12 @@ def test_update_ocw_learning_material_resources(
         "learning_resources.tasks.load_learning_materials", autospec=True
     )
 
-    if create_ocw_learning_materials:
-        update_ocw_learning_material_resources()
+    update_ocw_learning_material_resources()
 
-        mock_load_learning_materials.assert_called_once()
-        call_args = mock_load_learning_materials.call_args[0]
-        assert call_args[0] == ocw_resource.runs.first()
-        assert set(call_args[1]) == content_file_ids
-    else:
-        with pytest.raises(RuntimeError, match="CREATE_OCW_LEARNING_MATERIALS"):
-            update_ocw_learning_material_resources()
-        mock_load_learning_materials.assert_not_called()
+    mock_load_learning_materials.assert_called_once()
+    call_args = mock_load_learning_materials.call_args[0]
+    assert call_args[0] == ocw_resource.runs.first()
+    assert set(call_args[1]) == content_file_ids
 
 
 def test_cleanup_deleted_content_files_respects_retention_window(settings):
