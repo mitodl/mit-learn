@@ -226,7 +226,9 @@ class QdrantView(APIView):
                 search_params["prefetch"] = prefetch_params
                 search_params["query"] = models.FusionQuery(fusion=models.Fusion.RRF)
         else:
-            dense_query = await sync_to_async(encoder_dense.embed_query)(query_string)
+            dense_query = await sync_to_async(
+                encoder_dense.embed_query, thread_sensitive=False
+            )(query_string)
             if order_by and "score_threshold" not in search_params:
                 # Nest: dense vector prefetch → order_by query
                 search_params["prefetch"] = models.Prefetch(
@@ -391,9 +393,13 @@ class QdrantView(APIView):
             )
 
         if search_collection == RESOURCES_COLLECTION_NAME:
-            return await sync_to_async(_resource_vector_hits)(search_result)
+            return await sync_to_async(_resource_vector_hits, thread_sensitive=False)(
+                search_result
+            )
         else:
-            return await sync_to_async(_content_file_vector_hits)(search_result)
+            return await sync_to_async(
+                _content_file_vector_hits, thread_sensitive=False
+            )(search_result)
 
     def _extract_values(self, obj, qdrant_field):
         """
@@ -631,7 +637,7 @@ class LearningResourcesVectorSearchView(QdrantView):
                         response, context={"request": request}
                     ).data
 
-                response_data = await sync_to_async(serialize)()
+                response_data = await sync_to_async(serialize, thread_sensitive=False)()
                 response_data["results"] = list(response_data["results"])
                 return Response(response_data)
         else:
@@ -700,9 +706,9 @@ class ContentFilesVectorSearchView(QdrantView):
                 # (don't AND them: compound filters break Qdrant's approximate
                 # count). The resource readable_ids are included to match each
                 # resource's run-less course-metadata point.
-                best_run_ids = await sync_to_async(best_run_ids_for_resources)(
-                    resource_ids
-                )
+                best_run_ids = await sync_to_async(
+                    best_run_ids_for_resources, thread_sensitive=False
+                )(resource_ids)
                 del params["resource_readable_id"]
                 params["run_readable_id"] = best_run_ids + list(resource_ids)
 
@@ -734,7 +740,7 @@ class ContentFilesVectorSearchView(QdrantView):
                         response, context={"request": request}
                     ).data
 
-                response_data = await sync_to_async(serialize)()
+                response_data = await sync_to_async(serialize, thread_sensitive=False)()
                 response_data["results"] = list(response_data["results"])
                 return Response(response_data)
         else:
