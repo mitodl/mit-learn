@@ -66,8 +66,8 @@ describe("env() while the document is still streaming (error-shell pages)", () =
    * values synchronously from /public-env.json rather than returning undefined
    * or throwing.
    */
-  let readyStateSpy: jest.SpyInstance
   const RealXHR = window.XMLHttpRequest
+  const REAL_NODE_ENV = process.env.NODE_ENV
 
   const mockXhr = (impl: {
     status?: number
@@ -91,14 +91,18 @@ describe("env() while the document is still streaming (error-shell pages)", () =
     return { open, send, instances }
   }
 
+  // NODE_ENV is typed readonly; Object.assign sidesteps that for test setup.
+  const setNodeEnv = (value: string | undefined) =>
+    Object.assign(process.env, { NODE_ENV: value })
+
   beforeEach(() => {
-    readyStateSpy = jest
-      .spyOn(document, "readyState", "get")
-      .mockReturnValue("loading")
+    // The fetch tier is disabled under NODE_ENV=test so ordinary jsdom suites
+    // never attempt network I/O; emulate a browser build to exercise it here.
+    setNodeEnv("development")
   })
 
   afterEach(() => {
-    readyStateSpy.mockRestore()
+    setNodeEnv(REAL_NODE_ENV)
     window.XMLHttpRequest = RealXHR
     delete window.__ENV
     jest.resetModules()
@@ -143,10 +147,21 @@ describe("env() while the document is still streaming (error-shell pages)", () =
     expect(send).toHaveBeenCalledTimes(1)
   })
 
-  test("no fetch once the document has finished parsing", async () => {
-    // meta absent + parsing done ⇒ the meta was genuinely never delivered;
-    // fall through to the process.env test fallback without a network request.
-    readyStateSpy.mockReturnValue("complete")
+  test("fetches even after parsing completes when no <meta> was ever delivered", async () => {
+    // Deepest failure mode (root layout AND generateMetadata both throw): the
+    // document never contains an x-public-env <meta>, so the fetch is the only
+    // remaining transport regardless of when the first read happens.
+    const { send } = mockXhr({
+      status: 200,
+      responseText: JSON.stringify({ NEXT_PUBLIC_ORIGIN: "https://xhr.test" }),
+    })
+    const env = await freshEnv()
+    expect(env("NEXT_PUBLIC_ORIGIN")).toBe("https://xhr.test")
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  test("never fetches under NODE_ENV=test (jsdom suites use process.env)", async () => {
+    setNodeEnv("test")
     const { send } = mockXhr({ status: 200, responseText: "{}" })
     const env = await freshEnv()
     env("NEXT_PUBLIC_ORIGIN")

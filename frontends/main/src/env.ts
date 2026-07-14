@@ -54,13 +54,16 @@ type RequiredPublicEnvVar = Extract<
 //      body on error shells; the surviving copy when the root layout itself
 //      errors and Providers never renders). Either is only visible once the
 //      parser has reached it.
-//   3. Synchronous fetch of /public-env.json — module evaluation (e.g.
-//      instrumentation-client.ts, module-scope env() captures) can run while
-//      the document is still streaming, before any <meta> has been parsed. A
-//      blocking XHR is the only way to resolve values synchronously at that
-//      point; it fires at most once, and only when the document is still
-//      parsing with no <meta> available — in practice only when the head copy
-//      is missing entirely (global-error).
+//   3. Synchronous fetch of /public-env.json — the unconditional floor. Two
+//      real gaps it covers: (a) module evaluation (instrumentation-client.ts,
+//      module-scope env() captures) can run while the document is still
+//      streaming, before any <meta> has been parsed; (b) in the deepest
+//      failure mode (root layout AND generateMetadata both throw) the served
+//      document contains no x-public-env <meta> at all, at any point. A
+//      blocking XHR is the only way to resolve values synchronously in either
+//      case; it fires at most once and never when a <meta> was found. Skipped
+//      under jest (NODE_ENV=test) so jsdom suites fall through to the
+//      process.env test fallback instead of attempting network I/O.
 // Shared by env() and fullEnv().
 let publicEnvFetchAttempted = false
 const bootstrapClientEnv = (): void => {
@@ -76,7 +79,7 @@ const bootstrapClientEnv = (): void => {
     }
     return
   }
-  if (document.readyState === "loading" && !publicEnvFetchAttempted) {
+  if (process.env.NODE_ENV !== "test" && !publicEnvFetchAttempted) {
     publicEnvFetchAttempted = true
     try {
       const xhr = new XMLHttpRequest()
