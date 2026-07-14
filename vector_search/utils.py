@@ -65,7 +65,11 @@ from vector_search.constants import (
     TOPICS_COLLECTION_NAME,
     VECTOR_SEARCH_SCORE_BOOST,
 )
-from vector_search.encoders.utils import dense_encoder, sparse_encoder
+from vector_search.encoders.utils import (
+    dense_encoder,
+    sparse_encoder,
+    truncate_to_model_limit,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -468,9 +472,8 @@ def _learning_resource_embedding_context(document):
 
     Content from any attached content files is folded in, mirroring the
     OpenSearch text query which matches against the content of all of a
-    resource's content files regardless of resource type. The combined content
-    is truncated to LEARNING_RESOURCE_EMBEDDING_CONTENT_MAX_CHARS so we don't
-    exceed embedding model limits.
+    resource's content files regardless of resource type. The combined
+    context is truncated to the embedding model's input limit.
     """
     context = (
         f"{document.get('title')} "
@@ -482,10 +485,12 @@ def _learning_resource_embedding_context(document):
         if content_file.get("content")
     )
     if content:
-        max_chars = settings.LEARNING_RESOURCE_EMBEDDING_CONTENT_MAX_CHARS
-        if max_chars and len(content) > max_chars:
-            content = content[:max_chars]
-        context = f"{context}\n\n# Content\n{content}"
+        encoder = dense_encoder()
+        context = truncate_to_model_limit(
+            f"{context}\n\n# Content\n{content}",
+            encoder.model_name,
+            token_encoding_name=getattr(encoder, "token_encoding_name", None),
+        )
     return context
 
 

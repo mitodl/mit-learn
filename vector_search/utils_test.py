@@ -1074,9 +1074,17 @@ def test_embedding_context_without_content_files():
     assert context == "A title A short description A full description"
 
 
-def test_embedding_context_truncates_content(settings):
-    """Content folded into the embedding context should be truncated."""
-    settings.LEARNING_RESOURCE_EMBEDDING_CONTENT_MAX_CHARS = 10
+def test_embedding_context_truncates_content(mocker):
+    """The combined context should be truncated to the embedding model's limit."""
+    encoder = mocker.MagicMock(
+        model_name="test-model",
+        token_encoding_name="test-encoding",  # noqa: S106
+    )
+    mocker.patch("vector_search.utils.dense_encoder", return_value=encoder)
+    truncate_mock = mocker.patch(
+        "vector_search.utils.truncate_to_model_limit",
+        side_effect=lambda text, *_args, **_kwargs: text[:10],
+    )
     serialized_resource = {
         "title": "A title",
         "description": "A short description",
@@ -1089,8 +1097,11 @@ def test_embedding_context_truncates_content(settings):
         serialized_resource
     )
 
-    assert context == (
-        "A title A short description A full description\n\n# Content\n0123456789"
+    assert context == "A title A "
+    truncate_mock.assert_called_once_with(
+        "A title A short description A full description\n\n# Content\n0123456789ABCDEF",
+        "test-model",
+        token_encoding_name="test-encoding",  # noqa: S106
     )
 
 
