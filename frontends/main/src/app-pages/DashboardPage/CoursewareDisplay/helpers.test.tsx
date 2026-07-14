@@ -342,23 +342,23 @@ describe("helpers", () => {
       expect(result).toEqual(enrollmentHighGrade)
     })
 
-    test("returns first enrollment when both have certificates and same grade", () => {
+    test("returns the more recent enrollment when both have certificates and the same grade", () => {
       const run = factories.courses.courseRun({ id: 1 })
       const course = factories.courses.course({ courseruns: [run] })
 
       const enrollment1 = factories.enrollment.courseEnrollment({
-        run: { id: 1 },
+        run: { id: 1, start_date: "2020-01-01T00:00:00Z" },
         certificate: { uuid: "cert-1" },
         grades: [factories.enrollment.grade({ grade: 0.8 })],
       })
       const enrollment2 = factories.enrollment.courseEnrollment({
-        run: { id: 1 },
+        run: { id: 1, start_date: "2023-01-01T00:00:00Z" },
         certificate: { uuid: "cert-2" },
         grades: [factories.enrollment.grade({ grade: 0.8 })],
       })
 
       const result = selectBestEnrollment(course, [enrollment1, enrollment2])
-      expect(result).toEqual(enrollment1)
+      expect(result).toEqual(enrollment2)
     })
 
     test("handles multiple course runs", () => {
