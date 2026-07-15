@@ -79,8 +79,8 @@ def truncate_to_model_limit(
     try:
         info = get_model_info(model)
         max_input_tokens = info.get("max_input_tokens")
-    except Exception:
-        logger.exception("Failed to determine max_input_tokens for model %s", model)
+    except Exception:  # noqa: BLE001
+        logger.debug("Failed to determine max_input_tokens for model %s", model)
 
     if max_input_tokens and token_encoding_name:
         try:
@@ -91,8 +91,8 @@ def truncate_to_model_limit(
                 return text
 
             return encoding.decode(tokens[:max_input_tokens])
-        except Exception:
-            logger.exception(
+        except Exception:  # noqa: BLE001
+            logger.debug(
                 "Failed to truncate using tiktoken encoding '%s'",
                 token_encoding_name,
             )
