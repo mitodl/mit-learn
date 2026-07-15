@@ -148,3 +148,16 @@ CONTENT_BASE_URL_OLL = get_string(
     "CONTENT_BASE_URL_OLL", "https://openlearninglibrary.mit.edu"
 )
 CONTENT_BASE_URL_EDX = get_string("CONTENT_BASE_URL_EDX", "https://courses.edx.org")
+
+# Warehouse-pull settings for Cohort 1 catalog ETL, used to query the
+# integrations schema views exposed by the OL Data Platform. The query
+# engine backing this endpoint may migrate from Trino to StarRocks later;
+# WAREHOUSE_BACKEND selects the connector without touching ETL task code
+# (see learning_resources.lib.warehouse). Backend-specific credentials are
+# namespaced (e.g. TRINO_*) so a future STARROCKS_* block can sit alongside.
+WAREHOUSE_BACKEND = get_string("WAREHOUSE_BACKEND", "trino")
+TRINO_HOST = get_string("TRINO_HOST", None)
+TRINO_PORT = get_int("TRINO_PORT", 443)
+TRINO_USER = get_string("TRINO_USER", None)
+TRINO_PASSWORD = get_string("TRINO_PASSWORD", None)
+TRINO_CATALOG = get_string("TRINO_CATALOG", "ol_warehouse_production")

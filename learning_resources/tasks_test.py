@@ -1189,3 +1189,178 @@ def test_cleanup_deleted_content_files_returns_error_on_unexpected_exception(moc
     result = cleanup_deleted_content_files()
 
     assert result == "cleanup_deleted_content_files threw an error"
+
+
+@pytest.fixture
+def mock_warehouse_connect(mocker):
+    """Mock the warehouse connection so BaseWarehouseETLTask.run() never dials out."""
+    mock_conn = mocker.MagicMock()
+    mocker.patch(
+        "learning_resources.lib.warehouse.connect_to_warehouse", return_value=mock_conn
+    )
+    return mock_conn
+
+
+@pytest.mark.parametrize(
+    ("task_name", "view_suffix", "transform_name", "etl_source"),
+    [
+        (
+            "SyncMITxOnlineCoursesTask",
+            "integrations__learn__mitxonline_courses",
+            "transform_mitxonline_course",
+            ETLSource.mitxonline.name,
+        ),
+        (
+            "SyncXProCoursesTask",
+            "integrations__learn__xpro_courses",
+            "transform_xpro_course",
+            ETLSource.xpro.name,
+        ),
+        (
+            "SyncMITEdXCoursesTask",
+            "integrations__learn__mit_edx_courses",
+            "transform_mit_edx_course",
+            ETLSource.mit_edx.name,
+        ),
+        (
+            "SyncOCWCoursesTask",
+            "integrations__learn__ocw_courses",
+            "transform_ocw_course",
+            ETLSource.ocw.name,
+        ),
+    ],
+)
+def test_warehouse_sync_courses_task_wiring(  # noqa: PLR0913
+    mocker, mock_warehouse_connect, task_name, view_suffix, transform_name, etl_source
+):
+    """Each Cohort 1 courses task pulls its view, transforms rows, and loads courses."""
+    task = getattr(tasks, task_name)
+    rows = [{"readable_id": "a"}, {"readable_id": "b"}]
+    mock_iter_rows = mocker.patch(
+        "learning_resources.tasks.iter_rows", return_value=rows
+    )
+    mock_transform = mocker.patch(
+        f"learning_resources.tasks.catalog_sources.{transform_name}"
+    )
+    loaded = LearningResourceFactory.create_batch(2)
+    mock_load_courses = mocker.patch(
+        "learning_resources.tasks.load_courses", return_value=loaded
+    )
+    mock_clear_cache = mocker.patch("learning_resources.tasks.clear_views_cache")
+
+    result = task.delay().get()
+
+    assert result == len(loaded)
+    assert view_suffix in mock_iter_rows.call_args.args[1]
+    assert mock_transform.call_count == len(rows)
+    mock_load_courses.assert_called_once()
+    assert mock_load_courses.call_args.args[0] == etl_source
+    mock_clear_cache.assert_called_once()
+    mock_warehouse_connect.close.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("task_name", "view_suffix", "transform_name", "etl_source"),
+    [
+        (
+            "SyncMITxOnlineProgramsTask",
+            "integrations__learn__mitxonline_programs",
+            "transform_mitxonline_program",
+            ETLSource.mitxonline.name,
+        ),
+        (
+            "SyncXProProgramsTask",
+            "integrations__learn__xpro_programs",
+            "transform_xpro_program",
+            ETLSource.xpro.name,
+        ),
+        (
+            "SyncMicromastersProgramsTask",
+            "integrations__learn__micromasters_programs",
+            "transform_micromasters_program",
+            ETLSource.micromasters.name,
+        ),
+    ],
+)
+def test_warehouse_sync_programs_task_wiring(  # noqa: PLR0913
+    mocker, mock_warehouse_connect, task_name, view_suffix, transform_name, etl_source
+):
+    """Each Cohort 1 programs task pulls its view, transforms rows, and loads programs."""
+    task = getattr(tasks, task_name)
+    rows = [{"readable_id": "a"}]
+    mock_iter_rows = mocker.patch(
+        "learning_resources.tasks.iter_rows", return_value=rows
+    )
+    mock_transform = mocker.patch(
+        f"learning_resources.tasks.catalog_sources.{transform_name}"
+    )
+    loaded = LearningResourceFactory.create_batch(1)
+    mock_load_programs = mocker.patch(
+        "learning_resources.tasks.load_programs", return_value=loaded
+    )
+    mock_clear_cache = mocker.patch("learning_resources.tasks.clear_views_cache")
+
+    result = task.delay().get()
+
+    assert result == len(loaded)
+    assert view_suffix in mock_iter_rows.call_args.args[1]
+    assert mock_transform.call_count == len(rows)
+    mock_load_programs.assert_called_once()
+    assert mock_load_programs.call_args.args[0] == etl_source
+    mock_clear_cache.assert_called_once()
+    mock_warehouse_connect.close.assert_called_once()
+
+
+def test_warehouse_sync_task_closes_connection_on_error(mocker, mock_warehouse_connect):
+    """A warehouse-pull task closes the connection even when the fetch/transform fails."""
+    mocker.patch(
+        "learning_resources.tasks.iter_rows",
+        side_effect=RuntimeError("trino query failed"),
+    )
+
+    with pytest.raises(RuntimeError, match="trino query failed"):
+        tasks.SyncOCWCoursesTask.delay().get()
+
+    mock_warehouse_connect.close.assert_called_once()
+
+
+def test_warehouse_sync_task_full_refresh_pulls_everything_and_prunes(
+    mocker, mock_warehouse_connect
+):
+    """The default full_refresh=True run pulls unfiltered and prunes stale resources."""
+    mock_iter_rows = mocker.patch("learning_resources.tasks.iter_rows", return_value=[])
+    mock_load_courses = mocker.patch(
+        "learning_resources.tasks.load_courses", return_value=[]
+    )
+    mocker.patch("learning_resources.tasks.clear_views_cache")
+    mock_caches = mocker.patch("learning_resources.lib.warehouse.caches")
+
+    tasks.SyncOCWCoursesTask.delay().get()
+
+    assert mock_iter_rows.call_args.kwargs["since"] is None
+    assert mock_load_courses.call_args.kwargs["config"].prune is True
+    mock_caches.__getitem__.assert_not_called()
+
+
+def test_warehouse_sync_task_incremental_skips_prune_and_advances_watermark(
+    mocker, mock_warehouse_connect
+):
+    """full_refresh=False threads the stored watermark through and skips pruning."""
+    stored_watermark = now_in_utc() - timedelta(days=1)
+    mock_iter_rows = mocker.patch("learning_resources.tasks.iter_rows", return_value=[])
+    mock_load_courses = mocker.patch(
+        "learning_resources.tasks.load_courses", return_value=[]
+    )
+    mocker.patch("learning_resources.tasks.clear_views_cache")
+    mock_cache = mocker.MagicMock()
+    mock_cache.get.return_value = stored_watermark
+    mocker.patch("learning_resources.lib.warehouse.caches", {"durable": mock_cache})
+
+    tasks.SyncOCWCoursesTask.apply_async(kwargs={"full_refresh": False}).get()
+
+    assert mock_iter_rows.call_args.kwargs["since"] is stored_watermark
+    assert mock_load_courses.call_args.kwargs["config"].prune is False
+    mock_cache.set.assert_called_once()
+    assert mock_cache.set.call_args.args[0] == (
+        "warehouse_etl:last_synced_at:learning_resources.tasks.SyncOCWCoursesTask"
+    )

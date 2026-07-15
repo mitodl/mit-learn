@@ -50,6 +50,7 @@ from learning_resources.etl.loaders import (
     load_podcast,
     load_podcast_episode,
     load_podcasts,
+    load_prices,
     load_problem_file,
     load_problem_files,
     load_program,
@@ -1024,6 +1025,40 @@ def test_load_run(mocker, run_exists, status, certification):
         )
     else:
         mock_import_task.delay.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_load_run_none_instructors_and_prices_leave_existing_values_alone(mocker):
+    """`None` (not an omitted key, which still defaults to `[]`) for
+    run_data's "instructors"/"prices" is the sentinel for "not provided by
+    this source, leave alone" — same convention load_topics already uses
+    for `topics_data`. A source that doesn't have instructor/price data
+    (e.g. the warehouse-pull transforms) must not wipe out values another
+    pipeline already populated.
+    """
+    mocker.patch("learning_resources.tasks.import_content_files")
+    course = LearningResourceFactory.create(
+        is_course=True, runs=[], certification=True, etl_source=ETLSource.xpro.value
+    )
+    run = LearningResourceRunFactory.create(learning_resource=course, prices=[])
+    instructor = LearningResourceInstructorFactory.create(full_name="Jane Doe")
+    load_instructors(run, [{"full_name": instructor.full_name}])
+    load_prices(run, [{"amount": Decimal("49.00"), "currency": CURRENCY_USD}])
+    run.prices = [Decimal("49.00")]
+    run.save()
+
+    run_data = {
+        "run_id": run.run_id,
+        "title": run.title,
+        "instructors": None,
+        "prices": None,
+    }
+    result = load_run(course, run_data)
+
+    assert result.id == run.id
+    assert [i.full_name for i in result.instructors.all()] == [instructor.full_name]
+    assert [p.amount for p in result.resource_prices.all()] == [Decimal("49.00")]
+    assert result.prices == [Decimal("49.00")]
 
 
 @pytest.mark.parametrize(
