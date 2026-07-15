@@ -1,6 +1,17 @@
 Release Notes
 =============
 
+Version 0.74.2
+--------------
+
+- Add learning material content to embeddings context (#3607)
+- Sort dateless runs without crashing embeddings (#3605)
+- Filter out certain edx_module_ids from queries, log others if missing (#3609)
+- fix: Reconcile inconsistent parent podcast title resolution used by the podcast audio player (#3601)
+- Update dependency ruff to v0.15.16 (#3498)
+- [pre-commit.ci] pre-commit autoupdate (#3444)
+- add a "tie breaker" if all enrollments have no certificate or grade (#3599)
+
 Version 0.74.1 (Released July 14, 2026)
 --------------
 
