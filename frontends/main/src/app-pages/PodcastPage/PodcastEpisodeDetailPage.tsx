@@ -23,7 +23,7 @@ import type { PodcastEpisodeResource } from "api/v1"
 import moment from "moment"
 import { formatDate } from "ol-utilities"
 import { HOME, podcastPageView, podcastEpisodePageView } from "@/common/urls"
-import { externalLinkProps } from "@/common/utils"
+import { addExternalLinkTargets } from "@/common/utils"
 import { EpisodeItem } from "./PodcastsListingPage/EpisodeItem"
 import PodcastContainer from "./PodcastContainer"
 import Link from "next/link"
@@ -34,23 +34,6 @@ import PodcastShareButton from "./PodcastShareButton"
 import { env } from "@/env"
 
 const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
-
-// Episode descriptions are sanitized on the backend with nh3 during ETL (only
-// <a href/title> is allowed, and rel="noopener noreferrer" is added), so the HTML
-// is safe to render verbatim — the same trust model as resource descriptions
-// elsewhere. Rendering it directly keeps server and client output identical,
-// avoiding a hydration mismatch. target="_blank" is a presentation concern the
-// backend deliberately omits, so we add it here via a string transform (rather
-// than mutating the DOM post-mount) so it's part of the HTML fed to
-// dangerouslySetInnerHTML on both server and client — surviving re-renders and
-// keeping SSR output byte-identical to the client's first render.
-export const addExternalLinkTargets = (html: string): string =>
-  html.replace(/<a\s+([^>]*)>/g, (fullMatch, attrs) => {
-    const hrefMatch = attrs.match(/href="([^"]*)"/)
-    if (!hrefMatch) return fullMatch
-    const { target } = externalLinkProps(hrefMatch[1])
-    return target ? `<a ${attrs} target="${target}">` : fullMatch
-  })
 
 /* ── Layout ── */
 
@@ -306,6 +289,13 @@ export const PodcastEpisodeDetailPage: React.FC<
       ? `${NEXT_PUBLIC_ORIGIN}${podcastEpisodePageView(String(episode!.id), podcastId, episode?.title)}`
       : ""
 
+  // Episode descriptions are sanitized on the backend with nh3 during ETL
+  // (only <a href/title> is allowed), so the HTML is safe to render verbatim
+  // — the same trust model as resource descriptions elsewhere. Rendering it
+  // directly keeps server and client output identical, avoiding a hydration
+  // mismatch; target="_blank" is added via addExternalLinkTargets so it's
+  // part of the HTML fed to dangerouslySetInnerHTML on both server and
+  // client, keeping SSR output byte-identical to the client's first render.
   const description = useMemo(
     () =>
       episode?.description ? addExternalLinkTargets(episode.description) : null,

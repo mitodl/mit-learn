@@ -3,10 +3,7 @@ import { factories, setMockResponse, urls } from "api/test-utils"
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource, PodcastEpisodeResource } from "api/v1"
 import { renderWithProviders, screen, user } from "@/test-utils"
-import {
-  PodcastEpisodeDetailPage,
-  addExternalLinkTargets,
-} from "./PodcastEpisodeDetailPage"
+import { PodcastEpisodeDetailPage } from "./PodcastEpisodeDetailPage"
 
 jest.mock("./PodcastPlayer", () =>
   jest.requireActual("./PodcastPlayer.test-utils").mockPodcastPlayer(),
@@ -354,31 +351,6 @@ describe("PodcastEpisodeDetailPage", () => {
     expect(screen.getByTestId("podcast-player")).toBeInTheDocument()
     expect(screen.getByTestId("player-track-title")).toHaveTextContent(
       moreEpisode.title!,
-    )
-  })
-})
-describe("addExternalLinkTargets", () => {
-  test("adds target=_blank to external links", () => {
-    const html = addExternalLinkTargets('<a href="https://ocw.mit.edu">OCW</a>')
-    expect(html).toBe('<a href="https://ocw.mit.edu" target="_blank">OCW</a>')
-  })
-
-  test("leaves internal links unchanged", () => {
-    const html = addExternalLinkTargets('<a href="/search">Search</a>')
-    expect(html).toBe('<a href="/search">Search</a>')
-  })
-
-  test("leaves anchors without an href unchanged", () => {
-    const html = addExternalLinkTargets('<a name="top">Top</a>')
-    expect(html).toBe('<a name="top">Top</a>')
-  })
-
-  test("preserves other attributes on external links", () => {
-    const html = addExternalLinkTargets(
-      '<a href="https://ocw.mit.edu" rel="noopener noreferrer">OCW</a>',
-    )
-    expect(html).toBe(
-      '<a href="https://ocw.mit.edu" rel="noopener noreferrer" target="_blank">OCW</a>',
     )
   })
 })
