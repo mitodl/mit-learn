@@ -18,7 +18,6 @@ import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { useEnrollmentHandler } from "./hooks/useEnrollmentHandler"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import { ProgressBadge } from "./ProgressBadge"
-import { Button } from "@mitodl/smoot-design"
 
 type UnenrolledCourseCardProps = {
   course: CourseWithCourseRunsSerializerV2
@@ -114,10 +113,10 @@ export const UnenrolledCourseCard = ({
       />
     </Stack>
   )
-  const startButton = isCompact ? (
+  const startButton = (
     <CoursewareButton
       size="small"
-      variant="secondary"
+      variant={isCompact ? "secondary" : "primary"}
       data-testid="courseware-button"
       aria-label={`Start course: ${title}`}
       onClick={isDisabled ? undefined : enrollClick}
@@ -130,32 +129,6 @@ export const UnenrolledCourseCard = ({
     >
       Start
     </CoursewareButton>
-  ) : (
-    <Button
-      size="small"
-      variant="primary"
-      data-testid="courseware-button"
-      aria-label={`Start course: ${title}`}
-      onClick={isDisabled ? undefined : enrollClick}
-      disabled={isDisabled}
-      endIcon={
-        isPending ? (
-          <LoadingSpinner color="inherit" loading={isPending} size={16} />
-        ) : null
-      }
-    >
-      Start
-    </Button>
-  )
-  const buttonSection = (
-    <Stack
-      direction="row"
-      marginRight="8px"
-      alignItems="center"
-      justifyContent="end"
-    >
-      {startButton}
-    </Stack>
   )
 
   const progressBadgeSection =
@@ -194,11 +167,11 @@ export const UnenrolledCourseCard = ({
         <Stack
           direction="row"
           gap="8px"
-          paddingRight="32px"
+          paddingRight="40px"
           alignItems="center"
           justifyContent="end"
         >
-          {buttonSection}
+          {startButton}
         </Stack>
       </CardRoot>
 
@@ -228,7 +201,7 @@ export const UnenrolledCourseCard = ({
           alignItems="center"
           justifyContent="end"
         >
-          {buttonSection}
+          {startButton}
         </Stack>
       </CardRoot>
     </>

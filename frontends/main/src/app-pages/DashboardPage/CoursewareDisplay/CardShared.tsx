@@ -24,7 +24,7 @@ const CardRoot = styled.div<{
   },
   // Mobile styles for default layout
   layout === "default" && {
-    [theme.breakpoints.down("md")]: {
+    [theme.breakpoints.down("sm")]: {
       border: "none",
       flexDirection: "column",
       gap: "16px",
@@ -45,18 +45,19 @@ const CardRoot = styled.div<{
       borderBottomRightRadius: "8px !important",
       borderBottom: "none",
     },
-    [theme.breakpoints.down("md")]: {
+    [theme.breakpoints.down("sm")]: {
       flexDirection: "column",
+      flexGrow: 1,
       gap: "16px",
     },
   },
   screenSize === "desktop" && {
-    [theme.breakpoints.down("md")]: {
+    [theme.breakpoints.down("sm")]: {
       display: "none",
     },
   },
   screenSize === "mobile" && {
-    [theme.breakpoints.up("md")]: {
+    [theme.breakpoints.up("sm")]: {
       display: "none",
     },
   },
@@ -70,7 +71,7 @@ const CardTypeText = styled(Typography)(({ theme }) => ({
 const TitleHeading = styled.h3(({ theme }) => ({
   margin: 0,
   ...theme.typography.subtitle2,
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
     maxWidth: "calc(100% - 16px)",
   },
 }))
@@ -85,7 +86,7 @@ const TitleText = styled.h3<{ clickable?: boolean }>(
     ...theme.typography.subtitle2,
     color: theme.custom.colors.darkGray2,
     cursor: clickable ? "pointer" : "default",
-    [theme.breakpoints.down("md")]: {
+    [theme.breakpoints.down("sm")]: {
       maxWidth: "calc(100% - 16px)",
     },
   }),
@@ -114,10 +115,9 @@ const MenuButton = styled(ActionButton)<{
   status: EnrollmentStatus
 }>(({ theme, status }) => [
   {
-    [theme.breakpoints.down("md")]: {
-      position: "absolute",
-      top: "0",
-      right: "0",
+    [theme.breakpoints.down("sm")]: {
+      borderRadius: "4px",
+      border: `1px solid ${theme.custom.colors.lightGray2}`,
     },
   },
   status !== EnrollmentStatus.Completed &&
@@ -131,17 +131,21 @@ const COURSEWARE_BUTTON_WIDTH = "88px"
 // Fixed-width column that keeps the courseware button (and countdown) aligned
 // in the compact (module row) layout.
 const CoursewareActionColumn = styled(Stack)({
-  width: COURSEWARE_BUTTON_WIDTH,
+  minWidth: COURSEWARE_BUTTON_WIDTH,
+  gap: "8px",
   flexShrink: 0,
 })
 
 // Compact-layout courseware buttons are fixed width and use the text variant.
 const CoursewareButton = styled(Button)(({ theme, variant }) => ({
-  width: COURSEWARE_BUTTON_WIDTH,
   minWidth: COURSEWARE_BUTTON_WIDTH,
+  gap: "8px",
   ...(variant === "text" && {
     color: theme.custom.colors.silverGrayDark,
   }),
+  [theme.breakpoints.down("sm")]: {
+    flexGrow: 1,
+  },
 }))
 
 const CoursewareButtonLink = styled(ButtonLink)(({ theme, variant }) => ({
@@ -150,6 +154,9 @@ const CoursewareButtonLink = styled(ButtonLink)(({ theme, variant }) => ({
   ...(variant === "text" && {
     color: theme.custom.colors.silverGrayDark,
   }),
+  [theme.breakpoints.down("sm")]: {
+    flexGrow: 1,
+  },
 }))
 
 const Separator = styled.span(({ theme }) => ({

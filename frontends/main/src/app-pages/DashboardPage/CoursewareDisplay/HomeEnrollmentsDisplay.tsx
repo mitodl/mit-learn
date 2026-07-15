@@ -35,10 +35,7 @@ const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
   padding: "24px 32px",
   backgroundColor: theme.custom.colors.white,
-  borderBottom: `1px solid ${theme.custom.colors.red}`,
-  boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.08)",
-  borderRadius: "8px",
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
     backgroundColor: theme.custom.colors.lightGray1,
     marginTop: "16px",
     padding: "0",
@@ -58,7 +55,7 @@ const Title = styled(Typography)<Pick<TypographyProps, "component">>(
 
 const EnrollmentsList = styled(PlainList)<Pick<PlainListProps, "itemSpacing">>(
   ({ theme }) => ({
-    [theme.breakpoints.down("md")]: {
+    [theme.breakpoints.down("sm")]: {
       borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
       ">li+li": {
         marginTop: "0",
@@ -72,7 +69,7 @@ const EnrollmentsList = styled(PlainList)<Pick<PlainListProps, "itemSpacing">>(
 
 const HiddenEnrollmentsList = styled(EnrollmentsList)({
   marginTop: "16px",
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
     borderTop: "none",
     marginTop: "0",
   },
@@ -82,7 +79,7 @@ const ShowAllContainer = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "center",
   marginTop: "24px",
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
     marginBottom: "24px",
   },
 }))

@@ -25,6 +25,7 @@ import { CoursewareCard } from "./CoursewareCard"
 import {
   CardTypeText,
   CourseDateSummary,
+  MenuButton,
   Separator,
   UpgradedBanner,
 } from "./CardShared"
@@ -37,7 +38,6 @@ import {
   isVerifiedEnrollmentMode,
   mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
-import { ActionButton } from "@mitodl/smoot-design"
 import { RiAwardFill, RiMore2Line } from "@remixicon/react"
 import NiceModal from "@ebay/nice-modal-react"
 import { UnenrollProgramDialog } from "./DashboardDialogs"
@@ -54,7 +54,7 @@ const ProgramCardRoot = styled.div(({ theme }) => ({
   borderBottom: "none",
   backgroundColor: theme.custom.colors.white,
   boxShadow: "0 1px 3px 0 rgba(120, 147, 172, 0.20)",
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
     border: "none",
     borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
     borderRadius: "0px",
@@ -66,7 +66,7 @@ const ProgramCardRoot = styled.div(({ theme }) => ({
 
 const ProgramCardHeaderOuter = styled.div({
   display: "flex",
-  padding: "16px 24px",
+  padding: "16px 16px 16px 24px",
   alignItems: "center",
   alignSelf: "stretch",
   gap: "16px",
@@ -98,7 +98,7 @@ const ProgramCardSubHeader = styled.div(({ theme }) => ({
   gap: "10px",
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
   background: `${theme.custom.colors.lightGray1}`,
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
     borderLeft: `1px solid ${theme.custom.colors.lightGray2}`,
     borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
   },
@@ -113,23 +113,6 @@ const ProgramCardBody = styled.div({
   overflow: "hidden",
   borderRadius: "0 0 8px 8px",
 })
-
-const MenuButton = styled(ActionButton)<{
-  status: EnrollmentStatus
-}>(({ theme, status }) => [
-  {
-    marginLeft: "-8px",
-    [theme.breakpoints.down("md")]: {
-      position: "absolute",
-      top: "0",
-      right: "0",
-    },
-  },
-  status !== EnrollmentStatus.Completed &&
-    status !== EnrollmentStatus.Enrolled && {
-      visibility: "hidden",
-    },
-])
 
 const getContextMenuItems = (
   title: string,
@@ -364,7 +347,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
             {courseProgram?.title}
           </Typography>
         </ProgramCardHeaderInner>
-        <Stack direction="row" gap="0">
+        <Stack direction="row" gap="8px">
           {programCertificateUrl ? (
             <ProgramCertificateButton
               variant="bordered"

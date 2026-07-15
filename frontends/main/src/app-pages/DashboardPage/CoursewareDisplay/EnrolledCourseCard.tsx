@@ -32,7 +32,6 @@ import { SiblingRunsAccordion } from "./SiblingRunsAccordion"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
-import { Button, ButtonLink } from "@mitodl/smoot-design"
 import { coursePageView } from "@/common/urls"
 import NiceModal from "@ebay/nice-modal-react"
 import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
@@ -133,7 +132,7 @@ const EnrolledCardShell = styled.div(({ theme }) => ({
   borderRadius: "8px",
   overflow: "hidden",
   backgroundColor: theme.custom.colors.white,
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
     display: "none",
   },
   '&[data-layout="compact"]': {
@@ -324,7 +323,7 @@ export const EnrolledCourseCard = ({
       </CoursewareButtonLink>
     )
   ) : isDisabled ? (
-    <Button
+    <CoursewareButton
       size="small"
       variant="primary"
       disabled
@@ -332,9 +331,9 @@ export const EnrolledCourseCard = ({
       aria-label={`${buttonText} course: ${title}`}
     >
       {buttonText}
-    </Button>
+    </CoursewareButton>
   ) : (
-    <ButtonLink
+    <CoursewareButtonLink
       size="small"
       variant="primary"
       href={coursewareUrl ?? ""}
@@ -342,25 +341,7 @@ export const EnrolledCourseCard = ({
       aria-label={`${buttonText} course: ${title}`}
     >
       {buttonText}
-    </ButtonLink>
-  )
-  const buttonSection = isCompact ? (
-    <Stack direction="row" gap="8px" alignItems="center">
-      {certButton && (
-        <>
-          {certButton}
-          <Separator />
-        </>
-      )}
-      <CoursewareActionColumn direction="row" justifyContent="center">
-        {ctaButton}
-      </CoursewareActionColumn>
-    </Stack>
-  ) : (
-    <>
-      {certButton}
-      {ctaButton}
-    </>
+    </CoursewareButtonLink>
   )
   const menuItems = []
   const readableId = run?.course.readable_id
@@ -374,7 +355,6 @@ export const EnrolledCourseCard = ({
       href: detailsUrl,
     })
   }
-
   menuItems.push(
     {
       className: "dashboard-card-menu-item",
@@ -396,13 +376,11 @@ export const EnrolledCourseCard = ({
       },
     },
   )
-
   const receiptMenuItem = getReceiptMenuItem(
     enrollment?.enrollment_mode,
     `/orders/receipt/by-run/${enrollment?.run.id}/`,
   )
   if (receiptMenuItem) menuItems.push(receiptMenuItem)
-
   const contextMenu = (
     <SimpleMenu
       items={menuItems}
@@ -418,6 +396,32 @@ export const EnrolledCourseCard = ({
         </MenuButton>
       }
     />
+  )
+  const buttonSection = isCompact ? (
+    <Stack direction="row" flexGrow={1} gap="8px" alignItems="center">
+      {certButton && (
+        <>
+          {certButton}
+          <Separator />
+        </>
+      )}
+      <CoursewareActionColumn
+        direction="row"
+        flexGrow={1}
+        justifyContent="center"
+      >
+        {ctaButton}
+        {contextMenu}
+      </CoursewareActionColumn>
+    </Stack>
+  ) : (
+    <Stack flexGrow={1} gap="8px">
+      {certButton}
+      <Stack direction="row" gap="8px" alignItems="center">
+        {ctaButton}
+        {contextMenu}
+      </Stack>
+    </Stack>
   )
 
   const progressBadgeSection =
@@ -459,7 +463,6 @@ export const EnrolledCourseCard = ({
             </Stack>
             <Stack direction="row" gap="8px" alignItems="center">
               {buttonSection}
-              {contextMenu}
             </Stack>
           </CardHeaderContent>
           <SiblingRunsAccordion
@@ -486,7 +489,6 @@ export const EnrolledCourseCard = ({
           </Stack>
           <Stack direction="row" gap="8px" alignItems="center">
             {buttonSection}
-            {contextMenu}
           </Stack>
         </CardRoot>
       )}
@@ -507,10 +509,10 @@ export const EnrolledCourseCard = ({
           <Stack direction="column" gap="8px" flex={1}>
             {titleSection}
           </Stack>
-          {contextMenu}
         </Stack>
         <Stack
           direction="row"
+          flexGrow={1}
           gap="8px"
           alignItems="center"
           justifyContent="flex-end"
