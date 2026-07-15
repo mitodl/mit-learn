@@ -2,10 +2,10 @@ import React from "react"
 import { factories, setMockResponse, urls } from "api/test-utils"
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource, PodcastEpisodeResource } from "api/v1"
-import { renderWithProviders, screen, user, waitFor } from "@/test-utils"
+import { renderWithProviders, screen, user } from "@/test-utils"
 import {
   PodcastEpisodeDetailPage,
-  applyExternalLinkAttrs,
+  addExternalLinkTargets,
 } from "./PodcastEpisodeDetailPage"
 
 jest.mock("./PodcastPlayer", () =>
@@ -254,10 +254,12 @@ describe("PodcastEpisodeDetailPage", () => {
   })
 
   test("renders description links, opening external ones in a new tab", async () => {
+    // rel="noopener noreferrer" mirrors real backend output: nh3 adds it to
+    // every <a> during ETL sanitization, regardless of destination.
     const { episode, podcast } = setupApis({
       episodeOverrides: {
         description:
-          'Relevant Resources: <a href="https://ocw.mit.edu/">OCW</a> and <a href="/search">Search</a>.',
+          'Relevant Resources: <a href="https://ocw.mit.edu/" rel="noopener noreferrer">OCW</a> and <a href="/search" rel="noopener noreferrer">Search</a>.',
       },
       moreEpisodes: [],
     })
@@ -269,12 +271,10 @@ describe("PodcastEpisodeDetailPage", () => {
       />,
     )
 
-    // External link renders and is promoted to open in a new tab after mount.
+    // External link renders and opens in a new tab.
     const externalLink = await screen.findByRole("link", { name: "OCW" })
     expect(externalLink).toHaveAttribute("href", "https://ocw.mit.edu/")
-    await waitFor(() =>
-      expect(externalLink).toHaveAttribute("target", "_blank"),
-    )
+    expect(externalLink).toHaveAttribute("target", "_blank")
     expect(externalLink).toHaveAttribute("rel", "noopener noreferrer")
 
     // Internal link renders and stays in the same tab.
@@ -307,26 +307,28 @@ describe("PodcastEpisodeDetailPage", () => {
     )
   })
 })
-describe("applyExternalLinkAttrs", () => {
-  test("opens external links in a new tab", () => {
-    const container = document.createElement("div")
-    container.innerHTML = '<a href="https://ocw.mit.edu">OCW</a>'
-
-    applyExternalLinkAttrs(container)
-
-    const anchor = container.querySelector("a")!
-    expect(anchor.getAttribute("target")).toBe("_blank")
-    expect(anchor.getAttribute("rel")).toBe("noopener noreferrer")
+describe("addExternalLinkTargets", () => {
+  test("adds target=_blank to external links", () => {
+    const html = addExternalLinkTargets('<a href="https://ocw.mit.edu">OCW</a>')
+    expect(html).toBe('<a href="https://ocw.mit.edu" target="_blank">OCW</a>')
   })
 
-  test("leaves internal links in the same tab", () => {
-    const container = document.createElement("div")
-    container.innerHTML = '<a href="/search">Search</a>'
+  test("leaves internal links unchanged", () => {
+    const html = addExternalLinkTargets('<a href="/search">Search</a>')
+    expect(html).toBe('<a href="/search">Search</a>')
+  })
 
-    applyExternalLinkAttrs(container)
+  test("leaves anchors without an href unchanged", () => {
+    const html = addExternalLinkTargets('<a name="top">Top</a>')
+    expect(html).toBe('<a name="top">Top</a>')
+  })
 
-    const anchor = container.querySelector("a")!
-    expect(anchor.getAttribute("target")).toBeNull()
-    expect(anchor.getAttribute("rel")).toBeNull()
+  test("preserves other attributes on external links", () => {
+    const html = addExternalLinkTargets(
+      '<a href="https://ocw.mit.edu" rel="noopener noreferrer">OCW</a>',
+    )
+    expect(html).toBe(
+      '<a href="https://ocw.mit.edu" rel="noopener noreferrer" target="_blank">OCW</a>',
+    )
   })
 })

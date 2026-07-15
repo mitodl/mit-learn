@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef, useEffect } from "react"
+import React, { useRef, useMemo } from "react"
 import {
   Breadcrumbs,
   Typography,
@@ -8,7 +8,7 @@ import {
   styled,
   useMediaQuery,
 } from "ol-components"
-import type { Theme } from "ol-components"
+import type { Theme, TypographyProps } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import { RiPlayFill, RiPauseFill } from "@remixicon/react"
 import PodcastPlayer from "./PodcastPlayer"
@@ -40,16 +40,17 @@ const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 // is safe to render verbatim — the same trust model as resource descriptions
 // elsewhere. Rendering it directly keeps server and client output identical,
 // avoiding a hydration mismatch. target="_blank" is a presentation concern the
-// backend deliberately omits, so we add it to external links here after mount,
-// reusing the app-wide externalLinkProps convention; internal/relative links are
-// left in the same tab.
-export const applyExternalLinkAttrs = (container: HTMLElement) => {
-  container.querySelectorAll<HTMLAnchorElement>("a[href]").forEach((anchor) => {
-    const { target, rel } = externalLinkProps(anchor.getAttribute("href") ?? "")
-    if (target) anchor.setAttribute("target", target)
-    if (rel) anchor.setAttribute("rel", rel)
+// backend deliberately omits, so we add it here via a string transform (rather
+// than mutating the DOM post-mount) so it's part of the HTML fed to
+// dangerouslySetInnerHTML on both server and client — surviving re-renders and
+// keeping SSR output byte-identical to the client's first render.
+export const addExternalLinkTargets = (html: string): string =>
+  html.replace(/<a\s+([^>]*)>/g, (fullMatch, attrs) => {
+    const hrefMatch = attrs.match(/href="([^"]*)"/)
+    if (!hrefMatch) return fullMatch
+    const { target } = externalLinkProps(hrefMatch[1])
+    return target ? `<a ${attrs} target="${target}">` : fullMatch
   })
-}
 
 /* ── Layout ── */
 
@@ -143,28 +144,30 @@ const Topics = styled.span(({ theme }) => ({
   },
 }))
 
-const Description = styled(Typography)(({ theme }) => ({
-  color: theme.custom.colors.darkGray2,
-  display: "block",
-  marginBottom: "32px",
-  marginTop: "32px",
-  fontSize: "18px",
-  fontStyle: "normal",
-  lineHeight: "32px",
-  a: {
-    textDecoration: "underline",
+const Description = styled(Typography)<Pick<TypographyProps, "component">>(
+  ({ theme }) => ({
     color: theme.custom.colors.darkGray2,
-    fontWeight: theme.typography.fontWeightMedium,
-  },
-  "a:hover": {
-    textDecoration: "none",
-  },
-  [theme.breakpoints.down("sm")]: {
-    ...theme.typography.body1,
-    lineHeight: "24px",
-    marginTop: "16px",
-  },
-}))
+    display: "block",
+    marginBottom: "32px",
+    marginTop: "32px",
+    fontSize: "18px",
+    fontStyle: "normal",
+    lineHeight: "32px",
+    a: {
+      textDecoration: "underline",
+      color: theme.custom.colors.darkGray2,
+      fontWeight: theme.typography.fontWeightMedium,
+    },
+    "a:hover": {
+      textDecoration: "none",
+    },
+    [theme.breakpoints.down("sm")]: {
+      ...theme.typography.body1,
+      lineHeight: "24px",
+      marginTop: "16px",
+    },
+  }),
+)
 
 const EpisodeList = styled.ul({
   listStyle: "none",
@@ -236,7 +239,6 @@ export const PodcastEpisodeDetailPage: React.FC<
 > = ({ episodeId, podcastId }) => {
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"))
   const playerRef = useRef<PodcastPlayerHandle>(null)
-  const descriptionRef = useRef<HTMLDivElement>(null)
   const {
     playingEpisode,
     isAudioPlaying,
@@ -304,11 +306,11 @@ export const PodcastEpisodeDetailPage: React.FC<
       ? `${NEXT_PUBLIC_ORIGIN}${podcastEpisodePageView(String(episode!.id), podcastId, episode?.title)}`
       : ""
 
-  // Promote external links to open in a new tab after the description mounts.
-  // Runs client-side only, so it never affects the server-rendered HTML.
-  useEffect(() => {
-    if (descriptionRef.current) applyExternalLinkAttrs(descriptionRef.current)
-  }, [episode?.description])
+  const description = useMemo(
+    () =>
+      episode?.description ? addExternalLinkTargets(episode.description) : null,
+    [episode?.description],
+  )
 
   return (
     <>
@@ -363,12 +365,16 @@ export const PodcastEpisodeDetailPage: React.FC<
                 />
               )}
             </PodcastShareSection>
-            {episode?.description && (
+            {description && (
+              // Rendered as a <div>, not the default <p>: the sanitized
+              // description contains block elements (<p>, <ul>, <li>) which are
+              // invalid inside a <p>. The browser would reparent them during
+              // parsing, diverging from the server HTML and breaking hydration.
               <Description
-                ref={descriptionRef}
                 variant="body1"
+                component="div"
                 dangerouslySetInnerHTML={{
-                  __html: episode.description,
+                  __html: description,
                 }}
               />
             )}
