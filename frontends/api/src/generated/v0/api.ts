@@ -386,6 +386,130 @@ export interface ChannelUnitDetail {
   unit: LearningResourceOfferorDetail
 }
 /**
+ * Serializer for content feedback submissions.  ``user`` is set server-side from the request (never client-supplied). Each valid submission is persisted as a new append-only record.
+ * @export
+ * @interface ContentFeedback
+ */
+export interface ContentFeedback {
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFeedback
+   */
+  course_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFeedback
+   */
+  course_name?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFeedback
+   */
+  block_usage_key: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFeedback
+   */
+  block_type?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFeedback
+   */
+  block_display_name?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFeedback
+   */
+  unit_title?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFeedback
+   */
+  url?: string
+  /**
+   *
+   * @type {SentimentEnum}
+   * @memberof ContentFeedback
+   */
+  sentiment: SentimentEnum
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFeedback
+   */
+  comment?: string
+}
+
+/**
+ * Serializer for content feedback submissions.  ``user`` is set server-side from the request (never client-supplied). Each valid submission is persisted as a new append-only record.
+ * @export
+ * @interface ContentFeedbackRequest
+ */
+export interface ContentFeedbackRequest {
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFeedbackRequest
+   */
+  course_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFeedbackRequest
+   */
+  course_name?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFeedbackRequest
+   */
+  block_usage_key: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFeedbackRequest
+   */
+  block_type?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFeedbackRequest
+   */
+  block_display_name?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFeedbackRequest
+   */
+  unit_title?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFeedbackRequest
+   */
+  url?: string
+  /**
+   *
+   * @type {SentimentEnum}
+   * @memberof ContentFeedbackRequest
+   */
+  sentiment: SentimentEnum
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFeedbackRequest
+   */
+  comment?: string
+}
+
+/**
  * Serializer class for course run ContentFiles
  * @export
  * @interface ContentFile
@@ -5190,6 +5314,35 @@ export interface RetrieveProblemResponse {
   solution_set: string
 }
 /**
+ * * `positive` - Positive * `negative` - Negative * `idea` - Idea
+ * @export
+ * @enum {string}
+ */
+
+export const SentimentEnumDescriptions = {
+  positive: "Positive",
+  negative: "Negative",
+  idea: "Idea",
+} as const
+
+export const SentimentEnum = {
+  /**
+   * Positive
+   */
+  Positive: "positive",
+  /**
+   * Negative
+   */
+  Negative: "negative",
+  /**
+   * Idea
+   */
+  Idea: "idea",
+} as const
+
+export type SentimentEnum = (typeof SentimentEnum)[keyof typeof SentimentEnum]
+
+/**
  * * `facebook` - facebook * `linkedin` - linkedin * `personal` - personal * `twitter` - twitter
  * @export
  * @enum {string}
@@ -7333,6 +7486,182 @@ export class CkeditorApi extends BaseAPI {
   public ckeditorRetrieve(options?: RawAxiosRequestConfig) {
     return CkeditorApiFp(this.configuration)
       .ckeditorRetrieve(options)
+      .then((request) => request(this.axios, this.basePath))
+  }
+}
+
+/**
+ * ContentFeedbackApi - axios parameter creator
+ * @export
+ */
+export const ContentFeedbackApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Accept per-block content feedback submissions (append-only).
+     * @param {ContentFeedbackRequest} ContentFeedbackRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    contentFeedbackCreate: async (
+      ContentFeedbackRequest: ContentFeedbackRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'ContentFeedbackRequest' is not null or undefined
+      assertParamExists(
+        "contentFeedbackCreate",
+        "ContentFeedbackRequest",
+        ContentFeedbackRequest,
+      )
+      const localVarPath = `/api/v0/content_feedback/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "POST",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      localVarHeaderParameter["Content-Type"] = "application/json"
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        ContentFeedbackRequest,
+        localVarRequestOptions,
+        configuration,
+      )
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
+
+/**
+ * ContentFeedbackApi - functional programming interface
+ * @export
+ */
+export const ContentFeedbackApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator =
+    ContentFeedbackApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Accept per-block content feedback submissions (append-only).
+     * @param {ContentFeedbackRequest} ContentFeedbackRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async contentFeedbackCreate(
+      ContentFeedbackRequest: ContentFeedbackRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<ContentFeedback>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.contentFeedbackCreate(
+          ContentFeedbackRequest,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ContentFeedbackApi.contentFeedbackCreate"]?.[index]
+          ?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
+
+/**
+ * ContentFeedbackApi - factory interface
+ * @export
+ */
+export const ContentFeedbackApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = ContentFeedbackApiFp(configuration)
+  return {
+    /**
+     * Accept per-block content feedback submissions (append-only).
+     * @param {ContentFeedbackApiContentFeedbackCreateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    contentFeedbackCreate(
+      requestParameters: ContentFeedbackApiContentFeedbackCreateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<ContentFeedback> {
+      return localVarFp
+        .contentFeedbackCreate(
+          requestParameters.ContentFeedbackRequest,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
+
+/**
+ * Request parameters for contentFeedbackCreate operation in ContentFeedbackApi.
+ * @export
+ * @interface ContentFeedbackApiContentFeedbackCreateRequest
+ */
+export interface ContentFeedbackApiContentFeedbackCreateRequest {
+  /**
+   *
+   * @type {ContentFeedbackRequest}
+   * @memberof ContentFeedbackApiContentFeedbackCreate
+   */
+  readonly ContentFeedbackRequest: ContentFeedbackRequest
+}
+
+/**
+ * ContentFeedbackApi - object-oriented interface
+ * @export
+ * @class ContentFeedbackApi
+ * @extends {BaseAPI}
+ */
+export class ContentFeedbackApi extends BaseAPI {
+  /**
+   * Accept per-block content feedback submissions (append-only).
+   * @param {ContentFeedbackApiContentFeedbackCreateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ContentFeedbackApi
+   */
+  public contentFeedbackCreate(
+    requestParameters: ContentFeedbackApiContentFeedbackCreateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ContentFeedbackApiFp(this.configuration)
+      .contentFeedbackCreate(requestParameters.ContentFeedbackRequest, options)
       .then((request) => request(this.axios, this.basePath))
   }
 }
