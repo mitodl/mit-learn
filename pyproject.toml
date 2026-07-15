@@ -27,6 +27,7 @@ dependencies = [
     "dj-database-url>=3.0.0,<4",
     "dj-static>=0.0.6,<0.0.7",
     "django-anymail[mailgun]>=13.0,<14",
+    "django-aqueduct[derivations,vault]>=0.9.0,<1",
     "django-bitfield>=2.2.0,<3",
     "django-cache-memoize>=0.2.0,<0.3",
     "django-cors-headers>=4.0.0,<5",
@@ -156,6 +157,75 @@ dev = [
     "mitol-drf-lint==2026.4.2",
 ]
 
+[tool.aqueduct]
+modules = [
+    "main.settings_celery",
+    "main.settings_course_etl",
+    "main.settings_pluggy",
+    "main.settings",
+]
+output = "main/aqueduct_settings.py"
+include_envparser = true
+class_name = "AqueductSettings"
+extra = "allow"
+# `enrich_url_types` (0.9.0 str -> AnyUrl promotion) is intentionally left OFF.
+# It correctly excludes Django's relative-URL settings and pairs a str
+# serializer for model_dump(), but it still promotes APP_BASE_URL (default
+# None, promoted via the name-suffix fallback), whose stored value is then a
+# pydantic.Url object — and this model's own `build_urls` validator consumes it
+# with `urljoin(self.APP_BASE_URL, ...)`, which rejects non-str. Keeping the
+# URL fields as plain str preserves the drop-in contract with no workarounds.
+parity_model = "main.aqueduct_settings:AqueductSettings"
+parity_legacy = "main.settings"
+# Deliberate, documented divergences from main/settings.py. Every entry is a
+# policy fix, a framework/harness artifact, or a model-only typed input — not a
+# dropped value. Verified via `manage.py check_aqueduct_settings`.
+parity_ignore = [
+    # --- Deliberate policy / security fixes ---
+    "SECRET_KEY",              # required in the model; legacy had an insecure default
+    "WEBHOOK_SECRET",          # required in the model; legacy had an insecure default
+    "AWS_ACCESS_KEY_ID",       # CRITICAL fix: legacy typed this bool (default False); model is str | None
+    "AWS_SECRET_ACCESS_KEY",   # CRITICAL fix: legacy typed this bool (default False); model is str | None
+    "BASE_DIR",                # computed identically, via os.path on this file
+    # NOTE: DATABASES / DEFAULT_DATABASE_CONFIG / HEALTH_CHECK were previously
+    # ignored here because Django's ConnectionHandler and django-health-check
+    # inject extra dict keys at runtime; 0.9.0's parity check does a one-way
+    # subset compare for dict settings, so they no longer diverge and were
+    # dropped from this list.
+    # --- Conditional / leaked module locals (legacy only sets these in a branch) ---
+    "STORAGES",                # legacy sets STORAGES only under MITOL_USE_S3; model carries Django's default explicitly (the adapter injects every value)
+    "OPTIONS",                 # a leaked local inside legacy's `if MITOL_USE_S3` block, not a real Django setting
+    "IPWARE_PRIVATE_IP_PREFIX",# legacy sets this only under `if DEBUG`
+    # --- Model-only typed inputs (legacy reads these inline, never as a module global) ---
+    "HOST_IP",                 # legacy: INTERNAL_IPS = (get_string("HOST_IP", ...),)
+    "DATABASE_URL",
+    "REDISCLOUD_URL",
+    "MITOL_DB_CONN_MAX_AGE",
+    "MITOL_DB_DISABLE_SSL",
+    "MITOL_DB_DISABLE_SS_CURSORS",
+    "RUN_DATA_MIGRATIONS",
+    "HEROKU_APP_NAME",
+    "HEROKU_PARENT_APP_NAME",
+    "NEWS_EVENTS_MEDIUM_NEWS_SCHEDULE_SECONDS",
+    "NEWS_EVENTS_MITPE_EVENTS_SCHEDULE_SECONDS",
+    "NEWS_EVENTS_MITPE_NEWS_SCHEDULE_SECONDS",
+    "NEWS_EVENTS_OL_EVENTS_SCHEDULE_SECONDS",
+    "NEWS_EVENTS_ARTICLES_NEWS_SCHEDULE_SECONDS",
+    "NEWS_EVENTS_WEBSITE_CONTENT_NEWS_SCHEDULE_SECONDS",
+    "SCRAPE_MARKETING_PAGES_SCHEDULE_SECONDS",
+    "EMBED_NEW_RESOURCES_SCHEDULE_SECONDS",
+    "EMBED_NEW_CONTENT_FILES_SCHEDULE_SECONDS",
+    # --- Benign numeric type normalization ---
+    # get_float() declares a float but returns its int default un-coerced when
+    # the env var is unset; the model's float annotation normalizes it (3 -> 3.0).
+    "DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT",
+    "DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY",
+    "DEFAULT_SEARCH_MINIMUM_SCORE_CUTOFF",
+    "SEARCH_PROGRAM_INDEX_BOOST",
+    "SENTRY_PROFILES_SAMPLE_RATE",
+    "SENTRY_TRACES_SAMPLE_RATE",
+]
+
 [tool.uv]
 package = false
 default-groups = "all"
@@ -171,6 +241,13 @@ build-backend = "uv_build"
 [tool.ruff]
 target-version = "py311"
 line-length = 88
+# main/aqueduct_settings.py carries machine-owned `aqueduct:generated` regions.
+# 0.8.1 made the generator's output ruff-format-stable for the ~9 rule groups it
+# validated against, but mit-learn selects a much broader set: `ruff check` flags
+# 68 issues in the generated regions and `ruff format` would rewrite them (which
+# then makes `generate_aqueduct_settings --check` report drift). Per the upstream
+# note, extend-exclude remains the documented fallback for such rulesets.
+extend-exclude = ["main/aqueduct_settings.py"]
 lint.select = [
     "A",  # flake8-builtins
     # "AIR",  # Airflow
