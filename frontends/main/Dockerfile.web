@@ -9,39 +9,20 @@
 # runtime by Kubernetes and surfaced to the browser via PublicEnvScript.
 # Only GIT_REF is needed at build time (for generateBuildId in next.config.js).
 
-
-# Run:
-# docker run -p 8062:8062 -e PORT=8062 mit-learn-frontend:latest
-
-# Heroku build/push:
-#
-# heroku container:push web \
-#   --app mitopen-rc-nextjs \
-#   --recursive \
-#   --arg NEXT_PUBLIC_ORIGIN=https://next.rc.learn.mit.edu
-# NEXT_PUBLIC_MITOL_API_BASE_URL=https://api.rc.learn.mit.edu,\
-# NEXT_PUBLIC_SITE_NAME="MIT Learn",\
-# NEXT_PUBLIC_MITOL_SUPPORT_EMAIL=mitlearn-support@mit.edu,\
-# NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS=$MITOL_AXIOS_WITH_CREDENTIALS,\
-# NEXT_PUBLIC_CSRF_COOKIE_NAME=learn-rc-csrftoken,\
-# NEXT_PUBLIC_POSTHOG_API_HOST=$POSTHOG_API_HOST,\
-# NEXT_PUBLIC_POSTHOG_PROJECT_ID=$POSTHOG_PROJECT_ID,\
-# NEXT_PUBLIC_POSTHOG_API_KEY=$POSTHOG_API_KEY,\
-# NEXT_PUBLIC_POSTHOG_ENABLE_SESSION_RECORDING=$POSTHOG_ENABLE_SESSION_RECORDING,\
-# NEXT_PUBLIC_SENTRY_DSN=$SENTRY_DSN,\
-# NEXT_PUBLIC_SENTRY_ENV=$SENTRY_ENV,\
-# NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE=$SENTRY_PROFILES_SAMPLE_RATE,\
-# NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=$SENTRY_TRACES_SAMPLE_RATE,\
-# NEXT_PUBLIC_APPZI_URL=$APPZI_URL,\
-# NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT=$LEARN_AI_RECOMMENDATION_ENDPOINT,\
-# NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT=$LEARN_AI_SYLLABUS_ENDPOINT,\
-# NEXT_PUBLIC_VERSION=$VERSION \
-#   --context-path .
-
-# Heroku release:
-# heroku ps:scale frontend=1 --app mitopen-rc-nextjs
-# heroku container:release --app mitopen-rc-nextjs frontend
-
+# Then run with your local env vars, e.g.,
+# docker run --rm --name mln-test -p 8062:3000 \
+#     --add-host=api.open.odl.local:host-gateway \
+#     -e NEXT_PUBLIC_ORIGIN=http://open.odl.local:8062 \
+#     -e NEXT_PUBLIC_MITOL_API_BASE_URL=http://api.open.odl.local:8065 \
+#     -e NEXT_PUBLIC_SITE_NAME="MIT Learn" \
+#     -e NEXT_PUBLIC_MITOL_SUPPORT_EMAIL=mitlearn-support@mit.edu \
+#     -e NEXT_PUBLIC_CSRF_COOKIE_NAME=csrftoken-local-learn \
+#     -e NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL=http://mitxonline.odl.local:8065/ \
+#     -e NEXT_PUBLIC_MITX_ONLINE_BASE_URL=https://api.learn.mit.edu/mitxonline \
+#     -e NEXT_PUBLIC_MITX_ONLINE_CSRF_COOKIE_NAME=csrf_mitxonline \
+#     -e NEXT_CACHE_S_MAXAGE_SECONDS=7200 \
+#     -e NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS=true \
+#     mit-learn-nextjs:test
 
 FROM node:24-alpine AS base
 
