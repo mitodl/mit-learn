@@ -14,7 +14,10 @@ from qdrant_client.http.models.models import CountResult
 from qdrant_client.models import PointStruct
 
 import vector_search.utils as vs_utils
-from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
+from learning_resources.constants import (
+    GROUP_CONTENT_FILE_CONTENT_VIEWERS,
+    LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
+)
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
@@ -1022,6 +1025,90 @@ def test_should_generate_for_changed_resource(mocker):
     mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
     result = should_generate_resource_embeddings(serialized_resources[0])
     assert result is True
+
+
+def test_embedding_context_includes_content_files():
+    """
+    Content file text should be folded into the embedding context for any
+    resource type, mirroring the OpenSearch query.
+    """
+    serialized_resource = {
+        "title": "A title",
+        "description": "A short description",
+        "full_description": "A full description",
+        "resource_type_group": "course",
+        "content_files": [
+            {"content": "The first content file text"},
+            {"content": None},
+            {"content": "The second content file text"},
+        ],
+    }
+
+    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
+        serialized_resource
+    )
+    assert context == (
+        "A title A short description A full description\n\n# Content\n"
+        "The first content file text\n\nThe second content file text"
+    )
+
+
+def test_embedding_context_includes_serialized_content_files():
+    """Content from a real serialized document resource ends up in the context"""
+    resource = LearningResourceFactory.create(resource_type="document", published=True)
+    ContentFileFactory.create(
+        direct_learning_resource=resource, content="sentinel text", published=True
+    )
+    serialized = next(iter(serialize_bulk_learning_resources([resource.id])))
+    assert "sentinel text" in vs_utils._learning_resource_embedding_context(serialized)  # noqa: SLF001
+
+
+def test_embedding_context_without_content_files():
+    """Resources without content files should just use title/description text."""
+    serialized_resource = {
+        "title": "A title",
+        "description": "A short description",
+        "full_description": "A full description",
+        "resource_type_group": "course",
+        "content_files": [],
+    }
+
+    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
+        serialized_resource
+    )
+
+    assert context == "A title A short description A full description"
+
+
+def test_embedding_context_truncates_content(mocker):
+    """The combined context should be truncated to the embedding model's limit."""
+    encoder = mocker.MagicMock(
+        model_name="test-model",
+        token_encoding_name="test-encoding",  # noqa: S106
+    )
+    mocker.patch("vector_search.utils.dense_encoder", return_value=encoder)
+    truncate_mock = mocker.patch(
+        "vector_search.utils.truncate_to_model_limit",
+        side_effect=lambda text, *_args, **_kwargs: text[:10],
+    )
+    serialized_resource = {
+        "title": "A title",
+        "description": "A short description",
+        "full_description": "A full description",
+        "resource_type_group": LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
+        "content_files": [{"content": "0123456789ABCDEF"}],
+    }
+
+    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
+        serialized_resource
+    )
+
+    assert context == "A title A "
+    truncate_mock.assert_called_once_with(
+        "A title A short description A full description\n\n# Content\n0123456789ABCDEF",
+        "test-model",
+        token_encoding_name="test-encoding",  # noqa: S106
+    )
 
 
 def test_should_generate_for_changed_content_file(mocker):
