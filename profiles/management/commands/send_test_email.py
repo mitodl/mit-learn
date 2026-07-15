@@ -1,5 +1,7 @@
 """Management command for sending a test welcome or digest email to a user"""  # noqa: INP001
 
+import sys
+
 from django.contrib.auth import get_user_model
 from django.core.management import BaseCommand, CommandError
 from requests.models import PreparedRequest
@@ -89,6 +91,7 @@ class Command(BaseCommand):
                     f"User {user.id} has a blank email, send_welcome_email will skip it"
                 )
             )
+            sys.exit(1)
         send_welcome_email(user.id)
         self.stdout.write(f"Sent welcome email to {user}")
 
