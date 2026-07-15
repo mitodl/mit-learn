@@ -24,6 +24,7 @@ from profiles.utils import (
     profile_image_upload_uri_small,
     send_template_email,
     update_full_name,
+    user_has_email_optin,
 )
 
 
@@ -232,6 +233,33 @@ def test_fetch_program_letter_template_data_has_results(mocker, user, settings):
 
 
 # ---------------------------------------------------------------------------
+# user_has_email_optin tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("email_optin", [True, None])
+def test_user_has_email_optin_true_or_none(email_optin):
+    """user_has_email_optin is True when email_optin is True or None."""
+    user = UserFactory.create(profile__email_optin=email_optin)
+    assert user_has_email_optin(user) is True
+
+
+@pytest.mark.django_db
+def test_user_has_email_optin_false():
+    """user_has_email_optin is False when the user opted out."""
+    user = UserFactory.create(profile__email_optin=False)
+    assert user_has_email_optin(user) is False
+
+
+@pytest.mark.django_db
+def test_user_has_email_optin_no_profile():
+    """user_has_email_optin is False when the user has no profile."""
+    user = UserFactory.create(no_profile=True)
+    assert user_has_email_optin(user) is False
+
+
+# ---------------------------------------------------------------------------
 # send_template_email tests
 # ---------------------------------------------------------------------------
 
@@ -277,6 +305,41 @@ def test_send_template_email_transactional_opted_out_still_sends(mocker):
     """Transactional emails bypass email_optin even when the user opted out."""
     mock_send_email = mocker.patch("profiles.utils.send_email")
     user = UserFactory.create(profile__email_optin=False)
+
+    send_template_email(
+        user,
+        "Test",
+        "email/welcome_email.html",
+        context={"display_name": "Test"},
+        is_transactional=True,
+    )
+
+    mock_send_email.assert_called_once()
+
+
+@pytest.mark.django_db
+def test_send_template_email_not_transactional_no_profile_skips(mocker):
+    """When is_transactional=False and the user has no profile, the email is not sent."""
+    mock_send_email = mocker.patch("profiles.utils.send_email")
+    user = UserFactory.create(no_profile=True)
+
+    result = send_template_email(
+        user,
+        "Test",
+        "email/welcome_email.html",
+        context={"display_name": "Test"},
+        is_transactional=False,
+    )
+
+    assert result is None
+    mock_send_email.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_send_template_email_transactional_no_profile_still_sends(mocker):
+    """Transactional emails bypass the opt-in check even when there's no profile."""
+    mock_send_email = mocker.patch("profiles.utils.send_email")
+    user = UserFactory.create(no_profile=True)
 
     send_template_email(
         user,

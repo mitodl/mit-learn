@@ -14,6 +14,7 @@ from anymail.message import AnymailMessage
 from bs4 import BeautifulSoup
 from django.conf import settings
 from django.core import mail
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.temp import NamedTemporaryFile
 from django.template.loader import render_to_string
 from PIL import Image
@@ -393,6 +394,20 @@ def fetch_program_letter_template_data(letter):
     return None
 
 
+def user_has_email_optin(user) -> bool:
+    """
+    Determine whether a non-transactional email may be sent to a user.
+
+    Returns False if the user has explicitly opted out, or has no Profile
+    at all (e.g. a user provisioned without a profile being created).
+    """
+    try:
+        profile = user.profile
+    except ObjectDoesNotExist:
+        return False
+    return profile.email_optin is not False
+
+
 def send_template_email(user, subject, template, context, *, is_transactional: bool):
     """
     Send an html email using a provided template
@@ -404,7 +419,7 @@ def send_template_email(user, subject, template, context, *, is_transactional: b
         is_transactional(bool): If true the email bypasses the user's
             email_optin setting and always sends.
     """
-    if not is_transactional and user.profile.email_optin is False:
+    if not is_transactional and not user_has_email_optin(user):
         log.debug("Not sending email to user %s: opted out of email", user.id)
         return None
 
