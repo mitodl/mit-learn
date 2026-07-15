@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef, useMemo } from "react"
+import React, { useRef, useEffect } from "react"
 import {
   Breadcrumbs,
   Typography,
@@ -23,7 +23,6 @@ import type { PodcastEpisodeResource } from "api/v1"
 import moment from "moment"
 import { formatDate } from "ol-utilities"
 import { HOME, podcastPageView, podcastEpisodePageView } from "@/common/urls"
-import DOMPurify from "isomorphic-dompurify"
 import { externalLinkProps } from "@/common/utils"
 import { EpisodeItem } from "./PodcastsListingPage/EpisodeItem"
 import PodcastContainer from "./PodcastContainer"
@@ -36,23 +35,20 @@ import { env } from "@/env"
 
 const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
-// Runs after DOMPurify scrubs attributes. Promotes external links to open in a
-// new tab, matching the app-wide externalLinkProps convention; internal/relative
-// links are left alone. Scoped via add/removeHook below because addHook is global
-// (safe today: no other afterSanitizeAttributes hooks exist in the app).
-const openExternalLinksInNewTab = (node: Element) => {
-  if (node.tagName === "A" && node.hasAttribute("href")) {
-    const { target, rel } = externalLinkProps(node.getAttribute("href") ?? "")
-    if (target) node.setAttribute("target", target)
-    if (rel) node.setAttribute("rel", rel)
-  }
-}
-
-export const sanitizeDescription = (html: string): string => {
-  DOMPurify.addHook("afterSanitizeAttributes", openExternalLinksInNewTab)
-  const clean = DOMPurify.sanitize(html)
-  DOMPurify.removeHook("afterSanitizeAttributes")
-  return clean
+// Episode descriptions are sanitized on the backend with nh3 during ETL (only
+// <a href/title> is allowed, and rel="noopener noreferrer" is added), so the HTML
+// is safe to render verbatim — the same trust model as resource descriptions
+// elsewhere. Rendering it directly keeps server and client output identical,
+// avoiding a hydration mismatch. target="_blank" is a presentation concern the
+// backend deliberately omits, so we add it to external links here after mount,
+// reusing the app-wide externalLinkProps convention; internal/relative links are
+// left in the same tab.
+export const applyExternalLinkAttrs = (container: HTMLElement) => {
+  container.querySelectorAll<HTMLAnchorElement>("a[href]").forEach((anchor) => {
+    const { target, rel } = externalLinkProps(anchor.getAttribute("href") ?? "")
+    if (target) anchor.setAttribute("target", target)
+    if (rel) anchor.setAttribute("rel", rel)
+  })
 }
 
 /* ── Layout ── */
@@ -240,6 +236,7 @@ export const PodcastEpisodeDetailPage: React.FC<
 > = ({ episodeId, podcastId }) => {
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"))
   const playerRef = useRef<PodcastPlayerHandle>(null)
+  const descriptionRef = useRef<HTMLDivElement>(null)
   const {
     playingEpisode,
     isAudioPlaying,
@@ -307,11 +304,11 @@ export const PodcastEpisodeDetailPage: React.FC<
       ? `${NEXT_PUBLIC_ORIGIN}${podcastEpisodePageView(String(episode!.id), podcastId, episode?.title)}`
       : ""
 
-  const cleanDescription = useMemo(
-    () =>
-      episode?.description ? sanitizeDescription(episode.description) : "",
-    [episode?.description],
-  )
+  // Promote external links to open in a new tab after the description mounts.
+  // Runs client-side only, so it never affects the server-rendered HTML.
+  useEffect(() => {
+    if (descriptionRef.current) applyExternalLinkAttrs(descriptionRef.current)
+  }, [episode?.description])
 
   return (
     <>
@@ -368,9 +365,10 @@ export const PodcastEpisodeDetailPage: React.FC<
             </PodcastShareSection>
             {episode?.description && (
               <Description
+                ref={descriptionRef}
                 variant="body1"
                 dangerouslySetInnerHTML={{
-                  __html: cleanDescription,
+                  __html: episode.description,
                 }}
               />
             )}

@@ -2,10 +2,10 @@ import React from "react"
 import { factories, setMockResponse, urls } from "api/test-utils"
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource, PodcastEpisodeResource } from "api/v1"
-import { renderWithProviders, screen, user } from "@/test-utils"
+import { renderWithProviders, screen, user, waitFor } from "@/test-utils"
 import {
   PodcastEpisodeDetailPage,
-  sanitizeDescription,
+  applyExternalLinkAttrs,
 } from "./PodcastEpisodeDetailPage"
 
 jest.mock("./PodcastPlayer", () =>
@@ -253,6 +253,36 @@ describe("PodcastEpisodeDetailPage", () => {
     )
   })
 
+  test("renders description links, opening external ones in a new tab", async () => {
+    const { episode, podcast } = setupApis({
+      episodeOverrides: {
+        description:
+          'Relevant Resources: <a href="https://ocw.mit.edu/">OCW</a> and <a href="/search">Search</a>.',
+      },
+      moreEpisodes: [],
+    })
+
+    renderWithProviders(
+      <PodcastEpisodeDetailPage
+        episodeId={String(episode.id)}
+        podcastId={String(podcast.id)}
+      />,
+    )
+
+    // External link renders and is promoted to open in a new tab after mount.
+    const externalLink = await screen.findByRole("link", { name: "OCW" })
+    expect(externalLink).toHaveAttribute("href", "https://ocw.mit.edu/")
+    await waitFor(() =>
+      expect(externalLink).toHaveAttribute("target", "_blank"),
+    )
+    expect(externalLink).toHaveAttribute("rel", "noopener noreferrer")
+
+    // Internal link renders and stays in the same tab.
+    const internalLink = screen.getByRole("link", { name: "Search" })
+    expect(internalLink).toHaveAttribute("href", "/search")
+    expect(internalLink).not.toHaveAttribute("target")
+  })
+
   test("clicking play in 'More from' list renders the player for that episode", async () => {
     const moreEpisode = makePodcastEpisode()
     moreEpisode.podcast_episode.audio_url = "https://example.com/more.mp3"
@@ -277,15 +307,26 @@ describe("PodcastEpisodeDetailPage", () => {
     )
   })
 })
-describe("sanitizeDescription", () => {
+describe("applyExternalLinkAttrs", () => {
   test("opens external links in a new tab", () => {
-    const html = sanitizeDescription('<a href="https://ocw.mit.edu">OCW</a>')
-    expect(html).toContain('target="_blank"')
-    expect(html).toContain('rel="noopener noreferrer"')
+    const container = document.createElement("div")
+    container.innerHTML = '<a href="https://ocw.mit.edu">OCW</a>'
+
+    applyExternalLinkAttrs(container)
+
+    const anchor = container.querySelector("a")!
+    expect(anchor.getAttribute("target")).toBe("_blank")
+    expect(anchor.getAttribute("rel")).toBe("noopener noreferrer")
   })
 
   test("leaves internal links in the same tab", () => {
-    const html = sanitizeDescription('<a href="/search">Search</a>')
-    expect(html).not.toContain("target=")
+    const container = document.createElement("div")
+    container.innerHTML = '<a href="/search">Search</a>'
+
+    applyExternalLinkAttrs(container)
+
+    const anchor = container.querySelector("a")!
+    expect(anchor.getAttribute("target")).toBeNull()
+    expect(anchor.getAttribute("rel")).toBeNull()
   })
 })
