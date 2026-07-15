@@ -27,4 +27,16 @@ describe("HeroSection", () => {
     expect(screen.getByText(/5 podcasts/)).toBeInTheDocument()
     expect(screen.getByText(/42 episodes/)).toBeInTheDocument()
   })
+
+  it("shows a skeleton instead of the stats while loading", () => {
+    const { view } = renderWithProviders(
+      <HeroSection totalPodcasts={0} totalEpisodes={0} isLoading={true} />,
+    )
+    // The "0 podcasts • 0 episodes • Updated daily" line must not flash before
+    // data loads.
+    expect(screen.queryByText(/Updated daily/)).not.toBeInTheDocument()
+    expect(
+      view.container.querySelectorAll(".MuiSkeleton-root").length,
+    ).toBeGreaterThan(0)
+  })
 })

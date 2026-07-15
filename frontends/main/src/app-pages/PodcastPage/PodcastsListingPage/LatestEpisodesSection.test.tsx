@@ -69,6 +69,68 @@ describe("LatestEpisodesSection", () => {
     expect(screen.queryByRole("list")).not.toBeInTheDocument()
   })
 
+  it("shows an empty-state message when not loading and there are no episodes", () => {
+    renderWithProviders(
+      <LatestEpisodesSection
+        episodes={[]}
+        isMobile={false}
+        isAudioPlaying={false}
+        onPlayClick={jest.fn()}
+        onPauseClick={jest.fn()}
+        hasMoreEpisodes={false}
+        isPlayable={() => true}
+      />,
+    )
+    expect(
+      screen.getByText("No episodes available right now."),
+    ).toBeInTheDocument()
+  })
+
+  it("shows skeletons and no empty/error message while loading", () => {
+    const { view } = renderWithProviders(
+      <LatestEpisodesSection
+        episodes={[]}
+        isMobile={false}
+        isAudioPlaying={false}
+        onPlayClick={jest.fn()}
+        onPauseClick={jest.fn()}
+        hasMoreEpisodes={false}
+        isPlayable={() => true}
+        isLoading={true}
+      />,
+    )
+    expect(
+      view.container.querySelectorAll(".MuiSkeleton-root").length,
+    ).toBeGreaterThan(0)
+    expect(
+      screen.queryByText("No episodes available right now."),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("list")).not.toBeInTheDocument()
+  })
+
+  it("shows an error message when the request fails", () => {
+    renderWithProviders(
+      <LatestEpisodesSection
+        episodes={[]}
+        isMobile={false}
+        isAudioPlaying={false}
+        onPlayClick={jest.fn()}
+        onPauseClick={jest.fn()}
+        hasMoreEpisodes={false}
+        isPlayable={() => true}
+        isError={true}
+      />,
+    )
+    expect(
+      screen.getByText(
+        "Something went wrong loading episodes. Please try again later.",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("No episodes available right now."),
+    ).not.toBeInTheDocument()
+  })
+
   it("shows the 'Load more episodes' link only when hasMoreEpisodes is true", () => {
     const episodes = makeEpisodes(1)
     const { view } = renderWithProviders(

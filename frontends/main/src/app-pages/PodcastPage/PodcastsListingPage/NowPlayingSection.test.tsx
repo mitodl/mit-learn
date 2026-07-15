@@ -33,6 +33,22 @@ describe("NowPlayingSection", () => {
     expect(view.container).toBeEmptyDOMElement()
   })
 
+  it("renders a skeleton card while loading", () => {
+    const { view } = renderWithProviders(
+      <NowPlayingSection
+        nowPlaying={undefined}
+        isPlaying={false}
+        onPlayClick={jest.fn()}
+        onPauseClick={jest.fn()}
+        isLoading={true}
+      />,
+    )
+    expect(screen.getByText("NOW PLAYING")).toBeInTheDocument()
+    expect(
+      view.container.querySelectorAll(".MuiSkeleton-root").length,
+    ).toBeGreaterThan(0)
+  })
+
   it("renders nothing when the resource is not a podcast episode", () => {
     const course = factories.learningResources.resource({
       resource_type: ResourceTypeEnum.Course,
