@@ -48,14 +48,77 @@ log = logging.getLogger()
 BLOCKLIST_CACHE_TIMEOUT = 60 * 60 * 24
 
 
+# edX block types that never have content
+NO_CONTENT_BLOCK_TYPES = (
+    "discussion",
+    "openassessment",
+    "poll",
+    "survey",
+    "drag-and-drop-v2",
+    "lti_consumer",
+    "done",
+    "completion",
+    "edx_sga",
+    "recap",
+    "ubcpi",
+    "qualtricssurvey",
+)
+
+VALID_EDX_MODULE_ID_REGEX = re.compile(
+    r"(?:block-v1|asset-v1):.+\+type@"
+    rf"(?!(?:{'|'.join(map(re.escape, NO_CONTENT_BLOCK_TYPES))})\+block@)"
+    r".*\+block@.+",
+    re.IGNORECASE,
+)
+
+LOGGED_BLOCK_TYPES = ("problem", "problemset", "video", "html")
+LOGGED_TRANSCRIPT_EXTENSIONS = (".srt", ".vtt")
+
+
+def is_valid_edx_module_id(edx_module_id):
+    """
+    Return whether this id could reference indexable contentfiles.
+
+    Edge whitespace is ignored (stored ids never have any); internal
+    whitespace is preserved - Canvas run-ids contain spaces.
+    """
+    return bool(VALID_EDX_MODULE_ID_REGEX.fullmatch((edx_module_id or "").strip()))
+
+
+def filter_valid_edx_module_ids(edx_module_ids):
+    """
+    Return only ids that could reference content-bearing courseware,
+    trimmed of edge whitespace so downstream exact-match lookups hit.
+    """
+    stripped = ((eid or "").strip() for eid in edx_module_ids)
+    return [eid for eid in stripped if is_valid_edx_module_id(eid)]
+
+
+def is_loggable_missing_content_id(edx_module_id):
+    """Missing-contentfile logs are limited to block types bots depend on."""
+    edx_module_id = (edx_module_id or "").strip()
+    if not is_valid_edx_module_id(edx_module_id):
+        return False
+    id_lower = edx_module_id.lower()
+    if id_lower.startswith("asset-v1:"):
+        return id_lower.endswith(LOGGED_TRANSCRIPT_EXTENSIONS)
+    return any(f"+type@{t}+block@" in id_lower for t in LOGGED_BLOCK_TYPES)
+
+
 def log_missing_content_file(identifier, *, reason, source):
     """
     Log that a request referenced an edx_module_id with no backing ContentFile.
+
+    Only important block types (problem, video, html, .srt/.vtt transcripts) are
+    logged; everything else (and malformed ids) is silently ignored to keep the
+    Sentry signal meaningful.
 
     reason: "not_in_db" (no ContentFile row) or "not_in_index" (row exists but
     not embedded in Qdrant). LoggingIntegration forwards the error to Sentry,
     which groups by the stable message template and applies its own rate limiting.
     """
+    if not is_loggable_missing_content_id(identifier):
+        return
     log.error(
         "Missing ContentFile (%s) for edx_module_id=%s [source=%s]",
         reason,
