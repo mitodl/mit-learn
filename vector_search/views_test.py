@@ -158,6 +158,7 @@ def test_vector_search_filters_empty_query(mocker, client):
     )
 
 
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize(
     "user_role",
     [
@@ -251,6 +252,7 @@ def test_content_file_vector_search_filters(
             )
 
 
+@pytest.mark.django_db(transaction=True)
 def test_content_file_vector_search_filters_empty_query(
     mocker, client, django_user_model
 ):
@@ -311,6 +313,7 @@ def test_content_file_vector_search_filters_empty_query(
     )
 
 
+@pytest.mark.django_db(transaction=True)
 def test_content_file_vector_search_filters_custom_collection(
     mocker, client, django_user_model
 ):
@@ -357,6 +360,7 @@ def test_content_file_vector_search_filters_custom_collection(
     )
 
 
+@pytest.mark.django_db(transaction=True)
 def test_content_file_vector_search_group_parameters(mocker, client, django_user_model):
     """Test content file vector search uses custom collection if specified"""
 
@@ -699,6 +703,7 @@ def test_async_vector_resource_counts_aggregation_buckets():
     assert free_buckets == {"true": 2, "false": 1}
 
 
+@pytest.mark.django_db(transaction=True)
 def test_vector_search_no_score_cutoff_omits_score_threshold(
     mocker, client, django_user_model
 ):
@@ -1085,7 +1090,7 @@ def test_content_file_search_no_best_run_metadata_only(
     assert set(run_conditions[0].match.any) == {course.readable_id}
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_content_file_vector_search_logs_missing_edx_module_id(
     mocker, client, mock_qdrant, content_file_viewer
 ):
@@ -1103,7 +1108,7 @@ def test_content_file_vector_search_logs_missing_edx_module_id(
     )
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_content_file_vector_search_probe_failure_does_not_break_search(
     mocker, client, mock_qdrant, content_file_viewer
 ):
@@ -1124,7 +1129,7 @@ def test_content_file_vector_search_probe_failure_does_not_break_search(
     assert response.status_code == 200
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_content_file_vector_search_skips_probe_when_results_present(
     mocker, client, mock_qdrant, content_file_viewer
 ):
@@ -1158,7 +1163,7 @@ def test_content_file_vector_search_skips_probe_when_results_present(
     mock_probe.assert_not_awaited()
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_content_file_vector_search_all_invalid_ids_returns_empty(
     mocker, client, mock_qdrant, content_file_viewer
 ):
@@ -1189,7 +1194,7 @@ def test_content_file_vector_search_all_invalid_ids_returns_empty(
     mock_probe.assert_not_awaited()
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_content_file_vector_search_partial_invalid_ids_searches_survivors(
     mocker, client, mock_qdrant, content_file_viewer
 ):
