@@ -706,9 +706,16 @@ class ContentFilesVectorSearchView(QdrantView):
                 # (don't AND them: compound filters break Qdrant's approximate
                 # count). The resource readable_ids are included to match each
                 # resource's run-less course-metadata point.
-                best_run_ids = await sync_to_async(
-                    best_run_ids_for_resources, thread_sensitive=False
-                )(resource_ids)
+                def _best_run_ids():
+                    from django.db import close_old_connections
+
+                    close_old_connections()
+                    try:
+                        return best_run_ids_for_resources(resource_ids)
+                    finally:
+                        close_old_connections()
+
+                best_run_ids = await sync_to_async(_best_run_ids, thread_sensitive=False)()
                 del params["resource_readable_id"]
                 params["run_readable_id"] = best_run_ids + list(resource_ids)
 
