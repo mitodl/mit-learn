@@ -95,6 +95,17 @@ WORKDIR /app
 # sharp (Next.js image optimisation) requires glibc-compatible libs on Alpine.
 RUN apk add --no-cache libc6-compat
 
+# Copy the server build output including its .map files. `output: "standalone"`
+# only ships NFT-traced runtime files, which excludes source maps, so the
+# standalone copy below alone can't symbolicate server-side (SSR/RSC/route
+# handler) errors in Sentry. Maps are inert at runtime; a decoupled Concourse
+# task reads them out of the image rootfs and uploads them to Sentry.
+#
+# Copied BEFORE standalone so the runtime-authoritative standalone files win any
+# path collision. The .js chunks are byte-identical between the two, and the
+# .map files have no standalone counterpart, so they survive regardless.
+COPY --from=build /app/frontends/main/.next/server ./frontends/main/.next/server
+
 # Copy the standalone server (includes a minimal node_modules)
 COPY --from=build /app/frontends/main/.next/standalone ./
 
