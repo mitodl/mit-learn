@@ -57,7 +57,7 @@ export const ProgramEnrollmentCard = ({
   )
   const displayMode = program.display_mode
   const titleSection = (
-    <Stack gap="6px">
+    <Stack gap="12px">
       {titleHref ? (
         <TitleHeading>
           <TitleLink size="medium" color="black" href={titleHref}>

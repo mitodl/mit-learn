@@ -13,6 +13,7 @@ import {
   CourseDateSummary,
   Separator,
 } from "./CardShared"
+import { getCourseDateText } from "./courseDateUtils"
 import { EnrollmentStatus, getBestRun } from "./helpers"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { useEnrollmentHandler } from "./hooks/useEnrollmentHandler"
@@ -105,14 +106,16 @@ export const UnenrolledCourseCard = ({
       {title}
     </TitleText>
   )
-  const courseDateText = (
+  const hasCourseDateText =
+    getCourseDateText(courseRun?.start_date, courseRun?.end_date) !== null
+  const courseDateText = hasCourseDateText ? (
     <Stack direction="row" gap="8px" alignItems="start">
       <CourseDateSummary
         startDate={courseRun?.start_date}
         endDate={courseRun?.end_date}
       />
     </Stack>
-  )
+  ) : null
   const startButton = (
     <CoursewareButton
       size="small"
@@ -159,7 +162,7 @@ export const UnenrolledCourseCard = ({
         )}
         <Stack justifyContent="start" alignItems="stretch" gap="4px" flex={1}>
           {progressBadgeSection}
-          <Stack gap="6px">
+          <Stack gap="12px">
             {titleSection}
             {courseDateText}
           </Stack>

@@ -56,6 +56,10 @@ const RedEllipse = styled(Ellipse)(({ theme }) => ({
   backgroundColor: theme.custom.colors.red,
 }))
 
+const NowrapText = styled.span({
+  whiteSpace: "nowrap",
+})
+
 const EnrolledTitleLink = styled(TitleLink)<{
   enrollmentstatus: EnrollmentStatus
 }>(({ enrollmentstatus, theme }) => ({
@@ -117,10 +121,12 @@ const UpgradeBanner: React.FC<
       {calendarDays !== null && (
         <>
           <RedEllipse />
-          <NoSSR>
-            {/* This uses local time. */}
-            {formatUpgradeTime(calendarDays)}
-          </NoSSR>
+          <NowrapText>
+            <NoSSR>
+              {/* This uses local time. */}
+              {formatUpgradeTime(calendarDays)}
+            </NoSSR>
+          </NowrapText>
         </>
       )}
     </SubtitleLinkRoot>
@@ -263,7 +269,7 @@ export const EnrolledCourseCard = ({
 
   const endDateAndUpgradeSection =
     metaSegments.length > 0 ? (
-      <Stack direction="row" alignItems="center" gap="12px">
+      <Stack direction="row" flexWrap="wrap" alignItems="center" gap="8px">
         {metaSegments.map((segment, i) => (
           <React.Fragment key={i}>
             {i > 0 && <Ellipse />}
@@ -273,7 +279,7 @@ export const EnrolledCourseCard = ({
       </Stack>
     ) : null
   const titleSection = (
-    <Stack gap="6px">
+    <Stack gap="12px">
       {coursewareUrl ? (
         <TitleHeading as={headingLevel}>
           <EnrolledTitleLink

@@ -106,6 +106,7 @@ const SubtitleLink = styled(NextLink)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "2px",
+  whiteSpace: "nowrap",
   ":hover": {
     textDecoration: "underline",
   },
@@ -172,12 +173,14 @@ const Ellipse = styled.span(({ theme }) => ({
   width: "4px",
   height: "4px",
   borderRadius: "50%",
+  flexShrink: 0,
   backgroundColor: theme.custom.colors.silverGrayLight,
 }))
 
 const DateText = styled(Typography)(({ theme }) => ({
   ...theme.typography.subtitle3,
   color: theme.custom.colors.silverGrayDark,
+  whiteSpace: "nowrap",
 }))
 
 const CourseDateText: React.FC<{
@@ -195,6 +198,7 @@ const UpgradedBannerRoot = styled.div(({ theme }) => ({
   alignItems: "center",
   gap: "4px",
   color: theme.custom.colors.silverGrayDark,
+  whiteSpace: "nowrap",
   ...theme.typography.body3,
 }))
 

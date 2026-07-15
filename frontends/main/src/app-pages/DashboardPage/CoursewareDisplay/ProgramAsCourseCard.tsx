@@ -60,7 +60,6 @@ const ProgramCardRoot = styled.div(({ theme }) => ({
     borderRadius: "0px",
     boxShadow: "none",
     flexDirection: "column",
-    gap: "16px",
   },
 }))
 
