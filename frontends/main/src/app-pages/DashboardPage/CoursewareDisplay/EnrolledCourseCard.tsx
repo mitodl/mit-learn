@@ -243,7 +243,9 @@ export const EnrolledCourseCard = ({
       </SubtitleLink>
     </>
   ) : null
-  const certStatus = showUpgradeBanner ? (
+  const certStatus = certButton ? (
+    certButton
+  ) : showUpgradeBanner ? (
     <UpgradeBanner
       data-testid="upgrade-root"
       canUpgrade={showUpgradeBanner}
@@ -256,8 +258,6 @@ export const EnrolledCourseCard = ({
         )
       }}
     />
-  ) : certButton ? (
-    certButton
   ) : upgradedAndIncomplete ? (
     <UpgradedBanner />
   ) : null
