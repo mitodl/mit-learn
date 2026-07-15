@@ -40,6 +40,7 @@ from learning_resources_search.constants import (
     HYBRID_COMBINED_INDEX,
     LEARNING_RESOURCE_TYPES,
     PERCOLATE_INDEX_TYPE,
+    PROGRAM_TYPE,
     SEARCH_CONN_EXCEPTIONS,
     IndexestoUpdate,
 )
@@ -106,12 +107,23 @@ def upsert_content_file(file_id):
 
     content_file_obj = ContentFile.objects.for_serialization().get(id=file_id)
     content_file_data = serialize_content_file_for_update(content_file_obj)
+    parent_resource = (
+        content_file_obj.run.learning_resource
+        if content_file_obj.run_id
+        else content_file_obj.learning_resource
+    )
+    if parent_resource is None:
+        msg = f"ContentFile {content_file_obj.id} has no parent learning resource"
+        log.error(msg)
+        raise ValueError(msg)
+    learning_resource_id = parent_resource.id
+    resource_type = parent_resource.resource_type
     api.upsert_document(
         gen_content_file_id(content_file_obj.id),
         content_file_data,
-        COURSE_TYPE,
+        resource_type,
         retry_on_conflict=settings.INDEXING_ERROR_RETRIES,
-        routing=content_file_obj.run.learning_resource_id,
+        routing=learning_resource_id,
     )
 
 
@@ -409,33 +421,6 @@ def bulk_index_percolate_queries(percolate_ids, index_types):
 
 
 @app.task(
-    autoretry_for=(RetryError,),
-    retry_backoff=True,
-    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
-)
-def index_course_content_files(course_ids, index_types):
-    """
-    Index content files for a list of course ids
-
-    Args:
-        course_ids(list of int): List of course id's
-        index_types (string): one of the values IndexestoUpdate. Whether the default
-            index, the reindexing index or both need to be updated
-
-
-    """
-    try:
-        with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
-            api.index_course_content_files(course_ids, index_types=index_types)
-    except (RetryError, Ignore):
-        raise
-    except:  # noqa: E722
-        error = "index_course_content_files threw an error"
-        log.exception(error)
-        return error
-
-
-@app.task(
     acks_late=True,
     reject_on_worker_lost=True,
     autoretry_for=(RetryError,),
@@ -446,6 +431,7 @@ def index_content_files(
     content_file_ids,
     learning_resource_id,
     index_types=IndexestoUpdate.all_indexes.value,
+    resource_type=COURSE_TYPE,
 ):
     """
     Index a list of content files
@@ -455,12 +441,16 @@ def index_content_files(
         learning_resource_id(int): Learning resource id of the content files
         index_types (string): one of the values IndexestoUpdate. Whether the default
             index, the reindexing index or both need to be updated
+        resource_type (string): The resource type of the parent learning resource
 
     """
     try:
         with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
             api.index_content_files(
-                content_file_ids, learning_resource_id, index_types=index_types
+                content_file_ids,
+                learning_resource_id,
+                index_types=index_types,
+                resource_type=resource_type,
             )
     except (RetryError, Ignore):
         raise
@@ -477,18 +467,23 @@ def index_content_files(
     retry_backoff=True,
     rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
 )
-def deindex_content_files(content_file_ids, learning_resource_id):
+def deindex_content_files(
+    content_file_ids, learning_resource_id, resource_type=COURSE_TYPE
+):
     """
     Deindex a list of content files
 
     Args:
         content_file_ids(array of int): List of content file ids
         learning_resource_id(int): Learning resource id of the content files
+        resource_type (string): The resource type of the parent learning resource
 
     """
     try:
         with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
-            api.deindex_content_files(content_file_ids, learning_resource_id)
+            api.deindex_content_files(
+                content_file_ids, learning_resource_id, resource_type=resource_type
+            )
     except (RetryError, Ignore):
         raise
     except:  # noqa: E722
@@ -574,7 +569,7 @@ def wrap_retry_exception(*exception_classes):
 
 
 @app.task(bind=True)
-def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
+def start_recreate_index(self, indexes, remove_existing_reindexing_tags):  # noqa: C901
     """
     Wipe and recreate index and mapping, and index all items.
     """
@@ -637,23 +632,42 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                 .exclude(learning_resource__readable_id__in=blocklisted_ids)
                 .order_by("learning_resource_id")
             ):
-                index_tasks = index_tasks + [
-                    index_content_files.si(
-                        ids,
-                        course.learning_resource_id,
-                        index_types=IndexestoUpdate.reindexing_index.value,
-                    )
-                    for ids in chunks(
-                        ContentFile.objects.filter(
-                            run__learning_resource_id=course.learning_resource_id,
-                            published=True,
-                            run__published=True,
+                index_tasks = (
+                    index_tasks
+                    + [
+                        index_content_files.si(
+                            ids,
+                            course.learning_resource_id,
+                            index_types=IndexestoUpdate.reindexing_index.value,
                         )
-                        .order_by("id")
-                        .values_list("id", flat=True),
-                        chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
-                    )
-                ]
+                        for ids in chunks(
+                            ContentFile.objects.filter(
+                                run__learning_resource_id=course.learning_resource_id,
+                                published=True,
+                                run__published=True,
+                            )
+                            .order_by("id")
+                            .values_list("id", flat=True),
+                            chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+                        )
+                    ]
+                    + [
+                        index_content_files.si(
+                            ids,
+                            course.learning_resource_id,
+                            index_types=IndexestoUpdate.reindexing_index.value,
+                        )
+                        for ids in chunks(
+                            ContentFile.objects.filter(
+                                learning_resource_id=course.learning_resource_id,
+                                published=True,
+                            )
+                            .order_by("id")
+                            .values_list("id", flat=True),
+                            chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+                        )
+                    ]
+                )
 
         if HYBRID_COMBINED_INDEX in indexes:
             blocklisted_ids = load_course_blocklist()
@@ -693,6 +707,49 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                         chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
                     )
                 ]
+
+        if PROGRAM_TYPE in indexes:
+            for program_resource in LearningResource.objects.filter(
+                published=True, resource_type=PROGRAM_TYPE
+            ).order_by("id"):
+                index_tasks = (
+                    index_tasks
+                    + [
+                        index_content_files.si(
+                            ids,
+                            program_resource.id,
+                            index_types=IndexestoUpdate.reindexing_index.value,
+                            resource_type=PROGRAM_TYPE,
+                        )
+                        for ids in chunks(
+                            ContentFile.objects.filter(
+                                run__learning_resource_id=program_resource.id,
+                                published=True,
+                                run__published=True,
+                            )
+                            .order_by("id")
+                            .values_list("id", flat=True),
+                            chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+                        )
+                    ]
+                    + [
+                        index_content_files.si(
+                            ids,
+                            program_resource.id,
+                            index_types=IndexestoUpdate.reindexing_index.value,
+                            resource_type=PROGRAM_TYPE,
+                        )
+                        for ids in chunks(
+                            ContentFile.objects.filter(
+                                learning_resource_id=program_resource.id,
+                                published=True,
+                            )
+                            .order_by("id")
+                            .values_list("id", flat=True),
+                            chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+                        )
+                    ]
+                )
 
         index_tasks = celery.group(index_tasks)
     except:  # noqa: E722
@@ -739,6 +796,9 @@ def start_update_index(self, indexes, etl_source):
             index_tasks = index_tasks + get_update_resource_files_tasks(
                 blocklisted_ids, etl_source
             )
+
+        if PROGRAM_TYPE in indexes or CONTENT_FILE_TYPE in indexes:
+            index_tasks = index_tasks + get_update_program_files_tasks(etl_source)
         if PERCOLATE_INDEX_TYPE in indexes:
             index_tasks = index_tasks + get_update_percolator_tasks()
 
@@ -784,11 +844,108 @@ def get_update_resource_files_tasks(blocklisted_ids, etl_source):
         index_tasks = []
 
         for learning_resource in course_update_query.order_by("id"):
-            index_tasks = index_tasks + [
+            index_tasks = (
+                index_tasks
+                + [
+                    index_content_files.si(
+                        ids,
+                        learning_resource.id,
+                        index_types=IndexestoUpdate.current_index.value,
+                    )
+                    for ids in chunks(
+                        ContentFile.objects.filter(
+                            run__learning_resource_id=learning_resource.id,
+                            published=True,
+                            run__published=True,
+                        )
+                        .order_by("id")
+                        .values_list("id", flat=True),
+                        chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+                    )
+                ]
+                + [
+                    index_content_files.si(
+                        ids,
+                        learning_resource.id,
+                        index_types=IndexestoUpdate.current_index.value,
+                    )
+                    for ids in chunks(
+                        ContentFile.objects.filter(
+                            learning_resource_id=learning_resource.id,
+                            published=True,
+                        )
+                        .order_by("id")
+                        .values_list("id", flat=True),
+                        chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+                    )
+                ]
+            )
+
+            index_tasks = (
+                index_tasks
+                + [
+                    deindex_content_files.si(ids, learning_resource.id)
+                    for ids in chunks(
+                        ContentFile.objects.filter(
+                            run__learning_resource_id=learning_resource.id
+                        )
+                        .filter(Q(published=False) | Q(run__published=False))
+                        .order_by("id")
+                        .values_list("id", flat=True),
+                        chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+                    )
+                ]
+                + [
+                    deindex_content_files.si(ids, learning_resource.id)
+                    for ids in chunks(
+                        ContentFile.objects.filter(
+                            learning_resource_id=learning_resource.id,
+                            published=False,
+                        )
+                        .order_by("id")
+                        .values_list("id", flat=True),
+                        chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+                    )
+                ]
+            )
+
+        return index_tasks
+    else:
+        return []
+
+
+def get_update_program_files_tasks(etl_source):
+    """
+    Get list of tasks to update program content files.
+
+    Args:
+        etl_source(str): ETL source filter for the task
+    """
+    if etl_source is not None and etl_source not in RESOURCE_FILE_ETL_SOURCES:
+        return []
+
+    program_update_query = LearningResource.objects.filter(
+        published=True, resource_type=PROGRAM_TYPE
+    ).order_by("id")
+
+    if etl_source:
+        program_update_query = program_update_query.filter(etl_source=etl_source)
+    else:
+        program_update_query = program_update_query.filter(
+            etl_source__in=RESOURCE_FILE_ETL_SOURCES
+        )
+
+    index_tasks = []
+
+    for learning_resource in program_update_query:
+        index_tasks = (
+            index_tasks
+            + [
                 index_content_files.si(
                     ids,
                     learning_resource.id,
                     index_types=IndexestoUpdate.current_index.value,
+                    resource_type=PROGRAM_TYPE,
                 )
                 for ids in chunks(
                     ContentFile.objects.filter(
@@ -801,9 +958,31 @@ def get_update_resource_files_tasks(blocklisted_ids, etl_source):
                     chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
                 )
             ]
+            + [
+                index_content_files.si(
+                    ids,
+                    learning_resource.id,
+                    index_types=IndexestoUpdate.current_index.value,
+                    resource_type=PROGRAM_TYPE,
+                )
+                for ids in chunks(
+                    ContentFile.objects.filter(
+                        learning_resource_id=learning_resource.id,
+                        published=True,
+                    )
+                    .order_by("id")
+                    .values_list("id", flat=True),
+                    chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+                )
+            ]
+        )
 
-            index_tasks = index_tasks + [
-                deindex_content_files.si(ids, learning_resource.id)
+        index_tasks = (
+            index_tasks
+            + [
+                deindex_content_files.si(
+                    ids, learning_resource.id, resource_type=PROGRAM_TYPE
+                )
                 for ids in chunks(
                     ContentFile.objects.filter(
                         run__learning_resource_id=learning_resource.id
@@ -814,10 +993,23 @@ def get_update_resource_files_tasks(blocklisted_ids, etl_source):
                     chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
                 )
             ]
+            + [
+                deindex_content_files.si(
+                    ids, learning_resource.id, resource_type=PROGRAM_TYPE
+                )
+                for ids in chunks(
+                    ContentFile.objects.filter(
+                        learning_resource_id=learning_resource.id,
+                        published=False,
+                    )
+                    .order_by("id")
+                    .values_list("id", flat=True),
+                    chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+                )
+            ]
+        )
 
-        return index_tasks
-    else:
-        return []
+    return index_tasks
 
 
 def get_update_courses_tasks(blocklisted_ids, etl_source):

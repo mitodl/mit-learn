@@ -683,10 +683,13 @@ def scrape_marketing_pages(self):
             published=True, resource_type__in=["course", "program"]
         ).values_list("id", "resource_type")
     )
+    # Unpublished pages don't count as existing, so a resource whose page was
+    # unpublished along with it gets re-scraped (and republished) if the
+    # resource comes back.
     existing_page_resource_ids = set(
-        ContentFile.objects.filter(file_type=MARKETING_PAGE_FILE_TYPE).values_list(
-            "learning_resource_id", flat=True
-        )
+        ContentFile.objects.filter(
+            file_type=MARKETING_PAGE_FILE_TYPE, published=True
+        ).values_list("learning_resource_id", flat=True)
     )
 
     missing_ids = set(resource_types) - existing_page_resource_ids
@@ -731,6 +734,7 @@ def scrape_marketing_pages(self):
     rate_limit=settings.CELERY_RATE_LIMIT,
 )
 def marketing_page_for_resources(resource_ids):
+    from learning_resources_search.tasks import upsert_content_file
     from vector_search.tasks import generate_embeddings
 
     content_file_ids = []
@@ -780,8 +784,11 @@ def marketing_page_for_resources(resource_ids):
                 if children_content:
                     content += children_content
             content_file.content = content
+            content_file.published = learning_resource.published
             content_file.save()
             content_file_ids.append(content_file.id)
+            if content_file.published:
+                upsert_content_file.delay(content_file.id)
     if content_file_ids:
         generate_embeddings.delay(content_file_ids, CONTENT_FILE_TYPE, overwrite=True)
 

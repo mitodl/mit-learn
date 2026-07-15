@@ -30,9 +30,6 @@ app.conf.task_routes = {
     "learning_resources.tasks.import_all_xpro_files": {"queue": "edx_content"},
     "learning_resources.tasks.import_all_mit_edx_files": {"queue": "edx_content"},
     "learning_resources.tasks.import_all_mitxonline_files": {"queue": "edx_content"},
-    "learning_resources_search.tasks.index_course_content_files": {
-        "queue": "edx_content"
-    },
     "learning_resources_search.tasks.index_run_content_files": {"queue": "edx_content"},
     "learning_resources_search.tasks.deindex_run_content_files": {
         "queue": "edx_content"

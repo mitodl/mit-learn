@@ -7,6 +7,7 @@ from django.apps import apps
 from django.conf import settings as django_settings
 
 from learning_resources.etl.constants import QDRANT_RETAINED_SOURCES
+from learning_resources.models import ContentFile
 from learning_resources_search import tasks
 from learning_resources_search.api import get_similar_topics_qdrant
 from learning_resources_search.constants import (
@@ -105,9 +106,42 @@ class SearchIndexPlugin:
             )
         try_with_retry_as_task(chain(*unpublished_tasks))
 
+        if not resource.test_mode:
+            self._deindex_learning_resource_content_files(
+                [resource.id], resource.resource_type
+            )
+
         if resource.resource_type == COURSE_TYPE and not resource.test_mode:
             for run in resource.runs.all():
                 self.resource_run_unpublished(run)
+
+    def _deindex_learning_resource_content_files(self, resource_ids, resource_type):
+        """
+        Deindex content files attached to resources via their
+        learning_resource FK (e.g. marketing pages) rather than to a run.
+        OpenSearch only; the files stay in Qdrant.
+
+        Args:
+            resource_ids(list of int): The parent Learning Resource ids
+            resource_type(str): The parent Learning Resource type
+        """
+        files_by_resource = {}
+        for file_id, resource_id in ContentFile.objects.filter(
+            learning_resource_id__in=resource_ids
+        ).values_list("id", "learning_resource_id"):
+            files_by_resource.setdefault(resource_id, []).append(file_id)
+        for resource_id, file_ids in files_by_resource.items():
+            for ids in chunks(
+                file_ids,
+                chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+            ):
+                try_with_retry_as_task(
+                    chain(
+                        tasks.deindex_content_files.si(
+                            ids, resource_id, resource_type=resource_type
+                        )
+                    )
+                )
 
     @hookimpl
     def resource_similar_topics(self, resource) -> list[dict]:
@@ -154,6 +188,8 @@ class SearchIndexPlugin:
                     vector_tasks.remove_embeddings.si(ids, resource_type)
                 )
             try_with_retry_as_task(chain(*unpublished_tasks))
+
+        self._deindex_learning_resource_content_files(resource_ids, resource_type)
 
     @hookimpl
     def resource_before_delete(self, resource):
