@@ -1037,7 +1037,7 @@ def test_content_file_search_explicit_run_not_overridden(
     )
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_content_file_search_no_best_run_metadata_only(
     mocker, client, django_user_model
 ):
