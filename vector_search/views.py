@@ -707,6 +707,7 @@ class ContentFilesVectorSearchView(QdrantView):
                     # (don't AND them: compound filters break Qdrant's approximate
                     # count). The resource readable_ids are included to match each
                     # resource's run-less course-metadata point.
+
                     best_run_ids = await db_sync_to_async(best_run_ids_for_resources)(
                         resource_ids
                     )
