@@ -35,7 +35,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.74.0"
+VERSION = "0.74.1"
 
 log = logging.getLogger()
 
@@ -843,7 +843,6 @@ CONTENT_FILE_SUMMARIZER_BATCH_SIZE = get_int("CONTENT_FILE_SUMMARIZER_BATCH_SIZE
 CONTENT_SUMMARIZER_FLASHCARD_QUANTITY = get_int(
     "CONTENT_SUMMARIZER_FLASHCARD_QUANTITY", 10
 )
-
 
 CONTENT_SUMMARIZER_FLASHCARD_PROMPT = get_string(
     "CONTENT_SUMMARIZER_FLASHCARD_PROMPT",

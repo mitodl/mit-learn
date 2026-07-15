@@ -53,6 +53,24 @@ const setupApis = ({
     resource_type: ResourceTypeEnum.Podcast,
   })
 
+  // Episodes of this podcast reference it as their parent, as they would in
+  // production. The player resolves its "podcast name" from this summary.
+  const linkParent = (episodes: LearningResource[]) =>
+    episodes.forEach((episode) => {
+      if (episode.resource_type === ResourceTypeEnum.PodcastEpisode) {
+        episode.podcast_episode.podcasts = [podcast.id]
+        episode.podcast_episode.parent_podcasts = [
+          {
+            id: podcast.id,
+            title: podcast.title!,
+            readable_id: podcast.readable_id,
+          },
+        ]
+      }
+    })
+  linkParent(episodesPage1)
+  if (episodesPage2) linkParent(episodesPage2)
+
   setMockResponse.get(
     urls.learningResources.details({ id: podcast.id }),
     podcast,

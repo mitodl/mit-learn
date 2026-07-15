@@ -2,7 +2,7 @@
 
 import json
 import logging
-from datetime import UTC
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -704,14 +704,25 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             and serialized_resource.get("availability") == Availability.anytime.name
         )
 
+    def _parse_run_start(self, run):
+        """Parse a run's start_date as a UTC datetime, or None if unusable"""
+        start_date = run.get("start_date")
+        parsed = dateparser.parse(start_date) if start_date else None
+        if parsed is None:
+            return None
+        return (
+            parsed.replace(tzinfo=UTC)
+            if parsed.tzinfo is None
+            else parsed.astimezone(UTC)
+        )
+
+    def _run_sort_key(self, run):
+        """Sort key for a run; dateless or unparseable runs sort last."""
+        return self._parse_run_start(run) or datetime.max.replace(tzinfo=UTC)
+
     def runs_by_date(self, serialized_resource):
         """Get runs sorted by date"""
-        return sorted(
-            serialized_resource.get("runs", []),
-            key=lambda run: dateparser.parse(
-                run["start_date"] if run.get("start_date", "") else ""
-            ),
-        )
+        return sorted(serialized_resource.get("runs", []), key=self._run_sort_key)
 
     def dates_for_runs(self, serialized_resource):
         """Get a list of sorted and formatted run dates"""
@@ -731,6 +742,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     def format_run_date(self, run, as_taught_in):
         """Format the run date based on available data"""
+        parsed_start = self._parse_run_start(run)
         if as_taught_in:
             run_semester = run.get("semester", "")
             if run_semester:
@@ -739,18 +751,10 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
                     return f"{run_semester} {run['year']}"
                 if run.get("start_date"):
                     return f"{run_semester} {run['start_date']}"
-            if run.get("start_date"):
-                return (
-                    dateparser.parse(run["start_date"])
-                    .replace(tzinfo=UTC)
-                    .strftime("%B, %Y")
-                )
-        if run.get("start_date"):
-            return (
-                dateparser.parse(run["start_date"])
-                .replace(tzinfo=UTC)
-                .strftime("%B %d, %Y")
-            )
+            if parsed_start:
+                return parsed_start.strftime("%B, %Y")
+        if parsed_start:
+            return parsed_start.strftime("%B %d, %Y")
         return None
 
     def should_show_format(self, serialized_resource):
@@ -1029,12 +1033,8 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         if self.all_runs_are_identical(serialized_resource):
             return None
         for run in serialized_resource.get("runs", []):
-            start_date = run["start_date"]
-            formatted_date = (
-                dateparser.parse(start_date).replace(tzinfo=UTC).strftime("%B %d, %Y")
-                if start_date
-                else ""
-            )
+            parsed_start = self._parse_run_start(run)
+            formatted_date = parsed_start.strftime("%B %d, %Y") if parsed_start else ""
             location = run.get("location") or "Online"
             duration = run.get("duration")
             prices = run.get("prices", [])

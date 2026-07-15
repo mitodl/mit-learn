@@ -3,17 +3,19 @@ import type { RefObject } from "react"
 import type { LearningResource } from "api/v1"
 import { PLAYER_HEIGHT } from "./PodcastPlayer"
 import type { PodcastTrack, PodcastPlayerHandle } from "./PodcastPlayer"
-import { getEpisodeAudioUrl } from "./PodcastsListingPage/helpers"
+import {
+  getEpisodeAudioUrl,
+  getEpisodeParentPodcastName,
+} from "./PodcastsListingPage/helpers"
 
 /**
  * Shared play/pause/resume state and behavior for the podcast player,
  * used by PodcastsListingPage, PodcastDetailPage, and PodcastEpisodeDetailPage.
  *
- * NOTE: `podcastName` is passed in by the caller at `toggle()` time rather
- * than derived here, since each page currently resolves the "parent podcast
- * name" for a track differently (e.g. `episode.offered_by?.name` vs. a
- * separately-fetched podcast's `title`). Reconciling that inconsistency is
- * left for a follow-up.
+
+ * The "podcast name" shown for a track is resolved internally from the
+ * episode's embedded parent-podcast summary (see `getEpisodeParentPodcastName`),
+ * so all three pages display it consistently and callers don't pass it in.
  */
 export const usePodcastPlayer = (
   playerRef: RefObject<PodcastPlayerHandle | null>,
@@ -22,14 +24,19 @@ export const usePodcastPlayer = (
   const [playingEpisode, setPlayingEpisode] = useState<LearningResource | null>(
     null,
   )
-  const [podcastName, setPodcastName] = useState("Podcast")
+  // The podcast the episode was played from (its URL context). Used to name the
+  // right series when an episode belongs to more than one podcast.
+  const [podcastContextId, setPodcastContextId] = useState<number | null>(null)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
 
-  /** Starts a new episode, or resumes/pauses the one already loaded. */
-  const toggle = (
-    episode: LearningResource,
-    podcastNameForEpisode?: string,
-  ) => {
+  /**
+   * Starts a new episode, or resumes/pauses the one already loaded.
+   *
+   * `podcastId` is the podcast the episode was launched from (e.g. the current
+   * URL's podcast), so a multi-parent episode names the same series the page
+   * header does. Omit it when there is no single podcast context.
+   */
+  const toggle = (episode: LearningResource, podcastId?: number | null) => {
     if (!getEpisodeAudioUrl(episode)) return
     if (playingEpisode?.id === episode.id) {
       if (isAudioPlaying) {
@@ -39,7 +46,7 @@ export const usePodcastPlayer = (
       }
     } else {
       setPlayingEpisode(episode)
-      setPodcastName(podcastNameForEpisode || "Podcast")
+      setPodcastContextId(podcastId ?? null)
     }
   }
 
@@ -54,7 +61,9 @@ export const usePodcastPlayer = (
         return {
           audioUrl,
           title: playingEpisode.title || "Untitled Episode",
-          podcastName,
+          podcastName:
+            getEpisodeParentPodcastName(playingEpisode, podcastContextId) ||
+            "Podcast",
         }
       })()
     : null

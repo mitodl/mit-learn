@@ -1,13 +1,21 @@
 import React from "react"
 import Link from "next/link"
-import { Typography, styled } from "ol-components"
+import { Typography, Skeleton, styled } from "ol-components"
+import type { TypographyProps } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiArrowRightLine } from "@remixicon/react"
 import { formatDate } from "ol-utilities"
 import type { LearningResource } from "api/v1"
 import { SEARCH_PODCASTS, podcastPageView } from "@/common/urls"
-import { Section, SectionHeader, SectionTitle, SectionLink } from "./styled"
+import {
+  Section,
+  SectionHeader,
+  SectionTitle,
+  SectionLink,
+  SectionMessage,
+} from "./styled"
 import { formatApproxCount } from "./helpers"
+import { PODCAST_FEATURED_COUNT, PODCAST_MORE_COUNT } from "./constants"
 
 const PodcastDescription = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
@@ -74,7 +82,9 @@ const FeaturedPodcastImage = styled.img({
   marginBottom: "24px",
 })
 
-const FeaturedPodcastTitle = styled(Typography)(({ theme }) => ({
+const FeaturedPodcastTitle = styled(Typography)<
+  Pick<TypographyProps, "component">
+>(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   marginBottom: "8px",
 }))
@@ -119,10 +129,12 @@ const MorePodcastLeft = styled.div({
   minWidth: 0,
 })
 
-const MorePodcastTitle = styled(Typography)(({ theme }) => ({
-  color: theme.custom.colors.darkGray2,
-  whiteSpace: "normal",
-}))
+const MorePodcastTitle = styled(Typography)<Pick<TypographyProps, "component">>(
+  ({ theme }) => ({
+    color: theme.custom.colors.darkGray2,
+    whiteSpace: "normal",
+  }),
+)
 
 const MorePodcastOfferedBy = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
@@ -166,12 +178,66 @@ const StyledRiArrowRightLine = styled(RiArrowRightLine)(() => ({
   fontSize: "24px",
 }))
 
+const MorePodcastSkeletonRow = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: "16px",
+  padding: "23px 0 24px 0",
+  borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+}))
+
+const FeaturedPodcastSkeletonCard = styled.div(({ theme }) => ({
+  flex: 1,
+  minWidth: 0,
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+  padding: "40px",
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  "&:not(:first-of-type)": {
+    borderLeft: "none",
+  },
+  [theme.breakpoints.down("sm")]: {
+    padding: "24px",
+    "&:not(:first-of-type)": {
+      borderLeft: `1px solid ${theme.custom.colors.lightGray2}`,
+      borderTop: "none",
+    },
+  },
+}))
+
+const FeaturedPodcastsSkeleton = () => (
+  <FeaturedPodcastRow>
+    {Array.from({ length: PODCAST_FEATURED_COUNT }, (_unused, i) => (
+      <FeaturedPodcastSkeletonCard key={i}>
+        <Skeleton variant="rectangular" width={72} height={72} />
+        <Skeleton variant="text" width="60%" height={32} />
+        <Skeleton variant="text" width="100%" height={48} />
+        <Skeleton variant="text" width="40%" height={22} />
+      </FeaturedPodcastSkeletonCard>
+    ))}
+  </FeaturedPodcastRow>
+)
+
+const MorePodcastsSkeleton = () => (
+  <>
+    {Array.from({ length: PODCAST_MORE_COUNT }, (_unused, i) => (
+      <MorePodcastSkeletonRow key={i}>
+        <Skeleton variant="text" width="40%" height={26} />
+      </MorePodcastSkeletonRow>
+    ))}
+  </>
+)
+
 export type PodcastSectionProps = {
   featuredPodcasts: LearningResource[]
   morePodcasts: LearningResource[]
   hasMorePodcasts: boolean
   totalPodcasts: number
   isMobile: boolean
+  isLoading?: boolean
+  isError?: boolean
+  isFeaturedLoading?: boolean
 }
 
 const PodcastSection: React.FC<PodcastSectionProps> = ({
@@ -180,6 +246,9 @@ const PodcastSection: React.FC<PodcastSectionProps> = ({
   hasMorePodcasts,
   totalPodcasts,
   isMobile,
+  isLoading = false,
+  isError = false,
+  isFeaturedLoading = false,
 }) => {
   return (
     <Section style={{ paddingBottom: isMobile ? "32px" : "80px" }}>
@@ -195,61 +264,78 @@ const PodcastSection: React.FC<PodcastSectionProps> = ({
       </PodcastDescription>
 
       <PodcastGroup>
-        {featuredPodcasts.length > 0 && (
+        {(isFeaturedLoading || featuredPodcasts.length > 0) && (
           <div>
             <FeaturedLabel variant="subtitle2">FEATURED</FeaturedLabel>
-            <FeaturedPodcastRow>
-              {featuredPodcasts.map((item) => {
-                const episodeCount =
-                  item.resource_type === "podcast"
-                    ? item.podcast?.episode_count
+            {isFeaturedLoading ? (
+              <FeaturedPodcastsSkeleton />
+            ) : (
+              <FeaturedPodcastRow>
+                {featuredPodcasts.map((item) => {
+                  const episodeCount =
+                    item.resource_type === "podcast"
+                      ? item.podcast?.episode_count
+                      : null
+                  const updated = item.last_modified
+                    ? formatDate(item.last_modified, "MMM D")
                     : null
-                const updated = item.last_modified
-                  ? formatDate(item.last_modified, "MMM D")
-                  : null
-                return (
-                  <FeaturedPodcastCard
-                    key={item.id}
-                    href={podcastPageView(String(item.id), item.title)}
-                  >
-                    {item.image?.url && (
-                      <FeaturedPodcastImage
-                        src={item.image.url}
-                        alt={item.image.alt ?? item.title}
-                      />
-                    )}
-                    <FeaturedPodcastTitle
-                      className="podcast-card-title"
-                      variant="h4"
+                  return (
+                    <FeaturedPodcastCard
+                      key={item.id}
+                      href={podcastPageView(String(item.id), item.title)}
                     >
-                      {item.title}
-                    </FeaturedPodcastTitle>
-                    {item.description && (
-                      <FeaturedPodcastSummary variant="body1">
-                        {item.description}
-                      </FeaturedPodcastSummary>
-                    )}
-                    <FeaturedPodcastMeta variant="body2">
-                      {[
-                        episodeCount ? `${episodeCount} episodes` : null,
-                        updated ? `Updated ${updated}` : null,
-                      ]
-                        .filter(Boolean)
-                        .join("  •  ")}
-                    </FeaturedPodcastMeta>
-                  </FeaturedPodcastCard>
-                )
-              })}
-            </FeaturedPodcastRow>
+                      {item.image?.url && (
+                        <FeaturedPodcastImage
+                          src={item.image.url}
+                          alt={item.image.alt ?? item.title}
+                        />
+                      )}
+                      <FeaturedPodcastTitle
+                        className="podcast-card-title"
+                        variant="h4"
+                        component="h3"
+                      >
+                        {item.title}
+                      </FeaturedPodcastTitle>
+                      {item.description && (
+                        <FeaturedPodcastSummary variant="body1">
+                          {item.description}
+                        </FeaturedPodcastSummary>
+                      )}
+                      <FeaturedPodcastMeta variant="body2">
+                        {[
+                          episodeCount ? `${episodeCount} episodes` : null,
+                          updated ? `Updated ${updated}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join("  •  ")}
+                      </FeaturedPodcastMeta>
+                    </FeaturedPodcastCard>
+                  )
+                })}
+              </FeaturedPodcastRow>
+            )}
           </div>
         )}
 
-        {morePodcasts.length > 0 && (
-          <div>
-            <SectionHeader>
-              <SectionTitle>More Podcasts</SectionTitle>
-            </SectionHeader>
-            {morePodcasts.map((item) => {
+        <div>
+          <SectionHeader>
+            <SectionTitle>More Podcasts</SectionTitle>
+          </SectionHeader>
+          {isLoading && <MorePodcastsSkeleton />}
+          {!isLoading && isError && (
+            <SectionMessage variant="body1">
+              Something went wrong loading podcasts. Please try again later.
+            </SectionMessage>
+          )}
+          {!isLoading && !isError && morePodcasts.length === 0 && (
+            <SectionMessage variant="body1">
+              No podcasts available right now.
+            </SectionMessage>
+          )}
+          {!isLoading &&
+            !isError &&
+            morePodcasts.map((item) => {
               const episodeCount =
                 item.resource_type === "podcast"
                   ? item.podcast?.episode_count
@@ -263,7 +349,11 @@ const PodcastSection: React.FC<PodcastSectionProps> = ({
                   href={podcastPageView(String(item.id), item.title)}
                 >
                   <MorePodcastLeft>
-                    <MorePodcastTitle className="series-row-title" variant="h5">
+                    <MorePodcastTitle
+                      className="series-row-title"
+                      variant="h5"
+                      component="h3"
+                    >
                       {item.title}
                     </MorePodcastTitle>
                     {item.offered_by?.name && (
@@ -280,7 +370,10 @@ const PodcastSection: React.FC<PodcastSectionProps> = ({
                 </MorePodcastRow>
               )
             })}
-            {hasMorePodcasts && (
+          {!isLoading &&
+            !isError &&
+            morePodcasts.length > 0 &&
+            hasMorePodcasts && (
               <ViewAllContainer>
                 <ViewAllButton
                   variant="bordered"
@@ -291,8 +384,7 @@ const PodcastSection: React.FC<PodcastSectionProps> = ({
                 </ViewAllButton>
               </ViewAllContainer>
             )}
-          </div>
-        )}
+        </div>
       </PodcastGroup>
     </Section>
   )

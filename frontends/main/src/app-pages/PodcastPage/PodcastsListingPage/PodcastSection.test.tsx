@@ -92,6 +92,91 @@ describe("PodcastSection", () => {
     expect(screen.getByText(/5 episodes/)).toBeInTheDocument()
   })
 
+  it("shows an empty-state message when not loading and there are no podcasts", () => {
+    renderWithProviders(
+      <PodcastSection
+        featuredPodcasts={[]}
+        morePodcasts={[]}
+        hasMorePodcasts={false}
+        totalPodcasts={0}
+        isMobile={false}
+      />,
+    )
+    expect(screen.getByText("More Podcasts")).toBeInTheDocument()
+    expect(
+      screen.getByText("No podcasts available right now."),
+    ).toBeInTheDocument()
+  })
+
+  it("shows skeletons while loading and hides the empty state", () => {
+    const { view } = renderWithProviders(
+      <PodcastSection
+        featuredPodcasts={[]}
+        morePodcasts={[]}
+        hasMorePodcasts={false}
+        totalPodcasts={0}
+        isMobile={false}
+        isLoading={true}
+      />,
+    )
+    expect(
+      view.container.querySelectorAll(".MuiSkeleton-root").length,
+    ).toBeGreaterThan(0)
+    expect(
+      screen.queryByText("No podcasts available right now."),
+    ).not.toBeInTheDocument()
+  })
+
+  it("renders featured skeletons while featured podcasts are loading", () => {
+    const { view } = renderWithProviders(
+      <PodcastSection
+        featuredPodcasts={[]}
+        morePodcasts={[]}
+        hasMorePodcasts={false}
+        totalPodcasts={0}
+        isMobile={false}
+        isFeaturedLoading={true}
+      />,
+    )
+    expect(screen.getByText("FEATURED")).toBeInTheDocument()
+    expect(
+      view.container.querySelectorAll(".MuiSkeleton-root").length,
+    ).toBeGreaterThan(0)
+  })
+
+  it("shows an error message when the request fails", () => {
+    renderWithProviders(
+      <PodcastSection
+        featuredPodcasts={[]}
+        morePodcasts={[]}
+        hasMorePodcasts={false}
+        totalPodcasts={0}
+        isMobile={false}
+        isError={true}
+      />,
+    )
+    expect(
+      screen.getByText(
+        "Something went wrong loading podcasts. Please try again later.",
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it("does not show the 'View all' button when there are no podcast rows", () => {
+    renderWithProviders(
+      <PodcastSection
+        featuredPodcasts={[]}
+        morePodcasts={[]}
+        hasMorePodcasts={true}
+        totalPodcasts={250}
+        isMobile={false}
+      />,
+    )
+    expect(
+      screen.queryByRole("link", { name: /view all/i }),
+    ).not.toBeInTheDocument()
+  })
+
   it("shows the 'View all' button only when hasMoreSeries is true", () => {
     const series = makeSeries()
     const { view } = renderWithProviders(

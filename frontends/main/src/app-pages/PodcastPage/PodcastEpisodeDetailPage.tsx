@@ -294,7 +294,7 @@ export const PodcastEpisodeDetailPage: React.FC<
 
   const handlePlay = () => {
     if (!episode) return
-    toggle(episode, parentPodcast?.title)
+    toggle(episode, Number(podcastId))
   }
 
   const podcastHref = podcastId
@@ -404,7 +404,7 @@ export const PodcastEpisodeDetailPage: React.FC<
                   isPlaying={
                     playingEpisode?.id === episode.id && isAudioPlaying
                   }
-                  onPlayClick={(ep) => toggle(ep, parentPodcast?.title)}
+                  onPlayClick={(ep) => toggle(ep, Number(podcastId))}
                   onPauseClick={pause}
                   isPlayable={Boolean(getEpisodeAudioUrl(episode))}
                   isEpisodePage
