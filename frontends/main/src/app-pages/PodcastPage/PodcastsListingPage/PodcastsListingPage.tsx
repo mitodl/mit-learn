@@ -13,12 +13,7 @@ import PodcastContainer from "../PodcastContainer"
 import PodcastPlayer from "../PodcastPlayer"
 import type { PodcastPlayerHandle } from "../PodcastPlayer"
 import { usePodcastPlayer } from "../usePodcastPlayer"
-import {
-  PageSection,
-  BreadcrumbBar,
-  StyledPodcastContainer,
-  SectionDivider,
-} from "./styled"
+import { PageSection, BreadcrumbBar, SectionDivider } from "./styled"
 import HeroSection from "./HeroSection"
 import NowPlayingSection from "./NowPlayingSection"
 import LatestEpisodesSection from "./LatestEpisodesSection"
@@ -119,13 +114,13 @@ export const PodcastsListingPage: React.FC = () => {
     <>
       <PageSection>
         <BreadcrumbBar>
-          <StyledPodcastContainer>
+          <PodcastContainer width={1320} gutter={24} gutterBreakpoint="sm">
             <Breadcrumbs
               variant="light"
               ancestors={[{ href: HOME, label: "Home" }]}
               current="Podcasts"
             />
-          </StyledPodcastContainer>
+          </PodcastContainer>
         </BreadcrumbBar>
 
         <HeroSection
