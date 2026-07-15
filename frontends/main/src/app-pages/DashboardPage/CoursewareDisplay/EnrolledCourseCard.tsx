@@ -250,6 +250,8 @@ export const EnrolledCourseCard = ({
         )
       }}
     />
+  ) : certButton ? (
+    certButton
   ) : upgradedAndIncomplete ? (
     <UpgradedBanner />
   ) : null
@@ -399,12 +401,6 @@ export const EnrolledCourseCard = ({
   )
   const buttonSection = isCompact ? (
     <Stack direction="row" flexGrow={1} gap="8px" alignItems="center">
-      {certButton && (
-        <>
-          {certButton}
-          <Separator />
-        </>
-      )}
       <CoursewareActionColumn
         direction="row"
         flexGrow={1}
@@ -415,12 +411,9 @@ export const EnrolledCourseCard = ({
       </CoursewareActionColumn>
     </Stack>
   ) : (
-    <Stack flexGrow={1} gap="8px">
-      {certButton}
-      <Stack direction="row" gap="8px" alignItems="center">
-        {ctaButton}
-        {contextMenu}
-      </Stack>
+    <Stack direction="row" flexGrow={1} gap="8px" alignItems="center">
+      {ctaButton}
+      {contextMenu}
     </Stack>
   )
 

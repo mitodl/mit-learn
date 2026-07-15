@@ -67,7 +67,14 @@ export const ProgramEnrollmentCard = ({
       ) : (
         <TitleText>{title}</TitleText>
       )}
-      {upgradedAndIncomplete ? <UpgradedBanner /> : null}
+      {certificateLink ? (
+        <SubtitleLink href={certificateLink}>
+          <RiAwardLine size="16px" />
+          View Certificate
+        </SubtitleLink>
+      ) : upgradedAndIncomplete ? (
+        <UpgradedBanner />
+      ) : null}
     </Stack>
   )
   const detailsUrl = programPageView({
@@ -127,24 +134,16 @@ export const ProgramEnrollmentCard = ({
     />
   )
   const buttonSection = (
-    <Stack flexGrow={1} gap="8px">
-      {certificateLink && (
-        <SubtitleLink href={certificateLink}>
-          <RiAwardLine size="16px" />
-          View Certificate
-        </SubtitleLink>
-      )}
-      <Stack direction="row" gap="8px" alignItems="center">
-        <CoursewareButtonLink
-          size="small"
-          variant="primary"
-          href={programView(program.id)}
-          aria-label={`View program: ${title}`}
-        >
-          View
-        </CoursewareButtonLink>
-        {contextMenu}
-      </Stack>
+    <Stack direction="row" flexGrow={1} gap="8px" alignItems="center">
+      <CoursewareButtonLink
+        size="small"
+        variant="primary"
+        href={programView(program.id)}
+        aria-label={`View program: ${title}`}
+      >
+        View
+      </CoursewareButtonLink>
+      {contextMenu}
     </Stack>
   )
 
