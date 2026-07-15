@@ -682,7 +682,7 @@ class ContentFilesVectorSearchView(QdrantView):
         )
     )
     @extend_schema(summary="Content File Vector Search")
-    async def get(self, request):
+    async def get(self, request):  # noqa: C901, PLR0912
         request_data = ContentFileVectorSearchRequestSerializer(data=request.GET)
 
         if request_data.is_valid():
@@ -698,35 +698,37 @@ class ContentFilesVectorSearchView(QdrantView):
                 )
 
             params = dict(request_data.data)
-            resource_ids = params.get("resource_readable_id")
-            has_run_filter = "run_readable_id" in params or "edx_module_id" in params
-            if resource_ids and not has_run_filter:
-                # Restrict resource-scoped queries to each resource's best run.
-                # Replace resource_readable_id with a single run_readable_id filter
-                # (don't AND them: compound filters break Qdrant's approximate
-                # count). The resource readable_ids are included to match each
-                # resource's run-less course-metadata point.
-                def _best_run_ids():
-                    from django.db import close_old_connections
+            if "edx_module_id" in params and not params["edx_module_id"]:
+                # Every requested edx_module_id failed validation ("sent
+                # but stripped", as opposed to "not sent"): nothing can
+                # match, so skip Qdrant and return the same shape an
+                # empty search produces.
+                response = {"hits": [], "total": {"value": 0}, "aggregations": {}}
+            else:
+                resource_ids = params.get("resource_readable_id")
+                has_run_filter = (
+                    "run_readable_id" in params or "edx_module_id" in params
+                )
+                if resource_ids and not has_run_filter:
+                    # Restrict resource-scoped queries to each resource's best run.
+                    # Replace resource_readable_id with a single run_readable_id filter
+                    # (don't AND them: compound filters break Qdrant's approximate
+                    # count). The resource readable_ids are included to match each
+                    # resource's run-less course-metadata point.
+                    best_run_ids = await sync_to_async(best_run_ids_for_resources)(
+                        resource_ids
+                    )
+                    del params["resource_readable_id"]
+                    params["run_readable_id"] = best_run_ids + list(resource_ids)
 
-                    close_old_connections()
-                    try:
-                        return best_run_ids_for_resources(resource_ids)
-                    finally:
-                        close_old_connections()
-
-                best_run_ids = await sync_to_async(_best_run_ids, thread_sensitive=False)()
-                del params["resource_readable_id"]
-                params["run_readable_id"] = best_run_ids + list(resource_ids)
-
-            response = await self.async_vector_search(
-                query_text,
-                limit=limit,
-                offset=offset,
-                params=params,
-                search_collection=collection_name,
-                hybrid_search=hybrid_search,
-            )
+                response = await self.async_vector_search(
+                    query_text,
+                    limit=limit,
+                    offset=offset,
+                    params=params,
+                    search_collection=collection_name,
+                    hybrid_search=hybrid_search,
+                )
 
             if params.get("edx_module_id") and not response.get("hits"):
                 try:
