@@ -65,3 +65,15 @@ export const SectionLink = styled(Typography)(({ theme }) => ({
   textUnderlineOffset: "auto",
   textUnderlinePosition: "from-font",
 }))
+
+/**
+ * Shown in place of a section's body when it is empty or has failed to load, so
+ * the section header never sits over a blank space.
+ */
+export const SectionMessage = styled(Typography)(({ theme }) => ({
+  color: theme.custom.colors.silverGrayDark,
+  padding: "40px 0",
+  [theme.breakpoints.down("sm")]: {
+    padding: "32px 0",
+  },
+}))

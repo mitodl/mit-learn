@@ -250,6 +250,56 @@ describe("PodcastEpisodeDetailPage", () => {
     )
   })
 
+  test("names the URL's podcast (not the first parent) for a multi-parent episode", async () => {
+    const episode = makePodcastEpisode()
+    episode.podcast_episode.audio_url = "https://example.com/ep.mp3"
+    const podcastA = makePodcast({ title: "Podcast A" })
+    const podcastB = makePodcast({ title: "Podcast B" })
+    // The episode belongs to both A and B; the user is on B's URL.
+    episode.podcast_episode.podcasts = [podcastA.id, podcastB.id]
+    episode.podcast_episode.parent_podcasts = [
+      {
+        id: podcastA.id,
+        title: "Podcast A",
+        readable_id: podcastA.readable_id,
+      },
+      {
+        id: podcastB.id,
+        title: "Podcast B",
+        readable_id: podcastB.readable_id,
+      },
+    ]
+
+    setMockResponse.get(
+      urls.learningResources.details({ id: episode.id }),
+      episode,
+    )
+    setMockResponse.get(
+      urls.learningResources.details({ id: podcastB.id }),
+      podcastB,
+    )
+    setMockResponse.get(
+      `${urls.learningResources.items({ id: podcastB.id })}?limit=${EPISODES_PAGE_SIZE}`,
+      makeItemsResponse([episode]),
+    )
+
+    renderWithProviders(
+      <PodcastEpisodeDetailPage
+        episodeId={String(episode.id)}
+        podcastId={String(podcastB.id)}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", { name: /play episode/i }),
+    )
+
+    // The header/breadcrumb and the player bar must agree on Podcast B.
+    expect(screen.getByTestId("player-podcast-name")).toHaveTextContent(
+      "Podcast B",
+    )
+  })
+
   test("clicking play in 'More from' list renders the player for that episode", async () => {
     const moreEpisode = makePodcastEpisode()
     moreEpisode.podcast_episode.audio_url = "https://example.com/more.mp3"

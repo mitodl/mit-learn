@@ -273,8 +273,7 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
     ? formatDate(latestEpisode.last_modified, "MMM D")
     : null
 
-  const handlePlayClick = (episode: LearningResource) =>
-    toggle(episode, resource?.title)
+  const handlePlayClick = (episode: LearningResource) => toggle(episode, id)
 
   return (
     <>
