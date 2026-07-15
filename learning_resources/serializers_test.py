@@ -1130,6 +1130,105 @@ def test_metadata_display_serializer_show_start_anytime():
     assert metadata_serializer.show_start_anytime(serialized_resource) is False
 
 
+def test_runs_by_date_handles_dateless_runs():
+    """
+    runs_by_date should not crash when runs have no usable start_date (issue #12295);
+    such runs sort last, whether the value is None, missing, empty, or unparseable.
+    """
+    serialized_resource = {
+        "runs": [
+            {"id": 1, "start_date": None},
+            {"id": 2, "start_date": "2024-01-01T00:00:00Z"},
+            {"id": 3},  # start_date key missing
+            {"id": 4, "start_date": ""},  # empty string
+            {"id": 5, "start_date": "not a date"},  # unparseable
+        ]
+    }
+    serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    ordered = serializer.runs_by_date(serialized_resource)
+    assert [run["id"] for run in ordered] == [2, 1, 3, 4, 5]
+
+
+def _serialized_resource_with_bad_run_date(bad_start_date):
+    """Serialize a course with one valid run and one with a bad start_date"""
+    resource = LearningResourceFactory.create(
+        resource_type="course", availability=Availability.dated.name
+    )
+    serialized_resource = serializers.LearningResourceSerializer(resource).data
+    delivery = [
+        {
+            "code": LearningResourceDelivery.online.name,
+            "name": LearningResourceDelivery.online.value,
+        }
+    ]
+    serialized_resource["delivery"] = delivery
+    good_run = serialized_resource["runs"][0]
+    good_run.update(
+        {
+            "start_date": "2024-01-01T00:00:00Z",
+            "delivery": delivery,
+            "location": "",
+            "resource_prices": [],
+        }
+    )
+    bad_run = copy.deepcopy(good_run)
+    if bad_start_date == "missing":
+        bad_run.pop("start_date")
+    else:
+        bad_run["start_date"] = bad_start_date
+    serialized_resource["runs"] = [good_run, bad_run]
+    return serialized_resource, bad_run
+
+
+@pytest.mark.parametrize("bad_start_date", [None, "", "not a date", "missing"])
+def test_date_methods_handle_unusable_start_dates(bad_start_date):
+    """
+    dates_for_runs, total_runs_with_dates, get_starts, and render_document
+    should skip runs with unusable start_date values, not crash on them.
+    """
+    serialized_resource, _ = _serialized_resource_with_bad_run_date(bad_start_date)
+    serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    assert serializer.dates_for_runs(serialized_resource) == ["January 01, 2024"]
+    assert serializer.total_runs_with_dates(serialized_resource) == 1
+    assert serializer.get_starts(serialized_resource) == ["January 01, 2024"]
+    assert isinstance(serializer.render_document(), dict)
+
+
+@pytest.mark.parametrize("bad_start_date", [None, "", "not a date", "missing"])
+def test_date_methods_handle_all_runs_dateless(bad_start_date):
+    """Date methods should return empty values when no run has a usable date"""
+    serialized_resource, bad_run = _serialized_resource_with_bad_run_date(
+        bad_start_date
+    )
+    serialized_resource["runs"] = [bad_run]
+    serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    assert serializer.dates_for_runs(serialized_resource) == []
+    assert serializer.total_runs_with_dates(serialized_resource) == 0
+    assert serializer.get_starts(serialized_resource) is None
+    assert isinstance(serializer.render_document(), dict)
+
+
+@pytest.mark.parametrize("bad_start_date", [None, "", "not a date", "missing"])
+def test_get_runs_handles_unusable_start_dates(bad_start_date):
+    """get_runs should render an empty date for runs with unusable start_dates"""
+    serialized_resource, bad_run = _serialized_resource_with_bad_run_date(
+        bad_start_date
+    )
+    # differing location so all_runs_are_identical is False
+    bad_run["location"] = "Elsewhere"
+    serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    runs = serializer.get_runs(serialized_resource)
+    assert [run["start_date"] for run in runs] == ["January 01, 2024", ""]
+
+
 def test_total_runs_with_dates(mocker):
     """
     Test total_runs_with_dates method
