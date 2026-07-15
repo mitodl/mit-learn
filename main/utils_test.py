@@ -267,6 +267,8 @@ def test_clean_data_preserves_allowed_links():
         attributes=ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
     )
     assert 'href="https://ocw.mit.edu"' in result
+    assert 'title="OCW"' in result
+    assert 'rel="noopener noreferrer"' in result
     assert ">MIT OCW</a>" in result
     assert "javascript:" not in result  # nh3 drops unsafe schemes
 
