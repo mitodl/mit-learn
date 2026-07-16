@@ -1110,8 +1110,8 @@ const buildVariantKey = (variant: SupportedVariant): string =>
  * `Intl.DisplayNames` has no option to request this directly, so it's
  * applied here.
  */
-const capitalizeFirstWord = (value: string): string =>
-  value ? value.charAt(0).toUpperCase() + value.slice(1) : value
+const capitalizeFirstWord = (value: string, locale?: string): string =>
+  value ? value.charAt(0).toLocaleUpperCase(locale) + value.slice(1) : value
 
 // Per-dimension display labels. These are the single source of truth shared by
 // both buildVariantLabel (what the picker renders) and sortVariants (the order
