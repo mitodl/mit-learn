@@ -94,7 +94,9 @@ const TitleText = styled.h3<{ clickable?: boolean }>(
 
 const SubtitleLinkRoot = styled.div(({ theme }) => ({
   display: "flex",
+  flexWrap: "wrap",
   alignItems: "center",
+  rowGap: "2px",
   flex: 1,
   minWidth: 0,
   color: theme.custom.colors.red,
@@ -107,7 +109,6 @@ const SubtitleLink = styled(NextLink)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "2px",
-  whiteSpace: "nowrap",
   ":hover": {
     textDecoration: "underline",
   },

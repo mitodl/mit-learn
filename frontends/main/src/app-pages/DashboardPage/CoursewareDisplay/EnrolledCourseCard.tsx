@@ -56,7 +56,9 @@ const RedEllipse = styled(Ellipse)(({ theme }) => ({
   backgroundColor: theme.custom.colors.red,
 }))
 
-const NowrapText = styled.span({
+const CountdownGroup = styled.span({
+  display: "inline-flex",
+  alignItems: "center",
   whiteSpace: "nowrap",
 })
 
@@ -119,15 +121,13 @@ const UpgradeBanner: React.FC<
         {`Upgrade for certificate - ${formattedPrice}`}
       </SubtitleLink>
       {calendarDays !== null && (
-        <>
+        <CountdownGroup>
           <RedEllipse />
-          <NowrapText>
-            <NoSSR>
-              {/* This uses local time. */}
-              {formatUpgradeTime(calendarDays)}
-            </NoSSR>
-          </NowrapText>
-        </>
+          <NoSSR>
+            {/* This uses local time. */}
+            {formatUpgradeTime(calendarDays)}
+          </NoSSR>
+        </CountdownGroup>
       )}
     </SubtitleLinkRoot>
   )
