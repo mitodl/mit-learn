@@ -1414,6 +1414,7 @@ def test_embed_learning_resources_keeps_old_checksum_when_summary_fails(mocker):
     mock_qdrant.batch_update_points.assert_not_called()
 
 
+@pytest.mark.django_db(transaction=True)
 def test_vector_search_group_by(mocker, client, django_user_model):
     """
     Test that async_vector_search with group_by parameter returns grouped results
@@ -1914,6 +1915,7 @@ def test_vector_search_hybrid(mocker, client):
 
 
 @pytest.mark.parametrize("use_group_by", [True, False])
+@pytest.mark.django_db(transaction=True)
 def test_vector_search_group_by_offset_behavior(
     mocker, client, django_user_model, use_group_by
 ):

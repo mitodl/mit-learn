@@ -6,6 +6,7 @@ from functools import cache
 
 from asgiref.sync import sync_to_async
 from django.conf import settings
+from django.db import close_old_connections
 from django.db.models import Prefetch, Q
 from langchain_text_splitters import (
     MarkdownHeaderTextSplitter,
@@ -1541,3 +1542,16 @@ def custom_score_formula(collection_name: str) -> list[models.MultExpression]:
                 )
             )
     return score_expressions
+
+
+def db_sync_to_async(func):
+    """Offload sync DB work to the thread pool, with per-call connection cleanup."""
+
+    def wrapper(*args, **kwargs):
+        close_old_connections()
+        try:
+            return func(*args, **kwargs)
+        finally:
+            close_old_connections()
+
+    return sync_to_async(wrapper, thread_sensitive=False)
