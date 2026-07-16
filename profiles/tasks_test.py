@@ -17,10 +17,11 @@ def test_send_welcome_email_sends_template_email(mocker):
     send_welcome_email(user.id)
 
     mocked_send.assert_called_once_with(
-        ["new.user@example.com"],
+        user,
         "MIT Learn - Welcome to MIT Learn",
         "email/welcome_email.html",
         context={"display_name": "Full Name"},
+        is_transactional=True,
     )
 
 
@@ -60,10 +61,11 @@ def test_send_welcome_email_uses_full_name_when_profile_name_missing(mocker):
     send_welcome_email(user.id)
 
     mocked_send.assert_called_once_with(
-        ["full.name@example.com"],
+        user,
         "MIT Learn - Welcome to MIT Learn",
         "email/welcome_email.html",
         context={"display_name": "Full Name"},
+        is_transactional=True,
     )
 
 
@@ -83,10 +85,11 @@ def test_send_welcome_email_uses_username_when_names_missing(mocker):
     send_welcome_email(user.id)
 
     mocked_send.assert_called_once_with(
-        ["username.only@example.com"],
+        user,
         "MIT Learn - Welcome to MIT Learn",
         "email/welcome_email.html",
         context={"display_name": "username-only"},
+        is_transactional=True,
     )
 
 
@@ -105,8 +108,9 @@ def test_send_welcome_email_handles_missing_profile_relation(mocker):
     send_welcome_email(user.id)
 
     mocked_send.assert_called_once_with(
-        ["missing.profile@example.com"],
+        user,
         "MIT Learn - Welcome to MIT Learn",
         "email/welcome_email.html",
         context={"display_name": "profile-missing"},
+        is_transactional=True,
     )
