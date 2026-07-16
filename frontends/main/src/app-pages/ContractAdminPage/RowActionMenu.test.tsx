@@ -157,7 +157,10 @@ describe("RowActionMenu", () => {
     })
 
     test("revokes on confirm and reports success", async () => {
-      const code = makeCode({ redemption_status: "assigned" })
+      const code = makeCode({
+        redemption_status: "assigned",
+        assigned_to: "learner@example.com",
+      })
       setMockResponse.delete(
         urls.contracts.managerContractCodeRevoke(
           ORG_ID,
@@ -173,7 +176,10 @@ describe("RowActionMenu", () => {
       await user.click(screen.getByRole("button", { name: "Release seat" }))
 
       await waitFor(() => {
-        expect(onResult).toHaveBeenCalledWith("Seat released.", "success")
+        expect(onResult).toHaveBeenCalledWith(
+          "Seat released for learner@example.com.",
+          "success",
+        )
       })
     })
   })
@@ -309,7 +315,7 @@ describe("RowActionMenu", () => {
       )
       expect(
         await screen.findByRole("menuitem", {
-          name: "Link copied to clipboard",
+          name: "Claim link copied.",
         }),
       ).toBeInTheDocument()
     })
@@ -334,10 +340,10 @@ describe("RowActionMenu", () => {
 
       expect(
         await screen.findByRole("menuitem", {
-          name: "Link copied to clipboard",
+          name: "Claim link copied.",
         }),
       ).toBeInTheDocument()
-      expect(liveRegion).toHaveTextContent("Link copied to clipboard")
+      expect(liveRegion).toHaveTextContent("Claim link copied.")
     })
 
     test("falls back to execCommand when clipboard API is unavailable", async () => {
@@ -367,7 +373,7 @@ describe("RowActionMenu", () => {
       expect(document.execCommand).toHaveBeenCalledWith("copy")
       expect(
         await screen.findByRole("menuitem", {
-          name: "Link copied to clipboard",
+          name: "Claim link copied.",
         }),
       ).toBeInTheDocument()
     })

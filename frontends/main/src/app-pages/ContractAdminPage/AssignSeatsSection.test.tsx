@@ -320,7 +320,7 @@ describe("AssignSeatsSection", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: /ready to send invitations/i,
+        name: /review and send invitations/i,
       }),
     ).toBeInTheDocument()
   })
@@ -376,13 +376,13 @@ describe("AssignSeatsSection", () => {
     const textarea = screen.getByPlaceholderText(/enter employee emails/i)
     await user.type(textarea, "alice@example.com")
     await user.click(screen.getByRole("button", { name: "Assign Seats" }))
-    await screen.findByRole("heading", { name: /ready to send invitations/i })
+    await screen.findByRole("heading", { name: /review and send invitations/i })
 
     await user.click(screen.getByRole("button", { name: /cancel/i }))
 
     await waitFor(() =>
       expect(
-        screen.queryByRole("heading", { name: /ready to send invitations/i }),
+        screen.queryByRole("heading", { name: /review and send invitations/i }),
       ).not.toBeInTheDocument(),
     )
   })
@@ -410,7 +410,7 @@ describe("AssignSeatsSection", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: /ready to send invitations/i,
+        name: /review and send invitations/i,
       }),
     ).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/enter employee emails/i)).toHaveValue(
@@ -572,7 +572,7 @@ describe("AssignSeatsSection", () => {
       const textarea = screen.getByPlaceholderText(/enter employee emails/i)
       await user.type(textarea, "alice@example.com")
       await user.click(screen.getByRole("button", { name: "Assign Seats" }))
-      await screen.findByRole("heading", { name: /ready to send invitations/i })
+      await screen.findByRole("heading", { name: /review and send invitations/i })
     }
 
     test("shows 'Send Test Email to Me' button in the confirm modal", async () => {

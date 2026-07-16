@@ -433,8 +433,8 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
       <div>
         <SectionTitle component="h2">Assign Seats</SectionTitle>
         <MutedText>
-          Each learner will receive an email with a link to claim their seat and
-          access the program.
+          Each learner will receive an invitation email from MIT Learn to
+          access their learning.
         </MutedText>
       </div>
       {/* Always-mounted live region — debounced so screen readers aren't spammed on every keystroke */}
