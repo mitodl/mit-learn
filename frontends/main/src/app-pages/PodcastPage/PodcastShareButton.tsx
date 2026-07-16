@@ -34,7 +34,7 @@ const PodcastShareButton: React.FC<PodcastShareButtonProps> = ({
       <ShareDialog
         open={shareOpen}
         onClose={() => setShareOpen(false)}
-        resource={resource as PodcastEpisodeResource}
+        resource={resource}
         pageUrl={sharePageUrl}
         title={title ?? ""}
       />

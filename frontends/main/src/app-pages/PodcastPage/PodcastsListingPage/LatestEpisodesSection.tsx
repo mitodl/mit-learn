@@ -3,15 +3,16 @@ import { Link, Skeleton, styled } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import type { LearningResource, PodcastEpisodeResource } from "api/v1"
 import { SEARCH_PODCAST_EPISODES, podcastEpisodePageView } from "@/common/urls"
-import { Section, SectionHeader, SectionTitle, SectionMessage } from "./styled"
+import {
+  Section,
+  SectionHeader,
+  SectionTitle,
+  SectionMessage,
+  EpisodeList,
+} from "./styled"
 import { EpisodeItem } from "./EpisodeItem"
 import { getEpisodeParentPodcastId } from "./helpers"
 import { EPISODES_PAGE_SIZE } from "./constants"
-
-const EpisodeList = styled.div({
-  display: "grid",
-  gridTemplateColumns: "1fr",
-})
 
 const EpisodeSkeletonRow = styled.div(({ theme }) => ({
   display: "flex",
