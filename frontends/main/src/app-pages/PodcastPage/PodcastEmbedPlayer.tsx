@@ -9,6 +9,7 @@ import {
   RiForward30Line,
 } from "@remixicon/react"
 import type { LearningResource } from "api/v1"
+import { getEpisodeAudioUrl } from "./PodcastsListingPage/helpers"
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -21,11 +22,6 @@ const formatTime = (seconds: number): string => {
   const mm = String(m).padStart(2, "0")
   const ss = String(s).padStart(2, "0")
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`
-}
-
-function getAudioUrl(resource: LearningResource): string {
-  if (resource.resource_type !== "podcast_episode") return ""
-  return resource.podcast_episode?.audio_url ?? ""
 }
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -227,8 +223,11 @@ const PodcastEmbedPlayer: React.FC<PodcastEmbedPlayerProps> = ({
   resource,
   inline = false,
 }) => {
-  const audioUrl = getAudioUrl(resource)
-  const hasAudioSource = Boolean(audioUrl.trim())
+  // The embed player feeds this URL straight into an <audio> element, so it must
+  // be a direct media file — never the (possibly webpage) episode_link fallback.
+  const audioUrl =
+    getEpisodeAudioUrl(resource, { allowEpisodeLink: false }) ?? ""
+  const hasAudioSource = Boolean(audioUrl)
   const audioRef = useRef<HTMLAudioElement>(null)
   const isPlayPendingRef = useRef(false)
   const playAttemptIdRef = useRef(0)
