@@ -189,6 +189,61 @@ describe("PodcastDetailPage", () => {
     await screen.findByText(/no episodes found/i)
   })
 
+  test("shows a loading skeleton while fetching", async () => {
+    const episodes = makePodcastEpisodes(2)
+    const { podcast } = setupApis({ episodesPage1: episodes })
+
+    const { view } = renderWithProviders(
+      <PodcastDetailPage podcastId={String(podcast.id)} />,
+    )
+
+    // Skeleton is visible on first paint, before the queries resolve.
+    expect(
+      view.container.querySelectorAll(".MuiSkeleton-root").length,
+    ).toBeGreaterThan(0)
+
+    // Flush to the loaded state to avoid act() warnings.
+    await screen.findByText(episodes[0].title!)
+  })
+
+  test("shows an error when the podcast fails to load", async () => {
+    const podcast = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Podcast,
+    })
+    setMockResponse.get(
+      urls.learningResources.details({ id: podcast.id }),
+      "Server error",
+      { code: 500 },
+    )
+
+    renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
+
+    expect(
+      await screen.findByText(/something went wrong loading this podcast/i),
+    ).toBeInTheDocument()
+  })
+
+  test("shows an error when the episode list fails to load", async () => {
+    const podcast = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Podcast,
+    })
+    setMockResponse.get(
+      urls.learningResources.details({ id: podcast.id }),
+      podcast,
+    )
+    setMockResponse.get(
+      `${urls.learningResources.items({ id: podcast.id })}?limit=${EPISODES_PAGE_SIZE}`,
+      "Server error",
+      { code: 500 },
+    )
+
+    renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
+
+    expect(
+      await screen.findByText(/something went wrong loading episodes/i),
+    ).toBeInTheDocument()
+  })
+
   test("disables play button for episodes without audio source", async () => {
     const [episodeWithoutAudio] = makePodcastEpisodes(1)
     if (episodeWithoutAudio.podcast_episode) {

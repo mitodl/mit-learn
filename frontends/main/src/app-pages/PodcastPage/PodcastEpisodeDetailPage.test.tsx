@@ -300,6 +300,74 @@ describe("PodcastEpisodeDetailPage", () => {
     )
   })
 
+  test("shows a loading skeleton while the episode is fetching", async () => {
+    const { episode, podcast } = setupApis({ moreEpisodes: [] })
+
+    const { view } = renderWithProviders(
+      <PodcastEpisodeDetailPage
+        episodeId={String(episode.id)}
+        podcastId={String(podcast.id)}
+      />,
+    )
+
+    // Skeleton is visible on first paint, before the query resolves.
+    expect(
+      view.container.querySelectorAll(".MuiSkeleton-root").length,
+    ).toBeGreaterThan(0)
+
+    // Flush to the loaded state to avoid act() warnings.
+    await screen.findAllByText(episode.title!)
+  })
+
+  test("shows an error message when the episode fails to load", async () => {
+    const episode = makePodcastEpisode()
+    const podcast = makePodcast()
+    setMockResponse.get(
+      urls.learningResources.details({ id: episode.id }),
+      "Server error",
+      { code: 500 },
+    )
+    setMockResponse.get(
+      `${urls.learningResources.items({ id: podcast.id })}?limit=${EPISODES_PAGE_SIZE}`,
+      makeItemsResponse([]),
+    )
+
+    renderWithProviders(
+      <PodcastEpisodeDetailPage
+        episodeId={String(episode.id)}
+        podcastId={String(podcast.id)}
+      />,
+    )
+
+    expect(
+      await screen.findByText(/something went wrong loading this episode/i),
+    ).toBeInTheDocument()
+  })
+
+  test("shows an unavailable message when the episode is missing", async () => {
+    const episode = makePodcastEpisode()
+    const podcast = makePodcast()
+    setMockResponse.get(
+      urls.learningResources.details({ id: episode.id }),
+      null,
+    )
+    setMockResponse.get(
+      `${urls.learningResources.items({ id: podcast.id })}?limit=${EPISODES_PAGE_SIZE}`,
+      makeItemsResponse([]),
+    )
+
+    renderWithProviders(
+      <PodcastEpisodeDetailPage
+        episodeId={String(episode.id)}
+        podcastId={String(podcast.id)}
+      />,
+    )
+
+    expect(
+      await screen.findByText(/this episode is unavailable/i),
+    ).toBeInTheDocument()
+  })
+
   test("clicking play in 'More from' list renders the player for that episode", async () => {
     const moreEpisode = makePodcastEpisode()
     moreEpisode.podcast_episode.audio_url = "https://example.com/more.mp3"
