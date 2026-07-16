@@ -5,6 +5,7 @@ import {
   formatApproxCount,
   getEpisodeAudioUrl,
   getEpisodeDurationMinutes,
+  getEpisodeParentPodcast,
   getEpisodeParentPodcastId,
   getEpisodeParentPodcastName,
 } from "./helpers"
@@ -70,6 +71,34 @@ describe("getEpisodeAudioUrl", () => {
       },
     }) as unknown as LearningResource
     expect(getEpisodeAudioUrl(episode)).toBeNull()
+  })
+
+  it("falls back to episode_link by default when audio_url is absent", () => {
+    const episode = factories.learningResources.podcastEpisode({
+      podcast_episode: {
+        id: 1,
+        podcasts: [1],
+        duration: "PT1M",
+        audio_url: null as unknown as string,
+        episode_link: "https://example.com/link",
+      },
+    }) as unknown as LearningResource
+    expect(getEpisodeAudioUrl(episode)).toBe("https://example.com/link")
+  })
+
+  it("does not fall back to episode_link when allowEpisodeLink is false", () => {
+    // The embed player feeds the URL straight into an <audio> element, so the
+    // (possibly non-media) episode_link must never be used.
+    const episode = factories.learningResources.podcastEpisode({
+      podcast_episode: {
+        id: 1,
+        podcasts: [1],
+        duration: "PT1M",
+        audio_url: null as unknown as string,
+        episode_link: "https://example.com/webpage",
+      },
+    }) as unknown as LearningResource
+    expect(getEpisodeAudioUrl(episode, { allowEpisodeLink: false })).toBeNull()
   })
 })
 
@@ -225,5 +254,41 @@ describe("getEpisodeParentPodcastName", () => {
         "Podcast A",
       )
     })
+  })
+})
+
+describe("getEpisodeParentPodcast", () => {
+  const multiParentEpisode = factories.learningResources.podcastEpisode({
+    podcast_episode: {
+      id: 1,
+      podcasts: [1, 2],
+      parent_podcasts: [
+        { id: 1, title: "Podcast A", readable_id: "podcast-a" },
+        { id: 2, title: "Podcast B", readable_id: "podcast-b" },
+      ],
+      duration: "PT1M",
+      audio_url: "https://example.com/audio.mp3",
+      episode_link: "https://example.com/link",
+    },
+  }) as unknown as LearningResource
+
+  it("returns null for non-episode resources", () => {
+    const course = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Course,
+    })
+    expect(getEpisodeParentPodcast(course)).toBeNull()
+  })
+
+  it("returns the full parent object matching the given podcastId", () => {
+    expect(getEpisodeParentPodcast(multiParentEpisode, 2)).toEqual({
+      id: 2,
+      title: "Podcast B",
+      readable_id: "podcast-b",
+    })
+  })
+
+  it("falls back to the first parent when no id is given or none matches", () => {
+    expect(getEpisodeParentPodcast(multiParentEpisode)?.id).toBe(1)
+    expect(getEpisodeParentPodcast(multiParentEpisode, 999)?.id).toBe(1)
   })
 })

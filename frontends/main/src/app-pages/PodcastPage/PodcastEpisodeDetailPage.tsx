@@ -1,15 +1,8 @@
 "use client"
 
 import React, { useRef, useMemo } from "react"
-import {
-  Breadcrumbs,
-  Typography,
-  Container,
-  styled,
-  useMediaQuery,
-} from "ol-components"
+import { Breadcrumbs, Typography, styled, useMediaQuery } from "ol-components"
 import type { Theme, TypographyProps } from "ol-components"
-import { Button } from "@mitodl/smoot-design"
 import { RiPlayFill, RiPauseFill } from "@remixicon/react"
 import PodcastPlayer from "./PodcastPlayer"
 import type { PodcastPlayerHandle } from "./PodcastPlayer"
@@ -20,7 +13,6 @@ import {
 
 import { ResourceTypeEnum } from "api/v1"
 import type { PodcastEpisodeResource } from "api/v1"
-import moment from "moment"
 import { formatDate } from "ol-utilities"
 import { HOME, podcastPageView, podcastEpisodePageView } from "@/common/urls"
 import { addExternalLinkTargets } from "@/common/utils"
@@ -28,7 +20,18 @@ import { EpisodeItem } from "./PodcastsListingPage/EpisodeItem"
 import PodcastContainer from "./PodcastContainer"
 import Link from "next/link"
 import { usePodcastPlayer } from "./usePodcastPlayer"
-import { getEpisodeAudioUrl } from "./PodcastsListingPage/helpers"
+import {
+  getEpisodeAudioUrl,
+  getEpisodeDurationMinutes,
+  getEpisodeParentPodcast,
+} from "./PodcastsListingPage/helpers"
+import { EPISODES_PAGE_SIZE } from "./PodcastsListingPage/constants"
+import {
+  PageSection,
+  BreadcrumbBar,
+  EpisodeList,
+  PlayButton,
+} from "./PodcastsListingPage/styled"
 
 import PodcastShareButton from "./PodcastShareButton"
 import { env } from "@/env"
@@ -36,19 +39,6 @@ import { env } from "@/env"
 const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 /* ── Layout ── */
-
-const EpisodeContainer = styled(Container)(({ theme }) => ({
-  maxWidth: "624px !important",
-  padding: "0 !important",
-  [theme.breakpoints.down("sm")]: {
-    padding: "0 16px !important",
-  },
-}))
-
-const PageSection = styled.div(({ theme }) => ({
-  backgroundColor: theme.custom.colors.lightGray1,
-  minHeight: "100vh",
-}))
 
 const HeaderSection = styled("div", {
   shouldForwardProp: (prop) => prop !== "hasEpisodes",
@@ -152,25 +142,10 @@ const Description = styled(Typography)<Pick<TypographyProps, "component">>(
   }),
 )
 
-const EpisodeList = styled.ul({
-  listStyle: "none",
-  margin: 0,
-  padding: 0,
-  display: "grid",
-  gridTemplateColumns: "1fr",
-})
 const StyledPodcastShareButton = styled(PodcastShareButton)({
   padding: "18px 12px",
   margin: "0 0 24px",
 })
-
-export const BreadcrumbBar = styled.div(({ theme }) => ({
-  padding: "18px 0 2px 0",
-  borderBottom: `1px solid ${theme.custom.colors.red}`,
-  [theme.breakpoints.down("sm")]: {
-    padding: "12px 0 0 0",
-  },
-}))
 
 const ViewAllLink = styled.a(({ theme }) => ({
   color: theme.custom.colors.darkRed,
@@ -191,18 +166,16 @@ const ViewAllLink = styled.a(({ theme }) => ({
   },
 }))
 
-const StyledButton = styled(Button)(({ theme }) => ({
+const StyledButton = styled(PlayButton)(({ theme }) => ({
   marginBottom: "32px",
-  padding: "12px 24px 12px 20px",
   minWidth: "175px",
   ...theme.typography.body1,
   [theme.breakpoints.down("sm")]: {
-    width: "100%",
     marginBottom: "16px",
   },
 }))
 
-export const PodcastShareSection = styled("div")({
+const PodcastShareSection = styled("div")({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
@@ -234,20 +207,15 @@ export const PodcastEpisodeDetailPage: React.FC<
 
   const { data: episode } = useLearningResourcesDetail(Number(episodeId))
 
-  const podcastEpisode =
-    episode?.resource_type === ResourceTypeEnum.PodcastEpisode
-      ? episode.podcast_episode
-      : null
-
   // Parent podcast summary comes embedded in the episode response — prefer the
   // one matching the URL's podcastId, else fall back to the first parent.
-  const parentPodcast =
-    podcastEpisode?.parent_podcasts?.find((p) => p.id === Number(podcastId)) ??
-    podcastEpisode?.parent_podcasts?.[0]
+  const parentPodcast = episode
+    ? getEpisodeParentPodcast(episode, Number(podcastId))
+    : null
 
   const { data: episodesData } = useInfiniteLearningResourceItems(
     Number(podcastId),
-    { learning_resource_id: Number(podcastId), limit: 5 },
+    { learning_resource_id: Number(podcastId), limit: EPISODES_PAGE_SIZE },
     { enabled: !!podcastId },
   )
   const episodes =
@@ -260,9 +228,7 @@ export const PodcastEpisodeDetailPage: React.FC<
             r.id !== Number(episodeId),
         ),
     ) ?? []
-  const duration = podcastEpisode?.duration
-    ? Math.round(moment.duration(podcastEpisode.duration).asMinutes())
-    : null
+  const duration = episode ? getEpisodeDurationMinutes(episode) : null
 
   const date = episode?.last_modified
     ? formatDate(episode.last_modified, "MMM D, YYYY")
@@ -286,7 +252,7 @@ export const PodcastEpisodeDetailPage: React.FC<
 
   const sharePageUrl =
     episode && podcastId
-      ? `${NEXT_PUBLIC_ORIGIN}${podcastEpisodePageView(String(episode!.id), podcastId, episode?.title)}`
+      ? `${NEXT_PUBLIC_ORIGIN}${podcastEpisodePageView(String(episode.id), podcastId, episode.title)}`
       : ""
 
   // Episode descriptions are sanitized on the backend with nh3 during ETL
@@ -304,7 +270,7 @@ export const PodcastEpisodeDetailPage: React.FC<
 
   return (
     <>
-      <PageSection>
+      <PageSection variant="gray">
         <BreadcrumbBar>
           <PodcastContainer>
             <Breadcrumbs
@@ -318,7 +284,7 @@ export const PodcastEpisodeDetailPage: React.FC<
           </PodcastContainer>
         </BreadcrumbBar>
         <HeaderSection hasEpisodes={episodes.length > 0}>
-          <EpisodeContainer>
+          <PodcastContainer contentWidth={624} gutterBreakpoint="sm">
             {parentPodcast?.title && (
               <EpisodeLabel href={podcastHref}>
                 {parentPodcast.title}
@@ -368,10 +334,10 @@ export const PodcastEpisodeDetailPage: React.FC<
                 }}
               />
             )}
-          </EpisodeContainer>
+          </PodcastContainer>
         </HeaderSection>
         {episodes && episodes.length > 0 && (
-          <EpisodeContainer>
+          <PodcastContainer contentWidth={624} gutterBreakpoint="sm">
             <MoreItemDescription>
               More from {parentPodcast?.title ?? "Podcast"}
             </MoreItemDescription>
@@ -404,7 +370,7 @@ export const PodcastEpisodeDetailPage: React.FC<
             {podcastId && (
               <ViewAllLink href={podcastHref}>View all episodes →</ViewAllLink>
             )}
-          </EpisodeContainer>
+          </PodcastContainer>
         )}
       </PageSection>
 

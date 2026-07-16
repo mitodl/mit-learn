@@ -1,12 +1,11 @@
 import React from "react"
 import { Typography, Skeleton, styled } from "ol-components"
-import { Button } from "@mitodl/smoot-design"
 import { RiPlayFill, RiPauseFill } from "@remixicon/react"
 import DOMPurify from "isomorphic-dompurify"
 import { formatDate } from "ol-utilities"
 import type { LearningResource } from "api/v1"
 import { addExternalLinkTargets } from "@/common/utils"
-import { Section } from "./styled"
+import { Section, PlayButton } from "./styled"
 import { getEpisodeAudioUrl, getEpisodeDurationMinutes } from "./helpers"
 
 const NowPlayingHeader = styled.div({
@@ -132,9 +131,8 @@ const NowPlayingRight = styled.div(({ theme }) => ({
   },
 }))
 
-const PlayEpisodeButton = styled(Button)({
+const PlayEpisodeButton = styled(PlayButton)({
   width: "100%",
-  padding: "12px 24px 12px 20px",
   height: "48px",
 })
 
