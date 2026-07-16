@@ -629,11 +629,12 @@ def test_content_file_filter_logs_missing_edx_module_id(
 ):
     """Requesting an absent edx_module_id logs a missing-content-file error."""
     mock_log = mocker.patch("learning_resources.filters.log_missing_content_file")
+    absent_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@does_not_exist"
 
-    client.get(f"{CONTENT_API_URL}?edx_module_id=block_does_not_exist")
+    client.get(CONTENT_API_URL, {"edx_module_id": absent_id})
 
     mock_log.assert_called_once_with(
-        "block_does_not_exist", reason="not_in_db", source="contentfiles_api"
+        absent_id, reason="not_in_db", source="contentfiles_api"
     )
 
 

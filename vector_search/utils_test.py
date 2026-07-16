@@ -14,7 +14,10 @@ from qdrant_client.http.models.models import CountResult
 from qdrant_client.models import PointStruct
 
 import vector_search.utils as vs_utils
-from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
+from learning_resources.constants import (
+    GROUP_CONTENT_FILE_CONTENT_VIEWERS,
+    LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
+)
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
@@ -1022,6 +1025,90 @@ def test_should_generate_for_changed_resource(mocker):
     mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
     result = should_generate_resource_embeddings(serialized_resources[0])
     assert result is True
+
+
+def test_embedding_context_includes_content_files():
+    """
+    Content file text should be folded into the embedding context for any
+    resource type, mirroring the OpenSearch query.
+    """
+    serialized_resource = {
+        "title": "A title",
+        "description": "A short description",
+        "full_description": "A full description",
+        "resource_type_group": "course",
+        "content_files": [
+            {"content": "The first content file text"},
+            {"content": None},
+            {"content": "The second content file text"},
+        ],
+    }
+
+    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
+        serialized_resource
+    )
+    assert context == (
+        "A title A short description A full description\n\n# Content\n"
+        "The first content file text\n\nThe second content file text"
+    )
+
+
+def test_embedding_context_includes_serialized_content_files():
+    """Content from a real serialized document resource ends up in the context"""
+    resource = LearningResourceFactory.create(resource_type="document", published=True)
+    ContentFileFactory.create(
+        direct_learning_resource=resource, content="sentinel text", published=True
+    )
+    serialized = next(iter(serialize_bulk_learning_resources([resource.id])))
+    assert "sentinel text" in vs_utils._learning_resource_embedding_context(serialized)  # noqa: SLF001
+
+
+def test_embedding_context_without_content_files():
+    """Resources without content files should just use title/description text."""
+    serialized_resource = {
+        "title": "A title",
+        "description": "A short description",
+        "full_description": "A full description",
+        "resource_type_group": "course",
+        "content_files": [],
+    }
+
+    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
+        serialized_resource
+    )
+
+    assert context == "A title A short description A full description"
+
+
+def test_embedding_context_truncates_content(mocker):
+    """The combined context should be truncated to the embedding model's limit."""
+    encoder = mocker.MagicMock(
+        model_name="test-model",
+        token_encoding_name="test-encoding",  # noqa: S106
+    )
+    mocker.patch("vector_search.utils.dense_encoder", return_value=encoder)
+    truncate_mock = mocker.patch(
+        "vector_search.utils.truncate_to_model_limit",
+        side_effect=lambda text, *_args, **_kwargs: text[:10],
+    )
+    serialized_resource = {
+        "title": "A title",
+        "description": "A short description",
+        "full_description": "A full description",
+        "resource_type_group": LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
+        "content_files": [{"content": "0123456789ABCDEF"}],
+    }
+
+    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
+        serialized_resource
+    )
+
+    assert context == "A title A "
+    truncate_mock.assert_called_once_with(
+        "A title A short description A full description\n\n# Content\n0123456789ABCDEF",
+        "test-model",
+        token_encoding_name="test-encoding",  # noqa: S106
+    )
 
 
 def test_should_generate_for_changed_content_file(mocker):
@@ -2432,36 +2519,56 @@ def test_embed_learning_resources_uses_collection_guard(mocker):
 @pytest.mark.django_db
 def test_check_missing_content_file_ids_not_in_db(mocker):
     """An edx_module_id with no ContentFile row is logged not_in_db."""
+    absent_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@absent"
     mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
     mock_client = mocker.AsyncMock()
     mock_client.count = mocker.AsyncMock(return_value=CountResult(count=5))
     mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
 
     async_to_sync(check_missing_content_file_ids)(
-        ["block_absent"], CONTENT_FILES_COLLECTION_NAME
+        [absent_id], CONTENT_FILES_COLLECTION_NAME
     )
 
     mock_log.assert_called_once_with(
-        "block_absent", reason="not_in_db", source="vector_content_files_search"
+        absent_id, reason="not_in_db", source="vector_content_files_search"
     )
     mock_client.count.assert_not_called()
 
 
 @pytest.mark.django_db
+def test_check_missing_content_file_ids_trims_edge_whitespace(mocker):
+    """Edge whitespace is trimmed before probing, and the trimmed id is logged."""
+    absent_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@absent"
+    mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
+    mock_client = mocker.AsyncMock()
+    mock_client.count = mocker.AsyncMock(return_value=CountResult(count=5))
+    mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
+
+    async_to_sync(check_missing_content_file_ids)(
+        [f" {absent_id} "], CONTENT_FILES_COLLECTION_NAME
+    )
+
+    mock_log.assert_called_once_with(
+        absent_id, reason="not_in_db", source="vector_content_files_search"
+    )
+
+
+@pytest.mark.django_db
 def test_check_missing_content_file_ids_not_in_index(mocker):
     """An edx_module_id present in the DB but with zero Qdrant points -> not_in_index."""
-    ContentFileFactory.create(edx_module_id="block_present")
+    present_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@present"
+    ContentFileFactory.create(edx_module_id=present_id)
     mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
     mock_client = mocker.AsyncMock()
     mock_client.count = mocker.AsyncMock(return_value=CountResult(count=0))
     mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
 
     async_to_sync(check_missing_content_file_ids)(
-        ["block_present"], CONTENT_FILES_COLLECTION_NAME
+        [present_id], CONTENT_FILES_COLLECTION_NAME
     )
 
     mock_log.assert_called_once_with(
-        "block_present", reason="not_in_index", source="vector_content_files_search"
+        present_id, reason="not_in_index", source="vector_content_files_search"
     )
     assert mock_client.count.call_args.kwargs["exact"] is True
 
@@ -2469,14 +2576,37 @@ def test_check_missing_content_file_ids_not_in_index(mocker):
 @pytest.mark.django_db
 def test_check_missing_content_file_ids_present_and_indexed_silent(mocker):
     """An id present in DB and present in Qdrant logs nothing."""
-    ContentFileFactory.create(edx_module_id="block_ok")
+    present_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@ok"
+    ContentFileFactory.create(edx_module_id=present_id)
     mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
     mock_client = mocker.AsyncMock()
     mock_client.count = mocker.AsyncMock(return_value=CountResult(count=3))
     mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
 
     async_to_sync(check_missing_content_file_ids)(
-        ["block_ok"], CONTENT_FILES_COLLECTION_NAME
+        [present_id], CONTENT_FILES_COLLECTION_NAME
     )
 
+    mock_log.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_check_missing_content_file_ids_skips_unimportant_block_types(mocker):
+    """Unimportant block types are filtered out before any DB or Qdrant probe."""
+    mock_present = mocker.patch("vector_search.utils.present_edx_module_ids")
+    mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
+    mock_client = mocker.AsyncMock()
+    mock_client.count = mocker.AsyncMock(return_value=CountResult(count=0))
+    mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
+
+    async_to_sync(check_missing_content_file_ids)(
+        [
+            "block-v1:MITx+6.00x+2T2020+type@discussion+block@abc",
+            "does-not-exist",
+        ],
+        CONTENT_FILES_COLLECTION_NAME,
+    )
+
+    mock_present.assert_not_called()
+    mock_client.count.assert_not_called()
     mock_log.assert_not_called()

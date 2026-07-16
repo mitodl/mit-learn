@@ -13,7 +13,9 @@ from langchain_text_splitters import (
 )
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
-from learning_resources.constants import PROGRAM_COURSE_CACHE_KEY_TEST_MODE
+from learning_resources.constants import (
+    PROGRAM_COURSE_CACHE_KEY_TEST_MODE,
+)
 from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.models import (
     ContentFile,
@@ -27,6 +29,7 @@ from learning_resources.serializers import (
     LearningResourceSerializer,
 )
 from learning_resources.utils import (
+    is_loggable_missing_content_id,
     log_missing_content_file,
     present_edx_module_ids,
 )
@@ -63,7 +66,11 @@ from vector_search.constants import (
     TOPICS_COLLECTION_NAME,
     VECTOR_SEARCH_SCORE_BOOST,
 )
-from vector_search.encoders.utils import dense_encoder, sparse_encoder
+from vector_search.encoders.utils import (
+    dense_encoder,
+    sparse_encoder,
+    truncate_to_model_limit,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -463,11 +470,29 @@ def _chunk_markdown_documents(text, metadata):
 def _learning_resource_embedding_context(document):
     """
     Get the embedding context for a learning resource
+
+    Content from any attached content files is folded in, mirroring the
+    OpenSearch text query which matches against the content of all of a
+    resource's content files regardless of resource type. The combined
+    context is truncated to the embedding model's input limit.
     """
-    return (
+    context = (
         f"{document.get('title')} "
         f"{document.get('description')} {document.get('full_description')}"
     )
+    content = "\n\n".join(
+        content_file["content"]
+        for content_file in document.get("content_files") or []
+        if content_file.get("content")
+    )
+    if content:
+        encoder = dense_encoder()
+        context = truncate_to_model_limit(
+            f"{context}\n\n# Content\n{content}",
+            encoder.model_name,
+            token_encoding_name=getattr(encoder, "token_encoding_name", None),
+        )
+    return context
 
 
 def _content_file_embedding_context(document):
@@ -1070,6 +1095,15 @@ async def check_missing_content_file_ids(edx_module_ids, collection_name):
     the DB but absent from the Qdrant index (not_in_index). Probes existence
     directly, independent of q/other request filters.
     """
+    # Trim edge whitespace so the exact-match DB/Qdrant probes below can't
+    # produce false misses for ids that differ only by transport junk.
+    edx_module_ids = [
+        eid
+        for eid in ((eid or "").strip() for eid in edx_module_ids)
+        if is_loggable_missing_content_id(eid)
+    ]
+    if not edx_module_ids:
+        return
     present = await sync_to_async(present_edx_module_ids)(edx_module_ids)
     for missing in set(edx_module_ids) - present:
         log_missing_content_file(
