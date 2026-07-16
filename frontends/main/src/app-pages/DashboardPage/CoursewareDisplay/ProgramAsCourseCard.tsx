@@ -113,6 +113,12 @@ const ProgramCardSubHeaderText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
+const ProgramCardContent = styled.div(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    margin: "16px",
+  },
+}))
+
 const ProgramCardSubHeader = styled.div(({ theme }) => ({
   display: "flex",
   padding: "8px 16px",
@@ -122,12 +128,13 @@ const ProgramCardSubHeader = styled.div(({ theme }) => ({
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
   background: `${theme.custom.colors.lightGray1}`,
   [theme.breakpoints.down("sm")]: {
+    borderRadius: "4px 4px 0 0",
     borderLeft: `1px solid ${theme.custom.colors.lightGray2}`,
     borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
   },
 }))
 
-const ProgramCardBody = styled.div({
+const ProgramCardBody = styled.div(({ theme }) => ({
   display: "flex",
   width: "100%",
   flexDirection: "column",
@@ -135,7 +142,13 @@ const ProgramCardBody = styled.div({
   alignSelf: "stretch",
   overflow: "hidden",
   borderRadius: "0 0 8px 8px",
-})
+  [theme.breakpoints.down("sm")]: {
+    borderRadius: "0 0 4px 4px",
+    borderLeft: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+  },
+}))
 
 const getContextMenuItems = (
   title: string,
@@ -419,42 +432,44 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
           </ProgramCardHeaderInner>
         </ProgramCardHeaderOuter>
       </ProgramHeaderMobile>
-      <ProgramCardSubHeader>
-        <ProgramCardSubHeaderText variant="subtitle3">
-          {totalCount} Modules ({completedCount} of {totalCount} complete)
-        </ProgramCardSubHeaderText>
-      </ProgramCardSubHeader>
-      <ProgramCardBody>
-        {displayedModuleCourses.map((course) => {
-          const entry = buildCourseEntry(
-            course,
-            moduleEnrollmentsByCourseId[course.id] || [],
-            {
-              ancestorContext: {
-                useVerifiedEnrollment,
-                parentProgramReadableIds: parentProgramIds,
+      <ProgramCardContent>
+        <ProgramCardSubHeader>
+          <ProgramCardSubHeaderText variant="subtitle3">
+            {totalCount} Modules ({completedCount} of {totalCount} complete)
+          </ProgramCardSubHeaderText>
+        </ProgramCardSubHeader>
+        <ProgramCardBody>
+          {displayedModuleCourses.map((course) => {
+            const entry = buildCourseEntry(
+              course,
+              moduleEnrollmentsByCourseId[course.id] || [],
+              {
+                ancestorContext: {
+                  useVerifiedEnrollment,
+                  parentProgramReadableIds: parentProgramIds,
+                },
               },
-            },
-          )
-          if (!entry) return null
+            )
+            if (!entry) return null
 
-          return (
-            <CoursewareCard
-              key={getKey({
-                resourceType: ResourceType.Course,
-                id: course.id,
-                runId: entry.displayedEnrollment?.run.id,
-              })}
-              kind="course"
-              entry={entry}
-              layout="compact"
-              headingLevel="h4"
-              isModule
-              onUpgradeError={onUpgradeError}
-            />
-          )
-        })}
-      </ProgramCardBody>
+            return (
+              <CoursewareCard
+                key={getKey({
+                  resourceType: ResourceType.Course,
+                  id: course.id,
+                  runId: entry.displayedEnrollment?.run.id,
+                })}
+                kind="course"
+                entry={entry}
+                layout="compact"
+                headingLevel="h4"
+                isModule
+                onUpgradeError={onUpgradeError}
+              />
+            )
+          })}
+        </ProgramCardBody>
+      </ProgramCardContent>
     </ProgramCardRoot>
   )
 }
