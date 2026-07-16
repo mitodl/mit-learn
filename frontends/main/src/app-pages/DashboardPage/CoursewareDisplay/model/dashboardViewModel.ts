@@ -1102,11 +1102,24 @@ const getNativeLanguageName = (languageCode: string): string => {
 const buildVariantKey = (variant: SupportedVariant): string =>
   `language:${variant.language ?? ""}|industry:${variant.variant_industry ?? ""}|length:${variant.variant_length ?? ""}`
 
+/**
+ * `Intl.DisplayNames` returns language names in mid-sentence (dictionary)
+ * case, e.g. "español latinoamericano". Per CLDR's `contextTransforms` for
+ * the "languages" category (`titlecase-firstword`), UI list/menu and
+ * standalone contexts capitalize only the first word, not every word.
+ * `Intl.DisplayNames` has no option to request this directly, so it's
+ * applied here.
+ */
+const capitalizeFirstWord = (value: string): string =>
+  value ? value.charAt(0).toUpperCase() + value.slice(1) : value
+
 // Per-dimension display labels. These are the single source of truth shared by
 // both buildVariantLabel (what the picker renders) and sortVariants (the order
 // it renders in) so the sort always matches the visible text.
 const getVariantLanguageLabel = (variant: SupportedVariant): string =>
-  variant.language ? getNativeLanguageName(variant.language) : ""
+  variant.language
+    ? capitalizeFirstWord(getNativeLanguageName(variant.language))
+    : ""
 
 const getVariantIndustryLabel = (variant: SupportedVariant): string =>
   variant.variant_industry
