@@ -1856,10 +1856,16 @@ describe("buildVariantLabel", () => {
     )
   })
 
-  test("uses the Spanish native name for es_ES", () => {
+  test("uses the Spanish native name for es_ES, capitalized", () => {
     expect(
       buildVariantLabel(makeVariant({ language: LanguageEnum.EsEs })),
-    ).toMatch(/español/i)
+    ).toBe("Español de España • General • Full")
+  })
+
+  test("capitalizes only the first word of a multi-word language name", () => {
+    expect(
+      buildVariantLabel(makeVariant({ language: "es-419" as never })),
+    ).toBe("Español latinoamericano • General • Full")
   })
 
   test("includes the industry label when variant_industry is set", () => {
