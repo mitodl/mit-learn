@@ -572,7 +572,9 @@ describe("AssignSeatsSection", () => {
       const textarea = screen.getByPlaceholderText(/enter employee emails/i)
       await user.type(textarea, "alice@example.com")
       await user.click(screen.getByRole("button", { name: "Assign Seats" }))
-      await screen.findByRole("heading", { name: /review and send invitations/i })
+      await screen.findByRole("heading", {
+        name: /review and send invitations/i,
+      })
     }
 
     test("shows 'Send Test Email to Me' button in the confirm modal", async () => {
