@@ -1,14 +1,33 @@
 import { Typography, styled } from "ol-components"
-import PodcastContainer from "../PodcastContainer"
+import { Button } from "@mitodl/smoot-design"
 
-/* ── Shared layout used across PodcastsListingPage sections ── */
+/* ── Shared layout used across all podcast pages ── */
 
-export const PageSection = styled.div(({ theme }) => ({
-  backgroundColor: theme.custom.colors.white,
-  [theme.breakpoints.down("sm")]: {
-    backgroundColor: theme.custom.colors.lightGray1,
-  },
-}))
+/**
+ * Full-width page background. The `variant` controls the backdrop:
+ * - `responsive` (default): white on desktop, light gray on mobile (listing)
+ * - `white`: always white (podcast detail)
+ * - `gray`: light gray, full viewport height (episode detail)
+ */
+export const PageSection = styled("div", {
+  shouldForwardProp: (prop) => prop !== "variant",
+})<{ variant?: "responsive" | "white" | "gray" }>(
+  ({ theme, variant = "responsive" }) => ({
+    ...(variant === "responsive" && {
+      backgroundColor: theme.custom.colors.white,
+      [theme.breakpoints.down("sm")]: {
+        backgroundColor: theme.custom.colors.lightGray1,
+      },
+    }),
+    ...(variant === "white" && {
+      backgroundColor: theme.custom.colors.white,
+    }),
+    ...(variant === "gray" && {
+      backgroundColor: theme.custom.colors.lightGray1,
+      minHeight: "100vh",
+    }),
+  }),
+)
 
 export const BreadcrumbBar = styled.div(({ theme }) => ({
   padding: "18px 0 2px 0",
@@ -18,11 +37,20 @@ export const BreadcrumbBar = styled.div(({ theme }) => ({
   },
 }))
 
-export const StyledPodcastContainer = styled(PodcastContainer)(({ theme }) => ({
-  maxWidth: "1320px !important",
-  padding: "0px 24px !important",
+/** Single-column grid list used to render `EpisodeItem` rows. */
+export const EpisodeList = styled.div({
+  display: "grid",
+  gridTemplateColumns: "1fr",
+})
+
+/**
+ * Primary "play" button shared across podcast pages: standard padding and
+ * full-width on mobile. Pages extend it (`styled(PlayButton)(...)`) for tweaks.
+ */
+export const PlayButton = styled(Button)(({ theme }) => ({
+  padding: "12px 24px 12px 20px",
   [theme.breakpoints.down("sm")]: {
-    padding: "0px 16px !important",
+    width: "100%",
   },
 }))
 

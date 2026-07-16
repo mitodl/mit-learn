@@ -13,13 +13,22 @@ import {
 } from "api/hooks/learningResources"
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource } from "api/v1"
-import moment from "moment"
 import { formatDate } from "ol-utilities"
 import { HOME, podcastEpisodePageView } from "@/common/urls"
 import PodcastContainer from "./PodcastContainer"
 import { usePodcastPlayer } from "./usePodcastPlayer"
-import { getEpisodeAudioUrl } from "./PodcastsListingPage/helpers"
+import {
+  getEpisodeAudioUrl,
+  getEpisodeDurationMinutes,
+} from "./PodcastsListingPage/helpers"
 import { EpisodeItem } from "./PodcastsListingPage/EpisodeItem"
+import { EPISODES_PAGE_SIZE } from "./PodcastsListingPage/constants"
+import {
+  PageSection,
+  BreadcrumbBar,
+  EpisodeList,
+  PlayButton,
+} from "./PodcastsListingPage/styled"
 
 const HeaderSection = styled.div(({ theme }) => ({
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -149,21 +158,11 @@ const EpisodesHeading = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const EpisodeList = styled.div({
-  margin: 0,
-  padding: 0,
-  display: "grid",
-  gridTemplateColumns: "1fr",
-})
-
-const StyledButton = styled(Button)(({ theme }) => ({
+const StyledButton = styled(PlayButton)(({ theme }) => ({
   padding: "16px 20px",
   ...theme.typography.body1,
   fontWeight: theme.typography.fontWeightMedium,
   lineHeight: "16px",
-  [theme.breakpoints.down("sm")]: {
-    width: "100%",
-  },
 }))
 
 const StyledShowMoreContainer = styled("div")({
@@ -189,25 +188,11 @@ const StyledPauseIcon = styled(RiPauseFill)({
   height: "24px !important",
 })
 
-const BreadcrumbBar = styled.div(({ theme }) => ({
-  padding: "18px 0 2px 0",
-  borderBottom: `1px solid ${theme.custom.colors.red}`,
-  [theme.breakpoints.down("sm")]: {
-    padding: "12px 0 0px 0",
-  },
-}))
-
-const PageSection = styled.div(({ theme }) => ({
-  backgroundColor: theme.custom.colors.white,
-}))
-
 /* ── Page ── */
 
 type PodcastDetailPageProps = {
   podcastId: string
 }
-
-const EPISODES_PAGE_SIZE = 5
 
 export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
   podcastId,
@@ -264,10 +249,8 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
   const latestEpisode = episodes?.[0]
   const isLatestEpisodePlaying =
     !!latestEpisode && playingEpisode?.id === latestEpisode.id && isAudioPlaying
-  const latestEpisodeDuration = latestEpisode?.podcast_episode?.duration
-    ? Math.round(
-        moment.duration(latestEpisode.podcast_episode.duration).asMinutes(),
-      )
+  const latestEpisodeDuration = latestEpisode
+    ? getEpisodeDurationMinutes(latestEpisode)
     : null
   const latestEpisodeDate = latestEpisode?.last_modified
     ? formatDate(latestEpisode.last_modified, "MMM D")
@@ -277,7 +260,7 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
 
   return (
     <>
-      <PageSection>
+      <PageSection variant="white">
         <HeaderSection>
           <BreadcrumbBar>
             <PodcastContainer>
