@@ -681,7 +681,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
           <DescriptionText>
             You're about to send <strong>{validCount}</strong> invitation{" "}
             {pluralize("email", validCount)} from MIT Learn. Learners will
-            receive an email with secure link to claim their seat and access the
+            receive an email with a secure link to claim their seat and access the
             materials.
           </DescriptionText>
           {onSendTestEmail && (
