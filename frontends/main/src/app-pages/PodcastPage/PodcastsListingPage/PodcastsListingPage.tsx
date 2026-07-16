@@ -114,7 +114,11 @@ export const PodcastsListingPage: React.FC = () => {
     <>
       <PageSection>
         <BreadcrumbBar>
-          <PodcastContainer width={1320} gutter={24} gutterBreakpoint="sm">
+          <PodcastContainer
+            contentWidth={1320}
+            gutter={24}
+            gutterBreakpoint="sm"
+          >
             <Breadcrumbs
               variant="light"
               ancestors={[{ href: HOME, label: "Home" }]}

@@ -260,7 +260,7 @@ export const PodcastEpisodeDetailPage: React.FC<
           </PodcastContainer>
         </BreadcrumbBar>
         <HeaderSection hasEpisodes={episodes.length > 0}>
-          <PodcastContainer width={624} gutterBreakpoint="sm">
+          <PodcastContainer contentWidth={624} gutterBreakpoint="sm">
             {parentPodcast?.title && (
               <EpisodeLabel href={podcastHref}>
                 {parentPodcast.title}
@@ -308,7 +308,7 @@ export const PodcastEpisodeDetailPage: React.FC<
           </PodcastContainer>
         </HeaderSection>
         {episodes && episodes.length > 0 && (
-          <PodcastContainer width={624} gutterBreakpoint="sm">
+          <PodcastContainer contentWidth={624} gutterBreakpoint="sm">
             <MoreItemDescription>
               More from {parentPodcast?.title ?? "Podcast"}
             </MoreItemDescription>
