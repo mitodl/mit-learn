@@ -75,8 +75,8 @@ type RowActionMenuProps = {
 /**
  * Three-dot row action menu for the contract admin codes table.
  *
- * Pending (assigned) rows: Change assigned email, Resend claim email, Copy
- * claim link, Release seat.
+ * Pending (assigned) rows: Resend invitation, Copy claim link, Change
+ * assigned email, Release seat.
  *
  * Redeemed rows: button is disabled — no actions available.
  */
@@ -124,9 +124,9 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({
         id: contractId,
         parent_lookup_organization: orgId,
       })
-      onResult(`Claim email resent to ${code.assigned_to}.`, "success")
+      onResult(`Invitation resent to ${code.assigned_to}.`, "success")
     } catch {
-      onResult("Could not resend the claim email. Please try again.", "error")
+      onResult("Could not resend the invitation. Please try again.", "error")
     }
   }
 
@@ -263,12 +263,12 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({
       >
         {hasAssignedEmail ? (
           <ActionMenuItem onClick={handleResend}>
-            Resend claim email
+            Resend invitation
           </ActionMenuItem>
         ) : (
           <Tooltip title="No email is assigned to this seat yet." describeChild>
-            <ActionMenuItem disabled aria-label="Resend claim email">
-              Resend claim email
+            <ActionMenuItem disabled aria-label="Resend invitation">
+              Resend invitation
             </ActionMenuItem>
           </Tooltip>
         )}
