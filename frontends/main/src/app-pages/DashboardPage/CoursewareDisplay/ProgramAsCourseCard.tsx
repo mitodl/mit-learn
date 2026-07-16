@@ -56,8 +56,7 @@ const ProgramCardRoot = styled.div(({ theme }) => ({
   boxShadow: "0 1px 3px 0 rgba(120, 147, 172, 0.20)",
   [theme.breakpoints.down("sm")]: {
     border: "none",
-    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
-    borderRadius: "0px",
+    borderBottom: `1px solid ${theme.custom.colors.red}`,
     boxShadow: "none",
     flexDirection: "column",
   },
