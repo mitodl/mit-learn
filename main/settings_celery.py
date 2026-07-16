@@ -20,9 +20,10 @@ USE_CELERY = True
 REDIS_URL = get_string("REDIS_URL", get_string("REDISCLOUD_URL", None))
 CELERY_BROKER_URL = get_string("CELERY_BROKER_URL", REDIS_URL)
 CELERY_RESULT_BACKEND = get_string("CELERY_RESULT_BACKEND", REDIS_URL)
-# Results share the broker Redis. Celery's 24h default lets reindex chord
-# fan-outs (thousands of subtask result keys) accumulate and saturate memory;
-# keep results only long enough for chord callbacks to consume them.
+# Celery's 24h default lets reindex chord fan-outs (thousands of subtask
+# result keys) accumulate; when the result backend is the broker/cache Redis
+# (the default here) that saturates memory. Keep results only long enough for
+# chord callbacks to consume them.
 CELERY_RESULT_EXPIRES = get_int("CELERY_RESULT_EXPIRES", 60 * 60)
 CELERY_BEAT_SCHEDULER = RedBeatScheduler
 redbeat_redis_url = CELERY_BROKER_URL
