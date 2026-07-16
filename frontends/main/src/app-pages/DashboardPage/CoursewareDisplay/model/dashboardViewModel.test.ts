@@ -1857,21 +1857,23 @@ describe("buildVariantLabel", () => {
   })
 
   test("uses the Spanish native name for es_ES, capitalized", () => {
-    expect(
-      buildVariantLabel(makeVariant({ language: LanguageEnum.EsEs })),
-    ).toBe("Español de España • General • Full")
+    const label = buildVariantLabel(
+      makeVariant({ language: LanguageEnum.EsEs }),
+    )
+    // Exact ICU/CLDR wording (e.g. whether it disambiguates with "de España")
+    // can vary across Node/ICU versions — only assert the part this test
+    // owns: the name is capitalized and the industry/length suffix is intact.
+    expect(label).toMatch(/^Español\b/)
+    expect(label.endsWith("• General • Full")).toBe(true)
   })
 
   test("capitalizes only the first word of a multi-word language name", () => {
     const label = buildVariantLabel(
-      makeVariant({
-        language: "es-419" as unknown as SupportedVariant["language"],
-      }),
+      makeVariant({ language: "es-419" as never }),
     )
-    const languageLabel = label.split(" • ")[0] ?? ""
-    expect(languageLabel).toMatch(/^Español\b/)
-    expect(languageLabel).toMatch(/\blatinoamericano\b/i)
-    expect(languageLabel).not.toMatch(/\bLatinoamericano\b/)
+    // Second word ("latinoamericano" as of current CLDR data) is left
+    // lowercase — only the first word should be title-cased.
+    expect(label).toMatch(/^Español [a-záéíóúñ]+ • General • Full$/)
   })
 
   test("includes the industry label when variant_industry is set", () => {
