@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.74.2
+Version 0.74.2 (Released July 16, 2026)
 --------------
 
 - Add learning material content to embeddings context (#3607)
