@@ -63,13 +63,32 @@ const ProgramCardRoot = styled.div(({ theme }) => ({
   },
 }))
 
-const ProgramCardHeaderOuter = styled.div({
+const ProgramHeaderDesktop = styled.div(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    display: "none",
+  },
+}))
+
+const ProgramHeaderMobile = styled.div(({ theme }) => ({
+  [theme.breakpoints.up("sm")]: {
+    display: "none",
+  },
+}))
+
+const ProgramCardHeaderOuter = styled.div(({ theme }) => ({
   display: "flex",
+  position: "relative",
   padding: "16px 16px 16px 24px",
   alignItems: "center",
   alignSelf: "stretch",
   gap: "16px",
-})
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: "8px",
+    padding: "16px",
+  },
+}))
 
 const ProgramCardHeaderInner = styled.div({
   display: "flex",
@@ -79,11 +98,16 @@ const ProgramCardHeaderInner = styled.div({
   flex: "1 0 0",
 })
 
-const StatusContainer = styled.div({
+const StatusContainer = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "16px",
-})
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+    justifyContent: "space-between",
+    gap: "8px",
+  },
+}))
 
 const ProgramCardSubHeaderText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
@@ -333,35 +357,68 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
       className={className}
       data-testid="program-as-course-card"
     >
-      <ProgramCardHeaderOuter>
-        <ProgramCardHeaderInner>
-          <StatusContainer>
-            {progressBadgeSection}
-            <CourseDateSummary
-              startDate={courseProgram?.start_date}
-              endDate={courseProgram?.end_date}
-            />
-          </StatusContainer>
-          <Typography variant="subtitle2" component="h3">
-            {courseProgram?.title}
-          </Typography>
-        </ProgramCardHeaderInner>
-        <Stack direction="row" gap="8px">
-          {programCertificateUrl ? (
-            <ProgramCertificateButton
-              variant="bordered"
-              size="small"
-              startIcon={<RiAwardFill />}
-              href={programCertificateUrl}
-            >
-              Certificate
-            </ProgramCertificateButton>
-          ) : upgradedAndIncomplete ? (
-            <UpgradedBanner />
-          ) : null}
-          {contextMenu}
-        </Stack>
-      </ProgramCardHeaderOuter>
+      <ProgramHeaderDesktop data-testid="program-as-course-card-desktop-header">
+        <ProgramCardHeaderOuter>
+          <ProgramCardHeaderInner>
+            <StatusContainer>
+              {progressBadgeSection}
+              <CourseDateSummary
+                startDate={courseProgram?.start_date}
+                endDate={courseProgram?.end_date}
+              />
+            </StatusContainer>
+            <Typography variant="subtitle2" component="h3">
+              {courseProgram?.title}
+            </Typography>
+          </ProgramCardHeaderInner>
+          <Stack direction="row" gap="8px">
+            {programCertificateUrl ? (
+              <ProgramCertificateButton
+                variant="bordered"
+                size="small"
+                startIcon={<RiAwardFill />}
+                href={programCertificateUrl}
+              >
+                Certificate
+              </ProgramCertificateButton>
+            ) : upgradedAndIncomplete ? (
+              <UpgradedBanner />
+            ) : null}
+            {contextMenu}
+          </Stack>
+        </ProgramCardHeaderOuter>
+      </ProgramHeaderDesktop>
+      <ProgramHeaderMobile data-testid="program-as-course-card-mobile-header">
+        <ProgramCardHeaderOuter>
+          <ProgramCardHeaderInner>
+            <StatusContainer>
+              {progressBadgeSection}
+              <CourseDateSummary
+                startDate={courseProgram?.start_date}
+                endDate={courseProgram?.end_date}
+              />
+              <Stack direction="row" gap="8px">
+                {programCertificateUrl ? (
+                  <ProgramCertificateButton
+                    variant="bordered"
+                    size="small"
+                    startIcon={<RiAwardFill />}
+                    href={programCertificateUrl}
+                  >
+                    Certificate
+                  </ProgramCertificateButton>
+                ) : upgradedAndIncomplete ? (
+                  <UpgradedBanner />
+                ) : null}
+                {contextMenu}
+              </Stack>
+            </StatusContainer>
+            <Typography variant="subtitle2" component="h3">
+              {courseProgram?.title}
+            </Typography>
+          </ProgramCardHeaderInner>
+        </ProgramCardHeaderOuter>
+      </ProgramHeaderMobile>
       <ProgramCardSubHeader>
         <ProgramCardSubHeaderText variant="subtitle3">
           {totalCount} Modules ({completedCount} of {totalCount} complete)

@@ -185,26 +185,43 @@ export const UnenrolledCourseCard = ({
         className={className}
         layout={layout}
       >
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="stretch"
-          flex={1}
-          width="100%"
-        >
-          <Stack direction="column" gap="8px" flex={1}>
-            {titleSection}
-            {!isCompact && courseDateText}
+        <Stack direction="row" gap="8px" alignItems="flex-start" width="100%">
+          {showEnrollmentStatusIcon && (
+            <Stack alignSelf="flex-start">
+              <EnrollmentStatusIcon status={EnrollmentStatus.NotEnrolled} />
+            </Stack>
+          )}
+          <Stack
+            direction="column"
+            gap="16px"
+            flex={1}
+            minWidth={0}
+            width="100%"
+          >
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="stretch"
+              flex={1}
+              minWidth={0}
+              width="100%"
+            >
+              <Stack direction="column" gap="8px" flex={1} minWidth={0}>
+                {titleSection}
+                {!isCompact && courseDateText}
+              </Stack>
+            </Stack>
+            <Stack
+              direction="row"
+              width="100%"
+              gap="8px"
+              alignItems="center"
+              justifyContent="end"
+              minWidth={0}
+            >
+              {startButton}
+            </Stack>
           </Stack>
-        </Stack>
-        <Stack
-          direction="row"
-          width="100%"
-          gap="8px"
-          alignItems="center"
-          justifyContent="end"
-        >
-          {startButton}
         </Stack>
       </CardRoot>
     </>

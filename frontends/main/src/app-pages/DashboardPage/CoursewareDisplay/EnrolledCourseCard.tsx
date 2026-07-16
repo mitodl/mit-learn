@@ -279,7 +279,7 @@ export const EnrolledCourseCard = ({
       </Stack>
     ) : null
   const titleSection = (
-    <Stack gap="12px">
+    <Stack gap="12px" minWidth={0}>
       {coursewareUrl ? (
         <TitleHeading as={headingLevel}>
           <EnrolledTitleLink
@@ -498,26 +498,43 @@ export const EnrolledCourseCard = ({
         className={className}
         layout={layout}
       >
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="stretch"
-          flex={1}
-          width="100%"
-        >
-          <Stack direction="column" gap="8px" flex={1}>
-            {titleSection}
+        <Stack direction="row" gap="8px" alignItems="flex-start" width="100%">
+          {showEnrollmentStatusIcon && (
+            <Stack alignSelf="flex-start">
+              <EnrollmentStatusIcon status={enrollmentStatus} />
+            </Stack>
+          )}
+          <Stack
+            direction="column"
+            gap="16px"
+            flex={1}
+            minWidth={0}
+            width="100%"
+          >
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="stretch"
+              flex={1}
+              minWidth={0}
+              width="100%"
+            >
+              <Stack direction="column" gap="8px" flex={1} minWidth={0}>
+                {titleSection}
+              </Stack>
+            </Stack>
+            <Stack
+              direction="row"
+              flexGrow={1}
+              gap="8px"
+              alignItems="center"
+              justifyContent="flex-end"
+              minWidth={0}
+              width="100%"
+            >
+              {buttonSection}
+            </Stack>
           </Stack>
-        </Stack>
-        <Stack
-          direction="row"
-          flexGrow={1}
-          gap="8px"
-          alignItems="center"
-          justifyContent="flex-end"
-          width="100%"
-        >
-          {buttonSection}
         </Stack>
         {hasMultipleRuns && (
           <MobileAccordionWrapper>

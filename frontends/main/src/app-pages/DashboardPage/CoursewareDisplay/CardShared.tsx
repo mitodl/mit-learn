@@ -96,6 +96,7 @@ const SubtitleLinkRoot = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   flex: 1,
+  minWidth: 0,
   color: theme.custom.colors.red,
   ...theme.typography.body3,
 }))
