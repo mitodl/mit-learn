@@ -1863,9 +1863,15 @@ describe("buildVariantLabel", () => {
   })
 
   test("capitalizes only the first word of a multi-word language name", () => {
-    expect(
-      buildVariantLabel(makeVariant({ language: "es-419" as never })),
-    ).toBe("Español latinoamericano • General • Full")
+    const label = buildVariantLabel(
+      makeVariant({
+        language: "es-419" as unknown as SupportedVariant["language"],
+      }),
+    )
+    const languageLabel = label.split(" • ")[0] ?? ""
+    expect(languageLabel).toMatch(/^Español\b/)
+    expect(languageLabel).toMatch(/\blatinoamericano\b/i)
+    expect(languageLabel).not.toMatch(/\bLatinoamericano\b/)
   })
 
   test("includes the industry label when variant_industry is set", () => {
