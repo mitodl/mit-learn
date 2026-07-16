@@ -137,7 +137,7 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({
         id: contractId,
         parent_lookup_organization: orgId,
       })
-      onResult(`Seat released for ${assignedTo}.`, "success")
+      onResult(`Seat released for ${code.assigned_to?.trim() || "unassigned seat"}.`, "success")
     } catch (err) {
       const status = (err as AxiosError)?.response?.status
       onResult(
