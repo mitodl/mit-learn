@@ -259,6 +259,8 @@ def test_user_has_email_optin_no_profile():
     """user_has_email_optin is False when the user has no profile."""
     user = UserFactory.create(no_profile=True)
     assert user_has_email_optin(user) is False
+
+
 # send_email tests
 # ---------------------------------------------------------------------------
 
