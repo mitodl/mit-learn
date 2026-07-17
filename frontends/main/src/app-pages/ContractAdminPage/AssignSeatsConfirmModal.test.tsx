@@ -16,11 +16,11 @@ const baseProps = {
 describe("AssignSeatsConfirmModal — confirm step (no issues)", () => {
   beforeEach(() => jest.clearAllMocks())
 
-  test("shows 'Ready to send invitations' title when there are no issues", () => {
+  test("shows 'Review and send invitations' title when there are no issues", () => {
     renderWithTheme(<AssignSeatsConfirmModal {...baseProps} />)
 
     expect(
-      screen.getByRole("heading", { name: /ready to send invitations/i }),
+      screen.getByRole("heading", { name: /review and send invitations/i }),
     ).toBeInTheDocument()
   })
 
@@ -202,10 +202,12 @@ describe("AssignSeatsConfirmModal — review step (has issues)", () => {
       <AssignSeatsConfirmModal {...baseProps} invalidEmails={["bad@"]} />,
     )
 
-    await user.click(screen.getByRole("button", { name: /review & confirm/i }))
+    await user.click(
+      screen.getByRole("button", { name: /continue to email preview/i }),
+    )
 
     expect(
-      screen.getByRole("heading", { name: /ready to send invitations/i }),
+      screen.getByRole("heading", { name: /review and send invitations/i }),
     ).toBeInTheDocument()
   })
 
@@ -309,7 +311,7 @@ describe("AssignSeatsConfirmModal — unlimited contract (availableSeats null)",
 
     // Confirm step still renders normally.
     expect(
-      screen.getByRole("heading", { name: /ready to send invitations/i }),
+      screen.getByRole("heading", { name: /review and send invitations/i }),
     ).toBeInTheDocument()
 
     // Stat value is a dash and the label / group name convey no seat limit.
@@ -342,7 +344,7 @@ describe("AssignSeatsConfirmModal — unlimited contract (availableSeats null)",
     )
 
     expect(
-      screen.getByRole("heading", { name: /ready to send invitations/i }),
+      screen.getByRole("heading", { name: /review and send invitations/i }),
     ).toBeInTheDocument()
     expect(
       screen.queryByRole("heading", { name: /not enough seats available/i }),

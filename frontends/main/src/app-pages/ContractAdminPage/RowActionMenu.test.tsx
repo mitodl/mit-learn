@@ -44,7 +44,7 @@ describe("RowActionMenu", () => {
         screen.getByRole("menuitem", { name: "Change assigned email" }),
       ).toBeInTheDocument()
       expect(
-        screen.getByRole("menuitem", { name: "Resend claim email" }),
+        screen.getByRole("menuitem", { name: "Resend invitation" }),
       ).toBeInTheDocument()
       expect(
         screen.getByRole("menuitem", { name: "Copy claim link" }),
@@ -52,6 +52,22 @@ describe("RowActionMenu", () => {
       expect(
         screen.getByRole("menuitem", { name: "Release seat" }),
       ).toBeInTheDocument()
+    })
+
+    test("orders items with common actions first and the destructive action last", async () => {
+      const code = makeCode({ redemption_status: "assigned" })
+      renderMenu(code)
+
+      await user.click(screen.getByRole("button", { name: /more actions/i }))
+
+      expect(
+        screen.getAllByRole("menuitem").map((item) => item.textContent),
+      ).toEqual([
+        "Resend invitation",
+        "Copy claim link",
+        "Change assigned email",
+        "Release seat",
+      ])
     })
   })
 
@@ -75,7 +91,7 @@ describe("RowActionMenu", () => {
     })
   })
 
-  describe("Resend claim email", () => {
+  describe("Resend invitation", () => {
     test("calls the remind endpoint and reports success", async () => {
       const code = makeCode({
         redemption_status: "assigned",
@@ -93,7 +109,7 @@ describe("RowActionMenu", () => {
 
       await user.click(screen.getByRole("button", { name: /more actions/i }))
       await user.click(
-        screen.getByRole("menuitem", { name: "Resend claim email" }),
+        screen.getByRole("menuitem", { name: "Resend invitation" }),
       )
 
       await waitFor(() => {
@@ -110,7 +126,7 @@ describe("RowActionMenu", () => {
 
       await user.click(screen.getByRole("button", { name: /more actions/i }))
 
-      const item = screen.getByRole("menuitem", { name: "Resend claim email" })
+      const item = screen.getByRole("menuitem", { name: "Resend invitation" })
       expect(item).toHaveAttribute("aria-disabled", "true")
 
       await user.click(item)
@@ -132,7 +148,7 @@ describe("RowActionMenu", () => {
 
       await user.click(screen.getByRole("button", { name: /more actions/i }))
       await user.click(
-        screen.getByRole("menuitem", { name: "Resend claim email" }),
+        screen.getByRole("menuitem", { name: "Resend invitation" }),
       )
 
       await waitFor(() => {
@@ -157,7 +173,10 @@ describe("RowActionMenu", () => {
     })
 
     test("revokes on confirm and reports success", async () => {
-      const code = makeCode({ redemption_status: "assigned" })
+      const code = makeCode({
+        redemption_status: "assigned",
+        assigned_to: "learner@example.com",
+      })
       setMockResponse.delete(
         urls.contracts.managerContractCodeRevoke(
           ORG_ID,
@@ -173,7 +192,10 @@ describe("RowActionMenu", () => {
       await user.click(screen.getByRole("button", { name: "Release seat" }))
 
       await waitFor(() => {
-        expect(onResult).toHaveBeenCalledWith("Seat released.", "success")
+        expect(onResult).toHaveBeenCalledWith(
+          "Seat released for learner@example.com.",
+          "success",
+        )
       })
     })
   })
@@ -309,7 +331,7 @@ describe("RowActionMenu", () => {
       )
       expect(
         await screen.findByRole("menuitem", {
-          name: "Link copied to clipboard",
+          name: "Claim link copied.",
         }),
       ).toBeInTheDocument()
     })
@@ -334,10 +356,10 @@ describe("RowActionMenu", () => {
 
       expect(
         await screen.findByRole("menuitem", {
-          name: "Link copied to clipboard",
+          name: "Claim link copied.",
         }),
       ).toBeInTheDocument()
-      expect(liveRegion).toHaveTextContent("Link copied to clipboard")
+      expect(liveRegion).toHaveTextContent("Claim link copied.")
     })
 
     test("falls back to execCommand when clipboard API is unavailable", async () => {
@@ -367,7 +389,7 @@ describe("RowActionMenu", () => {
       expect(document.execCommand).toHaveBeenCalledWith("copy")
       expect(
         await screen.findByRole("menuitem", {
-          name: "Link copied to clipboard",
+          name: "Claim link copied.",
         }),
       ).toBeInTheDocument()
     })

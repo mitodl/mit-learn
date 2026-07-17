@@ -437,7 +437,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
   // to re-discover a new role="dialog" element.
   const handleReviewAndConfirm = () => {
     setStep("confirm")
-    const confirmText = `Ready to send invitations. You are about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with a secure link to claim their seat and access the materials. ${seatsAfterSendingText} Emails will be sent immediately and cannot be recalled.`
+    const confirmText = `Review and send invitations. You're about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with a secure link to claim their seat and access the materials. ${seatsAfterSendingText} Emails will be sent immediately and cannot be recalled.`
     setStepAnnouncement("")
     if (stepAnnouncementTimerRef.current)
       clearTimeout(stepAnnouncementTimerRef.current)
@@ -464,7 +464,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
       {reviewTitle}
     </>
   ) : (
-    "Ready to send invitations"
+    "Review and send invitations"
   )
 
   const dialogActions = overCapacity ? (
@@ -479,7 +479,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
         Cancel
       </Button>
       <Button variant="primary" onClick={handleReviewAndConfirm}>
-        Review &amp; Confirm
+        Continue to Email Preview
       </Button>
     </DialogActions>
   ) : (
@@ -511,7 +511,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
             : "",
           " Only valid, unique emails will be assigned.",
         ].join("")
-      : `You are about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with secure link to claim their seat and access the materials. ${seatsAfterSendingText} Emails will be sent immediately and cannot be recalled.`
+      : `You're about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with a secure link to claim their seat and access the materials. ${seatsAfterSendingText} Emails will be sent immediately and cannot be recalled.`
 
   // For overCapacity we point aria-describedby at the visible paragraph so
   // role="alertdialog" reads it exactly once on open. We do NOT programmatically
@@ -679,10 +679,10 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
       {!overCapacity && step === "confirm" && (
         <Stack gap="24px">
           <DescriptionText>
-            You are about to send <strong>{validCount}</strong> invitation{" "}
+            You're about to send <strong>{validCount}</strong> invitation{" "}
             {pluralize("email", validCount)} from MIT Learn. Learners will
-            receive an email with secure link to claim their seat and access the
-            materials.
+            receive an email with a secure link to claim their seat and access
+            the materials.
           </DescriptionText>
           {onSendTestEmail && (
             <EmailPreviewSection>
