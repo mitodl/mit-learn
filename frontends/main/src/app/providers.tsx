@@ -13,6 +13,7 @@ import { usePrefetchWarnings } from "api/ssr/usePrefetchWarnings"
 import { AppProgressBar as ProgressBar } from "next-nprogress-bar"
 import type { NProgressOptions } from "next-nprogress-bar"
 import { ReloadOnUserChange } from "@/page-components/ReloadOnUserChange/ReloadOnUserChange"
+import { PublicEnvInsertedHtml } from "./components/PublicEnvInsertedHtml"
 
 const PROGRESS_BAR_OPTS: NProgressOptions = { showSpinner: false }
 
@@ -23,6 +24,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <PublicEnvInsertedHtml />
       <ProgressBar
         height="3px"
         color={theme.custom.colors.brightRed}

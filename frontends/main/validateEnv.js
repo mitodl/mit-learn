@@ -20,7 +20,22 @@ const schema = yup.object().shape({
     .string()
     .matches(/^\d+$/, { excludeEmptyString: true }),
   // Required client/server vars — must be present in local dev and at runtime.
-  NEXT_PUBLIC_ORIGIN: yup.string().required(),
+  NEXT_PUBLIC_ORIGIN: yup
+    .string()
+    .required()
+    .test(
+      "is-http-url",
+      "NEXT_PUBLIC_ORIGIN must be an absolute http(s) URL (e.g. https://learn.mit.edu)",
+      (value) => {
+        if (!value) return true // absence is .required()'s error to report
+        try {
+          const url = new URL(value)
+          return url.protocol === "http:" || url.protocol === "https:"
+        } catch {
+          return false
+        }
+      },
+    ),
   NEXT_PUBLIC_MITOL_API_BASE_URL: yup.string().required(),
   NEXT_PUBLIC_SITE_NAME: yup.string().required(),
   NEXT_PUBLIC_MITOL_SUPPORT_EMAIL: yup.string().required(),
