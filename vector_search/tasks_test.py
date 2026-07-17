@@ -235,11 +235,26 @@ def test_embed_new_learning_resources(mocker, mocked_celery):
 
     with pytest.raises(mocked_celery.replace_exception_class):
         embed_new_learning_resources.delay()
-    list(mocked_celery.group.call_args[0][0])
 
     assert generate_embeddings_mock.si.call_count == 1
+    embedding_signature = generate_embeddings_mock.si.return_value
+    mocked_celery.chain.assert_called_once_with(embedding_signature)
+    mocked_celery.group.assert_not_called()
+    assert mocked_celery.replace.call_args[0][1] == mocked_celery.chain.return_value
     embedded_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
     assert sorted(new_resource_ids) == sorted(embedded_ids)
+
+
+def test_embed_new_learning_resources_no_work(mocker, mocked_celery):
+    """embed_new_learning_resources should not dispatch an empty canvas"""
+    settings.QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = 1
+    mocker.patch("vector_search.tasks.now_in_utc", return_value=now_in_utc())
+
+    assert embed_new_learning_resources.run() is None
+
+    mocked_celery.chain.assert_not_called()
+    mocked_celery.group.assert_not_called()
+    mocked_celery.replace.assert_not_called()
 
 
 def test_embed_new_content_files(mocker, mocked_celery):
