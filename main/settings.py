@@ -19,6 +19,7 @@ from urllib.parse import urljoin
 
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
+from mitol.keycloak.settings.keycloak import *  # noqa: F403
 from mitol.scim.settings.scim import *  # noqa: F403
 
 from main.envs import (
@@ -139,6 +140,7 @@ INSTALLED_APPS = (
     "vector_search",
     "ol_hubspot",
     "mitol.scim.apps.ScimApp",
+    "mitol.keycloak.apps.KeycloakApp",
     "health_check",
 )
 
@@ -568,7 +570,7 @@ if not MITOL_COOKIE_DOMAIN:
 
 MITOL_UNSUBSCRIBE_TOKEN_MAX_AGE_SECONDS = get_int(
     "MITOL_UNSUBSCRIBE_TOKEN_MAX_AGE_SECONDS",
-    60 * 60 * 24 * 7,  # 7 days
+    60 * 60 * 24 * 30,  # 30 days
 )
 
 JWT_AUTH = {
@@ -883,8 +885,11 @@ CANVAS_TUTORBOT_FOLDER = get_string("CANVAS_TUTORBOT_FOLDER", "web_resources/ai/
 MITOL_HUBSPOT_API_PRIVATE_TOKEN = get_string("MITOL_HUBSPOT_API_PRIVATE_TOKEN", None)
 
 # Create all learning material resources for OCW courses
-# Extra learning material resources are behind show_ocw_files flag in search
-# If false only learning materials in OCW_VISIBLE_TAGS will be created
-CREATE_HIDDEN_OCW_LEARNING_MATERIALS = get_bool(
-    "CREATE_HIDDEN_OCW_LEARNING_MATERIALS", default=False
+# Learning material resources are behind show_ocw_files flag in search
+CREATE_OCW_LEARNING_MATERIALS = get_bool("CREATE_OCW_LEARNING_MATERIALS", default=False)
+
+# separate secret keys for unsubscribe
+UNSUBSCRIBE_SECRET_KEY = get_string("UNSUBSCRIBE_SECRET_KEY", "insecure_secret_key")
+UNSUBSCRIBE_SECRET_KEY_FALLBACKS = get_list_of_str(
+    "UNSUBSCRIBE_SECRET_KEY_FALLBACKS", []
 )
