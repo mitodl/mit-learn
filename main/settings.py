@@ -883,5 +883,8 @@ CANVAS_TUTORBOT_FOLDER = get_string("CANVAS_TUTORBOT_FOLDER", "web_resources/ai/
 MITOL_HUBSPOT_API_PRIVATE_TOKEN = get_string("MITOL_HUBSPOT_API_PRIVATE_TOKEN", None)
 
 # Create all learning material resources for OCW courses
-# Learning material resources are behind show_ocw_files flag in search
-CREATE_OCW_LEARNING_MATERIALS = get_bool("CREATE_OCW_LEARNING_MATERIALS", default=False)
+# Extra learning material resources are behind show_ocw_files flag in search
+# If false only learning materials in OCW_VISIBLE_TAGS will be created
+CREATE_HIDDEN_OCW_LEARNING_MATERIALS = get_bool(
+    "CREATE_HIDDEN_OCW_LEARNING_MATERIALS", default=False
+)
