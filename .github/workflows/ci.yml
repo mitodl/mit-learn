@@ -73,6 +73,7 @@ jobs:
           INDEXING_API_USERNAME: mitodl
           MITOL_COOKIE_DOMAIN: localhost
           MITOL_COOKIE_NAME: cookie_monster
+          UNSUBSCRIBE_SECRET_KEY: fake_unsubscribe_secret
 
       - name: Upload coverage to CodeCov
         uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
