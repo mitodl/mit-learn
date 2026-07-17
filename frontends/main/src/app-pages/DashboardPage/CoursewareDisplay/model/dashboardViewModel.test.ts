@@ -1869,18 +1869,23 @@ describe("buildVariantLabel", () => {
 
   test("capitalizes only the first word of a multi-word language name", () => {
     const originalDisplayNames = Intl.DisplayNames
+    const intlWithDisplayNames = Intl as unknown as {
+      DisplayNames: typeof Intl.DisplayNames
+    }
     try {
       // Make the test independent of the host Node/ICU/CLDR data.
-      ;(Intl as any).DisplayNames = function () {
-        return { of: () => "español latinoamericano" }
-      } as any
+      intlWithDisplayNames.DisplayNames = class {
+        of() {
+          return "español latinoamericano"
+        }
+      } as unknown as typeof Intl.DisplayNames
 
       const label = buildVariantLabel(
         makeVariant({ language: "es-419" as never }),
       )
       expect(label).toBe("Español latinoamericano • General • Full")
     } finally {
-      ;(Intl as any).DisplayNames = originalDisplayNames
+      intlWithDisplayNames.DisplayNames = originalDisplayNames
     }
   })
 
