@@ -32,7 +32,7 @@ const AdditionalRunsAccordion = styled(Accordion)(({ theme }) => ({
     overflow: "hidden",
   },
   "& .MuiAccordionSummary-root": {
-    [theme.breakpoints.down("md")]: {
+    [theme.breakpoints.down("sm")]: {
       padding: 0,
     },
   },
@@ -130,14 +130,14 @@ const SummaryRow = styled(Stack)(({ theme }) => ({
   flex: 1,
   minWidth: 0,
   gap: "24px",
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
     gap: "8px",
   },
 }))
 
 const RunsListWrapper = styled.div(({ theme }) => ({
   padding: "0 16px 16px",
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
     padding: "0 0 8px",
   },
 }))

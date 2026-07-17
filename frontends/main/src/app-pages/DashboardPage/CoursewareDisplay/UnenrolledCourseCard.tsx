@@ -13,12 +13,12 @@ import {
   CourseDateSummary,
   Separator,
 } from "./CardShared"
+import { getCourseDateText } from "./courseDateUtils"
 import { EnrollmentStatus, getBestRun } from "./helpers"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { useEnrollmentHandler } from "./hooks/useEnrollmentHandler"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import { ProgressBadge } from "./ProgressBadge"
-import { Button } from "@mitodl/smoot-design"
 
 type UnenrolledCourseCardProps = {
   course: CourseWithCourseRunsSerializerV2
@@ -106,20 +106,23 @@ export const UnenrolledCourseCard = ({
       {title}
     </TitleText>
   )
-  const courseDateText = (
+  const hasCourseDateText =
+    getCourseDateText(courseRun?.start_date, courseRun?.end_date) !== null
+  const courseDateText = hasCourseDateText ? (
     <Stack direction="row" gap="8px" alignItems="start">
       <CourseDateSummary
         startDate={courseRun?.start_date}
         endDate={courseRun?.end_date}
       />
     </Stack>
-  )
-  const startButton = isCompact ? (
+  ) : null
+  const startButton = (
     <CoursewareButton
       size="small"
-      variant="secondary"
+      variant={isCompact ? "secondary" : "primary"}
       data-testid="courseware-button"
       aria-label={`Start course: ${title}`}
+      aria-busy={isPending}
       onClick={isDisabled ? undefined : enrollClick}
       disabled={isDisabled}
       endIcon={
@@ -130,32 +133,6 @@ export const UnenrolledCourseCard = ({
     >
       Start
     </CoursewareButton>
-  ) : (
-    <Button
-      size="small"
-      variant="primary"
-      data-testid="courseware-button"
-      aria-label={`Start course: ${title}`}
-      onClick={isDisabled ? undefined : enrollClick}
-      disabled={isDisabled}
-      endIcon={
-        isPending ? (
-          <LoadingSpinner color="inherit" loading={isPending} size={16} />
-        ) : null
-      }
-    >
-      Start
-    </Button>
-  )
-  const buttonSection = (
-    <Stack
-      direction="row"
-      marginRight="8px"
-      alignItems="center"
-      justifyContent="end"
-    >
-      {startButton}
-    </Stack>
   )
 
   const progressBadgeSection =
@@ -186,7 +163,7 @@ export const UnenrolledCourseCard = ({
         )}
         <Stack justifyContent="start" alignItems="stretch" gap="4px" flex={1}>
           {progressBadgeSection}
-          <Stack gap="6px">
+          <Stack gap="12px">
             {titleSection}
             {courseDateText}
           </Stack>
@@ -194,11 +171,11 @@ export const UnenrolledCourseCard = ({
         <Stack
           direction="row"
           gap="8px"
-          paddingRight="32px"
+          paddingRight="40px"
           alignItems="center"
           justifyContent="end"
         >
-          {buttonSection}
+          {startButton}
         </Stack>
       </CardRoot>
 
@@ -209,26 +186,43 @@ export const UnenrolledCourseCard = ({
         className={className}
         layout={layout}
       >
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="stretch"
-          flex={1}
-          width="100%"
-        >
-          <Stack direction="column" gap="8px" flex={1}>
-            {titleSection}
-            {!isCompact && courseDateText}
+        <Stack direction="row" gap="8px" alignItems="flex-start" width="100%">
+          {showEnrollmentStatusIcon && (
+            <Stack alignSelf="flex-start">
+              <EnrollmentStatusIcon status={EnrollmentStatus.NotEnrolled} />
+            </Stack>
+          )}
+          <Stack
+            direction="column"
+            gap="16px"
+            flex={1}
+            minWidth={0}
+            width="100%"
+          >
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="stretch"
+              flex={1}
+              minWidth={0}
+              width="100%"
+            >
+              <Stack direction="column" gap="8px" flex={1} minWidth={0}>
+                {titleSection}
+                {!isCompact && courseDateText}
+              </Stack>
+            </Stack>
+            <Stack
+              direction="row"
+              width="100%"
+              gap="8px"
+              alignItems="center"
+              justifyContent="end"
+              minWidth={0}
+            >
+              {startButton}
+            </Stack>
           </Stack>
-        </Stack>
-        <Stack
-          direction="row"
-          width="100%"
-          gap="8px"
-          alignItems="center"
-          justifyContent="end"
-        >
-          {buttonSection}
         </Stack>
       </CardRoot>
     </>

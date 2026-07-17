@@ -21,6 +21,9 @@ const StyledCoursewareCard = styled(CoursewareCard)({
 export const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
   color: theme.custom.colors.red,
   width: "120px",
+  [theme.breakpoints.down("sm")]: {
+    width: "80px",
+  },
 }))
 
 interface ProgramEnrollmentDisplayProps {
