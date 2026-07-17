@@ -13,6 +13,7 @@ import celery
 from celery.exceptions import Ignore
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import caches
 from django.db.models import Q
 from django.template.defaultfilters import pluralize
 from opensearchpy.exceptions import NotFoundError, RequestError
@@ -573,6 +574,91 @@ def wrap_retry_exception(*exception_classes):
         raise
 
 
+# Backstop only: continue_reindex_batches deletes these keys when the final
+# batch completes. Long enough to outlast a multi-day catalog reindex.
+REINDEX_STATE_CACHE_TTL = 60 * 60 * 24 * 7
+
+
+def _reindex_state_cache_keys(run_id):
+    """Return the durable-cache keys holding batched reindex state for a run"""
+    return (
+        f"reindex_batches:{run_id}",
+        f"reindex_batch_errors:{run_id}",
+        f"reindex_finish:{run_id}",
+    )
+
+
+def replace_with_batched_reindex(task, index_tasks, finish_signature):
+    """
+    Replace task with sequential chords of at most OPENSEARCH_REINDEX_BATCH_SIZE
+    index subtasks each, ending with finish_signature called with the
+    accumulated results.
+
+    Dispatching the whole catalog as a single chord floods the shared Redis
+    broker with result-collection traffic; sequential batches bound how much
+    of it is in flight at once. Batches and interim errors are stored in the
+    durable (database) cache so they stay off the broker.
+
+    Args:
+        task (celery.Task): the bound task to replace
+        index_tasks (list of celery.Signature): the index subtask signatures
+        finish_signature (celery.Signature): signature invoked with the
+            accumulated results once every batch has completed
+    """
+    run_id = task.request.id
+    batches = list(
+        chunks(index_tasks, chunk_size=settings.OPENSEARCH_REINDEX_BATCH_SIZE)
+    )
+    if not batches:
+        return task.replace(finish_signature.clone(args=([],)))
+    batches_key, errors_key, finish_key = _reindex_state_cache_keys(run_id)
+    cache = caches["durable"]
+    cache.set(batches_key, batches, REINDEX_STATE_CACHE_TTL)
+    cache.set(errors_key, [], REINDEX_STATE_CACHE_TTL)
+    cache.set(finish_key, finish_signature, REINDEX_STATE_CACHE_TTL)
+    return task.replace(
+        celery.chord(
+            celery.group(batches[0]),
+            continue_reindex_batches.s(run_id, 1),
+        )
+    )
+
+
+@app.task(bind=True)
+def continue_reindex_batches(self, results, run_id, next_batch_index):
+    """
+    Collect one reindex batch's results, then dispatch the next batch or the
+    stored finish signature with all accumulated results.
+
+    Args:
+        results (list or str): results of the batch that just completed
+        run_id (str): id of the originating reindex task run
+        next_batch_index (int): index of the next batch to dispatch
+    """
+    batches_key, errors_key, finish_key = _reindex_state_cache_keys(run_id)
+    cache = caches["durable"]
+    batch_errors = merge_strings(results)
+    if batch_errors:
+        errors = cache.get(errors_key) or []
+        errors.extend(batch_errors)
+        cache.set(errors_key, errors, REINDEX_STATE_CACHE_TTL)
+    batches = cache.get(batches_key)
+    if batches is None:
+        msg = f"Reindex batch state for run {run_id} is missing or expired"
+        raise ReindexError(msg)
+    if next_batch_index < len(batches):
+        return self.replace(
+            celery.chord(
+                celery.group(batches[next_batch_index]),
+                continue_reindex_batches.s(run_id, next_batch_index + 1),
+            )
+        )
+    errors = cache.get(errors_key) or []
+    finish_signature = cache.get(finish_key)
+    cache.delete_many([batches_key, errors_key, finish_key])
+    return self.replace(finish_signature.clone(args=(errors,)))
+
+
 @app.task(bind=True)
 def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
     """
@@ -694,16 +780,15 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                     )
                 ]
 
-        index_tasks = celery.group(index_tasks)
     except:  # noqa: E722
         error = "start_recreate_index threw an error"
         log.exception(error)
         return error
 
-    # Use self.replace so that code waiting on this task will also wait on the indexing
-    #  and finish tasks
-    return self.replace(
-        celery.chain(index_tasks, finish_recreate_index.s(new_backing_indices))
+    # replace() so that code waiting on this task will also wait on every
+    # batch and the finish task
+    return replace_with_batched_reindex(
+        self, index_tasks, finish_recreate_index.s(new_backing_indices)
     )
 
 
@@ -748,12 +833,11 @@ def start_update_index(self, indexes, etl_source):
                     resource_type
                 )
 
-        index_tasks = celery.group(index_tasks)
     except:  # noqa: E722
         error = "start_update_index threw an error"
         log.exception(error)
         return [error]
-    return self.replace(celery.chain(index_tasks, finish_update_index.s()))
+    return replace_with_batched_reindex(self, index_tasks, finish_update_index.s())
 
 
 def get_update_resource_files_tasks(blocklisted_ids, etl_source):

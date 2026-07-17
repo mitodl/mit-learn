@@ -81,11 +81,13 @@ def mocked_celery(mocker):
     )
     group_mock = mocker.patch("celery.group", autospec=True)
     chain_mock = mocker.patch("celery.chain", autospec=True)
+    chord_mock = mocker.patch("celery.chord", autospec=True)
 
     return SimpleNamespace(
         replace=replace_mock,
         group=group_mock,
         chain=chain_mock,
+        chord=chord_mock,
         replace_exception_class=exception_class,
     )
 
