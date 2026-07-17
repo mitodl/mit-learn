@@ -653,6 +653,8 @@ def continue_reindex_batches(self, results, run_id, next_batch_index):
                 continue_reindex_batches.s(run_id, next_batch_index + 1),
             )
         )
+
+
 errors = cache.get(errors_key) or []
 finish_signature = cache.get(finish_key)
 if finish_signature is None:
@@ -660,6 +662,7 @@ if finish_signature is None:
     raise ReindexError(msg)
 cache.delete_many([batches_key, errors_key, finish_key])
 return self.replace(finish_signature.clone(args=(errors,)))
+
 
 @app.task(bind=True)
 def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
