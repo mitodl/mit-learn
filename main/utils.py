@@ -589,9 +589,8 @@ def clear_views_cache(key_prefix: str | None = None) -> int:
         # Redis with the Celery broker + result backend) needs ~keyspace/10
         # round-trips. Raising it ~100x cuts a multi-second scan to a fraction.
         return cache.delete_pattern(pattern, itersize=1000)
-    if hasattr(cache, "keys"):
-        return cache.delete_many(cache.keys(pattern)) or 0
-    # Backends without pattern/key enumeration (e.g. LocMemCache) can only flush.
+    # Backends without SCAN-based pattern deletion (DummyCache in tests,
+    # LocMemCache) can't clear selectively -- flush everything instead.
     cache.clear()
     return 0
 
