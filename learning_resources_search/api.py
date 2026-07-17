@@ -11,6 +11,7 @@ from opensearch_dsl import Search
 from opensearch_dsl.query import MoreLikeThis, Percolate
 from opensearchpy.exceptions import NotFoundError
 
+from learning_resources.constants import OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS
 from learning_resources.models import LearningResource
 from learning_resources.serializers import (
     LearningResourceSerializer,
@@ -496,6 +497,7 @@ def generate_filter_clauses(search_params):
             },
             {"term": {"resource_type": "course"}},
             {"term": {"resource_type": "video"}},
+            {"term": {"resource_category": OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS}},
         ]
         ocw_clause = {
             "bool": {

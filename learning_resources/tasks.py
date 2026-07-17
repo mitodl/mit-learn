@@ -386,17 +386,17 @@ def update_ocw_learning_material_resources(self):  # noqa: ARG001
     ocw courses or content files
     """
 
-    if not settings.CREATE_OCW_LEARNING_MATERIALS:
-        message = (
-            "update_ocw_learning_material_resources cannot run because "
-            "CREATE_OCW_LEARNING_MATERIALS flag is set to False."
-        )
-        raise RuntimeError(message)
-
     for course in LearningResource.objects.filter(
         published=True, etl_source=ETLSource.ocw.name, resource_type="course"
     ):
         course_run = course.runs.filter(published=True).first()
+        if not course_run:
+            log.warning(
+                "Published course %s has no published run; "
+                "skipping learning materials update",
+                course.readable_id,
+            )
+            continue
         content_file_ids = course_run.content_files.filter(published=True).values_list(
             "id", flat=True
         )

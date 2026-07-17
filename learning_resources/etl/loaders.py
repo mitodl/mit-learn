@@ -16,6 +16,7 @@ from learning_resources.constants import (
     OCW_COURSE_CONTENT_CATEGORY_MAPPING,
     OCW_INSTRUCTOR_INSIGHTS_TAG,
     OCW_PLAYLIST_VIDEO_THRESHOLD,
+    OCW_VISIBLE_TAGS,
     LearningResourceDelivery,
     LearningResourceRelationTypes,
     LearningResourceType,
@@ -1077,19 +1078,21 @@ def load_learning_materials(
     Create learning material objects from ocw content files
     """
     material_ids = []
+    if settings.CREATE_HIDDEN_OCW_LEARNING_MATERIALS:
+        promoted_ocw_file_types = set(OCW_COURSE_CONTENT_CATEGORY_MAPPING.keys())
+    else:
+        promoted_ocw_file_types = set(OCW_VISIBLE_TAGS)
 
-    if not settings.CREATE_OCW_LEARNING_MATERIALS:
-        return
+    content_files = (
+        ContentFile.objects.filter(id__in=content_file_ids)
+        .select_related("direct_learning_resource")
+        .prefetch_related("content_tags")
+    )
 
-    promoted_ocw_file_types = set(OCW_COURSE_CONTENT_CATEGORY_MAPPING.keys())
-
-    for content_file_id in content_file_ids:
-        content_file = ContentFile.objects.get(id=content_file_id)
-
-        learning_material_tags = (
-            set(content_file.content_tags.values_list("name", flat=True))
-            & promoted_ocw_file_types
-        )
+    for content_file in content_files:
+        learning_material_tags = {
+            tag.name for tag in content_file.content_tags.all()
+        } & promoted_ocw_file_types
         if content_file.content_type != CONTENT_TYPE_PAGE and learning_material_tags:
             material_ids.append(
                 load_learning_material(course_run, content_file, learning_material_tags)

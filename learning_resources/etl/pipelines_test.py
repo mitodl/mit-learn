@@ -9,7 +9,12 @@ import pytest
 from moto import mock_aws
 
 from learning_resources.conftest import OCW_TEST_PREFIX, setup_s3_ocw
-from learning_resources.constants import LearningResourceType, OfferedBy, PlatformType
+from learning_resources.constants import (
+    OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS,
+    LearningResourceType,
+    OfferedBy,
+    PlatformType,
+)
 from learning_resources.etl import pipelines
 from learning_resources.etl.constants import (
     CourseLoaderConfig,
@@ -225,14 +230,14 @@ def test_podcast_etl():
 @mock_aws
 @pytest.mark.django_db
 @pytest.mark.parametrize("skip_content_files", [True, False])
-@pytest.mark.parametrize("settings_create_ocw_learning_materials", [True, False])
+@pytest.mark.parametrize("create_hidden_ocw_learning_materials", [True, False])
 def test_ocw_courses_etl(
-    settings, mocker, skip_content_files, settings_create_ocw_learning_materials
+    settings, mocker, skip_content_files, create_hidden_ocw_learning_materials
 ):
     """Test ocw_courses_etl"""
     setup_s3_ocw(settings)
 
-    settings.CREATE_OCW_LEARNING_MATERIALS = settings_create_ocw_learning_materials
+    settings.CREATE_HIDDEN_OCW_LEARNING_MATERIALS = create_hidden_ocw_learning_materials
 
     mocker.patch(
         "learning_resources.etl.ocw.extract_text_metadata",
@@ -270,7 +275,7 @@ def test_ocw_courses_etl(
     run = resource.runs.first()
     assert run.instructors.count() == 10
     assert run.run_id == "97db384ef34009a64df7cb86cf701979"
-    assert run.content_files.count() == (0 if skip_content_files else 4)
+    assert run.content_files.count() == (0 if skip_content_files else 5)
     assert mock_cf_actions.call_count == (0 if skip_content_files else 1)
     assert mock_calc_score.call_count == (0 if skip_content_files else 1)
 
@@ -281,25 +286,64 @@ def test_ocw_courses_etl(
         ]
     )
 
-    if skip_content_files or not settings.CREATE_OCW_LEARNING_MATERIALS:
+    # Open Textbook resources are always created regardless of
+    # CREATE_HIDDEN_OCW_LEARNING_MATERIALS. Activity Assignments are only created
+    # when CREATE_HIDDEN_OCW_LEARNING_MATERIALS is True.
+    if skip_content_files:
         assert learning_materials.count() == 0
+    elif create_hidden_ocw_learning_materials:
+        assert learning_materials.count() == 2
     else:
         assert learning_materials.count() == 1
 
-    if not skip_content_files and settings.CREATE_OCW_LEARNING_MATERIALS:
-        learning_material = learning_materials.first()
+    if not skip_content_files:
+        textbook = learning_materials.get(title="Textbook Title")
+        assert textbook.platform.code == PlatformType.ocw.name
+        assert textbook.offered_by.code == OfferedBy.ocw.name
+        assert list(textbook.resource_tags.values_list("name", flat=True)) == [
+            "Open Textbooks"
+        ]
+        assert textbook.resource_category == OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS
+
+    if not skip_content_files and create_hidden_ocw_learning_materials:
+        activity = learning_materials.get(title="Resource Title")
         assert (
-            learning_material.readable_id
+            activity.readable_id
             == "97db384ef34009a64df7cb86cf701979-courses/16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006/resources/resource/"
         )
-        assert learning_material.platform.code == PlatformType.ocw.name
-        assert learning_material.offered_by.code == OfferedBy.ocw.name
-        assert learning_material.title == "Resource Title"
-
-        assert list(learning_material.resource_tags.values_list("name", flat=True)) == [
+        assert activity.platform.code == PlatformType.ocw.name
+        assert activity.offered_by.code == OfferedBy.ocw.name
+        assert list(activity.resource_tags.values_list("name", flat=True)) == [
             "Activity Assignments"
         ]
-        assert learning_material.resource_category == "Practice & Assignment"
+        assert activity.resource_category == "Practice & Assignment"
+
+
+@mock_aws
+@pytest.mark.django_db
+@pytest.mark.parametrize("content_file_ids", [None, []])
+def test_ocw_courses_etl_no_content_files_ingested(settings, mocker, content_file_ids):
+    """Learning materials should be left alone if no content files were ingested"""
+    setup_s3_ocw(settings)
+
+    mocker.patch("learning_resources.etl.pipelines.loaders.resource_upserted_actions")
+    mock_load_content_files = mocker.patch(
+        "learning_resources.etl.pipelines.loaders.load_content_files",
+        return_value=content_file_ids,
+    )
+    mock_load_learning_materials = mocker.patch(
+        "learning_resources.etl.pipelines.loaders.load_learning_materials"
+    )
+
+    pipelines.ocw_courses_etl(
+        url_paths=[OCW_TEST_PREFIX],
+        force_overwrite=True,
+        start_timestamp=datetime(2020, 12, 15, tzinfo=UTC),
+        skip_content_files=False,
+    )
+
+    mock_load_content_files.assert_called_once()
+    mock_load_learning_materials.assert_not_called()
 
 
 @mock_aws
