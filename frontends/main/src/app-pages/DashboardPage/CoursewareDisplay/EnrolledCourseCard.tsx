@@ -435,6 +435,7 @@ export const EnrolledCourseCard = ({
   const hasMultipleRuns = (siblingEnrollments?.length ?? 0) > 0
   const showEnrollmentStatusIcon =
     !isContractPageResource && isModule && isCompact
+  const statusIconAlignment = metaSegments.length > 0 ? "start" : "center"
 
   return (
     <>
@@ -478,7 +479,7 @@ export const EnrolledCourseCard = ({
           layout={layout}
         >
           {showEnrollmentStatusIcon && (
-            <Stack alignSelf="start">
+            <Stack alignSelf={statusIconAlignment}>
               <EnrollmentStatusIcon status={enrollmentStatus} />
             </Stack>
           )}
@@ -500,7 +501,7 @@ export const EnrolledCourseCard = ({
       >
         <Stack direction="row" gap="8px" alignItems="flex-start" width="100%">
           {showEnrollmentStatusIcon && (
-            <Stack alignSelf="flex-start">
+            <Stack alignSelf={statusIconAlignment}>
               <EnrollmentStatusIcon status={enrollmentStatus} />
             </Stack>
           )}
