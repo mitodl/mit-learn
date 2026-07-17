@@ -286,6 +286,25 @@ class TestSettings(TestCase):
                 in settings_vars["CELERY_BEAT_SCHEDULE"]
             )
 
+    def test_celery_result_expires_default(self):
+        """Celery result expiry defaults to 1 hour"""
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            assert settings_vars["CELERY_RESULT_EXPIRES"] == 60 * 60
+
+    def test_celery_result_expires_override(self):
+        """Celery result expiry is configurable via an env var"""
+        with mock.patch.dict(
+            "os.environ",
+            {
+                **REQUIRED_SETTINGS,
+                "CELERY_RESULT_EXPIRES": "120",
+            },
+            clear=True,
+        ):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            assert settings_vars["CELERY_RESULT_EXPIRES"] == 120
+
     def _assert_s3_storage_config(
         self,
         storages_dict,
