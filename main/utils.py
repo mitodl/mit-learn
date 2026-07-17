@@ -584,7 +584,11 @@ def clear_views_cache(key_prefix: str | None = None) -> int:
     )
 
     if hasattr(cache, "delete_pattern"):
-        return cache.delete_pattern(pattern)
+        # itersize is the SCAN COUNT: django-redis defaults it to 10, so a
+        # delete_pattern over a large shared keyspace (this cache shares its
+        # Redis with the Celery broker + result backend) needs ~keyspace/10
+        # round-trips. Raising it ~100x cuts a multi-second scan to a fraction.
+        return cache.delete_pattern(pattern, itersize=1000)
     if hasattr(cache, "keys"):
         return cache.delete_many(cache.keys(pattern)) or 0
     # Backends without pattern/key enumeration (e.g. LocMemCache) can only flush.

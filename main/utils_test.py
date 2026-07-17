@@ -17,6 +17,7 @@ from main.utils import (
     cache_page_for_anonymous_users,
     chunks,
     clean_data,
+    clear_views_cache,
     extract_values,
     filter_dict_keys,
     filter_dict_with_renamed_keys,
@@ -586,3 +587,22 @@ def test_cache_key_format(mock_caches):
     hash_part = cache_key.split(".")[-1]
     assert len(hash_part) == 32
     assert all(c in "0123456789abcdef" for c in hash_part)
+
+
+@patch("main.utils.caches")
+def test_clear_views_cache_uses_large_itersize(mock_caches):
+    """
+    delete_pattern must be called with a large itersize (SCAN COUNT).
+
+    The default of 10 means a full-keyspace scan needs ~keyspace/10 round-trips
+    against the Redis shared with the Celery broker; a 55s scan on prod. Pinning
+    itersize guards against a regression back to the slow default.
+    """
+    mock_cache = MagicMock()
+    mock_cache.delete_pattern.return_value = 3
+    mock_caches.__getitem__.return_value = mock_cache
+
+    result = clear_views_cache()
+
+    mock_cache.delete_pattern.assert_called_once_with("views.*", itersize=1000)
+    assert result == 3
