@@ -44,5 +44,5 @@ class ContentFeedbackAdmin(admin.ModelAdmin):
         return False
 
     def has_change_permission(self, request, obj=None):  # noqa: ARG002
-        """Records are append-only; the admin is view-only (no no-op saves)."""
+        """Disallow editing; records are append-only so the admin is view-only."""
         return False
