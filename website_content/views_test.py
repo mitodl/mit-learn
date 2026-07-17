@@ -117,6 +117,87 @@ def test_staff_can_access_unpublished_content(client):
     assert data["id"] == content.id
 
 
+@pytest.fixture
+def mock_clear_views_cache(mocker):
+    """Patch the cache-clear hook so tests can assert whether it fired."""
+    return mocker.patch("website_content.views.clear_views_cache")
+
+
+def _make_content(user, *, is_published):
+    return WebsiteContent.objects.create(
+        title="t",
+        content={},
+        is_published=is_published,
+        user=user,
+        content_type="news",
+    )
+
+
+# The staff listing view is cached and includes unpublished content, so every
+# mutation must clear the view cache -- including on drafts. The is_published
+# parametrization guards against reintroducing a published-only gate.
+@pytest.mark.parametrize("is_published", [True, False])
+def test_create_clears_views_cache(
+    staff_client,
+    mock_clear_views_cache,
+    django_capture_on_commit_callbacks,
+    is_published,
+):
+    """Create clears the view cache on commit, published or draft."""
+    url = reverse("website_content:v1:website_content-list")
+    data = {
+        "content": {},
+        "title": "Some title",
+        "content_type": "news",
+        "is_published": is_published,
+    }
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = staff_client.post(url, data, format="json")
+
+    assert resp.status_code == 201
+    assert mock_clear_views_cache.called is True
+
+
+@pytest.mark.parametrize("now_published", [True, False])
+def test_update_clears_views_cache(
+    staff_client,
+    user,
+    mock_clear_views_cache,
+    django_capture_on_commit_callbacks,
+    now_published,
+):
+    """Update clears the view cache on commit, even a draft-to-draft edit."""
+    content = _make_content(user, is_published=False)
+    url = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": content.id}
+    )
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = staff_client.patch(url, {"is_published": now_published}, format="json")
+
+    assert resp.status_code == 200
+    assert mock_clear_views_cache.called is True
+
+
+@pytest.mark.parametrize("is_published", [True, False])
+def test_destroy_clears_views_cache(
+    staff_client,
+    user,
+    mock_clear_views_cache,
+    django_capture_on_commit_callbacks,
+    is_published,
+):
+    """Destroy clears the view cache on commit, published or draft."""
+    content = _make_content(user, is_published=is_published)
+    url = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": content.id}
+    )
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = staff_client.delete(url)
+
+    assert resp.status_code == 204
+    assert mock_clear_views_cache.called is True
+
+
 def test_content_type_filter(client, user):
     """content_type query param should filter results"""
     WebsiteContent.objects.create(

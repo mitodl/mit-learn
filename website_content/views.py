@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django_filters.rest_framework import DjangoFilterBackend
@@ -76,21 +77,25 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
+    # NOTE: clear the view cache on every mutation, published or not -- the
+    # staff listing view is cached and includes unpublished content, so a draft
+    # create/edit/delete can change a cached response too. Deferred to
+    # on_commit so it runs after the write is durable.
     def perform_create(self, serializer):
-        clear_views_cache()
         content = serializer.save(user=self.request.user)
+        transaction.on_commit(clear_views_cache)
         purge_content_on_save(content)
         content_published_actions(content=content)
 
     def perform_update(self, serializer):
-        clear_views_cache()
         content = serializer.save()
+        transaction.on_commit(clear_views_cache)
         purge_content_on_save(content)
         content_published_actions(content=content)
 
-    def destroy(self, request, *args, **kwargs):
-        clear_views_cache()
-        return super().destroy(request, *args, **kwargs)
+    def perform_destroy(self, instance):
+        super().perform_destroy(instance)
+        transaction.on_commit(clear_views_cache)
 
     @extend_schema(
         summary="Retrieve by ID or slug",
