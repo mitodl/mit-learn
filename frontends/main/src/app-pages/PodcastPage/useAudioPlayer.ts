@@ -5,7 +5,7 @@ export const SPEED_OPTIONS = [0.75, 1, 1.25, 1.5, 2]
 
 /**
  * Format a number of seconds as a clock time. Includes an hours component only
- * when the duration reaches an hour (`mm:ss`, else `h:mm:ss`), with zero-padded
+ * when the duration reaches an hour (`h:mm:ss`, else `mm:ss`), with zero-padded
  * minutes/seconds.
  *
  * NB: `ol-utilities`' `formatDurationClockTime` is intentionally not reused here

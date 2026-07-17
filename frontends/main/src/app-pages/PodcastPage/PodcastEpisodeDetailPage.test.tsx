@@ -303,7 +303,7 @@ describe("PodcastEpisodeDetailPage", () => {
   test("shows a loading skeleton while the episode is fetching", async () => {
     const { episode, podcast } = setupApis({ moreEpisodes: [] })
 
-    const { view } = renderWithProviders(
+    renderWithProviders(
       <PodcastEpisodeDetailPage
         episodeId={String(episode.id)}
         podcastId={String(podcast.id)}
@@ -311,9 +311,7 @@ describe("PodcastEpisodeDetailPage", () => {
     )
 
     // Skeleton is visible on first paint, before the query resolves.
-    expect(
-      view.container.querySelectorAll(".MuiSkeleton-root").length,
-    ).toBeGreaterThan(0)
+    expect(screen.getByTestId("episode-header-skeleton")).toBeInTheDocument()
 
     // Flush to the loaded state to avoid act() warnings.
     await screen.findAllByText(episode.title!)

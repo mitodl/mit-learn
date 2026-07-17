@@ -175,7 +175,7 @@ const SkeletonLine = styled(Skeleton)({
 })
 
 const EpisodeHeaderSkeleton = () => (
-  <>
+  <div data-testid="episode-header-skeleton" aria-hidden>
     <SkeletonLine variant="text" width={160} height={21} />
     <SkeletonLine variant="text" width="80%" height={44} />
     <SkeletonLine variant="text" width="50%" height={24} />
@@ -183,7 +183,7 @@ const EpisodeHeaderSkeleton = () => (
     <SkeletonLine variant="text" width="100%" height={20} />
     <SkeletonLine variant="text" width="95%" height={20} />
     <SkeletonLine variant="text" width="88%" height={20} />
-  </>
+  </div>
 )
 
 /* ── Component ── */

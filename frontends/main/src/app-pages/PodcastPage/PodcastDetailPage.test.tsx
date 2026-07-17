@@ -193,14 +193,10 @@ describe("PodcastDetailPage", () => {
     const episodes = makePodcastEpisodes(2)
     const { podcast } = setupApis({ episodesPage1: episodes })
 
-    const { view } = renderWithProviders(
-      <PodcastDetailPage podcastId={String(podcast.id)} />,
-    )
+    renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
 
     // Skeleton is visible on first paint, before the queries resolve.
-    expect(
-      view.container.querySelectorAll(".MuiSkeleton-root").length,
-    ).toBeGreaterThan(0)
+    expect(screen.getByTestId("podcast-header-skeleton")).toBeInTheDocument()
 
     // Flush to the loaded state to avoid act() warnings.
     await screen.findByText(episodes[0].title!)

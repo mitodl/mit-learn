@@ -191,17 +191,17 @@ const SkeletonLine = styled(Skeleton)({
 })
 
 const PodcastHeaderSkeleton = () => (
-  <>
+  <div data-testid="podcast-header-skeleton" aria-hidden>
     <SkeletonLine variant="text" width="60%" height={48} />
     <SkeletonLine variant="text" width="40%" height={22} />
     <SkeletonLine variant="text" width="100%" height={20} />
     <SkeletonLine variant="text" width="90%" height={20} />
     <SkeletonLine variant="rectangular" width={200} height={48} />
-  </>
+  </div>
 )
 
 const EpisodesSkeleton = () => (
-  <div>
+  <div data-testid="podcast-episodes-skeleton" aria-hidden>
     {Array.from({ length: EPISODES_PAGE_SIZE }, (_unused, i) => (
       <SkeletonLine key={i} variant="text" width="55%" height={26} />
     ))}
