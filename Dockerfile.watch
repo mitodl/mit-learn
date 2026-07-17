@@ -21,6 +21,10 @@ RUN apt-get update && apt-get install -y \
     libatspi2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
+# Trusted certs (org PKI + local-dev mkcert root injected at deploy time).
+COPY --chmod=644 certs/ /usr/local/share/ca-certificates/
+RUN update-ca-certificates
+
 WORKDIR /src
 
 # Copy all package.json files to enable yarn install

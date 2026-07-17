@@ -20,6 +20,7 @@ from django.template.loader import render_to_string
 from PIL import Image
 
 from main.utils import generate_filepath
+from users.utils import generate_unsubscribe_url
 
 log = logging.getLogger(__name__)
 
@@ -417,7 +418,8 @@ def send_template_email(user, subject, template, context, *, is_transactional: b
         template(str): Path to an html template
         context(dict): context vars used in rendering the template
         is_transactional(bool): If true the email bypasses the user's
-            email_optin setting and always sends.
+            email_optin setting and always sends, so no unsubscribe URL
+            is included. Otherwise an unsubscribe URL is included.
     """
     if not is_transactional and not user_has_email_optin(user):
         log.debug("Not sending email to user %s: opted out of email", user.id)
@@ -425,13 +427,29 @@ def send_template_email(user, subject, template, context, *, is_transactional: b
 
     if not context:
         context = {}
+    unsubscribe_url = None
+    if not is_transactional:
+        unsubscribe_url = generate_unsubscribe_url(user)
+        context["unsubscribe_url"] = unsubscribe_url
     context["APP_BASE_URL"] = settings.APP_BASE_URL
     context["ABSOLUTE_STATIC_URL"] = urljoin(settings.APP_BASE_URL, settings.STATIC_URL)
     html_content = render_to_string(template, context)
-    return send_email(user, subject, html_content, text_only=False)
+    return send_email(
+        user,
+        subject,
+        html_content,
+        text_only=False,
+        unsubscribe_url=unsubscribe_url,
+    )
 
 
-def send_email(user, subject, content, text_only):
+def send_email(
+    user,
+    subject,
+    content,
+    text_only,
+    unsubscribe_url: str | None = None,
+):
     """
     Send an email
     Args:
@@ -440,6 +458,7 @@ def send_email(user, subject, content, text_only):
         content(str): The html or plain text content of the email.
         text_only(bool): If True html from the 'content' arg
         will be stripped and sent as plain text
+        unsubscribe_url(str): URL to include in List-Unsubscribe headers
     """
 
     if text_only:
@@ -449,6 +468,10 @@ def send_email(user, subject, content, text_only):
         for link in soup.find_all("a"):
             link.replace_with(link.attrs["href"])
         text_content = soup.get_text().strip()
+    headers = {}
+    if unsubscribe_url:
+        headers["List-Unsubscribe"] = f"<{unsubscribe_url}>"
+        headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
     with mail.get_connection(settings.NOTIFICATION_EMAIL_BACKEND) as connection:
         msg = AnymailMessage(
             subject=subject,
@@ -456,6 +479,7 @@ def send_email(user, subject, content, text_only):
             to=[user.email],
             from_email=settings.MAILGUN_FROM_EMAIL,
             connection=connection,
+            headers=headers or None,
         )
         if not text_only:
             msg.attach_alternative(content, "text/html")

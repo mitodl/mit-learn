@@ -5,6 +5,7 @@ from io import BytesIO
 from urllib.parse import parse_qs, urlparse
 
 import pytest
+from django.core import mail
 from PIL import Image
 
 from main.factories import UserFactory
@@ -22,6 +23,7 @@ from profiles.utils import (
     profile_image_upload_uri,
     profile_image_upload_uri_medium,
     profile_image_upload_uri_small,
+    send_email,
     send_template_email,
     update_full_name,
     user_has_email_optin,
@@ -259,9 +261,88 @@ def test_user_has_email_optin_no_profile():
     assert user_has_email_optin(user) is False
 
 
+# send_email tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_send_email_adds_list_unsubscribe_headers_when_url_provided():
+    """send_email adds List-Unsubscribe headers when unsubscribe_url is given."""
+    user = UserFactory.create()
+
+    send_email(
+        user,
+        "Test",
+        "<p>content</p>",
+        text_only=False,
+        unsubscribe_url="https://api.example.com/api/v1/users/unsubscribe/token/",
+    )
+
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].extra_headers == {
+        "List-Unsubscribe": "<https://api.example.com/api/v1/users/unsubscribe/token/>",
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    }
+
+
+@pytest.mark.django_db
+def test_send_email_no_list_unsubscribe_headers_without_url():
+    """send_email does not set List-Unsubscribe headers when no URL is given."""
+    user = UserFactory.create()
+
+    send_email(user, "Test", "<p>content</p>", text_only=False)
+
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].extra_headers == {}
+
+
 # ---------------------------------------------------------------------------
 # send_template_email tests
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_send_template_email_transactional_no_unsubscribe_url(mocker):
+    """When is_transactional=True, no unsubscribe_url is passed."""
+    mock_send_email = mocker.patch("profiles.utils.send_email")
+    user = UserFactory.create()
+
+    send_template_email(
+        user,
+        "Test",
+        "email/welcome_email.html",
+        context={"display_name": "Test"},
+        is_transactional=True,
+    )
+
+    mock_send_email.assert_called_once()
+    call_kwargs = mock_send_email.call_args.kwargs
+    assert call_kwargs.get("unsubscribe_url") is None
+
+
+@pytest.mark.django_db
+def test_send_template_email_not_transactional_sets_unsubscribe_url(mocker, settings):
+    """When is_transactional=False, unsubscribe_url is set from the user."""
+    settings.MITOL_API_BASE_URL = "https://api.example.com"
+    mock_send_email = mocker.patch("profiles.utils.send_email")
+    user = UserFactory.create(profile__email_optin=True)
+
+    send_template_email(
+        user,
+        "Test",
+        "email/welcome_email.html",
+        context={"display_name": "Test"},
+        is_transactional=False,
+    )
+
+    mock_send_email.assert_called_once()
+    call_kwargs = mock_send_email.call_args.kwargs
+    assert call_kwargs["unsubscribe_url"]
+    # The UUID is embedded in the signed token but should not be a standalone path segment
+    from urllib.parse import urlparse
+
+    segments = urlparse(call_kwargs["unsubscribe_url"]).path.strip("/").split("/")
+    assert str(user.unsubscribe_uuid) not in segments
 
 
 @pytest.mark.django_db
@@ -301,8 +382,9 @@ def test_send_template_email_not_transactional_opted_out_skips(mocker):
 
 
 @pytest.mark.django_db
-def test_send_template_email_transactional_opted_out_still_sends(mocker):
+def test_send_template_email_transactional_opted_out_still_sends(mocker, settings):
     """Transactional emails bypass email_optin even when the user opted out."""
+    settings.MITOL_API_BASE_URL = "https://api.example.com"
     mock_send_email = mocker.patch("profiles.utils.send_email")
     user = UserFactory.create(profile__email_optin=False)
 

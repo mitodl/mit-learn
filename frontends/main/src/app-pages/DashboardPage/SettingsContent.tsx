@@ -10,8 +10,9 @@ import {
   DialogActions,
   Skeleton,
 } from "ol-components"
-import { Button } from "@mitodl/smoot-design"
+import { Button, Checkbox } from "@mitodl/smoot-design"
 import { useUserMe } from "api/hooks/user"
+import { useProfileMeMutation, useProfileMeQuery } from "api/hooks/profile"
 import {
   useSearchSubscriptionDelete,
   useSearchSubscriptionList,
@@ -174,6 +175,8 @@ const UnfollowDialog = NiceModal.create(
 
 const SettingsContent: React.FC = () => {
   const { data: user } = useUserMe()
+  const { data: profile } = useProfileMeQuery()
+  const { mutateAsync: updateProfile } = useProfileMeMutation()
 
   const subscriptionList = useSearchSubscriptionList({
     enabled: !!user?.is_authenticated,
@@ -186,6 +189,13 @@ const SettingsContent: React.FC = () => {
   return (
     <div id="user-settings">
       <TitleText component="h1">Settings</TitleText>
+      <SubtitleTitleText>Email Preferences</SubtitleTitleText>
+      <Checkbox
+        name="email_optin"
+        label="Receive emails from MIT Learn"
+        checked={profile?.email_optin ?? true}
+        onChange={(e) => updateProfile({ email_optin: e.target.checked })}
+      />
       <SettingsHeader>
         <SettingsHeaderLeft>
           <SubtitleTitleText>Following</SubtitleTitleText>
