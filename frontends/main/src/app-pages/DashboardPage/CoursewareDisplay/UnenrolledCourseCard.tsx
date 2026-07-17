@@ -122,6 +122,7 @@ export const UnenrolledCourseCard = ({
       variant={isCompact ? "secondary" : "primary"}
       data-testid="courseware-button"
       aria-label={`Start course: ${title}`}
+      aria-busy={isPending}
       onClick={isDisabled ? undefined : enrollClick}
       disabled={isDisabled}
       endIcon={
