@@ -101,7 +101,7 @@ describe.each([
     )
   })
 
-  test("shows 'Certificate track' alongside 'View Certificate' when verified enrollment has a certificate", () => {
+  test("shows 'View Certificate' in place of 'Certificate track' when verified enrollment has a certificate", () => {
     const programEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
         enrollment_mode: "verified",
@@ -110,12 +110,12 @@ describe.each([
     renderWithProviders(
       <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
     )
-    expect(within(getCard()).getByTestId("upgraded-banner")).toHaveTextContent(
-      "Certificate track",
-    )
     expect(
-      within(getCard()).getByRole("link", { name: /View Certificate/ }),
-    ).toBeInTheDocument()
+      within(getCard()).queryByTestId("upgraded-banner"),
+    ).not.toBeInTheDocument()
+    expect(
+      within(getCard()).getAllByRole("link", { name: /View Certificate/ }),
+    ).toHaveLength(1)
   })
 
   test("does not show 'Certificate track' for audit enrollment", () => {

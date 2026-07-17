@@ -364,6 +364,9 @@ const ContractHeaderSection = styled.div(({ theme }) => ({
     alignItems: "flex-start",
     gap: "16px",
     padding: "16px 0 0 0",
+    backgroundColor: theme.custom.colors.lightGray1,
+    boxShadow: "none",
+    borderRadius: "0px",
   },
 }))
 

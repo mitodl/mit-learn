@@ -16,17 +16,16 @@ const CardRoot = styled.div<{
     border: `1px solid ${theme.custom.colors.lightGray2}`,
     backgroundColor: theme.custom.colors.white,
     padding: "16px",
+    borderRadius: "8px",
+    boxShadow: "0 4px 8px 0 rgba(19, 20, 21, 0.08)",
     display: "flex",
     gap: "8px",
     alignItems: "center",
   },
   // Mobile styles for default layout
   layout === "default" && {
-    [theme.breakpoints.down("md")]: {
+    [theme.breakpoints.down("sm")]: {
       border: "none",
-      borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
-      borderRadius: "0px",
-      boxShadow: "none",
       flexDirection: "column",
       gap: "16px",
     },
@@ -46,18 +45,19 @@ const CardRoot = styled.div<{
       borderBottomRightRadius: "8px !important",
       borderBottom: "none",
     },
-    [theme.breakpoints.down("md")]: {
+    [theme.breakpoints.down("sm")]: {
       flexDirection: "column",
+      flexGrow: 1,
       gap: "16px",
     },
   },
   screenSize === "desktop" && {
-    [theme.breakpoints.down("md")]: {
+    [theme.breakpoints.down("sm")]: {
       display: "none",
     },
   },
   screenSize === "mobile" && {
-    [theme.breakpoints.up("md")]: {
+    [theme.breakpoints.up("sm")]: {
       display: "none",
     },
   },
@@ -71,7 +71,7 @@ const CardTypeText = styled(Typography)(({ theme }) => ({
 const TitleHeading = styled.h3(({ theme }) => ({
   margin: 0,
   ...theme.typography.subtitle2,
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
     maxWidth: "calc(100% - 16px)",
   },
 }))
@@ -86,7 +86,7 @@ const TitleText = styled.h3<{ clickable?: boolean }>(
     ...theme.typography.subtitle2,
     color: theme.custom.colors.darkGray2,
     cursor: clickable ? "pointer" : "default",
-    [theme.breakpoints.down("md")]: {
+    [theme.breakpoints.down("sm")]: {
       maxWidth: "calc(100% - 16px)",
     },
   }),
@@ -94,8 +94,11 @@ const TitleText = styled.h3<{ clickable?: boolean }>(
 
 const SubtitleLinkRoot = styled.div(({ theme }) => ({
   display: "flex",
+  flexWrap: "wrap",
   alignItems: "center",
+  rowGap: "2px",
   flex: 1,
+  minWidth: 0,
   color: theme.custom.colors.red,
   ...theme.typography.body3,
 }))
@@ -115,10 +118,9 @@ const MenuButton = styled(ActionButton)<{
   status: EnrollmentStatus
 }>(({ theme, status }) => [
   {
-    [theme.breakpoints.down("md")]: {
-      position: "absolute",
-      top: "0",
-      right: "0",
+    [theme.breakpoints.down("sm")]: {
+      borderRadius: "4px",
+      border: `1px solid ${theme.custom.colors.lightGray2}`,
     },
   },
   status !== EnrollmentStatus.Completed &&
@@ -132,17 +134,21 @@ const COURSEWARE_BUTTON_WIDTH = "88px"
 // Fixed-width column that keeps the courseware button (and countdown) aligned
 // in the compact (module row) layout.
 const CoursewareActionColumn = styled(Stack)({
-  width: COURSEWARE_BUTTON_WIDTH,
+  minWidth: COURSEWARE_BUTTON_WIDTH,
+  gap: "8px",
   flexShrink: 0,
 })
 
 // Compact-layout courseware buttons are fixed width and use the text variant.
 const CoursewareButton = styled(Button)(({ theme, variant }) => ({
-  width: COURSEWARE_BUTTON_WIDTH,
   minWidth: COURSEWARE_BUTTON_WIDTH,
+  gap: "8px",
   ...(variant === "text" && {
     color: theme.custom.colors.silverGrayDark,
   }),
+  [theme.breakpoints.down("sm")]: {
+    flexGrow: 1,
+  },
 }))
 
 const CoursewareButtonLink = styled(ButtonLink)(({ theme, variant }) => ({
@@ -151,6 +157,9 @@ const CoursewareButtonLink = styled(ButtonLink)(({ theme, variant }) => ({
   ...(variant === "text" && {
     color: theme.custom.colors.silverGrayDark,
   }),
+  [theme.breakpoints.down("sm")]: {
+    flexGrow: 1,
+  },
 }))
 
 const Separator = styled.span(({ theme }) => ({
@@ -166,12 +175,14 @@ const Ellipse = styled.span(({ theme }) => ({
   width: "4px",
   height: "4px",
   borderRadius: "50%",
+  flexShrink: 0,
   backgroundColor: theme.custom.colors.silverGrayLight,
 }))
 
 const DateText = styled(Typography)(({ theme }) => ({
   ...theme.typography.subtitle3,
   color: theme.custom.colors.silverGrayDark,
+  whiteSpace: "nowrap",
 }))
 
 const CourseDateText: React.FC<{
@@ -189,6 +200,7 @@ const UpgradedBannerRoot = styled.div(({ theme }) => ({
   alignItems: "center",
   gap: "4px",
   color: theme.custom.colors.silverGrayDark,
+  whiteSpace: "nowrap",
   ...theme.typography.body3,
 }))
 

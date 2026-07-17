@@ -283,7 +283,10 @@ describe("ProgramEnrollmentDisplay", () => {
     )
 
     await screen.findByText("Requirements")
-    expect(await screen.findByText("Program As Course")).toBeInTheDocument()
+    // Rendered once in the desktop header, once in the mobile header.
+    expect(
+      (await screen.findAllByText("Program As Course")).length,
+    ).toBeGreaterThan(0)
     expect((await screen.findAllByText("Module A")).length).toBeGreaterThan(0)
     expect((await screen.findAllByText("Module B")).length).toBeGreaterThan(0)
   })
