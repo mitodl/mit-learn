@@ -1868,12 +1868,20 @@ describe("buildVariantLabel", () => {
   })
 
   test("capitalizes only the first word of a multi-word language name", () => {
-    const label = buildVariantLabel(
-      makeVariant({ language: "es-419" as never }),
-    )
-    // Second word ("latinoamericano" as of current CLDR data) is left
-    // lowercase — only the first word should be title-cased.
-    expect(label).toMatch(/^Español [a-záéíóúñ]+ • General • Full$/)
+    const originalDisplayNames = Intl.DisplayNames
+    try {
+      // Make the test independent of the host Node/ICU/CLDR data.
+      ;(Intl as any).DisplayNames = function () {
+        return { of: () => "español latinoamericano" }
+      } as any
+
+      const label = buildVariantLabel(
+        makeVariant({ language: "es-419" as never }),
+      )
+      expect(label).toBe("Español latinoamericano • General • Full")
+    } finally {
+      ;(Intl as any).DisplayNames = originalDisplayNames
+    }
   })
 
   test("includes the industry label when variant_industry is set", () => {
