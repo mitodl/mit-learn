@@ -511,7 +511,7 @@ const AssignSeatsConfirmModal: React.FC<AssignSeatsConfirmModalProps> = ({
             : "",
           " Only valid, unique emails will be assigned.",
         ].join("")
-      : `You're about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with secure link to claim their seat and access the materials. ${seatsAfterSendingText} Emails will be sent immediately and cannot be recalled.`
+      : `You're about to send ${validCount} invitation ${pluralize("email", validCount)} from MIT Learn. Learners will receive an email with a secure link to claim their seat and access the materials. ${seatsAfterSendingText} Emails will be sent immediately and cannot be recalled.`
 
   // For overCapacity we point aria-describedby at the visible paragraph so
   // role="alertdialog" reads it exactly once on open. We do NOT programmatically
