@@ -7,8 +7,6 @@ test("env() reads from window.__ENV", () => {
 })
 
 test("env() falls back to the x-public-env <meta> when window.__ENV is unset", () => {
-  // Error/not-found pages are client-rendered shells where PublicEnvScript never
-  // runs; env() must read the value from the <meta> the root layout emits.
   const meta = document.createElement("meta")
   meta.setAttribute("name", "x-public-env")
   meta.setAttribute(
@@ -56,6 +54,114 @@ test("fullEnv() returns the full map, bootstrapping from the <meta> like env()",
 
   meta.remove()
   delete window.__ENV
+})
+
+describe("env() while the document is still streaming (error-shell pages)", () => {
+  /*
+   * Module evaluation can run before the parser reaches any x-public-env
+   * <meta>; env() must then fetch the values synchronously from
+   * /public-env.json rather than returning undefined or throwing.
+   */
+  const RealXHR = window.XMLHttpRequest
+  const REAL_NODE_ENV = process.env.NODE_ENV
+
+  const mockXhr = (impl: {
+    status?: number
+    responseText?: string
+    throws?: boolean
+  }) => {
+    const open = jest.fn()
+    const send = jest.fn(() => {
+      if (impl.throws) throw new Error("network error")
+    })
+    const instances: Array<{ open: jest.Mock; send: jest.Mock }> = []
+    window.XMLHttpRequest = jest.fn(function (this: XMLHttpRequest) {
+      Object.assign(this, {
+        open,
+        send,
+        status: impl.status ?? 0,
+        responseText: impl.responseText ?? "",
+      })
+      instances.push({ open, send })
+    }) as unknown as typeof XMLHttpRequest
+    return { open, send, instances }
+  }
+
+  // NODE_ENV is typed readonly; Object.assign sidesteps that for test setup.
+  const setNodeEnv = (value: string | undefined) =>
+    Object.assign(process.env, { NODE_ENV: value })
+
+  beforeEach(() => {
+    // The fetch tier is disabled under NODE_ENV=test so ordinary jsdom suites
+    // never attempt network I/O; emulate a browser build to exercise it here.
+    setNodeEnv("development")
+  })
+
+  afterEach(() => {
+    setNodeEnv(REAL_NODE_ENV)
+    window.XMLHttpRequest = RealXHR
+    delete window.__ENV
+    jest.resetModules()
+  })
+
+  const freshEnv = async () => (await import("@/env")).env
+
+  test("fetches env synchronously from /public-env.json when no <meta> is parsed yet", async () => {
+    const { open } = mockXhr({
+      status: 200,
+      responseText: JSON.stringify({ NEXT_PUBLIC_ORIGIN: "https://xhr.test" }),
+    })
+    const env = await freshEnv()
+    expect(env("NEXT_PUBLIC_ORIGIN")).toBe("https://xhr.test")
+    // synchronous request to the env route
+    expect(open).toHaveBeenCalledWith("GET", "/public-env.json", false)
+    // cached for subsequent reads
+    expect(window.__ENV).toEqual({ NEXT_PUBLIC_ORIGIN: "https://xhr.test" })
+  })
+
+  test("prefers the <meta> when present; no network request", async () => {
+    const { send } = mockXhr({ status: 200, responseText: "{}" })
+    const meta = document.createElement("meta")
+    meta.setAttribute("name", "x-public-env")
+    meta.setAttribute(
+      "content",
+      JSON.stringify({ NEXT_PUBLIC_ORIGIN: "https://meta.test" }),
+    )
+    document.head.appendChild(meta)
+
+    const env = await freshEnv()
+    expect(env("NEXT_PUBLIC_ORIGIN")).toBe("https://meta.test")
+    expect(send).not.toHaveBeenCalled()
+    meta.remove()
+  })
+
+  test("a failed fetch does not throw and is not retried", async () => {
+    const { send } = mockXhr({ throws: true })
+    const env = await freshEnv()
+    expect(() => env("NEXT_PUBLIC_ORIGIN")).not.toThrow()
+    env("NEXT_PUBLIC_ORIGIN")
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  test("fetches even after parsing completes when no <meta> was ever delivered", async () => {
+    // When the document never contains an x-public-env <meta>, the fetch is
+    // the only transport regardless of when the first read happens.
+    const { send } = mockXhr({
+      status: 200,
+      responseText: JSON.stringify({ NEXT_PUBLIC_ORIGIN: "https://xhr.test" }),
+    })
+    const env = await freshEnv()
+    expect(env("NEXT_PUBLIC_ORIGIN")).toBe("https://xhr.test")
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  test("never fetches under NODE_ENV=test (jsdom suites use process.env)", async () => {
+    setNodeEnv("test")
+    const { send } = mockXhr({ status: 200, responseText: "{}" })
+    const env = await freshEnv()
+    env("NEXT_PUBLIC_ORIGIN")
+    expect(send).not.toHaveBeenCalled()
+  })
 })
 
 /*
