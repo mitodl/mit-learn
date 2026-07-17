@@ -42,3 +42,7 @@ class ContentFeedbackAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):  # noqa: ARG002
         """Feedback records are not deletable from the admin."""
         return False
+
+    def has_change_permission(self, request, obj=None):  # noqa: ARG002
+        """Records are append-only; the admin is view-only (no no-op saves)."""
+        return False

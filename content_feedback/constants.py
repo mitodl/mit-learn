@@ -16,3 +16,12 @@ class ContentFeedbackSentiment(ExtendedEnum):
     positive = "Positive"
     negative = "Negative"
     idea = "Idea"
+
+
+# Django field choices: stored value is the member name (matches the MFE
+# payload), label is the human-readable value. Referenced by the model field and
+# by drf-spectacular's ENUM_NAME_OVERRIDES so the generated schema component is
+# named ContentFeedbackSentimentEnum (not the generic SentimentEnum).
+CONTENT_FEEDBACK_SENTIMENT_CHOICES = tuple(
+    (member.name, member.value) for member in ContentFeedbackSentiment
+)

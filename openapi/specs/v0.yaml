@@ -1744,8 +1744,10 @@ components:
           maxLength: 255
         url:
           type: string
+          format: uri
+          maxLength: 2083
         sentiment:
-          $ref: '#/components/schemas/SentimentEnum'
+          $ref: '#/components/schemas/ContentFeedbackSentimentEnum'
         comment:
           type: string
       required:
@@ -1782,14 +1784,30 @@ components:
           maxLength: 255
         url:
           type: string
+          format: uri
+          maxLength: 2083
         sentiment:
-          $ref: '#/components/schemas/SentimentEnum'
+          $ref: '#/components/schemas/ContentFeedbackSentimentEnum'
         comment:
           type: string
       required:
       - block_usage_key
       - course_id
       - sentiment
+    ContentFeedbackSentimentEnum:
+      enum:
+      - positive
+      - negative
+      - idea
+      type: string
+      description: |-
+        * `positive` - Positive
+        * `negative` - Negative
+        * `idea` - Idea
+      x-enum-descriptions:
+      - Positive
+      - Negative
+      - Idea
     ContentFile:
       type: object
       description: Serializer class for course run ContentFiles
@@ -5433,20 +5451,6 @@ components:
       required:
       - problem_set
       - solution_set
-    SentimentEnum:
-      enum:
-      - positive
-      - negative
-      - idea
-      type: string
-      description: |-
-        * `positive` - Positive
-        * `negative` - Negative
-        * `idea` - Idea
-      x-enum-descriptions:
-      - Positive
-      - Negative
-      - Idea
     SiteTypeEnum:
       enum:
       - facebook

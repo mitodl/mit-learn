@@ -435,10 +435,10 @@ export interface ContentFeedback {
   url?: string
   /**
    *
-   * @type {SentimentEnum}
+   * @type {ContentFeedbackSentimentEnum}
    * @memberof ContentFeedback
    */
-  sentiment: SentimentEnum
+  sentiment: ContentFeedbackSentimentEnum
   /**
    *
    * @type {string}
@@ -497,10 +497,10 @@ export interface ContentFeedbackRequest {
   url?: string
   /**
    *
-   * @type {SentimentEnum}
+   * @type {ContentFeedbackSentimentEnum}
    * @memberof ContentFeedbackRequest
    */
-  sentiment: SentimentEnum
+  sentiment: ContentFeedbackSentimentEnum
   /**
    *
    * @type {string}
@@ -508,6 +508,36 @@ export interface ContentFeedbackRequest {
    */
   comment?: string
 }
+
+/**
+ * * `positive` - Positive * `negative` - Negative * `idea` - Idea
+ * @export
+ * @enum {string}
+ */
+
+export const ContentFeedbackSentimentEnumDescriptions = {
+  positive: "Positive",
+  negative: "Negative",
+  idea: "Idea",
+} as const
+
+export const ContentFeedbackSentimentEnum = {
+  /**
+   * Positive
+   */
+  Positive: "positive",
+  /**
+   * Negative
+   */
+  Negative: "negative",
+  /**
+   * Idea
+   */
+  Idea: "idea",
+} as const
+
+export type ContentFeedbackSentimentEnum =
+  (typeof ContentFeedbackSentimentEnum)[keyof typeof ContentFeedbackSentimentEnum]
 
 /**
  * Serializer class for course run ContentFiles
@@ -5313,35 +5343,6 @@ export interface RetrieveProblemResponse {
    */
   solution_set: string
 }
-/**
- * * `positive` - Positive * `negative` - Negative * `idea` - Idea
- * @export
- * @enum {string}
- */
-
-export const SentimentEnumDescriptions = {
-  positive: "Positive",
-  negative: "Negative",
-  idea: "Idea",
-} as const
-
-export const SentimentEnum = {
-  /**
-   * Positive
-   */
-  Positive: "positive",
-  /**
-   * Negative
-   */
-  Negative: "negative",
-  /**
-   * Idea
-   */
-  Idea: "idea",
-} as const
-
-export type SentimentEnum = (typeof SentimentEnum)[keyof typeof SentimentEnum]
-
 /**
  * * `facebook` - facebook * `linkedin` - linkedin * `personal` - personal * `twitter` - twitter
  * @export

@@ -10,6 +10,11 @@ open_spectacular_settings = {
     "SERVE_URLCONF": "main.urls",
     "ENUM_GENERATE_CHOICE_DESCRIPTION": True,
     "COMPONENT_SPLIT_REQUEST": True,
+    "ENUM_NAME_OVERRIDES": {
+        "ContentFeedbackSentimentEnum": (
+            "content_feedback.constants.CONTENT_FEEDBACK_SENTIMENT_CHOICES"
+        ),
+    },
     "AUTHENTICATION_WHITELIST": [],
     "SCHEMA_PATH_PREFIX": "/api/v[0-9]",
     "POSTPROCESSING_HOOKS": [

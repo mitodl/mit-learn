@@ -3,7 +3,7 @@
 from django.conf import settings
 from django.db import models
 
-from content_feedback.constants import ContentFeedbackSentiment
+from content_feedback.constants import CONTENT_FEEDBACK_SENTIMENT_CHOICES
 from main.models import TimestampedModel
 
 
@@ -31,10 +31,10 @@ class ContentFeedback(TimestampedModel):
     block_type = models.CharField(max_length=64, blank=True)
     block_display_name = models.CharField(max_length=255, blank=True)
     unit_title = models.CharField(max_length=255, blank=True)
-    url = models.TextField(blank=True)
+    url = models.URLField(max_length=2083, blank=True)
     sentiment = models.CharField(
         max_length=10,
-        choices=((member.name, member.value) for member in ContentFeedbackSentiment),
+        choices=CONTENT_FEEDBACK_SENTIMENT_CHOICES,
     )
     comment = models.TextField(blank=True)
 
