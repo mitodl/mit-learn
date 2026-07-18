@@ -387,7 +387,7 @@ def test_search_index_plugin_content_files_loaded_published_run_with_qdrant(
     SearchIndexPlugin().content_files_loaded(run)
 
     mock_search_index_helpers.mock_embed_run_contentfiles_immutable_signature.assert_called_once_with(
-        run.id
+        run.id, None
     )
     mock_search_index_helpers.mock_upsert_contentfiles_immutable_signature.assert_called_once_with(
         run.id
@@ -411,7 +411,7 @@ def test_content_files_loaded_unpublished_run_embeds_qdrant_only(
     SearchIndexPlugin().content_files_loaded(run)
 
     mock_search_index_helpers.mock_embed_run_contentfiles_immutable_signature.assert_called_once_with(
-        run.id
+        run.id, None
     )
     mock_search_index_helpers.mock_remove_unpublished_run_contentfiles_immutable_signature.assert_called_once_with(
         run.id
@@ -447,7 +447,7 @@ def test_content_files_loaded_non_best_published_run_skips_opensearch(
     SearchIndexPlugin().content_files_loaded(non_best)
 
     mock_search_index_helpers.mock_embed_run_contentfiles_immutable_signature.assert_called_once_with(
-        non_best.id
+        non_best.id, None
     )
     mock_search_index_helpers.mock_upsert_contentfiles_immutable_signature.assert_not_called()
 
@@ -470,7 +470,7 @@ def test_content_files_loaded_test_mode_published_run_indexes_opensearch(
         run.id
     )
     mock_search_index_helpers.mock_embed_run_contentfiles_immutable_signature.assert_called_once_with(
-        run.id
+        run.id, None
     )
 
 
@@ -492,7 +492,7 @@ def test_content_files_loaded_variant_run_skips_opensearch(
 
     mock_search_index_helpers.mock_upsert_contentfiles_immutable_signature.assert_not_called()
     mock_search_index_helpers.mock_embed_run_contentfiles_immutable_signature.assert_called_once_with(
-        run.id
+        run.id, None
     )
     mock_search_index_helpers.mock_remove_unpublished_run_contentfiles_immutable_signature.assert_called_once_with(
         run.id
@@ -568,3 +568,29 @@ def test_search_index_plugin_resource_upserted_generate_embeddings(
     mock_search_index_helpers.mock_generate_embeddings_immutable_signature.assert_called_once_with(
         [resource.id], resource_type, overwrite=True
     )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("removed_unpublished", "expect_remove_called"),
+    [(True, True), (None, True), (False, False)],
+)
+def test_content_files_loaded_removed_unpublished_tristate(
+    mock_search_index_helpers, settings, removed_unpublished, expect_remove_called
+):
+    """None (legacy) and True append the remove-unpublished task; only False skips."""
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    run = LearningResourceRunFactory.create(
+        published=True, learning_resource__create_runs=False
+    )
+    ContentFileFactory.create(run=run)
+
+    SearchIndexPlugin().content_files_loaded(
+        run, content_file_ids=None, removed_unpublished=removed_unpublished
+    )
+
+    remove_mock = mock_search_index_helpers.mock_remove_unpublished_run_contentfiles_immutable_signature
+    if expect_remove_called:
+        remove_mock.assert_called_once_with(run.id)
+    else:
+        remove_mock.assert_not_called()

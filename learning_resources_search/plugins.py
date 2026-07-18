@@ -257,16 +257,23 @@ class SearchIndexPlugin:
         run.delete()
 
     @hookimpl
-    def content_files_loaded(self, run):
+    def content_files_loaded(
+        self, run, content_file_ids=None, removed_unpublished=None
+    ):
         """
         Upsert a created/modified run's content files.
 
-        Qdrant: embed every loaded run (all runs of a published/test_mode course)
-        and drop stale files. OpenSearch: index only the best published non-B2B
-        run, or any published non-variant run of a test_mode course.
+        Qdrant: embed the changed files (or all files when content_file_ids is
+        None) and drop stale files. OpenSearch: index only the best published
+        non-B2B run, or any published non-variant run of a test_mode course.
 
          Args:
              run(LearningResourceRun): The LearningResourceRun that was upserted
+             content_file_ids: ids of the files created/changed this load, or None
+                 to embed all of the run's published files (backfill / republish)
+             removed_unpublished: whether any previously-published files were
+                 unpublished this load; None (unknown, legacy) still purges, only
+                 an explicit False skips the removal task
         """
         if not run.content_files.exists():
             return
@@ -283,10 +290,15 @@ class SearchIndexPlugin:
                 index_tasks.append(tasks.index_run_content_files.si(run.id))
 
             if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
-                index_tasks.append(vector_tasks.embed_run_content_files.si(run.id))
                 index_tasks.append(
-                    vector_tasks.remove_unpublished_run_content_files.si(run.id)
+                    vector_tasks.embed_run_content_files.si(run.id, content_file_ids)
                 )
+                # None (legacy/unknown) keeps the historical always-purge behavior;
+                # only load_content_files, which knows definitively, passes False.
+                if removed_unpublished is not False:
+                    index_tasks.append(
+                        vector_tasks.remove_unpublished_run_content_files.si(run.id)
+                    )
 
         if index_tasks:
             try_with_retry_as_task(chain(*index_tasks))

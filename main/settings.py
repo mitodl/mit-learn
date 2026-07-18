@@ -778,6 +778,14 @@ QDRANT_CHUNK_SIZE = get_int(
     default=10,
 )
 
+# Max changed content-file ids passed as an argument to embed_run_content_files.
+# Above this, load_content_files passes None so the task re-queries the run's
+# published files itself, keeping the broker message small on large re-ingests.
+CONTENT_FILE_EMBED_ID_CAP = get_int(
+    name="CONTENT_FILE_EMBED_ID_CAP",
+    default=1000,
+)
+
 QDRANT_ENCODER = get_string(
     name="QDRANT_ENCODER", default="vector_search.encoders.gensim.GensimEncoder"
 )

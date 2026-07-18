@@ -463,15 +463,24 @@ def embed_new_content_files(self):
 
 
 @app.task(bind=True)
-def embed_run_content_files(self, run_id):
+def embed_run_content_files(self, run_id, content_file_ids=None):
     """
-    Embed contentfiles associated with a run
-    """
-    content_file_ids = list(
-        ContentFile.objects.filter(run__id=run_id).values_list("id", flat=True)
-    )
+    Embed published content files associated with a run.
 
-    return _replace_with_finalized_chain(self, content_file_ids, overwrite=True)
+    Args:
+        run_id (int): the run whose content files to embed
+        content_file_ids (list of int or None): when provided, only these files are
+            embedded (the ETL change-detection path passes just the changed files);
+            when None, all published files for the run are embedded (backfill /
+            republish).
+    """
+    content_files = ContentFile.objects.filter(run__id=run_id, published=True)
+    if content_file_ids is not None:
+        content_files = content_files.filter(id__in=content_file_ids)
+    ids = list(content_files.values_list("id", flat=True))
+    if not ids:
+        return None
+    return _replace_with_finalized_chain(self, ids, overwrite=True)
 
 
 @app.task(bind=True)
