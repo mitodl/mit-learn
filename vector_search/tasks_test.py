@@ -767,6 +767,57 @@ def test_embed_run_content_files_no_files_returns_none(mocker, mocked_celery):
     mocked_celery.chain.assert_not_called()
 
 
+def test_embed_run_content_files_only_given_ids(mocker, mocked_celery, settings):
+    """When content_file_ids is passed, only those published files are embedded."""
+    settings.QDRANT_CHUNK_SIZE = 50
+    run = LearningResourceRunFactory.create()
+    files = ContentFileFactory.create_batch(3, run=run, published=True)
+    changed = [files[0].id, files[1].id]
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        embed_run_content_files.delay(run.id, changed)
+
+    embedded_ids = [
+        content_file_id
+        for mock_call in generate_embeddings_mock.si.call_args_list
+        for content_file_id in mock_call.args[0]
+    ]
+    assert sorted(embedded_ids) == sorted(changed)
+
+
+def test_embed_run_content_files_skips_unpublished(mocker, mocked_celery, settings):
+    """Unpublished files are never embedded, even if named in content_file_ids."""
+    settings.QDRANT_CHUNK_SIZE = 50
+    run = LearningResourceRunFactory.create()
+    published = ContentFileFactory.create(run=run, published=True)
+    unpublished = ContentFileFactory.create(run=run, published=False)
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        embed_run_content_files.delay(run.id, [published.id, unpublished.id])
+
+    embedded_ids = [
+        content_file_id
+        for mock_call in generate_embeddings_mock.si.call_args_list
+        for content_file_id in mock_call.args[0]
+    ]
+    assert embedded_ids == [published.id]
+
+
+def test_embed_run_content_files_empty_ids_returns_none(mocker, mocked_celery):
+    """An explicit empty id list embeds nothing (no changed files this load)."""
+    run = LearningResourceRunFactory.create()
+    ContentFileFactory.create(run=run, published=True)
+    mocker.patch("vector_search.tasks.generate_embeddings", autospec=True)
+    assert embed_run_content_files(run.id, []) is None
+    mocked_celery.group.assert_not_called()
+
+
 def test_embeddings_healthcheck_no_missing_embeddings(mocker):
     """
     Test embeddings_healthcheck when there are no missing embeddings

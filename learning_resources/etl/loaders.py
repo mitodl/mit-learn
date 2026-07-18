@@ -1028,6 +1028,15 @@ def load_content_files(
 
     """
     if course_run.learning_resource.resource_type == LearningResourceType.course.name:
+        # Snapshot existing files so we can embed only what actually changed this
+        # load, rather than re-embedding the whole run every time.
+        prior_files = {
+            key: (checksum, published)
+            for key, checksum, published in ContentFile.objects.filter(
+                run=course_run
+            ).values_list("key", "checksum", "published")
+        }
+
         content_files_ids = []
         content_tags = []
         for content_file in content_files_data:
@@ -1052,6 +1061,7 @@ def load_content_files(
             .values_list("direct_learning_resource_id", flat=True)
             .distinct()
         )
+        removed_unpublished = stale_published_files.exists()
         stale_published_files.update(published=False)
         if stale_direct_resource_ids:
             LearningResource.objects.filter(
@@ -1062,12 +1072,60 @@ def load_content_files(
             ):
                 update_index(resource, newly_created=False)
 
+        changed_ids = _changed_content_file_ids(content_files_ids, prior_files)
+        # Emit the intra-run change ratio so the embedding-skip benefit is
+        # measurable in production (grep "content files changed" in the ETL logs).
+        log.info(
+            "run %s content files changed: %d of %d",
+            course_run.run_id,
+            len(changed_ids),
+            len(content_files_ids),
+        )
+        # Past the cap, hand the task None (re-query published files itself) rather
+        # than serialize a large id list into the broker message. Empty stays empty
+        # (embed nothing); only large lists collapse to None.
+        embed_ids = (
+            None
+            if len(changed_ids) > settings.CONTENT_FILE_EMBED_ID_CAP
+            else changed_ids
+        )
+
         if calc_completeness:
             calculate_completeness(course_run, content_tags=content_tags)
-        content_files_loaded_actions(run=course_run)
+        content_files_loaded_actions(
+            run=course_run,
+            content_file_ids=embed_ids,
+            removed_unpublished=removed_unpublished,
+        )
 
         return content_files_ids
     return None
+
+
+def _changed_content_file_ids(
+    content_files_ids: list[int],
+    prior_files: dict[str, tuple[str, bool]],
+) -> list[int]:
+    """
+    Return the subset of loaded content-file ids that need re-embedding.
+
+    A file is "changed" when it is new, its checksum differs from the prior load,
+    or it transitioned from unpublished to published (an identical-checksum
+    republish still needs re-embedding because it was purged from Qdrant while
+    unpublished).
+    """
+    changed_ids = []
+    for cf_id, key, checksum, published in ContentFile.objects.filter(
+        id__in=content_files_ids
+    ).values_list("id", "key", "checksum", "published"):
+        prior = prior_files.get(key)
+        if (
+            prior is None
+            or prior[0] != checksum
+            or (prior[1] is False and published is True)
+        ):
+            changed_ids.append(cf_id)
+    return changed_ids
 
 
 def load_learning_materials(

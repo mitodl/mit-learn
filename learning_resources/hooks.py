@@ -81,8 +81,17 @@ class LearningResourceHooks:
         """Trigger actions to delete a learning resource offeror"""
 
     @hookspec
-    def content_files_loaded(self, run):
-        """Trigger actions after content files are loaded for a run"""
+    def content_files_loaded(self, run, content_file_ids, removed_unpublished):
+        """
+        Trigger actions after content files are loaded for a run.
+
+        Args:
+            run: the LearningResourceRun whose content files were loaded
+            content_file_ids: ids of the files that were created/changed this load,
+                or None to act on all of the run's files (backfill / republish)
+            removed_unpublished: whether any previously-published files were
+                unpublished this load, or None when unknown (legacy callers)
+        """
 
 
 def get_plugin_manager():

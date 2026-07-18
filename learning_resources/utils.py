@@ -435,13 +435,28 @@ def bulk_resources_unpublished_actions(resource_ids: list[int], resource_type: s
     )
 
 
-def content_files_loaded_actions(run: LearningResourceRun):
+def content_files_loaded_actions(
+    run: LearningResourceRun,
+    content_file_ids: list[int] | None = None,
+    removed_unpublished: bool | None = None,  # noqa: FBT001
+):
     """
-    Trigger plugins when content files are loaded for a LearningResourceRun
+    Trigger plugins when content files are loaded for a LearningResourceRun.
+
+    Args:
+        run: the LearningResourceRun whose content files were loaded
+        content_file_ids: ids of the files created/changed this load, or None to
+            act on all of the run's files (backfill / republish)
+        removed_unpublished: whether any previously-published files were
+            unpublished this load, or None when unknown (legacy callers)
     """
     pm = get_plugin_manager()
     hook = pm.hook
-    hook.content_files_loaded(run=run)
+    hook.content_files_loaded(
+        run=run,
+        content_file_ids=content_file_ids,
+        removed_unpublished=removed_unpublished,
+    )
 
 
 def resource_run_unpublished_actions(run: LearningResourceRun):

@@ -35,6 +35,7 @@ from learning_resources.etl.edx_shared import sync_edx_course_files
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.loaders import (
     ProgramLoadResult,
+    _changed_content_file_ids,
     calculate_completeness,
     load_content_file,
     load_content_files,
@@ -3806,3 +3807,67 @@ def test_load_learning_material(mocker, learning_material_exists):
     assert learning_material.url == content_file.url
 
     assert content_file.direct_learning_resource_id == learning_material.id
+
+
+@pytest.mark.django_db
+def test_changed_content_file_ids_detects_new_changed_and_republished():
+    """
+    Change detection flags new, checksum-changed, and republished (unpublished
+    -> published, identical checksum) files, and excludes unchanged files.
+    """
+    run = LearningResourceRunFactory.create()
+    unchanged = ContentFileFactory.create(run=run, key="unchanged", published=True)
+    changed = ContentFileFactory.create(run=run, key="changed", published=True)
+    republished = ContentFileFactory.create(run=run, key="republished", published=True)
+    new_file = ContentFileFactory.create(run=run, key="new", published=True)
+
+    prior_files = {
+        "unchanged": (unchanged.checksum, True),
+        "changed": ("stale-checksum", True),
+        # was unpublished last load, republished now with the same checksum
+        "republished": (republished.checksum, False),
+        # "new" absent from the prior snapshot entirely
+    }
+
+    result = _changed_content_file_ids(
+        [unchanged.id, changed.id, republished.id, new_file.id], prior_files
+    )
+
+    assert sorted(result) == sorted([changed.id, republished.id, new_file.id])
+
+
+@pytest.mark.django_db
+def test_load_content_files_caps_changed_ids_to_none(mocker, settings):
+    """
+    When the changed-id list exceeds CONTENT_FILE_EMBED_ID_CAP, the hook is handed
+    None so embed_run_content_files re-queries instead of serializing a big list.
+    """
+    settings.CONTENT_FILE_EMBED_ID_CAP = 2
+    course = LearningResourceFactory.create(is_course=True, create_runs=False)
+    run = LearningResourceRunFactory.create(published=True, learning_resource=course)
+    mock_hook = mocker.patch(
+        "learning_resources.etl.loaders.content_files_loaded_actions", autospec=True
+    )
+    payload = [{"key": f"f{i}", "content": f"content {i}"} for i in range(3)]
+
+    load_content_files(run, payload)
+
+    assert mock_hook.call_args.kwargs["content_file_ids"] is None
+
+
+@pytest.mark.django_db
+def test_load_content_files_passes_changed_ids_under_cap(mocker, settings):
+    """Under the cap, the exact changed ids are passed through to the hook."""
+    settings.CONTENT_FILE_EMBED_ID_CAP = 100
+    course = LearningResourceFactory.create(is_course=True, create_runs=False)
+    run = LearningResourceRunFactory.create(published=True, learning_resource=course)
+    mock_hook = mocker.patch(
+        "learning_resources.etl.loaders.content_files_loaded_actions", autospec=True
+    )
+    payload = [{"key": f"f{i}", "content": f"content {i}"} for i in range(3)]
+
+    ids = load_content_files(run, payload)
+
+    passed = mock_hook.call_args.kwargs["content_file_ids"]
+    assert passed is not None
+    assert sorted(passed) == sorted(ids)
