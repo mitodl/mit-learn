@@ -699,8 +699,12 @@ def test_load_course_bad_platform(mocker):
     )
 
 
-def test_load_course_prune_clears_checksum_on_unpublished_runs():
-    """Runs pruned from course data should have checksum reset."""
+def test_load_course_prune_preserves_checksum_on_unpublished_runs():
+    """
+    Runs pruned from course data are unpublished but KEEP their checksum, so a
+    later re-ingest of the same (unchanged) archive is skipped by the archive
+    guard instead of needlessly re-ingesting and re-embedding.
+    """
     platform = LearningResourcePlatformFactory.create()
     course = CourseFactory.create(
         learning_resource__runs=[],
@@ -746,7 +750,8 @@ def test_load_course_prune_clears_checksum_on_unpublished_runs():
     assert retained_run.published is True
     assert retained_run.checksum == "retain_checksum"
     assert pruned_run.published is False
-    assert pruned_run.checksum is None
+    # checksum is preserved (not nulled) so an unchanged archive re-ingest is skipped
+    assert pruned_run.checksum == "pruned_checksum"
 
 
 @pytest.mark.parametrize("course_exists", [True, False])
