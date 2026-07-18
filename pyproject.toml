@@ -96,7 +96,7 @@ dependencies = [
     # client that resolves the gRPC QueryResponse DecodeError observed against server
     # v1.18.2 with cloud_inference=True + prefer_grpc=True.
     "qdrant-client[fastembed]~=1.18.0",
-    "redis>=7.0.0,<8",
+    "redis>=8.0.1,<9",
     "requests>=2.31.0,<3",
     "retry2>=0.9.5,<0.10",
     "selenium>=4.30.0,<5",
