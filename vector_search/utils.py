@@ -502,6 +502,33 @@ def _content_file_embedding_context(document):
     return document.get("content", "")
 
 
+# Sentinel distinguishing "caller did not supply a stored point" from an
+# explicit None (point genuinely absent from Qdrant).
+_UNSET = object()
+
+# Cap ids per Qdrant retrieve so large (backfill / healthcheck) batches stay
+# under the server's request-size limits.
+QDRANT_RETRIEVE_BATCH_SIZE = 256
+
+
+def _batch_retrieve_points(point_ids, collection_name):
+    """
+    Retrieve points by id in sub-batches, returning ``{str(point_id): point}``.
+
+    One (sub-batched) call replaces a per-document ``client.retrieve`` so a batch
+    of N documents costs ⌈N/256⌉ round trips instead of N.
+    """
+    client = qdrant_client()
+    found = {}
+    unique_ids = list(dict.fromkeys(str(pid) for pid in point_ids))
+    for id_batch in chunks(unique_ids, chunk_size=QDRANT_RETRIEVE_BATCH_SIZE):
+        for point in client.retrieve(
+            collection_name=collection_name, ids=list(id_batch)
+        ):
+            found[str(point.id)] = point
+    return found
+
+
 def _process_resource_embeddings(serialized_resources):
     docs = []
     metadata = []
@@ -509,12 +536,19 @@ def _process_resource_embeddings(serialized_resources):
     encoder_dense = dense_encoder()
     encoder_sparse = sparse_encoder()
 
+    stored_points = _batch_retrieve_points(
+        [vector_point_id(vector_point_key(doc)) for doc in serialized_resources],
+        RESOURCES_COLLECTION_NAME,
+    )
+
     for doc in serialized_resources:
-        if not should_generate_resource_embeddings(doc):
-            update_learning_resource_payload(doc)
+        point_id = vector_point_id(vector_point_key(doc))
+        stored_point = stored_points.get(point_id)
+        if not should_generate_resource_embeddings(doc, stored_point=stored_point):
+            update_learning_resource_payload(doc, stored_point=stored_point)
             continue
         metadata.append(doc)
-        ids.append(vector_point_id(vector_point_key(doc)))
+        ids.append(point_id)
         docs.append(_learning_resource_embedding_context(doc))
     if len(docs) > 0:
         embeddings = encoder_dense.embed_documents(docs)
@@ -528,10 +562,20 @@ def _process_resource_embeddings(serialized_resources):
     return None
 
 
-def update_learning_resource_payload(serialized_document):
+def update_learning_resource_payload(serialized_document, stored_point=_UNSET):
     """
     Refresh a resource's Qdrant payload without re-embedding.
+
+    When the caller supplies the already-retrieved stored point and its payload
+    matches, the write is skipped -- avoids a Qdrant write per resource on every
+    metadata sweep even when nothing changed.
     """
+    if (
+        stored_point is not _UNSET
+        and stored_point is not None
+        and stored_point.payload == serialized_document
+    ):
+        return
     point_id = vector_point_id(vector_point_key(serialized_document))
     qdrant_client().overwrite_payload(
         collection_name=RESOURCES_COLLECTION_NAME,
@@ -593,20 +637,24 @@ def _set_payload(points, document, param_map, collection_name):
         )
 
 
-def should_generate_resource_embeddings(serialized_document):
+def should_generate_resource_embeddings(serialized_document, stored_point=_UNSET):
     """
-    Determine if we should generate embeddings for a learning resource
+    Determine if we should generate embeddings for a learning resource.
+
+    Pass stored_point (the already-retrieved point, or None if absent) to reuse a
+    batched retrieve instead of issuing one retrieve per document.
     """
-    client = qdrant_client()
-    point_id = vector_point_id(vector_point_key(serialized_document))
-    response = client.retrieve(
-        collection_name=RESOURCES_COLLECTION_NAME,
-        ids=[point_id],
-    )
-    if len(response) > 0:
-        resource_payload = response[0].payload
+    if stored_point is _UNSET:
+        client = qdrant_client()
+        point_id = vector_point_id(vector_point_key(serialized_document))
+        response = client.retrieve(
+            collection_name=RESOURCES_COLLECTION_NAME,
+            ids=[point_id],
+        )
+        stored_point = response[0] if response else None
+    if stored_point is not None:
         stored_embedding_content = _learning_resource_embedding_context(
-            resource_payload
+            stored_point.payload
         )
         current_embedding_content = _learning_resource_embedding_context(
             serialized_document
@@ -662,12 +710,19 @@ def _stored_content_payloads(
 
 
 def should_generate_content_embeddings(
-    serialized_document: dict, point_id: str | None = None
+    serialized_document: dict, point_id: str | None = None, stored_point=_UNSET
 ) -> bool:
     """
-    Determine if we should generate embeddings for a content file
+    Determine if we should generate embeddings for a content file.
+
+    Pass stored_point (the already-retrieved chunk-0 point, or None if absent) to
+    reuse a batched retrieve instead of issuing one retrieve per document.
     """
-    point = _retrieve_content_file_point(serialized_document, point_id=point_id)
+    point = (
+        _retrieve_content_file_point(serialized_document, point_id=point_id)
+        if stored_point is _UNSET
+        else stored_point
+    )
     if not point:
         return True
     qdrant_checksum = (point.payload or {}).get("checksum")
@@ -688,6 +743,15 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
     metadata = []
     ids = []
     docs = []
+    # One batched retrieve of the course-info chunk-0 points, keyed by point id,
+    # instead of a per-resource retrieve inside the loop.
+    stored_points = _batch_retrieve_points(
+        [
+            vector_point_id(vector_point_key(doc, document_type="course_information"))
+            for doc in serialized_resources
+        ],
+        CONTENT_FILES_COLLECTION_NAME,
+    )
     for doc in serialized_resources:
         resource_vector_point_id = str(vector_point_id(vector_point_key(doc)))
         serializer = LearningResourceMetadataDisplaySerializer(
@@ -705,7 +769,9 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
             vector_point_key(doc, document_type="course_information")
         )
         if not should_generate_content_embeddings(
-            serialized_document, document_point_id
+            serialized_document,
+            document_point_id,
+            stored_point=stored_points.get(str(document_point_id)),
         ):
             continue
 
