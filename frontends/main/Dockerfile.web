@@ -24,7 +24,7 @@
 #     -e NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS=true \
 #     mit-learn-nextjs:test
 
-FROM node:24-alpine AS base
+FROM node:24-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS base
 
 RUN apk update
 RUN apk add --no-cache libc6-compat && \
@@ -88,7 +88,7 @@ CMD ["yarn", "dev"]
 # The standalone server is started directly with node (not `yarn start`), which
 # avoids yarn overhead and is the pattern recommended by Next.js for Docker:
 # https://github.com/vercel/next.js/tree/canary/examples/with-docker
-FROM node:24-alpine AS runner
+FROM node:24-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS runner
 
 WORKDIR /app
 
