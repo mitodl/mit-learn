@@ -31,7 +31,7 @@ services:
   redis:
     profiles:
       - backend
-    image: redis:8.2.2
+    image: redis:8.6.3@sha256:4d25e2fe601f7ffaeb4437cb6ced3518bc36edf34ebe98863c80836943d94529
     healthcheck:
       test: ["CMD", "redis-cli", "ping", "|", "grep", "PONG"]
       interval: 3s
