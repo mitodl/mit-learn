@@ -216,6 +216,11 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TIMEZONE = "UTC"
 CELERY_TASK_TASK_TRACK_STARTED = True
 CELERY_TASK_SEND_SENT_EVENT = True
+# Expire orphaned per-consumer event queues so celeryev traffic does not
+# accumulate unbounded in Redis when an event consumer (Flower, `celery events`,
+# or a worker started with -E) disconnects without deregistering.
+CELERY_EVENT_QUEUE_EXPIRES = get_int("CELERY_EVENT_QUEUE_EXPIRES", 60)
+CELERY_EVENT_QUEUE_TTL = get_int("CELERY_EVENT_QUEUE_TTL", 5)
 CELERY_RATE_LIMIT = get_string("CELERY_DEFAULT_RATE_LIMIT", "600/m")
 CELERY_SEARCH_RATE_LIMIT = get_string("CELERY_SEARCH_RATE_LIMIT", CELERY_RATE_LIMIT)
 CELERY_VECTOR_SEARCH_RATE_LIMIT = get_string(
