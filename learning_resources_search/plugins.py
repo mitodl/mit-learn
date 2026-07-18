@@ -2,7 +2,7 @@
 
 import logging
 
-from celery import chain
+from celery import Task, chain
 from django.apps import apps
 from django.conf import settings as django_settings
 
@@ -22,12 +22,22 @@ log = logging.getLogger()
 
 def try_with_retry_as_task(function, *args):
     """
-    Try running the task, if it errors, run it as a celery task.
+    Dispatch a task/signature to the broker with publish-time retry.
+
+    Accepts a bare task object (plus positional args) or an already-built
+    signature (e.g. a chain). Publish-time retry absorbs transient broker
+    blips without a second manual publish that could double-dispatch.
     """
-    try:
-        function(*args)
-    except Exception:  # noqa: BLE001
-        function.delay(*args)
+    signature = function.si(*args) if isinstance(function, Task) else function
+    signature.apply_async(
+        retry=True,
+        retry_policy={
+            "max_retries": 3,
+            "interval_start": 0.2,
+            "interval_step": 0.5,
+            "interval_max": 2,
+        },
+    )
 
 
 class SearchIndexPlugin:
