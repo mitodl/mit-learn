@@ -730,6 +730,15 @@ def test_embed_run_content_files_no_files_returns_none(mocker, mocked_celery):
     mocked_celery.group.assert_not_called()
 
 
+def test_embed_run_content_files_only_unpublished_returns_none(mocker, mocked_celery):
+    """A run whose content files are all unpublished embeds nothing (published filter)."""
+    run = LearningResourceRunFactory.create()
+    ContentFileFactory.create_batch(2, run=run, published=False)
+    mocker.patch("vector_search.tasks.generate_embeddings", autospec=True)
+    assert embed_run_content_files(run.id) is None
+    mocked_celery.group.assert_not_called()
+
+
 def test_embeddings_healthcheck_no_missing_embeddings(mocker):
     """
     Test embeddings_healthcheck when there are no missing embeddings
