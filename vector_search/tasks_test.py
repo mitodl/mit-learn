@@ -780,12 +780,7 @@ def test_embed_run_content_files_only_given_ids(mocker, mocked_celery, settings)
     with pytest.raises(mocked_celery.replace_exception_class):
         embed_run_content_files.delay(run.id, changed)
 
-    embedded_ids = [
-        content_file_id
-        for mock_call in generate_embeddings_mock.si.call_args_list
-        for content_file_id in mock_call.args[0]
-    ]
-    assert sorted(embedded_ids) == sorted(changed)
+    assert _embedded_content_file_ids(generate_embeddings_mock) == set(changed)
 
 
 def test_embed_run_content_files_skips_unpublished(mocker, mocked_celery, settings):
@@ -801,12 +796,7 @@ def test_embed_run_content_files_skips_unpublished(mocker, mocked_celery, settin
     with pytest.raises(mocked_celery.replace_exception_class):
         embed_run_content_files.delay(run.id, [published.id, unpublished.id])
 
-    embedded_ids = [
-        content_file_id
-        for mock_call in generate_embeddings_mock.si.call_args_list
-        for content_file_id in mock_call.args[0]
-    ]
-    assert embedded_ids == [published.id]
+    assert _embedded_content_file_ids(generate_embeddings_mock) == {published.id}
 
 
 def test_embed_run_content_files_empty_ids_returns_none(mocker, mocked_celery):
