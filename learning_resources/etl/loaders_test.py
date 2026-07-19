@@ -3837,28 +3837,18 @@ def test_changed_content_file_ids_detects_new_changed_and_republished():
 
 
 @pytest.mark.django_db
-def test_load_content_files_caps_changed_ids_to_none(mocker, settings):
+@pytest.mark.parametrize(
+    ("cap", "expect_ids"),
+    # 3 changed files: cap=2 exceeds it → None; cap=100 → exact ids passed through
+    [(2, False), (100, True)],
+)
+def test_load_content_files_changed_id_cap(mocker, settings, cap, expect_ids):
     """
-    When the changed-id list exceeds CONTENT_FILE_EMBED_ID_CAP, the hook is handed
-    None so embed_run_content_files re-queries instead of serializing a big list.
+    At/under CONTENT_FILE_EMBED_ID_CAP the exact changed ids reach the hook; over it
+    the hook is handed None so embed_run_content_files re-queries instead of
+    serializing a big list.
     """
-    settings.CONTENT_FILE_EMBED_ID_CAP = 2
-    course = LearningResourceFactory.create(is_course=True, create_runs=False)
-    run = LearningResourceRunFactory.create(published=True, learning_resource=course)
-    mock_hook = mocker.patch(
-        "learning_resources.etl.loaders.content_files_loaded_actions", autospec=True
-    )
-    payload = [{"key": f"f{i}", "content": f"content {i}"} for i in range(3)]
-
-    load_content_files(run, payload)
-
-    assert mock_hook.call_args.kwargs["content_file_ids"] is None
-
-
-@pytest.mark.django_db
-def test_load_content_files_passes_changed_ids_under_cap(mocker, settings):
-    """Under the cap, the exact changed ids are passed through to the hook."""
-    settings.CONTENT_FILE_EMBED_ID_CAP = 100
+    settings.CONTENT_FILE_EMBED_ID_CAP = cap
     course = LearningResourceFactory.create(is_course=True, create_runs=False)
     run = LearningResourceRunFactory.create(published=True, learning_resource=course)
     mock_hook = mocker.patch(
@@ -3869,5 +3859,7 @@ def test_load_content_files_passes_changed_ids_under_cap(mocker, settings):
     ids = load_content_files(run, payload)
 
     passed = mock_hook.call_args.kwargs["content_file_ids"]
-    assert passed is not None
-    assert sorted(passed) == sorted(ids)
+    if expect_ids:
+        assert sorted(passed) == sorted(ids)
+    else:
+        assert passed is None
