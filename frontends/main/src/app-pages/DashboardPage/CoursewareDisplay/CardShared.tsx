@@ -83,7 +83,7 @@ const TitleLink = styled(Link)(({ theme }) => ({
 const TitleText = styled.h3<{ clickable?: boolean }>(
   ({ theme, clickable }) => ({
     margin: 0,
-    ...theme.typography.subtitle2,
+    ...theme.typography.subtitle1,
     color: theme.custom.colors.darkGray2,
     cursor: clickable ? "pointer" : "default",
     [theme.breakpoints.down("sm")]: {
