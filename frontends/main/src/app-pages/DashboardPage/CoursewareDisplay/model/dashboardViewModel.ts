@@ -1031,7 +1031,16 @@ const FALLBACK_NATIVE_LANGUAGE_NAMES: Record<string, string> = {
   "zh-tw": "繁體中文",
 }
 
-const nativeLanguageNameCache = new Map<string, string>()
+/**
+ * `resolved: false` marks a raw, untranslated locale code that fell through
+ * every lookup (unknown to both `Intl.DisplayNames` and the static fallback
+ * table) — as opposed to a genuine human-readable name. Callers should not
+ * apply display-name casing rules (e.g. title-casing the first word) to an
+ * unresolved code, since it isn't a name at all.
+ */
+type NativeLanguageNameResult = { label: string; resolved: boolean }
+
+const nativeLanguageNameCache = new Map<string, NativeLanguageNameResult>()
 let cachedDisplayNamesRef: typeof Intl.DisplayNames | undefined =
   Intl.DisplayNames
 
@@ -1042,30 +1051,35 @@ const ensureNativeLanguageNameCacheIsFresh = (): void => {
   }
 }
 
-const getFallbackNativeLanguageName = (languageCode: string): string | null => {
+const getFallbackNativeLanguageName = (
+  languageCode: string,
+): NativeLanguageNameResult | null => {
   const exactMatch = FALLBACK_NATIVE_LANGUAGE_NAMES[languageCode]
   if (exactMatch) {
-    return exactMatch
+    return { label: exactMatch, resolved: true }
   }
   const baseLanguageSubtag = languageCode.split("-")[0]
   if (!baseLanguageSubtag) {
     return null
   }
-  return (
-    FALLBACK_NATIVE_LANGUAGE_NAMES[baseLanguageSubtag] ?? baseLanguageSubtag
-  )
+  const baseMatch = FALLBACK_NATIVE_LANGUAGE_NAMES[baseLanguageSubtag]
+  return baseMatch
+    ? { label: baseMatch, resolved: true }
+    : { label: baseLanguageSubtag, resolved: false }
 }
 
-const getNativeLanguageName = (languageCode: string): string => {
+const getNativeLanguageName = (
+  languageCode: string,
+): NativeLanguageNameResult => {
   ensureNativeLanguageNameCacheIsFresh()
   const normalizedLanguageCode = languageCode
     .trim()
     .toLowerCase()
     .replace("_", "-")
   const baseLanguageSubtag = normalizedLanguageCode.split("-")[0]
-  const cachedLabel = nativeLanguageNameCache.get(normalizedLanguageCode)
-  if (cachedLabel) {
-    return cachedLabel
+  const cachedResult = nativeLanguageNameCache.get(normalizedLanguageCode)
+  if (cachedResult) {
+    return cachedResult
   }
   let resolvedLabel: string | null = null
   try {
@@ -1091,22 +1105,38 @@ const getNativeLanguageName = (languageCode: string): string => {
   } catch {
     // Fall through to static fallback labels.
   }
-  const finalLabel =
-    resolvedLabel ??
-    getFallbackNativeLanguageName(normalizedLanguageCode) ??
-    normalizedLanguageCode
-  nativeLanguageNameCache.set(normalizedLanguageCode, finalLabel)
-  return finalLabel
+  const result: NativeLanguageNameResult = resolvedLabel
+    ? { label: resolvedLabel, resolved: true }
+    : (getFallbackNativeLanguageName(normalizedLanguageCode) ?? {
+        label: normalizedLanguageCode,
+        resolved: false,
+      })
+  nativeLanguageNameCache.set(normalizedLanguageCode, result)
+  return result
 }
 
 const buildVariantKey = (variant: SupportedVariant): string =>
   `language:${variant.language ?? ""}|industry:${variant.variant_industry ?? ""}|length:${variant.variant_length ?? ""}`
 
+/**
+ * `Intl.DisplayNames` returns language names in mid-sentence (dictionary)
+ * case, e.g. "español latinoamericano". Per CLDR's `contextTransforms` for
+ * the "languages" category (`titlecase-firstword`), UI list/menu and
+ * standalone contexts capitalize only the first word, not every word.
+ * `Intl.DisplayNames` has no option to request this directly, so it's
+ * applied here.
+ */
+const capitalizeFirstWord = (value: string): string =>
+  value ? value.charAt(0).toUpperCase() + value.slice(1) : value
+
 // Per-dimension display labels. These are the single source of truth shared by
 // both buildVariantLabel (what the picker renders) and sortVariants (the order
 // it renders in) so the sort always matches the visible text.
-const getVariantLanguageLabel = (variant: SupportedVariant): string =>
-  variant.language ? getNativeLanguageName(variant.language) : ""
+const getVariantLanguageLabel = (variant: SupportedVariant): string => {
+  if (!variant.language) return ""
+  const { label, resolved } = getNativeLanguageName(variant.language)
+  return resolved ? capitalizeFirstWord(label) : label
+}
 
 const getVariantIndustryLabel = (variant: SupportedVariant): string =>
   variant.variant_industry
