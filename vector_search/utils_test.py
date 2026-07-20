@@ -59,6 +59,8 @@ from vector_search.constants import (
 )
 from vector_search.encoders.utils import dense_encoder, sparse_encoder
 from vector_search.utils import (
+    QDRANT_RETRIEVE_BATCH_SIZE,
+    _batch_retrieve_points,
     _chunk_documents,
     _chunk_markdown_documents,
     _embed_course_metadata_as_contentfile,
@@ -1341,9 +1343,13 @@ def test_embed_learning_resources_overwrites_summaries_for_changed_content(mocke
     mocker.patch(
         "vector_search.utils.serialize_bulk_content_files", return_value=serialized
     )
+
+    def _checksum_changed(resource, stored_point=None):
+        return resource["id"] == changed_content_file.id
+
     mocker.patch(
         "vector_search.utils._content_file_stored_checksum_changed",
-        side_effect=lambda resource: resource["id"] == changed_content_file.id,
+        side_effect=_checksum_changed,
     )
 
     summarize_mock = mocker.patch(
@@ -1548,6 +1554,9 @@ def test_embed_course_metadata_as_contentfile_uploads_points_on_change(mocker):
     record that matches the checksum of metadata doc
     """
     mock_point = mocker.Mock()
+    mock_point.id = vector_point_id(
+        vector_point_key(serialized_resource, document_type="course_information")
+    )
     mock_point.payload = {"checksum": "checksum2"}
     mock_client.retrieve.return_value = [mock_point]
 
@@ -2612,3 +2621,71 @@ def test_check_missing_content_file_ids_skips_unimportant_block_types(mocker):
     mock_present.assert_not_called()
     mock_client.count.assert_not_called()
     mock_log.assert_not_called()
+
+
+def test_batch_retrieve_points_subbatches_at_cap(mocker):
+    """_batch_retrieve_points splits ids into retrieve calls capped at 256."""
+    mock_client = mocker.patch("vector_search.utils.qdrant_client")
+    mock_client.return_value.retrieve.return_value = []
+    ids = [str(i) for i in range(QDRANT_RETRIEVE_BATCH_SIZE * 2 + 5)]
+
+    _batch_retrieve_points(ids, "some_collection")
+
+    # ceil((2*256+5)/256) == 3 retrieve calls, none exceeding the cap
+    assert mock_client.return_value.retrieve.call_count == 3
+    for call in mock_client.return_value.retrieve.call_args_list:
+        assert len(call.kwargs["ids"]) <= QDRANT_RETRIEVE_BATCH_SIZE
+
+
+def test_update_content_file_payload_skips_write_when_projection_matches(mocker):
+    """A stored point whose mapped fields already match the doc → no write."""
+    doc = {
+        "key": "k1",
+        "run_readable_id": "run1",
+        "resource_readable_id": "res1",
+        "checksum": "abc",
+    }
+    stored = mocker.MagicMock()
+    stored.payload = dict(doc)
+    mock_client = mocker.patch("vector_search.utils.qdrant_client")
+    retrieve_params = mocker.patch(
+        "vector_search.utils.retrieve_points_matching_params"
+    )
+
+    update_content_file_payload(doc, stored_point=stored)
+
+    retrieve_params.assert_not_called()
+    mock_client.return_value.set_payload.assert_not_called()
+
+
+def test_update_content_file_payload_writes_when_projection_differs(mocker):
+    """A stored point whose checksum differs from the doc → payload refreshed."""
+    doc = {
+        "key": "k1",
+        "run_readable_id": "run1",
+        "resource_readable_id": "res1",
+        "checksum": "new",
+    }
+    stored = mocker.MagicMock()
+    stored.payload = {"key": "k1", "checksum": "old"}
+    mock_client = mocker.patch("vector_search.utils.qdrant_client")
+    mocker.patch(
+        "vector_search.utils.retrieve_points_matching_params",
+        return_value=[mocker.MagicMock(id="p1")],
+    )
+
+    update_content_file_payload(doc, stored_point=stored)
+
+    mock_client.return_value.set_payload.assert_called_once()
+
+
+def test_update_learning_resource_payload_skips_write_when_stored_matches(mocker):
+    """Unchanged resource payload on a sweep → no overwrite_payload write."""
+    doc = {"readable_id": "r1", "title": "t"}
+    stored = mocker.MagicMock()
+    stored.payload = dict(doc)
+    mock_client = mocker.patch("vector_search.utils.qdrant_client")
+
+    update_learning_resource_payload(doc, stored_point=stored)
+
+    mock_client.return_value.overwrite_payload.assert_not_called()

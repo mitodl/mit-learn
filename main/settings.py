@@ -771,9 +771,21 @@ QDRANT_SPARSE_ENCODER = get_string(
     default="vector_search.encoders.sparse_hash.SparseHashEncoder",
 )
 
+# Number of resource ids per generate_embeddings task. Resource-metadata
+# embedding is cheap per item, so a larger chunk means far fewer tasks.
 QDRANT_CHUNK_SIZE = get_int(
     name="QDRANT_CHUNK_SIZE",
-    default=10,
+    default=100,
+)
+
+# Number of content-file ids per generate_embeddings task. Kept smaller than
+# QDRANT_CHUNK_SIZE because content-file tasks do inline LLM summarization +
+# embedding per file, so a large chunk risks long runtimes (visibility_timeout)
+# and high worker memory. Raise toward QDRANT_CHUNK_SIZE once summarization is
+# decoupled from embedding.
+QDRANT_CONTENT_FILE_CHUNK_SIZE = get_int(
+    name="QDRANT_CONTENT_FILE_CHUNK_SIZE",
+    default=25,
 )
 
 QDRANT_ENCODER = get_string(

@@ -25,6 +25,14 @@ CELERY_RESULT_BACKEND = get_string("CELERY_RESULT_BACKEND", REDIS_URL)
 # (the default here) that saturates memory. Keep results only long enough for
 # chord callbacks to consume them.
 CELERY_RESULT_EXPIRES = get_int("CELERY_RESULT_EXPIRES", 60 * 60)
+# visibility_timeout must exceed the longest possible task runtime (inline
+# summarization + embedding) plus max retry backoff (600s), or in-flight tasks
+# get redelivered while still running, amplifying load during a backlog.
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    "visibility_timeout": get_int(
+        name="CELERY_BROKER_VISIBILITY_TIMEOUT", default=6 * 60 * 60
+    ),
+}
 CELERY_BEAT_SCHEDULER = RedBeatScheduler
 redbeat_redis_url = CELERY_BROKER_URL
 CELERY_TASK_ALWAYS_EAGER = get_bool("CELERY_TASK_ALWAYS_EAGER", False)  # noqa: FBT003
@@ -221,3 +229,5 @@ CELERY_SEARCH_RATE_LIMIT = get_string("CELERY_SEARCH_RATE_LIMIT", CELERY_RATE_LI
 CELERY_VECTOR_SEARCH_RATE_LIMIT = get_string(
     "CELERY_VECTOR_SEARCH_RATE_LIMIT", CELERY_RATE_LIMIT
 )
+# Per-worker execution rate for generate_embeddings; tunable without a deploy.
+CELERY_EMBEDDINGS_RATE_LIMIT = get_string("CELERY_EMBEDDINGS_RATE_LIMIT", "200/m")
