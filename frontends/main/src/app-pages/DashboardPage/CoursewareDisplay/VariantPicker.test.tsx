@@ -65,7 +65,7 @@ describe("VariantPicker labels", () => {
       name: /Customized Universal AI/,
     })
     // the language/industry/length detail moves to the card subtext
-    expect(esRadio).toHaveAccessibleName(/español.*General.*Full/)
+    expect(esRadio).toHaveAccessibleName(/español.*General.*Full/i)
     // the default label does not leak onto the variant card
     expect(esRadio).not.toHaveAccessibleName(/Universal AI Program/)
   })
@@ -86,7 +86,7 @@ describe("VariantPicker Viewing indicator", () => {
     const indicator = screen.getByText("Viewing:").closest("div")!
     expect(
       within(indicator).getByText(
-        /Customized Universal AI \(español.*General.*Full\)/,
+        /Customized Universal AI \(español.*General.*Full\)/i,
       ),
     ).toBeInTheDocument()
   })
@@ -149,7 +149,7 @@ describe("VariantPicker certificate badge", () => {
     renderPicker({ selectedVariant: esVariant })
 
     const esRadio = screen.getByRole("radio", {
-      name: /español.*General.*Full/,
+      name: /español.*General.*Full/i,
     })
     expect(esRadio).not.toHaveAccessibleName(/Certificate Eligible/)
   })
@@ -160,7 +160,7 @@ describe("VariantPicker selection", () => {
     renderPicker({ selectedVariant: esVariant })
 
     const esRadio = screen.getByRole("radio", {
-      name: /español.*General.*Full/,
+      name: /español.*General.*Full/i,
     })
     const enRadio = screen.getByRole("radio", { name: /Universal AI Program/ })
     expect(esRadio).toBeChecked()
@@ -172,7 +172,7 @@ describe("VariantPicker selection", () => {
     renderPicker({ selectedVariant: enDefault, setSelectedVariant })
 
     const esRadio = screen.getByRole("radio", {
-      name: /español.*General.*Full/,
+      name: /español.*General.*Full/i,
     })
     await user.click(esRadio)
     expect(setSelectedVariant).toHaveBeenCalledWith(esVariant)
