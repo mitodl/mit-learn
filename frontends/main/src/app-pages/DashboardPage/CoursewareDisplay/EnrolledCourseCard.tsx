@@ -28,7 +28,7 @@ import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { RiArrowUpCircleLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { isInPast, calendarDaysUntil, NoSSR } from "ol-utilities"
-import { SiblingRunsAccordion } from "./SiblingRunsAccordion"
+import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
@@ -132,7 +132,7 @@ const EnrolledCardShell = styled.div(({ theme }) => ({
   borderRadius: "8px",
   overflow: "hidden",
   backgroundColor: theme.custom.colors.white,
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
     display: "none",
   },
   '&[data-layout="compact"]': {
@@ -153,7 +153,7 @@ const EnrolledCardShell = styled.div(({ theme }) => ({
 }))
 
 const CardHeaderContent = styled.div({
-  padding: "16px 16px 0 16px",
+  padding: "16px",
   display: "flex",
   gap: "8px",
   alignItems: "center",
@@ -237,7 +237,9 @@ export const EnrolledCourseCard = ({
       </SubtitleLink>
     </>
   ) : null
-  const certStatus = showUpgradeBanner ? (
+  const certStatus = certButton ? (
+    certButton
+  ) : showUpgradeBanner ? (
     <UpgradeBanner
       data-testid="upgrade-root"
       canUpgrade={showUpgradeBanner}
@@ -346,21 +348,12 @@ export const EnrolledCourseCard = ({
   )
   const buttonSection = isCompact ? (
     <Stack direction="row" gap="8px" alignItems="center">
-      {certButton && (
-        <>
-          {certButton}
-          <Separator />
-        </>
-      )}
       <CoursewareActionColumn direction="row" justifyContent="center">
         {ctaButton}
       </CoursewareActionColumn>
     </Stack>
   ) : (
-    <>
-      {certButton}
-      {ctaButton}
-    </>
+    ctaButton
   )
   const menuItems = []
   const readableId = run?.course.readable_id
@@ -432,6 +425,11 @@ export const EnrolledCourseCard = ({
   const hasMultipleRuns = (siblingEnrollments?.length ?? 0) > 0
   const showEnrollmentStatusIcon =
     !isContractPageResource && isModule && isCompact
+  const runCount = (siblingEnrollments?.length ?? 0) + 1
+  const [runsExpanded, setRunsExpanded] = React.useState(false)
+  const toggleRunsExpanded = () => setRunsExpanded((v) => !v)
+  const desktopRunsPanelId = `sibling-runs-panel-desktop-${enrollment.id}`
+  const mobileRunsPanelId = `sibling-runs-panel-mobile-${enrollment.id}`
 
   return (
     <>
@@ -457,14 +455,30 @@ export const EnrolledCourseCard = ({
               {progressBadgeSection}
               {titleSection}
             </Stack>
-            <Stack direction="row" gap="8px" alignItems="center">
-              {buttonSection}
-              {contextMenu}
+            <Stack
+              direction="column"
+              height="stretch"
+              gap="8px"
+              alignItems="flex-end"
+              justifyContent="space-between"
+            >
+              <Stack direction="row" gap="8px" alignItems="center">
+                {buttonSection}
+                {contextMenu}
+              </Stack>
+              <SiblingRunsToggle
+                runCount={runCount}
+                expanded={runsExpanded}
+                onClick={toggleRunsExpanded}
+                controls={desktopRunsPanelId}
+              />
             </Stack>
           </CardHeaderContent>
-          <SiblingRunsAccordion
+          <SiblingRunsPanel
             enrollment={enrollment}
             siblingEnrollments={siblingEnrollments ?? []}
+            expanded={runsExpanded}
+            id={desktopRunsPanelId}
           />
         </EnrolledCardShell>
       ) : (
@@ -520,9 +534,19 @@ export const EnrolledCourseCard = ({
         </Stack>
         {hasMultipleRuns && (
           <MobileAccordionWrapper>
-            <SiblingRunsAccordion
+            <Stack direction="row" justifyContent="flex-end" width="100%">
+              <SiblingRunsToggle
+                runCount={runCount}
+                expanded={runsExpanded}
+                onClick={toggleRunsExpanded}
+                controls={mobileRunsPanelId}
+              />
+            </Stack>
+            <SiblingRunsPanel
               enrollment={enrollment}
               siblingEnrollments={siblingEnrollments ?? []}
+              expanded={runsExpanded}
+              id={mobileRunsPanelId}
             />
           </MobileAccordionWrapper>
         )}
