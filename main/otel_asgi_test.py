@@ -16,7 +16,6 @@ a span for an ASGI request.
 """
 
 import io
-import warnings
 
 import pytest
 from django.core.handlers.asgi import ASGIRequest
@@ -86,12 +85,8 @@ def test_asgi_request_emits_http_server_span(span_exporter):
     )
     middleware = _DjangoMiddleware(lambda _req: HttpResponse("ok"))
 
-    # The OTel instrumentation code path emits a pkg_resources DeprecationWarning
-    # that this project escalates to an error; it's unrelated to what we assert.
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        middleware.process_request(request)
-        middleware.process_response(request, HttpResponse("ok"))
+    middleware.process_request(request)
+    middleware.process_response(request, HttpResponse("ok"))
 
     server_spans = [
         span
