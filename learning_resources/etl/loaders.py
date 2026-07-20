@@ -602,7 +602,6 @@ def load_course(
                 | Q(learning_resource__test_mode=True)
             ).filter(published=True):
                 run.published = False
-                run.checksum = None
                 run.save()
                 resource_run_unpublished_actions(run)
 
@@ -744,7 +743,6 @@ def load_program(
                 | Q(learning_resource__test_mode=True)
             ).filter(published=True):
                 run.published = False
-                run.checksum = None
                 run.save()
 
         load_run_dependent_values(learning_resource)
