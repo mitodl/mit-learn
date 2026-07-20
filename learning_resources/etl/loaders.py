@@ -1031,10 +1031,10 @@ def load_content_files(
         # Snapshot existing files so we can embed only what actually changed this
         # load, rather than re-embedding the whole run every time.
         prior_files = {
-            key: (checksum, published)
-            for key, checksum, published in ContentFile.objects.filter(
+            key: (checksum, published, tuple(metadata))
+            for key, checksum, published, *metadata in ContentFile.objects.filter(
                 run=course_run
-            ).values_list("key", "checksum", "published")
+            ).values_list("key", "checksum", "published", *_PAYLOAD_METADATA_FIELDS)
         }
 
         content_files_ids = []
@@ -1102,27 +1102,46 @@ def load_content_files(
     return None
 
 
+# Scalar, ETL-settable ContentFile columns whose Qdrant payload isn't covered by
+# `checksum` (content-only). A deliberate subset of QDRANT_CONTENT_FILE_PARAM_MAP
+# (which also holds non-columns, run-level, and AI-generated fields).
+_PAYLOAD_METADATA_FIELDS = (
+    "title",
+    "description",
+    "url",
+    "file_type",
+    "file_extension",
+    "content_type",
+    "edx_module_id",
+)
+
+
 def _changed_content_file_ids(
     content_files_ids: list[int],
-    prior_files: dict[str, tuple[str, bool]],
+    prior_files: dict[str, tuple[str, bool, tuple]],
 ) -> list[int]:
     """
     Return the subset of loaded content-file ids that need re-embedding.
 
     A file is "changed" when it is new, its checksum differs from the prior load,
-    or it transitioned from unpublished to published (an identical-checksum
-    republish still needs re-embedding because it was purged from Qdrant while
-    unpublished).
+    it transitioned from unpublished to published (an identical-checksum republish
+    still needs re-embedding because it was purged from Qdrant while unpublished),
+    or a payload metadata field changed (needs a Qdrant payload refresh even
+    though the body text — and thus the checksum — is unchanged).
     """
     changed_ids = []
-    for cf_id, key, checksum, published in ContentFile.objects.filter(
+    for cf_id, key, checksum, published, *metadata in ContentFile.objects.filter(
         id__in=content_files_ids
-    ).values_list("id", "key", "checksum", "published"):
+    ).values_list("id", "key", "checksum", "published", *_PAYLOAD_METADATA_FIELDS):
         prior = prior_files.get(key)
+        if prior is None:
+            changed_ids.append(cf_id)
+            continue
+        prior_checksum, prior_published, prior_metadata = prior
         if (
-            prior is None
-            or prior[0] != checksum
-            or (prior[1] is False and published is True)
+            prior_checksum != checksum
+            or (prior_published is False and published is True)
+            or prior_metadata != tuple(metadata)
         ):
             changed_ids.append(cf_id)
     return changed_ids
