@@ -1,5 +1,10 @@
 import invariant from "tiny-invariant"
-import { convertToEmbedUrl, externalLinkProps } from "./utils"
+import {
+  convertToEmbedUrl,
+  externalLinkProps,
+  addExternalLinkTargets,
+  stripAnchorTags,
+} from "./utils"
 
 const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
 invariant(NEXT_PUBLIC_ORIGIN, "NEXT_PUBLIC_ORIGIN must be defined")
@@ -34,6 +39,56 @@ describe("externalLinkProps", () => {
 
   it("returns empty object for a hash-only href", () => {
     expect(externalLinkProps("#section")).toEqual({})
+  })
+})
+
+describe("addExternalLinkTargets", () => {
+  it("adds target=_blank to external links", () => {
+    const html = addExternalLinkTargets('<a href="https://ocw.mit.edu">OCW</a>')
+    expect(html).toBe('<a href="https://ocw.mit.edu" target="_blank">OCW</a>')
+  })
+
+  it("leaves internal links unchanged", () => {
+    const html = addExternalLinkTargets('<a href="/search">Search</a>')
+    expect(html).toBe('<a href="/search">Search</a>')
+  })
+
+  it("leaves anchors without an href unchanged", () => {
+    const html = addExternalLinkTargets('<a name="top">Top</a>')
+    expect(html).toBe('<a name="top">Top</a>')
+  })
+
+  it("preserves other attributes on external links", () => {
+    const html = addExternalLinkTargets(
+      '<a href="https://ocw.mit.edu" rel="noopener noreferrer">OCW</a>',
+    )
+    expect(html).toBe(
+      '<a href="https://ocw.mit.edu" rel="noopener noreferrer" target="_blank">OCW</a>',
+    )
+  })
+})
+
+describe("stripAnchorTags", () => {
+  it("removes an anchor tag but keeps its text", () => {
+    const html = stripAnchorTags('<a href="https://ocw.mit.edu">OCW</a>')
+    expect(html).toBe("OCW")
+  })
+
+  it("removes multiple anchors within surrounding text", () => {
+    const html = stripAnchorTags(
+      'Resources: <a href="https://ocw.mit.edu">OCW</a> and <a href="/search">Search</a>.',
+    )
+    expect(html).toBe("Resources: OCW and Search.")
+  })
+
+  it("keeps nested inline markup inside the anchor's text", () => {
+    const html = stripAnchorTags('<a href="https://ocw.mit.edu"><b>OCW</b></a>')
+    expect(html).toBe("<b>OCW</b>")
+  })
+
+  it("leaves text with no anchors unchanged", () => {
+    const html = stripAnchorTags("<p>Safe text</p>")
+    expect(html).toBe("<p>Safe text</p>")
   })
 })
 

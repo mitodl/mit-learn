@@ -250,6 +250,36 @@ describe("PodcastEpisodeDetailPage", () => {
     )
   })
 
+  test("renders description links, opening external ones in a new tab", async () => {
+    // rel="noopener noreferrer" mirrors real backend output: nh3 adds it to
+    // every <a> during ETL sanitization, regardless of destination.
+    const { episode, podcast } = setupApis({
+      episodeOverrides: {
+        description:
+          'Relevant Resources: <a href="https://ocw.mit.edu/" rel="noopener noreferrer">OCW</a> and <a href="/search" rel="noopener noreferrer">Search</a>.',
+      },
+      moreEpisodes: [],
+    })
+
+    renderWithProviders(
+      <PodcastEpisodeDetailPage
+        episodeId={String(episode.id)}
+        podcastId={String(podcast.id)}
+      />,
+    )
+
+    // External link renders and opens in a new tab.
+    const externalLink = await screen.findByRole("link", { name: "OCW" })
+    expect(externalLink).toHaveAttribute("href", "https://ocw.mit.edu/")
+    expect(externalLink).toHaveAttribute("target", "_blank")
+    expect(externalLink).toHaveAttribute("rel", "noopener noreferrer")
+
+    // Internal link renders and stays in the same tab.
+    const internalLink = screen.getByRole("link", { name: "Search" })
+    expect(internalLink).toHaveAttribute("href", "/search")
+    expect(internalLink).not.toHaveAttribute("target")
+  })
+
   test("names the URL's podcast (not the first parent) for a multi-parent episode", async () => {
     const episode = makePodcastEpisode()
     episode.podcast_episode.audio_url = "https://example.com/ep.mp3"
