@@ -214,7 +214,6 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TIMEZONE = "UTC"
-CELERY_TASK_TASK_TRACK_STARTED = True
 CELERY_TASK_SEND_SENT_EVENT = True
 # Expire orphaned per-consumer event queues so celeryev traffic does not
 # accumulate unbounded in Redis when an event consumer (Flower, `celery events`,
