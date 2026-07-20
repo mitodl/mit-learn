@@ -108,7 +108,7 @@ const RunLabelValue = styled(Typography)({
 const RunsListWrapper = styled.div(({ theme }) => ({
   padding: "0 16px 16px",
   [theme.breakpoints.down("sm")]: {
-    padding: "0 0 8px",
+    padding: "8px 0",
   },
 }))
 
