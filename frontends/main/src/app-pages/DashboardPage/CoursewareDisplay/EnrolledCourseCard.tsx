@@ -449,7 +449,7 @@ export const EnrolledCourseCard = ({
               </Stack>
             )}
             <Stack
-              gap="4px"
+              gap="8px"
               justifyContent="start"
               alignItems="stretch"
               flex={1}

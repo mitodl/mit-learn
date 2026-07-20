@@ -137,7 +137,7 @@ export const UnenrolledCourseCard = ({
 
   const progressBadgeSection =
     isModule && isCompact ? null : (
-      <Stack direction="row" gap="4px" alignItems="center">
+      <Stack direction="row" gap="8px" alignItems="center">
         <ProgressBadge enrollmentStatus={EnrollmentStatus.NotEnrolled} />
         <Separator />
         {cardTypeLabel}
