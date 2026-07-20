@@ -135,6 +135,7 @@ INSTALLED_APPS = (
     "oauth2_provider",
     "news_events",
     "testimonials",
+    "content_feedback",
     "data_fixtures",
     "vector_search",
     "ol_hubspot",
