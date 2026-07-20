@@ -699,8 +699,12 @@ def test_load_course_bad_platform(mocker):
     )
 
 
-def test_load_course_prune_clears_checksum_on_unpublished_runs():
-    """Runs pruned from course data should have checksum reset."""
+def test_load_course_prune_preserves_checksum_on_unpublished_runs():
+    """
+    Runs pruned from course data are unpublished but KEEP their checksum, so a
+    later re-ingest of the same (unchanged) archive is skipped by the archive
+    guard instead of needlessly re-ingesting and re-embedding.
+    """
     platform = LearningResourcePlatformFactory.create()
     course = CourseFactory.create(
         learning_resource__runs=[],
@@ -746,7 +750,64 @@ def test_load_course_prune_clears_checksum_on_unpublished_runs():
     assert retained_run.published is True
     assert retained_run.checksum == "retain_checksum"
     assert pruned_run.published is False
-    assert pruned_run.checksum is None
+    # checksum is preserved (not nulled) so an unchanged archive re-ingest is skipped
+    assert pruned_run.checksum == "pruned_checksum"
+
+
+def test_load_program_prune_preserves_checksum_on_unpublished_runs():
+    """
+    Runs pruned from program data are unpublished but KEEP their checksum, mirroring
+    the course prune path, so a later re-ingest of the same (unchanged) archive is
+    skipped by the archive guard instead of needlessly re-ingesting.
+    """
+    platform = LearningResourcePlatformFactory.create()
+    program = ProgramFactory.create(courses=[], platform=platform.code)
+    learning_resource = program.learning_resource
+    learning_resource.runs.set([])
+
+    retained_run = LearningResourceRunFactory.create(
+        learning_resource=learning_resource,
+        published=True,
+        checksum="retain_checksum",
+    )
+    pruned_run = LearningResourceRunFactory.create(
+        learning_resource=learning_resource,
+        published=True,
+        checksum="pruned_checksum",
+    )
+
+    load_program(
+        {
+            "platform": platform.code,
+            "readable_id": learning_resource.readable_id,
+            "professional": False,
+            "title": learning_resource.title,
+            "url": learning_resource.url,
+            "image": {"url": learning_resource.image.url},
+            "published": True,
+            "availability": learning_resource.availability,
+            "runs": [
+                {
+                    "run_id": retained_run.run_id,
+                    "enrollment_start": retained_run.enrollment_start,
+                    "start_date": retained_run.start_date,
+                    "end_date": retained_run.end_date,
+                    "prices": [],
+                }
+            ],
+            "courses": [],
+        },
+        [],
+        [],
+    )
+
+    retained_run.refresh_from_db()
+    pruned_run.refresh_from_db()
+    assert retained_run.published is True
+    assert retained_run.checksum == "retain_checksum"
+    assert pruned_run.published is False
+    # checksum is preserved (not nulled) so an unchanged archive re-ingest is skipped
+    assert pruned_run.checksum == "pruned_checksum"
 
 
 @pytest.mark.parametrize("course_exists", [True, False])
