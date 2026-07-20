@@ -18,7 +18,7 @@ const BadgeContainer = styled("div")<{
 
   return {
     display: "flex",
-    width: "100px",
+    width: "80px",
     padding: "4px 8px",
     borderRadius: "4px",
     justifyContent: "center",
