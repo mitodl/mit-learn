@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.74.3 (Released July 20, 2026)
+--------------
+
+- improve vector search endpoint performance  (#3610)
+- fix: Centralize podcast duration/audio/parent logic through helpers, remove moment from pages and Consolidate duplicated podcast styled components (#3616)
+- Pin asyncapi to a non-compromised version. (#3613)
+- chore: Include sourcemaps for the nextjs server in our docker image (#3620)
+
 Version 0.74.2 (Released July 16, 2026)
 --------------
 
