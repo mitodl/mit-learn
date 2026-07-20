@@ -12,7 +12,7 @@ import type {
   LearningResourcesSearchResponse,
   PaginatedLearningResourceOfferorDetailList,
 } from "api"
-import { ResourceTypeEnum } from "api"
+import { ResourceTypeEnum, LearningResourceRunLevelInnerCodeEnum } from "api"
 import invariant from "tiny-invariant"
 import { Permission } from "api/hooks/user"
 import {
@@ -160,7 +160,6 @@ describe("SearchPage", () => {
         "department",
         "free",
         "offered_by",
-        "professional",
         "resource_category",
         "resource_type",
         "resource_type_group",
@@ -171,6 +170,70 @@ describe("SearchPage", () => {
       )
     },
   )
+
+  test("Shows and aggregates facets that are in the URL but not shown by default", async () => {
+    setMockApiResponses({
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: {
+            level: [{ key: "graduate", doc_count: 100 }],
+          },
+          suggestions: [],
+        },
+      },
+    })
+    renderWithProviders(<SearchPage />, { url: "?level=graduate" })
+
+    await waitFor(() => {
+      expect(makeRequest.mock.calls.length > 0).toBe(true)
+    })
+    // "level" is not a default facet, but is requested as an aggregation
+    // because it is present in the URL.
+    const apiSearchParams = getLastApiSearchParams()
+    expect(apiSearchParams.getAll("aggregations")).toContain("level")
+
+    // ...and it renders as a facet after "Department" and before Admin Options.
+    const facetsContainer = screen.getByTestId("facets-container")
+    await within(facetsContainer).findByText("Level")
+    const facetTitles = within(facetsContainer)
+      .getAllByText(/Department|Level/)
+      .map((el) => el.textContent)
+    expect(facetTitles.indexOf("Level")).toBeGreaterThan(
+      facetTitles.indexOf("Department"),
+    )
+  })
+
+  test("Clear all removes an extra (non-default) facet from URL and sidebar", async () => {
+    setMockApiResponses({
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: {
+            level: [{ key: "graduate", doc_count: 100 }],
+          },
+          suggestions: [],
+        },
+      },
+    })
+    const { location } = renderWithProviders(<SearchPage />, {
+      url: "?level=graduate",
+    })
+
+    const facetsContainer = screen.getByTestId("facets-container")
+    // The extra facet renders because it is present in the URL.
+    await within(facetsContainer).findByText("Level")
+
+    const clearAll = await screen.findByRole("button", { name: /clear all/i })
+    await user.click(clearAll)
+
+    // Clearing all filters removes the extra facet from the URL...
+    expect(location.current.search).toBe("")
+    // ...and, since it is no longer in the URL, from the sidebar.
+    await waitFor(() => {
+      expect(within(facetsContainer).queryByText("Level")).toBeNull()
+    })
+  })
 
   test("Toggling facets", async () => {
     setMockApiResponses({
@@ -1194,6 +1257,75 @@ describe("UniversalAIBanner", () => {
         args.url.includes(urls.search.vectorResources()),
     ).length
     expect(finalVectorRequestCount).toBe(initialVectorRequestCount)
+  })
+
+  test("Vector Hybrid Search computes client-side counts for extra URL facets (e.g. level)", async () => {
+    const makeCourse = (
+      title: string,
+      levelCode: LearningResourceRunLevelInnerCodeEnum,
+    ) =>
+      factories.learningResources.resource({
+        title,
+        resource_type: ResourceTypeEnum.Course,
+        runs: [
+          factories.learningResources.run({
+            level: [{ code: levelCode, name: levelCode }],
+          }),
+        ],
+      })
+
+    const resources = [
+      makeCourse(
+        "Grad Course A",
+        LearningResourceRunLevelInnerCodeEnum.Graduate,
+      ),
+      makeCourse(
+        "Grad Course B",
+        LearningResourceRunLevelInnerCodeEnum.Graduate,
+      ),
+      makeCourse(
+        "Undergrad Course",
+        LearningResourceRunLevelInnerCodeEnum.Undergraduate,
+      ),
+    ]
+
+    setMockApiResponses({
+      search: {
+        count: 3,
+        metadata: {
+          aggregations: {
+            resource_type_group: [{ key: "course", doc_count: 3 }],
+          },
+          suggestions: [],
+        },
+        results: resources,
+      },
+    })
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: true,
+      is_authenticated: true,
+    })
+
+    // "level" is an extra facet (present in the URL, not shown by default).
+    renderWithProviders(<SearchPage />, {
+      url: "?vector_search=true&q=test&level=graduate",
+    })
+
+    // Client-side filtering keeps only graduate-level results.
+    await screen.findByText("Grad Course A")
+    await screen.findByText("Grad Course B")
+    expect(screen.queryByText("Undergrad Course")).not.toBeInTheDocument()
+
+    // Client-side aggregation populates the Level facet with disjunctive counts
+    // derived from run levels. Before the fix these counts were empty because
+    // getResourceFacetValues had no "level" case, so the facet showed nothing.
+    const facetsContainer = screen.getByTestId("facets-container")
+    await within(facetsContainer).findByText("Level")
+    // graduate is the active filter; undergraduate is still counted (disjunctive).
+    await within(facetsContainer).findByRole("checkbox", { name: "Graduate 2" })
+    await within(facetsContainer).findByRole("checkbox", {
+      name: "Undergraduate 1",
+    })
   })
 
   test("clicking Learn More fires cta_clicked with label and readableId", async () => {

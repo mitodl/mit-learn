@@ -76,6 +76,9 @@ const VECTOR_CLIENT_FILTER_FACETS = [
   "professional",
   "resource_category",
   "resource_type_group",
+  "level",
+  "platform",
+  "course_feature",
 ] as const
 
 type VectorClientFilterFacet = (typeof VECTOR_CLIENT_FILTER_FACETS)[number]
@@ -133,6 +136,21 @@ const getResourceFacetValues = (
       return normalizeParamValues(resource.offered_by?.code)
     case "topic":
       return normalizeParamValues(resource.topics?.map((t) => t.name))
+    case "platform":
+      return normalizeParamValues(
+        "platform" in resource ? resource.platform?.code : undefined,
+      )
+    case "level":
+      // Level is aggregated from run levels, matching the OpenSearch facet.
+      return normalizeParamValues(
+        "runs" in resource
+          ? resource.runs?.flatMap((run) => run.level.map((l) => l.code))
+          : [],
+      )
+    case "course_feature":
+      return normalizeParamValues(
+        "course_feature" in resource ? resource.course_feature : [],
+      )
     case "free":
     case "professional":
     case "resource_type":
