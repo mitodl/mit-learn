@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.74.3
+Version 0.74.3 (Released July 20, 2026)
 --------------
 
 - improve vector search endpoint performance  (#3610)
