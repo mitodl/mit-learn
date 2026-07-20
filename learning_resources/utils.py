@@ -437,8 +437,9 @@ def bulk_resources_unpublished_actions(resource_ids: list[int], resource_type: s
 
 def content_files_loaded_actions(
     run: LearningResourceRun,
+    *,
     content_file_ids: list[int] | None = None,
-    removed_unpublished: bool | None = None,  # noqa: FBT001
+    removed_unpublished: bool | None = None,
 ):
     """
     Trigger plugins when content files are loaded for a LearningResourceRun.
