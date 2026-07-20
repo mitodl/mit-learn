@@ -34,6 +34,7 @@ from learning_resources.etl.constants import (
 from learning_resources.etl.edx_shared import sync_edx_course_files
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.loaders import (
+    _PAYLOAD_METADATA_FIELDS,
     ProgramLoadResult,
     _changed_content_file_ids,
     calculate_completeness,
@@ -3812,28 +3813,45 @@ def test_load_learning_material(mocker, learning_material_exists):
 @pytest.mark.django_db
 def test_changed_content_file_ids_detects_new_changed_and_republished():
     """
-    Change detection flags new, checksum-changed, and republished (unpublished
-    -> published, identical checksum) files, and excludes unchanged files.
+    Change detection flags new, checksum-changed, republished (unpublished ->
+    published, identical checksum), and metadata-only-changed files, and excludes
+    unchanged files.
     """
     run = LearningResourceRunFactory.create()
     unchanged = ContentFileFactory.create(run=run, key="unchanged", published=True)
     changed = ContentFileFactory.create(run=run, key="changed", published=True)
     republished = ContentFileFactory.create(run=run, key="republished", published=True)
     new_file = ContentFileFactory.create(run=run, key="new", published=True)
+    # identical content (checksum) but a payload metadata field (title) differs
+    metadata_only = ContentFileFactory.create(
+        run=run, key="metadata_only", published=True, title="new title"
+    )
+
+    def meta(cf):
+        return tuple(getattr(cf, field) for field in _PAYLOAD_METADATA_FIELDS)
 
     prior_files = {
-        "unchanged": (unchanged.checksum, True),
-        "changed": ("stale-checksum", True),
+        "unchanged": (unchanged.checksum, True, meta(unchanged)),
+        "changed": ("stale-checksum", True, meta(changed)),
         # was unpublished last load, republished now with the same checksum
-        "republished": (republished.checksum, False),
+        "republished": (republished.checksum, False, meta(republished)),
+        # same checksum, but title was "old title" last load (index 0 of meta)
+        "metadata_only": (
+            metadata_only.checksum,
+            True,
+            ("old title", *meta(metadata_only)[1:]),
+        ),
         # "new" absent from the prior snapshot entirely
     }
 
     result = _changed_content_file_ids(
-        [unchanged.id, changed.id, republished.id, new_file.id], prior_files
+        [unchanged.id, changed.id, republished.id, new_file.id, metadata_only.id],
+        prior_files,
     )
 
-    assert sorted(result) == sorted([changed.id, republished.id, new_file.id])
+    assert sorted(result) == sorted(
+        [changed.id, republished.id, new_file.id, metadata_only.id]
+    )
 
 
 @pytest.mark.django_db
