@@ -129,7 +129,7 @@ const MenuButton = styled(ActionButton)<{
     },
 ])
 
-const COURSEWARE_BUTTON_WIDTH = "88px"
+const COURSEWARE_BUTTON_WIDTH = "80px"
 
 // Fixed-width column that keeps the courseware button (and countdown) aligned
 // in the compact (module row) layout.
