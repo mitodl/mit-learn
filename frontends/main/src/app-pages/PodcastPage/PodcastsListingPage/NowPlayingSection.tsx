@@ -4,6 +4,7 @@ import { RiPlayFill, RiPauseFill } from "@remixicon/react"
 import DOMPurify from "isomorphic-dompurify"
 import { formatDate } from "ol-utilities"
 import type { LearningResource } from "api/v1"
+import { addExternalLinkTargets } from "@/common/utils"
 import { Section, PlayButton } from "./styled"
 import { getEpisodeAudioUrl, getEpisodeDurationMinutes } from "./helpers"
 
@@ -217,7 +218,9 @@ const NowPlayingSection: React.FC<NowPlayingSectionProps> = ({
               <NowPlayingDescription
                 variant="body2"
                 dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(nowPlaying.description),
+                  __html: addExternalLinkTargets(
+                    DOMPurify.sanitize(nowPlaying.description),
+                  ),
                 }}
               />
             )}

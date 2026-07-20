@@ -14,6 +14,10 @@ from learning_resources.constants import Availability, LearningResourceType
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.utils import iso8601_duration
 from learning_resources.models import PodcastEpisode
+from main.constants import (
+    ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
+    ALLOWED_HTML_TAGS_WITH_LINKS,
+)
 from main.utils import clean_data, frontend_absolute_url, now_in_utc
 
 CONFIG_FILE_REPO = "mitodl/open-podcast-data"
@@ -167,7 +171,11 @@ def transform_episode(rss_data, offered_by, topics, parent_image):
         "resource_type": LearningResourceType.podcast_episode.name,
         "title": rss_data.title.text,
         "offered_by": offered_by,
-        "description": clean_data(rss_data.description.text),
+        "description": clean_data(
+            rss_data.description.text,
+            tags=ALLOWED_HTML_TAGS_WITH_LINKS,
+            attributes=ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
+        ),
         "url": episode_link or audio_url,
         "image": {
             "url": (rss_data.find("image")["href"]),
@@ -229,7 +237,11 @@ def transform(extracted_podcasts):
                 "etl_source": ETLSource.podcast.name,
                 "resource_type": LearningResourceType.podcast.name,
                 "offered_by": offered_by,
-                "description": clean_data(rss_data.channel.description.text),
+                "description": clean_data(
+                    rss_data.channel.description.text,
+                    tags=ALLOWED_HTML_TAGS_WITH_LINKS,
+                    attributes=ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
+                ),
                 "image": image,
                 "published": True,
                 "url": config_data.get("website", None),

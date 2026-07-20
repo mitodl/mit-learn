@@ -1,8 +1,8 @@
 "use client"
 
-import React, { useRef } from "react"
+import React, { useRef, useMemo } from "react"
 import { Breadcrumbs, Typography, styled, useMediaQuery } from "ol-components"
-import type { Theme } from "ol-components"
+import type { Theme, TypographyProps } from "ol-components"
 import { RiPlayFill, RiPauseFill } from "@remixicon/react"
 import PodcastPlayer from "./PodcastPlayer"
 import type { PodcastPlayerHandle } from "./PodcastPlayer"
@@ -15,7 +15,7 @@ import { ResourceTypeEnum } from "api/v1"
 import type { PodcastEpisodeResource } from "api/v1"
 import { formatDate } from "ol-utilities"
 import { HOME, podcastPageView, podcastEpisodePageView } from "@/common/urls"
-import DOMPurify from "isomorphic-dompurify"
+import { addExternalLinkTargets } from "@/common/utils"
 import { EpisodeItem } from "./PodcastsListingPage/EpisodeItem"
 import PodcastContainer from "./PodcastContainer"
 import Link from "next/link"
@@ -37,6 +37,7 @@ import PodcastShareButton from "./PodcastShareButton"
 import { env } from "@/env"
 
 const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
+
 /* ── Layout ── */
 
 const HeaderSection = styled("div", {
@@ -116,20 +117,30 @@ const Topics = styled.span(({ theme }) => ({
   },
 }))
 
-const Description = styled(Typography)(({ theme }) => ({
-  color: theme.custom.colors.darkGray2,
-  display: "block",
-  marginBottom: "32px",
-  marginTop: "32px",
-  fontSize: "18px",
-  fontStyle: "normal",
-  lineHeight: "32px",
-  [theme.breakpoints.down("sm")]: {
-    ...theme.typography.body1,
-    lineHeight: "24px",
-    marginTop: "16px",
-  },
-}))
+const Description = styled(Typography)<Pick<TypographyProps, "component">>(
+  ({ theme }) => ({
+    color: theme.custom.colors.darkGray2,
+    display: "block",
+    marginBottom: "32px",
+    marginTop: "32px",
+    fontSize: "18px",
+    fontStyle: "normal",
+    lineHeight: "32px",
+    a: {
+      textDecoration: "underline",
+      color: theme.custom.colors.darkGray2,
+      fontWeight: theme.typography.fontWeightMedium,
+    },
+    "a:hover": {
+      textDecoration: "none",
+    },
+    [theme.breakpoints.down("sm")]: {
+      ...theme.typography.body1,
+      lineHeight: "24px",
+      marginTop: "16px",
+    },
+  }),
+)
 
 const StyledPodcastShareButton = styled(PodcastShareButton)({
   padding: "18px 12px",
@@ -244,6 +255,19 @@ export const PodcastEpisodeDetailPage: React.FC<
       ? `${NEXT_PUBLIC_ORIGIN}${podcastEpisodePageView(String(episode.id), podcastId, episode.title)}`
       : ""
 
+  // Episode descriptions are sanitized on the backend with nh3 during ETL
+  // (only <a href/title> is allowed), so the HTML is safe to render verbatim
+  // — the same trust model as resource descriptions elsewhere. Rendering it
+  // directly keeps server and client output identical, avoiding a hydration
+  // mismatch; target="_blank" is added via addExternalLinkTargets so it's
+  // part of the HTML fed to dangerouslySetInnerHTML on both server and
+  // client, keeping SSR output byte-identical to the client's first render.
+  const description = useMemo(
+    () =>
+      episode?.description ? addExternalLinkTargets(episode.description) : null,
+    [episode?.description],
+  )
+
   return (
     <>
       <PageSection variant="gray">
@@ -297,11 +321,16 @@ export const PodcastEpisodeDetailPage: React.FC<
                 />
               )}
             </PodcastShareSection>
-            {episode?.description && (
+            {description && (
+              // Rendered as a <div>, not the default <p>: the sanitized
+              // description contains block elements (<p>, <ul>, <li>) which are
+              // invalid inside a <p>. The browser would reparent them during
+              // parsing, diverging from the server HTML and breaking hydration.
               <Description
                 variant="body1"
+                component="div"
                 dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(episode.description),
+                  __html: description,
                 }}
               />
             )}

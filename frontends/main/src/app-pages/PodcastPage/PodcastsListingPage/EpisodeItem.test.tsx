@@ -68,6 +68,31 @@ describe("EpisodeItem", () => {
     expect(document.querySelector("script")).not.toBeInTheDocument()
   })
 
+  it("strips links from the description, keeping their text, since the row is itself a link", () => {
+    const episode = makeEpisode({
+      description:
+        'Relevant Resources: <a href="https://ocw.mit.edu/">OCW</a> and <a href="/search">Search</a>.',
+    })
+    renderWithProviders(
+      <EpisodeItem
+        episode={episode}
+        href="#"
+        onPlayClick={jest.fn()}
+        isPlaying={false}
+        isPlayable={true}
+        isMobile={true}
+      />,
+    )
+    expect(
+      screen.getByText("Relevant Resources: OCW and Search.", {
+        exact: false,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      document.querySelector(".episode-description a"),
+    ).not.toBeInTheDocument()
+  })
+
   it("does not render a description when not on mobile", () => {
     const episode = makeEpisode({
       description: "<p>Some episode description</p>",
