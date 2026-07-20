@@ -493,7 +493,7 @@ CACHES = {
     },
     "redis": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": CELERY_BROKER_URL,  # noqa: F405
+        "LOCATION": REDIS_URL,  # noqa: F405
         "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
     },
     # imagekit caching

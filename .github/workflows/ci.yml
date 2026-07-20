@@ -63,6 +63,7 @@ jobs:
           MITOL_FEATURES_DEFAULT: "True"
           OPENSEARCH_URL: localhost:9200
           CELERY_TASK_ALWAYS_EAGER: "True"
+          REDIS_URL: redis://localhost:6379/4
           CELERY_BROKER_URL: redis://localhost:6379/4
           CELERY_RESULT_BACKEND: redis://localhost:6379/4
           TIKA_CLIENT_ONLY: "True"
