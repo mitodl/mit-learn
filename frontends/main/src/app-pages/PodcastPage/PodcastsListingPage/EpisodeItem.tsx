@@ -6,6 +6,7 @@ import { RiPlayFill, RiPauseFill } from "@remixicon/react"
 import DOMPurify from "isomorphic-dompurify"
 import { formatDate } from "ol-utilities"
 import type { LearningResource } from "api/v1"
+import { stripAnchorTags } from "@/common/utils"
 import { getEpisodeDurationMinutes } from "./helpers"
 
 const EpisodeRow = styled(Link, {
@@ -199,10 +200,13 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
           {episode.title}
         </EpisodeTitleLink>
         {isMobile && episode?.description && (
+          // EpisodeRow (below) is itself a link, so any <a> in the
+          // description must be stripped — a nested <a> is invalid HTML and
+          // browsers split the outer link's clickable area at that point.
           <EpisodeDescription
             className="episode-description"
             dangerouslySetInnerHTML={{
-              __html: DOMPurify.sanitize(episode.description),
+              __html: stripAnchorTags(DOMPurify.sanitize(episode.description)),
             }}
           />
         )}

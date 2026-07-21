@@ -129,6 +129,33 @@ paths:
               schema:
                 $ref: '#/components/schemas/CKEditorSettings'
           description: ''
+  /api/v0/content_feedback/:
+    post:
+      operationId: content_feedback_create
+      description: Accept per-block content feedback submissions (append-only).
+      tags:
+      - content_feedback
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentFeedbackRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContentFeedbackRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContentFeedbackRequest'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentFeedback'
+          description: ''
+        '400':
+          description: Invalid feedback submission
   /api/v0/learning_resources_search_admin_params/:
     get:
       operationId: learning_resources_search_admin_params_retrieve
@@ -1689,6 +1716,98 @@ components:
           readOnly: true
       required:
       - unit
+    ContentFeedback:
+      type: object
+      description: |-
+        Serializer for content feedback submissions.
+
+        ``user`` is set server-side from the request (never client-supplied). Each
+        valid submission is persisted as a new append-only record.
+      properties:
+        course_id:
+          type: string
+          maxLength: 255
+        course_name:
+          type: string
+          maxLength: 255
+        block_usage_key:
+          type: string
+          maxLength: 255
+        block_type:
+          type: string
+          maxLength: 64
+        block_display_name:
+          type: string
+          maxLength: 255
+        unit_title:
+          type: string
+          maxLength: 255
+        url:
+          type: string
+          format: uri
+          maxLength: 2083
+        sentiment:
+          $ref: '#/components/schemas/ContentFeedbackSentimentEnum'
+        comment:
+          type: string
+      required:
+      - block_usage_key
+      - course_id
+      - sentiment
+    ContentFeedbackRequest:
+      type: object
+      description: |-
+        Serializer for content feedback submissions.
+
+        ``user`` is set server-side from the request (never client-supplied). Each
+        valid submission is persisted as a new append-only record.
+      properties:
+        course_id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        course_name:
+          type: string
+          maxLength: 255
+        block_usage_key:
+          type: string
+          minLength: 1
+          maxLength: 255
+        block_type:
+          type: string
+          maxLength: 64
+        block_display_name:
+          type: string
+          maxLength: 255
+        unit_title:
+          type: string
+          maxLength: 255
+        url:
+          type: string
+          format: uri
+          maxLength: 2083
+        sentiment:
+          $ref: '#/components/schemas/ContentFeedbackSentimentEnum'
+        comment:
+          type: string
+      required:
+      - block_usage_key
+      - course_id
+      - sentiment
+    ContentFeedbackSentimentEnum:
+      enum:
+      - positive
+      - negative
+      - idea
+      type: string
+      description: |-
+        * `positive` - Positive
+        * `negative` - Negative
+        * `idea` - Idea
+      x-enum-descriptions:
+      - Positive
+      - Negative
+      - Idea
     ContentFile:
       type: object
       description: Serializer class for course run ContentFiles

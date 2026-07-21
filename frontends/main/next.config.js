@@ -2,9 +2,9 @@
 const { validateEnv } = require("./validateEnv")
 
 // In CI Docker builds (NEXT_BUILD_CI=1), NEXT_PUBLIC_* vars are not available
-// at build time — they are injected at runtime via PublicEnvScript. Skip
-// build-time validation; validateEnv() runs at server startup instead (see
-// src/instrumentation-node.ts).
+// at build time — they are delivered at runtime via the x-public-env <meta>
+// (see src/env.ts). Skip build-time validation; validateEnv() runs at server
+// startup instead (see src/instrumentation-node.ts).
 if (!process.env.NEXT_BUILD_CI) {
   validateEnv()
 }

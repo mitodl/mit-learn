@@ -10,6 +10,10 @@ from django.contrib.auth import get_user_model
 from django.http import QueryDict
 from rest_framework.response import Response
 
+from main.constants import (
+    ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
+    ALLOWED_HTML_TAGS_WITH_LINKS,
+)
 from main.factories import UserFactory
 from main.utils import (
     _sorted_query_string,
@@ -17,6 +21,7 @@ from main.utils import (
     cache_page_for_anonymous_users,
     chunks,
     clean_data,
+    clear_views_cache,
     extract_values,
     filter_dict_keys,
     filter_dict_with_renamed_keys,
@@ -247,6 +252,26 @@ def test_frontend_absolute_url(settings):
 def test_clean_data(input_text, output_text):
     """clean_data function should return expected output"""
     assert clean_data(input_text) == output_text
+
+
+def test_clean_data_preserves_allowed_links():
+    """clean_data keeps <a href> when anchors + href are explicitly allowed,
+    but still strips unsafe URL schemes.
+    """
+    html = (
+        "See <a href='https://ocw.mit.edu' title='OCW'>MIT OCW</a> "
+        "and <a href='javascript:alert(1)'>bad</a>"
+    )
+    result = clean_data(
+        html,
+        tags=ALLOWED_HTML_TAGS_WITH_LINKS,
+        attributes=ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
+    )
+    assert 'href="https://ocw.mit.edu"' in result
+    assert 'title="OCW"' in result
+    assert 'rel="noopener noreferrer"' in result
+    assert ">MIT OCW</a>" in result
+    assert "javascript:" not in result  # nh3 drops unsafe schemes
 
 
 def _create_mock_request(*, is_authenticated=False, path="/test/", query=""):
@@ -586,3 +611,22 @@ def test_cache_key_format(mock_caches):
     hash_part = cache_key.split(".")[-1]
     assert len(hash_part) == 32
     assert all(c in "0123456789abcdef" for c in hash_part)
+
+
+@patch("main.utils.caches")
+def test_clear_views_cache_uses_large_itersize(mock_caches):
+    """
+    delete_pattern must be called with a large itersize (SCAN COUNT).
+
+    The default of 10 means a full-keyspace scan needs ~keyspace/10 round-trips
+    against the Redis shared with the Celery broker; a 55s scan on prod. Pinning
+    itersize guards against a regression back to the slow default.
+    """
+    mock_cache = MagicMock()
+    mock_cache.delete_pattern.return_value = 3
+    mock_caches.__getitem__.return_value = mock_cache
+
+    result = clear_views_cache()
+
+    mock_cache.delete_pattern.assert_called_once_with("views.*", itersize=1000)
+    assert result == 3

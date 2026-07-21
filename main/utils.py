@@ -561,12 +561,14 @@ def frontend_absolute_url(relative_path: str) -> str:
     return urljoin(settings.APP_BASE_URL, relative_path)
 
 
-def clean_data(data: str, tags=None) -> str:
+def clean_data(data: str, tags=None, attributes=None) -> str:
     """Remove unwanted html tags from text"""
     if tags is None:
         tags = ALLOWED_HTML_TAGS
+    if attributes is None:
+        attributes = ALLOWED_HTML_ATTRIBUTES
     if data:
-        return nh3.clean(data, tags=tags, attributes=ALLOWED_HTML_ATTRIBUTES)
+        return nh3.clean(data, tags=tags, attributes=attributes)
     return ""
 
 
@@ -584,10 +586,13 @@ def clear_views_cache(key_prefix: str | None = None) -> int:
     )
 
     if hasattr(cache, "delete_pattern"):
-        return cache.delete_pattern(pattern)
-    if hasattr(cache, "keys"):
-        return cache.delete_many(cache.keys(pattern)) or 0
-    # Backends without pattern/key enumeration (e.g. LocMemCache) can only flush.
+        # itersize is the SCAN COUNT: django-redis defaults it to 10, so a
+        # delete_pattern over a large shared keyspace (this cache shares its
+        # Redis with the Celery broker + result backend) needs ~keyspace/10
+        # round-trips. Raising it ~100x cuts a multi-second scan to a fraction.
+        return cache.delete_pattern(pattern, itersize=1000)
+    # Backends without SCAN-based pattern deletion (DummyCache in tests,
+    # LocMemCache) can't clear selectively -- flush everything instead.
     cache.clear()
     return 0
 

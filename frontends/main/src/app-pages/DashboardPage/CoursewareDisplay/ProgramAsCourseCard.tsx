@@ -25,6 +25,7 @@ import { CoursewareCard } from "./CoursewareCard"
 import {
   CardTypeText,
   CourseDateSummary,
+  MenuButton,
   Separator,
   UpgradedBanner,
 } from "./CardShared"
@@ -37,7 +38,6 @@ import {
   isVerifiedEnrollmentMode,
   mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
-import { ActionButton } from "@mitodl/smoot-design"
 import { RiAwardFill, RiMore2Line } from "@remixicon/react"
 import NiceModal from "@ebay/nice-modal-react"
 import { UnenrollProgramDialog } from "./DashboardDialogs"
@@ -54,23 +54,40 @@ const ProgramCardRoot = styled.div(({ theme }) => ({
   borderBottom: "none",
   backgroundColor: theme.custom.colors.white,
   boxShadow: "0 1px 3px 0 rgba(120, 147, 172, 0.20)",
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
     border: "none",
-    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
-    borderRadius: "0px",
+    borderBottom: `1px solid ${theme.custom.colors.red}`,
     boxShadow: "none",
     flexDirection: "column",
-    gap: "16px",
   },
 }))
 
-const ProgramCardHeaderOuter = styled.div({
+const ProgramHeaderDesktop = styled.div(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    display: "none",
+  },
+}))
+
+const ProgramHeaderMobile = styled.div(({ theme }) => ({
+  [theme.breakpoints.up("sm")]: {
+    display: "none",
+  },
+}))
+
+const ProgramCardHeaderOuter = styled.div(({ theme }) => ({
   display: "flex",
-  padding: "16px 24px",
+  position: "relative",
+  padding: "16px 16px 16px 24px",
   alignItems: "center",
   alignSelf: "stretch",
   gap: "16px",
-})
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: "8px",
+    padding: "16px",
+  },
+}))
 
 const ProgramCardHeaderInner = styled.div({
   display: "flex",
@@ -80,14 +97,25 @@ const ProgramCardHeaderInner = styled.div({
   flex: "1 0 0",
 })
 
-const StatusContainer = styled.div({
+const StatusContainer = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "16px",
-})
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+    justifyContent: "space-between",
+    gap: "8px",
+  },
+}))
 
 const ProgramCardSubHeaderText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
+}))
+
+const ProgramCardContent = styled.div(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    margin: "16px",
+  },
 }))
 
 const ProgramCardSubHeader = styled.div(({ theme }) => ({
@@ -98,13 +126,14 @@ const ProgramCardSubHeader = styled.div(({ theme }) => ({
   gap: "10px",
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
   background: `${theme.custom.colors.lightGray1}`,
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
+    borderRadius: "4px 4px 0 0",
     borderLeft: `1px solid ${theme.custom.colors.lightGray2}`,
     borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
   },
 }))
 
-const ProgramCardBody = styled.div({
+const ProgramCardBody = styled.div(({ theme }) => ({
   display: "flex",
   width: "100%",
   flexDirection: "column",
@@ -112,24 +141,13 @@ const ProgramCardBody = styled.div({
   alignSelf: "stretch",
   overflow: "hidden",
   borderRadius: "0 0 8px 8px",
-})
-
-const MenuButton = styled(ActionButton)<{
-  status: EnrollmentStatus
-}>(({ theme, status }) => [
-  {
-    marginLeft: "-8px",
-    [theme.breakpoints.down("md")]: {
-      position: "absolute",
-      top: "0",
-      right: "0",
-    },
+  [theme.breakpoints.down("sm")]: {
+    borderRadius: "0 0 4px 4px",
+    borderLeft: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
   },
-  status !== EnrollmentStatus.Completed &&
-    status !== EnrollmentStatus.Enrolled && {
-      visibility: "hidden",
-    },
-])
+}))
 
 const getContextMenuItems = (
   title: string,
@@ -351,71 +369,106 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
       className={className}
       data-testid="program-as-course-card"
     >
-      <ProgramCardHeaderOuter>
-        <ProgramCardHeaderInner>
-          <StatusContainer>
-            {progressBadgeSection}
-            <CourseDateSummary
-              startDate={courseProgram?.start_date}
-              endDate={courseProgram?.end_date}
-            />
-          </StatusContainer>
-          <Typography variant="subtitle2" component="h3">
-            {courseProgram?.title}
-          </Typography>
-        </ProgramCardHeaderInner>
-        <Stack direction="row" gap="0">
-          {programCertificateUrl ? (
-            <ProgramCertificateButton
-              variant="bordered"
-              size="small"
-              startIcon={<RiAwardFill />}
-              href={programCertificateUrl}
-            >
-              Certificate
-            </ProgramCertificateButton>
-          ) : upgradedAndIncomplete ? (
-            <UpgradedBanner />
-          ) : null}
-          {contextMenu}
-        </Stack>
-      </ProgramCardHeaderOuter>
-      <ProgramCardSubHeader>
-        <ProgramCardSubHeaderText variant="subtitle3">
-          {totalCount} Modules ({completedCount} of {totalCount} complete)
-        </ProgramCardSubHeaderText>
-      </ProgramCardSubHeader>
-      <ProgramCardBody>
-        {displayedModuleCourses.map((course) => {
-          const entry = buildCourseEntry(
-            course,
-            moduleEnrollmentsByCourseId[course.id] || [],
-            {
-              ancestorContext: {
-                useVerifiedEnrollment,
-                parentProgramReadableIds: parentProgramIds,
+      <ProgramHeaderDesktop data-testid="program-as-course-card-desktop-header">
+        <ProgramCardHeaderOuter>
+          <ProgramCardHeaderInner>
+            <StatusContainer>
+              {progressBadgeSection}
+              <CourseDateSummary
+                startDate={courseProgram?.start_date}
+                endDate={courseProgram?.end_date}
+              />
+            </StatusContainer>
+            <Typography variant="subtitle2" component="h3">
+              {courseProgram?.title}
+            </Typography>
+          </ProgramCardHeaderInner>
+          <Stack direction="row" gap="8px">
+            {programCertificateUrl ? (
+              <ProgramCertificateButton
+                variant="bordered"
+                size="small"
+                startIcon={<RiAwardFill />}
+                href={programCertificateUrl}
+              >
+                Certificate
+              </ProgramCertificateButton>
+            ) : upgradedAndIncomplete ? (
+              <UpgradedBanner />
+            ) : null}
+            {contextMenu}
+          </Stack>
+        </ProgramCardHeaderOuter>
+      </ProgramHeaderDesktop>
+      <ProgramHeaderMobile data-testid="program-as-course-card-mobile-header">
+        <ProgramCardHeaderOuter>
+          <ProgramCardHeaderInner>
+            <StatusContainer>
+              {progressBadgeSection}
+              <CourseDateSummary
+                startDate={courseProgram?.start_date}
+                endDate={courseProgram?.end_date}
+              />
+              <Stack direction="row" gap="8px">
+                {programCertificateUrl ? (
+                  <ProgramCertificateButton
+                    variant="bordered"
+                    size="small"
+                    startIcon={<RiAwardFill />}
+                    href={programCertificateUrl}
+                  >
+                    Certificate
+                  </ProgramCertificateButton>
+                ) : upgradedAndIncomplete ? (
+                  <UpgradedBanner />
+                ) : null}
+                {contextMenu}
+              </Stack>
+            </StatusContainer>
+            <Typography variant="subtitle2" component="h3">
+              {courseProgram?.title}
+            </Typography>
+          </ProgramCardHeaderInner>
+        </ProgramCardHeaderOuter>
+      </ProgramHeaderMobile>
+      <ProgramCardContent>
+        <ProgramCardSubHeader>
+          <ProgramCardSubHeaderText variant="subtitle3">
+            {totalCount} Modules ({completedCount} of {totalCount} complete)
+          </ProgramCardSubHeaderText>
+        </ProgramCardSubHeader>
+        <ProgramCardBody>
+          {displayedModuleCourses.map((course) => {
+            const entry = buildCourseEntry(
+              course,
+              moduleEnrollmentsByCourseId[course.id] || [],
+              {
+                ancestorContext: {
+                  useVerifiedEnrollment,
+                  parentProgramReadableIds: parentProgramIds,
+                },
               },
-            },
-          )
-          if (!entry) return null
+            )
+            if (!entry) return null
 
-          return (
-            <CoursewareCard
-              key={getKey({
-                resourceType: ResourceType.Course,
-                id: course.id,
-                runId: entry.displayedEnrollment?.run.id,
-              })}
-              kind="course"
-              entry={entry}
-              layout="compact"
-              headingLevel="h4"
-              isModule
-              onUpgradeError={onUpgradeError}
-            />
-          )
-        })}
-      </ProgramCardBody>
+            return (
+              <CoursewareCard
+                key={getKey({
+                  resourceType: ResourceType.Course,
+                  id: course.id,
+                  runId: entry.displayedEnrollment?.run.id,
+                })}
+                kind="course"
+                entry={entry}
+                layout="compact"
+                headingLevel="h4"
+                isModule
+                onUpgradeError={onUpgradeError}
+              />
+            )
+          })}
+        </ProgramCardBody>
+      </ProgramCardContent>
     </ProgramCardRoot>
   )
 }

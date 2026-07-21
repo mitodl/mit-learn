@@ -1,6 +1,5 @@
 import React from "react"
 import Providers from "./providers"
-import { PublicEnvScript } from "./components/PublicEnvScript"
 import { env, publicEnvObject } from "@/env"
 
 import "./GlobalStyles"
@@ -9,15 +8,11 @@ import { Metadata } from "next"
 const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 /**
- * Site-wide metadata defaults plus an x-public-env meta tag carrying all
- * NEXT_PUBLIC_* values as JSON. NOTES:
- *  1. This delivery mechanism for NEXT_PUBLIC_* facilitates runtime env vars (not buildtime)
- *  2. Delivery via metadata works even when errors are thrown server-side,
- *     in which case React SSR is aborted and rendering falls back to a client-side render
- *  3. Available to synchronous scripts below <meta x-public-env> or async scripts
- *     above it, as long as this tag is delivered in the same HTML chunk as the async
- *     scripts above it. (In practice, this is true for metadata + HTML content
- *     down to the first suspense boundary.)
+ * Site-wide metadata defaults plus an x-public-env <meta> carrying all
+ * NEXT_PUBLIC_* values as JSON, for runtime (not buildtime) env vars — see
+ * src/env.ts. This is a secondary copy (PublicEnvInsertedHtml is primary):
+ * a metadata export still reaches the document when the root layout render
+ * itself fails, which no rendered component can guarantee.
  */
 export const metadata: Metadata = {
   metadataBase: NEXT_PUBLIC_ORIGIN ? new URL(NEXT_PUBLIC_ORIGIN) : null,
@@ -58,8 +53,6 @@ export default function RootLayout({
           name="application-version"
           content={env("NEXT_PUBLIC_VERSION") || "unknown"}
         />
-        {/* Inject all NEXT_PUBLIC_* env vars for runtime access via env() */}
-        <PublicEnvScript />
       </head>
       <body>
         <Providers>{children}</Providers>

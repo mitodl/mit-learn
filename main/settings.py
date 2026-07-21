@@ -35,7 +35,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.74.1"
+VERSION = "0.74.3"
 
 log = logging.getLogger()
 
@@ -135,6 +135,7 @@ INSTALLED_APPS = (
     "oauth2_provider",
     "news_events",
     "testimonials",
+    "content_feedback",
     "data_fixtures",
     "vector_search",
     "ol_hubspot",
@@ -883,5 +884,8 @@ CANVAS_TUTORBOT_FOLDER = get_string("CANVAS_TUTORBOT_FOLDER", "web_resources/ai/
 MITOL_HUBSPOT_API_PRIVATE_TOKEN = get_string("MITOL_HUBSPOT_API_PRIVATE_TOKEN", None)
 
 # Create all learning material resources for OCW courses
-# Learning material resources are behind show_ocw_files flag in search
-CREATE_OCW_LEARNING_MATERIALS = get_bool("CREATE_OCW_LEARNING_MATERIALS", default=False)
+# Extra learning material resources are behind show_ocw_files flag in search
+# If false only learning materials in OCW_VISIBLE_TAGS will be created
+CREATE_HIDDEN_OCW_LEARNING_MATERIALS = get_bool(
+    "CREATE_HIDDEN_OCW_LEARNING_MATERIALS", default=False
+)

@@ -20,6 +20,11 @@ USE_CELERY = True
 REDIS_URL = get_string("REDIS_URL", get_string("REDISCLOUD_URL", None))
 CELERY_BROKER_URL = get_string("CELERY_BROKER_URL", REDIS_URL)
 CELERY_RESULT_BACKEND = get_string("CELERY_RESULT_BACKEND", REDIS_URL)
+# Celery's 24h default lets reindex chord fan-outs (thousands of subtask
+# result keys) accumulate; when the result backend is the broker/cache Redis
+# (the default here) that saturates memory. Keep results only long enough for
+# chord callbacks to consume them.
+CELERY_RESULT_EXPIRES = get_int("CELERY_RESULT_EXPIRES", 60 * 60)
 CELERY_BEAT_SCHEDULER = RedBeatScheduler
 redbeat_redis_url = CELERY_BROKER_URL
 CELERY_TASK_ALWAYS_EAGER = get_bool("CELERY_TASK_ALWAYS_EAGER", False)  # noqa: FBT003
@@ -209,8 +214,12 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TIMEZONE = "UTC"
-CELERY_TASK_TASK_TRACK_STARTED = True
 CELERY_TASK_SEND_SENT_EVENT = True
+# Expire orphaned per-consumer event queues so celeryev traffic does not
+# accumulate unbounded in Redis when an event consumer (Flower, `celery events`,
+# or a worker started with -E) disconnects without deregistering.
+CELERY_EVENT_QUEUE_EXPIRES = get_int("CELERY_EVENT_QUEUE_EXPIRES", 60)
+CELERY_EVENT_QUEUE_TTL = get_int("CELERY_EVENT_QUEUE_TTL", 5)
 CELERY_RATE_LIMIT = get_string("CELERY_DEFAULT_RATE_LIMIT", "600/m")
 CELERY_SEARCH_RATE_LIMIT = get_string("CELERY_SEARCH_RATE_LIMIT", CELERY_RATE_LIMIT)
 CELERY_VECTOR_SEARCH_RATE_LIMIT = get_string(

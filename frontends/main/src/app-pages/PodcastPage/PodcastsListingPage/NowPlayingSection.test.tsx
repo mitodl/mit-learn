@@ -82,6 +82,27 @@ describe("NowPlayingSection", () => {
     expect(document.querySelector("script")).not.toBeInTheDocument()
   })
 
+  it("opens external description links in a new tab", () => {
+    const episode = makeEpisode({
+      description:
+        'Relevant Resources: <a href="https://ocw.mit.edu/">OCW</a> and <a href="/search">Search</a>.',
+    })
+    renderWithProviders(
+      <NowPlayingSection
+        nowPlaying={episode}
+        isPlaying={false}
+        onPlayClick={jest.fn()}
+        onPauseClick={jest.fn()}
+      />,
+    )
+
+    const externalLink = screen.getByRole("link", { name: "OCW" })
+    expect(externalLink).toHaveAttribute("target", "_blank")
+
+    const internalLink = screen.getByRole("link", { name: "Search" })
+    expect(internalLink).not.toHaveAttribute("target")
+  })
+
   it("calls onPlayClick when 'Play episode' is clicked", async () => {
     const episode = makeEpisode()
     const onPlayClick = jest.fn()

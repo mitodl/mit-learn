@@ -699,8 +699,12 @@ def test_load_course_bad_platform(mocker):
     )
 
 
-def test_load_course_prune_clears_checksum_on_unpublished_runs():
-    """Runs pruned from course data should have checksum reset."""
+def test_load_course_prune_preserves_checksum_on_unpublished_runs():
+    """
+    Runs pruned from course data are unpublished but KEEP their checksum, so a
+    later re-ingest of the same (unchanged) archive is skipped by the archive
+    guard instead of needlessly re-ingesting and re-embedding.
+    """
     platform = LearningResourcePlatformFactory.create()
     course = CourseFactory.create(
         learning_resource__runs=[],
@@ -746,7 +750,64 @@ def test_load_course_prune_clears_checksum_on_unpublished_runs():
     assert retained_run.published is True
     assert retained_run.checksum == "retain_checksum"
     assert pruned_run.published is False
-    assert pruned_run.checksum is None
+    # checksum is preserved (not nulled) so an unchanged archive re-ingest is skipped
+    assert pruned_run.checksum == "pruned_checksum"
+
+
+def test_load_program_prune_preserves_checksum_on_unpublished_runs():
+    """
+    Runs pruned from program data are unpublished but KEEP their checksum, mirroring
+    the course prune path, so a later re-ingest of the same (unchanged) archive is
+    skipped by the archive guard instead of needlessly re-ingesting.
+    """
+    platform = LearningResourcePlatformFactory.create()
+    program = ProgramFactory.create(courses=[], platform=platform.code)
+    learning_resource = program.learning_resource
+    learning_resource.runs.set([])
+
+    retained_run = LearningResourceRunFactory.create(
+        learning_resource=learning_resource,
+        published=True,
+        checksum="retain_checksum",
+    )
+    pruned_run = LearningResourceRunFactory.create(
+        learning_resource=learning_resource,
+        published=True,
+        checksum="pruned_checksum",
+    )
+
+    load_program(
+        {
+            "platform": platform.code,
+            "readable_id": learning_resource.readable_id,
+            "professional": False,
+            "title": learning_resource.title,
+            "url": learning_resource.url,
+            "image": {"url": learning_resource.image.url},
+            "published": True,
+            "availability": learning_resource.availability,
+            "runs": [
+                {
+                    "run_id": retained_run.run_id,
+                    "enrollment_start": retained_run.enrollment_start,
+                    "start_date": retained_run.start_date,
+                    "end_date": retained_run.end_date,
+                    "prices": [],
+                }
+            ],
+            "courses": [],
+        },
+        [],
+        [],
+    )
+
+    retained_run.refresh_from_db()
+    pruned_run.refresh_from_db()
+    assert retained_run.published is True
+    assert retained_run.checksum == "retain_checksum"
+    assert pruned_run.published is False
+    # checksum is preserved (not nulled) so an unchanged archive re-ingest is skipped
+    assert pruned_run.checksum == "pruned_checksum"
 
 
 @pytest.mark.parametrize("course_exists", [True, False])
@@ -3465,14 +3526,16 @@ def test_load_documents(mocker, climate_platform, mock_get_similar_topics_qdrant
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("create_ocw_learning_materials", [True, False])
-def test_load_learning_materials(mocker, settings, create_ocw_learning_materials):
+@pytest.mark.parametrize("create_hidden_ocw_learning_materials", [True, False])
+def test_load_learning_materials(
+    mocker, settings, create_hidden_ocw_learning_materials
+):
     """
     Test that load_learning_materials runs load_learning_material
-    based on CREATE_OCW_LEARNING_MATERIALS setting
+    based on CREATE_HIDDEN_OCW_LEARNING_MATERIALS setting
     """
 
-    settings.CREATE_OCW_LEARNING_MATERIALS = create_ocw_learning_materials
+    settings.CREATE_HIDDEN_OCW_LEARNING_MATERIALS = create_hidden_ocw_learning_materials
 
     ocw = LearningResourcePlatformFactory.create(code=PlatformType.ocw.name)
     ocw_course = CourseFactory.create(
@@ -3522,7 +3585,7 @@ def test_load_learning_materials(mocker, settings, create_ocw_learning_materials
         ],
     )
 
-    if create_ocw_learning_materials:
+    if create_hidden_ocw_learning_materials:
         # Programming assignments and Open Textbooks are promoted
         assert load_learning_materials_spy.call_count == 2
         load_learning_materials_spy.assert_any_call(
@@ -3554,10 +3617,10 @@ def test_load_learning_materials(mocker, settings, create_ocw_learning_materials
         no_longer_relevant_resource.refresh_from_db()
         assert no_longer_relevant_resource.published is False
     else:
-        # Nothing is promoted
-        assert load_learning_materials_spy.call_count == 0
+        # Only textbook is promoted
+        assert load_learning_materials_spy.call_count == 1
         resource_relationships = ocw_course.learning_resource.children.all()
-        assert resource_relationships.count() == 0
+        assert resource_relationships.count() == 1
 
 
 @pytest.mark.django_db
@@ -3567,7 +3630,6 @@ def test_load_learning_materials_demotes_page_content_files(mocker, settings):
     If a page content file was previously promoted (has direct_learning_resource),
     load_learning_materials should unpublish that resource and clear the link.
     """
-    settings.CREATE_OCW_LEARNING_MATERIALS = True
     ocw = LearningResourcePlatformFactory.create(code=PlatformType.ocw.name)
     ocw_course = CourseFactory.create(
         platform=ocw.code,
@@ -3617,7 +3679,7 @@ def test_load_learning_materials_preserves_videos(mocker, settings):
     Their resource id should appear in the final material_ids list so
     the course keeps them as children.
     """
-    settings.CREATE_OCW_LEARNING_MATERIALS = True
+    settings.CREATE_HIDDEN_OCW_LEARNING_MATERIALS = True
     ocw = LearningResourcePlatformFactory.create(code=PlatformType.ocw.name)
     ocw_course = CourseFactory.create(
         platform=ocw.code,

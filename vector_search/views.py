@@ -4,7 +4,6 @@ from collections import Counter
 from functools import wraps
 from itertools import chain
 
-from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -41,6 +40,7 @@ from vector_search.utils import (
     best_run_ids_for_resources,
     check_missing_content_file_ids,
     custom_score_formula,
+    db_sync_to_async,
     dense_encoder,
     qdrant_query_conditions,
     sparse_encoder,
@@ -106,7 +106,7 @@ class QdrantView(APIView):
         self.headers = self.default_response_headers
 
         try:
-            await sync_to_async(self.initial)(request, *args, **kwargs)
+            await db_sync_to_async(self.initial)(request, *args, **kwargs)
 
             if request.method.lower() in self.http_method_names:
                 handler = getattr(
@@ -171,12 +171,8 @@ class QdrantView(APIView):
 
         if hybrid_search:
             sparse_query, dense_query = await asyncio.gather(
-                sync_to_async(encoder_sparse.embed, thread_sensitive=False)(
-                    query_string
-                ),
-                sync_to_async(encoder_dense.embed_query, thread_sensitive=False)(
-                    query_string
-                ),
+                db_sync_to_async(encoder_sparse.embed)(query_string),
+                db_sync_to_async(encoder_dense.embed_query)(query_string),
             )
             custom_formula_query = models.FormulaQuery(
                 formula=models.SumExpression(
@@ -226,7 +222,9 @@ class QdrantView(APIView):
                 search_params["prefetch"] = prefetch_params
                 search_params["query"] = models.FusionQuery(fusion=models.Fusion.RRF)
         else:
-            dense_query = await sync_to_async(encoder_dense.embed_query)(query_string)
+            dense_query = await db_sync_to_async(encoder_dense.embed_query)(
+                query_string
+            )
             if order_by and "score_threshold" not in search_params:
                 # Nest: dense vector prefetch → order_by query
                 search_params["prefetch"] = models.Prefetch(
@@ -391,9 +389,9 @@ class QdrantView(APIView):
             )
 
         if search_collection == RESOURCES_COLLECTION_NAME:
-            return await sync_to_async(_resource_vector_hits)(search_result)
+            return await db_sync_to_async(_resource_vector_hits)(search_result)
         else:
-            return await sync_to_async(_content_file_vector_hits)(search_result)
+            return await db_sync_to_async(_content_file_vector_hits)(search_result)
 
     def _extract_values(self, obj, qdrant_field):
         """
@@ -631,7 +629,7 @@ class LearningResourcesVectorSearchView(QdrantView):
                         response, context={"request": request}
                     ).data
 
-                response_data = await sync_to_async(serialize)()
+                response_data = await db_sync_to_async(serialize)()
                 response_data["results"] = list(response_data["results"])
                 return Response(response_data)
         else:
@@ -709,7 +707,8 @@ class ContentFilesVectorSearchView(QdrantView):
                     # (don't AND them: compound filters break Qdrant's approximate
                     # count). The resource readable_ids are included to match each
                     # resource's run-less course-metadata point.
-                    best_run_ids = await sync_to_async(best_run_ids_for_resources)(
+
+                    best_run_ids = await db_sync_to_async(best_run_ids_for_resources)(
                         resource_ids
                     )
                     del params["resource_readable_id"]
@@ -743,7 +742,7 @@ class ContentFilesVectorSearchView(QdrantView):
                         response, context={"request": request}
                     ).data
 
-                response_data = await sync_to_async(serialize)()
+                response_data = await db_sync_to_async(serialize)()
                 response_data["results"] = list(response_data["results"])
                 return Response(response_data)
         else:
