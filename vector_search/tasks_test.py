@@ -28,7 +28,9 @@ from learning_resources_search.constants import (
     PROGRAM_TYPE,
 )
 from learning_resources_search.exceptions import RetryError
+from learning_resources_search.serializers import serialize_bulk_content_files
 from main.utils import now_in_utc
+from vector_search.constants import CONTENT_FILE_PREPASS_PAYLOAD_FIELDS
 from vector_search.tasks import (
     _record_embedding_failure,
     _retry_countdown,
@@ -44,7 +46,7 @@ from vector_search.tasks import (
     remove_unpublished_run_content_files,
     start_embed_resources,
 )
-from vector_search.utils import vector_point_id
+from vector_search.utils import vector_point_id, vector_point_key
 
 pytestmark = pytest.mark.django_db
 
@@ -767,45 +769,155 @@ def test_embed_run_content_files_no_files_returns_none(mocker, mocked_celery):
     mocked_celery.chain.assert_not_called()
 
 
-def test_embed_run_content_files_only_given_ids(mocker, mocked_celery, settings):
-    """When content_file_ids is passed, only those published files are embedded."""
-    settings.QDRANT_CHUNK_SIZE = 50
-    run = LearningResourceRunFactory.create()
-    files = ContentFileFactory.create_batch(3, run=run, published=True)
-    changed = [files[0].id, files[1].id]
-    generate_embeddings_mock = mocker.patch(
-        "vector_search.tasks.generate_embeddings", autospec=True
-    )
-
-    with pytest.raises(mocked_celery.replace_exception_class):
-        embed_run_content_files.delay(run.id, changed)
-
-    assert _embedded_content_file_ids(generate_embeddings_mock) == set(changed)
-
-
 def test_embed_run_content_files_skips_unpublished(mocker, mocked_celery, settings):
-    """Unpublished files are never embedded, even if named in content_file_ids."""
+    """Unpublished files are never embedded."""
     settings.QDRANT_CHUNK_SIZE = 50
     run = LearningResourceRunFactory.create()
     published = ContentFileFactory.create(run=run, published=True)
-    unpublished = ContentFileFactory.create(run=run, published=False)
+    ContentFileFactory.create(run=run, published=False)
     generate_embeddings_mock = mocker.patch(
         "vector_search.tasks.generate_embeddings", autospec=True
     )
 
     with pytest.raises(mocked_celery.replace_exception_class):
-        embed_run_content_files.delay(run.id, [published.id, unpublished.id])
+        embed_run_content_files.delay(run.id)
 
     assert _embedded_content_file_ids(generate_embeddings_mock) == {published.id}
 
 
-def test_embed_run_content_files_empty_ids_returns_none(mocker, mocked_celery):
-    """An explicit empty id list embeds nothing (no changed files this load)."""
+def _serializer_chunk0_pids(content_files):
+    """Chunk-0 point ids as the embed pipeline (serializer path) computes them"""
+    return {
+        doc["id"]: vector_point_id(
+            vector_point_key(doc, chunk_number=0, document_type="content_file")
+        )
+        for doc in serialize_bulk_content_files([cf.id for cf in content_files])
+    }
+
+
+def _stored_payload_entry(content_file, **overrides):
+    """Build a stored-payload map entry matching the file's current DB state"""
+    return {
+        "checksum": content_file.checksum,
+        **{
+            field: getattr(content_file, field)
+            for field in CONTENT_FILE_PREPASS_PAYLOAD_FIELDS
+        },
+        **overrides,
+    }
+
+
+def test_embed_run_content_files_pre_pass_skips_unchanged(
+    mocker, mocked_celery, settings
+):
+    """
+    Only files whose stored Qdrant payload is missing or stale are embedded.
+
+    The stored-payload map is keyed by serializer-derived point ids, so the
+    unchanged file is skipped only if the task's pre-pass computes the same
+    point id as the embed pipeline.
+    """
+    settings.QDRANT_CHUNK_SIZE = 50
     run = LearningResourceRunFactory.create()
-    ContentFileFactory.create(run=run, published=True)
-    mocker.patch("vector_search.tasks.generate_embeddings", autospec=True)
-    assert embed_run_content_files(run.id, []) is None
-    mocked_celery.group.assert_not_called()
+    # ContentFile.save() computes checksum from content
+    unchanged = ContentFileFactory.create(run=run, published=True, content="aaa")
+    stale = ContentFileFactory.create(run=run, published=True, content="bbb")
+    missing = ContentFileFactory.create(run=run, published=True, content="ccc")
+    pids = _serializer_chunk0_pids([unchanged, stale, missing])
+    stored_mock = mocker.patch(
+        "vector_search.tasks._stored_content_payloads",
+        return_value={
+            pids[unchanged.id]: _stored_payload_entry(unchanged),
+            pids[stale.id]: _stored_payload_entry(stale, checksum="stale-checksum"),
+        },
+    )
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        embed_run_content_files.delay(run.id)
+
+    assert _embedded_content_file_ids(generate_embeddings_mock) == {
+        stale.id,
+        missing.id,
+    }
+    assert set(stored_mock.call_args.args[0]) == set(pids.values())
+
+
+def test_embed_run_content_files_pre_pass_dispatches_metadata_only_change(
+    mocker, mocked_celery, settings
+):
+    """
+    A file with a matching checksum but drifted payload metadata (edited title,
+    newly generated summary) is dispatched so its Qdrant payload gets refreshed.
+    """
+    settings.QDRANT_CHUNK_SIZE = 50
+    run = LearningResourceRunFactory.create()
+    retitled = ContentFileFactory.create(run=run, published=True, content="aaa")
+    summarized = ContentFileFactory.create(run=run, published=True, content="bbb")
+    current = ContentFileFactory.create(run=run, published=True, content="ccc")
+    pids = _serializer_chunk0_pids([retitled, summarized, current])
+    mocker.patch(
+        "vector_search.tasks._stored_content_payloads",
+        return_value={
+            pids[retitled.id]: _stored_payload_entry(retitled, title="old title"),
+            pids[summarized.id]: _stored_payload_entry(summarized, summary=""),
+            pids[current.id]: _stored_payload_entry(current),
+        },
+    )
+    summarized.summary = "a new summary"
+    summarized.save()
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        embed_run_content_files.delay(run.id)
+
+    assert _embedded_content_file_ids(generate_embeddings_mock) == {
+        retitled.id,
+        summarized.id,
+    }
+
+
+def test_content_file_prepass_fields_are_serializer_pass_through():
+    """
+    Every pre-pass-compared field must be an exact serializer pass-through of
+    the ContentFile column: a transformed field would never converge with the
+    stored payload, flagging every file on every load.
+    """
+    content_file = ContentFileFactory.create(
+        run=LearningResourceRunFactory.create(),
+        published=True,
+        content="some content",
+        summary="a summary",
+        flashcards=[{"question": "q", "answer": "a"}],
+    )
+    doc = next(iter(serialize_bulk_content_files([content_file.id])))
+    for field in ("checksum", *CONTENT_FILE_PREPASS_PAYLOAD_FIELDS):
+        assert doc[field] == getattr(content_file, field), field
+
+
+def test_embed_run_content_files_all_unchanged_dispatches_nothing(
+    mocker, mocked_celery
+):
+    """A fully-unchanged run embeds nothing and schedules no chain."""
+    run = LearningResourceRunFactory.create()
+    files = ContentFileFactory.create_batch(2, run=run, published=True, content="x")
+    pids = _serializer_chunk0_pids(files)
+    mocker.patch(
+        "vector_search.tasks._stored_content_payloads",
+        return_value={pids[cf.id]: _stored_payload_entry(cf) for cf in files},
+    )
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+
+    assert embed_run_content_files(run.id) is None
+
+    generate_embeddings_mock.si.assert_not_called()
+    mocked_celery.chain.assert_not_called()
 
 
 def test_embeddings_healthcheck_no_missing_embeddings(mocker):

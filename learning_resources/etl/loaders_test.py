@@ -27,7 +27,6 @@ from learning_resources.constants import (
 )
 from learning_resources.etl import loaders
 from learning_resources.etl.constants import (
-    CONTENT_FILE_PAYLOAD_METADATA_FIELDS,
     CourseLoaderConfig,
     ETLSource,
     ProgramLoaderConfig,
@@ -36,7 +35,6 @@ from learning_resources.etl.edx_shared import sync_edx_course_files
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.loaders import (
     ProgramLoadResult,
-    _changed_content_file_ids,
     calculate_completeness,
     load_content_file,
     load_content_files,
@@ -3811,114 +3809,26 @@ def test_load_learning_material(mocker, learning_material_exists):
 
 
 @pytest.mark.django_db
-def test_changed_content_file_ids_detects_new_changed_and_republished():
+def test_load_content_files_flags_removed_unpublished(mocker):
     """
-    Change detection flags new, checksum-changed, republished (unpublished ->
-    published, identical checksum), and metadata-only-changed files, and excludes
-    unchanged files.
+    The hook receives removed_unpublished=False when every prior file is still
+    present, and True when a previously-published file is dropped from the payload.
     """
-    run = LearningResourceRunFactory.create()
-    unchanged = ContentFileFactory.create(run=run, key="unchanged", published=True)
-    changed = ContentFileFactory.create(run=run, key="changed", published=True)
-    republished = ContentFileFactory.create(run=run, key="republished", published=True)
-    new_file = ContentFileFactory.create(run=run, key="new", published=True)
-    # identical content (checksum) but a payload metadata field (title) differs
-    metadata_only = ContentFileFactory.create(
-        run=run, key="metadata_only", published=True, title="new title"
-    )
-
-    def meta(cf):
-        return tuple(
-            getattr(cf, field) for field in CONTENT_FILE_PAYLOAD_METADATA_FIELDS
-        )
-
-    prior_files = {
-        "unchanged": (unchanged.checksum, True, meta(unchanged)),
-        "changed": ("stale-checksum", True, meta(changed)),
-        # was unpublished last load, republished now with the same checksum
-        "republished": (republished.checksum, False, meta(republished)),
-        # same checksum, but title was "old title" last load (index 0 of meta)
-        "metadata_only": (
-            metadata_only.checksum,
-            True,
-            ("old title", *meta(metadata_only)[1:]),
-        ),
-        # "new" absent from the prior snapshot entirely
-    }
-
-    result = _changed_content_file_ids(
-        [unchanged.id, changed.id, republished.id, new_file.id, metadata_only.id],
-        prior_files,
-    )
-
-    assert sorted(result) == sorted(
-        [changed.id, republished.id, new_file.id, metadata_only.id]
-    )
-
-
-@pytest.mark.django_db
-@pytest.mark.parametrize(
-    ("cap", "expect_ids"),
-    # 3 changed files: cap=2 exceeds it → None; cap=100 → exact ids passed through
-    [(2, False), (100, True)],
-)
-def test_load_content_files_changed_id_cap(mocker, settings, cap, expect_ids):
-    """
-    At/under CONTENT_FILE_EMBED_ID_CAP the exact changed ids reach the hook; over it
-    the hook is handed None so embed_run_content_files re-queries instead of
-    serializing a big list.
-    """
-    settings.CONTENT_FILE_EMBED_ID_CAP = cap
-    course = LearningResourceFactory.create(is_course=True, create_runs=False)
-    run = LearningResourceRunFactory.create(published=True, learning_resource=course)
-    mock_hook = mocker.patch(
-        "learning_resources.etl.loaders.content_files_loaded_actions", autospec=True
-    )
-    payload = [{"key": f"f{i}", "content": f"content {i}"} for i in range(3)]
-
-    ids = load_content_files(run, payload)
-
-    passed = mock_hook.call_args.kwargs["content_file_ids"]
-    if expect_ids:
-        assert sorted(passed) == sorted(ids)
-    else:
-        assert passed is None
-
-
-@pytest.mark.django_db
-def test_load_content_files_reload_embeds_only_changed(mocker, settings):
-    """
-    Reloading a run embeds only the file whose content changed: the snapshot is
-    taken before the update, unchanged files are excluded, and a file dropped from
-    the payload is flagged as removed_unpublished.
-    """
-    settings.CONTENT_FILE_EMBED_ID_CAP = 100
     course = LearningResourceFactory.create(is_course=True, create_runs=False)
     run = LearningResourceRunFactory.create(published=True, learning_resource=course)
     mock_hook = mocker.patch(
         "learning_resources.etl.loaders.content_files_loaded_actions", autospec=True
     )
 
-    # First load establishes the prior snapshot (checksums) in the DB.
     load_content_files(
         run,
         [
             {"key": "keep", "content": "same"},
-            {"key": "change", "content": "v1"},
             {"key": "drop", "content": "gone"},
         ],
     )
+    assert mock_hook.call_args.kwargs["removed_unpublished"] is False
 
-    # Second load: "keep" identical, "change" has new content, "drop" is absent.
-    load_content_files(
-        run,
-        [
-            {"key": "keep", "content": "same"},
-            {"key": "change", "content": "v2"},
-        ],
-    )
-
-    changed_id = ContentFile.objects.get(run=run, key="change").id
-    kwargs = mock_hook.call_args.kwargs
-    assert kwargs["content_file_ids"] == [changed_id]
-    assert kwargs["removed_unpublished"] is True
+    # Second load: "drop" is absent, so its file gets unpublished.
+    load_content_files(run, [{"key": "keep", "content": "same"}])
+    assert mock_hook.call_args.kwargs["removed_unpublished"] is True

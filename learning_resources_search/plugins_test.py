@@ -387,7 +387,7 @@ def test_search_index_plugin_content_files_loaded_published_run_with_qdrant(
     SearchIndexPlugin().content_files_loaded(run)
 
     mock_search_index_helpers.mock_embed_run_contentfiles_immutable_signature.assert_called_once_with(
-        run.id, None
+        run.id
     )
     mock_search_index_helpers.mock_upsert_contentfiles_immutable_signature.assert_called_once_with(
         run.id
@@ -411,7 +411,7 @@ def test_content_files_loaded_unpublished_run_embeds_qdrant_only(
     SearchIndexPlugin().content_files_loaded(run)
 
     mock_search_index_helpers.mock_embed_run_contentfiles_immutable_signature.assert_called_once_with(
-        run.id, None
+        run.id
     )
     mock_search_index_helpers.mock_remove_unpublished_run_contentfiles_immutable_signature.assert_called_once_with(
         run.id
@@ -447,7 +447,7 @@ def test_content_files_loaded_non_best_published_run_skips_opensearch(
     SearchIndexPlugin().content_files_loaded(non_best)
 
     mock_search_index_helpers.mock_embed_run_contentfiles_immutable_signature.assert_called_once_with(
-        non_best.id, None
+        non_best.id
     )
     mock_search_index_helpers.mock_upsert_contentfiles_immutable_signature.assert_not_called()
 
@@ -470,7 +470,7 @@ def test_content_files_loaded_test_mode_published_run_indexes_opensearch(
         run.id
     )
     mock_search_index_helpers.mock_embed_run_contentfiles_immutable_signature.assert_called_once_with(
-        run.id, None
+        run.id
     )
 
 
@@ -492,7 +492,7 @@ def test_content_files_loaded_variant_run_skips_opensearch(
 
     mock_search_index_helpers.mock_upsert_contentfiles_immutable_signature.assert_not_called()
     mock_search_index_helpers.mock_embed_run_contentfiles_immutable_signature.assert_called_once_with(
-        run.id, None
+        run.id
     )
     mock_search_index_helpers.mock_remove_unpublished_run_contentfiles_immutable_signature.assert_called_once_with(
         run.id
@@ -586,7 +586,7 @@ def test_content_files_loaded_removed_unpublished_tristate(
     ContentFileFactory.create(run=run)
 
     SearchIndexPlugin().content_files_loaded(
-        run, content_file_ids=None, removed_unpublished=removed_unpublished
+        run, removed_unpublished=removed_unpublished
     )
 
     remove_mock = mock_search_index_helpers.mock_remove_unpublished_run_contentfiles_immutable_signature

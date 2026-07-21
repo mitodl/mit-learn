@@ -438,7 +438,6 @@ def bulk_resources_unpublished_actions(resource_ids: list[int], resource_type: s
 def content_files_loaded_actions(
     run: LearningResourceRun,
     *,
-    content_file_ids: list[int] | None = None,
     removed_unpublished: bool | None = None,
 ):
     """
@@ -446,16 +445,11 @@ def content_files_loaded_actions(
 
     Args:
         run: the LearningResourceRun whose content files were loaded
-        content_file_ids: ids of the changed files, or None for all files
         removed_unpublished: whether files were unpublished, or None if unknown
     """
     pm = get_plugin_manager()
     hook = pm.hook
-    hook.content_files_loaded(
-        run=run,
-        content_file_ids=content_file_ids,
-        removed_unpublished=removed_unpublished,
-    )
+    hook.content_files_loaded(run=run, removed_unpublished=removed_unpublished)
 
 
 def resource_run_unpublished_actions(run: LearningResourceRun):

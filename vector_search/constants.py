@@ -5,6 +5,22 @@ RESOURCES_COLLECTION_NAME = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
 CONTENT_FILES_COLLECTION_NAME = f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
 TOPICS_COLLECTION_NAME = f"{settings.QDRANT_BASE_COLLECTION_NAME}.topics"
 
+# ContentFile columns (beyond checksum, which only covers content) compared by the
+# embed_run_content_files pre-pass to detect stale Qdrant payloads. Every entry MUST
+# be an exact serializer pass-through of a scalar/JSON ContentFile column: a field
+# the serializer transforms would never converge, flagging every file on every load
+# (test_content_file_prepass_fields_are_serializer_pass_through guards this).
+CONTENT_FILE_PREPASS_PAYLOAD_FIELDS = (
+    "title",
+    "description",
+    "url",
+    "file_type",
+    "file_extension",
+    "content_type",
+    "edx_module_id",
+    "summary",
+    "flashcards",
+)
 
 QDRANT_CONTENT_FILE_PARAM_MAP = {
     "key": "key",
