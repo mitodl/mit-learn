@@ -1,12 +1,9 @@
 "use client"
 
-import React, { useRef } from "react"
-import { Breadcrumbs, Typography, styled, useMediaQuery } from "ol-components"
-import type { Theme } from "ol-components"
+import React from "react"
+import { Typography, Skeleton, styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import { RiPlayFill, RiPauseFill } from "@remixicon/react"
-import PodcastPlayer from "./PodcastPlayer"
-import type { PodcastPlayerHandle } from "./PodcastPlayer"
 import {
   useLearningResourcesDetail,
   useInfiniteLearningResourceItems,
@@ -16,7 +13,8 @@ import type { LearningResource } from "api/v1"
 import { formatDate } from "ol-utilities"
 import { HOME, podcastEpisodePageView } from "@/common/urls"
 import PodcastContainer from "./PodcastContainer"
-import { usePodcastPlayer } from "./usePodcastPlayer"
+import PodcastBreadcrumbs from "./PodcastBreadcrumbs"
+import { usePodcastPage } from "./usePodcastPage"
 import {
   getEpisodeAudioUrl,
   getEpisodeDurationMinutes,
@@ -25,9 +23,9 @@ import { EpisodeItem } from "./PodcastsListingPage/EpisodeItem"
 import { EPISODES_PAGE_SIZE } from "./PodcastsListingPage/constants"
 import {
   PageSection,
-  BreadcrumbBar,
   EpisodeList,
   PlayButton,
+  SectionMessage,
 } from "./PodcastsListingPage/styled"
 
 const HeaderSection = styled.div(({ theme }) => ({
@@ -188,6 +186,28 @@ const StyledPauseIcon = styled(RiPauseFill)({
   height: "24px !important",
 })
 
+const SkeletonLine = styled(Skeleton)({
+  marginBottom: "16px",
+})
+
+const PodcastHeaderSkeleton = () => (
+  <div data-testid="podcast-header-skeleton" aria-hidden>
+    <SkeletonLine variant="text" width="60%" height={48} />
+    <SkeletonLine variant="text" width="40%" height={22} />
+    <SkeletonLine variant="text" width="100%" height={20} />
+    <SkeletonLine variant="text" width="90%" height={20} />
+    <SkeletonLine variant="rectangular" width={200} height={48} />
+  </div>
+)
+
+const EpisodesSkeleton = () => (
+  <div data-testid="podcast-episodes-skeleton" aria-hidden>
+    {Array.from({ length: EPISODES_PAGE_SIZE }, (_unused, i) => (
+      <SkeletonLine key={i} variant="text" width="55%" height={26} />
+    ))}
+  </div>
+)
+
 /* ── Page ── */
 
 type PodcastDetailPageProps = {
@@ -198,23 +218,19 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
   podcastId,
 }) => {
   const id = Number(podcastId)
-  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"))
-  const playerRef = useRef<PodcastPlayerHandle>(null)
-  const {
-    playingEpisode,
-    isAudioPlaying,
-    setIsAudioPlaying,
-    currentTrack,
-    toggle,
-    pause,
-    close,
-  } = usePodcastPlayer(playerRef, isMobile)
+  const { isMobile, playerBar, playingEpisode, isAudioPlaying, toggle, pause } =
+    usePodcastPage()
 
-  const { data: resource } = useLearningResourcesDetail(id)
+  const {
+    data: resource,
+    isLoading: resourceLoading,
+    isError: resourceError,
+  } = useLearningResourcesDetail(id)
 
   const {
     data: episodesData,
     isLoading: episodesLoading,
+    isError: episodesError,
     isFetchingNextPage,
     hasNextPage,
     fetchNextPage,
@@ -262,132 +278,143 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
     <>
       <PageSection variant="white">
         <HeaderSection>
-          <BreadcrumbBar>
-            <PodcastContainer>
-              <Breadcrumbs
-                variant="light"
-                ancestors={[{ href: HOME, label: "Home" }]}
-                current={resource?.title}
-              />
-            </PodcastContainer>
-          </BreadcrumbBar>
+          <PodcastBreadcrumbs
+            ancestors={[{ href: HOME, label: "Home" }]}
+            current={resource?.title}
+          />
           <PodcastContainer>
             <StyledHeaderSection>
-              <HeaderContent>
-                <PodcastTitle variant="h1">
-                  {resource?.title ?? ""}
-                </PodcastTitle>
+              {resourceLoading ? (
+                <PodcastHeaderSkeleton />
+              ) : resourceError ? (
+                <SectionMessage variant="body1">
+                  Something went wrong loading this podcast. Please try again
+                  later.
+                </SectionMessage>
+              ) : !isPodcast ? (
+                <SectionMessage variant="body1">
+                  This podcast is unavailable.
+                </SectionMessage>
+              ) : (
+                <HeaderContent>
+                  <PodcastTitle variant="h1">{resource?.title}</PodcastTitle>
 
-                {resource?.image?.url && (
-                  <PodcastImage
-                    src={resource.image.url}
-                    alt={
-                      resource.image.alt ?? resource.title ?? "Podcast cover"
-                    }
-                  />
-                )}
-
-                <HeaderTextContent>
-                  {metaParts.length > 0 && (
-                    <MetaLine variant="body3">{metaParts.join(" · ")}</MetaLine>
-                  )}
-
-                  {resource?.description && (
-                    <Description variant="body2">
-                      {resource.description}
-                    </Description>
-                  )}
-
-                  {latestEpisode && (
-                    <LatestEpisodeLine variant="body3">
-                      {"Latest episode: "}
-                      {latestEpisode.title}
-                      {latestEpisodeDuration
-                        ? ` · ${latestEpisodeDuration} min`
-                        : ""}
-                      {latestEpisodeDate ? ` · ${latestEpisodeDate}` : ""}
-                    </LatestEpisodeLine>
-                  )}
-
-                  {latestEpisode && (
-                    <StyledButton
-                      onClick={() => handlePlayClick(latestEpisode)}
-                      variant="primary"
-                      startIcon={
-                        isLatestEpisodePlaying ? (
-                          <StyledPauseIcon />
-                        ) : (
-                          <StyledIcon />
-                        )
+                  {resource?.image?.url && (
+                    <PodcastImage
+                      src={resource.image.url}
+                      alt={
+                        resource.image.alt ?? resource.title ?? "Podcast cover"
                       }
-                      disabled={!getEpisodeAudioUrl(latestEpisode)}
-                    >
-                      {isLatestEpisodePlaying
-                        ? "Pause Latest Episode"
-                        : "Play Latest Episode"}
-                    </StyledButton>
+                    />
                   )}
-                </HeaderTextContent>
-              </HeaderContent>
+
+                  <HeaderTextContent>
+                    {metaParts.length > 0 && (
+                      <MetaLine variant="body3">
+                        {metaParts.join(" · ")}
+                      </MetaLine>
+                    )}
+
+                    {resource?.description && (
+                      <Description variant="body2">
+                        {resource.description}
+                      </Description>
+                    )}
+
+                    {latestEpisode && (
+                      <LatestEpisodeLine variant="body3">
+                        {"Latest episode: "}
+                        {latestEpisode.title}
+                        {latestEpisodeDuration
+                          ? ` · ${latestEpisodeDuration} min`
+                          : ""}
+                        {latestEpisodeDate ? ` · ${latestEpisodeDate}` : ""}
+                      </LatestEpisodeLine>
+                    )}
+
+                    {latestEpisode && (
+                      <StyledButton
+                        onClick={() => handlePlayClick(latestEpisode)}
+                        variant="primary"
+                        startIcon={
+                          isLatestEpisodePlaying ? (
+                            <StyledPauseIcon />
+                          ) : (
+                            <StyledIcon />
+                          )
+                        }
+                        disabled={!getEpisodeAudioUrl(latestEpisode)}
+                      >
+                        {isLatestEpisodePlaying
+                          ? "Pause Latest Episode"
+                          : "Play Latest Episode"}
+                      </StyledButton>
+                    )}
+                  </HeaderTextContent>
+                </HeaderContent>
+              )}
             </StyledHeaderSection>
           </PodcastContainer>
         </HeaderSection>
 
-        <PodcastContainer>
-          <EpisodesSection hasMoreEpisodes={!!hasNextPage}>
-            <EpisodesHeading variant="subtitle3">Episodes</EpisodesHeading>
+        {!resourceError && (resourceLoading || isPodcast) && (
+          <PodcastContainer>
+            <EpisodesSection hasMoreEpisodes={!!hasNextPage}>
+              <EpisodesHeading variant="subtitle3">Episodes</EpisodesHeading>
 
-            {episodes && episodes.length > 0 && (
-              <EpisodeList role="list">
-                {episodes.map((episode) => (
-                  <EpisodeItem
-                    role="listitem"
-                    key={episode.id}
-                    isMobile={isMobile}
-                    episode={episode}
-                    href={podcastEpisodePageView(
-                      String(episode.id),
-                      String(id),
-                      episode.title,
-                    )}
-                    onPlayClick={handlePlayClick}
-                    onPauseClick={pause}
-                    isPlaying={
-                      playingEpisode?.id === episode.id && isAudioPlaying
-                    }
-                    isPlayable={Boolean(getEpisodeAudioUrl(episode))}
-                  />
-                ))}
-              </EpisodeList>
-            )}
-            {(hasNextPage || episodesLoading) && (
-              <StyledShowMoreContainer>
-                <StyledShowMore
-                  variant="secondary"
-                  onClick={() => fetchNextPage()}
-                  disabled={isFetchingNextPage}
-                >
-                  {isFetchingNextPage ? "Loading..." : "Load more episodes"}
-                </StyledShowMore>
-              </StyledShowMoreContainer>
-            )}
+              {resourceLoading || episodesLoading ? (
+                <EpisodesSkeleton />
+              ) : episodesError ? (
+                <SectionMessage variant="body1">
+                  Something went wrong loading episodes. Please try again later.
+                </SectionMessage>
+              ) : episodes.length > 0 ? (
+                <EpisodeList role="list">
+                  {episodes.map((episode) => (
+                    <EpisodeItem
+                      role="listitem"
+                      key={episode.id}
+                      isMobile={isMobile}
+                      episode={episode}
+                      href={podcastEpisodePageView(
+                        String(episode.id),
+                        String(id),
+                        episode.title,
+                      )}
+                      onPlayClick={handlePlayClick}
+                      onPauseClick={pause}
+                      isPlaying={
+                        playingEpisode?.id === episode.id && isAudioPlaying
+                      }
+                      isPlayable={Boolean(getEpisodeAudioUrl(episode))}
+                    />
+                  ))}
+                </EpisodeList>
+              ) : (
+                <SectionMessage variant="body1">
+                  No episodes found.
+                </SectionMessage>
+              )}
 
-            {!episodesLoading && episodes?.length === 0 && (
-              <Typography variant="body1" color="text.secondary">
-                No episodes found.
-              </Typography>
-            )}
-          </EpisodesSection>
-        </PodcastContainer>
+              {!resourceLoading &&
+                !episodesLoading &&
+                !episodesError &&
+                hasNextPage && (
+                  <StyledShowMoreContainer>
+                    <StyledShowMore
+                      variant="secondary"
+                      onClick={() => fetchNextPage()}
+                      disabled={isFetchingNextPage}
+                    >
+                      {isFetchingNextPage ? "Loading..." : "Load more episodes"}
+                    </StyledShowMore>
+                  </StyledShowMoreContainer>
+                )}
+            </EpisodesSection>
+          </PodcastContainer>
+        )}
       </PageSection>
-      {currentTrack && (
-        <PodcastPlayer
-          ref={playerRef}
-          track={currentTrack}
-          onClose={close}
-          onPlayStateChange={setIsAudioPlaying}
-        />
-      )}
+      {playerBar}
     </>
   )
 }
