@@ -165,9 +165,6 @@ package = false
 default-groups = "all"
 override-dependencies = ["setuptools<80"]
 
-[tool.uv.sources]
-mitol-django-keycloak = { git = "https://github.com/mitodl/ol-django", branch = "nl/fix-keycloak-email_optin", subdirectory = "src/keycloak" }
-
 [tool.uv.build-backend]
 module-root = ""
 
