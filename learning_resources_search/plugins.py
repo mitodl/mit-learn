@@ -267,13 +267,11 @@ class SearchIndexPlugin:
         None) and drop stale files. OpenSearch: index only the best published
         non-B2B run, or any published non-variant run of a test_mode course.
 
-         Args:
-             run(LearningResourceRun): The LearningResourceRun that was upserted
-             content_file_ids: ids of the files created/changed this load, or None
-                 to embed all of the run's published files (backfill / republish)
-             removed_unpublished: whether any previously-published files were
-                 unpublished this load; None (unknown, legacy) still purges, only
-                 an explicit False skips the removal task
+        Args:
+            run: the LearningResourceRun that was upserted
+            content_file_ids: ids of the changed files, or None for all files
+            removed_unpublished: whether files were unpublished; only an explicit
+                False skips the removal task (None still purges)
         """
         if not run.content_files.exists():
             return

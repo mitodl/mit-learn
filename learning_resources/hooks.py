@@ -89,10 +89,8 @@ class LearningResourceHooks:
 
         Args:
             run: the LearningResourceRun whose content files were loaded
-            content_file_ids: ids of the files that were created/changed this load,
-                or None to act on all of the run's files (backfill / republish)
-            removed_unpublished: whether any previously-published files were
-                unpublished this load, or None when unknown (legacy callers)
+            content_file_ids: ids of the changed files, or None for all files
+            removed_unpublished: whether files were unpublished, or None if unknown
         """
 
 

@@ -469,10 +469,8 @@ def embed_run_content_files(self, run_id, content_file_ids=None):
 
     Args:
         run_id (int): the run whose content files to embed
-        content_file_ids (list of int or None): when provided, only these files are
-            embedded (the ETL change-detection path passes just the changed files);
-            when None, all published files for the run are embedded (backfill /
-            republish).
+        content_file_ids (list of int or None): only these files are embedded, or
+            all of the run's published files when None (backfill / republish)
     """
     content_files = ContentFile.objects.filter(run__id=run_id, published=True)
     if content_file_ids is not None:

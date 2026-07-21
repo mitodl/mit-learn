@@ -24,6 +24,7 @@ from learning_resources.constants import (
     RunStatus,
 )
 from learning_resources.etl.constants import (
+    CONTENT_FILE_PAYLOAD_METADATA_FIELDS,
     CONTENT_TAG_CATEGORIES,
     READABLE_ID_FIELD,
     ContentTagCategory,
@@ -1034,7 +1035,9 @@ def load_content_files(
             key: (checksum, published, tuple(metadata))
             for key, checksum, published, *metadata in ContentFile.objects.filter(
                 run=course_run
-            ).values_list("key", "checksum", "published", *_PAYLOAD_METADATA_FIELDS)
+            ).values_list(
+                "key", "checksum", "published", *CONTENT_FILE_PAYLOAD_METADATA_FIELDS
+            )
         }
 
         content_files_ids = []
@@ -1102,20 +1105,6 @@ def load_content_files(
     return None
 
 
-# Scalar, ETL-settable ContentFile columns whose Qdrant payload isn't covered by
-# `checksum` (content-only). A deliberate subset of QDRANT_CONTENT_FILE_PARAM_MAP
-# (which also holds non-columns, run-level, and AI-generated fields).
-_PAYLOAD_METADATA_FIELDS = (
-    "title",
-    "description",
-    "url",
-    "file_type",
-    "file_extension",
-    "content_type",
-    "edx_module_id",
-)
-
-
 def _changed_content_file_ids(
     content_files_ids: list[int],
     prior_files: dict[str, tuple[str, bool, tuple]],
@@ -1132,7 +1121,9 @@ def _changed_content_file_ids(
     changed_ids = []
     for cf_id, key, checksum, published, *metadata in ContentFile.objects.filter(
         id__in=content_files_ids
-    ).values_list("id", "key", "checksum", "published", *_PAYLOAD_METADATA_FIELDS):
+    ).values_list(
+        "id", "key", "checksum", "published", *CONTENT_FILE_PAYLOAD_METADATA_FIELDS
+    ):
         prior = prior_files.get(key)
         if prior is None:
             changed_ids.append(cf_id)
