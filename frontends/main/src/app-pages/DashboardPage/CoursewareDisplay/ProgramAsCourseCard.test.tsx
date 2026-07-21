@@ -186,6 +186,48 @@ describe("ProgramAsCourseCard", () => {
     )
   })
 
+  test.each([
+    { displayMode: "course" as const, label: "Module" },
+    { displayMode: null, label: "Course" },
+  ])(
+    "singularizes the sub-header label when there is exactly 1 $label",
+    async ({ displayMode, label }) => {
+      const moduleOne = mitxonline.factories.courses.course({
+        courseruns: [mitxonline.factories.courses.courseRun()],
+      })
+      const reqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const modules = reqTree.addOperator({
+        operator: "all_of",
+        title: "Modules",
+      })
+      modules.addCourse({ course: moduleOne.id })
+
+      const program = mitxonline.factories.programs.program({
+        courses: [moduleOne.id],
+        req_tree: reqTree.serialize(),
+        display_mode: displayMode,
+      })
+
+      setMockResponse.get(
+        mitxonline.urls.userMe.get(),
+        mitxonline.factories.user.user(),
+      )
+
+      renderWithProviders(
+        <ProgramAsCourseCard
+          courseProgram={program}
+          moduleCourses={[moduleOne]}
+          moduleEnrollmentsByCourseId={{}}
+        />,
+      )
+
+      expect(
+        await screen.findByText(`1 ${label} (0 of 1 complete)`),
+      ).toBeInTheDocument()
+    },
+  )
+
   test("progress badge reflects program enrollment status ('In Progress')", async () => {
     const cardData = setupCardData({ includeProgramEnrollment: true })
     invariant(cardData.courseProgramEnrollment)

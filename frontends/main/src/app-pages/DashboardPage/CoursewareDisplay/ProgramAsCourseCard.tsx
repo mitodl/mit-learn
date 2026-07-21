@@ -210,7 +210,11 @@ const getProgramTypeLabel = (
 
 const getProgramChildrenLabel = (
   displayMode: V2ProgramDisplayMode | null | undefined,
-) => (displayMode === DisplayModeEnum.Course ? "Modules" : "Courses")
+  count: number,
+) => {
+  const label = displayMode === DisplayModeEnum.Course ? "Module" : "Course"
+  return count === 1 ? label : `${label}s`
+}
 
 interface ProgramAsCourse {
   id: number
@@ -452,7 +456,8 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
       <ProgramCardContent>
         <ProgramCardSubHeader>
           <ProgramCardSubHeaderText variant="subtitle3">
-            {totalCount} {getProgramChildrenLabel(courseProgram.display_mode)} (
+            {totalCount}{" "}
+            {getProgramChildrenLabel(courseProgram.display_mode, totalCount)} (
             {completedCount} of {totalCount} complete)
           </ProgramCardSubHeaderText>
         </ProgramCardSubHeader>
