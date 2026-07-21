@@ -3883,3 +3883,42 @@ def test_load_content_files_changed_id_cap(mocker, settings, cap, expect_ids):
         assert sorted(passed) == sorted(ids)
     else:
         assert passed is None
+
+
+@pytest.mark.django_db
+def test_load_content_files_reload_embeds_only_changed(mocker, settings):
+    """
+    Reloading a run embeds only the file whose content changed: the snapshot is
+    taken before the update, unchanged files are excluded, and a file dropped from
+    the payload is flagged as removed_unpublished.
+    """
+    settings.CONTENT_FILE_EMBED_ID_CAP = 100
+    course = LearningResourceFactory.create(is_course=True, create_runs=False)
+    run = LearningResourceRunFactory.create(published=True, learning_resource=course)
+    mock_hook = mocker.patch(
+        "learning_resources.etl.loaders.content_files_loaded_actions", autospec=True
+    )
+
+    # First load establishes the prior snapshot (checksums) in the DB.
+    load_content_files(
+        run,
+        [
+            {"key": "keep", "content": "same"},
+            {"key": "change", "content": "v1"},
+            {"key": "drop", "content": "gone"},
+        ],
+    )
+
+    # Second load: "keep" identical, "change" has new content, "drop" is absent.
+    load_content_files(
+        run,
+        [
+            {"key": "keep", "content": "same"},
+            {"key": "change", "content": "v2"},
+        ],
+    )
+
+    changed_id = ContentFile.objects.get(run=run, key="change").id
+    kwargs = mock_hook.call_args.kwargs
+    assert kwargs["content_file_ids"] == [changed_id]
+    assert kwargs["removed_unpublished"] is True
