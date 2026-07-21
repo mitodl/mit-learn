@@ -457,7 +457,7 @@ export const EnrolledCourseCard = ({
             </Stack>
             <Stack
               direction="column"
-              height="stretch"
+              alignSelf="stretch"
               gap="8px"
               alignItems="flex-end"
               justifyContent="space-between"
