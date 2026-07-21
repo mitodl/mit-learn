@@ -20,17 +20,27 @@ export default function robots(): MetadataRoute.Robots {
 
   if (shouldIndex) {
     return {
-      rules: {
-        userAgent: "*",
-        allow: "/",
-        disallow: [
-          "/dashboard/",
-          "/learningpaths/",
-          "/onboarding/",
-          "/cart/",
-          "/program_letter/",
-        ],
-      },
+      rules: [
+        {
+          userAgent: "*",
+          allow: "/",
+          disallow: [
+            "/dashboard/",
+            "/learningpaths/",
+            "/onboarding/",
+            "/cart/",
+            "/program_letter/",
+          ],
+        },
+        // Meta's ad-preview crawler, not a real visitor -- driving disproportionate
+        // load against expensive, uncached SSR routes. robots.txt is advisory only
+        // (a non-compliant crawler can ignore it), so if this doesn't reduce its
+        // request volume, blocking it at the gateway/WAF layer is the follow-up.
+        {
+          userAgent: "meta-externalads/1.1",
+          disallow: "/",
+        },
+      ],
       sitemap: `${BASE_URL}/sitemaps/sitemap-index.xml`,
     }
   } else {
