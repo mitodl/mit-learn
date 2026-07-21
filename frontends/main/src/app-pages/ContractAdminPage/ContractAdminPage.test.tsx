@@ -482,6 +482,72 @@ describe("ContractAdminPage", () => {
 
       await screen.findByText("Could not export CSV. Please try again.")
     })
+
+    const assertiveLiveRegionText = () =>
+      [...document.querySelectorAll('[aria-live="assertive"]')]
+        .map((el) => el.textContent ?? "")
+        .join(" ")
+
+    // The smoot-design Alert only exposes its aria-describedby ("success/error
+    // message") to NVDA, not its children, so the real message is mirrored into
+    // an assertive live region. It must be assertive: the Alert's hardcoded
+    // role="alert" already fires assertively, and a polite mirror lands right
+    // after it and gets dropped by NVDA.
+    test("announces a successful export via an assertive live region", async () => {
+      const { org, contract } = makeOrgWithContract()
+      setupPage(org, contract, { total_codes: 1 })
+
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 1,
+          page_size: 500,
+        }),
+        factories.contracts.paginatedContractCodes([
+          factories.contracts.contractCode({
+            assigned_to: "alice@example.com",
+          }),
+        ]),
+      )
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByRole("button", { name: "Export CSV" })
+      await user.click(screen.getByRole("button", { name: "Export CSV" }))
+
+      await waitFor(() => {
+        expect(assertiveLiveRegionText()).toContain("CSV download started.")
+      })
+    })
+
+    test("announces an export failure via an assertive live region", async () => {
+      allowConsoleErrors()
+      const { org, contract } = makeOrgWithContract()
+      setupPage(org, contract, { total_codes: 1 })
+
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 1,
+          page_size: 500,
+        }),
+        "Internal Server Error",
+        { code: 500 },
+      )
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByRole("button", { name: "Export CSV" })
+      await user.click(screen.getByRole("button", { name: "Export CSV" }))
+
+      await waitFor(() => {
+        expect(assertiveLiveRegionText()).toContain(
+          "Could not export CSV. Please try again.",
+        )
+      })
+    })
   })
 
   describe("header stat counts refresh after mutations", () => {
