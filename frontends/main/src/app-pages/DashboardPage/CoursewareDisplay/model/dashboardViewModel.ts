@@ -681,6 +681,16 @@ const getRequirementSectionTitle = (node: V2ProgramRequirement): string => {
  * `course` arm (the only arm with language / contract / enrollment complexity).
  * The other two arms are not `DashboardCourseEntry`-shaped and are intentionally
  * left as lighter structs.
+ *
+ * The two program arms split on the nested program's `display_mode`:
+ * - `program-as-course` is the program-with-`display_mode:"course"` presentation
+ *   and only ever has course children (`moduleCourses`).
+ * - `program` is any other nested program. Its `children` are recursively
+ *   typed because a real program's requirements may reference further
+ *   programs; today only one level is resolved (see `resolveRequirementItem`)
+ *   and rendering still flows through the course-as-program card, so
+ *   `children` is the model-layer truth that becomes the render source when
+ *   this arm gets its own card component.
  */
 type RequirementSectionItem =
   | { kind: "course"; entry: DashboardCourseEntry }
@@ -690,7 +700,12 @@ type RequirementSectionItem =
       moduleCourses: CourseWithCourseRunsSerializerV2[]
       courseProgramEnrollment?: V3UserProgramEnrollment
     }
-  | { kind: "program-enrollment"; enrollment: V3UserProgramEnrollment }
+  | {
+      kind: "program"
+      program: V2ProgramDetail
+      children: RequirementSectionItem[]
+      programEnrollment?: V3UserProgramEnrollment
+    }
 
 /**
  * A fully-resolved requirement section for the program dashboard.
@@ -766,6 +781,88 @@ const buildCourseEntry = (
   }
 }
 
+type ResolveRequirementItemContext = {
+  /** Course pool for resolving course leaves at this level. */
+  coursesById: Map<number, CourseWithCourseRunsSerializerV2>
+  enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>
+  /** Program pool for resolving program leaves at this level. */
+  programsById: Map<number, V2ProgramDetail>
+  programEnrollmentsById: Record<number, V3UserProgramEnrollment>
+  moduleCoursesByProgramId: Record<number, CourseWithCourseRunsSerializerV2[]>
+  ancestorProgramEnrollment?: V3UserProgramEnrollment
+}
+
+/**
+ * Resolve one req_tree leaf (`{ type: "course" | "program", id }`) into a
+ * `RequirementSectionItem`, or `null` when the referenced entity is not in
+ * the context pools (callers drop nulls).
+ *
+ * Program leaves split on `display_mode`:
+ * - `display_mode === "course"` → `program-as-course` presentation.
+ * - anything else → `program`, whose `children` are resolved recursively from
+ *   the nested program's own req_tree. The recursive call scopes
+ *   `coursesById` to that program's module courses and empties `programsById`,
+ *   so resolution is depth-1 by construction: grandchild program leaves drop
+ *   via the normal not-found rule until deeper fetching exists.
+ */
+const resolveRequirementItem = (
+  resource: { type: "course" | "program"; id: number },
+  ctx: ResolveRequirementItemContext,
+): RequirementSectionItem | null => {
+  if (resource.type === "course") {
+    const course = ctx.coursesById.get(resource.id)
+    if (!course) return null
+    const entry = buildCourseEntry(
+      course,
+      ctx.enrollmentsByCourseId[course.id] ?? [],
+      {
+        ancestorContext: ctx.ancestorProgramEnrollment
+          ? { programEnrollment: ctx.ancestorProgramEnrollment }
+          : undefined,
+      },
+    )
+    if (!entry) return null
+    return { kind: "course", entry }
+  }
+
+  // resource.type === "program"
+  const program = ctx.programsById.get(resource.id)
+  if (!program) return null
+
+  if (isProgramAsCourse(program)) {
+    return {
+      kind: "program-as-course",
+      courseProgram: program,
+      moduleCourses: ctx.moduleCoursesByProgramId[program.id] ?? [],
+      courseProgramEnrollment: ctx.programEnrollmentsById[program.id],
+    }
+  }
+
+  const childCoursesById = new Map(
+    (ctx.moduleCoursesByProgramId[program.id] ?? []).map((course) => [
+      course.id,
+      course,
+    ]),
+  )
+  const children = parseProgramRequirementSections(program.req_tree)
+    .flatMap((section) => section.items)
+    .map((child) =>
+      resolveRequirementItem(child, {
+        ...ctx,
+        coursesById: childCoursesById,
+        programsById: new Map(),
+      }),
+    )
+    .filter((item): item is RequirementSectionItem => item !== null)
+
+  return {
+    kind: "program",
+    program,
+    children,
+    programEnrollment: ctx.programEnrollmentsById[program.id],
+  }
+}
+
 type BuildRequirementSectionsArgs = {
   /**
    * The program's `req_tree`. Assumes a flat structure: operators are never
@@ -828,8 +925,14 @@ const buildRequirementSections = ({
   completedCount: number
   totalCount: number
 } => {
-  const coursesById = new Map(programCourses.map((c) => [c.id, c]))
-  const programsById = new Map(requiredPrograms.map((p) => [p.id, p]))
+  const resolveContext: ResolveRequirementItemContext = {
+    coursesById: new Map(programCourses.map((c) => [c.id, c])),
+    enrollmentsByCourseId,
+    programsById: new Map(requiredPrograms.map((p) => [p.id, p])),
+    programEnrollmentsById,
+    moduleCoursesByProgramId: requiredProgramModuleCoursesByProgramId,
+    ancestorProgramEnrollment,
+  }
 
   const parsedSections: ProgramRequirementSection[] =
     parseProgramRequirementSections(reqTree)
@@ -837,42 +940,7 @@ const buildRequirementSections = ({
   const sections: RequirementSection[] = parsedSections
     .map((section) => {
       const items: RequirementSectionItem[] = section.items
-        .map((resource): RequirementSectionItem | null => {
-          if (resource.type === "course") {
-            const course = coursesById.get(resource.id)
-            if (!course) return null
-            const entry = buildCourseEntry(
-              course,
-              enrollmentsByCourseId[course.id] ?? [],
-              {
-                ancestorContext: ancestorProgramEnrollment
-                  ? { programEnrollment: ancestorProgramEnrollment }
-                  : undefined,
-              },
-            )
-            if (!entry) return null
-            return { kind: "course", entry }
-          }
-
-          // resource.type === "program"
-          const program = programsById.get(resource.id)
-          if (!program) return null
-
-          if (isProgramAsCourse(program)) {
-            return {
-              kind: "program-as-course",
-              courseProgram: program,
-              moduleCourses:
-                requiredProgramModuleCoursesByProgramId[program.id] ?? [],
-              courseProgramEnrollment: programEnrollmentsById[program.id],
-            }
-          }
-
-          const enrollment = programEnrollmentsById[program.id]
-          if (!enrollment) return null
-
-          return { kind: "program-enrollment", enrollment }
-        })
+        .map((resource) => resolveRequirementItem(resource, resolveContext))
         .filter((item): item is RequirementSectionItem => item !== null)
 
       const { completed, total } = getRequirementsProgress(

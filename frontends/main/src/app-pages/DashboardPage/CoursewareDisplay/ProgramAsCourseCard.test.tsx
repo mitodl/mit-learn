@@ -33,10 +33,14 @@ describe("ProgramAsCourseCard", () => {
     includeProgramEnrollment = false,
     startDate,
     endDate,
+    // Most tests here exercise the program-as-course presentation, which requires
+    // display_mode "course" — pinned because the card's labels read it.
+    displayMode = "course",
   }: {
     includeProgramEnrollment?: boolean
     startDate?: string | null
     endDate?: string | null
+    displayMode?: "course" | null
   } = {}) => {
     const moduleOne = mitxonline.factories.courses.course({
       courseruns: [mitxonline.factories.courses.courseRun()],
@@ -59,6 +63,7 @@ describe("ProgramAsCourseCard", () => {
       req_tree: reqTree.serialize(),
       start_date: startDate ?? null,
       end_date: endDate ?? null,
+      display_mode: displayMode,
     })
 
     const moduleEnrollment = mitxonline.factories.enrollment.courseEnrollment({
@@ -146,6 +151,39 @@ describe("ProgramAsCourseCard", () => {
     // next to a progress badge; only the per-module rows omit it. Rendered
     // once per (desktop/mobile) header copy.
     expect(screen.getAllByText("Course")).toHaveLength(2)
+  })
+
+  test("uses 'Program' labels and program details link when display_mode is not 'course'", async () => {
+    const cardData = setupCardData({ displayMode: null })
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={cardData.courseProgramEnrollment}
+      />,
+    )
+
+    await screen.findAllByRole("heading", {
+      name: cardData.courseProgram.title,
+      level: 3,
+    })
+    // Card type label, rendered once per (desktop/mobile) header copy.
+    expect(screen.getAllByText("Program")).toHaveLength(2)
+    expect(screen.queryByText("Course")).not.toBeInTheDocument()
+    // Children are described as courses, not modules.
+    expect(screen.getByText("2 Courses (0 of 2 complete)")).toBeInTheDocument()
+
+    const programCard = screen.getByTestId("program-as-course-card")
+    await user.click(within(programCard).getAllByLabelText("More options")[0])
+    const detailsLink = await screen.findByRole("menuitem", {
+      name: "View Program Details",
+    })
+    expect(detailsLink).toHaveAttribute(
+      "href",
+      `/programs/${cardData.courseProgram.readable_id}`,
+    )
   })
 
   test("progress badge reflects program enrollment status ('In Progress')", async () => {

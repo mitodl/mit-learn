@@ -1183,7 +1183,7 @@ describe("dashboardViewModel", () => {
       }
     })
 
-    test("produces a program-enrollment arm for regular programs that have an enrollment", () => {
+    test("produces a program arm for regular programs, carrying the enrollment when one exists", () => {
       const requiredProgram = factories.programs.program({
         id: 4001,
         display_mode: null,
@@ -1206,13 +1206,14 @@ describe("dashboardViewModel", () => {
       })
 
       expect(sections).toHaveLength(1)
-      expect(sections[0].items[0].kind).toBe("program-enrollment")
-      if (sections[0].items[0].kind === "program-enrollment") {
-        expect(sections[0].items[0].enrollment).toBe(programEnrollment)
+      expect(sections[0].items[0].kind).toBe("program")
+      if (sections[0].items[0].kind === "program") {
+        expect(sections[0].items[0].program).toBe(requiredProgram)
+        expect(sections[0].items[0].programEnrollment).toBe(programEnrollment)
       }
     })
 
-    test("drops a regular program item when there is no enrollment for it", () => {
+    test("produces a program arm even when there is no enrollment for it (unenrolled nested programs still render)", () => {
       const requiredProgram = factories.programs.program({
         id: 5001,
         display_mode: null,
@@ -1231,7 +1232,56 @@ describe("dashboardViewModel", () => {
         requiredProgramModuleCoursesByProgramId: {},
       })
 
-      expect(sections).toHaveLength(0)
+      expect(sections).toHaveLength(1)
+      expect(sections[0].items[0].kind).toBe("program")
+      if (sections[0].items[0].kind === "program") {
+        expect(sections[0].items[0].program).toBe(requiredProgram)
+        expect(sections[0].items[0].programEnrollment).toBeUndefined()
+      }
+    })
+
+    test("program arm children resolve course leaves from module courses; unfetched grandchild programs drop", () => {
+      const childCourse = factories.courses.course({ id: 5101 })
+      const nestedTree = new RequirementTreeBuilder()
+      const nestedOp = nestedTree.addOperator({
+        operator: "all_of",
+        title: "Track Courses",
+      })
+      nestedOp.addCourse({ course: childCourse.id })
+      // Grandchild program — depth-2 data is never fetched, so it must drop.
+      nestedOp.addProgram({ program: 9998 })
+
+      const requiredProgram = factories.programs.program({
+        id: 5201,
+        display_mode: null,
+        courses: [childCourse.id],
+        req_tree: nestedTree.serialize(),
+      })
+      const root = new RequirementTreeBuilder()
+      const op = root.addOperator({ operator: "all_of", title: "Tracks" })
+      op.addProgram({ program: requiredProgram.id })
+
+      const { sections } = buildRequirementSections({
+        reqTree: root.serialize(),
+        programCourses: [],
+        enrollmentsByCourseId: {},
+        programEnrollmentsById: {},
+        requiredPrograms: [requiredProgram],
+        requiredProgramModuleCoursesByProgramId: {
+          [requiredProgram.id]: [childCourse],
+        },
+      })
+
+      expect(sections).toHaveLength(1)
+      const item = sections[0].items[0]
+      expect(item.kind).toBe("program")
+      if (item.kind === "program") {
+        expect(item.children).toHaveLength(1)
+        expect(item.children[0].kind).toBe("course")
+        if (item.children[0].kind === "course") {
+          expect(item.children[0].entry.course).toBe(childCourse)
+        }
+      }
     })
 
     test("drops a program item when the program id is not in requiredPrograms", () => {

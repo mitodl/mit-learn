@@ -3,8 +3,10 @@ import { useQuery } from "@tanstack/react-query"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
-import type { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
-import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import type {
+  CourseRunEnrollmentV3,
+  V2ProgramDisplayMode,
+} from "@mitodl/mitxonline-api-axios/v2"
 import { getIdsFromReqTree } from "@/common/mitxonline"
 import {
   groupCourseRunEnrollmentsByCourseId,
@@ -19,6 +21,7 @@ export type ProgramDashboardData = {
   sections: RequirementSection[]
   programTitle: string | undefined
   programType: string | null | undefined
+  programDisplayMode: V2ProgramDisplayMode | null | undefined
   programCertificateUrl: string | null
   completedCount: number
   totalCount: number
@@ -100,16 +103,13 @@ const useProgramDashboardData = (programId: number): ProgramDashboardData => {
     [requiredPrograms?.results],
   )
 
-  const programAsCourseCourseIds = React.useMemo(() => {
+  // Every nested program (program-as-course or not) renders with its course children
+  // on the program dashboard, so gather course ids across all of them.
+  const requiredProgramCourseIds = React.useMemo(() => {
     const uniqueIds = new Set<number>()
-    requiredProgramList
-      .filter(
-        (requiredProgram) =>
-          requiredProgram.display_mode === DisplayModeEnum.Course,
-      )
-      .forEach((requiredProgram) => {
-        requiredProgram.courses?.forEach((courseId) => uniqueIds.add(courseId))
-      })
+    requiredProgramList.forEach((requiredProgram) => {
+      requiredProgram.courses?.forEach((courseId) => uniqueIds.add(courseId))
+    })
     return [...uniqueIds]
   }, [requiredProgramList])
 
@@ -118,10 +118,10 @@ const useProgramDashboardData = (programId: number): ProgramDashboardData => {
     isLoading: requiredProgramCoursesLoading,
   } = useQuery({
     ...coursesQueries.coursesList({
-      id: programAsCourseCourseIds,
-      page_size: programAsCourseCourseIds.length || undefined,
+      id: requiredProgramCourseIds,
+      page_size: requiredProgramCourseIds.length || undefined,
     }),
-    enabled: Boolean(enrolledInProgram && programAsCourseCourseIds.length > 0),
+    enabled: Boolean(enrolledInProgram && requiredProgramCourseIds.length > 0),
   })
 
   const isLoading =
@@ -178,6 +178,7 @@ const useProgramDashboardData = (programId: number): ProgramDashboardData => {
     sections,
     programTitle: program?.title,
     programType: program?.program_type,
+    programDisplayMode: program?.display_mode,
     programCertificateUrl,
     completedCount,
     totalCount,

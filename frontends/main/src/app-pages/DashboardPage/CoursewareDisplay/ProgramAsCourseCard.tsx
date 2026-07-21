@@ -9,6 +9,8 @@ import {
 import {
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
+  DisplayModeEnum,
+  V2ProgramDisplayMode,
   V3UserProgramEnrollment,
   V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -158,7 +160,7 @@ const getContextMenuItems = (
   const menuItems = []
   const detailsUrl = programPageView({
     readable_id: resource.readable_id,
-    display_mode: "course",
+    display_mode: resource.display_mode,
   })
 
   const courseMenuItems = []
@@ -167,7 +169,7 @@ const getContextMenuItems = (
     courseMenuItems.push({
       className: "dashboard-card-menu-item",
       key: "view-course-details",
-      label: "View Course Details",
+      label: `View ${getProgramTypeLabel(resource.display_mode)} Details`,
       href: detailsUrl,
     })
   }
@@ -197,6 +199,19 @@ const getContextMenuItems = (
   return [...menuItems, ...additionalItems]
 }
 
+/**
+ * Learner-facing wording for a program on the dashboard, driven by its
+ * display_mode: programs with `display_mode: "course"` (program-as-course)
+ * speak "Course"/"Modules"; any other program speaks "Program"/"Courses".
+ */
+const getProgramTypeLabel = (
+  displayMode: V2ProgramDisplayMode | null | undefined,
+) => (displayMode === DisplayModeEnum.Course ? "Course" : "Program")
+
+const getProgramChildrenLabel = (
+  displayMode: V2ProgramDisplayMode | null | undefined,
+) => (displayMode === DisplayModeEnum.Course ? "Modules" : "Courses")
+
 interface ProgramAsCourse {
   id: number
   readable_id: string
@@ -205,6 +220,7 @@ interface ProgramAsCourse {
   end_date?: string | null
   courses?: number[]
   req_tree?: V2ProgramRequirement[]
+  display_mode?: V2ProgramDisplayMode | null
 }
 
 interface ProgramAsCourseCardProps {
@@ -248,14 +264,14 @@ interface ProgramAsCourseCardProps {
 }
 
 /**
- * Renders a v3 program in the dashboard's course presentation mode.
+ * Renders a v3 program as a dashboard card with its child-course rows.
  *
- * When a program enrollment is configured with `display_mode="course"`, the
- * dashboard treats the program as a learner-facing "course" even though the
- * backing data still comes from the v3 program / program enrollment models.
- * In that presentation, the courses from the program's first requirement
- * section are shown as the course's "modules". It will only ever display
- * actual child courses of the program, never nested child programs.
+ * Wording is driven by the program's `display_mode`: programs with
+ * `display_mode="course"` present as a learner-facing "course" whose child
+ * courses are "modules"; any other program presents as a "Program" whose
+ * children are "courses". Either way the children come from the program's
+ * first requirement section, and only actual child courses are ever
+ * displayed — never nested child programs.
  *
  * This component keeps the underlying program terminology in its data inputs,
  * but translates that data into the course-and-modules UI used on the
@@ -359,7 +375,9 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
     <Stack direction="row" gap="4px" alignItems="center">
       <ProgressBadge enrollmentStatus={programEnrollmentStatus} />
       <Separator />
-      <CardTypeText>Course</CardTypeText>
+      <CardTypeText>
+        {getProgramTypeLabel(courseProgram.display_mode)}
+      </CardTypeText>
     </Stack>
   )
 
@@ -434,7 +452,8 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
       <ProgramCardContent>
         <ProgramCardSubHeader>
           <ProgramCardSubHeaderText variant="subtitle3">
-            {totalCount} Modules ({completedCount} of {totalCount} complete)
+            {totalCount} {getProgramChildrenLabel(courseProgram.display_mode)} (
+            {completedCount} of {totalCount} complete)
           </ProgramCardSubHeaderText>
         </ProgramCardSubHeader>
         <ProgramCardBody>
