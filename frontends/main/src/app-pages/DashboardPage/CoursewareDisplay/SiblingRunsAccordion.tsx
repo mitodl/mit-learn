@@ -133,6 +133,8 @@ type SiblingRunsToggleProps = {
   runCount: number
   expanded: boolean
   onClick: () => void
+  /** id of this toggle button, referenced by the panel's aria-labelledby. */
+  id?: string
   /** id of the SiblingRunsPanel this toggle controls. */
   controls?: string
 }
@@ -141,10 +143,12 @@ const SiblingRunsToggle: React.FC<SiblingRunsToggleProps> = ({
   runCount,
   expanded,
   onClick,
+  id,
   controls,
 }) => (
   <ToggleButton
     type="button"
+    id={id}
     onClick={onClick}
     aria-expanded={expanded}
     aria-controls={controls}
@@ -220,6 +224,8 @@ type SiblingRunsPanelProps = {
   expanded: boolean
   /** id referenced by the SiblingRunsToggle controlling this panel. */
   id?: string
+  /** id of the SiblingRunsToggle that labels this panel. */
+  labelledBy?: string
 }
 
 const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
@@ -227,6 +233,7 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
   siblingEnrollments,
   expanded,
   id,
+  labelledBy,
 }) => {
   const currentRun = enrollment.run
   const currentStatus = getDashboardEnrollmentStatus({
@@ -243,7 +250,14 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
     : currentDateRange
 
   return (
-    <Collapse in={expanded} id={id}>
+    <Collapse
+      in={expanded}
+      id={id}
+      mountOnEnter
+      unmountOnExit
+      role="region"
+      aria-labelledby={labelledBy}
+    >
       <RunsListWrapper>
         <RunsListBox>
           <RunListRow

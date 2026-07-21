@@ -27,6 +27,7 @@ const SiblingRunsAccordionHarness: React.FC<{
         runCount={siblingEnrollments.length + 1}
         expanded={expanded}
         onClick={() => setExpanded((v) => !v)}
+        id="toggle"
         controls="panel"
       />
       <SiblingRunsPanel
@@ -34,6 +35,7 @@ const SiblingRunsAccordionHarness: React.FC<{
         siblingEnrollments={siblingEnrollments}
         expanded={expanded}
         id="panel"
+        labelledBy="toggle"
       />
     </>
   )
@@ -70,6 +72,38 @@ describe("SiblingRunsToggle + SiblingRunsPanel", () => {
       "aria-expanded",
       "false",
     )
+  })
+
+  test("while collapsed, the panel's links are not present in the DOM", () => {
+    const enrollment = makeEnrollment()
+    const sibling = makeEnrollment({ courseware_url: faker.internet.url() })
+    renderWithProviders(
+      <SiblingRunsAccordionHarness
+        enrollment={enrollment}
+        siblingEnrollments={[sibling]}
+      />,
+    )
+    // Collapsed content must not be mounted at all (not just visually
+    // hidden), so keyboard/screen-reader users can't tab into a link that
+    // isn't visible.
+    expect(
+      screen.queryByRole("link", { name: /View content/ }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("region")).not.toBeInTheDocument()
+  })
+
+  test("once expanded, the panel is exposed as a region labelled by the toggle", async () => {
+    const enrollment = makeEnrollment()
+    const sibling = makeEnrollment()
+    renderWithProviders(
+      <SiblingRunsAccordionHarness
+        enrollment={enrollment}
+        siblingEnrollments={[sibling]}
+      />,
+    )
+    await expandAccordion()
+    const region = await screen.findByRole("region")
+    expect(region).toHaveAttribute("aria-labelledby", "toggle")
   })
 
   test("clicking the toggle expands the panel", async () => {

@@ -430,6 +430,8 @@ export const EnrolledCourseCard = ({
   const toggleRunsExpanded = () => setRunsExpanded((v) => !v)
   const desktopRunsPanelId = `sibling-runs-panel-desktop-${enrollment.id}`
   const mobileRunsPanelId = `sibling-runs-panel-mobile-${enrollment.id}`
+  const desktopRunsToggleId = `sibling-runs-toggle-desktop-${enrollment.id}`
+  const mobileRunsToggleId = `sibling-runs-toggle-mobile-${enrollment.id}`
 
   return (
     <>
@@ -470,6 +472,7 @@ export const EnrolledCourseCard = ({
                 runCount={runCount}
                 expanded={runsExpanded}
                 onClick={toggleRunsExpanded}
+                id={desktopRunsToggleId}
                 controls={desktopRunsPanelId}
               />
             </Stack>
@@ -479,6 +482,7 @@ export const EnrolledCourseCard = ({
             siblingEnrollments={siblingEnrollments ?? []}
             expanded={runsExpanded}
             id={desktopRunsPanelId}
+            labelledBy={desktopRunsToggleId}
           />
         </EnrolledCardShell>
       ) : (
@@ -548,6 +552,7 @@ export const EnrolledCourseCard = ({
                 runCount={runCount}
                 expanded={runsExpanded}
                 onClick={toggleRunsExpanded}
+                id={mobileRunsToggleId}
                 controls={mobileRunsPanelId}
               />
             </Stack>
@@ -556,6 +561,7 @@ export const EnrolledCourseCard = ({
               siblingEnrollments={siblingEnrollments ?? []}
               expanded={runsExpanded}
               id={mobileRunsPanelId}
+              labelledBy={mobileRunsToggleId}
             />
           </MobileAccordionWrapper>
         )}
