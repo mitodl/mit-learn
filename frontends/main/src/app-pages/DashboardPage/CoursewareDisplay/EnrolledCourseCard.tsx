@@ -511,26 +511,35 @@ export const EnrolledCourseCard = ({
         className={className}
         layout={layout}
       >
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="stretch"
-          flex={1}
-          width="100%"
-        >
-          <Stack direction="column" gap="8px" flex={1}>
-            {titleSection}
+        <Stack direction="row" gap="8px" alignItems="flex-start" width="100%">
+          {showEnrollmentStatusIcon && (
+            <Stack alignSelf="start">
+              <EnrollmentStatusIcon status={enrollmentStatus} />
+            </Stack>
+          )}
+          <Stack direction="column" gap="8px" flex={1} minWidth={0}>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="stretch"
+              flex={1}
+              width="100%"
+            >
+              <Stack direction="column" gap="8px" flex={1}>
+                {titleSection}
+              </Stack>
+              {contextMenu}
+            </Stack>
+            <Stack
+              direction="row"
+              gap="8px"
+              alignItems="center"
+              justifyContent="flex-end"
+              width="100%"
+            >
+              {buttonSection}
+            </Stack>
           </Stack>
-          {contextMenu}
-        </Stack>
-        <Stack
-          direction="row"
-          gap="8px"
-          alignItems="center"
-          justifyContent="flex-end"
-          width="100%"
-        >
-          {buttonSection}
         </Stack>
         {hasMultipleRuns && (
           <MobileAccordionWrapper>
