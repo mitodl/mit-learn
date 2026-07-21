@@ -72,6 +72,9 @@ dependencies = [
     "openai>=2.0.0,<3",
     "opensearch-dsl>=2.0.0,<3",
     "opensearch-py>=2.0.0,<3",
+    # Required so DjangoInstrumentor emits HTTP server spans under ASGI (Granian).
+    # Without it the Django OTel middleware silently no-ops on every ASGI request.
+    "opentelemetry-instrumentation-asgi>=0.52b0",
     "opentelemetry-instrumentation-celery>=0.52b0",
     "opentelemetry-instrumentation-django>=0.52b0",
     "opentelemetry-instrumentation-psycopg>=0.52b0",
