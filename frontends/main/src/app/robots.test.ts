@@ -39,7 +39,11 @@ describe("robots", () => {
   const originalNoindex = process.env.MITOL_NOINDEX
 
   afterEach(() => {
-    process.env.MITOL_NOINDEX = originalNoindex
+    if (originalNoindex === undefined) {
+      delete process.env.MITOL_NOINDEX
+    } else {
+      process.env.MITOL_NOINDEX = originalNoindex
+    }
   })
 
   it("disallows everything when MITOL_NOINDEX is not 'false'", () => {
@@ -56,11 +60,11 @@ describe("robots", () => {
         {
           userAgent: "*",
           // Canonical resource drawer URLs (the form the resources sitemap
-          // emits) and the bare search landing stay crawlable; these win
-          // over the disallows below by longest-match precedence.
-          allow: ["/search$", "/search?resource="],
+          // emits) stay crawlable; this wins over the disallows below by
+          // longest-match precedence.
+          allow: ["/search?resource="],
           disallow: [
-            "/search",
+            "/search?",
             "/*?resource=",
             "/*&resource=",
             "/*?_rsc=",

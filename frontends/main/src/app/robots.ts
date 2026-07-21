@@ -28,18 +28,21 @@ export default function robots(): MetadataRoute.Robots {
            * /search?resource=<id>&resource_title=<slug>, and the resources
            * sitemap enumerates every resource at exactly that URL. Crawling
            * drawer overlays anywhere else (/c/, /news, /, faceted search) is
-           * pure duplicate load, so allow only the canonical form (and the
-           * bare /search landing page) and block resource-carrying URLs
-           * site-wide. The allow rules win by longest-match precedence
-           * (RFC 9309); they are listed first for naive first-match parsers.
+           * pure duplicate load, so allow only the canonical form and block
+           * resource-carrying URLs site-wide. The bare /search landing page
+           * matches no disallow and stays crawlable by default. The allow
+           * rule wins by longest-match precedence (RFC 9309); it is listed
+           * first for naive first-match parsers.
            *
            * NOTE: the allow rule is a literal prefix match, so it depends on
            * `resource` being the FIRST query param in canonical drawer URLs
            * (see resourceDrawerSearch in common/urls.ts).
            */
-          allow: ["/search$", "/search?resource="],
+          allow: ["/search?resource="],
           disallow: [
-            "/search",
+            // Faceted/keyword search results (any query string except the
+            // canonical drawer form above)
+            "/search?",
             "/*?resource=",
             "/*&resource=",
             // Next.js router-prefetch payloads — never part of rendered or
