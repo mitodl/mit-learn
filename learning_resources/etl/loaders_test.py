@@ -27,6 +27,7 @@ from learning_resources.constants import (
 )
 from learning_resources.etl import loaders
 from learning_resources.etl.constants import (
+    CONTENT_FILE_PAYLOAD_METADATA_FIELDS,
     CourseLoaderConfig,
     ETLSource,
     ProgramLoaderConfig,
@@ -34,7 +35,6 @@ from learning_resources.etl.constants import (
 from learning_resources.etl.edx_shared import sync_edx_course_files
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.loaders import (
-    _PAYLOAD_METADATA_FIELDS,
     ProgramLoadResult,
     _changed_content_file_ids,
     calculate_completeness,
@@ -3828,7 +3828,9 @@ def test_changed_content_file_ids_detects_new_changed_and_republished():
     )
 
     def meta(cf):
-        return tuple(getattr(cf, field) for field in _PAYLOAD_METADATA_FIELDS)
+        return tuple(
+            getattr(cf, field) for field in CONTENT_FILE_PAYLOAD_METADATA_FIELDS
+        )
 
     prior_files = {
         "unchanged": (unchanged.checksum, True, meta(unchanged)),
