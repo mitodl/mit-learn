@@ -1,8 +1,6 @@
 "use client"
 
-import React, { useMemo, useRef } from "react"
-import { Breadcrumbs, useMediaQuery } from "ol-components"
-import type { Theme } from "ol-components"
+import React, { useMemo } from "react"
 import { useLearningResourcesList } from "api/hooks/learningResources"
 import { useInfiniteLearningPathItems } from "api/hooks/learningPaths"
 import { ResourceTypeEnum, LearningResourcesListSortbyEnum } from "api/v1"
@@ -10,10 +8,9 @@ import type { LearningResource } from "api/v1"
 import { env } from "@/env"
 import { HOME } from "@/common/urls"
 import PodcastContainer from "../PodcastContainer"
-import PodcastPlayer from "../PodcastPlayer"
-import type { PodcastPlayerHandle } from "../PodcastPlayer"
-import { usePodcastPlayer } from "../usePodcastPlayer"
-import { PageSection, BreadcrumbBar, SectionDivider } from "./styled"
+import PodcastBreadcrumbs from "../PodcastBreadcrumbs"
+import { usePodcastPage } from "../usePodcastPage"
+import { PageSection, SectionDivider } from "./styled"
 import HeroSection from "./HeroSection"
 import NowPlayingSection from "./NowPlayingSection"
 import LatestEpisodesSection from "./LatestEpisodesSection"
@@ -26,17 +23,8 @@ import {
 } from "./constants"
 
 export const PodcastsListingPage: React.FC = () => {
-  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"))
-  const playerRef = useRef<PodcastPlayerHandle>(null)
-  const {
-    playingEpisode,
-    isAudioPlaying,
-    setIsAudioPlaying,
-    currentTrack,
-    toggle,
-    pause,
-    close,
-  } = usePodcastPlayer(playerRef, isMobile)
+  const { isMobile, playerBar, playingEpisode, isAudioPlaying, toggle, pause } =
+    usePodcastPage()
   const episodesLimit = EPISODES_PAGE_SIZE + 1
   const podcastLimit = PODCAST_MORE_COUNT
 
@@ -113,19 +101,13 @@ export const PodcastsListingPage: React.FC = () => {
   return (
     <>
       <PageSection>
-        <BreadcrumbBar>
-          <PodcastContainer
-            contentWidth={1320}
-            gutter={24}
-            gutterBreakpoint="sm"
-          >
-            <Breadcrumbs
-              variant="light"
-              ancestors={[{ href: HOME, label: "Home" }]}
-              current="Podcasts"
-            />
-          </PodcastContainer>
-        </BreadcrumbBar>
+        <PodcastBreadcrumbs
+          ancestors={[{ href: HOME, label: "Home" }]}
+          current="Podcasts"
+          contentWidth={1320}
+          gutter={24}
+          gutterBreakpoint="sm"
+        />
 
         <HeroSection
           totalPodcasts={totalPodcasts}
@@ -169,14 +151,7 @@ export const PodcastsListingPage: React.FC = () => {
           />
         </PodcastContainer>
       </PageSection>
-      {currentTrack && (
-        <PodcastPlayer
-          ref={playerRef}
-          track={currentTrack}
-          onClose={close}
-          onPlayStateChange={setIsAudioPlaying}
-        />
-      )}
+      {playerBar}
     </>
   )
 }
