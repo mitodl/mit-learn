@@ -7,7 +7,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.shortcuts import redirect
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from keycloak.exceptions import KeycloakError
 from rest_framework import status
 from rest_framework.response import Response
@@ -48,14 +48,30 @@ class UnsubscribeView(APIView):
             return False
         return True
 
-    @extend_schema(summary="One-click unsubscribe redirect")
+    @extend_schema(exclude=True)
     def get(self, request, token):  # noqa: ARG002
         if not self._unsubscribe(token):
             params = urlencode({"error_code": "invalid_token"})
             return redirect(f"{settings.APP_BASE_URL}/unsubscribed?{params}")
         return redirect(f"{settings.APP_BASE_URL}/unsubscribed")
 
-    @extend_schema(summary="One-click unsubscribe (RFC 8058)")
+    @extend_schema(
+        summary="One-click unsubscribe (RFC 8058)",
+        request=None,
+        responses={
+            200: OpenApiResponse(
+                response={"type": "object", "properties": {}},
+                description="Successfully unsubscribed",
+            ),
+            400: OpenApiResponse(
+                response={
+                    "type": "object",
+                    "properties": {"error": {"type": "string"}},
+                },
+                description="Invalid or expired token",
+            ),
+        },
+    )
     def post(self, request, token):  # noqa: ARG002
         if not self._unsubscribe(token):
             return Response(

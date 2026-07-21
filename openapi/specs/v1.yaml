@@ -8592,22 +8592,6 @@ paths:
                 $ref: '#/components/schemas/LearningResourceTopic'
           description: ''
   /api/v1/unsubscribe/{token}/:
-    get:
-      operationId: unsubscribe_retrieve
-      description: Handle email unsubscribe requests via signed token.
-      summary: One-click unsubscribe redirect
-      parameters:
-      - in: path
-        name: token
-        schema:
-          type: string
-          pattern: ^[^/]+$
-        required: true
-      tags:
-      - unsubscribe
-      responses:
-        '200':
-          description: No response body
     post:
       operationId: unsubscribe_create
       description: Handle email unsubscribe requests via signed token.
@@ -8623,7 +8607,21 @@ paths:
       - unsubscribe
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: {}
+          description: Successfully unsubscribed
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+          description: Invalid or expired token
   /api/v1/upload-media/:
     post:
       operationId: media_upload

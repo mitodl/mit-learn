@@ -8846,6 +8846,19 @@ export type SourceTypeEnum =
 /**
  *
  * @export
+ * @interface UnsubscribeCreate400Response
+ */
+export interface UnsubscribeCreate400Response {
+  /**
+   *
+   * @type {string}
+   * @memberof UnsubscribeCreate400Response
+   */
+  error?: string
+}
+/**
+ *
+ * @export
  * @interface User
  */
 export interface User {
@@ -29806,52 +29819,6 @@ export const UnsubscribeApiAxiosParamCreator = function (
         options: localVarRequestOptions,
       }
     },
-    /**
-     * Handle email unsubscribe requests via signed token.
-     * @summary One-click unsubscribe redirect
-     * @param {string} token
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    unsubscribeRetrieve: async (
-      token: string,
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
-      // verify required parameter 'token' is not null or undefined
-      assertParamExists("unsubscribeRetrieve", "token", token)
-      const localVarPath = `/api/v1/unsubscribe/{token}/`.replace(
-        `{${"token"}}`,
-        encodeURIComponent(String(token)),
-      )
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
-      let baseOptions
-      if (configuration) {
-        baseOptions = configuration.baseOptions
-      }
-
-      const localVarRequestOptions = {
-        method: "GET",
-        ...baseOptions,
-        ...options,
-      }
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter)
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {}
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      }
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      }
-    },
   }
 }
 
@@ -29874,39 +29841,13 @@ export const UnsubscribeApiFp = function (configuration?: Configuration) {
       token: string,
       options?: RawAxiosRequestConfig,
     ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<object>
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.unsubscribeCreate(token, options)
       const index = configuration?.serverIndex ?? 0
       const operationBasePath =
         operationServerMap["UnsubscribeApi.unsubscribeCreate"]?.[index]?.url
-      return (axios, basePath) =>
-        createRequestFunction(
-          localVarAxiosArgs,
-          globalAxios,
-          BASE_PATH,
-          configuration,
-        )(axios, operationBasePath || basePath)
-    },
-    /**
-     * Handle email unsubscribe requests via signed token.
-     * @summary One-click unsubscribe redirect
-     * @param {string} token
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async unsubscribeRetrieve(
-      token: string,
-      options?: RawAxiosRequestConfig,
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>
-    > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.unsubscribeRetrieve(token, options)
-      const index = configuration?.serverIndex ?? 0
-      const operationBasePath =
-        operationServerMap["UnsubscribeApi.unsubscribeRetrieve"]?.[index]?.url
       return (axios, basePath) =>
         createRequestFunction(
           localVarAxiosArgs,
@@ -29939,24 +29880,9 @@ export const UnsubscribeApiFactory = function (
     unsubscribeCreate(
       requestParameters: UnsubscribeApiUnsubscribeCreateRequest,
       options?: RawAxiosRequestConfig,
-    ): AxiosPromise<void> {
+    ): AxiosPromise<object> {
       return localVarFp
         .unsubscribeCreate(requestParameters.token, options)
-        .then((request) => request(axios, basePath))
-    },
-    /**
-     * Handle email unsubscribe requests via signed token.
-     * @summary One-click unsubscribe redirect
-     * @param {UnsubscribeApiUnsubscribeRetrieveRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    unsubscribeRetrieve(
-      requestParameters: UnsubscribeApiUnsubscribeRetrieveRequest,
-      options?: RawAxiosRequestConfig,
-    ): AxiosPromise<void> {
-      return localVarFp
-        .unsubscribeRetrieve(requestParameters.token, options)
         .then((request) => request(axios, basePath))
     },
   }
@@ -29972,20 +29898,6 @@ export interface UnsubscribeApiUnsubscribeCreateRequest {
    *
    * @type {string}
    * @memberof UnsubscribeApiUnsubscribeCreate
-   */
-  readonly token: string
-}
-
-/**
- * Request parameters for unsubscribeRetrieve operation in UnsubscribeApi.
- * @export
- * @interface UnsubscribeApiUnsubscribeRetrieveRequest
- */
-export interface UnsubscribeApiUnsubscribeRetrieveRequest {
-  /**
-   *
-   * @type {string}
-   * @memberof UnsubscribeApiUnsubscribeRetrieve
    */
   readonly token: string
 }
@@ -30011,23 +29923,6 @@ export class UnsubscribeApi extends BaseAPI {
   ) {
     return UnsubscribeApiFp(this.configuration)
       .unsubscribeCreate(requestParameters.token, options)
-      .then((request) => request(this.axios, this.basePath))
-  }
-
-  /**
-   * Handle email unsubscribe requests via signed token.
-   * @summary One-click unsubscribe redirect
-   * @param {UnsubscribeApiUnsubscribeRetrieveRequest} requestParameters Request parameters.
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   * @memberof UnsubscribeApi
-   */
-  public unsubscribeRetrieve(
-    requestParameters: UnsubscribeApiUnsubscribeRetrieveRequest,
-    options?: RawAxiosRequestConfig,
-  ) {
-    return UnsubscribeApiFp(this.configuration)
-      .unsubscribeRetrieve(requestParameters.token, options)
       .then((request) => request(this.axios, this.basePath))
   }
 }
