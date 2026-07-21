@@ -155,6 +155,11 @@ export const absoluteUrl = (path: string): string =>
  *   /search?resource={id}[&resource_title={slug}]
  * `resource` is the authoritative id; `resource_title` is a cosmetic slug,
  * omitted when blank and ignored on lookup.
+ *
+ * `resource` MUST stay the first query param: robots.ts re-allows canonical
+ * drawer URLs via the literal prefix rule `Allow: /search?resource=`, so
+ * reordering the params would silently block them from crawlers (these are
+ * the URLs the resources sitemap emits).
  */
 export const resourceDrawerSearch = (
   resourceId: number,
