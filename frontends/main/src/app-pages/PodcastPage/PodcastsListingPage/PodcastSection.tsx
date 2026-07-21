@@ -3,7 +3,7 @@ import Link from "next/link"
 import { Typography, Skeleton, styled } from "ol-components"
 import type { TypographyProps } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
-import { RiArrowRightLine } from "@remixicon/react"
+import { RiArrowRightLine, RiArrowRightSLine } from "@remixicon/react"
 import { formatDate } from "ol-utilities"
 import type { LearningResource } from "api/v1"
 import { SEARCH_PODCASTS, podcastPageView } from "@/common/urls"
@@ -63,6 +63,10 @@ const FeaturedPodcastCard = styled(Link)(({ theme }) => ({
   "&:hover .podcast-card-title": {
     color: theme.custom.colors.red,
   },
+  "&:hover .podcast-card-arrow": {
+    opacity: 1,
+    color: theme.custom.colors.red,
+  },
   [theme.breakpoints.down("sm")]: {
     padding: "24px",
     // Cards stack vertically on mobile, so adjacent cards share a single
@@ -74,13 +78,29 @@ const FeaturedPodcastCard = styled(Link)(({ theme }) => ({
   },
 }))
 
+const FeaturedPodcastHeader = styled.div({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "16px",
+  marginBottom: "24px",
+})
+
 const FeaturedPodcastImage = styled.img({
   width: "72px",
   height: "72px",
   objectFit: "cover",
   borderRadius: "8px",
-  marginBottom: "24px",
 })
+
+const FeaturedPodcastArrow = styled(RiArrowRightSLine)(({ theme }) => ({
+  flexShrink: 0,
+  fontSize: "24px",
+  color: theme.custom.colors.red,
+  // Revealed on card hover via the parent's ".podcast-card-arrow" rule.
+  opacity: 0,
+  marginLeft: "auto",
+}))
 
 const FeaturedPodcastTitle = styled(Typography)<
   Pick<TypographyProps, "component">
@@ -284,12 +304,18 @@ const PodcastSection: React.FC<PodcastSectionProps> = ({
                       key={item.id}
                       href={podcastPageView(String(item.id), item.title)}
                     >
-                      {item.image?.url && (
-                        <FeaturedPodcastImage
-                          src={item.image.url}
-                          alt={item.image.alt ?? item.title}
+                      <FeaturedPodcastHeader>
+                        {item.image?.url && (
+                          <FeaturedPodcastImage
+                            src={item.image.url}
+                            alt={item.image.alt ?? item.title}
+                          />
+                        )}
+                        <FeaturedPodcastArrow
+                          className="podcast-card-arrow"
+                          aria-hidden="true"
                         />
-                      )}
+                      </FeaturedPodcastHeader>
                       <FeaturedPodcastTitle
                         className="podcast-card-title"
                         variant="h4"
