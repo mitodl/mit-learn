@@ -1311,7 +1311,9 @@ describe("ProgramEnrollmentDisplay", () => {
 
     // 1 required completed + min(2 electives completed, 1 required) = 2 total completed
     // total = 2 required + 1 elective min = 3
-    await screen.findByText(/2 of 3/)
+    expect(
+      await screen.findByTestId("program-completion-count"),
+    ).toHaveTextContent("2 of 3")
   })
 
   test("Section header caps displayed count at operator_value for min_number_of sections", async () => {
