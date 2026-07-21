@@ -6,6 +6,7 @@ import pytest
 from celery.exceptions import Ignore, Retry
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import caches
 from opensearchpy.exceptions import ConnectionError as ESConnectionError
 from opensearchpy.exceptions import ConnectionTimeout, RequestError
 
@@ -42,13 +43,17 @@ from learning_resources_search.tasks import (
     _get_percolated_rows,
     _group_percolated_rows,
     _infer_percolate_group,
+    _reindex_state_cache_keys,
     bulk_deindex_learning_resources,
+    continue_reindex_batches,
     deindex_document,
     deindex_run_content_files,
     finish_recreate_index,
+    finish_update_index,
     index_course_content_files,
     index_learning_resources,
     index_run_content_files,
+    replace_with_batched_reindex,
     send_subscription_emails,
     start_recreate_index,
     start_update_index,
@@ -62,6 +67,13 @@ from main.test_utils import assert_not_raises
 
 pytestmark = pytest.mark.django_db
 User = get_user_model()
+
+
+@pytest.fixture
+def mocked_reindex_cache(mocker):
+    """Mock the durable cache holding batched reindex state"""
+    caches_mock = mocker.patch("learning_resources_search.tasks.caches")
+    return caches_mock["durable"]
 
 
 @pytest.fixture
@@ -141,7 +153,9 @@ def test_system_exit_retry(mocker):
         ["combined_hybrid"],
     ],
 )
-def test_start_recreate_index(mocker, mocked_celery, user, indexes):  # noqa: C901
+def test_start_recreate_index(  # noqa: C901
+    mocker, mocked_celery, mocked_reindex_cache, user, indexes
+):
     """
     recreate_index should recreate the OpenSearch index and reindex all data with it
     """
@@ -282,12 +296,12 @@ def test_start_recreate_index(mocker, mocked_celery, user, indexes):  # noqa: C9
             index_types=IndexestoUpdate.reindexing_index.value,
         )
     assert mocked_celery.replace.call_count == 1
-    assert mocked_celery.replace.call_args[0][1] == mocked_celery.chain.return_value
+    assert mocked_celery.replace.call_args[0][1] == mocked_celery.chord.return_value
 
 
 @pytest.mark.parametrize("indexes", [["course"], ["combined_hybrid"]])
 def test_start_recreate_index_excludes_blocklisted_courses(
-    mocker, mocked_celery, indexes
+    mocker, mocked_celery, mocked_reindex_cache, indexes
 ):
     """start_recreate_index should not index courses whose readable_id is blocklisted"""
     courses = CourseFactory.create_batch(3, etl_source=ETLSource.ocw.value)
@@ -341,7 +355,7 @@ def test_start_recreate_index_excludes_blocklisted_courses(
     [True, False],
 )
 def test_start_recreate_index_existing_reindexing_index(
-    mocker, mocked_celery, user, remove_existing_reindexing_tags
+    mocker, mocked_celery, mocked_reindex_cache, user, remove_existing_reindexing_tags
 ):
     """start_recreate_index should stop when reindexing indexes already exist."""
     settings.OPENSEARCH_INDEXING_CHUNK_SIZE = 2
@@ -412,10 +426,121 @@ def test_start_recreate_index_existing_reindexing_index(
         )
 
         assert mocked_celery.replace.call_count == 1
-        assert mocked_celery.replace.call_args[0][1] == mocked_celery.chain.return_value
+        assert mocked_celery.replace.call_args[0][1] == mocked_celery.chord.return_value
     else:
         assert index_learning_resources_mock.si.call_count == 0
         assert mocked_celery.replace.call_count == 0
+
+
+def test_replace_with_batched_reindex(mocker, mocked_celery, settings):
+    """replace_with_batched_reindex should store batches and dispatch only the first"""
+    settings.OPENSEARCH_REINDEX_BATCH_SIZE = 2
+    index_tasks = [
+        index_learning_resources.si(
+            [resource_id],
+            COURSE_TYPE,
+            index_types=IndexestoUpdate.reindexing_index.value,
+        )
+        for resource_id in range(5)
+    ]
+    finish_signature = finish_recreate_index.s({COURSE_TYPE: "backing"})
+    task = mocker.Mock(request=mocker.Mock(id="run-id"))
+
+    replace_with_batched_reindex(task, index_tasks, finish_signature)
+
+    batches_key, errors_key, finish_key = _reindex_state_cache_keys("run-id")
+    cache = caches["durable"]
+    batches = cache.get(batches_key)
+    assert [len(batch) for batch in batches] == [2, 2, 1]
+    assert batches[0] == index_tasks[:2]
+    assert cache.get(errors_key) == []
+    assert cache.get(finish_key) == finish_signature
+    mocked_celery.group.assert_called_once_with(index_tasks[:2])
+    mocked_celery.chord.assert_called_once_with(
+        mocked_celery.group.return_value,
+        continue_reindex_batches.s("run-id", 1),
+    )
+    task.replace.assert_called_once_with(mocked_celery.chord.return_value)
+
+
+def test_replace_with_batched_reindex_no_tasks(mocker, mocked_celery):
+    """replace_with_batched_reindex should skip straight to the finish signature"""
+    finish_signature = finish_update_index.s()
+    task = mocker.Mock(request=mocker.Mock(id="run-id"))
+
+    replace_with_batched_reindex(task, [], finish_signature)
+
+    batches_key, _, _ = _reindex_state_cache_keys("run-id")
+    assert caches["durable"].get(batches_key) is None
+    mocked_celery.chord.assert_not_called()
+    task.replace.assert_called_once_with(finish_signature.clone(args=([],)))
+
+
+def test_continue_reindex_batches_dispatches_next_batch(mocked_celery):
+    """continue_reindex_batches should record errors and dispatch the next batch"""
+    run_id = "run-id"
+    batches = [
+        [
+            index_learning_resources.si(
+                [1], COURSE_TYPE, index_types=IndexestoUpdate.reindexing_index.value
+            )
+        ],
+        [
+            index_learning_resources.si(
+                [2], COURSE_TYPE, index_types=IndexestoUpdate.reindexing_index.value
+            )
+        ],
+    ]
+    batches_key, errors_key, _ = _reindex_state_cache_keys(run_id)
+    cache = caches["durable"]
+    cache.set(batches_key, batches, None)
+    cache.set(errors_key, [], None)
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        continue_reindex_batches.delay(["batch-error", None], run_id, 1)
+
+    assert cache.get(errors_key) == ["batch-error"]
+    mocked_celery.group.assert_called_once_with(batches[1])
+    mocked_celery.chord.assert_called_once_with(
+        mocked_celery.group.return_value,
+        continue_reindex_batches.s(run_id, 2),
+    )
+    assert mocked_celery.replace.call_args[0][1] == mocked_celery.chord.return_value
+
+
+def test_continue_reindex_batches_finishes(mocked_celery):
+    """continue_reindex_batches should invoke the finish signature with all errors"""
+    run_id = "run-id"
+    backing_indices = {COURSE_TYPE: "backing"}
+    batches = [
+        [
+            index_learning_resources.si(
+                [1], COURSE_TYPE, index_types=IndexestoUpdate.reindexing_index.value
+            )
+        ]
+    ]
+    batches_key, errors_key, finish_key = _reindex_state_cache_keys(run_id)
+    cache = caches["durable"]
+    cache.set(batches_key, batches, None)
+    cache.set(errors_key, ["earlier-error"], None)
+    cache.set(finish_key, finish_recreate_index.s(backing_indices), None)
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        continue_reindex_batches.delay(["late-error"], run_id, 1)
+
+    assert mocked_celery.replace.call_args[0][1] == finish_recreate_index.s(
+        backing_indices
+    ).clone(args=(["earlier-error", "late-error"],))
+    assert cache.get(batches_key) is None
+    assert cache.get(errors_key) is None
+    assert cache.get(finish_key) is None
+    mocked_celery.chord.assert_not_called()
+
+
+def test_continue_reindex_batches_missing_state():
+    """continue_reindex_batches should fail loudly if the stored state is gone"""
+    with pytest.raises(ReindexError):
+        continue_reindex_batches.delay([], "missing-run", 1)
 
 
 @pytest.mark.parametrize("with_error", [True, False])
@@ -535,7 +660,9 @@ def test_bulk_deindex_learning_resources(mocker, with_error):
         (["content_file"], ETLSource.oll.value),
     ],
 )
-def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings):  # noqa: PLR0915
+def test_start_update_index(  # noqa: C901, PLR0912, PLR0913, PLR0915
+    mocker, mocked_celery, mocked_reindex_cache, indexes, etl_source, settings
+):
     """
     recreate_index should recreate the OpenSearch index and reindex all data with it
     """
@@ -596,11 +723,20 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
     with pytest.raises(mocked_celery.replace_exception_class):
         start_update_index.delay(indexes, etl_source)
 
-    assert mocked_celery.group.call_count == 1
+    expect_index_tasks = (
+        COURSE_TYPE in indexes
+        or PROGRAM_TYPE in indexes
+        or (
+            CONTENT_FILE_TYPE in indexes
+            and (etl_source is None or etl_source in RESOURCE_FILE_ETL_SOURCES)
+        )
+    )
+    assert mocked_celery.group.call_count == (1 if expect_index_tasks else 0)
 
-    # Celery's 'group' function takes a generator as an argument. In order to make assertions about the items
-    # in that generator, 'list' is being called to force iteration through all of those items.
-    list(mocked_celery.group.call_args[0][0])
+    if expect_index_tasks:
+        # Celery's 'group' function takes a generator as an argument. In order to make assertions about the items
+        # in that generator, 'list' is being called to force iteration through all of those items.
+        list(mocked_celery.group.call_args[0][0])
 
     if COURSE_TYPE in indexes:
         mock_blocklist.assert_called_once()
@@ -707,7 +843,12 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
             assert index_content_mock.si.call_count == 4
 
     assert mocked_celery.replace.call_count == 1
-    assert mocked_celery.replace.call_args[0][1] == mocked_celery.chain.return_value
+    if expect_index_tasks:
+        assert mocked_celery.replace.call_args[0][1] == mocked_celery.chord.return_value
+    else:
+        assert mocked_celery.replace.call_args[0][1] == finish_update_index.s().clone(
+            args=([],)
+        )
 
 
 def test_upsert_content_file_task(mocked_api):
