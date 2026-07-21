@@ -15,6 +15,7 @@ from learning_resources.models import (
     ContentFile,
     Course,
     LearningResource,
+    LearningResourceRun,
 )
 from learning_resources.serializers import (
     ContentFileSerializer,
@@ -39,10 +40,12 @@ from main.utils import (
     now_in_utc,
 )
 from vector_search.constants import (
+    CONTENT_FILE_PREPASS_PAYLOAD_FIELDS,
     CONTENT_FILES_COLLECTION_NAME,
     RESOURCES_COLLECTION_NAME,
 )
 from vector_search.utils import (
+    _stored_content_payloads,
     embed_learning_resources,
     embed_topics,
     filter_existing_qdrant_points_by_ids,
@@ -463,19 +466,75 @@ def embed_new_content_files(self):
 
 
 @app.task(bind=True)
-def embed_run_content_files(self, run_id, content_file_ids=None):
+def embed_run_content_files(self, run_id):
     """
-    Embed published content files associated with a run.
+    Embed the run's published content files whose Qdrant points are missing or
+    stale (checksum or a payload metadata field differs).
 
-    Args:
-        run_id (int): the run whose content files to embed
-        content_file_ids (list of int or None): only these files are embedded, or
-            all of the run's published files when None (backfill / republish)
+    A run-level pre-pass batch-compares each file's DB checksum and payload
+    metadata columns against the stored Qdrant payload, so a fully-unchanged
+    run costs one DB query plus a few batched retrieves instead of serializing
+    every file. A checksum-matching file with drifted metadata (edited title,
+    newly generated summary, ...) is dispatched but exits via the payload-only
+    update path downstream — no re-embedding. Failed or purged embeds show up
+    as missing/stale points, so they self-heal on the next load.
     """
-    content_files = ContentFile.objects.filter(run__id=run_id, published=True)
-    if content_file_ids is not None:
-        content_files = content_files.filter(id__in=content_file_ids)
-    ids = list(content_files.values_list("id", flat=True))
+    run = (
+        LearningResourceRun.objects.select_related("learning_resource__platform")
+        .filter(id=run_id)
+        .first()
+    )
+    if run is None:
+        return None
+    resource = run.learning_resource
+    platform_code = resource.platform.code if resource.platform else ""
+
+    def chunk0_point_id(key):
+        # Mirrors the doc fields ContentFileSerializer emits for run files
+        return vector_point_id(
+            vector_point_key(
+                {
+                    "platform": {"code": platform_code},
+                    "resource_readable_id": resource.readable_id,
+                    "run_readable_id": run.run_id,
+                    "key": key,
+                },
+                chunk_number=0,
+                document_type="content_file",
+            )
+        )
+
+    pid_rows = [
+        (cf_id, chunk0_point_id(key), checksum, meta)
+        for cf_id, key, checksum, *meta in ContentFile.objects.filter(
+            run=run, published=True
+        ).values_list("id", "key", "checksum", *CONTENT_FILE_PREPASS_PAYLOAD_FIELDS)
+    ]
+    stored = _stored_content_payloads(
+        [pid for _, pid, _, _ in pid_rows],
+        fields=("checksum", *CONTENT_FILE_PREPASS_PAYLOAD_FIELDS),
+    )
+
+    def is_stale(pid, checksum, meta):
+        payload = stored.get(pid)
+        if payload is None or payload.get("checksum") != checksum:
+            return True
+        return any(
+            payload.get(field) != value
+            for field, value in zip(CONTENT_FILE_PREPASS_PAYLOAD_FIELDS, meta)
+        )
+
+    ids = [
+        cf_id
+        for cf_id, pid, checksum, meta in pid_rows
+        if is_stale(pid, checksum, meta)
+    ]
+    log.info(
+        "embed_run_content_files run %s: %d of %d files need embedding",
+        run_id,
+        len(ids),
+        len(pid_rows),
+    )
     if not ids:
         return None
     return _replace_with_finalized_chain(self, ids, overwrite=True)

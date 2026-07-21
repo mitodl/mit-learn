@@ -185,17 +185,3 @@ class CommitmentConfig:
     commitment: str = ""
     min_weekly_hours: int = None
     max_weekly_hours: int = None
-
-
-# Scalar, ETL-settable ContentFile columns whose Qdrant payload isn't covered by
-# `checksum` (content-only). A deliberate subset of QDRANT_CONTENT_FILE_PARAM_MAP
-# (which also holds non-columns, run-level, and AI-generated fields).
-CONTENT_FILE_PAYLOAD_METADATA_FIELDS = (
-    "title",
-    "description",
-    "url",
-    "file_type",
-    "file_extension",
-    "content_type",
-    "edx_module_id",
-)

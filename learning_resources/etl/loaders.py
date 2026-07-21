@@ -24,7 +24,6 @@ from learning_resources.constants import (
     RunStatus,
 )
 from learning_resources.etl.constants import (
-    CONTENT_FILE_PAYLOAD_METADATA_FIELDS,
     CONTENT_TAG_CATEGORIES,
     READABLE_ID_FIELD,
     ContentTagCategory,
@@ -1029,17 +1028,6 @@ def load_content_files(
 
     """
     if course_run.learning_resource.resource_type == LearningResourceType.course.name:
-        # Snapshot existing files so we can embed only what actually changed this
-        # load, rather than re-embedding the whole run every time.
-        prior_files = {
-            key: (checksum, published, tuple(metadata))
-            for key, checksum, published, *metadata in ContentFile.objects.filter(
-                run=course_run
-            ).values_list(
-                "key", "checksum", "published", *CONTENT_FILE_PAYLOAD_METADATA_FIELDS
-            )
-        }
-
         content_files_ids = []
         content_tags = []
         for content_file in content_files_data:
@@ -1075,67 +1063,15 @@ def load_content_files(
             ):
                 update_index(resource, newly_created=False)
 
-        changed_ids = _changed_content_file_ids(content_files_ids, prior_files)
-        # Emit the intra-run change ratio so the embedding-skip benefit is
-        # measurable in production (grep "content files changed" in the ETL logs).
-        log.info(
-            "run %s content files changed: %d of %d",
-            course_run.run_id,
-            len(changed_ids),
-            len(content_files_ids),
-        )
-        # Past the cap, hand the task None (re-query published files itself) rather
-        # than serialize a large id list into the broker message. Empty stays empty
-        # (embed nothing); only large lists collapse to None.
-        embed_ids = (
-            None
-            if len(changed_ids) > settings.CONTENT_FILE_EMBED_ID_CAP
-            else changed_ids
-        )
-
         if calc_completeness:
             calculate_completeness(course_run, content_tags=content_tags)
         content_files_loaded_actions(
             run=course_run,
-            content_file_ids=embed_ids,
             removed_unpublished=removed_unpublished,
         )
 
         return content_files_ids
     return None
-
-
-def _changed_content_file_ids(
-    content_files_ids: list[int],
-    prior_files: dict[str, tuple[str, bool, tuple]],
-) -> list[int]:
-    """
-    Return the subset of loaded content-file ids that need re-embedding.
-
-    A file is "changed" when it is new, its checksum differs from the prior load,
-    it transitioned from unpublished to published (an identical-checksum republish
-    still needs re-embedding because it was purged from Qdrant while unpublished),
-    or a payload metadata field changed (needs a Qdrant payload refresh even
-    though the body text — and thus the checksum — is unchanged).
-    """
-    changed_ids = []
-    for cf_id, key, checksum, published, *metadata in ContentFile.objects.filter(
-        id__in=content_files_ids
-    ).values_list(
-        "id", "key", "checksum", "published", *CONTENT_FILE_PAYLOAD_METADATA_FIELDS
-    ):
-        prior = prior_files.get(key)
-        if prior is None:
-            changed_ids.append(cf_id)
-            continue
-        prior_checksum, prior_published, prior_metadata = prior
-        if (
-            prior_checksum != checksum
-            or (prior_published is False and published is True)
-            or prior_metadata != tuple(metadata)
-        ):
-            changed_ids.append(cf_id)
-    return changed_ids
 
 
 def load_learning_materials(
