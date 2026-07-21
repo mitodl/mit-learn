@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.75.0
+Version 0.75.0 (Released July 21, 2026)
 --------------
 
 - fix: raise SCAN COUNT in clear_views_cache to cut Redis scan time + clear cache less often during website_content requests (#3634)
