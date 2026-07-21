@@ -52,12 +52,12 @@ export const PlayPauseButton = styled("button", {
     border: "none",
     cursor: "pointer",
     padding: 0,
-    // Fixed size + overflow:hidden keeps the spinner clipped inside the button.
     // The spinner is absolutely centered; play/pause icons fill the same area.
     position: "relative",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    // Fixed size + overflow:hidden keeps the spinner clipped inside the button.
     width: `${buttonSize}px`,
     height: `${buttonSize}px`,
     flexShrink: 0,
@@ -95,8 +95,19 @@ export const ProgressWrapper = styled.div({
 export const ProgressRange = styled("input", {
   shouldForwardProp: (prop) =>
     prop !== "percent" && prop !== "trackHeight" && prop !== "thumbSize",
-})<{ percent: number; trackHeight?: number; thumbSize?: number }>(
-  ({ theme, percent, trackHeight = 12, thumbSize = 14 }) => ({
+})<{ percent: number; trackHeight?: number; thumbSize?: number }>(({
+  theme,
+  percent,
+  trackHeight = 12,
+  thumbSize = 14,
+}) => {
+  // The native range thumb is inset by half its width at each end, so its
+  // center travels within [thumbSize/2, width - thumbSize/2] rather than the
+  // full track width. Align the gradient stop with the thumb center (not the
+  // raw percent of full width) so the red fill always meets the thumb with no
+  // grey gap showing behind it.
+  const fillStop = `calc(${thumbSize / 2}px + ${percent / 100} * (100% - ${thumbSize}px))`
+  return {
     appearance: "none",
     WebkitAppearance: "none",
     flex: 1,
@@ -106,7 +117,7 @@ export const ProgressRange = styled("input", {
     outline: "none",
     border: "none",
     padding: 0,
-    background: `linear-gradient(to right, ${theme.custom.colors.red} ${percent}%, ${theme.custom.colors.lightGray2} ${percent}%)`,
+    background: `linear-gradient(to right, ${theme.custom.colors.red} ${fillStop}, ${theme.custom.colors.lightGray2} ${fillStop})`,
     "&::-webkit-slider-thumb": {
       WebkitAppearance: "none",
       width: `${thumbSize}px`,
@@ -123,8 +134,8 @@ export const ProgressRange = styled("input", {
       border: "none",
       cursor: "pointer",
     },
-  }),
-)
+  }
+})
 
 export const TimeLabel = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
