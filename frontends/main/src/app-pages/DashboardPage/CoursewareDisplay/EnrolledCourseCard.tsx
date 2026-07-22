@@ -28,7 +28,7 @@ import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { RiArrowUpCircleLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { isInPast, calendarDaysUntil, NoSSR } from "ol-utilities"
-import { SiblingRunsAccordion } from "./SiblingRunsAccordion"
+import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
@@ -55,12 +55,6 @@ const RedEllipse = styled(Ellipse)(({ theme }) => ({
   marginRight: "6px",
   backgroundColor: theme.custom.colors.red,
 }))
-
-const CountdownGroup = styled.span({
-  display: "inline-flex",
-  alignItems: "center",
-  whiteSpace: "nowrap",
-})
 
 const EnrolledTitleLink = styled(TitleLink)<{
   enrollmentstatus: EnrollmentStatus
@@ -121,13 +115,13 @@ const UpgradeBanner: React.FC<
         {`Upgrade for certificate - ${formattedPrice}`}
       </SubtitleLink>
       {calendarDays !== null && (
-        <CountdownGroup>
+        <>
           <RedEllipse />
           <NoSSR>
             {/* This uses local time. */}
             {formatUpgradeTime(calendarDays)}
           </NoSSR>
-        </CountdownGroup>
+        </>
       )}
     </SubtitleLinkRoot>
   )
@@ -159,7 +153,7 @@ const EnrolledCardShell = styled.div(({ theme }) => ({
 }))
 
 const CardHeaderContent = styled.div({
-  padding: "16px 16px 0 16px",
+  padding: "16px",
   display: "flex",
   gap: "8px",
   alignItems: "center",
@@ -269,7 +263,7 @@ export const EnrolledCourseCard = ({
 
   const endDateAndUpgradeSection =
     metaSegments.length > 0 ? (
-      <Stack direction="row" flexWrap="wrap" alignItems="center" gap="8px">
+      <Stack direction="row" alignItems="center" gap="12px">
         {metaSegments.map((segment, i) => (
           <React.Fragment key={i}>
             {i > 0 && <Ellipse />}
@@ -279,7 +273,7 @@ export const EnrolledCourseCard = ({
       </Stack>
     ) : null
   const titleSection = (
-    <Stack gap="12px" minWidth={0}>
+    <Stack gap="6px">
       {coursewareUrl ? (
         <TitleHeading as={headingLevel}>
           <EnrolledTitleLink
@@ -307,6 +301,7 @@ export const EnrolledCourseCard = ({
   const isCompleted =
     enrollmentStatus === EnrollmentStatus.Completed || courseHasEnded
   const buttonText = isCompleted ? "View" : "Continue"
+  const variant = isCompleted ? "secondary" : "primary"
   const compactVariant = isCompleted ? "text" : "primary"
   const ctaButton = isCompact ? (
     isDisabled ? (
@@ -333,7 +328,7 @@ export const EnrolledCourseCard = ({
   ) : isDisabled ? (
     <CoursewareButton
       size="small"
-      variant="primary"
+      variant={variant}
       disabled
       data-testid="courseware-button"
       aria-label={`${buttonText} course: ${title}`}
@@ -343,13 +338,22 @@ export const EnrolledCourseCard = ({
   ) : (
     <CoursewareButtonLink
       size="small"
-      variant="primary"
+      variant={variant}
       href={coursewareUrl ?? ""}
       data-testid="courseware-button"
       aria-label={`${buttonText} course: ${title}`}
     >
       {buttonText}
     </CoursewareButtonLink>
+  )
+  const buttonSection = isCompact ? (
+    <Stack direction="row" gap="8px" alignItems="center">
+      <CoursewareActionColumn direction="row" justifyContent="center">
+        {ctaButton}
+      </CoursewareActionColumn>
+    </Stack>
+  ) : (
+    ctaButton
   )
   const menuItems = []
   const readableId = run?.course.readable_id
@@ -363,6 +367,7 @@ export const EnrolledCourseCard = ({
       href: detailsUrl,
     })
   }
+
   menuItems.push(
     {
       className: "dashboard-card-menu-item",
@@ -384,11 +389,13 @@ export const EnrolledCourseCard = ({
       },
     },
   )
+
   const receiptMenuItem = getReceiptMenuItem(
     enrollment?.enrollment_mode,
     `/orders/receipt/by-run/${enrollment?.run.id}/`,
   )
   if (receiptMenuItem) menuItems.push(receiptMenuItem)
+
   const contextMenu = (
     <SimpleMenu
       items={menuItems}
@@ -405,23 +412,6 @@ export const EnrolledCourseCard = ({
       }
     />
   )
-  const buttonSection = isCompact ? (
-    <Stack direction="row" flexGrow={1} gap="8px" alignItems="center">
-      <CoursewareActionColumn
-        direction="row"
-        flexGrow={1}
-        justifyContent="center"
-      >
-        {ctaButton}
-        {contextMenu}
-      </CoursewareActionColumn>
-    </Stack>
-  ) : (
-    <Stack direction="row" flexGrow={1} gap="8px" alignItems="center">
-      {ctaButton}
-      {contextMenu}
-    </Stack>
-  )
 
   const progressBadgeSection =
     isModule && isCompact ? null : (
@@ -435,7 +425,13 @@ export const EnrolledCourseCard = ({
   const hasMultipleRuns = (siblingEnrollments?.length ?? 0) > 0
   const showEnrollmentStatusIcon =
     !isContractPageResource && isModule && isCompact
-  const statusIconAlignment = metaSegments.length > 0 ? "start" : "center"
+  const runCount = (siblingEnrollments?.length ?? 0) + 1
+  const [runsExpanded, setRunsExpanded] = React.useState(false)
+  const toggleRunsExpanded = () => setRunsExpanded((v) => !v)
+  const desktopRunsPanelId = `sibling-runs-panel-desktop-${enrollment.id}`
+  const mobileRunsPanelId = `sibling-runs-panel-mobile-${enrollment.id}`
+  const desktopRunsToggleId = `sibling-runs-toggle-desktop-${enrollment.id}`
+  const mobileRunsToggleId = `sibling-runs-toggle-mobile-${enrollment.id}`
 
   return (
     <>
@@ -453,7 +449,7 @@ export const EnrolledCourseCard = ({
               </Stack>
             )}
             <Stack
-              gap="4px"
+              gap="8px"
               justifyContent="start"
               alignItems="stretch"
               flex={1}
@@ -461,13 +457,32 @@ export const EnrolledCourseCard = ({
               {progressBadgeSection}
               {titleSection}
             </Stack>
-            <Stack direction="row" gap="8px" alignItems="center">
-              {buttonSection}
+            <Stack
+              direction="column"
+              alignSelf="stretch"
+              gap="8px"
+              alignItems="flex-end"
+              justifyContent="space-between"
+            >
+              <Stack direction="row" gap="8px" alignItems="center">
+                {buttonSection}
+                {contextMenu}
+              </Stack>
+              <SiblingRunsToggle
+                runCount={runCount}
+                expanded={runsExpanded}
+                onClick={toggleRunsExpanded}
+                id={desktopRunsToggleId}
+                controls={desktopRunsPanelId}
+              />
             </Stack>
           </CardHeaderContent>
-          <SiblingRunsAccordion
+          <SiblingRunsPanel
             enrollment={enrollment}
             siblingEnrollments={siblingEnrollments ?? []}
+            expanded={runsExpanded}
+            id={desktopRunsPanelId}
+            labelledBy={desktopRunsToggleId}
           />
         </EnrolledCardShell>
       ) : (
@@ -479,7 +494,7 @@ export const EnrolledCourseCard = ({
           layout={layout}
         >
           {showEnrollmentStatusIcon && (
-            <Stack alignSelf={statusIconAlignment}>
+            <Stack alignSelf="start">
               <EnrollmentStatusIcon status={enrollmentStatus} />
             </Stack>
           )}
@@ -489,6 +504,7 @@ export const EnrolledCourseCard = ({
           </Stack>
           <Stack direction="row" gap="8px" alignItems="center">
             {buttonSection}
+            {contextMenu}
           </Stack>
         </CardRoot>
       )}
@@ -501,36 +517,28 @@ export const EnrolledCourseCard = ({
       >
         <Stack direction="row" gap="8px" alignItems="flex-start" width="100%">
           {showEnrollmentStatusIcon && (
-            <Stack alignSelf={statusIconAlignment}>
+            <Stack alignSelf="start">
               <EnrollmentStatusIcon status={enrollmentStatus} />
             </Stack>
           )}
-          <Stack
-            direction="column"
-            gap="16px"
-            flex={1}
-            minWidth={0}
-            width="100%"
-          >
+          <Stack direction="column" gap="8px" flex={1} minWidth={0}>
             <Stack
               direction="row"
               justifyContent="space-between"
               alignItems="stretch"
               flex={1}
-              minWidth={0}
               width="100%"
             >
-              <Stack direction="column" gap="8px" flex={1} minWidth={0}>
+              <Stack direction="column" gap="8px" flex={1}>
                 {titleSection}
               </Stack>
+              {contextMenu}
             </Stack>
             <Stack
               direction="row"
-              flexGrow={1}
               gap="8px"
               alignItems="center"
               justifyContent="flex-end"
-              minWidth={0}
               width="100%"
             >
               {buttonSection}
@@ -539,9 +547,21 @@ export const EnrolledCourseCard = ({
         </Stack>
         {hasMultipleRuns && (
           <MobileAccordionWrapper>
-            <SiblingRunsAccordion
+            <Stack direction="row" justifyContent="flex-end" width="100%">
+              <SiblingRunsToggle
+                runCount={runCount}
+                expanded={runsExpanded}
+                onClick={toggleRunsExpanded}
+                id={mobileRunsToggleId}
+                controls={mobileRunsPanelId}
+              />
+            </Stack>
+            <SiblingRunsPanel
               enrollment={enrollment}
               siblingEnrollments={siblingEnrollments ?? []}
+              expanded={runsExpanded}
+              id={mobileRunsPanelId}
+              labelledBy={mobileRunsToggleId}
             />
           </MobileAccordionWrapper>
         )}
