@@ -31,6 +31,7 @@ from learning_resources_search.constants import (
     LEARNING_RESOURCE_MAP,
     MAPPING,
     PERCOLATE_INDEX_TYPE,
+    PROGRAM_TYPE,
     SYNONYMS,
     IndexestoUpdate,
 )
@@ -391,7 +392,7 @@ def deindex_learning_resources(ids, base_index_name):
         index_types=IndexestoUpdate.all_indexes.value,
     )
 
-    if base_index_name == COURSE_TYPE:
+    if base_index_name in (COURSE_TYPE, PROGRAM_TYPE):
         for run_id in LearningResourceRun.objects.filter(
             learning_resource_id__in=ids
         ).values_list("id", flat=True):
@@ -430,32 +431,17 @@ def index_percolators(ids, index_types):
     )
 
 
-def index_course_content_files(learning_resource_ids, index_types):
-    """
-    Index a list of content files by course ids
-
-    Args:
-        learning_resource_ids(list of int): List of Learning Resource id's
-        index_types (string): one of the values IndexestoUpdate. Whether the default
-            index, the reindexing index or both need to be updated
-
-    """
-    for run_id in LearningResourceRun.objects.filter(
-        learning_resource_id__in=learning_resource_ids,
-    ).values_list("id", flat=True):
-        index_run_content_files(run_id, index_types)
-
-
 def index_run_content_files(run_id, index_types):
     """
     Index a list of content files by run id
 
     Args:
-        run_id(int): Course run id
+        run_id(int): Run id
         index_types (string): one of the values IndexestoUpdate. Whether the default
             index, the reindexing index or both need to be updated
     """
-    run = LearningResourceRun.objects.get(pk=run_id)
+    run = LearningResourceRun.objects.select_related("learning_resource").get(pk=run_id)
+    resource_type = run.learning_resource.resource_type
     content_file_ids = run.content_files.filter(published=True).values_list(
         "id", flat=True
     )
@@ -463,10 +449,17 @@ def index_run_content_files(run_id, index_types):
     for ids_chunk in chunks(
         content_file_ids, chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE
     ):
-        index_content_files(ids_chunk, run.learning_resource.id, index_types)
+        index_content_files(
+            ids_chunk,
+            run.learning_resource.id,
+            index_types,
+            resource_type=resource_type,
+        )
 
 
-def index_content_files(content_file_ids, learning_resource_id, index_types):
+def index_content_files(
+    content_file_ids, learning_resource_id, index_types, resource_type=COURSE_TYPE
+):
     """
     Index a list of content files
 
@@ -475,6 +468,7 @@ def index_content_files(content_file_ids, learning_resource_id, index_types):
         learning_resource_id(int): Learning resource id of the content files
         index_types (string): one of the values IndexestoUpdate. Whether the default
             index, the reindexing index or both need to be updated
+        resource_type (string): The resource type of the parent learning resource
     """
 
     documents = (
@@ -486,19 +480,22 @@ def index_content_files(content_file_ids, learning_resource_id, index_types):
 
     index_items(
         documents,
-        COURSE_TYPE,
+        resource_type,
         index_types=index_types,
         routing=learning_resource_id,
     )
 
 
-def deindex_content_files(content_file_ids, learning_resource_id):
+def deindex_content_files(
+    content_file_ids, learning_resource_id, resource_type=COURSE_TYPE
+):
     """
-    Index a list of content files
+    Deindex a list of content files
 
     Args:
         content_file_ids(array of int): List of content file ids
         learning_resource_id(int): Learning resource id of the content files
+        resource_type (string): The resource type of the parent learning resource
     """
 
     documents = (
@@ -508,7 +505,7 @@ def deindex_content_files(content_file_ids, learning_resource_id):
 
     deindex_items(
         documents,
-        COURSE_TYPE,
+        resource_type,
         index_types=IndexestoUpdate.all_indexes.value,
         routing=learning_resource_id,
     )
@@ -519,13 +516,14 @@ def deindex_run_content_files(run_id, unpublished_only, *, keep_published=False)
     Deindex a list of content files by run from the index.
 
     Args:
-        run_id(int): Course run id
+        run_id(int): Run id
         unpublished_only(bool): if true only deindex files with published=False
         keep_published(bool): if true, deindex all of the run's current content
             files from OpenSearch without flipping ContentFile.published. Used to
             remove a run from OpenSearch while keeping it in Qdrant / the REST API.
     """
-    run = LearningResourceRun.objects.get(id=run_id)
+    run = LearningResourceRun.objects.select_related("learning_resource").get(id=run_id)
+    resource_type = run.learning_resource.resource_type
     if unpublished_only:
         content_files = run.content_files.filter(published=False).all()
     else:
@@ -543,7 +541,7 @@ def deindex_run_content_files(run_id, unpublished_only, *, keep_published=False)
 
     deindex_items(
         documents,
-        COURSE_TYPE,
+        resource_type,
         index_types=IndexestoUpdate.all_indexes.value,
         routing=run.learning_resource_id,
     )

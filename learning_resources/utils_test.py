@@ -22,6 +22,7 @@ from learning_resources.constants import (
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE
 from learning_resources.etl.utils import get_content_type
 from learning_resources.factories import (
+    ContentFileFactory,
     CourseFactory,
     LearningPathFactory,
     LearningResourceFactory,
@@ -346,11 +347,36 @@ def test_similar_topics_action(mock_plugin_manager, fixture_resource) -> dict:
 
 def test_resource_unpublished_actions(mock_plugin_manager, fixture_resource):
     """
-    resource_unpublished_actions function should trigger plugin hook's resource_unpublished function
+    resource_unpublished_actions function should unpublish direct content files
+    and trigger plugin hook's resource_unpublished function
     """
+    marketing_page = ContentFileFactory.create(
+        learning_resource=fixture_resource, published=True
+    )
     utils.resource_unpublished_actions(fixture_resource)
+    marketing_page.refresh_from_db()
+    assert marketing_page.published is False
     mock_plugin_manager.hook.resource_unpublished.assert_called_once_with(
         resource=fixture_resource
+    )
+
+
+def test_bulk_resources_unpublished_actions(mock_plugin_manager, fixture_resource):
+    """
+    bulk_resources_unpublished_actions function should unpublish direct content
+    files and trigger plugin hook's bulk_resources_unpublished function
+    """
+    marketing_page = ContentFileFactory.create(
+        learning_resource=fixture_resource, published=True
+    )
+    utils.bulk_resources_unpublished_actions(
+        [fixture_resource.id], fixture_resource.resource_type
+    )
+    marketing_page.refresh_from_db()
+    assert marketing_page.published is False
+    mock_plugin_manager.hook.bulk_resources_unpublished.assert_called_once_with(
+        resource_ids=[fixture_resource.id],
+        resource_type=fixture_resource.resource_type,
     )
 
 
