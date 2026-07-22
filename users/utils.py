@@ -35,10 +35,8 @@ def generate_unsubscribe_frontend_url(user) -> str:
 
 
 def unsign_unsubscribe_token(token: str) -> str | None:
-    """Unsign and return the UUID string, or None if invalid/expired."""
+    """Unsign and return the UUID string, or None if invalid."""
     try:
-        return _get_unsubscribe_signer().unsign(
-            token, max_age=settings.MITOL_UNSUBSCRIBE_TOKEN_MAX_AGE_SECONDS
-        )
+        return _get_unsubscribe_signer().unsign(token)
     except signing.BadSignature:
         return None

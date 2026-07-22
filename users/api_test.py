@@ -62,10 +62,15 @@ def test_unsubscribe_unknown_uuid_returns_false():
 
 
 @pytest.mark.django_db
-def test_unsubscribe_expired_token_returns_false(settings):
-    """Expired token returns False."""
+def test_unsubscribe_old_token_still_succeeds(mocker, settings):
+    """A token does not expire, regardless of MITOL_UNSUBSCRIBE_TOKEN_MAX_AGE_SECONDS."""
+    mocker.patch("users.api.sync_email_optin_to_keycloak")
     settings.MITOL_UNSUBSCRIBE_TOKEN_MAX_AGE_SECONDS = 0
     user = UserFactory.create()
+    user.profile.email_optin = True
+    user.profile.save()
     token = _make_token(str(user.unsubscribe_uuid))
 
-    assert unsubscribe(token) is False
+    assert unsubscribe(token) is True
+    user.profile.refresh_from_db()
+    assert user.profile.email_optin is False

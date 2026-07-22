@@ -21,7 +21,7 @@ describe("UnsubscribePage", () => {
       screen.getByText(/are you sure you want to unsubscribe/i),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("button", { name: /confirm unsubscribe/i }),
+      screen.getByRole("button", { name: /yes, unsubscribe me/i }),
     ).toBeInTheDocument()
   })
 
@@ -29,7 +29,7 @@ describe("UnsubscribePage", () => {
     setMockResponse.post(urls.unsubscribe.post("abc123"), {})
     renderWithProviders(<UnsubscribePage token="abc123" />)
 
-    const button = screen.getByRole("button", { name: /confirm unsubscribe/i })
+    const button = screen.getByRole("button", { name: /yes, unsubscribe me/i })
     await userEvent.click(button)
 
     await waitFor(() => {
@@ -47,7 +47,7 @@ describe("UnsubscribePage", () => {
     )
     renderWithProviders(<UnsubscribePage token="abc123" />)
 
-    const button = screen.getByRole("button", { name: /confirm unsubscribe/i })
+    const button = screen.getByRole("button", { name: /yes, unsubscribe me/i })
     await userEvent.click(button)
 
     await waitFor(() => {
@@ -63,7 +63,7 @@ describe("UnsubscribePage", () => {
     setMockResponse.post(urls.unsubscribe.post("abc123"), new Promise(() => {}))
     renderWithProviders(<UnsubscribePage token="abc123" />)
 
-    const button = screen.getByRole("button", { name: /confirm unsubscribe/i })
+    const button = screen.getByRole("button", { name: /yes, unsubscribe me/i })
     await userEvent.click(button)
 
     await waitFor(() => {

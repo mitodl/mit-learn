@@ -90,10 +90,10 @@ def test_unsign_unsubscribe_token_invalid():
 
 
 @pytest.mark.django_db
-def test_unsign_unsubscribe_token_expired(settings):
-    """unsign_unsubscribe_token returns None for an expired token."""
+def test_unsign_unsubscribe_token_does_not_expire(settings):
+    """unsign_unsubscribe_token ignores MITOL_UNSUBSCRIBE_TOKEN_MAX_AGE_SECONDS."""
     settings.MITOL_UNSUBSCRIBE_TOKEN_MAX_AGE_SECONDS = 0
     user = UserFactory.create()
     uuid_str = str(user.unsubscribe_uuid)
     token = _get_unsubscribe_signer().sign(uuid_str)
-    assert unsign_unsubscribe_token(token) is None
+    assert unsign_unsubscribe_token(token) == uuid_str
