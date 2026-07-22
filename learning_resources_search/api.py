@@ -96,7 +96,10 @@ def relevant_indexes(resource_types, aggregations, endpoint, use_hybrid_search):
 
     """
     if endpoint == CONTENT_FILE_TYPE:
-        return [get_default_alias_name(COURSE_TYPE)]
+        return [
+            get_default_alias_name(COURSE_TYPE),
+            get_default_alias_name(PROGRAM_TYPE),
+        ]
     elif use_hybrid_search:
         return [get_default_alias_name(HYBRID_COMBINED_INDEX)]
 

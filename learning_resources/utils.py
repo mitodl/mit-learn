@@ -390,8 +390,10 @@ def resource_upserted_actions(
 
 def resource_unpublished_actions(resource: LearningResource):
     """
-    Trigger plugins when a LearningResource is removed/unpublished
+    Unpublish a resource's direct content files (e.g. marketing pages) and
+    trigger plugins when a LearningResource is removed/unpublished
     """
+    resource.resource_content_files.filter(published=True).update(published=False)
     pm = get_plugin_manager()
     hook = pm.hook
     hook.resource_unpublished(resource=resource)
@@ -420,8 +422,12 @@ def resource_delete_actions(resource: LearningResource):
 
 def bulk_resources_unpublished_actions(resource_ids: list[int], resource_type: str):
     """
-    Trigger plugins when a LearningResource is removed/unpublished
+    Unpublish the resources' direct content files (e.g. marketing pages) and
+    trigger plugins when LearningResources are removed/unpublished
     """
+    ContentFile.objects.filter(
+        learning_resource_id__in=resource_ids, published=True
+    ).update(published=False)
     pm = get_plugin_manager()
     hook = pm.hook
     hook.bulk_resources_unpublished(
