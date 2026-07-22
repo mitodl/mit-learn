@@ -1284,3 +1284,23 @@ def test_log_missing_content_file_skips_unimportant_block_type(mocker):
     )
 
     mock_log.error.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("clean text", "clean text"),
+        ("", ""),
+        ("Résumé en français : déjà vu", "Résumé en français : déjà vu"),
+        ("nul\x00char", "nulchar"),
+        ("multi\x00ple\x00nuls", "multiplenuls"),
+        ("bad\ud800surrogate", "bad?surrogate"),
+        ("\x00\ud800", "?"),
+    ],
+)
+def test_sanitize_llm_text(text, expected):
+    """sanitize_llm_text should strip NULs and replace lone surrogates"""
+    result = utils.sanitize_llm_text(text)
+    assert result == expected
+    # The result must always be storable: strict UTF-8 encoding cannot raise
+    result.encode("utf-8")
