@@ -130,7 +130,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       }
       showStayUpdated={
         course.courseruns.length > 0 &&
-        (page.show_stay_updated ?? true) &&
+        (page.show_stay_updated ?? false) &&
         course.courseruns.every(
           (run) =>
             run.enrollment_modes.length > 0 &&

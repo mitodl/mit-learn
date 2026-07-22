@@ -598,6 +598,9 @@ def test_marketing_page_for_resources_with_webdriver(mocker, settings):
     )
 
     mock_generate_embeddings = mocker.patch("vector_search.tasks.generate_embeddings")
+    mock_upsert_content_file = mocker.patch(
+        "learning_resources_search.tasks.upsert_content_file"
+    )
 
     marketing_page_for_resources([course.id])
 
@@ -617,6 +620,9 @@ def test_marketing_page_for_resources_with_webdriver(mocker, settings):
     mock_generate_embeddings.delay.assert_called_once_with(
         [content_file.id], "content_file", overwrite=True
     )
+
+    # Verify the search index upsert was triggered
+    mock_upsert_content_file.delay.assert_called_once_with(content_file.id)
 
 
 @pytest.mark.django_db
@@ -655,6 +661,9 @@ def test_marketing_page_for_resources_isolates_scrape_failures(mocker):
     )
     mocker.patch("learning_resources.tasks.html_to_markdown", return_value="ok")
     mock_generate_embeddings = mocker.patch("vector_search.tasks.generate_embeddings")
+    mock_upsert_content_file = mocker.patch(
+        "learning_resources_search.tasks.upsert_content_file"
+    )
 
     # Must not raise despite the bad course failing
     marketing_page_for_resources([bad_course.id, good_course.id])
@@ -666,6 +675,7 @@ def test_marketing_page_for_resources_isolates_scrape_failures(mocker):
     mock_generate_embeddings.delay.assert_called_once_with(
         [good_cf.id], "content_file", overwrite=True
     )
+    mock_upsert_content_file.delay.assert_called_once_with(good_cf.id)
 
 
 @pytest.mark.django_db
@@ -716,6 +726,9 @@ def test_marketing_page_for_program_appends_children(mocker, settings):
     )
 
     mock_generate_embeddings = mocker.patch("vector_search.tasks.generate_embeddings")
+    mock_upsert_content_file = mocker.patch(
+        "learning_resources_search.tasks.upsert_content_file"
+    )
 
     marketing_page_for_resources([program.id])
 
@@ -730,6 +743,9 @@ def test_marketing_page_for_program_appends_children(mocker, settings):
     mock_generate_embeddings.delay.assert_called_once_with(
         [content_file.id], "content_file", overwrite=True
     )
+
+    # Program marketing pages should be upserted to the search index as well
+    mock_upsert_content_file.delay.assert_called_once_with(content_file.id)
 
 
 @pytest.mark.django_db
@@ -759,6 +775,7 @@ def test_marketing_page_for_non_program_skips_children_content(mocker, settings)
         return_value={},
     )
     mock_generate_embeddings = mocker.patch("vector_search.tasks.generate_embeddings")
+    mocker.patch("learning_resources_search.tasks.upsert_content_file")
 
     marketing_page_for_resources([course.id])
 

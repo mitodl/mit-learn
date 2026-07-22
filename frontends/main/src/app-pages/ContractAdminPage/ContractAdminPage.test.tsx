@@ -1,6 +1,6 @@
 import React from "react"
 import { renderWithProviders, screen, user } from "@/test-utils"
-import { waitFor } from "@testing-library/react"
+import { act, waitFor } from "@testing-library/react"
 import { setMockResponse } from "api/test-utils"
 import { factories, urls } from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -481,6 +481,164 @@ describe("ContractAdminPage", () => {
       await user.click(screen.getByRole("button", { name: "Export CSV" }))
 
       await screen.findByText("Could not export CSV. Please try again.")
+    })
+
+    const assertiveLiveRegionText = () =>
+      [...document.querySelectorAll('[aria-live="assertive"]')]
+        .map((el) => el.textContent ?? "")
+        .join(" ")
+
+    // The smoot-design Alert only exposes its aria-describedby ("success/error
+    // message") to NVDA, not its children, so the real message is mirrored into
+    // an assertive live region. It must be assertive: the Alert's hardcoded
+    // role="alert" already fires assertively, and a polite mirror lands right
+    // after it and gets dropped by NVDA.
+    test("announces a successful export via an assertive live region", async () => {
+      const { org, contract } = makeOrgWithContract()
+      setupPage(org, contract, { total_codes: 1 })
+
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 1,
+          page_size: 500,
+        }),
+        factories.contracts.paginatedContractCodes([
+          factories.contracts.contractCode({
+            assigned_to: "alice@example.com",
+          }),
+        ]),
+      )
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByRole("button", { name: "Export CSV" })
+      await user.click(screen.getByRole("button", { name: "Export CSV" }))
+
+      await waitFor(() => {
+        expect(assertiveLiveRegionText()).toContain("CSV download started.")
+      })
+    })
+
+    test("announces an export failure via an assertive live region", async () => {
+      allowConsoleErrors()
+      const { org, contract } = makeOrgWithContract()
+      setupPage(org, contract, { total_codes: 1 })
+
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 1,
+          page_size: 500,
+        }),
+        "Internal Server Error",
+        { code: 500 },
+      )
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByRole("button", { name: "Export CSV" })
+      await user.click(screen.getByRole("button", { name: "Export CSV" }))
+
+      await waitFor(() => {
+        expect(assertiveLiveRegionText()).toContain(
+          "Could not export CSV. Please try again.",
+        )
+      })
+    })
+
+    // The visual Alert (role="alert") is the auto-dismissing element; the
+    // message also lives in the aria-live mirror region (no role), so querying
+    // by role="alert" targets only the toast, not the mirror.
+    test("auto-dismisses the success alert after its timeout", async () => {
+      jest.useFakeTimers()
+      try {
+        const timerUser = user.setup({
+          advanceTimers: jest.advanceTimersByTime,
+        })
+        const { org, contract } = makeOrgWithContract()
+        setupPage(org, contract, { total_codes: 1 })
+
+        setMockResponse.get(
+          urls.contracts.managerContractCodes(org.id, contract.id, {
+            page: 1,
+            page_size: 500,
+          }),
+          factories.contracts.paginatedContractCodes([
+            factories.contracts.contractCode({
+              assigned_to: "alice@example.com",
+            }),
+          ]),
+        )
+
+        renderWithProviders(
+          <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+        )
+
+        await timerUser.click(
+          await screen.findByRole("button", { name: "Export CSV" }),
+        )
+
+        const alert = await screen.findByRole("alert")
+        expect(alert).toHaveTextContent("CSV download started.")
+
+        act(() => {
+          jest.advanceTimersByTime(5000)
+        })
+
+        await waitFor(() => {
+          expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+        })
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    test("does not auto-dismiss the error alert", async () => {
+      allowConsoleErrors()
+      jest.useFakeTimers()
+      try {
+        const timerUser = user.setup({
+          advanceTimers: jest.advanceTimersByTime,
+        })
+        const { org, contract } = makeOrgWithContract()
+        setupPage(org, contract, { total_codes: 1 })
+
+        setMockResponse.get(
+          urls.contracts.managerContractCodes(org.id, contract.id, {
+            page: 1,
+            page_size: 500,
+          }),
+          "Internal Server Error",
+          { code: 500 },
+        )
+
+        renderWithProviders(
+          <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+        )
+
+        await timerUser.click(
+          await screen.findByRole("button", { name: "Export CSV" }),
+        )
+
+        const alert = await screen.findByRole("alert")
+        expect(alert).toHaveTextContent(
+          "Could not export CSV. Please try again.",
+        )
+
+        // Advance well past the success auto-hide window; the error must remain.
+        act(() => {
+          jest.advanceTimersByTime(10000)
+        })
+
+        expect(screen.getByRole("alert")).toHaveTextContent(
+          "Could not export CSV. Please try again.",
+        )
+      } finally {
+        jest.useRealTimers()
+      }
     })
   })
 

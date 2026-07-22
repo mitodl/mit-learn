@@ -101,8 +101,12 @@ def test_search_index_plugin_resource_unpublished(
     if resource_type == COURSE_TYPE and has_content_files:
         for run in resource.runs.all():
             ContentFileFactory.create(run=run)
+    marketing_page = ContentFileFactory.create(learning_resource=resource)
     unpublish_run_mock = mocker.patch(
         "learning_resources_search.plugins.tasks.deindex_run_content_files.si"
+    )
+    deindex_direct_files_mock = mocker.patch(
+        "learning_resources_search.plugins.tasks.deindex_content_files.si"
     )
     SearchIndexPlugin().resource_unpublished(resource)
     mock_search_index_helpers.mock_remove_learning_resource_immutable_signature.assert_called_once_with(
@@ -115,6 +119,43 @@ def test_search_index_plugin_resource_unpublished(
             unpublish_run_mock.assert_any_call(run.id, unpublished_only=False)
     else:
         unpublish_run_mock.assert_not_called()
+    if test_mode:
+        deindex_direct_files_mock.assert_not_called()
+    else:
+        deindex_direct_files_mock.assert_called_once_with(
+            [marketing_page.id], resource.id, resource_type=resource.resource_type
+        )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("resource_type", [COURSE_TYPE, PROGRAM_TYPE])
+def test_search_index_plugin_bulk_resources_unpublished_direct_files(
+    mocker, resource_type
+):
+    """bulk_resources_unpublished should deindex the resources' direct content files"""
+    resources = LearningResourceFactory.create_batch(
+        2, resource_type=resource_type, published=False
+    )
+    marketing_pages = {
+        resource.id: ContentFileFactory.create(learning_resource=resource)
+        for resource in resources
+    }
+    mocker.patch(
+        "learning_resources_search.plugins.tasks.bulk_deindex_learning_resources.si"
+    )
+    deindex_direct_files_mock = mocker.patch(
+        "learning_resources_search.plugins.tasks.deindex_content_files.si"
+    )
+    SearchIndexPlugin().bulk_resources_unpublished(
+        [resource.id for resource in resources], resource_type
+    )
+    assert deindex_direct_files_mock.call_count == len(resources)
+    for resource in resources:
+        deindex_direct_files_mock.assert_any_call(
+            [marketing_pages[resource.id].id],
+            resource.id,
+            resource_type=resource_type,
+        )
 
 
 @pytest.mark.django_db

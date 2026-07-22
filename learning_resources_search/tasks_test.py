@@ -46,7 +46,6 @@ from learning_resources_search.tasks import (
     deindex_document,
     deindex_run_content_files,
     finish_recreate_index,
-    index_course_content_files,
     index_learning_resources,
     index_run_content_files,
     send_subscription_emails,
@@ -141,7 +140,7 @@ def test_system_exit_retry(mocker):
         ["combined_hybrid"],
     ],
 )
-def test_start_recreate_index(mocker, mocked_celery, user, indexes):  # noqa: C901
+def test_start_recreate_index(mocker, mocked_celery, user, indexes):  # noqa: C901, PLR0915
     """
     recreate_index should recreate the OpenSearch index and reindex all data with it
     """
@@ -160,6 +159,12 @@ def test_start_recreate_index(mocker, mocked_celery, user, indexes):  # noqa: C9
     for course in ocw_courses:
         ContentFileFactory.create_batch(3, run=course.learning_resource.runs.first())
 
+    # A resource-level (marketing page) content file attached directly to the
+    # learning resource rather than a run.
+    course_marketing_file = ContentFileFactory.create(
+        learning_resource=ocw_courses[0].learning_resource
+    )
+
     oll_courses = CourseFactory.create_batch(2, etl_source=ETLSource.ocw.value)
 
     courses = sorted(
@@ -173,6 +178,16 @@ def test_start_recreate_index(mocker, mocked_celery, user, indexes):  # noqa: C9
             courses=[],
         ),
         key=lambda program: program.learning_resource_id,
+    )
+
+    # Attach both a run-level and a resource-level (marketing page) content file
+    # to one program to exercise program content file indexing.
+    program_with_files = programs[0]
+    program_run_file = ContentFileFactory.create(
+        run=program_with_files.learning_resource.runs.first()
+    )
+    program_marketing_file = ContentFileFactory.create(
+        learning_resource=program_with_files.learning_resource
     )
 
     index_learning_resources_mock = mocker.patch(
@@ -268,6 +283,30 @@ def test_start_recreate_index(mocker, mocked_celery, user, indexes):  # noqa: C9
                 course.learning_resource_id,
                 index_types=IndexestoUpdate.reindexing_index.value,
             )
+
+        # resource-level (marketing page) content file attached directly to the
+        # learning resource
+        index_files_mock.si.assert_any_call(
+            [course_marketing_file.id],
+            ocw_courses[0].learning_resource_id,
+            index_types=IndexestoUpdate.reindexing_index.value,
+        )
+
+    if PROGRAM_TYPE in indexes:
+        # Program content files are indexed with resource_type=PROGRAM_TYPE, for
+        # both run-level and resource-level (marketing page) content files.
+        index_files_mock.si.assert_any_call(
+            [program_run_file.id],
+            program_with_files.learning_resource_id,
+            index_types=IndexestoUpdate.reindexing_index.value,
+            resource_type=PROGRAM_TYPE,
+        )
+        index_files_mock.si.assert_any_call(
+            [program_marketing_file.id],
+            program_with_files.learning_resource_id,
+            index_types=IndexestoUpdate.reindexing_index.value,
+            resource_type=PROGRAM_TYPE,
+        )
 
     if PROGRAM_TYPE in indexes or HYBRID_COMBINED_INDEX in indexes:
         index_type = indexes[0]
@@ -565,6 +604,17 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
                 3, run=course.learning_resource.runs.first()
             )
 
+        # A resource-level (marketing page) content file attached directly to
+        # the learning resource rather than a run.
+        xpro_course = next(
+            course
+            for course in courses
+            if course.learning_resource.etl_source == ETLSource.xpro.value
+        )
+        xpro_marketing_file = ContentFileFactory.create(
+            learning_resource=xpro_course.learning_resource
+        )
+
         unpublished_courses = sorted(
             [
                 CourseFactory.create(
@@ -581,6 +631,19 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
             key=lambda program: program.learning_resource_id,
         )
         unpublished_program = ProgramFactory.create(is_unpublished=True)
+
+        # Program content files are only indexed for programs whose ETL source
+        # has content files. Give one program such a source and attach both a
+        # run-level and a resource-level (marketing page) content file.
+        program_with_files = programs[0]
+        program_with_files.learning_resource.etl_source = ETLSource.mitxonline.value
+        program_with_files.learning_resource.save()
+        program_run_file = ContentFileFactory.create(
+            run=program_with_files.learning_resource.runs.first()
+        )
+        program_marketing_file = ContentFileFactory.create(
+            learning_resource=program_with_files.learning_resource
+        )
 
     index_learning_resources_mock = mocker.patch(
         "learning_resources_search.tasks.index_learning_resources", autospec=True
@@ -674,9 +737,25 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
             [unpublished_program.learning_resource_id], PROGRAM_TYPE
         )
 
+        # Program content files are indexed with resource_type=PROGRAM_TYPE, for
+        # both run-level and resource-level (marketing page) content files.
+        index_content_mock.si.assert_any_call(
+            [program_run_file.id],
+            program_with_files.learning_resource_id,
+            index_types=IndexestoUpdate.current_index.value,
+            resource_type=PROGRAM_TYPE,
+        )
+        index_content_mock.si.assert_any_call(
+            [program_marketing_file.id],
+            program_with_files.learning_resource_id,
+            index_types=IndexestoUpdate.current_index.value,
+            resource_type=PROGRAM_TYPE,
+        )
+
     if CONTENT_FILE_TYPE in indexes:
         if etl_source in RESOURCE_FILE_ETL_SOURCES:
-            assert index_content_mock.si.call_count == 2
+            # 2 run-level chunks + 1 resource-level (marketing page) chunk
+            assert index_content_mock.si.call_count == 3
             course = next(
                 course
                 for course in courses
@@ -701,6 +780,14 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
                 index_types=IndexestoUpdate.current_index.value,
             )
 
+            # resource-level (marketing page) content file attached directly to
+            # the learning resource
+            index_content_mock.si.assert_any_call(
+                [xpro_marketing_file.id],
+                course.learning_resource_id,
+                index_types=IndexestoUpdate.current_index.value,
+            )
+
         elif etl_source:
             assert index_content_mock.si.call_count == 0
         else:
@@ -711,9 +798,8 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
 
 
 def test_upsert_content_file_task(mocked_api):
-    """Test that upsert_content_file will serialize the content file data and upsert it to the OS index"""
+    """upsert_content_file routes to the correct index based on the parent resource type"""
     course = CourseFactory.create(etl_source=ETLSource.ocw.value)
-
     content_file = ContentFileFactory.create(run=course.learning_resource.runs.first())
     upsert_content_file(content_file.id)
     data = serialize_content_file_for_update(content_file)
@@ -726,25 +812,36 @@ def test_upsert_content_file_task(mocked_api):
     )
 
 
-@pytest.mark.usefixtures("_wrap_retry_mock")
-@pytest.mark.parametrize("with_error", [True, False])
-@pytest.mark.parametrize(
-    "index_types",
-    [IndexestoUpdate.all_indexes.value, IndexestoUpdate.current_index.value],
-)
-def test_index_course_content_files(mocker, with_error, index_types):
-    """index_course_content_files should call the api function of the same name"""
-    index_content_files_mock = mocker.patch(
-        "learning_resources_search.indexing_api.index_course_content_files"
-    )
-    if with_error:
-        index_content_files_mock.side_effect = TabError
-    result = index_course_content_files.delay([1, 2, 3], index_types=index_types).get()
-    assert result == (
-        "index_course_content_files threw an error" if with_error else None
+def test_upsert_content_file_task_program(mocked_api):
+    """upsert_content_file routes program content files to the program index"""
+    program = ProgramFactory.create()
+    content_file = ContentFileFactory.create(run=program.learning_resource.runs.first())
+    upsert_content_file(content_file.id)
+    data = serialize_content_file_for_update(content_file)
+    mocked_api.upsert_document.assert_called_once_with(
+        gen_content_file_id(content_file.id),
+        data,
+        PROGRAM_TYPE,
+        retry_on_conflict=settings.INDEXING_ERROR_RETRIES,
+        routing=program.learning_resource_id,
     )
 
-    index_content_files_mock.assert_called_once_with([1, 2, 3], index_types=index_types)
+
+def test_upsert_content_file_task_relationship_through_learning_resource_id(mocked_api):
+    """upsert_content_file handles content files attached via learning_resource_id (not run_id)"""
+    program = ProgramFactory.create()
+    content_file = ContentFileFactory.create(
+        learning_resource=program.learning_resource
+    )
+    upsert_content_file(content_file.id)
+    data = serialize_content_file_for_update(content_file)
+    mocked_api.upsert_document.assert_called_once_with(
+        gen_content_file_id(content_file.id),
+        data,
+        PROGRAM_TYPE,
+        retry_on_conflict=settings.INDEXING_ERROR_RETRIES,
+        routing=program.learning_resource_id,
+    )
 
 
 @pytest.mark.usefixtures("_wrap_retry_mock")

@@ -19,6 +19,7 @@ from urllib.parse import urljoin
 
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
+from mitol.keycloak.settings.keycloak import *  # noqa: F403
 from mitol.scim.settings.scim import *  # noqa: F403
 
 from main.envs import (
@@ -35,7 +36,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.74.3"
+VERSION = "0.75.1"
 
 log = logging.getLogger()
 
@@ -140,6 +141,7 @@ INSTALLED_APPS = (
     "vector_search",
     "ol_hubspot",
     "mitol.scim.apps.ScimApp",
+    "mitol.keycloak.apps.KeycloakApp",
     "health_check",
 )
 
@@ -888,4 +890,13 @@ MITOL_HUBSPOT_API_PRIVATE_TOKEN = get_string("MITOL_HUBSPOT_API_PRIVATE_TOKEN", 
 # If false only learning materials in OCW_VISIBLE_TAGS will be created
 CREATE_HIDDEN_OCW_LEARNING_MATERIALS = get_bool(
     "CREATE_HIDDEN_OCW_LEARNING_MATERIALS", default=False
+)
+
+# separate secret keys for unsubscribe
+UNSUBSCRIBE_SECRET_KEY = get_string("UNSUBSCRIBE_SECRET_KEY", None)
+if not UNSUBSCRIBE_SECRET_KEY:
+    msg = "UNSUBSCRIBE_SECRET_KEY is not set"
+    raise ImproperlyConfigured(msg)
+UNSUBSCRIBE_SECRET_KEY_FALLBACKS = get_list_of_str(
+    "UNSUBSCRIBE_SECRET_KEY_FALLBACKS", []
 )

@@ -63,7 +63,12 @@ def os_topic(topic_name) -> Mock:
                 "testindex_document_default",
             ],
         ),
-        (CONTENT_FILE_TYPE, ["content_file"], [], ["testindex_course_default"]),
+        (
+            CONTENT_FILE_TYPE,
+            ["content_file"],
+            [],
+            ["testindex_course_default", "testindex_program_default"],
+        ),
     ],
 )
 def test_relevant_indexes(endpoint, resourse_types, aggregations, result):
@@ -4246,7 +4251,7 @@ def test_execute_learn_search_for_content_file_query(opensearch):
 
     opensearch.conn.search.assert_called_once_with(
         body=query,
-        index=["testindex_course_default"],
+        index=["testindex_course_default,testindex_program_default"],
         search_type="dfs_query_then_fetch",
     )
 

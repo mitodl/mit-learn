@@ -431,7 +431,7 @@ describe("useProgramDashboardData", () => {
     }
   })
 
-  test("program-enrollment arm is correctly identified in sections", async () => {
+  test("program arm is produced for nested programs even without an enrollment", async () => {
     const parentReqTree =
       new mitxonline.factories.requirements.RequirementTreeBuilder()
     const requirements = parentReqTree.addOperator({
@@ -440,11 +440,22 @@ describe("useProgramDashboardData", () => {
     })
     requirements.addProgram({ program: 901 })
 
-    // Not display_mode=course, with a user enrollment in it → program-enrollment
-    // arm. Only `id` is under test; this arm reads neither courses nor req_tree
-    // of a required program, so no other overrides.
+    const childCourse = mitxonline.factories.courses.course({ id: 31 })
+    const nestedReqTree =
+      new mitxonline.factories.requirements.RequirementTreeBuilder()
+    const trackCourses = nestedReqTree.addOperator({
+      operator: "all_of",
+      title: "Track Courses",
+    })
+    trackCourses.addCourse({ course: childCourse.id })
+
+    // Not display_mode=course (factory default null) and NO user enrollment
+    // in it — the unenrolled-track bug case. Must still render, with its
+    // course children resolved from the required-program courses query.
     const requiredProgram = mitxonline.factories.programs.program({
       id: 901,
+      courses: [childCourse.id],
+      req_tree: nestedReqTree.serialize(),
     })
 
     const parentProgram = mitxonline.factories.programs.program({
@@ -453,13 +464,13 @@ describe("useProgramDashboardData", () => {
       req_tree: parentReqTree.serialize(),
     })
     const parentProgramEnrollment = makeProgramEnrollment(parentProgram)
-    const requiredProgramEnrollment = makeProgramEnrollment(requiredProgram)
 
     const { mockAll } = buildProgramScenario({
       programId: parentProgram.id,
       program: parentProgram,
-      programEnrollments: [parentProgramEnrollment, requiredProgramEnrollment],
+      programEnrollments: [parentProgramEnrollment],
       requiredPrograms: [requiredProgram],
+      requiredProgramCourses: [childCourse],
     })
     mockAll()
 
@@ -468,9 +479,12 @@ describe("useProgramDashboardData", () => {
 
     expect(result.current.sections).toHaveLength(1)
     const item = result.current.sections[0].items[0]
-    expect(item.kind).toBe("program-enrollment")
-    if (item.kind === "program-enrollment") {
-      expect(item.enrollment.program.id).toBe(901)
+    expect(item.kind).toBe("program")
+    if (item.kind === "program") {
+      expect(item.program.id).toBe(901)
+      expect(item.programEnrollment).toBeUndefined()
+      expect(item.moduleCourses).toHaveLength(1)
+      expect(item.moduleCourses[0].id).toBe(childCourse.id)
     }
   })
 

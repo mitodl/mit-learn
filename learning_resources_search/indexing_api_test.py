@@ -14,6 +14,7 @@ from learning_resources.factories import (
     ContentFileFactory,
     CourseFactory,
     LearningResourceRunFactory,
+    ProgramFactory,
 )
 from learning_resources.models import ContentFile
 from learning_resources.serializers import ContentFileSerializer
@@ -40,7 +41,6 @@ from learning_resources_search.indexing_api import (
     delete_orphaned_indexes,
     get_reindexing_alias_name,
     index_content_files,
-    index_course_content_files,
     index_items,
     index_learning_resources,
     index_run_content_files,
@@ -577,25 +577,6 @@ def test_deindex_run_content_files_unpublished_only_does_not_hard_delete(mocker)
     assert ContentFile.objects.count() == 3
 
 
-def test_index_course_content_files(mocker):
-    """
-    OpenSearch should try indexing content files for all runs in a course
-    """
-    mock_index_run_content_files = mocker.patch(
-        "learning_resources_search.indexing_api.index_run_content_files", autospec=True
-    )
-    courses = CourseFactory.create_batch(2)
-    index_course_content_files(
-        [course.learning_resource_id for course in courses],
-        IndexestoUpdate.current_index.value,
-    )
-    for course in courses:
-        for run in course.runs.all():
-            mock_index_run_content_files.assert_any_call(
-                run.id, IndexestoUpdate.current_index.value
-            )
-
-
 @pytest.mark.parametrize("content_file_count", [3, 17])
 @pytest.mark.parametrize(
     "index_types",
@@ -683,6 +664,41 @@ def test_index_content_files_serialization(mocker, index_types):
         index_types=index_types,
         routing=run.learning_resource.id,
     )
+
+
+def test_index_run_content_files_resolves_resource_type(mocker):
+    """index_run_content_files should index a program run's files into the program index"""
+    program = ProgramFactory.create()
+    run = program.learning_resource.runs.first()
+    ContentFileFactory.create_batch(3, run=run, published=True)
+    mock_index_items = mocker.patch(
+        "learning_resources_search.indexing_api.index_items", autospec=True
+    )
+    index_run_content_files(run.id, IndexestoUpdate.current_index.value)
+    mock_index_items.assert_called_once_with(
+        mocker.ANY,
+        PROGRAM_TYPE,
+        index_types=IndexestoUpdate.current_index.value,
+        routing=program.learning_resource_id,
+    )
+
+
+def test_bulk_content_file_deindex_on_program_deletion(mocker):
+    """Deindexing programs should also deindex their content files"""
+    mock_deindex_run_content_files = mocker.patch(
+        "learning_resources_search.indexing_api.deindex_run_content_files",
+        autospec=True,
+    )
+    mocker.patch("learning_resources_search.indexing_api.deindex_items", autospec=True)
+    programs = ProgramFactory.create_batch(2)
+    deindex_learning_resources(
+        [program.learning_resource_id for program in programs], PROGRAM_TYPE
+    )
+    for program in programs:
+        for run in program.learning_resource.runs.all():
+            mock_deindex_run_content_files.assert_any_call(
+                run.id, unpublished_only=False
+            )
 
 
 @pytest.mark.parametrize(

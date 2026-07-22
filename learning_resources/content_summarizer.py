@@ -17,7 +17,7 @@ from learning_resources.models import (
     ContentFile,
     ContentSummarizerConfiguration,
 )
-from learning_resources.utils import truncate_to_tokens
+from learning_resources.utils import sanitize_llm_text, truncate_to_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -263,7 +263,7 @@ class ContentSummarizer:
             raise SummaryGenerationError(exc) from exc
 
         else:
-            return generated_summary
+            return sanitize_llm_text(generated_summary)
 
     def _generate_flashcards(
         self, content: str, llm_model: str
@@ -308,4 +308,10 @@ class ContentSummarizer:
             )
             raise FlashcardsGenerationError(exc) from exc
         else:
-            return generated_flashcards
+            return [
+                {
+                    k: sanitize_llm_text(v) if isinstance(v, str) else v
+                    for k, v in flashcard.items()
+                }
+                for flashcard in generated_flashcards
+            ]

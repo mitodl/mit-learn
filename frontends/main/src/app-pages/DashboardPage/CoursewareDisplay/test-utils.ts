@@ -14,7 +14,6 @@ import {
   V2Program,
   V2ProgramDetail,
   V3UserProgramEnrollment,
-  DisplayModeEnum,
   LanguageEnum,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { getIdsFromReqTree } from "@/common/mitxonline"
@@ -533,22 +532,20 @@ const buildProgramScenario = (
       )
     }
 
-    // Query 6: required-program courses (program-as-course module courses)
-    // enabled: Boolean(enrolledInProgram && programAsCourseCourseIds.length > 0)
-    // Must mirror useProgramDashboardData.ts programAsCourseCourseIds useMemo exactly — same drift risk.
+    // Query 6: required-program courses (nested-program course children)
+    // enabled: Boolean(enrolledInProgram && requiredProgramCourseIds.length > 0)
+    // Must mirror useProgramDashboardData.ts requiredProgramCourseIds useMemo exactly — same drift risk.
     const uniqueIds = new Set<number>()
-    requiredPrograms
-      .filter((p) => p.display_mode === DisplayModeEnum.Course)
-      .forEach((p) => {
-        p.courses?.forEach((courseId) => uniqueIds.add(courseId))
-      })
-    const programAsCourseCourseIds = [...uniqueIds]
+    requiredPrograms.forEach((p) => {
+      p.courses?.forEach((courseId) => uniqueIds.add(courseId))
+    })
+    const requiredProgramCourseIds = [...uniqueIds]
 
-    if (programAsCourseCourseIds.length > 0) {
+    if (requiredProgramCourseIds.length > 0) {
       setMockResponse.get(
         urls.courses.coursesList({
-          id: programAsCourseCourseIds,
-          page_size: programAsCourseCourseIds.length || undefined,
+          id: requiredProgramCourseIds,
+          page_size: requiredProgramCourseIds.length || undefined,
         }),
         {
           count: requiredProgramCourses.length,

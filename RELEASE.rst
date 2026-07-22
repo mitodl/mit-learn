@@ -1,6 +1,33 @@
 Release Notes
 =============
 
+Version 0.75.1 (Released July 22, 2026)
+--------------
+
+- display programs without display_mode set on the program dashboard (#3656)
+- Sanitize LLM-generated summaries/flashcards before saving ContentFile (#3629)
+- feat: improve CSV export UX auto-dismiss success alert (#3652)
+- index content files for programs (#3621)
+- fix: block meta-externalads/1.1 crawler in robots.txt (#3653)
+- fix: emit OpenTelemetry HTTP server spans under ASGI (#3641)
+- refactor: Extract a PodcastPageShell for shared player/breadcrumb wiring  and Extract a shared audio engine from the two podcast players (#3628)
+
+Version 0.75.0 (Released July 21, 2026)
+--------------
+
+- fix: raise SCAN COUNT in clear_views_cache to cut Redis scan time + clear cache less often during website_content requests (#3634)
+- fix: preserve links in podcast episode descriptions (#3612)
+- Expire orphaned Celery event queues in Redis (#3644)
+- Preserve run.checksum when unpublishing runs during ETL prune (#3643)
+- Capitalize foreign language name clean (#3633)
+- feat: add content feedback model and submission endpoint (#3593)
+- Bound Celery result retention to reduce mitlearn Redis memory pressure (#3625)
+- fix: Align B2B admin dashboard copy across seat assignment, confirm modal, and row actions (#3630)
+- dashboard card mobile design improvements (#3626)
+- show textbooks (#3618)
+- fix: ensure earlier env vars loading to avoid blank error page (#3614)
+- Don't send non-transactional emails when opted out (#3615)
+
 Version 0.74.3 (Released July 20, 2026)
 --------------
 

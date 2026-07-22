@@ -1,6 +1,10 @@
 """Profile API"""
 
+import logging
+
 import tldextract
+from mitol.keycloak import api as keycloak_api
+from mitol.keycloak.data_models import UserAttributes
 
 from profiles.models import (
     PERSONAL_SITE_TYPE,
@@ -8,6 +12,8 @@ from profiles.models import (
     Profile,
     filter_profile_props,
 )
+
+log = logging.getLogger(__name__)
 
 
 def ensure_profile(user, profile_data=None):
@@ -44,3 +50,19 @@ def get_site_type_from_url(url):
     if domain in SITE_TYPE_OPTIONS:
         return domain
     return PERSONAL_SITE_TYPE
+
+
+def sync_email_optin_to_keycloak(user, *, email_optin):
+    """Push the user's email opt-in preference to their Keycloak account"""
+    if not keycloak_api.is_admin_client_configured():
+        return
+
+    if not user.global_id:
+        log.warning(
+            "Cannot sync email_optin to Keycloak for user %s: no global_id", user.id
+        )
+        return
+
+    keycloak_api.update_user(
+        user.global_id, attributes=UserAttributes(email_optin=1 if email_optin else 0)
+    )

@@ -1,6 +1,7 @@
 import React from "react"
 import { Skeleton, Stack, Typography, styled, theme } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
+import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { ResourceType, getKey } from "./model/dashboardViewModel"
 import { CoursewareCard } from "./CoursewareCard"
 import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
@@ -9,11 +10,6 @@ import { RiAwardFill } from "@remixicon/react"
 import { useProgramDashboardData } from "./hooks/useProgramDashboardData"
 
 const CourseEntryCardStyled = styled(CoursewareCard)({
-  borderRadius: "8px",
-  boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
-})
-
-const StyledCoursewareCard = styled(CoursewareCard)({
   borderRadius: "8px",
   boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
 })
@@ -71,12 +67,14 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
           {data.programTitle}
         </Typography>
         <Stack direction="row" justifyContent="space-between">
-          <Typography variant="body2">
+          <Typography variant="body2" data-testid="program-completion-count">
             You have completed
             <Typography component="span" variant="subtitle2">
-              {` ${data.completedCount} of ${data.totalCount} courses `}
+              {` ${data.completedCount} of ${data.totalCount}`}
             </Typography>
-            for this program.
+            {data.programDisplayMode === DisplayModeEnum.Course
+              ? " courses for this program."
+              : "."}
           </Typography>
           <Stack direction="column" alignItems="flex-end" gap="8px">
             {data.programCertificateUrl && (
@@ -152,14 +150,20 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                   )
                 }
 
+                // item.kind === "program" — rendered with the same card as
+                // program-as-course; the card derives its "Program" wording
+                // from display_mode.
                 return (
-                  <StyledCoursewareCard
+                  <ProgramAsCourseCard
                     key={getKey({
                       resourceType: ResourceType.Program,
-                      id: item.enrollment.program.id,
+                      id: item.program.id,
                     })}
-                    kind="program-enrollment"
-                    programEnrollment={item.enrollment}
+                    courseProgram={item.program}
+                    moduleCourses={item.moduleCourses}
+                    moduleEnrollmentsByCourseId={data.enrollmentsByCourseId}
+                    courseProgramEnrollment={item.programEnrollment}
+                    ancestorProgramEnrollment={data.ancestorProgramEnrollment}
                   />
                 )
               })}
