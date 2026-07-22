@@ -3,17 +3,21 @@ from django.db import migrations
 
 def unpublish_micromasters_resources(apps, schema_editor):
     """Unpublish and deindex any remaining micromasters resources"""
-    # Real model/utils (not apps.get_model) so the pluggy unpublished hooks
-    # fire and deindex the resources from OpenSearch/Qdrant
-    from learning_resources.models import LearningResource
-    from learning_resources.utils import resource_unpublished_actions
+    # Runtime import so the pluggy unpublished hooks fire and deindex the
+    # resources from OpenSearch/Qdrant; the hook is id-based so it stays
+    # compatible with the historical model queryset
+    from learning_resources.utils import bulk_resources_unpublished_actions
 
-    for resource in LearningResource.objects.filter(
+    LearningResource = apps.get_model("learning_resources", "LearningResource")
+    resources = LearningResource.objects.filter(
         etl_source="micromasters", published=True
-    ):
-        resource.published = False
-        resource.save()
-        resource_unpublished_actions(resource)
+    )
+    ids_by_type = {}
+    for res_id, res_type in resources.values_list("id", "resource_type"):
+        ids_by_type.setdefault(res_type, []).append(res_id)
+    resources.update(published=False)
+    for res_type, ids in ids_by_type.items():
+        bulk_resources_unpublished_actions(ids, res_type)
 
 
 class Migration(migrations.Migration):
