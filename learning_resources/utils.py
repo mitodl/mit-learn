@@ -805,7 +805,7 @@ def truncate_to_tokens(text: str, max_tokens: int, model: str = "gpt-4o") -> str
 
 
 def sanitize_llm_text(text: str) -> str:
-    """Strip characters Postgres can't store: NUL and lone surrogates."""
+    """Replace characters Postgres can't store: NUL and lone surrogates."""
     return text.replace("\x00", "").encode("utf-8", errors="replace").decode("utf-8")
 
 
