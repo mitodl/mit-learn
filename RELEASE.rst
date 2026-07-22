@@ -1,6 +1,17 @@
 Release Notes
 =============
 
+Version 0.75.1
+--------------
+
+- display programs without display_mode set on the program dashboard (#3656)
+- Sanitize LLM-generated summaries/flashcards before saving ContentFile (#3629)
+- feat: improve CSV export UX auto-dismiss success alert (#3652)
+- index content files for programs (#3621)
+- fix: block meta-externalads/1.1 crawler in robots.txt (#3653)
+- fix: emit OpenTelemetry HTTP server spans under ASGI (#3641)
+- refactor: Extract a PodcastPageShell for shared player/breadcrumb wiring  and Extract a shared audio engine from the two podcast players (#3628)
+
 Version 0.75.0 (Released July 21, 2026)
 --------------
 
