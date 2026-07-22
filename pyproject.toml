@@ -128,6 +128,7 @@ dependencies = [
     "gensim>=4.4.0",
     "langchain-community>=0.4.2",
     "langchain-text-splitters>=1.1.2",
+    "mitol-django-keycloak>=2026.7.13,<2027",
 ]
 
 [dependency-groups]

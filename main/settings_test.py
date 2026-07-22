@@ -22,6 +22,7 @@ REQUIRED_SETTINGS = {
     "MITOL_COOKIE_NAME": "cookie_monster",
     "MITOL_COOKIE_DOMAIN": "od.fake.domain",
     "MITOL_APP_BASE_URL": "http:localhost:8063/",
+    "UNSUBSCRIBE_SECRET_KEY": "fake_unsubscribe_secret_key",  # pragma: allowlist-secret
 }
 
 
