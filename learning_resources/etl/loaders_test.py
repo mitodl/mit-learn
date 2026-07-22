@@ -1346,18 +1346,9 @@ def test_load_run_content_files_loaded_actions_only_on_republish(mocker, new_pub
         published=True,
     )
     run = LearningResourceRunFactory.create(learning_resource=course, published=False)
-    ContentFileFactory.create_batch(2, run=run)
+    ContentFileFactory.create(run=run)
 
-    run_props = model_to_dict(run)
-    run_props["published"] = new_published
-    run_props["prices"] = []
-    run_props["instructors"] = []
-    run_props["image"] = None
-    del run_props["id"]
-    del run_props["learning_resource"]
-    del run_props["resource_prices"]
-
-    load_run(course, run_props)
+    load_run(course, {"run_id": run.run_id, "published": new_published})
 
     assert mock_loaded_actions.call_count == (1 if new_published else 0)
 
