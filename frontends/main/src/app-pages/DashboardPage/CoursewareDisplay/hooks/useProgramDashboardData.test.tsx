@@ -483,11 +483,8 @@ describe("useProgramDashboardData", () => {
     if (item.kind === "program") {
       expect(item.program.id).toBe(901)
       expect(item.programEnrollment).toBeUndefined()
-      expect(item.children).toHaveLength(1)
-      expect(item.children[0].kind).toBe("course")
-      if (item.children[0].kind === "course") {
-        expect(item.children[0].entry.course.id).toBe(childCourse.id)
-      }
+      expect(item.moduleCourses).toHaveLength(1)
+      expect(item.moduleCourses[0].id).toBe(childCourse.id)
     }
   })
 

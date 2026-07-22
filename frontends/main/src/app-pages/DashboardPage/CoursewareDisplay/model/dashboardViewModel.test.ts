@@ -1240,22 +1240,12 @@ describe("dashboardViewModel", () => {
       }
     })
 
-    test("program arm children resolve course leaves from module courses; unfetched grandchild programs drop", () => {
+    test("program arm's moduleCourses resolve from requiredProgramModuleCoursesByProgramId", () => {
       const childCourse = factories.courses.course({ id: 5101 })
-      const nestedTree = new RequirementTreeBuilder()
-      const nestedOp = nestedTree.addOperator({
-        operator: "all_of",
-        title: "Track Courses",
-      })
-      nestedOp.addCourse({ course: childCourse.id })
-      // Grandchild program — depth-2 data is never fetched, so it must drop.
-      nestedOp.addProgram({ program: 9998 })
-
       const requiredProgram = factories.programs.program({
         id: 5201,
         display_mode: null,
         courses: [childCourse.id],
-        req_tree: nestedTree.serialize(),
       })
       const root = new RequirementTreeBuilder()
       const op = root.addOperator({ operator: "all_of", title: "Tracks" })
@@ -1276,11 +1266,7 @@ describe("dashboardViewModel", () => {
       const item = sections[0].items[0]
       expect(item.kind).toBe("program")
       if (item.kind === "program") {
-        expect(item.children).toHaveLength(1)
-        expect(item.children[0].kind).toBe("course")
-        if (item.children[0].kind === "course") {
-          expect(item.children[0].entry.course).toBe(childCourse)
-        }
+        expect(item.moduleCourses).toEqual([childCourse])
       }
     })
 

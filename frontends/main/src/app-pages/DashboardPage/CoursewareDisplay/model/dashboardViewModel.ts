@@ -682,15 +682,13 @@ const getRequirementSectionTitle = (node: V2ProgramRequirement): string => {
  * The other two arms are not `DashboardCourseEntry`-shaped and are intentionally
  * left as lighter structs.
  *
- * The two program arms split on the nested program's `display_mode`:
- * - `program-as-course` is the program-with-`display_mode:"course"` presentation
- *   and only ever has course children (`moduleCourses`).
- * - `program` is any other nested program. Its `children` are recursively
- *   typed because a real program's requirements may reference further
- *   programs; today only one level is resolved (see `resolveRequirementItem`)
- *   and rendering still flows through the course-as-program card, so
- *   `children` is the model-layer truth that becomes the render source when
- *   this arm gets its own card component.
+ * The two program arms split on the nested program's `display_mode` and are
+ * otherwise structurally identical (`moduleCourses` course children, optional
+ * enrollment): `program-as-course` is the program-with-`display_mode:"course"`
+ * presentation; `program` is any other nested program. Kept as separate arms
+ * (rather than merged) because their learner-facing wording and future render
+ * paths are expected to diverge — see the `getProgramTypeLabel`/
+ * `getProgramChildrenLabel` split in `ProgramAsCourseCard`.
  */
 type RequirementSectionItem =
   | { kind: "course"; entry: DashboardCourseEntry }
@@ -703,7 +701,7 @@ type RequirementSectionItem =
   | {
       kind: "program"
       program: V2ProgramDetail
-      children: RequirementSectionItem[]
+      moduleCourses: CourseWithCourseRunsSerializerV2[]
       programEnrollment?: V3UserProgramEnrollment
     }
 
@@ -797,13 +795,9 @@ type ResolveRequirementItemContext = {
  * `RequirementSectionItem`, or `null` when the referenced entity is not in
  * the context pools (callers drop nulls).
  *
- * Program leaves split on `display_mode`:
- * - `display_mode === "course"` → `program-as-course` presentation.
- * - anything else → `program`, whose `children` are resolved recursively from
- *   the nested program's own req_tree. The recursive call scopes
- *   `coursesById` to that program's module courses and empties `programsById`,
- *   so resolution is depth-1 by construction: grandchild program leaves drop
- *   via the normal not-found rule until deeper fetching exists.
+ * Program leaves split on `display_mode`: `display_mode === "course"` →
+ * `program-as-course`, anything else → `program`. Both arms resolve their
+ * course children the same way, from `moduleCoursesByProgramId`.
  */
 const resolveRequirementItem = (
   resource: { type: "course" | "program"; id: number },
@@ -838,27 +832,10 @@ const resolveRequirementItem = (
     }
   }
 
-  const childCoursesById = new Map(
-    (ctx.moduleCoursesByProgramId[program.id] ?? []).map((course) => [
-      course.id,
-      course,
-    ]),
-  )
-  const children = parseProgramRequirementSections(program.req_tree)
-    .flatMap((section) => section.items)
-    .map((child) =>
-      resolveRequirementItem(child, {
-        ...ctx,
-        coursesById: childCoursesById,
-        programsById: new Map(),
-      }),
-    )
-    .filter((item): item is RequirementSectionItem => item !== null)
-
   return {
     kind: "program",
     program,
-    children,
+    moduleCourses: ctx.moduleCoursesByProgramId[program.id] ?? [],
     programEnrollment: ctx.programEnrollmentsById[program.id],
   }
 }

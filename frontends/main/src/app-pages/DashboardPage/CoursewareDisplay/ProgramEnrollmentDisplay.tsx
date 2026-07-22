@@ -151,9 +151,8 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                 }
 
                 // item.kind === "program" — rendered with the same card as
-                // program-as-course for now; the card derives its "Program"
-                // wording from display_mode. Only course children can be
-                // displayed until the card grows a nested-program renderer.
+                // program-as-course; the card derives its "Program" wording
+                // from display_mode.
                 return (
                   <ProgramAsCourseCard
                     key={getKey({
@@ -161,9 +160,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                       id: item.program.id,
                     })}
                     courseProgram={item.program}
-                    moduleCourses={item.children.flatMap((child) =>
-                      child.kind === "course" ? [child.entry.course] : [],
-                    )}
+                    moduleCourses={item.moduleCourses}
                     moduleEnrollmentsByCourseId={data.enrollmentsByCourseId}
                     courseProgramEnrollment={item.programEnrollment}
                     ancestorProgramEnrollment={data.ancestorProgramEnrollment}
