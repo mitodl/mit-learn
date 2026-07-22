@@ -14,8 +14,9 @@ import {
   MediaApi,
   VideoPlaylistsApi,
   HubspotApi,
-  UnsubscribeApi,
 } from "./generated/v1/api"
+
+import { UnsubscribeApi } from "@mitodl/mit-learn-api-axios/v1"
 
 import {
   ChannelsApi,
