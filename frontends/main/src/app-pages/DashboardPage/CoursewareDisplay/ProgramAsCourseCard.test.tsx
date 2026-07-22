@@ -33,10 +33,14 @@ describe("ProgramAsCourseCard", () => {
     includeProgramEnrollment = false,
     startDate,
     endDate,
+    // Most tests here exercise the program-as-course presentation, which requires
+    // display_mode "course" — pinned because the card's labels read it.
+    displayMode = "course",
   }: {
     includeProgramEnrollment?: boolean
     startDate?: string | null
     endDate?: string | null
+    displayMode?: "course" | null
   } = {}) => {
     const moduleOne = mitxonline.factories.courses.course({
       courseruns: [mitxonline.factories.courses.courseRun()],
@@ -59,6 +63,7 @@ describe("ProgramAsCourseCard", () => {
       req_tree: reqTree.serialize(),
       start_date: startDate ?? null,
       end_date: endDate ?? null,
+      display_mode: displayMode,
     })
 
     const moduleEnrollment = mitxonline.factories.enrollment.courseEnrollment({
@@ -147,6 +152,81 @@ describe("ProgramAsCourseCard", () => {
     // once per (desktop/mobile) header copy.
     expect(screen.getAllByText("Course")).toHaveLength(2)
   })
+
+  test("uses 'Program' labels and program details link when display_mode is not 'course'", async () => {
+    const cardData = setupCardData({ displayMode: null })
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={cardData.courseProgramEnrollment}
+      />,
+    )
+
+    await screen.findAllByRole("heading", {
+      name: cardData.courseProgram.title,
+      level: 3,
+    })
+    // Card type label, rendered once per (desktop/mobile) header copy.
+    expect(screen.getAllByText("Program")).toHaveLength(2)
+    expect(screen.queryByText("Course")).not.toBeInTheDocument()
+    // Children are described as courses, not modules.
+    expect(screen.getByText("2 Courses (0 of 2 complete)")).toBeInTheDocument()
+
+    const programCard = screen.getByTestId("program-as-course-card")
+    await user.click(within(programCard).getAllByLabelText("More options")[0])
+    const detailsLink = await screen.findByRole("menuitem", {
+      name: "View Program Details",
+    })
+    expect(detailsLink).toHaveAttribute(
+      "href",
+      `/programs/${cardData.courseProgram.readable_id}`,
+    )
+  })
+
+  test.each([
+    { displayMode: "course" as const, label: "Module" },
+    { displayMode: null, label: "Course" },
+  ])(
+    "singularizes the sub-header label when there is exactly 1 $label",
+    async ({ displayMode, label }) => {
+      const moduleOne = mitxonline.factories.courses.course({
+        courseruns: [mitxonline.factories.courses.courseRun()],
+      })
+      const reqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const modules = reqTree.addOperator({
+        operator: "all_of",
+        title: "Modules",
+      })
+      modules.addCourse({ course: moduleOne.id })
+
+      const program = mitxonline.factories.programs.program({
+        courses: [moduleOne.id],
+        req_tree: reqTree.serialize(),
+        display_mode: displayMode,
+      })
+
+      setMockResponse.get(
+        mitxonline.urls.userMe.get(),
+        mitxonline.factories.user.user(),
+      )
+
+      renderWithProviders(
+        <ProgramAsCourseCard
+          courseProgram={program}
+          moduleCourses={[moduleOne]}
+          moduleEnrollmentsByCourseId={{}}
+        />,
+      )
+
+      expect(
+        await screen.findByText(`1 ${label} (0 of 1 complete)`),
+      ).toBeInTheDocument()
+    },
+  )
 
   test("progress badge reflects program enrollment status ('In Progress')", async () => {
     const cardData = setupCardData({ includeProgramEnrollment: true })
