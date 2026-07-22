@@ -50,10 +50,8 @@ class UnsubscribeView(APIView):
 
     @extend_schema(exclude=True)
     def get(self, request, token):  # noqa: ARG002
-        if not self._unsubscribe(token):
-            params = urlencode({"error_code": "invalid_token"})
-            return redirect(f"{settings.APP_BASE_URL}/unsubscribed?{params}")
-        return redirect(f"{settings.APP_BASE_URL}/unsubscribed")
+        params = urlencode({"token": token})
+        return redirect(f"{settings.APP_BASE_URL}/unsubscribe?{params}")
 
     @extend_schema(
         summary="One-click unsubscribe (RFC 8058)",

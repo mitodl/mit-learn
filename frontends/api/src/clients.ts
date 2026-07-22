@@ -14,6 +14,7 @@ import {
   MediaApi,
   VideoPlaylistsApi,
   HubspotApi,
+  UnsubscribeApi,
 } from "./generated/v1/api"
 
 import {
@@ -106,6 +107,8 @@ const vectorLearningResourcesSearchApi = new VectorLearningResourcesSearchApi(
   axiosInstance,
 )
 
+const unsubscribeApi = new UnsubscribeApi(undefined, BASE_PATH, axiosInstance)
+
 export {
   learningResourcesApi,
   learningPathsApi,
@@ -130,4 +133,5 @@ export {
   learningResourcesSearchAdminParamsApi,
   videoPlaylistsApi,
   vectorLearningResourcesSearchApi,
+  unsubscribeApi,
 }

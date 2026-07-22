@@ -1,5 +1,7 @@
 """Tests for users.views"""
 
+from urllib.parse import urlencode
+
 import pytest
 from django.urls import reverse
 from keycloak.exceptions import KeycloakError
@@ -17,13 +19,13 @@ def _unsubscribe_url(token):
 
 
 # ---------------------------------------------------------------------------
-# GET tests (always redirect)
+# GET tests (never unsubscribes, just hands the token to the frontend)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.django_db
-def test_unsubscribe_get_valid_token_redirects_to_success(mocker, client, settings):
-    """Valid token redirects to /unsubscribed and sets email_optin=False."""
+def test_unsubscribe_get_redirects_to_frontend_with_token(mocker, client, settings):
+    """GET redirects to the frontend confirmation page with the token, without unsubscribing."""
     settings.APP_BASE_URL = "https://learn.example.com"
     sync_mock = mocker.patch("users.views.sync_email_optin_to_keycloak")
     user = UserFactory.create()
@@ -34,77 +36,23 @@ def test_unsubscribe_get_valid_token_redirects_to_success(mocker, client, settin
     resp = client.get(_unsubscribe_url(token))
 
     assert resp.status_code == 302
-    assert resp["Location"] == "https://learn.example.com/unsubscribed"
-    user.profile.refresh_from_db()
-    assert user.profile.email_optin is False
-    sync_mock.assert_called_once_with(user, email_optin=False)
-
-
-@pytest.mark.django_db
-def test_unsubscribe_get_keycloak_sync_failure_redirects_with_error(
-    mocker, client, settings
-):
-    """A Keycloak sync failure redirects with an error and does not update the profile."""
-    settings.APP_BASE_URL = "https://learn.example.com"
-    mocker.patch(
-        "users.views.sync_email_optin_to_keycloak",
-        side_effect=KeycloakError("boom"),
-    )
-    user = UserFactory.create()
-    user.profile.email_optin = True
-    user.profile.save()
-
-    token = _make_token(str(user.unsubscribe_uuid))
-    resp = client.get(_unsubscribe_url(token))
-
-    assert resp.status_code == 302
-    assert resp["Location"] == (
-        "https://learn.example.com/unsubscribed?error_code=invalid_token"
-    )
+    params = urlencode({"token": token})
+    assert resp["Location"] == f"https://learn.example.com/unsubscribe?{params}"
     user.profile.refresh_from_db()
     assert user.profile.email_optin is True
+    sync_mock.assert_not_called()
 
 
 @pytest.mark.django_db
-def test_unsubscribe_get_invalid_token_redirects_with_error(client, settings):
-    """Invalid token redirects to /unsubscribed?error_code=invalid_token."""
+def test_unsubscribe_get_invalid_token_redirects_with_token_anyway(client, settings):
+    """GET redirects with the token even when it's invalid, since GET never validates it."""
     settings.APP_BASE_URL = "https://learn.example.com"
     resp = client.get(_unsubscribe_url("totally-invalid"))
 
     assert resp.status_code == 302
-    assert resp["Location"] == (
-        "https://learn.example.com/unsubscribed?error_code=invalid_token"
-    )
-
-
-@pytest.mark.django_db
-def test_unsubscribe_get_unknown_uuid_redirects_with_error(client, settings):
-    """Valid signature but unknown UUID redirects with error_code."""
-    settings.APP_BASE_URL = "https://learn.example.com"
-    import uuid
-
-    token = _make_token(str(uuid.uuid4()))
-    resp = client.get(_unsubscribe_url(token))
-
-    assert resp.status_code == 302
-    assert resp["Location"] == (
-        "https://learn.example.com/unsubscribed?error_code=invalid_token"
-    )
-
-
-@pytest.mark.django_db
-def test_unsubscribe_get_expired_token_redirects_with_error(client, settings):
-    """Expired token redirects with error_code."""
-    settings.APP_BASE_URL = "https://learn.example.com"
-    settings.MITOL_UNSUBSCRIBE_TOKEN_MAX_AGE_SECONDS = 0
-    user = UserFactory.create()
-    token = _make_token(str(user.unsubscribe_uuid))
-
-    resp = client.get(_unsubscribe_url(token))
-
-    assert resp.status_code == 302
-    assert resp["Location"] == (
-        "https://learn.example.com/unsubscribed?error_code=invalid_token"
+    assert (
+        resp["Location"]
+        == "https://learn.example.com/unsubscribe?token=totally-invalid"
     )
 
 
