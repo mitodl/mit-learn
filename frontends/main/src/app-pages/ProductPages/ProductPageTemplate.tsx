@@ -60,9 +60,14 @@ const ContentStack = styled(Stack)(({ theme }) => ({
   },
 }))
 
-const EnrollButton = styled.div({
-  width: "100%",
-})
+const EnrollButton = styled.div(({ theme }) => ({
+  [theme.breakpoints.down("md")]: {
+    width: "240px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+  },
+}))
 
 const StayUpdatedButton = styled(Button)(({ theme }) => ({
   color: theme.custom.colors.white,

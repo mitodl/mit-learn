@@ -15,6 +15,11 @@ const ButtonWrapper = styled.span<{ $fullWidth?: boolean }>(
       ? { display: "block", width: "100%", "> button": { width: "100%" } }
       : { display: "inline-block" }),
     // Buttons always span the full width on small screens.
+    [theme.breakpoints.down("md")]: {
+      display: "block",
+      width: "100%",
+      "> button": { width: "100%" },
+    },
     [theme.breakpoints.down("sm")]: {
       display: "block",
       width: "100%",

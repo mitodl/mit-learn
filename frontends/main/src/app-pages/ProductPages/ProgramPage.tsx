@@ -287,7 +287,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       enrollmentAction={<ProgramHeaderEnrollButton program={program} />}
       showStayUpdated={
         program.enrollment_modes.length > 0 &&
-        page.show_stay_updated &&
+        (page.show_stay_updated ?? true) &&
         program.enrollment_modes.every((mode) =>
           isVerifiedEnrollmentMode(mode.mode_slug),
         )
