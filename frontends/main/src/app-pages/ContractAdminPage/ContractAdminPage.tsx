@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import {
   keepPreviousData,
@@ -153,6 +153,19 @@ const SeatAssignmentsControls = styled.div(({ theme }) => ({
 }))
 
 const ExportButtonWrapper = styled.div(({ theme }) => ({
+  // smoot-design Button only styles the native `:disabled` state, but the export
+  // button uses `aria-disabled` while exporting — mirror the bordered variant's
+  // disabled appearance here.
+  "> button[aria-disabled='true']": {
+    cursor: "default",
+    backgroundColor: theme.custom.colors.lightGray2,
+    border: `1px solid ${theme.custom.colors.lightGray2}`,
+    color: theme.custom.colors.silverGrayDark,
+    ":hover": {
+      backgroundColor: theme.custom.colors.lightGray2,
+      color: theme.custom.colors.silverGrayDark,
+    },
+  },
   [theme.breakpoints.down("md")]: {
     width: "100%",
     "> button": {
@@ -376,8 +389,8 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   // Mirror row-action Alert text into an assertive live region — smoot-design
   // Alert announces only its aria-describedby ("success/error message") via NVDA
   // instead of the actual children text. Must be before early returns (Rules of Hooks).
-  // Reset-then-set with a 100ms delay so the live region fires after the Alert's
-  // role="alert" has been processed by NVDA, preventing the update from being dropped.
+  // Reset-then-set with a 100ms delay so it fires after the Alert's role="alert"
+  // has been processed by NVDA rather than being dropped.
   useEffect(() => {
     if (!rowActionResult?.message) {
       setRowActionAnnouncement("")
@@ -389,6 +402,12 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     const id = setTimeout(() => setRowActionAnnouncement(text), 100)
     return () => clearTimeout(id)
   }, [rowActionResult])
+
+  // The Alert restarts its autoHideDuration timer whenever its `onClose` prop
+  // changes identity. Passing a new inline function each render (e.g. when a
+  // keystroke in the search box re-renders this page) would keep resetting that
+  // timer so the alert never auto-dismisses — so keep a stable reference here.
+  const handleAlertClose = useCallback(() => setRowActionResult(null), [])
 
   const {
     data: managerOrgs,
@@ -520,7 +539,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   }
 
   const handleExportCsv = async () => {
-    if (!hasExportableRows) return
+    if (isExporting || !hasExportableRows) return
     setIsExporting(true)
     try {
       const allRows: ManagerEnrollmentCode[] = []
@@ -675,7 +694,13 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
             <Alert
               severity={rowActionResult.severity}
               closable
-              onClose={() => setRowActionResult(null)}
+              // A success message only confirms the action worked, so it
+              // auto-dismisses after 5s. Errors stay until dismissed so the
+              // user has time to read and act on them.
+              autoHideDuration={
+                rowActionResult.severity === "success" ? 5000 : undefined
+              }
+              onClose={handleAlertClose}
             >
               {rowActionResult.message}
             </Alert>
@@ -705,9 +730,8 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
               <Button
                 variant="bordered"
                 onClick={handleExportCsv}
-                disabled={
-                  isLoadingContractDetail || !hasExportableRows || isExporting
-                }
+                disabled={isLoadingContractDetail || !hasExportableRows}
+                aria-disabled={isExporting}
                 aria-busy={isExporting}
               >
                 {isExporting ? "Exporting..." : "Export CSV"}
