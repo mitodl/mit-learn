@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.75.2
+--------------
+
+- Add unsubscribe API (#3636)
+
 Version 0.75.1 (Released July 22, 2026)
 --------------
 
