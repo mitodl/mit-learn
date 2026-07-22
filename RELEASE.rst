@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.75.1
+Version 0.75.1 (Released July 22, 2026)
 --------------
 
 - display programs without display_mode set on the program dashboard (#3656)
