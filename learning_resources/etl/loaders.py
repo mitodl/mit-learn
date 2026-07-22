@@ -1052,8 +1052,7 @@ def load_content_files(
             .values_list("direct_learning_resource_id", flat=True)
             .distinct()
         )
-        removed_unpublished = stale_published_files.exists()
-        stale_published_files.update(published=False)
+        removed_unpublished = stale_published_files.update(published=False) > 0
         if stale_direct_resource_ids:
             LearningResource.objects.filter(
                 id__in=stale_direct_resource_ids, published=True
