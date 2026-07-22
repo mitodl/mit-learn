@@ -2,6 +2,8 @@
 Factory for Users
 """
 
+import uuid
+
 import ulid
 from django.conf import settings
 from factory import (
@@ -31,6 +33,8 @@ class UserFactory(DjangoModelFactory):
     scim_username = SelfAttribute("email")
 
     global_id = SelfAttribute("scim_external_id")
+
+    unsubscribe_uuid = LazyFunction(uuid.uuid4)
 
     class Meta:
         model = settings.AUTH_USER_MODEL

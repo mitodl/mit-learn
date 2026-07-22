@@ -17,7 +17,7 @@ class User(AbstractUser, AbstractSCIMUserMixin, TimestampedModel):
     unsubscribe_uuid = UUIDField(
         null=True,
         unique=True,
-        default=uuid.uuid4,
+        default=None,
     )
 
     def get_or_generate_unsubscribe_uuid(self) -> uuid.UUID:

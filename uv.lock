@@ -1860,7 +1860,7 @@ name = "jinxed"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ansicon", marker = "sys_platform == 'win32'" },
+    { name = "ansicon" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/20/d0/59b2b80e7a52d255f9e0ad040d2e826342d05580c4b1d7d7747cfb8db731/jinxed-1.3.0.tar.gz", hash = "sha256:1593124b18a41b7a3da3b078471442e51dbad3d77b4d4f2b0c26ab6f7d660dbf", size = 80981, upload-time = "2024-07-31T22:39:18.854Z" }
 wheels = [
@@ -2769,7 +2769,7 @@ requires-dist = [
     { name = "markdown", specifier = ">=3.7,<4" },
     { name = "markdown2", specifier = ">=2.4.8,<3" },
     { name = "mitol-django-common", specifier = ">=2026.4.2,<2027" },
-    { name = "mitol-django-keycloak", git = "https://github.com/mitodl/ol-django?subdirectory=src%2Fkeycloak&branch=nl%2Ffix-keycloak-email_optin" },
+    { name = "mitol-django-keycloak", specifier = ">=2026.7.13,<2027" },
     { name = "mitol-django-observability", specifier = ">=2026.1.0,<2027" },
     { name = "mitol-django-scim", specifier = ">=2026.4.2,<2027" },
     { name = "named-enum", specifier = ">=1.4.0,<2" },
@@ -2875,11 +2875,15 @@ wheels = [
 [[package]]
 name = "mitol-django-keycloak"
 version = "2026.7.13"
-source = { git = "https://github.com/mitodl/ol-django?subdirectory=src%2Fkeycloak&branch=nl%2Ffix-keycloak-email_optin#9a0bf6730fa38ba09cc284ec99583f502858f8ea" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
     { name = "pydantic" },
     { name = "python-keycloak" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8e/eb/b23606be6b0982376182ce349c9834b29c7ab25ce70758817a1c8758816d/mitol_django_keycloak-2026.7.13.tar.gz", hash = "sha256:a1113d2b4db1df853012eabcb9a3da7113f6d0cd93b0f46474339111f65ba8d3", size = 3219, upload-time = "2026-07-13T10:56:33.828Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/37/ae/865d4632e6b6baf4e158c6c7aae204a4cdc14c9c2a8b3af616aac2ce23a8/mitol_django_keycloak-2026.7.13-py3-none-any.whl", hash = "sha256:845a241dc1433e8d7d85963ab6f2f5e969df69958caeae4c6e072c0669c6336c", size = 5115, upload-time = "2026-07-13T10:56:32.742Z" },
 ]
 
 [[package]]
