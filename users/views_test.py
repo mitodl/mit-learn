@@ -4,7 +4,6 @@ from urllib.parse import urlencode
 
 import pytest
 from django.urls import reverse
-from keycloak.exceptions import KeycloakError
 
 from main.factories import UserFactory
 from users.utils import _get_unsubscribe_signer
@@ -27,7 +26,7 @@ def _unsubscribe_url(token):
 def test_unsubscribe_get_redirects_to_frontend_with_token(mocker, client, settings):
     """GET redirects to the frontend confirmation page with the token, without unsubscribing."""
     settings.APP_BASE_URL = "https://learn.example.com"
-    sync_mock = mocker.patch("users.views.sync_email_optin_to_keycloak")
+    unsubscribe_mock = mocker.patch("users.views.unsubscribe")
     user = UserFactory.create()
     user.profile.email_optin = True
     user.profile.save()
@@ -38,9 +37,7 @@ def test_unsubscribe_get_redirects_to_frontend_with_token(mocker, client, settin
     assert resp.status_code == 302
     params = urlencode({"token": token})
     assert resp["Location"] == f"https://learn.example.com/unsubscribe?{params}"
-    user.profile.refresh_from_db()
-    assert user.profile.email_optin is True
-    sync_mock.assert_not_called()
+    unsubscribe_mock.assert_not_called()
 
 
 @pytest.mark.django_db
@@ -58,72 +55,30 @@ def test_unsubscribe_get_invalid_token_redirects_with_token_anyway(client, setti
 
 # ---------------------------------------------------------------------------
 # POST tests (RFC 8058 one-click — returns JSON)
+#
+# The view just delegates to users.api.unsubscribe(), so these tests mock
+# that function and assert the view's response handling. The unsubscribe
+# logic itself is tested in users/api_test.py.
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.django_db
-def test_unsubscribe_post_valid_token_returns_200(mocker, client):
-    """Valid token returns 200 and sets email_optin=False."""
-    sync_mock = mocker.patch("users.views.sync_email_optin_to_keycloak")
-    user = UserFactory.create()
-    user.profile.email_optin = True
-    user.profile.save()
-
-    token = _make_token(str(user.unsubscribe_uuid))
+def test_unsubscribe_post_success_returns_200(mocker, client):
+    """When users.api.unsubscribe() succeeds, POST returns 200."""
+    mocker.patch("users.views.unsubscribe", return_value=True)
+    token = _make_token("some-uuid")
     resp = client.post(_unsubscribe_url(token))
 
     assert resp.status_code == 200
-    user.profile.refresh_from_db()
-    assert user.profile.email_optin is False
-    sync_mock.assert_called_once_with(user, email_optin=False)
+    assert resp.json() == {}
 
 
 @pytest.mark.django_db
-def test_unsubscribe_post_keycloak_sync_failure_returns_400(mocker, client):
-    """A Keycloak sync failure returns 400 and does not update the profile."""
-    mocker.patch(
-        "users.views.sync_email_optin_to_keycloak",
-        side_effect=KeycloakError("boom"),
-    )
-    user = UserFactory.create()
-    user.profile.email_optin = True
-    user.profile.save()
-
-    token = _make_token(str(user.unsubscribe_uuid))
+def test_unsubscribe_post_failure_returns_400(mocker, client):
+    """When users.api.unsubscribe() fails, POST returns 400."""
+    mocker.patch("users.views.unsubscribe", return_value=False)
+    token = _make_token("some-uuid")
     resp = client.post(_unsubscribe_url(token))
-
-    assert resp.status_code == 400
-    user.profile.refresh_from_db()
-    assert user.profile.email_optin is True
-
-
-@pytest.mark.django_db
-def test_unsubscribe_post_invalid_token_returns_400(client):
-    """Invalid token returns 400."""
-    resp = client.post(_unsubscribe_url("totally-invalid"))
 
     assert resp.status_code == 400
     assert resp.json() == {"error": "Invalid or expired token"}
-
-
-@pytest.mark.django_db
-def test_unsubscribe_post_unknown_uuid_returns_400(client):
-    """Valid signature but unknown UUID returns 400."""
-    import uuid
-
-    token = _make_token(str(uuid.uuid4()))
-    resp = client.post(_unsubscribe_url(token))
-
-    assert resp.status_code == 400
-
-
-@pytest.mark.django_db
-def test_unsubscribe_post_expired_token_returns_400(client, settings):
-    """Expired token returns 400."""
-    settings.MITOL_UNSUBSCRIBE_TOKEN_MAX_AGE_SECONDS = 0
-    user = UserFactory.create()
-    token = _make_token(str(user.unsubscribe_uuid))
-
-    resp = client.post(_unsubscribe_url(token))
-
-    assert resp.status_code == 400
