@@ -324,25 +324,31 @@ def test_send_template_email_transactional_no_unsubscribe_url(mocker):
 def test_send_template_email_not_transactional_sets_unsubscribe_url(mocker, settings):
     """When is_transactional=False, unsubscribe_url is set from the user."""
     settings.MITOL_API_BASE_URL = "https://api.example.com"
+    settings.APP_BASE_URL = "https://learn.example.com"
     mock_send_email = mocker.patch("profiles.utils.send_email")
     user = UserFactory.create(profile__email_optin=True)
 
     send_template_email(
         user,
         "Test",
-        "email/welcome_email.html",
+        "email/email_base.html",
         context={"display_name": "Test"},
         is_transactional=False,
     )
 
     mock_send_email.assert_called_once()
+    # The List-Unsubscribe header URL is still API-rooted (RFC 8058 one-click)
     call_kwargs = mock_send_email.call_args.kwargs
     assert call_kwargs["unsubscribe_url"]
+    assert call_kwargs["unsubscribe_url"].startswith("https://api.example.com")
     # The UUID is embedded in the signed token but should not be a standalone path segment
-    from urllib.parse import urlparse
-
     segments = urlparse(call_kwargs["unsubscribe_url"]).path.strip("/").split("/")
     assert str(user.unsubscribe_uuid) not in segments
+
+    # The footer link rendered into the email body points at the frontend page
+    html_content = mock_send_email.call_args.args[2]
+    assert "https://learn.example.com/unsubscribe?" in html_content
+    assert "https://api.example.com" not in html_content
 
 
 @pytest.mark.django_db

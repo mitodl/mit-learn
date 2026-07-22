@@ -1,5 +1,7 @@
 """Users utilities"""
 
+from urllib.parse import urlencode
+
 from django.conf import settings
 from django.core import signing
 from django.core.exceptions import ImproperlyConfigured
@@ -22,6 +24,14 @@ def generate_unsubscribe_url(user) -> str:
     token = _get_unsubscribe_signer().sign(uuid_str)
     path = reverse("users:v1:unsubscribe", kwargs={"token": token})
     return f"{settings.MITOL_API_BASE_URL}{path}"
+
+
+def generate_unsubscribe_frontend_url(user) -> str:
+    """Return the frontend unsubscribe URL, matching UnsubscribeView.get's redirect."""
+    uuid_str = str(user.get_or_generate_unsubscribe_uuid())
+    token = _get_unsubscribe_signer().sign(uuid_str)
+    params = urlencode({"token": token})
+    return f"{settings.APP_BASE_URL}/unsubscribe?{params}"
 
 
 def unsign_unsubscribe_token(token: str) -> str | None:

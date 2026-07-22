@@ -5,6 +5,7 @@ import pytest
 from main.factories import UserFactory
 from users.utils import (
     _get_unsubscribe_signer,
+    generate_unsubscribe_frontend_url,
     generate_unsubscribe_url,
     unsign_unsubscribe_token,
 )
@@ -42,6 +43,29 @@ def test_generate_unsubscribe_url_token_can_recover_uuid(settings):
     url = generate_unsubscribe_url(user)
     # token is the last non-empty path segment
     token = url.rstrip("/").rsplit("/", 1)[-1]
+    recovered = unsign_unsubscribe_token(token)
+    assert recovered == str(user.unsubscribe_uuid)
+
+
+@pytest.mark.django_db
+def test_generate_unsubscribe_frontend_url_rooted_at_app_base(settings):
+    """generate_unsubscribe_frontend_url should use APP_BASE_URL as the base."""
+    settings.APP_BASE_URL = "https://learn.example.com"
+    user = UserFactory.create()
+    url = generate_unsubscribe_frontend_url(user)
+    assert url.startswith("https://learn.example.com/unsubscribe?")
+
+
+@pytest.mark.django_db
+def test_generate_unsubscribe_frontend_url_token_can_recover_uuid(settings):
+    """The token in the frontend URL should unsign to the original UUID."""
+    settings.APP_BASE_URL = "https://learn.example.com"
+    user = UserFactory.create()
+    url = generate_unsubscribe_frontend_url(user)
+    from urllib.parse import parse_qs, urlparse
+
+    query = parse_qs(urlparse(url).query)
+    token = query["token"][0]
     recovered = unsign_unsubscribe_token(token)
     assert recovered == str(user.unsubscribe_uuid)
 

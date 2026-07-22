@@ -20,7 +20,7 @@ from django.template.loader import render_to_string
 from PIL import Image
 
 from main.utils import generate_filepath
-from users.utils import generate_unsubscribe_url
+from users.utils import generate_unsubscribe_frontend_url, generate_unsubscribe_url
 
 log = logging.getLogger(__name__)
 
@@ -430,7 +430,7 @@ def send_template_email(user, subject, template, context, *, is_transactional: b
     unsubscribe_url = None
     if not is_transactional:
         unsubscribe_url = generate_unsubscribe_url(user)
-        context["unsubscribe_url"] = unsubscribe_url
+        context["unsubscribe_url"] = generate_unsubscribe_frontend_url(user)
     context["APP_BASE_URL"] = settings.APP_BASE_URL
     context["ABSOLUTE_STATIC_URL"] = urljoin(settings.APP_BASE_URL, settings.STATIC_URL)
     html_content = render_to_string(template, context)
