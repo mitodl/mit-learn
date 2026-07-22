@@ -18,12 +18,13 @@ const BadgeContainer = styled("div")<{
 
   return {
     display: "flex",
-    width: "80px",
+    minWidth: "80px",
     padding: "4px 8px",
     borderRadius: "4px",
     justifyContent: "center",
     alignItems: "center",
     gap: "4px",
+    whiteSpace: "nowrap",
     backgroundColor,
     color,
   }

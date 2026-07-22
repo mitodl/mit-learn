@@ -70,14 +70,14 @@ const CardTypeText = styled(Typography)(({ theme }) => ({
 
 const TitleHeading = styled.h3(({ theme }) => ({
   margin: 0,
-  ...theme.typography.subtitle2,
+  ...theme.typography.subtitle1,
   [theme.breakpoints.down("sm")]: {
     maxWidth: "calc(100% - 16px)",
   },
 }))
 
 const TitleLink = styled(Link)(({ theme }) => ({
-  ...theme.typography.subtitle2,
+  ...theme.typography.subtitle1,
 }))
 
 const TitleText = styled.h3<{ clickable?: boolean }>(
