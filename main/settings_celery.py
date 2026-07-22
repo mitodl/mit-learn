@@ -53,10 +53,6 @@ CELERY_BEAT_SCHEDULE = (
             "task": "learning_resources.tasks.import_all_mit_edx_files",
             "schedule": crontab(minute=0, hour=6),
         },
-        "update-micromasters-programs-every-1-days": {
-            "task": "learning_resources.tasks.get_micromasters_data",
-            "schedule": crontab(minute=0, hour=5),  # 1:00am EST
-        },
         "update-mit-climate-articles-every-1-days": {
             "task": "learning_resources.tasks.get_mit_climate_data",
             "schedule": crontab(minute=30, hour=5),  # 1:30am EST

@@ -80,14 +80,6 @@ def update_next_start_date_and_prices():
 
 
 @app.task
-def get_micromasters_data():
-    """Execute the MicroMasters ETL pipeline"""
-    programs = pipelines.micromasters_etl()
-    clear_views_cache()
-    return len(programs)
-
-
-@app.task
 @cooldown_task(
     wait_time=3600,
     key_func=lambda *, api_course_datafile=None, api_program_datafile=None: (
