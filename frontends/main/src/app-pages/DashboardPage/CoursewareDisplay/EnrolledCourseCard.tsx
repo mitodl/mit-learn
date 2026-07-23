@@ -98,20 +98,27 @@ const UpgradeBanner: React.FC<
   const replaceBasketItem = useReplaceBasketItem()
   const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment()
 
+  const programRequestBody = programReadableIds?.length
+    ? programReadableIds
+    : programCoursewareId
+      ? [programCoursewareId]
+      : []
+  // Mirrors useEnrollmentHandler's gating: without a program identifier the
+  // verified-program-enrollment endpoint can't resolve which program to
+  // credit the upgrade against, so fall back to checkout instead of calling
+  // it with an empty request_body.
+  const canOneClickUpgrade = Boolean(
+    isVerifiedProgramEnrollment && readableId && programRequestBody.length > 0,
+  )
+
   const handleUpgradeClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
 
-    if (isVerifiedProgramEnrollment) {
-      if (!readableId) return
-      const requestBody = programReadableIds?.length
-        ? programReadableIds
-        : programCoursewareId
-          ? [programCoursewareId]
-          : []
+    if (canOneClickUpgrade) {
       try {
         await createVerifiedProgramEnrollment.mutateAsync({
-          courserun_id: readableId,
-          request_body: requestBody,
+          courserun_id: readableId!,
+          request_body: programRequestBody,
         })
         if (coursewareUrl) {
           window.location.href = coursewareUrl
@@ -148,7 +155,7 @@ const UpgradeBanner: React.FC<
     <SubtitleLinkRoot {...others}>
       <SubtitleLink href="#" onClick={handleUpgradeClick}>
         <RiArrowUpCircleLine size="16px" />
-        {isVerifiedProgramEnrollment
+        {canOneClickUpgrade
           ? "Upgrade for certificate"
           : `Upgrade for certificate - $${certificateUpgradePrice}`}
       </SubtitleLink>

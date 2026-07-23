@@ -621,6 +621,47 @@ describe.each([
     })
   })
 
+  test("Falls back to checkout when the verified program enrollment has no resolvable program identifier", async () => {
+    const assign = jest.mocked(window.location.assign)
+    setupUserApis()
+    const productId = faker.number.int()
+    const price = faker.commerce.price()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      b2b_contract_id: null,
+      certificate: null,
+      run: {
+        is_upgradable: true,
+        upgrade_deadline: faker.date.future().toISOString(),
+        upgrade_product_id: productId,
+        upgrade_product_price: price,
+        upgrade_product_is_active: true,
+      },
+    })
+    const clearUrl = mitxonline.urls.baskets.clear()
+    setMockResponse.delete(clearUrl, undefined)
+    const basketUrl = mitxonline.urls.baskets.createFromProduct(productId)
+    setMockResponse.post(basketUrl, { id: 1, items: [] })
+
+    renderWithProviders(
+      <EnrolledCourseCard
+        enrollment={enrollment}
+        ancestorContext={{ useVerifiedEnrollment: true }}
+      />,
+    )
+    const banner = within(getCard()).getByTestId("upgrade-root")
+    expect(banner).toHaveTextContent(`Upgrade for certificate - $${price}`)
+
+    await user.click(
+      within(getCard()).getByRole("link", { name: /Upgrade for certificate/ }),
+    )
+
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "post", url: basketUrl }),
+    )
+    expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
+  })
+
   // ---------------------------------------------------------------------------
   // Upgraded (paid, certificate not yet earned) banner
   // ---------------------------------------------------------------------------
