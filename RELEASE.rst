@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.75.5
+--------------
+
+- Remove micromasters ETL (#3663)
+- Add one-click unsubscribe to emails (#3637)
+
 Version 0.75.4 (Released July 23, 2026)
 --------------
 
