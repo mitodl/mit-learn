@@ -265,6 +265,7 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
       }
       showStayUpdated={
         program.enrollment_modes.length > 0 &&
+        (page.show_stay_updated ?? false) &&
         program.enrollment_modes.every((mode) =>
           isVerifiedEnrollmentMode(mode.mode_slug),
         )

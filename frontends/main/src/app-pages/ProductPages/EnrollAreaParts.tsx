@@ -20,11 +20,6 @@ const ButtonWrapper = styled.span<{ $fullWidth?: boolean }>(
       width: "100%",
       "> button": { width: "100%" },
     },
-    [theme.breakpoints.down("sm")]: {
-      display: "block",
-      width: "100%",
-      "> button": { width: "100%" },
-    },
   }),
 )
 
