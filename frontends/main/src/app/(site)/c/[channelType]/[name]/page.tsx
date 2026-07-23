@@ -91,11 +91,20 @@ const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
 
   const constantSearchParams = getConstantSearchParams(channel.search_filter)
 
+  const urlParams = new URLSearchParams(
+    Object.entries(search).flatMap(([key, value]) =>
+      Array.isArray(value)
+        ? value.map((v) => [key, v])
+        : [[key, String(value)]],
+    ),
+  )
+
   const { facetNames } = getFacets(
     channelType,
     offerors as unknown as Record<string, LearningResourceOfferorDetail>,
     constantSearchParams,
     null,
+    urlParams,
   )
 
   const searchRequest = getSearchParams({

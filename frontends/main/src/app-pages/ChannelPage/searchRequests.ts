@@ -8,6 +8,7 @@ import type {
 import { LearningResourceOfferor } from "api"
 import { ChannelTypeEnum } from "api/v0"
 import { getFacetManifest } from "@/page-components/SearchDisplay/getFacetManifest"
+import { getExtraFacetNames } from "@/app-pages/SearchPage/searchRequests"
 
 export const getConstantSearchParams = (searchFilter?: string) => {
   const searchParams: Facets & BooleanFacets = {}
@@ -63,9 +64,16 @@ const getFacetManifestForChannelType = (
   offerors: Record<string, LearningResourceOfferor>,
   constantSearchParams: Facets,
   resourceTypeGroup: string | null,
+  extraFacetNames: string[] = [],
 ): FacetManifest => {
-  const facets = FACETS_BY_CHANNEL_TYPE[channelType] || []
-  return getFacetManifest(offerors, resourceTypeGroup)
+  // Facets shown by default for this channel type plus any additional facets
+  // present in the URL. Facets hard-coded by the channel config
+  // (constantSearchParams) are filtered out below.
+  const facets = [
+    ...(FACETS_BY_CHANNEL_TYPE[channelType] || []),
+    ...extraFacetNames,
+  ]
+  return getFacetManifest(offerors, resourceTypeGroup, extraFacetNames)
     .filter(
       (facetSetting) =>
         !Object.keys(constantSearchParams).includes(facetSetting.name) &&
@@ -81,12 +89,24 @@ export const getFacets = (
   offerors: Record<string, LearningResourceOfferor>,
   constantSearchParams: Facets,
   resourceTypeGroup: string | null,
+  searchParams?: URLSearchParams,
 ) => {
+  // Facets already surfaced by the channel type or pinned by the channel config
+  // should not be duplicated as extra facets from the URL.
+  const baseFacetNames = [
+    ...(FACETS_BY_CHANNEL_TYPE[channelType] || []),
+    ...Object.keys(constantSearchParams),
+  ] as UseResourceSearchParamsProps["facets"]
+  const extraFacetNames = searchParams
+    ? (getExtraFacetNames(searchParams, baseFacetNames) ?? [])
+    : []
+
   const facetManifest = getFacetManifestForChannelType(
     channelType,
     offerors,
     constantSearchParams,
     resourceTypeGroup,
+    extraFacetNames,
   )
 
   const facetNames = Array.from(
