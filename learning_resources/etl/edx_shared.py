@@ -118,15 +118,21 @@ def process_course_archive(
     """
     Download and process a course archive from S3.
 
+    Two gates: run.archive_key stores the full S3 key of the last-processed
+    archive — keys are content-addressed for edX-family sources, so a matching
+    key means the archive is unchanged and the download is skipped entirely.
+    After a download, run.checksum (tar-structure digest) decides whether the
+    content actually changed and needs loading.
+
     Args:
         bucket: S3 bucket object
         key(str): S3 object key for the course archive
         run(LearningResourceRun): The run to process
         overwrite(bool): Whether to overwrite existing content files
-
-    Returns:
-        bool: True if successfully processed, False if skipped due to matching checksum
     """
+    if run.archive_key == key and not overwrite:
+        log.debug("Archive key unchanged for %s, skipping download", key)
+        return
     with TemporaryDirectory() as export_tempdir:
         course_tarpath = Path(export_tempdir, key.rsplit("/", maxsplit=1)[-1])
         log.info("course tarpath for run %s is %s", run.run_id, course_tarpath)
@@ -135,18 +141,40 @@ def process_course_archive(
             checksum = calc_checksum(course_tarpath)
         except ReadError:
             log.exception("Error reading tar file %s, skipping", course_tarpath)
-            return False
+            return
         if run.checksum == checksum and not overwrite:
+            # content unchanged under a new/unknown key: record the key so the
+            # next sync skips the download entirely
+            run.archive_key = key
+            run.save(update_fields=["archive_key"])
             log.info("Checksums match for %s, skipping load", key)
-            return False
+            return
         try:
+            payload_count = 0
+
+            def _counted(items):
+                nonlocal payload_count
+                for item in items:
+                    payload_count += 1
+                    yield item
+
             content_files_ids = load_content_files(
                 run,
-                transform_content_files(course_tarpath, run, overwrite=overwrite),
+                _counted(
+                    transform_content_files(course_tarpath, run, overwrite=overwrite)
+                ),
             )
             if content_files_ids:
                 run.checksum = checksum
-                run.save(update_fields=["checksum"])
+                run.archive_key = key
+                run.save(update_fields=["checksum", "archive_key"])
+            elif payload_count == 0:
+                # Archive genuinely contains no ingestible files: stamp the key
+                # so it stops being re-downloaded every sync. Leave checksum
+                # alone. Files-yielded-but-none-loaded saves nothing, so the
+                # next sync retries.
+                run.archive_key = key
+                run.save(update_fields=["archive_key"])
         except:  # noqa: E722
             log.exception("Error ingesting OLX content data for %s", key)
 

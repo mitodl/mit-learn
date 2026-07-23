@@ -257,7 +257,10 @@ def test_sync_edx_course_files_error(mock_course_archive_bucket, mocker, source)
     sync_edx_course_files(source, [run.learning_resource.id], [key])
     assert mock_transform.call_count == 1
     assert str(mock_transform.call_args[0][0]).endswith("foo.tar.gz") is True
-    mock_load_content_files.assert_called_once_with(run, fake_data)
+    mock_load_content_files.assert_called_once()
+    called_run, called_data = mock_load_content_files.call_args[0]
+    assert called_run == run
+    assert list(called_data) == list(fake_data)
     assert mock_log.call_args[0][0].startswith("Error ingesting OLX content data for ")
 
 
@@ -358,8 +361,13 @@ def test_sync_edx_course_files_test_mode_all_runs_processed(
     assert mock_load_content_files.call_count == 3
 
     # Verify each run was processed
+    called_runs = [call.args[0] for call in mock_load_content_files.call_args_list]
+    called_data = [
+        list(call.args[1]) for call in mock_load_content_files.call_args_list
+    ]
     for run in runs:
-        mock_load_content_files.assert_any_call(run, fake_data)
+        assert run in called_runs
+    assert called_data == [list(fake_data)] * 3
 
 
 @pytest.mark.parametrize("source", [ETLSource.mit_edx.value, ETLSource.xpro.value])
@@ -681,7 +689,10 @@ def test_sync_edx_archive_success(
     sync_edx_archive(etl_source, s3_key, overwrite=False)
 
     mock_transform.assert_called_once()
-    mock_load.assert_called_once_with(run, '{"key": "data"}')
+    mock_load.assert_called_once()
+    called_run, called_data = mock_load.call_args[0]
+    assert called_run == run
+    assert list(called_data) == list('{"key": "data"}')
     run.refresh_from_db()
     assert run.checksum is not None
 
@@ -868,7 +879,10 @@ def test_sync_edx_archive_test_mode_all_runs(
     sync_edx_archive(etl_source, s3_key, overwrite=False)
 
     mock_transform.assert_called_once()
-    mock_load.assert_called_once_with(old_run, '{"key": "data"}')
+    mock_load.assert_called_once()
+    called_run, called_data = mock_load.call_args[0]
+    assert called_run == old_run
+    assert list(called_data) == list('{"key": "data"}')
 
 
 @pytest.mark.parametrize("etl_source", [ETLSource.mitxonline.name, ETLSource.xpro.name])
@@ -1388,3 +1402,134 @@ def test_process_course_archive_does_not_set_checksum_on_exception(mocker):
 
     run.refresh_from_db()
     assert run.checksum == "oldchecksum"
+
+
+def test_process_course_archive_skips_download_when_key_matches(mocker):
+    """A stored archive_key equal to the S3 key should skip without downloading"""
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    run = LearningResourceRunFactory.create(
+        published=True, archive_key=key, checksum="oldchecksum"
+    )
+    bucket = mocker.MagicMock()
+    mock_load = mocker.patch("learning_resources.etl.edx_shared.load_content_files")
+
+    process_course_archive(bucket, key, run)
+
+    bucket.download_file.assert_not_called()
+    mock_load.assert_not_called()
+    run.refresh_from_db()
+    assert run.archive_key == key
+    assert run.checksum == "oldchecksum"
+
+
+def test_process_course_archive_stamps_key_on_checksum_match(mocker):
+    """A matching checksum with a stale archive_key should stamp the key, no load"""
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    run = LearningResourceRunFactory.create(
+        published=True, archive_key=None, checksum="samechecksum"
+    )
+    bucket = mocker.MagicMock()
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum", return_value="samechecksum"
+    )
+    mock_load = mocker.patch("learning_resources.etl.edx_shared.load_content_files")
+
+    process_course_archive(bucket, key, run)
+
+    bucket.download_file.assert_called_once()
+    mock_load.assert_not_called()
+    run.refresh_from_db()
+    assert run.archive_key == key
+    assert run.checksum == "samechecksum"
+
+
+def test_process_course_archive_saves_both_fields_on_load(mocker):
+    """A changed archive should load and save both checksum and archive_key"""
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    run = LearningResourceRunFactory.create(
+        published=True, archive_key=None, checksum=None
+    )
+    bucket = mocker.MagicMock()
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum", return_value="newchecksum"
+    )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        return_value=iter([{"key": "content.txt"}]),
+    )
+
+    def fake_load(run_arg, data, **kwargs):
+        list(data)  # consume the generator like the real loader
+        return [1, 2, 3]
+
+    mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files", side_effect=fake_load
+    )
+
+    process_course_archive(bucket, key, run)
+
+    run.refresh_from_db()
+    assert run.archive_key == key
+    assert run.checksum == "newchecksum"
+
+
+def test_process_course_archive_stamps_key_for_empty_archive(mocker):
+    """An archive whose transform yields no payloads should stamp archive_key only"""
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    run = LearningResourceRunFactory.create(
+        published=True, archive_key=None, checksum=None
+    )
+    bucket = mocker.MagicMock()
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum", return_value="newchecksum"
+    )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        return_value=iter([]),
+    )
+
+    def fake_load(run_arg, data, **kwargs):
+        list(data)
+        return []
+
+    mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files", side_effect=fake_load
+    )
+
+    process_course_archive(bucket, key, run)
+
+    run.refresh_from_db()
+    assert run.archive_key == key
+    assert run.checksum is None
+
+
+def test_process_course_archive_overwrite_bypasses_key_gate(mocker):
+    """overwrite=True should download and load even when the stored key matches"""
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    run = LearningResourceRunFactory.create(
+        published=True, archive_key=key, checksum=None
+    )
+    bucket = mocker.MagicMock()
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum", return_value="newchecksum"
+    )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        return_value=iter([{"key": "content.txt"}]),
+    )
+
+    def fake_load(run_arg, data, **kwargs):
+        list(data)
+        return [1]
+
+    mock_load = mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files", side_effect=fake_load
+    )
+
+    process_course_archive(bucket, key, run, overwrite=True)
+
+    bucket.download_file.assert_called_once()
+    mock_load.assert_called_once()
+    run.refresh_from_db()
+    assert run.archive_key == key
+    assert run.checksum == "newchecksum"
