@@ -433,9 +433,10 @@ def embed_new_learning_resources(self):
                 )
             ]
         )
-    embed_tasks = celery.group(tasks)
-
-    return self.replace(embed_tasks)
+    # Dispatch chunks sequentially instead of materializing the whole lookback
+    # window as one group. This bounds broker queue depth and prevents KEDA from
+    # scaling the embeddings worker fleet for a short-lived fan-out burst.
+    return _replace_with_chain(self, tasks)
 
 
 @app.task(bind=True)
