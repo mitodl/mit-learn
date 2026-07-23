@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.75.3
+Version 0.75.3 (Released July 23, 2026)
 --------------
 
 - facets from url (#3655)
