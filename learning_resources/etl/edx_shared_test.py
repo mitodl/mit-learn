@@ -161,6 +161,9 @@ def test_sync_edx_course_files_matching_checksum(mocker, mock_course_archive_buc
     mock_load.assert_not_called()
     mock_index.assert_not_called()
 
+    run.refresh_from_db()
+    assert run.archive_key == key
+
 
 @pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
 def test_sync_edx_course_files_invalid_tarfile(
@@ -1329,8 +1332,8 @@ def test_build_run_lookup_cross_format_prefix_match():
     assert lookup[normalized_key][0].id == run.id
 
 
-def test_process_course_archive_does_not_set_checksum_on_empty_ingest(mocker):
-    """process_course_archive should not update run.checksum if load_content_files returns empty list"""
+def test_process_course_archive_saves_nothing_when_all_files_fail_ingest(mocker):
+    """process_course_archive should not update run.checksum or run.archive_key if all files fail to load"""
     run = LearningResourceRunFactory.create(published=True, checksum=None)
     bucket = mocker.MagicMock()
     key = "mitxonline/courses/course-v1:Test+Course+R1/archive.tar.gz"
@@ -1341,17 +1344,22 @@ def test_process_course_archive_does_not_set_checksum_on_empty_ingest(mocker):
     )
     mocker.patch(
         "learning_resources.etl.edx_shared.transform_content_files",
-        return_value=iter([]),
+        return_value=iter([{"key": "content.txt"}]),
     )
+
+    def fake_load(run_arg, data, **kwargs):
+        list(data)  # consume the generator like the real loader
+        return []
+
     mocker.patch(
-        "learning_resources.etl.edx_shared.load_content_files",
-        return_value=[],
+        "learning_resources.etl.edx_shared.load_content_files", side_effect=fake_load
     )
 
     process_course_archive(bucket, key, run)
 
     run.refresh_from_db()
     assert run.checksum is None
+    assert run.archive_key is None
 
 
 def test_process_course_archive_sets_checksum_on_successful_ingest(mocker):
