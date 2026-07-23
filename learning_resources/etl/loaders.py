@@ -1052,7 +1052,7 @@ def load_content_files(
             .values_list("direct_learning_resource_id", flat=True)
             .distinct()
         )
-        removed_unpublished = stale_published_files.update(published=False) > 0
+        stale_published_files.update(published=False)
         if stale_direct_resource_ids:
             LearningResource.objects.filter(
                 id__in=stale_direct_resource_ids, published=True
@@ -1064,10 +1064,7 @@ def load_content_files(
 
         if calc_completeness:
             calculate_completeness(course_run, content_tags=content_tags)
-        content_files_loaded_actions(
-            run=course_run,
-            removed_unpublished=removed_unpublished,
-        )
+        content_files_loaded_actions(run=course_run)
 
         return content_files_ids
     return None

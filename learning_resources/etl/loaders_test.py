@@ -3806,29 +3806,3 @@ def test_load_learning_material(mocker, learning_material_exists):
     assert learning_material.url == content_file.url
 
     assert content_file.direct_learning_resource_id == learning_material.id
-
-
-@pytest.mark.django_db
-def test_load_content_files_flags_removed_unpublished(mocker):
-    """
-    The hook receives removed_unpublished=False when every prior file is still
-    present, and True when a previously-published file is dropped from the payload.
-    """
-    course = LearningResourceFactory.create(is_course=True, create_runs=False)
-    run = LearningResourceRunFactory.create(published=True, learning_resource=course)
-    mock_hook = mocker.patch(
-        "learning_resources.etl.loaders.content_files_loaded_actions", autospec=True
-    )
-
-    load_content_files(
-        run,
-        [
-            {"key": "keep", "content": "same"},
-            {"key": "drop", "content": "gone"},
-        ],
-    )
-    assert mock_hook.call_args.kwargs["removed_unpublished"] is False
-
-    # Second load: "drop" is absent, so its file gets unpublished.
-    load_content_files(run, [{"key": "keep", "content": "same"}])
-    assert mock_hook.call_args.kwargs["removed_unpublished"] is True

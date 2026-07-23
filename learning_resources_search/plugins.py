@@ -257,7 +257,7 @@ class SearchIndexPlugin:
         run.delete()
 
     @hookimpl
-    def content_files_loaded(self, run, removed_unpublished=None):
+    def content_files_loaded(self, run):
         """
         Upsert a created/modified run's content files.
 
@@ -268,8 +268,6 @@ class SearchIndexPlugin:
 
         Args:
             run: the LearningResourceRun that was upserted
-            removed_unpublished: whether files were unpublished; only an explicit
-                False skips the removal task (None still purges)
         """
         if not run.content_files.exists():
             return
@@ -287,12 +285,11 @@ class SearchIndexPlugin:
 
             if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
                 index_tasks.append(vector_tasks.embed_run_content_files.si(run.id))
-                # None (legacy/unknown) keeps the historical always-purge behavior;
-                # only load_content_files, which knows definitively, passes False.
-                if removed_unpublished is not False:
-                    index_tasks.append(
-                        vector_tasks.remove_unpublished_run_content_files.si(run.id)
-                    )
+                # Always purge unpublished files' points so a failed removal
+                # task self-heals on the next load.
+                index_tasks.append(
+                    vector_tasks.remove_unpublished_run_content_files.si(run.id)
+                )
 
         if index_tasks:
             try_with_retry_as_task(chain(*index_tasks))
