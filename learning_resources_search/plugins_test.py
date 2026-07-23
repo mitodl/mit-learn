@@ -571,26 +571,18 @@ def test_search_index_plugin_resource_upserted_generate_embeddings(
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize(
-    ("removed_unpublished", "expect_remove_called"),
-    [(True, True), (None, True), (False, False)],
-)
-def test_content_files_loaded_removed_unpublished_tristate(
-    mock_search_index_helpers, settings, removed_unpublished, expect_remove_called
+def test_content_files_loaded_always_purges_unpublished(
+    mock_search_index_helpers, settings
 ):
-    """None (legacy) and True append the remove-unpublished task; only False skips."""
+    """The remove-unpublished task always runs so failed removals self-heal."""
     settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
     run = LearningResourceRunFactory.create(
         published=True, learning_resource__create_runs=False
     )
     ContentFileFactory.create(run=run)
 
-    SearchIndexPlugin().content_files_loaded(
-        run, removed_unpublished=removed_unpublished
-    )
+    SearchIndexPlugin().content_files_loaded(run)
 
-    remove_mock = mock_search_index_helpers.mock_remove_unpublished_run_contentfiles_immutable_signature
-    if expect_remove_called:
-        remove_mock.assert_called_once_with(run.id)
-    else:
-        remove_mock.assert_not_called()
+    mock_search_index_helpers.mock_remove_unpublished_run_contentfiles_immutable_signature.assert_called_once_with(
+        run.id
+    )
