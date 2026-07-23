@@ -38,6 +38,7 @@ def test_serialize_user(user):
     assert UserSerializer(user).data == {
         "id": user.id,
         "username": user.username,
+        "global_id": user.global_id,
         "first_name": user.first_name,
         "last_name": user.last_name,
         "is_learning_path_editor": False,
@@ -90,6 +91,7 @@ def test_serialize_create_user(db, mocker):
     assert UserSerializer(instance=user).data == {
         "id": user.id,
         "username": user.username,
+        "global_id": user.global_id,
         "first_name": user.first_name,
         "last_name": user.last_name,
         "is_learning_path_editor": False,
