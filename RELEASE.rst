@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.75.4
+--------------
+
+- fix: News, Articles, Django admin pages don't load on production (#3657)
+
 Version 0.75.3 (Released July 23, 2026)
 --------------
 
