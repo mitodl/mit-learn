@@ -383,6 +383,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "username",
+            "global_id",
             "profile",
             "email",
             "first_name",
@@ -391,7 +392,7 @@ class UserSerializer(serializers.ModelSerializer):
             "is_learning_path_editor",
             "is_authenticated",
         )
-        read_only_fields = ("id", "username", "is_authenticated")
+        read_only_fields = ("id", "username", "global_id", "is_authenticated")
 
 
 class ProgramCertificateSerializer(serializers.ModelSerializer):

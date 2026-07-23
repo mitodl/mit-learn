@@ -4,6 +4,6 @@
   "channels/serializers.py:136:24:ORM002",
   "profiles/serializers.py:136:31:ORM002",
   "profiles/serializers.py:196:16:ORM002",
-  "profiles/serializers.py:418:15:ORM001",
-  "profiles/serializers.py:419:27:ORM001"
+  "profiles/serializers.py:419:15:ORM001",
+  "profiles/serializers.py:420:27:ORM001"
 ]
