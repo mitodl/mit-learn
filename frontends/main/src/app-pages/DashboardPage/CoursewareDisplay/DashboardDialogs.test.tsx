@@ -5,6 +5,7 @@ import {
   setMockResponse,
   setupLocationMock,
   user,
+  waitFor,
   within,
 } from "@/test-utils"
 import { HomeEnrollmentsDisplay } from "./HomeEnrollmentsDisplay"
@@ -154,6 +155,60 @@ describe("DashboardDialogs", () => {
         url: mitxonline.urls.enrollment.courseEnrollment(enrollment.id),
       }),
     )
+  })
+
+  test("Unenrolling removes the card immediately, before the enrollments list refetches", async () => {
+    const { enrollments } = setupApis()
+    const enrollment = faker.helpers.arrayElement(enrollments)
+
+    setMockResponse.delete(
+      mitxonline.urls.enrollment.courseEnrollment(enrollment.id),
+      null,
+    )
+    renderWithProviders(<HomeEnrollmentsDisplay />)
+
+    await screen.findByRole("heading", { name: "My Learning" })
+
+    const cards = await screen.findAllByTestId("enrollment-card-desktop")
+    expect(cards.length).toBe(enrollments.length)
+
+    const card = cards.find(
+      (c) => !!within(c).queryByText(enrollment.run.title),
+    )
+    invariant(card)
+
+    // Hold the post-unenroll invalidation refetch open. If the card only
+    // disappears once the list refetches, this test fails — proving the card is
+    // removed by the mutation's immediate cache update, not by the refetch.
+    const refetch = Promise.withResolvers<typeof enrollments>()
+    setMockResponse.get(
+      mitxonline.urls.enrollment.enrollmentsListV3(),
+      refetch.promise,
+    )
+
+    const contextMenuButton = await within(card).findByLabelText("More options")
+    await user.click(contextMenuButton)
+
+    const unenrollButton = await screen.findByRole("menuitem", {
+      name: "Unenroll",
+    })
+    await user.click(unenrollButton)
+
+    const confirmButton = await screen.findByRole("button", {
+      name: "Unenroll",
+    })
+    await user.click(confirmButton)
+
+    // Card is gone even though the refetch is still pending.
+    await waitFor(() => {
+      expect(screen.queryByText(enrollment.run.title)).not.toBeInTheDocument()
+    })
+    expect(screen.getAllByTestId("enrollment-card-desktop")).toHaveLength(
+      enrollments.length - 1,
+    )
+
+    // Let the held refetch settle so nothing dangles after the test.
+    refetch.resolve(enrollments.filter((e) => e.id !== enrollment.id))
   })
 })
 

@@ -64,6 +64,12 @@ const useDestroyEnrollment = () => {
   return useMutation({
     mutationFn: (enrollmentId: number) =>
       courseRunEnrollmentsApi.enrollmentsDestroy({ id: enrollmentId }),
+    onSuccess: (_data, enrollmentId) => {
+      queryClient.setQueryData(
+        enrollmentQueries.courseRunEnrollmentsList().queryKey,
+        (data) => data?.filter((enrollment) => enrollment.id !== enrollmentId),
+      )
+    },
     onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: enrollmentKeys.courseRunEnrollmentsList(),
