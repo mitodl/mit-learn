@@ -23,6 +23,7 @@ const { configureApiClients } = jest.requireActual("api/runtime")
 // don't need them.
 const LEARN_BASE_URL = "http://api.test.learn.odl.local:8065"
 const MITX_ONLINE_BASE_URL = "http://api.test.learn.odl.local:8065/mitxonline"
+const ANALYTICS_BASE_URL = "http://api.test.learn.odl.local:8065/analytics"
 
 process.env.NEXT_PUBLIC_ORIGIN = "http://test.learn.odl.local:8062"
 process.env.NEXT_PUBLIC_VERSION = "test-version"
@@ -30,6 +31,7 @@ process.env.NEXT_PUBLIC_MITOL_API_BASE_URL = LEARN_BASE_URL
 process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL = MITX_ONLINE_BASE_URL
 process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL =
   "http://mitxonline.odl.local:8065"
+process.env.NEXT_PUBLIC_ANALYTICS_API_BASE_URL = ANALYTICS_BASE_URL
 
 configureApiClients({
   learn: {
@@ -40,6 +42,11 @@ configureApiClients({
   mitxonline: {
     baseUrl: MITX_ONLINE_BASE_URL,
     csrfCookieName: "mitxcsrftoken",
+    withCredentials: false,
+  },
+  analytics: {
+    baseUrl: ANALYTICS_BASE_URL,
+    csrfCookieName: "csrftoken",
     withCredentials: false,
   },
 })
