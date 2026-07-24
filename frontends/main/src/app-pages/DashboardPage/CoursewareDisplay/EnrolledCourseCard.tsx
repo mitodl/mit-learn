@@ -80,7 +80,7 @@ const UpgradeBanner: React.FC<
     coursewareUrl?: string
     programReadableIds?: string[]
     programCoursewareId?: string
-    onError?: (error: Error) => void
+    onUpgradeFailure?: (message: string) => void
   } & React.HTMLAttributes<HTMLDivElement>
 > = ({
   canUpgrade,
@@ -92,7 +92,7 @@ const UpgradeBanner: React.FC<
   coursewareUrl,
   programReadableIds,
   programCoursewareId,
-  onError,
+  onUpgradeFailure,
   ...others
 }) => {
   const replaceBasketItem = useReplaceBasketItem()
@@ -123,8 +123,10 @@ const UpgradeBanner: React.FC<
         if (coursewareUrl) {
           window.location.href = coursewareUrl
         }
-      } catch (error) {
-        onError?.(error as Error)
+      } catch {
+        onUpgradeFailure?.(
+          "There was a problem upgrading your enrollment. Please try again.",
+        )
       }
       return
     }
@@ -133,8 +135,10 @@ const UpgradeBanner: React.FC<
 
     try {
       await replaceBasketItem.mutateAsync(productId)
-    } catch (error) {
-      onError?.(error as Error)
+    } catch {
+      onUpgradeFailure?.(
+        "There was a problem adding the certificate to your cart.",
+      )
     }
   }
 
@@ -309,11 +313,7 @@ export const EnrolledCourseCard = ({
       programCoursewareId={
         ancestorContext?.programEnrollment?.program.readable_id
       }
-      onError={() => {
-        onUpgradeError?.(
-          "There was a problem adding the certificate to your cart.",
-        )
-      }}
+      onUpgradeFailure={onUpgradeError}
     />
   ) : upgradedAndIncomplete ? (
     <UpgradedBanner />
