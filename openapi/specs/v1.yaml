@@ -11208,7 +11208,7 @@ components:
         content_files:
           type: array
           items:
-            $ref: '#/components/schemas/ContentFile'
+            $ref: '#/components/schemas/NestedContentFile'
           nullable: true
           readOnly: true
         description:
@@ -13655,6 +13655,136 @@ components:
       - child
       - id
       - parent
+    NestedContentFile:
+      type: object
+      description: |-
+        ContentFileSerializer without the large text fields (content, summary,
+        flashcards), for nesting inside learning resource API responses.
+        The search indexing path re-adds full content where needed.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        run_id:
+          type: integer
+        direct_learning_resource_id:
+          type: integer
+          nullable: true
+        run_title:
+          type: string
+        run_slug:
+          type: string
+        departments:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResourceDepartment'
+          readOnly: true
+        semester:
+          type: string
+        year:
+          type: integer
+        topics:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResourceTopic'
+          readOnly: true
+        key:
+          type: string
+          nullable: true
+          maxLength: 1024
+        uid:
+          type: string
+          nullable: true
+          maxLength: 36
+        title:
+          type: string
+          nullable: true
+          maxLength: 1024
+        description:
+          type: string
+          nullable: true
+        require_summaries:
+          type: boolean
+          readOnly: true
+        url:
+          type: string
+          nullable: true
+        content_feature_type:
+          type: array
+          items:
+            type: string
+        content_type:
+          $ref: '#/components/schemas/ContentFileContentTypeEnum'
+        content_title:
+          type: string
+          nullable: true
+          maxLength: 1024
+        content_author:
+          type: string
+          nullable: true
+          maxLength: 1024
+        content_language:
+          type: string
+          nullable: true
+          maxLength: 24
+        checksum:
+          type: string
+        image_src:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        resource_id:
+          type: string
+          readOnly: true
+        resource_readable_id:
+          type: string
+          readOnly: true
+        source_path:
+          type: string
+        course_number:
+          type: array
+          items:
+            type: string
+          description: Extract the course number(s) from the associated course
+          readOnly: true
+        file_type:
+          type: string
+          nullable: true
+          maxLength: 128
+        file_extension:
+          type: string
+          nullable: true
+          maxLength: 32
+        offered_by:
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceOfferor'
+          readOnly: true
+        platform:
+          allOf:
+          - $ref: '#/components/schemas/LearningResourcePlatform'
+          readOnly: true
+        run_readable_id:
+          type: string
+        edx_module_id:
+          type: string
+          nullable: true
+          maxLength: 1024
+        youtube_id:
+          type: string
+          nullable: true
+          maxLength: 32
+      required:
+      - content_feature_type
+      - course_number
+      - departments
+      - id
+      - offered_by
+      - platform
+      - require_summaries
+      - resource_id
+      - resource_readable_id
+      - topics
     NullEnum:
       enum:
       - null
@@ -17218,7 +17348,7 @@ components:
         content_files:
           type: array
           items:
-            $ref: '#/components/schemas/ContentFile'
+            $ref: '#/components/schemas/NestedContentFile'
           nullable: true
           readOnly: true
         description:

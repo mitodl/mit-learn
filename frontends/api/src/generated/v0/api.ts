@@ -643,10 +643,10 @@ export interface ContentFile {
   content_feature_type: Array<string>
   /**
    *
-   * @type {ContentTypeEnum}
+   * @type {ContentFileContentTypeEnum}
    * @memberof ContentFile
    */
-  content_type?: ContentTypeEnum
+  content_type?: ContentFileContentTypeEnum
   /**
    *
    * @type {string}
@@ -764,6 +764,41 @@ export interface ContentFile {
 }
 
 /**
+ * * `page` - page * `file` - file * `video` - video * `pdf` - pdf
+ * @export
+ * @enum {string}
+ */
+
+export const ContentFileContentTypeEnumDescriptions = {
+  page: "page",
+  file: "file",
+  video: "video",
+  pdf: "pdf",
+} as const
+
+export const ContentFileContentTypeEnum = {
+  /**
+   * page
+   */
+  Page: "page",
+  /**
+   * file
+   */
+  File: "file",
+  /**
+   * video
+   */
+  Video: "video",
+  /**
+   * pdf
+   */
+  Pdf: "pdf",
+} as const
+
+export type ContentFileContentTypeEnum =
+  (typeof ContentFileContentTypeEnum)[keyof typeof ContentFileContentTypeEnum]
+
+/**
  * SearchResponseSerializer with OpenAPI annotations for Content Files search
  * @export
  * @interface ContentFileVectorSearchResponse
@@ -842,41 +877,6 @@ export interface ContentFileVectorSearchResponseMetadataAggregationsValueInner {
    */
   doc_count: number
 }
-/**
- * * `page` - page * `file` - file * `video` - video * `pdf` - pdf
- * @export
- * @enum {string}
- */
-
-export const ContentTypeEnumDescriptions = {
-  page: "page",
-  file: "file",
-  video: "video",
-  pdf: "pdf",
-} as const
-
-export const ContentTypeEnum = {
-  /**
-   * page
-   */
-  Page: "page",
-  /**
-   * file
-   */
-  File: "file",
-  /**
-   * video
-   */
-  Video: "video",
-  /**
-   * pdf
-   */
-  Pdf: "pdf",
-} as const
-
-export type ContentTypeEnum =
-  (typeof ContentTypeEnum)[keyof typeof ContentTypeEnum]
-
 /**
  *
  * @export
@@ -1773,10 +1773,10 @@ export interface DocumentResource {
   resource_type: DocumentResourceResourceTypeEnum
   /**
    *
-   * @type {Array<ContentFile>}
+   * @type {Array<NestedContentFile>}
    * @memberof DocumentResource
    */
-  content_files: Array<ContentFile> | null
+  content_files: Array<NestedContentFile> | null
   /**
    *
    * @type {string}
@@ -3236,6 +3236,212 @@ export interface LearningResourcesVectorSearchResponse {
    */
   metadata: ContentFileVectorSearchResponseMetadata
 }
+/**
+ * ContentFileSerializer without the large text fields (content, summary, flashcards), for nesting inside learning resource API responses. The search indexing path re-adds full content where needed.
+ * @export
+ * @interface NestedContentFile
+ */
+export interface NestedContentFile {
+  /**
+   *
+   * @type {number}
+   * @memberof NestedContentFile
+   */
+  id: number
+  /**
+   *
+   * @type {number}
+   * @memberof NestedContentFile
+   */
+  run_id?: number
+  /**
+   *
+   * @type {number}
+   * @memberof NestedContentFile
+   */
+  direct_learning_resource_id?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  run_title?: string
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  run_slug?: string
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof NestedContentFile
+   */
+  departments: Array<LearningResourceDepartment>
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  semester?: string
+  /**
+   *
+   * @type {number}
+   * @memberof NestedContentFile
+   */
+  year?: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof NestedContentFile
+   */
+  topics: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  key?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  uid?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  title?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  description?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof NestedContentFile
+   */
+  require_summaries: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof NestedContentFile
+   */
+  content_feature_type: Array<string>
+  /**
+   *
+   * @type {ContentFileContentTypeEnum}
+   * @memberof NestedContentFile
+   */
+  content_type?: ContentFileContentTypeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  content_title?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  content_author?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  content_language?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  checksum?: string
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  image_src?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  resource_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  resource_readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  source_path?: string
+  /**
+   * Extract the course number(s) from the associated course
+   * @type {Array<string>}
+   * @memberof NestedContentFile
+   */
+  course_number: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  file_type?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  file_extension?: string | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof NestedContentFile
+   */
+  offered_by: LearningResourceOfferor
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof NestedContentFile
+   */
+  platform: LearningResourcePlatform
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  run_readable_id?: string
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  edx_module_id?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof NestedContentFile
+   */
+  youtube_id?: string | null
+}
+
 /**
  * Serializer for News FeedItem
  * @export
@@ -6445,10 +6651,10 @@ export interface VideoResource {
   playlists: Array<string>
   /**
    *
-   * @type {Array<ContentFile>}
+   * @type {Array<NestedContentFile>}
    * @memberof VideoResource
    */
-  content_files: Array<ContentFile> | null
+  content_files: Array<NestedContentFile> | null
   /**
    *
    * @type {string}

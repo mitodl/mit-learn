@@ -1501,6 +1501,21 @@ class ContentFileSerializer(serializers.ModelSerializer):
         ]
 
 
+class NestedContentFileSerializer(ContentFileSerializer):
+    """
+    ContentFileSerializer without the large text fields (content, summary,
+    flashcards), for nesting inside learning resource API responses.
+    The search indexing path re-adds full content where needed.
+    """
+
+    class Meta(ContentFileSerializer.Meta):
+        fields = [
+            field
+            for field in ContentFileSerializer.Meta.fields
+            if field not in ("content", "summary", "flashcards")
+        ]
+
+
 class VideoResourceSerializer(LearningResourceBaseSerializer):
     """Serializer for video resources"""
 
@@ -1515,11 +1530,11 @@ class VideoResourceSerializer(LearningResourceBaseSerializer):
     content_files = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
 
-    @extend_schema_field(ContentFileSerializer(many=True, allow_null=True))
+    @extend_schema_field(NestedContentFileSerializer(many=True, allow_null=True))
     def get_content_files(self, instance):
         """Serialize content files with prefetch."""
         content_files = instance.direct_content_files_for_serialization()
-        return ContentFileSerializer(
+        return NestedContentFileSerializer(
             content_files,
             many=True,
             read_only=True,
@@ -1547,11 +1562,11 @@ class DocumentResourceSerializer(LearningResourceBaseSerializer):
     content_files = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
 
-    @extend_schema_field(ContentFileSerializer(many=True, allow_null=True))
+    @extend_schema_field(NestedContentFileSerializer(many=True, allow_null=True))
     def get_content_files(self, instance):
         """Serialize content files with prefetch."""
         content_files = instance.direct_content_files_for_serialization()
-        return ContentFileSerializer(
+        return NestedContentFileSerializer(
             content_files,
             many=True,
             read_only=True,

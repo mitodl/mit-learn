@@ -494,6 +494,9 @@ SOURCE_EXCLUDED_FIELDS = [
     "flashcards",
     "vector_embedding",
     "video.transcript",
+    "content_files.content",
+    "content_files.summary",
+    "content_files.flashcards",
 ]
 
 LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS = {
