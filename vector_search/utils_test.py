@@ -226,16 +226,16 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
             ],
         )
     else:
-        # all contentfiles exist in qdrant
-        mocker.patch(
-            "vector_search.utils.filter_existing_qdrant_points_by_ids",
-            return_value=[
-                vector_point_id(
-                    f"{doc['platform']['code']}.{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['key']}.0"
-                )
-                for doc in serialize_bulk_content_files([r.id for r in resources[0:3]])
-            ],
-        )
+        # the last 2 contentfiles already have points in qdrant; the first 3 don't
+        mock_qdrant.retrieve.return_value = [
+            mocker.MagicMock(
+                id=vector_point_id(
+                    vector_point_key(doc, chunk_number=0, document_type="content_file")
+                ),
+                payload={"checksum": doc["checksum"]},
+            )
+            for doc in serialize_bulk_content_files([r.id for r in resources[3:5]])
+        ]
     mocker.patch(
         "learning_resources.content_summarizer.ContentSummarizer.summarize_content_files_by_ids"
     )
@@ -770,9 +770,6 @@ def test_generate_content_points_uses_markdown_chunking_for_marketing_pages(mock
         return_value=[Document(page_content="chunk1", metadata={"key": "k1"})],
     )
     mock_chunk = mocker.patch("vector_search.utils._chunk_documents")
-    mocker.patch(
-        "vector_search.utils.should_generate_content_embeddings", return_value=True
-    )
     mocker.patch("vector_search.utils.remove_points_matching_params")
 
     mock_dense = mocker.MagicMock()
@@ -794,7 +791,7 @@ def test_generate_content_points_uses_markdown_chunking_for_marketing_pages(mock
         "key": "k1",
     }
 
-    list(_generate_content_file_points([doc]))
+    list(_generate_content_file_points([doc], {}))
     mock_md_chunk.assert_called_once()
     mock_chunk.assert_not_called()
 
@@ -809,9 +806,6 @@ def test_generate_content_points_uses_standard_chunking_for_non_markdown(mocker)
     mock_chunk = mocker.patch(
         "vector_search.utils._chunk_documents",
         return_value=[Document(page_content="chunk1", metadata={"key": "k1"})],
-    )
-    mocker.patch(
-        "vector_search.utils.should_generate_content_embeddings", return_value=True
     )
     mocker.patch("vector_search.utils.remove_points_matching_params")
 
@@ -834,7 +828,7 @@ def test_generate_content_points_uses_standard_chunking_for_non_markdown(mocker)
         "key": "k1",
     }
 
-    list(_generate_content_file_points([doc]))
+    list(_generate_content_file_points([doc], {}))
     mock_chunk.assert_called_once()
     mock_md_chunk.assert_not_called()
 
@@ -857,9 +851,6 @@ def test_generate_content_points_leaves_headroom_under_token_limit(mocker):
             for i in range(num_chunks)
         ],
     )
-    mocker.patch(
-        "vector_search.utils.should_generate_content_embeddings", return_value=True
-    )
     mocker.patch("vector_search.utils.remove_points_matching_params")
 
     mock_dense = mocker.MagicMock()
@@ -881,7 +872,7 @@ def test_generate_content_points_leaves_headroom_under_token_limit(mocker):
         "key": "k1",
     }
 
-    points = list(_generate_content_file_points([doc]))
+    points = list(_generate_content_file_points([doc], {}))
 
     batch_sizes = [
         len(call.args[0]) for call in mock_dense.embed_documents.call_args_list
@@ -906,9 +897,6 @@ def test_generate_content_points_request_chunk_size_never_zero(mocker):
             Document(page_content=f"chunk{i}", metadata={"key": "k1"}) for i in range(3)
         ],
     )
-    mocker.patch(
-        "vector_search.utils.should_generate_content_embeddings", return_value=True
-    )
     mocker.patch("vector_search.utils.remove_points_matching_params")
 
     mock_dense = mocker.MagicMock()
@@ -930,7 +918,7 @@ def test_generate_content_points_request_chunk_size_never_zero(mocker):
         "key": "k1",
     }
 
-    points = list(_generate_content_file_points([doc]))
+    points = list(_generate_content_file_points([doc], {}))
     assert len(points) == 3
 
 
@@ -1127,43 +1115,81 @@ def test_should_generate_for_changed_content_file(mocker):
     assert result is True
 
 
-@pytest.mark.parametrize(
-    ("stored_payload", "expected"),
-    [
-        ({"checksum": "previous-checksum"}, True),
-        ({"checksum": "current-checksum"}, False),
-        ({}, False),
-        (None, False),
-    ],
-)
-def test_content_file_stored_checksum_changed(mocker, stored_payload, expected):
-    """Only an existing, different stored checksum counts as changed for summaries."""
-    serialized_document = {
-        "resource_readable_id": "resource-1",
-        "run_readable_id": "run-1",
-        "key": "transcript.txt",
-        "checksum": "current-checksum",
-    }
+def test_stored_content_payloads_batches_and_maps(mocker, settings):
+    """One retrieve per id-chunk; existing points map to their stored payload."""
+    settings.QDRANT_POINT_UPLOAD_BATCH_SIZE = 2
+    present = mocker.MagicMock(id="p1", payload={"checksum": "abc"})
+    no_checksum = mocker.MagicMock(id="p2", payload={})
     mock_qdrant = mocker.MagicMock()
-    if stored_payload is None:
-        mock_qdrant.retrieve.return_value = []
-    else:
-        mock_point = mocker.MagicMock()
-        mock_point.payload = stored_payload
-        mock_qdrant.retrieve.return_value = [mock_point]
+    # p3 does not exist in Qdrant
+    mock_qdrant.retrieve.side_effect = [[present, no_checksum], []]
     mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
 
-    assert (
-        vs_utils._content_file_stored_checksum_changed(  # noqa: SLF001
-            serialized_document
-        )
-        is expected
+    stored = vs_utils._stored_content_payloads(  # noqa: SLF001
+        ["p1", "p2", "p3"], fields=("checksum", "title")
     )
-    mock_qdrant.retrieve.assert_called_once()
-    assert (
-        mock_qdrant.retrieve.call_args.kwargs["collection_name"]
-        == CONTENT_FILES_COLLECTION_NAME
+
+    assert stored == {"p1": {"checksum": "abc"}, "p2": {}}
+    assert mock_qdrant.retrieve.call_count == 2  # ceil(3 ids / batch size 2)
+    for call in mock_qdrant.retrieve.call_args_list:
+        assert call.kwargs["collection_name"] == CONTENT_FILES_COLLECTION_NAME
+        assert call.kwargs["with_payload"] == ["checksum", "title"]
+
+
+@pytest.mark.parametrize(
+    ("stored_entry", "expect_regenerate"),
+    [
+        ("missing", True),  # no point in Qdrant (new file or failed prior embed)
+        (None, True),  # point exists but has no stored checksum
+        ("stale-checksum", True),  # stored checksum differs
+        ("current-checksum", False),  # matches -> payload-only update
+    ],
+)  # stored_entry is the checksum in the stored payload dict
+def test_generate_content_points_checksum_gate(mocker, stored_entry, expect_regenerate):
+    """Docs are re-embedded unless their stored Qdrant checksum matches."""
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 500
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 50
+
+    mocker.patch(
+        "vector_search.utils._chunk_documents",
+        return_value=[Document(page_content="chunk1", metadata={"key": "k1"})],
     )
+    mocker.patch("vector_search.utils.remove_points_matching_params")
+    update_payload_mock = mocker.patch(
+        "vector_search.utils.update_content_file_payload"
+    )
+    mock_dense = mocker.MagicMock()
+    mock_dense.embed_documents.side_effect = lambda texts: [[0.1] for _ in texts]
+    mock_dense.model_short_name.return_value = "dense"
+    mock_sparse = mocker.MagicMock()
+    mock_sparse.embed_documents.side_effect = lambda texts: [[0.2] for _ in texts]
+    mock_sparse.model_short_name.return_value = "sparse"
+    mocker.patch("vector_search.utils.dense_encoder", return_value=mock_dense)
+    mocker.patch("vector_search.utils.sparse_encoder", return_value=mock_sparse)
+
+    doc = {
+        "content": "Some plain text content",
+        "file_type": "page",
+        "file_extension": ".html",
+        "platform": {"code": "x"},
+        "resource_readable_id": "r1",
+        "run_readable_id": "run1",
+        "key": "k1",
+        "checksum": "current-checksum",
+    }
+    point_id = vector_point_id(
+        vector_point_key(doc, chunk_number=0, document_type="content_file")
+    )
+    stored = {} if stored_entry == "missing" else {point_id: {"checksum": stored_entry}}
+
+    points = list(_generate_content_file_points([doc], stored))
+
+    if expect_regenerate:
+        assert len(points) == 1
+        update_payload_mock.assert_not_called()
+    else:
+        assert points == []
+        update_payload_mock.assert_called_once_with(doc)
 
 
 def test_should_not_generate_for_unchanged_content_file(mocker):
@@ -1246,11 +1272,9 @@ def test_embed_learning_resources_summarizes_only_contentfiles_with_summary(mock
     Test that embedding overwrites don't overwrite existing summaries.
     """
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mock_qdrant.retrieve.return_value = []
     mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
     mocker.patch("vector_search.utils.create_qdrant_collections")
-    mocker.patch(
-        "vector_search.utils.filter_existing_qdrant_points_by_ids", return_value=[]
-    )
     mocker.patch("vector_search.utils.remove_qdrant_records")
 
     learning_resource = LearningResourceFactory.create(
@@ -1284,9 +1308,6 @@ def test_embed_learning_resources_summarizes_only_contentfiles_with_summary(mock
         serialized.append(d)
     mocker.patch(
         "vector_search.utils.serialize_bulk_content_files", return_value=serialized
-    )
-    mocker.patch(
-        "vector_search.utils._content_file_stored_checksum_changed", return_value=False
     )
 
     summarize_mock = mocker.patch(
@@ -1333,7 +1354,7 @@ def test_embed_learning_resources_overwrites_summaries_for_changed_content(mocke
             "key": cf.key,
             "summary": cf.summary,
             "content": cf.content,
-            "checksum": cf.checksum,
+            "checksum": f"current-{cf.id}",
         }
         for cf in all_contentfiles
     ]
@@ -1341,10 +1362,22 @@ def test_embed_learning_resources_overwrites_summaries_for_changed_content(mocke
     mocker.patch(
         "vector_search.utils.serialize_bulk_content_files", return_value=serialized
     )
-    mocker.patch(
-        "vector_search.utils._content_file_stored_checksum_changed",
-        side_effect=lambda resource: resource["id"] == changed_content_file.id,
-    )
+    # The unchanged file takes the payload-only path (covered by its own tests)
+    mocker.patch("vector_search.utils.update_content_file_payload")
+    # Stored Qdrant checksum matches for the unchanged file, differs for the changed
+    mock_qdrant.retrieve.return_value = [
+        mocker.MagicMock(
+            id=vector_point_id(
+                vector_point_key(doc, chunk_number=0, document_type="content_file")
+            ),
+            payload={
+                "checksum": doc["checksum"]
+                if doc["id"] == unchanged_content_file.id
+                else "stale-checksum"
+            },
+        )
+        for doc in serialized
+    ]
 
     summarize_mock = mocker.patch(
         "learning_resources.content_summarizer.ContentSummarizer.summarize_content_files_by_ids"
@@ -1392,15 +1425,23 @@ def test_embed_learning_resources_keeps_old_checksum_when_summary_fails(mocker):
             "key": content_file.key,
             "summary": content_file.summary,
             "content": content_file.content,
-            "checksum": content_file.checksum,
+            "checksum": "current-checksum",
         }
     ]
     mocker.patch(
         "vector_search.utils.serialize_bulk_content_files", return_value=serialized
     )
-    mocker.patch(
-        "vector_search.utils._content_file_stored_checksum_changed", return_value=True
-    )
+    # Stored Qdrant checksum differs, so the summary must be regenerated
+    mock_qdrant.retrieve.return_value = [
+        mocker.MagicMock(
+            id=vector_point_id(
+                vector_point_key(
+                    serialized[0], chunk_number=0, document_type="content_file"
+                )
+            ),
+            payload={"checksum": "previous-checksum"},
+        )
+    ]
     summarize_mock = mocker.patch(
         "learning_resources.content_summarizer.ContentSummarizer.summarize_content_files_by_ids",
         return_value=[

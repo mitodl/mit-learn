@@ -82,7 +82,12 @@ class LearningResourceHooks:
 
     @hookspec
     def content_files_loaded(self, run):
-        """Trigger actions after content files are loaded for a run"""
+        """
+        Trigger actions after content files are loaded for a run.
+
+        Args:
+            run: the LearningResourceRun whose content files were loaded
+        """
 
 
 def get_plugin_manager():
