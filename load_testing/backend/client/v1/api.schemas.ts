@@ -3304,7 +3304,7 @@ export interface PercolateQuerySubscriptionRequestRequest {
   offset?: number
   /** Number of results to return per page */
   limit?: number
-  /** The organization that offers the learning resource             
+  /** The organization that offers the learning resource
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -3314,7 +3314,7 @@ export interface PercolateQuerySubscriptionRequestRequest {
 * `see` - MIT Sloan Executive Education
 * `climate` - MIT Climate */
   offered_by?: OfferedByEnum[]
-  /** The platform on which the learning resource is offered             
+  /** The platform on which the learning resource is offered
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -3367,7 +3367,7 @@ export interface PercolateQuerySubscriptionRequestRequest {
 * `-views` - Popularity descending
 * `upcoming` - Next start date ascending */
   sortby?: SortbyEnum
-  /** The type of learning resource             
+  /** The type of learning resource
 
 * `course` - course
 * `program` - program
@@ -3394,14 +3394,14 @@ export interface PercolateQuerySubscriptionRequestRequest {
    * @nullable
    */
   certification?: boolean | null
-  /** The type of certificate             
+  /** The type of certificate
 
 * `micromasters` - MicroMasters Credential
 * `professional` - Professional Certificate
 * `completion` - Certificate of Completion
 * `none` - No Certificate */
   certification_type?: CertificationTypeEnum[]
-  /** The department that offers the learning resource             
+  /** The department that offers the learning resource
 
 * `1` - Civil and Environmental Engineering
 * `2` - Mechanical Engineering
@@ -3447,7 +3447,7 @@ export interface PercolateQuerySubscriptionRequestRequest {
   course_feature?: string[]
   /** Show resource counts by category */
   aggregations?: AggregationsEnum[]
-  /** The delivery options in which the learning resource is offered             
+  /** The delivery options in which the learning resource is offered
 
 * `online` - Online
 * `hybrid` - Hybrid
@@ -3457,7 +3457,7 @@ export interface PercolateQuerySubscriptionRequestRequest {
   resource_type_group?: ResourceTypeGroupEnum[]
   /** The resource category for the resource */
   resource_category?: string[]
-  /** The open search search type for text queries             
+  /** The open search search type for text queries
 
 * `phrase` - phrase
 * `best_fields` - best_fields
@@ -5984,7 +5984,7 @@ export type ContentFileSearchRetrieveParams = {
    */
   ocw_topic?: string[]
   /**
- * The organization that offers the learning resource             
+ * The organization that offers the learning resource
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -6000,7 +6000,7 @@ export type ContentFileSearchRetrieveParams = {
    */
   offset?: number
   /**
- * The platform on which the learning resource is offered             
+ * The platform on which the learning resource is offered
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -7870,7 +7870,7 @@ export type LearningResourcesSimilarListParams = {
    */
   certification?: boolean | null
   /**
- * The type of certificate             
+ * The type of certificate
 
 * `micromasters` - MicroMasters Credential
 * `professional` - Professional Certificate
@@ -7883,7 +7883,7 @@ export type LearningResourcesSimilarListParams = {
    */
   course_feature?: string[]
   /**
- * The delivery options in which the learning resource is offered             
+ * The delivery options in which the learning resource is offered
 
 * `online` - Online
 * `hybrid` - Hybrid
@@ -7892,7 +7892,7 @@ export type LearningResourcesSimilarListParams = {
  */
   delivery?: LearningResourcesSimilarListDeliveryItem[]
   /**
- * The department that offers the learning resource             
+ * The department that offers the learning resource
 
 * `1` - Civil and Environmental Engineering
 * `2` - Mechanical Engineering
@@ -7945,7 +7945,7 @@ export type LearningResourcesSimilarListParams = {
    */
   ocw_topic?: string[]
   /**
- * The organization that offers the learning resource             
+ * The organization that offers the learning resource
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -7957,7 +7957,7 @@ export type LearningResourcesSimilarListParams = {
  */
   offered_by?: LearningResourcesSimilarListOfferedByItem[]
   /**
- * The platform on which the learning resource is offered             
+ * The platform on which the learning resource is offered
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -7991,7 +7991,7 @@ export type LearningResourcesSimilarListParams = {
    */
   resource_category?: string[]
   /**
- * The type of learning resource             
+ * The type of learning resource
 
 * `course` - course
 * `program` - program
@@ -8004,7 +8004,7 @@ export type LearningResourcesSimilarListParams = {
  */
   resource_type?: LearningResourcesSimilarListResourceTypeItem[]
   /**
- * The category of learning resource             
+ * The category of learning resource
 
 * `course` - Course
 * `program` - Program
@@ -8280,7 +8280,7 @@ export type LearningResourcesVectorSimilarListParams = {
    */
   certification?: boolean | null
   /**
- * The type of certificate             
+ * The type of certificate
 
 * `micromasters` - MicroMasters Credential
 * `professional` - Professional Certificate
@@ -8293,7 +8293,7 @@ export type LearningResourcesVectorSimilarListParams = {
    */
   course_feature?: string[]
   /**
- * The delivery options in which the learning resource is offered             
+ * The delivery options in which the learning resource is offered
 
 * `online` - Online
 * `hybrid` - Hybrid
@@ -8302,7 +8302,7 @@ export type LearningResourcesVectorSimilarListParams = {
  */
   delivery?: LearningResourcesVectorSimilarListDeliveryItem[]
   /**
- * The department that offers the learning resource             
+ * The department that offers the learning resource
 
 * `1` - Civil and Environmental Engineering
 * `2` - Mechanical Engineering
@@ -8355,7 +8355,7 @@ export type LearningResourcesVectorSimilarListParams = {
    */
   ocw_topic?: string[]
   /**
- * The organization that offers the learning resource             
+ * The organization that offers the learning resource
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -8367,7 +8367,7 @@ export type LearningResourcesVectorSimilarListParams = {
  */
   offered_by?: LearningResourcesVectorSimilarListOfferedByItem[]
   /**
- * The platform on which the learning resource is offered             
+ * The platform on which the learning resource is offered
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -8401,7 +8401,7 @@ export type LearningResourcesVectorSimilarListParams = {
    */
   resource_category?: string[]
   /**
- * The type of learning resource             
+ * The type of learning resource
 
 * `course` - course
 * `program` - program
@@ -8414,7 +8414,7 @@ export type LearningResourcesVectorSimilarListParams = {
  */
   resource_type?: LearningResourcesVectorSimilarListResourceTypeItem[]
   /**
- * The category of learning resource             
+ * The category of learning resource
 
 * `course` - Course
 * `program` - Program
@@ -9189,7 +9189,7 @@ export type LearningResourcesSearchRetrieveParams = {
    */
   certification?: boolean | null
   /**
- * The type of certificate             
+ * The type of certificate
 
 * `micromasters` - MicroMasters Credential
 * `professional` - Professional Certificate
@@ -9209,7 +9209,7 @@ export type LearningResourcesSearchRetrieveParams = {
    */
   course_feature?: string[]
   /**
- * The delivery options in which the learning resource is offered             
+ * The delivery options in which the learning resource is offered
 
 * `online` - Online
 * `hybrid` - Hybrid
@@ -9218,7 +9218,7 @@ export type LearningResourcesSearchRetrieveParams = {
  */
   delivery?: LearningResourcesSearchRetrieveDeliveryItem[]
   /**
- * The department that offers the learning resource             
+ * The department that offers the learning resource
 
 * `1` - Civil and Environmental Engineering
 * `2` - Mechanical Engineering
@@ -9297,7 +9297,7 @@ export type LearningResourcesSearchRetrieveParams = {
    */
   ocw_topic?: string[]
   /**
- * The organization that offers the learning resource             
+ * The organization that offers the learning resource
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -9313,7 +9313,7 @@ export type LearningResourcesSearchRetrieveParams = {
    */
   offset?: number
   /**
- * The platform on which the learning resource is offered             
+ * The platform on which the learning resource is offered
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -9352,7 +9352,7 @@ export type LearningResourcesSearchRetrieveParams = {
    */
   resource_category?: string[]
   /**
- * The type of learning resource             
+ * The type of learning resource
 
 * `course` - course
 * `program` - program
@@ -9366,7 +9366,7 @@ export type LearningResourcesSearchRetrieveParams = {
   resource_type?: LearningResourcesSearchRetrieveResourceTypeItem[]
   resource_type_group?: LearningResourcesSearchRetrieveResourceTypeGroupItem[]
   /**
- * The open search search type for text queries             
+ * The open search search type for text queries
 
 * `phrase` - phrase
 * `best_fields` - best_fields
@@ -9767,7 +9767,7 @@ export type LearningResourcesUserSubscriptionListParams = {
    */
   certification?: boolean | null
   /**
- * The type of certificate             
+ * The type of certificate
 
 * `micromasters` - MicroMasters Credential
 * `professional` - Professional Certificate
@@ -9787,7 +9787,7 @@ export type LearningResourcesUserSubscriptionListParams = {
    */
   course_feature?: string[]
   /**
- * The delivery options in which the learning resource is offered             
+ * The delivery options in which the learning resource is offered
 
 * `online` - Online
 * `hybrid` - Hybrid
@@ -9796,7 +9796,7 @@ export type LearningResourcesUserSubscriptionListParams = {
  */
   delivery?: LearningResourcesUserSubscriptionListDeliveryItem[]
   /**
- * The department that offers the learning resource             
+ * The department that offers the learning resource
 
 * `1` - Civil and Environmental Engineering
 * `2` - Mechanical Engineering
@@ -9875,7 +9875,7 @@ export type LearningResourcesUserSubscriptionListParams = {
    */
   ocw_topic?: string[]
   /**
- * The organization that offers the learning resource             
+ * The organization that offers the learning resource
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -9891,7 +9891,7 @@ export type LearningResourcesUserSubscriptionListParams = {
    */
   offset?: number
   /**
- * The platform on which the learning resource is offered             
+ * The platform on which the learning resource is offered
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -9930,7 +9930,7 @@ export type LearningResourcesUserSubscriptionListParams = {
    */
   resource_category?: string[]
   /**
- * The type of learning resource             
+ * The type of learning resource
 
 * `course` - course
 * `program` - program
@@ -9944,7 +9944,7 @@ export type LearningResourcesUserSubscriptionListParams = {
   resource_type?: LearningResourcesUserSubscriptionListResourceTypeItem[]
   resource_type_group?: LearningResourcesUserSubscriptionListResourceTypeGroupItem[]
   /**
- * The open search search type for text queries             
+ * The open search search type for text queries
 
 * `phrase` - phrase
 * `best_fields` - best_fields
@@ -10345,7 +10345,7 @@ export type LearningResourcesUserSubscriptionCheckListParams = {
    */
   certification?: boolean | null
   /**
- * The type of certificate             
+ * The type of certificate
 
 * `micromasters` - MicroMasters Credential
 * `professional` - Professional Certificate
@@ -10365,7 +10365,7 @@ export type LearningResourcesUserSubscriptionCheckListParams = {
    */
   course_feature?: string[]
   /**
- * The delivery options in which the learning resource is offered             
+ * The delivery options in which the learning resource is offered
 
 * `online` - Online
 * `hybrid` - Hybrid
@@ -10374,7 +10374,7 @@ export type LearningResourcesUserSubscriptionCheckListParams = {
  */
   delivery?: LearningResourcesUserSubscriptionCheckListDeliveryItem[]
   /**
- * The department that offers the learning resource             
+ * The department that offers the learning resource
 
 * `1` - Civil and Environmental Engineering
 * `2` - Mechanical Engineering
@@ -10453,7 +10453,7 @@ export type LearningResourcesUserSubscriptionCheckListParams = {
    */
   ocw_topic?: string[]
   /**
- * The organization that offers the learning resource             
+ * The organization that offers the learning resource
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -10469,7 +10469,7 @@ export type LearningResourcesUserSubscriptionCheckListParams = {
    */
   offset?: number
   /**
- * The platform on which the learning resource is offered             
+ * The platform on which the learning resource is offered
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -10508,7 +10508,7 @@ export type LearningResourcesUserSubscriptionCheckListParams = {
    */
   resource_category?: string[]
   /**
- * The type of learning resource             
+ * The type of learning resource
 
 * `course` - course
 * `program` - program
@@ -10522,7 +10522,7 @@ export type LearningResourcesUserSubscriptionCheckListParams = {
   resource_type?: LearningResourcesUserSubscriptionCheckListResourceTypeItem[]
   resource_type_group?: LearningResourcesUserSubscriptionCheckListResourceTypeGroupItem[]
   /**
- * The open search search type for text queries             
+ * The open search search type for text queries
 
 * `phrase` - phrase
 * `best_fields` - best_fields
@@ -10940,7 +10940,7 @@ export type LearningResourcesUserSubscriptionSubscribeCreateParams = {
    */
   certification?: boolean | null
   /**
- * The type of certificate             
+ * The type of certificate
 
 * `micromasters` - MicroMasters Credential
 * `professional` - Professional Certificate
@@ -10960,7 +10960,7 @@ export type LearningResourcesUserSubscriptionSubscribeCreateParams = {
    */
   course_feature?: string[]
   /**
- * The delivery options in which the learning resource is offered             
+ * The delivery options in which the learning resource is offered
 
 * `online` - Online
 * `hybrid` - Hybrid
@@ -10969,7 +10969,7 @@ export type LearningResourcesUserSubscriptionSubscribeCreateParams = {
  */
   delivery?: LearningResourcesUserSubscriptionSubscribeCreateDeliveryItem[]
   /**
- * The department that offers the learning resource             
+ * The department that offers the learning resource
 
 * `1` - Civil and Environmental Engineering
 * `2` - Mechanical Engineering
@@ -11048,7 +11048,7 @@ export type LearningResourcesUserSubscriptionSubscribeCreateParams = {
    */
   ocw_topic?: string[]
   /**
- * The organization that offers the learning resource             
+ * The organization that offers the learning resource
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -11064,7 +11064,7 @@ export type LearningResourcesUserSubscriptionSubscribeCreateParams = {
    */
   offset?: number
   /**
- * The platform on which the learning resource is offered             
+ * The platform on which the learning resource is offered
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -11103,7 +11103,7 @@ export type LearningResourcesUserSubscriptionSubscribeCreateParams = {
    */
   resource_category?: string[]
   /**
- * The type of learning resource             
+ * The type of learning resource
 
 * `course` - course
 * `program` - program
@@ -11117,7 +11117,7 @@ export type LearningResourcesUserSubscriptionSubscribeCreateParams = {
   resource_type?: LearningResourcesUserSubscriptionSubscribeCreateResourceTypeItem[]
   resource_type_group?: LearningResourcesUserSubscriptionSubscribeCreateResourceTypeGroupItem[]
   /**
- * The open search search type for text queries             
+ * The open search search type for text queries
 
 * `phrase` - phrase
 * `best_fields` - best_fields
