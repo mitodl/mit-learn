@@ -6,7 +6,10 @@ from enum import Enum
 from opensearchpy.exceptions import ConnectionError as ESConnectionError
 from urllib3.exceptions import TimeoutError as UrlTimeoutError
 
-from learning_resources.constants import LEARNING_RESOURCE_SORTBY_OPTIONS
+from learning_resources.constants import (
+    CONTENT_FILE_LARGE_FIELDS,
+    LEARNING_RESOURCE_SORTBY_OPTIONS,
+)
 
 ALIAS_ALL_INDICES = "all"
 COURSE_TYPE = "course"
@@ -489,11 +492,10 @@ SOURCE_EXCLUDED_FIELDS = [
     "resource_age_date",
     "featured_rank",
     "is_incomplete_or_stale",
-    "content",
-    "summary",
-    "flashcards",
+    *CONTENT_FILE_LARGE_FIELDS,
     "vector_embedding",
     "video.transcript",
+    *[f"content_files.{field}" for field in CONTENT_FILE_LARGE_FIELDS],
 ]
 
 LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS = {

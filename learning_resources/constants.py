@@ -230,6 +230,10 @@ VALID_COURSE_CONTENT_CHOICES = list(
     zip(VALID_COURSE_CONTENT_TYPES, VALID_COURSE_CONTENT_TYPES)
 )
 
+# Large text fields excluded from API responses (both nested serializers and
+# OpenSearch _source filtering) but retained in the search index for querying
+CONTENT_FILE_LARGE_FIELDS = ("content", "summary", "flashcards")
+
 TUTOR_PROBLEM_TYPE = "problem"
 TUTOR_SOLUTION_TYPE = "solution"
 VALID_TUTOR_PROBLEM_TYPES = [TUTOR_PROBLEM_TYPE, TUTOR_SOLUTION_TYPE]
