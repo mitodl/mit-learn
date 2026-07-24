@@ -68,6 +68,7 @@ const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
       posthog.init(POSTHOG_API_KEY, {
         api_host: POSTHOG_API_HOST,
         ui_host: POSTHOG_UI_HOST,
+        cross_subdomain_cookie: false,
         bootstrap: {
           featureFlags: featureFlags
             ? {
