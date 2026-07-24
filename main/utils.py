@@ -1,6 +1,7 @@
 """main utilities"""
 
 import datetime
+import json
 import logging
 import os
 from collections.abc import Callable
@@ -15,8 +16,10 @@ import requests
 from bs4 import BeautifulSoup
 from django.conf import settings
 from django.core.cache import caches
+from django.http import HttpResponse
 from django.views.decorators.cache import cache_page
 from nh3 import nh3
+from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 
 from main.constants import ALLOWED_HTML_ATTRIBUTES, ALLOWED_HTML_TAGS
@@ -35,6 +38,28 @@ def _sorted_query_string(query_dict):
         # (topic=a&topic=b and topic=b&topic=a should match)
         items.extend(f"{key}={value}" for value in sorted(query_dict.getlist(key)))
     return "&".join(items)
+
+
+def _wants_html(request) -> bool:
+    """Whether the request wants the browsable API (HTML) rather than JSON."""
+    return "text/html" in request.headers.get("Accept", "") or bool(
+        request.GET.get("format")
+    )
+
+
+def _cached_response(request, cached_data):
+    """
+    Build a response from a cache entry (rendered JSON bytes or legacy dict).
+
+    JSON requests get the cached bytes as-is, skipping re-rendering. Requests
+    wanting another format (e.g. the browsable API) get a DRF Response so
+    content negotiation still applies.
+    """
+    if not isinstance(cached_data, bytes):
+        return Response(cached_data)
+    if _wants_html(request):
+        return Response(json.loads(cached_data))
+    return HttpResponse(cached_data, content_type="application/json")
 
 
 def _resolve_cache_timeout(timeout: int | None) -> int:
@@ -99,12 +124,18 @@ def _cache_page_ignoring_cookies(  # noqa: C901
 
                 cached_data = await cache_backend.aget(cache_key)
                 if cached_data is not None:
-                    return Response(cached_data)
+                    return _cached_response(request, cached_data)
 
                 response = await func(request, *args, **kwargs)
 
                 if response.status_code == 200:  # noqa: PLR2004
-                    await cache_backend.aset(cache_key, response.data, cache_timeout)
+                    # Cache rendered JSON bytes so cache hits skip
+                    # DRF serialization entirely
+                    await cache_backend.aset(
+                        cache_key,
+                        JSONRenderer().render(response.data),
+                        cache_timeout,
+                    )
 
                 return response
 
@@ -136,14 +167,19 @@ def _cache_page_ignoring_cookies(  # noqa: C901
             # Try to get from cache
             cached_data = cache_backend.get(cache_key)
             if cached_data is not None:
-                return Response(cached_data)
+                return _cached_response(request, cached_data)
 
             # Execute view
             response = func(request, *args, **kwargs)
 
-            # Only cache successful responses
+            # Only cache successful responses. Cache rendered JSON bytes so
+            # cache hits skip DRF serialization entirely
             if response.status_code == 200:  # noqa: PLR2004
-                cache_backend.set(cache_key, response.data, cache_timeout)
+                cache_backend.set(
+                    cache_key,
+                    JSONRenderer().render(response.data),
+                    cache_timeout,
+                )
 
             return response
 
