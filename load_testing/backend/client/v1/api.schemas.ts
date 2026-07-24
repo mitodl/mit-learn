@@ -114,6 +114,11 @@ export const CertificationTypeEnum = {
 } as const
 
 /**
+ * @nullable
+ */
+export type ContentFileImageSrc = string | string | null
+
+/**
  * Serializer class for course run ContentFiles
  */
 export interface ContentFile {
@@ -167,11 +172,8 @@ export interface ContentFile {
    */
   content_language?: string | null
   checksum?: string
-  /**
-   * @maxLength 200
-   * @nullable
-   */
-  image_src?: string | null
+  /** @nullable */
+  image_src?: ContentFileImageSrc
   readonly resource_id: string
   readonly resource_readable_id: string
   source_path?: string
@@ -258,8 +260,10 @@ export interface ContentFileSearchResponse {
 export interface ContentFileWebHookRequest {
   content_path?: string
   source: SourceEnum
-  course_id?: string
-  course_readable_id?: string
+  /** @nullable */
+  course_id?: string | null
+  /** @nullable */
+  course_readable_id?: string | null
 }
 
 /**
@@ -268,8 +272,10 @@ export interface ContentFileWebHookRequest {
 export interface ContentFileWebHookRequestRequest {
   content_path?: string
   source: SourceEnum
-  course_id?: string
-  course_readable_id?: string
+  /** @nullable */
+  course_id?: string | null
+  /** @nullable */
+  course_readable_id?: string | null
 }
 
 /**
@@ -456,6 +462,8 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
   resource_type: CourseResourceResourceType
   readonly course: Course
   readonly readable_id: string
@@ -666,7 +674,8 @@ export const DeliveryEnum = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
+ * `21T` - Theater Arts
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -731,8 +740,10 @@ export const DepartmentEnum = {
   "21H": "21H",
   /** Literature */
   "21L": "21L",
-  /** Music and Theater Arts */
+  /** Music */
   "21M": "21M",
+  /** Theater Arts */
+  "21T": "21T",
   /** Nuclear Science and Engineering */
   NUMBER_22: "22",
   /** Linguistics and Philosophy */
@@ -911,9 +922,11 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
   resource_type: DocumentResourceResourceType
   /** @nullable */
-  readonly content_files: readonly ContentFile[] | null
+  readonly content_files: readonly NestedContentFile[] | null
   /** @nullable */
   readonly description: string | null
   readonly readable_id: string
@@ -1679,6 +1692,8 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
   resource_type: LearningPathResourceResourceType
   /** The display category for this resource. */
   readonly resource_category: string
@@ -2162,6 +2177,8 @@ export interface LearningResourceOfferor {
   display_facet?: boolean
 }
 
+export type LearningResourceOfferorDetailMoreInformation = string | string
+
 /**
  * Serializer for LearningResourceOfferor with all details
  */
@@ -2179,8 +2196,7 @@ export interface LearningResourceOfferorDetail {
   fee?: string[]
   certifications?: string[]
   content_types?: string[]
-  /** @maxLength 200 */
-  more_information?: string
+  more_information?: LearningResourceOfferorDetailMoreInformation
   value_prop?: string
   display_facet?: boolean
 }
@@ -2621,7 +2637,47 @@ export interface LearningResourceSummary {
    * @nullable
    */
   url?: string | null
+  /** @maxLength 256 */
+  title: string
+  resource_type: LearningResourceSummaryResourceTypeEnum
+  /** Ids of the parents that form part of this resource's URL: the parent podcasts of a podcast episode, the playlists of a video. Empty for every other resource type. Parents are not filtered by `published`, so an id here may belong to a resource this endpoint will not return. */
+  readonly canonical_parent_ids: readonly number[]
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
 }
+
+/**
+ * * `course` - Course
+ * `program` - Program
+ * `learning_path` - Learning Path
+ * `podcast` - Podcast
+ * `podcast_episode` - Podcast Episode
+ * `video` - Video
+ * `video_playlist` - Video Playlist
+ * `document` - Document
+ */
+export type LearningResourceSummaryResourceTypeEnum =
+  (typeof LearningResourceSummaryResourceTypeEnum)[keyof typeof LearningResourceSummaryResourceTypeEnum]
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const LearningResourceSummaryResourceTypeEnum = {
+  /** Course */
+  course: "course",
+  /** Program */
+  program: "program",
+  /** Learning Path */
+  learning_path: "learning_path",
+  /** Podcast */
+  podcast: "podcast",
+  /** Podcast Episode */
+  podcast_episode: "podcast_episode",
+  /** Video */
+  video: "video",
+  /** Video Playlist */
+  video_playlist: "video_playlist",
+  /** Document */
+  document: "document",
+} as const
 
 /**
  * Serializer for LearningResourceTopic model
@@ -2718,6 +2774,97 @@ export interface MicroUserListRelationship {
   readonly child: number
 }
 
+/**
+ * @nullable
+ */
+export type NestedContentFileImageSrc = string | string | null
+
+/**
+ * ContentFileSerializer without the large text fields (content, summary,
+flashcards), for nesting inside learning resource API responses.
+The search indexing path re-adds full content where needed.
+ */
+export interface NestedContentFile {
+  readonly id: number
+  run_id?: number
+  /** @nullable */
+  direct_learning_resource_id?: number | null
+  run_title?: string
+  run_slug?: string
+  readonly departments: readonly LearningResourceDepartment[]
+  semester?: string
+  year?: number
+  readonly topics: readonly LearningResourceTopic[]
+  /**
+   * @maxLength 1024
+   * @nullable
+   */
+  key?: string | null
+  /**
+   * @maxLength 36
+   * @nullable
+   */
+  uid?: string | null
+  /**
+   * @maxLength 1024
+   * @nullable
+   */
+  title?: string | null
+  /** @nullable */
+  description?: string | null
+  readonly require_summaries: boolean
+  /** @nullable */
+  url?: string | null
+  content_feature_type: string[]
+  content_type?: ContentFileContentTypeEnum
+  /**
+   * @maxLength 1024
+   * @nullable
+   */
+  content_title?: string | null
+  /**
+   * @maxLength 1024
+   * @nullable
+   */
+  content_author?: string | null
+  /**
+   * @maxLength 24
+   * @nullable
+   */
+  content_language?: string | null
+  checksum?: string
+  /** @nullable */
+  image_src?: NestedContentFileImageSrc
+  readonly resource_id: string
+  readonly resource_readable_id: string
+  source_path?: string
+  /** Extract the course number(s) from the associated course */
+  readonly course_number: readonly string[]
+  /**
+   * @maxLength 128
+   * @nullable
+   */
+  file_type?: string | null
+  /**
+   * @maxLength 32
+   * @nullable
+   */
+  file_extension?: string | null
+  readonly offered_by: LearningResourceOfferor
+  readonly platform: LearningResourcePlatform
+  run_readable_id?: string
+  /**
+   * @maxLength 1024
+   * @nullable
+   */
+  edx_module_id?: string | null
+  /**
+   * @maxLength 32
+   * @nullable
+   */
+  youtube_id?: string | null
+}
+
 export type NullEnum = (typeof NullEnum)[keyof typeof NullEnum]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
@@ -2731,9 +2878,15 @@ public videos API; `key` is required) or a delete payload (`video_id` plus
 `delete: true`).
  */
 export interface OVSVideoWebhookRequestRequest {
-  /** @minLength 1 */
+  /**
+   * @minLength 1
+   * @pattern ^[A-Za-z0-9._-]{1,255}$
+   */
   key?: string
-  /** @minLength 1 */
+  /**
+   * @minLength 1
+   * @pattern ^[A-Za-z0-9._-]{1,255}$
+   */
   video_id?: string
   delete?: boolean
 }
@@ -3102,6 +3255,8 @@ export interface PatchedUserListRequest {
   privacy_level?: PrivacyLevelEnum
 }
 
+export type PatchedWebsiteContentRequestSlug = string | string
+
 /**
  * Serializer for WebsiteContent model.
  */
@@ -3115,11 +3270,7 @@ export interface PatchedWebsiteContentRequest {
   content?: unknown
   content_type?: WebsiteContentContentTypeEnum
   is_published?: boolean
-  /**
-   * @maxLength 60
-   * @pattern ^[-a-zA-Z0-9_]+$
-   */
-  slug?: string
+  slug?: PatchedWebsiteContentRequestSlug
 }
 
 /**
@@ -3153,7 +3304,7 @@ export interface PercolateQuerySubscriptionRequestRequest {
   offset?: number
   /** Number of results to return per page */
   limit?: number
-  /** The organization that offers the learning resource
+  /** The organization that offers the learning resource             
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -3163,7 +3314,7 @@ export interface PercolateQuerySubscriptionRequestRequest {
 * `see` - MIT Sloan Executive Education
 * `climate` - MIT Climate */
   offered_by?: OfferedByEnum[]
-  /** The platform on which the learning resource is offered
+  /** The platform on which the learning resource is offered             
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -3216,7 +3367,7 @@ export interface PercolateQuerySubscriptionRequestRequest {
 * `-views` - Popularity descending
 * `upcoming` - Next start date ascending */
   sortby?: SortbyEnum
-  /** The type of learning resource
+  /** The type of learning resource             
 
 * `course` - course
 * `program` - program
@@ -3243,14 +3394,14 @@ export interface PercolateQuerySubscriptionRequestRequest {
    * @nullable
    */
   certification?: boolean | null
-  /** The type of certificate
+  /** The type of certificate             
 
 * `micromasters` - MicroMasters Credential
 * `professional` - Professional Certificate
 * `completion` - Certificate of Completion
 * `none` - No Certificate */
   certification_type?: CertificationTypeEnum[]
-  /** The department that offers the learning resource
+  /** The department that offers the learning resource             
 
 * `1` - Civil and Environmental Engineering
 * `2` - Mechanical Engineering
@@ -3274,7 +3425,8 @@ export interface PercolateQuerySubscriptionRequestRequest {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -3295,7 +3447,7 @@ export interface PercolateQuerySubscriptionRequestRequest {
   course_feature?: string[]
   /** Show resource counts by category */
   aggregations?: AggregationsEnum[]
-  /** The delivery options in which the learning resource is offered
+  /** The delivery options in which the learning resource is offered             
 
 * `online` - Online
 * `hybrid` - Hybrid
@@ -3305,7 +3457,7 @@ export interface PercolateQuerySubscriptionRequestRequest {
   resource_type_group?: ResourceTypeGroupEnum[]
   /** The resource category for the resource */
   resource_category?: string[]
-  /** The open search search type for text queries
+  /** The open search search type for text queries             
 
 * `phrase` - phrase
 * `best_fields` - best_fields
@@ -3488,8 +3640,13 @@ export interface Podcast {
 export interface PodcastEpisode {
   readonly id: number
   /** Get the podcast id(s) the episode belongs to */
-  readonly podcasts: readonly string[]
-  transcript?: string
+  readonly podcasts: readonly number[]
+  readonly parent_podcasts: readonly PodcastEpisodeParent[]
+  /** Whether a transcript is available from the transcript endpoint.
+
+The text itself is excluded from this serializer, so this is how a
+client knows whether to fetch it. */
+  readonly has_transcript: boolean
   /** @maxLength 2048 */
   audio_url: string
   /**
@@ -3502,15 +3659,21 @@ export interface PodcastEpisode {
    * @nullable
    */
   duration?: string | null
-  /** @nullable */
-  rss?: string | null
+}
+
+/**
+ * Minimal parent-podcast summary embedded in an episode.
+ */
+export interface PodcastEpisodeParent {
+  id: number
+  title: string
+  readable_id: string
 }
 
 /**
  * Serializer for PodcastEpisode
  */
 export interface PodcastEpisodeRequest {
-  transcript?: string
   /**
    * @minLength 1
    * @maxLength 2048
@@ -3527,8 +3690,6 @@ export interface PodcastEpisodeRequest {
    * @nullable
    */
   duration?: string | null
-  /** @nullable */
-  rss?: string | null
 }
 
 /**
@@ -3679,6 +3840,8 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
   resource_type: PodcastEpisodeResourceResourceType
   readonly podcast_episode: PodcastEpisode
   readonly readable_id: string
@@ -3845,6 +4008,17 @@ export type PodcastEpisodeResourceResourceTypeEnum =
 export const PodcastEpisodeResourceResourceTypeEnum = {
   podcast_episode: "podcast_episode",
 } as const
+
+/**
+ * Serializer for a single podcast episode's transcript.
+
+Kept out of PodcastEpisodeSerializer so the text is only ever sent when a
+client asks for this one episode's transcript.
+ */
+export interface PodcastEpisodeTranscript {
+  readonly id: number
+  transcript?: string
+}
 
 /**
  * Serializer for Podcasts
@@ -4019,6 +4193,8 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
   resource_type: PodcastResourceResourceType
   readonly podcast: Podcast
   readonly readable_id: string
@@ -4473,6 +4649,8 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
   resource_type: ProgramResourceResourceType
   readonly program: Program
   readonly readable_id: string
@@ -4810,8 +4988,7 @@ export const SortbyEnum = {
 } as const
 
 /**
- * * `micromasters` - micromasters
- * `mit_edx` - mit_edx
+ * * `mit_edx` - mit_edx
  * `mitpe` - mitpe
  * `mitxonline` - mitxonline
  * `oll` - oll
@@ -4828,8 +5005,6 @@ export type SourceEnum = (typeof SourceEnum)[keyof typeof SourceEnum]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const SourceEnum = {
-  /** micromasters */
-  micromasters: "micromasters",
   /** mit_edx */
   mit_edx: "mit_edx",
   /** mitpe */
@@ -4950,15 +5125,25 @@ export interface UserRequest {
 }
 
 /**
+ * @nullable
+ */
+export type VideoStreamingUrl = string | string | null
+
+/**
+ * @nullable
+ */
+export type VideoCoverImageUrl = string | string | null
+
+/**
  * Serializer for the Video model
  */
 export interface Video {
   readonly id: number
   readonly caption_urls: readonly CaptionUrl[]
   /** @nullable */
-  readonly streaming_url: string | null
+  readonly streaming_url: VideoStreamingUrl
   /** @nullable */
-  readonly cover_image_url: string | null
+  readonly cover_image_url: VideoCoverImageUrl
   /** @maxLength 11 */
   duration: string
 }
@@ -5002,6 +5187,14 @@ export interface VideoPlaylist {
   /** @nullable */
   readonly channel: VideoPlaylistChannel
   video_count: number
+  /** @nullable */
+  readonly parent_learning_resource_id: number | null
+  /** @nullable */
+  readonly parent_title: string | null
+  /** @nullable */
+  readonly parent_url: string | null
+  /** Extract the course number(s) from the parent course, if any */
+  readonly parent_course_numbers: readonly string[]
 }
 
 /**
@@ -5159,6 +5352,8 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
   resource_type: VideoPlaylistResourceResourceType
   readonly video_playlist: VideoPlaylist
   readonly readable_id: string
@@ -5490,13 +5685,15 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
   resource_type: VideoResourceResourceType
   /** @nullable */
   readonly video: VideoResourceVideo
   /** Get the playlist id(s) the video belongs to */
   readonly playlists: readonly string[]
   /** @nullable */
-  readonly content_files: readonly ContentFile[] | null
+  readonly content_files: readonly NestedContentFile[] | null
   /** @nullable */
   readonly description: string | null
   readonly readable_id: string
@@ -5669,6 +5866,10 @@ export interface WebhookResponse {
   error?: string
 }
 
+export type WebsiteContentSlug = string | string
+
+export type WebsiteContentCoverImage = string | string
+
 /**
  * Serializer for WebsiteContent model.
  */
@@ -5684,11 +5885,8 @@ export interface WebsiteContent {
   readonly updated_on: string
   readonly publish_date: string
   is_published?: boolean
-  /**
-   * @maxLength 60
-   * @pattern ^[-a-zA-Z0-9_]+$
-   */
-  slug?: string
+  slug?: WebsiteContentSlug
+  readonly cover_image: WebsiteContentCoverImage
 }
 
 /**
@@ -5710,6 +5908,8 @@ export interface WebsiteContentImageUploadRequest {
   image_file: Blob
 }
 
+export type WebsiteContentRequestSlug = string | string
+
 /**
  * Serializer for WebsiteContent model.
  */
@@ -5723,11 +5923,7 @@ export interface WebsiteContentRequest {
   content?: unknown
   content_type?: WebsiteContentContentTypeEnum
   is_published?: boolean
-  /**
-   * @maxLength 60
-   * @pattern ^[-a-zA-Z0-9_]+$
-   */
-  slug?: string
+  slug?: WebsiteContentRequestSlug
 }
 
 export type ArticlesListParams = {
@@ -5788,7 +5984,7 @@ export type ContentFileSearchRetrieveParams = {
    */
   ocw_topic?: string[]
   /**
- * The organization that offers the learning resource
+ * The organization that offers the learning resource             
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -5804,7 +6000,7 @@ export type ContentFileSearchRetrieveParams = {
    */
   offset?: number
   /**
- * The platform on which the learning resource is offered
+ * The platform on which the learning resource is offered             
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -6127,7 +6323,8 @@ export type CoursesListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -6310,6 +6507,7 @@ export const CoursesListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -6602,7 +6800,8 @@ export type FeaturedListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -6785,6 +6984,7 @@ export const FeaturedListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -6994,7 +7194,8 @@ export type LearningResourceDisplayInfoListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -7177,6 +7378,7 @@ export const LearningResourceDisplayInfoListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -7351,7 +7553,8 @@ export type LearningResourcesListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -7534,6 +7737,7 @@ export const LearningResourcesListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -7666,7 +7870,7 @@ export type LearningResourcesSimilarListParams = {
    */
   certification?: boolean | null
   /**
- * The type of certificate
+ * The type of certificate             
 
 * `micromasters` - MicroMasters Credential
 * `professional` - Professional Certificate
@@ -7679,7 +7883,7 @@ export type LearningResourcesSimilarListParams = {
    */
   course_feature?: string[]
   /**
- * The delivery options in which the learning resource is offered
+ * The delivery options in which the learning resource is offered             
 
 * `online` - Online
 * `hybrid` - Hybrid
@@ -7688,7 +7892,7 @@ export type LearningResourcesSimilarListParams = {
  */
   delivery?: LearningResourcesSimilarListDeliveryItem[]
   /**
- * The department that offers the learning resource
+ * The department that offers the learning resource             
 
 * `1` - Civil and Environmental Engineering
 * `2` - Mechanical Engineering
@@ -7712,7 +7916,8 @@ export type LearningResourcesSimilarListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -7740,7 +7945,7 @@ export type LearningResourcesSimilarListParams = {
    */
   ocw_topic?: string[]
   /**
- * The organization that offers the learning resource
+ * The organization that offers the learning resource             
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -7752,7 +7957,7 @@ export type LearningResourcesSimilarListParams = {
  */
   offered_by?: LearningResourcesSimilarListOfferedByItem[]
   /**
- * The platform on which the learning resource is offered
+ * The platform on which the learning resource is offered             
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -7782,7 +7987,11 @@ export type LearningResourcesSimilarListParams = {
    */
   professional?: boolean | null
   /**
- * The type of learning resource
+   * The resource category for the resource
+   */
+  resource_category?: string[]
+  /**
+ * The type of learning resource             
 
 * `course` - course
 * `program` - program
@@ -7795,7 +8004,7 @@ export type LearningResourcesSimilarListParams = {
  */
   resource_type?: LearningResourcesSimilarListResourceTypeItem[]
   /**
- * The category of learning resource
+ * The category of learning resource             
 
 * `course` - Course
 * `program` - Program
@@ -7865,7 +8074,8 @@ export const LearningResourcesSimilarListDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
+ * `21T` - Theater Arts
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -7909,6 +8119,7 @@ export const LearningResourcesSimilarListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   CC: "CC",
@@ -8069,7 +8280,7 @@ export type LearningResourcesVectorSimilarListParams = {
    */
   certification?: boolean | null
   /**
- * The type of certificate
+ * The type of certificate             
 
 * `micromasters` - MicroMasters Credential
 * `professional` - Professional Certificate
@@ -8082,7 +8293,7 @@ export type LearningResourcesVectorSimilarListParams = {
    */
   course_feature?: string[]
   /**
- * The delivery options in which the learning resource is offered
+ * The delivery options in which the learning resource is offered             
 
 * `online` - Online
 * `hybrid` - Hybrid
@@ -8091,7 +8302,7 @@ export type LearningResourcesVectorSimilarListParams = {
  */
   delivery?: LearningResourcesVectorSimilarListDeliveryItem[]
   /**
- * The department that offers the learning resource
+ * The department that offers the learning resource             
 
 * `1` - Civil and Environmental Engineering
 * `2` - Mechanical Engineering
@@ -8115,7 +8326,8 @@ export type LearningResourcesVectorSimilarListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -8143,7 +8355,7 @@ export type LearningResourcesVectorSimilarListParams = {
    */
   ocw_topic?: string[]
   /**
- * The organization that offers the learning resource
+ * The organization that offers the learning resource             
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -8155,7 +8367,7 @@ export type LearningResourcesVectorSimilarListParams = {
  */
   offered_by?: LearningResourcesVectorSimilarListOfferedByItem[]
   /**
- * The platform on which the learning resource is offered
+ * The platform on which the learning resource is offered             
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -8185,7 +8397,11 @@ export type LearningResourcesVectorSimilarListParams = {
    */
   professional?: boolean | null
   /**
- * The type of learning resource
+   * The resource category for the resource
+   */
+  resource_category?: string[]
+  /**
+ * The type of learning resource             
 
 * `course` - course
 * `program` - program
@@ -8198,7 +8414,7 @@ export type LearningResourcesVectorSimilarListParams = {
  */
   resource_type?: LearningResourcesVectorSimilarListResourceTypeItem[]
   /**
- * The category of learning resource
+ * The category of learning resource             
 
 * `course` - Course
 * `program` - Program
@@ -8268,7 +8484,8 @@ export const LearningResourcesVectorSimilarListDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
+ * `21T` - Theater Arts
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -8312,6 +8529,7 @@ export const LearningResourcesVectorSimilarListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   CC: "CC",
@@ -8650,7 +8868,8 @@ export type LearningResourcesSummaryListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -8833,6 +9052,7 @@ export const LearningResourcesSummaryListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -8969,7 +9189,7 @@ export type LearningResourcesSearchRetrieveParams = {
    */
   certification?: boolean | null
   /**
- * The type of certificate
+ * The type of certificate             
 
 * `micromasters` - MicroMasters Credential
 * `professional` - Professional Certificate
@@ -8989,7 +9209,7 @@ export type LearningResourcesSearchRetrieveParams = {
    */
   course_feature?: string[]
   /**
- * The delivery options in which the learning resource is offered
+ * The delivery options in which the learning resource is offered             
 
 * `online` - Online
 * `hybrid` - Hybrid
@@ -8998,7 +9218,7 @@ export type LearningResourcesSearchRetrieveParams = {
  */
   delivery?: LearningResourcesSearchRetrieveDeliveryItem[]
   /**
- * The department that offers the learning resource
+ * The department that offers the learning resource             
 
 * `1` - Civil and Environmental Engineering
 * `2` - Mechanical Engineering
@@ -9022,7 +9242,8 @@ export type LearningResourcesSearchRetrieveParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -9076,7 +9297,7 @@ export type LearningResourcesSearchRetrieveParams = {
    */
   ocw_topic?: string[]
   /**
- * The organization that offers the learning resource
+ * The organization that offers the learning resource             
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -9092,7 +9313,7 @@ export type LearningResourcesSearchRetrieveParams = {
    */
   offset?: number
   /**
- * The platform on which the learning resource is offered
+ * The platform on which the learning resource is offered             
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -9131,7 +9352,7 @@ export type LearningResourcesSearchRetrieveParams = {
    */
   resource_category?: string[]
   /**
- * The type of learning resource
+ * The type of learning resource             
 
 * `course` - course
 * `program` - program
@@ -9145,7 +9366,7 @@ export type LearningResourcesSearchRetrieveParams = {
   resource_type?: LearningResourcesSearchRetrieveResourceTypeItem[]
   resource_type_group?: LearningResourcesSearchRetrieveResourceTypeGroupItem[]
   /**
- * The open search search type for text queries
+ * The open search search type for text queries             
 
 * `phrase` - phrase
 * `best_fields` - best_fields
@@ -9297,7 +9518,8 @@ export const LearningResourcesSearchRetrieveDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
+ * `21T` - Theater Arts
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -9341,6 +9563,7 @@ export const LearningResourcesSearchRetrieveDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   CC: "CC",
@@ -9544,7 +9767,7 @@ export type LearningResourcesUserSubscriptionListParams = {
    */
   certification?: boolean | null
   /**
- * The type of certificate
+ * The type of certificate             
 
 * `micromasters` - MicroMasters Credential
 * `professional` - Professional Certificate
@@ -9564,7 +9787,7 @@ export type LearningResourcesUserSubscriptionListParams = {
    */
   course_feature?: string[]
   /**
- * The delivery options in which the learning resource is offered
+ * The delivery options in which the learning resource is offered             
 
 * `online` - Online
 * `hybrid` - Hybrid
@@ -9573,7 +9796,7 @@ export type LearningResourcesUserSubscriptionListParams = {
  */
   delivery?: LearningResourcesUserSubscriptionListDeliveryItem[]
   /**
- * The department that offers the learning resource
+ * The department that offers the learning resource             
 
 * `1` - Civil and Environmental Engineering
 * `2` - Mechanical Engineering
@@ -9597,7 +9820,8 @@ export type LearningResourcesUserSubscriptionListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -9651,7 +9875,7 @@ export type LearningResourcesUserSubscriptionListParams = {
    */
   ocw_topic?: string[]
   /**
- * The organization that offers the learning resource
+ * The organization that offers the learning resource             
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -9667,7 +9891,7 @@ export type LearningResourcesUserSubscriptionListParams = {
    */
   offset?: number
   /**
- * The platform on which the learning resource is offered
+ * The platform on which the learning resource is offered             
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -9706,7 +9930,7 @@ export type LearningResourcesUserSubscriptionListParams = {
    */
   resource_category?: string[]
   /**
- * The type of learning resource
+ * The type of learning resource             
 
 * `course` - course
 * `program` - program
@@ -9720,7 +9944,7 @@ export type LearningResourcesUserSubscriptionListParams = {
   resource_type?: LearningResourcesUserSubscriptionListResourceTypeItem[]
   resource_type_group?: LearningResourcesUserSubscriptionListResourceTypeGroupItem[]
   /**
- * The open search search type for text queries
+ * The open search search type for text queries             
 
 * `phrase` - phrase
 * `best_fields` - best_fields
@@ -9872,7 +10096,8 @@ export const LearningResourcesUserSubscriptionListDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
+ * `21T` - Theater Arts
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -9916,6 +10141,7 @@ export const LearningResourcesUserSubscriptionListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   CC: "CC",
@@ -10119,7 +10345,7 @@ export type LearningResourcesUserSubscriptionCheckListParams = {
    */
   certification?: boolean | null
   /**
- * The type of certificate
+ * The type of certificate             
 
 * `micromasters` - MicroMasters Credential
 * `professional` - Professional Certificate
@@ -10139,7 +10365,7 @@ export type LearningResourcesUserSubscriptionCheckListParams = {
    */
   course_feature?: string[]
   /**
- * The delivery options in which the learning resource is offered
+ * The delivery options in which the learning resource is offered             
 
 * `online` - Online
 * `hybrid` - Hybrid
@@ -10148,7 +10374,7 @@ export type LearningResourcesUserSubscriptionCheckListParams = {
  */
   delivery?: LearningResourcesUserSubscriptionCheckListDeliveryItem[]
   /**
- * The department that offers the learning resource
+ * The department that offers the learning resource             
 
 * `1` - Civil and Environmental Engineering
 * `2` - Mechanical Engineering
@@ -10172,7 +10398,8 @@ export type LearningResourcesUserSubscriptionCheckListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -10226,7 +10453,7 @@ export type LearningResourcesUserSubscriptionCheckListParams = {
    */
   ocw_topic?: string[]
   /**
- * The organization that offers the learning resource
+ * The organization that offers the learning resource             
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -10242,7 +10469,7 @@ export type LearningResourcesUserSubscriptionCheckListParams = {
    */
   offset?: number
   /**
- * The platform on which the learning resource is offered
+ * The platform on which the learning resource is offered             
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -10281,7 +10508,7 @@ export type LearningResourcesUserSubscriptionCheckListParams = {
    */
   resource_category?: string[]
   /**
- * The type of learning resource
+ * The type of learning resource             
 
 * `course` - course
 * `program` - program
@@ -10295,7 +10522,7 @@ export type LearningResourcesUserSubscriptionCheckListParams = {
   resource_type?: LearningResourcesUserSubscriptionCheckListResourceTypeItem[]
   resource_type_group?: LearningResourcesUserSubscriptionCheckListResourceTypeGroupItem[]
   /**
- * The open search search type for text queries
+ * The open search search type for text queries             
 
 * `phrase` - phrase
 * `best_fields` - best_fields
@@ -10455,7 +10682,8 @@ export const LearningResourcesUserSubscriptionCheckListDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
+ * `21T` - Theater Arts
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -10499,6 +10727,7 @@ export const LearningResourcesUserSubscriptionCheckListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   CC: "CC",
@@ -10711,7 +10940,7 @@ export type LearningResourcesUserSubscriptionSubscribeCreateParams = {
    */
   certification?: boolean | null
   /**
- * The type of certificate
+ * The type of certificate             
 
 * `micromasters` - MicroMasters Credential
 * `professional` - Professional Certificate
@@ -10731,7 +10960,7 @@ export type LearningResourcesUserSubscriptionSubscribeCreateParams = {
    */
   course_feature?: string[]
   /**
- * The delivery options in which the learning resource is offered
+ * The delivery options in which the learning resource is offered             
 
 * `online` - Online
 * `hybrid` - Hybrid
@@ -10740,7 +10969,7 @@ export type LearningResourcesUserSubscriptionSubscribeCreateParams = {
  */
   delivery?: LearningResourcesUserSubscriptionSubscribeCreateDeliveryItem[]
   /**
- * The department that offers the learning resource
+ * The department that offers the learning resource             
 
 * `1` - Civil and Environmental Engineering
 * `2` - Mechanical Engineering
@@ -10764,7 +10993,8 @@ export type LearningResourcesUserSubscriptionSubscribeCreateParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -10818,7 +11048,7 @@ export type LearningResourcesUserSubscriptionSubscribeCreateParams = {
    */
   ocw_topic?: string[]
   /**
- * The organization that offers the learning resource
+ * The organization that offers the learning resource             
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -10834,7 +11064,7 @@ export type LearningResourcesUserSubscriptionSubscribeCreateParams = {
    */
   offset?: number
   /**
- * The platform on which the learning resource is offered
+ * The platform on which the learning resource is offered             
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -10873,7 +11103,7 @@ export type LearningResourcesUserSubscriptionSubscribeCreateParams = {
    */
   resource_category?: string[]
   /**
- * The type of learning resource
+ * The type of learning resource             
 
 * `course` - course
 * `program` - program
@@ -10887,7 +11117,7 @@ export type LearningResourcesUserSubscriptionSubscribeCreateParams = {
   resource_type?: LearningResourcesUserSubscriptionSubscribeCreateResourceTypeItem[]
   resource_type_group?: LearningResourcesUserSubscriptionSubscribeCreateResourceTypeGroupItem[]
   /**
- * The open search search type for text queries
+ * The open search search type for text queries             
 
 * `phrase` - phrase
 * `best_fields` - best_fields
@@ -11049,7 +11279,8 @@ export const LearningResourcesUserSubscriptionSubscribeCreateDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
+ * `21T` - Theater Arts
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -11093,6 +11324,7 @@ export const LearningResourcesUserSubscriptionSubscribeCreateDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   CC: "CC",
@@ -11345,7 +11577,8 @@ export type LearningpathsListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -11528,6 +11761,7 @@ export const LearningpathsListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -11739,7 +11973,8 @@ export type PodcastEpisodesListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -11922,6 +12157,7 @@ export const PodcastEpisodesListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -12096,7 +12332,8 @@ export type PodcastsListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -12279,6 +12516,7 @@ export const PodcastsListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -12468,7 +12706,8 @@ export type ProgramsListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -12651,6 +12890,7 @@ export const ProgramsListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -12810,6 +13050,12 @@ export type TopicsListParams = {
   parent_topic_id?: number[]
 }
 
+export type UnsubscribeCreate200 = { [key: string]: unknown }
+
+export type UnsubscribeCreate400 = {
+  error?: string
+}
+
 export type MediaUpload201 = {
   url?: string
 }
@@ -12885,7 +13131,8 @@ export type VideoPlaylistsListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -13068,6 +13315,7 @@ export const VideoPlaylistsListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -13257,7 +13505,8 @@ export type VideosListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -13440,6 +13689,7 @@ export const VideosListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -13567,11 +13817,16 @@ export const VideosListSortby = {
 
 export type WebhooksContentFilesCreateParams = {
   content_path?: string
-  course_id?: string
-  course_readable_id?: string
   /**
-   * * `micromasters` - micromasters
-   * `mit_edx` - mit_edx
+   * @nullable
+   */
+  course_id?: string | null
+  /**
+   * @nullable
+   */
+  course_readable_id?: string | null
+  /**
+   * * `mit_edx` - mit_edx
    * `mitpe` - mitpe
    * `mitxonline` - mitxonline
    * `oll` - oll
@@ -13593,7 +13848,6 @@ export type WebhooksContentFilesCreateSource =
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const WebhooksContentFilesCreateSource = {
-  micromasters: "micromasters",
   mit_edx: "mit_edx",
   mitpe: "mitpe",
   mitxonline: "mitxonline",

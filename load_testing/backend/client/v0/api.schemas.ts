@@ -193,6 +193,87 @@ export interface ChannelUnitDetail {
   readonly unit: LearningResourceOfferorDetail
 }
 
+export type ContentFeedbackUrl = string | string
+
+/**
+ * Serializer for content feedback submissions.
+
+``user`` is set server-side from the request (never client-supplied). Each
+valid submission is persisted as a new append-only record.
+ */
+export interface ContentFeedback {
+  /** @maxLength 255 */
+  course_id: string
+  /** @maxLength 255 */
+  course_name?: string
+  /** @maxLength 255 */
+  block_usage_key: string
+  /** @maxLength 64 */
+  block_type?: string
+  /** @maxLength 255 */
+  block_display_name?: string
+  /** @maxLength 255 */
+  unit_title?: string
+  url?: ContentFeedbackUrl
+  sentiment: ContentFeedbackSentimentEnum
+  comment?: string
+}
+
+export type ContentFeedbackRequestUrl = string | string
+
+/**
+ * Serializer for content feedback submissions.
+
+``user`` is set server-side from the request (never client-supplied). Each
+valid submission is persisted as a new append-only record.
+ */
+export interface ContentFeedbackRequest {
+  /**
+   * @minLength 1
+   * @maxLength 255
+   */
+  course_id: string
+  /** @maxLength 255 */
+  course_name?: string
+  /**
+   * @minLength 1
+   * @maxLength 255
+   */
+  block_usage_key: string
+  /** @maxLength 64 */
+  block_type?: string
+  /** @maxLength 255 */
+  block_display_name?: string
+  /** @maxLength 255 */
+  unit_title?: string
+  url?: ContentFeedbackRequestUrl
+  sentiment: ContentFeedbackSentimentEnum
+  comment?: string
+}
+
+/**
+ * * `positive` - Positive
+ * `negative` - Negative
+ * `idea` - Idea
+ */
+export type ContentFeedbackSentimentEnum =
+  (typeof ContentFeedbackSentimentEnum)[keyof typeof ContentFeedbackSentimentEnum]
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const ContentFeedbackSentimentEnum = {
+  /** Positive */
+  positive: "positive",
+  /** Negative */
+  negative: "negative",
+  /** Idea */
+  idea: "idea",
+} as const
+
+/**
+ * @nullable
+ */
+export type ContentFileImageSrc = string | string | null
+
 /**
  * Serializer class for course run ContentFiles
  */
@@ -228,7 +309,7 @@ export interface ContentFile {
   /** @nullable */
   url?: string | null
   content_feature_type: string[]
-  content_type?: ContentTypeEnum
+  content_type?: ContentFileContentTypeEnum
   /** @nullable */
   content?: string | null
   /**
@@ -247,11 +328,8 @@ export interface ContentFile {
    */
   content_language?: string | null
   checksum?: string
-  /**
-   * @maxLength 200
-   * @nullable
-   */
-  image_src?: string | null
+  /** @nullable */
+  image_src?: ContentFileImageSrc
   readonly resource_id: string
   readonly resource_readable_id: string
   source_path?: string
@@ -284,6 +362,27 @@ export interface ContentFile {
   youtube_id?: string | null
 }
 
+/**
+ * * `page` - page
+ * `file` - file
+ * `video` - video
+ * `pdf` - pdf
+ */
+export type ContentFileContentTypeEnum =
+  (typeof ContentFileContentTypeEnum)[keyof typeof ContentFileContentTypeEnum]
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const ContentFileContentTypeEnum = {
+  /** page */
+  page: "page",
+  /** file */
+  file: "file",
+  /** video */
+  video: "video",
+  /** pdf */
+  pdf: "pdf",
+} as const
+
 export type ContentFileVectorSearchResponseMetadataAggregationsItem = {
   key: string
   doc_count: number
@@ -310,27 +409,6 @@ export interface ContentFileVectorSearchResponse {
   readonly results: readonly ContentFile[]
   readonly metadata: ContentFileVectorSearchResponseMetadata
 }
-
-/**
- * * `page` - page
- * `file` - file
- * `video` - video
- * `pdf` - pdf
- */
-export type ContentTypeEnum =
-  (typeof ContentTypeEnum)[keyof typeof ContentTypeEnum]
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
-export const ContentTypeEnum = {
-  /** page */
-  page: "page",
-  /** file */
-  file: "file",
-  /** video */
-  video: "video",
-  /** pdf */
-  pdf: "pdf",
-} as const
 
 export interface Counts {
   courses: number
@@ -502,6 +580,8 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
   resource_type: CourseResourceResourceType
   readonly course: Course
   readonly readable_id: string
@@ -614,6 +694,30 @@ export const CurrentEducationEnum = {
 } as const
 
 /**
+ * Serializer for the requesting user.
+
+Unlike UserSerializer this exposes the user's own email plus whether they
+can manage their credentials, both of which the settings page needs. It is
+read-only: users change their email through Keycloak, not through us.
+ */
+export interface CurrentUser {
+  readonly id: number
+  readonly username: string
+  /** @nullable */
+  readonly global_id: string | null
+  profile?: Profile
+  readonly email: string
+  readonly first_name: string
+  readonly last_name: string
+  readonly is_article_editor: boolean
+  readonly is_learning_path_editor: boolean
+  readonly is_authenticated: boolean
+  /** Whether the user signs in through an external identity provider, and so
+cannot change their email or password through us. */
+  readonly is_sso_user: boolean
+}
+
+/**
  * * `online` - Online
  * `hybrid` - Hybrid
  * `in_person` - In-Person
@@ -666,7 +770,7 @@ export interface DepartmentChannel {
    * Get the avatar image URL
    * @nullable
    */
-  avatar?: string | null
+  readonly avatar: string | null
   /**
    * Get the avatar image small URL
    * @nullable
@@ -681,7 +785,7 @@ export interface DepartmentChannel {
    * Get the banner image URL
    * @nullable
    */
-  banner?: string | null
+  readonly banner: string | null
   readonly lists: readonly LearningPathPreview[]
   /** Get the URL for the channel */
   readonly channel_url: string
@@ -875,9 +979,11 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
   resource_type: DocumentResourceResourceType
   /** @nullable */
-  readonly content_files: readonly ContentFile[] | null
+  readonly content_files: readonly NestedContentFile[] | null
   /** @nullable */
   readonly description: string | null
   readonly readable_id: string
@@ -1243,6 +1349,8 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
   resource_type: LearningPathResourceResourceType
   /** The display category for this resource. */
   readonly resource_category: string
@@ -1415,6 +1523,8 @@ export interface LearningResourceOfferor {
   display_facet?: boolean
 }
 
+export type LearningResourceOfferorDetailMoreInformation = string | string
+
 /**
  * Serializer for LearningResourceOfferor with all details
  */
@@ -1432,8 +1542,7 @@ export interface LearningResourceOfferorDetail {
   fee?: string[]
   certifications?: string[]
   content_types?: string[]
-  /** @maxLength 200 */
-  more_information?: string
+  more_information?: LearningResourceOfferorDetailMoreInformation
   value_prop?: string
   display_facet?: boolean
 }
@@ -1696,6 +1805,97 @@ export interface LearningResourcesVectorSearchResponse {
   readonly metadata: LearningResourcesVectorSearchResponseMetadata
 }
 
+/**
+ * @nullable
+ */
+export type NestedContentFileImageSrc = string | string | null
+
+/**
+ * ContentFileSerializer without the large text fields (content, summary,
+flashcards), for nesting inside learning resource API responses.
+The search indexing path re-adds full content where needed.
+ */
+export interface NestedContentFile {
+  readonly id: number
+  run_id?: number
+  /** @nullable */
+  direct_learning_resource_id?: number | null
+  run_title?: string
+  run_slug?: string
+  readonly departments: readonly LearningResourceDepartment[]
+  semester?: string
+  year?: number
+  readonly topics: readonly LearningResourceTopic[]
+  /**
+   * @maxLength 1024
+   * @nullable
+   */
+  key?: string | null
+  /**
+   * @maxLength 36
+   * @nullable
+   */
+  uid?: string | null
+  /**
+   * @maxLength 1024
+   * @nullable
+   */
+  title?: string | null
+  /** @nullable */
+  description?: string | null
+  readonly require_summaries: boolean
+  /** @nullable */
+  url?: string | null
+  content_feature_type: string[]
+  content_type?: ContentFileContentTypeEnum
+  /**
+   * @maxLength 1024
+   * @nullable
+   */
+  content_title?: string | null
+  /**
+   * @maxLength 1024
+   * @nullable
+   */
+  content_author?: string | null
+  /**
+   * @maxLength 24
+   * @nullable
+   */
+  content_language?: string | null
+  checksum?: string
+  /** @nullable */
+  image_src?: NestedContentFileImageSrc
+  readonly resource_id: string
+  readonly resource_readable_id: string
+  source_path?: string
+  /** Extract the course number(s) from the associated course */
+  readonly course_number: readonly string[]
+  /**
+   * @maxLength 128
+   * @nullable
+   */
+  file_type?: string | null
+  /**
+   * @maxLength 32
+   * @nullable
+   */
+  file_extension?: string | null
+  readonly offered_by: LearningResourceOfferor
+  readonly platform: LearningResourcePlatform
+  run_readable_id?: string
+  /**
+   * @maxLength 1024
+   * @nullable
+   */
+  edx_module_id?: string | null
+  /**
+   * @maxLength 32
+   * @nullable
+   */
+  youtube_id?: string | null
+}
+
 export type NewsFeedItemResourceType =
   (typeof NewsFeedItemResourceType)[keyof typeof NewsFeedItemResourceType]
 
@@ -1884,7 +2084,7 @@ export interface PathwayChannel {
    * Get the avatar image URL
    * @nullable
    */
-  avatar?: string | null
+  readonly avatar: string | null
   /**
    * Get the avatar image small URL
    * @nullable
@@ -1899,7 +2099,7 @@ export interface PathwayChannel {
    * Get the banner image URL
    * @nullable
    */
-  banner?: string | null
+  readonly banner: string | null
   readonly lists: readonly LearningPathPreview[]
   /** Get the URL for the channel */
   readonly channel_url: string
@@ -1973,8 +2173,13 @@ export interface Podcast {
 export interface PodcastEpisode {
   readonly id: number
   /** Get the podcast id(s) the episode belongs to */
-  readonly podcasts: readonly string[]
-  transcript?: string
+  readonly podcasts: readonly number[]
+  readonly parent_podcasts: readonly PodcastEpisodeParent[]
+  /** Whether a transcript is available from the transcript endpoint.
+
+The text itself is excluded from this serializer, so this is how a
+client knows whether to fetch it. */
+  readonly has_transcript: boolean
   /** @maxLength 2048 */
   audio_url: string
   /**
@@ -1987,8 +2192,15 @@ export interface PodcastEpisode {
    * @nullable
    */
   duration?: string | null
-  /** @nullable */
-  rss?: string | null
+}
+
+/**
+ * Minimal parent-podcast summary embedded in an episode.
+ */
+export interface PodcastEpisodeParent {
+  id: number
+  title: string
+  readable_id: string
 }
 
 /**
@@ -2139,6 +2351,8 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
   resource_type: PodcastEpisodeResourceResourceType
   readonly podcast_episode: PodcastEpisode
   readonly readable_id: string
@@ -2363,6 +2577,8 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
   resource_type: PodcastResourceResourceType
   readonly podcast: Podcast
   readonly readable_id: string
@@ -2498,6 +2714,7 @@ export interface Profile {
   readonly profile_image_small: string
   /** Custom getter for medium profile image */
   readonly profile_image_medium: string
+  email_optin?: boolean
   /** @nullable */
   bio?: string | null
   /**
@@ -2825,6 +3042,8 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
   resource_type: ProgramResourceResourceType
   readonly program: Program
   readonly readable_id: string
@@ -3056,7 +3275,7 @@ export interface TopicChannel {
    * Get the avatar image URL
    * @nullable
    */
-  avatar?: string | null
+  readonly avatar: string | null
   /**
    * Get the avatar image small URL
    * @nullable
@@ -3071,7 +3290,7 @@ export interface TopicChannel {
    * Get the banner image URL
    * @nullable
    */
-  banner?: string | null
+  readonly banner: string | null
   readonly lists: readonly LearningPathPreview[]
   /** Get the URL for the channel */
   readonly channel_url: string
@@ -3150,7 +3369,7 @@ export interface UnitChannel {
    * Get the avatar image URL
    * @nullable
    */
-  avatar?: string | null
+  readonly avatar: string | null
   /**
    * Get the avatar image small URL
    * @nullable
@@ -3165,7 +3384,7 @@ export interface UnitChannel {
    * Get the banner image URL
    * @nullable
    */
-  banner?: string | null
+  readonly banner: string | null
   readonly lists: readonly LearningPathPreview[]
   /** Get the URL for the channel */
   readonly channel_url: string
@@ -3217,6 +3436,8 @@ export const UnitChannelTypeEnum = {
 export interface User {
   readonly id: number
   readonly username: string
+  /** @nullable */
+  readonly global_id: string | null
   profile?: Profile
   readonly first_name: string
   readonly last_name: string
@@ -3258,15 +3479,25 @@ export interface UserWebsiteRequest {
 }
 
 /**
+ * @nullable
+ */
+export type VideoStreamingUrl = string | string | null
+
+/**
+ * @nullable
+ */
+export type VideoCoverImageUrl = string | string | null
+
+/**
  * Serializer for the Video model
  */
 export interface Video {
   readonly id: number
   readonly caption_urls: readonly CaptionUrl[]
   /** @nullable */
-  readonly streaming_url: string | null
+  readonly streaming_url: VideoStreamingUrl
   /** @nullable */
-  readonly cover_image_url: string | null
+  readonly cover_image_url: VideoCoverImageUrl
   /** @maxLength 11 */
   duration: string
 }
@@ -3294,6 +3525,14 @@ export interface VideoPlaylist {
   /** @nullable */
   readonly channel: VideoPlaylistChannel
   video_count: number
+  /** @nullable */
+  readonly parent_learning_resource_id: number | null
+  /** @nullable */
+  readonly parent_title: string | null
+  /** @nullable */
+  readonly parent_url: string | null
+  /** Extract the course number(s) from the parent course, if any */
+  readonly parent_course_numbers: readonly string[]
 }
 
 /**
@@ -3444,6 +3683,8 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
   resource_type: VideoPlaylistResourceResourceType
   readonly video_playlist: VideoPlaylist
   readonly readable_id: string
@@ -3673,13 +3914,15 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
   resource_type: VideoResourceResourceType
   /** @nullable */
   readonly video: VideoResourceVideo
   /** Get the playlist id(s) the video belongs to */
   readonly playlists: readonly string[]
   /** @nullable */
-  readonly content_files: readonly ContentFile[] | null
+  readonly content_files: readonly NestedContentFile[] | null
   /** @nullable */
   readonly description: string | null
   readonly readable_id: string
@@ -3966,7 +4209,7 @@ export type TestimonialsListParams = {
 
 export type VectorContentFilesSearchRetrieveParams = {
   /**
- * aggregations for facet counts
+ * aggregations for facet counts             
 
 * `key` - Key
 * `course_number` - Course Number
@@ -4110,7 +4353,7 @@ export const VectorContentFilesSearchRetrieveAggregationsItem = {
 
 export type VectorLearningResourcesSearchRetrieveParams = {
   /**
- * aggregations for facet counts
+ * aggregations for facet counts             
 
 * `readable_id` - Readable Id
 * `resource_type` - Resource Type
@@ -4142,7 +4385,7 @@ export type VectorLearningResourcesSearchRetrieveParams = {
    */
   certification?: boolean | null
   /**
- * The type of certificate
+ * The type of certificate             
 
 * `micromasters` - MicroMasters Credential
 * `professional` - Professional Certificate
@@ -4155,7 +4398,7 @@ export type VectorLearningResourcesSearchRetrieveParams = {
    */
   course_feature?: string[]
   /**
- * The delivery options in which the learning resource is offered
+ * The delivery options in which the learning resource is offered             
 
 * `online` - Online
 * `hybrid` - Hybrid
@@ -4164,7 +4407,7 @@ export type VectorLearningResourcesSearchRetrieveParams = {
  */
   delivery?: VectorLearningResourcesSearchRetrieveDeliveryItem[]
   /**
- * The department that offers the learning resource
+ * The department that offers the learning resource             
 
 * `1` - Civil and Environmental Engineering
 * `2` - Mechanical Engineering
@@ -4188,7 +4431,8 @@ export type VectorLearningResourcesSearchRetrieveParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -4225,7 +4469,7 @@ export type VectorLearningResourcesSearchRetrieveParams = {
    */
   ocw_topic?: string[]
   /**
- * The organization that offers the learning resource
+ * The organization that offers the learning resource             
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -4243,7 +4487,7 @@ export type VectorLearningResourcesSearchRetrieveParams = {
    */
   offset?: number
   /**
- * The platform on which the learning resource is offered
+ * The platform on which the learning resource is offered             
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -4287,7 +4531,11 @@ export type VectorLearningResourcesSearchRetrieveParams = {
    */
   readable_id?: string
   /**
- * The type of learning resource
+   * The resource category for the resource
+   */
+  resource_category?: string[]
+  /**
+ * The type of learning resource             
 
 * `course` - course
 * `program` - program
@@ -4300,7 +4548,7 @@ export type VectorLearningResourcesSearchRetrieveParams = {
  */
   resource_type?: VectorLearningResourcesSearchRetrieveResourceTypeItem[]
   /**
- * The category of learning resource
+ * The category of learning resource             
 
 * `course` - Course
 * `program` - Program
@@ -4449,7 +4697,8 @@ export const VectorLearningResourcesSearchRetrieveDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
+ * `21T` - Theater Arts
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -4493,6 +4742,7 @@ export const VectorLearningResourcesSearchRetrieveDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   CC: "CC",
