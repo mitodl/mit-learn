@@ -212,6 +212,9 @@ def test_serialize_video_resource_with_content_files():
     assert len(serializer.data["content_files"]) == 1
     assert serializer.data["content_files"][0]["id"] == content_file.id
     assert serializer.data["content_files"][0]["title"] == "Video Content File"
+    # Full text fields are excluded from nested API responses
+    for field in ("content", "summary", "flashcards"):
+        assert field not in serializer.data["content_files"][0]
     # Description should fall back to content file's description when resource has none
     assert serializer.data["description"] == "Content file description"
 
