@@ -1512,7 +1512,7 @@ class NestedContentFileSerializer(ContentFileSerializer):
         fields = [
             field
             for field in ContentFileSerializer.Meta.fields
-            if field not in ("content", "summary", "flashcards")
+            if field not in constants.CONTENT_FILE_LARGE_FIELDS
         ]
 
 
