@@ -5,14 +5,14 @@ from main.utils import clear_views_cache
 from news_events.etl import pipelines
 
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def get_medium_mit_news():
     """Run the Medium MIT News ETL pipeline"""
     pipelines.medium_mit_news_etl()
     clear_views_cache()
 
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def get_ol_events():
     """Run the Open Learning Events ETL pipeline"""
     pipelines.ol_events_etl()
@@ -33,21 +33,21 @@ def get_sloan_exec_webinars():
     clear_views_cache()
 
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def get_mitpe_news():
     """Run the MIT Professional Education news ETL pipeline"""
     pipelines.mitpe_news_etl()
     clear_views_cache()
 
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def get_mitpe_events():
     """Run the MIT Professional Education events ETL pipeline"""
     pipelines.mitpe_events_etl()
     clear_views_cache()
 
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def get_website_content_news():
     """Run the website content news ETL pipeline"""
 
