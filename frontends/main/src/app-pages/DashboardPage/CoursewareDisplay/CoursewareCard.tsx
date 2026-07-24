@@ -120,6 +120,7 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
         entry.enrollments,
         entry.displayedEnrollment,
       )}
+      ancestorContext={entry.ancestorContext}
       layout={layout}
       headingLevel={headingLevel}
       onUpgradeError={onUpgradeError}

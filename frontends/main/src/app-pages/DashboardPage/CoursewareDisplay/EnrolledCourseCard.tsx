@@ -27,6 +27,7 @@ import { getCourseDateText } from "./courseDateUtils"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { RiArrowUpCircleLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
+import { useCreateVerifiedProgramEnrollment } from "api/mitxonline-hooks/enrollment"
 import { isInPast, calendarDaysUntil, NoSSR } from "ol-utilities"
 import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
@@ -36,7 +37,10 @@ import { coursePageView } from "@/common/urls"
 import NiceModal from "@ebay/nice-modal-react"
 import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
 import { getReceiptMenuItem } from "./receiptMenuItem"
-import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
+import {
+  CourseRunEnrollmentV3,
+  V3UserProgramEnrollment,
+} from "@mitodl/mitxonline-api-axios/v2"
 import { ProgressBadge } from "./ProgressBadge"
 
 const formatUpgradeTime = (daysFloat: number) => {
@@ -71,6 +75,11 @@ const UpgradeBanner: React.FC<
     certificateUpgradeDeadline?: string | null
     certificateUpgradePrice?: string | null
     productId?: number | null
+    isVerifiedProgramEnrollment?: boolean
+    readableId?: string
+    coursewareUrl?: string
+    programReadableIds?: string[]
+    programCoursewareId?: string
     onError?: (error: Error) => void
   } & React.HTMLAttributes<HTMLDivElement>
 > = ({
@@ -78,13 +87,48 @@ const UpgradeBanner: React.FC<
   certificateUpgradeDeadline,
   certificateUpgradePrice,
   productId,
+  isVerifiedProgramEnrollment,
+  readableId,
+  coursewareUrl,
+  programReadableIds,
+  programCoursewareId,
   onError,
   ...others
 }) => {
   const replaceBasketItem = useReplaceBasketItem()
+  const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment()
+
+  const programRequestBody = programReadableIds?.length
+    ? programReadableIds
+    : programCoursewareId
+      ? [programCoursewareId]
+      : []
+  // Mirrors useEnrollmentHandler's gating: without a program identifier the
+  // verified-program-enrollment endpoint can't resolve which program to
+  // credit the upgrade against, so fall back to checkout instead of calling
+  // it with an empty request_body.
+  const canOneClickUpgrade = Boolean(
+    isVerifiedProgramEnrollment && readableId && programRequestBody.length > 0,
+  )
 
   const handleUpgradeClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
+
+    if (canOneClickUpgrade) {
+      try {
+        await createVerifiedProgramEnrollment.mutateAsync({
+          courserun_id: readableId!,
+          request_body: programRequestBody,
+        })
+        if (coursewareUrl) {
+          window.location.href = coursewareUrl
+        }
+      } catch (error) {
+        onError?.(error as Error)
+      }
+      return
+    }
+
     if (!productId) return
 
     try {
@@ -103,7 +147,6 @@ const UpgradeBanner: React.FC<
     return null
   }
 
-  const formattedPrice = `$${certificateUpgradePrice}`
   const calendarDays = certificateUpgradeDeadline
     ? calendarDaysUntil(certificateUpgradeDeadline)
     : null
@@ -112,7 +155,9 @@ const UpgradeBanner: React.FC<
     <SubtitleLinkRoot {...others}>
       <SubtitleLink href="#" onClick={handleUpgradeClick}>
         <RiArrowUpCircleLine size="16px" />
-        {`Upgrade for certificate - ${formattedPrice}`}
+        {canOneClickUpgrade
+          ? "Upgrade for certificate"
+          : `Upgrade for certificate - $${certificateUpgradePrice}`}
       </SubtitleLink>
       {calendarDays !== null && (
         <>
@@ -166,6 +211,11 @@ const MobileAccordionWrapper = styled.div({
 type EnrolledCourseCardProps = {
   enrollment: CourseRunEnrollmentV3
   siblingEnrollments?: CourseRunEnrollmentV3[]
+  ancestorContext?: {
+    programEnrollment?: V3UserProgramEnrollment
+    parentProgramReadableIds?: string[]
+    useVerifiedEnrollment?: boolean
+  }
   layout?: "default" | "compact"
   headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
   onUpgradeError?: (error: string) => void
@@ -177,6 +227,7 @@ type EnrolledCourseCardProps = {
 export const EnrolledCourseCard = ({
   enrollment,
   siblingEnrollments,
+  ancestorContext,
   layout = "default",
   headingLevel,
   onUpgradeError,
@@ -223,6 +274,11 @@ export const EnrolledCourseCard = ({
     !!run?.upgrade_product_price &&
     !!run?.upgrade_product_id &&
     !(run?.upgrade_deadline && isInPast(run.upgrade_deadline))
+  const isVerifiedProgramEnrollment =
+    Boolean(ancestorContext?.useVerifiedEnrollment) ||
+    isVerifiedEnrollmentMode(
+      ancestorContext?.programEnrollment?.enrollment_mode,
+    )
   const enrollmentStatus = getDashboardEnrollmentStatus({
     type: DashboardType.CourseRunEnrollment,
     data: enrollment,
@@ -246,6 +302,13 @@ export const EnrolledCourseCard = ({
       certificateUpgradeDeadline={run?.upgrade_deadline}
       certificateUpgradePrice={run?.upgrade_product_price}
       productId={run?.upgrade_product_id}
+      isVerifiedProgramEnrollment={isVerifiedProgramEnrollment}
+      readableId={run?.courseware_id}
+      coursewareUrl={coursewareUrl ?? undefined}
+      programReadableIds={ancestorContext?.parentProgramReadableIds}
+      programCoursewareId={
+        ancestorContext?.programEnrollment?.program.readable_id
+      }
       onError={() => {
         onUpgradeError?.(
           "There was a problem adding the certificate to your cart.",
