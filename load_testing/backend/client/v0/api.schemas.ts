@@ -4056,7 +4056,7 @@ export type TestimonialsListParams = {
 
 export type VectorContentFilesSearchRetrieveParams = {
   /**
- * aggregations for facet counts             
+ * aggregations for facet counts
 
 * `key` - Key
 * `course_number` - Course Number
@@ -4200,7 +4200,7 @@ export const VectorContentFilesSearchRetrieveAggregationsItem = {
 
 export type VectorLearningResourcesSearchRetrieveParams = {
   /**
- * aggregations for facet counts             
+ * aggregations for facet counts
 
 * `readable_id` - Readable Id
 * `resource_type` - Resource Type
@@ -4232,7 +4232,7 @@ export type VectorLearningResourcesSearchRetrieveParams = {
    */
   certification?: boolean | null
   /**
- * The type of certificate             
+ * The type of certificate
 
 * `micromasters` - MicroMasters Credential
 * `professional` - Professional Certificate
@@ -4245,7 +4245,7 @@ export type VectorLearningResourcesSearchRetrieveParams = {
    */
   course_feature?: string[]
   /**
- * The delivery options in which the learning resource is offered             
+ * The delivery options in which the learning resource is offered
 
 * `online` - Online
 * `hybrid` - Hybrid
@@ -4254,7 +4254,7 @@ export type VectorLearningResourcesSearchRetrieveParams = {
  */
   delivery?: VectorLearningResourcesSearchRetrieveDeliveryItem[]
   /**
- * The department that offers the learning resource             
+ * The department that offers the learning resource
 
 * `1` - Civil and Environmental Engineering
 * `2` - Mechanical Engineering
@@ -4315,7 +4315,7 @@ export type VectorLearningResourcesSearchRetrieveParams = {
    */
   ocw_topic?: string[]
   /**
- * The organization that offers the learning resource             
+ * The organization that offers the learning resource
 
 * `mitx` - MITx
 * `ocw` - MIT OpenCourseWare
@@ -4333,7 +4333,7 @@ export type VectorLearningResourcesSearchRetrieveParams = {
    */
   offset?: number
   /**
- * The platform on which the learning resource is offered             
+ * The platform on which the learning resource is offered
 
 * `edx` - edX
 * `ocw` - MIT OpenCourseWare
@@ -4381,7 +4381,7 @@ export type VectorLearningResourcesSearchRetrieveParams = {
    */
   resource_category?: string[]
   /**
- * The type of learning resource             
+ * The type of learning resource
 
 * `course` - course
 * `program` - program
@@ -4394,7 +4394,7 @@ export type VectorLearningResourcesSearchRetrieveParams = {
  */
   resource_type?: VectorLearningResourcesSearchRetrieveResourceTypeItem[]
   /**
- * The category of learning resource             
+ * The category of learning resource
 
 * `course` - Course
 * `program` - Program
