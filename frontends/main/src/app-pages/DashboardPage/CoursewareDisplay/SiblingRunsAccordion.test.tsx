@@ -3,23 +3,54 @@ import { renderWithProviders, screen, user } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
-import { SiblingRunsAccordion } from "./SiblingRunsAccordion"
+import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
 
 const makeEnrollment = (
   runOverrides: Record<string, unknown> = {},
 ): ReturnType<typeof mitxonline.factories.enrollment.courseEnrollment> =>
   mitxonline.factories.enrollment.courseEnrollment({ run: runOverrides })
 
+/**
+ * SiblingRunsToggle and SiblingRunsPanel are rendered in
+ * different parts of the card DOM (the toggle in the header, the panel
+ * below it) but share a single `expanded` state lifted to their parent.
+ * This harness reproduces that pairing for tests.
+ */
+const SiblingRunsAccordionHarness: React.FC<{
+  enrollment: ReturnType<typeof makeEnrollment>
+  siblingEnrollments: ReturnType<typeof makeEnrollment>[]
+}> = ({ enrollment, siblingEnrollments }) => {
+  const [expanded, setExpanded] = React.useState(false)
+  return (
+    <>
+      <SiblingRunsToggle
+        runCount={siblingEnrollments.length + 1}
+        expanded={expanded}
+        onClick={() => setExpanded((v) => !v)}
+        id="toggle"
+        controls="panel"
+      />
+      <SiblingRunsPanel
+        enrollment={enrollment}
+        siblingEnrollments={siblingEnrollments}
+        expanded={expanded}
+        id="panel"
+        labelledBy="toggle"
+      />
+    </>
+  )
+}
+
 const expandAccordion = async () => {
   await user.click(screen.getByRole("button", { name: /Course runs/ }))
 }
 
-describe("SiblingRunsAccordion", () => {
+describe("SiblingRunsToggle + SiblingRunsPanel", () => {
   test("shows 'Course runs (N)' where N is total runs including current", () => {
     const enrollment = makeEnrollment()
     const siblings = [makeEnrollment(), makeEnrollment()]
     renderWithProviders(
-      <SiblingRunsAccordion
+      <SiblingRunsAccordionHarness
         enrollment={enrollment}
         siblingEnrollments={siblings}
       />,
@@ -32,7 +63,7 @@ describe("SiblingRunsAccordion", () => {
     const enrollment = makeEnrollment()
     const sibling = makeEnrollment()
     renderWithProviders(
-      <SiblingRunsAccordion
+      <SiblingRunsAccordionHarness
         enrollment={enrollment}
         siblingEnrollments={[sibling]}
       />,
@@ -43,11 +74,43 @@ describe("SiblingRunsAccordion", () => {
     )
   })
 
-  test("clicking the summary expands the accordion", async () => {
+  test("while collapsed, the panel's links are not present in the DOM", () => {
+    const enrollment = makeEnrollment()
+    const sibling = makeEnrollment({ courseware_url: faker.internet.url() })
+    renderWithProviders(
+      <SiblingRunsAccordionHarness
+        enrollment={enrollment}
+        siblingEnrollments={[sibling]}
+      />,
+    )
+    // Collapsed content must not be mounted at all (not just visually
+    // hidden), so keyboard/screen-reader users can't tab into a link that
+    // isn't visible.
+    expect(
+      screen.queryByRole("link", { name: /View content/ }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("region")).not.toBeInTheDocument()
+  })
+
+  test("once expanded, the panel is exposed as a region labelled by the toggle", async () => {
     const enrollment = makeEnrollment()
     const sibling = makeEnrollment()
     renderWithProviders(
-      <SiblingRunsAccordion
+      <SiblingRunsAccordionHarness
+        enrollment={enrollment}
+        siblingEnrollments={[sibling]}
+      />,
+    )
+    await expandAccordion()
+    const region = await screen.findByRole("region")
+    expect(region).toHaveAttribute("aria-labelledby", "toggle")
+  })
+
+  test("clicking the toggle expands the panel", async () => {
+    const enrollment = makeEnrollment()
+    const sibling = makeEnrollment()
+    renderWithProviders(
+      <SiblingRunsAccordionHarness
         enrollment={enrollment}
         siblingEnrollments={[sibling]}
       />,
@@ -59,6 +122,23 @@ describe("SiblingRunsAccordion", () => {
     )
   })
 
+  test("shows the current run above the sibling list once expanded", async () => {
+    const enrollment = makeEnrollment({
+      start_date: moment("2026-01-05").toISOString(),
+      end_date: moment("2026-08-20").toISOString(),
+    })
+    const sibling = makeEnrollment()
+    renderWithProviders(
+      <SiblingRunsAccordionHarness
+        enrollment={enrollment}
+        siblingEnrollments={[sibling]}
+      />,
+    )
+    await expandAccordion()
+    expect(await screen.findByText("Current run:")).toBeInTheDocument()
+    expect(screen.getByText(/Jan 5, 2026/)).toBeInTheDocument()
+  })
+
   test("each sibling with a courseware URL shows a 'View content' link after expanding", async () => {
     const urlA = faker.internet.url()
     const urlB = faker.internet.url()
@@ -66,9 +146,9 @@ describe("SiblingRunsAccordion", () => {
       makeEnrollment({ courseware_url: urlA }),
       makeEnrollment({ courseware_url: urlB }),
     ]
-    const enrollment = makeEnrollment()
+    const enrollment = makeEnrollment({ courseware_url: null })
     renderWithProviders(
-      <SiblingRunsAccordion
+      <SiblingRunsAccordionHarness
         enrollment={enrollment}
         siblingEnrollments={siblings}
       />,
@@ -96,9 +176,9 @@ describe("SiblingRunsAccordion", () => {
         end_date: moment("2021-08-10").toISOString(),
       }),
     ]
-    const enrollment = makeEnrollment()
+    const enrollment = makeEnrollment({ courseware_url: null })
     renderWithProviders(
-      <SiblingRunsAccordion
+      <SiblingRunsAccordionHarness
         enrollment={enrollment}
         siblingEnrollments={siblings}
       />,
@@ -122,9 +202,9 @@ describe("SiblingRunsAccordion", () => {
 
   test("siblings without a courseware URL do not get a 'View content' link", async () => {
     const sibling = makeEnrollment({ courseware_url: null })
-    const enrollment = makeEnrollment()
+    const enrollment = makeEnrollment({ courseware_url: null })
     renderWithProviders(
-      <SiblingRunsAccordion
+      <SiblingRunsAccordionHarness
         enrollment={enrollment}
         siblingEnrollments={[sibling]}
       />,
@@ -143,7 +223,7 @@ describe("SiblingRunsAccordion", () => {
     })
     const enrollment = makeEnrollment()
     renderWithProviders(
-      <SiblingRunsAccordion
+      <SiblingRunsAccordionHarness
         enrollment={enrollment}
         siblingEnrollments={[sibling]}
       />,
@@ -160,7 +240,7 @@ describe("SiblingRunsAccordion", () => {
     })
     const enrollment = makeEnrollment()
     renderWithProviders(
-      <SiblingRunsAccordion
+      <SiblingRunsAccordionHarness
         enrollment={enrollment}
         siblingEnrollments={[sibling]}
       />,
@@ -177,9 +257,9 @@ describe("SiblingRunsAccordion", () => {
     const siblings = Array.from({ length: 4 }, () =>
       makeEnrollment({ courseware_url: faker.internet.url() }),
     )
-    const enrollment = makeEnrollment()
+    const enrollment = makeEnrollment({ courseware_url: null })
     renderWithProviders(
-      <SiblingRunsAccordion
+      <SiblingRunsAccordionHarness
         enrollment={enrollment}
         siblingEnrollments={siblings}
       />,

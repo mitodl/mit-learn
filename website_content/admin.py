@@ -21,6 +21,9 @@ class WebsiteContentAdmin(admin.ModelAdmin):
     search_fields = ("title", "slug", "author_name")
     readonly_fields = ("slug", "cover_image", "created_on", "updated_on")
     list_select_related = ("user",)
+    # Avoid rendering every user in a <select> on the change form, which times
+    # out in production. Uses an AJAX search widget instead.
+    autocomplete_fields = ("user",)
     ordering = ("-created_on",)
 
 
@@ -30,4 +33,5 @@ class WebsiteContentImageUploadAdmin(admin.ModelAdmin):
 
     list_display = ("user", "created_at")
     list_select_related = ("user",)
+    autocomplete_fields = ("user",)
     ordering = ("-created_at",)

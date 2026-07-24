@@ -1,6 +1,23 @@
 Release Notes
 =============
 
+Version 0.75.4 (Released July 23, 2026)
+--------------
+
+- fix: News, Articles, Django admin pages don't load on production (#3657)
+
+Version 0.75.3 (Released July 23, 2026)
+--------------
+
+- facets from url (#3655)
+- Only re-embed a run's content files when it is actually republished (#3662)
+- multiple enrollment display updates (#3650)
+
+Version 0.75.2 (Released July 22, 2026)
+--------------
+
+- Add unsubscribe API (#3636)
+
 Version 0.75.1 (Released July 22, 2026)
 --------------
 

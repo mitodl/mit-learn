@@ -1328,6 +1328,31 @@ def test_load_run_skips_import_content_files_when_content_files_exist(
     mock_import_task.delay.assert_not_called()
 
 
+@pytest.mark.parametrize("new_published", [True, False])
+def test_load_run_content_files_loaded_actions_only_on_republish(mocker, new_published):
+    """
+    content_files_loaded_actions should fire only when a previously unpublished
+    run becomes published, not on every sync of a run that stays unpublished
+    (which would re-embed its content files each time).
+    """
+    mock_loaded_actions = mocker.patch(
+        "learning_resources.etl.loaders.content_files_loaded_actions",
+        autospec=True,
+    )
+    course = LearningResourceFactory.create(
+        is_course=True,
+        create_runs=False,
+        etl_source=ETLSource.mitxonline.value,
+        published=True,
+    )
+    run = LearningResourceRunFactory.create(learning_resource=course, published=False)
+    ContentFileFactory.create(run=run)
+
+    load_run(course, {"run_id": run.run_id, "published": new_published})
+
+    assert mock_loaded_actions.call_count == (1 if new_published else 0)
+
+
 @pytest.mark.parametrize("parent_factory", [CourseFactory, ProgramFactory])
 @pytest.mark.parametrize("topics_exist", [True, False])
 def test_load_topics(mocker, parent_factory, topics_exist):

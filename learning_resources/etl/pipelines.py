@@ -9,7 +9,6 @@ from toolz import compose, curry
 
 from learning_resources.etl import (
     loaders,
-    micromasters,
     mit_edx,
     mit_edx_programs,
     mitpe,
@@ -35,17 +34,6 @@ log = logging.getLogger(__name__)
 
 load_programs = curry(loaders.load_programs)
 load_courses = curry(loaders.load_courses)
-
-micromasters_etl = compose(
-    load_programs(
-        ETLSource.micromasters.name,
-        config=ProgramLoaderConfig(
-            prune=True, courses=CourseLoaderConfig(fetch_only=True)
-        ),
-    ),
-    micromasters.transform,
-    micromasters.extract,
-)
 
 mit_edx_courses_etl = compose(
     load_courses(

@@ -70,20 +70,20 @@ const CardTypeText = styled(Typography)(({ theme }) => ({
 
 const TitleHeading = styled.h3(({ theme }) => ({
   margin: 0,
-  ...theme.typography.subtitle2,
+  ...theme.typography.subtitle1,
   [theme.breakpoints.down("sm")]: {
     maxWidth: "calc(100% - 16px)",
   },
 }))
 
 const TitleLink = styled(Link)(({ theme }) => ({
-  ...theme.typography.subtitle2,
+  ...theme.typography.subtitle1,
 }))
 
 const TitleText = styled.h3<{ clickable?: boolean }>(
   ({ theme, clickable }) => ({
     margin: 0,
-    ...theme.typography.subtitle2,
+    ...theme.typography.subtitle1,
     color: theme.custom.colors.darkGray2,
     cursor: clickable ? "pointer" : "default",
     [theme.breakpoints.down("sm")]: {
@@ -129,7 +129,7 @@ const MenuButton = styled(ActionButton)<{
     },
 ])
 
-const COURSEWARE_BUTTON_WIDTH = "88px"
+const COURSEWARE_BUTTON_WIDTH = "80px"
 
 // Fixed-width column that keeps the courseware button (and countdown) aligned
 // in the compact (module row) layout.

@@ -148,7 +148,7 @@ export const ProgramEnrollmentCard = ({
   )
 
   const progressBadgeSection = (
-    <Stack direction="row" gap="4px" alignItems="center">
+    <Stack direction="row" gap="8px" alignItems="center">
       <ProgressBadge enrollmentStatus={enrollmentStatus} />
       <Separator />
       <CardTypeText>Program</CardTypeText>

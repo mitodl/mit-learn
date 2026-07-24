@@ -250,6 +250,10 @@ const profileMe = {
   patch: () => `${getApiBaseUrl()}/api/v0/profiles/me/`,
 }
 
+const unsubscribe = {
+  post: (token: string) => `${getApiBaseUrl()}/api/v1/unsubscribe/${token}/`,
+}
+
 const newsEvents = {
   list: (params?: NewsEventsApiNewsEventsListRequest) =>
     `${getApiBaseUrl()}/api/v0/news_events/${query(params)}`,
@@ -283,4 +287,5 @@ export {
   newsEvents,
   testimonials,
   adminSearchParams,
+  unsubscribe,
 }

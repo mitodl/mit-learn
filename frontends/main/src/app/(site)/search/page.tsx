@@ -6,7 +6,10 @@ import {
 } from "api/hooks/learningResources"
 import { getMetadataAsync, safeGenerateMetadata } from "@/common/metadata"
 import SearchPage from "@/app-pages/SearchPage/SearchPage"
-import { facetNames } from "@/app-pages/SearchPage/searchRequests"
+import {
+  defaultFacetNames,
+  getExtraFacetNames,
+} from "@/app-pages/SearchPage/searchRequests"
 import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
 import validateRequestParams from "@/page-components/SearchDisplay/validateRequestParams"
 import type { ResourceSearchRequest } from "@/page-components/SearchDisplay/validateRequestParams"
@@ -27,11 +30,22 @@ const Page: React.FC<PageProps<"/search">> = async ({ searchParams }) => {
     page?: string
   }
 
+  const urlParams = new URLSearchParams(
+    Object.entries(search).flatMap(([key, value]) =>
+      Array.isArray(value)
+        ? value.map((v) => [key, v])
+        : [[key, String(value)]],
+    ),
+  )
+
   const params = getSearchParams({
     // @ts-expect-error -- this will error until mitodl/mit-learn-api-axios is updated
     requestParams: validateRequestParams(search),
     constantSearchParams: {},
-    facetNames,
+    facetNames: [
+      ...(defaultFacetNames ?? []),
+      ...(getExtraFacetNames(urlParams) ?? []),
+    ] as typeof defaultFacetNames,
     page: Number(search.page ?? 1),
   })
 

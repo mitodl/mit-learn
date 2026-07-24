@@ -1,12 +1,5 @@
 import React from "react"
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Stack,
-  styled,
-  Typography,
-} from "ol-components"
+import { Collapse, Stack, styled, Typography } from "ol-components"
 import {
   DashboardType,
   EnrollmentStatus,
@@ -22,28 +15,6 @@ import { isInPast, formatDate } from "ol-utilities"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import NextLink from "next/link"
 import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
-
-const AdditionalRunsAccordion = styled(Accordion)(({ theme }) => ({
-  boxShadow: "none",
-  "&:before": { display: "none" },
-  backgroundColor: theme.custom.colors.white,
-  "& .MuiAccordionSummary-content": {
-    minWidth: 0,
-    overflow: "hidden",
-  },
-  "& .MuiAccordionSummary-root": {
-    [theme.breakpoints.down("sm")]: {
-      padding: 0,
-    },
-  },
-}))
-
-const CurrentRunIcon = styled.div(({ theme }) => ({
-  width: "8px",
-  height: "8px",
-  backgroundColor: theme.custom.colors.green,
-  flexShrink: 0,
-}))
 
 const UpcomingRunIcon = styled(RiTimeLine)(({ theme }) => ({
   width: "16px",
@@ -86,13 +57,6 @@ const ViewContentLink = styled(NextLink)(({ theme }) => ({
   "&:hover": { textDecoration: "underline" },
 }))
 
-const ExpandChevron = styled(RiArrowDownSLine)(({ theme }) => ({
-  width: "16px",
-  height: "16px",
-  color: theme.custom.colors.silverGrayDark,
-  flexShrink: 0,
-}))
-
 const ViewContentArrow = styled(RiArrowRightSLine)(({ theme }) => ({
   width: "16px",
   height: "16px",
@@ -107,38 +71,44 @@ const CourseRunsCountText = styled.span(({ theme }) => ({
   whiteSpace: "nowrap",
 }))
 
-const DateRangeStack = styled(Stack)({
-  flex: 1,
-  minWidth: 0,
-  overflow: "hidden",
-})
-
-const RunsAccordionSummary = styled(AccordionSummary)(({ theme }) => ({
-  "&:hover": {
-    ".course-runs-count-text": {
-      color: theme.custom.colors.mitRed,
-      textDecoration: "underline",
-    },
-  },
+const ExpandChevron = styled(RiArrowDownSLine, {
+  shouldForwardProp: (prop) => prop !== "expanded",
+})<{ expanded: boolean }>(({ theme, expanded }) => ({
+  width: "16px",
+  height: "16px",
+  color: theme.custom.colors.silverGrayDark,
+  flexShrink: 0,
+  transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
+  transition: "transform 0.2s ease",
 }))
 
-const RunsAccordionDetails = styled(AccordionDetails)({
+const ToggleButton = styled.button(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: "4px",
+  background: "none",
+  border: "none",
   padding: 0,
-})
-
-const SummaryRow = styled(Stack)(({ theme }) => ({
-  flex: 1,
-  minWidth: 0,
-  gap: "24px",
-  [theme.breakpoints.down("sm")]: {
-    gap: "8px",
+  cursor: "pointer",
+  "&:hover .course-runs-count-text": {
+    color: theme.custom.colors.mitRed,
+    textDecoration: "underline",
   },
 }))
+
+const RunLabelPrefix = styled(Typography)({
+  flexShrink: 0,
+})
+
+const RunLabelValue = styled(Typography)({
+  flex: 1,
+  minWidth: 0,
+})
 
 const RunsListWrapper = styled.div(({ theme }) => ({
   padding: "0 16px 16px",
   [theme.breakpoints.down("sm")]: {
-    padding: "0 0 8px",
+    padding: "8px 0",
   },
 }))
 
@@ -158,112 +128,182 @@ const getRunStatusLabel = (status: EnrollmentStatus): string => {
   return ""
 }
 
-type SiblingRunsAccordionProps = {
-  /** The currently displayed enrollment (shown in the summary bar). */
+type SiblingRunsToggleProps = {
+  /** Total number of runs, including the currently displayed one. */
+  runCount: number
+  expanded: boolean
+  onClick: () => void
+  /** id of this toggle button, referenced by the panel's aria-labelledby. */
+  id?: string
+  /** id of the SiblingRunsPanel this toggle controls. */
+  controls?: string
+}
+
+const SiblingRunsToggle: React.FC<SiblingRunsToggleProps> = ({
+  runCount,
+  expanded,
+  onClick,
+  id,
+  controls,
+}) => (
+  <ToggleButton
+    type="button"
+    id={id}
+    onClick={onClick}
+    aria-expanded={expanded}
+    aria-controls={controls}
+  >
+    <CourseRunsCountText className="course-runs-count-text">
+      Course runs ({runCount})
+    </CourseRunsCountText>
+    <ExpandChevron expanded={expanded} aria-hidden="true" />
+  </ToggleButton>
+)
+
+type RunListRowProps = {
+  icon: React.ReactNode
+  /** Bold lead-in, e.g. "Current run:" or "Upcoming:". Omitted for plain past runs. */
+  labelPrefix?: string
+  labelValue: string
+  coursewareUrl?: string | null
+  ariaLabel: string
+  isFirst: boolean
+}
+
+const RunListRow: React.FC<RunListRowProps> = ({
+  icon,
+  labelPrefix,
+  labelValue,
+  coursewareUrl,
+  ariaLabel,
+  isFirst,
+}) => (
+  <RunRow isFirst={isFirst}>
+    <Stack direction="row" gap="8px" alignItems="center" flex={1} minWidth={0}>
+      {icon}
+      <Stack
+        direction="row"
+        gap="4px"
+        alignItems="center"
+        flex={1}
+        minWidth={0}
+      >
+        {labelPrefix && (
+          <RunLabelPrefix variant="subtitle3" color="darkGray2" noWrap>
+            {labelPrefix}
+          </RunLabelPrefix>
+        )}
+        <RunLabelValue
+          variant={labelPrefix ? "body3" : "subtitle3"}
+          color={labelPrefix ? "silverGrayDark" : "darkGray2"}
+          noWrap
+        >
+          {labelValue}
+        </RunLabelValue>
+      </Stack>
+    </Stack>
+    {coursewareUrl && (
+      <Stack direction="row" gap="4px" alignItems="center" flexShrink={0}>
+        <ViewContentLink href={coursewareUrl} aria-label={ariaLabel}>
+          View content
+        </ViewContentLink>
+        <ViewContentArrow />
+      </Stack>
+    )}
+  </RunRow>
+)
+
+type SiblingRunsPanelProps = {
+  /** The currently displayed enrollment (shown above the sibling list). */
   enrollment: CourseRunEnrollmentV3
   /**
    * Other enrollments for the same course variant, pre-filtered to exclude
-   * the current enrollment. Each entry becomes a row in the expanded list.
+   * the current enrollment. Each entry becomes a row in the list.
    */
   siblingEnrollments: CourseRunEnrollmentV3[]
+  expanded: boolean
+  /** id referenced by the SiblingRunsToggle controlling this panel. */
+  id?: string
+  /** id of the SiblingRunsToggle that labels this panel. */
+  labelledBy?: string
 }
 
-const SiblingRunsAccordion: React.FC<SiblingRunsAccordionProps> = ({
+const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
   enrollment,
   siblingEnrollments,
+  expanded,
+  id,
+  labelledBy,
 }) => {
-  const [expanded, setExpanded] = React.useState(false)
-  const run = enrollment.run
-  const enrollmentStatus = getDashboardEnrollmentStatus({
+  const currentRun = enrollment.run
+  const currentStatus = getDashboardEnrollmentStatus({
     type: DashboardType.CourseRunEnrollment,
     data: enrollment,
   })
+  const currentStatusLabel = getRunStatusLabel(currentStatus)
+  const currentDateRange = formatRunDateRange(
+    currentRun?.start_date,
+    currentRun?.end_date,
+  )
+  const currentLabelValue = currentStatusLabel
+    ? `${currentDateRange} (${currentStatusLabel})`
+    : currentDateRange
 
   return (
-    <AdditionalRunsAccordion
-      expanded={expanded}
-      disableGutters
-      onChange={(_e, isExpanded) => setExpanded(isExpanded)}
+    <Collapse
+      in={expanded}
+      id={id}
+      mountOnEnter
+      unmountOnExit
+      role="region"
+      aria-labelledby={labelledBy}
     >
-      <RunsAccordionSummary expandIcon={<ExpandChevron />}>
-        <SummaryRow direction="row" alignItems="flex-end">
-          <DateRangeStack direction="row" alignItems="center" gap="4px">
-            <CurrentRunIcon aria-hidden="true" />
-            <Typography variant="body3" color="darkGray2" noWrap>
-              Current run:
-            </Typography>
-            <Typography variant="body3" color="silverGrayDark" noWrap>
-              {formatRunDateRange(run?.start_date, run?.end_date)}
-              {getRunStatusLabel(enrollmentStatus)
-                ? ` (${getRunStatusLabel(enrollmentStatus)})`
-                : ""}
-            </Typography>
-          </DateRangeStack>
-          <CourseRunsCountText className="course-runs-count-text">
-            Course runs ({siblingEnrollments.length + 1})
-          </CourseRunsCountText>
-        </SummaryRow>
-      </RunsAccordionSummary>
-      <RunsAccordionDetails>
-        <RunsListWrapper>
-          <RunsListBox>
-            {siblingEnrollments.map((e, i) => {
-              const startDate = e.run?.start_date
-              const endDate = e.run?.end_date
-              const isUpcoming = startDate && !isInPast(startDate)
-              const isExpired = endDate && isInPast(endDate)
-              const runLabel = isUpcoming
-                ? `Upcoming: ${formatRunDateRange(startDate, endDate)}`
-                : formatRunDateRange(startDate, endDate)
-              const runEnrollmentStatus = getDashboardEnrollmentStatus({
-                type: DashboardType.CourseRunEnrollment,
-                data: e,
-              })
-              const coursewareUrl = e.run?.courseware_url
-              return (
-                <RunRow key={e.id} isFirst={i === 0}>
-                  <Stack
-                    direction="row"
-                    gap="8px"
-                    alignItems="center"
-                    flex={1}
-                    minWidth={0}
-                  >
-                    {isUpcoming ? (
-                      <UpcomingRunIcon aria-hidden="true" />
-                    ) : isExpired ? (
-                      <ExpiredRunIcon aria-hidden="true" />
-                    ) : (
-                      <EnrollmentStatusIcon status={runEnrollmentStatus} />
-                    )}
-                    <Typography variant="subtitle3" color="darkGray2" noWrap>
-                      {runLabel}
-                    </Typography>
-                  </Stack>
-                  {coursewareUrl && (
-                    <Stack
-                      direction="row"
-                      gap="4px"
-                      alignItems="center"
-                      flexShrink={0}
-                    >
-                      <ViewContentLink
-                        href={coursewareUrl}
-                        aria-label={`View content for ${runLabel}`}
-                      >
-                        View content
-                      </ViewContentLink>
-                      <ViewContentArrow />
-                    </Stack>
-                  )}
-                </RunRow>
-              )
-            })}
-          </RunsListBox>
-        </RunsListWrapper>
-      </RunsAccordionDetails>
-    </AdditionalRunsAccordion>
+      <RunsListWrapper>
+        <RunsListBox>
+          <RunListRow
+            isFirst
+            icon={<EnrollmentStatusIcon status={currentStatus} />}
+            labelPrefix="Current run:"
+            labelValue={currentLabelValue}
+            coursewareUrl={currentRun?.courseware_url}
+            ariaLabel={`View content for Current run: ${currentLabelValue}`}
+          />
+          {siblingEnrollments.map((e) => {
+            const startDate = e.run?.start_date
+            const endDate = e.run?.end_date
+            const isUpcoming = startDate && !isInPast(startDate)
+            const isExpired = endDate && isInPast(endDate)
+            const dateRange = formatRunDateRange(startDate, endDate)
+            const fullLabel = isUpcoming ? `Upcoming: ${dateRange}` : dateRange
+            const runEnrollmentStatus = getDashboardEnrollmentStatus({
+              type: DashboardType.CourseRunEnrollment,
+              data: e,
+            })
+            const coursewareUrl = e.run?.courseware_url
+            return (
+              <RunListRow
+                key={e.id}
+                isFirst={false}
+                icon={
+                  isUpcoming ? (
+                    <UpcomingRunIcon aria-hidden="true" />
+                  ) : isExpired ? (
+                    <ExpiredRunIcon aria-hidden="true" />
+                  ) : (
+                    <EnrollmentStatusIcon status={runEnrollmentStatus} />
+                  )
+                }
+                labelPrefix={isUpcoming ? "Upcoming:" : undefined}
+                labelValue={dateRange}
+                coursewareUrl={coursewareUrl}
+                ariaLabel={`View content for ${fullLabel}`}
+              />
+            )
+          })}
+        </RunsListBox>
+      </RunsListWrapper>
+    </Collapse>
   )
 }
 
-export { SiblingRunsAccordion }
+export { SiblingRunsToggle, SiblingRunsPanel }

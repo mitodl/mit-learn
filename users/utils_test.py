@@ -5,6 +5,7 @@ import pytest
 from main.factories import UserFactory
 from users.utils import (
     _get_unsubscribe_signer,
+    generate_unsubscribe_frontend_url,
     generate_unsubscribe_url,
     unsign_unsubscribe_token,
 )
@@ -47,6 +48,29 @@ def test_generate_unsubscribe_url_token_can_recover_uuid(settings):
 
 
 @pytest.mark.django_db
+def test_generate_unsubscribe_frontend_url_rooted_at_app_base(settings):
+    """generate_unsubscribe_frontend_url should use APP_BASE_URL as the base."""
+    settings.APP_BASE_URL = "https://learn.example.com"
+    user = UserFactory.create()
+    url = generate_unsubscribe_frontend_url(user)
+    assert url.startswith("https://learn.example.com/unsubscribe?")
+
+
+@pytest.mark.django_db
+def test_generate_unsubscribe_frontend_url_token_can_recover_uuid(settings):
+    """The token in the frontend URL should unsign to the original UUID."""
+    settings.APP_BASE_URL = "https://learn.example.com"
+    user = UserFactory.create()
+    url = generate_unsubscribe_frontend_url(user)
+    from urllib.parse import parse_qs, urlparse
+
+    query = parse_qs(urlparse(url).query)
+    token = query["token"][0]
+    recovered = unsign_unsubscribe_token(token)
+    assert recovered == str(user.unsubscribe_uuid)
+
+
+@pytest.mark.django_db
 def test_unsign_unsubscribe_token_valid():
     """unsign_unsubscribe_token returns the UUID string for a valid token."""
     user = UserFactory.create()
@@ -66,10 +90,10 @@ def test_unsign_unsubscribe_token_invalid():
 
 
 @pytest.mark.django_db
-def test_unsign_unsubscribe_token_expired(settings):
-    """unsign_unsubscribe_token returns None for an expired token."""
+def test_unsign_unsubscribe_token_does_not_expire(settings):
+    """unsign_unsubscribe_token ignores MITOL_UNSUBSCRIBE_TOKEN_MAX_AGE_SECONDS."""
     settings.MITOL_UNSUBSCRIBE_TOKEN_MAX_AGE_SECONDS = 0
     user = UserFactory.create()
     uuid_str = str(user.unsubscribe_uuid)
     token = _get_unsubscribe_signer().sign(uuid_str)
-    assert unsign_unsubscribe_token(token) is None
+    assert unsign_unsubscribe_token(token) == uuid_str
