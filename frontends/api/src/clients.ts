@@ -16,6 +16,8 @@ import {
   HubspotApi,
 } from "./generated/v1/api"
 
+import { UnsubscribeApi } from "@mitodl/mit-learn-api-axios/v1"
+
 import {
   ChannelsApi,
   WidgetListsApi,
@@ -106,6 +108,8 @@ const vectorLearningResourcesSearchApi = new VectorLearningResourcesSearchApi(
   axiosInstance,
 )
 
+const unsubscribeApi = new UnsubscribeApi(undefined, BASE_PATH, axiosInstance)
+
 export {
   learningResourcesApi,
   learningPathsApi,
@@ -130,4 +134,5 @@ export {
   learningResourcesSearchAdminParamsApi,
   videoPlaylistsApi,
   vectorLearningResourcesSearchApi,
+  unsubscribeApi,
 }

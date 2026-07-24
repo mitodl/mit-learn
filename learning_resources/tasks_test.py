@@ -71,7 +71,6 @@ def test_cache_is_cleared_after_task_run(mocker, mocked_celery):
     )
     tasks.get_mit_edx_data.delay()
     tasks.update_next_start_date_and_prices.delay()
-    tasks.get_micromasters_data.delay()
     tasks.get_mit_edx_data.delay()
     tasks.get_mitxonline_data.delay()
     tasks.get_oll_data.delay()
@@ -86,15 +85,7 @@ def test_cache_is_cleared_after_task_run(mocker, mocked_celery):
 
     tasks.get_youtube_data.delay()
     tasks.get_youtube_transcripts.delay()
-    assert mocked_clear_views_cache.call_count == 11
-
-
-def test_get_micromasters_data(mocker):
-    """Verify that the get_micromasters_data invokes the MicroMasters ETL pipeline"""
-    mock_pipelines = mocker.patch("learning_resources.tasks.pipelines")
-
-    tasks.get_micromasters_data.delay()
-    mock_pipelines.micromasters_etl.assert_called_once_with()
+    assert mocked_clear_views_cache.call_count == 10
 
 
 def test_get_mit_edx_data_valid(mocker):

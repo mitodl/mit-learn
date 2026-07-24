@@ -386,35 +386,6 @@ def test_ocw_courses_etl_exception(settings, mocker):
         mock_log.assert_any_call("Error encountered parsing OCW json for %s", path)
 
 
-def test_micromasters_etl():
-    """Verify that micromasters etl pipeline executes correctly"""
-    values = [1, 2, 3]
-
-    with reload_mocked_pipeline(
-        patch("learning_resources.etl.micromasters.extract", autospec=True),
-        patch(
-            "learning_resources.etl.micromasters.transform",
-            return_value=values,
-            autospec=True,
-        ),
-        patch("learning_resources.etl.loaders.load_programs", autospec=True),
-    ) as patches:
-        mock_extract, mock_transform, mock_load_programs = patches
-        result = pipelines.micromasters_etl()
-
-    mock_extract.assert_called_once_with()
-    mock_transform.assert_called_once_with(mock_extract.return_value)
-    mock_load_programs.assert_called_once_with(
-        ETLSource.micromasters.name,
-        mock_transform.return_value,
-        config=ProgramLoaderConfig(
-            prune=True, courses=CourseLoaderConfig(fetch_only=True)
-        ),
-    )
-
-    assert result == mock_load_programs.return_value
-
-
 def test_sloan_courses_etl():
     """Verify that sloan courses etl pipeline executes correctly"""
     with reload_mocked_pipeline(

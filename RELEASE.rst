@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.75.5
+--------------
+
+- fix: add check for stay updated button on product pages and fix the buttons alignment  (#3658)
+- fix: News pages should show publication date not creation date and hover state for featured podcasts (#3651)
+- Remove micromasters ETL (#3663)
+- Add one-click unsubscribe to emails (#3637)
+
 Version 0.75.4 (Released July 23, 2026)
 --------------
 

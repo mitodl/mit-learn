@@ -9,10 +9,18 @@ export const ChooseYourPath = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
 }))
 
-const ButtonWrapper = styled.span<{ $fullWidth?: boolean }>(({ $fullWidth }) =>
-  $fullWidth
-    ? { display: "block", width: "100%", "> button": { width: "100%" } }
-    : { display: "inline-block" },
+const ButtonWrapper = styled.span<{ $fullWidth?: boolean }>(
+  ({ $fullWidth, theme }) => ({
+    ...($fullWidth
+      ? { display: "block", width: "100%", "> button": { width: "100%" } }
+      : { display: "inline-block" }),
+    // Buttons always span the full width on small screens.
+    [theme.breakpoints.down("md")]: {
+      display: "block",
+      width: "100%",
+      "> button": { width: "100%" },
+    },
+  }),
 )
 
 /**
