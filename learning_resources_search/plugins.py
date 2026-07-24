@@ -284,12 +284,13 @@ class SearchIndexPlugin:
                 index_tasks.append(tasks.index_run_content_files.si(run.id))
 
             if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
-                index_tasks.append(vector_tasks.embed_run_content_files.si(run.id))
-                # Always purge unpublished files' points so a failed removal
-                # task self-heals on the next load.
+                # Purge before embedding so unpublished files' points are
+                # removed even if the embed task fails; the two tasks touch
+                # disjoint sets (published=False vs published=True files).
                 index_tasks.append(
                     vector_tasks.remove_unpublished_run_content_files.si(run.id)
                 )
+                index_tasks.append(vector_tasks.embed_run_content_files.si(run.id))
 
         if index_tasks:
             try_with_retry_as_task(chain(*index_tasks))

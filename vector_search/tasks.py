@@ -465,7 +465,7 @@ def embed_new_content_files(self):
     )
 
 
-@app.task(bind=True)
+@app.task(bind=True, max_retries=3)
 def embed_run_content_files(self, run_id):
     """
     Embed the run's published content files whose Qdrant points are missing or
@@ -478,6 +478,11 @@ def embed_run_content_files(self, run_id):
     newly generated summary, ...) is dispatched but exits via the payload-only
     update path downstream — no re-embedding. Failed or purged embeds show up
     as missing/stale points, so they self-heal on the next load.
+
+    Content-less files are excluded: they never produce Qdrant points, so they
+    would otherwise be re-flagged on every load. Transient Qdrant errors during
+    the pre-pass retry with backoff so a blip doesn't defer the run's embedding
+    to the next load.
     """
     run = (
         LearningResourceRun.objects.select_related("learning_resource__platform")
@@ -508,12 +513,22 @@ def embed_run_content_files(self, run_id):
         (cf_id, chunk0_point_id(key), checksum, meta)
         for cf_id, key, checksum, *meta in ContentFile.objects.filter(
             run=run, published=True
-        ).values_list("id", "key", "checksum", *CONTENT_FILE_PREPASS_PAYLOAD_FIELDS)
+        )
+        .exclude(Q(content__isnull=True) | Q(content=""))
+        .values_list("id", "key", "checksum", *CONTENT_FILE_PREPASS_PAYLOAD_FIELDS)
     ]
-    stored = _stored_content_payloads(
-        [pid for _, pid, _, _ in pid_rows],
-        fields=("checksum", *CONTENT_FILE_PREPASS_PAYLOAD_FIELDS),
-    )
+    try:
+        stored = _stored_content_payloads(
+            [pid for _, pid, _, _ in pid_rows],
+            fields=("checksum", *CONTENT_FILE_PREPASS_PAYLOAD_FIELDS),
+        )
+    except grpc.RpcError as err:
+        if err.code() in (
+            grpc.StatusCode.DEADLINE_EXCEEDED,
+            grpc.StatusCode.UNAVAILABLE,
+        ):
+            raise self.retry(exc=err, countdown=_retry_countdown(self.request.retries))  # noqa: B904
+        raise
 
     def is_stale(pid, checksum, meta):
         payload = stored.get(pid)
