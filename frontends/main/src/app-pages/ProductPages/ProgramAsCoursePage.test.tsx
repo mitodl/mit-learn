@@ -44,6 +44,15 @@ const makeProgramAsCourse: typeof factories.programs.program = (
   })
 const makePage = factories.pages.programPageItem
 
+// The enroll button renders with aria-label="Loading" (and no "Start Learning"
+// accessible name) until the enrollment-status query resolves. Under CI load
+// that query can take longer than Testing Library's default 1s waitFor, leaving
+// the button in its loading state when findAllByRole gives up — a timing flake,
+// not a regression. Give these queries extra headroom so they retry until the
+// button leaves its loading state. See ProgramHeaderEnrollButton /
+// useProgramEnrollment.
+const ENROLL_STATUS_TIMEOUT = 5000
+
 const setupApis = ({
   program,
   page,
@@ -164,9 +173,11 @@ describe("ProgramAsCoursePage", () => {
     renderWithProviders(
       <ProgramAsCoursePage readableId={program.readable_id} />,
     )
-    const buttons = await screen.findAllByRole("button", {
-      name: "Start Learning",
-    })
+    const buttons = await screen.findAllByRole(
+      "button",
+      { name: "Start Learning" },
+      { timeout: ENROLL_STATUS_TIMEOUT },
+    )
     expect(buttons.length).toBeGreaterThanOrEqual(1)
   })
 
@@ -420,9 +431,11 @@ describe("ProgramAsCoursePage", () => {
       <ProgramAsCoursePage readableId={program.readable_id} />,
     )
 
-    const [enrollButton] = await screen.findAllByRole("button", {
-      name: "Start Learning",
-    })
+    const [enrollButton] = await screen.findAllByRole(
+      "button",
+      { name: "Start Learning" },
+      { timeout: ENROLL_STATUS_TIMEOUT },
+    )
     await user.click(enrollButton)
 
     await waitFor(() => {
@@ -484,9 +497,11 @@ describe("ProgramAsCoursePage", () => {
     expect(
       screen.queryByText("Earn a verified certificate of completion"),
     ).not.toBeInTheDocument()
-    const enrollButtons = await screen.findAllByRole("button", {
-      name: "Start Learning",
-    })
+    const enrollButtons = await screen.findAllByRole(
+      "button",
+      { name: "Start Learning" },
+      { timeout: ENROLL_STATUS_TIMEOUT },
+    )
     expect(enrollButtons.length).toBeGreaterThanOrEqual(1)
   })
 
