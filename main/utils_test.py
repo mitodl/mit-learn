@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from django.contrib.auth import get_user_model
 from django.http import QueryDict
+from rest_framework.renderers import BrowsableAPIRenderer, JSONRenderer
 from rest_framework.response import Response
 
 from main.constants import (
@@ -284,7 +285,9 @@ def _create_mock_request(
     request.path = path
     request.GET = QueryDict(query)
     request.headers = {"Accept": accept}
-    request.accepted_renderer.format = "html" if "text/html" in accept else "json"
+    request.accepted_renderer = (
+        BrowsableAPIRenderer() if "text/html" in accept else JSONRenderer()
+    )
     return request
 
 
