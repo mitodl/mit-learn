@@ -219,6 +219,28 @@ def test_serialize_video_resource_with_content_files():
     assert serializer.data["description"] == "Content file description"
 
 
+def test_serialize_document_resource_with_content_files():
+    """
+    Verify that DocumentResourceSerializer serializes content files without
+    the full text fields
+    """
+    document_resource = factories.LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.name,
+    )
+    content_file = factories.ContentFileFactory.create(
+        run=None,
+        direct_learning_resource=document_resource,
+        title="Document Content File",
+    )
+    resource = LearningResource.objects.for_serialization().get(pk=document_resource.pk)
+    serializer = serializers.DocumentResourceSerializer(instance=resource)
+
+    assert len(serializer.data["content_files"]) == 1
+    assert serializer.data["content_files"][0]["id"] == content_file.id
+    for field in ("content", "summary", "flashcards"):
+        assert field not in serializer.data["content_files"][0]
+
+
 def test_serialize_podcast_episode_playlists_to_json():
     """
     Verify that a serialized podcast episode resource has the correct podcast data
