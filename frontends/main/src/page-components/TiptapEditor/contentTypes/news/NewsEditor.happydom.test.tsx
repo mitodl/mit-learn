@@ -9,6 +9,7 @@ import { screen, waitFor, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { setMockResponse, factories, urls, makeRequest } from "api/test-utils"
 import { NewsEditor } from "./NewsEditor"
+import type { WebsiteContent } from "api/v1"
 import type { JSONContent } from "@tiptap/react"
 import { renderWithProviders } from "@/test-utils"
 
@@ -1527,5 +1528,73 @@ describe("NewsEditor - Document Rendering", () => {
         consoleErrorSpy.mockImplementation(currentMock)
       }
     })
+  })
+})
+
+describe("NewsEditor - Byline publish date", () => {
+  // A minimal valid document (banner + byline + paragraph) so the byline node
+  // renders in the read-only viewer.
+  const bylineDoc: JSONContent = {
+    type: "doc",
+    content: [
+      {
+        type: "banner",
+        content: [
+          {
+            type: "heading",
+            attrs: { level: 1 },
+            content: [{ type: "text", text: "Byline Article" }],
+          },
+          { type: "paragraph", content: [] },
+        ],
+      },
+      { type: "byline" },
+      { type: "paragraph", content: [] },
+    ],
+  }
+
+  const renderReadOnly = async (overrides: Partial<WebsiteContent>) => {
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+
+    const newsItem = factories.websiteContent.websiteContent({
+      id: 300,
+      title: "Byline Article",
+      content: bylineDoc,
+      ...overrides,
+    })
+    setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
+
+    renderWithProviders(<NewsEditor newsItem={newsItem} readOnly />, { user })
+    await screen.findByTestId("editor")
+    return newsItem
+  }
+
+  // publish_date and created_on are deliberately different so we can prove the
+  // byline reads from publish_date and never falls back to created_on.
+  test.each([
+    {
+      description: "shows the formatted publish_date when published",
+      isPublished: true,
+      expected: "Mar 15, 2024",
+    },
+    {
+      description: "shows 'Draft' (never created_on) when unpublished",
+      isPublished: false,
+      expected: "Draft",
+    },
+  ])("$description", async ({ isPublished, expected }) => {
+    await renderReadOnly({
+      is_published: isPublished,
+      publish_date: "2024-03-15T12:00:00Z",
+      created_on: "2020-01-01T12:00:00Z",
+    })
+
+    await screen.findByText(expected)
+    // The byline must never surface the created_on date.
+    expect(screen.queryByText("Jan 1, 2020")).not.toBeInTheDocument()
   })
 })
