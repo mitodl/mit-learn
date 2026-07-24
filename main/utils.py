@@ -40,12 +40,15 @@ def _sorted_query_string(query_dict):
     return "&".join(items)
 
 
-def _wants_html(request) -> bool:
-    """Whether the request wants the browsable API (HTML) rather than JSON."""
+def _needs_negotiated_response(request) -> bool:
+    """
+    Whether the request needs content-negotiated rendering (e.g. the
+    browsable API) rather than raw cached JSON bytes.
+    """
     renderer = getattr(request, "accepted_renderer", None)
     if renderer is not None:
-        # DRF negotiated the renderer in initial(), before the decorated handler
-        return renderer.format == "html"
+        # DRF negotiated the renderer in initial(); raw bytes only serve JSON
+        return renderer.format != "json"
     return "text/html" in request.headers.get("Accept", "")
 
 
@@ -59,7 +62,7 @@ def _cached_response(request, cached_data):
     """
     if not isinstance(cached_data, bytes):
         return Response(cached_data)
-    if _wants_html(request):
+    if _needs_negotiated_response(request):
         return Response(json.loads(cached_data))
     return HttpResponse(cached_data, content_type="application/json")
 
