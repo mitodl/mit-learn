@@ -1,6 +1,7 @@
 """Utils tests"""
 
 import datetime
+import json
 from math import ceil
 from tempfile import NamedTemporaryFile
 from unittest.mock import MagicMock, patch
@@ -274,12 +275,15 @@ def test_clean_data_preserves_allowed_links():
     assert "javascript:" not in result  # nh3 drops unsafe schemes
 
 
-def _create_mock_request(*, is_authenticated=False, path="/test/", query=""):
+def _create_mock_request(
+    *, is_authenticated=False, path="/test/", query="", accept="application/json"
+):
     """Create a mock request object for testing cache decorators."""
     request = MagicMock()
     request.user.is_authenticated = is_authenticated
     request.path = path
     request.GET = QueryDict(query)
+    request.headers = {"Accept": accept}
     return request
 
 
@@ -396,7 +400,7 @@ def test_cache_page_for_all_users_caches_authenticated(mock_caches):
 
 @patch("main.utils.caches")
 def test_cache_returns_cached_response(mock_caches):
-    """Subsequent requests return cached data."""
+    """Subsequent requests return cached data (legacy dict entries)."""
     mock_cache = MagicMock()
     cached_data = {"result": "cached", "call": 0}
     mock_cache.get.return_value = cached_data
@@ -410,6 +414,58 @@ def test_cache_returns_cached_response(mock_caches):
 
     assert view.call_count["count"] == 0
     assert response.data == cached_data
+
+
+@patch("main.utils.caches")
+def test_cache_stores_rendered_json_bytes(mock_caches):
+    """Responses are cached as rendered JSON bytes, not raw data."""
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = None
+    mock_caches.__getitem__.return_value = mock_cache
+
+    view = _create_view()
+    decorated = cache_page_for_all_users(300)(view)
+
+    decorated(_create_mock_request())
+
+    cached_value = mock_cache.set.call_args.args[1]
+    assert isinstance(cached_value, bytes)
+    assert json.loads(cached_value) == {"result": "fresh", "call": 1}
+
+
+@patch("main.utils.caches")
+def test_cache_hit_returns_bytes_without_rendering(mock_caches):
+    """Cached rendered bytes are returned directly as an HttpResponse."""
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = b'{"result": "cached"}'
+    mock_caches.__getitem__.return_value = mock_cache
+
+    view = _create_view()
+    decorated = cache_page_for_all_users(300)(view)
+
+    response = decorated(_create_mock_request())
+
+    assert view.call_count["count"] == 0
+    assert response.content == b'{"result": "cached"}'
+    assert response["Content-Type"] == "application/json"
+
+
+@patch("main.utils.caches")
+def test_cache_hit_html_request_gets_negotiable_response(mock_caches):
+    """Browsable API (HTML) requests get a DRF Response from cached bytes."""
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = b'{"result": "cached"}'
+    mock_caches.__getitem__.return_value = mock_cache
+
+    view = _create_view()
+    decorated = cache_page_for_all_users(300)(view)
+
+    request = _create_mock_request(accept="text/html,application/xhtml+xml")
+    response = decorated(request)
+
+    assert view.call_count["count"] == 0
+    assert isinstance(response, Response)
+    assert response.data == {"result": "cached"}
 
 
 @patch("main.utils.caches")
