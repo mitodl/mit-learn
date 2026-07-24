@@ -200,9 +200,7 @@ describe("DashboardDialogs", () => {
     await user.click(confirmButton)
 
     // Card is gone even though the refetch is still pending.
-    await waitFor(() => {
-      expect(screen.queryByText(enrollment.run.title)).not.toBeInTheDocument()
-    })
+    await waitFor(() => expect(card).not.toBeInTheDocument())
     expect(screen.getAllByTestId("enrollment-card-desktop")).toHaveLength(
       enrollments.length - 1,
     )
