@@ -42,9 +42,11 @@ def _sorted_query_string(query_dict):
 
 def _wants_html(request) -> bool:
     """Whether the request wants the browsable API (HTML) rather than JSON."""
-    return "text/html" in request.headers.get("Accept", "") or bool(
-        request.GET.get("format")
-    )
+    renderer = getattr(request, "accepted_renderer", None)
+    if renderer is not None:
+        # DRF negotiated the renderer in initial(), before the decorated handler
+        return renderer.format == "html"
+    return "text/html" in request.headers.get("Accept", "")
 
 
 def _cached_response(request, cached_data):

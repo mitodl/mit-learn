@@ -141,7 +141,9 @@ def serialize_learning_resource_for_update(
         serialized_data["video"]["transcript"] = learning_resource_obj.video.transcript
 
     if serialized_data.get("content_files"):
-        # The API serializer omits full text; re-add it for nested search
+        # The API serializer omits full text; re-serialize with the full
+        # serializer for nested search. Serializes content_files twice, which
+        # is acceptable in this celery-only indexing path.
         serialized_data["content_files"] = [
             ContentFileSerializer(content_file).data
             for content_file in (

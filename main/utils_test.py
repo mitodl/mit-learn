@@ -284,6 +284,7 @@ def _create_mock_request(
     request.path = path
     request.GET = QueryDict(query)
     request.headers = {"Accept": accept}
+    request.accepted_renderer.format = "html" if "text/html" in accept else "json"
     return request
 
 
