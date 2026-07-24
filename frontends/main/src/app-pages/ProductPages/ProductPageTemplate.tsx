@@ -61,8 +61,9 @@ const ContentStack = styled(Stack)(({ theme }) => ({
 }))
 
 const EnrollButton = styled.div(({ theme }) => ({
-  width: "240px",
-
+  [theme.breakpoints.down("md")]: {
+    width: "240px",
+  },
   [theme.breakpoints.down("sm")]: {
     width: "100%",
   },

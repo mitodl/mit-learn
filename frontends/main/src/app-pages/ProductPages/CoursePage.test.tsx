@@ -682,7 +682,10 @@ describe("CoursePage", () => {
           mitxFactories.courses.courseRun({ enrollment_modes: [verifiedMode] }),
         ],
       })
-      const page = makePage({ course_details: course })
+      const page = makePage({
+        course_details: course,
+        show_stay_updated: true,
+      })
       setupApis({ course, page })
       renderWithProviders(<CoursePage readableId={course.readable_id} />)
 

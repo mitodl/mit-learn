@@ -735,7 +735,10 @@ describe("ProgramPage", () => {
           factories.courses.enrollmentMode({ mode_slug: "verified" }),
         ],
       })
-      const page = makePage({ program_details: program })
+      const page = makePage({
+        program_details: program,
+        show_stay_updated: true,
+      })
       setupApis({ program, page })
       renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
