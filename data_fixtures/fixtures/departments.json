@@ -232,6 +232,16 @@
   {
     "model": "learning_resources.LearningResourceDepartment",
     "fields": {
+      "department_id": "21T",
+      "name": "Theater Arts",
+      "school_id": 3,
+      "created_on": "2024-04-17T00:00:00.000000+00:00",
+      "updated_on": "2024-04-17T00:00:00.000000+00:00"
+    }
+  },
+  {
+    "model": "learning_resources.LearningResourceDepartment",
+    "fields": {
       "department_id": "22",
       "name": "Nuclear Science and Engineering",
       "school_id": 2,

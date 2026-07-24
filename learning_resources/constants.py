@@ -261,6 +261,7 @@ DEPARTMENTS = {
     "21H": "History",
     "21L": "Literature",
     "21M": "Music and Theater Arts",
+    "21T": "Theater Arts",
     "22": "Nuclear Science and Engineering",
     "24": "Linguistics and Philosophy",
     "CC": "Concourse",
