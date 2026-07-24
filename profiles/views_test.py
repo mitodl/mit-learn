@@ -39,6 +39,7 @@ def test_list_users(staff_client, staff_user):
         {
             "id": staff_user.id,
             "username": staff_user.username,
+            "global_id": staff_user.global_id,
             "first_name": staff_user.first_name,
             "last_name": staff_user.last_name,
             "is_learning_path_editor": True,
@@ -98,6 +99,7 @@ def test_get_user(staff_client, user):
     assert resp.json() == {
         "id": user.id,
         "username": user.username,
+        "global_id": user.global_id,
         "first_name": user.first_name,
         "last_name": user.last_name,
         "is_article_editor": True,
@@ -188,6 +190,7 @@ def test_patch_user(staff_client, user, email, email_optin, toc_optin):
     assert resp.json() == {
         "id": user.id,
         "username": user.username,
+        "global_id": user.global_id,
         "first_name": user.first_name,
         "last_name": user.last_name,
         "is_learning_path_editor": True,
@@ -390,6 +393,7 @@ def test_get_user_by_me(mocker, client, user, is_anonymous):
         assert resp.json() == {
             "id": None,
             "username": "",
+            "global_id": None,
             "is_learning_path_editor": False,
             "is_article_editor": False,
             "is_authenticated": False,
@@ -398,6 +402,7 @@ def test_get_user_by_me(mocker, client, user, is_anonymous):
         assert resp.json() == {
             "id": user.id,
             "username": user.username,
+            "global_id": user.global_id,
             "first_name": user.first_name,
             "last_name": user.last_name,
             "is_learning_path_editor": False,

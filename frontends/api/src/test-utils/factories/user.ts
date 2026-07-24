@@ -33,6 +33,7 @@ const user: PartialFactory<User> = (overrides = {}): User => {
       // @ts-expect-error API Response can include anonymous user
       id: null,
       username: "",
+      global_id: null,
     }
   }
 
@@ -44,6 +45,7 @@ const user: PartialFactory<User> = (overrides = {}): User => {
     is_learning_path_editor: false,
     username: faker.internet.username(),
     is_authenticated: true,
+    global_id: faker.string.uuid(),
     ...overrides,
     profile: profile(overrides?.profile ?? {}),
   }
