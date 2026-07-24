@@ -108,6 +108,7 @@ import type {
   ProgramsListParams,
   SchoolsListParams,
   TopicsListParams,
+  UnsubscribeCreate200,
   UserList,
   UserListRelationship,
   UserListRelationshipRequest,
@@ -2830,6 +2831,43 @@ PercolateQuerySerializer: The percolate query
       response,
       data,
       operationId: "topics_retrieve",
+    }
+  }
+
+  /**
+   * Handle email unsubscribe requests via signed token.
+   * @summary One-click unsubscribe (RFC 8058)
+   */
+  unsubscribeCreate(
+    token: string,
+    requestParameters?: Params,
+  ): {
+    response: Response
+    data: UnsubscribeCreate200
+    operationId: string
+  } {
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/unsubscribe/${token}/`)
+    const mergedRequestParameters = this._mergeRequestParameters(
+      requestParameters || {},
+      this.commonRequestParameters,
+    )
+    const response = http.request(
+      "POST",
+      k6url.toString(),
+      undefined,
+      mergedRequestParameters,
+    )
+    let data
+
+    try {
+      data = response.json()
+    } catch {
+      data = response.body
+    }
+    return {
+      response,
+      data,
+      operationId: "unsubscribe_create",
     }
   }
 
