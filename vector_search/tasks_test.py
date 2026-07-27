@@ -884,6 +884,96 @@ def test_embeddings_healthcheck_missing_summaries(mocker):
     )
 
 
+def test_embeddings_healthcheck_excludes_already_summarized(mocker):
+    """
+    embeddings_healthcheck should not count content files that already have
+    a summary as missing (regression test for passing overwrite=True
+    implicitly by mis-ordering get_unprocessed_content_file_ids arguments)
+    """
+    content_extension = [".srt"]
+    content_type = ["file"]
+    platform = LearningResourcePlatformFactory.create()
+    ContentSummarizerConfigurationFactory.create(
+        allowed_extensions=content_extension,
+        allowed_content_types=content_type,
+        is_active=True,
+        llm_model="test",
+        platform__code=platform.code,
+    )
+    resource = LearningResourceFactory.create(
+        published=True, require_summaries=True, platform=platform
+    )
+    resource.runs.all().delete()
+    learning_resource_run = LearningResourceRunFactory.create(
+        published=True,
+        learning_resource=resource,
+    )
+    learning_resource_run.learning_resource = resource
+    learning_resource_run.save()
+
+    ContentFileFactory.create(
+        published=True,
+        content="test",
+        file_extension=content_extension[0],
+        summary="already summarized",
+        flashcards=[{"question": "q", "answer": "a"}],
+        content_type=content_type[0],
+        run=learning_resource_run,
+    )
+    mocker.patch(
+        "vector_search.tasks.filter_existing_qdrant_points_by_ids",
+    )
+    mock_sentry = mocker.patch("vector_search.tasks.sentry_sdk.capture_message")
+
+    embeddings_healthcheck()
+    assert mock_sentry.call_count == 0
+
+
+def test_embeddings_healthcheck_summaries_scoped_to_require_summaries(mocker):
+    """
+    embeddings_healthcheck should only count missing summaries for learning
+    resources that require them, not every learning resource (regression
+    test for get_unprocessed_content_file_ids never receiving
+    learning_resource_ids)
+    """
+    content_extension = [".srt"]
+    content_type = ["file"]
+    platform = LearningResourcePlatformFactory.create()
+    ContentSummarizerConfigurationFactory.create(
+        allowed_extensions=content_extension,
+        allowed_content_types=content_type,
+        is_active=True,
+        llm_model="test",
+        platform__code=platform.code,
+    )
+    resource = LearningResourceFactory.create(
+        published=True, require_summaries=False, platform=platform
+    )
+    resource.runs.all().delete()
+    learning_resource_run = LearningResourceRunFactory.create(
+        published=True,
+        learning_resource=resource,
+    )
+    learning_resource_run.learning_resource = resource
+    learning_resource_run.save()
+
+    ContentFileFactory.create(
+        published=True,
+        content="test",
+        file_extension=content_extension[0],
+        summary="",
+        content_type=content_type[0],
+        run=learning_resource_run,
+    )
+    mocker.patch(
+        "vector_search.tasks.filter_existing_qdrant_points_by_ids",
+    )
+    mock_sentry = mocker.patch("vector_search.tasks.sentry_sdk.capture_message")
+
+    embeddings_healthcheck()
+    assert mock_sentry.call_count == 0
+
+
 def test_generate_embeddings_retries_on_deadline(mocker):
     """A deadline with retry budget left calls self.retry (jittered backoff)."""
     mocker.patch(

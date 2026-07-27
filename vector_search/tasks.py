@@ -632,11 +632,21 @@ def embeddings_healthcheck():
 
 
 def _missing_summaries():
-    summarizer = ContentSummarizer()
-    return summarizer.get_unprocessed_content_file_ids(
+    resource_ids = list(
         LearningResource.objects.filter(require_summaries=True)
         .filter(Q(published=True) | Q(test_mode=True))
         .values_list("id", flat=True)
+    )
+    if not resource_ids:
+        # get_unprocessed_content_file_ids treats an empty learning_resource_ids
+        # list the same as None (no restriction), so short-circuit here instead
+        # of letting it scan every learning resource.
+        return []
+
+    summarizer = ContentSummarizer()
+    return summarizer.get_unprocessed_content_file_ids(
+        overwrite=False,
+        learning_resource_ids=resource_ids,
     )
 
 
