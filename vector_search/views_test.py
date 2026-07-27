@@ -1223,13 +1223,15 @@ def test_vector_search_count_is_exact(client, mock_qdrant):
     Qdrant's approximate count overestimates filtered collections, which made
     the paginator advertise pages that returned no results.
     """
-    client.get(
+    response = client.get(
         reverse("vector_search:v0:vector_learning_resources_search"),
         data={
             "topic": "Art, Design & Architecture",
             "resource_type_group": "learning_material",
         },
     )
+
+    assert response.status_code == 200
 
     mock_qdrant.count.assert_awaited()
     assert mock_qdrant.count.await_args.kwargs["exact"] is True
