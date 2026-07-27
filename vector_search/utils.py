@@ -8,16 +8,11 @@ from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.db import close_old_connections
 from django.db.models import Prefetch, Q
-from langchain_text_splitters import (
-    MarkdownHeaderTextSplitter,
-    RecursiveCharacterTextSplitter,
-)
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
 from learning_resources.constants import (
     PROGRAM_COURSE_CACHE_KEY_TEST_MODE,
 )
-from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.models import (
     ContentFile,
     LearningResource,
@@ -393,6 +388,8 @@ def embed_topics():
 
 @cache
 def _get_text_splitter(**kwargs):
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+
     if settings.LITELLM_TOKEN_ENCODING_NAME:
         kwargs["encoding_name"] = settings.LITELLM_TOKEN_ENCODING_NAME
         return RecursiveCharacterTextSplitter.from_tiktoken_encoder(**kwargs)
@@ -429,6 +426,8 @@ def _chunk_markdown_documents(text, metadata):
     metadata so every chunk's page_content is self-describing
     for embedding.
     """
+    from langchain_text_splitters import MarkdownHeaderTextSplitter
+
     header_splitter = MarkdownHeaderTextSplitter(
         headers_to_split_on=MARKDOWN_HEADERS_TO_SPLIT_ON,
         strip_headers=False,
@@ -892,6 +891,8 @@ def _summarize_content_files_for_embedding(
 ):
     if not fill_summary_content_ids and not changed_summary_content_ids:
         return docs_batch
+
+    from learning_resources.content_summarizer import ContentSummarizer
 
     summarizer = ContentSummarizer()
     if fill_summary_content_ids:

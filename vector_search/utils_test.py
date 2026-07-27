@@ -607,7 +607,7 @@ def test_document_chunker_tiktoken(mocker):
     encoder = dense_encoder()
     encoder.token_encoding_name = None
     mocked_splitter = mocker.patch(
-        "vector_search.utils.RecursiveCharacterTextSplitter.from_tiktoken_encoder"
+        "langchain_text_splitters.RecursiveCharacterTextSplitter.from_tiktoken_encoder"
     )
 
     _chunk_documents(["this is a test document"], [{}])
@@ -628,11 +628,15 @@ def test_text_splitter_chunk_size_override(mocker):
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = chunk_size
     settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = chunk_size / 10
     encoder = dense_encoder()
-    mocked_splitter = mocker.patch("vector_search.utils.RecursiveCharacterTextSplitter")
+    mocked_splitter = mocker.patch(
+        "langchain_text_splitters.RecursiveCharacterTextSplitter"
+    )
     encoder.token_encoding_name = "cl100k_base"  # noqa: S105
     _chunk_documents(["this is a test document"], [{}])
     assert mocked_splitter.mock_calls[0].kwargs["chunk_size"] == 100
-    mocked_splitter = mocker.patch("vector_search.utils.RecursiveCharacterTextSplitter")
+    mocked_splitter = mocker.patch(
+        "langchain_text_splitters.RecursiveCharacterTextSplitter"
+    )
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = None
     _chunk_documents(["this is a test document"], [{}])
     assert "chunk_size" not in mocked_splitter.mock_calls[0].kwargs
