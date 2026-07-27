@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.75.5
+Version 0.75.5 (Released July 27, 2026)
 --------------
 
 - fix: add check for stay updated button on product pages and fix the buttons alignment  (#3658)
