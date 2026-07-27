@@ -648,7 +648,7 @@ def _sentry_healthcheck_log(healthcheck, alert_type, context, message):
         sentry_sdk.capture_message(message)
 
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def sync_topics():
     """
     Sync topics to the Qdrant collection
