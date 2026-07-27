@@ -19,11 +19,16 @@ import type {
   WebsiteContentApiWebsiteContentListRequest as WebsiteContentListRequest,
 } from "api/v1"
 import { LocalDate } from "ol-utilities"
-import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
+import {
+  RiArrowLeftLine,
+  RiArrowRightLine,
+  RiDeleteBinLine,
+} from "@remixicon/react"
 import { extractFirstImage } from "@/common/websiteContentUtils"
 import { websiteContentEditView, websiteContentCreateView } from "@/common/urls"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
-import { ButtonLink } from "@mitodl/smoot-design"
+import { Button, ButtonLink } from "@mitodl/smoot-design"
+import { showDeleteWebsiteContentDialog } from "@/page-components/WebsiteContentDialogs/DeleteWebsiteContentDialog"
 
 const PAGE_SIZE = 20
 
@@ -44,6 +49,9 @@ const PageHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 40px;
+`
+const StyledDeleteButton = styled(Button)`
+  padding-bottom: 0;
 `
 
 const DraftContentCard = styled(Card)`
@@ -112,6 +120,17 @@ const DraftItem: React.FC<{ contentItem: WebsiteContent; type: string }> = ({
           </>
         )}
       </Card.Footer>
+      <Card.Actions>
+        <StyledDeleteButton
+          variant="text"
+          size="small"
+          aria-label={`Delete ${contentItem.title}`}
+          startIcon={<RiDeleteBinLine />}
+          onClick={() => showDeleteWebsiteContentDialog(contentItem)}
+        >
+          Delete
+        </StyledDeleteButton>
+      </Card.Actions>
     </DraftContentCard>
   )
 }

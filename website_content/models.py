@@ -39,6 +39,10 @@ class WebsiteContent(TimestampedModel):
         default=WebsiteContentType.news.name,
     )
     cover_image = models.URLField(max_length=2083, blank=True, default="")
+    # Soft-delete marker. When set, the item is treated as deleted: it is
+    # excluded from all API listings/detail views but kept in the database for
+    # recovery/audit. Only unpublished (draft) items may be soft-deleted.
+    deleted_on = models.DateTimeField(null=True, blank=True, default=None)
 
     def save(self, *args, **kwargs):
         """Auto-populate slug and cover_image before persisting."""

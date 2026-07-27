@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
@@ -11,6 +12,7 @@ from drf_spectacular.utils import (
 )
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -61,7 +63,9 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
     filterset_class = WebsiteContentFilter
 
     def get_queryset(self):
-        qs = WebsiteContent.objects.all()
+        # Soft-deleted items are hidden everywhere (list, retrieve,
+        # detail-by-id-or-slug all route through get_queryset).
+        qs = WebsiteContent.objects.filter(deleted_on__isnull=True)
         if not (is_admin_user(self.request) or is_website_content_editor(self.request)):
             qs = qs.filter(is_published=True)
 
@@ -94,7 +98,15 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
         content_published_actions(content=content)
 
     def perform_destroy(self, instance):
-        super().perform_destroy(instance)
+        # Only drafts may be deleted. Published content is out of scope and
+        # deleting it is rejected rather than hidden.
+        if instance.is_published:
+            raise ValidationError("Published content cannot be deleted.")
+        # Soft delete: mark the row rather than removing it, and bypass the
+        # model's save() override (which recomputes slug/cover_image) so this
+        # is a targeted single-field write.
+        now = timezone.now()
+        WebsiteContent.objects.filter(pk=instance.pk).update(deleted_on=now)
         transaction.on_commit(clear_views_cache)
 
     @extend_schema(

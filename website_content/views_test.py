@@ -178,16 +178,14 @@ def test_update_clears_views_cache(
     assert mock_clear_views_cache.called is True
 
 
-@pytest.mark.parametrize("is_published", [True, False])
-def test_destroy_clears_views_cache(
+def test_destroy_draft_soft_deletes(
     staff_client,
     user,
     mock_clear_views_cache,
     django_capture_on_commit_callbacks,
-    is_published,
 ):
-    """Destroy clears the view cache on commit, published or draft."""
-    content = _make_content(user, is_published=is_published)
+    """Deleting a draft soft-deletes it and clears the view cache on commit."""
+    content = _make_content(user, is_published=False)
     url = reverse(
         "website_content:v1:website_content-detail", kwargs={"pk": content.id}
     )
@@ -196,6 +194,57 @@ def test_destroy_clears_views_cache(
 
     assert resp.status_code == 204
     assert mock_clear_views_cache.called is True
+
+    # Row is kept in the DB but marked deleted.
+    content.refresh_from_db()
+    assert content.deleted_on is not None
+
+
+def test_soft_deleted_content_hidden_from_api(staff_client, user):
+    """Soft-deleted items are excluded from list and detail endpoints."""
+    content = _make_content(user, is_published=False)
+    staff_client.delete(
+        reverse("website_content:v1:website_content-detail", kwargs={"pk": content.id})
+    )
+
+    list_url = reverse("website_content:v1:website_content-list")
+    list_ids = [item["id"] for item in staff_client.get(list_url).json()["results"]]
+    assert content.id not in list_ids
+
+    detail_url = reverse(
+        "website_content:v1:website_content-detail-by-id-or-slug",
+        kwargs={"identifier": str(content.id)},
+    )
+    assert staff_client.get(detail_url).status_code == 404
+
+
+def test_destroy_published_rejected(staff_client, user):
+    """Published content cannot be deleted; the row is left untouched."""
+    content = _make_content(user, is_published=True)
+    url = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": content.id}
+    )
+    resp = staff_client.delete(url)
+
+    assert resp.status_code == 400
+    content.refresh_from_db()
+    assert content.deleted_on is None
+
+
+def test_destroy_forbidden_for_non_editor(client, user):
+    """A non-staff, non-editor user cannot delete content."""
+    normal_user = UserFactory.create(is_staff=False)
+    client.force_login(normal_user)
+
+    content = _make_content(user, is_published=False)
+    url = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": content.id}
+    )
+    resp = client.delete(url)
+
+    assert resp.status_code == 403
+    content.refresh_from_db()
+    assert content.deleted_on is None
 
 
 def test_content_type_filter(client, user):

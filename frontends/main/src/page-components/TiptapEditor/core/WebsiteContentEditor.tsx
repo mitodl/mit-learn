@@ -16,6 +16,9 @@ import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import { useUserHasPermission, Permission } from "api/hooks/user"
 import { useQueryClient, type QueryClient } from "@tanstack/react-query"
 import dynamic from "next/dynamic"
+import { useRouter } from "next-nprogress-bar"
+import { RiDeleteBinLine } from "@remixicon/react"
+import { showDeleteWebsiteContentDialog } from "@/page-components/WebsiteContentDialogs/DeleteWebsiteContentDialog"
 
 import { Toolbar } from "../vendor/components/tiptap-ui-primitive/toolbar"
 import { TiptapEditor, MainToolbarContent, TipTapViewer } from "../TiptapEditor"
@@ -210,6 +213,7 @@ const WebsiteContentEditor = ({
   uploadImageRef.current = uploadImage
 
   const queryClient = useQueryClient()
+  const router = useRouter()
   const isArticleEditor = useUserHasPermission(Permission.ArticleEditor)
 
   const uploadHandler = useCallback<UploadHandler>(
@@ -408,6 +412,21 @@ const WebsiteContentEditor = ({
               ) : (
                 <StyledToolbar>
                   <MainToolbarContent editor={editor} />
+                  {contentItem && !contentItem.is_published ? (
+                    <Button
+                      variant="text"
+                      size="small"
+                      disabled={isPending}
+                      startIcon={<RiDeleteBinLine />}
+                      onClick={() =>
+                        showDeleteWebsiteContentDialog(contentItem, () =>
+                          router.push(websiteContentDraftsView(contentType)),
+                        )
+                      }
+                    >
+                      Delete
+                    </Button>
+                  ) : null}
                   {!contentItem?.is_published ? (
                     <Button
                       variant="secondary"
