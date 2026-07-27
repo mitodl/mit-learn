@@ -44,13 +44,8 @@ const makeProgramAsCourse: typeof factories.programs.program = (
   })
 const makePage = factories.pages.programPageItem
 
-// The enroll button renders with aria-label="Loading" (and no "Start Learning"
-// accessible name) until the enrollment-status query resolves. Under CI load
-// that query can take longer than Testing Library's default 1s waitFor, leaving
-// the button in its loading state when findAllByRole gives up — a timing flake,
-// not a regression. Give these queries extra headroom so they retry until the
-// button leaves its loading state. See ProgramHeaderEnrollButton /
-// useProgramEnrollment.
+// Enrollment status can be slow to resolve, so wait longer for the enroll
+// button to leave its loading state before asserting on it.
 const ENROLL_STATUS_TIMEOUT = 5000
 
 const setupApis = ({
