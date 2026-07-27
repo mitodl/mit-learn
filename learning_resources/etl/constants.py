@@ -80,7 +80,6 @@ ProgramLoaderConfig = namedtuple(  # noqa: PYI024
 class ETLSource(ExtendedEnum):
     """Enum of ETL sources"""
 
-    micromasters = "micromasters"
     mit_edx = "mit_edx"
     mitpe = "mitpe"
     mitxonline = "mitxonline"

@@ -9872,7 +9872,6 @@ paths:
         name: source
         schema:
           enum:
-          - micromasters
           - mit_edx
           - mitpe
           - mitxonline
@@ -9888,7 +9887,6 @@ paths:
           type: string
           minLength: 1
         description: |-
-          * `micromasters` - micromasters
           * `mit_edx` - mit_edx
           * `mitpe` - mitpe
           * `mitxonline` - mitxonline
@@ -16368,7 +16366,6 @@ components:
       - Next start date ascending
     SourceEnum:
       enum:
-      - micromasters
       - mit_edx
       - mitpe
       - mitxonline
@@ -16383,7 +16380,6 @@ components:
       - ovs
       type: string
       description: |-
-        * `micromasters` - micromasters
         * `mit_edx` - mit_edx
         * `mitpe` - mitpe
         * `mitxonline` - mitxonline
@@ -16397,7 +16393,6 @@ components:
         * `canvas` - canvas
         * `ovs` - ovs
       x-enum-descriptions:
-      - micromasters
       - mit_edx
       - mitpe
       - mitxonline
