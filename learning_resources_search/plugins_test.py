@@ -568,3 +568,21 @@ def test_search_index_plugin_resource_upserted_generate_embeddings(
     mock_search_index_helpers.mock_generate_embeddings_immutable_signature.assert_called_once_with(
         [resource.id], resource_type, overwrite=True
     )
+
+
+@pytest.mark.django_db
+def test_content_files_loaded_always_purges_unpublished(
+    mock_search_index_helpers, settings
+):
+    """The remove-unpublished task always runs so failed removals self-heal."""
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    run = LearningResourceRunFactory.create(
+        published=True, learning_resource__create_runs=False
+    )
+    ContentFileFactory.create(run=run)
+
+    SearchIndexPlugin().content_files_loaded(run)
+
+    mock_search_index_helpers.mock_remove_unpublished_run_contentfiles_immutable_signature.assert_called_once_with(
+        run.id
+    )

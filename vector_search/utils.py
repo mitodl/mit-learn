@@ -637,17 +637,29 @@ def _retrieve_content_file_point(
     return None
 
 
-def _content_file_stored_checksum_changed(serialized_document: dict) -> bool:
-    point = _retrieve_content_file_point(serialized_document)
-    if not point:
-        return False
-    stored_checksum = (point.payload or {}).get("checksum")
-    # Missing checksums should not force an expensive summary rewrite by themselves.
-    # should_generate_content_embeddings still treats them as changed so embeddings
-    # can repair older Qdrant points without overwriting existing summaries.
-    return stored_checksum is not None and stored_checksum != serialized_document.get(
-        "checksum"
-    )
+def _stored_content_payloads(
+    point_ids: list[str], fields: tuple[str, ...] = ("checksum",)
+) -> dict[str, dict]:
+    """
+    Batch-retrieve stored payload fields for content-file points.
+
+    Returns {point_id: partial payload dict} for points that exist in Qdrant;
+    absent points are absent from the map. One lookup per batch replaces the
+    per-file retrieves for the existence filter, summary-change check, and
+    embed gate.
+    """
+    client = qdrant_client()
+    stored = {}
+    for id_batch in chunks(
+        point_ids, chunk_size=settings.QDRANT_POINT_UPLOAD_BATCH_SIZE
+    ):
+        for record in client.retrieve(
+            collection_name=CONTENT_FILES_COLLECTION_NAME,
+            ids=id_batch,
+            with_payload=list(fields),
+        ):
+            stored[record.id] = record.payload or {}
+    return stored
 
 
 def should_generate_content_embeddings(
@@ -743,9 +755,13 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         client.upload_points(CONTENT_FILES_COLLECTION_NAME, points=points, wait=False)
 
 
-def _generate_content_file_points(serialized_content):
+def _generate_content_file_points(serialized_content, stored_payloads):
     """
-    Chunk and embed content file documents, yielding PointStructs
+    Chunk and embed content file documents, yielding PointStructs.
+
+    stored_payloads maps chunk-0 point ids to stored Qdrant payload fields
+    (see _stored_content_payloads); docs whose stored checksum matches get a
+    payload-only refresh instead of re-embedding.
     """
     encoder_dense = dense_encoder()
     encoder_sparse = sparse_encoder()
@@ -771,7 +787,17 @@ def _generate_content_file_points(serialized_content):
         embedding_context = _content_file_embedding_context(doc)
         if not embedding_context:
             continue
-        should_generate = should_generate_content_embeddings(doc)
+        # Point ids are content-key-derived and stable, so recompute per doc;
+        # summarization replaces the doc dicts between here and process_batch.
+        point_id = vector_point_id(
+            vector_point_key(doc, chunk_number=0, document_type="content_file")
+        )
+        # Missing point or differing/missing stored checksum -> regenerate
+        # (self-heals failed or purged points on the next load).
+        should_generate = (
+            point_id not in stored_payloads
+            or stored_payloads[point_id].get("checksum") != doc["checksum"]
+        )
         if not should_generate:
             """
             Just update the payload and continue
@@ -947,7 +973,6 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
             fill_summary_content_ids = []
             changed_summary_content_ids = []
 
-            # Collect IDs for summarization
             contentfile_points = [
                 (
                     vector_point_id(
@@ -959,17 +984,23 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
                 )
                 for doc in docs_batch
             ]
+            # One batched lookup serves the existence filter, the summary-change
+            # check, and the embed gate in _generate_content_file_points.
+            stored_payloads = _stored_content_payloads(
+                [point[0] for point in contentfile_points]
+            )
             if not overwrite:
-                filtered_point_ids = filter_existing_qdrant_points_by_ids(
-                    [point[0] for point in contentfile_points],
-                    collection_name=collection_name,
-                )
                 docs_batch = [
-                    point[1]
-                    for point in contentfile_points
-                    if point[0] in filtered_point_ids
+                    doc
+                    for point_id, doc in contentfile_points
+                    if point_id not in stored_payloads
                 ]
-            for resource in docs_batch:
+                contentfile_points = [
+                    point
+                    for point in contentfile_points
+                    if point[0] not in stored_payloads
+                ]
+            for point_id, resource in contentfile_points:
                 if (
                     resource.get("summary")
                     or resource.get("require_summaries")
@@ -977,7 +1008,15 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
                     .filter(run__id=resource.get("run_id"))
                     .exists()
                 ):
-                    if overwrite and _content_file_stored_checksum_changed(resource):
+                    stored_checksum = stored_payloads.get(point_id, {}).get("checksum")
+                    # A missing point or missing stored checksum must not force
+                    # an expensive summary rewrite by itself; the embed gate
+                    # still regenerates embeddings for those.
+                    if (
+                        overwrite
+                        and stored_checksum is not None
+                        and stored_checksum != resource.get("checksum")
+                    ):
                         changed_summary_content_ids.append(resource["id"])
                     else:
                         fill_summary_content_ids.append(resource["id"])
@@ -988,7 +1027,9 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
                 changed_summary_content_ids,
             )
 
-            points_generator_iter = _generate_content_file_points(docs_batch)
+            points_generator_iter = _generate_content_file_points(
+                docs_batch, stored_payloads
+            )
             points_upload_batch = []
 
             for point in points_generator_iter:
