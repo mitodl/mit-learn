@@ -5770,6 +5770,12 @@ export interface User {
   username: string
   /**
    *
+   * @type {string}
+   * @memberof User
+   */
+  global_id: string | null
+  /**
+   *
    * @type {Profile}
    * @memberof User
    */
