@@ -67,6 +67,31 @@ def _cached_response(request, cached_data):
     return HttpResponse(cached_data, content_type="application/json")
 
 
+def _cache_response_json(cache_backend, cache_key, cache_timeout, response):
+    """
+    Cache the response's rendered JSON bytes.
+
+    Piggybacks on the response's own render pass so a cache miss doesn't render
+    the payload twice. Only a non-JSON renderer (the browsable API) needs a
+    separate JSON render.
+    """
+
+    def store(rendered):
+        content = (
+            rendered.content
+            if rendered.accepted_renderer.format == "json"
+            else JSONRenderer().render(rendered.data)
+        )
+        cache_backend.set(cache_key, content, cache_timeout)
+
+    if hasattr(response, "add_post_render_callback"):
+        response.add_post_render_callback(store)
+    else:
+        cache_backend.set(
+            cache_key, JSONRenderer().render(response.data), cache_timeout
+        )
+
+
 def _resolve_cache_timeout(timeout: int | None) -> int:
     """Resolve a cache timeout, deferring to settings when no timeout is given."""
     if timeout is None:
@@ -136,10 +161,8 @@ def _cache_page_ignoring_cookies(  # noqa: C901
                 if response.status_code == 200:  # noqa: PLR2004
                     # Cache rendered JSON bytes so cache hits skip
                     # DRF serialization entirely
-                    await cache_backend.aset(
-                        cache_key,
-                        JSONRenderer().render(response.data),
-                        cache_timeout,
+                    _cache_response_json(
+                        cache_backend, cache_key, cache_timeout, response
                     )
 
                 return response
@@ -180,11 +203,7 @@ def _cache_page_ignoring_cookies(  # noqa: C901
             # Only cache successful responses. Cache rendered JSON bytes so
             # cache hits skip DRF serialization entirely
             if response.status_code == 200:  # noqa: PLR2004
-                cache_backend.set(
-                    cache_key,
-                    JSONRenderer().render(response.data),
-                    cache_timeout,
-                )
+                _cache_response_json(cache_backend, cache_key, cache_timeout, response)
 
             return response
 
