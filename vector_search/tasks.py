@@ -495,8 +495,9 @@ def embed_run_content_files(self, run_id):
     resource = run.learning_resource
     platform_code = resource.platform.code if resource.platform else ""
 
-    def chunk0_point_id(key):
-        # Mirrors the doc fields ContentFileSerializer emits for run files
+    def first_chunk_point_id(key):
+        # Returns the qdrant point id for the first chunk of the contentfile,
+        # mirroring the doc fields ContentFileSerializer emits for run files
         return vector_point_id(
             vector_point_key(
                 {
@@ -512,7 +513,7 @@ def embed_run_content_files(self, run_id):
 
     contentless = Q(content__isnull=True) | Q(content="")
     pid_rows = [
-        (cf_id, chunk0_point_id(key), checksum, meta)
+        (cf_id, first_chunk_point_id(key), checksum, meta)
         for cf_id, key, checksum, *meta in ContentFile.objects.filter(
             run=run, published=True
         )
@@ -520,7 +521,7 @@ def embed_run_content_files(self, run_id):
         .values_list("id", "key", "checksum", *CONTENT_FILE_PREPASS_PAYLOAD_FIELDS)
     ]
     contentless_rows = [
-        (cf_id, chunk0_point_id(key))
+        (cf_id, first_chunk_point_id(key))
         for cf_id, key in ContentFile.objects.filter(
             contentless, run=run, published=True
         ).values_list("id", "key")
