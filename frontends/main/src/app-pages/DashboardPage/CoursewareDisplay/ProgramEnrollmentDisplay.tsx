@@ -1,6 +1,6 @@
 import React from "react"
-import { Skeleton, Stack, Typography, styled, theme } from "ol-components"
-import { ButtonLink } from "@mitodl/smoot-design"
+import { Link, Skeleton, Stack, Typography, styled, theme } from "ol-components"
+import { Alert, ButtonLink } from "@mitodl/smoot-design"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { ResourceType, getKey } from "./model/dashboardViewModel"
 import { CoursewareCard } from "./CoursewareCard"
@@ -8,11 +8,18 @@ import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import { RiAwardFill } from "@remixicon/react"
 import { useProgramDashboardData } from "./hooks/useProgramDashboardData"
+import { env } from "@/env"
 
 const CourseEntryCardStyled = styled(CoursewareCard)({
   borderRadius: "8px",
   boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
 })
+
+const AlertBanner = styled(Alert)({
+  marginBottom: "16px",
+})
+
+const SUPPORT_EMAIL = env("NEXT_PUBLIC_MITOL_SUPPORT_EMAIL") || ""
 
 export const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
   color: theme.custom.colors.red,
@@ -30,6 +37,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   programId,
 }) => {
   const data = useProgramDashboardData(programId)
+  const [upgradeError, setUpgradeError] = React.useState<string | null>(null)
 
   if (data.isLoading) {
     return (
@@ -52,6 +60,19 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   }
   return (
     <Stack direction="column">
+      {upgradeError && (
+        <AlertBanner
+          severity="error"
+          closable={true}
+          onClose={() => setUpgradeError(null)}
+        >
+          {upgradeError}{" "}
+          <Link color="red" href={`mailto:${SUPPORT_EMAIL}`}>
+            Contact Support
+          </Link>{" "}
+          for assistance.
+        </AlertBanner>
+      )}
       <Stack direction="column" marginBottom="24px">
         <Stack
           direction="row"
@@ -130,6 +151,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                       })}
                       kind="course"
                       entry={item.entry}
+                      onUpgradeError={setUpgradeError}
                     />
                   )
                 }
@@ -146,6 +168,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                       moduleEnrollmentsByCourseId={data.enrollmentsByCourseId}
                       courseProgramEnrollment={item.courseProgramEnrollment}
                       ancestorProgramEnrollment={data.ancestorProgramEnrollment}
+                      onUpgradeError={setUpgradeError}
                     />
                   )
                 }
@@ -164,6 +187,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                     moduleEnrollmentsByCourseId={data.enrollmentsByCourseId}
                     courseProgramEnrollment={item.programEnrollment}
                     ancestorProgramEnrollment={data.ancestorProgramEnrollment}
+                    onUpgradeError={setUpgradeError}
                   />
                 )
               })}
