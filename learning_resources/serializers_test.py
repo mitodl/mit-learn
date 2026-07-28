@@ -395,7 +395,7 @@ def test_learning_resource_serializer(  # noqa: PLR0913
                 "department_id": dept.department_id,
                 "name": dept.name,
                 "channel_url": frontend_absolute_url(
-                    f"/c/department/{Channel.objects.get(department_detail__department=dept).name}/",
+                    f"/c/department/{Channel.objects.get(department_detail__department=dept).name}",
                 ),
                 "school": {
                     "id": dept.school.id,
@@ -705,7 +705,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
                 "code": content_file.run.learning_resource.offered_by.code,
                 "display_facet": True,
                 "channel_url": frontend_absolute_url(
-                    f"/c/unit/{Channel.objects.get(unit_detail__unit=content_file.run.learning_resource.offered_by).name}/"
+                    f"/c/unit/{Channel.objects.get(unit_detail__unit=content_file.run.learning_resource.offered_by).name}"
                 )
                 if has_channels
                 else None,
@@ -717,7 +717,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
                     "name": dept.name,
                     "department_id": dept.department_id,
                     "channel_url": frontend_absolute_url(
-                        f"/c/department/{Channel.objects.get(department_detail__department=dept).name}/"
+                        f"/c/department/{Channel.objects.get(department_detail__department=dept).name}"
                     )
                     if has_channels
                     else None,
@@ -740,7 +740,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
                     "icon": topic.icon,
                     "parent": topic.parent,
                     "channel_url": frontend_absolute_url(
-                        f"/c/topic/{Channel.objects.get(topic_detail__topic=topic).name}/"
+                        f"/c/topic/{Channel.objects.get(topic_detail__topic=topic).name}"
                         if has_channels
                         else None,
                     )
