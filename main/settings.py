@@ -795,6 +795,14 @@ QDRANT_CONTENT_FILE_CHUNK_SIZE = get_int(
     default=25,
 )
 
+# Number of ids per remove_embeddings task. Separate from QDRANT_CHUNK_SIZE
+# because removal issues one filter-based delete per id, and delete volume
+# drives Qdrant's vacuum optimizer (CPU spikes).
+QDRANT_DELETE_CHUNK_SIZE = get_int(
+    name="QDRANT_DELETE_CHUNK_SIZE",
+    default=10,
+)
+
 QDRANT_ENCODER = get_string(
     name="QDRANT_ENCODER", default="vector_search.encoders.gensim.GensimEncoder"
 )
@@ -839,9 +847,19 @@ EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(
     "EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER", default=False
 )
 WEBDRIVER_WAIT_SECONDS = get_int(name="WEBDRIVER_WAIT_SECONDS", default=10)
+
+# Resources scraped per marketing-page task. Each page costs two webdriver
+# waits, so this bounds task runtime independently of the embedding chunk size.
+MARKETING_PAGE_SCRAPE_CHUNK_SIZE = get_int(
+    name="MARKETING_PAGE_SCRAPE_CHUNK_SIZE", default=10
+)
+
 LITELLM_TOKEN_ENCODING_NAME = get_string(
     name="LITELLM_TOKEN_ENCODING_NAME", default=None
 )
+# Documents per embedding request. 25 * the 8191-token per-document limit stays
+# under OpenAI's 300k-token-per-request cap, which fails as a hard 400.
+LITELLM_EMBEDDING_BATCH_SIZE = get_int(name="LITELLM_EMBEDDING_BATCH_SIZE", default=25)
 LITELLM_CUSTOM_PROVIDER = get_string(name="LITELLM_CUSTOM_PROVIDER", default="openai")
 LITELLM_API_BASE = get_string(name="LITELLM_API_BASE", default=None)
 

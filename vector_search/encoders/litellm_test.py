@@ -34,6 +34,26 @@ def test_litellm_encoder_cache_enabled(mock_embedding):
 
 
 @patch("vector_search.encoders.litellm.embedding")
+def test_litellm_encoder_batches_requests(mock_embedding, settings):
+    """
+    Documents are split into requests of LITELLM_EMBEDDING_BATCH_SIZE: one
+    oversized request is a hard 400 from the provider, not a retryable error.
+    """
+    settings.LITELLM_EMBEDDING_BATCH_SIZE = 2
+    mock_embedding.return_value.to_dict.side_effect = lambda: {
+        "data": [{"embedding": [0.1]}] * len(mock_embedding.call_args.kwargs["input"])
+    }
+
+    embeddings = LiteLLMEncoder("test_model").embed_documents(["a", "b", "c"])
+
+    assert len(embeddings) == 3
+    assert [call.kwargs["input"] for call in mock_embedding.call_args_list] == [
+        ["a", "b"],
+        ["c"],
+    ]
+
+
+@patch("vector_search.encoders.litellm.embedding")
 def test_litellm_encoder_cache_disabled(mock_embedding):
     """
     Test that cache is disabled when cache is False on the encoder

@@ -980,6 +980,36 @@ def _summarize_content_files_for_embedding(
     return refreshed_docs
 
 
+def _upsert_points(client, collection_name, points):
+    """
+    Upsert points in QDRANT_POINT_UPLOAD_BATCH_SIZE batches.
+
+    Batching bounds the request size: a dense+sparse point with a full resource
+    payload runs tens of KB, so an unbatched chunk can exceed the client timeout
+    or the server's request-size limit.
+    """
+    batch = []
+    for point in points:
+        batch.append(point)
+        if len(batch) >= settings.QDRANT_POINT_UPLOAD_BATCH_SIZE:
+            client.batch_update_points(
+                collection_name=collection_name,
+                update_operations=[
+                    models.UpsertOperation(upsert=models.PointsList(points=batch)),
+                ],
+                wait=False,
+            )
+            batch = []
+    if batch:
+        client.batch_update_points(
+            collection_name=collection_name,
+            update_operations=[
+                models.UpsertOperation(upsert=models.PointsList(points=batch)),
+            ],
+            wait=False,
+        )
+
+
 def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C901
     """
     Embed learning resources
@@ -1087,40 +1117,10 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
             points_generator_iter = _generate_content_file_points(
                 docs_batch, stored_payloads
             )
-            points_upload_batch = []
+            _upsert_points(client, collection_name, points_generator_iter)
 
-            for point in points_generator_iter:
-                points_upload_batch.append(point)
-                if len(points_upload_batch) >= settings.QDRANT_POINT_UPLOAD_BATCH_SIZE:
-                    client.batch_update_points(
-                        collection_name=collection_name,
-                        update_operations=[
-                            models.UpsertOperation(
-                                upsert=models.PointsList(
-                                    points=points_upload_batch,
-                                )
-                            ),
-                        ],
-                        wait=False,
-                    )
-                    points_upload_batch = []
-
-            if points_upload_batch:
-                client.batch_update_points(
-                    collection_name=collection_name,
-                    update_operations=[
-                        models.UpsertOperation(
-                            upsert=models.PointsList(
-                                points=points_upload_batch,
-                            )
-                        ),
-                    ],
-                    wait=False,
-                )
-
-            # Explicit deletions to help GC
+            # Explicit deletion to help GC
             del points_generator_iter
-            del points_upload_batch
 
         # We don't delete docs_batch here because it's a reference passed in,
         # but the caller clears the list.
@@ -1143,17 +1143,7 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
 
         points = None  # Handled inside the loop
     if points:
-        client.batch_update_points(
-            collection_name=collection_name,
-            update_operations=[
-                models.UpsertOperation(
-                    upsert=models.PointsList(
-                        points=points,
-                    )
-                ),
-            ],
-            wait=False,
-        )
+        _upsert_points(client, collection_name, points)
 
 
 def _resource_vector_hits(search_result):

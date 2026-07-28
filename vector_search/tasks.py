@@ -76,41 +76,42 @@ def _replace_with_chain(task, task_signatures):
     return task.replace(celery.chain(*task_signatures))
 
 
-def _replace_with_content_file_group(
-    task: celery.Task, content_file_ids: list[int], *, overwrite: bool
+def _dispatch_content_file_chunks(
+    content_file_ids: list[int], *, overwrite: bool
 ) -> None:
     """
-    Replace the parent with a group of content-file embedding chunks.
+    Dispatch content-file embedding chunks, fire and forget.
 
-    A group (not a chain) so chunks are not serialized behind one another and the
-    remaining work is not carried in every message; returns None when there is
-    nothing to embed. Failures surface via generate_embeddings' own logging and
-    the periodic embeddings_healthcheck, not a chain tail.
+    Chunks are published individually rather than via ``task.replace(group(...))``:
+    celery uplifts a replaced group into a chord, which keeps per-chunk result
+    bookkeeping in Redis even for ignore_result tasks. Callers are chain tails,
+    so nothing downstream needs to wait. Failures surface via
+    generate_embeddings' own logging/Sentry and the periodic
+    embeddings_healthcheck.
     """
-    sigs = [
+    _dispatch_signatures(
         generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite=overwrite)
         for ids in chunks(
             content_file_ids, chunk_size=settings.QDRANT_CONTENT_FILE_CHUNK_SIZE
         )
-    ]
-    if not sigs:
-        return None
-    return task.replace(celery.group(sigs))
+    )
 
 
-def _dispatch_signatures(task_signatures) -> int:
+def _dispatch_signatures(task_signatures) -> None:
     """
-    Fire-and-forget dispatch of already-built chunk signatures (backfill paths).
+    Fire-and-forget dispatch of already-built chunk signatures.
 
     Publishes one message per chunk rather than a single catalog-wide group/chain,
     so a full-catalog backfill does not spike the broker with one huge message.
-    Nothing waits on the results (embedding tasks are ignore_result).
+    Nothing waits on the results (embedding tasks are ignore_result), so this
+    returns None: callers' return value stays "falsy on success, error string on
+    failure".
     """
     count = 0
     for sig in task_signatures:
         sig.apply_async()
         count += 1
-    return count
+    log.info("Dispatched %d embedding chunk task(s)", count)
 
 
 def _queue_program_content_file_embedding_tasks(index_tasks, program_ids, overwrite):
@@ -131,7 +132,7 @@ def _queue_program_content_file_embedding_tasks(index_tasks, program_ids, overwr
             generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite)
             for ids in chunks(
                 contentfile_ids,
-                chunk_size=settings.QDRANT_CHUNK_SIZE,
+                chunk_size=settings.QDRANT_CONTENT_FILE_CHUNK_SIZE,
             )
         ]
     )
@@ -153,6 +154,8 @@ def _retry_countdown(retries: int) -> int:
     reject_on_worker_lost=True,
     max_retries=3,
     rate_limit=settings.CELERY_EMBEDDINGS_RATE_LIMIT,
+    soft_time_limit=settings.CELERY_EMBEDDINGS_SOFT_TIME_LIMIT,
+    time_limit=settings.CELERY_EMBEDDINGS_TIME_LIMIT,
     ignore_result=True,
 )
 def generate_embeddings(
@@ -160,6 +163,7 @@ def generate_embeddings(
     ids: list[int],
     resource_type: str,
     overwrite: bool,  # noqa: FBT001
+    failure_key: str | None = None,  # noqa: ARG001
 ) -> None:
     """
     Generate learning resource embeddings and index in Qdrant.
@@ -167,6 +171,10 @@ def generate_embeddings(
     Retries transient Qdrant/search errors with jittered backoff. On exhaustion or a
     non-transient error, logs and propagates the failure (surfaced via Sentry and the
     periodic embeddings_healthcheck).
+
+    failure_key is accepted and ignored so messages published by the previous
+    release (which chained a finalize_embeddings tail) still run on a new worker.
+    Remove it, and finalize_embeddings below, one release after deploy.
     """
     try:
         with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
@@ -219,6 +227,15 @@ def remove_embeddings(ids, resource_type):
         if err.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
             raise RetryError(str(err)) from err
         raise
+
+
+@app.task(ignore_result=True)
+def finalize_embeddings(failure_key: str | None = None) -> None:
+    """
+    No-op retained for one release so finalize_embeddings tails already queued by
+    the previous release do not fail as an unregistered task. Chunk failures now
+    surface via generate_embeddings' logging/Sentry.
+    """
 
 
 @app.task
@@ -276,7 +293,7 @@ def start_embed_resources(indexes, skip_content_files, overwrite):  # noqa: C901
                         generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite)
                         for ids in chunks(
                             contentfiles,
-                            chunk_size=settings.QDRANT_CHUNK_SIZE,
+                            chunk_size=settings.QDRANT_CONTENT_FILE_CHUNK_SIZE,
                         )
                     ]
         for resource_type in set(LEARNING_RESOURCE_TYPES) - {COURSE_TYPE}:
@@ -381,7 +398,7 @@ def embed_learning_resources_by_id(ids, skip_content_files, overwrite):
                         generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite)
                         for ids in chunks(
                             content_ids,
-                            chunk_size=settings.QDRANT_CHUNK_SIZE,
+                            chunk_size=settings.QDRANT_CONTENT_FILE_CHUNK_SIZE,
                         )
                     ]
 
@@ -431,8 +448,8 @@ def embed_new_learning_resources(self):
     return self.replace(embed_tasks)
 
 
-@app.task(bind=True, ignore_result=True)
-def embed_new_content_files(self):
+@app.task(ignore_result=True)
+def embed_new_content_files():
     """
     Embed new content files from QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW minutes ago
     """
@@ -448,8 +465,7 @@ def embed_new_content_files(self):
         .exclude(learning_resource__published=False, learning_resource__test_mode=False)
     )
 
-    return _replace_with_content_file_group(
-        self,
+    return _dispatch_content_file_chunks(
         list(new_content_files.values_list("id", flat=True)),
         overwrite=False,
     )
@@ -559,7 +575,7 @@ def embed_run_content_files(self, run_id):
         remove_qdrant_records(leftover_ids, CONTENT_FILE_TYPE)
     if not ids:
         return None
-    return _replace_with_content_file_group(self, ids, overwrite=True)
+    return _dispatch_content_file_chunks(ids, overwrite=True)
 
 
 @app.task(bind=True, ignore_result=True)
@@ -572,7 +588,9 @@ def remove_run_content_files(self, run_id):
     )
     tasks = [
         remove_embeddings.si(ids, CONTENT_FILE_TYPE)
-        for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
+        for ids in chunks(
+            content_file_ids, chunk_size=settings.QDRANT_DELETE_CHUNK_SIZE
+        )
     ]
     return _replace_with_chain(self, tasks)
 
@@ -589,7 +607,9 @@ def remove_unpublished_run_content_files(self, run_id):
     )
     tasks = [
         remove_embeddings.si(ids, CONTENT_FILE_TYPE)
-        for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
+        for ids in chunks(
+            content_file_ids, chunk_size=settings.QDRANT_DELETE_CHUNK_SIZE
+        )
     ]
     return _replace_with_chain(self, tasks)
 

@@ -786,7 +786,7 @@ def test_scrape_marketing_pages(mocker, settings, mocked_celery):
     """Test that scrape_marketing_pages correctly identifies resources without marketing pages"""
 
     settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = True
-    settings.QDRANT_CHUNK_SIZE = 2
+    settings.MARKETING_PAGE_SCRAPE_CHUNK_SIZE = 2
 
     course1 = models.LearningResource.objects.create(
         title="Course 1",
@@ -842,7 +842,7 @@ def test_scrape_marketing_pages_orders_courses_before_programs(
     mocker, settings, mocked_celery
 ):
     """Courses are scraped in a group that runs before the programs group."""
-    settings.QDRANT_CHUNK_SIZE = 10
+    settings.MARKETING_PAGE_SCRAPE_CHUNK_SIZE = 10
     course = models.LearningResource.objects.create(
         title="Course",
         url="https://example.com/course",
@@ -891,7 +891,7 @@ def test_scrape_marketing_pages_queues_healable_programs(
     """A program that already has a page but is missing its children section
     (with a child course page available) is queued for re-scrape.
     """
-    settings.QDRANT_CHUNK_SIZE = 10
+    settings.MARKETING_PAGE_SCRAPE_CHUNK_SIZE = 10
     course = models.LearningResource.objects.create(
         title="Course",
         url="https://example.com/course",

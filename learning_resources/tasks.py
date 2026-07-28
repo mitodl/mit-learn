@@ -699,11 +699,15 @@ def scrape_marketing_pages(self):
 
     course_tasks = [
         marketing_page_for_resources.si(ids)
-        for ids in chunks(missing_course_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
+        for ids in chunks(
+            missing_course_ids, chunk_size=settings.MARKETING_PAGE_SCRAPE_CHUNK_SIZE
+        )
     ]
     program_tasks = [
         marketing_page_for_resources.si(ids)
-        for ids in chunks(sorted(program_ids), chunk_size=settings.QDRANT_CHUNK_SIZE)
+        for ids in chunks(
+            sorted(program_ids), chunk_size=settings.MARKETING_PAGE_SCRAPE_CHUNK_SIZE
+        )
     ]
 
     if course_tasks and program_tasks:
@@ -782,8 +786,10 @@ def marketing_page_for_resources(resource_ids):
             content_file_ids.append(content_file.id)
             if content_file.published:
                 upsert_content_file.delay(content_file.id)
-    if content_file_ids:
-        generate_embeddings.delay(content_file_ids, CONTENT_FILE_TYPE, overwrite=True)
+    for ids in chunks(
+        content_file_ids, chunk_size=settings.QDRANT_CONTENT_FILE_CHUNK_SIZE
+    ):
+        generate_embeddings.delay(ids, CONTENT_FILE_TYPE, overwrite=True)
 
 
 @app.task(

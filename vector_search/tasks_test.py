@@ -104,6 +104,55 @@ def test_start_embed_resources(mocker, mocked_celery, index):
     assert mocked_celery.replace.call_count == 0
 
 
+def test_start_embed_resources_dispatches_one_message_per_chunk(
+    mocker, mocked_celery, settings
+):
+    """
+    Each chunk signature is published individually, and the task returns None so
+    the management command does not read a dispatch count as an error.
+    """
+    settings.QDRANT_CHUNK_SIZE = 2
+    LearningResourceFactory.create_batch(5, resource_type=PROGRAM_TYPE)
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+
+    assert (
+        start_embed_resources([PROGRAM_TYPE], skip_content_files=True, overwrite=True)
+        is None
+    )
+
+    assert generate_embeddings_mock.si.call_count == 3
+    assert generate_embeddings_mock.si.return_value.apply_async.call_count == 3
+
+
+def test_start_embed_resources_content_files_use_content_file_chunk_size(
+    mocker, mocked_celery, settings
+):
+    """
+    Content-file chunks in the backfill use QDRANT_CONTENT_FILE_CHUNK_SIZE: these
+    tasks summarize inline, so they must not inherit the larger resource chunk.
+    """
+    settings.QDRANT_CHUNK_SIZE = 100
+    settings.QDRANT_CONTENT_FILE_CHUNK_SIZE = 2
+    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
+    course = CourseFactory.create(etl_source=ETLSource.ocw.value)
+    ContentFileFactory.create_batch(5, run=course.learning_resource.runs.first())
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+
+    start_embed_resources([COURSE_TYPE], skip_content_files=False, overwrite=True)
+
+    content_file_calls = [
+        call
+        for call in generate_embeddings_mock.si.call_args_list
+        if call.args[1] == CONTENT_FILE_TYPE
+    ]
+    assert len(content_file_calls) == 3
+    assert all(len(call.args[0]) <= 2 for call in content_file_calls)
+
+
 @pytest.mark.parametrize(
     "index",
     ["course", "program"],
@@ -269,8 +318,7 @@ def test_embed_new_content_files(mocker, mocked_celery):
         "vector_search.tasks.generate_embeddings", autospec=True
     )
 
-    with pytest.raises(mocked_celery.replace_exception_class):
-        embed_new_content_files.delay()
+    embed_new_content_files.delay()
 
     embedded_ids = [
         content_file_id
@@ -282,13 +330,13 @@ def test_embed_new_content_files(mocker, mocked_celery):
         mock_call.kwargs.get("overwrite") is False
         for mock_call in generate_embeddings_mock.si.call_args_list
     )
-    # content files now dispatch as a group of chunk signatures (no finalize tail)
-    group_args = list(mocked_celery.group.call_args.args[0])
-    assert group_args == [
-        generate_embeddings_mock.si.return_value
-        for _ in generate_embeddings_mock.si.call_args_list
-    ]
-    assert mocked_celery.replace.call_args[0][1] == mocked_celery.group.return_value
+    # content-file chunks are published individually: no group/chord bookkeeping
+    assert (
+        generate_embeddings_mock.si.return_value.apply_async.call_count
+        == generate_embeddings_mock.si.call_count
+    )
+    assert mocked_celery.group.call_count == 0
+    assert mocked_celery.replace.call_count == 0
 
 
 def test_remove_run_content_files(mocker, mocked_celery, settings):
@@ -662,8 +710,7 @@ def test_embed_new_content_files_without_runs(mocker, mocked_celery):
         "vector_search.tasks.generate_embeddings", autospec=True
     )
 
-    with pytest.raises(mocked_celery.replace_exception_class):
-        embed_new_content_files.delay()
+    embed_new_content_files.delay()
     embedded_ids = generate_embeddings_mock.si.call_args_list[0].args[0]
     for contentfile_id in content_files_without_run:
         assert contentfile_id in embedded_ids
@@ -671,8 +718,8 @@ def test_embed_new_content_files_without_runs(mocker, mocked_celery):
 
 def test_embed_run_content_files(mocker, mocked_celery, settings):
     """
-    embed_run_content_files should replace itself with embedding tasks for all
-    content files associated with the run.
+    embed_run_content_files should dispatch embedding tasks for all content files
+    associated with the run, one message per chunk.
     """
     settings.QDRANT_CONTENT_FILE_CHUNK_SIZE = 2
     run = LearningResourceRunFactory.create()
@@ -685,8 +732,7 @@ def test_embed_run_content_files(mocker, mocked_celery, settings):
         "vector_search.tasks.generate_embeddings", autospec=True
     )
 
-    with pytest.raises(mocked_celery.replace_exception_class):
-        embed_run_content_files.delay(run.id)
+    embed_run_content_files.delay(run.id)
 
     embedded_ids = [
         content_file_id
@@ -699,14 +745,11 @@ def test_embed_run_content_files(mocker, mocked_celery, settings):
         and mock_call.kwargs["overwrite"] is True
         for mock_call in generate_embeddings_mock.si.call_args_list
     )
-    # content files dispatch as a group of chunk sigs (no finalize tail)
-    group_args = list(mocked_celery.group.call_args.args[0])
-    assert group_args == [
-        generate_embeddings_mock.si.return_value
-        for _ in generate_embeddings_mock.si.call_args_list
-    ]
-    assert mocked_celery.replace.call_count == 1
-    assert mocked_celery.replace.call_args[0][1] == mocked_celery.group.return_value
+    # 3 files at chunk size 2 -> 2 chunks, each published on its own
+    assert generate_embeddings_mock.si.call_count == 2
+    assert generate_embeddings_mock.si.return_value.apply_async.call_count == 2
+    assert mocked_celery.group.call_count == 0
+    assert mocked_celery.replace.call_count == 0
 
 
 def test_embed_run_content_files_no_content_files(mocker, mocked_celery):
@@ -735,7 +778,7 @@ def test_embed_run_content_files_no_files_returns_none(mocker, mocked_celery):
 
 def test_embed_run_content_files_skips_unpublished(mocker, mocked_celery, settings):
     """Unpublished files are never embedded."""
-    settings.QDRANT_CHUNK_SIZE = 50
+    settings.QDRANT_CONTENT_FILE_CHUNK_SIZE = 50
     run = LearningResourceRunFactory.create()
     published = ContentFileFactory.create(run=run, published=True, content="aaa")
     ContentFileFactory.create(run=run, published=False, content="bbb")
@@ -743,8 +786,7 @@ def test_embed_run_content_files_skips_unpublished(mocker, mocked_celery, settin
         "vector_search.tasks.generate_embeddings", autospec=True
     )
 
-    with pytest.raises(mocked_celery.replace_exception_class):
-        embed_run_content_files.delay(run.id)
+    embed_run_content_files.delay(run.id)
 
     assert _embedded_content_file_ids(generate_embeddings_mock) == {published.id}
 
@@ -754,7 +796,7 @@ def test_embed_run_content_files_skips_contentless(mocker, mocked_celery, settin
     Files without content never produce Qdrant points, so the pre-pass must not
     flag them as stale (they would otherwise be re-dispatched on every load).
     """
-    settings.QDRANT_CHUNK_SIZE = 50
+    settings.QDRANT_CONTENT_FILE_CHUNK_SIZE = 50
     run = LearningResourceRunFactory.create()
     with_content = ContentFileFactory.create(run=run, published=True, content="aaa")
     ContentFileFactory.create(run=run, published=True, content="")
@@ -763,8 +805,7 @@ def test_embed_run_content_files_skips_contentless(mocker, mocked_celery, settin
         "vector_search.tasks.generate_embeddings", autospec=True
     )
 
-    with pytest.raises(mocked_celery.replace_exception_class):
-        embed_run_content_files.delay(run.id)
+    embed_run_content_files.delay(run.id)
 
     assert _embedded_content_file_ids(generate_embeddings_mock) == {with_content.id}
 
@@ -858,7 +899,7 @@ def test_embed_run_content_files_pre_pass_skips_unchanged(
     unchanged file is skipped only if the task's pre-pass computes the same
     point id as the embed pipeline.
     """
-    settings.QDRANT_CHUNK_SIZE = 50
+    settings.QDRANT_CONTENT_FILE_CHUNK_SIZE = 50
     run = LearningResourceRunFactory.create()
     # ContentFile.save() computes checksum from content
     unchanged = ContentFileFactory.create(run=run, published=True, content="aaa")
@@ -876,8 +917,7 @@ def test_embed_run_content_files_pre_pass_skips_unchanged(
         "vector_search.tasks.generate_embeddings", autospec=True
     )
 
-    with pytest.raises(mocked_celery.replace_exception_class):
-        embed_run_content_files.delay(run.id)
+    embed_run_content_files.delay(run.id)
 
     assert _embedded_content_file_ids(generate_embeddings_mock) == {
         stale.id,
@@ -893,7 +933,7 @@ def test_embed_run_content_files_pre_pass_dispatches_metadata_only_change(
     A file with a matching checksum but drifted payload metadata (edited title,
     newly generated summary) is dispatched so its Qdrant payload gets refreshed.
     """
-    settings.QDRANT_CHUNK_SIZE = 50
+    settings.QDRANT_CONTENT_FILE_CHUNK_SIZE = 50
     run = LearningResourceRunFactory.create()
     retitled = ContentFileFactory.create(run=run, published=True, content="aaa")
     summarized = ContentFileFactory.create(run=run, published=True, content="bbb")
@@ -913,8 +953,7 @@ def test_embed_run_content_files_pre_pass_dispatches_metadata_only_change(
         "vector_search.tasks.generate_embeddings", autospec=True
     )
 
-    with pytest.raises(mocked_celery.replace_exception_class):
-        embed_run_content_files.delay(run.id)
+    embed_run_content_files.delay(run.id)
 
     assert _embedded_content_file_ids(generate_embeddings_mock) == {
         retitled.id,

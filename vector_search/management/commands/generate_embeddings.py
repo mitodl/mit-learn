@@ -98,14 +98,16 @@ class Command(BaseCommand):
             f" Types to embed: {indexes_to_update}"
         )
 
-        self.stdout.write("Waiting on task...")
+        self.stdout.write("Waiting on dispatch...")
         start = now_in_utc()
         error = task.get()
         if error:
-            msg = f"Geenerate embeddings errored: {error}"
+            msg = f"Generate embeddings errored: {error}"
             raise CommandError(msg)
         clear_views_cache()
         total_seconds = (now_in_utc() - start).total_seconds()
         self.stdout.write(
-            f"Embeddings generated and stored, took {total_seconds} seconds"
+            f"Embedding tasks dispatched in {total_seconds} seconds. Embedding runs "
+            "in the background on the embeddings queue; check worker logs or the "
+            "embeddings healthcheck for completion."
         )
