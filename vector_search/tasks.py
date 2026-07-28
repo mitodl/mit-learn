@@ -464,7 +464,7 @@ def embed_new_content_files(self):
     )
 
 
-@app.task(bind=True)
+@app.task(bind=True, max_retries=3)
 def embed_run_content_files(self, run_id):
     """
     Embed the run's published content files whose Qdrant points are missing or
@@ -477,6 +477,12 @@ def embed_run_content_files(self, run_id):
     newly generated summary, ...) is dispatched but exits via the payload-only
     update path downstream — no re-embedding. Failed or purged embeds show up
     as missing/stale points, so they self-heal on the next load.
+
+    Content-less files are excluded: they never produce Qdrant points, so they
+    would otherwise be re-flagged on every load. Any point left over from when
+    such a file still had content is removed. Transient Qdrant errors during
+    the pre-pass retry with backoff so a blip doesn't defer the run's embedding
+    to the next load.
     """
     run = (
         LearningResourceRun.objects.select_related("learning_resource__platform")
@@ -488,8 +494,9 @@ def embed_run_content_files(self, run_id):
     resource = run.learning_resource
     platform_code = resource.platform.code if resource.platform else ""
 
-    def chunk0_point_id(key):
-        # Mirrors the doc fields ContentFileSerializer emits for run files
+    def first_chunk_point_id(key):
+        # Returns the qdrant point id for the first chunk of the contentfile,
+        # mirroring the doc fields ContentFileSerializer emits for run files
         return vector_point_id(
             vector_point_key(
                 {
@@ -503,16 +510,33 @@ def embed_run_content_files(self, run_id):
             )
         )
 
+    contentless = Q(content__isnull=True) | Q(content="")
     pid_rows = [
-        (cf_id, chunk0_point_id(key), checksum, meta)
+        (cf_id, first_chunk_point_id(key), checksum, meta)
         for cf_id, key, checksum, *meta in ContentFile.objects.filter(
             run=run, published=True
-        ).values_list("id", "key", "checksum", *CONTENT_FILE_PREPASS_PAYLOAD_FIELDS)
+        )
+        .exclude(contentless)
+        .values_list("id", "key", "checksum", *CONTENT_FILE_PREPASS_PAYLOAD_FIELDS)
     ]
-    stored = _stored_content_payloads(
-        [pid for _, pid, _, _ in pid_rows],
-        fields=("checksum", *CONTENT_FILE_PREPASS_PAYLOAD_FIELDS),
-    )
+    contentless_rows = [
+        (cf_id, first_chunk_point_id(key))
+        for cf_id, key in ContentFile.objects.filter(
+            contentless, run=run, published=True
+        ).values_list("id", "key")
+    ]
+    try:
+        stored = _stored_content_payloads(
+            [pid for _, pid, _, _ in pid_rows] + [pid for _, pid in contentless_rows],
+            fields=("checksum", *CONTENT_FILE_PREPASS_PAYLOAD_FIELDS),
+        )
+    except grpc.RpcError as err:
+        if err.code() in (
+            grpc.StatusCode.DEADLINE_EXCEEDED,
+            grpc.StatusCode.UNAVAILABLE,
+        ):
+            raise self.retry(exc=err, countdown=_retry_countdown(self.request.retries))  # noqa: B904
+        raise
 
     def is_stale(pid, checksum, meta):
         payload = stored.get(pid)
@@ -528,12 +552,20 @@ def embed_run_content_files(self, run_id):
         for cf_id, pid, checksum, meta in pid_rows
         if is_stale(pid, checksum, meta)
     ]
+    # A stored point for a now-contentless file is a leftover from when the
+    # file had content — remove it. Inline rather than a chained task: leftovers
+    # are rare and few, and a failed delete self-heals on the next load.
+    leftover_ids = [cf_id for cf_id, pid in contentless_rows if pid in stored]
     log.info(
-        "embed_run_content_files run %s: %d of %d files need embedding",
+        "embed_run_content_files run %s: %d of %d files need embedding, "
+        "%d leftover contentless points to remove",
         run_id,
         len(ids),
         len(pid_rows),
+        len(leftover_ids),
     )
+    if leftover_ids:
+        remove_qdrant_records(leftover_ids, CONTENT_FILE_TYPE)
     if not ids:
         return None
     return _replace_with_finalized_chain(self, ids, overwrite=True)

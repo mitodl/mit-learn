@@ -705,7 +705,8 @@ def test_embed_run_content_files(mocker, mocked_celery, settings):
     settings.QDRANT_CHUNK_SIZE = 2
     run = LearningResourceRunFactory.create()
     content_file_ids = [
-        content_file.id for content_file in ContentFileFactory.create_batch(3, run=run)
+        content_file.id
+        for content_file in ContentFileFactory.create_batch(3, run=run, content="text")
     ]
     ContentFileFactory.create()
     generate_embeddings_mock = mocker.patch(
@@ -773,8 +774,8 @@ def test_embed_run_content_files_skips_unpublished(mocker, mocked_celery, settin
     """Unpublished files are never embedded."""
     settings.QDRANT_CHUNK_SIZE = 50
     run = LearningResourceRunFactory.create()
-    published = ContentFileFactory.create(run=run, published=True)
-    ContentFileFactory.create(run=run, published=False)
+    published = ContentFileFactory.create(run=run, published=True, content="aaa")
+    ContentFileFactory.create(run=run, published=False, content="bbb")
     generate_embeddings_mock = mocker.patch(
         "vector_search.tasks.generate_embeddings", autospec=True
     )
@@ -783,6 +784,83 @@ def test_embed_run_content_files_skips_unpublished(mocker, mocked_celery, settin
         embed_run_content_files.delay(run.id)
 
     assert _embedded_content_file_ids(generate_embeddings_mock) == {published.id}
+
+
+def test_embed_run_content_files_skips_contentless(mocker, mocked_celery, settings):
+    """
+    Files without content never produce Qdrant points, so the pre-pass must not
+    flag them as stale (they would otherwise be re-dispatched on every load).
+    """
+    settings.QDRANT_CHUNK_SIZE = 50
+    run = LearningResourceRunFactory.create()
+    with_content = ContentFileFactory.create(run=run, published=True, content="aaa")
+    ContentFileFactory.create(run=run, published=True, content="")
+    ContentFileFactory.create(run=run, published=True, content=None)
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        embed_run_content_files.delay(run.id)
+
+    assert _embedded_content_file_ids(generate_embeddings_mock) == {with_content.id}
+
+
+def test_embed_run_content_files_removes_leftover_contentless_points(mocker):
+    """
+    A published file whose content became empty keeps the point embedded from
+    its old content; the pre-pass detects and removes it. Contentless files
+    with no stored point trigger no removal.
+    """
+    run = LearningResourceRunFactory.create()
+    emptied = ContentFileFactory.create(run=run, published=True, content="")
+    ContentFileFactory.create(run=run, published=True, content=None)
+    pids = _serializer_chunk0_pids([emptied])
+    mocker.patch(
+        "vector_search.tasks._stored_content_payloads",
+        return_value={pids[emptied.id]: {"checksum": "from-old-content"}},
+    )
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+    remove_mock = mocker.patch(
+        "vector_search.tasks.remove_qdrant_records", autospec=True
+    )
+
+    assert embed_run_content_files(run.id) is None
+
+    generate_embeddings_mock.si.assert_not_called()
+    remove_mock.assert_called_once_with([emptied.id], CONTENT_FILE_TYPE)
+
+
+def test_embed_run_content_files_retries_transient_qdrant_errors(mocker):
+    """A transient Qdrant error in the pre-pass retries instead of failing the run."""
+    run = LearningResourceRunFactory.create()
+    ContentFileFactory.create(run=run, published=True, content="aaa")
+    mocker.patch(
+        "vector_search.tasks._stored_content_payloads",
+        side_effect=_rpc_error(grpc.StatusCode.UNAVAILABLE),
+    )
+    retry = mocker.patch.object(embed_run_content_files, "retry", side_effect=Retry())
+
+    with pytest.raises(Retry):
+        embed_run_content_files(run.id)
+
+    retry.assert_called_once()
+    assert retry.call_args.kwargs["countdown"] >= 0
+
+
+def test_embed_run_content_files_does_not_retry_terminal_errors(mocker):
+    """A non-transient Qdrant error in the pre-pass propagates without retry."""
+    run = LearningResourceRunFactory.create()
+    ContentFileFactory.create(run=run, published=True, content="aaa")
+    mocker.patch(
+        "vector_search.tasks._stored_content_payloads",
+        side_effect=_rpc_error(grpc.StatusCode.INVALID_ARGUMENT),
+    )
+
+    with pytest.raises(grpc.RpcError):
+        embed_run_content_files(run.id)
 
 
 def _serializer_chunk0_pids(content_files):

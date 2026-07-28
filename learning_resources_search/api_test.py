@@ -2422,6 +2422,9 @@ def test_execute_learn_search_for_learning_resource_query(settings, opensearch):
                 "flashcards",
                 "vector_embedding",
                 "video.transcript",
+                "content_files.content",
+                "content_files.summary",
+                "content_files.flashcards",
             ]
         },
     }
@@ -2521,6 +2524,9 @@ def test_execute_learn_search_for_learning_resource_query_filter_ocw_files(
                 "flashcards",
                 "vector_embedding",
                 "video.transcript",
+                "content_files.content",
+                "content_files.summary",
+                "content_files.flashcards",
             ]
         },
     }
@@ -3068,6 +3074,9 @@ def test_execute_learn_search_with_script_score(
                 "flashcards",
                 "vector_embedding",
                 "video.transcript",
+                "content_files.content",
+                "content_files.summary",
+                "content_files.flashcards",
             ]
         },
     }
@@ -3574,6 +3583,9 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                 "flashcards",
                 "vector_embedding",
                 "video.transcript",
+                "content_files.content",
+                "content_files.summary",
+                "content_files.flashcards",
             ]
         },
     }
@@ -4065,6 +4077,9 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                 "flashcards",
                 "vector_embedding",
                 "video.transcript",
+                "content_files.content",
+                "content_files.summary",
+                "content_files.flashcards",
             ]
         },
     }
@@ -4243,6 +4258,9 @@ def test_execute_learn_search_for_content_file_query(opensearch):
                 "flashcards",
                 "vector_embedding",
                 "video.transcript",
+                "content_files.content",
+                "content_files.summary",
+                "content_files.flashcards",
             ]
         },
     }

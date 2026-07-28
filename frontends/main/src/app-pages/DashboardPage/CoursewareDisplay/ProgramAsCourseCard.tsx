@@ -333,12 +333,36 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
     completedCount,
   )
 
-  const parentProgramIds = [
-    courseProgram.readable_id,
+  // Ordered nearest-to-furthest (ancestor last). verified_program_enrollments
+  // grants the free upgrade based on whichever given program is structurally
+  // the ancestor, so an unverified ancestor is useless and gets trimmed
+  // below - but the nearer program's id must stay even when unverified,
+  // since the backend also uses it to identify which program owns the
+  // course. See "uses verified enrollment when ancestor has verified mode"
+  // in ProgramAsCourseCard.test.tsx.
+  const programChain = [
+    {
+      readableId: courseProgram.readable_id,
+      enrollmentMode: courseProgramEnrollment?.enrollment_mode,
+    },
     ...(ancestorProgramEnrollment
-      ? [ancestorProgramEnrollment.readable_id]
+      ? [
+          {
+            readableId: ancestorProgramEnrollment.readable_id,
+            enrollmentMode: ancestorProgramEnrollment.enrollment_mode,
+          },
+        ]
       : []),
   ]
+  // Trim an unverified ancestor off the end; never trim the front.
+  const trimmedProgramChain = [...programChain]
+  while (
+    trimmedProgramChain.length > 0 &&
+    !isVerifiedEnrollmentMode(trimmedProgramChain.at(-1)?.enrollmentMode)
+  ) {
+    trimmedProgramChain.pop()
+  }
+  const parentProgramIds = trimmedProgramChain.map((p) => p.readableId)
   const useVerifiedEnrollment = [
     courseProgramEnrollment?.enrollment_mode,
     ancestorProgramEnrollment?.enrollment_mode,
