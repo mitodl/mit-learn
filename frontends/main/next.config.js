@@ -56,6 +56,15 @@ const nextConfig = {
         destination: "/enrollmentcode/:code",
         permanent: true,
       },
+      {
+        /* Department 21M was renamed "Music and Theater Arts" -> "Music", which
+         * changed its channel slug. Without this, existing links
+         * hit notFound().
+         */
+        source: "/c/department/music-and-theater-arts",
+        destination: "/c/department/music",
+        permanent: true,
+      },
     ]
   },
 
