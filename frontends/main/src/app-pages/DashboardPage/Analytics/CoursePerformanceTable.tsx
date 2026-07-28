@@ -20,6 +20,7 @@ import {
   SUPPRESSED_EXPLANATION,
   SuppressibleValue,
 } from "./format"
+import SectionError from "./SectionError"
 
 /**
  * Per-course-run performance from `mv_b2b_enrollment_completion_funnel`.
@@ -59,7 +60,16 @@ const COLUMN_FLEX = {
 const CoursePerformanceTable: React.FC<{
   rows: EnrollmentCompletionFunnel[] | undefined
   isLoading: boolean
-}> = ({ rows, isLoading }) => {
+  isError?: boolean
+}> = ({ rows, isLoading, isError }) => {
+  if (isError) {
+    return (
+      <TableCard>
+        <SectionError />
+      </TableCard>
+    )
+  }
+
   if (isLoading) {
     return (
       <TableCard>

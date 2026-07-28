@@ -1,5 +1,5 @@
 import React from "react"
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import { ThemeProvider } from "ol-components"
 import { factories } from "api/analytics-test-utils"
 import EngagementTrendChart from "./EngagementTrendChart"
@@ -37,12 +37,22 @@ describe("EngagementTrendChart", () => {
     expect(strokes).toEqual([...CATEGORICAL])
   })
 
+  // Scoped to the legend: the paired table repeats every series name as a
+  // column header, which is the point of it, so an unscoped query matches twice.
   test("labels every series so identity is never carried by color alone", () => {
     renderWithTheme(<EngagementTrendChart rows={months} isLoading={false} />)
 
-    expect(screen.getByText("Active learners")).toBeInTheDocument()
-    expect(screen.getByText("New enrollments")).toBeInTheDocument()
-    expect(screen.getByText("Certificates earned")).toBeInTheDocument()
+    expect(
+      screen.getByText("Active learners", { selector: ".MuiChartsLabel-root" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("New enrollments", { selector: ".MuiChartsLabel-root" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("Certificates earned", {
+        selector: ".MuiChartsLabel-root",
+      }),
+    ).toBeInTheDocument()
   })
 
   test("shows an empty state rather than an empty chart", () => {
@@ -69,6 +79,70 @@ describe("EngagementTrendChart", () => {
     expect(() =>
       renderWithTheme(<EngagementTrendChart rows={rows} isLoading={false} />),
     ).not.toThrow()
+  })
+
+  /**
+   * The SVG is unreadable to a screen reader, so the monthly numbers have to
+   * exist as text too — the same pairing `ProgramFunnelChart` uses.
+   */
+  test("pairs the chart with a table of the same numbers", () => {
+    renderWithTheme(
+      <EngagementTrendChart
+        rows={[
+          factories.monthlyEngagementTrend({
+            activity_year_and_month: "2026-01",
+            monthly_active_learners: 84,
+            new_enrollments: 21,
+            certificates_earned: 7,
+          }),
+        ]}
+        isLoading={false}
+      />,
+    )
+
+    const table = screen.getByRole("table", { name: "Monthly engagement" })
+    expect(within(table).getByText("Jan 2026")).toBeInTheDocument()
+    expect(within(table).getByText("84")).toBeInTheDocument()
+    expect(within(table).getByText("21")).toBeInTheDocument()
+    expect(within(table).getByText("7")).toBeInTheDocument()
+  })
+
+  /**
+   * A gap in a line reads as "no data" — only the table can say a month was
+   * withheld and why.
+   */
+  test("explains suppressed months in the table instead of leaving a bare gap", () => {
+    renderWithTheme(
+      <EngagementTrendChart
+        rows={[
+          factories.monthlyEngagementTrend({
+            activity_year_and_month: "2026-01",
+            certificates_earned: null,
+          }),
+        ]}
+        isLoading={false}
+      />,
+    )
+
+    expect(
+      screen.getAllByLabelText(/Withheld: too few learners/).length,
+    ).toBeGreaterThan(0)
+    expect(screen.getByText(/Withheld: too few learners/)).toBeInTheDocument()
+  })
+
+  test("says the data could not be loaded rather than showing an empty state", () => {
+    renderWithTheme(
+      <EngagementTrendChart rows={undefined} isLoading={false} isError />,
+    )
+
+    expect(
+      screen.getByText(
+        "This data could not be loaded. Please try again later.",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("No monthly activity recorded yet."),
+    ).not.toBeInTheDocument()
   })
 })
 

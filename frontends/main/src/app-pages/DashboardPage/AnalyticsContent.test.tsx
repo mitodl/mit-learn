@@ -6,7 +6,7 @@ import {
   factories as analyticsFactories,
   urls as analyticsUrls,
 } from "api/analytics-test-utils"
-import { waitFor } from "@testing-library/react"
+import { waitFor, within } from "@testing-library/react"
 import type { AxiosError } from "axios"
 import type { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -330,12 +330,12 @@ describe("AnalyticsContent", () => {
       )
 
       await screen.findByText("Widget Engineering")
-      expect(
-        screen.getByRole("table", { name: "Program funnel" }),
-      ).toBeInTheDocument()
-      expect(screen.getByText("50")).toBeInTheDocument()
-      expect(screen.getByText("30")).toBeInTheDocument()
-      expect(screen.getByText("12")).toBeInTheDocument()
+      // Scoped to this table: the monthly engagement section renders its own
+      // table of counts, which can legitimately carry the same numbers.
+      const table = screen.getByRole("table", { name: "Program funnel" })
+      expect(within(table).getByText("50")).toBeInTheDocument()
+      expect(within(table).getByText("30")).toBeInTheDocument()
+      expect(within(table).getByText("12")).toBeInTheDocument()
     })
 
     test("says so when a view has never refreshed rather than implying freshness", async () => {
@@ -386,6 +386,45 @@ describe("AnalyticsContent", () => {
       await screen.findByText("No course enrollments recorded yet.")
       expect(
         screen.getByText("No program enrollments recorded yet."),
+      ).toBeInTheDocument()
+    })
+
+    /**
+     * A section whose query failed has no rows and no `as_of`, which is exactly
+     * what a successful-but-empty section looks like. It must not borrow that
+     * section's copy: "No course enrollments recorded yet" is a claim about the
+     * org, and "Data not yet refreshed" is a claim about the view, and neither
+     * is known to be true when the request never came back.
+     */
+    test("distinguishes a failed section from an empty one", async () => {
+      const org = orgWithUuid()
+      setManagerOrgs([org])
+      allowConsoleErrors()
+      setAnalyticsResponses()
+      // Overrides the successful response registered just above.
+      setMockResponse.get(
+        analyticsUrls.organizations.enrollmentFunnel(ORG_UUID, { limit: 200 }),
+        "Internal Server Error",
+        { code: 500 },
+      )
+
+      renderWithProviders(
+        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} />,
+      )
+
+      await screen.findByText(
+        "This data could not be loaded. Please try again later.",
+      )
+      expect(
+        screen.queryByText("No course enrollments recorded yet."),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText("Data not yet refreshed"),
+      ).not.toBeInTheDocument()
+      // The three sections that did load keep their own freshness stamp.
+      expect(screen.getAllByText(/Data as of/)).toHaveLength(3)
+      expect(
+        screen.getByText(/Some analytics could not be loaded/),
       ).toBeInTheDocument()
     })
   })

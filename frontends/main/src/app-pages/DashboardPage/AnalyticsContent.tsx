@@ -251,10 +251,12 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           description="Seats consumed and learner outcomes for each contract."
           asOf={utilization.data?.as_of}
           isLoading={utilization.isPending}
+          isError={utilization.isError}
         />
         <ContractKpiCards
           rows={utilization.data?.data}
           isLoading={utilization.isPending}
+          isError={utilization.isError}
         />
       </Section>
 
@@ -264,10 +266,12 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           description="Distinct learners active, newly enrolled, and certified each month."
           asOf={trend.data?.as_of}
           isLoading={trend.isPending}
+          isError={trend.isError}
         />
         <EngagementTrendChart
           rows={trend.data?.data}
           isLoading={trend.isPending}
+          isError={trend.isError}
         />
       </Section>
 
@@ -277,10 +281,12 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           description="Enrollment, activity and completion for each course run."
           asOf={courses.data?.as_of}
           isLoading={courses.isPending}
+          isError={courses.isError}
         />
         <CoursePerformanceTable
           rows={courses.data?.data}
           isLoading={courses.isPending}
+          isError={courses.isError}
         />
       </Section>
 
@@ -290,10 +296,12 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           description="How far learners progress through each program."
           asOf={programs.data?.as_of}
           isLoading={programs.isPending}
+          isError={programs.isError}
         />
         <ProgramFunnelChart
           rows={programs.data?.data}
           isLoading={programs.isPending}
+          isError={programs.isError}
         />
       </Section>
     </Stack>

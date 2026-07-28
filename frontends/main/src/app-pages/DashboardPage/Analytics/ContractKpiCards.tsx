@@ -9,6 +9,7 @@ import {
   formatPercent,
   SuppressibleValue,
 } from "./format"
+import SectionError from "./SectionError"
 
 /**
  * Headline numbers from `mv_b2b_contract_utilization`.
@@ -112,7 +113,18 @@ const contractDates = (row: ContractUtilization): string | null => {
 const ContractKpiCards: React.FC<{
   rows: ContractUtilization[] | undefined
   isLoading: boolean
-}> = ({ rows, isLoading }) => {
+  isError?: boolean
+}> = ({ rows, isLoading, isError }) => {
+  if (isError) {
+    return (
+      <Root>
+        <ContractCard>
+          <SectionError />
+        </ContractCard>
+      </Root>
+    )
+  }
+
   if (isLoading) {
     return (
       <Root>

@@ -2,10 +2,27 @@
 
 import React from "react"
 import { LineChart } from "@mui/x-charts/LineChart"
-import { Skeleton, styled, Typography } from "ol-components"
+import { Skeleton, styled } from "ol-components"
 import type { MonthlyEngagementTrend } from "api/analytics-hooks/organizations"
+import {
+  EmptyTableMessage,
+  MobileLabel,
+  TableCell,
+  TableFooter,
+  TableFootnote,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableRow,
+} from "@/components/B2BTable/B2BTable"
 import { CATEGORICAL, CHART_INK } from "./chartPalette"
-import { formatCount, formatYearMonth, formatYearMonthShort } from "./format"
+import {
+  formatCount,
+  formatYearMonth,
+  formatYearMonthShort,
+  SUPPRESSED_EXPLANATION,
+  SuppressibleValue,
+} from "./format"
+import SectionError from "./SectionError"
 
 /**
  * Monthly enrollment/engagement trend from `mv_b2b_monthly_engagement_trend`.
@@ -26,45 +43,81 @@ import { formatCount, formatYearMonth, formatYearMonthShort } from "./format"
  * k-anonymity floor. They are passed through to the chart as `null`, which the
  * line series renders as a genuine gap. Coercing them to 0 would draw a dip
  * that did not happen.
+ *
+ * # Why the chart is paired with a table
+ *
+ * The `<LineChart>` is an SVG of plotted geometry: a screen reader gets nothing
+ * readable out of it, and a suppressed month is drawn as a gap that reads
+ * identically to "no data". The table below carries the same monthly numbers as
+ * text, where a suppressed value can say so in words. Same pairing, and same
+ * reasoning, as `ProgramFunnelChart`.
  */
 
 const ChartCard = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   borderRadius: "8px",
-  padding: "24px 24px 8px",
+  padding: "24px",
   [theme.breakpoints.down("md")]: {
-    padding: "16px 8px 8px",
+    padding: "16px",
   },
 }))
 
-const EmptyMessage = styled(Typography)(({ theme }) => ({
-  ...theme.typography.body2,
-  color: theme.custom.colors.silverGrayDark,
-  padding: "32px 0",
-  textAlign: "center",
-})) as typeof Typography
+const TableWrapper = styled.div(({ theme }) => ({
+  paddingTop: "24px",
+  marginTop: "8px",
+  borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
+}))
 
 const CHART_HEIGHT = 320
 
+const COLUMN_FLEX = {
+  month: 1.4,
+  active: 1.4,
+  enrollments: 1.4,
+  certificates: 1.6,
+}
+
+/** Drives both the chart series and the columns of the table beside it. */
 const SERIES = [
   {
     key: "monthly_active_learners",
+    column: "active",
     label: "Active learners",
     color: CATEGORICAL[0],
   },
-  { key: "new_enrollments", label: "New enrollments", color: CATEGORICAL[1] },
+  {
+    key: "new_enrollments",
+    column: "enrollments",
+    label: "New enrollments",
+    color: CATEGORICAL[1],
+  },
   {
     key: "certificates_earned",
+    column: "certificates",
     label: "Certificates earned",
     color: CATEGORICAL[2],
   },
-] as const
+] as const satisfies ReadonlyArray<{
+  key: keyof MonthlyEngagementTrend
+  column: keyof typeof COLUMN_FLEX
+  label: string
+  color: string
+}>
 
 const EngagementTrendChart: React.FC<{
   rows: MonthlyEngagementTrend[] | undefined
   isLoading: boolean
-}> = ({ rows, isLoading }) => {
+  isError?: boolean
+}> = ({ rows, isLoading, isError }) => {
+  if (isError) {
+    return (
+      <ChartCard>
+        <SectionError />
+      </ChartCard>
+    )
+  }
+
   if (isLoading) {
     return (
       <ChartCard>
@@ -76,7 +129,7 @@ const EngagementTrendChart: React.FC<{
   if (!rows?.length) {
     return (
       <ChartCard>
-        <EmptyMessage>No monthly activity recorded yet.</EmptyMessage>
+        <EmptyTableMessage>No monthly activity recorded yet.</EmptyTableMessage>
       </ChartCard>
     )
   }
@@ -87,6 +140,9 @@ const EngagementTrendChart: React.FC<{
     a.activity_year_and_month.localeCompare(b.activity_year_and_month),
   )
   const labels = months.map((row) => row.activity_year_and_month)
+  const hasSuppressed = months.some(
+    (row) => row.new_enrollments === null || row.certificates_earned === null,
+  )
 
   return (
     <ChartCard>
@@ -137,6 +193,52 @@ const EngagementTrendChart: React.FC<{
           "& .MuiLineElement-root": { strokeWidth: 2 },
         }}
       />
+      <TableWrapper>
+        <div role="table" aria-label="Monthly engagement">
+          <div role="rowgroup">
+            <TableHeaderRow role="row">
+              <TableHeaderCell role="columnheader" $flex={COLUMN_FLEX.month}>
+                Month
+              </TableHeaderCell>
+              {SERIES.map((series) => (
+                <TableHeaderCell
+                  key={series.key}
+                  role="columnheader"
+                  $flex={COLUMN_FLEX[series.column]}
+                  $numeric
+                >
+                  {series.label}
+                </TableHeaderCell>
+              ))}
+            </TableHeaderRow>
+          </div>
+          <div role="rowgroup">
+            {months.map((row) => (
+              <TableRow role="row" key={row.activity_year_and_month}>
+                <TableCell role="cell" $flex={COLUMN_FLEX.month} $primary>
+                  {formatYearMonth(row.activity_year_and_month)}
+                </TableCell>
+                {SERIES.map((series) => (
+                  <TableCell
+                    key={series.key}
+                    role="cell"
+                    $flex={COLUMN_FLEX[series.column]}
+                    $numeric
+                  >
+                    <MobileLabel>{series.label}</MobileLabel>
+                    <SuppressibleValue value={row[series.key]} />
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </div>
+        </div>
+        {hasSuppressed ? (
+          <TableFooter>
+            <TableFootnote>{SUPPRESSED_EXPLANATION}</TableFootnote>
+          </TableFooter>
+        ) : null}
+      </TableWrapper>
     </ChartCard>
   )
 }

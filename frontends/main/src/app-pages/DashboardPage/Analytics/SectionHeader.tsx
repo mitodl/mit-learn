@@ -62,6 +62,8 @@ type SectionHeaderProps = {
   /** ISO timestamp of the backing view's last refresh; `null` before its first. */
   asOf?: string | null
   isLoading?: boolean
+  /** The section's query failed, so nothing is known about its freshness. */
+  isError?: boolean
   /** Heading level, so section headings nest correctly under the page `h1`. */
   component?: React.ElementType
 }
@@ -71,26 +73,36 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
   description,
   asOf,
   isLoading,
+  isError,
   component = "h2",
 }) => {
   const formatted = asOf ? formatAsOf(asOf) : null
+
+  /**
+   * A failed request tells us nothing about when the view last refreshed, so
+   * this slot claims nothing at all — "Data not yet refreshed" would be a
+   * statement about the view that we are in no position to make. The section
+   * body says it could not load.
+   */
+  const freshness = isError ? null : isLoading ? (
+    <Skeleton width="180px" height="18px" />
+  ) : formatted && asOf ? (
+    <AsOf>
+      Data as of <time dateTime={asOf}>{formatted}</time>
+    </AsOf>
+  ) : (
+    // Distinguish "the view has never refreshed" from "we are still
+    // loading" — a manager reading a zero needs to know which.
+    <AsOf>Data not yet refreshed</AsOf>
+  )
+
   return (
     <Root>
       <TitleGroup>
         <Title component={component}>{title}</Title>
         {description ? <Description>{description}</Description> : null}
       </TitleGroup>
-      {isLoading ? (
-        <Skeleton width="180px" height="18px" />
-      ) : formatted && asOf ? (
-        <AsOf>
-          Data as of <time dateTime={asOf}>{formatted}</time>
-        </AsOf>
-      ) : (
-        // Distinguish "the view has never refreshed" from "we are still
-        // loading" — a manager reading a zero needs to know which.
-        <AsOf>Data not yet refreshed</AsOf>
-      )}
+      {freshness}
     </Root>
   )
 }

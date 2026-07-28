@@ -20,6 +20,7 @@ import {
   SUPPRESSED_EXPLANATION,
   SuppressibleValue,
 } from "./format"
+import SectionError from "./SectionError"
 
 /**
  * Program funnel from `mv_b2b_program_funnel`.
@@ -98,7 +99,16 @@ const rowHeight = (programCount: number) =>
 const ProgramFunnelChart: React.FC<{
   rows: ProgramFunnel[] | undefined
   isLoading: boolean
-}> = ({ rows, isLoading }) => {
+  isError?: boolean
+}> = ({ rows, isLoading, isError }) => {
+  if (isError) {
+    return (
+      <Card>
+        <SectionError />
+      </Card>
+    )
+  }
+
   if (isLoading) {
     return (
       <Card>
