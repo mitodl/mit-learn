@@ -1235,3 +1235,24 @@ def test_vector_search_count_is_exact(client, mock_qdrant):
 
     mock_qdrant.count.assert_awaited()
     assert mock_qdrant.count.await_args.kwargs["exact"] is True
+
+
+@pytest.mark.django_db(transaction=True)
+def test_content_file_vector_search_count_is_approximate(
+    client, mock_qdrant, content_file_viewer
+):
+    """Content-file totals must stay approximate.
+
+    Exact counting scales with matched points, and this collection holds
+    millions of chunks, so an exact count here would cost most of a second.
+    Nothing paginates content files, so the imprecision is invisible.
+    """
+    response = client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={"q": "test"},
+    )
+
+    assert response.status_code == 200
+
+    mock_qdrant.count.assert_awaited()
+    assert mock_qdrant.count.await_args.kwargs["exact"] is False
