@@ -485,12 +485,12 @@ class QdrantView(APIView):
         aggregation_keys = params.get("aggregations") or []
 
         count_result, aggregations = await asyncio.gather(
-            # exact=True: this count drives the paginated result total, so an
-            # approximate value would advertise pages that return no results.
+            # we do not set exact=True for the contentfiles collection
+            # due to the number (millions) of points
             client.count(
                 collection_name=search_collection,
                 count_filter=search_filter,
-                exact=True,
+                exact=search_collection == RESOURCES_COLLECTION_NAME,
             ),
             async_qdrant_aggregations(
                 aggregation_keys,
