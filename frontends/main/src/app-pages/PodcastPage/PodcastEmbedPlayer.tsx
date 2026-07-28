@@ -7,6 +7,7 @@ import {
   RiPauseCircleLine,
   RiReplay10Line,
   RiForward30Line,
+  RiErrorWarningLine,
 } from "@remixicon/react"
 import type { LearningResource } from "api/v1"
 import { getEpisodeAudioUrl } from "./PodcastsListingPage/helpers"
@@ -23,6 +24,9 @@ import {
   ProgressRange,
   TimeLabel,
   SpeedButton as SpeedButtonBase,
+  PlaybackError,
+  PlaybackErrorText,
+  RetryButton,
 } from "./AudioPlayer.styled"
 
 // ─── Styled components (card layout) ────────────────────────────────────────────
@@ -129,10 +133,12 @@ const PodcastEmbedPlayer: React.FC<PodcastEmbedPlayerProps> = ({
     duration,
     percent,
     speed,
+    error,
     togglePlay,
     skip,
     cycleSpeed,
     seek,
+    retry,
   } = useAudioPlayer(audioUrl)
 
   const Wrapper = inline ? InlineWrapper : Shell
@@ -201,23 +207,35 @@ const PodcastEmbedPlayer: React.FC<PodcastEmbedPlayerProps> = ({
           </SpeedButton>
         </Controls>
 
-        <ProgressWrapper>
-          <TimeLabel variant="body3">{formatClockTime(currentTime)}</TimeLabel>
-          <ProgressRange
-            type="range"
-            min={0}
-            max={duration || 1}
-            value={currentTime}
-            step={1}
-            percent={percent}
-            trackHeight={8}
-            thumbSize={12}
-            aria-valuetext={formatClockTime(currentTime)}
-            aria-label="Seek"
-            onChange={(e) => seek(Number(e.target.value))}
-          />
-          <TimeLabel variant="body3">{formatClockTime(duration)}</TimeLabel>
-        </ProgressWrapper>
+        {error ? (
+          <PlaybackError role="alert">
+            <RiErrorWarningLine aria-hidden />
+            <PlaybackErrorText variant="body3">{error}</PlaybackErrorText>
+            {hasAudioSource ? (
+              <RetryButton onClick={retry}>Try again</RetryButton>
+            ) : null}
+          </PlaybackError>
+        ) : (
+          <ProgressWrapper>
+            <TimeLabel variant="body3">
+              {formatClockTime(currentTime)}
+            </TimeLabel>
+            <ProgressRange
+              type="range"
+              min={0}
+              max={duration || 1}
+              value={currentTime}
+              step={1}
+              percent={percent}
+              trackHeight={8}
+              thumbSize={12}
+              aria-valuetext={formatClockTime(currentTime)}
+              aria-label="Seek"
+              onChange={(e) => seek(Number(e.target.value))}
+            />
+            <TimeLabel variant="body3">{formatClockTime(duration)}</TimeLabel>
+          </ProgressWrapper>
+        )}
       </PlayerCard>
     </Wrapper>
   )

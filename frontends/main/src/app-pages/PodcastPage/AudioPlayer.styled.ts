@@ -159,3 +159,37 @@ export const SpeedButton = styled.button(({ theme }) => ({
     color: theme.custom.colors.red,
   },
 }))
+
+/**
+ * Playback-failure message. Takes the progress row's grid area, replacing the
+ * seek slider — which has nothing to scrub — so the players report the failure
+ * without growing taller and pushing the fixed bar over the page content.
+ */
+export const PlaybackError = styled.div(({ theme }) => ({
+  gridArea: "progress",
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+  minWidth: 0,
+  color: theme.custom.colors.red,
+  "& > svg": {
+    flexShrink: 0,
+    width: "20px",
+    height: "20px",
+  },
+}))
+
+export const PlaybackErrorText = styled(Typography)({
+  minWidth: 0,
+  // Bound the message at two lines: one fits the desktop bar, two fit the
+  // taller mobile layout, and neither can push the transport controls around.
+  display: "-webkit-box",
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: "vertical",
+  overflow: "hidden",
+})
+
+export const RetryButton = styled(SpeedButton)(({ theme }) => ({
+  borderColor: theme.custom.colors.red,
+  color: theme.custom.colors.red,
+}))

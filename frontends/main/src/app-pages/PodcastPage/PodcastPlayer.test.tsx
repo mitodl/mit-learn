@@ -303,6 +303,183 @@ describe("PodcastPlayer", () => {
     ).toBeDisabled()
   })
 
+  describe("playback errors", () => {
+    /**
+     * Fire an `error` event carrying a specific MediaError code, the way a
+     * browser does when the fetch or the decode fails.
+     */
+    const simulateMediaError = (audio: HTMLAudioElement, code: number) => {
+      Object.defineProperty(audio, "error", {
+        value: { code },
+        configurable: true,
+      })
+      fireEvent.error(audio)
+    }
+
+    /** Override `navigator.onLine`, which jsdom reports as `true` by default. */
+    const setOnLine = (value: boolean) => {
+      Object.defineProperty(window.navigator, "onLine", {
+        value,
+        configurable: true,
+      })
+    }
+
+    afterEach(() => setOnLine(true))
+
+    test("blames the connection, not the provider, when the device is offline", async () => {
+      const { audio } = await renderPlayer()
+      setOnLine(false)
+      // An offline request never reaches the network, so the browser reports
+      // the same code a geo-block does.
+      simulateMediaError(audio, 4) // MEDIA_ERR_SRC_NOT_SUPPORTED
+
+      const alert = await screen.findByRole("alert")
+      expect(alert).toHaveTextContent(/you appear to be offline/i)
+      expect(alert).not.toHaveTextContent(/region/i)
+    })
+
+    test("reports offline when play() rejects with no connection", async () => {
+      ;(window.HTMLMediaElement.prototype.play as jest.Mock).mockRejectedValue(
+        Object.assign(new Error("nope"), { name: "NotSupportedError" }),
+      )
+      setOnLine(false)
+
+      await renderPlayer()
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        /you appear to be offline/i,
+      )
+      ;(window.HTMLMediaElement.prototype.play as jest.Mock).mockResolvedValue(
+        undefined,
+      )
+    })
+
+    test("shows a region-restriction message when the source is rejected (e.g. HTTP 451)", async () => {
+      const { audio } = await renderPlayer()
+      simulateMediaError(audio, 4) // MEDIA_ERR_SRC_NOT_SUPPORTED
+
+      const alert = await screen.findByRole("alert")
+      expect(alert).toHaveTextContent(/can't be played/i)
+      expect(alert).toHaveTextContent(/unavailable in your region/i)
+    })
+
+    test("shows a connection message on a network failure", async () => {
+      const { audio } = await renderPlayer()
+      simulateMediaError(audio, 2) // MEDIA_ERR_NETWORK
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        /couldn't load this episode/i,
+      )
+    })
+
+    test("shows a damaged-file message when the audio cannot be decoded", async () => {
+      const { audio } = await renderPlayer()
+      simulateMediaError(audio, 3) // MEDIA_ERR_DECODE
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(/damaged/i)
+    })
+
+    test("ignores aborted loads, which are just track changes", async () => {
+      const { audio } = await renderPlayer()
+      simulateMediaError(audio, 1) // MEDIA_ERR_ABORTED
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    })
+
+    test("replaces the seek slider with the message", async () => {
+      const { audio } = await renderPlayer()
+      expect(screen.getByRole("slider", { name: /seek/i })).toBeInTheDocument()
+
+      simulateMediaError(audio, 4)
+
+      await screen.findByRole("alert")
+      expect(
+        screen.queryByRole("slider", { name: /seek/i }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("reports missing audio without waiting for a failed load", async () => {
+      await renderPlayer(
+        makeTrack({ audioUrl: "" }),
+        {},
+        { waitForAutoPlay: false },
+      )
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /audio isn't available for this episode/i,
+      )
+      // Nothing to re-fetch, so no retry is offered.
+      expect(
+        screen.queryByRole("button", { name: /try again/i }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("Try again reloads the source and plays", async () => {
+      const { audio } = await renderPlayer()
+      simulateMediaError(audio, 2)
+      await screen.findByRole("alert")
+
+      jest.clearAllMocks()
+      fireEvent.click(screen.getByRole("button", { name: /try again/i }))
+
+      expect(window.HTMLMediaElement.prototype.load).toHaveBeenCalled()
+      await waitFor(() =>
+        expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalled(),
+      )
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    })
+
+    test("clears the message when the track changes", async () => {
+      const { audio, rerender } = await renderPlayer()
+      simulateMediaError(audio, 4)
+      await screen.findByRole("alert")
+
+      rerender(
+        <ThemeProvider>
+          <PodcastPlayer
+            track={makeTrack({ audioUrl: "https://example.com/ep2.mp3" })}
+            onClose={jest.fn()}
+          />
+        </ThemeProvider>,
+      )
+
+      await waitFor(() =>
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
+      )
+    })
+
+    test("stays silent when autoplay is blocked by browser policy", async () => {
+      ;(window.HTMLMediaElement.prototype.play as jest.Mock).mockRejectedValue(
+        Object.assign(new Error("blocked"), { name: "NotAllowedError" }),
+      )
+
+      await renderPlayer()
+
+      await waitFor(() =>
+        expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalled(),
+      )
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      ;(window.HTMLMediaElement.prototype.play as jest.Mock).mockResolvedValue(
+        undefined,
+      )
+    })
+
+    test("reports a generic failure when play() rejects for another reason", async () => {
+      ;(window.HTMLMediaElement.prototype.play as jest.Mock).mockRejectedValue(
+        Object.assign(new Error("nope"), { name: "NotSupportedError" }),
+      )
+
+      await renderPlayer()
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        /something went wrong playing this episode/i,
+      )
+      ;(window.HTMLMediaElement.prototype.play as jest.Mock).mockResolvedValue(
+        undefined,
+      )
+    })
+  })
+
   test("prevents duplicate play calls during rapid clicks while play is pending", async () => {
     const { simulateCanPlay } = await renderPlayer()
     await simulateCanPlay()
