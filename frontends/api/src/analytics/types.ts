@@ -23,10 +23,16 @@
  * endpoint, so it is per-section rather than per-page: one lagging view cannot
  * make another section look fresher than it is. It is `null` until that view
  * has refreshed for the first time.
+ *
+ * `total_count` is how many rows the org has in that view across every page,
+ * already net of the anonymity floor. `data.length` alone cannot distinguish a
+ * complete result from one truncated at the page cap, so this is what lets the
+ * dashboard admit to showing a subset instead of quietly dropping the rest.
  */
 export type OrgAnalyticsResponse<RowT> = {
   organization_id: string
   as_of: string | null
+  total_count: number
   data: RowT[]
 }
 

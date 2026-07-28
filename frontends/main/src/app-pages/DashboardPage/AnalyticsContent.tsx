@@ -2,7 +2,7 @@
 
 import React from "react"
 import Image from "next/image"
-import { useQueries, useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { Skeleton, Stack, styled, Typography } from "ol-components"
@@ -22,6 +22,7 @@ import CoursePerformanceTable from "./Analytics/CoursePerformanceTable"
 import EngagementTrendChart from "./Analytics/EngagementTrendChart"
 import ProgramFunnelChart from "./Analytics/ProgramFunnelChart"
 import SectionHeader from "./Analytics/SectionHeader"
+import SectionTruncation from "./Analytics/SectionTruncation"
 import { getOrgUuid } from "./Analytics/orgUuid"
 
 /**
@@ -107,9 +108,22 @@ const Notice = styled(Typography)(({ theme }) => ({
 /**
  * These views are small per org (contracts, programs, a couple of years of
  * months), but the API caps every list endpoint, so ask for a page big enough
- * that no org is silently truncated at the default.
+ * that no org is truncated at the default.
+ *
+ * "Big enough" is not "always enough", though, which is why every section
+ * compares what it rendered against the envelope's `total_count` and says so
+ * when it is showing a subset — see `SectionTruncation`.
  */
 const PAGE_SIZE = 200
+
+/**
+ * The analytics API's own `max_page_size`; it answers 422 above this. Caps what
+ * "Show all" is allowed to ask for, so the button never issues a request the
+ * API will reject.
+ */
+const MAX_PAGE_SIZE = 1000
+
+type SectionKey = "utilization" | "trend" | "courses" | "programs"
 
 /**
  * Note there is no 401/403 branch for the analytics queries themselves. The
@@ -143,34 +157,83 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   const orgUuid = getOrgUuid(org)
   const analyticsAvailable = isAnalyticsConfigured() && !!orgUuid
 
+  // Per-section page size. Raised only by that section's "Show all", so
+  // expanding a truncated course table never refetches the other three.
+  const [limits, setLimits] = React.useState<Record<SectionKey, number>>({
+    utilization: PAGE_SIZE,
+    trend: PAGE_SIZE,
+    courses: PAGE_SIZE,
+    programs: PAGE_SIZE,
+  })
+
   // One query per endpoint, each backed by its own materialized view with its
   // own refresh time, so sections load and report freshness independently.
   // Spelled out as a literal tuple rather than built with `.map` so useQueries
   // keeps each entry's own result type instead of widening them to `unknown`.
-  const page = { limit: PAGE_SIZE }
+  //
+  // `keepPreviousData` matters on the "Show all" path: the limit is part of the
+  // query key, so without it the section a manager just asked to expand would
+  // blank back to its skeleton before returning with more rows.
   const [utilization, trend, courses, programs] = useQueries({
     queries: [
       {
-        ...analyticsOrganizationQueries.contractUtilization(
-          orgUuid ?? "",
-          page,
-        ),
+        ...analyticsOrganizationQueries.contractUtilization(orgUuid ?? "", {
+          limit: limits.utilization,
+        }),
         enabled: analyticsAvailable,
+        placeholderData: keepPreviousData,
       },
       {
-        ...analyticsOrganizationQueries.engagementTrend(orgUuid ?? "", page),
+        ...analyticsOrganizationQueries.engagementTrend(orgUuid ?? "", {
+          limit: limits.trend,
+        }),
         enabled: analyticsAvailable,
+        placeholderData: keepPreviousData,
       },
       {
-        ...analyticsOrganizationQueries.enrollmentFunnel(orgUuid ?? "", page),
+        ...analyticsOrganizationQueries.enrollmentFunnel(orgUuid ?? "", {
+          limit: limits.courses,
+        }),
         enabled: analyticsAvailable,
+        placeholderData: keepPreviousData,
       },
       {
-        ...analyticsOrganizationQueries.programFunnel(orgUuid ?? "", page),
+        ...analyticsOrganizationQueries.programFunnel(orgUuid ?? "", {
+          limit: limits.programs,
+        }),
         enabled: analyticsAvailable,
+        placeholderData: keepPreviousData,
       },
     ],
   })
+
+  /**
+   * The truncation footer for one section, or null when it is showing
+   * everything. "Show all" asks for the whole result set in a single page,
+   * bounded by what the API will serve — beyond that the message stands alone,
+   * since a button that cannot deliver the rest would be worse than none.
+   */
+  const truncation = (
+    query: { data?: { total_count: number; data: unknown[] } },
+    key: SectionKey,
+  ) => {
+    if (!query.data) return null
+    const { total_count: total } = query.data
+    const shown = query.data.data.length
+    return (
+      <SectionTruncation
+        shown={shown}
+        total={total}
+        canShowAll={limits[key] < MAX_PAGE_SIZE}
+        onShowAll={() =>
+          setLimits((current) => ({
+            ...current,
+            [key]: Math.min(total, MAX_PAGE_SIZE),
+          }))
+        }
+      />
+    )
+  }
 
   if (isLoadingOrgs) {
     return <Skeleton width="100%" height="128px" />
@@ -258,6 +321,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           isLoading={utilization.isPending}
           isError={utilization.isError}
         />
+        {truncation(utilization, "utilization")}
       </Section>
 
       <Section>
@@ -273,6 +337,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           isLoading={trend.isPending}
           isError={trend.isError}
         />
+        {truncation(trend, "trend")}
       </Section>
 
       <Section>
@@ -288,6 +353,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           isLoading={courses.isPending}
           isError={courses.isError}
         />
+        {truncation(courses, "courses")}
       </Section>
 
       <Section>
@@ -303,6 +369,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           isLoading={programs.isPending}
           isError={programs.isError}
         />
+        {truncation(programs, "programs")}
       </Section>
     </Stack>
   )

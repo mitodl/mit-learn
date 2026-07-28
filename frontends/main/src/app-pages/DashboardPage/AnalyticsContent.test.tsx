@@ -7,6 +7,7 @@ import {
   urls as analyticsUrls,
 } from "api/analytics-test-utils"
 import { waitFor, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import type { AxiosError } from "axios"
 import type { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -426,6 +427,109 @@ describe("AnalyticsContent", () => {
       expect(
         screen.getByText(/Some analytics could not be loaded/),
       ).toBeInTheDocument()
+    })
+  })
+
+  /**
+   * Every endpoint is paged, and a truncated page is invisible in the rows: 2
+   * of 340 looks exactly like 2 of 2. The envelope's `total_count` is the only
+   * thing that distinguishes them.
+   */
+  describe("truncation", () => {
+    const courseRows = (count: number) =>
+      Array.from({ length: count }, (_, index) =>
+        analyticsFactories.enrollmentCompletionFunnel({
+          courserun_pk: index + 1,
+          courserun_title: `Course ${index + 1}`,
+        }),
+      )
+
+    test("says nothing when a section holds every row", async () => {
+      const org = orgWithUuid()
+      setManagerOrgs([org])
+      setAnalyticsResponses()
+
+      renderWithProviders(
+        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} />,
+      )
+
+      await screen.findByRole("heading", { name: "Course performance" })
+      expect(screen.queryByText(/Showing \d+ of/)).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", { name: /Show all/ }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("admits to showing a subset, and loads the rest on request", async () => {
+      const org = orgWithUuid()
+      setManagerOrgs([org])
+      setAnalyticsResponses()
+      setMockResponse.get(
+        analyticsUrls.organizations.enrollmentFunnel(ORG_UUID, { limit: 200 }),
+        analyticsFactories.envelope(courseRows(2), {
+          as_of: AS_OF,
+          total_count: 340,
+        }),
+      )
+      // "Show all" asks for the whole result set in one page.
+      setMockResponse.get(
+        analyticsUrls.organizations.enrollmentFunnel(ORG_UUID, { limit: 340 }),
+        analyticsFactories.envelope(courseRows(3), {
+          as_of: AS_OF,
+          total_count: 340,
+        }),
+      )
+
+      const user = userEvent.setup()
+      renderWithProviders(
+        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} />,
+      )
+
+      await screen.findByText("Showing 2 of 340.")
+      await user.click(screen.getByRole("button", { name: "Show all 340" }))
+
+      await screen.findByText("Course 3")
+      // Still short of the total, so the count updates rather than disappearing.
+      expect(screen.getByText("Showing 3 of 340.")).toBeInTheDocument()
+    })
+
+    /**
+     * The API answers 422 above its max_page_size, so past that point there is
+     * no request left to make — the message has to stand on its own rather than
+     * offering a button that cannot deliver.
+     */
+    test("drops the button once a section is already at the API's page cap", async () => {
+      const org = orgWithUuid()
+      setManagerOrgs([org])
+      setAnalyticsResponses()
+      setMockResponse.get(
+        analyticsUrls.organizations.enrollmentFunnel(ORG_UUID, { limit: 200 }),
+        analyticsFactories.envelope(courseRows(2), {
+          as_of: AS_OF,
+          total_count: 5000,
+        }),
+      )
+      setMockResponse.get(
+        analyticsUrls.organizations.enrollmentFunnel(ORG_UUID, { limit: 1000 }),
+        analyticsFactories.envelope(courseRows(4), {
+          as_of: AS_OF,
+          total_count: 5000,
+        }),
+      )
+
+      const user = userEvent.setup()
+      renderWithProviders(
+        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} />,
+      )
+
+      // Capped at max_page_size rather than asking for all 5000.
+      await screen.findByRole("button", { name: "Show all 5,000" })
+      await user.click(screen.getByRole("button", { name: "Show all 5,000" }))
+
+      await screen.findByText("Showing 4 of 5,000.")
+      expect(
+        screen.queryByRole("button", { name: /Show all/ }),
+      ).not.toBeInTheDocument()
     })
   })
 })

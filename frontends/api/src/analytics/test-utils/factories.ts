@@ -24,6 +24,9 @@ const envelope = <RowT>(
 ): OrgAnalyticsResponse<RowT> => ({
   organization_id: organizationId(),
   as_of: "2026-07-01T04:00:00Z",
+  // Defaults to a complete result set; a test exercising truncation passes a
+  // larger total explicitly.
+  total_count: data.length,
   data,
   ...overrides,
 })
