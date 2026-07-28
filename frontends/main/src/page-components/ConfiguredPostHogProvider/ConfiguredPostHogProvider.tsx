@@ -47,8 +47,17 @@ const PosthogIdentifier = () => {
   useEffect(() => {
     if (!user) return
     const anonymous = posthog.get_property("$user_state") === "anonymous"
-    if (user.is_authenticated && user.id) {
-      posthog.identify(String(user.id))
+    if (user.is_authenticated) {
+      /**
+       * Identify by the Keycloak global id rather than our Django user id.
+       * This posthog project is shared with other MIT applications, and
+       * mitxpro identifies people by its own integer user ids, so integer ids
+       * collide across applications. Users with no global id are left
+       * unidentified rather than identified by a colliding id.
+       */
+      if (user.global_id) {
+        posthog.identify(user.global_id)
+      }
     } else if (!anonymous) {
       posthog.reset()
     }
