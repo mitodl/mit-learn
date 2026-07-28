@@ -2676,15 +2676,3 @@ def test_batch_retrieve_points_subbatches_at_cap(mocker):
     assert mock_client.return_value.retrieve.call_count == 3
     for call in mock_client.return_value.retrieve.call_args_list:
         assert len(call.kwargs["ids"]) <= QDRANT_RETRIEVE_BATCH_SIZE
-
-
-def test_update_learning_resource_payload_skips_write_when_stored_matches(mocker):
-    """Unchanged resource payload on a sweep → no overwrite_payload write."""
-    doc = {"readable_id": "r1", "title": "t"}
-    stored = mocker.MagicMock()
-    stored.payload = dict(doc)
-    mock_client = mocker.patch("vector_search.utils.qdrant_client")
-
-    update_learning_resource_payload(doc, stored_point=stored)
-
-    mock_client.return_value.overwrite_payload.assert_not_called()

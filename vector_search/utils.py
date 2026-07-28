@@ -545,7 +545,7 @@ def _process_resource_embeddings(serialized_resources):
         point_id = vector_point_id(vector_point_key(doc))
         stored_point = stored_points.get(point_id)
         if not should_generate_resource_embeddings(doc, stored_point=stored_point):
-            update_learning_resource_payload(doc, stored_point=stored_point)
+            update_learning_resource_payload(doc)
             continue
         metadata.append(doc)
         ids.append(point_id)
@@ -562,20 +562,10 @@ def _process_resource_embeddings(serialized_resources):
     return None
 
 
-def update_learning_resource_payload(serialized_document, stored_point=_UNSET):
+def update_learning_resource_payload(serialized_document):
     """
     Refresh a resource's Qdrant payload without re-embedding.
-
-    When the caller supplies the already-retrieved stored point and its payload
-    matches, the write is skipped -- avoids a Qdrant write per resource on every
-    metadata sweep even when nothing changed.
     """
-    if (
-        stored_point is not _UNSET
-        and stored_point is not None
-        and stored_point.payload == serialized_document
-    ):
-        return
     point_id = vector_point_id(vector_point_key(serialized_document))
     qdrant_client().overwrite_payload(
         collection_name=RESOURCES_COLLECTION_NAME,
