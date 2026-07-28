@@ -220,16 +220,20 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     if (!query.data) return null
     const { total_count: total } = query.data
     const shown = query.data.data.length
+    const nextLimit = Math.min(total, MAX_PAGE_SIZE)
     return (
       <SectionTruncation
         shown={shown}
         total={total}
-        canShowAll={limits[key] < MAX_PAGE_SIZE}
+        // Offer the button only when it would actually ask for more than we
+        // already did. Two ways it would not: the section is at the API's cap,
+        // or it already requested `total` rows and got back fewer because the
+        // API applies its LIMIT before the anonymity floor drops sub-floor rows
+        // — so a page of `total` can still come back short, permanently. Either
+        // way the message stands alone rather than offering a no-op click.
+        canShowAll={nextLimit > limits[key]}
         onShowAll={() =>
-          setLimits((current) => ({
-            ...current,
-            [key]: Math.min(total, MAX_PAGE_SIZE),
-          }))
+          setLimits((current) => ({ ...current, [key]: nextLimit }))
         }
       />
     )

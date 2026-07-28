@@ -494,6 +494,48 @@ describe("AnalyticsContent", () => {
     })
 
     /**
+     * The API applies its LIMIT in SQL and drops sub-floor rows afterwards, so
+     * a page of `total_count` rows can still come back short — permanently.
+     * Asking again would resend the same limit and change nothing, so the
+     * button has to go rather than sit there doing nothing.
+     */
+    test("stops offering more once a section has already asked for the total", async () => {
+      const org = orgWithUuid()
+      setManagerOrgs([org])
+      setAnalyticsResponses()
+      setMockResponse.get(
+        analyticsUrls.organizations.enrollmentFunnel(ORG_UUID, { limit: 200 }),
+        analyticsFactories.envelope(courseRows(188), {
+          as_of: AS_OF,
+          total_count: 340,
+        }),
+      )
+      // Asked for 340, got 328: the other 12 were dropped by the floor after
+      // the LIMIT had already been applied.
+      setMockResponse.get(
+        analyticsUrls.organizations.enrollmentFunnel(ORG_UUID, { limit: 340 }),
+        analyticsFactories.envelope(courseRows(328), {
+          as_of: AS_OF,
+          total_count: 340,
+        }),
+      )
+
+      const user = userEvent.setup()
+      renderWithProviders(
+        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} />,
+      )
+
+      await user.click(
+        await screen.findByRole("button", { name: "Show all 340" }),
+      )
+
+      await screen.findByText("Showing 328 of 340.")
+      expect(
+        screen.queryByRole("button", { name: /Show all/ }),
+      ).not.toBeInTheDocument()
+    })
+
+    /**
      * The API answers 422 above its max_page_size, so past that point there is
      * no request left to make — the message has to stand on its own rather than
      * offering a button that cannot deliver.
