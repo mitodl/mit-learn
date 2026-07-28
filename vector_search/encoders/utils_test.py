@@ -34,11 +34,11 @@ def warning_mock(mocker):
 def test_truncate_to_model_limit_truncates_long_text(mocker, warning_mock):
     """Text over the model's max input tokens is cut to that token limit"""
     mocker.patch(
-        "vector_search.encoders.utils.get_model_info",
+        "litellm.get_model_info",
         return_value={"max_input_tokens": 5},
     )
     mocker.patch(
-        "vector_search.encoders.utils.tiktoken.get_encoding",
+        "tiktoken.get_encoding",
         return_value=FakeEncoding(),
     )
 
@@ -55,11 +55,11 @@ def test_truncate_to_model_limit_truncates_long_text(mocker, warning_mock):
 def test_truncate_to_model_limit_leaves_short_text_unchanged(mocker, warning_mock):
     """Text within the model's max input tokens is returned as-is"""
     mocker.patch(
-        "vector_search.encoders.utils.get_model_info",
+        "litellm.get_model_info",
         return_value={"max_input_tokens": 5},
     )
     mocker.patch(
-        "vector_search.encoders.utils.tiktoken.get_encoding",
+        "tiktoken.get_encoding",
         return_value=FakeEncoding(),
     )
 
@@ -78,12 +78,10 @@ def test_truncate_to_model_limit_unknown_model_falls_back_to_chars(
 ):
     """Fall back to the character limit when model info can't be determined"""
     mocker.patch(
-        "vector_search.encoders.utils.get_model_info",
+        "litellm.get_model_info",
         side_effect=ValueError("unknown model"),
     )
-    get_encoding_mock = mocker.patch(
-        "vector_search.encoders.utils.tiktoken.get_encoding"
-    )
+    get_encoding_mock = mocker.patch("tiktoken.get_encoding")
     text = "x" * (DEFAULT_TRUNCATE_CHARS + 100)
 
     result = truncate_to_model_limit(
@@ -102,7 +100,7 @@ def test_truncate_to_model_limit_missing_max_tokens_falls_back_to_chars(
 ):
     """Fall back to the character limit when the model has no max_input_tokens"""
     mocker.patch(
-        "vector_search.encoders.utils.get_model_info",
+        "litellm.get_model_info",
         return_value={},
     )
     text = "x" * (DEFAULT_TRUNCATE_CHARS + 100)
@@ -122,7 +120,7 @@ def test_truncate_to_model_limit_no_token_encoding_falls_back_to_chars(
 ):
     """Fall back to the character limit when no token encoding name is given"""
     mocker.patch(
-        "vector_search.encoders.utils.get_model_info",
+        "litellm.get_model_info",
         return_value={"max_input_tokens": 5},
     )
     text = "x" * (DEFAULT_TRUNCATE_CHARS + 100)
@@ -136,11 +134,11 @@ def test_truncate_to_model_limit_no_token_encoding_falls_back_to_chars(
 def test_truncate_to_model_limit_bad_encoding_falls_back_to_chars(mocker, warning_mock):
     """Fall back to the character limit when the tiktoken encoding fails"""
     mocker.patch(
-        "vector_search.encoders.utils.get_model_info",
+        "litellm.get_model_info",
         return_value={"max_input_tokens": 5},
     )
     mocker.patch(
-        "vector_search.encoders.utils.tiktoken.get_encoding",
+        "tiktoken.get_encoding",
         side_effect=ValueError("bad encoding"),
     )
     text = "x" * (DEFAULT_TRUNCATE_CHARS + 100)
@@ -158,7 +156,7 @@ def test_truncate_to_model_limit_bad_encoding_falls_back_to_chars(mocker, warnin
 def test_truncate_to_model_limit_fallback_warns_once_per_model(mocker, warning_mock):
     """The fallback warning is deduplicated per model/encoding combination"""
     mocker.patch(
-        "vector_search.encoders.utils.get_model_info",
+        "litellm.get_model_info",
         side_effect=ValueError("unknown model"),
     )
 
@@ -183,7 +181,7 @@ def test_truncate_to_model_limit_strict_raises_instead_of_falling_back(
 ):
     """In strict mode any fallback condition raises instead of truncating"""
     mocker.patch(
-        "vector_search.encoders.utils.get_model_info",
+        "litellm.get_model_info",
         **model_info_kwargs,
     )
     # no token_encoding_name, so even a known model can't use token truncation
@@ -195,11 +193,11 @@ def test_truncate_to_model_limit_strict_raises_instead_of_falling_back(
 def test_truncate_to_model_limit_strict_allows_token_truncation(mocker, warning_mock):
     """Strict mode doesn't interfere when token-based truncation works"""
     mocker.patch(
-        "vector_search.encoders.utils.get_model_info",
+        "litellm.get_model_info",
         return_value={"max_input_tokens": 5},
     )
     mocker.patch(
-        "vector_search.encoders.utils.tiktoken.get_encoding",
+        "tiktoken.get_encoding",
         return_value=FakeEncoding(),
     )
 
