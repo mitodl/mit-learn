@@ -14,6 +14,9 @@ open_spectacular_settings = {
         "ContentFeedbackSentimentEnum": (
             "content_feedback.constants.CONTENT_FEEDBACK_SENTIMENT_CHOICES"
         ),
+        "ContentFileContentTypeEnum": (
+            "learning_resources.constants.VALID_COURSE_CONTENT_CHOICES"
+        ),
     },
     "AUTHENTICATION_WHITELIST": [],
     "SCHEMA_PATH_PREFIX": "/api/v[0-9]",
