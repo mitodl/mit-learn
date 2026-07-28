@@ -2,7 +2,7 @@
 
 import React from "react"
 import { BarChart } from "@mui/x-charts/BarChart"
-import { Skeleton, styled, Typography } from "ol-components"
+import { Skeleton, styled, Typography, useTheme } from "ol-components"
 import type { ProgramFunnel } from "api/analytics-hooks/organizations"
 import {
   EmptyTableMessage,
@@ -14,7 +14,7 @@ import {
   TableHeaderRow,
   TableRow,
 } from "@/components/B2BTable/B2BTable"
-import { CHART_INK, FUNNEL_STAGES } from "./chartPalette"
+import { chartInk, FUNNEL_STAGES } from "./chartPalette"
 import {
   formatCount,
   SUPPRESSED_EXPLANATION,
@@ -101,6 +101,9 @@ const ProgramFunnelChart: React.FC<{
   isLoading: boolean
   isError?: boolean
 }> = ({ rows, isLoading, isError }) => {
+  // Above the early returns: hooks cannot be called conditionally.
+  const ink = chartInk(useTheme())
+
   if (isError) {
     return (
       <Card>
@@ -159,7 +162,7 @@ const ProgramFunnelChart: React.FC<{
               scaleType: "band",
               data: labels,
               width: 220,
-              tickLabelStyle: { fill: CHART_INK.label, fontSize: 12 },
+              tickLabelStyle: { fill: ink.label, fontSize: 12 },
               // A gap between category groups keeps adjacent programs from
               // reading as one block of bars.
               categoryGapRatio: 0.4,
@@ -170,7 +173,7 @@ const ProgramFunnelChart: React.FC<{
             {
               min: 0,
               valueFormatter: (value: number) => formatCount(value),
-              tickLabelStyle: { fill: CHART_INK.label, fontSize: 12 },
+              tickLabelStyle: { fill: ink.label, fontSize: 12 },
             },
           ]}
           series={STAGES.map((stage) => ({
@@ -184,9 +187,9 @@ const ProgramFunnelChart: React.FC<{
           }))}
           sx={{
             "& .MuiChartsAxis-line, & .MuiChartsAxis-tick": {
-              stroke: CHART_INK.axis,
+              stroke: ink.axis,
             },
-            "& .MuiChartsGrid-line": { stroke: CHART_INK.grid },
+            "& .MuiChartsGrid-line": { stroke: ink.grid },
           }}
         />
       </ChartWrapper>

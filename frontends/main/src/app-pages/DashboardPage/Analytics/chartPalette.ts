@@ -1,3 +1,5 @@
+import type { Theme } from "ol-components"
+
 /**
  * Chart colors for the B2B analytics dashboard.
  *
@@ -50,12 +52,20 @@ const FUNNEL_STAGES = [
 /**
  * Non-data ink. Grid and axis lines stay recessive so the marks carry the
  * chart; labels wear text tokens rather than the series color.
+ *
+ * Read from the theme rather than pinned as hexes, unlike the two palettes
+ * above. Nothing here is a validated data color — these are the same greys the
+ * rest of the dashboard's chrome already uses, so if smoot-design retunes a
+ * token the chart chrome has to move with it or the charts drift out of step
+ * with the tables beside them. The series colors are the opposite case: they
+ * are pinned precisely *because* they must not move without re-running the
+ * contrast and CVD checks.
  */
-const CHART_INK = {
-  grid: "#DDE1E6", // lightGray2
-  axis: "#B8C2CC", // silverGrayLight
-  label: "#626A73", // silverGrayDark
-  surface: "#FFFFFF",
-} as const
+const chartInk = (theme: Theme) => ({
+  grid: theme.custom.colors.lightGray2,
+  axis: theme.custom.colors.silverGrayLight,
+  label: theme.custom.colors.silverGrayDark,
+  surface: theme.custom.colors.white,
+})
 
-export { CATEGORICAL, CHART_INK, FUNNEL_STAGES }
+export { CATEGORICAL, chartInk, FUNNEL_STAGES }

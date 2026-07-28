@@ -1,10 +1,22 @@
 import React from "react"
 import { render, screen, within } from "@testing-library/react"
-import { ThemeProvider } from "ol-components"
+import { ThemeProvider, useTheme } from "ol-components"
+import type { Theme } from "ol-components"
 import { factories } from "api/analytics-test-utils"
 import EngagementTrendChart from "./EngagementTrendChart"
 import ProgramFunnelChart from "./ProgramFunnelChart"
-import { CATEGORICAL, FUNNEL_STAGES } from "./chartPalette"
+import { CATEGORICAL, chartInk, FUNNEL_STAGES } from "./chartPalette"
+
+/**
+ * Captures the live theme so the ink assertions below compare against the
+ * token, not a hex copied into this file — copying one here would reintroduce
+ * exactly the drift the theme lookup exists to prevent.
+ */
+let capturedTheme: Theme
+const ThemeProbe = () => {
+  capturedTheme = useTheme() as Theme
+  return null
+}
 
 /**
  * Smoke coverage for the real charts (they are stubbed out in the page test).
@@ -14,7 +26,35 @@ import { CATEGORICAL, FUNNEL_STAGES } from "./chartPalette"
  */
 
 const renderWithTheme = (ui: React.ReactElement) =>
-  render(<ThemeProvider>{ui}</ThemeProvider>)
+  render(
+    <ThemeProvider>
+      <ThemeProbe />
+      {ui}
+    </ThemeProvider>,
+  )
+
+/**
+ * The two palettes above stay pinned as hexes on purpose — they are validated
+ * data colors and must not move without re-running the contrast/CVD checks.
+ * The non-data ink is the opposite case: it is the same grey chrome the tables
+ * beside these charts use, so it reads from the theme and moves when a
+ * smoot-design token is retuned. Asserted against the live token rather than a
+ * literal, since a literal here would just relocate the duplication and would
+ * still pass if the module went back to hardcoding.
+ */
+describe("chartInk", () => {
+  test("resolves non-data ink from theme tokens, not pinned hexes", () => {
+    renderWithTheme(<div />)
+    const colors = capturedTheme.custom.colors
+
+    expect(chartInk(capturedTheme)).toEqual({
+      grid: colors.lightGray2,
+      axis: colors.silverGrayLight,
+      label: colors.silverGrayDark,
+      surface: colors.white,
+    })
+  })
+})
 
 describe("EngagementTrendChart", () => {
   const months = [

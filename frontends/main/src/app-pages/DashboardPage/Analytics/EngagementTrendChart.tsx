@@ -2,7 +2,7 @@
 
 import React from "react"
 import { LineChart } from "@mui/x-charts/LineChart"
-import { Skeleton, styled } from "ol-components"
+import { Skeleton, styled, useTheme } from "ol-components"
 import type { MonthlyEngagementTrend } from "api/analytics-hooks/organizations"
 import {
   EmptyTableMessage,
@@ -14,7 +14,7 @@ import {
   TableHeaderRow,
   TableRow,
 } from "@/components/B2BTable/B2BTable"
-import { CATEGORICAL, CHART_INK } from "./chartPalette"
+import { CATEGORICAL, chartInk } from "./chartPalette"
 import {
   formatCount,
   formatYearMonth,
@@ -110,6 +110,9 @@ const EngagementTrendChart: React.FC<{
   isLoading: boolean
   isError?: boolean
 }> = ({ rows, isLoading, isError }) => {
+  // Above the early returns: hooks cannot be called conditionally.
+  const ink = chartInk(useTheme())
+
   if (isError) {
     return (
       <ChartCard>
@@ -161,14 +164,14 @@ const EngagementTrendChart: React.FC<{
               context.location === "tick"
                 ? formatYearMonthShort(value)
                 : formatYearMonth(value),
-            tickLabelStyle: { fill: CHART_INK.label, fontSize: 12 },
+            tickLabelStyle: { fill: ink.label, fontSize: 12 },
           },
         ]}
         yAxis={[
           {
             min: 0,
             valueFormatter: (value: number) => formatCount(value),
-            tickLabelStyle: { fill: CHART_INK.label, fontSize: 12 },
+            tickLabelStyle: { fill: ink.label, fontSize: 12 },
             width: 56,
           },
         ]}
@@ -187,9 +190,9 @@ const EngagementTrendChart: React.FC<{
         }))}
         sx={{
           "& .MuiChartsAxis-line, & .MuiChartsAxis-tick": {
-            stroke: CHART_INK.axis,
+            stroke: ink.axis,
           },
-          "& .MuiChartsGrid-line": { stroke: CHART_INK.grid },
+          "& .MuiChartsGrid-line": { stroke: ink.grid },
           "& .MuiLineElement-root": { strokeWidth: 2 },
         }}
       />
