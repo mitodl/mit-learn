@@ -105,7 +105,7 @@ def test_serialize_channel(  # pylint: disable=too-many-arguments
         "created_on": mocker.ANY,
         "id": channel.id,
         "channel_url": frontend_absolute_url(
-            f"/c/{channel.channel_type}/{channel.name}/"
+            f"/c/{channel.channel_type}/{channel.name}"
         ),
         "lists": [
             LearningPathPreviewSerializer(channel_list.channel_list).data

@@ -1214,3 +1214,45 @@ def test_content_file_vector_search_partial_invalid_ids_searches_survivors(
     id_conditions = [c for c in must if getattr(c, "key", None) == "edx_module_id"]
     assert len(id_conditions) == 1
     assert list(id_conditions[0].match.any) == [valid_id]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_vector_search_count_is_exact(client, mock_qdrant):
+    """The result total must be an exact count.
+
+    Qdrant's approximate count overestimates filtered collections, which made
+    the paginator advertise pages that returned no results.
+    """
+    response = client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={
+            "topic": "Art, Design & Architecture",
+            "resource_type_group": "learning_material",
+        },
+    )
+
+    assert response.status_code == 200
+
+    mock_qdrant.count.assert_awaited()
+    assert mock_qdrant.count.await_args.kwargs["exact"] is True
+
+
+@pytest.mark.django_db(transaction=True)
+def test_content_file_vector_search_count_is_approximate(
+    client, mock_qdrant, content_file_viewer
+):
+    """Content-file totals must stay approximate.
+
+    Exact counting scales with matched points, and this collection holds
+    millions of chunks, so an exact count here would cost most of a second.
+    Nothing paginates content files, so the imprecision is invisible.
+    """
+    response = client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={"q": "test"},
+    )
+
+    assert response.status_code == 200
+
+    mock_qdrant.count.assert_awaited()
+    assert mock_qdrant.count.await_args.kwargs["exact"] is False

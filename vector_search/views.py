@@ -485,10 +485,18 @@ class QdrantView(APIView):
         aggregation_keys = params.get("aggregations") or []
 
         count_result, aggregations = await asyncio.gather(
+            # This total drives pagination, and Qdrant's approximate count
+            # overestimates a filtered collection -- which advertises pages
+            # that return no results. Exact counting fixes that but scales with
+            # the number of matched points (measured at ~60ms per million), so
+            # we only set exact=True for the resources collection (~1 point per
+            # resource). We do not set it for the contentfiles collection due to
+            # the number (millions) of points; its totals stay approximate,
+            # which is invisible while nothing paginates them.
             client.count(
                 collection_name=search_collection,
                 count_filter=search_filter,
-                exact=False,
+                exact=search_collection == RESOURCES_COLLECTION_NAME,
             ),
             async_qdrant_aggregations(
                 aggregation_keys,

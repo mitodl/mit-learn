@@ -568,3 +568,29 @@ def test_search_index_plugin_resource_upserted_generate_embeddings(
     mock_search_index_helpers.mock_generate_embeddings_immutable_signature.assert_called_once_with(
         [resource.id], resource_type, overwrite=True
     )
+
+
+@pytest.mark.django_db
+def test_content_files_loaded_always_purges_unpublished(
+    mocker, mock_search_index_helpers, settings
+):
+    """
+    The remove-unpublished task always runs, and ahead of the embed task in the
+    chain, so a failed embed can't strand unpublished files' points in Qdrant.
+    """
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    chain_mock = mocker.patch("learning_resources_search.plugins.chain")
+    run = LearningResourceRunFactory.create(
+        published=True, learning_resource__create_runs=False
+    )
+    ContentFileFactory.create(run=run)
+
+    SearchIndexPlugin().content_files_loaded(run)
+
+    mock_search_index_helpers.mock_remove_unpublished_run_contentfiles_immutable_signature.assert_called_once_with(
+        run.id
+    )
+    chained = list(chain_mock.call_args.args)
+    purge = mock_search_index_helpers.mock_remove_unpublished_run_contentfiles_immutable_signature.return_value
+    embed = mock_search_index_helpers.mock_embed_run_contentfiles_immutable_signature.return_value
+    assert chained.index(purge) < chained.index(embed)

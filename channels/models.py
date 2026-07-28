@@ -40,7 +40,6 @@ class ChannelQuerySet(TimestampedModelQuerySet):
                         "channel_type",
                         models.Value("/"),
                         "name",
-                        models.Value("/"),
                     ),
                 ),
                 default=None,
@@ -163,7 +162,7 @@ class Channel(TimestampedModel):
     def channel_url(self) -> str | None:
         """Return the channel url"""
         if self.published:
-            return frontend_absolute_url(f"/c/{self.channel_type}/{self.name}/")
+            return frontend_absolute_url(f"/c/{self.channel_type}/{self.name}")
         return None
 
     @property
