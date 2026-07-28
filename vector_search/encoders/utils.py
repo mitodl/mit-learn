@@ -1,10 +1,8 @@
 import logging
 from functools import cache
 
-import tiktoken
 from django.conf import settings
 from django.utils.module_loading import import_string
-from litellm import get_model_info
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +72,8 @@ def truncate_to_model_limit(
     Returns:
         Truncated text.
     """
+    from litellm import get_model_info
+
     max_input_tokens = None
 
     try:
@@ -84,6 +84,8 @@ def truncate_to_model_limit(
 
     if max_input_tokens and token_encoding_name:
         try:
+            import tiktoken
+
             encoding = tiktoken.get_encoding(token_encoding_name)
             tokens = encoding.encode(text)
 

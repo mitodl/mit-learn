@@ -13,6 +13,9 @@ from vector_search.encoders.base import BaseEncoder
 log = logging.getLogger()
 redis_url = urlparse(settings.CELERY_BROKER_URL)
 
+# drop unsupported model params
+litellm.drop_params = True
+
 # these must be set directly via environ (litellm limitation)
 os.environ["REDIS_SSL"] = str(redis_url.scheme.endswith("ss"))
 litellm.cache = Cache(
