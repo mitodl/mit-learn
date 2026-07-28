@@ -806,6 +806,33 @@ def test_embed_run_content_files_skips_contentless(mocker, mocked_celery, settin
     assert _embedded_content_file_ids(generate_embeddings_mock) == {with_content.id}
 
 
+def test_embed_run_content_files_removes_leftover_contentless_points(mocker):
+    """
+    A published file whose content became empty keeps the point embedded from
+    its old content; the pre-pass detects and removes it. Contentless files
+    with no stored point trigger no removal.
+    """
+    run = LearningResourceRunFactory.create()
+    emptied = ContentFileFactory.create(run=run, published=True, content="")
+    ContentFileFactory.create(run=run, published=True, content=None)
+    pids = _serializer_chunk0_pids([emptied])
+    mocker.patch(
+        "vector_search.tasks._stored_content_payloads",
+        return_value={pids[emptied.id]: {"checksum": "from-old-content"}},
+    )
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+    remove_mock = mocker.patch(
+        "vector_search.tasks.remove_qdrant_records", autospec=True
+    )
+
+    assert embed_run_content_files(run.id) is None
+
+    generate_embeddings_mock.si.assert_not_called()
+    remove_mock.assert_called_once_with([emptied.id], CONTENT_FILE_TYPE)
+
+
 def test_embed_run_content_files_retries_transient_qdrant_errors(mocker):
     """A transient Qdrant error in the pre-pass retries instead of failing the run."""
     run = LearningResourceRunFactory.create()
