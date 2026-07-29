@@ -1,6 +1,25 @@
 Release Notes
 =============
 
+Version 0.76.0 (Released July 29, 2026)
+--------------
+
+- Fix topic page pagination (#3682)
+- Followup to #3646: skip contentless files in embed pre-pass, retry Qdrant blips, purge before embed (#3684)
+- Slim learning resource API payloads and cache rendered JSON (#3675)
+- one click upgrade for courses in verified program enrollments (#3671)
+- Update dependency social-auth-app-django to v5.6.0 [SECURITY] (#3642)
+- fix: Autocomplete chip overflow on learning path form (bump smoot-design) (#3676)
+- Set Posthog Cookie on site domain, not mit.edu (#3680)
+- fix: Remove course enrollment from cache on unenroll for instant UI update (#3674)
+- feat: expose keycloak global_id on the users/me serializer (#3666)
+- Delete micromasters resources and remove ETLSource constant (#3670)
+- Skip embedding tasks and Qdrant writes for unchanged content files (#3646)
+- Fix embeddings healthcheck missing-summaries filter in _missing_summaries (#3686)
+- Add acks_late to ETL tasks killed by worker autoscaling scale-downs (#3678)
+- fix: Flaky JS test: ProgramAsCoursePage 'Enroll CTA posts program enrollment' times out on Loading button (#3672)
+- Switch cache config to use REDIS_URL as intended (#3648)
+
 Version 0.75.5 (Released July 27, 2026)
 --------------
 
