@@ -26,6 +26,7 @@ import { getStayUpdatedHubspotFormId } from "@/common/config"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 import { PlatformEnum } from "api"
+import { useStickyRevealTop } from "./useStickyRevealTop"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -306,6 +307,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   resource,
 }) => {
   const posthog = usePostHog()
+  const summaryColRef = useStickyRevealTop(HEADER_HEIGHT + OFFSET_FROM_HEADER)
   const stayUpdatedFormId = getStayUpdatedHubspotFormId()
   const shouldShowStayUpdatedButton = Boolean(
     stayUpdatedFormId && showStayUpdated,
@@ -414,7 +416,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
         </TopContainer>
       </GradientBanner>
       <BottomContainer>
-        <SummaryCol>{infoBox}</SummaryCol>
+        <SummaryCol ref={summaryColRef}>{infoBox}</SummaryCol>
         <MainCol>
           <SectionsWrapper>{children}</SectionsWrapper>
         </MainCol>
