@@ -308,6 +308,69 @@ describe("PodcastEmbedPlayer", () => {
     })
   })
 
+  describe("playback errors", () => {
+    const simulateMediaError = (audio: HTMLAudioElement, code: number) => {
+      Object.defineProperty(audio, "error", {
+        value: { code },
+        configurable: true,
+      })
+      fireEvent.error(audio)
+    }
+
+    test("shows a message when the source is rejected (e.g. HTTP 451)", async () => {
+      const { audio } = renderPlayer()
+      simulateMediaError(audio, 4) // MEDIA_ERR_SRC_NOT_SUPPORTED
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        /unavailable in your region/i,
+      )
+    })
+
+    test("replaces the seek slider with the message", async () => {
+      const { audio } = renderPlayer()
+      expect(screen.getByRole("slider", { name: /seek/i })).toBeInTheDocument()
+
+      simulateMediaError(audio, 2)
+
+      await screen.findByRole("alert")
+      expect(
+        screen.queryByRole("slider", { name: /seek/i }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("reports missing audio for an episode with no audio_url", () => {
+      const resource = makeEpisode({
+        podcast_episode: {
+          ...makeEpisode().podcast_episode!,
+          audio_url: null as unknown as string,
+          episode_link: null,
+        },
+      })
+      renderPlayer(resource)
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /audio isn't available for this episode/i,
+      )
+      expect(
+        screen.queryByRole("button", { name: /try again/i }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("Try again reloads the source and clears the message", async () => {
+      const { audio } = renderPlayer()
+      simulateMediaError(audio, 2)
+      await screen.findByRole("alert")
+
+      jest.clearAllMocks()
+      fireEvent.click(screen.getByRole("button", { name: /try again/i }))
+
+      expect(window.HTMLMediaElement.prototype.load).toHaveBeenCalled()
+      await waitFor(() =>
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
+      )
+    })
+  })
+
   describe("no close button", () => {
     test("does not render a close button", () => {
       renderPlayer()

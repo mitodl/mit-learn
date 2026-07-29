@@ -303,6 +303,303 @@ describe("PodcastPlayer", () => {
     ).toBeDisabled()
   })
 
+  describe("playback errors", () => {
+    /**
+     * Fire an `error` event carrying a specific MediaError code, the way a
+     * browser does when the fetch or the decode fails.
+     */
+    const simulateMediaError = (audio: HTMLAudioElement, code: number) => {
+      Object.defineProperty(audio, "error", {
+        value: { code },
+        configurable: true,
+      })
+      fireEvent.error(audio)
+    }
+
+    /** Override `navigator.onLine`, which jsdom reports as `true` by default. */
+    const setOnLine = (value: boolean) => {
+      Object.defineProperty(window.navigator, "onLine", {
+        value,
+        configurable: true,
+      })
+    }
+
+    afterEach(() => setOnLine(true))
+
+    test("blames the connection, not the provider, when the device is offline", async () => {
+      const { audio } = await renderPlayer()
+      setOnLine(false)
+      // An offline request never reaches the network, so the browser reports
+      // the same code a geo-block does.
+      simulateMediaError(audio, 4) // MEDIA_ERR_SRC_NOT_SUPPORTED
+
+      const alert = await screen.findByRole("alert")
+      expect(alert).toHaveTextContent(/you appear to be offline/i)
+      expect(alert).not.toHaveTextContent(/region/i)
+    })
+
+    test("reports offline when play() rejects with no connection", async () => {
+      ;(window.HTMLMediaElement.prototype.play as jest.Mock).mockRejectedValue(
+        Object.assign(new Error("nope"), { name: "NotSupportedError" }),
+      )
+      setOnLine(false)
+
+      await renderPlayer()
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        /you appear to be offline/i,
+      )
+      ;(window.HTMLMediaElement.prototype.play as jest.Mock).mockResolvedValue(
+        undefined,
+      )
+    })
+
+    test("shows a region-restriction message when the source is rejected (e.g. HTTP 451)", async () => {
+      const { audio } = await renderPlayer()
+      simulateMediaError(audio, 4) // MEDIA_ERR_SRC_NOT_SUPPORTED
+
+      const alert = await screen.findByRole("alert")
+      expect(alert).toHaveTextContent(/can't be played/i)
+      expect(alert).toHaveTextContent(/unavailable in your region/i)
+    })
+
+    test("shows a connection message on a network failure", async () => {
+      const { audio } = await renderPlayer()
+      simulateMediaError(audio, 2) // MEDIA_ERR_NETWORK
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        /couldn't load this episode/i,
+      )
+    })
+
+    test("shows a damaged-file message when the audio cannot be decoded", async () => {
+      const { audio } = await renderPlayer()
+      simulateMediaError(audio, 3) // MEDIA_ERR_DECODE
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(/damaged/i)
+    })
+
+    test("ignores aborted loads, which are just track changes", async () => {
+      const { audio } = await renderPlayer()
+      simulateMediaError(audio, 1) // MEDIA_ERR_ABORTED
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    })
+
+    test("replaces the seek slider with the message", async () => {
+      const { audio } = await renderPlayer()
+      expect(screen.getByRole("slider", { name: /seek/i })).toBeInTheDocument()
+
+      simulateMediaError(audio, 4)
+
+      await screen.findByRole("alert")
+      expect(
+        screen.queryByRole("slider", { name: /seek/i }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("reports missing audio without waiting for a failed load", async () => {
+      await renderPlayer(
+        makeTrack({ audioUrl: "" }),
+        {},
+        { waitForAutoPlay: false },
+      )
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /audio isn't available for this episode/i,
+      )
+      // Nothing to re-fetch, so no retry is offered.
+      expect(
+        screen.queryByRole("button", { name: /try again/i }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("Try again reloads the source and plays", async () => {
+      const { audio } = await renderPlayer()
+      simulateMediaError(audio, 2)
+      await screen.findByRole("alert")
+
+      jest.clearAllMocks()
+      fireEvent.click(screen.getByRole("button", { name: /try again/i }))
+
+      expect(window.HTMLMediaElement.prototype.load).toHaveBeenCalled()
+      await waitFor(() =>
+        expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalled(),
+      )
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    })
+
+    describe("focus handoff", () => {
+      test("moves focus to Try again when the focused control is replaced", async () => {
+        const { audio, simulateCanPlay } = await renderPlayer()
+        await simulateCanPlay()
+
+        const slider = screen.getByRole("slider", { name: /seek/i })
+        slider.focus()
+        expect(slider).toHaveFocus()
+
+        simulateMediaError(audio, 4)
+
+        await waitFor(() =>
+          expect(
+            screen.getByRole("button", { name: /try again/i }),
+          ).toHaveFocus(),
+        )
+      })
+
+      test("returns focus to the play button after a successful retry", async () => {
+        const { audio, simulateCanPlay } = await renderPlayer()
+        simulateMediaError(audio, 2)
+
+        const retryButton = await screen.findByRole("button", {
+          name: /try again/i,
+        })
+        retryButton.focus()
+        fireEvent.click(retryButton)
+
+        // The reload leaves the play button disabled, so the handoff has to
+        // wait for it to become focusable again: first the buffering clears,
+        // then the play() promise settles.
+        simulateCanPlay()
+
+        await waitFor(() =>
+          expect(
+            screen.getByRole("button", { name: /^pause$/i }),
+          ).toHaveFocus(),
+        )
+      })
+
+      test("announces the retry while it is in flight", async () => {
+        const { audio, simulateCanPlay } = await renderPlayer()
+        simulateMediaError(audio, 2)
+
+        const retryButton = await screen.findByRole("button", {
+          name: /try again/i,
+        })
+        // The live region must already exist so the text change is announced.
+        const status = document.querySelector("[aria-live='polite']")
+        expect(status).toBeInTheDocument()
+        expect(status).toHaveTextContent("")
+
+        fireEvent.click(retryButton)
+
+        // The alert is gone and the button unmounted — this is the silent gap.
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+        expect(retryButton).not.toBeInTheDocument()
+        expect(status).toHaveTextContent(/retrying/i)
+        expect(document.querySelector("[aria-busy='true']")).toBeInTheDocument()
+
+        simulateCanPlay()
+
+        await waitFor(() => expect(status).toHaveTextContent(""))
+        expect(document.querySelector("[aria-busy='true']")).toBeNull()
+      })
+
+      test("stops announcing when the retry fails again", async () => {
+        const { audio } = await renderPlayer()
+        simulateMediaError(audio, 2)
+
+        fireEvent.click(
+          await screen.findByRole("button", { name: /try again/i }),
+        )
+        const status = document.querySelector("[aria-live='polite']")
+        expect(status).toHaveTextContent(/retrying/i)
+
+        // The reload fails too; the alert speaks for the outcome from here.
+        simulateMediaError(audio, 2)
+
+        await waitFor(() => expect(status).toHaveTextContent(""))
+        expect(await screen.findByRole("alert")).toBeInTheDocument()
+      })
+
+      test("says nothing when playback is healthy", async () => {
+        const { simulateCanPlay } = await renderPlayer()
+        await simulateCanPlay()
+
+        expect(
+          document.querySelector("[aria-live='polite']"),
+        ).toHaveTextContent("")
+        expect(document.querySelector("[aria-busy='true']")).toBeNull()
+      })
+
+      test("does not steal focus from elsewhere on the page", async () => {
+        const { audio, simulateCanPlay } = await renderPlayer()
+        await simulateCanPlay()
+
+        const closeButton = screen.getByRole("button", {
+          name: /close player/i,
+        })
+        closeButton.focus()
+
+        simulateMediaError(audio, 4)
+
+        await screen.findByRole("alert")
+        expect(closeButton).toHaveFocus()
+      })
+
+      test("leaves focus alone when the error arrives unattended", async () => {
+        const { audio } = await renderPlayer()
+        // Nothing in the player was focused — a mouse user scrolling the page.
+        expect(document.body).toHaveFocus()
+
+        simulateMediaError(audio, 4)
+
+        await screen.findByRole("alert")
+        expect(document.body).toHaveFocus()
+      })
+    })
+
+    test("clears the message when the track changes", async () => {
+      const { audio, rerender } = await renderPlayer()
+      simulateMediaError(audio, 4)
+      await screen.findByRole("alert")
+
+      rerender(
+        <ThemeProvider>
+          <PodcastPlayer
+            track={makeTrack({ audioUrl: "https://example.com/ep2.mp3" })}
+            onClose={jest.fn()}
+          />
+        </ThemeProvider>,
+      )
+
+      await waitFor(() =>
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
+      )
+    })
+
+    test("stays silent when autoplay is blocked by browser policy", async () => {
+      ;(window.HTMLMediaElement.prototype.play as jest.Mock).mockRejectedValue(
+        Object.assign(new Error("blocked"), { name: "NotAllowedError" }),
+      )
+
+      await renderPlayer()
+
+      await waitFor(() =>
+        expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalled(),
+      )
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      ;(window.HTMLMediaElement.prototype.play as jest.Mock).mockResolvedValue(
+        undefined,
+      )
+    })
+
+    test("reports a generic failure when play() rejects for another reason", async () => {
+      ;(window.HTMLMediaElement.prototype.play as jest.Mock).mockRejectedValue(
+        Object.assign(new Error("nope"), { name: "NotSupportedError" }),
+      )
+
+      await renderPlayer()
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        /something went wrong playing this episode/i,
+      )
+      ;(window.HTMLMediaElement.prototype.play as jest.Mock).mockResolvedValue(
+        undefined,
+      )
+    })
+  })
+
   test("prevents duplicate play calls during rapid clicks while play is pending", async () => {
     const { simulateCanPlay } = await renderPlayer()
     await simulateCanPlay()

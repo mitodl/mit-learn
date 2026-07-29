@@ -2,14 +2,17 @@
 
 import React, { forwardRef, useImperativeHandle } from "react"
 import { styled } from "ol-components"
+import { VisuallyHidden } from "@mitodl/smoot-design"
 import {
   RiPlayCircleLine,
   RiPauseCircleLine,
   RiReplay10Line,
   RiForward30Line,
   RiCloseLine,
+  RiErrorWarningLine,
 } from "@remixicon/react"
 import { useAudioPlayer, formatClockTime } from "./useAudioPlayer"
+import { usePlaybackRecovery, RETRYING_STATUS } from "./usePlaybackRecovery"
 import {
   TrackInfo as TrackInfoBase,
   TrackTitle as TrackTitleBase,
@@ -22,6 +25,9 @@ import {
   ProgressRange,
   TimeLabel,
   SpeedButton as SpeedButtonBase,
+  PlaybackError,
+  PlaybackErrorText,
+  RetryButton,
 } from "./AudioPlayer.styled"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -171,13 +177,24 @@ const PodcastPlayer = forwardRef<PodcastPlayerHandle, PodcastPlayerProps>(
       duration,
       percent,
       speed,
+      error,
       togglePlay,
       skip,
       cycleSpeed,
       seek,
       pause,
       resume,
+      retry,
     } = useAudioPlayer(track.audioUrl, { autoPlay: true, onPlayStateChange })
+
+    const isPlayDisabled = isBuffering || isPlayPending || !hasAudioSource
+    const {
+      playButtonRef,
+      retryButtonRef,
+      onProgressFocus,
+      requestRetry,
+      isRetrying,
+    } = usePlaybackRecovery(error, retry, isPlayDisabled)
 
     useImperativeHandle(ref, () => ({ pause, resume }), [pause, resume])
 
@@ -195,7 +212,16 @@ const PodcastPlayer = forwardRef<PodcastPlayerHandle, PodcastPlayerProps>(
         {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
         <audio ref={audioRef} {...audioProps} />
 
-        <PlayerShell>
+        <PlayerShell aria-busy={isRetrying}>
+          {/*
+            Mounted unconditionally, with only its text changing: a live region
+            added to the DOM at the same moment as its content is unreliably
+            announced.
+          */}
+          <VisuallyHidden aria-live="polite" aria-atomic="true">
+            {isRetrying ? RETRYING_STATUS : ""}
+          </VisuallyHidden>
+
           <TrackInfo>
             <PodcastName variant="body1" sx={{ color: "text.secondary" }}>
               {track.podcastName}
@@ -215,6 +241,7 @@ const PodcastPlayer = forwardRef<PodcastPlayerHandle, PodcastPlayerProps>(
             </IconButton>
 
             <PlayPauseButton
+              ref={playButtonRef}
               buttonSize={64}
               mobileButtonSize={56}
               onClick={togglePlay}
@@ -227,7 +254,7 @@ const PodcastPlayer = forwardRef<PodcastPlayerHandle, PodcastPlayerProps>(
                       ? "Pause"
                       : "Play"
               }
-              disabled={isBuffering || isPlayPending || !hasAudioSource}
+              disabled={isPlayDisabled}
             >
               {isBuffering || isPlayPending ? (
                 <PlayerLoader loading size={40} color="inherit" />
@@ -247,27 +274,39 @@ const PodcastPlayer = forwardRef<PodcastPlayerHandle, PodcastPlayerProps>(
             </IconButton>
           </Controls>
 
-          <ProgressWrapper>
-            <TimeLabel variant="body3">
-              {formatClockTime(currentTime)}
-            </TimeLabel>
-            <ProgressRange
-              type="range"
-              min={0}
-              max={duration || 1}
-              value={currentTime}
-              step={1}
-              percent={percent}
-              aria-label="Seek"
-              onChange={(e) => seek(Number(e.target.value))}
-              onKeyDown={handleSeekKeyDown}
-            />
-            <TimeLabel variant="body3">{formatClockTime(duration)}</TimeLabel>
+          {error ? (
+            <PlaybackError role="alert">
+              <RiErrorWarningLine aria-hidden />
+              <PlaybackErrorText variant="body3">{error}</PlaybackErrorText>
+              {hasAudioSource ? (
+                <RetryButton ref={retryButtonRef} onClick={requestRetry}>
+                  Try again
+                </RetryButton>
+              ) : null}
+            </PlaybackError>
+          ) : (
+            <ProgressWrapper onFocus={onProgressFocus}>
+              <TimeLabel variant="body3">
+                {formatClockTime(currentTime)}
+              </TimeLabel>
+              <ProgressRange
+                type="range"
+                min={0}
+                max={duration || 1}
+                value={currentTime}
+                step={1}
+                percent={percent}
+                aria-label="Seek"
+                onChange={(e) => seek(Number(e.target.value))}
+                onKeyDown={handleSeekKeyDown}
+              />
+              <TimeLabel variant="body3">{formatClockTime(duration)}</TimeLabel>
 
-            <SpeedButton onClick={cycleSpeed} aria-label="Playback speed">
-              {speed}x
-            </SpeedButton>
-          </ProgressWrapper>
+              <SpeedButton onClick={cycleSpeed} aria-label="Playback speed">
+                {speed}x
+              </SpeedButton>
+            </ProgressWrapper>
+          )}
 
           {/* Close */}
           <CloseButton onClick={onClose} aria-label="Close player">
