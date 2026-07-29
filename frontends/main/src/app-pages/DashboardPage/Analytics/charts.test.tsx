@@ -56,6 +56,66 @@ describe("chartInk", () => {
   })
 })
 
+/**
+ * Both charts are paired with a table carrying the same numbers, which makes
+ * the SVG redundant for a screen reader — and worse than redundant, since
+ * traversing hundreds of series and axis nodes to reach data that is about to
+ * be presented properly is pure noise. So the chart is hidden and the table is
+ * the accessible copy.
+ *
+ * The second assertion in each case is the one that keeps this honest:
+ * `aria-hidden` on a subtree containing focusable content is itself a
+ * violation, because keyboard focus can land somewhere screen readers have been
+ * told does not exist. Neither chart renders anything focusable today; this
+ * fails if a future library version starts to.
+ */
+describe.each([
+  [
+    "EngagementTrendChart",
+    () => (
+      <EngagementTrendChart
+        rows={[factories.monthlyEngagementTrend()]}
+        isLoading={false}
+      />
+    ),
+    "Monthly engagement",
+  ],
+  [
+    "ProgramFunnelChart",
+    () => (
+      <ProgramFunnelChart
+        rows={[factories.programFunnel()]}
+        isLoading={false}
+      />
+    ),
+    "Program funnel",
+  ],
+])("%s accessibility", (_name, renderChart, tableLabel) => {
+  test("hides the chart from assistive tech but keeps its table", () => {
+    const { container } = renderWithTheme(renderChart())
+
+    // eslint-disable-next-line testing-library/no-container
+    const svg = container.querySelector("svg")
+    expect(svg).toBeInTheDocument()
+    expect(svg?.closest("[aria-hidden='true']")).not.toBeNull()
+
+    // The table is the accessible equivalent, so it must stay exposed.
+    const table = screen.getByRole("table", { name: tableLabel })
+    expect(table.closest("[aria-hidden='true']")).toBeNull()
+  })
+
+  test("puts nothing focusable inside the hidden subtree", () => {
+    const { container } = renderWithTheme(renderChart())
+
+    // eslint-disable-next-line testing-library/no-container
+    const hidden = container.querySelector("[aria-hidden='true']")
+    const focusable = hidden?.querySelectorAll(
+      "a[href], button, input, select, textarea, [tabindex]",
+    )
+    expect(focusable).toHaveLength(0)
+  })
+})
+
 describe("EngagementTrendChart", () => {
   const months = [
     factories.monthlyEngagementTrend({ activity_year_and_month: "2026-01" }),

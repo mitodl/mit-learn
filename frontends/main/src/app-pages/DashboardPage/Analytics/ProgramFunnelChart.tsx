@@ -146,7 +146,11 @@ const ProgramFunnelChart: React.FC<{
 
   return (
     <Card>
-      <ChartWrapper>
+      {/* Hidden from assistive tech for the same reason as the trend chart:
+          the table below is the accessible copy of these numbers, so exposing
+          the SVG only adds a long walk through series and axis nodes. Nothing
+          inside is focusable, which the test asserts. */}
+      <ChartWrapper aria-hidden>
         <BarChart
           layout="horizontal"
           height={rowHeight(rows.length)}

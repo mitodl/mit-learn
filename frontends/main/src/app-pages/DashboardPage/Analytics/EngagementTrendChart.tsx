@@ -149,53 +149,63 @@ const EngagementTrendChart: React.FC<{
 
   return (
     <ChartCard>
-      <LineChart
-        height={CHART_HEIGHT}
-        margin={{ left: 8, right: 8, top: 8, bottom: 0 }}
-        // Horizontal rules only: vertical ones would fight the marks for
-        // attention without helping anyone read a monthly value.
-        grid={{ horizontal: true }}
-        xAxis={[
-          {
-            scaleType: "point",
-            data: labels,
-            valueFormatter: (value: string, context) =>
-              // The tooltip has room for the year; a dense monthly axis does not.
-              context.location === "tick"
-                ? formatYearMonthShort(value)
-                : formatYearMonth(value),
-            tickLabelStyle: { fill: ink.label, fontSize: 12 },
-          },
-        ]}
-        yAxis={[
-          {
-            min: 0,
-            valueFormatter: (value: number) => formatCount(value),
-            tickLabelStyle: { fill: ink.label, fontSize: 12 },
-            width: 56,
-          },
-        ]}
-        series={SERIES.map((series) => ({
-          // `null` is meaningful here: a month suppressed by the anonymity
-          // floor, drawn as a gap rather than a zero.
-          data: months.map((row) => row[series.key] ?? null),
-          label: series.label,
-          color: series.color,
-          curve: "linear",
-          // A mark per month keeps single-point series visible and gives the
-          // hover layer something bigger than a 2px line to aim at.
-          showMark: true,
-          valueFormatter: (value: number | null) =>
-            value === null ? "Withheld (too few learners)" : formatCount(value),
-        }))}
-        sx={{
-          "& .MuiChartsAxis-line, & .MuiChartsAxis-tick": {
-            stroke: ink.axis,
-          },
-          "& .MuiChartsGrid-line": { stroke: ink.grid },
-          "& .MuiLineElement-root": { strokeWidth: 2 },
-        }}
-      />
+      {/* Hidden from assistive tech: the table below carries the same numbers
+          as text, so leaving the SVG exposed only makes a screen reader walk
+          hundreds of series and axis nodes to reach data it is about to be
+          given properly. Safe to hide because the chart renders nothing
+          focusable — asserted in the test, since burying a focusable node
+          inside aria-hidden would be its own violation. */}
+      <div aria-hidden>
+        <LineChart
+          height={CHART_HEIGHT}
+          margin={{ left: 8, right: 8, top: 8, bottom: 0 }}
+          // Horizontal rules only: vertical ones would fight the marks for
+          // attention without helping anyone read a monthly value.
+          grid={{ horizontal: true }}
+          xAxis={[
+            {
+              scaleType: "point",
+              data: labels,
+              valueFormatter: (value: string, context) =>
+                // The tooltip has room for the year; a dense monthly axis does not.
+                context.location === "tick"
+                  ? formatYearMonthShort(value)
+                  : formatYearMonth(value),
+              tickLabelStyle: { fill: ink.label, fontSize: 12 },
+            },
+          ]}
+          yAxis={[
+            {
+              min: 0,
+              valueFormatter: (value: number) => formatCount(value),
+              tickLabelStyle: { fill: ink.label, fontSize: 12 },
+              width: 56,
+            },
+          ]}
+          series={SERIES.map((series) => ({
+            // `null` is meaningful here: a month suppressed by the anonymity
+            // floor, drawn as a gap rather than a zero.
+            data: months.map((row) => row[series.key] ?? null),
+            label: series.label,
+            color: series.color,
+            curve: "linear",
+            // A mark per month keeps single-point series visible and gives the
+            // hover layer something bigger than a 2px line to aim at.
+            showMark: true,
+            valueFormatter: (value: number | null) =>
+              value === null
+                ? "Withheld (too few learners)"
+                : formatCount(value),
+          }))}
+          sx={{
+            "& .MuiChartsAxis-line, & .MuiChartsAxis-tick": {
+              stroke: ink.axis,
+            },
+            "& .MuiChartsGrid-line": { stroke: ink.grid },
+            "& .MuiLineElement-root": { strokeWidth: 2 },
+          }}
+        />
+      </div>
       <TableWrapper>
         <div role="table" aria-label="Monthly engagement">
           <div role="rowgroup">
