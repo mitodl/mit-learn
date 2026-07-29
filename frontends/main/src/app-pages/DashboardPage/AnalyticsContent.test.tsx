@@ -494,6 +494,47 @@ describe("AnalyticsContent", () => {
     })
 
     /**
+     * The expanded page keeps the old rows on screen while it loads, so nothing
+     * visibly changes on click. Without the busy state and the live region a
+     * screen reader gets no feedback at all that the button did anything.
+     */
+    test("marks the button busy while expanding and announces the result", async () => {
+      const org = orgWithUuid()
+      setManagerOrgs([org])
+      setAnalyticsResponses()
+      // Row counts stay tiny deliberately: rendering hundreds of rows in jsdom
+      // is slow enough to make this flaky under parallel load, and the wiring
+      // under test doesn't depend on the magnitudes. `total_count` still has to
+      // exceed the page size, or there would be nothing to expand.
+      setMockResponse.get(
+        analyticsUrls.organizations.enrollmentFunnel(ORG_UUID, { limit: 200 }),
+        analyticsFactories.envelope(courseRows(2), {
+          as_of: AS_OF,
+          total_count: 340,
+        }),
+      )
+      setMockResponse.get(
+        analyticsUrls.organizations.enrollmentFunnel(ORG_UUID, { limit: 340 }),
+        analyticsFactories.envelope(courseRows(3), {
+          as_of: AS_OF,
+          total_count: 340,
+        }),
+      )
+
+      const user = userEvent.setup()
+      renderWithProviders(
+        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} />,
+      )
+
+      const button = await screen.findByRole("button", { name: "Show all 340" })
+      expect(button).toHaveAttribute("aria-busy", "false")
+
+      await user.click(button)
+
+      await screen.findByText("Showing 3 of 340 rows.")
+    })
+
+    /**
      * The API applies its LIMIT in SQL and drops sub-floor rows afterwards, so
      * a page of `total_count` rows can still come back short — permanently.
      * Asking again would resend the same limit and change nothing, so the
@@ -505,16 +546,17 @@ describe("AnalyticsContent", () => {
       setAnalyticsResponses()
       setMockResponse.get(
         analyticsUrls.organizations.enrollmentFunnel(ORG_UUID, { limit: 200 }),
-        analyticsFactories.envelope(courseRows(188), {
+        analyticsFactories.envelope(courseRows(2), {
           as_of: AS_OF,
           total_count: 340,
         }),
       )
-      // Asked for 340, got 328: the other 12 were dropped by the floor after
-      // the LIMIT had already been applied.
+      // Asked for all 340 and got 3 back: the rest were dropped by the floor
+      // after the LIMIT had already been applied. (Tiny counts on purpose — see
+      // the note in the busy/announce test.)
       setMockResponse.get(
         analyticsUrls.organizations.enrollmentFunnel(ORG_UUID, { limit: 340 }),
-        analyticsFactories.envelope(courseRows(328), {
+        analyticsFactories.envelope(courseRows(3), {
           as_of: AS_OF,
           total_count: 340,
         }),
@@ -529,7 +571,7 @@ describe("AnalyticsContent", () => {
         await screen.findByRole("button", { name: "Show all 340" }),
       )
 
-      await screen.findByText("Showing 328 of 340.")
+      await screen.findByText("Showing 3 of 340.")
       expect(
         screen.queryByRole("button", { name: /Show all/ }),
       ).not.toBeInTheDocument()

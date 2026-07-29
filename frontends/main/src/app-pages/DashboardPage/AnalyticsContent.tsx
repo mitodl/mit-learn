@@ -2,7 +2,7 @@
 
 import React from "react"
 import Image from "next/image"
-import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { Skeleton, Stack, styled, Typography } from "ol-components"
@@ -168,43 +168,41 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
 
   // One query per endpoint, each backed by its own materialized view with its
   // own refresh time, so sections load and report freshness independently.
-  // Spelled out as a literal tuple rather than built with `.map` so useQueries
-  // keeps each entry's own result type instead of widening them to `unknown`.
   //
-  // `keepPreviousData` matters on the "Show all" path: the limit is part of the
-  // query key, so without it the section a manager just asked to expand would
-  // blank back to its skeleton before returning with more rows.
-  const [utilization, trend, courses, programs] = useQueries({
-    queries: [
-      {
-        ...analyticsOrganizationQueries.contractUtilization(orgUuid ?? "", {
-          limit: limits.utilization,
-        }),
-        enabled: analyticsAvailable,
-        placeholderData: keepPreviousData,
-      },
-      {
-        ...analyticsOrganizationQueries.engagementTrend(orgUuid ?? "", {
-          limit: limits.trend,
-        }),
-        enabled: analyticsAvailable,
-        placeholderData: keepPreviousData,
-      },
-      {
-        ...analyticsOrganizationQueries.enrollmentFunnel(orgUuid ?? "", {
-          limit: limits.courses,
-        }),
-        enabled: analyticsAvailable,
-        placeholderData: keepPreviousData,
-      },
-      {
-        ...analyticsOrganizationQueries.programFunnel(orgUuid ?? "", {
-          limit: limits.programs,
-        }),
-        enabled: analyticsAvailable,
-        placeholderData: keepPreviousData,
-      },
-    ],
+  // Four `useQuery` calls rather than one `useQueries`, which is what this was
+  // originally. `placeholderData: keepPreviousData` is silently inert under
+  // `useQueries` here — on a limit change the result went straight to
+  // `data: undefined`, so the section a manager had just asked to expand blanked
+  // back to its skeleton, which is exactly what the option was there to prevent.
+  // It behaves as documented on `useQuery` (as it does on ContractAdminPage).
+  // The count is fixed and the order never changes, so this is hook-safe.
+  const utilization = useQuery({
+    ...analyticsOrganizationQueries.contractUtilization(orgUuid ?? "", {
+      limit: limits.utilization,
+    }),
+    enabled: analyticsAvailable,
+    placeholderData: keepPreviousData,
+  })
+  const trend = useQuery({
+    ...analyticsOrganizationQueries.engagementTrend(orgUuid ?? "", {
+      limit: limits.trend,
+    }),
+    enabled: analyticsAvailable,
+    placeholderData: keepPreviousData,
+  })
+  const courses = useQuery({
+    ...analyticsOrganizationQueries.enrollmentFunnel(orgUuid ?? "", {
+      limit: limits.courses,
+    }),
+    enabled: analyticsAvailable,
+    placeholderData: keepPreviousData,
+  })
+  const programs = useQuery({
+    ...analyticsOrganizationQueries.programFunnel(orgUuid ?? "", {
+      limit: limits.programs,
+    }),
+    enabled: analyticsAvailable,
+    placeholderData: keepPreviousData,
   })
 
   /**
@@ -214,7 +212,10 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
    * since a button that cannot deliver the rest would be worse than none.
    */
   const truncation = (
-    query: { data?: { total_count: number; data: unknown[] } },
+    query: {
+      data?: { total_count: number; data: unknown[] }
+      isPlaceholderData: boolean
+    },
     key: SectionKey,
   ) => {
     if (!query.data) return null
@@ -225,6 +226,10 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
       <SectionTruncation
         shown={shown}
         total={total}
+        // `isPlaceholderData` is precisely "a differently-keyed query is in
+        // flight and these rows are the previous ones" — which is the state a
+        // manager cannot otherwise perceive, since the table does not blank.
+        isExpanding={query.isPlaceholderData}
         // Offer the button only when it would actually ask for more than we
         // already did. Two ways it would not: the section is at the API's cap,
         // or it already requested `total` rows and got back fewer because the
