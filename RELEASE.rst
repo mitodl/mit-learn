@@ -1,6 +1,21 @@
 Release Notes
 =============
 
+Version 0.76.1
+--------------
+
+- test: pin course-run end dates so session options stay unambiguous (#3697)
+- Readd dropped GTM calls (#3696)
+- feat(b2b): org analytics dashboard for the manager surface (#3679)
+- Fix flaky test:  deterministically sort  choices (#3689)
+- Defer AI library imports to reduce process startup cost (#3683)
+- add ocw topic to search (#3692)
+- Identify posthog persons by keycloak global_id, not django pk (#3693)
+- Fix oasdiff comment for large diffs (#3694)
+- fix garbled non-Latin characters in certificate PDFs (#3685)
+- fix: Show error message when a podcast episode fails to play (#3687)
+- Strip trailing slash from channel_url (#3691)
+
 Version 0.76.0 (Released July 29, 2026)
 --------------
 
