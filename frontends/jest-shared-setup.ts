@@ -1,3 +1,4 @@
+import v8 from "node:v8"
 import { faker } from "@faker-js/faker/locale/en"
 import failOnConsole from "jest-fail-on-console"
 
@@ -23,6 +24,20 @@ setDefaultTimezone("UTC")
 // jsdom), so they live in main/src/test-utils/setupJest.tsx. The api workspace
 // configures its clients with hardcoded test URLs in its own setup, and leaf
 // packages (ol-*) don't read NEXT_PUBLIC_* at all.
+
+/**
+ * jsdom does not expose `structuredClone`, which real browsers and Node both
+ * have. `@mui/x-charts` calls it while building series state, so any test that
+ * renders a chart dies with a ReferenceError without this.
+ *
+ * Implemented with v8's serializer rather than a JSON round-trip so it behaves
+ * like the real thing for Dates, Maps and Sets instead of flattening them to
+ * strings and plain objects.
+ */
+if (typeof globalThis.structuredClone === "undefined") {
+  globalThis.structuredClone = <T>(value: T): T =>
+    v8.deserialize(v8.serialize(value as never)) as T
+}
 
 // Pulled from the docs - see https://jestjs.io/docs/manual-mocks#mocking-methods-which-are-not-implemented-in-jsdom
 

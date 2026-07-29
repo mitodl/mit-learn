@@ -103,6 +103,14 @@ export const CONTRACT_ADMIN_VIEW =
   "/organization/[orgSlug]/contract/[contractSlug]/admin"
 export const contractAdminView = (orgSlug: string, contractSlug: string) =>
   generatePath(CONTRACT_ADMIN_VIEW, { orgSlug, contractSlug })
+/**
+ * B2B analytics is org-scoped, not contract-scoped: the underlying materialized
+ * views are keyed on the organization and break out contracts as rows.
+ */
+export const ORGANIZATION_ANALYTICS_VIEW =
+  "/dashboard/organization/[orgSlug]/analytics"
+export const organizationAnalyticsView = (orgSlug: string) =>
+  generatePath(ORGANIZATION_ANALYTICS_VIEW, { orgSlug })
 export const PROGRAM_VIEW = "/dashboard/program/[id]"
 export const programView = (id: number) =>
   generatePath(PROGRAM_VIEW, { id: String(id) })

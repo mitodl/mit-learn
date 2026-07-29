@@ -26,4 +26,9 @@ configureApiClients({
     csrfCookieName: "mitxcsrftoken",
     withCredentials: false,
   },
+  analytics: {
+    baseUrl: "http://api.test.learn.odl.local:8065/analytics",
+    csrfCookieName: "csrftoken",
+    withCredentials: false,
+  },
 })
