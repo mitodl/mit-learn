@@ -9,7 +9,11 @@ import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { enrollmentAlertSuccessUrl } from "@/common/mitxonline"
 import { useRouter } from "next-nprogress-bar"
 import { usePostHog } from "posthog-js/react"
-import { trackCourseEnrolled } from "@/common/analytics/gtm"
+import {
+  trackCourseEnrolled,
+  trackStartEnrollment,
+  trackBeginCheckout,
+} from "@/common/analytics/gtm"
 import { DASHBOARD_HOME } from "@/common/urls"
 import { getCourseScenario, type CourseScenario } from "./courseRun"
 import { useCourseEnrolledRunIds } from "./useCourseEnrolledRunIds"
@@ -90,9 +94,11 @@ export const useCourseEnrollment = (
         opts?.onRequireSignup?.(e.currentTarget)
         return
       }
+      trackStartEnrollment(course.title)
       if (kind === "paid") {
         const product = selectedRun?.products?.[0]
         if (product) {
+          trackBeginCheckout(course.title)
           replaceBasketItem.mutate(product.id)
         }
       } else if (kind === "free") {
