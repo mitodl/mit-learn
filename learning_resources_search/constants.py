@@ -211,7 +211,10 @@ LEARNING_RESOURCE_MAP = {
             "channel_url": {"type": "keyword"},
         },
     },
-    "ocw_topics": {"type": "keyword"},
+    "ocw_topics": {
+        "type": "keyword",
+        "fields": {"english": {"type": "text", "analyzer": "custom_english"}},
+    },
     "offered_by": {
         "type": "nested",
         "properties": {
@@ -420,6 +423,7 @@ LEARNING_RESOURCE_QUERY_FIELDS = [
     "readable_id",
     "offered_by",
     "course_feature",
+    "ocw_topics.english",
     "video.transcript.english",
 ]
 
