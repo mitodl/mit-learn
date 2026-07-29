@@ -10,7 +10,6 @@ from django.conf import settings
 from django.core.cache import caches
 from django.db.models import Q
 
-from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.models import (
     ContentFile,
     Course,
@@ -740,6 +739,8 @@ def _missing_summaries():
         # list the same as None (no restriction), so short-circuit here instead
         # of letting it scan every learning resource.
         return []
+
+    from learning_resources.content_summarizer import ContentSummarizer
 
     summarizer = ContentSummarizer()
     return summarizer.get_unprocessed_content_file_ids(

@@ -13,7 +13,6 @@ from django.db import transaction
 from django.db.models import F, Max, Prefetch, Q
 from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 from isodate import parse_duration
-from langchain_text_splitters import RecursiveJsonSplitter
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -1128,6 +1127,8 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     def render_chunks(self):
         """Convert resource info to markdown chunks"""
+        from langchain_text_splitters import RecursiveJsonSplitter
+
         rendered_doc = self.render_document()
         resource_type = self.instance.get("resource_type", "course")
         """

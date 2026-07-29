@@ -546,7 +546,7 @@ def test_summarize_unprocessed_content(
         "learning_resources.tasks.summarize_content_files_task", autospec=True
     )
     get_unprocessed_content_file_ids_mock = mocker.patch(
-        "learning_resources.tasks.ContentSummarizer.get_unprocessed_content_file_ids",
+        "learning_resources.content_summarizer.ContentSummarizer.get_unprocessed_content_file_ids",
         autospec=True,
         return_value=ids,
     )

@@ -46,9 +46,6 @@ from learning_resources.constants import (
     OfferedBy,
     RunStatus,
 )
-from learning_resources.converters.opendataloader_llm_converter import (
-    OpenDataLoaderLLMConverter,
-)
 from learning_resources.etl.constants import (
     RESOURCE_DELIVERY_MAPPING,
     TIME_INTERVAL_MAPPING,
@@ -1294,6 +1291,10 @@ def _pdf_to_markdown(pdf_path):
     """
     Convert a PDF file to markdown using an llm
     """
+    from learning_resources.converters.opendataloader_llm_converter import (
+        OpenDataLoaderLLMConverter,
+    )
+
     converter = OpenDataLoaderLLMConverter(pdf_path)
     return converter.convert_to_markdown()
 

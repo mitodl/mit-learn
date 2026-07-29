@@ -4,9 +4,12 @@ import logging
 
 import sentry_sdk
 from celery.exceptions import WorkerLostError
+from sentry_sdk.integrations.boto3 import Boto3Integration
 from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.httpx import HttpxIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
+from sentry_sdk.integrations.redis import RedisIntegration
 
 # these errors occur when a shutdown is happening (usually caused by a SIGTERM)
 SHUTDOWN_ERRORS = (WorkerLostError, SystemExit)
@@ -73,9 +76,22 @@ def init_sentry(  # noqa: PLR0913
         before_send=before_send,
         traces_sample_rate=traces_sample_rate,
         profiles_sample_rate=profiles_sample_rate,
+        # Sentry's auto-enabling integrations (langchain, openai, etc.) import
+        # their target library at init time just to check whether it's
+        # installed, regardless of whether it's ever used -- e.g. langchain is
+        # installed as a litellm transitive dependency but never used directly,
+        # and importing its Sentry integration alone pulls in the whole
+        # langchain/tiktoken stack on every process. Opt in explicitly instead.
+        # Boto3/Redis/Httpx are included because boto3, redis, and httpx are
+        # already imported elsewhere at boot regardless of Sentry, so these
+        # add no import cost of their own.
+        auto_enabling_integrations=False,
         integrations=[
             DjangoIntegration(),
             CeleryIntegration(),
             LoggingIntegration(level=log_level),
+            RedisIntegration(),
+            Boto3Integration(),
+            HttpxIntegration(),
         ],
     )

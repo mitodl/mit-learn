@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 import html2text
 import rapidjson
 import requests
-import tiktoken
 import yaml
 from botocore.exceptions import ClientError
 from django.conf import settings
@@ -800,6 +799,8 @@ def truncate_to_tokens(text: str, max_tokens: int, model: str = "gpt-4o") -> str
     """
     Truncate text to a maximum number of tokens for a given model.
     """
+    import tiktoken
+
     encoding = tiktoken.encoding_for_model(model)
     tokens = encoding.encode(text)
     if len(tokens) <= max_tokens:

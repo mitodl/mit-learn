@@ -15,7 +15,6 @@ from django.db.models import Q
 from django.utils import timezone
 
 from learning_resources.constants import LearningResourceType
-from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.etl import ovs, pipelines, youtube
 from learning_resources.etl.canvas import (
     sync_canvas_archive,
@@ -549,6 +548,8 @@ def summarize_content_files_task(
     Returns:
         - None
     """
+    from learning_resources.content_summarizer import ContentSummarizer
+
     summarizer = ContentSummarizer()
     return summarizer.summarize_content_files_by_ids(content_file_ids, overwrite)
 
