@@ -1028,6 +1028,7 @@ def test_embedding_context_includes_content_files():
         "title": "A title",
         "description": "A short description",
         "full_description": "A full description",
+        "readable_id": "18.06",
         "resource_type_group": "course",
         "content_files": [
             {"content": "The first content file text"},
@@ -1040,7 +1041,8 @@ def test_embedding_context_includes_content_files():
         serialized_resource
     )
     assert context == (
-        "A title A short description A full description\n\n# Content\n"
+        "# A title\n\nA short description A full description\n\n"
+        "Course code: 18.06\n\n\n## Content\n"
         "The first content file text\n\nThe second content file text"
     )
 
@@ -1061,6 +1063,7 @@ def test_embedding_context_without_content_files():
         "title": "A title",
         "description": "A short description",
         "full_description": "A full description",
+        "readable_id": "18.06",
         "resource_type_group": "course",
         "content_files": [],
     }
@@ -1069,7 +1072,9 @@ def test_embedding_context_without_content_files():
         serialized_resource
     )
 
-    assert context == "A title A short description A full description"
+    assert context == (
+        "# A title\n\nA short description A full description\n\nCourse code: 18.06\n"
+    )
 
 
 def test_embedding_context_truncates_content(mocker):
@@ -1087,6 +1092,7 @@ def test_embedding_context_truncates_content(mocker):
         "title": "A title",
         "description": "A short description",
         "full_description": "A full description",
+        "readable_id": "18.06",
         "resource_type_group": LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
         "content_files": [{"content": "0123456789ABCDEF"}],
     }
@@ -1095,12 +1101,84 @@ def test_embedding_context_truncates_content(mocker):
         serialized_resource
     )
 
-    assert context == "A title A "
+    assert context == "# A title\n"
     truncate_mock.assert_called_once_with(
-        "A title A short description A full description\n\n# Content\n0123456789ABCDEF",
+        "# A title\n\nA short description A full description\n\n"
+        "Course code: 18.06\n\n\n## Content\n0123456789ABCDEF",
         "test-model",
         token_encoding_name="test-encoding",  # noqa: S106
     )
+
+
+def test_embedding_context_includes_course_code():
+    """The resource's readable_id should be included as the course code."""
+    serialized_resource = {
+        "title": "Linear Algebra",
+        "description": "A short description",
+        "full_description": "A full description",
+        "readable_id": "18.06",
+        "resource_type_group": "course",
+        "content_files": [],
+    }
+
+    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
+        serialized_resource
+    )
+
+    assert "Course code: 18.06" in context
+
+
+def test_embedding_context_markdown_formatting():
+    """Title and content should be rendered as markdown headings."""
+    serialized_resource = {
+        "title": "Linear Algebra",
+        "description": "A short description",
+        "full_description": "A full description",
+        "readable_id": "18.06",
+        "resource_type_group": "course",
+        "content_files": [{"content": "Some content file text"}],
+    }
+
+    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
+        serialized_resource
+    )
+
+    assert context.startswith("# Linear Algebra\n")
+    assert "\n## Content\n" in context
+
+
+@pytest.mark.parametrize(
+    ("description", "full_description", "expected"),
+    [
+        (
+            "A short description",
+            "A full description",
+            "A short description A full description",
+        ),
+        (None, "A full description", "A full description"),
+        ("A short description", None, "A short description"),
+        (None, None, ""),
+    ],
+)
+def test_embedding_context_omits_missing_descriptions(
+    description, full_description, expected
+):
+    """Missing description fields should be dropped rather than rendered as None."""
+    serialized_resource = {
+        "title": "Linear Algebra",
+        "description": description,
+        "full_description": full_description,
+        "readable_id": "18.06",
+        "resource_type_group": "course",
+        "content_files": [],
+    }
+
+    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
+        serialized_resource
+    )
+
+    assert context == f"# Linear Algebra\n\n{expected}\n\nCourse code: 18.06\n"
+    assert "None" not in context
 
 
 def test_should_generate_for_changed_content_file(mocker):
