@@ -101,7 +101,8 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
         # Only drafts may be deleted. Published content is out of scope and
         # deleting it is rejected rather than hidden.
         if instance.is_published:
-            raise ValidationError("Published content cannot be deleted.")
+            msg = "Published content cannot be deleted."
+            raise ValidationError(msg)
         # Soft delete: mark the row rather than removing it, and bypass the
         # model's save() override (which recomputes slug/cover_image) so this
         # is a targeted single-field write.
