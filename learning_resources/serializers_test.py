@@ -212,8 +212,33 @@ def test_serialize_video_resource_with_content_files():
     assert len(serializer.data["content_files"]) == 1
     assert serializer.data["content_files"][0]["id"] == content_file.id
     assert serializer.data["content_files"][0]["title"] == "Video Content File"
+    # Full text fields are excluded from nested API responses
+    for field in ("content", "summary", "flashcards"):
+        assert field not in serializer.data["content_files"][0]
     # Description should fall back to content file's description when resource has none
     assert serializer.data["description"] == "Content file description"
+
+
+def test_serialize_document_resource_with_content_files():
+    """
+    Verify that DocumentResourceSerializer serializes content files without
+    the full text fields
+    """
+    document_resource = factories.LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.name,
+    )
+    content_file = factories.ContentFileFactory.create(
+        run=None,
+        direct_learning_resource=document_resource,
+        title="Document Content File",
+    )
+    resource = LearningResource.objects.for_serialization().get(pk=document_resource.pk)
+    serializer = serializers.DocumentResourceSerializer(instance=resource)
+
+    assert len(serializer.data["content_files"]) == 1
+    assert serializer.data["content_files"][0]["id"] == content_file.id
+    for field in ("content", "summary", "flashcards"):
+        assert field not in serializer.data["content_files"][0]
 
 
 def test_serialize_podcast_episode_playlists_to_json():
@@ -370,7 +395,7 @@ def test_learning_resource_serializer(  # noqa: PLR0913
                 "department_id": dept.department_id,
                 "name": dept.name,
                 "channel_url": frontend_absolute_url(
-                    f"/c/department/{Channel.objects.get(department_detail__department=dept).name}/",
+                    f"/c/department/{Channel.objects.get(department_detail__department=dept).name}",
                 ),
                 "school": {
                     "id": dept.school.id,
@@ -680,7 +705,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
                 "code": content_file.run.learning_resource.offered_by.code,
                 "display_facet": True,
                 "channel_url": frontend_absolute_url(
-                    f"/c/unit/{Channel.objects.get(unit_detail__unit=content_file.run.learning_resource.offered_by).name}/"
+                    f"/c/unit/{Channel.objects.get(unit_detail__unit=content_file.run.learning_resource.offered_by).name}"
                 )
                 if has_channels
                 else None,
@@ -692,7 +717,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
                     "name": dept.name,
                     "department_id": dept.department_id,
                     "channel_url": frontend_absolute_url(
-                        f"/c/department/{Channel.objects.get(department_detail__department=dept).name}/"
+                        f"/c/department/{Channel.objects.get(department_detail__department=dept).name}"
                     )
                     if has_channels
                     else None,
@@ -715,7 +740,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
                     "icon": topic.icon,
                     "parent": topic.parent,
                     "channel_url": frontend_absolute_url(
-                        f"/c/topic/{Channel.objects.get(topic_detail__topic=topic).name}/"
+                        f"/c/topic/{Channel.objects.get(topic_detail__topic=topic).name}"
                         if has_channels
                         else None,
                     )

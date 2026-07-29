@@ -65,7 +65,7 @@ log = logging.getLogger(__name__)
 CLEANUP_RETRY_EXCEPTIONS = (*SEARCH_CONN_EXCEPTIONS, OperationalError)
 
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def update_next_start_date_and_prices():
     """Update expired next start dates and prices"""
     resources = LearningResource.objects.filter(next_start_date__lt=timezone.now())
@@ -79,7 +79,7 @@ def update_next_start_date_and_prices():
     return len(resources)
 
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 @cooldown_task(
     wait_time=3600,
     key_func=lambda *, api_course_datafile=None, api_program_datafile=None: (
@@ -108,7 +108,7 @@ def get_mit_edx_data(
     return len(courses) + len(programs)
 
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 @cooldown_task(wait_time=900)
 def get_mitxonline_data() -> int | None:
     """Execute the MITX Online ETL pipeline"""
@@ -136,21 +136,21 @@ def get_oll_data(sheets_id=None) -> int | None:
     return len(courses)
 
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def get_mitpe_data():
     """Execute the Professional Education ETL pipeline"""
     courses, programs = pipelines.mitpe_etl()
     return len(courses) + len(programs)
 
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def get_sloan_data():
     """Execute the Sloan ETL pipelines"""
     courses = pipelines.sloan_courses_etl()
     return len(courses)
 
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 @cooldown_task(wait_time=900)
 def get_xpro_data() -> int | None:
     """Execute the xPro ETL pipeline"""
@@ -160,7 +160,7 @@ def get_xpro_data() -> int | None:
     return len(courses) + len(programs)
 
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def get_mit_climate_data():
     """Execute the MIT Climate ETL pipeline"""
     articles = pipelines.mit_climate_etl()
@@ -168,7 +168,7 @@ def get_mit_climate_data():
     return len(articles)
 
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def get_content_files(
     ids: list[int],
     etl_source: str,
@@ -317,7 +317,7 @@ def import_content_files(
     )
 
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def get_podcast_data():
     """
     Execute the Podcast ETL pipeline
@@ -530,7 +530,7 @@ def get_ovs_transcripts(*, overwrite=False):
     clear_views_cache()
 
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def get_learning_resource_views():
     """Load learning resource views from the PostHog ETL."""
 
