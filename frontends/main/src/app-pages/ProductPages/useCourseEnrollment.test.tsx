@@ -548,6 +548,63 @@ describe("useCourseEnrollment — actions", () => {
     expect(onRequireSignup).toHaveBeenCalledWith(anchorButton)
   })
 
+  test("unauthenticated paid click -> basket clear + add (no signup)", async () => {
+    const product = makeProduct()
+    const run = makeRun({
+      is_enrollable: true,
+      is_upgradable: true,
+      is_archived: false,
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [product],
+    })
+    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+
+    setMockResponse.get(
+      urls.userMe.get(),
+      makeUser({ is_authenticated: false }),
+    )
+    const clearUrl = mitxUrls.baskets.clear()
+    const basketUrl = mitxUrls.baskets.createFromProduct(product.id)
+    setMockResponse.delete(clearUrl, undefined)
+    setMockResponse.post(basketUrl, { id: 1, items: [] })
+
+    const onRequireSignup = jest.fn()
+
+    const { result } = renderHook(
+      () =>
+        useCourseEnrollment(course, run, {
+          tracking: { placement: "infobox" },
+          onRequireSignup,
+        }),
+      { wrapper },
+    )
+
+    await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
+
+    const state = result.current.state
+    expect(state.status).toBe("options")
+    if (state.status !== "options") return
+
+    const paidOption = state.options.find((o) => o.kind === "paid")
+    expect(paidOption).toBeDefined()
+
+    paidOption!.onClick!({
+      currentTarget: document.createElement("button"),
+    } as React.MouseEvent<HTMLButtonElement>)
+
+    // Anonymous paid checkout hands off to the MITx Online basket rather than
+    // prompting signup first.
+    await waitFor(() =>
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "delete", url: clearUrl }),
+      ),
+    )
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "post", url: basketUrl }),
+    )
+    expect(onRequireSignup).not.toHaveBeenCalled()
+  })
+
   test("fires PostHog enroll_cta_clicked on paid action click", async () => {
     const product = makeProduct()
     const run = makeRun({

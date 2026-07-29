@@ -393,4 +393,52 @@ describe("useProgramEnrollment — actions", () => {
       expect.objectContaining({ method: "post", url: basketUrl }),
     )
   })
+
+  test("unauthenticated paid action -> hands off to basket (no signup)", async () => {
+    setMockResponse.get(
+      urls.userMe.get(),
+      makeUser({ is_authenticated: false }),
+    )
+
+    const product = makeProduct({ price: "100" })
+    const program = makeProgram({
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [product],
+    })
+    const clearUrl = mitxUrls.baskets.clear()
+    const basketUrl = mitxUrls.baskets.createFromProduct(product.id)
+    setMockResponse.delete(clearUrl, undefined)
+    setMockResponse.post(basketUrl, { id: 1, items: [] })
+
+    const onRequireSignup = jest.fn()
+
+    const { result } = renderHook(
+      () =>
+        useProgramEnrollment(program, {
+          tracking: { placement: "infobox" },
+          onRequireSignup,
+        }),
+      { wrapper },
+    )
+
+    await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
+
+    const state = result.current.state
+    if (state.status !== "options") throw new Error("expected options")
+    const paid = state.options.find((o) => o.kind === "paid")!
+
+    paid.onClick!(fakeClickEvent())
+
+    // Anonymous paid checkout hands off to the MITx Online basket rather than
+    // prompting signup first.
+    await waitFor(() =>
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "delete", url: clearUrl }),
+      ),
+    )
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "post", url: basketUrl }),
+    )
+    expect(onRequireSignup).not.toHaveBeenCalled()
+  })
 })
