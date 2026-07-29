@@ -120,21 +120,24 @@ def test_command_updates_existing_contact_property(mocker, faker):
 
 
 @pytest.mark.django_db
-def test_command_disambiguates_duplicate_labels_with_value_suffix(mocker, faker):
+@pytest.mark.parametrize("reverse_creation_order", [False, True])
+def test_command_disambiguates_duplicate_labels_with_value_suffix(
+    mocker, faker, reverse_creation_order
+):
     """Command makes duplicate labels unique for HubSpot while preserving values."""
     property_name = faker.slug().replace("-", "_")
-    LearningResourceFactory(
-        is_course=True,
-        title="Generative AI Playbook",
-        readable_id="gai-playbook-a",
-        etl_source="mitxonline",
-    )
-    LearningResourceFactory(
-        is_program=True,
-        title="Generative AI Playbook",
-        readable_id="gai-playbook-b",
-        etl_source="mitxonline",
-    )
+    # creation order is varied because ordering by a duplicated label leaves the
+    # database free to return the tied rows in any order
+    readable_ids = ["gai-playbook-a", "gai-playbook-b"]
+    if reverse_creation_order:
+        readable_ids.reverse()
+    for readable_id in readable_ids:
+        LearningResourceFactory(
+            is_course=True,
+            title="Generative AI Playbook",
+            readable_id=readable_id,
+            etl_source="mitxonline",
+        )
 
     mocker.patch(
         "ol_hubspot.management.commands.update_hubspot_contact_property_choices.get_contact_property",
