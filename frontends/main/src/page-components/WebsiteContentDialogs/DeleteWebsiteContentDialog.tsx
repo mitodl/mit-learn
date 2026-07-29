@@ -25,15 +25,18 @@ const CONTENT_TYPE_LABELS: Record<string, string> = {
 const DeleteWebsiteContentDialog = NiceModal.create(
   ({ contentItem, onDestroy }: DeleteWebsiteContentDialogProps) => {
     const modal = NiceModal.useModal()
-    const hideModal = modal.hide
     const destroy = useWebsiteContentDestroy()
     const label = CONTENT_TYPE_LABELS[contentItem.content_type ?? ""] ?? "Item"
 
+    // Closing is Dialog's job: it awaits onConfirm and then calls the onClose
+    // that muiDialogV5 wires to modal.hide(). Hiding here as well would drive
+    // the same transition twice and race Dialog's own post-confirm state
+    // update. On a rejected mutation Dialog skips onClose, so the dialog
+    // correctly stays open for the user to retry.
     const handleConfirm = useCallback(async () => {
       await destroy.mutateAsync(contentItem.id)
-      hideModal()
       onDestroy?.()
-    }, [destroy, hideModal, contentItem, onDestroy])
+    }, [destroy, contentItem, onDestroy])
 
     return (
       <Dialog

@@ -51,4 +51,28 @@ describe("WebsiteContentDraftListingPage delete", () => {
       )
     })
   })
+
+  test("offers no delete action for published content", async () => {
+    setupEditor()
+    // The API only rejects this with a 400, so the button must not be offered
+    // even if a published item reaches this list.
+    const published = factories.websiteContent.websiteContent({
+      title: "Already Published",
+      content_type: "news",
+      is_published: true,
+    })
+    setMockResponse.get(expect.stringContaining("/api/v1/website_content/"), {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [published],
+    })
+
+    renderWithProviders(<WebsiteContentDraftListingPage contentType="news" />)
+
+    await screen.findByText(published.title)
+    expect(
+      screen.queryByRole("button", { name: `Delete ${published.title}` }),
+    ).not.toBeInTheDocument()
+  })
 })

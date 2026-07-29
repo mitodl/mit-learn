@@ -120,17 +120,25 @@ const DraftItem: React.FC<{ contentItem: WebsiteContent; type: string }> = ({
           </>
         )}
       </Card.Footer>
-      <Card.Actions>
-        <StyledDeleteButton
-          variant="text"
-          size="small"
-          aria-label={`Delete ${contentItem.title}`}
-          startIcon={<RiDeleteBinLine />}
-          onClick={() => showDeleteWebsiteContentDialog(contentItem)}
-        >
-          Delete
-        </StyledDeleteButton>
-      </Card.Actions>
+      {/*
+        Only drafts are deletable — the API rejects deleting published content
+        with a 400. This page filters to drafts, so the guard is belt-and-braces:
+        it keeps the UI honest about the backend rule if a published item ever
+        reaches this list.
+      */}
+      {!contentItem.is_published && (
+        <Card.Actions>
+          <StyledDeleteButton
+            variant="text"
+            size="small"
+            aria-label={`Delete ${contentItem.title}`}
+            startIcon={<RiDeleteBinLine />}
+            onClick={() => showDeleteWebsiteContentDialog(contentItem)}
+          >
+            Delete
+          </StyledDeleteButton>
+        </Card.Actions>
+      )}
     </DraftContentCard>
   )
 }
