@@ -1,8 +1,8 @@
 import React from "react"
 
-import { render, waitFor } from "@testing-library/react"
+import { waitFor } from "@testing-library/react"
 import { PosthogIdentifier } from "./ConfiguredPostHogProvider"
-import { QueryClientProvider, QueryClient } from "@tanstack/react-query"
+import { renderWithProviders } from "@/test-utils"
 
 // mock stuff
 import { setMockResponse, urls, factories } from "api/test-utils"
@@ -27,15 +27,15 @@ const mockPosthog = jest.mocked(posthog)
 
 describe("PosthogIdentifier", () => {
   const setup = (user: Partial<User>) => {
-    const queryClient = new QueryClient()
     const userData = factories.user.user(user)
 
     setMockResponse.get(urls.userMe.get(), userData)
-    render(
-      <QueryClientProvider client={queryClient}>
-        <PosthogIdentifier />
-      </QueryClientProvider>,
-    )
+    /**
+     * No `user` option: we want the user to arrive via the mocked request, so
+     * that the effect runs on a pending-then-resolved query as it does in the
+     * app, rather than on a pre-seeded cache.
+     */
+    renderWithProviders(<PosthogIdentifier />)
     return userData
   }
   test.each([
