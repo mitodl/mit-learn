@@ -26,6 +26,15 @@ jobs:
             'head/openapi/specs/*.yaml' \
             | head -1)
           echo "summary=$SUMMARY" >> $GITHUB_OUTPUT
+          {
+            echo "## OpenAPI Changes"
+            echo ""
+            echo "${SUMMARY:-No detectable change.}"
+            echo ""
+            echo "[View full changelog](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+            echo ""
+            echo "Unexpected changes? Ensure your branch is up-to-date with \`main\` (consider rebasing)."
+          } > comment_body.md
       - name: Find existing comment
         id: find_comment
         uses: peter-evans/find-comment@b30e6a3c0ed37e7c023ccd3f1db5c6c0b0c23aad # v4
@@ -44,14 +53,7 @@ jobs:
           repository: ${{ github.repository }}
           issue-number: ${{ github.event.pull_request.number }}
           comment-id: ${{ steps.find_comment.outputs.comment-id }}
-          body: |
-            ## OpenAPI Changes
-
-            ${{ steps.oasdif_changelog.outputs.summary || 'No detectable change.' }}
-
-            [View full changelog](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-
-            Unexpected changes? Ensure your branch is up-to-date with `main` (consider rebasing).
+          body-path: comment_body.md
       - name: Check for breaking changes
         id: oasdif_breaking
         run: |
