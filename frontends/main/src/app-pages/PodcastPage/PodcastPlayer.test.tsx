@@ -429,6 +429,126 @@ describe("PodcastPlayer", () => {
       expect(screen.queryByRole("alert")).not.toBeInTheDocument()
     })
 
+    describe("focus handoff", () => {
+      test("moves focus to Try again when the focused control is replaced", async () => {
+        const { audio, simulateCanPlay } = await renderPlayer()
+        await simulateCanPlay()
+
+        const slider = screen.getByRole("slider", { name: /seek/i })
+        slider.focus()
+        expect(slider).toHaveFocus()
+
+        simulateMediaError(audio, 4)
+
+        await waitFor(() =>
+          expect(
+            screen.getByRole("button", { name: /try again/i }),
+          ).toHaveFocus(),
+        )
+      })
+
+      test("returns focus to the play button after a successful retry", async () => {
+        const { audio, simulateCanPlay } = await renderPlayer()
+        simulateMediaError(audio, 2)
+
+        const retryButton = await screen.findByRole("button", {
+          name: /try again/i,
+        })
+        retryButton.focus()
+        fireEvent.click(retryButton)
+
+        // The reload leaves the play button disabled, so the handoff has to
+        // wait for it to become focusable again: first the buffering clears,
+        // then the play() promise settles.
+        simulateCanPlay()
+
+        await waitFor(() =>
+          expect(
+            screen.getByRole("button", { name: /^pause$/i }),
+          ).toHaveFocus(),
+        )
+      })
+
+      test("announces the retry while it is in flight", async () => {
+        const { audio, simulateCanPlay } = await renderPlayer()
+        simulateMediaError(audio, 2)
+
+        const retryButton = await screen.findByRole("button", {
+          name: /try again/i,
+        })
+        // The live region must already exist so the text change is announced.
+        const status = document.querySelector("[aria-live='polite']")
+        expect(status).toBeInTheDocument()
+        expect(status).toHaveTextContent("")
+
+        fireEvent.click(retryButton)
+
+        // The alert is gone and the button unmounted — this is the silent gap.
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+        expect(retryButton).not.toBeInTheDocument()
+        expect(status).toHaveTextContent(/retrying/i)
+        expect(document.querySelector("[aria-busy='true']")).toBeInTheDocument()
+
+        simulateCanPlay()
+
+        await waitFor(() => expect(status).toHaveTextContent(""))
+        expect(document.querySelector("[aria-busy='true']")).toBeNull()
+      })
+
+      test("stops announcing when the retry fails again", async () => {
+        const { audio } = await renderPlayer()
+        simulateMediaError(audio, 2)
+
+        fireEvent.click(
+          await screen.findByRole("button", { name: /try again/i }),
+        )
+        const status = document.querySelector("[aria-live='polite']")
+        expect(status).toHaveTextContent(/retrying/i)
+
+        // The reload fails too; the alert speaks for the outcome from here.
+        simulateMediaError(audio, 2)
+
+        await waitFor(() => expect(status).toHaveTextContent(""))
+        expect(await screen.findByRole("alert")).toBeInTheDocument()
+      })
+
+      test("says nothing when playback is healthy", async () => {
+        const { simulateCanPlay } = await renderPlayer()
+        await simulateCanPlay()
+
+        expect(
+          document.querySelector("[aria-live='polite']"),
+        ).toHaveTextContent("")
+        expect(document.querySelector("[aria-busy='true']")).toBeNull()
+      })
+
+      test("does not steal focus from elsewhere on the page", async () => {
+        const { audio, simulateCanPlay } = await renderPlayer()
+        await simulateCanPlay()
+
+        const closeButton = screen.getByRole("button", {
+          name: /close player/i,
+        })
+        closeButton.focus()
+
+        simulateMediaError(audio, 4)
+
+        await screen.findByRole("alert")
+        expect(closeButton).toHaveFocus()
+      })
+
+      test("leaves focus alone when the error arrives unattended", async () => {
+        const { audio } = await renderPlayer()
+        // Nothing in the player was focused — a mouse user scrolling the page.
+        expect(document.body).toHaveFocus()
+
+        simulateMediaError(audio, 4)
+
+        await screen.findByRole("alert")
+        expect(document.body).toHaveFocus()
+      })
+    })
+
     test("clears the message when the track changes", async () => {
       const { audio, rerender } = await renderPlayer()
       simulateMediaError(audio, 4)
