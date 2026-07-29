@@ -111,7 +111,6 @@ INSTALLED_APPS = (
     "django_removals",
     "django_scim",
     "social_django",
-    "server_status",
     "rest_framework",
     "corsheaders",
     "anymail",
