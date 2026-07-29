@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.76.0
+Version 0.76.0 (Released July 29, 2026)
 --------------
 
 - Fix topic page pagination (#3682)
