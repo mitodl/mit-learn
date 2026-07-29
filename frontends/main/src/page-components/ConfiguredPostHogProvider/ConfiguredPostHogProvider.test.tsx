@@ -1,13 +1,12 @@
 import React from "react"
 
-import { render, waitFor } from "@testing-library/react"
+import { waitFor } from "@testing-library/react"
 import { PosthogIdentifier } from "./ConfiguredPostHogProvider"
-import { QueryClientProvider, QueryClient } from "@tanstack/react-query"
+import { renderWithProviders } from "@/test-utils"
 
 // mock stuff
-import { setMockResponse, urls } from "api/test-utils"
+import { setMockResponse, urls, factories } from "api/test-utils"
 import type { User } from "api/hooks/user"
-import { makeUserSettings } from "@/test-utils/factories"
 import { usePostHog } from "posthog-js/react"
 import type { PostHog } from "posthog-js"
 
@@ -28,15 +27,15 @@ const mockPosthog = jest.mocked(posthog)
 
 describe("PosthogIdentifier", () => {
   const setup = (user: Partial<User>) => {
-    const queryClient = new QueryClient()
-    const userData = makeUserSettings(user)
+    const userData = factories.user.user(user)
 
     setMockResponse.get(urls.userMe.get(), userData)
-    render(
-      <QueryClientProvider client={queryClient}>
-        <PosthogIdentifier />
-      </QueryClientProvider>,
-    )
+    /**
+     * No `user` option: we want the user to arrive via the mocked request, so
+     * that the effect runs on a pending-then-resolved query as it does in the
+     * app, rather than on a pre-seeded cache.
+     */
+    renderWithProviders(<PosthogIdentifier />)
     return userData
   }
   test.each([
@@ -55,11 +54,24 @@ describe("PosthogIdentifier", () => {
     },
   )
 
-  test("If authenticated, calls `identify` with user id and username", async () => {
+  test("If authenticated, calls `identify` with the user's global id", async () => {
     const user = setup({ is_authenticated: true })
     await waitFor(() => {
-      expect(mockPosthog.identify).toHaveBeenCalledWith(String(user.id))
+      expect(mockPosthog.identify).toHaveBeenCalledExactlyOnceWith(
+        user.global_id,
+      )
     })
+    expect(mockPosthog.reset).not.toHaveBeenCalled()
+  })
+
+  test("If authenticated with no global id, neither identifies nor resets", async () => {
+    // Not "anonymous", so a fall-through to the reset branch would be visible.
+    mockPosthog.get_property.mockReturnValue("identified")
+    setup({ is_authenticated: true, global_id: null })
+    await waitFor(() => {
+      expect(mockPosthog.get_property).toHaveBeenCalledWith("$user_state")
+    })
+    expect(mockPosthog.identify).not.toHaveBeenCalled()
     expect(mockPosthog.reset).not.toHaveBeenCalled()
   })
 })

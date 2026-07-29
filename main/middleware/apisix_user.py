@@ -173,8 +173,11 @@ def get_user_from_apisix_headers(  # noqa: C901
             posthog = Posthog(
                 settings.POSTHOG_PROJECT_API_KEY, host=settings.POSTHOG_API_HOST
             )
+            # Identify by global_id, not user.id: this posthog project is
+            # shared with other MIT applications that use their own integer
+            # user ids, so integer ids collide across applications.
             posthog.capture(
-                user.id,
+                global_id,
                 event=PostHogEvents.ACCOUNT_CREATED.value,
                 properties={
                     "$current_url": request.build_absolute_uri(),

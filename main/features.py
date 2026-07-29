@@ -109,10 +109,11 @@ def is_enabled(
         default (bool): default value if not set in settings
         unique_id (str):
             person identifier passed back to posthog which is the display value for
-            person. I recommend this be user.id for logged-in users to allow for
-            more readable user flags as well as more clear troubleshooting. For
-            anonymous users, a persistent ID will help with troubleshooting and tracking
-            efforts.
+            person. For logged-in users this should be the Keycloak global id
+            (user.global_id): this posthog project is shared with other MIT
+            applications that use their own integer user ids, so a Django pk
+            would collide across applications. For anonymous users, a persistent
+            ID will help with troubleshooting and tracking efforts.
 
     Returns:
         bool: True if the feature flag is enabled

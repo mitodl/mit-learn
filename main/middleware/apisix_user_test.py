@@ -10,6 +10,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.db import close_old_connections
 
+from main.constants import PostHogEvents
 from main.factories import UserFactory
 from main.middleware.apisix_user import ApisixUserMiddleware
 
@@ -74,7 +75,11 @@ def test_get_request(mocker, mock_login, settings):
     assert user.profile.email_optin == apisix_user_info["emailOptIn"]
     assert user.global_id == apisix_user_info["sub"]
     mock_posthog_cls.assert_called_once()
-    mock_posthog_cls.return_value.capture.assert_called_once()
+    mock_posthog_cls.return_value.capture.assert_called_once_with(
+        apisix_user_info["sub"],
+        event=PostHogEvents.ACCOUNT_CREATED.value,
+        properties=mocker.ANY,
+    )
 
 
 @pytest.mark.django_db(transaction=True)
