@@ -437,7 +437,10 @@ def bulk_resources_unpublished_actions(resource_ids: list[int], resource_type: s
 
 def content_files_loaded_actions(run: LearningResourceRun):
     """
-    Trigger plugins when content files are loaded for a LearningResourceRun
+    Trigger plugins when content files are loaded for a LearningResourceRun.
+
+    Args:
+        run: the LearningResourceRun whose content files were loaded
     """
     pm = get_plugin_manager()
     hook = pm.hook

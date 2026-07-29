@@ -871,6 +871,25 @@ def test_serialize_bulk_learning_resources_for_deletion():
 
 
 @pytest.mark.django_db
+def test_serialize_learning_resource_for_update_readds_content_file_text():
+    """
+    Indexed learning material docs should include full content file text even
+    though the API serializer omits it
+    """
+    resource = factories.LearningResourceFactory.create(
+        resource_type=LearningResourceType.video.name, runs=[]
+    )
+    factories.ContentFileFactory.create(
+        run=None,
+        direct_learning_resource=resource,
+        content="full text for nested search",
+    )
+    resource = LearningResource.objects.for_search_serialization().get(pk=resource.pk)
+    serialized = serializers.serialize_learning_resource_for_update(resource)
+    assert serialized["content_files"][0]["content"] == "full text for nested search"
+
+
+@pytest.mark.django_db
 def test_serialize_content_file_for_bulk():
     """
     Test that serialize_content_file_for_bulk yields correct data
