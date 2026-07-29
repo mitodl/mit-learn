@@ -35,6 +35,37 @@ const makeRun = mitxFactories.courses.courseRun
 const makeMode = mitxFactories.courses.enrollmentMode
 const makeProduct = mitxFactories.courses.product
 
+const daysFromNow = (days: number) =>
+  new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
+
+/**
+ * A run with both ends of its date range pinned.
+ *
+ * Pinning `end_date` is not decoration. The session options are labelled with
+ * the *whole* range ("Aug 28 - Sep 27, 2026"), and the tests below select an
+ * option by a regex built from one run's start date — so an unpinned
+ * `end_date`, which the factory fills with `faker.date.future()`, can land on
+ * the same calendar day as another run's start and make that regex match two
+ * options. That is exactly what happened in
+ * https://github.com/mitodl/mit-learn/actions/runs/30469814580: a run starting
+ * "Aug 28" drew the random end date "Sep 27", which collided with the "Sep 27"
+ * start of the run the test was trying to click.
+ *
+ * The offsets below are spaced so no two labelled dates can share a calendar
+ * day, which makes every option's accessible name unambiguous by construction
+ * rather than by luck.
+ */
+const makeDatedRun = (
+  startInDays: number,
+  endInDays: number,
+  overrides: Parameters<typeof makeRun>[0] = {},
+) =>
+  makeRun({
+    ...overrides,
+    start_date: daysFromNow(startInDays),
+    end_date: daysFromNow(endInDays),
+  })
+
 function setupAuth(enrollments: unknown[] = []) {
   setMockResponse.get(
     apiUrls.userMe.get(),
@@ -115,7 +146,7 @@ describe("InfoBoxCourse — session selector", () => {
 describe("InfoBoxCourse — run selection changes enroll area", () => {
   test("switching from a both run to a free-only run changes the cards", async () => {
     setupAuth()
-    const bothRun = makeRun({
+    const bothRun = makeDatedRun(30, 45, {
       is_enrollable: true,
       is_archived: false,
       is_upgradable: true,
@@ -124,15 +155,13 @@ describe("InfoBoxCourse — run selection changes enroll area", () => {
         makeMode({ requires_payment: true }),
       ],
       products: [makeProduct()],
-      start_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     })
-    const freeOnlyRun = makeRun({
+    const freeOnlyRun = makeDatedRun(60, 75, {
       is_enrollable: true,
       is_archived: false,
       is_upgradable: false,
       enrollment_modes: [makeMode({ requires_payment: false })],
       products: [],
-      start_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
     })
     const course = makeCourse({
       next_run_id: bothRun.id,
@@ -172,21 +201,19 @@ describe("InfoBoxCourse — run selection changes enroll area", () => {
 
 describe("InfoBoxCourse — session-switch round-trip (enrolled run)", () => {
   test("selecting an enrolled run collapses to Enrolled; switching back restores cards", async () => {
-    const runA = makeRun({
+    const runA = makeDatedRun(30, 45, {
       is_enrollable: true,
       is_archived: false,
       is_upgradable: false,
       enrollment_modes: [makeMode({ requires_payment: false })],
       products: [],
-      start_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     })
-    const runB = makeRun({
+    const runB = makeDatedRun(60, 75, {
       is_enrollable: true,
       is_archived: false,
       is_upgradable: false,
       enrollment_modes: [makeMode({ requires_payment: false })],
       products: [],
-      start_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
     })
     const course = makeCourse({
       next_run_id: runA.id,
