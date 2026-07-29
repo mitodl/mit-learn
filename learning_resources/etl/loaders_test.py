@@ -28,6 +28,7 @@ from learning_resources.constants import (
 from learning_resources.etl import loaders
 from learning_resources.etl.constants import (
     CourseLoaderConfig,
+    CourseNumberType,
     ETLSource,
     ProgramLoaderConfig,
 )
@@ -668,6 +669,50 @@ def test_load_course(  # noqa: PLR0913, PLR0912, PLR0915
     props.pop("delivery")
     for key, value in props.items():
         assert getattr(result, key) == value, f"Property {key} should equal {value}"
+
+
+def test_load_course_updates_course_numbers(mock_upsert_tasks):
+    """load_course should replace course_numbers on an existing course"""
+    platform = LearningResourcePlatformFactory.create()
+    course = CourseFactory.create(
+        learning_resource__runs=[],
+        platform=platform.code,
+        course_numbers=[
+            {
+                "value": "old-number",
+                "department": None,
+                "listing_type": CourseNumberType.primary.name,
+                "primary": True,
+                "sort_coursenum": "old-number",
+            }
+        ],
+    )
+    learning_resource = course.learning_resource
+
+    new_course_numbers = [
+        {
+            "value": "18.03.1x",
+            "department": None,
+            "listing_type": CourseNumberType.primary.name,
+            "primary": True,
+            "sort_coursenum": "18.03.1x",
+        }
+    ]
+    props = {
+        "readable_id": learning_resource.readable_id,
+        "platform": platform.code,
+        "title": learning_resource.title,
+        "url": learning_resource.url,
+        "published": learning_resource.published,
+        "runs": [],
+        "course": {"course_numbers": new_course_numbers},
+    }
+
+    load_course(props, [], [], config=CourseLoaderConfig(prune=True))
+
+    assert Course.objects.count() == 1
+    course.refresh_from_db()
+    assert course.course_numbers == new_course_numbers
 
 
 def test_load_course_bad_platform(mocker):

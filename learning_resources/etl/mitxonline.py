@@ -4,7 +4,7 @@ import copy
 import logging
 import re
 from collections.abc import Iterator
-from datetime import UTC
+from datetime import UTC, datetime
 from decimal import Decimal
 from urllib.parse import parse_qs, urljoin, urlparse
 
@@ -388,6 +388,25 @@ def _transform_course(course):
     ]
     has_certification = parse_certification(OFFERED_BY["code"], runs)
     strip_enrollment_modes(runs)
+    # Course runs each carry a course_number. Order the runs by start date
+    # (latest first) so the latest run supplies the primary course number, then
+    # collect the distinct values with the remaining numbers as cross-listed.
+    # This replaces the course readable_id as the source of course numbers.
+    runs_by_recency = sorted(
+        (course_run for course_run in course["courseruns"] if course_run),
+        key=lambda course_run: (
+            _parse_datetime(
+                course_run.get("start_date") or course_run.get("enrollment_start")
+            )
+            or datetime.min.replace(tzinfo=UTC)
+        ),
+        reverse=True,
+    )
+    course_numbers = []
+    for course_run in runs_by_recency:
+        course_number = course_run.get("course_number")
+        if course_number and course_number not in course_numbers:
+            course_numbers.append(course_number)
     return {
         "readable_id": course["readable_id"],
         "platform": PlatformType.mitxonline.name,
@@ -401,8 +420,12 @@ def _transform_course(course):
         "force_ingest": course.get("ingest_content_files_for_ai", False),
         "course": {
             "course_numbers": generate_course_numbers_json(
-                course["readable_id"], is_ocw=False
-            ),
+                course_numbers[0],
+                extra_nums=course_numbers[1:],
+                is_ocw=False,
+            )
+            if course_numbers
+            else [],
         },
         "published": bool(
             parse_page_attribute(course, "page_url")
