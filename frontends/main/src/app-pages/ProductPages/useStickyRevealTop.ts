@@ -12,8 +12,8 @@ import { useEffect, useRef } from "react"
  *
  *   top = min(defaultOffset, viewportHeight - elementHeight)
  *
- * - Shorter than the viewport -> `defaultOffset` (unchanged from before).
- * - Taller -> a negative offset that lands the element's bottom at the
+ * - Fits in viewport at `defaultOffset` -> `defaultOffset` (unchanged from before).
+ * - Otherwise -> a (possibly negative) offset that lands the element's bottom at the
  *   viewport bottom once stuck.
  */
 export const useStickyRevealTop = (defaultOffset: number) => {
