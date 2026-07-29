@@ -3,6 +3,7 @@ import gc
 import logging
 import uuid
 from functools import cache
+from textwrap import dedent
 
 from asgiref.sync import sync_to_async
 from django.conf import settings
@@ -476,9 +477,23 @@ def _learning_resource_embedding_context(document):
     resource's content files regardless of resource type. The combined
     context is truncated to the embedding model's input limit.
     """
-    context = (
-        f"{document.get('title')} "
-        f"{document.get('description')} {document.get('full_description')}"
+    description = " ".join(
+        filter(
+            None,
+            [
+                document.get("description"),
+                document.get("full_description"),
+            ],
+        )
+    )
+    context = dedent(
+        f"""\
+# {document.get("title")}
+
+{description}
+
+Course code: {document.get("readable_id")}
+"""
     )
     content = "\n\n".join(
         content_file["content"]
@@ -488,7 +503,7 @@ def _learning_resource_embedding_context(document):
     if content:
         encoder = dense_encoder()
         context = truncate_to_model_limit(
-            f"{context}\n\n# Content\n{content}",
+            f"{context}\n\n## Content\n{content}",
             encoder.model_name,
             token_encoding_name=getattr(encoder, "token_encoding_name", None),
         )
