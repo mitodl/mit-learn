@@ -643,6 +643,12 @@ REST_FRAMEWORK = {
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.NamespaceVersioning",
     "ALLOWED_VERSIONS": ["v0", "v1"],
     "ORDERING_PARAM": "sortby",
+    "DEFAULT_THROTTLE_RATES": {
+        # Rate format is "<count>/<period>" (e.g. "10/min", "30/hour"); a blank
+        # env value -> "" or None -> None -> throttle is a no-op (kill switch).
+        "content_feedback": get_string("CONTENT_FEEDBACK_THROTTLE_RATE", "10/min")
+        or None,
+    },
 }
 
 USE_X_FORWARDED_PORT = get_bool("USE_X_FORWARDED_PORT", False)  # noqa: FBT003

@@ -114,3 +114,33 @@ def test_factory_builds_valid_record():
     feedback = ContentFeedbackFactory.create()
     assert feedback.pk is not None
     assert feedback.sentiment in ("positive", "negative", "idea")
+
+
+def test_submit_rate_limited(user_client, mocker):
+    """Exceeding the per-user rate returns 429; a different user is unaffected."""
+    from django.core.cache.backends.locmem import LocMemCache
+    from rest_framework.test import APIClient
+
+    from main.factories import UserFactory
+    from main.throttles import RedisScopedRateThrottle
+
+    mocker.patch.object(
+        RedisScopedRateThrottle, "cache", LocMemCache("throttle-test", {})
+    )
+    mocker.patch.object(
+        RedisScopedRateThrottle, "THROTTLE_RATES", {"content_feedback": "2/min"}
+    )
+
+    url = reverse("content_feedback:v0:content_feedback")
+    assert user_client.post(url, _payload()).status_code == 201
+    assert user_client.post(url, _payload()).status_code == 201
+    response = user_client.post(url, _payload())
+    assert response.status_code == 429
+    assert response.json()["error_type"] == "Throttled"
+
+    # The limit is keyed per authenticated user: a different user still gets
+    # through even after the first user is throttled. (The user_client fixture
+    # shares one APIClient, so build a distinct client for the second user.)
+    other_client = APIClient()
+    other_client.force_login(UserFactory.create())
+    assert other_client.post(url, _payload()).status_code == 201
