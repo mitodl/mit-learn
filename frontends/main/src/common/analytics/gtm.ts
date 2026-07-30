@@ -202,7 +202,7 @@ const trackCatalogFilter = (params: CatalogFilterParams) => {
 
 /**
  * Fired when a user applies a filter to the course catalog.
- * Maps to "filter_course_catalog" GTM trigger.
+ * Maps to the "filter-course-catalog" GTM trigger.
  */
 const trackFilterCourseCatalog = (params: CatalogFilterParams) => {
   pushGtmEvent("filter-course-catalog", {
