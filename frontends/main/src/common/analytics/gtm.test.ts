@@ -260,7 +260,10 @@ describe("trackCatalogFilter", () => {
 
 describe("trackFilterCourseCatalog", () => {
   it("pushes a filter-course-catalog event with filter name and value", () => {
-    trackFilterCourseCatalog({ filterName: "topic", filterValue: "data science" })
+    trackFilterCourseCatalog({
+      filterName: "topic",
+      filterValue: "data science",
+    })
     expect(window.dataLayer).toContainEqual({
       event: "filter-course-catalog",
       "filter-name": "topic",
