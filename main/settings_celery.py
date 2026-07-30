@@ -164,6 +164,10 @@ CELERY_BEAT_SCHEDULE = (
             "task": "learning_resources_search.tasks.update_featured_rank",
             "schedule": crontab(minute=30, hour=7),  # 3:30am EST
         },
+        "delete-old-task-jobs-every-1-days": {
+            "task": "main.tasks.delete_old_task_jobs",
+            "schedule": crontab(minute=0, hour=8),  # 4:00am EST
+        },
         "scrape-marketing-pages-every-1-days": {
             "task": "learning_resources.tasks.scrape_marketing_pages",
             "schedule": get_int(

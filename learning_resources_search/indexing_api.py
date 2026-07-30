@@ -640,6 +640,23 @@ def switch_indices(backing_index, object_type):
         log.warning("Reindex alias not found for %s", object_type)
 
 
+def is_default_backing_index(backing_index, object_type):
+    """
+    Check whether the default alias already points at the given backing index
+
+    Args:
+        backing_index (str): The backing index to check
+        object_type (str): The object type for the index
+
+    Returns:
+        bool: True if the default alias already points at backing_index
+    """
+    conn = get_conn()
+    return conn.indices.exists_alias(
+        index=backing_index, name=get_default_alias_name(object_type)
+    )
+
+
 def delete_orphaned_indexes(obj_types, delete_reindexing_tags):
     """
     Delete any indices without aliases
