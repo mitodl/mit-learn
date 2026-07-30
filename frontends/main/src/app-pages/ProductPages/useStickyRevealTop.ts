@@ -7,10 +7,14 @@ import { useEffect, useRef } from "react"
  * CTA) reachable without an internal scrollbar or a scroll listener.
  *
  * The browser's native sticky positioning does all the scroll-time work; this
- * only sets the sticky `top` offset, recomputing on resize and when the
- * element's own content changes size:
+ * only sets the sticky `top` offset, recomputing on resize, on visualViewport
+ * resize (mobile URL bar show/hide), and when the element's own content
+ * changes size:
  *
  *   top = min(defaultOffset, viewportHeight - elementHeight)
+ *
+ * where viewportHeight is window.visualViewport's height when available,
+ * falling back to window.innerHeight.
  *
  * - Fits in viewport at `defaultOffset` -> `defaultOffset` (unchanged from before).
  * - Otherwise -> a (possibly negative) offset that lands the element's bottom at the
@@ -24,7 +28,10 @@ export const useStickyRevealTop = (defaultOffset: number) => {
     if (!el) return
 
     const update = () => {
-      const top = Math.min(defaultOffset, window.innerHeight - el.offsetHeight)
+      // The visual viewport shrinks/grows when a mobile browser's URL bar
+      // shows or hides, without necessarily firing a window "resize" event.
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight
+      const top = Math.min(defaultOffset, viewportHeight - el.offsetHeight)
       el.style.top = `${top}px`
     }
 
@@ -32,10 +39,12 @@ export const useStickyRevealTop = (defaultOffset: number) => {
     const resizeObserver = new ResizeObserver(update)
     resizeObserver.observe(el)
     window.addEventListener("resize", update)
+    window.visualViewport?.addEventListener("resize", update)
 
     return () => {
       resizeObserver.disconnect()
       window.removeEventListener("resize", update)
+      window.visualViewport?.removeEventListener("resize", update)
     }
   }, [defaultOffset])
 
