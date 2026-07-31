@@ -953,18 +953,6 @@ wheels = [
 ]
 
 [[package]]
-name = "django-server-status"
-version = "0.7.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "django" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ee/46/e6ee9a6c25f25a196d60e184e01add80642318cfa18ec1304d254ac5adac/django-server-status-0.7.3.tar.gz", hash = "sha256:9126e20d78c88f62ffe382c1a5c73f1206ba8dca07a8039e81e3f35f1f75941a", size = 21266, upload-time = "2020-09-18T19:08:53.198Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/aa/36/ee1b756346ea0a7327191a7b5042de2557c798f2700b81e2bcc29b38e278/django_server_status-0.7.3-py3-none-any.whl", hash = "sha256:2a018c731504a3c82d45717bca011c4f6b1d547f5384c9b0a04b439e9e5c3552", size = 22593, upload-time = "2020-09-18T19:08:51.849Z" },
-]
-
-[[package]]
 name = "django-storages"
 version = "1.14.6"
 source = { registry = "https://pypi.org/simple" }
@@ -1860,7 +1848,7 @@ name = "jinxed"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ansicon" },
+    { name = "ansicon", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/20/d0/59b2b80e7a52d255f9e0ad040d2e826342d05580c4b1d7d7747cfb8db731/jinxed-1.3.0.tar.gz", hash = "sha256:1593124b18a41b7a3da3b078471442e51dbad3d77b4d4f2b0c26ab6f7d660dbf", size = 80981, upload-time = "2024-07-31T22:39:18.854Z" }
 wheels = [
@@ -2599,7 +2587,6 @@ dependencies = [
     { name = "django-redis" },
     { name = "django-removals" },
     { name = "django-scim2" },
-    { name = "django-server-status" },
     { name = "django-storages" },
     { name = "django-zeal" },
     { name = "djangorestframework" },
@@ -2649,8 +2636,7 @@ dependencies = [
     { name = "pdf2image" },
     { name = "pluggy" },
     { name = "posthog" },
-    { name = "psycopg" },
-    { name = "psycopg2" },
+    { name = "psycopg", extra = ["c"] },
     { name = "pyarrow" },
     { name = "pycountry" },
     { name = "pygithub" },
@@ -2741,7 +2727,6 @@ requires-dist = [
     { name = "django-redis", specifier = ">=5.2.0,<7" },
     { name = "django-removals", specifier = ">=1.1.6,<2" },
     { name = "django-scim2", specifier = ">=0.19.1,<0.20" },
-    { name = "django-server-status", specifier = ">=0.7.0,<0.8" },
     { name = "django-storages", specifier = ">=1.13.2,<2" },
     { name = "django-zeal", specifier = ">=2.0.4,<3" },
     { name = "djangorestframework", specifier = ">=3.14.0,<4" },
@@ -2791,8 +2776,7 @@ requires-dist = [
     { name = "pdf2image", specifier = ">=1.17.0,<2" },
     { name = "pluggy", specifier = ">=1.3.0,<2" },
     { name = "posthog", specifier = ">=5.0.0,<6" },
-    { name = "psycopg", specifier = ">=3.2.4,<4" },
-    { name = "psycopg2", specifier = ">=2.9.6,<3" },
+    { name = "psycopg", extras = ["c"], specifier = ">=3.2.4,<4" },
     { name = "pyarrow", specifier = ">=24,<25" },
     { name = "pycountry", specifier = ">=24.6.1,<25" },
     { name = "pygithub", specifier = ">=2.0.0,<3" },
@@ -3806,14 +3790,16 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c8/5b/181e2e3becb7672b502f0ed7f16ed7352aca7c109cfb94cf3878a9186db9/psycopg-3.3.3-py3-none-any.whl", hash = "sha256:f96525a72bcfade6584ab17e89de415ff360748c766f0106959144dcbb38c698", size = 212768, upload-time = "2026-02-18T16:46:27.365Z" },
 ]
 
-[[package]]
-name = "psycopg2"
-version = "2.9.11"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/89/8d/9d12bc8677c24dad342ec777529bce705b3e785fa05d85122b5502b9ab55/psycopg2-2.9.11.tar.gz", hash = "sha256:964d31caf728e217c697ff77ea69c2ba0865fa41ec20bb00f0977e62fdcc52e3", size = 379598, upload-time = "2025-10-10T11:14:46.075Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b5/bf/635fbe5dd10ed200afbbfbe98f8602829252ca1cce81cc48fb25ed8dadc0/psycopg2-2.9.11-cp312-cp312-win_amd64.whl", hash = "sha256:e03e4a6dbe87ff81540b434f2e5dc2bddad10296db5eea7bdc995bf5f4162938", size = 2713969, upload-time = "2025-10-10T11:10:15.946Z" },
+[package.optional-dependencies]
+c = [
+    { name = "psycopg-c", marker = "implementation_name != 'pypy'" },
 ]
+
+[[package]]
+name = "psycopg-c"
+version = "3.3.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/cb/a0/8feb0ca8c7c20a8b9ac4d46b335ddd57e48e593b714262f006880f34fee5/psycopg_c-3.3.3.tar.gz", hash = "sha256:86ef6f4424348247828e83fb0882c9f8acb33e64d0a5ce66c1b4a5107ee73edd", size = 631965, upload-time = "2026-02-18T16:52:18.084Z" }
 
 [[package]]
 name = "ptyprocess"
