@@ -105,12 +105,20 @@ class WebsiteContent(TimestampedModel, SafeDeleteModel):
 
     def save(self, *args, **kwargs):
         """Auto-populate slug and cover_image before persisting."""
-        previous = WebsiteContent.objects.get(pk=self.pk) if self.pk else None
-        was_published = getattr(previous, "is_published", None)
+        # all_objects, not objects: this is an identity lookup for the row's own
+        # prior state, and the default manager hides it once it is soft-deleted.
+        previous = WebsiteContent.all_objects.get(pk=self.pk) if self.pk else None
+        # A soft-deleted row does not reserve its slug, so undelete is treated
+        # like a first publish: re-derive the slug rather than assume the old one
+        # is still free. The loop below stays on `objects` deliberately -- "is
+        # this slug taken" is a question about live rows only.
+        was_publicly_visible = bool(
+            previous and previous.is_published and not previous.deleted
+        )
 
         slug = self.slug or None
 
-        if not was_published and self.is_published:
+        if not was_publicly_visible and self.is_published:
             if not self.publish_date:
                 self.publish_date = timezone.now()
 

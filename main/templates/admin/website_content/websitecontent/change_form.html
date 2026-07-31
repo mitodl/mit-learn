@@ -1,0 +1,7 @@
+{% extends "admin/change_form.html" %}
+{% block submit_buttons_bottom %}
+{% if deleted_warning %}
+<p class="errornote">{{ deleted_warning }}</p>
+{% endif %}
+{{ block.super }}
+{% endblock %}
