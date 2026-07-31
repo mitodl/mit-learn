@@ -71,7 +71,10 @@ class WebsiteContent(TimestampedModel, SafeDeleteModel):
     content = models.JSONField(default=dict)
     title = models.CharField(max_length=255)
     author_name = models.TextField(blank=True, default="")
-    slug = models.SlugField(max_length=255, unique=True, blank=True, null=True)
+    # null rather than "": NULLs are distinct in a unique index, so any number
+    # of slug-less drafts coexist under the partial constraint below, where empty
+    # strings would collide.
+    slug = models.SlugField(max_length=255, blank=True, null=True)  # noqa: DJ001
     is_published = models.BooleanField(default=False)
     publish_date = models.DateTimeField(null=True, blank=True)
     content_type = models.CharField(
@@ -80,6 +83,21 @@ class WebsiteContent(TimestampedModel, SafeDeleteModel):
         default=WebsiteContentType.news.name,
     )
     cover_image = models.URLField(max_length=2083, blank=True, default="")
+
+    class Meta:
+        """
+        Slugs are unique among live rows only. A soft-deleted row keeps its slug
+        for audit but does not reserve the URL, so the slug can be reused while
+        the row is deleted -- see save() for how undelete handles that.
+        """
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["slug"],
+                condition=models.Q(deleted__isnull=True),
+                name="website_content_unique_slug_among_live",
+            ),
+        ]
 
     def __str__(self):
         """Return a string representation."""
