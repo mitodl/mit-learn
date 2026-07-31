@@ -100,4 +100,49 @@ describe("useReplaceBasketItem", () => {
     expect(mutateAsync).not.toHaveBeenCalled()
     expect(assign).not.toHaveBeenCalled()
   })
+
+  test("appends anonymous_basket_id to the redirect url for an anonymous basket (sync path)", () => {
+    const assign = jest.mocked(window.location.assign)
+    mutate.mockImplementationOnce(
+      (_productId: number, opts?: { onSuccess?: (b: unknown) => void }) =>
+        opts?.onSuccess?.({ id: 9, anonymous_id: "abc-123" }),
+    )
+    const { result } = renderHook(() => useReplaceBasketItem())
+
+    act(() => {
+      result.current.mutate(42)
+    })
+
+    const calledUrl = new URL(assign.mock.calls[0][0])
+    expect(calledUrl.searchParams.get("anonymous_basket_id")).toBe("abc-123")
+  })
+
+  test("appends anonymous_basket_id to the redirect url for an anonymous basket (async path)", async () => {
+    const assign = jest.mocked(window.location.assign)
+    mutateAsync.mockResolvedValueOnce({ id: 9, anonymous_id: "abc-123" })
+    const { result } = renderHook(() => useReplaceBasketItem())
+
+    await act(async () => {
+      await result.current.mutateAsync(42)
+    })
+
+    const calledUrl = new URL(assign.mock.calls[0][0])
+    expect(calledUrl.searchParams.get("anonymous_basket_id")).toBe("abc-123")
+  })
+
+  test("does not append anonymous_basket_id when the basket belongs to a real user", () => {
+    const assign = jest.mocked(window.location.assign)
+    mutate.mockImplementationOnce(
+      (_productId: number, opts?: { onSuccess?: (b: unknown) => void }) =>
+        opts?.onSuccess?.({ id: 9, user: 1, anonymous_id: null }),
+    )
+    const { result } = renderHook(() => useReplaceBasketItem())
+
+    act(() => {
+      result.current.mutate(42)
+    })
+
+    const calledUrl = new URL(assign.mock.calls[0][0])
+    expect(calledUrl.searchParams.has("anonymous_basket_id")).toBe(false)
+  })
 })
