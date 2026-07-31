@@ -20,7 +20,7 @@ import type {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 import {
   trackCourseEnrolled,
@@ -37,12 +37,15 @@ jest.mock("@/common/analytics/gtm", () => ({
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
   usePostHog: jest.fn(),
+  useFeatureFlagEnabled: jest.fn(),
 }))
 const mockCapture = jest.fn()
 jest.mocked(usePostHog).mockReturnValue(
   // @ts-expect-error Not mocking all of posthog
   { capture: mockCapture },
 )
+const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
 const mockPush = jest.fn()
 jest.mock("next-nprogress-bar", () => ({
@@ -342,6 +345,7 @@ describe("useCourseEnrollment — actions", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
     setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
     setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), [])
@@ -603,6 +607,55 @@ describe("useCourseEnrollment — actions", () => {
       expect.objectContaining({ method: "post", url: basketUrl }),
     )
     expect(onRequireSignup).not.toHaveBeenCalled()
+  })
+
+  test("unauthenticated paid click requires signup when the anonymous-checkout flag is off", async () => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+
+    const product = makeProduct()
+    const run = makeRun({
+      is_enrollable: true,
+      is_upgradable: true,
+      is_archived: false,
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [product],
+    })
+    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+
+    setMockResponse.get(
+      urls.userMe.get(),
+      makeUser({ is_authenticated: false }),
+    )
+
+    const onRequireSignup = jest.fn()
+
+    const { result } = renderHook(
+      () =>
+        useCourseEnrollment(course, run, {
+          tracking: { placement: "infobox" },
+          onRequireSignup,
+        }),
+      { wrapper },
+    )
+
+    await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
+
+    const state = result.current.state
+    expect(state.status).toBe("options")
+    if (state.status !== "options") return
+
+    const paidOption = state.options.find((o) => o.kind === "paid")
+    expect(paidOption).toBeDefined()
+
+    const anchorButton = document.createElement("button")
+    paidOption!.onClick!({
+      currentTarget: anchorButton,
+    } as React.MouseEvent<HTMLButtonElement>)
+
+    expect(onRequireSignup).toHaveBeenCalledWith(anchorButton)
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "delete" }),
+    )
   })
 
   test("fires PostHog enroll_cta_clicked on paid action click", async () => {
