@@ -10,7 +10,11 @@ import {
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
-import { makeRequest } from "api/test-utils"
+import {
+  makeRequest,
+  urls as learnUrls,
+  factories as learnFactories,
+} from "api/test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { EnrolledCourseCard } from "./EnrolledCourseCard"
@@ -19,6 +23,17 @@ const EnrollmentMode = {
   Audit: "audit",
   Verified: "verified",
 } as const
+
+// useAddToBasket/useClearBasket check Learn's own auth state (separate from
+// mitxonline's) before invalidating the checkout-payload query. File-scoped
+// (not per-describe) since several describe blocks below each have their own
+// tests that don't all route through setupUserApis.
+beforeEach(() => {
+  setMockResponse.get(
+    learnUrls.userMe.get(),
+    learnFactories.user.user({ is_authenticated: true }),
+  )
+})
 
 const setupUserApis = (
   overrides?: Parameters<typeof mitxonline.factories.user.user>[0],

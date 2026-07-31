@@ -7,7 +7,11 @@ import {
   user,
   within,
 } from "@/test-utils"
-import { makeRequest } from "api/test-utils"
+import {
+  makeRequest,
+  urls as learnUrls,
+  factories as learnFactories,
+} from "api/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import { waitFor } from "@testing-library/react"
@@ -21,6 +25,15 @@ jest.mock("posthog-js/react")
 
 describe("ProgramAsCourseCard", () => {
   setupLocationMock()
+
+  // useAddToBasket/useClearBasket check Learn's own auth state (separate
+  // from mitxonline's) before invalidating the checkout-payload query.
+  beforeEach(() => {
+    setMockResponse.get(
+      learnUrls.userMe.get(),
+      learnFactories.user.user({ is_authenticated: true }),
+    )
+  })
 
   /**
    * Creates a ProgramAsCourseCard data set with:
