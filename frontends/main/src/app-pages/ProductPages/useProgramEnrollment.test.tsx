@@ -14,7 +14,7 @@ import {
 } from "api/mitxonline-test-utils"
 import { useProgramEnrollment } from "./useProgramEnrollment"
 import { programView } from "@/common/urls"
-import { usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 import { trackProgramEnrolled } from "@/common/analytics/gtm"
 import { PlatformEnum } from "api"
@@ -26,12 +26,15 @@ jest.mock("@/common/analytics/gtm", () => ({
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
   usePostHog: jest.fn(),
+  useFeatureFlagEnabled: jest.fn(),
 }))
 const mockCapture = jest.fn()
 jest.mocked(usePostHog).mockReturnValue(
   // @ts-expect-error Not mocking all of posthog
   { capture: mockCapture },
 )
+const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
 const mockPush = jest.fn()
 jest.mock("next-nprogress-bar", () => ({
@@ -220,6 +223,7 @@ describe("useProgramEnrollment — actions", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
   })
 
@@ -440,5 +444,47 @@ describe("useProgramEnrollment — actions", () => {
       expect.objectContaining({ method: "post", url: basketUrl }),
     )
     expect(onRequireSignup).not.toHaveBeenCalled()
+  })
+
+  test("unauthenticated paid action requires signup when the anonymous-checkout flag is off", async () => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+
+    setMockResponse.get(
+      urls.userMe.get(),
+      makeUser({ is_authenticated: false }),
+    )
+
+    const product = makeProduct({ price: "100" })
+    const program = makeProgram({
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [product],
+    })
+
+    const onRequireSignup = jest.fn()
+
+    const { result } = renderHook(
+      () =>
+        useProgramEnrollment(program, {
+          tracking: { placement: "infobox" },
+          onRequireSignup,
+        }),
+      { wrapper },
+    )
+
+    await waitFor(() => expect(result.current.isStatusLoading).toBe(false))
+
+    const state = result.current.state
+    if (state.status !== "options") throw new Error("expected options")
+    const paid = state.options.find((o) => o.kind === "paid")!
+
+    const anchorButton = document.createElement("button")
+    paid.onClick!({
+      currentTarget: anchorButton,
+    } as React.MouseEvent<HTMLButtonElement>)
+
+    expect(onRequireSignup).toHaveBeenCalledWith(anchorButton)
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "delete" }),
+    )
   })
 })

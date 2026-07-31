@@ -8,7 +8,8 @@ import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { enrollmentAlertSuccessUrl } from "@/common/mitxonline"
 import { useRouter } from "next-nprogress-bar"
-import { usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
 import {
   trackCourseEnrolled,
   trackStartEnrollment,
@@ -63,6 +64,9 @@ export const useCourseEnrollment = (
   const createEnrollment = useCreateEnrollment()
   const router = useRouter()
   const posthog = usePostHog()
+  const anonymousCheckoutEnabled = useFeatureFlagEnabled(
+    FeatureFlags.AnonymousCheckout,
+  )
 
   const isEnrolledInSelected =
     selectedRun !== undefined && enrolledRunIds.includes(selectedRun.id)
@@ -90,10 +94,14 @@ export const useCourseEnrollment = (
         resourceType: "course",
         readableId: course.readable_id,
       })
-      // Only the free/audit track requires an account - paid checkout hands
-      // off to the (anonymous-capable) MITx Online basket regardless of auth
-      // state, so the signup gate only applies to "free" clicks.
-      if (kind === "free" && !me.data?.is_authenticated) {
+      // The free/audit track always requires an account. The paid track
+      // hands off to the (anonymous-capable) MITx Online basket regardless of
+      // auth state, but only once the anonymous-checkout flag is on - until
+      // then, anonymous paid clicks fall back to the signup gate too.
+      if (
+        !me.data?.is_authenticated &&
+        (kind === "free" || !anonymousCheckoutEnabled)
+      ) {
         opts?.onRequireSignup?.(e.currentTarget)
         return
       }

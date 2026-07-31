@@ -16,6 +16,7 @@ export enum FeatureFlags {
   B2BAnalyticsDashboard = "b2b-analytics-dashboard",
   Arithmix = "arithmix",
   Hacksnack = "hacksnack",
+  AnonymousCheckout = "anonymous-checkout",
 }
 
 /**
