@@ -3,6 +3,7 @@ import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import { Dialog } from "ol-components"
 import { useWebsiteContentDestroy } from "api/hooks/website_content"
 import type { WebsiteContent } from "api/v1"
+import { CONTENT_TYPE_LABELS } from "@/common/website_content"
 
 type DeletableContent = Pick<WebsiteContent, "id" | "title" | "content_type">
 
@@ -10,11 +11,6 @@ type DeleteWebsiteContentDialogProps = {
   contentItem: DeletableContent
   /** Called after the item is successfully deleted (e.g. to redirect). */
   onDestroy?: () => void
-}
-
-const CONTENT_TYPE_LABELS: Record<string, string> = {
-  article: "Article",
-  news: "News",
 }
 
 /**
@@ -26,7 +22,9 @@ const DeleteWebsiteContentDialog = NiceModal.create(
   ({ contentItem, onDestroy }: DeleteWebsiteContentDialogProps) => {
     const modal = NiceModal.useModal()
     const destroy = useWebsiteContentDestroy()
-    const label = CONTENT_TYPE_LABELS[contentItem.content_type ?? ""] ?? "Item"
+    const label = contentItem.content_type
+      ? CONTENT_TYPE_LABELS[contentItem.content_type]
+      : "Item"
 
     // Closing is Dialog's job: it awaits onConfirm and then calls the onClose
     // that muiDialogV5 wires to modal.hide(). Hiding here as well would drive

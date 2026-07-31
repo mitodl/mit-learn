@@ -3,11 +3,6 @@ import { renderWithProviders, screen, user, waitFor } from "@/test-utils"
 import { setMockResponse, factories, urls, makeRequest } from "api/test-utils"
 import { WebsiteContentDraftListingPage } from "./WebsiteContentDraftListingPage"
 
-const mockPush = jest.fn()
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush }),
-}))
-
 const setupEditor = () => {
   setMockResponse.get(
     urls.userMe.get(),

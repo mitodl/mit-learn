@@ -1,7 +1,6 @@
 from django.conf import settings
 from django.db import transaction
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
@@ -64,8 +63,9 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         # Soft-deleted items are hidden everywhere (list, retrieve,
-        # detail-by-id-or-slug all route through get_queryset).
-        qs = WebsiteContent.objects.filter(deleted_on__isnull=True)
+        # detail-by-id-or-slug all route through get_queryset) because the
+        # default manager excludes them.
+        qs = WebsiteContent.objects.all()
         if not (is_admin_user(self.request) or is_website_content_editor(self.request)):
             qs = qs.filter(is_published=True)
 
@@ -103,11 +103,9 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
         if instance.is_published:
             msg = "Published content cannot be deleted."
             raise ValidationError(msg)
-        # Soft delete: mark the row rather than removing it, and bypass the
-        # model's save() override (which recomputes slug/cover_image) so this
-        # is a targeted single-field write.
-        now = timezone.now()
-        WebsiteContent.objects.filter(pk=instance.pk).update(deleted_on=now)
+        # Soft delete: SOFT_DELETE policy stamps `deleted` and leaves the row
+        # in place for recovery/audit.
+        instance.delete()
         transaction.on_commit(clear_views_cache)
 
     @extend_schema(

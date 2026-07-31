@@ -4,8 +4,12 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
+from safedelete.managers import SafeDeleteManager
+from safedelete.models import SOFT_DELETE, SafeDeleteModel
+from safedelete.queryset import SafeDeleteQueryset
 
 from main.models import TimestampedModel
+from main.utils import now_in_utc
 from website_content.constants import WebsiteContentType
 from website_content.utils import (
     extract_image_from_content,
@@ -13,13 +17,50 @@ from website_content.utils import (
 )
 
 
-class WebsiteContent(TimestampedModel):
+class WebsiteContentQuerySet(SafeDeleteQueryset):
+    """
+    Subclassed QuerySet for WebsiteContentManager
+    """
+
+    def update(self, **kwargs):
+        """
+        Automatically update updated_on timestamp when .update(). This mirrors
+        TimestampedModelQuerySet, which is bypassed because SafeDeleteModel
+        supplies its own queryset.
+        """
+        if "updated_on" not in kwargs:
+            kwargs["updated_on"] = now_in_utc()
+        return super().update(**kwargs)
+
+
+class WebsiteContentManager(SafeDeleteManager):
+    """
+    Default manager for WebsiteContent.
+
+    Hides soft-deleted rows and keeps TimestampedModel's updated_on behavior.
+    """
+
+    _queryset_class = WebsiteContentQuerySet
+
+
+class WebsiteContent(TimestampedModel, SafeDeleteModel):
     """
     Stores rich-text content created by staff members.
 
     The `content_type` field distinguishes between different kinds of authored
     content (e.g. "news" posts vs standalone "article" pages).
+
+    Deletes are soft: `delete()` stamps `deleted` and the default manager hides
+    the row from every query, keeping it available for recovery/audit. Pass
+    `force_policy=HARD_DELETE` to remove a row for real, or use
+    `all_objects` / `deleted_objects` to query soft-deleted rows.
     """
+
+    _safedelete_policy = SOFT_DELETE
+
+    # Declared explicitly: TimestampedModel precedes SafeDeleteModel in the MRO,
+    # so its plain manager would otherwise win and expose soft-deleted rows.
+    objects = WebsiteContentManager()
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -39,10 +80,6 @@ class WebsiteContent(TimestampedModel):
         default=WebsiteContentType.news.name,
     )
     cover_image = models.URLField(max_length=2083, blank=True, default="")
-    # Soft-delete marker. When set, the item is treated as deleted: it is
-    # excluded from all API listings/detail views but kept in the database for
-    # recovery/audit. Only unpublished (draft) items may be soft-deleted.
-    deleted_on = models.DateTimeField(null=True, blank=True, default=None)
 
     def save(self, *args, **kwargs):
         """Auto-populate slug and cover_image before persisting."""

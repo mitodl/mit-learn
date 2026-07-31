@@ -427,6 +427,9 @@ const WebsiteContentEditor = ({
                       Delete
                     </Button>
                   ) : null}
+                  {/* Separates the destructive action from the save actions to
+                      reduce misclicks. */}
+                  <Spacer />
                   {!contentItem?.is_published ? (
                     <Button
                       variant="secondary"

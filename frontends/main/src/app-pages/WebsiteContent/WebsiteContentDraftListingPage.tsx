@@ -14,9 +14,10 @@ import {
 } from "ol-components"
 import { Permission } from "api/hooks/user"
 import { useWebsiteContentList } from "api/hooks/website_content"
-import type {
-  WebsiteContent,
-  WebsiteContentApiWebsiteContentListRequest as WebsiteContentListRequest,
+import {
+  WebsiteContentContentTypeEnum,
+  type WebsiteContent,
+  type WebsiteContentApiWebsiteContentListRequest as WebsiteContentListRequest,
 } from "api/v1"
 import { LocalDate } from "ol-utilities"
 import {
@@ -25,9 +26,10 @@ import {
   RiDeleteBinLine,
 } from "@remixicon/react"
 import { extractFirstImage } from "@/common/websiteContentUtils"
+import { CONTENT_TYPE_LABELS } from "@/common/website_content"
 import { websiteContentEditView, websiteContentCreateView } from "@/common/urls"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
-import { Button, ButtonLink } from "@mitodl/smoot-design"
+import { ActionButton, ButtonLink } from "@mitodl/smoot-design"
 import { showDeleteWebsiteContentDialog } from "@/page-components/WebsiteContentDialogs/DeleteWebsiteContentDialog"
 
 const PAGE_SIZE = 20
@@ -43,6 +45,9 @@ const PageWrapper = styled.div`
     padding: 40px 0;
   }
 `
+const StyledActionButton = styled(ActionButton)`
+  padding-top: 16px;
+`
 
 const PageHeader = styled.div`
   display: flex;
@@ -50,10 +55,6 @@ const PageHeader = styled.div`
   align-items: center;
   margin-bottom: 40px;
 `
-const StyledDeleteButton = styled(Button)`
-  padding-bottom: 0;
-`
-
 const DraftContentCard = styled(Card)`
   display: flex;
   flex-direction: column;
@@ -87,15 +88,10 @@ const DraftBadge = styled.span`
   font-weight: ${theme.typography.fontWeightMedium};
 `
 
-const CONTENT_TYPE_LABELS: Record<string, string> = {
-  article: "Article",
-  news: "News",
-}
-
-const DraftItem: React.FC<{ contentItem: WebsiteContent; type: string }> = ({
-  contentItem,
-  type,
-}) => {
+const DraftItem: React.FC<{
+  contentItem: WebsiteContent
+  type: WebsiteContentContentTypeEnum
+}> = ({ contentItem, type }) => {
   const itemUrl = contentItem.is_published
     ? `/${type === "article" ? "articles" : type}/${contentItem.slug || contentItem.id}`
     : websiteContentEditView(type, contentItem.id)
@@ -128,15 +124,14 @@ const DraftItem: React.FC<{ contentItem: WebsiteContent; type: string }> = ({
       */}
       {!contentItem.is_published && (
         <Card.Actions>
-          <StyledDeleteButton
+          <StyledActionButton
             variant="text"
             size="small"
             aria-label={`Delete ${contentItem.title}`}
-            startIcon={<RiDeleteBinLine />}
             onClick={() => showDeleteWebsiteContentDialog(contentItem)}
           >
-            Delete
-          </StyledDeleteButton>
+            <RiDeleteBinLine size={16} />
+          </StyledActionButton>
         </Card.Actions>
       )}
     </DraftContentCard>
@@ -145,9 +140,9 @@ const DraftItem: React.FC<{ contentItem: WebsiteContent; type: string }> = ({
 
 interface WebsiteContentDraftListingPageProps {
   /**
-   * Content type to show drafts for (e.g. 'article', 'news').
+   * Content type to show drafts for. Defaults to news.
    */
-  contentType?: string
+  contentType?: WebsiteContentContentTypeEnum
 }
 
 const WebsiteContentDraftListingPage: React.FC<
@@ -155,14 +150,14 @@ const WebsiteContentDraftListingPage: React.FC<
 > = ({ contentType }) => {
   const [page, setPage] = useState(1)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const type = contentType || "news"
-  const label = CONTENT_TYPE_LABELS[type] ?? type
+  const type = contentType ?? WebsiteContentContentTypeEnum.News
+  const label = CONTENT_TYPE_LABELS[type]
 
   const listParams: WebsiteContentListRequest = {
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
     draft: true,
-    content_type: type as WebsiteContentListRequest["content_type"],
+    content_type: type,
   }
 
   const { data: contentItems, isLoading: isLoadingContentItems } =

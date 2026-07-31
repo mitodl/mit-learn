@@ -197,7 +197,7 @@ def test_destroy_draft_soft_deletes(
 
     # Row is kept in the DB but marked deleted.
     content.refresh_from_db()
-    assert content.deleted_on is not None
+    assert content.deleted is not None
 
 
 def test_soft_deleted_content_hidden_from_api(staff_client, user):
@@ -228,7 +228,7 @@ def test_destroy_published_rejected(staff_client, user):
 
     assert resp.status_code == 400
     content.refresh_from_db()
-    assert content.deleted_on is None
+    assert content.deleted is None
 
 
 def test_destroy_forbidden_for_non_editor(client, user):
@@ -244,7 +244,7 @@ def test_destroy_forbidden_for_non_editor(client, user):
 
     assert resp.status_code == 403
     content.refresh_from_db()
-    assert content.deleted_on is None
+    assert content.deleted is None
 
 
 def test_content_type_filter(client, user):
