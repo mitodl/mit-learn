@@ -81,6 +81,10 @@ class WebsiteContent(TimestampedModel, SafeDeleteModel):
     )
     cover_image = models.URLField(max_length=2083, blank=True, default="")
 
+    def __str__(self):
+        """Return a string representation."""
+        return self.title
+
     def save(self, *args, **kwargs):
         """Auto-populate slug and cover_image before persisting."""
         previous = WebsiteContent.objects.get(pk=self.pk) if self.pk else None
