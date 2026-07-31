@@ -90,7 +90,10 @@ export const useCourseEnrollment = (
         resourceType: "course",
         readableId: course.readable_id,
       })
-      if (!me.data?.is_authenticated) {
+      // Only the free/audit track requires an account - paid checkout hands
+      // off to the (anonymous-capable) MITx Online basket regardless of auth
+      // state, so the signup gate only applies to "free" clicks.
+      if (kind === "free" && !me.data?.is_authenticated) {
         opts?.onRequireSignup?.(e.currentTarget)
         return
       }
@@ -107,11 +110,8 @@ export const useCourseEnrollment = (
         }
       } else if (kind === "free") {
         // Free enrollment requires an account — there is no anonymous audit
-        // enrollment — so unauthenticated users are routed to signup first.
-        if (!me.data?.is_authenticated) {
-          opts?.onRequireSignup?.(e.currentTarget)
-          return
-        }
+        // enrollment — so unauthenticated users are routed to signup first
+        // (handled by the guard above).
         if (selectedRun) {
           createEnrollment.mutate(
             { run_id: selectedRun.id },
