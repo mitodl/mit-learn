@@ -1582,11 +1582,29 @@ class LearningResourceSerializer(serializers.Serializer):
         )
     }
 
+    def _child_serializer(self, resource_type):
+        """
+        Return a reusable serializer instance for a resource_type.
+
+        Constructing a DRF serializer deep-copies its whole field tree, so
+        building one per object makes bulk serialization (search hydration,
+        indexing) dominated by setup rather than output. Under many=True the
+        ListSerializer reuses a single child, so this cache spans the list --
+        which is how a normal many=True serializer already behaves.
+        """
+        if not hasattr(self, "_child_serializer_cache"):
+            self._child_serializer_cache = {}
+        if resource_type not in self._child_serializer_cache:
+            self._child_serializer_cache[resource_type] = self.serializer_cls_mapping[
+                resource_type
+            ](context=self.context)
+        return self._child_serializer_cache[resource_type]
+
     def to_representation(self, instance):
         """Serialize a LearningResource based on resource_type"""
-        serializer_cls = self.serializer_cls_mapping[instance.resource_type]
-
-        return serializer_cls(instance=instance, context=self.context).data
+        return self._child_serializer(instance.resource_type).to_representation(
+            instance
+        )
 
 
 class LearningResourceRelationshipSerializer(serializers.ModelSerializer):
