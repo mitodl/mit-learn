@@ -71,7 +71,11 @@ class WebsiteContent(TimestampedModel, SafeDeleteModel):
     content = models.JSONField(default=dict)
     title = models.CharField(max_length=255)
     author_name = models.TextField(blank=True, default="")
-    slug = models.SlugField(max_length=255, unique=True, blank=True, null=True)
+    # Uniqueness is enforced by the conditional constraint in Meta, not
+    # unique=True, so soft-deleted rows stop reserving their slug. null=True is
+    # load-bearing (DJ001 would rather have ""): unpublished drafts have no slug,
+    # and NULLs are distinct to Postgres where a shared "" would collide.
+    slug = models.SlugField(max_length=255, blank=True, null=True)  # noqa: DJ001
     is_published = models.BooleanField(default=False)
     publish_date = models.DateTimeField(null=True, blank=True)
     content_type = models.CharField(
@@ -81,9 +85,29 @@ class WebsiteContent(TimestampedModel, SafeDeleteModel):
     )
     cover_image = models.URLField(max_length=2083, blank=True, default="")
 
+    class Meta:
+        """Meta options for WebsiteContent"""
+
+        constraints = [
+            # Only undeleted rows have to hold a distinct slug. A plain
+            # unique=True counts soft-deleted rows too, so deleting content
+            # permanently burned its slug: republishing under the same title
+            # produced "the-title-1". NULL slugs (unpublished drafts) never
+            # collide -- Postgres treats NULLs as distinct in a unique index.
+            models.UniqueConstraint(
+                fields=["slug"],
+                condition=models.Q(deleted__isnull=True),
+                name="unique_slug_among_undeleted",
+            )
+        ]
+
     def save(self, *args, **kwargs):
         """Auto-populate slug and cover_image before persisting."""
-        previous = WebsiteContent.objects.get(pk=self.pk) if self.pk else None
+        # all_objects, not objects: the default manager hides soft-deleted rows,
+        # so saving one would raise DoesNotExist here and 500.
+        previous = (
+            WebsiteContent.all_objects.filter(pk=self.pk).first() if self.pk else None
+        )
         was_published = getattr(previous, "is_published", None)
 
         slug = self.slug or None
@@ -98,6 +122,8 @@ class WebsiteContent(TimestampedModel, SafeDeleteModel):
             slug = base_slug
             counter = 1
 
+            # `objects` (undeleted only) deliberately mirrors the constraint's
+            # condition: a slug held only by a soft-deleted row is free to take.
             while WebsiteContent.objects.filter(slug=slug).exclude(pk=self.pk).exists():
                 suffix = f"-{counter}"
                 slug = f"{base_slug[: max_length - len(suffix)]}{suffix}"
@@ -108,6 +134,10 @@ class WebsiteContent(TimestampedModel, SafeDeleteModel):
         self.cover_image = image_data.get("url", "") if image_data else ""
 
         super().save(*args, **kwargs)
+
+    def __str__(self):
+        """Return a string representation."""
+        return self.title
 
     def get_url(self):
         """

@@ -46,7 +46,8 @@ const PageWrapper = styled.div`
   }
 `
 const StyledActionButton = styled(ActionButton)`
-  padding-top: 16px;
+  border: 1px solid ${theme.custom.colors.silverGray};
+  border-radius: 50%;
 `
 
 const PageHeader = styled.div`
@@ -55,11 +56,21 @@ const PageHeader = styled.div`
   align-items: center;
   margin-bottom: 40px;
 `
-const DraftContentCard = styled(Card)`
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-`
+const DraftContentCard = styled(Card)({
+  display: "flex",
+  flexDirection: "column",
+  height: "100%",
+  // Card's internal wrapper around the footer and actions has no className of
+  // its own, so target it via the footer it always renders. Anchoring on the
+  // footer rather than the actions matters: Card omits the actions element
+  // entirely when it has no children, which is the case for published items.
+  // Keep the descendant form -- jsdom's selector engine rejects a leading
+  // combinator inside :has(), so `:has(> .MitCard-footer)` breaks the tests.
+  "> div:has(.MitCard-footer)": {
+    alignItems: "center",
+    paddingTop: "16px",
+  },
+})
 
 const PaginationContainer = styled.div`
   display: flex;
