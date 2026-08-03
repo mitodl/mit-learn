@@ -26,17 +26,10 @@ const makeGrade = factories.enrollment.grade
 const makeContract = factories.contracts.contract
 
 /**
- * Mock MITx Online's order history, which every verified enrollment card fetches
- * to decide whether it has a receipt to link to (see `useOrderIdForResource`).
- *
- * Call this in any suite that renders a verified enrollment: without it the
- * request is unmocked and `jest-fail-on-console` fails the test. The default —
- * an empty history — means no card shows a "Receipt" item, which is what most
- * tests want. Pass `runId`/`programId` with an `orderId` to make one resolve.
- *
- * `purchasable_object` variants are distinguished by shape, not a type field: a
- * course run is the only one with a nested `course`, and a program has neither
- * `course` nor `run_tag`.
+ * Mock the order history that verified enrollment cards fetch to decide whether to
+ * show a "Receipt" item. Required in any suite rendering a verified enrollment,
+ * or the unmocked request fails the test. Defaults to an empty history (no
+ * receipt); pass `runId`/`programId` to make one resolve.
  */
 const setupOrderHistory = ({
   runId,

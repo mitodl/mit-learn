@@ -119,10 +119,8 @@ export const RECEIPT_VIEW = "/receipt/[orderId]"
 export const receiptView = (orderId: number) =>
   generatePath(RECEIPT_VIEW, { orderId: String(orderId) })
 /**
- * MITx Online does not expose the paying order on enrollment payloads, so these
- * routes take the run/program the learner actually has in hand and resolve the
- * order themselves before redirecting to `RECEIPT_VIEW`. They mirror MITx
- * Online's own `ReceiptByRunView` / `ReceiptByProgramView` redirects.
+ * Enrollments carry no order reference, so these routes resolve the order from the
+ * run/program before redirecting to `RECEIPT_VIEW`.
  */
 export const RECEIPT_BY_RUN_VIEW = "/receipt/by-run/[runId]"
 export const receiptByRunView = (runId: number) =>

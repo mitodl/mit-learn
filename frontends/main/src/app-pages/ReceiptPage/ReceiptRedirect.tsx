@@ -4,7 +4,7 @@ import React from "react"
 import { useRouter } from "next-nprogress-bar"
 import { Container, Skeleton, styled } from "ol-components"
 import * as urls from "@/common/urls"
-import { ReceiptUnavailable } from "./ReceiptUnavailable"
+import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 import {
   useOrderIdForProgram,
   useOrderIdForRun,
@@ -20,19 +20,15 @@ const PageContainer = styled(Container)({
 })
 
 /**
- * Resolves a course run or program to the order that paid for it, then replaces
- * the current history entry with that order's receipt.
- *
- * This mirrors MITx Online's `ReceiptByRunView` / `ReceiptByProgramView`, which
- * exist because enrollment payloads do not carry the paying order. `replace` (not
- * `push`) is used so "Back" from the receipt returns to wherever the learner came
- * from rather than bouncing through this route again.
+ * Resolves a course run or program to its order, then replaces the history entry
+ * with that order's receipt. `replace`, not `push`, so "Back" from the receipt
+ * skips this route. Mirrors MITx Online's `ReceiptByRunView`.
  */
 const ReceiptRedirect: React.FC<{ resolution: OrderIdResolution }> = ({
   resolution,
 }) => {
   const router = useRouter()
-  const { isPending, isError, orderId } = resolution
+  const { isPending, orderId } = resolution
 
   React.useEffect(() => {
     if (orderId !== null) {
@@ -50,13 +46,10 @@ const ReceiptRedirect: React.FC<{ resolution: OrderIdResolution }> = ({
   }
 
   /**
-   * A verified enrollment does not imply an order of its own: MITx Online also
-   * marks runs verified when the learner bought the enclosing program, redeemed a
-   * B2B enrollment code, or was upgraded administratively. In all of those cases
-   * `PaidCourseRun` is absent and there is no run-level receipt — MITx Online's
-   * own `ReceiptByRunView` 404s identically.
+   * No order covers this run/program, or the lookup failed. Generic 404 for both,
+   * so a prober cannot tell a well-formed id from an unresolvable one.
    */
-  return <ReceiptUnavailable reason={isError ? "lookup-failed" : "no-order"} />
+  return <NotFoundPage />
 }
 
 const ReceiptByRunRedirect: React.FC<{ runId: number }> = ({ runId }) => {

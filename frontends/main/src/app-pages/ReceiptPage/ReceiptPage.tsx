@@ -10,6 +10,8 @@ import { Button, ButtonLink } from "@mitodl/smoot-design"
 import { orderQueries } from "api/mitxonline-hooks/orders"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import type { Order } from "@mitodl/mitxonline-api-axios/v2"
+import type { AxiosError } from "axios"
+import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 import mitLearnLogo from "@/public/images/mit-learn-logo-black.svg"
 import { env } from "@/env"
 import * as urls from "@/common/urls"
@@ -27,10 +29,7 @@ import {
 
 const SUPPORT_EMAIL = env("NEXT_PUBLIC_MITOL_SUPPORT_EMAIL") || ""
 
-/**
- * MIT Learn's own postal details, shown so the receipt stands alone as a record
- * of who issued it. These are not learner data and do not come from the API.
- */
+/** MIT Learn's own details — not learner data, not from the API. */
 const MIT_LEARN_ADDRESS =
   "600 Technology Square, NE49-2000, Cambridge, MA 02139 USA"
 
@@ -47,14 +46,8 @@ const PageContainer = styled(Container)({
 const ButtonBar = styled.div({
   display: "flex",
   gap: "8px",
-  /**
-   * "Back" sits at the far left and the print action at the far right, so the
-   * gap between them grows with the viewport.
-   */
   justifyContent: "space-between",
-  /**
-   * Neither button belongs in a printed receipt.
-   */
+  // Neither button belongs in a printed receipt.
   "@media print": {
     display: "none",
   },
@@ -85,10 +78,7 @@ const Section = styled.section({
 
 const IssuerLogo = styled(Image)({
   display: "block",
-  /**
-   * `Section` is a stretch flex column, so without `align-self` the logo widens
-   * to the whole column and scales up with it.
-   */
+  // `Section` stretches its children, which would scale the logo up.
   alignSelf: "flex-start",
   width: "auto",
   height: "40px",
@@ -108,17 +98,9 @@ const SupportLink = styled.a(({ theme }) => ({
 }))
 
 /**
- * Rows describing what was bought.
- *
- * The design shows the order's single line item inline. Orders can hold more than
- * one line, so per-line rows are grouped per line and the order-level rows
- * (number, date, discount code, total) follow once at the end.
- *
- * Rows the design shows but MITx Online does not provide are omitted rather than
- * faked: "Tax", "HSN" and "Total Before Tax" have no counterpart anywhere in the
- * receipt payload. "CEUs" is included because the field exists, but note that
- * MITx Online's `TransactionLineSerializer` currently hardcodes it to null, so in
- * practice the row does not render.
+ * One group of rows per line item, then the order-level rows. The design's "Tax"
+ * and "HSN" rows are omitted — the payload has no such fields. "CEUs" is wired up
+ * but MITx Online always returns null for it today.
  */
 const getOrderDetailGroups = (order: Order): ReceiptDetailGroup[] => {
   const lineGroups: ReceiptDetailGroup[] = order.lines.map((line) => [
@@ -158,10 +140,8 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
   const router = useRouter()
   const orderQuery = useQuery(orderQueries.receipt(orderId))
   /**
-   * `Order.purchaser` carries only the country, state and email of the legal
-   * address — no name. The receipt endpoint only ever returns the requesting
-   * user's own orders, so the logged-in MITx Online user *is* the purchaser and
-   * is the correct source for their name.
+   * `Order.purchaser` has no name field. The endpoint only returns the requester's
+   * own orders, so the logged-in user is the purchaser.
    */
   const userQuery = useQuery(mitxUserQueries.me())
 
@@ -169,10 +149,8 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
   const user = userQuery.data
 
   /**
-   * Filtered up front so an all-empty section can be dropped along with its
-   * heading. Orders with no CyberSource transaction (fully discounted, B2B) have
-   * no payment or billing details at all, and "Payment Information" over empty
-   * space reads as a broken page.
+   * Filtered up front so a section with no rows can be dropped along with its
+   * heading — zero-value orders have no payment or billing details at all.
    */
   const customerGroups = order
     ? populatedGroups([
@@ -195,6 +173,20 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
         ],
       ])
     : []
+
+  /**
+   * The endpoint is purchaser-scoped, so someone else's order 404s just like a
+   * missing one. Both get the generic 404 so a prober cannot tell them apart.
+   * Other failures keep the message below, since they say nothing about whether
+   * the order exists.
+   */
+  const isNotFound =
+    !orderQuery.isPending &&
+    (orderQuery.error as AxiosError | null)?.response?.status === 404
+
+  if (isNotFound) {
+    return <NotFoundPage />
+  }
 
   return (
     <Background>

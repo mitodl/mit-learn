@@ -52,13 +52,7 @@ const TotalRow = styled.div({
   gap: "16px",
 })
 
-/**
- * Total discount applied across the order.
- *
- * `TransactionLine.discount` is the per-unit discount MITx Online computed for
- * the line (`product.price - discounted_price`), so it is multiplied by quantity
- * to get what the learner actually saved.
- */
+/** `line.discount` is per unit, hence the multiply. */
 const getTotalDiscount = (order: Order): number =>
   order.lines.reduce(
     (total, line) => total + Number(line.discount) * line.quantity,
@@ -69,12 +63,9 @@ const getTotalQuantity = (order: Order): number =>
   order.lines.reduce((total, line) => total + line.quantity, 0)
 
 /**
- * The right-hand order summary: per-item prices, the discount and quantity
- * totals, and the amount paid.
- *
- * The design also shows "Total Before Tax" and a "Tax (10%)" line. MITx Online's
- * receipt payload carries no tax figures at all (`total_price_paid` is the only
- * total), so those rows are omitted rather than shown with an invented value.
+ * Per-item prices, discount and quantity totals, and the amount paid. The
+ * design's "Tax" and "Total Before Tax" rows are omitted — the payload has no tax
+ * data.
  */
 const ReceiptOrderSummary: React.FC<{ order: Order; className?: string }> = ({
   order,

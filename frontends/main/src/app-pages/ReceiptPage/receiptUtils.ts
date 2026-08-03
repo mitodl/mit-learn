@@ -2,32 +2,19 @@ import moment from "moment"
 import type { Order, OrderStreetAddress } from "@mitodl/mitxonline-api-axios/v2"
 import { formatPrice } from "@/common/mitxonline"
 
-/**
- * Receipt amounts always show cents, unlike catalog prices — `$1,524.00` rather
- * than `$1,524`. A receipt is a financial record, so a rounded-looking figure is
- * misleading even when the cents are zero.
- */
+/** Receipt amounts always show cents, unlike catalog prices. */
 const formatMoney = (amount: number | string): string =>
   formatPrice(amount, { avoidCents: false })
 
 /**
- * Long-form receipt dates, e.g. "June 14, 2024".
- *
- * Formatted in UTC, not the viewer's zone, unlike `ol-utilities`' `formatDate`.
- * MITx Online stores course start/end dates and order timestamps at UTC
- * midnight, which renders as the *previous* day for anyone west of Greenwich —
- * so a receipt viewed in Boston would disagree with the order it records. It
- * also keeps the output stable regardless of where the receipt is opened, which
- * matters for a financial document.
+ * Long-form receipt dates, e.g. "June 14, 2024". UTC, not the viewer's zone:
+ * course dates are stored at UTC midnight and would otherwise render a day early
+ * west of Greenwich.
  */
 const formatReceiptDate = (date: string): string =>
   moment.utc(date).format("MMMM DD, YYYY")
 
-/**
- * The run/program dates for a line, as a single range. Either end may be absent
- * (self-paced runs often have no end date), in which case only the known end of
- * the range is shown.
- */
+/** A line's dates as one range; either end may be absent. */
 const formatDateRange = (
   startDate?: string | null,
   endDate?: string | null,
@@ -39,12 +26,8 @@ const formatDateRange = (
 }
 
 /**
- * Flatten MITx Online's billing address into one line, e.g.
- * "123 Main Street, Danvers MA, 01923".
- *
- * Every part is optional — the address comes from the CyberSource transaction
- * payload, which only includes the fields the payment form collected — so parts
- * are joined only when present rather than leaving stray commas behind.
+ * Billing address as one line, e.g. "123 Main Street, Danvers MA, 01923". Every
+ * part is optional, so only present ones are joined.
  */
 const formatStreetAddress = (
   address: OrderStreetAddress | undefined,
@@ -64,11 +47,7 @@ const formatStreetAddress = (
   return parts.length > 0 ? parts.join(", ") : null
 }
 
-/**
- * The payment method as shown on the receipt: "Visa | xxxxxxxxxxxx1111" for
- * card payments, "Paypal" for PayPal, and nothing when MITx Online recorded no
- * transaction (e.g. a fully discounted order, which has no payment to describe).
- */
+/** e.g. "Visa | xxxxxxxxxxxx1111", or null when there was no payment. */
 const formatPaymentMethod = (order: Order): string | null => {
   const transaction = order.transactions
   if (!transaction) return null
