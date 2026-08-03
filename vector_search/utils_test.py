@@ -1153,10 +1153,10 @@ def test_embedding_context_markdown_formatting():
         (
             "A short description",
             "A full description",
-            "A short description A full description",
+            "A short description A full description\n\n",
         ),
-        (None, "A full description", "A full description"),
-        ("A short description", None, "A short description"),
+        (None, "A full description", "A full description\n\n"),
+        ("A short description", None, "A short description\n\n"),
         (None, None, ""),
     ],
 )
@@ -1171,13 +1171,14 @@ def test_embedding_context_omits_missing_descriptions(
         "readable_id": "18.06",
         "resource_type_group": "course",
         "content_files": [],
+        "resource_type": "course",
     }
 
     context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
         serialized_resource
     )
 
-    assert context == f"# Linear Algebra\n\n{expected}\n\nCourse number: 18.06\n"
+    assert context == f"# Linear Algebra\n\n{expected}Course number: 18.06"
     assert "None" not in context
 
 
