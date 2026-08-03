@@ -28,6 +28,7 @@ class PostHogLearningResourceViewEvent:
 
     resource_id: int
     event_date: datetime
+    event_uuid: str
 
 
 def posthog_extract_lrd_view_events() -> Generator[dict, None, None]:
@@ -94,11 +95,23 @@ def posthog_transform_lrd_view_events(
         # The PostHog data files contain other kinds of events, for example llm calls.
         # We only want to the resource views
 
-        if resource_id:
-            yield PostHogLearningResourceViewEvent(
-                resource_id=resource_id,
-                event_date=event.get("timestamp"),
+        if not resource_id:
+            continue
+
+        event_uuid = event.get("uuid")
+        if not event_uuid:
+            # PostHog assigns every event a uuid, so this indicates
+            # malformed source data
+            log.warning(
+                "Skipping lrd_view event without a uuid for resource %s", resource_id
             )
+            continue
+
+        yield PostHogLearningResourceViewEvent(
+            resource_id=resource_id,
+            event_date=event.get("timestamp"),
+            event_uuid=event_uuid,
+        )
 
 
 def load_posthog_lrd_view_event(
@@ -136,9 +149,20 @@ def load_posthog_lrd_view_event(
         log.warning(skip_warning)
         return None
 
-    lr_event, _ = LearningResourceViewEvent.objects.get_or_create(
+    # Adopt a matching legacy row (loaded before event_uuid existed) so
+    # re-read S3 files don't duplicate it; no-op once the tail is stamped
+    LearningResourceViewEvent.objects.filter(
         learning_resource=learning_resource,
         event_date=event.event_date,
+        event_uuid__isnull=True,
+    ).update(event_uuid=event.event_uuid)
+
+    lr_event, _ = LearningResourceViewEvent.objects.get_or_create(
+        event_uuid=event.event_uuid,
+        defaults={
+            "learning_resource": learning_resource,
+            "event_date": event.event_date,
+        },
     )
 
     return lr_event

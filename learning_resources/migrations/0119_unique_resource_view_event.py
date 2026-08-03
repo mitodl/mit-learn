@@ -1,4 +1,4 @@
-"""Dedupe LearningResourceViewEvent rows, then enforce uniqueness"""
+"""Dedupe LearningResourceViewEvent rows and add a unique PostHog event UUID"""
 
 from django.db import migrations, models
 from django.db.models import Count, Min
@@ -28,18 +28,23 @@ class Migration(migrations.Migration):
 
     operations = [
         # Block concurrent writes (e.g. the PostHog ETL task) for the duration
-        # of the transaction so no new duplicates appear between the dedupe
-        # and the constraint creation
+        # of the transaction so no new duplicates appear during the dedupe
         migrations.RunSQL(
             "LOCK TABLE learning_resources_learningresourceviewevent IN EXCLUSIVE MODE",
             reverse_sql=migrations.RunSQL.noop,
         ),
         migrations.RunPython(dedupe_view_events, migrations.RunPython.noop),
-        migrations.AddConstraint(
+        migrations.AddField(
             model_name="learningresourceviewevent",
-            constraint=models.UniqueConstraint(
-                fields=("learning_resource", "event_date"),
-                name="unique_resource_view_event",
+            name="event_uuid",
+            field=models.UUIDField(
+                editable=False,
+                help_text=(
+                    "The PostHog event UUID. Null only for rows loaded"
+                    " before this field existed."
+                ),
+                null=True,
+                unique=True,
             ),
         ),
     ]
