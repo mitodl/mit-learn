@@ -27,6 +27,13 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # Block concurrent writes (e.g. the PostHog ETL task) for the duration
+        # of the transaction so no new duplicates appear between the dedupe
+        # and the constraint creation
+        migrations.RunSQL(
+            "LOCK TABLE learning_resources_learningresourceviewevent IN EXCLUSIVE MODE",
+            reverse_sql=migrations.RunSQL.noop,
+        ),
         migrations.RunPython(dedupe_view_events, migrations.RunPython.noop),
         migrations.AddConstraint(
             model_name="learningresourceviewevent",
