@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from content_feedback.models import ContentFeedback
 from content_feedback.serializers import ContentFeedbackSerializer
+from main.throttles import RedisScopedRateThrottle
 
 
 @extend_schema(
@@ -13,6 +14,7 @@ from content_feedback.serializers import ContentFeedbackSerializer
     responses={
         201: ContentFeedbackSerializer,
         400: OpenApiResponse(description="Invalid feedback submission"),
+        429: OpenApiResponse(description="Rate limit exceeded"),
     },
 )
 class ContentFeedbackView(CreateAPIView):
@@ -21,6 +23,8 @@ class ContentFeedbackView(CreateAPIView):
     queryset = ContentFeedback.objects.all()
     serializer_class = ContentFeedbackSerializer
     permission_classes = (IsAuthenticated,)
+    throttle_classes = (RedisScopedRateThrottle,)
+    throttle_scope = "content_feedback"
 
     def perform_create(self, serializer):
         """Attribute the feedback to the authenticated user (server-side)."""
