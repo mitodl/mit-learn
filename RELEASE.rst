@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.76.2
+Version 0.76.2 (Released August 03, 2026)
 --------------
 
 - fix hidden cta on product pages when the window is too short (#3704)
