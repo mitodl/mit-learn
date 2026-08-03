@@ -486,15 +486,12 @@ def _learning_resource_embedding_context(document):
             ],
         )
     )
-    context = dedent(
-        f"""\
-# {document.get("title")}
 
-{description}
+    parts = [f"# {document.get('title')}", description]
+    if document.get("resource_type_group") == "course" and document.get("readable_id"):
+        parts.append(f"Course code: {document.get('readable_id')}")
 
-Course code: {document.get("readable_id")}
-"""
-    )
+    context = dedent("\n\n".join(filter(None, parts)))
     content = "\n\n".join(
         content_file["content"]
         for content_file in document.get("content_files") or []
