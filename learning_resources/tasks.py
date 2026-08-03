@@ -544,6 +544,7 @@ def calculate_resource_view_counts():
 
     num_updated = update_resource_view_counts()
     log.info("Updated view_count for %i resources", num_updated)
+    clear_views_cache()
 
 
 @app.task(acks_late=True)

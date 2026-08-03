@@ -146,7 +146,8 @@ CELERY_BEAT_SCHEDULE = (
         },
         "calculate_resource_view_counts-every-1-days": {
             "task": "learning_resources.tasks.calculate_resource_view_counts",
-            "schedule": crontab(minute=0, hour=4),  # 4:00 AM UTC
+            # staggered off cleanup-deleted-content-files, which also runs at 04:00 UTC
+            "schedule": crontab(minute=20, hour=4),
         },
         "send-subscription-emails-every-1-days": {
             "task": "learning_resources_search.tasks.send_subscription_emails",
