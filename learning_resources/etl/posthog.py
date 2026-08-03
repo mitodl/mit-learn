@@ -136,13 +136,9 @@ def load_posthog_lrd_view_event(
         log.warning(skip_warning)
         return None
 
-    lr_event, _ = LearningResourceViewEvent.objects.update_or_create(
+    lr_event, _ = LearningResourceViewEvent.objects.get_or_create(
         learning_resource=learning_resource,
         event_date=event.event_date,
-        defaults={
-            "learning_resource": learning_resource,
-            "event_date": event.event_date,
-        },
     )
 
     return lr_event

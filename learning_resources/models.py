@@ -1567,6 +1567,14 @@ class LearningResourceViewEvent(TimestampedModel):
         help_text="The date of the lrd_view event, as collected by PostHog.",
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["learning_resource", "event_date"],
+                name="unique_resource_view_event",
+            )
+        ]
+
     def __str__(self):
         """Return a string representation of the event."""
 
