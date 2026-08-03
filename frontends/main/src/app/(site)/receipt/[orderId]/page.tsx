@@ -10,9 +10,8 @@ export const metadata: Metadata = standardizeMetadata({
 })
 
 /**
- * A receipt is per-learner data behind MITx Online's session cookie, which is not
- * forwarded on server-side requests, so the order is fetched client-side rather
- * than prefetched and hydrated here.
+ * Fetched client-side: MITx Online's session cookie is not forwarded on
+ * server-side requests, so the order cannot be prefetched here.
  */
 const Page: React.FC<PageProps<"/receipt/[orderId]">> = async ({ params }) => {
   const { orderId } = await params

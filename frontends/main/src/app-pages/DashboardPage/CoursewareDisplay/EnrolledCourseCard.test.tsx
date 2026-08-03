@@ -17,11 +17,7 @@ import moment from "moment"
 import { EnrolledCourseCard } from "./EnrolledCourseCard"
 import { setupOrderHistory } from "./test-utils"
 
-/**
- * Verified enrollment cards look up their order to decide whether to show a
- * "Receipt" item. Default to an empty history (no receipt); individual tests
- * override with a resolving one where that is the thing under test.
- */
+// Verified cards look up their order; default to none, tests override.
 beforeEach(() => {
   setupOrderHistory()
 })
@@ -841,11 +837,7 @@ describe.each([
     ).toHaveAttribute("href", receiptView(87))
   })
 
-  /**
-   * A verified enrollment does not imply a run-level order: MITx Online also
-   * marks runs verified on program purchase, B2B code redemption, and admin
-   * upgrades. Showing the item then produces a link that 404s in both apps.
-   */
+  // Verified does not imply a run-level order, so the item must stay hidden.
   test("Receipt is hidden for a verified enrollment with no order behind it", async () => {
     setupUserApis()
     const runId = faker.number.int({ min: 1 })

@@ -24,10 +24,7 @@ const setupApis = ({
   return { mitxUser, receipt }
 }
 
-/**
- * Reads the value cell for a label within a labelled section, so assertions do
- * not depend on which section a duplicated label ("Name:") appears in.
- */
+/** Reads a label's value cell within one section, since labels repeat. */
 const findValueFor = async (sectionName: string, label: string) => {
   const heading = await screen.findByRole("heading", { name: sectionName })
   // The heading and its detail list are siblings inside the section element.
@@ -94,8 +91,7 @@ describe("ReceiptPage", () => {
   })
 
   test("formats dates in UTC so they match the recorded order", async () => {
-    // UTC midnight renders as the previous day in any negative-offset zone, so
-    // local formatting would show "July 07" / "July 08" here.
+    // Local formatting would render these a day early.
     setupApis({
       order: mitxonline.factories.orders.order({
         id: ORDER_ID,
@@ -293,7 +289,7 @@ describe("ReceiptPage", () => {
   })
 
   test("drops the Payment Information section when there is no transaction", async () => {
-    // Matches a real fully-discounted / B2B order: MITx Online returns the
+    // Matches a real zero-value order: MITx Online returns the
     // transaction and address objects with every field null.
     setupApis({
       order: mitxonline.factories.orders.order({
@@ -346,7 +342,8 @@ describe("ReceiptPage", () => {
     expect(summary).toHaveTextContent("$3,029.20")
   })
 
-  test("shows an error message when the receipt cannot be loaded", async () => {
+  // Someone else's order 404s like a missing one; both get the generic 404.
+  test("renders the generic 404 when the order is not found or not yours", async () => {
     setMockResponse.get(
       mitxonline.urls.userMe.get(),
       mitxonline.factories.user.user(),
@@ -354,6 +351,28 @@ describe("ReceiptPage", () => {
     setMockResponse.get(mitxonline.urls.orders.receipt(ORDER_ID), "Not found", {
       code: 404,
     })
+
+    renderWithProviders(<ReceiptPage orderId={ORDER_ID} />)
+
+    expect(
+      await screen.findByText(/couldn't find what you were looking for/i),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(/We could not load this receipt/i),
+    ).not.toBeInTheDocument()
+  })
+
+  // A 500 says nothing about existence, so it keeps an actionable message.
+  test("keeps an actionable message when the request fails for another reason", async () => {
+    setMockResponse.get(
+      mitxonline.urls.userMe.get(),
+      mitxonline.factories.user.user(),
+    )
+    setMockResponse.get(
+      mitxonline.urls.orders.receipt(ORDER_ID),
+      "Server error",
+      { code: 500 },
+    )
 
     renderWithProviders(<ReceiptPage orderId={ORDER_ID} />)
 

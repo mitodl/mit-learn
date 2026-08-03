@@ -9,11 +9,7 @@ describe("getReceiptMenuItem", () => {
     expect(getReceiptMenuItem("audit", 87)).toBeNull()
   })
 
-  /**
-   * Covers both "no order paid for this run/program" (e.g. verified via a program
-   * purchase or B2B code) and "the lookup has not resolved yet" — the hook
-   * reports null for both, and hiding the item is correct either way.
-   */
+  // Also covers "lookup still pending" — the hook reports null for both.
   test("returns null for a verified enrollment with no resolved order", () => {
     expect(getReceiptMenuItem("verified", null)).toBeNull()
   })

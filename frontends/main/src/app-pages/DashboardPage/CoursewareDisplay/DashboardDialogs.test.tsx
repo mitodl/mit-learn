@@ -33,11 +33,7 @@ import {
   trackProgramUnenrolled,
 } from "@/common/analytics/gtm"
 
-/**
- * Verified enrollment cards look up their order to decide whether to show a
- * "Receipt" item. Default to an empty history (no receipt); individual tests
- * override with a resolving one where that is the thing under test.
- */
+// Verified cards look up their order; default to none, tests override.
 beforeEach(() => {
   setupOrderHistory()
 })

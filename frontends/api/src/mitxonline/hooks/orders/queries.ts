@@ -29,11 +29,11 @@ const orderQueries = {
       },
     }),
   /**
-   * The authenticated user's order history, most recent first.
+   * Fulfilled and refunded orders, most recent first.
    *
-   * MITx Online does not expose the order that paid for a given enrollment, so
-   * this is how we resolve a course run or program back to its order (see
-   * `useOrderIdForRun` / `useOrderIdForProgram`).
+   * Enrollments carry no reference to their order, so getting from a run or
+   * program to its receipt means searching these lines — see
+   * `useOrderIdForRun` / `useOrderIdForProgram`.
    */
   historyList: (opts: OrdersApiOrdersHistoryListRequest = {}) =>
     queryOptions({

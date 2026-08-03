@@ -1,20 +1,13 @@
 import React from "react"
 import { Typography, styled } from "ol-components"
 
-/**
- * A label/value pair. `value` is nullish when the API did not supply the field,
- * in which case the row is dropped rather than rendered empty — see
- * {@link ReceiptDetailList}.
- */
+/** A label/value pair. A nullish `value` means the row is dropped. */
 type ReceiptDetail = {
   label: string
   value: React.ReactNode
 }
 
-/**
- * A group of rows rendered contiguously. Groups are separated by vertical space,
- * mirroring the blank spacer rows in the design.
- */
+/** Rows rendered contiguously; groups are separated by vertical space. */
 type ReceiptDetailGroup = ReceiptDetail[]
 
 const LABEL_COLUMN_WIDTH = "200px"
@@ -26,9 +19,8 @@ const GroupStack = styled.div({
 })
 
 /**
- * Each group is its own grid. The label column is a fixed width, so groups line
- * up with each other without needing to share one grid container (which would
- * mean putting non-`dt`/`dd` spacers inside a `dl`).
+ * One grid per group. The label column is a fixed width so separate grids still
+ * align, which avoids putting spacer elements inside a `dl`.
  */
 const DetailList = styled.dl(({ theme }) => ({
   display: "grid",
@@ -39,9 +31,7 @@ const DetailList = styled.dl(({ theme }) => ({
   },
 }))
 
-/**
- * The bottom border is drawn on both cells so the rule spans the full row.
- */
+/** Border on both cells so the rule spans the full row. */
 const cell = {
   display: "flex",
   alignItems: "center",
@@ -71,8 +61,9 @@ const DetailValue = styled.dd(({ theme }) => ({
  * Drop rows the API did not supply, then drop any group left with no rows.
  *
  * MITx Online leaves optional receipt fields unset rather than blank — CEUs is
- * always null today, and orders with no CyberSource transaction (fully
- * discounted, or B2B) come back with every payment and address field null. A
+ * always null today, and orders that never reached the payment processor (any
+ * zero-value order — 100%-off coupon, program entitlement) come back with every
+ * payment and address field null. A
  * labelled empty row reads as missing data, and a whole section of them reads as
  * a broken page, so callers use this to decide whether to render the section at
  * all.

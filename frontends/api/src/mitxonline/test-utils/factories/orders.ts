@@ -81,9 +81,9 @@ const order = (overrides: Partial<Order> = {}): Order => ({
 })
 
 /**
- * A `Product` as it appears on order history lines. `purchasable_object` is the
- * course run or program the product sells, and is how order history is matched
- * back to a run/program (see `useOrderIdForRun` / `useOrderIdForProgram`).
+ * The default `purchasable_object` has only an `id`, which matches no variant —
+ * pass a shaped object (with `course`, or neither `course` nor `run_tag`) when the
+ * test needs it to resolve.
  */
 const product = (overrides: Partial<Product> = {}): Product => ({
   id: faker.number.int(),

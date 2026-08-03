@@ -16,13 +16,10 @@ const RUN_ID = 500
 const PROGRAM_ID = 99
 const ORDER_ID = 4242
 
-/**
- * `useOrderIdForResource` requests a single page of 100 records; the mock must
- * match that exact URL, params included.
- */
+/** Must match the hook's request exactly, params included. */
 const HISTORY_URL = mitxonline.urls.orders.historyList({ limit: 100 })
 
-/** A course run product: the only purchasable-object variant with `course`. */
+/** Course run: the only variant with `course`. */
 const courseRunLine = (runId: number) =>
   mitxonline.factories.orders.line({
     product: mitxonline.factories.orders.product({
@@ -35,7 +32,7 @@ const courseRunLine = (runId: number) =>
     }),
   })
 
-/** A program product: no `course` and no `run_tag`. */
+/** Program: neither `course` nor `run_tag`. */
 const programLine = (programId: number) =>
   mitxonline.factories.orders.line({
     product: mitxonline.factories.orders.product({
@@ -47,7 +44,7 @@ const programLine = (programId: number) =>
     }),
   })
 
-/** A program *run* product: has `run_tag`, and its `id` is the program run's. */
+/** Program run: has `run_tag`, and its `id` is the run's, not the program's. */
 const programRunLine = (programRunId: number) =>
   mitxonline.factories.orders.line({
     product: mitxonline.factories.orders.product({
@@ -150,7 +147,7 @@ describe("ReceiptByRunRedirect", () => {
     renderWithProviders(<ReceiptByRunRedirect runId={RUN_ID} />)
 
     expect(
-      await screen.findByText(/couldn't find a receipt for this enrollment/i),
+      await screen.findByText(/couldn't find what you were looking for/i),
     ).toBeInTheDocument()
   })
 
@@ -168,21 +165,19 @@ describe("ReceiptByRunRedirect", () => {
     renderWithProviders(<ReceiptByRunRedirect runId={RUN_ID} />)
 
     expect(
-      await screen.findByText(/couldn't find a receipt for this enrollment/i),
+      await screen.findByText(/couldn't find what you were looking for/i),
     ).toBeInTheDocument()
   })
 
-  test("distinguishes a failed lookup from a genuinely absent receipt", async () => {
+  // Indistinguishable from an absent receipt, on purpose.
+  test("shows the generic 404 when the order lookup fails", async () => {
     setMockResponse.get(HISTORY_URL, "Server error", { code: 500 })
 
     renderWithProviders(<ReceiptByRunRedirect runId={RUN_ID} />)
 
     expect(
-      await screen.findByText(/couldn't load your order history/i),
+      await screen.findByText(/couldn't find what you were looking for/i),
     ).toBeInTheDocument()
-    expect(
-      screen.queryByText(/couldn't find a receipt for this enrollment/i),
-    ).not.toBeInTheDocument()
   })
 })
 
@@ -223,7 +218,7 @@ describe("ReceiptByProgramRedirect", () => {
     renderWithProviders(<ReceiptByProgramRedirect programId={PROGRAM_ID} />)
 
     expect(
-      await screen.findByText(/couldn't find a receipt for this enrollment/i),
+      await screen.findByText(/couldn't find what you were looking for/i),
     ).toBeInTheDocument()
   })
 
@@ -242,7 +237,7 @@ describe("ReceiptByProgramRedirect", () => {
     renderWithProviders(<ReceiptByProgramRedirect programId={PROGRAM_ID} />)
 
     expect(
-      await screen.findByText(/couldn't find a receipt for this enrollment/i),
+      await screen.findByText(/couldn't find what you were looking for/i),
     ).toBeInTheDocument()
   })
 })
