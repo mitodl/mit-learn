@@ -162,6 +162,7 @@ dev = [
 package = false
 default-groups = "all"
 override-dependencies = ["setuptools<80"]
+exclude-newer = "7d"
 
 [tool.uv.build-backend]
 module-root = ""
