@@ -1042,7 +1042,7 @@ def test_embedding_context_includes_content_files():
     )
     assert context == (
         "# A title\n\nA short description A full description\n\n"
-        "Course code: 18.06\n\n\n## Content\n"
+        "Course number: 18.06\n\n\n## Content\n"
         "The first content file text\n\nThe second content file text"
     )
 
@@ -1073,7 +1073,7 @@ def test_embedding_context_without_content_files():
     )
 
     assert context == (
-        "# A title\n\nA short description A full description\n\nCourse code: 18.06\n"
+        "# A title\n\nA short description A full description\n\nCourse number: 18.06\n"
     )
 
 
@@ -1104,14 +1104,14 @@ def test_embedding_context_truncates_content(mocker):
     assert context == "# A title\n"
     truncate_mock.assert_called_once_with(
         "# A title\n\nA short description A full description\n\n"
-        "Course code: 18.06\n\n\n## Content\n0123456789ABCDEF",
+        "Course number: 18.06\n\n\n## Content\n0123456789ABCDEF",
         "test-model",
         token_encoding_name="test-encoding",  # noqa: S106
     )
 
 
 def test_embedding_context_includes_course_code():
-    """The resource's readable_id should be included as the course code."""
+    """The resource's readable_id should be included as the course number."""
     serialized_resource = {
         "title": "Linear Algebra",
         "description": "A short description",
@@ -1125,7 +1125,7 @@ def test_embedding_context_includes_course_code():
         serialized_resource
     )
 
-    assert "Course code: 18.06" in context
+    assert "Course number: 18.06" in context
 
 
 def test_embedding_context_markdown_formatting():
@@ -1177,7 +1177,7 @@ def test_embedding_context_omits_missing_descriptions(
         serialized_resource
     )
 
-    assert context == f"# Linear Algebra\n\n{expected}\n\nCourse code: 18.06\n"
+    assert context == f"# Linear Algebra\n\n{expected}\n\nCourse number: 18.06\n"
     assert "None" not in context
 
 
