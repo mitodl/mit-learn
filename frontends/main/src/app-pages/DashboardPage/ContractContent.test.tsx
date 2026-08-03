@@ -12,9 +12,10 @@ import { urls, factories } from "api/mitxonline-test-utils"
 import {
   createCoursesWithContractRuns,
   createTestContracts,
+  setupOrderHistory,
   setupOrgAndUser,
-  setupProgramsAndCourses,
   setupOrgDashboardMocks,
+  setupProgramsAndCourses,
 } from "./CoursewareDisplay/test-utils"
 import {
   CourseWithCourseRunsSerializerV2,
@@ -25,6 +26,15 @@ import invariant from "tiny-invariant"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { contractAdminView } from "@/common/urls"
+
+/**
+ * Verified enrollment cards look up their order to decide whether to show a
+ * "Receipt" item. Default to an empty history (no receipt); individual tests
+ * override with a resolving one where that is the thing under test.
+ */
+beforeEach(() => {
+  setupOrderHistory()
+})
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),

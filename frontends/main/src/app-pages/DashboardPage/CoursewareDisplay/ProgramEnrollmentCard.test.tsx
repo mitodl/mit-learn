@@ -2,8 +2,19 @@ import React from "react"
 import { renderWithProviders, screen, user, within } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
+import { receiptView } from "@/common/urls"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { ProgramEnrollmentCard } from "./ProgramEnrollmentCard"
+import { setupOrderHistory } from "./test-utils"
+
+/**
+ * Verified enrollment cards look up their order to decide whether to show a
+ * "Receipt" item. Default to an empty history (no receipt); individual tests
+ * override with a resolving one where that is the thing under test.
+ */
+beforeEach(() => {
+  setupOrderHistory()
+})
 
 describe.each([
   { display: "desktop", testId: "enrollment-card-desktop" },
@@ -227,6 +238,7 @@ describe.each([
       mitxonline.factories.enrollment.programEnrollmentV3({
         enrollment_mode: "verified",
       })
+    setupOrderHistory({ programId: programEnrollment.program.id })
     renderWithProviders(
       <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
     )
@@ -234,7 +246,7 @@ describe.each([
       within(getCard()).getByRole("button", { name: "More options" }),
     )
     expect(
-      screen.getByRole("menuitem", { name: "Receipt" }),
+      await screen.findByRole("menuitem", { name: "Receipt" }),
     ).toBeInTheDocument()
   })
 
@@ -254,29 +266,45 @@ describe.each([
     ).not.toBeInTheDocument()
   })
 
-  test("Receipt links to correct MITx Online URL for verified program enrollment", async () => {
+  test("Receipt links to the receipt for the order that paid for the program", async () => {
     const program = mitxonline.factories.programs.simpleProgram({ id: 99 })
+    setupOrderHistory({ programId: 99, orderId: 23 })
     const programEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
         program,
         enrollment_mode: "verified",
       })
-    const windowOpenSpy = jest
-      .spyOn(window, "open")
-      .mockImplementation(() => null)
     renderWithProviders(
       <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
     )
     await user.click(
       within(getCard()).getByRole("button", { name: "More options" }),
     )
-    await user.click(screen.getByRole("menuitem", { name: "Receipt" }))
-    expect(windowOpenSpy).toHaveBeenCalledWith(
-      mitxonlineLegacyUrl("/orders/receipt/by-program/99/"),
-      "_blank",
-      "noopener,noreferrer",
+    expect(
+      await screen.findByRole("menuitem", { name: "Receipt" }),
+    ).toHaveAttribute("href", receiptView(23))
+  })
+
+  test("Receipt is hidden for a verified program enrollment with no order", async () => {
+    const program = mitxonline.factories.programs.simpleProgram({ id: 99 })
+    // An order exists, but for a different program.
+    setupOrderHistory({ programId: 100, orderId: 23 })
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        program,
+        enrollment_mode: "verified",
+      })
+    renderWithProviders(
+      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
     )
-    windowOpenSpy.mockRestore()
+    await user.click(
+      within(getCard()).getByRole("button", { name: "More options" }),
+    )
+    await screen.findByRole("menuitem", { name: "Program Record" })
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Receipt" }),
+    ).not.toBeInTheDocument()
   })
 })
 

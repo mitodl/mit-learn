@@ -27,8 +27,17 @@ import {
 import { HomeEnrollmentsDisplay } from "./HomeEnrollmentsDisplay"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
-import { setupEnrollments } from "./test-utils"
+import { setupEnrollments, setupOrderHistory } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
+
+/**
+ * Verified enrollment cards look up their order to decide whether to show a
+ * "Receipt" item. Default to an empty history (no receipt); individual tests
+ * override with a resolving one where that is the thing under test.
+ */
+beforeEach(() => {
+  setupOrderHistory()
+})
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest

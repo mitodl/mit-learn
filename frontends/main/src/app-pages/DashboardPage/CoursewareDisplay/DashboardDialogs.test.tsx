@@ -11,7 +11,11 @@ import {
 import { HomeEnrollmentsDisplay } from "./HomeEnrollmentsDisplay"
 import { CoursewareCard } from "./CoursewareCard"
 import { buildCourseEntry } from "./model/dashboardViewModel"
-import { dashboardCourse, setupEnrollments } from "./test-utils"
+import {
+  dashboardCourse,
+  setupEnrollments,
+  setupOrderHistory,
+} from "./test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import {
   urls as testUrls,
@@ -28,6 +32,15 @@ import {
   trackCourseUnenrolled,
   trackProgramUnenrolled,
 } from "@/common/analytics/gtm"
+
+/**
+ * Verified enrollment cards look up their order to decide whether to show a
+ * "Receipt" item. Default to an empty history (no receipt); individual tests
+ * override with a resolving one where that is the thing under test.
+ */
+beforeEach(() => {
+  setupOrderHistory()
+})
 
 jest.mock("posthog-js/react")
 jest.mock("@/common/analytics/gtm", () => ({
