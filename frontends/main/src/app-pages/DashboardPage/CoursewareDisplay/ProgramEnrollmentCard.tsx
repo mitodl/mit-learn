@@ -25,6 +25,7 @@ import { getCertificateLink } from "./model/dashboardViewModel"
 import NiceModal from "@ebay/nice-modal-react"
 import { UnenrollProgramDialog } from "./DashboardDialogs"
 import { getReceiptMenuItem } from "./receiptMenuItem"
+import { useOrderIdForProgram } from "@/common/mitxonline/useOrderIdForResource"
 import { SimpleMenu, Stack } from "ol-components"
 import { EnrollmentStatus } from "./helpers"
 import { ProgressBadge } from "./ProgressBadge"
@@ -54,6 +55,13 @@ export const ProgramEnrollmentCard = ({
     : EnrollmentStatus.Enrolled
   const upgradedAndIncomplete = isVerifiedEnrollmentMode(
     programEnrollment.enrollment_mode,
+  )
+  /**
+   * Skipped for audit enrollments, which never have a receipt. Shares one
+   * `orders/history` query with every other card on the dashboard.
+   */
+  const { orderId: receiptOrderId } = useOrderIdForProgram(
+    upgradedAndIncomplete ? programId : null,
   )
   const displayMode = program.display_mode
   const titleSection = (
@@ -114,7 +122,7 @@ export const ProgramEnrollmentCard = ({
   }
   const receiptMenuItem = getReceiptMenuItem(
     programEnrollment.enrollment_mode,
-    `/orders/receipt/by-program/${program.id}/`,
+    receiptOrderId,
   )
   if (receiptMenuItem) menuItems.push(receiptMenuItem)
   const contextMenu = (

@@ -1,5 +1,16 @@
 import { faker } from "@faker-js/faker/locale/en"
-import type { Order, TransactionLine } from "@mitodl/mitxonline-api-axios/v2"
+import type {
+  Line,
+  Nested,
+  Order,
+  OrderHistory,
+  OrderStreetAddress,
+  OrderTransactions,
+  PaginatedOrderHistoryList,
+  Product,
+  RedeemedDiscount,
+  TransactionLine,
+} from "@mitodl/mitxonline-api-axios/v2"
 
 const transactionLine = (
   overrides: Partial<TransactionLine> = {},
@@ -17,6 +28,43 @@ const transactionLine = (
   ...overrides,
 })
 
+const orderTransactions = (
+  overrides: Partial<OrderTransactions> = {},
+): OrderTransactions => ({
+  card_number: `xxxxxxxxxxxx${faker.string.numeric(4)}`,
+  card_type: "Visa",
+  name: faker.person.fullName(),
+  bill_to_email: faker.internet.email(),
+  payment_method: "card",
+  ...overrides,
+})
+
+const orderStreetAddress = (
+  overrides: Partial<OrderStreetAddress> = {},
+): OrderStreetAddress => ({
+  line: [faker.location.streetAddress()],
+  postal_code: faker.location.zipCode(),
+  state: faker.location.state({ abbreviated: true }),
+  city: faker.location.city(),
+  country: "US",
+  ...overrides,
+})
+
+const redeemedDiscount = (
+  overrides: Partial<Nested> = {},
+): RedeemedDiscount => ({
+  redeemed_discount: {
+    id: faker.number.int(),
+    created_on: faker.date.past().toISOString(),
+    updated_on: faker.date.past().toISOString(),
+    amount: faker.commerce.price({ min: 5, max: 50 }),
+    discount_type: "dollars-off",
+    redemption_type: "one-time",
+    discount_code: faker.string.alphanumeric(12),
+    ...overrides,
+  },
+})
+
 const order = (overrides: Partial<Order> = {}): Order => ({
   id: faker.number.int(),
   state: "fulfilled",
@@ -27,9 +75,74 @@ const order = (overrides: Partial<Order> = {}): Order => ({
   refunds: [],
   reference_number: faker.string.alphanumeric(10),
   created_on: faker.date.past().toISOString(),
-  transactions: {},
-  street_address: {},
+  transactions: orderTransactions(),
+  street_address: orderStreetAddress(),
   ...overrides,
 })
 
-export { order, transactionLine }
+/**
+ * A `Product` as it appears on order history lines. `purchasable_object` is the
+ * course run or program the product sells, and is how order history is matched
+ * back to a run/program (see `useOrderIdForRun` / `useOrderIdForProgram`).
+ */
+const product = (overrides: Partial<Product> = {}): Product => ({
+  id: faker.number.int(),
+  price: faker.commerce.price({ min: 50, max: 500 }),
+  description: faker.commerce.productDescription(),
+  is_active: true,
+  purchasable_object: { id: faker.number.int() },
+  ...overrides,
+})
+
+const line = (overrides: Partial<Line> = {}): Line => {
+  const unitPrice = faker.commerce.price({ min: 50, max: 500 })
+  return {
+    id: faker.number.int(),
+    quantity: 1,
+    item_description: faker.commerce.productName(),
+    unit_price: unitPrice,
+    total_price: unitPrice,
+    product: product(),
+    ...overrides,
+  }
+}
+
+const orderHistory = (overrides: Partial<OrderHistory> = {}): OrderHistory => ({
+  id: faker.number.int(),
+  state: "fulfilled",
+  reference_number: faker.string.alphanumeric(10),
+  purchaser: {
+    id: faker.number.int(),
+    name: faker.person.fullName(),
+    created_on: faker.date.past().toISOString(),
+    updated_on: faker.date.past().toISOString(),
+  },
+  total_price_paid: faker.commerce.price({ min: 50, max: 500 }),
+  lines: [line()],
+  created_on: faker.date.past().toISOString(),
+  titles: [],
+  updated_on: faker.date.past().toISOString(),
+  ...overrides,
+})
+
+const orderHistoryList = (
+  results: OrderHistory[],
+  opts: { count?: number; next?: string | null; previous?: string | null } = {},
+): PaginatedOrderHistoryList => ({
+  count: opts.count ?? results.length,
+  next: opts.next ?? null,
+  previous: opts.previous ?? null,
+  results,
+})
+
+export {
+  order,
+  orderHistory,
+  orderHistoryList,
+  orderStreetAddress,
+  orderTransactions,
+  line,
+  product,
+  redeemedDiscount,
+  transactionLine,
+}
