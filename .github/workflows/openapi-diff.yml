@@ -5,15 +5,17 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout HEAD
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           ref: ${{ github.head_ref }}
           path: head
+          persist-credentials: false
       - name: Checkout BASE
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           ref: ${{ github.base_ref }}
           path: base
+          persist-credentials: false
       - name: Generate oasdiff summary
         id: oasdif_changelog
         run: |

@@ -28,7 +28,9 @@ jobs:
           - 6379:6379
 
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
 
       - name: update apt
         run: sudo apt-get update -y
@@ -37,7 +39,7 @@ jobs:
         run: cat Aptfile | sudo xargs apt-get install
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
         with:
           enable-cache: true
 
@@ -84,8 +86,10 @@ jobs:
   javascript-tests:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
-      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
         with:
           node-version: "^24.0.0"
           cache: yarn
@@ -117,10 +121,11 @@ jobs:
         uses: SimenB/github-actions-cpu-cores@97ba232459a8e02ff6121db9362b09661c875ab8 # v2
 
       - name: Tests
-        run: yarn test --max-workers ${{ steps.cpu-cores.outputs.count }}
+        run: yarn test --max-workers ${STEPS_CPU_CORES_OUTPUTS_COUNT}
         env:
           CODECOV: true
           NODE_ENV: test
+          STEPS_CPU_CORES_OUTPUTS_COUNT: ${{ steps.cpu-cores.outputs.count }}
 
       - name: Upload coverage to CodeCov
         uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
@@ -132,7 +137,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
 
       - name: Build the Docker image
         env:
@@ -147,9 +154,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
         with:
           node-version: "^24.0.0"
           cache: yarn
@@ -171,8 +180,10 @@ jobs:
       GENERATOR_OUTPUT_DIR_VC: ./frontends/api/src/generated/v0
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
-      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
         with:
           node-version: "^24.0.0"
           cache: yarn
@@ -182,7 +193,7 @@ jobs:
         run: yarn install --immutable
 
       - name: Generate Fresh API Client
-        uses: openapi-generators/openapitools-generator-action@v1
+        uses: openapi-generators/openapitools-generator-action@515e8d70646f72de54d61c7f54b9447b7a1176f0 # v1
         with:
           generator: typescript-axios
           openapi-file: $OPENAPI_SCHEMA
@@ -210,8 +221,10 @@ jobs:
       GENERATOR_OUTPUT_DIR_VC: ./frontends/api/src/generated/v1
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
-      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
         with:
           node-version: "^24.0.0"
           cache: yarn
@@ -221,7 +234,7 @@ jobs:
         run: yarn install --immutable
 
       - name: Generate Fresh API Client
-        uses: openapi-generators/openapitools-generator-action@v1
+        uses: openapi-generators/openapitools-generator-action@515e8d70646f72de54d61c7f54b9447b7a1176f0 # v1
         with:
           generator: typescript-axios
           openapi-file: $OPENAPI_SCHEMA
