@@ -489,7 +489,7 @@ def _learning_resource_embedding_context(document):
 
     parts = [f"# {document.get('title')}", description]
     if document.get("resource_type_group") == "course" and document.get("readable_id"):
-        parts.append(f"Course code: {document.get('readable_id')}")
+        parts.append(f"Course number: {document.get('readable_id')}")
 
     context = dedent("\n\n".join(filter(None, parts)))
     content = "\n\n".join(
