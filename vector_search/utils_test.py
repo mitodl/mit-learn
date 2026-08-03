@@ -1006,18 +1006,15 @@ def test_should_generate_for_changed_resource(mocker):
     resource = LearningResourceFactory.create()
     serialized_resources = list(serialize_bulk_learning_resources([resource.id]))
 
-    mock_qdrant = mocker.MagicMock()
     fake_payload = {
         "title": "Different title",
         "description": serialized_resources[0]["description"],
         "full_description": serialized_resources[0]["full_description"],
     }
     mock_point = mocker.MagicMock()
-    # return record with different title
+    # stored record with different title
     mock_point.payload = fake_payload
-    mock_qdrant.retrieve.return_value = [mock_point]
-    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
-    result = should_generate_resource_embeddings(serialized_resources[0])
+    result = should_generate_resource_embeddings(serialized_resources[0], mock_point)
     assert result is True
 
 
@@ -1111,13 +1108,10 @@ def test_should_generate_for_changed_content_file(mocker):
     content_file = ContentFileFactory.create(content="Test content")
     serialized_files = list(serialize_bulk_content_files([content_file.id]))
 
-    mock_qdrant = mocker.MagicMock()
     mock_point = mocker.MagicMock()
-    # return record with different checksum
+    # stored record with different checksum
     mock_point.payload = {"checksum": "different-checksum"}
-    mock_qdrant.retrieve.return_value = [mock_point]
-    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
-    result = should_generate_content_embeddings(serialized_files[0])
+    result = should_generate_content_embeddings(serialized_files[0], mock_point)
     assert result is True
 
 
@@ -1204,13 +1198,10 @@ def test_should_not_generate_for_unchanged_content_file(mocker):
     content_file = ContentFileFactory.create(content="Test content")
     serialized_files = list(serialize_bulk_content_files([content_file.id]))
 
-    mock_qdrant = mocker.MagicMock()
     mock_point = mocker.MagicMock()
-    # return record with same checksum
+    # stored record with same checksum
     mock_point.payload = {"checksum": serialized_files[0]["checksum"]}
-    mock_qdrant.retrieve.return_value = [mock_point]
-    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
-    result = should_generate_content_embeddings(serialized_files[0])
+    result = should_generate_content_embeddings(serialized_files[0], mock_point)
     assert result is False
 
 

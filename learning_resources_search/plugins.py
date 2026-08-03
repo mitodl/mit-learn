@@ -26,19 +26,12 @@ def try_with_retry_as_task(function, *args):
     Dispatch a task/signature to the broker with publish-time retry.
 
     Accepts a bare task object (plus positional args) or an already-built
-    signature (e.g. a chain). Publish-time retry absorbs transient broker
-    blips without a second manual publish that could double-dispatch.
+    signature (e.g. a chain). Celery's default publish retry
+    (task_publish_retry, 3 attempts) absorbs transient broker blips without
+    a second manual publish that could double-dispatch.
     """
     signature = function.si(*args) if isinstance(function, Task) else function
-    signature.apply_async(
-        retry=True,
-        retry_policy={
-            "max_retries": 3,
-            "interval_start": 0.2,
-            "interval_step": 0.5,
-            "interval_max": 2,
-        },
-    )
+    signature.apply_async()
 
 
 class SearchIndexPlugin:

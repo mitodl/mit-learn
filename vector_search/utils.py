@@ -502,10 +502,6 @@ def _content_file_embedding_context(document):
     return document.get("content", "")
 
 
-# Sentinel distinguishing "caller did not supply a stored point" from an
-# explicit None (point genuinely absent from Qdrant).
-_UNSET = object()
-
 # Cap ids per Qdrant retrieve so large (backfill / healthcheck) batches stay
 # under the server's request-size limits.
 QDRANT_RETRIEVE_BATCH_SIZE = 256
@@ -627,21 +623,13 @@ def _set_payload(points, document, param_map, collection_name):
         )
 
 
-def should_generate_resource_embeddings(serialized_document, stored_point=_UNSET):
+def should_generate_resource_embeddings(serialized_document, stored_point):
     """
     Determine if we should generate embeddings for a learning resource.
 
-    Pass stored_point (the already-retrieved point, or None if absent) to reuse a
-    batched retrieve instead of issuing one retrieve per document.
+    stored_point is the already-retrieved Qdrant point (from a batched
+    retrieve), or None if absent.
     """
-    if stored_point is _UNSET:
-        client = qdrant_client()
-        point_id = vector_point_id(vector_point_key(serialized_document))
-        response = client.retrieve(
-            collection_name=RESOURCES_COLLECTION_NAME,
-            ids=[point_id],
-        )
-        stored_point = response[0] if response else None
     if stored_point is not None:
         stored_embedding_content = _learning_resource_embedding_context(
             stored_point.payload
@@ -652,26 +640,6 @@ def should_generate_resource_embeddings(serialized_document, stored_point=_UNSET
         if stored_embedding_content == current_embedding_content:
             return False
     return True
-
-
-def _retrieve_content_file_point(
-    serialized_document: dict, point_id: str | None = None
-):
-    client = qdrant_client()
-    if not point_id:
-        # we just need metadata from the first chunk
-        point_id = vector_point_id(
-            vector_point_key(
-                serialized_document, chunk_number=0, document_type="content_file"
-            )
-        )
-    response = client.retrieve(
-        collection_name=CONTENT_FILES_COLLECTION_NAME,
-        ids=[point_id],
-    )
-    if len(response) > 0:
-        return response[0]
-    return None
 
 
 def _stored_content_payloads(
@@ -699,23 +667,16 @@ def _stored_content_payloads(
     return stored
 
 
-def should_generate_content_embeddings(
-    serialized_document: dict, point_id: str | None = None, stored_point=_UNSET
-) -> bool:
+def should_generate_content_embeddings(serialized_document: dict, stored_point) -> bool:
     """
     Determine if we should generate embeddings for a content file.
 
-    Pass stored_point (the already-retrieved chunk-0 point, or None if absent) to
-    reuse a batched retrieve instead of issuing one retrieve per document.
+    stored_point is the already-retrieved chunk-0 Qdrant point (from a batched
+    retrieve), or None if absent.
     """
-    point = (
-        _retrieve_content_file_point(serialized_document, point_id=point_id)
-        if stored_point is _UNSET
-        else stored_point
-    )
-    if not point:
+    if not stored_point:
         return True
-    qdrant_checksum = (point.payload or {}).get("checksum")
+    qdrant_checksum = (stored_point.payload or {}).get("checksum")
     return qdrant_checksum != serialized_document["checksum"]
 
 
@@ -759,9 +720,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
             vector_point_key(doc, document_type="course_information")
         )
         if not should_generate_content_embeddings(
-            serialized_document,
-            document_point_id,
-            stored_point=stored_points.get(str(document_point_id)),
+            serialized_document, stored_points.get(str(document_point_id))
         ):
             continue
 
