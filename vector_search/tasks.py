@@ -103,9 +103,9 @@ def _dispatch_signatures(task_signatures) -> None:
 
     Publishes one message per chunk rather than a single catalog-wide group/chain,
     so a full-catalog backfill does not spike the broker with one huge message.
-    Nothing waits on the results (embedding tasks are ignore_result), so this
-    returns None: callers' return value stays "falsy on success, error string on
-    failure".
+    Nothing waits on the results (embedding tasks are ignore_result). Always
+    returns None (falsy success for callers returning it directly); a publish
+    failure raises out of apply_async, failing the dispatching task loudly.
     """
     count = 0
     for sig in task_signatures:
