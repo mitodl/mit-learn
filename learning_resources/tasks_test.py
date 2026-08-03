@@ -18,9 +18,11 @@ from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
     LearningResourceRunFactory,
+    LearningResourceViewEventFactory,
 )
 from learning_resources.models import ContentFile, LearningResource
 from learning_resources.tasks import (
+    calculate_resource_view_counts,
     cleanup_deleted_content_files,
     get_ocw_data,
     get_youtube_data,
@@ -1187,3 +1189,14 @@ def test_cleanup_deleted_content_files_returns_error_on_unexpected_exception(moc
     result = cleanup_deleted_content_files()
 
     assert result == "cleanup_deleted_content_files threw an error"
+
+
+def test_calculate_resource_view_counts():
+    """calculate_resource_view_counts should populate view_count from view events"""
+    resource = LearningResourceFactory.create(published=True)
+    LearningResourceViewEventFactory.create_batch(3, learning_resource=resource)
+
+    calculate_resource_view_counts()
+
+    resource.refresh_from_db()
+    assert resource.view_count == 3

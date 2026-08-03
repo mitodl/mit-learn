@@ -14,6 +14,7 @@ from django.db import OperationalError
 from django.db.models import Q
 from django.utils import timezone
 
+from learning_resources.api import update_resource_view_counts
 from learning_resources.constants import LearningResourceType
 from learning_resources.etl import ovs, pipelines, youtube
 from learning_resources.etl.canvas import (
@@ -535,6 +536,14 @@ def get_learning_resource_views():
 
     pipelines.posthog_etl()
     clear_views_cache()
+
+
+@app.task(acks_late=True)
+def calculate_resource_view_counts():
+    """Recalculate the denormalized LearningResource.view_count column."""
+
+    num_updated = update_resource_view_counts()
+    log.info("Updated view_count for %i resources", num_updated)
 
 
 @app.task(acks_late=True)

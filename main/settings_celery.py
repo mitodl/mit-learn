@@ -144,6 +144,10 @@ CELERY_BEAT_SCHEDULE = (
                 "NEWS_EVENTS_OL_EVENTS_SCHEDULE_SECONDS", 60 * 60 * 3
             ),  # default is every 3 hours
         },
+        "calculate_resource_view_counts-every-1-days": {
+            "task": "learning_resources.tasks.calculate_resource_view_counts",
+            "schedule": crontab(minute=0, hour=4),  # 4:00 AM UTC
+        },
         "send-subscription-emails-every-1-days": {
             "task": "learning_resources_search.tasks.send_subscription_emails",
             "schedule": crontab(minute=30, hour=18),  # 2:30pm EST

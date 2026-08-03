@@ -13,6 +13,7 @@ from rest_framework.reverse import reverse
 
 from channels.factories import ChannelTopicDetailFactory, ChannelUnitDetailFactory
 from channels.models import Channel
+from learning_resources.api import update_resource_view_counts
 from learning_resources.constants import (
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
     GROUP_TUTOR_PROBLEM_VIEWERS,
@@ -1054,6 +1055,10 @@ def test_popular_sort(client, resource_type):
             random.randrange(0, 30),  # noqa: S311
             learning_resource=resource,
         )
+
+    # sortby=-views orders by the denormalized view_count column, so it must
+    # be populated the same way the PostHog ETL / backfill task would.
+    update_resource_view_counts()
 
     url = reverse("lr:v1:learning_resources_api-list")
 
