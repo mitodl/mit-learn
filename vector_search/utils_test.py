@@ -16,7 +16,6 @@ from qdrant_client.models import PointStruct
 import vector_search.utils as vs_utils
 from learning_resources.constants import (
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
-    LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
 )
 from learning_resources.factories import (
     ContentFileFactory,
@@ -1030,6 +1029,7 @@ def test_embedding_context_includes_content_files():
         "full_description": "A full description",
         "readable_id": "18.06",
         "resource_type_group": "course",
+        "resource_type": "course",
         "content_files": [
             {"content": "The first content file text"},
             {"content": None},
@@ -1042,7 +1042,7 @@ def test_embedding_context_includes_content_files():
     )
     assert context == (
         "# A title\n\nA short description A full description\n\n"
-        "Course number: 18.06\n\n\n## Content\n"
+        "Course number: 18.06\n\n## Content\n"
         "The first content file text\n\nThe second content file text"
     )
 
@@ -1065,6 +1065,7 @@ def test_embedding_context_without_content_files():
         "full_description": "A full description",
         "readable_id": "18.06",
         "resource_type_group": "course",
+        "resource_type": "course",
         "content_files": [],
     }
 
@@ -1073,7 +1074,7 @@ def test_embedding_context_without_content_files():
     )
 
     assert context == (
-        "# A title\n\nA short description A full description\n\nCourse number: 18.06\n"
+        "# A title\n\nA short description A full description\n\nCourse number: 18.06"
     )
 
 
@@ -1093,8 +1094,9 @@ def test_embedding_context_truncates_content(mocker):
         "description": "A short description",
         "full_description": "A full description",
         "readable_id": "18.06",
-        "resource_type_group": LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
+        "resource_type_group": "course",
         "content_files": [{"content": "0123456789ABCDEF"}],
+        "resource_type": "course",
     }
 
     context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
@@ -1104,7 +1106,7 @@ def test_embedding_context_truncates_content(mocker):
     assert context == "# A title\n"
     truncate_mock.assert_called_once_with(
         "# A title\n\nA short description A full description\n\n"
-        "Course number: 18.06\n\n\n## Content\n0123456789ABCDEF",
+        "Course number: 18.06\n\n## Content\n0123456789ABCDEF",
         "test-model",
         token_encoding_name="test-encoding",  # noqa: S106
     )
