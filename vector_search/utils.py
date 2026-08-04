@@ -1209,7 +1209,10 @@ def _content_file_vector_hits(search_result):
     serialized_content_files = ContentFileSerializer(
         ContentFile.objects.for_serialization()
         .filter(key__in=keys)
-        .filter(Q(run__run_id__in=run_readable_ids) | Q(run__isnull=True)),
+        .filter(
+            Q(run__run_id__in=run_readable_ids)
+            | Q(run__isnull=True, learning_resource__readable_id__in=run_readable_ids)
+        ),
         many=True,
     ).data
     results = []
