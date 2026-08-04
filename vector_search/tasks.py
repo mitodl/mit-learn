@@ -7,7 +7,6 @@ import sentry_sdk
 from celery.exceptions import Ignore
 from celery.utils.time import get_exponential_backoff_interval
 from django.conf import settings
-from django.core.cache import caches
 from django.db.models import Q
 
 from learning_resources.models import (
@@ -58,18 +57,6 @@ from vector_search.utils import (
 
 log = logging.getLogger(__name__)
 
-EMBED_FAILURE_TTL = 60 * 60 * 24  # 24h defensive cleanup for the per-run counter
-
-
-def _record_embedding_failure(failure_key: str) -> None:
-    """Bump the per-invocation embedding-failure counter in the shared redis cache."""
-    cache = caches["redis"]
-    key = f"embed_errors:{failure_key}"
-    try:
-        cache.incr(key)
-    except ValueError:  # key absent
-        cache.set(key, 1, EMBED_FAILURE_TTL)
-
 
 @app.task
 def tune_qdrant_collections():
@@ -89,23 +76,42 @@ def _replace_with_chain(task, task_signatures):
     return task.replace(celery.chain(*task_signatures))
 
 
-def _replace_with_finalized_chain(
-    task: celery.Task, content_file_ids: list[int], *, overwrite: bool
+def _dispatch_content_file_chunks(
+    content_file_ids: list[int], *, overwrite: bool
 ) -> None:
     """
-    Chain of content-file embedding chunks + a finalize tail that fails the parent
-    if any chunk failed. Returns None when there is nothing to embed.
+    Dispatch content-file embedding chunks, fire and forget.
+
+    Chunks are published individually rather than via ``task.replace(group(...))``:
+    celery uplifts a replaced group into a chord, which keeps per-chunk result
+    bookkeeping in Redis even for ignore_result tasks. Callers are chain tails,
+    so nothing downstream needs to wait. Failures surface via
+    generate_embeddings' own logging/Sentry and the periodic
+    embeddings_healthcheck.
     """
-    failure_key = task.request.id
-    sigs = [
-        generate_embeddings.si(
-            ids, CONTENT_FILE_TYPE, overwrite=overwrite, failure_key=failure_key
+    _dispatch_signatures(
+        generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite=overwrite)
+        for ids in chunks(
+            content_file_ids, chunk_size=settings.QDRANT_CONTENT_FILE_CHUNK_SIZE
         )
-        for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
-    ]
-    if not sigs:
-        return None
-    return task.replace(celery.chain(*sigs, finalize_embeddings.si(failure_key)))
+    )
+
+
+def _dispatch_signatures(task_signatures) -> None:
+    """
+    Fire-and-forget dispatch of already-built chunk signatures.
+
+    Publishes one message per chunk rather than a single catalog-wide group/chain,
+    so a full-catalog backfill does not spike the broker with one huge message.
+    Nothing waits on the results (embedding tasks are ignore_result). Always
+    returns None (falsy success for callers returning it directly); a publish
+    failure raises out of apply_async, failing the dispatching task loudly.
+    """
+    count = 0
+    for sig in task_signatures:
+        sig.apply_async()
+        count += 1
+    log.info("Dispatched %d embedding chunk task(s)", count)
 
 
 def _queue_program_content_file_embedding_tasks(index_tasks, program_ids, overwrite):
@@ -126,7 +132,7 @@ def _queue_program_content_file_embedding_tasks(index_tasks, program_ids, overwr
             generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite)
             for ids in chunks(
                 contentfile_ids,
-                chunk_size=settings.QDRANT_CHUNK_SIZE,
+                chunk_size=settings.QDRANT_CONTENT_FILE_CHUNK_SIZE,
             )
         ]
     )
@@ -147,21 +153,28 @@ def _retry_countdown(retries: int) -> int:
     acks_late=True,
     reject_on_worker_lost=True,
     max_retries=3,
-    rate_limit="200/m",
+    rate_limit=settings.CELERY_EMBEDDINGS_RATE_LIMIT,
+    soft_time_limit=settings.CELERY_EMBEDDINGS_SOFT_TIME_LIMIT,
+    time_limit=settings.CELERY_EMBEDDINGS_TIME_LIMIT,
+    ignore_result=True,
 )
 def generate_embeddings(
     self,
     ids: list[int],
     resource_type: str,
     overwrite: bool,  # noqa: FBT001
-    failure_key: str | None = None,
+    failure_key: str | None = None,  # noqa: ARG001
 ) -> None:
     """
     Generate learning resource embeddings and index in Qdrant.
 
     Retries transient Qdrant/search errors with jittered backoff. On exhaustion or a
-    non-transient error: if failure_key is set, log + record the failure and return so
-    the chain continues (finalize_embeddings fails the parent); otherwise propagate.
+    non-transient error, logs and propagates the failure (surfaced via Sentry and the
+    periodic embeddings_healthcheck).
+
+    failure_key is accepted and ignored so messages published by the previous
+    release (which chained a finalize_embeddings tail) still run on a new worker.
+    Remove it, and finalize_embeddings below, one release after deploy.
     """
     try:
         with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
@@ -171,6 +184,7 @@ def generate_embeddings(
     except SystemExit as err:  # worker shutdown: transient; propagate if exhausted
         if self.request.retries < self.max_retries:
             raise self.retry(exc=err, countdown=_retry_countdown(self.request.retries))  # noqa: B904
+        log.exception("generate_embeddings exhausted retries for %s", resource_type)
         raise
     except Exception as err:
         is_transient_grpc = isinstance(err, grpc.RpcError) and err.code() in (
@@ -181,10 +195,8 @@ def generate_embeddings(
             self.request.retries < self.max_retries
         ):
             raise self.retry(exc=err, countdown=_retry_countdown(self.request.retries))  # noqa: B904
-        if failure_key is None:
-            raise  # generic callers: propagate terminal failure (current behavior)
         log.exception("generate_embeddings failed for %s", resource_type)
-        _record_embedding_failure(failure_key)
+        raise
 
 
 @app.task(
@@ -193,6 +205,7 @@ def generate_embeddings(
     autoretry_for=(RetryError,),
     retry_backoff=True,
     rate_limit=settings.CELERY_VECTOR_SEARCH_RATE_LIMIT,
+    ignore_result=True,
 )
 def remove_embeddings(ids, resource_type):
     """
@@ -216,21 +229,17 @@ def remove_embeddings(ids, resource_type):
         raise
 
 
+@app.task(ignore_result=True)
+def finalize_embeddings(failure_key: str | None = None) -> None:
+    """
+    No-op retained for one release so finalize_embeddings tails already queued by
+    the previous release do not fail as an unregistered task. Chunk failures now
+    surface via generate_embeddings' logging/Sentry.
+    """
+
+
 @app.task
-def finalize_embeddings(failure_key: str) -> None:
-    """Chain tail: fail the parent task if any chunk recorded a failure."""
-    cache = caches["redis"]
-    key = f"embed_errors:{failure_key}"
-    failures = cache.get(key, 0)
-    cache.delete(key)
-    if failures:
-        msg = f"{failures} embedding chunk(s) failed for {failure_key}"
-        log.error(msg)
-        raise RuntimeError(msg)
-
-
-@app.task(bind=True)
-def start_embed_resources(self, indexes, skip_content_files, overwrite):  # noqa: C901
+def start_embed_resources(indexes, skip_content_files, overwrite):  # noqa: C901
     """
     Celery task to embed all learning resources for given indexes
 
@@ -284,7 +293,7 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):  # noqa
                         generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite)
                         for ids in chunks(
                             contentfiles,
-                            chunk_size=settings.QDRANT_CHUNK_SIZE,
+                            chunk_size=settings.QDRANT_CONTENT_FILE_CHUNK_SIZE,
                         )
                     ]
         for resource_type in set(LEARNING_RESOURCE_TYPES) - {COURSE_TYPE}:
@@ -329,13 +338,13 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):  # noqa
         log.exception(error)
         return error
 
-    # Use self.replace so that code waiting on this task will also wait on the embedding
-    #  and finish tasks
-    return _replace_with_chain(self, index_tasks)
+    # Fire-and-forget per-chunk dispatch rather than one catalog-wide chain, which
+    # would spike the broker with a single huge message. Nothing waits on results.
+    return _dispatch_signatures(index_tasks)
 
 
-@app.task(bind=True)
-def embed_learning_resources_by_id(self, ids, skip_content_files, overwrite):
+@app.task
+def embed_learning_resources_by_id(ids, skip_content_files, overwrite):
     """
     Celery task to embed specific resources
 
@@ -389,22 +398,21 @@ def embed_learning_resources_by_id(self, ids, skip_content_files, overwrite):
                         generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite)
                         for ids in chunks(
                             content_ids,
-                            chunk_size=settings.QDRANT_CHUNK_SIZE,
+                            chunk_size=settings.QDRANT_CONTENT_FILE_CHUNK_SIZE,
                         )
                     ]
 
     except:  # noqa: E722
-        error = "start_embed_resources threw an error"
+        error = "embed_learning_resources_by_id threw an error"
         log.exception(error)
         return error
 
-    # Use self.replace so that code waiting on this task will also wait on the embedding
-    #  and finish tasks
+    # Fire-and-forget per-chunk dispatch rather than one catalog-wide chain, which
+    # would spike the broker with a single huge message. Nothing waits on results.
+    return _dispatch_signatures(index_tasks)
 
-    return _replace_with_chain(self, index_tasks)
 
-
-@app.task(bind=True)
+@app.task(bind=True, ignore_result=True)
 def embed_new_learning_resources(self):
     """
     Embed new resources from QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW minutes ago
@@ -440,8 +448,8 @@ def embed_new_learning_resources(self):
     return self.replace(embed_tasks)
 
 
-@app.task(bind=True)
-def embed_new_content_files(self):
+@app.task(ignore_result=True)
+def embed_new_content_files():
     """
     Embed new content files from QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW minutes ago
     """
@@ -457,14 +465,13 @@ def embed_new_content_files(self):
         .exclude(learning_resource__published=False, learning_resource__test_mode=False)
     )
 
-    return _replace_with_finalized_chain(
-        self,
+    return _dispatch_content_file_chunks(
         list(new_content_files.values_list("id", flat=True)),
         overwrite=False,
     )
 
 
-@app.task(bind=True, max_retries=3)
+@app.task(bind=True, max_retries=3, ignore_result=True)
 def embed_run_content_files(self, run_id):
     """
     Embed the run's published content files whose Qdrant points are missing or
@@ -568,10 +575,10 @@ def embed_run_content_files(self, run_id):
         remove_qdrant_records(leftover_ids, CONTENT_FILE_TYPE)
     if not ids:
         return None
-    return _replace_with_finalized_chain(self, ids, overwrite=True)
+    return _dispatch_content_file_chunks(ids, overwrite=True)
 
 
-@app.task(bind=True)
+@app.task(bind=True, ignore_result=True)
 def remove_run_content_files(self, run_id):
     """
     Remove content files associated with a run from Qdrant
@@ -581,12 +588,14 @@ def remove_run_content_files(self, run_id):
     )
     tasks = [
         remove_embeddings.si(ids, CONTENT_FILE_TYPE)
-        for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
+        for ids in chunks(
+            content_file_ids, chunk_size=settings.QDRANT_DELETE_CHUNK_SIZE
+        )
     ]
     return _replace_with_chain(self, tasks)
 
 
-@app.task(bind=True)
+@app.task(bind=True, ignore_result=True)
 def remove_unpublished_run_content_files(self, run_id):
     """
     Remove unpublished content files associated with a run from Qdrant
@@ -598,7 +607,9 @@ def remove_unpublished_run_content_files(self, run_id):
     )
     tasks = [
         remove_embeddings.si(ids, CONTENT_FILE_TYPE)
-        for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
+        for ids in chunks(
+            content_file_ids, chunk_size=settings.QDRANT_DELETE_CHUNK_SIZE
+        )
     ]
     return _replace_with_chain(self, tasks)
 

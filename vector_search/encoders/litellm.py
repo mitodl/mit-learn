@@ -1,5 +1,6 @@
 import logging
 import os
+from itertools import batched
 from urllib.parse import urlparse
 
 import litellm
@@ -44,7 +45,17 @@ class LiteLLMEncoder(BaseEncoder):
             log.warning(msg)
 
     def embed_documents(self, documents):
-        return [result["embedding"] for result in self.get_embedding(documents)["data"]]
+        # Cap inputs per request: each document is truncated to the model's input
+        # limit upstream (8191 tokens for text-embedding-3-*), so a bounded count
+        # keeps a request under the provider's per-request token cap (OpenAI:
+        # 300k), which would otherwise fail as a non-transient 400.
+        embeddings = []
+        for batch in batched(documents, settings.LITELLM_EMBEDDING_BATCH_SIZE):
+            embeddings.extend(
+                result["embedding"]
+                for result in self.get_embedding(list(batch))["data"]
+            )
+        return embeddings
 
     def get_embedding(self, texts):
         if self.cache:

@@ -502,6 +502,29 @@ def _content_file_embedding_context(document):
     return document.get("content", "")
 
 
+# Cap ids per Qdrant retrieve so large (backfill / healthcheck) batches stay
+# under the server's request-size limits.
+QDRANT_RETRIEVE_BATCH_SIZE = 256
+
+
+def _batch_retrieve_points(point_ids, collection_name):
+    """
+    Retrieve points by id in sub-batches, returning ``{str(point_id): point}``.
+
+    One (sub-batched) call replaces a per-document ``client.retrieve`` so a batch
+    of N documents costs ⌈N/256⌉ round trips instead of N.
+    """
+    client = qdrant_client()
+    found = {}
+    unique_ids = list(dict.fromkeys(str(pid) for pid in point_ids))
+    for id_batch in chunks(unique_ids, chunk_size=QDRANT_RETRIEVE_BATCH_SIZE):
+        for point in client.retrieve(
+            collection_name=collection_name, ids=list(id_batch)
+        ):
+            found[str(point.id)] = point
+    return found
+
+
 def _process_resource_embeddings(serialized_resources):
     docs = []
     metadata = []
@@ -509,12 +532,19 @@ def _process_resource_embeddings(serialized_resources):
     encoder_dense = dense_encoder()
     encoder_sparse = sparse_encoder()
 
+    stored_points = _batch_retrieve_points(
+        [vector_point_id(vector_point_key(doc)) for doc in serialized_resources],
+        RESOURCES_COLLECTION_NAME,
+    )
+
     for doc in serialized_resources:
-        if not should_generate_resource_embeddings(doc):
+        point_id = vector_point_id(vector_point_key(doc))
+        stored_point = stored_points.get(point_id)
+        if not should_generate_resource_embeddings(doc, stored_point=stored_point):
             update_learning_resource_payload(doc)
             continue
         metadata.append(doc)
-        ids.append(vector_point_id(vector_point_key(doc)))
+        ids.append(point_id)
         docs.append(_learning_resource_embedding_context(doc))
     if len(docs) > 0:
         embeddings = encoder_dense.embed_documents(docs)
@@ -593,20 +623,16 @@ def _set_payload(points, document, param_map, collection_name):
         )
 
 
-def should_generate_resource_embeddings(serialized_document):
+def should_generate_resource_embeddings(serialized_document, stored_point):
     """
-    Determine if we should generate embeddings for a learning resource
+    Determine if we should generate embeddings for a learning resource.
+
+    stored_point is the already-retrieved Qdrant point (from a batched
+    retrieve), or None if absent.
     """
-    client = qdrant_client()
-    point_id = vector_point_id(vector_point_key(serialized_document))
-    response = client.retrieve(
-        collection_name=RESOURCES_COLLECTION_NAME,
-        ids=[point_id],
-    )
-    if len(response) > 0:
-        resource_payload = response[0].payload
+    if stored_point is not None:
         stored_embedding_content = _learning_resource_embedding_context(
-            resource_payload
+            stored_point.payload
         )
         current_embedding_content = _learning_resource_embedding_context(
             serialized_document
@@ -614,26 +640,6 @@ def should_generate_resource_embeddings(serialized_document):
         if stored_embedding_content == current_embedding_content:
             return False
     return True
-
-
-def _retrieve_content_file_point(
-    serialized_document: dict, point_id: str | None = None
-):
-    client = qdrant_client()
-    if not point_id:
-        # we just need metadata from the first chunk
-        point_id = vector_point_id(
-            vector_point_key(
-                serialized_document, chunk_number=0, document_type="content_file"
-            )
-        )
-    response = client.retrieve(
-        collection_name=CONTENT_FILES_COLLECTION_NAME,
-        ids=[point_id],
-    )
-    if len(response) > 0:
-        return response[0]
-    return None
 
 
 def _stored_content_payloads(
@@ -661,16 +667,16 @@ def _stored_content_payloads(
     return stored
 
 
-def should_generate_content_embeddings(
-    serialized_document: dict, point_id: str | None = None
-) -> bool:
+def should_generate_content_embeddings(serialized_document: dict, stored_point) -> bool:
     """
-    Determine if we should generate embeddings for a content file
+    Determine if we should generate embeddings for a content file.
+
+    stored_point is the already-retrieved chunk-0 Qdrant point (from a batched
+    retrieve), or None if absent.
     """
-    point = _retrieve_content_file_point(serialized_document, point_id=point_id)
-    if not point:
+    if not stored_point:
         return True
-    qdrant_checksum = (point.payload or {}).get("checksum")
+    qdrant_checksum = (stored_point.payload or {}).get("checksum")
     return qdrant_checksum != serialized_document["checksum"]
 
 
@@ -688,6 +694,15 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
     metadata = []
     ids = []
     docs = []
+    # One batched retrieve of the course-info chunk-0 points, keyed by point id,
+    # instead of a per-resource retrieve inside the loop.
+    stored_points = _batch_retrieve_points(
+        [
+            vector_point_id(vector_point_key(doc, document_type="course_information"))
+            for doc in serialized_resources
+        ],
+        CONTENT_FILES_COLLECTION_NAME,
+    )
     for doc in serialized_resources:
         resource_vector_point_id = str(vector_point_id(vector_point_key(doc)))
         serializer = LearningResourceMetadataDisplaySerializer(
@@ -705,7 +720,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
             vector_point_key(doc, document_type="course_information")
         )
         if not should_generate_content_embeddings(
-            serialized_document, document_point_id
+            serialized_document, stored_points.get(str(document_point_id))
         ):
             continue
 
@@ -924,6 +939,36 @@ def _summarize_content_files_for_embedding(
     return refreshed_docs
 
 
+def _upsert_points(client, collection_name, points):
+    """
+    Upsert points in QDRANT_POINT_UPLOAD_BATCH_SIZE batches.
+
+    Batching bounds the request size: a dense+sparse point with a full resource
+    payload runs tens of KB, so an unbatched chunk can exceed the client timeout
+    or the server's request-size limit.
+    """
+    batch = []
+    for point in points:
+        batch.append(point)
+        if len(batch) >= settings.QDRANT_POINT_UPLOAD_BATCH_SIZE:
+            client.batch_update_points(
+                collection_name=collection_name,
+                update_operations=[
+                    models.UpsertOperation(upsert=models.PointsList(points=batch)),
+                ],
+                wait=False,
+            )
+            batch = []
+    if batch:
+        client.batch_update_points(
+            collection_name=collection_name,
+            update_operations=[
+                models.UpsertOperation(upsert=models.PointsList(points=batch)),
+            ],
+            wait=False,
+        )
+
+
 def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C901
     """
     Embed learning resources
@@ -1031,40 +1076,10 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
             points_generator_iter = _generate_content_file_points(
                 docs_batch, stored_payloads
             )
-            points_upload_batch = []
+            _upsert_points(client, collection_name, points_generator_iter)
 
-            for point in points_generator_iter:
-                points_upload_batch.append(point)
-                if len(points_upload_batch) >= settings.QDRANT_POINT_UPLOAD_BATCH_SIZE:
-                    client.batch_update_points(
-                        collection_name=collection_name,
-                        update_operations=[
-                            models.UpsertOperation(
-                                upsert=models.PointsList(
-                                    points=points_upload_batch,
-                                )
-                            ),
-                        ],
-                        wait=False,
-                    )
-                    points_upload_batch = []
-
-            if points_upload_batch:
-                client.batch_update_points(
-                    collection_name=collection_name,
-                    update_operations=[
-                        models.UpsertOperation(
-                            upsert=models.PointsList(
-                                points=points_upload_batch,
-                            )
-                        ),
-                    ],
-                    wait=False,
-                )
-
-            # Explicit deletions to help GC
+            # Explicit deletion to help GC
             del points_generator_iter
-            del points_upload_batch
 
         # We don't delete docs_batch here because it's a reference passed in,
         # but the caller clears the list.
@@ -1087,17 +1102,7 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
 
         points = None  # Handled inside the loop
     if points:
-        client.batch_update_points(
-            collection_name=collection_name,
-            update_operations=[
-                models.UpsertOperation(
-                    upsert=models.PointsList(
-                        points=points,
-                    )
-                ),
-            ],
-            wait=False,
-        )
+        _upsert_points(client, collection_name, points)
 
 
 def _resource_vector_hits(search_result):

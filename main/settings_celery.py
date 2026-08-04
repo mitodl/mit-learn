@@ -25,6 +25,16 @@ CELERY_RESULT_BACKEND = get_string("CELERY_RESULT_BACKEND", None)
 # (the default here) that saturates memory. Keep results only long enough for
 # chord callbacks to consume them.
 CELERY_RESULT_EXPIRES = get_int("CELERY_RESULT_EXPIRES", 60 * 60)
+# visibility_timeout must exceed the longest possible task runtime (bounded by
+# CELERY_EMBEDDINGS_TIME_LIMIT below) plus max retry backoff (600s), or in-flight
+# tasks get redelivered while still running, amplifying load during a backlog.
+# It is also the recovery delay for messages orphaned by a hard pod kill, so keep
+# it only as high as the longest task needs.
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    "visibility_timeout": get_int(
+        name="CELERY_BROKER_VISIBILITY_TIMEOUT", default=2 * 60 * 60
+    ),
+}
 CELERY_BEAT_SCHEDULER = RedBeatScheduler
 redbeat_redis_url = CELERY_BROKER_URL
 CELERY_TASK_ALWAYS_EAGER = get_bool("CELERY_TASK_ALWAYS_EAGER", False)  # noqa: FBT003
@@ -221,3 +231,15 @@ CELERY_SEARCH_RATE_LIMIT = get_string("CELERY_SEARCH_RATE_LIMIT", CELERY_RATE_LI
 CELERY_VECTOR_SEARCH_RATE_LIMIT = get_string(
     "CELERY_VECTOR_SEARCH_RATE_LIMIT", CELERY_RATE_LIMIT
 )
+# Per-worker execution rate for generate_embeddings, counted in *tasks* per
+# minute, so the item rate against Qdrant is this times the chunk size. Kept at
+# 20/m so the QDRANT_CHUNK_SIZE=100 resource chunks hold the pre-chunking item
+# rate (~2k/min/worker) instead of multiplying it. Changing it needs a worker
+# restart; use celery's control.rate_limit for a live change.
+CELERY_EMBEDDINGS_RATE_LIMIT = get_string("CELERY_EMBEDDINGS_RATE_LIMIT", "20/m")
+# Bound generate_embeddings runtime so a wedged summarize/embed call cannot hold
+# a message unacked for the whole visibility_timeout. Soft limit raises
+# SoftTimeLimitExceeded (logged + failed like any other terminal error); the hard
+# limit is the backstop if the task ignores it.
+CELERY_EMBEDDINGS_SOFT_TIME_LIMIT = get_int("CELERY_EMBEDDINGS_SOFT_TIME_LIMIT", 1800)
+CELERY_EMBEDDINGS_TIME_LIMIT = get_int("CELERY_EMBEDDINGS_TIME_LIMIT", 2400)
