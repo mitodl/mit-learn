@@ -502,6 +502,27 @@ def _content_file_embedding_context(document):
     return document.get("content", "")
 
 
+def _with_run_readable_id_fallback(serialized_document):
+    """
+    Return the document with run_readable_id defaulted to the resource
+    readable_id for run-less content files (e.g. scraped marketing pages).
+
+    The content-file search API rewrites resource_readable_id filters into
+    run_readable_id filters (see ContentFilesVectorSearchView), so every point
+    payload must carry a run_readable_id to stay reachable -- course-metadata
+    points already follow this convention. Only the Qdrant payload gets the
+    fallback; point ids still derive from the raw serialized document.
+    """
+    if serialized_document.get("run_readable_id") or not serialized_document.get(
+        "resource_readable_id"
+    ):
+        return serialized_document
+    return {
+        **serialized_document,
+        "run_readable_id": serialized_document["resource_readable_id"],
+    }
+
+
 def _process_resource_embeddings(serialized_resources):
     docs = []
     metadata = []
@@ -559,7 +580,7 @@ def update_content_file_payload(serialized_document):
 
     _set_payload(
         points,
-        serialized_document,
+        _with_run_readable_id_fallback(serialized_document),
         param_map=QDRANT_CONTENT_FILE_PARAM_MAP,
         collection_name=CONTENT_FILES_COLLECTION_NAME,
     )
@@ -847,16 +868,18 @@ def _generate_content_file_points(serialized_content, stored_payloads):
                     break
                 chunk_id, split_doc = valid_chunks[relative_index]
 
-                metadata = {
-                    "resource_point_id": str(resource_vector_point_id),
-                    "chunk_number": chunk_id,
-                    "chunk_content": split_doc.page_content,
-                    **{
-                        key: split_doc.metadata[key]
-                        for key in QDRANT_CONTENT_FILE_PARAM_MAP
-                        if key in split_doc.metadata
-                    },
-                }
+                metadata = _with_run_readable_id_fallback(
+                    {
+                        "resource_point_id": str(resource_vector_point_id),
+                        "chunk_number": chunk_id,
+                        "chunk_content": split_doc.page_content,
+                        **{
+                            key: split_doc.metadata[key]
+                            for key in QDRANT_CONTENT_FILE_PARAM_MAP
+                            if key in split_doc.metadata
+                        },
+                    }
+                )
 
                 point_id = vector_point_id(
                     vector_point_key(
@@ -1184,15 +1207,25 @@ def _content_file_vector_hits(search_result):
     keys = [hit.payload.get("key") for hit in search_result]
 
     serialized_content_files = ContentFileSerializer(
-        ContentFile.objects.for_serialization().filter(
-            run__run_id__in=run_readable_ids, key__in=keys
-        ),
+        ContentFile.objects.for_serialization()
+        .filter(key__in=keys)
+        .filter(Q(run__run_id__in=run_readable_ids) | Q(run__isnull=True)),
         many=True,
     ).data
     results = []
     contentfiles_dict = {}
+    # Run-less content files (e.g. marketing pages) serialize without a
+    # run_readable_id; their Qdrant payloads carry the resource readable_id
+    # in that field instead, so key them the same way here.
     [
-        contentfiles_dict.update({(cf["run_readable_id"], cf["key"]): cf})
+        contentfiles_dict.update(
+            {
+                (
+                    cf.get("run_readable_id") or cf.get("resource_readable_id"),
+                    cf["key"],
+                ): cf
+            }
+        )
         for cf in serialized_content_files
     ]
     results = []
