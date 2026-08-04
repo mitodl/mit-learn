@@ -116,13 +116,8 @@ def process_course_archive(
     bucket, key: str, run: LearningResourceRun, *, overwrite: bool = False
 ) -> None:
     """
-    Download and process a course archive from S3.
-
-    Two gates: run.archive_key stores the full S3 key of the last-processed
-    archive — keys are content-addressed for edX-family sources, so a matching
-    key means the archive is unchanged and the download is skipped entirely.
-    After a download, run.checksum (tar-structure digest) decides whether the
-    content actually changed and needs loading.
+    Download and process a course archive from S3, skipping the download
+    entirely when run.archive_key already matches the content-addressed key.
 
     Args:
         bucket: S3 bucket object
@@ -143,8 +138,7 @@ def process_course_archive(
             log.exception("Error reading tar file %s, skipping", course_tarpath)
             return
         if run.checksum == checksum and not overwrite:
-            # content unchanged under a new/unknown key: record the key so the
-            # next sync skips the download entirely
+            # unchanged content under a new key: record it to skip future downloads
             run.archive_key = key
             run.save(update_fields=["archive_key"])
             log.info("Checksums match for %s, skipping load", key)
@@ -169,10 +163,8 @@ def process_course_archive(
                 run.archive_key = key
                 run.save(update_fields=["checksum", "archive_key"])
             elif payload_count == 0:
-                # Archive genuinely contains no ingestible files: stamp the key
-                # so it stops being re-downloaded every sync. Leave checksum
-                # alone. Files-yielded-but-none-loaded saves nothing, so the
-                # next sync retries.
+                # empty archive: stop re-downloading it. If files were yielded
+                # but none loaded, save nothing so the next sync retries.
                 run.archive_key = key
                 run.save(update_fields=["archive_key"])
         except:  # noqa: E722

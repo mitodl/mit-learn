@@ -828,9 +828,7 @@ class LearningResourceRun(TimestampedModel):
     )
     resource_prices = models.ManyToManyField(LearningResourcePrice, blank=True)
     checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
-    # Full S3 key of the last-processed course archive. For edX-family sources
-    # keys are content-addressed, so a matching key means the archive is
-    # unchanged and the download can be skipped.
+    # S3 key of the last-processed course archive (content-addressed)
     archive_key = models.CharField(max_length=512, null=True, blank=True)  # noqa: DJ001
     delivery = ArrayField(
         models.CharField(
