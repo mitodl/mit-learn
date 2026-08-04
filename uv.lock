@@ -940,6 +940,19 @@ wheels = [
 ]
 
 [[package]]
+name = "django-safedelete"
+version = "1.4.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a8/f0/d1a4ade3d89946445bdbe103fa376371dbaee0c94ae0cb570c7383ac7950/django_safedelete-1.4.1.tar.gz", hash = "sha256:f5919d627519fd6d766a3616ee15554a19e13edcb5f7fb9d86503cd71a6986d0", size = 32570, upload-time = "2025-03-05T08:39:44.932Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/25/68/26c713fca48ba7b631b64f14e9d3057cecb5b3aba93d8d05554fcf6bb5e5/django_safedelete-1.4.1-py3-none-any.whl", hash = "sha256:c4232445e4ec3a2b72ac9002130377088c8e541bba5a5af4cf8936ec3ff0afde", size = 44084, upload-time = "2025-03-05T08:39:43.497Z" },
+]
+
+[[package]]
 name = "django-scim2"
 version = "0.19.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2586,6 +2599,7 @@ dependencies = [
     { name = "django-oauth-toolkit" },
     { name = "django-redis" },
     { name = "django-removals" },
+    { name = "django-safedelete" },
     { name = "django-scim2" },
     { name = "django-storages" },
     { name = "django-zeal" },
@@ -2726,6 +2740,7 @@ requires-dist = [
     { name = "django-oauth-toolkit", specifier = ">=3.0.0,<4" },
     { name = "django-redis", specifier = ">=5.2.0,<7" },
     { name = "django-removals", specifier = ">=1.1.6,<2" },
+    { name = "django-safedelete", specifier = ">=1.4.0,<2" },
     { name = "django-scim2", specifier = ">=0.19.1,<0.20" },
     { name = "django-storages", specifier = ">=1.13.2,<2" },
     { name = "django-zeal", specifier = ">=2.0.4,<3" },

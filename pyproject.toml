@@ -38,6 +38,7 @@ dependencies = [
     "django-json-widget>=2.0.0,<3",
     "django-oauth-toolkit>=3.0.0,<4",
     "django-redis>=5.2.0,<7",
+    "django-safedelete>=1.4.0,<2",
     "django-scim2>=0.19.1,<0.20",
     "django-storages>=1.13.2,<2",
     "djangorestframework>=3.14.0,<4",

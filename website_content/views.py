@@ -11,6 +11,7 @@ from drf_spectacular.utils import (
 )
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -61,6 +62,9 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
     filterset_class = WebsiteContentFilter
 
     def get_queryset(self):
+        # Soft-deleted items are hidden everywhere (list, retrieve,
+        # detail-by-id-or-slug all route through get_queryset) because the
+        # default manager excludes them.
         qs = WebsiteContent.objects.all()
         if not (is_admin_user(self.request) or is_website_content_editor(self.request)):
             qs = qs.filter(is_published=True)
@@ -94,7 +98,14 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
         content_published_actions(content=content)
 
     def perform_destroy(self, instance):
-        super().perform_destroy(instance)
+        # Only drafts may be deleted. Published content is out of scope and
+        # deleting it is rejected rather than hidden.
+        if instance.is_published:
+            msg = "Published content cannot be deleted."
+            raise ValidationError(msg)
+        # Soft delete: SOFT_DELETE policy stamps `deleted` and leaves the row
+        # in place for recovery/audit.
+        instance.delete()
         transaction.on_commit(clear_views_cache)
 
     @extend_schema(
