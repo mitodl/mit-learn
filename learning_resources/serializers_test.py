@@ -443,6 +443,76 @@ def test_learning_resource_serializer(  # noqa: PLR0913
     }
 
 
+@pytest.mark.parametrize("has_context", [True, False])
+def test_learning_resource_serializer_caches_child_serializers(rf, user, has_context):
+    """LearningResourceSerializer memoizes one child serializer per resource_type"""
+    request = rf.get("/")
+    request.user = user
+    context = {"request": request} if has_context else {}
+
+    serializer = serializers.LearningResourceSerializer(context=context)
+
+    children = {}
+    for resource_type, expected_cls in serializer.serializer_cls_mapping.items():
+        child = serializer._child_serializer(resource_type)  # noqa: SLF001
+        assert isinstance(child, expected_cls)
+        assert child.context == context
+        # repeated lookups return the very same instance, not an equal one
+        assert serializer._child_serializer(resource_type) is child  # noqa: SLF001
+        children[resource_type] = child
+
+    # each resource_type gets its own child
+    assert len({id(child) for child in children.values()}) == len(children)
+
+    # the cache is per-parent-instance, so context never leaks across serializers
+    other = serializers.LearningResourceSerializer(context={})
+    for resource_type, child in children.items():
+        assert other._child_serializer(resource_type) is not child  # noqa: SLF001
+
+
+def test_learning_resource_serializer_many_matches_individual(rf, user):
+    """
+    Serializing a mixed list with many=True (which reuses a single child
+    serializer, and therefore a single child serializer cache) produces the same
+    output as serializing each resource on its own.
+    """
+    request = rf.get("/")
+    request.user = user
+    context = {"request": request}
+
+    resources = [
+        LearningResourceFactory.create(**params)
+        for params in (
+            {"is_course": True},
+            {"is_program": True},
+            {"is_learning_path": True},
+            {"is_podcast": True},
+            {"is_podcast_episode": True},
+            {"is_video": True},
+            {"is_video_playlist": True},
+            # a second course, to exercise a cache hit within one list pass
+            {"is_course": True},
+        )
+    ]
+    queryset = LearningResource.objects.for_serialization().filter(
+        pk__in=[resource.pk for resource in resources]
+    )
+    # every mapped resource_type except document is covered here
+    assert {resource.resource_type for resource in queryset} == set(
+        serializers.LearningResourceSerializer.serializer_cls_mapping
+    ) - {LearningResourceType.document.name}
+
+    results = serializers.LearningResourceSerializer(
+        queryset, many=True, context=context
+    ).data
+    expected = [
+        serializers.LearningResourceSerializer(instance=resource, context=context).data
+        for resource in queryset
+    ]
+
+    assert_json_equal(results, expected)
+
+
 def test_serialize_run_related_models():
     """
     Verify that a serialized run contains attributes for related objects
