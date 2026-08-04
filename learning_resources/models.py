@@ -1567,7 +1567,6 @@ class LearningResourceViewEvent(TimestampedModel):
         help_text="The date of the lrd_view event, as collected by PostHog.",
     )
     event_uuid = models.UUIDField(
-        unique=True,
         null=True,
         editable=False,
         help_text=(
@@ -1575,6 +1574,17 @@ class LearningResourceViewEvent(TimestampedModel):
             " before this field existed."
         ),
     )
+
+    class Meta:
+        constraints = [
+            # Conditional so the index skips the legacy NULL rows, which would
+            # otherwise cost ~105MB of index for entries nothing ever probes.
+            models.UniqueConstraint(
+                fields=["event_uuid"],
+                condition=Q(event_uuid__isnull=False),
+                name="learning_resources_lrviewevent_event_uuid_uniq",
+            )
+        ]
 
     def __str__(self):
         """Return a string representation of the event."""

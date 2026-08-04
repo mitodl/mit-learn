@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 import boto3
 import pandas as pd
 from django.conf import settings
+from django.db import IntegrityError, transaction
 
 from learning_resources.models import LearningResource, LearningResourceViewEvent
 from learning_resources.utils import resource_upserted_actions
@@ -149,13 +150,42 @@ def load_posthog_lrd_view_event(
         log.warning(skip_warning)
         return None
 
-    # Adopt a matching legacy row (loaded before event_uuid existed) so
-    # re-read S3 files don't duplicate it; no-op once the tail is stamped
-    LearningResourceViewEvent.objects.filter(
-        learning_resource=learning_resource,
-        event_date=event.event_date,
-        event_uuid__isnull=True,
-    ).update(event_uuid=event.event_uuid)
+    # The newest S3 file is re-read on every run (its last_modified is always
+    # later than the events it holds), so most events arrive already stored.
+    # Return early: stamping this uuid onto another legacy duplicate below
+    # would violate the unique index.
+    existing = LearningResourceViewEvent.objects.filter(
+        event_uuid=event.event_uuid
+    ).first()
+    if existing:
+        return existing
+
+    # Adopt a matching legacy row (loaded before event_uuid existed) so re-read
+    # S3 files don't duplicate it. Stamp only the oldest one; the legacy tail
+    # can hold duplicate (resource, event_date) rows.
+    legacy_row = (
+        LearningResourceViewEvent.objects.filter(
+            learning_resource=learning_resource,
+            event_date=event.event_date,
+            event_uuid__isnull=True,
+        )
+        .order_by("id")
+        .first()
+    )
+    if legacy_row:
+        try:
+            # Savepoint: the check above is not a lock, so a concurrent run can
+            # adopt a different duplicate for this uuid first. get_or_create
+            # below then finds that row.
+            with transaction.atomic():
+                LearningResourceViewEvent.objects.filter(pk=legacy_row.pk).update(
+                    event_uuid=event.event_uuid
+                )
+        except IntegrityError:
+            log.info(
+                "Legacy view event row for resource %s was adopted concurrently",
+                event.resource_id,
+            )
 
     lr_event, _ = LearningResourceViewEvent.objects.get_or_create(
         event_uuid=event.event_uuid,

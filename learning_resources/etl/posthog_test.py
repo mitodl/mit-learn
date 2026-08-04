@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+from django.db import IntegrityError
 from freezegun import freeze_time
 
 from learning_resources.etl import posthog
@@ -137,3 +138,81 @@ def test_load_posthog_lrd_view_events(
     else:
         assert LearningResourceViewEvent.objects.count() == 0
         assert len([event for event in loaded_events if event is not None]) == 0
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("runs", [1, 2])
+def test_load_posthog_lrd_view_events_duplicate_legacy_rows(
+    mocker, mock_posthog_event_bucket, settings, runs
+):
+    """Duplicate legacy rows are tolerated, and re-running the ETL stays idempotent"""
+    LearningResourceViewEvent.objects.all().delete()
+    bucket = mock_posthog_event_bucket.bucket
+    settings.POSTHOG_EVENT_S3_BUCKET = bucket.name
+    settings.POSTHOG_EVENT_S3_PREFIX = "events/"
+    with Path.open(Path("test_json/posthog/test_data.parquet.zst"), "rb") as infile:
+        bucket.put_object(
+            Key="events/file1.parquet.zst",
+            Body=infile.read(),
+            ACL="public-read",
+        )
+
+    resource = LearningResourceFactory.create(id=3235)
+    mocker.patch(
+        "learning_resources.etl.posthog.resource_upserted_actions",
+        autospec=True,
+    )
+
+    event_date = datetime(2025, 8, 28, 15, 20, 13, 620000, tzinfo=UTC)
+    legacy_rows = LearningResourceViewEventFactory.create_batch(
+        2, learning_resource=resource, event_date=event_date
+    )
+
+    for _ in range(runs):
+        posthog.load_posthog_lrd_view_events(
+            posthog.posthog_transform_lrd_view_events(
+                posthog.posthog_extract_lrd_view_events()
+            )
+        )
+
+    stamped = [
+        row
+        for row in LearningResourceViewEvent.objects.filter(
+            pk__in=[r.pk for r in legacy_rows]
+        )
+        if row.event_uuid is not None
+    ]
+    assert len(stamped) == 1
+    # The unstamped duplicate survives rather than being deleted
+    assert (
+        LearningResourceViewEvent.objects.filter(
+            learning_resource=resource, event_date=event_date, event_uuid__isnull=True
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.django_db
+def test_load_posthog_lrd_view_event_adoption_lost_to_concurrent_run(mocker):
+    """Losing the adoption race to a concurrent run doesn't crash the loader"""
+    resource = LearningResourceFactory.create()
+    event_date = now_in_utc()
+    LearningResourceViewEventFactory.create(
+        learning_resource=resource, event_date=event_date
+    )
+    event_uuid = "0198f143-cf8c-79b6-bab8-9c9063659a54"
+    # Simulates another worker stamping a different duplicate with this uuid
+    # between our existence check and the adoption update
+    mocker.patch(
+        "django.db.models.QuerySet.update",
+        side_effect=IntegrityError("duplicate key value violates unique constraint"),
+    )
+
+    lr_event = posthog.load_posthog_lrd_view_event(
+        posthog.PostHogLearningResourceViewEvent(
+            resource_id=resource.id, event_date=event_date, event_uuid=event_uuid
+        )
+    )
+
+    assert lr_event is not None
+    assert LearningResourceViewEvent.objects.filter(event_uuid=event_uuid).count() == 1
