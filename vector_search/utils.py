@@ -488,7 +488,22 @@ def _learning_resource_embedding_context(document):
     )
 
     parts = [f"# {document.get('title')}", description]
-    if document.get("resource_type_group") == "course" and document.get("readable_id"):
+    course_numbers = document.get("course_numbers") or (
+        document.get("course", {}).get("course_numbers")
+        if isinstance(document.get("course"), dict)
+        else None
+    )
+    if course_numbers:
+        formatted_numbers = [
+            num.get("value") if isinstance(num, dict) else str(num)
+            for num in course_numbers
+            if (num.get("value") if isinstance(num, dict) else num)
+        ]
+        if formatted_numbers:
+            parts.append(f"Course numbers: {', '.join(formatted_numbers)}")
+    elif document.get("resource_type_group") == "course" and document.get(
+        "readable_id"
+    ):
         parts.append(f"Course number: {document.get('readable_id')}")
 
     context = dedent("\n\n".join(filter(None, parts)))

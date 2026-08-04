@@ -1130,6 +1130,32 @@ def test_embedding_context_includes_course_code():
     assert "Course number: 18.06" in context
 
 
+@pytest.mark.parametrize(
+    ("course_numbers", "expected"),
+    [
+        ([{"value": "18.06"}, {"value": "18.061"}], "Course numbers: 18.06, 18.061"),
+        (["18.06", "18.061"], "Course numbers: 18.06, 18.061"),
+    ],
+)
+def test_embedding_context_includes_course_numbers(course_numbers, expected):
+    """The resource's course_numbers should be formatted as a comma-separated list."""
+    serialized_resource = {
+        "title": "Linear Algebra",
+        "description": "A short description",
+        "full_description": "A full description",
+        "readable_id": "18.06",
+        "course_numbers": course_numbers,
+        "resource_type_group": "course",
+        "content_files": [],
+    }
+
+    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
+        serialized_resource
+    )
+
+    assert expected in context
+
+
 def test_embedding_context_markdown_formatting():
     """Title and content should be rendered as markdown headings."""
     serialized_resource = {
