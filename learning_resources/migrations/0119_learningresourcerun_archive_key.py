@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0116_learningresourcerun_is_b2b_is_variant"),
+        ("learning_resources", "0118_delete_micromasters_resources"),
     ]
 
     operations = [
