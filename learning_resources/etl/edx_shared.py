@@ -1,6 +1,7 @@
 """Shared functions for EdX sites"""
 
 import logging
+from itertools import chain
 from pathlib import Path
 from tarfile import ReadError
 from tempfile import TemporaryDirectory
@@ -114,7 +115,7 @@ def build_run_lookup(
 
 def process_course_archive(
     bucket, key: str, run: LearningResourceRun, *, overwrite: bool = False
-) -> None:
+) -> bool:
     """
     Download and process a course archive from S3, skipping the download
     entirely when run.archive_key already matches the content-addressed key.
@@ -124,10 +125,13 @@ def process_course_archive(
         key(str): S3 object key for the course archive
         run(LearningResourceRun): The run to process
         overwrite(bool): Whether to overwrite existing content files
+
+    Returns:
+        bool: False if skipped via matching archive_key, True otherwise
     """
     if run.archive_key == key and not overwrite:
         log.debug("Archive key unchanged for %s, skipping download", key)
-        return
+        return False
     with TemporaryDirectory() as export_tempdir:
         course_tarpath = Path(export_tempdir, key.rsplit("/", maxsplit=1)[-1])
         log.info("course tarpath for run %s is %s", run.run_id, course_tarpath)
@@ -136,39 +140,35 @@ def process_course_archive(
             checksum = calc_checksum(course_tarpath)
         except ReadError:
             log.exception("Error reading tar file %s, skipping", course_tarpath)
-            return
+            return True
         if run.checksum == checksum and not overwrite:
             # unchanged content under a new key: record it to skip future downloads
             run.archive_key = key
             run.save(update_fields=["archive_key"])
             log.info("Checksums match for %s, skipping load", key)
-            return
+            return True
         try:
-            payload_count = 0
-
-            def _counted(items):
-                nonlocal payload_count
-                for item in items:
-                    payload_count += 1
-                    yield item
-
+            content_files_data = iter(
+                transform_content_files(course_tarpath, run, overwrite=overwrite)
+            )
+            first = next(content_files_data, None)
+            if first is None:
+                # empty archive: stop re-downloading it
+                run.archive_key = key
+                run.save(update_fields=["archive_key"])
+                return True
             content_files_ids = load_content_files(
-                run,
-                _counted(
-                    transform_content_files(course_tarpath, run, overwrite=overwrite)
-                ),
+                run, chain([first], content_files_data)
             )
             if content_files_ids:
                 run.checksum = checksum
                 run.archive_key = key
                 run.save(update_fields=["checksum", "archive_key"])
-            elif payload_count == 0:
-                # empty archive: stop re-downloading it. If files were yielded
-                # but none loaded, save nothing so the next sync retries.
-                run.archive_key = key
-                run.save(update_fields=["archive_key"])
+            # else: files yielded but none loaded — save nothing so the next
+            # sync retries
         except:  # noqa: E722
             log.exception("Error ingesting OLX content data for %s", key)
+    return True
 
 
 def get_most_recent_course_archives(etl_source: str) -> list[str]:
@@ -348,11 +348,10 @@ def sync_edx_course_files(
             log.warning("There are %d runs for %s", len(matching_runs), key)
 
         run = matching_runs[0]
-        if run.archive_key == key and not overwrite:
+        if process_course_archive(bucket, key, run, overwrite=overwrite):
+            processed += 1
+        else:
             skipped += 1
-            continue
-        processed += 1
-        process_course_archive(bucket, key, run, overwrite=overwrite)
     log.info(
         "%s content file sync: %d unchanged archives skipped, %d processed",
         etl_source,

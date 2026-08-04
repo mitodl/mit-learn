@@ -165,10 +165,8 @@ def test_sync_edx_course_files_matching_checksum(mocker, mock_course_archive_buc
     assert run.archive_key == key
 
 
-def test_sync_edx_course_files_skips_unchanged_archive_keys(
-    mocker, mock_course_archive_bucket
-):
-    """Keys matching a run's archive_key skip before process_course_archive; summary logged"""
+def test_sync_edx_course_files_skips_unchanged_archive_keys(mocker):
+    """Keys matching a run's archive_key skip without downloading; summary logged"""
     run = LearningResourceFactory.create(
         is_course=True, create_runs=True, etl_source=ETLSource.mitxonline.name
     ).best_run
@@ -177,18 +175,18 @@ def test_sync_edx_course_files_skips_unchanged_archive_keys(
     )
     run.archive_key = key
     run.save()
+    bucket = mocker.MagicMock()
     mocker.patch(
         "learning_resources.etl.edx_shared.get_bucket_by_name",
-        return_value=mock_course_archive_bucket.bucket,
+        return_value=bucket,
     )
-    mock_process = mocker.patch(
-        "learning_resources.etl.edx_shared.process_course_archive"
-    )
+    mock_load = mocker.patch("learning_resources.etl.edx_shared.load_content_files")
     mock_log = mocker.patch("learning_resources.etl.edx_shared.log.info")
 
     sync_edx_course_files("mitxonline", [run.learning_resource.id], [key])
 
-    mock_process.assert_not_called()
+    bucket.download_file.assert_not_called()
+    mock_load.assert_not_called()
     mock_log.assert_any_call(
         "%s content file sync: %d unchanged archives skipped, %d processed",
         "mitxonline",
@@ -1406,7 +1404,7 @@ def test_process_course_archive_sets_checksum_on_successful_ingest(mocker):
     )
     mocker.patch(
         "learning_resources.etl.edx_shared.transform_content_files",
-        return_value=iter([]),
+        return_value=iter([{"key": "content.txt"}]),
     )
     mocker.patch(
         "learning_resources.etl.edx_shared.load_content_files",
@@ -1527,17 +1525,11 @@ def test_process_course_archive_stamps_key_for_empty_archive(mocker):
         "learning_resources.etl.edx_shared.transform_content_files",
         return_value=iter([]),
     )
-
-    def fake_load(run_arg, data, **kwargs):
-        list(data)
-        return []
-
-    mocker.patch(
-        "learning_resources.etl.edx_shared.load_content_files", side_effect=fake_load
-    )
+    mock_load = mocker.patch("learning_resources.etl.edx_shared.load_content_files")
 
     process_course_archive(bucket, key, run)
 
+    mock_load.assert_not_called()
     run.refresh_from_db()
     assert run.archive_key == key
     assert run.checksum is None
