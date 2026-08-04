@@ -1587,8 +1587,8 @@ class LearningResourceSerializer(serializers.Serializer):
         Return a reusable serializer instance for a resource_type.
 
         Constructing a DRF serializer deep-copies its whole field tree, so
-        building one per object makes bulk serialization (search hydration,
-        indexing) dominated by setup rather than output. Under many=True the
+        building one per object makes bulk serialization (search hydration)
+        dominated by setup rather than output. Under many=True the
         ListSerializer reuses a single child, so this cache spans the list --
         which is how a normal many=True serializer already behaves.
         """
