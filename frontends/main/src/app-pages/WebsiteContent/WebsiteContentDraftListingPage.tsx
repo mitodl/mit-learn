@@ -45,10 +45,6 @@ const PageWrapper = styled.div`
     padding: 40px 0;
   }
 `
-const StyledActionButton = styled(ActionButton)`
-  border: 1px solid ${theme.custom.colors.silverGray};
-  border-radius: 50%;
-`
 
 const PageHeader = styled.div`
   display: flex;
@@ -135,14 +131,15 @@ const DraftItem: React.FC<{
       */}
       {!contentItem.is_published && (
         <Card.Actions>
-          <StyledActionButton
-            variant="text"
+          <ActionButton
+            variant="secondary"
+            edge="circular"
             size="small"
             aria-label={`Delete ${contentItem.title}`}
             onClick={() => showDeleteWebsiteContentDialog(contentItem)}
           >
             <RiDeleteBinLine size={16} />
-          </StyledActionButton>
+          </ActionButton>
         </Card.Actions>
       )}
     </DraftContentCard>
