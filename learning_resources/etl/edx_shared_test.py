@@ -165,6 +165,38 @@ def test_sync_edx_course_files_matching_checksum(mocker, mock_course_archive_buc
     assert run.archive_key == key
 
 
+def test_sync_edx_course_files_skips_unchanged_archive_keys(
+    mocker, mock_course_archive_bucket
+):
+    """Keys matching a run's archive_key skip before process_course_archive; summary logged"""
+    run = LearningResourceFactory.create(
+        is_course=True, create_runs=True, etl_source=ETLSource.mitxonline.name
+    ).best_run
+    key = (
+        f"{get_s3_prefix_for_source(ETLSource.mitxonline.name)}/{run.run_id}/foo.tar.gz"
+    )
+    run.archive_key = key
+    run.save()
+    mocker.patch(
+        "learning_resources.etl.edx_shared.get_bucket_by_name",
+        return_value=mock_course_archive_bucket.bucket,
+    )
+    mock_process = mocker.patch(
+        "learning_resources.etl.edx_shared.process_course_archive"
+    )
+    mock_log = mocker.patch("learning_resources.etl.edx_shared.log.info")
+
+    sync_edx_course_files("mitxonline", [run.learning_resource.id], [key])
+
+    mock_process.assert_not_called()
+    mock_log.assert_any_call(
+        "%s content file sync: %d unchanged archives skipped, %d processed",
+        "mitxonline",
+        1,
+        0,
+    )
+
+
 @pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
 def test_sync_edx_course_files_invalid_tarfile(
     mock_course_archive_bucket, mocker, source

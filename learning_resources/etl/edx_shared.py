@@ -343,6 +343,7 @@ def sync_edx_course_files(
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     run_lookup = build_run_lookup(etl_source, ids)
 
+    skipped = processed = 0
     for key in keys:
         normalized_key_id = extract_run_id_from_key(etl_source, key)
         matching_runs = run_lookup.get(normalized_key_id)
@@ -355,4 +356,14 @@ def sync_edx_course_files(
             log.warning("There are %d runs for %s", len(matching_runs), key)
 
         run = matching_runs[0]
+        if run.archive_key == key and not overwrite:
+            skipped += 1
+            continue
+        processed += 1
         process_course_archive(bucket, key, run, overwrite=overwrite)
+    log.info(
+        "%s content file sync: %d unchanged archives skipped, %d processed",
+        etl_source,
+        skipped,
+        processed,
+    )
