@@ -85,9 +85,7 @@ describe("PodcastSection", () => {
         isMobile={false}
       />,
     )
-    expect(
-      screen.getByText("Teaching & learning at MIT"),
-    ).toBeInTheDocument()
+    expect(screen.getByText("Teaching & learning at MIT")).toBeInTheDocument()
     expect(document.querySelector("script")).not.toBeInTheDocument()
   })
 
@@ -111,9 +109,7 @@ describe("PodcastSection", () => {
       }),
     ).toBeInTheDocument()
     // Only the card's own outer link should be present — no nested <a>.
-    expect(screen.getAllByRole("link", { name: /Chalk Radio/ })).toHaveLength(
-      1,
-    )
+    expect(screen.getAllByRole("link", { name: /Chalk Radio/ })).toHaveLength(1)
   })
 
   it("renders 'More Podcasts' rows with title and offered_by", () => {
