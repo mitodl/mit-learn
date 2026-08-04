@@ -1,9 +1,10 @@
 "use client"
 
 import React from "react"
-import { Typography, Skeleton, styled } from "ol-components"
+import { Typography, Skeleton, styled, TypographyProps } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import { RiPlayFill, RiPauseFill } from "@remixicon/react"
+import DOMPurify from "isomorphic-dompurify"
 import {
   useLearningResourcesDetail,
   useInfiniteLearningResourceItems,
@@ -12,6 +13,7 @@ import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource } from "api/v1"
 import { formatDate } from "ol-utilities"
 import { HOME, podcastEpisodePageView } from "@/common/urls"
+import { addExternalLinkTargets } from "@/common/utils"
 import PodcastContainer from "./PodcastContainer"
 import PodcastBreadcrumbs from "./PodcastBreadcrumbs"
 import { usePodcastPage } from "./usePodcastPage"
@@ -66,18 +68,28 @@ const MetaLine = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const Description = styled(Typography)(({ theme }) => ({
-  color: theme.custom.colors.darkGray2,
-  display: "block",
-  marginBottom: "16px",
-  ...theme.typography.body1,
-  lineHeight: "26px",
-  [theme.breakpoints.down("sm")]: {
-    marginBottom: "8px",
-    ...theme.typography.body2,
-    lineHeight: "22px",
-  },
-}))
+const Description = styled(Typography)<Pick<TypographyProps, "component">>(
+  ({ theme }) => ({
+    color: theme.custom.colors.darkGray2,
+    display: "block",
+    marginBottom: "16px",
+    ...theme.typography.body1,
+    lineHeight: "26px",
+    a: {
+      textDecoration: "underline",
+      color: theme.custom.colors.darkGray2,
+      fontWeight: theme.typography.fontWeightMedium,
+    },
+    "a:hover": {
+      textDecoration: "none",
+    },
+    [theme.breakpoints.down("sm")]: {
+      marginBottom: "8px",
+      ...theme.typography.body2,
+      lineHeight: "22px",
+    },
+  }),
+)
 
 const LatestEpisodeLine = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
@@ -316,9 +328,15 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
                     )}
 
                     {resource?.description && (
-                      <Description variant="body2">
-                        {resource.description}
-                      </Description>
+                      <Description
+                        variant="body2"
+                        component="div"
+                        dangerouslySetInnerHTML={{
+                          __html: addExternalLinkTargets(
+                            DOMPurify.sanitize(resource.description),
+                          ),
+                        }}
+                      />
                     )}
 
                     {latestEpisode && (

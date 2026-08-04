@@ -71,6 +71,51 @@ describe("PodcastSection", () => {
     )
   })
 
+  it("renders a sanitized, formatted summary for featured series", () => {
+    const series = makeSeries({
+      description:
+        '<script>alert("xss")</script><p>Teaching &amp; learning at MIT</p>',
+    })
+    renderWithProviders(
+      <PodcastSection
+        featuredPodcasts={[series]}
+        morePodcasts={[]}
+        hasMorePodcasts={false}
+        totalPodcasts={0}
+        isMobile={false}
+      />,
+    )
+    expect(
+      screen.getByText("Teaching & learning at MIT"),
+    ).toBeInTheDocument()
+    expect(document.querySelector("script")).not.toBeInTheDocument()
+  })
+
+  it("strips links from the featured summary, keeping their text, since the card is itself a link", () => {
+    const series = makeSeries({
+      description:
+        'Relevant Resources: <a href="https://ocw.mit.edu/">OCW</a> and <a href="/search">Search</a>.',
+    })
+    renderWithProviders(
+      <PodcastSection
+        featuredPodcasts={[series]}
+        morePodcasts={[]}
+        hasMorePodcasts={false}
+        totalPodcasts={0}
+        isMobile={false}
+      />,
+    )
+    expect(
+      screen.getByText("Relevant Resources: OCW and Search.", {
+        exact: false,
+      }),
+    ).toBeInTheDocument()
+    // Only the card's own outer link should be present — no nested <a>.
+    expect(screen.getAllByRole("link", { name: /Chalk Radio/ })).toHaveLength(
+      1,
+    )
+  })
+
   it("renders 'More Podcasts' rows with title and offered_by", () => {
     const series = makeSeries({
       title: "The Aggregate",

@@ -4,9 +4,11 @@ import { Typography, Skeleton, styled } from "ol-components"
 import type { TypographyProps } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiArrowRightLine, RiArrowRightSLine } from "@remixicon/react"
+import DOMPurify from "isomorphic-dompurify"
 import { formatDate } from "ol-utilities"
 import type { LearningResource } from "api/v1"
 import { SEARCH_PODCASTS, podcastPageView } from "@/common/urls"
+import { stripAnchorTags } from "@/common/utils"
 import {
   Section,
   SectionHeader,
@@ -109,7 +111,9 @@ const FeaturedPodcastTitle = styled(Typography)<
   marginBottom: "8px",
 }))
 
-const FeaturedPodcastSummary = styled(Typography)(({ theme }) => ({
+const FeaturedPodcastSummary = styled(Typography)<
+  Pick<TypographyProps, "component">
+>(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
   lineHeight: "24px",
   marginBottom: "16px",
@@ -117,6 +121,18 @@ const FeaturedPodcastSummary = styled(Typography)(({ theme }) => ({
   WebkitBoxOrient: "vertical",
   WebkitLineClamp: 2,
   overflow: "hidden",
+  maxWidth: "100%",
+  overflowWrap: "break-word",
+  wordBreak: "break-word",
+  "& p": {
+    display: "inline",
+    margin: 0,
+    maxWidth: "100%",
+    overflowWrap: "break-word",
+    wordBreak: "break-word",
+    whiteSpace: "normal",
+    textWrap: "wrap",
+  },
 }))
 
 const FeaturedPodcastMeta = styled(Typography)(({ theme }) => ({
@@ -324,9 +340,15 @@ const PodcastSection: React.FC<PodcastSectionProps> = ({
                         {item.title}
                       </FeaturedPodcastTitle>
                       {item.description && (
-                        <FeaturedPodcastSummary variant="body1">
-                          {item.description}
-                        </FeaturedPodcastSummary>
+                        <FeaturedPodcastSummary
+                          variant="body1"
+                          component="div"
+                          dangerouslySetInnerHTML={{
+                            __html: stripAnchorTags(
+                              DOMPurify.sanitize(item.description),
+                            ),
+                          }}
+                        />
                       )}
                       <FeaturedPodcastMeta variant="body2">
                         {[
