@@ -576,7 +576,7 @@ def load_course(
         if config.fetch_only or not learning_resource:
             return learning_resource
 
-        Course.objects.get_or_create(
+        Course.objects.update_or_create(
             learning_resource=learning_resource, defaults=course_data
         )
 
