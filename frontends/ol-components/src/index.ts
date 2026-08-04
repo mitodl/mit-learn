@@ -4,7 +4,7 @@
 
 export { default as styled } from "@emotion/styled"
 export { css, Global } from "@emotion/react"
-export { alpha } from "@mui/material/styles"
+export { alpha, useTheme } from "@mui/material/styles"
 
 /**
  * Re-exports from MUI.

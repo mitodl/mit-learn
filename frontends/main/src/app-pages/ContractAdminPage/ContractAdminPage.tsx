@@ -12,6 +12,7 @@ import {
   alpha,
   Chip,
   Container,
+  Link,
   Pagination,
   SearchInput,
   Skeleton,
@@ -30,6 +31,18 @@ import {
 import { AssignSeatsSection } from "./AssignSeatsSection"
 import { RowActionMenu } from "./RowActionMenu"
 import {
+  EmptyTableMessage,
+  MobileLabel,
+  STUB,
+  TableCard,
+  TableCell,
+  TableFooter,
+  TableFootnote,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableRow,
+} from "@/components/B2BTable/B2BTable"
+import {
   managerOrganizationQueries,
   type ManagerEnrollmentCode,
 } from "api/mitxonline-hooks/organizations"
@@ -38,6 +51,7 @@ import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { organizationAnalyticsView } from "@/common/urls"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 
@@ -93,6 +107,12 @@ const ContractSubtitle = styled(Typography)(({ theme }) => ({
   ...theme.typography.subtitle1,
   color: theme.custom.colors.silverGrayDark,
 })) as typeof Typography
+
+const AnalyticsLink = styled(Link)(({ theme }) => ({
+  ...theme.typography.body2,
+  display: "inline-block",
+  paddingTop: "4px",
+}))
 
 const StatsSide = styled.div(({ theme }) => ({
   display: "flex",
@@ -185,89 +205,6 @@ const ControlsLeft = styled.div(({ theme }) => ({
   },
 }))
 
-const TableCard = styled.div(({ theme }) => ({
-  backgroundColor: theme.custom.colors.white,
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "8px",
-  padding: "24px",
-  [theme.breakpoints.down("md")]: {
-    padding: "16px",
-  },
-}))
-
-const TableHeaderRow = styled.div(({ theme }) => ({
-  display: "flex",
-  gap: "16px",
-  alignItems: "center",
-  paddingBottom: "16px",
-  borderBottom: `1px solid ${theme.custom.colors.silverGrayDark}`,
-  [theme.breakpoints.down("md")]: {
-    display: "none",
-  },
-}))
-
-const TableHeaderCell = styled("div", {
-  shouldForwardProp: (prop) => prop !== "$flex",
-})<{ $flex: number }>(({ $flex, theme }) => ({
-  flex: $flex,
-  minWidth: 0,
-  ...theme.typography.subtitle2,
-  color: theme.custom.colors.black,
-}))
-
-const TableRow = styled.div(({ theme }) => ({
-  display: "flex",
-  gap: "16px",
-  alignItems: "center",
-  padding: "14px 0",
-  borderBottom: `1px solid ${theme.custom.colors.silverGrayLight}`,
-  "&:last-child": {
-    borderBottom: "none",
-  },
-  [theme.breakpoints.down("md")]: {
-    position: "relative",
-    flexWrap: "wrap",
-    gap: "6px 0",
-    padding: "16px 40px 16px 0",
-  },
-}))
-
-const MobileLabel = styled.span(({ theme }) => ({
-  display: "none",
-  [theme.breakpoints.down("md")]: {
-    display: "inline",
-    ...theme.typography.subtitle2,
-    color: theme.custom.colors.darkGray2,
-    minWidth: "120px",
-    flexShrink: 0,
-  },
-}))
-
-const TableCell = styled("div", {
-  shouldForwardProp: (prop) => prop !== "$flex" && prop !== "$primary",
-})<{ $flex: number; $primary?: boolean }>(({ $flex, $primary, theme }) => ({
-  flex: $flex,
-  minWidth: 0,
-  ...theme.typography.body2,
-  color: theme.custom.colors.black,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-  [theme.breakpoints.down("md")]: {
-    flex: "none",
-    width: "100%",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    overflow: "visible",
-    whiteSpace: "normal",
-    ...($primary && {
-      ...theme.typography.subtitle2,
-      marginBottom: "4px",
-    }),
-  },
-}))
-
 const StatusBadge = styled(Chip, {
   shouldForwardProp: (prop) => prop !== "$status",
 })<{ $status: "assigned" | "redeemed" }>(({ $status, theme }) => ({
@@ -299,27 +236,6 @@ const ActionCell = styled.div(({ theme }) => ({
     right: 0,
   },
 }))
-
-const TableFooter = styled.div({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  paddingTop: "16px",
-})
-
-const TableFootnote = styled(Typography)(({ theme }) => ({
-  ...theme.typography.body2,
-  color: theme.custom.colors.silverGrayDark,
-})) as typeof Typography
-
-const EmptyTableMessage = styled(Typography)(({ theme }) => ({
-  ...theme.typography.body2,
-  color: theme.custom.colors.silverGrayDark,
-  padding: "32px 0",
-  textAlign: "center",
-})) as typeof Typography
-
-const STUB = "—"
 
 type StatusFilter = "all" | "pending" | "redeemed"
 
@@ -365,6 +281,9 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   contractSlug,
 }) => {
   const queryClient = useQueryClient()
+  const analyticsEnabled = useFeatureFlagEnabled(
+    FeatureFlags.B2BAnalyticsDashboard,
+  )
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
@@ -633,6 +552,19 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                   </>
                 ) : null}
               </ContractSubtitle>
+              {/* Analytics is the reporting half of this dashboard and is
+                  org-scoped, so it lives at its own URL rather than under this
+                  contract. Behind its own flag: the analytics API is not
+                  deployed everywhere this page is. */}
+              {analyticsEnabled ? (
+                <AnalyticsLink
+                  color="red"
+                  size="small"
+                  href={organizationAnalyticsView(orgSlug)}
+                >
+                  View analytics
+                </AnalyticsLink>
+              ) : null}
             </div>
           </OrgDetailsContainer>
           <StatsSide>

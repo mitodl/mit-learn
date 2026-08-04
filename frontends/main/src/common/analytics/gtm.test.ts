@@ -12,6 +12,7 @@ import {
   trackVideo50Percent,
   trackSiteSearch,
   trackCatalogFilter,
+  trackFilterCourseCatalog,
   trackReturnVisit,
   trackBeginCheckout,
   trackOrganicSocialClick,
@@ -251,6 +252,20 @@ describe("trackCatalogFilter", () => {
     trackCatalogFilter({ filterName: "topic", filterValue: "data science" })
     expect(window.dataLayer).toContainEqual({
       event: "catalog-filter",
+      "filter-name": "topic",
+      "filter-value": "data science",
+    })
+  })
+})
+
+describe("trackFilterCourseCatalog", () => {
+  it("pushes a filter-course-catalog event with filter name and value", () => {
+    trackFilterCourseCatalog({
+      filterName: "topic",
+      filterValue: "data science",
+    })
+    expect(window.dataLayer).toContainEqual({
+      event: "filter-course-catalog",
       "filter-name": "topic",
       "filter-value": "data science",
     })

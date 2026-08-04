@@ -13,6 +13,7 @@ export enum FeatureFlags {
   OcwProductPages = "ocw-product-pages",
   VideoPlaylistPage = "video-playlist-page",
   B2BContractManagerDashboard = "b2b-contract-manager-dashboard",
+  B2BAnalyticsDashboard = "b2b-analytics-dashboard",
   Arithmix = "arithmix",
   Hacksnack = "hacksnack",
 }

@@ -156,6 +156,8 @@ paths:
           description: ''
         '400':
           description: Invalid feedback submission
+        '429':
+          description: Rate limit exceeded
   /api/v0/learning_resources_search_admin_params/:
     get:
       operationId: learning_resources_search_admin_params_retrieve

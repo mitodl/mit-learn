@@ -1,10 +1,19 @@
 import { learnAxiosClient } from "../axios"
 import { mitxAxiosClient } from "../mitxonline/axios"
+import { analyticsAxiosClient } from "../analytics/axios"
 import type { ConfigurableAxiosConfig } from "../configurableAxios"
 
 export type ApiClientsConfig = {
   learn: ConfigurableAxiosConfig
   mitxonline: ConfigurableAxiosConfig
+  /**
+   * The OL Analytics API. Optional: it is a newer service that is not deployed
+   * to every environment yet, so an environment that does not set
+   * `NEXT_PUBLIC_ANALYTICS_API_BASE_URL` still boots — only the analytics
+   * dashboard is unavailable there. Callers gate on `isAnalyticsConfigured()`
+   * rather than letting the unconfigured instance throw from its interceptor.
+   */
+  analytics?: ConfigurableAxiosConfig
 }
 
 const normalizeBaseUrl = (label: string, value: string) => {
@@ -33,6 +42,12 @@ const normalizeConfig = (config: ApiClientsConfig): ApiClientsConfig => ({
     ...config.mitxonline,
     baseUrl: normalizeBaseUrl("mitxonline", config.mitxonline.baseUrl),
   },
+  ...(config.analytics && {
+    analytics: {
+      ...config.analytics,
+      baseUrl: normalizeBaseUrl("analytics", config.analytics.baseUrl),
+    },
+  }),
 })
 
 export const configureApiClients = (config: ApiClientsConfig): void => {
@@ -48,12 +63,25 @@ export const configureApiClients = (config: ApiClientsConfig): void => {
 
   learnAxiosClient.applyConfig(normalized.learn)
   mitxAxiosClient.applyConfig(normalized.mitxonline)
+  if (normalized.analytics) {
+    analyticsAxiosClient.applyConfig(normalized.analytics)
+  }
 }
 
+/**
+ * Whether the always-required clients are configured. Deliberately excludes the
+ * analytics client so that an environment without an analytics API still
+ * reports "configured" and `bootstrapApiClients()` stays first-wins.
+ */
 export const isApiClientsConfigured = (): boolean =>
   learnAxiosClient.isConfigured() && mitxAxiosClient.isConfigured()
+
+/** Whether this environment has an analytics API to talk to. */
+export const isAnalyticsConfigured = (): boolean =>
+  analyticsAxiosClient.isConfigured()
 
 export const resetApiClientsForTests = () => {
   learnAxiosClient.resetForTests()
   mitxAxiosClient.resetForTests()
+  analyticsAxiosClient.resetForTests()
 }

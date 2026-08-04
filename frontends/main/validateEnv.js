@@ -60,6 +60,10 @@ const schema = yup.object().shape({
   NEXT_PUBLIC_SENTRY_ENV: yup.string(),
   NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE: yup.string(),
   NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: yup.string(),
+  // Base URL of the OL Analytics API (ol-analytics-api). Optional: environments
+  // without an analytics deployment simply do not surface the org analytics
+  // dashboard — see isAnalyticsConfigured() in api/runtime.
+  NEXT_PUBLIC_ANALYTICS_API_BASE_URL: yup.string(),
   NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT: yup.string(),
   NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT: yup.string(),
   NEXT_PUBLIC_LEARN_AI_CSRF_COOKIE_NAME: yup.string(),

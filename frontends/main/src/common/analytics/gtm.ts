@@ -201,6 +201,17 @@ const trackCatalogFilter = (params: CatalogFilterParams) => {
 }
 
 /**
+ * Fired when a user applies a filter to the course catalog.
+ * Maps to the "filter-course-catalog" GTM trigger.
+ */
+const trackFilterCourseCatalog = (params: CatalogFilterParams) => {
+  pushGtmEvent("filter-course-catalog", {
+    "filter-name": params.filterName,
+    "filter-value": params.filterValue,
+  })
+}
+
+/**
  * Fired once per session when a returning visitor (has visited before) loads the site.
  * Uses localStorage to detect return visitors across sessions.
  * Maps to "Return Visit" in the marketing event plan.
@@ -259,6 +270,7 @@ export {
   trackVideo50Percent,
   trackSiteSearch,
   trackCatalogFilter,
+  trackFilterCourseCatalog,
   trackReturnVisit,
   trackBeginCheckout,
   trackOrganicSocialClick,

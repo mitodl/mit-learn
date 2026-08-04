@@ -36,7 +36,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.76.0"
+VERSION = "0.76.2"
 
 log = logging.getLogger()
 
@@ -111,7 +111,6 @@ INSTALLED_APPS = (
     "django_removals",
     "django_scim",
     "social_django",
-    "server_status",
     "rest_framework",
     "corsheaders",
     "anymail",
@@ -120,6 +119,7 @@ INSTALLED_APPS = (
     "django_json_widget",
     "django_filters",
     "drf_spectacular",
+    "safedelete",
     "mitol.observability.apps.ObservabilityConfig",
     # Put our apps after this point
     "main",
@@ -643,6 +643,12 @@ REST_FRAMEWORK = {
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.NamespaceVersioning",
     "ALLOWED_VERSIONS": ["v0", "v1"],
     "ORDERING_PARAM": "sortby",
+    "DEFAULT_THROTTLE_RATES": {
+        # Rate format is "<count>/<period>" (e.g. "10/min", "30/hour"); a blank
+        # env value -> "" or None -> None -> throttle is a no-op (kill switch).
+        "content_feedback": get_string("CONTENT_FEEDBACK_THROTTLE_RATE", "10/min")
+        or None,
+    },
 }
 
 USE_X_FORWARDED_PORT = get_bool("USE_X_FORWARDED_PORT", False)  # noqa: FBT003

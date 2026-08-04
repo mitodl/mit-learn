@@ -1598,3 +1598,77 @@ describe("NewsEditor - Byline publish date", () => {
     expect(screen.queryByText("Jan 1, 2020")).not.toBeInTheDocument()
   })
 })
+
+describe("NewsEditor - Delete draft", () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  test("editor can delete a draft from the edit toolbar", async () => {
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+
+    const newsItem = factories.websiteContent.websiteContent({
+      id: 321,
+      title: "Draft to delete",
+      content_type: "news",
+      is_published: false,
+    })
+    setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
+    setMockResponse.delete(urls.websiteContent.details(newsItem.id), null)
+
+    renderWithProviders(
+      <NewsEditor newsItem={newsItem} onSave={mockOnSave} />,
+      {
+        user,
+      },
+    )
+
+    await screen.findByTestId("editor")
+
+    await userEvent.click(await screen.findByRole("button", { name: "Delete" }))
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Yes, delete" }),
+    )
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "delete",
+          url: urls.websiteContent.details(newsItem.id),
+        }),
+      )
+    })
+  })
+
+  test("delete button is not shown for published content", async () => {
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+
+    const newsItem = factories.websiteContent.websiteContent({
+      id: 322,
+      title: "Published item",
+      content_type: "news",
+      is_published: true,
+    })
+    setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
+
+    renderWithProviders(
+      <NewsEditor newsItem={newsItem} onSave={mockOnSave} />,
+      {
+        user,
+      },
+    )
+
+    await screen.findByTestId("editor")
+    expect(
+      screen.queryByRole("button", { name: "Delete" }),
+    ).not.toBeInTheDocument()
+  })
+})

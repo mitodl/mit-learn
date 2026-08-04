@@ -22,10 +22,16 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
-import { trackCourseEnrolled } from "@/common/analytics/gtm"
+import {
+  trackCourseEnrolled,
+  trackStartEnrollment,
+  trackBeginCheckout,
+} from "@/common/analytics/gtm"
 
 jest.mock("@/common/analytics/gtm", () => ({
   trackCourseEnrolled: jest.fn(),
+  trackStartEnrollment: jest.fn(),
+  trackBeginCheckout: jest.fn(),
 }))
 
 jest.mock("posthog-js/react", () => ({
@@ -380,6 +386,9 @@ describe("useCourseEnrollment — actions", () => {
 
     paidOption!.onClick!(fakeEvent)
 
+    expect(trackStartEnrollment).toHaveBeenCalledWith(course.title)
+    expect(trackBeginCheckout).toHaveBeenCalledWith(course.title)
+
     await waitFor(() =>
       expect(makeRequest).toHaveBeenCalledWith(
         expect.objectContaining({ method: "delete", url: clearUrl }),
@@ -421,6 +430,8 @@ describe("useCourseEnrollment — actions", () => {
     } as React.MouseEvent<HTMLButtonElement>
 
     freeOption!.onClick!(fakeEvent)
+
+    expect(trackStartEnrollment).toHaveBeenCalledWith(course.title)
 
     await waitFor(() =>
       expect(makeRequest).toHaveBeenCalledWith(
