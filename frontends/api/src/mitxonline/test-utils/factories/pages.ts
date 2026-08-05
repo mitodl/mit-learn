@@ -4,7 +4,6 @@ import type { PartialFactory, Factory } from "ol-test-utilities"
 import type {
   FeatureImage,
   CoursePageItem,
-  PriceItem,
   Faculty,
   CoursePageList,
   V2Course,
@@ -32,15 +31,6 @@ const featureImage: Factory<FeatureImage> = (override) => {
     image_url: faker.internet.url(),
     title: faker.lorem.words(3),
     width: faker.number.int({ min: 100, max: 1000 }),
-    ...override,
-  }
-}
-
-const priceItem: Factory<PriceItem> = (override) => {
-  return {
-    id: faker.string.uuid(),
-    type: "price_details",
-    value: { link: "", text: "$99.00" },
     ...override,
   }
 }
@@ -156,7 +146,6 @@ const coursePageItem: PartialFactory<CoursePageItem> = (override) => {
     min_weekly_hours: `${faker.number.int({ min: 1, max: 20 })}`,
     min_weeks: faker.number.int({ min: 1, max: 12 }),
     prerequisites: makeHTMLList(2),
-    price: [priceItem()],
     title: faker.lorem.words(3),
     topic_list: [
       {
@@ -229,14 +218,6 @@ const programPageItem: PartialFactory<ProgramPageItem> = (override) => {
     max_weekly_hours: `${faker.number.int({ min: 11, max: 20 })}`,
     min_weeks: faker.number.int({ min: 24, max: 48 }),
     max_weeks: faker.number.int({ min: 48, max: 96 }),
-    price: [
-      priceItem({
-        value: {
-          text: `$${faker.number.int({ min: 250, max: 1000 })} - $${faker.number.int({ min: 1000, max: 5000 })} per course`,
-          link: "",
-        },
-      }),
-    ],
     min_price: `${faker.number.int({ min: 1000, max: 2500 })}`,
     max_price: `${faker.number.int({ min: 2500, max: 10000 })}`,
     show_stay_updated: faker.datatype.boolean(),
