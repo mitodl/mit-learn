@@ -395,6 +395,33 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "username", "global_id", "is_authenticated")
 
 
+class CurrentUserSerializer(UserSerializer):
+    """
+    Serializer for the requesting user.
+
+    Unlike UserSerializer this exposes the user's own email plus whether they
+    can manage their credentials, both of which the settings page needs. It is
+    read-only: users change their email through Keycloak, not through us.
+    """
+
+    email = serializers.SerializerMethodField()
+    is_sso_user = serializers.SerializerMethodField()
+
+    def get_email(self, instance) -> str:
+        """Get the user's email address (blank for anonymous users)"""
+        return getattr(instance, "email", "") or ""
+
+    def get_is_sso_user(self, instance) -> bool:
+        """
+        Whether the user signs in through an external identity provider, and so
+        cannot change their email or password through us.
+        """
+        return auth_api.is_sso_user(instance)
+
+    class Meta(UserSerializer.Meta):
+        fields = (*UserSerializer.Meta.fields, "is_sso_user")
+
+
 class ProgramCertificateSerializer(serializers.ModelSerializer):
     """
     Serializer for Program Certificates
