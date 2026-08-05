@@ -1,7 +1,6 @@
 import { env } from "@/env"
 import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 import type { VideoPlaylistResource } from "api/v1"
-import DOMPurify from "isomorphic-dompurify"
 
 const isInEnum = <T extends string>(
   value: string,
@@ -196,29 +195,6 @@ const addExternalLinkTargets = (html: string): string =>
 const stripAnchorTags = (html: string): string =>
   html.replace(/<a\b[^>]*>(.*?)<\/a>/gis, "$1")
 
-const BLOCK_BOUNDARY_TAGS = /<\/(?:p|div|li|h[1-6])>|<br\s*\/?>/gi
-
-/**
- * Converts a sanitized-HTML string (e.g. a resource `description`) to plain
- * text suitable for contexts that must not contain markup, like <meta
- * name="description">, og:description, and twitter:description. Strips all
- * tags and decodes entities (&amp; -> &); a space is inserted at block-level
- * boundaries first so adjacent paragraphs/list items don't get mashed
- * together once their tags are removed.
- */
-const htmlToPlainText = (html: string): string => {
-  if (!html) return ""
-  const withBreaks = html.replace(BLOCK_BOUNDARY_TAGS, (match) => `${match} `)
-  // RETURN_DOM_FRAGMENT gives back real DOM nodes rather than a serialized
-  // HTML string, so reading .textContent decodes entities for free (a
-  // serialized-string result stays HTML-escaped, e.g. "&amp;", since it's
-  // meant to be re-inserted as HTML).
-  const fragment = DOMPurify.sanitize(withBreaks, {
-    RETURN_DOM_FRAGMENT: true,
-  })
-  return collapseWhitespace(fragment.textContent ?? "")
-}
-
 export {
   isInEnum,
   stripOrgPrefix,
@@ -231,5 +207,4 @@ export {
   externalLinkProps,
   addExternalLinkTargets,
   stripAnchorTags,
-  htmlToPlainText,
 }

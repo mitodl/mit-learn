@@ -4,7 +4,7 @@ import {
   RESOURCE_DRAWER_PARAMS,
 } from "@/common/urls"
 import { parseResourceId } from "@/common/slugs"
-import { htmlToPlainText } from "@/common/utils"
+import { htmlToPlainText } from "@/common/htmlToPlainText"
 import type { AxiosError } from "axios"
 import type { Metadata } from "next"
 import * as Sentry from "@sentry/nextjs"
