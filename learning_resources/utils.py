@@ -4,6 +4,8 @@ import logging
 import re
 from collections import defaultdict
 from functools import cache
+from hashlib import md5
+from http import HTTPStatus
 from shutil import which
 from typing import TYPE_CHECKING
 
@@ -45,6 +47,7 @@ from main.utils import generate_filepath
 log = logging.getLogger()
 
 BLOCKLIST_CACHE_TIMEOUT = 60 * 60 * 24
+IMAGE_URL_REACHABLE_CACHE_TIMEOUT = 60 * 60 * 24
 
 
 # edX block types that never have content
@@ -225,6 +228,40 @@ def load_course_blocklist():
     blocklist = [str(line, "utf-8") for line in response.iter_lines()]
     redis_cache.set("course_blocklist", blocklist, timeout=BLOCKLIST_CACHE_TIMEOUT)
     return blocklist
+
+
+def image_url_is_reachable(url: str) -> bool:
+    """
+    Check whether an image URL responds successfully, caching the result.
+
+    Args:
+        url (str): the image URL to check
+
+    Returns:
+        bool: True if the URL responds successfully
+    """
+    cache_key = f"image_url_reachable:{md5(url.encode('utf-8')).hexdigest()}"  # noqa: S324
+    redis_cache = caches["redis"]
+    reachable = redis_cache.get(cache_key)
+    if reachable is None:
+        try:
+            response = requests.head(
+                url, timeout=settings.REQUESTS_TIMEOUT, allow_redirects=True
+            )
+            if response.status_code in (
+                HTTPStatus.METHOD_NOT_ALLOWED,
+                HTTPStatus.NOT_IMPLEMENTED,
+            ):
+                # Some servers reject HEAD requests; retry without the body
+                response = requests.get(
+                    url, timeout=settings.REQUESTS_TIMEOUT, stream=True
+                )
+                response.close()
+            reachable = response.ok
+        except requests.RequestException:
+            reachable = False
+        redis_cache.set(cache_key, reachable, timeout=IMAGE_URL_REACHABLE_CACHE_TIMEOUT)
+    return reachable
 
 
 def load_course_duplicates(etl_source: str) -> list:
