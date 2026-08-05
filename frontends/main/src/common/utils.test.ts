@@ -104,7 +104,7 @@ describe("htmlToPlainText", () => {
     expect(htmlToPlainText("<p>First</p><p>Second</p>")).toBe("First Second")
   })
 
-  it("keeps a space where a <br> separated lines", () => {
+  it("keeps a space where a <br> separates lines", () => {
     expect(htmlToPlainText("Line one<br>Line two")).toBe("Line one Line two")
   })
 
