@@ -20,15 +20,6 @@ import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import invariant from "tiny-invariant"
 import { LearningResourceCard } from "ol-components"
 
-// Mock ShareDialog to avoid MUI Popper portal rendering issues in jsdom.
-// The mock renders a detectable element so we can assert on it.
-jest.mock("@/app-pages/VideoPlaylistCollectionPage/ShareDialog", () => ({
-  __esModule: true,
-  default: jest.fn(({ open }: { open: boolean }) => (
-    <div data-testid="share-dialog" data-open={String(open)} />
-  )),
-}))
-
 jest.mock("ol-components", () => {
   const actual = jest.requireActual("ol-components")
   return {

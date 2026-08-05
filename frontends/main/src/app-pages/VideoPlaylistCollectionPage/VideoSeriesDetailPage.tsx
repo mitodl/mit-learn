@@ -24,11 +24,6 @@ const StyledVideoResourcePlayer = styled(VideoResourcePlayer)(({ theme }) => ({
   borderBottom: `3px solid ${theme.custom.colors.darkGray2}`,
 }))
 
-const StyledVideoShareButton = styled(VideoShareButton)({
-  height: "40px",
-  padding: "18px 12px",
-})
-
 type VideoSeriesDetailPageProps = {
   videoId: number
   playlistId: number | null
@@ -171,7 +166,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               style={{ marginBottom: 12 }}
             />
           ) : (
-            <Styled.VideoTitle ref={titleRef} tabIndex={-1}>
+            <Styled.VideoTitle ref={titleRef} tabIndex={-1} $compact>
               {video?.title}
             </Styled.VideoTitle>
           )}
@@ -181,7 +176,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               <Styled.StyledDuration>{duration}</Styled.StyledDuration>
             )}
             {!itemsLoading && video && (
-              <StyledVideoShareButton
+              <VideoShareButton
                 video={video}
                 title={video?.title ?? ""}
                 pageUrl={`${NEXT_PUBLIC_ORIGIN}${videoDetailPageView(video.id, playlistId ?? undefined, video.title)}`}

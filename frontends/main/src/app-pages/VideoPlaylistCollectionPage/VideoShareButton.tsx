@@ -1,11 +1,19 @@
 "use client"
 
 import React, { useState } from "react"
+import { styled } from "ol-components"
 import { RiShareForwardFill } from "@remixicon/react"
 import type { VideoResource } from "api/v1"
 import ShareDialog from "@/components/ShareDialog/ShareDialog"
+import ShareButton from "@/components/ShareButton/ShareButton"
 import type { VideoPlayerHandle } from "./VideoResourcePlayer"
-import * as Styled from "./VideoSeriesDetailPage.styled"
+
+// Both video pages sized the button identically via their own
+// `styled(VideoShareButton)` wrapper; that sizing now lives here instead.
+const StyledShareButton = styled(ShareButton)({
+  height: "40px",
+  padding: "18px 12px",
+})
 
 type VideoShareButtonProps = {
   video: VideoResource
@@ -26,14 +34,14 @@ const VideoShareButton: React.FC<VideoShareButtonProps> = ({
 
   return (
     <>
-      <Styled.ShareButton
+      <StyledShareButton
         className={className}
         aria-label={`Share ${title}`}
         onClick={() => setShareOpen(true)}
       >
         <RiShareForwardFill size={16} />
         Share
-      </Styled.ShareButton>
+      </StyledShareButton>
       <ShareDialog
         open={shareOpen}
         video={video}
