@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.77.1
+Version 0.77.1 (Released August 05, 2026)
 --------------
 
 - serializer performance - cache/re-use child serializer (#3713)
