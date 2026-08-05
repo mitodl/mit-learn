@@ -15,6 +15,7 @@ from learning_resources.constants import (
     PlatformType,
 )
 from learning_resources.etl.canvas_utils import (
+    canvas_course_checksum,
     canvas_course_url,
     canvas_url_config,
     get_published_items,
@@ -22,7 +23,6 @@ from learning_resources.etl.canvas_utils import (
 )
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.utils import (
-    calc_checksum,
     get_edx_module_id,
     process_olx_path,
 )
@@ -52,17 +52,20 @@ def sync_canvas_archive(bucket, key: str, overwrite):
         course_archive_path = Path(export_tempdir, key.rsplit("/", maxsplit=1)[-1])
         bucket.download_file(key, course_archive_path)
         url_config = canvas_url_config(bucket, export_tempdir, url_config_file)
+        checksum = canvas_course_checksum(course_archive_path, url_config)
         resource_readable_id, run = run_for_canvas_archive(
-            course_archive_path, course_folder=course_folder, overwrite=overwrite
+            course_archive_path,
+            course_folder=course_folder,
+            checksum=checksum,
+            overwrite=overwrite,
         )
-        checksum = calc_checksum(course_archive_path)
         if run:
             canvas_content_files = list(
                 transform_canvas_content_files(
                     course_archive_path, run, url_config=url_config, overwrite=overwrite
                 )
             )
-            load_content_files(
+            content_files_ids = load_content_files(
                 run,
                 canvas_content_files,
             )
@@ -73,17 +76,20 @@ def sync_canvas_archive(bucket, key: str, overwrite):
                     course_archive_path, run, overwrite=overwrite
                 ),
             )
-            run.checksum = checksum
-            run.save()
+            if content_files_ids or not canvas_content_files:
+                # only mark the archive processed once its content actually
+                # loaded (or there was legitimately nothing to load), so a
+                # failed or empty load is retried on the next sync
+                run.checksum = checksum
+                run.save(update_fields=["checksum"])
 
     return resource_readable_id
 
 
-def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
+def run_for_canvas_archive(course_archive_path, course_folder, checksum, overwrite):
     """
     Generate and return a LearningResourceRun for a Canvas course
     """
-    checksum = calc_checksum(course_archive_path)
     course_info = parse_canvas_settings(course_archive_path)
     course_title = course_info.get("title", f"canvas course {course_folder}")
     url = canvas_course_url(course_archive_path)
@@ -130,8 +136,6 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
     if run.checksum == checksum and not overwrite:
         log.debug("Checksums match for %s, skipping load", readable_id)
         return resource_readable_id, None
-    run.checksum = checksum
-    run.save()
     return resource_readable_id, run
 
 

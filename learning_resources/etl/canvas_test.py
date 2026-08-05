@@ -3,19 +3,23 @@
 import zipfile
 from datetime import timedelta
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 from defusedxml import ElementTree
+from freezegun import freeze_time
 
 from learning_resources.constants import LearningResourceType, PlatformType
 from learning_resources.etl.canvas import (
     run_for_canvas_archive,
+    sync_canvas_archive,
     transform_canvas_content_files,
     transform_canvas_problem_files,
 )
 from learning_resources.etl.canvas_utils import (
     _compact_element,
+    canvas_course_checksum,
     get_published_items,
     is_file_published,
     parse_canvas_files,
@@ -179,12 +183,11 @@ def test_run_for_canvas_archive_creates_resource_and_run(tmp_path, mocker):
         return_value={"course_id": "123", "canvas_domain": "mit.edu"},
     )
 
-    mocker.patch("learning_resources.etl.canvas.calc_checksum", return_value="abc123")
     # No resource exists yet
     zip_path = tmp_path / "archive.zip"
 
     _, run = run_for_canvas_archive(
-        zip_path, course_folder=course_folder, overwrite=True
+        zip_path, course_folder=course_folder, checksum="abc123", overwrite=True
     )
     resource = LearningResource.objects.get(readable_id=f"{course_folder}-TEST101")
     assert resource.title == "Test Course"
@@ -193,7 +196,9 @@ def test_run_for_canvas_archive_creates_resource_and_run(tmp_path, mocker):
     assert resource.platform.code == PlatformType.canvas.name
     assert run is not None
     assert run.learning_resource == resource
-    assert run.checksum == "abc123"
+    # checksum is only saved after a successful content load in
+    # sync_canvas_archive, never by run_for_canvas_archive
+    assert run.checksum is None
 
 
 @pytest.mark.django_db
@@ -210,9 +215,6 @@ def test_run_for_canvas_archive_creates_run_if_none_exists(tmp_path, mocker):
         "learning_resources.etl.canvas_utils.parse_context_xml",
         return_value={"course_id": "123", "canvas_domain": "mit.edu"},
     )
-    mocker.patch(
-        "learning_resources.etl.canvas.calc_checksum", return_value="checksum104"
-    )
     # Create resource with no runs
     resource = LearningResourceFactory.create(
         readable_id=f"{course_folder}-TEST104",
@@ -226,11 +228,14 @@ def test_run_for_canvas_archive_creates_run_if_none_exists(tmp_path, mocker):
     course_archive_path = tmp_path / "archive4.zip"
     course_archive_path.write_text("dummy")
     _, run = run_for_canvas_archive(
-        course_archive_path, course_folder=course_folder, overwrite=True
+        course_archive_path,
+        course_folder=course_folder,
+        checksum="checksum104",
+        overwrite=True,
     )
     assert run is not None
     assert run.learning_resource == resource
-    assert run.checksum == "checksum104"
+    assert run.checksum is None
 
 
 def make_canvas_zip(
@@ -1994,7 +1999,9 @@ def test_ingestion_finishes_with_missing_xml_files(
         "learning_resources.etl.utils.extract_text_metadata",
         return_value={"content": "test"},
     )
-    _, run = run_for_canvas_archive(zip_path, tmp_path, overwrite=True)
+    _, run = run_for_canvas_archive(
+        zip_path, tmp_path, checksum="abc123", overwrite=True
+    )
     content_results = list(
         transform_canvas_content_files(
             Path(zip_path), run, url_config={}, overwrite=True
@@ -2088,3 +2095,282 @@ def test_empty_pdf_is_skipped(tmp_path):
         )
     )
     assert result == []
+
+
+LOCK_FILES_XML_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
+<fileMeta xmlns="http://canvas.instructure.com/xsd/cccv1p0">
+<files>
+<file identifier="RES3">
+  <display_name>{display_name}</display_name>
+  <unlock_at>{unlock_at}</unlock_at>
+  <category>uncategorized</category>
+</file>
+</files>
+</fileMeta>
+"""
+
+LOCK_MANIFEST_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
+<manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+  <resources>
+    <resource identifier="RES3" type="webcontent">
+      <file href="web_resources/file3.html"/>
+    </resource>
+  </resources>
+</manifest>
+"""
+
+
+def make_timed_lock_zip(  # noqa: PLR0913
+    tmp_path,
+    unlock_at,
+    name="lock_course.zip",
+    settings_xml=DEFAULT_SETTINGS_XML,
+    manifest_xml=LOCK_MANIFEST_XML,
+    display_name="file3",
+    content=b"<html>one</html>",
+):
+    """Course archive with one file whose visibility is gated by unlock_at"""
+    zip_path = tmp_path / name
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("course_settings/course_settings.xml", settings_xml)
+        zf.writestr(
+            "course_settings/files_meta.xml",
+            LOCK_FILES_XML_TEMPLATE.format(
+                unlock_at=unlock_at, display_name=display_name
+            ).encode(),
+        )
+        zf.writestr("imsmanifest.xml", manifest_xml)
+        zf.writestr("web_resources/file3.html", content)
+    return zip_path
+
+
+UNLOCKED = "2001-01-01T00:00:00"
+
+
+def test_canvas_course_checksum_ignores_export_noise(tmp_path):
+    """
+    Archives differing only in imsmanifest.xml bytes and course_settings/*
+    bytes AND size must produce the same digest — Canvas rewrites these on
+    every no-op export (verified across 13 prod course pairs).
+    """
+    a = make_timed_lock_zip(tmp_path, UNLOCKED, name="a.zip")
+    b = make_timed_lock_zip(
+        tmp_path,
+        UNLOCKED,
+        name="b.zip",
+        settings_xml=DEFAULT_SETTINGS_XML + b"<!-- export noise, new size -->",
+        manifest_xml=LOCK_MANIFEST_XML.replace(b"<resources>", b"<resources >"),
+    )
+    assert canvas_course_checksum(a, {}) == canvas_course_checksum(b, {})
+
+
+def test_canvas_course_checksum_detects_same_size_content_edit(tmp_path):
+    """
+    A content member with identical name and size but different bytes must
+    change the digest — parity with the per-file archive_checksum gate that
+    the archive-level skip would otherwise shadow.
+    """
+    a = make_timed_lock_zip(
+        tmp_path, UNLOCKED, name="a.zip", content=b"<html>one</html>"
+    )
+    b = make_timed_lock_zip(
+        tmp_path, UNLOCKED, name="b.zip", content=b"<html>two</html>"
+    )
+    assert canvas_course_checksum(a, {}) != canvas_course_checksum(b, {})
+
+
+def test_canvas_course_checksum_independent_of_member_order(tmp_path):
+    """Zip directory order must not affect the digest"""
+    zip_a = tmp_path / "a.zip"
+    zip_b = tmp_path / "b.zip"
+    members = [
+        ("web_resources/x.html", b"xx"),
+        ("web_resources/y.html", b"yy"),
+        ("course_settings/course_settings.xml", DEFAULT_SETTINGS_XML),
+    ]
+    with zipfile.ZipFile(zip_a, "w") as zf:
+        for name, content in members:
+            zf.writestr(name, content)
+    with zipfile.ZipFile(zip_b, "w") as zf:
+        for name, content in reversed(members):
+            zf.writestr(name, content)
+    assert canvas_course_checksum(zip_a, {}) == canvas_course_checksum(zip_b, {})
+
+
+def test_canvas_course_checksum_sensitive_to_url_config(tmp_path):
+    """
+    url_config (from the .metadata.json sidecar) feeds ContentFile urls; a
+    changed url must change the digest even when the archive is unchanged.
+    """
+    zip_path = make_timed_lock_zip(tmp_path, UNLOCKED)
+    with_url = {"/file3.html": {"url": "https://mit.edu/f/1"}}
+    reminted = {"/file3.html": {"url": "https://mit.edu/f/2"}}
+    assert canvas_course_checksum(zip_path, with_url) != canvas_course_checksum(
+        zip_path, reminted
+    )
+
+
+def test_canvas_course_checksum_sensitive_to_display_name(tmp_path):
+    """
+    A same-length display_name change lives in the excluded files_meta.xml;
+    the publish-set component must still catch it (it feeds content_title).
+    """
+    a = make_timed_lock_zip(tmp_path, UNLOCKED, name="a.zip", display_name="fileA")
+    b = make_timed_lock_zip(tmp_path, UNLOCKED, name="b.zip", display_name="fileB")
+    assert canvas_course_checksum(a, {}) != canvas_course_checksum(b, {})
+
+
+def test_canvas_course_checksum_changes_when_lock_boundary_passes(tmp_path):
+    """
+    The same archive must produce a different checksum once a timed lock
+    boundary passes — publish status depends on wall-clock time, and the gate
+    must reprocess when it flips.
+    """
+    zip_path = make_timed_lock_zip(tmp_path, "2026-09-01T00:00:00")
+    with freeze_time("2026-08-15"):
+        while_locked = canvas_course_checksum(zip_path, {})
+    with freeze_time("2026-09-15"):
+        after_unlock = canvas_course_checksum(zip_path, {})
+    assert while_locked != after_unlock
+
+
+def test_canvas_course_checksum_catches_size_preserving_publish_toggle(tmp_path):
+    """
+    Two archives with identical member names/sizes but different publish
+    state must differ — the publish-set component catches what the
+    name:size structural digest cannot.
+    """
+    locked = make_timed_lock_zip(tmp_path, "2099-01-01T00:00:00", name="locked.zip")
+    unlocked = make_timed_lock_zip(tmp_path, "2001-01-01T00:00:00", name="unlocked.zip")
+    assert canvas_course_checksum(locked, {}) != canvas_course_checksum(unlocked, {})
+
+
+def test_canvas_course_checksum_is_cwd_independent(tmp_path, monkeypatch):
+    """Checksum must not embed the worker process's working directory"""
+    zip_path = make_timed_lock_zip(tmp_path, "2001-01-01T00:00:00")
+    digest = canvas_course_checksum(zip_path, {})
+    other_cwd = tmp_path / "elsewhere"
+    other_cwd.mkdir()
+    monkeypatch.chdir(other_cwd)
+    assert canvas_course_checksum(zip_path, {}) == digest
+
+
+@pytest.fixture
+def sync_mocks(mocker, tmp_path):
+    """Bucket/url_config/loader mocks for sync_canvas_archive"""
+    zip_path = make_timed_lock_zip(tmp_path, "2001-01-01T00:00:00")
+
+    def fake_download(key, dest):
+        Path(dest).write_bytes(zip_path.read_bytes())
+
+    bucket = MagicMock()
+    bucket.download_file.side_effect = fake_download
+    mocker.patch("learning_resources.etl.canvas.canvas_url_config", return_value={})
+    mocker.patch(
+        "learning_resources.etl.utils.extract_text_metadata",
+        return_value={"content": "TEXT"},
+    )
+    mocker.patch(
+        "learning_resources.etl.canvas_utils.parse_context_xml",
+        return_value={"course_id": "123", "canvas_domain": "mit.edu"},
+    )
+    load_content = mocker.patch("learning_resources.etl.loaders.load_content_files")
+    load_problems = mocker.patch("learning_resources.etl.loaders.load_problem_files")
+    return SimpleNamespace(
+        bucket=bucket, load_content=load_content, load_problems=load_problems
+    )
+
+
+def _canvas_run(readable_id):
+    return LearningResource.objects.get(readable_id=readable_id).runs.first()
+
+
+def test_sync_canvas_archive_skips_unchanged_archive(sync_mocks):
+    """A second sync of an unchanged archive must not reload content"""
+    readable_id = sync_canvas_archive(
+        sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
+    )
+    assert sync_mocks.load_content.call_count == 1
+    first_checksum = _canvas_run(readable_id).checksum
+    assert first_checksum
+
+    sync_canvas_archive(
+        sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
+    )
+    assert sync_mocks.load_content.call_count == 1
+    assert _canvas_run(readable_id).checksum == first_checksum
+
+
+def test_sync_canvas_archive_saves_checksum_only_after_successful_load(sync_mocks):
+    """
+    A failed load must leave the checksum unset so the next sync retries
+    instead of silently skipping content that was never ingested.
+    """
+    sync_mocks.load_content.side_effect = Exception("load failed")
+    with pytest.raises(Exception, match="load failed"):
+        sync_canvas_archive(
+            sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
+        )
+    resource = LearningResource.objects.get(etl_source=ETLSource.canvas.name)
+    assert resource.runs.first().checksum is None
+
+    sync_mocks.load_content.side_effect = None
+    sync_canvas_archive(
+        sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
+    )
+    assert sync_mocks.load_content.call_count == 2
+    assert resource.runs.first().checksum
+
+
+def test_sync_canvas_archive_computes_checksum_once(mocker, sync_mocks):
+    """The course digest is computed exactly once per archive"""
+    from learning_resources.etl import canvas
+
+    spy = mocker.spy(canvas, "canvas_course_checksum")
+    sync_canvas_archive(
+        sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
+    )
+    assert spy.call_count == 1
+
+
+def test_sync_canvas_archive_retries_when_nothing_loads(sync_mocks):
+    """
+    load_content_files returning [] (all files failed without raising) must
+    NOT save the checksum — the next sync retries instead of skipping content
+    that was never ingested.
+    """
+    sync_mocks.load_content.return_value = []
+    readable_id = sync_canvas_archive(
+        sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
+    )
+    assert _canvas_run(readable_id).checksum is None
+
+    sync_mocks.load_content.return_value = [1]
+    sync_canvas_archive(
+        sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
+    )
+    assert sync_mocks.load_content.call_count == 2
+    assert _canvas_run(readable_id).checksum
+
+
+def test_sync_canvas_archive_saves_checksum_for_legitimately_empty_course(
+    mocker, sync_mocks, tmp_path
+):
+    """
+    A course with nothing published yields no payloads and loads nothing;
+    that's not a failure — save the checksum so it isn't reprocessed weekly.
+    (The publish-set digest component unfreezes it if anything is published.)
+    """
+    locked_zip = make_timed_lock_zip(
+        tmp_path, "2099-01-01T00:00:00", name="all_locked.zip"
+    )
+
+    def fake_download(key, dest):
+        Path(dest).write_bytes(locked_zip.read_bytes())
+
+    sync_mocks.bucket.download_file.side_effect = fake_download
+    sync_mocks.load_content.return_value = []
+    readable_id = sync_canvas_archive(
+        sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
+    )
+    assert _canvas_run(readable_id).checksum
