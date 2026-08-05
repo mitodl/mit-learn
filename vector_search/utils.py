@@ -3,6 +3,7 @@ import gc
 import logging
 import uuid
 from functools import cache
+from textwrap import dedent
 
 from asgiref.sync import sync_to_async
 from django.conf import settings
@@ -476,10 +477,36 @@ def _learning_resource_embedding_context(document):
     resource's content files regardless of resource type. The combined
     context is truncated to the embedding model's input limit.
     """
-    context = (
-        f"{document.get('title')} "
-        f"{document.get('description')} {document.get('full_description')}"
+    description = " ".join(
+        filter(
+            None,
+            [
+                document.get("description"),
+                document.get("full_description"),
+            ],
+        )
     )
+
+    parts = [f"# {document.get('title')}", description]
+    course_numbers = document.get("course_numbers") or (
+        document.get("course", {}).get("course_numbers")
+        if isinstance(document.get("course"), dict)
+        else None
+    )
+    if course_numbers:
+        formatted_numbers = [
+            num.get("value") if isinstance(num, dict) else str(num)
+            for num in course_numbers
+            if (num.get("value") if isinstance(num, dict) else num)
+        ]
+        if formatted_numbers:
+            parts.append(f"Course numbers: {', '.join(formatted_numbers)}")
+    elif document.get("resource_type_group") == "course" and document.get(
+        "readable_id"
+    ):
+        parts.append(f"Course number: {document.get('readable_id')}")
+
+    context = dedent("\n\n".join(filter(None, parts)))
     content = "\n\n".join(
         content_file["content"]
         for content_file in document.get("content_files") or []
@@ -488,7 +515,7 @@ def _learning_resource_embedding_context(document):
     if content:
         encoder = dense_encoder()
         context = truncate_to_model_limit(
-            f"{context}\n\n# Content\n{content}",
+            f"{context}\n\n## Content\n{content}",
             encoder.model_name,
             token_encoding_name=getattr(encoder, "token_encoding_name", None),
         )
