@@ -70,15 +70,18 @@ def sync_canvas_archive(bucket, key: str, overwrite):
                 canvas_content_files,
             )
 
-            load_problem_files(
-                run,
+            canvas_problem_files = list(
                 transform_canvas_problem_files(
                     course_archive_path, run, overwrite=overwrite
-                ),
+                )
             )
-            if content_files_ids or not canvas_content_files:
+            problem_files_ids = load_problem_files(run, canvas_problem_files)
+            content_loaded = content_files_ids or not canvas_content_files
+            # load_problem_file swallows per-file errors and returns None
+            problems_loaded = any(problem_files_ids) or not canvas_problem_files
+            if content_loaded and problems_loaded:
                 # a failed or empty load must be retried on the next sync, so
-                # only mark processed once content loaded (or none was published)
+                # only mark processed once everything loaded (or was unpublished)
                 run.checksum = checksum
                 run.save(update_fields=["checksum"])
 

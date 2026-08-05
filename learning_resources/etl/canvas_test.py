@@ -2329,6 +2329,31 @@ def test_sync_canvas_archive_retries_when_nothing_loads(sync_mocks):
     assert _canvas_run(readable_id).checksum
 
 
+def test_sync_canvas_archive_retries_when_problem_files_fail(mocker, sync_mocks):
+    """
+    Tutor problem files yielded but none loaded (load_problem_file swallows
+    per-file errors and returns None) must NOT save the checksum, so the next
+    sync retries.
+    """
+    mocker.patch(
+        "learning_resources.etl.canvas.transform_canvas_problem_files",
+        side_effect=lambda *_args, **_kwargs: iter(
+            [{"source_path": "tutorbot/p1/problem.pdf"}]
+        ),
+    )
+    sync_mocks.load_problems.return_value = [None]
+    readable_id = sync_canvas_archive(
+        sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
+    )
+    assert _canvas_run(readable_id).checksum is None
+
+    sync_mocks.load_problems.return_value = [7]
+    sync_canvas_archive(
+        sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
+    )
+    assert _canvas_run(readable_id).checksum
+
+
 def test_sync_canvas_archive_saves_checksum_for_legitimately_empty_course(
     mocker, sync_mocks, tmp_path
 ):
