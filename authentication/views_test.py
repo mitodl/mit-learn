@@ -347,6 +347,23 @@ def mock_is_sso_user(mocker):
     return mocker.patch("authentication.views.is_sso_user", return_value=False)
 
 
+@pytest.fixture(autouse=True)
+def account_action_settings(settings):
+    """
+    Pin the settings the account action flow reads.
+
+    KEYCLOAK_CLIENT_ID has no default and MITOL_API_BASE_URL defaults to empty,
+    so without this these tests assert against whatever the environment
+    happens to provide — passing locally and failing in CI.
+    """
+    settings.KEYCLOAK_BASE_URL = "https://sso.example.edu"
+    settings.KEYCLOAK_REALM_NAME = "olapps"
+    settings.KEYCLOAK_CLIENT_ID = "ol-mitlearn-client"
+    settings.KEYCLOAK_CLIENT_SECRET = "a-secret"  # noqa: S105
+    settings.MITOL_API_BASE_URL = "https://api.example.edu"
+    return settings
+
+
 @pytest.mark.parametrize(
     ("action", "kc_action"),
     [
@@ -592,3 +609,25 @@ def test_account_action_complete_syncs_without_session(
 
     assert resp.status_code == 302
     mock_sync_email.assert_called_once()
+
+
+@pytest.mark.usefixtures("mock_is_sso_user")
+def test_account_action_start_unconfigured_client(settings, client):
+    """
+    An environment without KEYCLOAK_CLIENT_ID must not 500.
+
+    The setting has no default, and urlencode raises TypeError on None, so
+    without a guard every click on Change Email would be a server error.
+    """
+    settings.KEYCLOAK_CLIENT_ID = None
+
+    resp = client.get(
+        reverse("account-action-start", kwargs={"action": "update-email"})
+    )
+
+    assert resp.status_code == 302
+    expected_params = urlencode(
+        {"account_action": "update-email", "account_action_status": "error"}
+    )
+    settings_url = f"{settings.APP_BASE_URL.removesuffix('/')}/dashboard/settings"
+    assert resp.headers["Location"] == f"{settings_url}?{expected_params}"

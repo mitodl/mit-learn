@@ -190,6 +190,23 @@ class AccountActionStartView(RedirectView):
                 },
             )
 
+        if not settings.KEYCLOAK_CLIENT_ID:
+            # Nothing to build an authorization request with. Send the user back
+            # with an error rather than raising: KEYCLOAK_CLIENT_ID has no
+            # default, so an environment that hasn't set it would otherwise
+            # 500 on every click.
+            log.error(
+                "KEYCLOAK_CLIENT_ID is not configured; cannot start account action %s",
+                action,
+            )
+            return with_query_params(
+                next_url,
+                {
+                    ACCOUNT_ACTION_PARAM: action,
+                    ACCOUNT_ACTION_STATUS_PARAM: AccountActionStatus.ERROR,
+                },
+            )
+
         if self.request.user.is_authenticated and is_sso_user(self.request.user):
             # SSO users have no local Keycloak credentials to change. The UI
             # hides these actions from them, so this is the backstop for a
