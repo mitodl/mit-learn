@@ -3,7 +3,7 @@ import { renderWithProviders, screen, user } from "@/test-utils"
 import { factories } from "api/test-utils"
 import { ResourceTypeEnum } from "api/v1"
 import type { VideoResource } from "api/v1"
-import VideoShareDialog from "./VideoShareDialog"
+import ShareDialog from "./ShareDialog"
 
 const PAGE_URL = "https://learn.mit.edu/video/42?playlist=1"
 
@@ -40,7 +40,7 @@ const makeOvsVideo = (overrides: Partial<VideoResource> = {}): VideoResource =>
 
 const renderDialog = (video: VideoResource = makeVideo()) =>
   renderWithProviders(
-    <VideoShareDialog
+    <ShareDialog
       open
       onClose={jest.fn()}
       video={video}
@@ -54,7 +54,7 @@ const renderDialogWithTime = (
   video: VideoResource = makeYouTubeVideo(),
 ) =>
   renderWithProviders(
-    <VideoShareDialog
+    <ShareDialog
       open
       onClose={jest.fn()}
       video={video}
@@ -64,7 +64,7 @@ const renderDialogWithTime = (
     />,
   )
 
-describe("VideoShareDialog", () => {
+describe("ShareDialog", () => {
   describe("tab switching", () => {
     test("defaults to the Share tab", async () => {
       renderDialog()
@@ -93,7 +93,7 @@ describe("VideoShareDialog", () => {
     test("calls onClose when the close button is clicked", async () => {
       const onClose = jest.fn()
       renderWithProviders(
-        <VideoShareDialog
+        <ShareDialog
           open
           onClose={onClose}
           video={makeVideo()}

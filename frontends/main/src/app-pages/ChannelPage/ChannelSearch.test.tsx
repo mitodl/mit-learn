@@ -332,6 +332,62 @@ describe("ChannelSearch", () => {
     },
   )
 
+  test("Shows and aggregates a facet that is in the URL but not shown by default", async () => {
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Unit },
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: {
+            level: [{ key: "graduate", doc_count: 100 }],
+          },
+          suggestions: [],
+        },
+      },
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}/?level=graduate`,
+    })
+
+    await waitFor(() => {
+      expect(makeRequest.mock.calls.length > 0).toBe(true)
+    })
+
+    // "level" is not a default facet for this channel type, but it is requested
+    // as an aggregation because it is present in the URL.
+    const apiSearchParams = getLastApiSearchParams()
+    expect(apiSearchParams.getAll("aggregations")).toContain("level")
+
+    // ...and it renders as a facet.
+    const facetsContainer = screen.getByTestId("facets-container")
+    await within(facetsContainer).findByText("Level")
+  })
+
+  test("Does not duplicate a facet already shown by default as an extra URL facet", async () => {
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Unit },
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: {
+            topic: [{ key: "physics", doc_count: 100 }],
+          },
+          suggestions: [],
+        },
+      },
+    })
+
+    // "topic" is a default facet for Unit channels and is also present in the
+    // URL; it must appear exactly once.
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}/?topic=physics`,
+    })
+
+    const facetsContainer = await screen.findByTestId("facets-container")
+    expect(await within(facetsContainer).findAllByText("Topic")).toHaveLength(1)
+  })
+
   test("Submitting search text updates URL correctly", async () => {
     const resources = factories.learningResources.resources({
       count: 10,

@@ -6,6 +6,8 @@ export {
   SkipLinksNav,
   StyledBreadcrumbs,
   NoVideoMessage,
+  ScreenReaderOnly,
+  VideoTitle,
 } from "./shared.styled"
 
 export const PageWrapper = styled.div({
@@ -46,8 +48,6 @@ export const UpNextRight = styled.div({
   alignItems: "center",
   gap: "24px",
 })
-
-export { default as ShareButton } from "@/components/ShareButton/ShareButton"
 
 // ── Series navigation bar ──
 
@@ -190,23 +190,6 @@ export const InstitutionLabel = styled.span(({ theme }) => ({
   },
 }))
 
-export const VideoTitle = styled.h1(({ theme }) => ({
-  ...theme.typography.h2,
-  fontWeight: theme.typography.fontWeightBold,
-  color: theme.custom.colors.black,
-  margin: "0 0 16px",
-  "&:focus": { outline: "none" },
-  fontSize: "44px",
-  fontStyle: "normal",
-  lineHeight: "120%",
-  letterSpacing: "-0.88px",
-  [theme.breakpoints.down("sm")]: {
-    ...theme.typography.h3,
-    margin: "0 0 8px",
-    letterSpacing: "inherit",
-  },
-}))
-
 export const SectionDivider = styled.div(({ theme }) => ({
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
   margin: "32px 0",
@@ -326,15 +309,3 @@ export const TopicChip = styled(Link)(({ theme }) => ({
     color: theme.custom.colors.red,
   },
 }))
-
-export const ScreenReaderOnly = styled.span({
-  position: "absolute",
-  width: 1,
-  height: 1,
-  padding: 0,
-  margin: -1,
-  overflow: "hidden",
-  clip: "rect(0, 0, 0, 0)",
-  whiteSpace: "nowrap",
-  border: 0,
-})

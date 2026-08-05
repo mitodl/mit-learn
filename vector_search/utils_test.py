@@ -16,7 +16,6 @@ from qdrant_client.models import PointStruct
 import vector_search.utils as vs_utils
 from learning_resources.constants import (
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
-    LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
 )
 from learning_resources.factories import (
     ContentFileFactory,
@@ -61,6 +60,7 @@ from vector_search.encoders.utils import dense_encoder, sparse_encoder
 from vector_search.utils import (
     _chunk_documents,
     _chunk_markdown_documents,
+    _content_file_vector_hits,
     _embed_course_metadata_as_contentfile,
     _generate_content_file_points,
     _get_text_splitter,
@@ -1028,7 +1028,9 @@ def test_embedding_context_includes_content_files():
         "title": "A title",
         "description": "A short description",
         "full_description": "A full description",
+        "readable_id": "18.06",
         "resource_type_group": "course",
+        "resource_type": "course",
         "content_files": [
             {"content": "The first content file text"},
             {"content": None},
@@ -1040,7 +1042,8 @@ def test_embedding_context_includes_content_files():
         serialized_resource
     )
     assert context == (
-        "A title A short description A full description\n\n# Content\n"
+        "# A title\n\nA short description A full description\n\n"
+        "Course number: 18.06\n\n## Content\n"
         "The first content file text\n\nThe second content file text"
     )
 
@@ -1061,7 +1064,9 @@ def test_embedding_context_without_content_files():
         "title": "A title",
         "description": "A short description",
         "full_description": "A full description",
+        "readable_id": "18.06",
         "resource_type_group": "course",
+        "resource_type": "course",
         "content_files": [],
     }
 
@@ -1069,7 +1074,9 @@ def test_embedding_context_without_content_files():
         serialized_resource
     )
 
-    assert context == "A title A short description A full description"
+    assert context == (
+        "# A title\n\nA short description A full description\n\nCourse number: 18.06"
+    )
 
 
 def test_embedding_context_truncates_content(mocker):
@@ -1087,20 +1094,121 @@ def test_embedding_context_truncates_content(mocker):
         "title": "A title",
         "description": "A short description",
         "full_description": "A full description",
-        "resource_type_group": LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
+        "readable_id": "18.06",
+        "resource_type_group": "course",
         "content_files": [{"content": "0123456789ABCDEF"}],
+        "resource_type": "course",
     }
 
     context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
         serialized_resource
     )
 
-    assert context == "A title A "
+    assert context == "# A title\n"
     truncate_mock.assert_called_once_with(
-        "A title A short description A full description\n\n# Content\n0123456789ABCDEF",
+        "# A title\n\nA short description A full description\n\n"
+        "Course number: 18.06\n\n## Content\n0123456789ABCDEF",
         "test-model",
         token_encoding_name="test-encoding",  # noqa: S106
     )
+
+
+def test_embedding_context_includes_course_code():
+    """The resource's readable_id should be included as the course number."""
+    serialized_resource = {
+        "title": "Linear Algebra",
+        "description": "A short description",
+        "full_description": "A full description",
+        "readable_id": "18.06",
+        "resource_type_group": "course",
+        "content_files": [],
+    }
+
+    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
+        serialized_resource
+    )
+
+    assert "Course number: 18.06" in context
+
+
+@pytest.mark.parametrize(
+    ("course_numbers", "expected"),
+    [
+        ([{"value": "18.06"}, {"value": "18.061"}], "Course numbers: 18.06, 18.061"),
+        (["18.06", "18.061"], "Course numbers: 18.06, 18.061"),
+    ],
+)
+def test_embedding_context_includes_course_numbers(course_numbers, expected):
+    """The resource's course_numbers should be formatted as a comma-separated list."""
+    serialized_resource = {
+        "title": "Linear Algebra",
+        "description": "A short description",
+        "full_description": "A full description",
+        "readable_id": "18.06",
+        "course_numbers": course_numbers,
+        "resource_type_group": "course",
+        "content_files": [],
+    }
+
+    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
+        serialized_resource
+    )
+
+    assert expected in context
+
+
+def test_embedding_context_markdown_formatting():
+    """Title and content should be rendered as markdown headings."""
+    serialized_resource = {
+        "title": "Linear Algebra",
+        "description": "A short description",
+        "full_description": "A full description",
+        "readable_id": "18.06",
+        "resource_type_group": "course",
+        "content_files": [{"content": "Some content file text"}],
+    }
+
+    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
+        serialized_resource
+    )
+
+    assert context.startswith("# Linear Algebra\n")
+    assert "\n## Content\n" in context
+
+
+@pytest.mark.parametrize(
+    ("description", "full_description", "expected"),
+    [
+        (
+            "A short description",
+            "A full description",
+            "A short description A full description\n\n",
+        ),
+        (None, "A full description", "A full description\n\n"),
+        ("A short description", None, "A short description\n\n"),
+        (None, None, ""),
+    ],
+)
+def test_embedding_context_omits_missing_descriptions(
+    description, full_description, expected
+):
+    """Missing description fields should be dropped rather than rendered as None."""
+    serialized_resource = {
+        "title": "Linear Algebra",
+        "description": description,
+        "full_description": full_description,
+        "readable_id": "18.06",
+        "resource_type_group": "course",
+        "content_files": [],
+        "resource_type": "course",
+    }
+
+    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
+        serialized_resource
+    )
+
+    assert context == f"# Linear Algebra\n\n{expected}Course number: 18.06"
+    assert "None" not in context
 
 
 def test_should_generate_for_changed_content_file(mocker):
@@ -1268,6 +1376,132 @@ def test_update_payload_no_points(mocker):
     update_content_file_payload(serialized_files[0])
     # Verify set_payload not called
     mock_qdrant.set_payload.assert_not_called()
+
+
+def test_generate_content_points_runless_run_readable_id_fallback(mocker):
+    """
+    Run-less content files (e.g. scraped marketing pages) must get a
+    run_readable_id payload equal to the resource readable_id: the content-file
+    search API rewrites resource_readable_id filters into run_readable_id
+    filters, so points without the field are unreachable. Files with a real
+    run keep the run's id.
+    """
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 500
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 50
+    mocker.patch("vector_search.utils.remove_points_matching_params")
+    mock_dense = mocker.MagicMock()
+    mock_dense.embed_documents.side_effect = lambda texts: [[0.1] for _ in texts]
+    mock_dense.model_short_name.return_value = "dense"
+    mock_sparse = mocker.MagicMock()
+    mock_sparse.embed_documents.side_effect = lambda texts: [[0.2] for _ in texts]
+    mock_sparse.model_short_name.return_value = "sparse"
+    mocker.patch("vector_search.utils.dense_encoder", return_value=mock_dense)
+    mocker.patch("vector_search.utils.sparse_encoder", return_value=mock_sparse)
+
+    runless_doc = {
+        "content": "# Marketing page\n\nSome marketing content",
+        "file_type": "marketing_page",
+        "file_extension": ".md",
+        "platform": {"code": "xpro"},
+        "resource_readable_id": "program-v1:xPRO+Test",
+        "key": "https://xpro.mit.edu/programs/program-v1:xPRO+Test/",
+        "checksum": "abc",
+    }
+    run_doc = {
+        "content": "Some plain text content",
+        "file_type": "page",
+        "file_extension": ".html",
+        "platform": {"code": "x"},
+        "resource_readable_id": "r1",
+        "run_readable_id": "run1",
+        "key": "k1",
+        "checksum": "def",
+    }
+
+    points = list(_generate_content_file_points([runless_doc, run_doc], {}))
+
+    runless_payloads = [
+        point.payload for point in points if point.payload["key"] == runless_doc["key"]
+    ]
+    run_payloads = [point.payload for point in points if point.payload["key"] == "k1"]
+    assert runless_payloads
+    assert run_payloads
+    assert all(
+        payload["run_readable_id"] == "program-v1:xPRO+Test"
+        for payload in runless_payloads
+    )
+    assert all(payload["run_readable_id"] == "run1" for payload in run_payloads)
+
+
+def test_update_payload_content_file_runless_backfills_run_readable_id(mocker):
+    """
+    Payload refresh for a run-less content file writes the resource readable_id
+    into run_readable_id (healing pre-fix points without re-embedding), while
+    the point lookup keeps using the raw document so points stored without the
+    field are still found.
+    """
+    resource = LearningResourceFactory.create(is_program=True)
+    content_file = ContentFileFactory.create(
+        learning_resource=resource, content="Test content"
+    )
+    serialized = next(iter(serialize_bulk_content_files([content_file.id])))
+    assert "run_readable_id" not in serialized
+
+    mock_qdrant = mocker.MagicMock()
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+    mock_point = mocker.MagicMock()
+    mock_point.id = "test-point-id"
+    retrieve_mock = mocker.patch(
+        "vector_search.utils.retrieve_points_matching_params", return_value=[mock_point]
+    )
+
+    update_content_file_payload(serialized)
+
+    assert "run_readable_id" not in retrieve_mock.call_args[0][0]
+    payload = mock_qdrant.set_payload.call_args[1]["payload"]
+    assert payload["run_readable_id"] == resource.readable_id
+
+
+def test_content_file_vector_hits_hydrates_runless_files():
+    """
+    Search hits for run-less content files (e.g. marketing pages) are hydrated
+    with the serialized DB record, matched via the resource readable_id their
+    payloads carry in run_readable_id.
+    """
+    resource = LearningResourceFactory.create(is_program=True)
+    content_file = ContentFileFactory.create(
+        learning_resource=resource,
+        content="marketing content",
+        file_type="marketing_page",
+    )
+    run_content_file = ContentFileFactory.create(content="run file content")
+    hits = [
+        PointStruct(
+            id=1,
+            payload={
+                "run_readable_id": resource.readable_id,
+                "key": content_file.key,
+                "chunk_content": "marketing content",
+            },
+            vector=[],
+        ),
+        PointStruct(
+            id=2,
+            payload={
+                "run_readable_id": run_content_file.run.run_id,
+                "key": run_content_file.key,
+                "chunk_content": "run file content",
+            },
+            vector=[],
+        ),
+    ]
+
+    results = _content_file_vector_hits(hits)
+
+    assert results[0]["id"] == content_file.id
+    assert results[0]["resource_readable_id"] == resource.readable_id
+    assert "content" not in results[0]
+    assert results[1]["id"] == run_content_file.id
 
 
 @pytest.mark.django_db

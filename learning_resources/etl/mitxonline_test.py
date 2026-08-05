@@ -4,7 +4,6 @@ import json
 
 # pylint: disable=redefined-outer-name
 from datetime import UTC, datetime
-from unittest.mock import ANY
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -18,7 +17,7 @@ from learning_resources.constants import (
     PlatformType,
     RunStatus,
 )
-from learning_resources.etl.constants import CourseNumberType, ETLSource
+from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.mitxonline import (
     OFFERED_BY,
     _fetch_courses_by_ids,
@@ -42,6 +41,7 @@ from learning_resources.etl.mitxonline import (
     transform_topics,
 )
 from learning_resources.etl.utils import (
+    generate_course_numbers_json,
     get_department_id_by_name,
     parse_certification,
     parse_string_to_int,
@@ -52,6 +52,30 @@ from main.test_utils import any_instance_of
 from main.utils import clean_data
 
 pytestmark = pytest.mark.django_db
+
+
+def _expected_course_numbers(course_data):
+    """Build expected course_numbers json from a course's runs (latest run first)."""
+    runs_by_recency = sorted(
+        (course_run for course_run in course_data["courseruns"] if course_run),
+        key=lambda course_run: (
+            _parse_datetime(
+                course_run.get("start_date") or course_run.get("enrollment_start")
+            )
+            or datetime.min.replace(tzinfo=UTC)
+        ),
+        reverse=True,
+    )
+    course_numbers = []
+    for course_run in runs_by_recency:
+        course_number = course_run.get("course_number")
+        if course_number and course_number not in course_numbers:
+            course_numbers.append(course_number)
+    if not course_numbers:
+        return []
+    return generate_course_numbers_json(
+        course_numbers[0], extra_nums=course_numbers[1:], is_ocw=False
+    )
 
 
 @pytest.fixture
@@ -718,17 +742,7 @@ def test_mitxonline_transform_programs(
                         course_data["topics"], OFFERED_BY["code"]
                     ),
                     "runs": runs,
-                    "course": {
-                        "course_numbers": [
-                            {
-                                "value": course_data["readable_id"],
-                                "department": ANY,
-                                "listing_type": CourseNumberType.primary.value,
-                                "primary": True,
-                                "sort_coursenum": course_data["readable_id"],
-                            }
-                        ]
-                    },
+                    "course": {"course_numbers": _expected_course_numbers(course_data)},
                     "position": len(expected_courses),
                 }
             )
@@ -896,17 +910,7 @@ def test_mitxonline_transform_courses(mock_mitxonline_courses_data, mocker, sett
                     else None
                 ),
                 "runs": runs,
-                "course": {
-                    "course_numbers": [
-                        {
-                            "value": course_data["readable_id"],
-                            "department": ANY,
-                            "listing_type": CourseNumberType.primary.value,
-                            "primary": True,
-                            "sort_coursenum": course_data["readable_id"],
-                        }
-                    ]
-                },
+                "course": {"course_numbers": _expected_course_numbers(course_data)},
                 "availability": course_data["availability"],
                 "format": [Format.asynchronous.name],
                 "pace": [Pace.instructor_paced.name],
