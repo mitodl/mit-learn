@@ -1451,7 +1451,7 @@ export interface CurrentUser {
    */
   profile?: Profile
   /**
-   * The user\'s email address (blank for anonymous users)
+   * Get the user\'s email address (blank for anonymous users)
    * @type {string}
    * @memberof CurrentUser
    */
