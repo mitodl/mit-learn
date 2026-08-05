@@ -211,7 +211,9 @@ class LearningResourceFactory(DjangoModelFactory):
     title = factory.Faker("word")
     description = factory.Faker("sentence")
     full_description = factory.Faker("text")
-    url = factory.Faker("url")
+    # Unique per resource; faker urls collide often enough to flake tests
+    # that match resources by url
+    url = factory.Sequence(lambda n: f"https://example.com/resource-{n}")
     languages = factory.List(random.choices(["en", "es"]))  # noqa: S311
     last_modified = factory.Faker("date_time", tzinfo=UTC)
     created_on = factory.Faker("date_time", tzinfo=UTC)
