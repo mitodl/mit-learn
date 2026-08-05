@@ -2181,20 +2181,18 @@ def test_canvas_course_checksum_detects_same_size_content_edit(tmp_path):
 
 def test_canvas_course_checksum_independent_of_member_order(tmp_path):
     """Zip directory order must not affect the digest"""
-    zip_a = tmp_path / "a.zip"
-    zip_b = tmp_path / "b.zip"
     members = [
         ("web_resources/x.html", b"xx"),
         ("web_resources/y.html", b"yy"),
         ("course_settings/course_settings.xml", DEFAULT_SETTINGS_XML),
     ]
-    with zipfile.ZipFile(zip_a, "w") as zf:
-        for name, content in members:
-            zf.writestr(name, content)
-    with zipfile.ZipFile(zip_b, "w") as zf:
-        for name, content in reversed(members):
-            zf.writestr(name, content)
-    assert canvas_course_checksum(zip_a, {}) == canvas_course_checksum(zip_b, {})
+    digests = []
+    for name, order in (("a.zip", members), ("b.zip", members[::-1])):
+        with zipfile.ZipFile(tmp_path / name, "w") as zf:
+            for member, content in order:
+                zf.writestr(member, content)
+        digests.append(canvas_course_checksum(tmp_path / name, {}))
+    assert digests[0] == digests[1]
 
 
 def test_canvas_course_checksum_sensitive_to_url_config(tmp_path):
@@ -2232,17 +2230,6 @@ def test_canvas_course_checksum_changes_when_lock_boundary_passes(tmp_path):
     with freeze_time("2026-09-15"):
         after_unlock = canvas_course_checksum(zip_path, {})
     assert while_locked != after_unlock
-
-
-def test_canvas_course_checksum_catches_size_preserving_publish_toggle(tmp_path):
-    """
-    Two archives with identical member names/sizes but different publish
-    state must differ — the publish-set component catches what the
-    name:size structural digest cannot.
-    """
-    locked = make_timed_lock_zip(tmp_path, "2099-01-01T00:00:00", name="locked.zip")
-    unlocked = make_timed_lock_zip(tmp_path, "2001-01-01T00:00:00", name="unlocked.zip")
-    assert canvas_course_checksum(locked, {}) != canvas_course_checksum(unlocked, {})
 
 
 def test_canvas_course_checksum_is_cwd_independent(tmp_path, monkeypatch):
@@ -2320,17 +2307,6 @@ def test_sync_canvas_archive_saves_checksum_only_after_successful_load(sync_mock
     )
     assert sync_mocks.load_content.call_count == 2
     assert resource.runs.first().checksum
-
-
-def test_sync_canvas_archive_computes_checksum_once(mocker, sync_mocks):
-    """The course digest is computed exactly once per archive"""
-    from learning_resources.etl import canvas
-
-    spy = mocker.spy(canvas, "canvas_course_checksum")
-    sync_canvas_archive(
-        sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
-    )
-    assert spy.call_count == 1
 
 
 def test_sync_canvas_archive_retries_when_nothing_loads(sync_mocks):

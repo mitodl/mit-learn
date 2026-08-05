@@ -77,9 +77,8 @@ def sync_canvas_archive(bucket, key: str, overwrite):
                 ),
             )
             if content_files_ids or not canvas_content_files:
-                # only mark the archive processed once its content actually
-                # loaded (or there was legitimately nothing to load), so a
-                # failed or empty load is retried on the next sync
+                # a failed or empty load must be retried on the next sync, so
+                # only mark processed once content loaded (or none was published)
                 run.checksum = checksum
                 run.save(update_fields=["checksum"])
 

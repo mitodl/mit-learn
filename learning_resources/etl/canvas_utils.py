@@ -715,8 +715,8 @@ def get_published_items(zipfile_path, url_config):
 # course_settings/* change bytes AND size — verified across 13 prod course
 # pairs). They are excluded from the byte digest; their semantic content
 # (publish state, titles) is covered by the publish-set component below.
-CHECKSUM_EXCLUDED_MEMBERS = ("imsmanifest.xml",)
-CHECKSUM_EXCLUDED_PREFIXES = ("course_settings/",)
+# Nothing under these paths is ever ingested as a content file (IGNORE_FILES).
+CHECKSUM_EXCLUDED = ("imsmanifest.xml", "course_settings/")
 
 
 def canvas_course_checksum(course_archive_path, url_config: dict) -> str:
@@ -732,9 +732,7 @@ def canvas_course_checksum(course_archive_path, url_config: dict) -> str:
     hasher = md5()  # noqa: S324 - non-cryptographic change detection
     with zipfile.ZipFile(course_archive_path, "r") as course_archive:
         for info in sorted(course_archive.infolist(), key=lambda i: i.filename):
-            if info.filename in CHECKSUM_EXCLUDED_MEMBERS or info.filename.startswith(
-                CHECKSUM_EXCLUDED_PREFIXES
-            ):
+            if info.filename.startswith(CHECKSUM_EXCLUDED):
                 continue
             hasher.update(f"{info.filename}\0{info.file_size}\0{info.CRC}\0".encode())
     published = get_published_items(course_archive_path, url_config)
