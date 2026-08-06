@@ -49,23 +49,28 @@ credentials for it.
 
 ### 1. Learn side — provision credentials for inbound SCIM
 
-Learn's SCIM endpoints authenticate through **Learn's own OAuth2 provider**, not
-Keycloak. Specifically:
+**Already built.** Run once per environment:
 
-- `oauth2_provider.middleware.OAuth2TokenMiddleware` populates `request.user`
-  from the bearer token
-- `mitol.scim.utils.is_authenticated_predicate` then requires
-  `user.is_authenticated and user.is_active and user.is_staff`
+```bash
+python manage.py provision_scim_client
+```
 
-So Keycloak must present a **django-oauth-toolkit access token belonging to a
-staff user**. That needs:
+It creates a staff service user (`scim-keycloak`), an OAuth2 application, and a
+bearer token bound to that user, then prints the token and the values Keycloak
+needs. Idempotent; `--rotate-token` issues a new one, since the token is only
+displayed when created.
 
-- a dedicated service user with `is_staff=True` (no usable password)
-- an OAuth2 application and a token for it
-- the token stored somewhere the Keycloak config can reference
+Why a bearer token and not the client_credentials grant: Learn's SCIM endpoints
+are guarded by Learn's own OAuth2 provider, where `OAuth2TokenMiddleware` resolves
+the token to a user and `mitol.scim.utils.is_authenticated_predicate` then requires
+that user to be active **and staff**. A client_credentials token is issued to the
+application rather than a person, so `AccessToken.user` is null and the request is
+rejected with a **401** — confirmed by testing, not assumed. So the plugin's auth
+type must be **BEARER**.
 
-Please confirm how this was done for MITx Online so Learn matches it rather than
-inventing a second pattern.
+For reference, the plugin supports `BASIC`, `API_KEY`, `BEARER`,
+`CLIENT_CREDENTIALS_GRANT` and `MUTUAL_TLS_CLIENT_AUTH`. Only `BEARER` works here
+without further changes on Learn's side.
 
 ### 2. Keycloak side — add the remote SCIM target
 
