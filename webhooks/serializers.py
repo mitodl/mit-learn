@@ -59,3 +59,29 @@ class ContentFileWebhookRequestSerializer(serializers.Serializer):
     source = serializers.CharField(required=False, allow_blank=True)
     run = serializers.CharField(required=False, allow_blank=True)
     course = serializers.CharField(required=False, allow_blank=True)
+
+
+class LearningResourceWebhookRequestSerializer(serializers.Serializer):
+    """
+    Serializer for the generic ``/api/v1/webhooks/learning_resources/`` endpoint.
+
+    Accepts a batch of pre-computed canonical LearningResource payloads pushed
+    from the OL Data Platform (Dagster). Each resource must carry at minimum
+    ``readable_id``, ``etl_source`` and ``resource_type`` so the handler can
+    route it to the correct loader; all other keys are preserved and passed
+    through to the loaders unchanged.
+    """
+
+    resources = serializers.ListField(child=serializers.DictField(), allow_empty=True)
+
+    def validate_resources(self, resources):
+        required_fields = ("readable_id", "etl_source", "resource_type")
+        for index, resource in enumerate(resources):
+            missing = [field for field in required_fields if not resource.get(field)]
+            if missing:
+                msg = (
+                    f"resources[{index}] is missing required field(s): "
+                    f"{', '.join(missing)}"
+                )
+                raise serializers.ValidationError(msg)
+        return resources
