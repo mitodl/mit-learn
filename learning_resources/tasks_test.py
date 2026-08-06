@@ -14,6 +14,7 @@ from learning_resources import factories, models, tasks
 from learning_resources.conftest import OCW_TEST_PREFIX, setup_s3, setup_s3_ocw
 from learning_resources.constants import LearningResourceType, PlatformType
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
+from learning_resources.etl.exceptions import ExtractException
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
@@ -23,7 +24,9 @@ from learning_resources.models import ContentFile, LearningResource
 from learning_resources.tasks import (
     cleanup_deleted_content_files,
     get_ocw_data,
+    get_youtube_channel_data,
     get_youtube_data,
+    get_youtube_playlist_data,
     get_youtube_transcripts,
     marketing_page_for_resources,
     scrape_marketing_pages,
@@ -83,9 +86,10 @@ def test_cache_is_cleared_after_task_run(mocker, mocked_celery):
         skip_content_files=True,
     )
 
-    tasks.get_youtube_data.delay()
+    # get_youtube_data is absent on purpose: it only queues the fan-out, whose
+    # writes land long after it returns, so it has nothing to invalidate
     tasks.get_youtube_transcripts.delay()
-    assert mocked_clear_views_cache.call_count == 10
+    assert mocked_clear_views_cache.call_count == 9
 
 
 def test_get_mit_edx_data_valid(mocker):
@@ -458,12 +462,222 @@ def test_get_ocw_courses(settings, mocker, mocked_celery, timestamp, overwrite):
     )
 
 
-@pytest.mark.parametrize("channel_ids", [["abc", "123"], None])
-def test_get_youtube_data(mocker, settings, channel_ids):
-    """Verify that the get_youtube_data invokes the YouTube ETL pipeline with expected params"""
-    mock_pipelines = mocker.patch("learning_resources.tasks.pipelines")
-    get_youtube_data.delay(channel_ids=channel_ids)
-    mock_pipelines.youtube_etl.assert_called_once_with(channel_ids=channel_ids)
+@pytest.fixture
+def youtube_settings(settings):
+    """Configure youtube ETL settings"""
+    settings.YOUTUBE_CONFIG_URL = "http://test.youtube/config.yaml"
+    settings.YOUTUBE_DEVELOPER_KEY = "key"
+    return settings
+
+
+def _channel_config(channel_id, **kwargs):
+    """Build a youtube channel config"""
+    return {"channel_id": channel_id, "offered_by": "ocw", **kwargs}
+
+
+def _playlist_data(playlist_id):
+    """Build the raw youtube api data for a playlist"""
+    return {
+        "id": playlist_id,
+        "snippet": {
+            "title": f"Playlist {playlist_id}",
+            "thumbnails": {"high": {"url": f"http://img/{playlist_id}.jpg"}},
+        },
+    }
+
+
+@pytest.mark.parametrize("channel_ids", [["channel1"], None])
+def test_get_youtube_data(mocker, youtube_settings, channel_ids):
+    """get_youtube_data should queue one task per configured channel"""
+    channel_configs = [_channel_config("channel1"), _channel_config("channel2")]
+    mock_configs = mocker.patch(
+        "learning_resources.tasks.youtube.get_youtube_channel_configs",
+        autospec=True,
+        return_value=channel_configs,
+    )
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.loaders.unpublish_removed_youtube_channels",
+        autospec=True,
+    )
+    mock_channel_task = mocker.patch(
+        "learning_resources.tasks.get_youtube_channel_data", autospec=True
+    )
+
+    assert get_youtube_data.delay(channel_ids=channel_ids).get() == 2
+
+    mock_configs.assert_called_once_with(channel_ids=channel_ids)
+    assert [
+        call.args[0] for call in mock_channel_task.delay.call_args_list
+    ] == channel_configs
+
+    if channel_ids:
+        # a run filtered to specific channels doesn't know the full channel set,
+        # so it must not unpublish the channels it wasn't asked about
+        mock_unpublish.assert_not_called()
+    else:
+        mock_unpublish.assert_called_once_with(["channel1", "channel2"])
+
+
+def test_get_youtube_data_without_configs_does_not_unpublish(mocker, youtube_settings):
+    """An empty channel config should be treated as a failure, not as "no channels\""""
+    mocker.patch(
+        "learning_resources.tasks.youtube.get_youtube_channel_configs",
+        autospec=True,
+        return_value=[],
+    )
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.loaders.unpublish_removed_youtube_channels",
+        autospec=True,
+    )
+    mock_channel_task = mocker.patch(
+        "learning_resources.tasks.get_youtube_channel_data", autospec=True
+    )
+
+    assert get_youtube_data.delay().get() == 0
+
+    mock_unpublish.assert_not_called()
+    mock_channel_task.delay.assert_not_called()
+
+
+@pytest.mark.parametrize("setting", ["YOUTUBE_CONFIG_URL", "YOUTUBE_DEVELOPER_KEY"])
+def test_get_youtube_data_missing_settings(mocker, youtube_settings, setting):
+    """A missing youtube setting should stop the run before any extraction"""
+    setattr(youtube_settings, setting, None)
+    mock_configs = mocker.patch(
+        "learning_resources.tasks.youtube.get_youtube_channel_configs", autospec=True
+    )
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.loaders.unpublish_removed_youtube_channels",
+        autospec=True,
+    )
+
+    assert get_youtube_data.delay().get() == 0
+
+    mock_configs.assert_not_called()
+    mock_unpublish.assert_not_called()
+
+
+def test_get_youtube_channel_data(mocker, youtube_settings):
+    """A channel task should load the channel and queue a task per playlist"""
+    mocker.patch("learning_resources.tasks.youtube.get_youtube_client", autospec=True)
+    mocker.patch(
+        "learning_resources.tasks.youtube.extract_channel",
+        autospec=True,
+        return_value={"id": "channel1", "snippet": {"title": "Channel 1"}},
+    )
+    playlists = [_playlist_data("playlist1"), _playlist_data("playlist2")]
+    mocker.patch(
+        "learning_resources.tasks.youtube.extract_playlist_metadata",
+        autospec=True,
+        return_value=iter([(playlists[0], True), (playlists[1], False)]),
+    )
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.loaders.unpublish_removed_playlists", autospec=True
+    )
+    mock_playlist_task = mocker.patch(
+        "learning_resources.tasks.get_youtube_playlist_data", autospec=True
+    )
+
+    get_youtube_channel_data.delay(_channel_config("channel1"))
+
+    video_channel = models.VideoChannel.objects.get(channel_id="channel1")
+    assert video_channel.title == "Channel 1"
+    assert video_channel.published is True
+    assert video_channel.etl_source == ETLSource.youtube.name
+
+    # the full playlist listing is resolved before anything is unpublished
+    mock_unpublish.assert_called_once_with(video_channel, ["playlist1", "playlist2"])
+
+    assert [
+        (call.args, call.kwargs) for call in mock_playlist_task.delay.call_args_list
+    ] == [
+        (("channel1", playlists[0], "ocw"), {"create_videos": True}),
+        (("channel1", playlists[1], "ocw"), {"create_videos": False}),
+    ]
+
+
+def test_get_youtube_channel_data_missing_from_youtube(mocker, youtube_settings):
+    """A channel youtube no longer returns should be left alone"""
+    mocker.patch("learning_resources.tasks.youtube.get_youtube_client", autospec=True)
+    mocker.patch(
+        "learning_resources.tasks.youtube.extract_channel",
+        autospec=True,
+        return_value=None,
+    )
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.loaders.unpublish_removed_playlists", autospec=True
+    )
+    mock_playlist_task = mocker.patch(
+        "learning_resources.tasks.get_youtube_playlist_data", autospec=True
+    )
+
+    get_youtube_channel_data.delay(_channel_config("channel1"))
+
+    assert models.VideoChannel.objects.count() == 0
+    mock_unpublish.assert_not_called()
+    mock_playlist_task.delay.assert_not_called()
+
+
+def test_get_youtube_channel_data_extract_error_keeps_playlists(
+    mocker, youtube_settings
+):
+    """A failed playlist listing must not unpublish the channel's playlists"""
+    mocker.patch("learning_resources.tasks.youtube.get_youtube_client", autospec=True)
+    mocker.patch(
+        "learning_resources.tasks.youtube.extract_channel",
+        autospec=True,
+        return_value={"id": "channel1", "snippet": {"title": "Channel 1"}},
+    )
+    mocker.patch(
+        "learning_resources.tasks.youtube.extract_playlist_metadata",
+        autospec=True,
+        side_effect=ExtractException("boom"),
+    )
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.loaders.unpublish_removed_playlists", autospec=True
+    )
+
+    with pytest.raises(ExtractException):
+        get_youtube_channel_data.delay(_channel_config("channel1"))
+
+    mock_unpublish.assert_not_called()
+
+
+def test_get_youtube_playlist_data(mocker, youtube_settings):
+    """A playlist task should transform and load only its own playlist"""
+    video_channel = factories.VideoChannelFactory.create(channel_id="channel1")
+    mocker.patch("learning_resources.tasks.youtube.get_youtube_client", autospec=True)
+    mock_videos = mocker.patch(
+        "learning_resources.tasks.youtube.extract_playlist_items", autospec=True
+    )
+    mock_load_playlist = mocker.patch(
+        "learning_resources.tasks.loaders.load_playlist", autospec=True
+    )
+
+    get_youtube_playlist_data.delay(
+        "channel1", _playlist_data("playlist1"), "ocw", create_videos=True
+    )
+
+    mock_videos.assert_called_once_with(ANY, "playlist1")
+    loaded_channel, playlist_data = mock_load_playlist.call_args.args
+    assert loaded_channel == video_channel
+    assert playlist_data["playlist_id"] == "playlist1"
+    assert playlist_data["create_videos"] is True
+    assert playlist_data["offered_by"] == {"code": "ocw"}
+
+
+def test_get_youtube_playlist_data_without_channel(mocker, youtube_settings):
+    """A playlist whose channel vanished mid-run should be skipped, not crash"""
+    mocker.patch("learning_resources.tasks.youtube.get_youtube_client", autospec=True)
+    mock_load_playlist = mocker.patch(
+        "learning_resources.tasks.loaders.load_playlist", autospec=True
+    )
+
+    get_youtube_playlist_data.delay(
+        "channel1", _playlist_data("playlist1"), "ocw", create_videos=True
+    )
+
+    mock_load_playlist.assert_not_called()
 
 
 def test_get_youtube_transcripts(mocker):
