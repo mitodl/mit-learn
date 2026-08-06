@@ -1,7 +1,8 @@
 import DOMPurify from "isomorphic-dompurify"
 import { collapseWhitespace } from "@/common/utils"
 
-const BLOCK_BOUNDARY_TAGS = /<\/(?:p|div|li|h[1-6])>|<br\s*\/?>/gi
+const BLOCK_BOUNDARY_TAGS =
+  /<\/(?:p|div|li|h[1-6]|td|th|tr|blockquote|pre)>|<br\s*\/?>/gi
 
 /**
  * Converts a sanitized-HTML string (e.g. a resource `description`) to plain

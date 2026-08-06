@@ -15,6 +15,18 @@ describe("htmlToPlainText", () => {
     expect(htmlToPlainText("Line one<br>Line two")).toBe("Line one Line two")
   })
 
+  it("keeps a space between adjacent table cells", () => {
+    expect(
+      htmlToPlainText("<table><tr><td>A</td><td>B</td></tr></table>"),
+    ).toBe("A B")
+  })
+
+  it("keeps a space after a blockquote or pre block", () => {
+    expect(
+      htmlToPlainText("<blockquote>Quote</blockquote><pre>Code</pre>Text"),
+    ).toBe("Quote Code Text")
+  })
+
   it("strips links but keeps their text", () => {
     expect(
       htmlToPlainText('<p><a href="https://ocw.mit.edu">OCW</a> resources</p>'),
