@@ -464,12 +464,10 @@ def test_account_action_complete(settings, client, mock_sync_email, kc_action_st
 @pytest.mark.parametrize(
     ("action", "kc_action_status"),
     [
-        # Keycloak didn't report an outcome
-        ("update-email", None),
-        ("update-email", "who-knows"),
         # Not an action we started
         ("delete-account", "success"),
         (None, "success"),
+        ("delete-account", None),
     ],
 )
 def test_account_action_complete_unusable_params(
@@ -682,3 +680,101 @@ def test_account_action_complete_password_never_pending(
     assert resp.status_code == 302
     assert "account_action_status=success" in resp.headers["Location"]
     mock_sync_email.assert_not_called()
+
+
+@pytest.mark.usefixtures("mock_sync_email")
+def test_account_action_complete_refreshes_on_confirmation_leg(settings, client):
+    """
+    The confirmation leg carries nothing we can read, so bounce via Keycloak.
+
+    Clicking the link in Keycloak's confirmation email applies the change and
+    returns the user here through a plain hyperlink — only the params we put in
+    the redirect URI ourselves, no authorization code. One silent
+    re-authorization gets us claims we can actually read.
+    """
+    next_url = urljoin(settings.APP_BASE_URL, "/dashboard/settings")
+    params = urlencode({"next": next_url, "account_action": "update-email"})
+
+    resp = client.get(f"{reverse('account-action-complete')}?{params}")
+
+    assert resp.status_code == 302
+    parsed = urlparse(resp.headers["Location"])
+    assert parsed.netloc == urlparse(settings.KEYCLOAK_BASE_URL).netloc
+
+    query = parse_qs(parsed.query)
+    # Invisible to the user: no login form if a session already exists.
+    assert query["prompt"] == ["none"]
+    # No kc_action — we are reading claims, not starting another action.
+    assert "kc_action" not in query
+    # The marker is what stops this repeating.
+    assert "account_action_refreshed=1" in query["redirect_uri"][0]
+
+
+def test_account_action_complete_refresh_is_not_repeated(settings, client):
+    """
+    A refreshed callback with still no code must not bounce again.
+
+    Keycloak answers prompt=none with an error rather than a code when there is
+    no session, so without the marker check this would ping-pong.
+    """
+    next_url = urljoin(settings.APP_BASE_URL, "/dashboard/settings")
+    params = urlencode(
+        {
+            "next": next_url,
+            "account_action": "update-email",
+            "account_action_refreshed": "1",
+            "error": "login_required",
+        }
+    )
+
+    resp = client.get(f"{reverse('account-action-complete')}?{params}")
+
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == next_url
+
+
+def test_account_action_complete_reports_success_after_refresh(
+    settings, client, mock_sync_email
+):
+    """Coming back from the refresh with a changed address reports success"""
+    mock_sync_email.return_value = True
+    next_url = urljoin(settings.APP_BASE_URL, "/dashboard/settings")
+    params = urlencode(
+        {
+            "next": next_url,
+            "account_action": "update-email",
+            "account_action_refreshed": "1",
+            "code": "a-code",
+        }
+    )
+
+    resp = client.get(f"{reverse('account-action-complete')}?{params}")
+
+    assert resp.status_code == 302
+    assert "account_action_status=success" in resp.headers["Location"]
+    # redirect_uri for the exchange must include the marker, or Keycloak rejects
+    # it for not matching the one the authorization request used.
+    assert (
+        "account_action_refreshed=1" in mock_sync_email.call_args.kwargs["redirect_uri"]
+    )
+
+
+def test_account_action_complete_quiet_when_refresh_shows_no_change(
+    settings, client, mock_sync_email
+):
+    """No stray alert if the refresh shows the address didn't move"""
+    mock_sync_email.return_value = False
+    next_url = urljoin(settings.APP_BASE_URL, "/dashboard/settings")
+    params = urlencode(
+        {
+            "next": next_url,
+            "account_action": "update-email",
+            "account_action_refreshed": "1",
+            "code": "a-code",
+        }
+    )
+
+    resp = client.get(f"{reverse('account-action-complete')}?{params}")
+
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == next_url

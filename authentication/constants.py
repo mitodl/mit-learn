@@ -8,6 +8,10 @@ from enum import StrEnum
 ACCOUNT_ACTION_PARAM = "account_action"
 ACCOUNT_ACTION_STATUS_PARAM = "account_action_status"
 
+# Marks a callback that has already been through one silent re-authorization, so
+# a leg that still arrives without an authorization code can't loop.
+ACCOUNT_ACTION_REFRESHED_PARAM = "account_action_refreshed"
+
 
 class AccountAction(StrEnum):
     """Account actions a user can start from the settings page"""

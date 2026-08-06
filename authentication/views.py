@@ -14,6 +14,7 @@ from django.views.generic.base import RedirectView
 from authentication.api import is_sso_user, sync_email_from_keycloak
 from authentication.constants import (
     ACCOUNT_ACTION_PARAM,
+    ACCOUNT_ACTION_REFRESHED_PARAM,
     ACCOUNT_ACTION_STATUS_PARAM,
     KEYCLOAK_ACTION_STATUSES,
     KEYCLOAK_ACTIONS,
@@ -147,13 +148,14 @@ def with_query_params(url, params):
     return urlunparse(parsed._replace(query=query))
 
 
-def build_account_action_callback_url(request, *, next_url, action):
+def build_account_action_callback_url(request, *, next_url, action, refreshed=False):
     """
     Build the callback URL Keycloak returns the user to.
 
     Both legs of the flow must produce a byte-identical string: it is sent as
     `redirect_uri` in the authorization request, and again when exchanging the
-    authorization code, where Keycloak requires an exact match.
+    authorization code, where Keycloak requires an exact match. That includes the
+    refresh marker, so it has to be reproduced here rather than appended later.
 
     Keycloak returns the user to the API domain, which is where APISIX (and so
     the OIDC client's registered redirect URIs) lives.
@@ -164,7 +166,23 @@ def build_account_action_callback_url(request, *, next_url, action):
         if settings.MITOL_API_BASE_URL
         else request.build_absolute_uri(callback_path)
     )
-    return with_query_params(base_url, {"next": next_url, ACCOUNT_ACTION_PARAM: action})
+    params = {"next": next_url, ACCOUNT_ACTION_PARAM: action}
+    if refreshed:
+        params[ACCOUNT_ACTION_REFRESHED_PARAM] = "1"
+    return with_query_params(base_url, params)
+
+
+def keycloak_authorization_url(params):
+    """Build a URL for the realm's OIDC authorization endpoint"""
+    return "".join(
+        [
+            settings.KEYCLOAK_BASE_URL.removesuffix("/"),
+            "/realms/",
+            settings.KEYCLOAK_REALM_NAME,
+            "/protocol/openid-connect/auth?",
+            urlencode(params),
+        ]
+    )
 
 
 class AccountActionStartView(RedirectView):
@@ -224,26 +242,18 @@ class AccountActionStartView(RedirectView):
             self.request, next_url=next_url, action=action
         )
 
-        qs = {
-            "client_id": settings.KEYCLOAK_CLIENT_ID,
-            "response_type": "code",
-            "redirect_uri": callback_url,
-            # `email` is requested explicitly so the code we exchange on the
-            # callback can read the updated address. It is one of Keycloak's
-            # default client scopes, but relying on that being true of every
-            # environment's client would fail silently and confusingly.
-            "scope": "openid email",
-            "kc_action": KEYCLOAK_ACTIONS[action],
-        }
-
-        return "".join(
-            [
-                settings.KEYCLOAK_BASE_URL.removesuffix("/"),
-                "/realms/",
-                settings.KEYCLOAK_REALM_NAME,
-                "/protocol/openid-connect/auth?",
-                urlencode(qs),
-            ]
+        return keycloak_authorization_url(
+            {
+                "client_id": settings.KEYCLOAK_CLIENT_ID,
+                "response_type": "code",
+                "redirect_uri": callback_url,
+                # `email` is requested explicitly so the code we exchange on the
+                # callback can read the updated address. It is one of Keycloak's
+                # default client scopes, but relying on that being true of every
+                # environment's client would fail silently and confusingly.
+                "scope": "openid email",
+                "kc_action": KEYCLOAK_ACTIONS[action],
+            }
         )
 
 
@@ -257,30 +267,56 @@ class AccountActionCompleteView(RedirectView):
     cached userinfo still holds the old one.
     """
 
+    @property
+    def refreshed(self) -> bool:
+        """Whether this callback already came via a silent re-authorization"""
+        return self.request.GET.get(ACCOUNT_ACTION_REFRESHED_PARAM) == "1"
+
     def sync_changed_email(self, next_url, action) -> bool:
         """
-        Pull the new email from Keycloak after an email change.
+        Pull the current email from Keycloak and store it.
 
-        Returns True only if the stored email actually changed. A False means
-        either that Keycloak still reports the old address — with verify_email
-        on, the change is pending a confirmation link — or that we could not
-        read Keycloak at all. The caller uses this to avoid telling the user
-        their email changed when it has not.
+        Returns True only if the stored email actually changed.
         """
         code = self.request.GET.get("code")
         if not code:
-            log.warning(
-                "Account action callback for %s had no authorization code; "
-                "cannot read the updated email from Keycloak",
-                action,
-            )
             return False
 
         return sync_email_from_keycloak(
             code=code,
             redirect_uri=build_account_action_callback_url(
-                self.request, next_url=next_url, action=action
+                self.request,
+                next_url=next_url,
+                action=action,
+                refreshed=self.refreshed,
             ),
+        )
+
+    def build_refresh_url(self, next_url, action):
+        """
+        Start one silent authorization round trip to read the user's claims.
+
+        Confirming an email change happens entirely inside Keycloak: it emails a
+        link, and clicking it returns the user here through a plain hyperlink
+        carrying only the params we put in the redirect URI ourselves — no
+        authorization code, so nothing to exchange. Without this the address
+        Keycloak just applied would not reach us until the gateway session turned
+        over, which is two weeks in deployed environments.
+
+        `prompt=none` keeps it invisible: the user has just come from Keycloak so
+        a session should exist, and if it doesn't Keycloak returns an error to the
+        callback rather than showing a login form.
+        """
+        return keycloak_authorization_url(
+            {
+                "client_id": settings.KEYCLOAK_CLIENT_ID,
+                "response_type": "code",
+                "redirect_uri": build_account_action_callback_url(
+                    self.request, next_url=next_url, action=action, refreshed=True
+                ),
+                "scope": "openid email",
+                "prompt": "none",
+            }
         )
 
     def get_redirect_url(self, *args, **kwargs):  # noqa: ARG002
@@ -291,10 +327,42 @@ class AccountActionCompleteView(RedirectView):
 
         action = parse_account_action(raw_action)
         status = KEYCLOAK_ACTION_STATUSES.get(keycloak_status)
+        has_code = bool(self.request.GET.get("code"))
 
-        if action is None or status is None:
-            # Not something we can report on, so redirect without an alert
-            # rather than guess at an outcome.
+        if action is None:
+            log.warning(
+                "Account action callback for an unrecognised action: %s", raw_action
+            )
+            return next_url
+
+        # The confirmation leg: Keycloak has applied the change but tells us
+        # nothing about it. Bounce through Keycloak once to obtain claims we can
+        # actually read. The marker stops this repeating if no code comes back.
+        if (
+            action == AccountAction.UPDATE_EMAIL
+            and status is None
+            and not has_code
+            and not self.refreshed
+            and settings.KEYCLOAK_CLIENT_ID
+        ):
+            return self.build_refresh_url(next_url, action)
+
+        if has_code and status is None:
+            # Returning from the silent refresh above. Report success only if the
+            # address really moved; staying quiet is better than a stray alert if
+            # this callback was reached some other way.
+            if self.sync_changed_email(next_url, action):
+                return with_query_params(
+                    next_url,
+                    {
+                        ACCOUNT_ACTION_PARAM: action,
+                        ACCOUNT_ACTION_STATUS_PARAM: AccountActionStatus.SUCCESS,
+                    },
+                )
+            return next_url
+
+        if status is None:
+            # Nothing to report and nothing to read.
             log.warning(
                 "Account action callback with unusable params: action=%s, %s=%s "
                 "(params present: %s)",
