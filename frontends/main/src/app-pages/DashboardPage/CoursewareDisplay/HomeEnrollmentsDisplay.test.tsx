@@ -26,7 +26,6 @@ import {
 } from "@/test-utils"
 import { HomeEnrollmentsDisplay } from "./HomeEnrollmentsDisplay"
 import * as mitxonline from "api/mitxonline-test-utils"
-import { urls as learnUrls, factories as learnFactories } from "api/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { setupEnrollments } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
@@ -38,17 +37,6 @@ const mockedUseFeatureFlagEnabled = jest
 
 describe("HomeEnrollmentsDisplay", () => {
   setupLocationMock()
-
-  // useAddToBasket/useClearBasket check Learn's own auth state (separate
-  // from mitxonline's) before invalidating the checkout-payload query. Set at
-  // the describe level since many tests here mock the rest of the user/
-  // enrollment APIs inline rather than through setupApis below.
-  beforeEach(() => {
-    setMockResponse.get(
-      learnUrls.userMe.get(),
-      learnFactories.user.user({ is_authenticated: true }),
-    )
-  })
 
   const setupApis = (includeExpired: boolean = true) => {
     const mitxOnlineUser = mitxonline.factories.user.user()
