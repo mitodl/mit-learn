@@ -2,6 +2,7 @@
 Classes related to models for main
 """
 
+from django.db import models
 from django.db.models import DateTimeField, Model
 from django.db.models.query import QuerySet
 
@@ -52,3 +53,70 @@ class NoDefaultTimestampedModel(TimestampedModel):
 
     class Meta:
         abstract = True
+
+
+class TaskJob(TimestampedModel):
+    """
+    Tracks a long-running celery task that has been decomposed into batches
+    (TaskBatch rows), so its progress and completion live in the database
+    rather than in any single worker process
+    """
+
+    class Status(models.TextChoices):
+        QUEUED = "queued"  # created; the start task has not completed yet
+        RUNNING = "running"  # batches created and executing
+        FINISHING = "finishing"  # all batches done; finish step claimed
+        SUCCEEDED = "succeeded"
+        FAILED = "failed"
+
+    ACTIVE_STATUSES = (Status.QUEUED, Status.RUNNING, Status.FINISHING)
+
+    task_name = models.CharField(max_length=255, db_index=True)
+    params = models.JSONField(default=dict)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.QUEUED,
+        db_index=True,
+    )
+    error = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"Task job {self.id} {self.task_name} ({self.status})"
+
+
+class TaskBatch(TimestampedModel):
+    """A unit of work for a TaskJob"""
+
+    class Status(models.TextChoices):
+        QUEUED = "queued"  # waiting for a worker to pick it up
+        RUNNING = "running"  # a worker has started executing it
+        SUCCEEDED = "succeeded"
+        FAILED = "failed"
+
+    NON_TERMINAL_STATUSES = (Status.QUEUED, Status.RUNNING)
+
+    job = models.ForeignKey(TaskJob, on_delete=models.CASCADE, related_name="batches")
+    batch_key = models.CharField(max_length=255)
+    kind = models.CharField(max_length=64)
+    params = models.JSONField(default=dict)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.QUEUED,
+        db_index=True,
+    )
+    error = models.TextField(blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["job", "batch_key"], name="unique_task_batch_key"
+            )
+        ]
+        indexes = [
+            models.Index(fields=["job", "status"], name="taskbatch_job_status_idx")
+        ]
+
+    def __str__(self):
+        return f"Task batch {self.batch_key} ({self.status}) for job {self.job_id}"

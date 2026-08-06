@@ -11,12 +11,15 @@ from factory import (
     LazyFunction,
     RelatedFactory,
     SelfAttribute,
+    Sequence,
     SubFactory,
     Trait,
 )
 from factory.django import DjangoModelFactory
 from factory.fuzzy import FuzzyText
 from social_django.models import UserSocialAuth
+
+from main.models import TaskBatch, TaskJob
 
 
 class UserFactory(DjangoModelFactory):
@@ -62,3 +65,25 @@ class UserSocialAuthFactory(DjangoModelFactory):
 
     class Meta:
         model = UserSocialAuth
+
+
+class TaskJobFactory(DjangoModelFactory):
+    """Factory for TaskJobs"""
+
+    task_name = FuzzyText()
+    params = LazyFunction(dict)
+
+    class Meta:
+        model = TaskJob
+
+
+class TaskBatchFactory(DjangoModelFactory):
+    """Factory for TaskBatches"""
+
+    job = SubFactory(TaskJobFactory)
+    batch_key = Sequence(lambda n: f"batch:{n}")
+    kind = FuzzyText()
+    params = LazyFunction(dict)
+
+    class Meta:
+        model = TaskBatch

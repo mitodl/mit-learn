@@ -163,6 +163,14 @@ dev = [
 package = false
 default-groups = "all"
 override-dependencies = ["setuptools<80"]
+exclude-newer = "7d"
+required-version = ">=0.9.17"
+
+[tool.uv.exclude-newer-package]
+mitol-django-common = "0d"
+mitol-django-observability = "0d"
+mitol-django-scim = "0d"
+mitol-drf-lint = "0d"
 
 [tool.uv.build-backend]
 module-root = ""

@@ -14,9 +14,6 @@ EDX_COURSE_BUCKET_PREFIX = get_string(
     "EDX_COURSE_BUCKET_PREFIX", "edxorg-raw-data/edxorg/raw_data/course_xml/"
 )
 
-# Authentication for the github api
-GITHUB_ACCESS_TOKEN = get_string("GITHUB_ACCESS_TOKEN", None)
-
 # OCW settings
 OCW_LIVE_BUCKET = get_string("OCW_LIVE_BUCKET", None)
 OCW_ITERATOR_CHUNK_SIZE = get_int("OCW_ITERATOR_CHUNK_SIZE", 1000)

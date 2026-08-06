@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.77.1 (Released August 05, 2026)
+--------------
+
+- serializer performance - cache/re-use child serializer (#3713)
+- feat: soft delete feature for news and articles content (#3681)
+- Add trackFilterCourseCatalog GTM event (#3707)
+- Rate-limit content_feedback submissions per user (#3705)
+- Use psycopg's C implementation; drop unused psycopg2 and django-server-status (#3701)
+
 Version 0.76.2 (Released August 03, 2026)
 --------------
 
