@@ -73,6 +73,31 @@ handling authentication request to identity provider" page, and its logs show
 
 `UPDATE_PASSWORD` is a built-in action and needs neither step.
 
+#### Email, and why it matters for changing your email
+
+Deployed realms have `verify_email` enabled, which changes the flow materially:
+submitting the "Update your email" form does **not** change the address. Keycloak
+emails a confirmation link to the new address and only applies the change once
+that link is clicked. Testing against a local realm with verification off will
+give you a different flow than production.
+
+The `keycloak` profile therefore includes **Mailpit**, which captures every email
+Keycloak sends. Nothing leaves your machine, so any address works.
+
+- Inbox: http://localhost:8025
+- The realm export points Keycloak's SMTP at `mailpit:1025` and sets
+  `verifyEmail: true`, matching the deployed realms.
+
+`--import-realm` skips realms that already exist, so an existing local setup
+needs this applied once by hand — Keycloak admin → _Realm settings → Email_
+(host `mailpit`, port `1025`, from `no-reply@open.odl.local`, no auth/SSL/TLS),
+and _Realm settings → Login → Verify email_ on.
+
+One gotcha when using the **Test connection** button: Keycloak sends the test to
+the _logged-in admin user's own_ address, so it returns a 500 with only
+`Failed to send email` in the logs if that user has no email set. Set one on the
+`admin` user in the `master` realm first.
+
 #### The MIT Learn login theme
 
 Out of the box, local Keycloak serves the stock Keycloak login pages, so the
