@@ -107,19 +107,12 @@ export const useCourseEnrollment = (
       }
       trackStartEnrollment(course.title)
       if (kind === "paid") {
-        // Paid checkout runs for anonymous users too. The basket and cart live
-        // on MITx Online, which supports anonymous baskets, so we hand off
-        // directly to checkout and defer account creation to the MITx Online
-        // flow (Review → Account → Verify → Payment).
         const product = selectedRun?.products?.[0]
         if (product) {
           trackBeginCheckout(course.title)
           replaceBasketItem.mutate(product.id)
         }
       } else if (kind === "free") {
-        // Free enrollment requires an account — there is no anonymous audit
-        // enrollment — so unauthenticated users are routed to signup first
-        // (handled by the guard above).
         if (selectedRun) {
           createEnrollment.mutate(
             { run_id: selectedRun.id },
