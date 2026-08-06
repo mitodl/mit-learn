@@ -42,6 +42,7 @@ from learning_resources_search.tasks import (
     _get_percolated_rows,
     _group_percolated_rows,
     _infer_percolate_group,
+    _validated_resource_image_url,
     bulk_deindex_learning_resources,
     deindex_document,
     deindex_run_content_files,
@@ -58,6 +59,7 @@ from learning_resources_search.tasks import (
 )
 from main.factories import UserFactory
 from main.test_utils import assert_not_raises
+from main.utils import frontend_absolute_url
 
 pytestmark = pytest.mark.django_db
 User = get_user_model()
@@ -78,6 +80,14 @@ def _wrap_retry_mock(mocker):
 def mocked_api(mocker):
     """Mock object that patches the channels API"""
     return mocker.patch("learning_resources_search.tasks.api")
+
+
+@pytest.fixture(autouse=True)
+def mock_image_url_is_reachable(mocker):
+    """Mock the image URL reachability check to avoid network requests"""
+    return mocker.patch(
+        "learning_resources_search.tasks.image_url_is_reachable", return_value=True
+    )
 
 
 def test_upsert_learning_resource(mocked_api):
@@ -1243,6 +1253,31 @@ def test_digest_email_template(mocked_api, mocker, mocked_celery):
     assert user.id == task_args[0]
     for topic in topics:
         assert topic in template_data
+
+
+@pytest.mark.parametrize("reachable", [True, False])
+def test_validated_resource_image_url(mock_image_url_is_reachable, reachable):
+    """
+    The digest email should use the resource image only if its URL is
+    reachable, and the default image otherwise
+    """
+    mock_image_url_is_reachable.return_value = reachable
+    resource = LearningResourceFactory.create(is_course=True)
+    validated_url = _validated_resource_image_url(resource)
+    if reachable:
+        assert validated_url == resource.image.url
+    else:
+        assert validated_url == frontend_absolute_url("/images/default_resource.jpg")
+    mock_image_url_is_reachable.assert_called_once_with(resource.image.url)
+
+
+def test_validated_resource_image_url_no_image(mock_image_url_is_reachable):
+    """The digest email should use the default image if the resource has none"""
+    resource = LearningResourceFactory.create(is_course=True, no_image=True)
+    assert _validated_resource_image_url(resource) == frontend_absolute_url(
+        "/images/default_resource.jpg"
+    )
+    mock_image_url_is_reachable.assert_not_called()
 
 
 def test_subscription_digest_subject():

@@ -26,6 +26,7 @@ from learning_resources.tasks import (
     get_youtube_data,
     get_youtube_transcripts,
     marketing_page_for_resources,
+    prune_unreachable_resource_images,
     scrape_marketing_pages,
     sync_canvas_courses,
     update_next_start_date_and_prices,
@@ -1187,3 +1188,58 @@ def test_cleanup_deleted_content_files_returns_error_on_unexpected_exception(moc
     result = cleanup_deleted_content_files()
 
     assert result == "cleanup_deleted_content_files threw an error"
+
+
+def test_prune_unreachable_resource_images(mocker):
+    """
+    prune_unreachable_resource_images should delete image records with dead
+    URLs and reindex the affected published resources
+    """
+    good_resource = LearningResourceFactory.create(is_course=True)
+    bad_resource = LearningResourceFactory.create(is_course=True)
+    unpublished_resource = LearningResourceFactory.create(
+        is_course=True, published=False
+    )
+    reachable_mock = mocker.patch(
+        "learning_resources.tasks.image_url_is_reachable",
+        side_effect=lambda url: url == good_resource.image.url,
+    )
+    upserted_mock = mocker.patch("learning_resources.tasks.resource_upserted_actions")
+
+    removed = prune_unreachable_resource_images()
+
+    assert removed == 1
+    good_resource.refresh_from_db()
+    bad_resource.refresh_from_db()
+    unpublished_resource.refresh_from_db()
+    assert good_resource.image is not None
+    assert bad_resource.image is None
+    # unpublished resources should not be checked at all
+    assert unpublished_resource.image is not None
+    checked_urls = [call.args[0] for call in reachable_mock.call_args_list]
+    assert unpublished_resource.image.url not in checked_urls
+    upserted_mock.assert_called_once_with(
+        bad_resource, percolate=False, generate_embeddings=False
+    )
+
+
+def test_prune_unreachable_resource_images_shared_image(mocker):
+    """
+    Images are deduplicated by URL, so a single dead image record can be shared
+    by many resources. All published referencing resources should be reindexed.
+    """
+    shared_image = factories.LearningResourceImageFactory.create(
+        url="http://example.com/dead.jpg"
+    )
+    shared = LearningResourceFactory.create_batch(2, is_course=True, image=shared_image)
+    mocker.patch("learning_resources.tasks.image_url_is_reachable", return_value=False)
+    upserted_mock = mocker.patch("learning_resources.tasks.resource_upserted_actions")
+
+    # a shared image is only checked (and deleted) once
+    assert prune_unreachable_resource_images() == 1
+    assert not models.LearningResourceImage.objects.filter(id=shared_image.id).exists()
+    for resource in shared:
+        resource.refresh_from_db()
+        assert resource.image is None
+    reindexed = {call.args[0].id for call in upserted_mock.call_args_list}
+    assert reindexed == {resource.id for resource in shared}
