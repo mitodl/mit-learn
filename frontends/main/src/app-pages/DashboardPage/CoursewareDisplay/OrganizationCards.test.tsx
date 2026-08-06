@@ -348,7 +348,6 @@ describe("OrganizationCards", () => {
         name: "Test Organization",
         logo: undefined,
         slug: "org-test-org",
-        sso_organization_id: null,
         contracts: [
           mitxOnlineFactories.contracts.contract({
             id: 1,
