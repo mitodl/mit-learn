@@ -12,6 +12,7 @@ import {
   factories as mitxFactories,
   urls as mitxUrls,
 } from "api/mitxonline-test-utils"
+import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { useCourseEnrollment } from "./useCourseEnrollment"
 import type { EnrollActionKind } from "./useCourseEnrollment"
 import { getSelectedRun } from "./courseRun"
@@ -369,7 +370,7 @@ describe("useCourseEnrollment — actions", () => {
     const clearUrl = mitxUrls.baskets.clear()
     const basketUrl = mitxUrls.baskets.createFromProduct(product.id)
     setMockResponse.delete(clearUrl, undefined)
-    setMockResponse.post(basketUrl, { id: 1, items: [] })
+    setMockResponse.post(basketUrl, mitxFactories.baskets.basket())
 
     const { result } = renderHook(() => useCourseEnrollment(course, run), {
       wrapper,
@@ -569,8 +570,9 @@ describe("useCourseEnrollment — actions", () => {
     )
     const clearUrl = mitxUrls.baskets.clear()
     const basketUrl = mitxUrls.baskets.createFromProduct(product.id)
+    const anonymous = mitxFactories.baskets.anonymousBasket()
     setMockResponse.delete(clearUrl, undefined)
-    setMockResponse.post(basketUrl, { id: 1, items: [] })
+    setMockResponse.post(basketUrl, anonymous)
 
     const onRequireSignup = jest.fn()
 
@@ -607,6 +609,18 @@ describe("useCourseEnrollment — actions", () => {
       expect.objectContaining({ method: "post", url: basketUrl }),
     )
     expect(onRequireSignup).not.toHaveBeenCalled()
+
+    // The anonymous basket's id comes back in the API response and has to reach
+    // MITx Online through the redirect URL: the session cookie that identifies
+    // the basket is host-only and cannot cross from Learn's API host to
+    // mitxonline's own domain.
+    const expectedUrl = new URL(mitxonlineLegacyUrl("/cart/"))
+    expectedUrl.searchParams.set("anonymous_basket_id", anonymous.anonymous_id!)
+    await waitFor(() =>
+      expect(window.location.assign).toHaveBeenCalledWith(
+        expectedUrl.toString(),
+      ),
+    )
   })
 
   test("unauthenticated paid click requires signup when the anonymous-checkout flag is off", async () => {
@@ -670,10 +684,10 @@ describe("useCourseEnrollment — actions", () => {
     const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
 
     setMockResponse.delete(mitxUrls.baskets.clear(), undefined)
-    setMockResponse.post(mitxUrls.baskets.createFromProduct(product.id), {
-      id: 1,
-      items: [],
-    })
+    setMockResponse.post(
+      mitxUrls.baskets.createFromProduct(product.id),
+      mitxFactories.baskets.basket(),
+    )
 
     const { result } = renderHook(
       () =>

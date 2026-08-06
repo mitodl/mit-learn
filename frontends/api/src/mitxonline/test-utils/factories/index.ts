@@ -8,6 +8,7 @@ import * as user from "./user"
 import * as requirements from "./requirements"
 import * as contracts from "./contracts"
 import * as orders from "./orders"
+import * as baskets from "./baskets"
 
 export {
   mitx as enrollment,
@@ -20,4 +21,5 @@ export {
   requirements,
   contracts,
   orders,
+  baskets,
 }
