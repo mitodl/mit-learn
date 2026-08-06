@@ -36,7 +36,12 @@ class Command(BaseCommand):
     auth type BEARER.
 
     Idempotent. Run once per environment, then give the printed token to whoever
-    configures the Keycloak SCIM provider.
+    configures the Keycloak SCIM provider — it is the only thing that uses it.
+
+    Unlike Application.client_secret, AccessToken.token is stored unhashed, so an
+    existing token can be read back rather than rotated:
+
+        AccessToken.objects.get(user__username="scim-keycloak").token
     """
 
     help = "Provision the service user and OAuth2 client Keycloak uses for SCIM"
@@ -60,9 +65,9 @@ class Command(BaseCommand):
             "--rotate-token",
             action="store_true",
             help=(
-                "Replace the existing token with a new one. Use this to rotate, "
-                "or if the current token has been lost — it is only displayed "
-                "when issued."
+                "Replace the existing token with a new one. Access tokens are "
+                "stored unhashed, so an existing one can be read back instead of "
+                "rotated if it is merely mislaid."
             ),
         )
         parser.add_argument(
@@ -136,7 +141,7 @@ class Command(BaseCommand):
             self.stdout.write(f"  bearer token : {token}")
             self.stdout.write(
                 self.style.WARNING(
-                    "  ^ shown once. Re-run with --rotate-token to issue a new one."
+                    "  ^ paste into Keycloak's SCIM provider config (auth: BEARER)."
                 )
             )
         else:
