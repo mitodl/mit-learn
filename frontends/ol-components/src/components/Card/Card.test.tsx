@@ -6,6 +6,14 @@ import { getOriginalSrc } from "ol-test-utilities"
 import invariant from "tiny-invariant"
 import { renderWithTheme } from "../../test-utils"
 
+/**
+ * jsdom implements no PointerEvent at all, and useClickChildLink constructs one
+ * to carry a modifier onto the card's anchor. MouseEvent takes the same init
+ * fields, so it stands in for the ones under test here; the gestures a real
+ * browser performs in response are out of jsdom's reach either way.
+ */
+window.PointerEvent = MouseEvent as unknown as typeof PointerEvent
+
 describe("Card", () => {
   test("has class MitCard-root on root element", () => {
     const { container } = renderWithTheme(
@@ -145,4 +153,118 @@ describe("Card", () => {
     })
     expect(titleHeading.getAttribute("aria-level")).toBe("2")
   })
+
+  /**
+   * Regression guard for the card link's pushUrl: a forwarded body click must
+   * reach the anchor's React handler, not just its default behavior, or the
+   * anchor has no chance to cancel the navigation.
+   */
+  test("A body click reaches the card link's own React handler", async () => {
+    const onClick = jest.fn((e: React.MouseEvent) => e.preventDefault())
+    renderWithTheme(
+      <Card forwardClicksToLink>
+        <Card.Content>
+          <a data-card-link="true" href="#woof" onClick={onClick}>
+            Title
+          </a>
+          <div>Body</div>
+        </Card.Content>
+      </Card>,
+    )
+
+    await user.click(screen.getByText("Body"))
+
+    expect(onClick).toHaveBeenCalled()
+    expect(window.location.hash).toBe("")
+  })
+
+  /**
+   * Pins the whole Card.Title -> Linkable -> Link -> LinkAdapter chain, emotion's
+   * prop forwarding included. Asserting on window.location instead would not
+   * catch a broken chain: pushState and an ordinary hash navigation both leave
+   * the same location behind.
+   *
+   * The middle row covers Linkable's fallback for `?`-relative hrefs, which
+   * exists so cards keep working until they pass pushUrl explicitly.
+   */
+  test.each([
+    {
+      name: "pushUrl is forwarded down the chain",
+      href: "/search?resource=1",
+      pushUrl: "?resource=1",
+      pushed: "?resource=1",
+    },
+    {
+      name: "a ?-relative href pushes itself",
+      href: "?resource=1",
+      pushUrl: undefined,
+      pushed: "?resource=1",
+    },
+    {
+      // Hash rather than a path href: jsdom refuses cross-document navigation
+      // and console.errors, and ol-components has no expectWindowNavigation.
+      // Either way the href is non-`?`, which is the branch under test.
+      name: "a non-?-relative href navigates rather than pushing",
+      href: "#woof",
+      pushUrl: undefined,
+      pushed: null,
+    },
+  ])("Card.Title: $name", async ({ href, pushUrl, pushed }) => {
+    const pushState = jest.spyOn(window.history, "pushState")
+    renderWithTheme(
+      <Card>
+        <Card.Title href={href} pushUrl={pushUrl}>
+          Title
+        </Card.Title>
+      </Card>,
+    )
+
+    await user.click(screen.getByRole("link", { name: "Title" }))
+
+    if (pushed === null) {
+      expect(pushState).not.toHaveBeenCalled()
+    } else {
+      expect(pushState).toHaveBeenCalledWith({}, "", pushed)
+    }
+  })
+
+  /**
+   * One row per modifier: each is both an operand of the guard and a field of
+   * the forwarded event, and omitting it from either turns that gesture into a
+   * plain click on the card link. The listener goes on the anchor itself
+   * because the forwarded event deliberately does not bubble.
+   *
+   * jsdom implements none of the gestures these modifiers trigger, so this
+   * pins the flags arriving at the anchor, not the new tab or window that a
+   * real browser opens in response.
+   */
+  test.each([
+    { modifier: "Meta", flag: "metaKey" },
+    { modifier: "Control", flag: "ctrlKey" },
+    { modifier: "Shift", flag: "shiftKey" },
+    { modifier: "Alt", flag: "altKey" },
+  ])(
+    "A $modifier-click on the body forwards the modifier to the card link",
+    async ({ modifier, flag }) => {
+      renderWithTheme(
+        <Card forwardClicksToLink>
+          <Card.Content>
+            <a data-card-link="true" href="#woof">
+              Title
+            </a>
+            <div>Body</div>
+          </Card.Content>
+        </Card>,
+      )
+      const forwarded = jest.fn()
+      screen.getByRole("link").addEventListener("click", forwarded)
+      const u = user.setup()
+      await u.keyboard(`{${modifier}>}`)
+
+      await u.click(screen.getByText("Body"))
+
+      expect(forwarded).toHaveBeenCalledTimes(1)
+      expect(forwarded.mock.calls[0][0]).toHaveProperty(flag, true)
+    },
+  )
 })

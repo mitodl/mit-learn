@@ -1,24 +1,30 @@
 import React from "react"
 import NextLink from "next/link"
 import type { LinkProps } from "next/link"
-import invariant from "tiny-invariant"
 
 type LinkAdapterExtraProps = Pick<LinkProps, "scroll" | "prefetch"> & {
-  /*
-   * If true, enables client-side-only routing via window.history.pushState.
-   * This is ONLY available for query-param updates, e.g.,
-   * `href="?resource=123"`.
+  /**
+   * If set, a plain click pushes this URL with `window.history.pushState`
+   * rather than navigating to `href`.
    *
-   * This avoids calls to the NextJS server for RSC payloads that can cause
-   * performance and hydration mismatch issues for example where we are only
-   * updating the URL search params for modal views within the page, such as the
-   * resource drawer, and do not want to trigger calls to the server page which
-   * may re-fetch API data.
+   * Use it where the link should *point* at a real, shareable, crawlable URL
+   * but a click should update the current page instead of leaving it — the
+   * resource drawer, whose href is the canonical `/search?resource=…` while a
+   * click keeps you on the page you were browsing.
+   *
+   * `pushUrl === href` is the "shallow routing" case: a query-param update
+   * that must not hit the Next server for an RSC payload, which would cause
+   * refetches and hydration mismatches for modal views like the drawer.
+   *
+   * Modified clicks (⌘, Ctrl, Shift, Alt), clicks a caller's own onClick has
+   * already prevented, and links with a `target` are left alone, so they get
+   * ordinary anchor behaviour on `href`. Middle-click and the context menu
+   * never reach React's onClick at all.
+   *
+   * Setting this also disables prefetching, since a plain click never
+   * navigates to `href`. Pass `prefetch` explicitly to opt back in.
    */
-  shallow?: boolean
-  // Note: NextJS LinkProps actually does have a `shallow` prop, but at time of
-  // writing it is only supported by the Pages router, so the docs for it are
-  // unhelpful.
+  pushUrl?: string
 }
 
 type LinkAdapterProps = React.ComponentProps<"a"> & LinkAdapterExtraProps
@@ -26,21 +32,20 @@ type LinkAdapterProps = React.ComponentProps<"a"> & LinkAdapterExtraProps
 /**
  * Default link implementation used for our smoot-design theme.
  */
-const LinkAdapter = ({ shallow, href = "", ...props }: LinkAdapterProps) => {
-  invariant(
-    !shallow || href.startsWith("?"),
-    "shallow links must start with '?'",
-  )
+const LinkAdapter = ({ pushUrl, href = "", ...props }: LinkAdapterProps) => {
   return (
     <NextLink
       href={href}
+      prefetch={pushUrl ? false : undefined}
       {...props}
       onClick={(e) => {
         props.onClick?.(e)
-        if (shallow) {
-          e.preventDefault()
-          window.history.pushState({}, "", href)
-        }
+        if (!pushUrl) return
+        if (e.defaultPrevented) return
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+        if (e.currentTarget.target && e.currentTarget.target !== "_self") return
+        e.preventDefault()
+        window.history.pushState({}, "", pushUrl)
       }}
     />
   )

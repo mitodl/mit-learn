@@ -106,7 +106,7 @@ export const ProductPageAskTimButton: React.FC<
 
   return (
     <AskTimCard>
-      <AskTimLink shallow href={syllabusHref} onClick={onClick}>
+      <AskTimLink href={syllabusHref} pushUrl={syllabusHref} onClick={onClick}>
         <RiSparkling2Line aria-hidden />
         <AskTimLabel>
           Ask <strong>TIM</strong>

@@ -131,6 +131,11 @@ interface LearningResourceListCardProps {
   resource?: LearningResource | null
   className?: string
   href?: string
+  /**
+   * If set, a plain click pushes this URL with window.history.pushState
+   * rather than navigating to href. See LinkAdapter for the full rules.
+   */
+  pushUrl?: string
   onAddToLearningPathClick?: ResourceIdCallback | null
   onAddToUserListClick?: ResourceIdCallback | null
   editMenu?: React.ReactNode | null
@@ -146,6 +151,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   resource,
   className,
   href,
+  pushUrl,
   onAddToLearningPathClick,
   onAddToUserListClick,
   editMenu,
@@ -212,6 +218,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       className={className}
       list
       href={href}
+      pushUrl={pushUrl}
       onClick={onClick}
       headingLevel={headingLevel}
       imageSrc={imageSrc}

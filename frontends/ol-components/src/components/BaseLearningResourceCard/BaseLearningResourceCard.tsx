@@ -4,7 +4,7 @@ import styled from "@emotion/styled"
 import Skeleton from "@mui/material/Skeleton"
 import { RiAwardFill } from "@remixicon/react"
 import { Card } from "../Card/Card"
-import type { Size } from "../Card/Card"
+import type { Size, LinkTargetProps } from "../Card/Card"
 import { ListCard } from "../Card/ListCard"
 import { ListCardCondensed } from "../Card/ListCardCondensed"
 import { ActionButton } from "@mitodl/smoot-design"
@@ -86,6 +86,15 @@ interface BaseLearningResourceCardProps {
   size?: Size
   isMedia?: boolean
   href?: string
+  /**
+   * If set, a plain click on the card's title link pushes this URL instead of
+   * navigating to `href`. A click on the card body reaches it too, via the
+   * forwarding in `useClickChildLink`.
+   *
+   * Distinct from `onClick`, which is on the card container and fires for
+   * every click inside the card, buttons included.
+   */
+  pushUrl?: string
   onClick?: React.MouseEventHandler<HTMLElement>
   headingLevel?: number
   // Display data
@@ -289,6 +298,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
   size = "medium",
   isMedia = false,
   href,
+  pushUrl,
   onClick,
   headingLevel = 6,
   imageSrc,
@@ -312,6 +322,10 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
   editMenu = null,
   parentCourseName = null,
 }) => {
+  // Re-pairs href and pushUrl, which arrive here as independent optionals but
+  // are a discriminated pair on the Title components.
+  const linkTarget: LinkTargetProps = href ? { href, pushUrl } : {}
+
   if (isLoading) {
     if (list && condensed) {
       return (
@@ -444,7 +458,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
         </ListCardCondensed.Info>
         {title && (
           <ListCardCondensed.Title
-            href={href}
+            {...linkTarget}
             lang={lang}
             role="heading"
             aria-level={headingLevel}
@@ -530,7 +544,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
         </ListCard.Info>
         {title && (
           <ListCard.Title
-            href={href}
+            {...linkTarget}
             lang={lang}
             role="heading"
             aria-level={headingLevel}
@@ -622,7 +636,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
       </Card.Info>
       {title && (
         <Card.Title
-          href={href}
+          {...linkTarget}
           lang={lang}
           role="heading"
           aria-level={headingLevel}

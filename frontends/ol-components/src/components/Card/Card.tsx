@@ -17,19 +17,32 @@ import { truncateText } from "../TruncateText/TruncateText"
 
 export type Size = "small" | "medium"
 
+/**
+ * Where a card title points, and what a plain click on it does.
+ *
+ * `pushUrl` is meaningless without an `href` — with no href the title renders
+ * as a plain span and never receives a click handler — so the two are
+ * discriminated to make that combination unrepresentable.
+ *
+ * If `pushUrl` is set, a plain click pushes it with window.history.pushState
+ * rather than navigating to `href`. See LinkAdapter for the full rules.
+ */
+export type LinkTargetProps =
+  | { href?: undefined; pushUrl?: never }
+  | { href: string; pushUrl?: string }
+
 type LinkableProps = {
-  href?: string
   children?: ReactNode
   className?: string
-}
+} & LinkTargetProps
 /**
  * Render a NextJS link if href is provided, otherwise a span.
- * Passes shallow to navigate with window.history.pushState
- * where we are only updating search params to prevent calls
- * to the server for RSC payloads.
+ * Passes pushUrl through, so a plain click can update the current page's URL
+ * instead of navigating to href.
  */
 export const Linkable: React.FC<LinkableProps> = ({
   href,
+  pushUrl,
   children,
   className,
   ...others
@@ -41,7 +54,9 @@ export const Linkable: React.FC<LinkableProps> = ({
         {...others}
         className={className}
         href={href}
-        shallow={href.startsWith("?")}
+        // Fallback preserves the old `shallow` behavior for `?`-relative
+        // hrefs. Removed once cards pass pushUrl explicitly.
+        pushUrl={pushUrl ?? (href.startsWith("?") ? href : undefined)}
         nohover
       >
         {children}
@@ -142,14 +157,13 @@ const LinkableTitle = ({
   title: TitleProps
   size: Size | undefined
 }) => {
-  const { role, "aria-level": ariaLevel, href, children, ...rest } = title
+  const { role, "aria-level": ariaLevel, children, ...rest } = title
 
   return (
     <Title
-      data-card-link={!!href}
+      data-card-link={!!title.href}
       className="MitCard-title"
       size={size}
-      href={href}
       {...rest}
     >
       {/*
@@ -209,15 +223,20 @@ export const useClickChildLink = (
       )
       const target = e.target as HTMLElement
       if (!anchor || target.closest("a, button, [data-card-action]")) return
-      if (e.metaKey || e.ctrlKey) {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
         /**
-         * Enables ctrl+click to open card's link in new tab.
-         * Without this, ctrl+click only works on the anchor itself.
+         * Forwards the modifier so the browser applies its own gesture to the
+         * anchor — new tab, new window, download — as it would if the anchor
+         * itself had been the click target. `anchor.click()` below synthesizes
+         * an unmodified click, so without this a modified body click would
+         * behave as a plain one.
          */
         const opts: PointerEventInit = {
           bubbles: false,
           metaKey: e.metaKey,
           ctrlKey: e.ctrlKey,
+          shiftKey: e.shiftKey,
+          altKey: e.altKey,
         }
         anchor.dispatchEvent(new PointerEvent("click", opts))
       } else {
@@ -257,12 +276,12 @@ export type ImageProps = NextImageProps & {
 }
 type TitleProps = {
   children?: ReactNode
-  href?: string
   lines?: number
   style?: CSSProperties
   lang?: string
   role?: AriaRole
-} & AriaAttributes
+} & AriaAttributes &
+  LinkTargetProps
 
 type SlotProps = { children?: ReactNode; style?: CSSProperties }
 

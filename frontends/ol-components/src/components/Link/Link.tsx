@@ -70,15 +70,11 @@ const linkStyles = (props: LinkStyleProps) => {
 
 type LinkProps = LinkStyleProps &
   React.ComponentProps<"a"> & {
-    /* Pass shallow to navigate with window.history.pushState
-     * on the client only to prevent calls to the Next.js server
-     * for RSC payloads - these cause performance and hydration mismatch
-     * issues for example where we are only updating the URL search params
-     * for modal views within the page, such as the resource drawer, and
-     * do not want to trigger calls to the server page which may
-     * re-fetch API data.
+    /**
+     * If set, a plain click pushes this URL with window.history.pushState
+     * rather than navigating to href. See LinkAdapter for the full rules.
      */
-    shallow?: boolean
+    pushUrl?: string
     scroll?: boolean
     prefetch?: boolean
   }

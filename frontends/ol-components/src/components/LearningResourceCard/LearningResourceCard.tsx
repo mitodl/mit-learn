@@ -29,6 +29,11 @@ interface LearningResourceCardProps {
   size?: Size
   isMedia?: boolean
   href?: string
+  /**
+   * If set, a plain click pushes this URL with window.history.pushState
+   * rather than navigating to href. See LinkAdapter for the full rules.
+   */
+  pushUrl?: string
   onAddToLearningPathClick?: ResourceIdCallback | null
   onAddToUserListClick?: ResourceIdCallback | null
   inUserList?: boolean
@@ -46,6 +51,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   size = "medium",
   isMedia = false,
   href,
+  pushUrl,
   onAddToLearningPathClick,
   onAddToUserListClick,
   inLearningPath,
@@ -72,6 +78,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
           resource={resource}
           className={className}
           href={href}
+          pushUrl={pushUrl}
           onAddToLearningPathClick={onAddToLearningPathClick}
           onAddToUserListClick={onAddToUserListClick}
           inUserList={inUserList}
@@ -87,6 +94,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
         resource={resource}
         className={className}
         href={href}
+        pushUrl={pushUrl}
         onAddToLearningPathClick={onAddToLearningPathClick}
         onAddToUserListClick={onAddToUserListClick}
         inUserList={inUserList}
@@ -154,6 +162,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       size={size}
       isMedia={isMedia}
       href={href}
+      pushUrl={pushUrl}
       onClick={onClick}
       headingLevel={headingLevel}
       imageSrc={imageSrc}

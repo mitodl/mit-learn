@@ -27,12 +27,13 @@ const StyledButton = styled(LinkAdapter)(({ theme }) => ({
 
 const AskTIMButton = () => {
   const posthog = usePostHog()
+  const href = `?${RECOMMENDER_QUERY_PARAM}`
 
   return (
     <>
       <StyledButton
-        shallow
-        href={`?${RECOMMENDER_QUERY_PARAM}`}
+        href={href}
+        pushUrl={href}
         onClick={() => {
           if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
             posthog.capture(PostHogEvents.AskTimClicked, {
