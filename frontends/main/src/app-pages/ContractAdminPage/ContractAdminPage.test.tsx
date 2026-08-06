@@ -261,9 +261,9 @@ describe("ContractAdminPage", () => {
     expect(screen.getByRole("group", { name: "Unassigned" })).toHaveTextContent(
       "15",
     )
-    expect(
-      screen.getByRole("group", { name: "Pending claim" }),
-    ).toHaveTextContent("10")
+    expect(screen.getByRole("group", { name: "Pending" })).toHaveTextContent(
+      "10",
+    )
     expect(screen.getByRole("group", { name: "Redeemed" })).toHaveTextContent(
       "5",
     )
@@ -643,7 +643,7 @@ describe("ContractAdminPage", () => {
   })
 
   describe("header stat counts refresh after mutations", () => {
-    test("bulk-assigning seats updates Unassigned and Pending claim counts", async () => {
+    test("bulk-assigning seats updates Unassigned and Pending counts", async () => {
       mockedUseFeatureFlagsLoaded.mockReturnValue(true)
       mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
@@ -708,12 +708,12 @@ describe("ContractAdminPage", () => {
           screen.getByRole("group", { name: "Unassigned" }),
         ).toHaveTextContent("5")
       })
-      expect(
-        screen.getByRole("group", { name: "Pending claim" }),
-      ).toHaveTextContent("3")
+      expect(screen.getByRole("group", { name: "Pending" })).toHaveTextContent(
+        "3",
+      )
     })
 
-    test("releasing a seat updates Unassigned and Pending claim counts", async () => {
+    test("releasing a seat updates Unassigned and Pending counts", async () => {
       mockedUseFeatureFlagsLoaded.mockReturnValue(true)
       mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
@@ -780,13 +780,13 @@ describe("ContractAdminPage", () => {
           screen.getByRole("group", { name: "Unassigned" }),
         ).toHaveTextContent("7")
       })
-      expect(
-        screen.getByRole("group", { name: "Pending claim" }),
-      ).toHaveTextContent("1")
+      expect(screen.getByRole("group", { name: "Pending" })).toHaveTextContent(
+        "1",
+      )
     })
   })
 
-  test("Pending claim tab filters to assigned codes only", async () => {
+  test("Pending tab filters to assigned codes only", async () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
@@ -840,12 +840,178 @@ describe("ContractAdminPage", () => {
 
     await screen.findByText("pending@example.com")
 
-    await user.click(screen.getByRole("tab", { name: "Pending claim" }))
+    await user.click(screen.getByRole("tab", { name: "Pending" }))
 
     await waitFor(() => {
       expect(screen.queryByText("redeemed@example.com")).not.toBeInTheDocument()
     })
     expect(screen.getByText("pending@example.com")).toBeInTheDocument()
+  })
+
+  describe("status pill", () => {
+    const setupCodeRow = (
+      code: ReturnType<typeof factories.contracts.contractCode>,
+    ) => {
+      const { org, contract } = makeOrgWithContract()
+      setMockResponse.get(managerOrgsUrl, {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [org],
+      })
+      setMockResponse.get(
+        managerContractDetailUrl(org.id, contract.id),
+        makeContractDetail(contract, {
+          total_codes: 1,
+          assigned_codes: code.redemption_status === "redeemed" ? 0 : 1,
+          unassigned_codes: 0,
+          redeemed_codes: code.redemption_status === "redeemed" ? 1 : 0,
+        }),
+      )
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 1,
+          page_size: 25,
+        }),
+        factories.contracts.paginatedContractCodes([code]),
+      )
+      return { org, contract }
+    }
+
+    beforeEach(() => {
+      mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    })
+
+    test("shows 'Pending' for an assigned code with no email_status yet", async () => {
+      const code = factories.contracts.contractCode({
+        redemption_status: "assigned",
+        assigned_to: "pending@example.com",
+        email_status: null,
+      })
+      const { org, contract } = setupCodeRow(code)
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByText("pending@example.com")
+      expect(
+        screen.getByText("Pending", { selector: ".MuiChip-label" }),
+      ).toBeInTheDocument()
+    })
+
+    test("shows 'Pending' for an assigned code with email_status=pending", async () => {
+      const code = factories.contracts.contractCode({
+        redemption_status: "assigned",
+        assigned_to: "pending@example.com",
+        email_status: "pending",
+      })
+      const { org, contract } = setupCodeRow(code)
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByText("pending@example.com")
+      expect(
+        screen.getByText("Pending", { selector: ".MuiChip-label" }),
+      ).toBeInTheDocument()
+    })
+
+    test("shows 'Delivered' for an assigned code with email_status=delivered", async () => {
+      const code = factories.contracts.contractCode({
+        redemption_status: "assigned",
+        assigned_to: "delivered@example.com",
+        email_status: "delivered",
+      })
+      const { org, contract } = setupCodeRow(code)
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByText("delivered@example.com")
+      expect(screen.getByText("Pending - Delivered")).toBeInTheDocument()
+    })
+
+    test("shows 'Opened' for an assigned code with email_status=opened", async () => {
+      const code = factories.contracts.contractCode({
+        redemption_status: "assigned",
+        assigned_to: "opened@example.com",
+        email_status: "opened",
+      })
+      const { org, contract } = setupCodeRow(code)
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByText("opened@example.com")
+      expect(screen.getByText("Pending - Opened")).toBeInTheDocument()
+    })
+
+    test("shows 'Clicked' for an assigned code with email_status=clicked", async () => {
+      const code = factories.contracts.contractCode({
+        redemption_status: "assigned",
+        assigned_to: "clicked@example.com",
+        email_status: "clicked",
+      })
+      const { org, contract } = setupCodeRow(code)
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByText("clicked@example.com")
+      expect(screen.getByText("Pending - Clicked")).toBeInTheDocument()
+    })
+
+    test("shows a 'Failed' pill with an accessible tooltip explanation", async () => {
+      const code = factories.contracts.contractCode({
+        redemption_status: "assigned",
+        assigned_to: "bounced@example.com",
+        email_status: "failed",
+      })
+      const { org, contract } = setupCodeRow(code)
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByText("bounced@example.com")
+      // "Failed" is the accessible name (from the visible label); the
+      // explanation is a description, not baked into the name — MUI's
+      // describeChild renders it as a native `title` attribute while closed,
+      // and swaps it for a live aria-describedby while the tooltip is open.
+      expect(screen.getByText("Failed")).toBeInTheDocument()
+      expect(
+        screen.getByTitle(
+          "Delivery failed — the recipient's email address may be invalid, unreachable, or blocked by their mail server.",
+        ),
+      ).toBeInTheDocument()
+    })
+
+    test("shows 'Redeemed' once a code is redeemed, regardless of its email_status", async () => {
+      const code = factories.contracts.contractCode({
+        redemption_status: "redeemed",
+        assigned_to: "assignee@example.com",
+        redeemed_by: "redeemed@example.com",
+        redeemed_on: new Date().toISOString(),
+        email_status: "opened",
+      })
+      const { org, contract } = setupCodeRow(code)
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByText("redeemed@example.com")
+      expect(
+        screen.getByText("Redeemed", { selector: ".MuiChip-label" }),
+      ).toBeInTheDocument()
+      expect(screen.queryByText("Pending - Opened")).not.toBeInTheDocument()
+    })
   })
 
   // Uncapped contracts have no max_learners, so total_codes comes back null or 0.
@@ -912,7 +1078,7 @@ describe("ContractAdminPage", () => {
 
         // Per-status stats are still shown — they don't depend on the cap.
         expect(
-          screen.getByRole("group", { name: "Pending claim" }),
+          screen.getByRole("group", { name: "Pending" }),
         ).toHaveTextContent("4")
         expect(
           screen.getByRole("group", { name: "Redeemed" }),
