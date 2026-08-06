@@ -63,6 +63,7 @@ from learning_resources.etl.loaders import (
     load_videos,
     load_videos_from_content_files,
     load_youtube_video_channels,
+    unpublish_removed_playlists,
 )
 from learning_resources.etl.mitxonline import transform_programs
 from learning_resources.etl.utils import get_s3_prefix_for_source
@@ -2865,6 +2866,46 @@ def test_load_playlists_unpublish(mocker):
     )
     actual_unpublished_ids = sorted(playlist_unpublish_call[0][0])
     assert actual_unpublished_ids == expected_unpublished_ids
+
+
+def test_unpublish_removed_playlists(mocker):
+    """Playlists no longer listed under the channel should be unpublished"""
+    mocker.patch("learning_resources_search.tasks.bulk_deindex_learning_resources.si")
+    mock_bulk_unpublish = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
+    )
+    channel = VideoChannelFactory.create()
+    kept, removed = VideoPlaylistFactory.create_batch(2, channel=channel)
+    other_channel_playlist = VideoPlaylistFactory.create()
+
+    unpublish_removed_playlists(channel, [kept.learning_resource.readable_id])
+
+    for playlist, expected in (
+        (kept, True),
+        (removed, False),
+        (other_channel_playlist, True),
+    ):
+        playlist.refresh_from_db()
+        assert playlist.learning_resource.published is expected
+
+    mock_bulk_unpublish.assert_called_once_with(
+        [removed.learning_resource.id], LearningResourceType.video_playlist.name
+    )
+
+
+def test_unpublish_removed_playlists_noop(mocker):
+    """Nothing should be unpublished when the channel's playlists all still exist"""
+    mock_bulk_unpublish = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
+    )
+    channel = VideoChannelFactory.create()
+    playlists = VideoPlaylistFactory.create_batch(2, channel=channel)
+
+    unpublish_removed_playlists(
+        channel, [playlist.learning_resource.readable_id for playlist in playlists]
+    )
+
+    mock_bulk_unpublish.assert_not_called()
 
 
 @pytest.mark.parametrize("playlist_exists", [True, False])

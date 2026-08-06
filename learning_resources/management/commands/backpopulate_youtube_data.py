@@ -3,15 +3,13 @@
 from datetime import UTC, datetime
 
 from django.core.management import BaseCommand
-from django.db.models import Count
 
-from learning_resources.etl.constants import YOUTUBE_ETL_TASK_NAME, ETLSource
+from learning_resources.etl.constants import ETLSource
 from learning_resources.management.commands.mixins import ConfirmDeleteMixin
 from learning_resources.models import LearningResource, VideoChannel
-from learning_resources.tasks import get_youtube_transcripts, start_youtube_etl_job
+from learning_resources.tasks import get_youtube_data, get_youtube_transcripts
 from learning_resources.utils import resource_delete_actions
 from main.constants import ISOFORMAT
-from main.models import TaskJob
 from main.utils import now_in_utc
 
 
@@ -61,43 +59,11 @@ class Command(ConfirmDeleteMixin, BaseCommand):
             action="store_true",
             help="Overwrite any existing transcript records",
         )
-        mode_group.add_argument(
-            "--status",
-            dest="status",
-            nargs="?",
-            type=int,
-            const=0,
-            default=None,
-            help=(
-                "Print the status of a youtube ETL job instead of starting one "
-                "(defaults to the most recent job)"
-            ),
-        )
         super().add_arguments(parser)
-
-    def print_job_status(self, job_id):
-        """Print the status of a youtube ETL job"""
-        jobs = TaskJob.objects.filter(task_name=YOUTUBE_ETL_TASK_NAME)
-        job = jobs.filter(id=job_id).first() if job_id else jobs.order_by("-id").first()
-        if not job:
-            self.stdout.write("No youtube ETL job found")
-            return
-        self.stdout.write(f"Youtube ETL job {job.id}: {job.status}")
-        self.stdout.write("  batches:")
-        batch_counts = job.batches.values("kind", "status").annotate(count=Count("id"))
-        kind_counts = {}
-        for row in batch_counts:
-            kind_counts.setdefault(row["kind"], {})[row["status"]] = row["count"]
-        for kind, counts in sorted(kind_counts.items()):
-            self.stdout.write(f"    {kind}: {counts}")
-        if job.error:
-            self.stdout.write(f"  error: {job.error}")
 
     def handle(self, *args, **options):  # noqa: ARG002
         """Run Populate youtube videos"""
-        if options["status"] is not None:
-            self.print_job_status(options["status"])
-        elif options["delete"]:
+        if options["delete"]:
             videos_playlists = LearningResource.objects.filter(
                 etl_source=ETLSource.youtube.name
             )
@@ -140,14 +106,16 @@ class Command(ConfirmDeleteMixin, BaseCommand):
             total_seconds = (now_in_utc() - start).total_seconds()
             self.stdout.write(f"Completed in {total_seconds} seconds")
         else:
-            job = start_youtube_etl_job(channel_ids=options["channel_ids"])
-            if job is None:
-                self.stdout.write(
-                    "A youtube ETL job is already in progress, nothing started"
-                )
-                return
-            self.stdout.write(f"Started youtube ETL job {job.id}")
+            channel_ids = options["channel_ids"]
+            task = get_youtube_data.delay(channel_ids=channel_ids)
+            self.stdout.write(f"Started task {task} to get YouTube video data")
+            self.stdout.write("Waiting on task...")
+            start = now_in_utc()
+            channel_count = task.get()
+            total_seconds = (now_in_utc() - start).total_seconds()
+            # each channel fans out into its own task, and each of those into a
+            # task per playlist, so the loading continues after this returns
             self.stdout.write(
-                f"Check progress with:"
-                f" ./manage.py backpopulate_youtube_data --status {job.id}"
+                f"Queued {channel_count} YouTube channels in {total_seconds} seconds."
+                f" Follow the celery logs for the per-channel and per-playlist tasks."
             )

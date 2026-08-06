@@ -469,7 +469,7 @@ def test_extract_playlists_create_videos(
         )
     )
     assert len(results) == 1
-    _, _, create_videos = results[0]
+    _, create_videos = results[0]
     assert create_videos is expected
 
 
@@ -488,6 +488,35 @@ def test_extract_channels_errors(error, raised_exception, message):
         with pytest.raises(raised_exception) as err:
             list(youtube.extract_channels(client, [{"channel_id": "channel_id"}]))
         assert message in str(err)
+
+
+@pytest.mark.parametrize("items", [[{"id": "channel_id", "snippet": {}}], []])
+def test_extract_channel(items):
+    """extract_channel should return the single channel youtube has, if any"""
+    client = Mock()
+    client.channels.return_value.list.return_value.execute.return_value = {
+        "items": items
+    }
+    assert youtube.extract_channel(client, "channel_id") == (
+        items[0] if items else None
+    )
+
+
+def test_extract_channel_error():
+    """extract_channel should wrap youtube api errors"""
+    client = Mock(channels=Mock(side_effect=HttpError(Mock(), b"")))
+    with pytest.raises(ExtractException) as err:
+        youtube.extract_channel(client, "channel_id")
+    assert "Error fetching channel: channel_id=channel_id" in str(err)
+
+
+def test_transform_channel(extracted_and_transformed_values):
+    """transform_channel should normalize a channel without its playlists"""
+    extracted, transformed = extracted_and_transformed_values
+    result = youtube.transform_channel(extracted[0][1])
+    assert result == {
+        key: value for key, value in transformed[0].items() if key != "playlists"
+    }
 
 
 def test_transform_video(extracted_and_transformed_values):
