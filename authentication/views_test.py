@@ -436,8 +436,10 @@ def test_account_action_start_sso_user(settings, client, user, mock_is_sso_user)
 
 
 @pytest.mark.parametrize("kc_action_status", ["success", "cancelled", "error"])
-def test_account_action_complete(settings, client, kc_action_status):
+def test_account_action_complete(settings, client, mock_sync_email, kc_action_status):
     """The callback should hand the action's outcome back to the frontend"""
+    # A confirmed change, so "success" is reported as-is rather than downgraded.
+    mock_sync_email.return_value = True
     next_url = urljoin(settings.APP_BASE_URL, "/dashboard/settings")
     callback_params = urlencode(
         {
@@ -631,3 +633,52 @@ def test_account_action_start_unconfigured_client(settings, client):
     )
     settings_url = f"{settings.APP_BASE_URL.removesuffix('/')}/dashboard/settings"
     assert resp.headers["Location"] == f"{settings_url}?{expected_params}"
+
+
+def test_account_action_complete_pending_when_email_unchanged(
+    settings, client, mock_sync_email
+):
+    """
+    Keycloak's "success" means accepted, not applied.
+
+    Realms with verify_email on — which is all deployed environments — email a
+    confirmation link and only change the address once it is clicked. Reporting
+    success there would tell the user their email changed when it has not, so
+    the status is downgraded to pending when reading Keycloak back shows the
+    address is unchanged.
+    """
+    mock_sync_email.return_value = False
+    params = urlencode(
+        {
+            "next": urljoin(settings.APP_BASE_URL, "/dashboard/settings"),
+            "account_action": "update-email",
+            "kc_action_status": "success",
+            "code": "a-code",
+        }
+    )
+
+    resp = client.get(f"{reverse('account-action-complete')}?{params}")
+
+    assert resp.status_code == 302
+    assert "account_action_status=pending" in resp.headers["Location"]
+    assert "account_action_status=success" not in resp.headers["Location"]
+
+
+def test_account_action_complete_password_never_pending(
+    settings, client, mock_sync_email
+):
+    """A password change applies immediately, so it is never downgraded"""
+    params = urlencode(
+        {
+            "next": urljoin(settings.APP_BASE_URL, "/dashboard/settings"),
+            "account_action": "update-password",
+            "kc_action_status": "success",
+            "code": "a-code",
+        }
+    )
+
+    resp = client.get(f"{reverse('account-action-complete')}?{params}")
+
+    assert resp.status_code == 302
+    assert "account_action_status=success" in resp.headers["Location"]
+    mock_sync_email.assert_not_called()

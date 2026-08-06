@@ -257,8 +257,16 @@ class AccountActionCompleteView(RedirectView):
     cached userinfo still holds the old one.
     """
 
-    def sync_changed_email(self, next_url, action):
-        """Pull the new email from Keycloak after a successful email change"""
+    def sync_changed_email(self, next_url, action) -> bool:
+        """
+        Pull the new email from Keycloak after an email change.
+
+        Returns True only if the stored email actually changed. A False means
+        either that Keycloak still reports the old address — with verify_email
+        on, the change is pending a confirmation link — or that we could not
+        read Keycloak at all. The caller uses this to avoid telling the user
+        their email changed when it has not.
+        """
         code = self.request.GET.get("code")
         if not code:
             log.warning(
@@ -266,9 +274,9 @@ class AccountActionCompleteView(RedirectView):
                 "cannot read the updated email from Keycloak",
                 action,
             )
-            return
+            return False
 
-        sync_email_from_keycloak(
+        return sync_email_from_keycloak(
             code=code,
             redirect_uri=build_account_action_callback_url(
                 self.request, next_url=next_url, action=action
@@ -288,18 +296,26 @@ class AccountActionCompleteView(RedirectView):
             # Not something we can report on, so redirect without an alert
             # rather than guess at an outcome.
             log.warning(
-                "Account action callback with unusable params: action=%s, %s=%s",
+                "Account action callback with unusable params: action=%s, %s=%s "
+                "(params present: %s)",
                 raw_action,
                 KEYCLOAK_ACTION_STATUS_PARAM,
                 keycloak_status,
+                # Names only — these carry authorization codes and addresses.
+                ",".join(sorted(self.request.GET.keys())),
             )
             return next_url
 
+        # Keycloak reports success once it has *accepted* an email change, which
+        # with verify_email on means it emailed a confirmation link rather than
+        # applying anything. Only claim the address changed if reading it back
+        # from Keycloak proves it did.
         if (
             action == AccountAction.UPDATE_EMAIL
             and status is AccountActionStatus.SUCCESS
+            and not self.sync_changed_email(next_url, action)
         ):
-            self.sync_changed_email(next_url, action)
+            status = AccountActionStatus.PENDING
 
         return with_query_params(
             next_url,

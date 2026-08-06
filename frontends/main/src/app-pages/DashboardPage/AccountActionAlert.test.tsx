@@ -18,6 +18,11 @@ describe("AccountActionAlert", () => {
       message: "Your password has been updated.",
     },
     {
+      search: "?account_action=update-email&account_action_status=pending",
+      message:
+        "Almost done — check your inbox for a confirmation link to finish updating your email address.",
+    },
+    {
       search: "?account_action=update-email&account_action_status=error",
       message: "We couldn't update your email address. Please try again.",
     },
