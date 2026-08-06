@@ -38,11 +38,16 @@ from learning_resources.etl.utils import (
     get_bucket_by_name,
     get_s3_prefix_for_source,
 )
-from learning_resources.models import ContentFile, LearningResource
+from learning_resources.models import (
+    ContentFile,
+    LearningResource,
+    LearningResourceImage,
+)
 from learning_resources.site_scrapers.utils import scraper_for_site
 from learning_resources.utils import (
     build_program_children_content_bulk,
     html_to_markdown,
+    image_url_is_reachable,
     load_course_blocklist,
     programs_needing_children_heal,
     resource_unpublished_actions,
@@ -847,3 +852,35 @@ def cleanup_deleted_content_files():
         error = "cleanup_deleted_content_files threw an error"
         log.exception(error)
         return error
+
+
+@app.task(acks_late=True, reject_on_worker_lost=True)
+def prune_unreachable_resource_images():
+    """
+    Delete LearningResourceImage records whose URLs no longer resolve, so that
+    resources fall back to the default image everywhere (API, search, emails)
+    instead of rendering a broken image.
+    """
+    image_ids = (
+        LearningResource.objects.filter(published=True, image__isnull=False)
+        .values_list("image_id", flat=True)
+        .distinct()
+    )
+    removed = 0
+    for image in LearningResourceImage.objects.filter(id__in=image_ids).iterator():
+        if image_url_is_reachable(image.url):
+            continue
+        resource_ids = list(image.learningresource_set.values_list("id", flat=True))
+        log.info(
+            "Pruning unreachable image %s from resources %s", image.url, resource_ids
+        )
+        # FK is SET_NULL, so deleting the record clears it on referencing resources
+        image.delete()
+        removed += 1
+        for resource in LearningResource.objects.filter(
+            id__in=resource_ids, published=True
+        ):
+            resource_upserted_actions(
+                resource, percolate=False, generate_embeddings=False
+            )
+    return removed

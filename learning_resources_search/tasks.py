@@ -27,7 +27,7 @@ from learning_resources.models import (
     LearningResourceDepartment,
     LearningResourceOfferor,
 )
-from learning_resources.utils import load_course_blocklist
+from learning_resources.utils import image_url_is_reachable, load_course_blocklist
 from learning_resources.views import FeaturedViewSet
 from learning_resources_search import indexing_api as api
 from learning_resources_search.api import (
@@ -220,6 +220,21 @@ def _group_percolated_rows(rows):
     return grouped_data
 
 
+def _validated_resource_image_url(resource):
+    """
+    Return the resource's image URL if it is reachable, otherwise the default
+    resource image. Email clients can't fall back on their own, so a dead URL
+    would render as a broken image icon.
+    """
+    if (
+        resource.image
+        and resource.image.url
+        and image_url_is_reachable(resource.image.url)
+    ):
+        return resource.image.url
+    return frontend_absolute_url("/images/default_resource.jpg")
+
+
 def _get_percolated_rows(resources, subscription_type):
     """
     Get percolated rows for a list of learning resources and subscription type
@@ -232,6 +247,7 @@ def _get_percolated_rows(resources, subscription_type):
             source_type=subscription_type
         )
         if percolated.count() > 0:
+            resource_image_url = _validated_resource_image_url(resource)
             percolated_users = set(percolated.values_list("users", flat=True))
             all_users.update(percolated_users)
             for user in percolated_users:
@@ -251,9 +267,7 @@ def _get_percolated_rows(resources, subscription_type):
                     {
                         "resource_url": resource_url,
                         "resource_title": resource.title,
-                        "resource_image_url": resource.image.url
-                        if resource.image
-                        else frontend_absolute_url("/images/default_resource.jpg"),
+                        "resource_image_url": resource_image_url,
                         "resource_type": LearningResourceType[
                             resource.resource_type
                         ].value,

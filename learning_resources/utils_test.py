@@ -8,6 +8,8 @@ from pathlib import Path
 
 import markdown
 import pytest
+import requests
+import responses
 import yaml
 from faker import Faker
 
@@ -45,6 +47,7 @@ from learning_resources.utils import (
     build_program_children_content,
     build_program_children_content_bulk,
     filter_valid_edx_module_ids,
+    image_url_is_reachable,
     is_loggable_missing_content_id,
     is_valid_edx_module_id,
     log_missing_content_file,
@@ -1304,3 +1307,45 @@ def test_sanitize_llm_text(text, expected):
     assert result == expected
     # The result must always be storable: strict UTF-8 encoding cannot raise
     result.encode("utf-8")
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [(200, True), (301, True), (404, False), (403, False), (500, False)],
+)
+def test_image_url_is_reachable(mocked_responses, status, expected):
+    """image_url_is_reachable should be True only for successful responses"""
+    url = "http://example.com/image.jpg"
+    mocked_responses.add(responses.HEAD, url, status=status)
+    assert image_url_is_reachable(url) is expected
+
+
+def test_image_url_is_reachable_head_not_allowed(mocked_responses):
+    """image_url_is_reachable should fall back to GET if HEAD is rejected"""
+    url = "http://example.com/image.jpg"
+    mocked_responses.add(responses.HEAD, url, status=405)
+    mocked_responses.add(responses.GET, url, status=200)
+    assert image_url_is_reachable(url) is True
+
+
+def test_image_url_is_reachable_connection_error(mocked_responses):
+    """image_url_is_reachable should be False if the request errors out"""
+    url = "http://example.com/image.jpg"
+    mocked_responses.add(
+        responses.HEAD, url, body=requests.exceptions.ConnectionError()
+    )
+    assert image_url_is_reachable(url) is False
+
+
+def test_image_url_is_reachable_caches_result(mocked_responses, settings):
+    """image_url_is_reachable should cache results per URL"""
+    settings.CACHES = {
+        **settings.CACHES,
+        "redis": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"},
+    }
+    url = "http://example.com/image.jpg"
+    mocked_responses.add(responses.HEAD, url, status=404)
+    assert image_url_is_reachable(url) is False
+    # second call hits the cache; RequestsMock would fail on a second request
+    assert image_url_is_reachable(url) is False
+    assert len(mocked_responses.calls) == 1

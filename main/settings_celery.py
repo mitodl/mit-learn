@@ -201,6 +201,12 @@ CELERY_BEAT_SCHEDULE = (
                 minute=0, hour=6, day_of_week=6
             ),  # 2:00am EST on Friday
         },
+        "weekly-prune-unreachable-resource-images": {
+            "task": "learning_resources.tasks.prune_unreachable_resource_images",
+            "schedule": crontab(
+                minute=0, hour=10, day_of_week=0
+            ),  # 6:00am EST on Sunday
+        },
         "cleanup-deleted-content-files-every-1-days": {
             "task": "learning_resources.tasks.cleanup_deleted_content_files",
             "schedule": crontab(
