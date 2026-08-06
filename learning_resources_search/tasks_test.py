@@ -27,8 +27,11 @@ from learning_resources_search.constants import (
     COURSE_TYPE,
     HYBRID_COMBINED_INDEX,
     LEARNING_RESOURCE_TYPES,
+    PERCOLATE_INDEX_TYPE,
     PROGRAM_TYPE,
+    REINDEX_TASK_NAME,
     IndexestoUpdate,
+    ReindexBatchKind,
 )
 from learning_resources_search.exceptions import ReindexError, RetryError
 from learning_resources_search.factories import PercolateQueryFactory
@@ -42,12 +45,14 @@ from learning_resources_search.tasks import (
     _get_percolated_rows,
     _group_percolated_rows,
     _infer_percolate_group,
+    _maybe_finish_reindex_job,
     bulk_deindex_learning_resources,
     deindex_document,
     deindex_run_content_files,
-    finish_recreate_index,
+    finish_reindex_job,
     index_learning_resources,
     index_run_content_files,
+    run_reindex_batch,
     send_subscription_emails,
     start_recreate_index,
     start_update_index,
@@ -56,7 +61,8 @@ from learning_resources_search.tasks import (
     upsert_learning_resource,
     wrap_retry_exception,
 )
-from main.factories import UserFactory
+from main.factories import TaskBatchFactory, TaskJobFactory, UserFactory
+from main.models import TaskBatch, TaskJob
 from main.test_utils import assert_not_raises
 
 pytestmark = pytest.mark.django_db
@@ -140,12 +146,13 @@ def test_system_exit_retry(mocker):
         ["combined_hybrid"],
     ],
 )
-def test_start_recreate_index(mocker, mocked_celery, user, indexes):  # noqa: C901, PLR0915
+def test_start_recreate_index(mocker, indexes):  # noqa: C901, PLR0912, PLR0915
     """
-    recreate_index should recreate the OpenSearch index and reindex all data with it
+    recreate_index should create backing indexes and batch rows for all data
     """
     settings.OPENSEARCH_INDEXING_CHUNK_SIZE = 2
     settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE = 2
+    settings.OPENSEARCH_REINDEX_DISPATCH_CHUNK_SIZE = 2
 
     mock_blocklist = mocker.patch(
         "learning_resources_search.tasks.load_course_blocklist", return_value=[]
@@ -158,12 +165,6 @@ def test_start_recreate_index(mocker, mocked_celery, user, indexes):  # noqa: C9
 
     for course in ocw_courses:
         ContentFileFactory.create_batch(3, run=course.learning_resource.runs.first())
-
-    # A resource-level (marketing page) content file attached directly to the
-    # learning resource rather than a run.
-    course_marketing_file = ContentFileFactory.create(
-        learning_resource=ocw_courses[0].learning_resource
-    )
 
     oll_courses = CourseFactory.create_batch(2, etl_source=ETLSource.ocw.value)
 
@@ -180,21 +181,8 @@ def test_start_recreate_index(mocker, mocked_celery, user, indexes):  # noqa: C9
         key=lambda program: program.learning_resource_id,
     )
 
-    # Attach both a run-level and a resource-level (marketing page) content file
-    # to one program to exercise program content file indexing.
-    program_with_files = programs[0]
-    program_run_file = ContentFileFactory.create(
-        run=program_with_files.learning_resource.runs.first()
-    )
-    program_marketing_file = ContentFileFactory.create(
-        learning_resource=program_with_files.learning_resource
-    )
-
-    index_learning_resources_mock = mocker.patch(
-        "learning_resources_search.tasks.index_learning_resources", autospec=True
-    )
-    index_files_mock = mocker.patch(
-        "learning_resources_search.tasks.index_content_files", autospec=True
+    run_reindex_batch_mock = mocker.patch(
+        "learning_resources_search.tasks.run_reindex_batch", autospec=True
     )
 
     backing_index = "backing"
@@ -211,123 +199,98 @@ def test_start_recreate_index(mocker, mocked_celery, user, indexes):  # noqa: C9
     delete_orphaned_indexes_mock = mocker.patch(
         "learning_resources_search.indexing_api.delete_orphaned_indexes", autospec=True
     )
-    finish_recreate_index_mock = mocker.patch(
-        "learning_resources_search.tasks.finish_recreate_index", autospec=True
+
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME, params={"indexes": indexes}
     )
+    start_recreate_index.delay(job.id)
 
-    finish_recreate_index_dict = {}
-
-    with pytest.raises(mocked_celery.replace_exception_class):
-        start_recreate_index.delay(indexes, remove_existing_reindexing_tags=False)
+    job.refresh_from_db()
+    assert job.status == TaskJob.Status.RUNNING
+    assert job.error == ""
 
     for doctype in [COURSE_TYPE, PROGRAM_TYPE, HYBRID_COMBINED_INDEX]:
         if doctype in indexes:
-            finish_recreate_index_dict[doctype] = backing_index
+            assert job.params["backing_indexes"][doctype] == backing_index
             create_backing_index_mock.assert_any_call(doctype)
-
-    finish_recreate_index_mock.s.assert_called_once_with(finish_recreate_index_dict)
 
     delete_orphaned_indexes_mock.assert_called_once_with(
         indexes, delete_reindexing_tags=False
     )
 
-    assert mocked_celery.group.call_count == 1
+    resource_batches = job.batches.filter(
+        kind=ReindexBatchKind.learning_resources.value
+    ).order_by("id")
+    dispatch_batches = job.batches.filter(
+        kind=ReindexBatchKind.dispatch_content_files.value
+    ).order_by("id")
 
-    # Celery's 'group' function takes a generator as an argument. In order to make assertions about the items
-    # in that generator, 'list' is being called to force iteration through all of those items.
-    list(mocked_celery.group.call_args[0][0])
+    # no content file batches until dispatch batches run
+    assert not job.batches.filter(kind=ReindexBatchKind.content_files.value).exists()
 
     if COURSE_TYPE in indexes:
-        assert index_learning_resources_mock.si.call_count == 3
+        assert resource_batches.count() == 3
 
     if PROGRAM_TYPE in indexes:
-        assert index_learning_resources_mock.si.call_count == 2
+        assert resource_batches.count() == 2
 
     if HYBRID_COMBINED_INDEX in indexes:
-        assert index_learning_resources_mock.si.call_count == 5
+        assert resource_batches.count() == 5
+
+    resource_id_chunks = [batch.params["ids"] for batch in resource_batches]
+    for batch in resource_batches:
+        assert batch.params["index_name"] == indexes[0]
 
     if COURSE_TYPE in indexes or HYBRID_COMBINED_INDEX in indexes:
         mock_blocklist.assert_called_once()
-        index_type = indexes[0]
-        index_learning_resources_mock.si.assert_any_call(
+        for chunk in (
             [courses[0].learning_resource_id, courses[1].learning_resource_id],
-            index_type,
-            index_types=IndexestoUpdate.reindexing_index.value,
-        )
-        index_learning_resources_mock.si.assert_any_call(
             [courses[2].learning_resource_id, courses[3].learning_resource_id],
-            index_type,
-            index_types=IndexestoUpdate.reindexing_index.value,
-        )
-        index_learning_resources_mock.si.assert_any_call(
             [courses[4].learning_resource_id, courses[5].learning_resource_id],
-            index_type,
-            index_types=IndexestoUpdate.reindexing_index.value,
-        )
-
-    if COURSE_TYPE in indexes:
-        for course in ocw_courses:
-            content_file_ids = (
-                course.learning_resource.runs.first()
-                .content_files.order_by("id")
-                .values_list("id", flat=True)
-            )
-            index_files_mock.si.assert_any_call(
-                [content_file_ids[0], content_file_ids[1]],
-                course.learning_resource_id,
-                index_types=IndexestoUpdate.reindexing_index.value,
-            )
-
-            index_files_mock.si.assert_any_call(
-                [content_file_ids[2]],
-                course.learning_resource_id,
-                index_types=IndexestoUpdate.reindexing_index.value,
-            )
-
-        # resource-level (marketing page) content file attached directly to the
-        # learning resource
-        index_files_mock.si.assert_any_call(
-            [course_marketing_file.id],
-            ocw_courses[0].learning_resource_id,
-            index_types=IndexestoUpdate.reindexing_index.value,
-        )
-
-    if PROGRAM_TYPE in indexes:
-        # Program content files are indexed with resource_type=PROGRAM_TYPE, for
-        # both run-level and resource-level (marketing page) content files.
-        index_files_mock.si.assert_any_call(
-            [program_run_file.id],
-            program_with_files.learning_resource_id,
-            index_types=IndexestoUpdate.reindexing_index.value,
-            resource_type=PROGRAM_TYPE,
-        )
-        index_files_mock.si.assert_any_call(
-            [program_marketing_file.id],
-            program_with_files.learning_resource_id,
-            index_types=IndexestoUpdate.reindexing_index.value,
-            resource_type=PROGRAM_TYPE,
-        )
+        ):
+            assert chunk in resource_id_chunks
 
     if PROGRAM_TYPE in indexes or HYBRID_COMBINED_INDEX in indexes:
-        index_type = indexes[0]
-        index_learning_resources_mock.si.assert_any_call(
+        for chunk in (
             [programs[0].learning_resource_id, programs[1].learning_resource_id],
-            index_type,
-            index_types=IndexestoUpdate.reindexing_index.value,
-        )
-        index_learning_resources_mock.si.assert_any_call(
             [programs[2].learning_resource_id, programs[3].learning_resource_id],
-            index_type,
-            index_types=IndexestoUpdate.reindexing_index.value,
-        )
-    assert mocked_celery.replace.call_count == 1
-    assert mocked_celery.replace.call_args[0][1] == mocked_celery.chain.return_value
+        ):
+            assert chunk in resource_id_chunks
+
+    if COURSE_TYPE in indexes:
+        # all 6 courses are resource-file (ocw) courses, dispatched in chunks of 2
+        assert dispatch_batches.count() == 3
+        dispatched_ids = [
+            resource_id
+            for batch in dispatch_batches
+            for resource_id in batch.params["learning_resource_ids"]
+        ]
+        assert dispatched_ids == [course.learning_resource_id for course in courses]
+        for batch in dispatch_batches:
+            assert batch.params["resource_type"] == COURSE_TYPE
+    elif PROGRAM_TYPE in indexes:
+        assert dispatch_batches.count() == 2
+        dispatched_ids = [
+            resource_id
+            for batch in dispatch_batches
+            for resource_id in batch.params["learning_resource_ids"]
+        ]
+        assert dispatched_ids == [program.learning_resource_id for program in programs]
+        for batch in dispatch_batches:
+            assert batch.params["resource_type"] == PROGRAM_TYPE
+    else:
+        assert dispatch_batches.count() == 0
+
+    # every batch was enqueued
+    assert run_reindex_batch_mock.delay.call_count == job.batches.count()
+    enqueued_ids = {
+        call.args[0] for call in run_reindex_batch_mock.delay.call_args_list
+    }
+    assert enqueued_ids == set(job.batches.values_list("id", flat=True))
 
 
 @pytest.mark.parametrize("indexes", [["course"], ["combined_hybrid"]])
-def test_start_recreate_index_excludes_blocklisted_courses(
-    mocker, mocked_celery, indexes
-):
+def test_start_recreate_index_excludes_blocklisted_courses(mocker, indexes):
     """start_recreate_index should not index courses whose readable_id is blocklisted"""
     courses = CourseFactory.create_batch(3, etl_source=ETLSource.ocw.value)
     blocked = courses[0]
@@ -337,54 +300,115 @@ def test_start_recreate_index_excludes_blocklisted_courses(
         "learning_resources_search.tasks.load_course_blocklist",
         return_value=[blocked.learning_resource.readable_id],
     )
-    index_learning_resources_mock = mocker.patch(
-        "learning_resources_search.tasks.index_learning_resources", autospec=True
-    )
-    index_files_mock = mocker.patch(
-        "learning_resources_search.tasks.index_content_files", autospec=True
-    )
+    mocker.patch("learning_resources_search.tasks.run_reindex_batch", autospec=True)
     mocker.patch(
         "learning_resources_search.indexing_api.get_existing_reindexing_indexes",
         autospec=True,
         return_value=[],
     )
     # ponytail: no assertions on these; they just keep the task off OpenSearch
-    for target in (
+    # (create_backing_index must return a string so it can be stored in the
+    # job's JSON params)
+    mocker.patch(
         "learning_resources_search.indexing_api.create_backing_index",
+        autospec=True,
+        return_value="backing",
+    )
+    mocker.patch(
         "learning_resources_search.indexing_api.delete_orphaned_indexes",
-        "learning_resources_search.tasks.finish_recreate_index",
-    ):
-        mocker.patch(target, autospec=True)
+        autospec=True,
+    )
 
-    with pytest.raises(mocked_celery.replace_exception_class):
-        start_recreate_index.delay(indexes, remove_existing_reindexing_tags=False)
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME, params={"indexes": indexes}
+    )
+    start_recreate_index.delay(job.id)
+
+    job.refresh_from_db()
+    assert job.status == TaskJob.Status.RUNNING
 
     indexed_resource_ids = {
         resource_id
-        for call in index_learning_resources_mock.si.call_args_list
-        for resource_id in call.args[0]
+        for batch in job.batches.filter(kind=ReindexBatchKind.learning_resources.value)
+        for resource_id in batch.params["ids"]
     }
     assert indexed_resource_ids == {
         course.learning_resource_id for course in courses[1:]
     }
 
     if COURSE_TYPE in indexes:
-        file_course_ids = {call.args[1] for call in index_files_mock.si.call_args_list}
-        assert file_course_ids == {
-            course.learning_resource_id for course in courses[1:]
+        dispatched_ids = {
+            resource_id
+            for batch in job.batches.filter(
+                kind=ReindexBatchKind.dispatch_content_files.value
+            )
+            for resource_id in batch.params["learning_resource_ids"]
         }
+        assert dispatched_ids == {course.learning_resource_id for course in courses[1:]}
+
+
+def test_start_recreate_index_percolate(mocker):
+    """start_recreate_index should chunk and enqueue percolate query batches"""
+    settings.OPENSEARCH_INDEXING_CHUNK_SIZE = 2
+
+    PercolateQuery.objects.bulk_create(PercolateQueryFactory.build_batch(5))
+    percolate_queries = list(PercolateQuery.objects.order_by("id"))
+
+    run_reindex_batch_mock = mocker.patch(
+        "learning_resources_search.tasks.run_reindex_batch", autospec=True
+    )
+    mocker.patch(
+        "learning_resources_search.indexing_api.create_backing_index",
+        autospec=True,
+        return_value="backing",
+    )
+    mocker.patch(
+        "learning_resources_search.indexing_api.get_existing_reindexing_indexes",
+        autospec=True,
+        return_value=[],
+    )
+    mocker.patch(
+        "learning_resources_search.indexing_api.delete_orphaned_indexes", autospec=True
+    )
+
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME, params={"indexes": [PERCOLATE_INDEX_TYPE]}
+    )
+    start_recreate_index.delay(job.id)
+
+    job.refresh_from_db()
+    assert job.status == TaskJob.Status.RUNNING
+
+    percolate_batches = job.batches.filter(
+        kind=ReindexBatchKind.percolate.value
+    ).order_by("batch_key")
+    # 5 queries in chunks of 2 -> 3 batches, and only percolate batches
+    assert percolate_batches.count() == 3
+    assert job.batches.count() == 3
+
+    id_chunks = [batch.params["ids"] for batch in percolate_batches]
+    assert id_chunks == [
+        [percolate_queries[0].id, percolate_queries[1].id],
+        [percolate_queries[2].id, percolate_queries[3].id],
+        [percolate_queries[4].id],
+    ]
+
+    # every percolate batch was enqueued
+    enqueued_ids = {
+        call.args[0] for call in run_reindex_batch_mock.delay.call_args_list
+    }
+    assert enqueued_ids == set(percolate_batches.values_list("id", flat=True))
 
 
 @pytest.mark.parametrize(
-    "remove_existing_reindexing_tags",
+    "restart",
     [True, False],
 )
-def test_start_recreate_index_existing_reindexing_index(
-    mocker, mocked_celery, user, remove_existing_reindexing_tags
-):
+def test_start_recreate_index_existing_reindexing_index(mocker, restart):
     """start_recreate_index should stop when reindexing indexes already exist."""
     settings.OPENSEARCH_INDEXING_CHUNK_SIZE = 2
     settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE = 2
+    settings.OPENSEARCH_REINDEX_DISPATCH_CHUNK_SIZE = 2
     indexes = ["program"]
 
     programs = sorted(
@@ -392,8 +416,8 @@ def test_start_recreate_index_existing_reindexing_index(
         key=lambda program: program.learning_resource_id,
     )
 
-    index_learning_resources_mock = mocker.patch(
-        "learning_resources_search.tasks.index_learning_resources", autospec=True
+    run_reindex_batch_mock = mocker.patch(
+        "learning_resources_search.tasks.run_reindex_batch", autospec=True
     )
 
     backing_index = "backing"
@@ -405,9 +429,6 @@ def test_start_recreate_index_existing_reindexing_index(
     delete_orphaned_indexes_mock = mocker.patch(
         "learning_resources_search.indexing_api.delete_orphaned_indexes", autospec=True
     )
-    finish_recreate_index_mock = mocker.patch(
-        "learning_resources_search.tasks.finish_recreate_index", autospec=True
-    )
 
     mocker.patch(
         "learning_resources_search.indexing_api.get_existing_reindexing_indexes",
@@ -415,81 +436,222 @@ def test_start_recreate_index_existing_reindexing_index(
         return_value=["another_reindexing_index"],
     )
 
-    if remove_existing_reindexing_tags:
-        with pytest.raises(mocked_celery.replace_exception_class):
-            start_recreate_index.delay(
-                indexes, remove_existing_reindexing_tags=remove_existing_reindexing_tags
-            )
-    else:
-        start_recreate_index.delay(
-            indexes, remove_existing_reindexing_tags=remove_existing_reindexing_tags
-        )
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME,
+        params={
+            "indexes": indexes,
+            "restart": restart,
+        },
+    )
+    start_recreate_index.delay(job.id)
 
-    finish_recreate_index_dict = {"program": "backing"}
+    job.refresh_from_db()
 
-    if remove_existing_reindexing_tags:
+    if restart:
+        assert job.status == TaskJob.Status.RUNNING
         delete_orphaned_indexes_mock.assert_called_once_with(
             indexes, delete_reindexing_tags=True
         )
+        assert job.params["backing_indexes"] == {"program": "backing"}
 
-        finish_recreate_index_mock.s.assert_called_once_with(finish_recreate_index_dict)
-        assert mocked_celery.group.call_count == 1
-
-        # Celery's 'group' function takes a generator as an argument. In order to make assertions about the items
-        # in that generator, 'list' is being called to force iteration through all of those items.
-        list(mocked_celery.group.call_args[0][0])
-        assert index_learning_resources_mock.si.call_count == 2
-        index_learning_resources_mock.si.assert_any_call(
+        resource_batches = job.batches.filter(
+            kind=ReindexBatchKind.learning_resources.value
+        )
+        assert resource_batches.count() == 2
+        resource_id_chunks = [batch.params["ids"] for batch in resource_batches]
+        for chunk in (
             [programs[0].learning_resource_id, programs[1].learning_resource_id],
-            PROGRAM_TYPE,
-            index_types=IndexestoUpdate.reindexing_index.value,
-        )
-        index_learning_resources_mock.si.assert_any_call(
             [programs[2].learning_resource_id, programs[3].learning_resource_id],
-            PROGRAM_TYPE,
-            index_types=IndexestoUpdate.reindexing_index.value,
-        )
-
-        assert mocked_celery.replace.call_count == 1
-        assert mocked_celery.replace.call_args[0][1] == mocked_celery.chain.return_value
+        ):
+            assert chunk in resource_id_chunks
+        assert run_reindex_batch_mock.delay.call_count == job.batches.count()
     else:
-        assert index_learning_resources_mock.si.call_count == 0
-        assert mocked_celery.replace.call_count == 0
+        assert job.status == TaskJob.Status.FAILED
+        assert "another_reindexing_index" in job.error
+        assert job.batches.count() == 0
+        assert run_reindex_batch_mock.delay.call_count == 0
+        delete_orphaned_indexes_mock.assert_not_called()
+
+
+def test_start_recreate_index_existing_active_job(mocker):
+    """start_recreate_index should stop when another active reindex job overlaps"""
+    mocker.patch(
+        "learning_resources_search.indexing_api.get_existing_reindexing_indexes",
+        autospec=True,
+        return_value=[],
+    )
+    run_reindex_batch_mock = mocker.patch(
+        "learning_resources_search.tasks.run_reindex_batch", autospec=True
+    )
+    other_job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME,
+        params={"indexes": ["program"]},
+        status=TaskJob.Status.RUNNING,
+    )
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME, params={"indexes": ["program"]}
+    )
+
+    start_recreate_index.delay(job.id)
+
+    job.refresh_from_db()
+    assert job.status == TaskJob.Status.FAILED
+    assert str(other_job.id) in job.error
+    assert run_reindex_batch_mock.delay.call_count == 0
+
+
+def test_start_recreate_index_resumes_running_job(mocker):
+    """
+    A redelivery of start_recreate_index for a RUNNING job (worker died mid
+    enqueue loop) should re-enqueue still-queued batches without redoing setup
+    """
+    create_backing_index_mock = mocker.patch(
+        "learning_resources_search.indexing_api.create_backing_index", autospec=True
+    )
+    delete_orphaned_indexes_mock = mocker.patch(
+        "learning_resources_search.indexing_api.delete_orphaned_indexes", autospec=True
+    )
+    run_reindex_batch_mock = mocker.patch(
+        "learning_resources_search.tasks.run_reindex_batch", autospec=True
+    )
+    finish_mock = mocker.patch(
+        "learning_resources_search.tasks.finish_reindex_job", autospec=True
+    )
+
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME,
+        params={"indexes": ["course"], "backing_indexes": {"course": "backing"}},
+        status=TaskJob.Status.RUNNING,
+    )
+    # one batch already finished in the first attempt, one never got enqueued
+    done_batch = TaskBatchFactory.create(
+        job=job,
+        kind=ReindexBatchKind.learning_resources.value,
+        status=TaskBatch.Status.SUCCEEDED,
+    )
+    stranded_batch = TaskBatchFactory.create(
+        job=job,
+        kind=ReindexBatchKind.learning_resources.value,
+        status=TaskBatch.Status.QUEUED,
+    )
+
+    start_recreate_index.delay(job.id)
+
+    # setup must NOT be redone (recreating backing indexes would orphan the
+    # documents the finished batch already wrote)
+    create_backing_index_mock.assert_not_called()
+    delete_orphaned_indexes_mock.assert_not_called()
+    # only the still-queued batch is (re)enqueued
+    run_reindex_batch_mock.delay.assert_called_once_with(stranded_batch.id)
+    # no new batch rows created
+    assert job.batches.count() == 2
+    assert done_batch.job_id == job.id
+    # job is not complete yet (a queued batch remains), so finish isn't claimed
+    finish_mock.delay.assert_not_called()
 
 
 @pytest.mark.parametrize("with_error", [True, False])
-def test_finish_recreate_index(mocker, with_error):
+def test_finish_reindex_job(mocker, with_error):
     """
-    finish_recreate_index should attach the backing index to the default alias
+    finish_reindex_job should attach the backing index to the default alias
     """
-    backing_indices = {"course": "backing", "program": "backing"}
-    results = ["error"] if with_error else []
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME,
+        params={
+            "indexes": ["course", "program"],
+            "backing_indexes": {"course": "backing", "program": "backing"},
+        },
+        status=TaskJob.Status.FINISHING,
+    )
+    TaskBatchFactory.create(job=job, status=TaskBatch.Status.SUCCEEDED)
+    if with_error:
+        TaskBatchFactory.create(job=job, status=TaskBatch.Status.FAILED, error="error")
     switch_indices_mock = mocker.patch(
         "learning_resources_search.indexing_api.switch_indices", autospec=True
     )
     mock_delete_orphans = mocker.patch(
         "learning_resources_search.indexing_api.delete_orphaned_indexes"
     )
+    mocker.patch(
+        "learning_resources_search.indexing_api.is_default_backing_index",
+        autospec=True,
+        return_value=False,
+    )
 
     if with_error:
         with pytest.raises(ReindexError):
-            finish_recreate_index.delay(results, backing_indices)
+            finish_reindex_job.delay(job.id)
         switch_indices_mock.assert_not_called()
         mock_delete_orphans.assert_called_once()
+        job.refresh_from_db()
+        assert job.status == TaskJob.Status.FAILED
+        assert "error" in job.error
     else:
-        finish_recreate_index.delay(results, backing_indices)
+        finish_reindex_job.delay(job.id)
         switch_indices_mock.assert_any_call("backing", COURSE_TYPE)
         switch_indices_mock.assert_any_call("backing", PROGRAM_TYPE)
         mock_delete_orphans.assert_not_called()
+        job.refresh_from_db()
+        assert job.status == TaskJob.Status.SUCCEEDED
+
+
+def test_finish_reindex_job_skips_already_switched(mocker):
+    """
+    A redelivered finish_reindex_job should not re-switch (and thereby delete)
+    a backing index that is already the default
+    """
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME,
+        params={"indexes": ["course"], "backing_indexes": {"course": "backing"}},
+        status=TaskJob.Status.FINISHING,
+    )
+    switch_indices_mock = mocker.patch(
+        "learning_resources_search.indexing_api.switch_indices", autospec=True
+    )
+    mocker.patch(
+        "learning_resources_search.indexing_api.is_default_backing_index",
+        autospec=True,
+        return_value=True,
+    )
+
+    finish_reindex_job.delay(job.id)
+
+    switch_indices_mock.assert_not_called()
+    job.refresh_from_db()
+    assert job.status == TaskJob.Status.SUCCEEDED
+
+
+def test_finish_reindex_job_noop_when_not_finishing(mocker):
+    """finish_reindex_job should do nothing unless the job is in finishing state"""
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME,
+        params={"indexes": ["course"], "backing_indexes": {"course": "backing"}},
+        status=TaskJob.Status.SUCCEEDED,
+    )
+    switch_indices_mock = mocker.patch(
+        "learning_resources_search.indexing_api.switch_indices", autospec=True
+    )
+
+    finish_reindex_job.delay(job.id)
+
+    switch_indices_mock.assert_not_called()
 
 
 @pytest.mark.parametrize("with_error", [True, False])
-def test_finish_recreate_index_retry_exceptions(mocker, with_error):
+def test_finish_reindex_job_retry_exceptions(mocker, with_error):
     """
-    finish_recreate_index should be retried on RequestErrors
+    finish_reindex_job should be retried on RequestErrors
     """
-    backing_indices = {"course": "backing", "program": "backing"}
-    results = ["error"] if with_error else []
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME,
+        params={
+            "indexes": ["course", "program"],
+            "backing_indexes": {"course": "backing", "program": "backing"},
+        },
+        status=TaskJob.Status.FINISHING,
+    )
+    if with_error:
+        TaskBatchFactory.create(job=job, status=TaskBatch.Status.FAILED, error="error")
     mock_error = RequestError(429, "oops", {})
     switch_indices_mock = mocker.patch(
         "learning_resources_search.indexing_api.switch_indices",
@@ -500,15 +662,332 @@ def test_finish_recreate_index_retry_exceptions(mocker, with_error):
         "learning_resources_search.indexing_api.delete_orphaned_indexes",
         side_effect=[mock_error, None],
     )
+    mocker.patch(
+        "learning_resources_search.indexing_api.is_default_backing_index",
+        autospec=True,
+        return_value=False,
+    )
 
     with pytest.raises(Retry):
-        finish_recreate_index.delay(results, backing_indices)
+        finish_reindex_job.delay(job.id)
+    job.refresh_from_db()
+    # the job stays in finishing state so the retry can pick it back up
+    assert job.status == TaskJob.Status.FINISHING
     if with_error:
         switch_indices_mock.assert_not_called()
         mock_delete_orphans.assert_called_once()
     else:
         mock_delete_orphans.assert_not_called()
         switch_indices_mock.assert_called_once()
+
+
+def test_run_reindex_batch_learning_resources(mocker, mocked_api):
+    """run_reindex_batch should index learning resources for that batch kind"""
+    finish_mock = mocker.patch(
+        "learning_resources_search.tasks.finish_reindex_job", autospec=True
+    )
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME, status=TaskJob.Status.RUNNING
+    )
+    batch = TaskBatchFactory.create(
+        job=job,
+        kind=ReindexBatchKind.learning_resources.value,
+        params={"ids": [1, 2], "index_name": COURSE_TYPE},
+    )
+
+    run_reindex_batch.delay(batch.id)
+
+    mocked_api.index_learning_resources.assert_called_once_with(
+        [1, 2], COURSE_TYPE, IndexestoUpdate.reindexing_index.value
+    )
+    batch.refresh_from_db()
+    assert batch.status == TaskBatch.Status.SUCCEEDED
+    # the last batch of the job claims the finish step
+    job.refresh_from_db()
+    assert job.status == TaskJob.Status.FINISHING
+    finish_mock.delay.assert_called_once_with(job.id)
+
+
+def test_run_reindex_batch_content_files(mocker, mocked_api):
+    """run_reindex_batch should index content files for that batch kind"""
+    mocker.patch("learning_resources_search.tasks.finish_reindex_job", autospec=True)
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME, status=TaskJob.Status.RUNNING
+    )
+    batch = TaskBatchFactory.create(
+        job=job,
+        kind=ReindexBatchKind.content_files.value,
+        params={
+            "ids": [3, 4],
+            "learning_resource_id": 7,
+            "resource_type": PROGRAM_TYPE,
+        },
+    )
+
+    run_reindex_batch.delay(batch.id)
+
+    mocked_api.index_content_files.assert_called_once_with(
+        [3, 4],
+        7,
+        index_types=IndexestoUpdate.reindexing_index.value,
+        resource_type=PROGRAM_TYPE,
+    )
+    batch.refresh_from_db()
+    assert batch.status == TaskBatch.Status.SUCCEEDED
+
+
+def test_run_reindex_batch_percolate(mocker, mocked_api):
+    """run_reindex_batch should index percolate queries for that batch kind"""
+    mocker.patch("learning_resources_search.tasks.finish_reindex_job", autospec=True)
+    serialize_mock = mocker.patch(
+        "learning_resources_search.tasks.serialize_bulk_percolators",
+        return_value=["serialized"],
+    )
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME, status=TaskJob.Status.RUNNING
+    )
+    batch = TaskBatchFactory.create(
+        job=job,
+        kind=ReindexBatchKind.percolate.value,
+        params={"ids": [5, 6]},
+    )
+
+    run_reindex_batch.delay(batch.id)
+
+    serialize_mock.assert_called_once_with([5, 6])
+    mocked_api.index_items.assert_called_once_with(
+        ["serialized"],
+        PERCOLATE_INDEX_TYPE,
+        IndexestoUpdate.reindexing_index.value,
+    )
+    batch.refresh_from_db()
+    assert batch.status == TaskBatch.Status.SUCCEEDED
+
+
+def test_run_reindex_batch_dispatch_content_files(mocker, mocked_api):
+    """
+    A dispatch batch should create and enqueue content file batches, idempotently
+    """
+    settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE = 2
+    course = CourseFactory.create(etl_source=ETLSource.ocw.value)
+    run = course.learning_resource.runs.first()
+    run_files = sorted(
+        ContentFileFactory.create_batch(3, run=run), key=lambda file: file.id
+    )
+    marketing_file = ContentFileFactory.create(
+        learning_resource=course.learning_resource
+    )
+    delay_mock = mocker.patch.object(run_reindex_batch, "delay")
+
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME, status=TaskJob.Status.RUNNING
+    )
+    batch = TaskBatchFactory.create(
+        job=job,
+        kind=ReindexBatchKind.dispatch_content_files.value,
+        params={
+            "learning_resource_ids": [course.learning_resource_id],
+            "resource_type": COURSE_TYPE,
+        },
+    )
+
+    run_reindex_batch(batch.id)
+
+    children = job.batches.filter(kind=ReindexBatchKind.content_files.value).order_by(
+        "batch_key"
+    )
+    assert children.count() == 3
+    child_params = [child.params for child in children]
+    assert {
+        "ids": [run_files[0].id, run_files[1].id],
+        "learning_resource_id": course.learning_resource_id,
+        "resource_type": COURSE_TYPE,
+    } in child_params
+    assert {
+        "ids": [run_files[2].id],
+        "learning_resource_id": course.learning_resource_id,
+        "resource_type": COURSE_TYPE,
+    } in child_params
+    assert {
+        "ids": [marketing_file.id],
+        "learning_resource_id": course.learning_resource_id,
+        "resource_type": COURSE_TYPE,
+    } in child_params
+
+    batch.refresh_from_db()
+    assert batch.status == TaskBatch.Status.SUCCEEDED
+    assert delay_mock.call_count == 3
+
+    # re-running the dispatch (e.g. on redelivery) must not duplicate children
+    TaskBatch.objects.filter(id=batch.id).update(status=TaskBatch.Status.QUEUED)
+    run_reindex_batch(batch.id)
+    assert job.batches.filter(kind=ReindexBatchKind.content_files.value).count() == 3
+
+
+def test_run_reindex_batch_error(mocker, mocked_api):
+    """run_reindex_batch should mark the batch failed on a non-retryable error"""
+    finish_mock = mocker.patch(
+        "learning_resources_search.tasks.finish_reindex_job", autospec=True
+    )
+    mocked_api.index_learning_resources.side_effect = ValueError("boom")
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME, status=TaskJob.Status.RUNNING
+    )
+    batch = TaskBatchFactory.create(
+        job=job,
+        kind=ReindexBatchKind.learning_resources.value,
+        params={"ids": [1], "index_name": COURSE_TYPE},
+    )
+
+    run_reindex_batch.delay(batch.id)
+
+    batch.refresh_from_db()
+    assert batch.status == TaskBatch.Status.FAILED
+    assert "boom" in batch.error
+    # failed batches still count toward completion so the job can finish/clean up
+    job.refresh_from_db()
+    assert job.status == TaskJob.Status.FINISHING
+    finish_mock.delay.assert_called_once_with(job.id)
+
+
+def test_run_reindex_batch_retry(mocker, mocked_api):
+    """run_reindex_batch should retry on search connection errors"""
+    mocker.patch("learning_resources_search.tasks.finish_reindex_job", autospec=True)
+    mocked_api.index_learning_resources.side_effect = ESConnectionError(
+        "err", "err", "err"
+    )
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME, status=TaskJob.Status.RUNNING
+    )
+    batch = TaskBatchFactory.create(
+        job=job,
+        kind=ReindexBatchKind.learning_resources.value,
+        params={"ids": [1], "index_name": COURSE_TYPE},
+    )
+
+    with pytest.raises(Retry):
+        run_reindex_batch.delay(batch.id)
+
+    batch.refresh_from_db()
+    # the batch is left non-terminal so the celery retry re-runs it
+    assert batch.status == TaskBatch.Status.RUNNING
+
+
+def test_run_reindex_batch_on_failure_fails_batch(mocker):
+    """
+    When run_reindex_batch gives up (retries exhausted) its on_failure handler
+    should mark the batch FAILED and nudge the job toward completion
+    """
+    finish_mock = mocker.patch(
+        "learning_resources_search.tasks.finish_reindex_job", autospec=True
+    )
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME, status=TaskJob.Status.RUNNING
+    )
+    batch = TaskBatchFactory.create(
+        job=job,
+        kind=ReindexBatchKind.learning_resources.value,
+        status=TaskBatch.Status.RUNNING,
+    )
+
+    run_reindex_batch.on_failure(RetryError("boom"), "task-id", [batch.id], {}, None)
+
+    batch.refresh_from_db()
+    assert batch.status == TaskBatch.Status.FAILED
+    assert "boom" in batch.error
+    # it was the only batch, so the job is now claimable for finishing
+    job.refresh_from_db()
+    assert job.status == TaskJob.Status.FINISHING
+    finish_mock.delay.assert_called_once_with(job.id)
+
+
+def test_finish_reindex_job_on_failure_fails_job():
+    """
+    When finish_reindex_job gives up its on_failure handler should mark the
+    FINISHING job FAILED so it doesn't hang active forever
+    """
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME,
+        params={"indexes": ["course"], "backing_indexes": {"course": "backing"}},
+        status=TaskJob.Status.FINISHING,
+    )
+
+    finish_reindex_job.on_failure(
+        RetryError("switch failed"), "task-id", [job.id], {}, None
+    )
+
+    job.refresh_from_db()
+    assert job.status == TaskJob.Status.FAILED
+    assert "switch failed" in job.error
+
+
+@pytest.mark.parametrize(
+    ("batch_status", "job_status"),
+    [
+        (TaskBatch.Status.SUCCEEDED, TaskJob.Status.RUNNING),
+        (TaskBatch.Status.QUEUED, TaskJob.Status.FAILED),
+    ],
+)
+def test_run_reindex_batch_noop(mocker, mocked_api, batch_status, job_status):
+    """run_reindex_batch should do nothing if the batch or job is terminal"""
+    mocker.patch("learning_resources_search.tasks.finish_reindex_job", autospec=True)
+    job = TaskJobFactory.create(task_name=REINDEX_TASK_NAME, status=job_status)
+    batch = TaskBatchFactory.create(
+        job=job,
+        kind=ReindexBatchKind.learning_resources.value,
+        status=batch_status,
+        params={"ids": [1], "index_name": COURSE_TYPE},
+    )
+
+    run_reindex_batch.delay(batch.id)
+
+    mocked_api.index_learning_resources.assert_not_called()
+    batch.refresh_from_db()
+    assert batch.status == batch_status
+
+
+def test_maybe_finish_reindex_job(mocker):
+    """_maybe_finish_reindex_job should claim the finish exactly once"""
+    finish_mock = mocker.patch(
+        "learning_resources_search.tasks.finish_reindex_job", autospec=True
+    )
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME, status=TaskJob.Status.RUNNING
+    )
+    done_batch = TaskBatchFactory.create(job=job, status=TaskBatch.Status.SUCCEEDED)
+    pending_batch = TaskBatchFactory.create(job=job, status=TaskBatch.Status.QUEUED)
+
+    _maybe_finish_reindex_job(job.id)
+    job.refresh_from_db()
+    assert job.status == TaskJob.Status.RUNNING
+    finish_mock.delay.assert_not_called()
+
+    TaskBatch.objects.filter(id=pending_batch.id).update(status=TaskBatch.Status.FAILED)
+    _maybe_finish_reindex_job(job.id)
+    job.refresh_from_db()
+    assert job.status == TaskJob.Status.FINISHING
+    finish_mock.delay.assert_called_once_with(job.id)
+
+    # a second caller cannot claim the finish again
+    _maybe_finish_reindex_job(job.id)
+    assert finish_mock.delay.call_count == 1
+    assert done_batch.job_id == job.id
+
+
+def test_maybe_finish_reindex_job_no_batches(mocker):
+    """A job with no batches at all should finish immediately"""
+    finish_mock = mocker.patch(
+        "learning_resources_search.tasks.finish_reindex_job", autospec=True
+    )
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME, status=TaskJob.Status.RUNNING
+    )
+
+    _maybe_finish_reindex_job(job.id)
+
+    job.refresh_from_db()
+    assert job.status == TaskJob.Status.FINISHING
+    finish_mock.delay.assert_called_once_with(job.id)
 
 
 @pytest.mark.usefixtures("_wrap_retry_mock")
@@ -1379,11 +1858,22 @@ def test_cache_is_cleared_after_reindex(mocker):
         "learning_resources_search.tasks.clear_views_cache"
     )
 
-    backing_indices = {"course": "backing", "program": "backing"}
-    results = []
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME,
+        params={
+            "indexes": ["course", "program"],
+            "backing_indexes": {"course": "backing", "program": "backing"},
+        },
+        status=TaskJob.Status.FINISHING,
+    )
     mocker.patch("learning_resources_search.indexing_api.switch_indices", autospec=True)
     mocker.patch("learning_resources_search.indexing_api.delete_orphaned_indexes")
-    finish_recreate_index.delay(results, backing_indices)
+    mocker.patch(
+        "learning_resources_search.indexing_api.is_default_backing_index",
+        autospec=True,
+        return_value=False,
+    )
+    finish_reindex_job.delay(job.id)
     assert mocked_clear_views_cache.call_count == 1
 
 

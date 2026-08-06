@@ -56,6 +56,21 @@ class IndexestoUpdate(Enum):
     all_indexes = "all_indexes"
 
 
+# TaskJob.task_name for recreate_index jobs
+REINDEX_TASK_NAME = "recreate_index"
+
+
+class ReindexBatchKind(Enum):
+    """
+    Enum for the kinds of TaskBatch used by recreate_index jobs
+    """
+
+    learning_resources = "learning_resources"
+    content_files = "content_files"
+    percolate = "percolate"
+    dispatch_content_files = "dispatch_content_files"
+
+
 LEARNING_RESOURCE_TYPES = (
     COURSE_TYPE,
     PROGRAM_TYPE,
