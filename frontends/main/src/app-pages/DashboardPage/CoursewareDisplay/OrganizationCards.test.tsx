@@ -32,6 +32,7 @@ describe("OrganizationCards", () => {
       description: `Description for org ${i + 1}`,
       logo: `https://example.com/logo${i + 1}.png`,
       slug: `org-test-${i + 1}`,
+      sso_organization_id: null,
       contracts: withContracts
         ? [
             mitxOnlineFactories.contracts.contract({
@@ -87,6 +88,7 @@ describe("OrganizationCards", () => {
       description: "Test Description",
       logo: "https://example.com/logo1.png",
       slug: "org-test",
+      sso_organization_id: null,
       contracts: [
         mitxOnlineFactories.contracts.contract({
           id: 1,
@@ -114,6 +116,7 @@ describe("OrganizationCards", () => {
         description: "Test description",
         logo: "https://example.com/logo.png",
         slug: "org-test-org",
+        sso_organization_id: null,
         contracts: [
           mitxOnlineFactories.contracts.contract({
             id: 1,
@@ -166,6 +169,7 @@ describe("OrganizationCards", () => {
         description: "Test description",
         logo: "https://example.com/logo.png",
         slug: "org-test-org",
+        sso_organization_id: null,
         contracts: [contract1, contract2],
       }
 
@@ -198,6 +202,7 @@ describe("OrganizationCards", () => {
         description: "Test description",
         logo: "https://example.com/logo.png",
         slug: "org-test-org",
+        sso_organization_id: null,
         contracts: [
           mitxOnlineFactories.contracts.contract({
             id: 1,
@@ -223,6 +228,7 @@ describe("OrganizationCards", () => {
         description: "Test description",
         logo: "https://example.com/logo.png",
         slug: "org-test-org",
+        sso_organization_id: null,
         contracts: [], // No contracts for this organization
       }
 
@@ -251,6 +257,7 @@ describe("OrganizationCards", () => {
         description: "Test description",
         logo: "https://example.com/logo1.png",
         slug: "org-one",
+        sso_organization_id: null,
         contracts: [
           mitxOnlineFactories.contracts.contract({
             id: 1,
@@ -272,6 +279,7 @@ describe("OrganizationCards", () => {
         description: "Test description",
         logo: "https://example.com/logo2.png",
         slug: "org-two",
+        sso_organization_id: null,
         contracts: [
           mitxOnlineFactories.contracts.contract({
             id: 3,
@@ -339,6 +347,7 @@ describe("OrganizationCards", () => {
         name: "Test Organization",
         logo: undefined,
         slug: "org-test-org",
+        sso_organization_id: null,
         contracts: [
           mitxOnlineFactories.contracts.contract({
             id: 1,
@@ -374,6 +383,7 @@ describe("OrganizationCards", () => {
         description: "Test description",
         logo: "https://example.com/logo.png",
         slug: "org-my-company",
+        sso_organization_id: null,
         contracts: [contract],
       }
 
@@ -401,6 +411,7 @@ describe("OrganizationCards", () => {
         description: "Test description",
         logo: "https://example.com/logo.png",
         slug: "my-company", // No 'org-' prefix
+        sso_organization_id: null,
         contracts: [contract],
       }
 
@@ -422,6 +433,7 @@ describe("OrganizationCards", () => {
         description: "Test description",
         logo: "https://example.com/logo.png",
         slug: "org-test-org",
+        sso_organization_id: null,
         contracts: [], // No contracts for this organization
       }
 

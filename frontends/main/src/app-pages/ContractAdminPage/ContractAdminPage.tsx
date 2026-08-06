@@ -8,6 +8,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query"
 import { useFeatureFlagEnabled } from "posthog-js/react"
+import { RiErrorWarningLine } from "@remixicon/react"
 import {
   alpha,
   Chip,
@@ -18,6 +19,7 @@ import {
   Skeleton,
   Stack,
   TabContext,
+  Tooltip,
   Typography,
   styled,
 } from "ol-components"
@@ -205,9 +207,17 @@ const ControlsLeft = styled.div(({ theme }) => ({
   },
 }))
 
+type DisplayStatus =
+  | "redeemed"
+  | "pending"
+  | "delivered"
+  | "opened"
+  | "clicked"
+  | "failed"
+
 const StatusBadge = styled(Chip, {
   shouldForwardProp: (prop) => prop !== "$status",
-})<{ $status: "assigned" | "redeemed" }>(({ $status, theme }) => ({
+})<{ $status: DisplayStatus }>(({ $status, theme }) => ({
   height: "20px",
   borderRadius: "4px",
   paddingRight: "8px",
@@ -219,11 +229,58 @@ const StatusBadge = styled(Chip, {
     backgroundColor: alpha(theme.custom.colors.green, 0.2),
     color: theme.custom.colors.darkGreen,
   }),
-  ...($status === "assigned" && {
+  ...($status === "failed" && {
+    backgroundColor: alpha(theme.custom.colors.red, 0.2),
+    color: theme.custom.colors.red,
+    cursor: "help",
+  }),
+  // pending/delivered/opened/clicked all read as "in progress, nothing
+  // wrong" and share the same blue treatment.
+  ...(["pending", "delivered", "opened", "clicked"].includes($status) && {
     backgroundColor: alpha(theme.custom.colors.blue, 0.2),
     color: theme.custom.colors.darkBlue,
   }),
 }))
+
+// Icon trails the text (rather than Chip's built-in leading-icon slot) so the
+// warning icon reads as "here's more detail" after the status, not as a
+// leading glyph identifying the status itself.
+const FailedLabel = styled.span({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "4px",
+})
+
+const DISPLAY_STATUS_LABEL: Record<DisplayStatus, string> = {
+  redeemed: "Redeemed",
+  pending: "Pending",
+  delivered: "Pending - Delivered",
+  opened: "Pending - Opened",
+  clicked: "Pending - Clicked",
+  failed: "Failed",
+}
+
+const FAILED_EMAIL_EXPLANATION =
+  "Delivery failed — the recipient's email address may be invalid, unreachable, or blocked by their mail server."
+
+/**
+ * `redemption_status` always wins once a seat is redeemed — email
+ * deliverability no longer matters at that point. Otherwise, the code's
+ * `email_status` drives display; a never-sent or still-`"pending"` email both
+ * collapse into "Pending" since neither indicates a problem worth surfacing.
+ */
+function getDisplayStatus(code: ManagerEnrollmentCode): DisplayStatus {
+  if (code.redemption_status === "redeemed") return "redeemed"
+  switch (code.email_status) {
+    case "delivered":
+    case "opened":
+    case "clicked":
+    case "failed":
+      return code.email_status
+    default:
+      return "pending"
+  }
+}
 
 const ActionCell = styled.div(({ theme }) => ({
   width: "40px",
@@ -492,7 +549,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
           buildCsvRow([
             c.assigned_to,
             c.redeemed_by,
-            c.redemption_status === "redeemed" ? "Redeemed" : "Pending claim",
+            DISPLAY_STATUS_LABEL[getDisplayStatus(c)],
             formatDate(c.assigned_on),
             formatDate(c.redeemed_on),
             formatDate(c.last_sent),
@@ -588,13 +645,13 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                 <StatLabel>Unassigned</StatLabel>
               </StatBlock>
             )}
-            <StatBlock role="group" aria-label="Pending claim">
+            <StatBlock role="group" aria-label="Pending">
               {isLoadingContractDetail ? (
                 <Skeleton width="48px" height="36px" />
               ) : (
                 <StatValue>{assignedCount}</StatValue>
               )}
-              <StatLabel>Pending claim</StatLabel>
+              <StatLabel>Pending</StatLabel>
             </StatBlock>
             <StatBlock role="group" aria-label="Redeemed">
               {isLoadingContractDetail ? (
@@ -642,7 +699,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
               <TabContext value={statusFilter}>
                 <TabButtonList onChange={handleTabChange}>
                   <TabButton label="All" value="all" />
-                  <TabButton label="Pending claim" value="pending" />
+                  <TabButton label="Pending" value="pending" />
                   <TabButton label="Redeemed" value="redeemed" />
                 </TabButtonList>
               </TabContext>
@@ -760,18 +817,35 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                       </TableCell>
                       <TableCell role="cell" $flex={COLUMN_FLEX.status}>
                         <MobileLabel>Status</MobileLabel>
-                        <StatusBadge
-                          $status={
-                            code.redemption_status === "assigned"
-                              ? "assigned"
-                              : "redeemed"
-                          }
-                          label={
-                            code.redemption_status === "redeemed"
-                              ? "Redeemed"
-                              : "Pending claim"
-                          }
-                        />
+                        {(() => {
+                          const status = getDisplayStatus(code)
+                          const badge = (
+                            <StatusBadge
+                              $status={status}
+                              label={
+                                status === "failed" ? (
+                                  <FailedLabel>
+                                    {DISPLAY_STATUS_LABEL[status]}
+                                    <RiErrorWarningLine
+                                      aria-hidden="true"
+                                      size={14}
+                                    />
+                                  </FailedLabel>
+                                ) : (
+                                  DISPLAY_STATUS_LABEL[status]
+                                )
+                              }
+                              tabIndex={status === "failed" ? 0 : undefined}
+                            />
+                          )
+                          return status === "failed" ? (
+                            <Tooltip title={FAILED_EMAIL_EXPLANATION} describeChild>
+                              {badge}
+                            </Tooltip>
+                          ) : (
+                            badge
+                          )
+                        })()}
                       </TableCell>
                       <TableCell role="cell" $flex={COLUMN_FLEX.assignedOn}>
                         <MobileLabel>Assigned on</MobileLabel>
