@@ -1604,3 +1604,32 @@ class ContentSummarizerConfiguration(TimestampedModel):
         default=list,
     )
     is_active = models.BooleanField(default=True)
+
+
+class ETLSourceOwnership(TimestampedModel):
+    """
+    Declares which pipeline owns writes for an (etl_source, resource_type) pair.
+
+    A missing row means "pull" (the historical default: Celery ETL is the
+    source of truth and its full-sync loaders may prune/unpublish anything
+    they didn't just write). Adding a "push" row hands write ownership to a
+    webhook/event pipeline (e.g. Dagster) and tells pull-ETL loaders to skip
+    writing and pruning that pair entirely, so the two writers stop treating
+    each other's rows as missing. See learning_resources/etl/ownership.py.
+    """
+
+    class Mode(models.TextChoices):
+        PULL = "pull", "Pull (Celery ETL)"
+        PUSH = "push", "Push (webhook/event pipeline)"
+
+    etl_source = models.CharField(max_length=32)
+    resource_type = models.CharField(max_length=32)
+    mode = models.CharField(max_length=8, choices=Mode.choices, default=Mode.PULL)
+
+    class Meta:
+        unique_together = ("etl_source", "resource_type")
+        verbose_name = "ETL source ownership"
+        verbose_name_plural = "ETL source ownerships"
+
+    def __str__(self):
+        return f"{self.etl_source}/{self.resource_type}: {self.mode}"
