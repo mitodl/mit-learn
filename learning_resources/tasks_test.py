@@ -13,7 +13,13 @@ from moto import mock_aws
 from learning_resources import factories, models, tasks
 from learning_resources.conftest import OCW_TEST_PREFIX, setup_s3, setup_s3_ocw
 from learning_resources.constants import LearningResourceType, PlatformType
-from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
+from learning_resources.etl.constants import (
+    MARKETING_PAGE_FILE_TYPE,
+    YOUTUBE_ETL_TASK_NAME,
+    ETLSource,
+    YoutubeBatchKind,
+)
+from learning_resources.etl.exceptions import ExtractException
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
@@ -22,15 +28,20 @@ from learning_resources.factories import (
 from learning_resources.models import ContentFile, LearningResource
 from learning_resources.tasks import (
     cleanup_deleted_content_files,
+    finish_youtube_etl,
     get_ocw_data,
     get_youtube_data,
     get_youtube_transcripts,
     marketing_page_for_resources,
+    run_youtube_batch,
     scrape_marketing_pages,
+    start_youtube_etl,
     sync_canvas_courses,
     update_next_start_date_and_prices,
     update_ocw_learning_material_resources,
 )
+from main.factories import TaskBatchFactory, TaskJobFactory
+from main.models import TaskBatch, TaskJob
 from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
@@ -458,12 +469,429 @@ def test_get_ocw_courses(settings, mocker, mocked_celery, timestamp, overwrite):
     )
 
 
+@pytest.fixture
+def youtube_settings(settings):
+    """Settings with the youtube ETL configured"""
+    settings.YOUTUBE_CONFIG_URL = "http://test.youtube/config.yaml"
+    settings.YOUTUBE_DEVELOPER_KEY = "key"
+    return settings
+
+
+def _channel_config(channel_id, **kwargs):
+    """Build a youtube channel config"""
+    return {"channel_id": channel_id, "offered_by": "ocw", **kwargs}
+
+
+def _playlist_data(playlist_id):
+    """Build the raw youtube api data for a playlist"""
+    return {
+        "id": playlist_id,
+        "snippet": {
+            "title": f"Playlist {playlist_id}",
+            "thumbnails": {"high": {"url": f"http://img/{playlist_id}.jpg"}},
+        },
+    }
+
+
 @pytest.mark.parametrize("channel_ids", [["abc", "123"], None])
-def test_get_youtube_data(mocker, settings, channel_ids):
-    """Verify that the get_youtube_data invokes the YouTube ETL pipeline with expected params"""
-    mock_pipelines = mocker.patch("learning_resources.tasks.pipelines")
-    get_youtube_data.delay(channel_ids=channel_ids)
-    mock_pipelines.youtube_etl.assert_called_once_with(channel_ids=channel_ids)
+def test_get_youtube_data(mocker, channel_ids):
+    """get_youtube_data should create a job and enqueue its start task"""
+    mock_start = mocker.patch(
+        "learning_resources.tasks.start_youtube_etl", autospec=True
+    )
+
+    job_id = get_youtube_data.delay(channel_ids=channel_ids).get()
+
+    job = TaskJob.objects.get(id=job_id)
+    assert job.task_name == YOUTUBE_ETL_TASK_NAME
+    assert job.status == TaskJob.Status.QUEUED
+    assert job.params["channel_ids"] == channel_ids
+    mock_start.delay.assert_called_once_with(job_id)
+
+
+@pytest.mark.parametrize("status", TaskJob.ACTIVE_STATUSES)
+def test_get_youtube_data_skips_active_job(mocker, status):
+    """get_youtube_data should not start a second job while one is in progress"""
+    TaskJobFactory.create(task_name=YOUTUBE_ETL_TASK_NAME, status=status)
+    mock_start = mocker.patch(
+        "learning_resources.tasks.start_youtube_etl", autospec=True
+    )
+
+    assert get_youtube_data.delay().get() is None
+    assert TaskJob.objects.filter(task_name=YOUTUBE_ETL_TASK_NAME).count() == 1
+    mock_start.delay.assert_not_called()
+
+
+def test_start_youtube_etl(mocker, youtube_settings):
+    """start_youtube_etl should create a batch per configured channel"""
+    channel_configs = [_channel_config("channel1"), _channel_config("channel2")]
+    mocker.patch(
+        "learning_resources.tasks.youtube.get_youtube_channel_configs",
+        autospec=True,
+        return_value=channel_configs,
+    )
+    mock_run_batch = mocker.patch(
+        "learning_resources.tasks.run_youtube_batch", autospec=True
+    )
+
+    job = TaskJobFactory.create(
+        task_name=YOUTUBE_ETL_TASK_NAME, params={"channel_ids": None}
+    )
+    start_youtube_etl.delay(job.id)
+
+    job.refresh_from_db()
+    assert job.status == TaskJob.Status.RUNNING
+    assert job.params["channel_ids"] == ["channel1", "channel2"]
+
+    batches = job.batches.order_by("batch_key")
+    assert [batch.batch_key for batch in batches] == [
+        "channel:channel1",
+        "channel:channel2",
+    ]
+    assert {batch.kind for batch in batches} == {YoutubeBatchKind.channel.value}
+    assert [batch.params["channel_config"] for batch in batches] == channel_configs
+    assert sorted(
+        call.args[0] for call in mock_run_batch.delay.call_args_list
+    ) == sorted(batch.id for batch in batches)
+
+
+def test_start_youtube_etl_requeues_pending_batches(mocker, youtube_settings):
+    """A redelivered start task should re-enqueue queued batches without rebuilding them"""
+    mock_configs = mocker.patch(
+        "learning_resources.tasks.youtube.get_youtube_channel_configs", autospec=True
+    )
+    mock_run_batch = mocker.patch(
+        "learning_resources.tasks.run_youtube_batch", autospec=True
+    )
+
+    job = TaskJobFactory.create(
+        task_name=YOUTUBE_ETL_TASK_NAME,
+        status=TaskJob.Status.RUNNING,
+        params={"channel_ids": ["channel1"]},
+    )
+    queued = TaskBatchFactory.create(job=job, status=TaskBatch.Status.QUEUED)
+    TaskBatchFactory.create(job=job, status=TaskBatch.Status.SUCCEEDED)
+
+    start_youtube_etl.delay(job.id)
+
+    mock_configs.assert_not_called()
+    mock_run_batch.delay.assert_called_once_with(queued.id)
+
+
+def test_start_youtube_etl_without_configs_does_not_unpublish(mocker, youtube_settings):
+    """An empty channel config should fail the job rather than unpublish everything"""
+    mocker.patch(
+        "learning_resources.tasks.youtube.get_youtube_channel_configs",
+        autospec=True,
+        return_value=[],
+    )
+    mock_finish = mocker.patch(
+        "learning_resources.tasks.finish_youtube_etl", autospec=True
+    )
+
+    job = TaskJobFactory.create(
+        task_name=YOUTUBE_ETL_TASK_NAME, params={"channel_ids": None}
+    )
+    start_youtube_etl.delay(job.id)
+
+    job.refresh_from_db()
+    assert job.status == TaskJob.Status.FAILED
+    assert job.error == "No youtube channel configs found"
+    assert job.batches.count() == 0
+    mock_finish.delay.assert_not_called()
+
+
+@pytest.mark.parametrize("setting", ["YOUTUBE_CONFIG_URL", "YOUTUBE_DEVELOPER_KEY"])
+def test_start_youtube_etl_missing_settings(mocker, youtube_settings, setting):
+    """A missing youtube setting should fail the job before any extraction"""
+    setattr(youtube_settings, setting, None)
+    mock_configs = mocker.patch(
+        "learning_resources.tasks.youtube.get_youtube_channel_configs", autospec=True
+    )
+
+    job = TaskJobFactory.create(
+        task_name=YOUTUBE_ETL_TASK_NAME, params={"channel_ids": None}
+    )
+    start_youtube_etl.delay(job.id)
+
+    job.refresh_from_db()
+    assert job.status == TaskJob.Status.FAILED
+    assert setting in job.error
+    mock_configs.assert_not_called()
+
+
+def test_run_youtube_batch_channel(mocker, youtube_settings):
+    """A channel batch should load the channel and fan its playlists out into batches"""
+    mocker.patch("learning_resources.tasks.youtube.get_youtube_client", autospec=True)
+    mocker.patch(
+        "learning_resources.tasks.youtube.extract_channel",
+        autospec=True,
+        return_value={"id": "channel1", "snippet": {"title": "Channel 1"}},
+    )
+    mocker.patch(
+        "learning_resources.tasks.youtube.extract_playlist_metadata",
+        autospec=True,
+        return_value=iter(
+            [(_playlist_data("playlist1"), True), (_playlist_data("playlist2"), False)]
+        ),
+    )
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.loaders.unpublish_removed_playlists", autospec=True
+    )
+    mock_run_batch = mocker.patch(
+        "learning_resources.tasks.run_youtube_batch", autospec=True
+    )
+
+    job = TaskJobFactory.create(
+        task_name=YOUTUBE_ETL_TASK_NAME,
+        status=TaskJob.Status.RUNNING,
+        params={"channel_ids": ["channel1"]},
+    )
+    batch = TaskBatchFactory.create(
+        job=job,
+        kind=YoutubeBatchKind.channel.value,
+        batch_key="channel:channel1",
+        params={"channel_config": _channel_config("channel1")},
+    )
+
+    run_youtube_batch(batch.id)
+
+    batch.refresh_from_db()
+    assert batch.status == TaskBatch.Status.SUCCEEDED
+
+    video_channel = models.VideoChannel.objects.get(channel_id="channel1")
+    assert video_channel.title == "Channel 1"
+    assert video_channel.published is True
+    assert video_channel.etl_source == ETLSource.youtube.name
+
+    mock_unpublish.assert_called_once_with(video_channel, ["playlist1", "playlist2"])
+
+    playlist_batches = job.batches.filter(
+        kind=YoutubeBatchKind.playlist.value
+    ).order_by("batch_key")
+    assert [playlist_batch.batch_key for playlist_batch in playlist_batches] == [
+        "playlist:playlist1",
+        "playlist:playlist2",
+    ]
+    assert [
+        playlist_batch.params["create_videos"] for playlist_batch in playlist_batches
+    ] == [True, False]
+    assert all(
+        playlist_batch.params["channel_id"] == "channel1"
+        and playlist_batch.params["offered_by"] == "ocw"
+        for playlist_batch in playlist_batches
+    )
+    assert sorted(
+        call.args[0] for call in mock_run_batch.delay.call_args_list
+    ) == sorted(playlist_batch.id for playlist_batch in playlist_batches)
+
+
+def test_run_youtube_batch_channel_missing_from_youtube(mocker, youtube_settings):
+    """A channel youtube no longer returns should succeed without creating batches"""
+    mocker.patch("learning_resources.tasks.youtube.get_youtube_client", autospec=True)
+    mocker.patch(
+        "learning_resources.tasks.youtube.extract_channel",
+        autospec=True,
+        return_value=None,
+    )
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.loaders.unpublish_removed_playlists", autospec=True
+    )
+
+    job = TaskJobFactory.create(
+        task_name=YOUTUBE_ETL_TASK_NAME,
+        status=TaskJob.Status.RUNNING,
+        params={"channel_ids": ["channel1"]},
+    )
+    batch = TaskBatchFactory.create(
+        job=job,
+        kind=YoutubeBatchKind.channel.value,
+        params={"channel_config": _channel_config("channel1")},
+    )
+
+    run_youtube_batch(batch.id)
+
+    batch.refresh_from_db()
+    assert batch.status == TaskBatch.Status.SUCCEEDED
+    assert models.VideoChannel.objects.count() == 0
+    assert job.batches.filter(kind=YoutubeBatchKind.playlist.value).count() == 0
+    mock_unpublish.assert_not_called()
+
+
+def test_run_youtube_batch_playlist(mocker, youtube_settings):
+    """A playlist batch should transform and load just its own playlist"""
+    video_channel = factories.VideoChannelFactory.create(channel_id="channel1")
+    mocker.patch("learning_resources.tasks.youtube.get_youtube_client", autospec=True)
+    mock_videos = mocker.patch(
+        "learning_resources.tasks.youtube.extract_playlist_items", autospec=True
+    )
+    mock_load_playlist = mocker.patch(
+        "learning_resources.tasks.loaders.load_playlist", autospec=True
+    )
+
+    job = TaskJobFactory.create(
+        task_name=YOUTUBE_ETL_TASK_NAME,
+        status=TaskJob.Status.RUNNING,
+        params={"channel_ids": ["channel1"]},
+    )
+    batch = TaskBatchFactory.create(
+        job=job,
+        kind=YoutubeBatchKind.playlist.value,
+        params={
+            "channel_id": "channel1",
+            "playlist_data": _playlist_data("playlist1"),
+            "offered_by": "ocw",
+            "create_videos": True,
+        },
+    )
+
+    run_youtube_batch(batch.id)
+
+    batch.refresh_from_db()
+    assert batch.status == TaskBatch.Status.SUCCEEDED
+    mock_videos.assert_called_once_with(ANY, "playlist1")
+
+    loaded_channel, playlist_data = mock_load_playlist.call_args.args
+    assert loaded_channel == video_channel
+    assert playlist_data["playlist_id"] == "playlist1"
+    assert playlist_data["create_videos"] is True
+
+
+def test_run_youtube_batch_records_failure(mocker, youtube_settings):
+    """A batch that raises should be marked failed rather than left running"""
+    mocker.patch("learning_resources.tasks.youtube.get_youtube_client", autospec=True)
+    mocker.patch(
+        "learning_resources.tasks.youtube.extract_channel",
+        autospec=True,
+        side_effect=ExtractException("boom"),
+    )
+    mock_finish = mocker.patch(
+        "learning_resources.tasks.finish_youtube_etl", autospec=True
+    )
+
+    job = TaskJobFactory.create(
+        task_name=YOUTUBE_ETL_TASK_NAME,
+        status=TaskJob.Status.RUNNING,
+        params={"channel_ids": ["channel1"]},
+    )
+    batch = TaskBatchFactory.create(
+        job=job,
+        kind=YoutubeBatchKind.channel.value,
+        params={"channel_config": _channel_config("channel1")},
+    )
+
+    run_youtube_batch(batch.id)
+
+    batch.refresh_from_db()
+    assert batch.status == TaskBatch.Status.FAILED
+    assert "boom" in batch.error
+    # the failure still completes the job so it can't hang
+    job.refresh_from_db()
+    assert job.status == TaskJob.Status.FINISHING
+    mock_finish.delay.assert_called_once_with(job.id)
+
+
+def test_run_youtube_batch_skips_terminal_batch(mocker):
+    """A redelivered batch that already finished should not be re-run"""
+    mock_execute = mocker.patch(
+        "learning_resources.tasks._execute_youtube_batch", autospec=True
+    )
+    mock_finish = mocker.patch(
+        "learning_resources.tasks.finish_youtube_etl", autospec=True
+    )
+
+    job = TaskJobFactory.create(
+        task_name=YOUTUBE_ETL_TASK_NAME,
+        status=TaskJob.Status.RUNNING,
+        params={"channel_ids": ["channel1"]},
+    )
+    batch = TaskBatchFactory.create(job=job, status=TaskBatch.Status.SUCCEEDED)
+
+    run_youtube_batch(batch.id)
+
+    mock_execute.assert_not_called()
+    # the redelivery still nudges the job to completion
+    job.refresh_from_db()
+    assert job.status == TaskJob.Status.FINISHING
+    mock_finish.delay.assert_called_once_with(job.id)
+
+
+def test_run_youtube_batch_finishes_job_only_when_all_batches_done(mocker):
+    """The finish step should wait for every batch of the job"""
+    mocker.patch("learning_resources.tasks._execute_youtube_batch", autospec=True)
+    mock_finish = mocker.patch(
+        "learning_resources.tasks.finish_youtube_etl", autospec=True
+    )
+
+    job = TaskJobFactory.create(
+        task_name=YOUTUBE_ETL_TASK_NAME,
+        status=TaskJob.Status.RUNNING,
+        params={"channel_ids": ["channel1"]},
+    )
+    batches = TaskBatchFactory.create_batch(2, job=job)
+
+    run_youtube_batch(batches[0].id)
+    mock_finish.delay.assert_not_called()
+
+    run_youtube_batch(batches[1].id)
+    mock_finish.delay.assert_called_once_with(job.id)
+
+
+@pytest.mark.parametrize("has_failures", [True, False])
+def test_finish_youtube_etl(mocker, has_failures):
+    """finish_youtube_etl should unpublish removed channels and close out the job"""
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.loaders.unpublish_removed_youtube_channels",
+        autospec=True,
+    )
+    mock_clear_cache = mocker.patch(
+        "learning_resources.tasks.clear_views_cache", autospec=True
+    )
+
+    job = TaskJobFactory.create(
+        task_name=YOUTUBE_ETL_TASK_NAME,
+        status=TaskJob.Status.FINISHING,
+        params={"channel_ids": ["channel1", "channel2"]},
+    )
+    TaskBatchFactory.create(job=job, status=TaskBatch.Status.SUCCEEDED)
+    if has_failures:
+        TaskBatchFactory.create(
+            job=job,
+            batch_key="channel:channel2",
+            status=TaskBatch.Status.FAILED,
+            error="boom",
+        )
+
+    finish_youtube_etl.delay(job.id)
+
+    # cleanup runs either way; a failed batch leaves its resources as they were
+    mock_unpublish.assert_called_once_with(["channel1", "channel2"])
+    mock_clear_cache.assert_called_once()
+
+    job.refresh_from_db()
+    if has_failures:
+        assert job.status == TaskJob.Status.FAILED
+        assert "channel:channel2: boom" in job.error
+    else:
+        assert job.status == TaskJob.Status.SUCCEEDED
+        assert job.error == ""
+
+
+def test_finish_youtube_etl_skips_unclaimed_job(mocker):
+    """finish_youtube_etl should do nothing for a job it hasn't claimed"""
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.loaders.unpublish_removed_youtube_channels",
+        autospec=True,
+    )
+
+    job = TaskJobFactory.create(
+        task_name=YOUTUBE_ETL_TASK_NAME,
+        status=TaskJob.Status.SUCCEEDED,
+        params={"channel_ids": ["channel1"]},
+    )
+    finish_youtube_etl.delay(job.id)
+
+    mock_unpublish.assert_not_called()
 
 
 def test_get_youtube_transcripts(mocker):

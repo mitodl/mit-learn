@@ -15,7 +15,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from learning_resources.constants import LearningResourceType
-from learning_resources.etl import ovs, pipelines, youtube
+from learning_resources.etl import loaders, ovs, pipelines, youtube
 from learning_resources.etl.canvas import (
     sync_canvas_archive,
 )
@@ -38,7 +38,7 @@ from learning_resources.etl.utils import (
     get_bucket_by_name,
     get_s3_prefix_for_source,
 )
-from learning_resources.models import ContentFile, LearningResource
+from learning_resources.models import ContentFile, LearningResource, VideoChannel
 from learning_resources.site_scrapers.utils import scraper_for_site
 from learning_resources.utils import (
     build_program_children_content_bulk,
@@ -467,22 +467,140 @@ def get_ocw_data(  # noqa: PLR0913
     return self.replace(ocw_tasks)
 
 
-@app.task(acks_late=True)
+@app.task(acks_late=True, reject_on_worker_lost=True)
+def get_youtube_playlist_data(
+    channel_id, playlist_data, offered_by_code, *, create_videos
+):
+    """
+    Load a single youtube playlist and its videos
+
+    Args:
+        channel_id (str): youtube's id for the playlist's channel
+        playlist_data (dict): the raw playlist data from the youtube api
+        offered_by_code (str): the offered_by code for the playlist
+        create_videos (bool): whether to create videos from this playlist
+            or match to existing videos without creating new ones
+    """
+    video_channel = VideoChannel.objects.filter(channel_id=channel_id).first()
+    if video_channel is None:
+        # the channel task upserts the channel before fanning out, so this only
+        # happens if the channel was deleted mid-run
+        log.error("No VideoChannel for channel_id=%s", channel_id)
+        return
+
+    youtube_client = youtube.get_youtube_client()
+    playlist_id = playlist_data["id"]
+    loaders.load_playlist(
+        video_channel,
+        youtube.transform_playlist(
+            playlist_data,
+            youtube.extract_playlist_items(youtube_client, playlist_id),
+            offered_by_code,
+            create_videos=create_videos,
+        ),
+    )
+
+
+@app.task(acks_late=True, reject_on_worker_lost=True)
+def get_youtube_channel_data(channel_config):
+    """
+    Load a single youtube channel and fan its playlists out into their own tasks.
+
+    The channel row is upserted before the playlist tasks are queued so they
+    can find it, and the channel's full playlist listing is resolved before
+    anything is unpublished, so a failed extraction can't unpublish a live
+    playlist.
+
+    Args:
+        channel_config (dict): the channel's configuration
+    """
+    channel_id = channel_config["channel_id"]
+    youtube_client = youtube.get_youtube_client()
+
+    channel_data = youtube.extract_channel(youtube_client, channel_id)
+    if channel_data is None:
+        log.warning("No youtube data for channel_id=%s", channel_id)
+        return
+
+    create_videos = channel_config.get("create_videos", True)
+    playlists = list(
+        youtube.extract_playlist_metadata(
+            youtube_client,
+            channel_config.get("playlists", []),
+            channel_id,
+            create_videos_channel_setting=create_videos,
+        )
+    )
+
+    video_channel = loaders.upsert_video_channel(
+        youtube.transform_channel(channel_data)
+    )
+    loaders.unpublish_removed_playlists(
+        video_channel, [playlist_data["id"] for playlist_data, _ in playlists]
+    )
+
+    log.info(
+        "Queueing %d playlists for youtube channel_id=%s", len(playlists), channel_id
+    )
+    for playlist_data, playlist_create_videos in playlists:
+        get_youtube_playlist_data.delay(
+            channel_id,
+            playlist_data,
+            channel_config.get("offered_by", None),
+            create_videos=playlist_create_videos,
+        )
+
+
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def get_youtube_data(*, channel_ids=None):
     """
-    Execute the YouTube ETL pipeline
+    Fan the YouTube ETL out into one task per channel, each of which fans out
+    into one task per playlist.
+
+    Nothing waits on the fan-out: no worker holds more than a single playlist's
+    worth of work, so a culled pod costs only the playlist it was loading and
+    the redelivered message picks it back up.
 
     Args:
         channel_ids (list of str or None):
             if a list the extraction is limited to those channels
 
     Returns:
-        int:
-            The number of results that were fetched
+        int: the number of channels queued
     """
-    results = pipelines.youtube_etl(channel_ids=channel_ids)
+    missing = [
+        setting
+        for setting in ("YOUTUBE_CONFIG_URL", "YOUTUBE_DEVELOPER_KEY")
+        if not getattr(settings, setting)
+    ]
+    if missing:
+        log.error("Missing required settings: %s", ", ".join(missing))
+        return 0
+
+    channel_configs = youtube.get_youtube_channel_configs(channel_ids=channel_ids)
+    if not channel_configs:
+        # an empty config would unpublish every channel below, so treat it as a
+        # failure rather than as "youtube offers nothing"
+        log.error("No youtube channel configs found")
+        return 0
+
+    if not channel_ids:
+        # only a full run knows the complete set of configured channels; a run
+        # filtered to specific channels must not unpublish the rest. Videos
+        # orphaned by playlists this run unpublishes are swept up by the next
+        # full run.
+        loaders.unpublish_removed_youtube_channels(
+            [channel_config["channel_id"] for channel_config in channel_configs]
+        )
+
+    log.info("Queueing %d youtube channels", len(channel_configs))
+    for channel_config in channel_configs:
+        get_youtube_channel_data.delay(channel_config)
+
+    # the fan-out writes after this point, but the views cache is short-lived
+    # and cleared again by the next ETL run, so there's nothing to wait for
     clear_views_cache()
-    return len(list(results))
+    return len(channel_configs)
 
 
 @app.task

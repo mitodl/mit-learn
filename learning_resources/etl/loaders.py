@@ -1908,9 +1908,31 @@ def load_playlists(
     return playlists
 
 
+def upsert_video_channel(video_channel_data: dict) -> VideoChannel:
+    """
+    Create or update the VideoChannel row itself, without touching its playlists
+
+    Arg:
+        video_channel_data (dict):
+            the normalized video channel data, without a "playlists" key
+    Returns:
+        VideoChannel: the updated or created video channel
+    """
+    channel_data = {
+        **video_channel_data,
+        "etl_source": ETLSource.youtube.name,
+        "published": True,
+    }
+    channel_id = channel_data.pop("channel_id")
+    video_channel, _ = VideoChannel.objects.select_for_update().update_or_create(
+        channel_id=channel_id, defaults=channel_data
+    )
+    return video_channel
+
+
 def load_video_channel(video_channel_data: dict) -> VideoChannel:
     """
-    Load a single video channel into the database
+    Load a single video channel, and its playlists, into the database
 
     Arg:
         video_channel_data (dict):
@@ -1918,49 +1940,45 @@ def load_video_channel(video_channel_data: dict) -> VideoChannel:
     Returns:
         VideoChannel: the updated or created video channel
     """
-    channel_id = video_channel_data.pop("channel_id")
     playlists_data = video_channel_data.pop("playlists", [])
-
-    video_channel, _ = VideoChannel.objects.select_for_update().update_or_create(
-        channel_id=channel_id, defaults=video_channel_data
-    )
+    video_channel = upsert_video_channel(video_channel_data)
     load_playlists(video_channel, playlists_data)
 
     return video_channel
 
 
-def load_youtube_video_channels(video_channels_data: iter) -> list[VideoChannel]:
+def unpublish_removed_playlists(
+    video_channel: VideoChannel, playlist_ids: list[str]
+) -> None:
     """
-    Load a list of video channels
+    Unpublish the channel's playlists that are no longer in its youtube listing
 
     Args:
-        video_channels_data (iter of dict): iterable of the video channels data
-
-    Returns:
-        list of VideoChannel: the loaded video channels
+        video_channel (VideoChannel): the video channel
+        playlist_ids (list of str): youtube ids of the channel's current playlists
     """
-    video_channels = []
-    channel_ids = []
-    for video_channel_data in video_channels_data:
-        channel_id = video_channel_data["channel_id"]
-        channel_ids.append(channel_id)
-        video_channel_data["etl_source"] = ETLSource.youtube.name
-        video_channel_data["published"] = True
-        try:
-            video_channel = load_video_channel(video_channel_data)
-        except ExtractException:
-            # video_channel_data has lazily evaluated generators,
-            # one of them could raise an extraction error
-            # this is a small pollution of separation of concerns
-            # but this allows us to stream the extracted data w/ generators
-            # as opposed to having to load everything into memory,
-            # which will eventually fail
-            log.exception(
-                "Error with extracted video channel: channel_id=%s", channel_id
-            )
-        else:
-            video_channels.append(video_channel)
+    playlists_to_unpublish = LearningResource.objects.filter(
+        video_playlist__channel=video_channel
+    ).exclude(readable_id__in=playlist_ids)
+    unpublished_ids = list(playlists_to_unpublish.values_list("id", flat=True))
 
+    if unpublished_ids:
+        playlists_to_unpublish.update(published=False)
+        bulk_resources_unpublished_actions(
+            unpublished_ids, LearningResourceType.video_playlist.name
+        )
+
+
+def unpublish_removed_youtube_channels(channel_ids: list[str]) -> None:
+    """
+    Unpublish everything youtube no longer offers under the configured channels.
+
+    Channels that aren't in channel_ids are unpublished, along with their
+    playlists and any video left without a published playlist.
+
+    Args:
+        channel_ids (list of str): youtube ids of the configured channels
+    """
     VideoChannel.objects.filter(etl_source=ETLSource.youtube.name).exclude(
         channel_id__in=channel_ids
     ).update(published=False)
@@ -1995,5 +2013,38 @@ def load_youtube_video_channels(video_channels_data: iter) -> list[VideoChannel]
         bulk_resources_unpublished_actions(
             orphaned_video_ids, LearningResourceType.video.name
         )
+
+
+def load_youtube_video_channels(video_channels_data: iter) -> list[VideoChannel]:
+    """
+    Load a list of video channels
+
+    Args:
+        video_channels_data (iter of dict): iterable of the video channels data
+
+    Returns:
+        list of VideoChannel: the loaded video channels
+    """
+    video_channels = []
+    channel_ids = []
+    for video_channel_data in video_channels_data:
+        channel_id = video_channel_data["channel_id"]
+        channel_ids.append(channel_id)
+        try:
+            video_channel = load_video_channel(video_channel_data)
+        except ExtractException:
+            # video_channel_data has lazily evaluated generators,
+            # one of them could raise an extraction error
+            # this is a small pollution of separation of concerns
+            # but this allows us to stream the extracted data w/ generators
+            # as opposed to having to load everything into memory,
+            # which will eventually fail
+            log.exception(
+                "Error with extracted video channel: channel_id=%s", channel_id
+            )
+        else:
+            video_channels.append(video_channel)
+
+    unpublish_removed_youtube_channels(channel_ids)
 
     return video_channels
