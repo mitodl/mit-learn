@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0118_delete_micromasters_resources"),
+        ("learning_resources", "0120_view_event_uuid_unique_index"),
     ]
 
     operations = [
