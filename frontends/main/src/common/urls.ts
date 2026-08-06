@@ -159,6 +159,28 @@ export const absoluteUrl = (path: string): string =>
   `${requiredEnv("NEXT_PUBLIC_ORIGIN")}${path}`
 
 /**
+ * Point `params` at a resource's drawer: the authoritative `resource` id plus
+ * the cosmetic `resource_title` slug.
+ *
+ * A blank slug *deletes* `resource_title` rather than leaving it. Callers
+ * typically copy an existing query string, which may still carry a previous
+ * resource's slug, and pairing that with the new id would mislabel the URL.
+ */
+export const setResourceParams = (
+  params: URLSearchParams,
+  resourceId: number,
+  title: string | undefined,
+): void => {
+  params.set(RESOURCE_DRAWER_PARAMS.resource, String(resourceId))
+  const slug = title ? slugify(title) : ""
+  if (slug) {
+    params.set(RESOURCE_DRAWER_PARAMS.resource_title, slug)
+  } else {
+    params.delete(RESOURCE_DRAWER_PARAMS.resource_title)
+  }
+}
+
+/**
  * Relative drawer URL on the search page:
  *   /search?resource={id}[&resource_title={slug}]
  * `resource` is the authoritative id; `resource_title` is a cosmetic slug,
@@ -168,11 +190,8 @@ export const resourceDrawerSearch = (
   resourceId: number,
   title: string | undefined,
 ) => {
-  const slug = title ? slugify(title) : ""
-  const params = new URLSearchParams({
-    [RESOURCE_DRAWER_PARAMS.resource]: String(resourceId),
-  })
-  if (slug) params.set(RESOURCE_DRAWER_PARAMS.resource_title, slug)
+  const params = new URLSearchParams()
+  setResourceParams(params, resourceId, title)
   return `${SEARCH}?${params.toString()}`
 }
 

@@ -54,9 +54,7 @@ export const Linkable: React.FC<LinkableProps> = ({
         {...others}
         className={className}
         href={href}
-        // Fallback preserves the old `shallow` behavior for `?`-relative
-        // hrefs. Removed once cards pass pushUrl explicitly.
-        pushUrl={pushUrl ?? (href.startsWith("?") ? href : undefined)}
+        pushUrl={pushUrl}
         nohover
       >
         {children}

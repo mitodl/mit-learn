@@ -6,7 +6,8 @@ import {
   AddToLearningPathDialog,
   AddToUserListDialog,
 } from "../Dialogs/AddToListDialog"
-import { useResourceDrawerHref } from "../LearningResourceDrawer/useResourceDrawerHref"
+import { useResourceDrawerPushUrl } from "../LearningResourceDrawer/useResourceDrawerPushUrl"
+import { resourceDrawerSearch } from "@/common/urls"
 import { useUserMe } from "api/hooks/user"
 import { LearningResource } from "api"
 import { SignupPopover } from "../SignupPopover/SignupPopover"
@@ -15,7 +16,6 @@ import { useLearningResourceDetailSetCache } from "api/hooks/learningResources"
 import { useIsLearningPathMember } from "api/hooks/learningPaths"
 
 export const useResourceCard = (resource?: LearningResource | null) => {
-  const getDrawerHref = useResourceDrawerHref()
   const { data: user } = useUserMe()
   const { data: inUserList } = useIsUserListMember(resource?.id)
   const { data: inLearningPath } = useIsLearningPathMember(resource?.id)
@@ -55,7 +55,6 @@ export const useResourceCard = (resource?: LearningResource | null) => {
 
   return {
     onClick,
-    getDrawerHref,
     anchorEl,
     handleClosePopover,
     handleAddToLearningPathClick,
@@ -78,7 +77,7 @@ const subheadingMap: Record<HeadingElement, number> = {
 
 type ResourceCardProps = Omit<
   LearningResourceCardProps,
-  "href" | "onAddToLearningPathClick" | "onAddToUserListClick"
+  "href" | "pushUrl" | "onAddToLearningPathClick" | "onAddToUserListClick"
 > & {
   headingLevel?: number
   parentHeadingEl?: HeadingElement
@@ -99,7 +98,6 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
   ...others
 }) => {
   const {
-    getDrawerHref,
     anchorEl,
     handleClosePopover,
     handleAddToLearningPathClick,
@@ -108,6 +106,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
     inLearningPath,
     onClick,
   } = useResourceCard(resource)
+  const getPushUrl = useResourceDrawerPushUrl()
 
   const composedOnClick = onCardClick
     ? () => {
@@ -123,7 +122,12 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
       <LearningResourceCard
         onClick={composedOnClick}
         resource={resource}
-        href={resource ? getDrawerHref(resource.id) : undefined}
+        href={
+          resource
+            ? resourceDrawerSearch(resource.id, resource.title)
+            : undefined
+        }
+        pushUrl={resource ? getPushUrl(resource) : undefined}
         onAddToLearningPathClick={handleAddToLearningPathClick}
         onAddToUserListClick={handleAddToUserListClick}
         inUserList={inUserList}

@@ -184,8 +184,9 @@ describe("Card", () => {
    * catch a broken chain: pushState and an ordinary hash navigation both leave
    * the same location behind.
    *
-   * The middle row covers Linkable's fallback for `?`-relative hrefs, which
-   * exists so cards keep working until they pass pushUrl explicitly.
+   * The second row uses a hash href because jsdom refuses cross-document
+   * navigation and console.errors, and ol-components has no
+   * expectWindowNavigation.
    */
   test.each([
     {
@@ -195,16 +196,7 @@ describe("Card", () => {
       pushed: "?resource=1",
     },
     {
-      name: "a ?-relative href pushes itself",
-      href: "?resource=1",
-      pushUrl: undefined,
-      pushed: "?resource=1",
-    },
-    {
-      // Hash rather than a path href: jsdom refuses cross-document navigation
-      // and console.errors, and ol-components has no expectWindowNavigation.
-      // Either way the href is non-`?`, which is the branch under test.
-      name: "a non-?-relative href navigates rather than pushing",
+      name: "an href with no pushUrl navigates rather than pushing",
       href: "#woof",
       pushUrl: undefined,
       pushed: null,
