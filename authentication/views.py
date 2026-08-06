@@ -19,6 +19,7 @@ from authentication.constants import (
     KEYCLOAK_ACTIONS,
     AccountAction,
     AccountActionStatus,
+    parse_account_action,
 )
 from main.middleware.apisix_user import ApisixUserMiddleware, decode_apisix_headers
 from profiles.tasks import send_welcome_email
@@ -277,16 +278,18 @@ class AccountActionCompleteView(RedirectView):
     def get_redirect_url(self, *args, **kwargs):  # noqa: ARG002
         """Get the frontend URL, annotated with the outcome of the action"""
         next_url = get_account_action_redirect_url(self.request)
-        action = self.request.GET.get(ACCOUNT_ACTION_PARAM)
+        raw_action = self.request.GET.get(ACCOUNT_ACTION_PARAM)
         keycloak_status = self.request.GET.get(KEYCLOAK_ACTION_STATUS_PARAM)
+
+        action = parse_account_action(raw_action)
         status = KEYCLOAK_ACTION_STATUSES.get(keycloak_status)
 
-        if action not in AccountAction or status is None:
+        if action is None or status is None:
             # Not something we can report on, so redirect without an alert
             # rather than guess at an outcome.
             log.warning(
                 "Account action callback with unusable params: action=%s, %s=%s",
-                action,
+                raw_action,
                 KEYCLOAK_ACTION_STATUS_PARAM,
                 keycloak_status,
             )

@@ -9,6 +9,7 @@ from keycloak.exceptions import KeycloakError
 
 from authentication import api
 from authentication.api import fetch_keycloak_userinfo, sync_email_from_keycloak
+from authentication.constants import AccountAction, parse_account_action
 from main.factories import UserFactory
 from profiles.models import Profile
 
@@ -277,3 +278,24 @@ def test_sync_email_from_keycloak_unchanged(mock_oidc_client):
     }
 
     assert sync_email_from_keycloak(code="c", redirect_uri="https://api/cb") is False
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("update-email", AccountAction.UPDATE_EMAIL),
+        ("update-password", AccountAction.UPDATE_PASSWORD),
+        ("delete-account", None),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_parse_account_action(value, expected):
+    """
+    A raw query-string value maps to its AccountAction, or None.
+
+    Pins that a plain string is recognised: `value in AccountAction` only
+    accepts values from Python 3.12 onwards and raises TypeError before that,
+    so the reporting and email-sync branches of the callback depend on this.
+    """
+    assert parse_account_action(value) is expected

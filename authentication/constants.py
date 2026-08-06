@@ -16,6 +16,21 @@ class AccountAction(StrEnum):
     UPDATE_PASSWORD = "update-password"  # noqa: S105
 
 
+def parse_account_action(value: str | None) -> "AccountAction | None":
+    """
+    Return the AccountAction matching a raw query-string value, or None.
+
+    Prefer this over `value in AccountAction`: membership tests against an enum
+    only accept plain values from Python 3.12 onwards, and raise TypeError
+    before that, so the explicit lookup keeps the intent obvious and pins the
+    behaviour regardless of interpreter version.
+    """
+    try:
+        return AccountAction(value)
+    except ValueError:
+        return None
+
+
 class AccountActionStatus(StrEnum):
     """Outcome of an account action, as reported back to the frontend"""
 
