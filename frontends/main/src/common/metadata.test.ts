@@ -68,6 +68,18 @@ describe("safeGenerateMetadata", () => {
   })
 })
 
+describe("standardizeMetadata", () => {
+  test("converts an HTML description to plain text in all description fields", async () => {
+    const meta = await standardizeMetadata({
+      description: "<p>Daryl Morey &amp; Jessica Gelman</p>",
+    })
+
+    expect(meta.description).toBe("Daryl Morey & Jessica Gelman")
+    expect(meta.openGraph?.description).toBe("Daryl Morey & Jessica Gelman")
+    expect(meta.twitter?.description).toBe("Daryl Morey & Jessica Gelman")
+  })
+})
+
 describe("getMetadataAsync drawer canonical", () => {
   test("emits a slugged separate-param canonical for a valid ?resource=", async () => {
     const resource = factories.learningResources.course()
