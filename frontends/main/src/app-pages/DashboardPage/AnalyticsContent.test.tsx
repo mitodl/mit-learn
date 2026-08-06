@@ -53,23 +53,15 @@ const managerOrgsUrl = urls.organization.managerOrganizationsList()
 
 const ORG_UUID = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
 
-/**
- * `sso_organization_id` is not on the generated `OrganizationPage` type yet
- * (mitodl/mitxonline#3789 has not been released into the client), so it is
- * spliced on here the same way it arrives on the wire.
- */
 const orgWithUuid = (
   overrides: Partial<OrganizationPage> = {},
   ssoOrganizationId: string | null = ORG_UUID,
-) => {
-  const org = factories.organizations.organization({
+) =>
+  factories.organizations.organization({
     contracts: [factories.contracts.contract()],
+    sso_organization_id: ssoOrganizationId,
     ...overrides,
   })
-  return ssoOrganizationId
-    ? { ...org, sso_organization_id: ssoOrganizationId }
-    : org
-}
 
 const setManagerOrgs = (orgs: unknown[]) => {
   setMockResponse.get(managerOrgsUrl, {
