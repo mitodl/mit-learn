@@ -1,10 +1,9 @@
 "use client"
 
-import React from "react"
+import React, { useMemo } from "react"
 import { Typography, Skeleton, styled, TypographyProps } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import { RiPlayFill, RiPauseFill } from "@remixicon/react"
-import DOMPurify from "isomorphic-dompurify"
 import {
   useLearningResourcesDetail,
   useInfiniteLearningResourceItems,
@@ -286,6 +285,21 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
 
   const handlePlayClick = (episode: LearningResource) => toggle(episode, id)
 
+  // Podcast descriptions are sanitized on the backend with nh3 during ETL
+  // (only <a href/title> is allowed), so the HTML is safe to render verbatim
+  // — the same trust model as podcast episode descriptions. Rendering it
+  // directly keeps server and client output identical, avoiding a hydration
+  // mismatch; target="_blank" is added via addExternalLinkTargets so it's
+  // part of the HTML fed to dangerouslySetInnerHTML on both server and
+  // client, keeping SSR output byte-identical to the client's first render.
+  const description = useMemo(
+    () =>
+      resource?.description
+        ? addExternalLinkTargets(resource.description)
+        : null,
+    [resource?.description],
+  )
+
   return (
     <>
       <PageSection variant="white">
@@ -327,14 +341,12 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
                       </MetaLine>
                     )}
 
-                    {resource?.description && (
+                    {description && (
                       <Description
                         variant="body2"
                         component="div"
                         dangerouslySetInnerHTML={{
-                          __html: addExternalLinkTargets(
-                            DOMPurify.sanitize(resource.description),
-                          ),
+                          __html: description,
                         }}
                       />
                     )}

@@ -205,13 +205,12 @@ describe("PodcastDetailPage", () => {
     await screen.findByText(episodes[0].title!)
   })
 
-  test("renders a sanitized, formatted show description", async () => {
+  test("renders a formatted show description", async () => {
     const episodes = makePodcastEpisodes(1)
     const { podcast } = setupApis({
       episodesPage1: episodes,
       podcastOverrides: {
-        description:
-          '<script>alert("xss")</script><p>Daryl Morey &amp; Jessica Gelman</p>',
+        description: "<p>Daryl Morey &amp; Jessica Gelman</p>",
       },
     })
 
@@ -220,7 +219,6 @@ describe("PodcastDetailPage", () => {
     expect(
       await screen.findByText("Daryl Morey & Jessica Gelman"),
     ).toBeInTheDocument()
-    expect(document.querySelector("script")).not.toBeInTheDocument()
   })
 
   test("opens external links in the show description in a new tab", async () => {
@@ -228,8 +226,10 @@ describe("PodcastDetailPage", () => {
     const { podcast } = setupApis({
       episodesPage1: episodes,
       podcastOverrides: {
+        // rel="noopener noreferrer" mirrors real backend output: nh3 adds it
+        // to every <a> during ETL sanitization, regardless of destination.
         description:
-          'Relevant Resources: <a href="https://ocw.mit.edu/">OCW</a> and <a href="/search">Search</a>.',
+          'Relevant Resources: <a href="https://ocw.mit.edu/" rel="noopener noreferrer">OCW</a> and <a href="/search" rel="noopener noreferrer">Search</a>.',
       },
     })
 
