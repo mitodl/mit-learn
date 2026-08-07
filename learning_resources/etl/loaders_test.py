@@ -63,6 +63,7 @@ from learning_resources.etl.loaders import (
     load_videos,
     load_videos_from_content_files,
     load_youtube_video_channels,
+    unpublish_orphaned_videos,
     unpublish_removed_playlists,
 )
 from learning_resources.etl.mitxonline import transform_programs
@@ -2868,15 +2869,26 @@ def test_load_playlists_unpublish(mocker):
     assert actual_unpublished_ids == expected_unpublished_ids
 
 
-def test_unpublish_removed_playlists(mocker):
-    """Playlists no longer listed under the channel should be unpublished"""
-    mocker.patch("learning_resources_search.tasks.bulk_deindex_learning_resources.si")
-    mock_bulk_unpublish = mocker.patch(
-        "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
+def _add_playlist_videos(playlist_resource, videos):
+    """Attach videos to a playlist resource"""
+    playlist_resource.resources.set(
+        videos,
+        through_defaults={
+            "relation_type": LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
+        },
     )
+
+
+def test_unpublish_removed_playlists(mock_upsert_tasks):
+    """A removed playlist should take the videos it orphans with it"""
     channel = VideoChannelFactory.create()
     kept, removed = VideoPlaylistFactory.create_batch(2, channel=channel)
     other_channel_playlist = VideoPlaylistFactory.create()
+
+    orphaned_video = VideoFactory.create().learning_resource
+    shared_video = VideoFactory.create().learning_resource
+    _add_playlist_videos(removed.learning_resource, [orphaned_video, shared_video])
+    _add_playlist_videos(kept.learning_resource, [shared_video])
 
     unpublish_removed_playlists(channel, [kept.learning_resource.readable_id])
 
@@ -2888,9 +2900,11 @@ def test_unpublish_removed_playlists(mocker):
         playlist.refresh_from_db()
         assert playlist.learning_resource.published is expected
 
-    mock_bulk_unpublish.assert_called_once_with(
-        [removed.learning_resource.id], LearningResourceType.video_playlist.name
-    )
+    orphaned_video.refresh_from_db()
+    assert orphaned_video.published is False
+    # still listed under a published playlist, so not orphaned
+    shared_video.refresh_from_db()
+    assert shared_video.published is True
 
 
 def test_unpublish_removed_playlists_noop(mocker):
@@ -2900,12 +2914,33 @@ def test_unpublish_removed_playlists_noop(mocker):
     )
     channel = VideoChannelFactory.create()
     playlists = VideoPlaylistFactory.create_batch(2, channel=channel)
+    _add_playlist_videos(
+        playlists[0].learning_resource, [VideoFactory.create().learning_resource]
+    )
 
     unpublish_removed_playlists(
         channel, [playlist.learning_resource.readable_id for playlist in playlists]
     )
 
     mock_bulk_unpublish.assert_not_called()
+
+
+def test_unpublish_orphaned_videos_sweeps_everything(mock_upsert_tasks):
+    """Called without playlist ids it should catch any video left unlisted"""
+    published_playlist = VideoPlaylistFactory.create().learning_resource
+    stale_playlist = VideoPlaylistFactory.create(is_unpublished=True).learning_resource
+
+    orphaned_video = VideoFactory.create().learning_resource
+    listed_video = VideoFactory.create().learning_resource
+    _add_playlist_videos(stale_playlist, [orphaned_video])
+    _add_playlist_videos(published_playlist, [listed_video])
+
+    unpublish_orphaned_videos()
+
+    orphaned_video.refresh_from_db()
+    assert orphaned_video.published is False
+    listed_video.refresh_from_db()
+    assert listed_video.published is True
 
 
 @pytest.mark.parametrize("playlist_exists", [True, False])

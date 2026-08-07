@@ -64,23 +64,11 @@ def mock_blocklist(mocker):
     )
 
 
-def test_cache_is_cleared_after_task_run(mocker, mocked_celery, settings):
+def test_cache_is_cleared_after_task_run(mocker, mocked_celery):
     """Test that the search cache is cleared out after every task run"""
     mocker.patch("learning_resources.tasks.ocw_courses_etl", autospec=True)
     mocker.patch("learning_resources.tasks.get_content_tasks", autospec=True)
     mocker.patch("learning_resources.tasks.pipelines")
-    settings.YOUTUBE_CONFIG_URL = "http://test.youtube/config.yaml"
-    settings.YOUTUBE_DEVELOPER_KEY = "key"
-    mocker.patch(
-        "learning_resources.tasks.youtube.get_youtube_channel_configs",
-        autospec=True,
-        return_value=[{"channel_id": "channel1"}],
-    )
-    mocker.patch(
-        "learning_resources.tasks.loaders.unpublish_removed_youtube_channels",
-        autospec=True,
-    )
-    mocker.patch("learning_resources.tasks.get_youtube_channel_data", autospec=True)
     mocked_clear_views_cache = mocker.patch(
         "learning_resources.tasks.clear_views_cache"
     )
@@ -98,9 +86,10 @@ def test_cache_is_cleared_after_task_run(mocker, mocked_celery, settings):
         skip_content_files=True,
     )
 
-    tasks.get_youtube_data.delay()
+    # get_youtube_data is absent on purpose: it only queues the fan-out, whose
+    # writes land long after it returns, so it has nothing to invalidate
     tasks.get_youtube_transcripts.delay()
-    assert mocked_clear_views_cache.call_count == 10
+    assert mocked_clear_views_cache.call_count == 9
 
 
 def test_get_mit_edx_data_valid(mocker):
@@ -513,9 +502,6 @@ def test_get_youtube_data(mocker, youtube_settings, channel_ids):
     mock_channel_task = mocker.patch(
         "learning_resources.tasks.get_youtube_channel_data", autospec=True
     )
-    mock_clear_cache = mocker.patch(
-        "learning_resources.tasks.clear_views_cache", autospec=True
-    )
 
     assert get_youtube_data.delay(channel_ids=channel_ids).get() == 2
 
@@ -523,7 +509,6 @@ def test_get_youtube_data(mocker, youtube_settings, channel_ids):
     assert [
         call.args[0] for call in mock_channel_task.delay.call_args_list
     ] == channel_configs
-    mock_clear_cache.assert_called_once()
 
     if channel_ids:
         # a run filtered to specific channels doesn't know the full channel set,

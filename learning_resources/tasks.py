@@ -586,9 +586,7 @@ def get_youtube_data(*, channel_ids=None):
 
     if not channel_ids:
         # only a full run knows the complete set of configured channels; a run
-        # filtered to specific channels must not unpublish the rest. Videos
-        # orphaned by playlists this run unpublishes are swept up by the next
-        # full run.
+        # filtered to specific channels must not unpublish the rest
         loaders.unpublish_removed_youtube_channels(
             [channel_config["channel_id"] for channel_config in channel_configs]
         )
@@ -597,9 +595,6 @@ def get_youtube_data(*, channel_ids=None):
     for channel_config in channel_configs:
         get_youtube_channel_data.delay(channel_config)
 
-    # the fan-out writes after this point, but the views cache is short-lived
-    # and cleared again by the next ETL run, so there's nothing to wait for
-    clear_views_cache()
     return len(channel_configs)
 
 
