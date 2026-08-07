@@ -115,6 +115,20 @@ export const PROGRAM_VIEW = "/dashboard/program/[id]"
 export const programView = (id: number) =>
   generatePath(PROGRAM_VIEW, { id: String(id) })
 
+export const RECEIPT_VIEW = "/receipt/[orderId]"
+export const receiptView = (orderId: number) =>
+  generatePath(RECEIPT_VIEW, { orderId: String(orderId) })
+/**
+ * Enrollments carry no order reference, so these routes resolve the order from the
+ * run/program before redirecting to `RECEIPT_VIEW`.
+ */
+export const RECEIPT_BY_RUN_VIEW = "/receipt/by-run/[runId]"
+export const receiptByRunView = (runId: number) =>
+  generatePath(RECEIPT_BY_RUN_VIEW, { runId: String(runId) })
+export const RECEIPT_BY_PROGRAM_VIEW = "/receipt/by-program/[programId]"
+export const receiptByProgramView = (programId: number) =>
+  generatePath(RECEIPT_BY_PROGRAM_VIEW, { programId: String(programId) })
+
 export const SEARCH = "/search"
 
 export const ABOUT = "/about"

@@ -11,7 +11,11 @@ import {
 import { HomeEnrollmentsDisplay } from "./HomeEnrollmentsDisplay"
 import { CoursewareCard } from "./CoursewareCard"
 import { buildCourseEntry } from "./model/dashboardViewModel"
-import { dashboardCourse, setupEnrollments } from "./test-utils"
+import {
+  dashboardCourse,
+  setupEnrollments,
+  setupOrderHistory,
+} from "./test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import {
   urls as testUrls,
@@ -28,6 +32,11 @@ import {
   trackCourseUnenrolled,
   trackProgramUnenrolled,
 } from "@/common/analytics/gtm"
+
+// Verified cards look up their order; default to none, tests override.
+beforeEach(() => {
+  setupOrderHistory()
+})
 
 jest.mock("posthog-js/react")
 jest.mock("@/common/analytics/gtm", () => ({

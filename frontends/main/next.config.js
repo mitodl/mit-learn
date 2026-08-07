@@ -107,6 +107,7 @@ const nextConfig = {
     // Turbopack filesystem caching is enabled by default in Next.js 16.1+
     // Explicitly enable it for clarity (optional - already default)
     turbopackFileSystemCacheForDev: true,
+    turbopackMemoryLimit: 2 * 1024 ** 3, // bytes; triggers Turbopack GC above ~2GB
   },
 
   /**
