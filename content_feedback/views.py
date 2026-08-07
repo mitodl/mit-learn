@@ -20,10 +20,9 @@ from main.throttles import RedisScopedRateThrottle
 class ContentFeedbackView(CreateAPIView):
     """Accept per-block content feedback submissions (append-only).
 
-    Anonymous submissions are allowed: courseware-only learners have no
-    mit-learn/APISIX session, so requiring authentication would reject nearly
-    all of them (403). This mirrors learn-ai/AskTIM, which tolerates anonymous
-    callers and stores no user. Attributed submissions still record the user.
+    Uses AllowAny: courseware-only learners have no mit-learn/APISIX session,
+    so requiring auth would 403 nearly all of them. Authenticated rows record
+    the user; anonymous rows store null (mirrors learn-ai/AskTIM).
     """
 
     queryset = ContentFeedback.objects.all()
