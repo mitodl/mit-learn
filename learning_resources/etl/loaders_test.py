@@ -33,7 +33,6 @@ from learning_resources.etl.constants import (
     ProgramLoaderConfig,
 )
 from learning_resources.etl.edx_shared import sync_edx_course_files
-from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.loaders import (
     ProgramLoadResult,
     calculate_completeness,
@@ -47,7 +46,6 @@ from learning_resources.etl.loaders import (
     load_ovs_playlist,
     load_ovs_playlists,
     load_playlist,
-    load_playlists,
     load_podcast,
     load_podcast_episode,
     load_podcasts,
@@ -62,9 +60,9 @@ from learning_resources.etl.loaders import (
     load_video_with_content_file,
     load_videos,
     load_videos_from_content_files,
-    load_youtube_video_channels,
     unpublish_orphaned_videos,
     unpublish_removed_playlists,
+    unpublish_removed_youtube_channels,
 )
 from learning_resources.etl.mitxonline import transform_programs
 from learning_resources.etl.utils import get_s3_prefix_for_source
@@ -102,8 +100,6 @@ from learning_resources.models import (
     Program,
     TutorProblemFile,
     Video,
-    VideoChannel,
-    VideoPlaylist,
 )
 from learning_resources.test_utils import set_up_topics
 from main.utils import now_in_utc
@@ -2816,59 +2812,6 @@ def test_load_videos_from_content_files_empty_input():
     assert result == []
 
 
-def test_load_playlists_unpublish(mocker):
-    """Test load_playlists when a video/playlist gets unpublished"""
-    mocker.patch("learning_resources_search.tasks.bulk_deindex_learning_resources.si")
-    mock_bulk_unpublish = mocker.patch(
-        "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
-    )
-    channel = VideoChannelFactory.create()
-
-    playlists = sorted(
-        VideoPlaylistFactory.create_batch(4, channel=channel),
-        key=lambda playlist: playlist.id,
-    )
-    playlist_id = playlists[0].learning_resource.readable_id
-    playlist_title = playlists[0].learning_resource.title
-    assert playlists[0].learning_resource.published is True
-    playlists_data = [
-        {
-            "playlist_id": playlist_id,
-            "url": f"https://youtube.com/playlist?list={playlist_id}",
-            "image": {
-                "url": f"https://i.ytimg.com/vi/{playlist_id}/hqdefault.jpg",
-                "alt": playlist_title,
-            },
-            "published": True,
-            "videos": [],
-        }
-    ]
-
-    load_playlists(channel, playlists_data)
-    assert (
-        LearningResource.objects.filter(
-            resource_type="video_playlist", published=True
-        ).count()
-        == 1
-    )
-
-    for playlist in playlists:
-        playlist.refresh_from_db()
-        if playlist.id == playlists[0].id:
-            assert playlist.learning_resource.published is True
-        else:
-            assert playlist.learning_resource.published is False
-
-    expected_unpublished_ids = sorted(p.learning_resource.id for p in playlists[1:])
-    playlist_unpublish_call = next(
-        call
-        for call in mock_bulk_unpublish.call_args_list
-        if call[0][1] == LearningResourceType.video_playlist.name
-    )
-    actual_unpublished_ids = sorted(playlist_unpublish_call[0][0])
-    assert actual_unpublished_ids == expected_unpublished_ids
-
-
 def _add_playlist_videos(playlist_resource, videos):
     """Attach videos to a playlist resource"""
     playlist_resource.resources.set(
@@ -3183,84 +3126,21 @@ def test_load_ovs_playlists_empty_aborts(mocker):
     assert vp.learning_resource.published is True
 
 
-def test_load_youtube_video_channels():
-    """Test load_youtube_video_channels"""
-    assert VideoChannel.objects.count() == 0
-    assert VideoPlaylist.objects.count() == 0
-
-    channels_data = []
-    for channel in VideoChannelFactory.build_batch(3):
-        channel_data = model_to_dict(channel)
-
-        playlist = VideoPlaylistFactory.build()
-        playlist_data = model_to_dict(playlist)
-        playlist_id = playlist.learning_resource.readable_id
-        playlist_data["playlist_id"] = playlist_id
-        playlist_data["url"] = f"https://youtube.com/playlist?list={playlist_id}"
-        playlist_data["image"] = {
-            "url": f"https://i.ytimg.com/vi/{playlist_id}/hqdefault.jpg",
-            "alt": playlist.learning_resource.title,
-        }
-        del playlist_data["id"]
-        del playlist_data["channel"]
-        del playlist_data["learning_resource"]
-        del playlist_data["parent_learning_resource"]
-
-        channel_data["playlists"] = [playlist_data]
-        channels_data.append(channel_data)
-
-    results = load_youtube_video_channels(channels_data)
-
-    assert len(results) == len(channels_data)
-
-    for result in results:
-        assert isinstance(result, VideoChannel)
-
-        assert result.playlists.count() == 1
-
-
-def test_load_youtube_video_channels_error(mocker):
-    """Test that an error doesn't fail the entire operation"""
-
-    def pop_channel_id_with_exception(data):
-        """Pop channel_id off data and raise an exception"""
-        data.pop("channel_id")
-        raise ExtractException
-
-    mock_load_channel = mocker.patch(
-        "learning_resources.etl.loaders.load_video_channel"
-    )
-    mock_load_channel.side_effect = pop_channel_id_with_exception
-    mock_log = mocker.patch("learning_resources.etl.loaders.log")
-    channel_id = "abc"
-
-    load_youtube_video_channels([{"channel_id": channel_id}])
-
-    mock_log.exception.assert_called_once_with(
-        "Error with extracted video channel: channel_id=%s", channel_id
-    )
-
-
-def test_load_youtube_video_channels_unpublish(mock_upsert_tasks):
-    """Test load_youtube_video_channels when a video/playlist gets unpublished"""
+def test_unpublish_removed_youtube_channels(mock_upsert_tasks):
+    """A channel dropped from the config takes its playlists and videos with it"""
     channel = VideoChannelFactory.create(etl_source=ETLSource.youtube.name)
     ovs_channel = VideoChannelFactory.create(etl_source=ETLSource.ovs.name)
     playlist = VideoPlaylistFactory.create(channel=channel).learning_resource
     ovs_playlist = VideoPlaylistFactory.create(channel=ovs_channel).learning_resource
     video = VideoFactory.create().learning_resource
-    playlist.resources.set(
-        [video],
-        through_defaults={
-            "relation_type": LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
-        },
-    )
+    _add_playlist_videos(playlist, [video])
     assert channel.published is True
     assert video.published is True
     assert playlist.published is True
     assert ovs_playlist.published is True
 
-    # inputs don't matter here
-    load_youtube_video_channels([])
+    # no channels configured, so the youtube channel is no longer offered
+    unpublish_removed_youtube_channels([])
 
     video.refresh_from_db()
     assert video.published is False
@@ -3269,6 +3149,7 @@ def test_load_youtube_video_channels_unpublish(mock_upsert_tasks):
     channel.refresh_from_db()
     assert channel.published is False
 
+    # other ETL sources are left alone
     ovs_channel.refresh_from_db()
     assert ovs_channel.published is True
     ovs_playlist.refresh_from_db()
