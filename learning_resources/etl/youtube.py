@@ -199,7 +199,7 @@ def _extract_playlists(
     create_videos_channel_setting: bool,
 ) -> Generator[tuple, None, None]:
     """
-    Extract a list of playlists
+    Extract the metadata of a list of playlists
 
     Args:
         youtube_client (Resource): Youtube api client
@@ -209,7 +209,7 @@ def _extract_playlists(
             is to create videos from youtube data
 
     Returns:
-        A generator that yields playlist data
+        A generator that yields (playlist data, create_videos) tuples
     """
     try:
         while request is not None:
@@ -232,11 +232,7 @@ def _extract_playlists(
                     create_videos = create_videos_channel_setting
 
                 if not playlist_config.get("ignore", False):
-                    yield (
-                        playlist_data,
-                        extract_playlist_items(youtube_client, playlist_id),
-                        create_videos,
-                    )
+                    yield (playlist_data, create_videos)
 
             request = youtube_client.playlists().list_next(request, response)
     except StopIteration:
@@ -247,7 +243,7 @@ def _extract_playlists(
         raise ExtractException(msg) from exc
 
 
-def extract_playlists(
+def extract_playlist_metadata(
     youtube_client: Resource,
     playlist_configs: list[dict],
     channel_id: str,
@@ -255,15 +251,17 @@ def extract_playlists(
     create_videos_channel_setting: bool,
 ) -> Generator[tuple, None, None]:
     """
-    Extract a list of playlists for a channel
+    Extract the metadata of a channel's playlists, without their videos.
+
     Args:
         youtube_client (object): Youtube api client
         playlist_configs (list of dict): list of playlist configurations
         channel_id (str): youtube's id for the channel
         create_videos_channel_setting (bool): whether the channel config
             is to create videos from youtube data
+
     Returns:
-        A generator that yields playlist data
+        A generator that yields (playlist data, create_videos) tuples
     """
 
     playlist_configs_by_id = {
@@ -297,58 +295,33 @@ def extract_playlists(
         )
 
 
-def extract_channels(
-    youtube_client: Resource, channels_config: list[dict]
-) -> Generator[tuple, None, None]:
+def extract_channel(youtube_client: Resource, channel_id: str) -> dict | None:
     """
-    Extract a list of channels
+    Extract the raw data for a single channel
 
     Args:
         youtube_client (Resource): Youtube api client
-        channels_config (list of dict): list of channel configurations
+        channel_id (str): youtube's id for the channel
 
     Returns:
-        A generator that yields channel data
+        dict or None: the channel data, or None if youtube has no such channel
     """
-    channel_configs_by_ids = {item["channel_id"]: item for item in channels_config}
-    channel_ids = set(channel_configs_by_ids.keys())
-
-    if not channel_ids:
-        return
-
     try:
-        request = youtube_client.channels().list(
-            part="snippet,contentDetails",
-            id=",".join(channel_ids),
-            maxResults=YOUTUBE_MAX_RESULTS,
+        response = (
+            youtube_client.channels()
+            .list(
+                part="snippet,contentDetails",
+                id=channel_id,
+                maxResults=YOUTUBE_MAX_RESULTS,
+            )
+            .execute()
         )
-
-        while request is not None:
-            response = request.execute()
-
-            if response is None:
-                break
-
-            for channel_data in response["items"]:
-                channel_id = channel_data["id"]
-                channel_config = channel_configs_by_ids[channel_id]
-                offered_by = channel_config.get("offered_by", None)
-                create_videos = channel_config.get("create_videos", True)
-                playlist_configs = channel_config.get("playlists", [])
-                playlists = extract_playlists(
-                    youtube_client,
-                    playlist_configs,
-                    channel_id,
-                    create_videos_channel_setting=create_videos,
-                )
-                yield (offered_by, channel_data, playlists)
-
-            request = youtube_client.channels().list_next(request, response)
-    except StopIteration:
-        return
     except googleapiclient.errors.HttpError as exc:
-        msg = f"Error fetching channels: channel_ids={channel_ids}"
+        msg = f"Error fetching channel: channel_id={channel_id}"
         raise ExtractException(msg) from exc
+
+    items = (response or {}).get("items", [])
+    return items[0] if items else None
 
 
 def get_captions_for_video(video_resource: LearningResource) -> str:
@@ -455,27 +428,6 @@ def get_youtube_channel_configs(*, channel_ids: str | None = None) -> list[dict]
     return channel_configs
 
 
-def extract(*, channel_ids: str | None = None) -> Generator[tuple, None, None]:
-    """
-    Return video data for all videos in channels' playlists
-
-    Args:
-        channel_ids (list of str or None): list of channels to extract (all if None)
-
-    Returns:
-        A generator that yields tuples with offered_by and video data
-    """
-    for setting in ("YOUTUBE_CONFIG_URL", "YOUTUBE_DEVELOPER_KEY"):
-        if not getattr(settings, setting):
-            log.error("Missing required setting %s", setting)
-            return
-
-    youtube_client = get_youtube_client()
-    channel_configs = get_youtube_channel_configs(channel_ids=channel_ids)
-
-    yield from extract_channels(youtube_client, channel_configs)
-
-
 def transform_video(video_data: dict, offered_by_code: str) -> dict:
     """
     Transform raw video data into normalized data structure for single video
@@ -550,33 +502,21 @@ def transform_playlist(
     }
 
 
-def transform(extracted_channels: iter) -> Generator[dict, None, None]:
+def transform_channel(channel_data: dict) -> dict:
     """
-    Transform raw video data into normalized data structure
+    Transform raw channel data into our normalized data, without its playlists
 
     Args:
-        extracted_channels (iterable of tuple): the youtube channels that were fetched
+        channel_data (dict): the raw channel data from the youtube api
 
     Returns:
-        generator that yields normalized video data
+        dict: normalized channel data
     """
-    # NOTE: this generator has nested generators (channels -> playlists -> videos)
-    # this is by design so that when the loaders run an exception raised in an
-    # extraction function can signal to the loader code that a partial import occurred
-    # if you change this it may trigger undefined behavior in the loaders
-    for offered_by, channel_data, playlists in extracted_channels:
-        yield {
-            "channel_id": channel_data["id"],
-            "title": channel_data["snippet"]["title"],
-            "published": True,
-            # intentional generator expression
-            "playlists": (
-                transform_playlist(
-                    playlist, videos, offered_by, create_videos=create_videos
-                )
-                for playlist, videos, create_videos in playlists
-            ),
-        }
+    return {
+        "channel_id": channel_data["id"],
+        "title": channel_data["snippet"]["title"],
+        "published": True,
+    }
 
 
 def get_youtube_videos_for_transcripts_job(

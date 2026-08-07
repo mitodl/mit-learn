@@ -20,7 +20,6 @@ from learning_resources.etl import (
     posthog,
     sloan,
     xpro,
-    youtube,
 )
 from learning_resources.etl.constants import (
     CourseLoaderConfig,
@@ -161,10 +160,6 @@ def ocw_courses_etl(
         )
         raise ExtractException(message)
 
-
-youtube_etl = compose(
-    loaders.load_youtube_video_channels, youtube.transform, youtube.extract
-)
 
 ovs_etl = compose(loaders.load_ovs_playlists, ovs.transform, ovs.extract)
 
