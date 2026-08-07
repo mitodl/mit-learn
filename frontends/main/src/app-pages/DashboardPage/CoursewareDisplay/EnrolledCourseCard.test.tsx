@@ -440,7 +440,7 @@ describe.each([
     const clearUrl = mitxonline.urls.baskets.clear()
     setMockResponse.delete(clearUrl, undefined)
     const basketUrl = mitxonline.urls.baskets.createFromProduct(productId)
-    setMockResponse.post(basketUrl, { id: 1, items: [] })
+    setMockResponse.post(basketUrl, mitxonline.factories.baskets.basket())
 
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
     await user.click(
@@ -641,7 +641,7 @@ describe.each([
     const clearUrl = mitxonline.urls.baskets.clear()
     setMockResponse.delete(clearUrl, undefined)
     const basketUrl = mitxonline.urls.baskets.createFromProduct(productId)
-    setMockResponse.post(basketUrl, { id: 1, items: [] })
+    setMockResponse.post(basketUrl, mitxonline.factories.baskets.basket())
 
     renderWithProviders(
       <EnrolledCourseCard

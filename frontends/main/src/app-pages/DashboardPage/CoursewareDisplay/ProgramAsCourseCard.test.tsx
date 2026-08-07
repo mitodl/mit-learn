@@ -530,7 +530,7 @@ describe("ProgramAsCourseCard", () => {
     const clearUrl = mitxonline.urls.baskets.clear()
     setMockResponse.delete(clearUrl, undefined)
     const basketUrl = mitxonline.urls.baskets.createFromProduct(product.id)
-    setMockResponse.post(basketUrl, { id: 1, items: [] })
+    setMockResponse.post(basketUrl, mitxonline.factories.baskets.basket())
 
     renderWithProviders(
       <ProgramAsCourseCard
