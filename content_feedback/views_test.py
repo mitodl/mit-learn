@@ -26,11 +26,12 @@ def _payload(**overrides):
     return payload
 
 
-def test_submit_requires_authentication(client):
-    """Anonymous users cannot submit feedback."""
+def test_submit_allows_anonymous(client):
+    """Anonymous users can submit feedback; the record has no user."""
     response = client.post(reverse("content_feedback:v0:content_feedback"), _payload())
-    assert response.status_code in (401, 403)
-    assert ContentFeedback.objects.count() == 0
+    assert response.status_code == 201
+    assert ContentFeedback.objects.count() == 1
+    assert ContentFeedback.objects.get().user is None
 
 
 def test_submit_creates_record_for_user(user_client, user):
