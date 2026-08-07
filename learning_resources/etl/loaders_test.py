@@ -2020,6 +2020,10 @@ def test_load_test_mode_resource_content_files(
         return_value=[],
     )
     mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        return_value=iter(content_data),
+    )
+    mocker.patch(
         "learning_resources_search.plugins.tasks.deindex_run_content_files",
         autospec=True,
     )
@@ -2045,7 +2049,8 @@ def test_load_test_mode_resource_content_files(
     )
 
     if test_mode:
-        assert len(mock_load_content_files.mock_calls[0].args) == len(content_data)
+        _, data_arg = mock_load_content_files.mock_calls[0].args
+        assert list(data_arg) == content_data
     else:
         assert mock_load_content_files.call_count == 0
 
