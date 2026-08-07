@@ -365,10 +365,10 @@ describe("CourseEnrollArea — click smoke tests", () => {
     const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
 
     setMockResponse.delete(mitxUrls.baskets.clear(), undefined)
-    setMockResponse.post(mitxUrls.baskets.createFromProduct(product.id), {
-      id: 1,
-      items: [],
-    })
+    setMockResponse.post(
+      mitxUrls.baskets.createFromProduct(product.id),
+      mitxFactories.baskets.basket(),
+    )
 
     renderWithProviders(<CourseEnrollArea course={course} selectedRun={run} />)
 

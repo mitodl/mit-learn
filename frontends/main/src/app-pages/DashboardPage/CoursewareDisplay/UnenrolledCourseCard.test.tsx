@@ -9,11 +9,7 @@ import {
   within,
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
-import {
-  makeRequest,
-  urls as learnUrls,
-  factories as learnFactories,
-} from "api/test-utils"
+import { makeRequest } from "api/test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { cartesianProduct } from "ol-test-utilities"
@@ -28,17 +24,6 @@ jest.mock("@/common/analytics/gtm", () => ({
 const mitxOnlineCourse = mitxonline.factories.courses.course
 
 const mitxUser = mitxonline.factories.user.user
-
-// useAddToBasket/useClearBasket check Learn's own auth state (separate from
-// mitxonline's) before invalidating the checkout-payload query. File-scoped
-// (not per-describe) since several describe blocks below each have their own
-// tests that don't all route through setupUserApis.
-beforeEach(() => {
-  setMockResponse.get(
-    learnUrls.userMe.get(),
-    learnFactories.user.user({ is_authenticated: true }),
-  )
-})
 
 const setupUserApis = (overrides?: Parameters<typeof mitxUser>[0]) => {
   const userData = mitxonline.factories.user.user({
@@ -596,7 +581,7 @@ describe.each([
         const clearUrl = mitxonline.urls.baskets.clear()
         setMockResponse.delete(clearUrl, undefined)
         const basketUrl = mitxonline.urls.baskets.createFromProduct(product.id)
-        setMockResponse.post(basketUrl, { id: 1, items: [] })
+        setMockResponse.post(basketUrl, mitxonline.factories.baskets.basket())
 
         renderWithProviders(<UnenrolledCourseCard course={course} />)
 
@@ -808,7 +793,7 @@ describe.each([
       const clearUrl = mitxonline.urls.baskets.clear()
       setMockResponse.delete(clearUrl, undefined)
       const basketUrl = mitxonline.urls.baskets.createFromProduct(product.id)
-      setMockResponse.post(basketUrl, { id: 1, items: [] })
+      setMockResponse.post(basketUrl, mitxonline.factories.baskets.basket())
 
       renderWithProviders(
         <UnenrolledCourseCard

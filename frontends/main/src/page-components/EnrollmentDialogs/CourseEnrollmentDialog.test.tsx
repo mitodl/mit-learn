@@ -7,12 +7,7 @@ import {
   user,
   setupLocationMock,
 } from "@/test-utils"
-import {
-  makeRequest,
-  setMockResponse,
-  urls as learnUrls,
-  factories as learnFactories,
-} from "api/test-utils"
+import { makeRequest, setMockResponse } from "api/test-utils"
 import {
   urls as mitxUrls,
   factories as mitxFactories,
@@ -66,15 +61,6 @@ describe("CourseEnrollmentDialog", () => {
   }
 
   setupLocationMock()
-
-  // useAddToBasket/useClearBasket check Learn's own auth state (separate
-  // from mitxonline's) before invalidating the checkout-payload query.
-  beforeEach(() => {
-    setMockResponse.get(
-      learnUrls.userMe.get(),
-      learnFactories.user.user({ is_authenticated: true }),
-    )
-  })
 
   describe("Course run dropdown", () => {
     test("Shows one entry for each enrollable course run", async () => {
@@ -378,7 +364,7 @@ describe("CourseEnrollmentDialog", () => {
       const clearUrl = mitxUrls.baskets.clear()
       setMockResponse.delete(clearUrl, undefined)
       const basketUrl = mitxUrls.baskets.createFromProduct(product.id)
-      setMockResponse.post(basketUrl, { id: 1, items: [] })
+      setMockResponse.post(basketUrl, mitxFactories.baskets.basket())
 
       renderWithProviders(<div />)
       await openDialog(course)
