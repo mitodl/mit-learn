@@ -1870,44 +1870,6 @@ def load_videos_from_content_files(
     return videos
 
 
-def load_playlists(
-    video_channel: VideoChannel, playlists_data: iter
-) -> list[LearningResource]:
-    """
-    Load a list of video playlists into the database
-
-    Args:
-        video_channel (VideoChannel): the video channel instance this playlist is under
-        playlists_data (iter of dict): iterable of the video playlists
-
-    Returns:
-        list of LearningResource:
-            the created or updated LearningResources for the playlists
-    """
-    playlists = [
-        playlist
-        for playlist in (
-            load_playlist(video_channel, playlist_data)
-            for playlist_data in playlists_data
-        )
-        if playlist is not None
-    ]
-    playlist_ids = [playlist.id for playlist in playlists]
-
-    # remove playlists that no longer exist
-    playlists_to_unpublish = LearningResource.objects.filter(
-        video_playlist__channel=video_channel
-    ).exclude(id__in=playlist_ids)
-
-    playlists_to_unpublish.update(published=False)
-    bulk_resources_unpublished_actions(
-        playlists_to_unpublish.values_list("id", flat=True),
-        LearningResourceType.video_playlist.name,
-    )
-
-    return playlists
-
-
 def upsert_video_channel(video_channel_data: dict) -> VideoChannel:
     """
     Create or update the VideoChannel row itself, without touching its playlists
@@ -1927,23 +1889,6 @@ def upsert_video_channel(video_channel_data: dict) -> VideoChannel:
     video_channel, _ = VideoChannel.objects.select_for_update().update_or_create(
         channel_id=channel_id, defaults=channel_data
     )
-    return video_channel
-
-
-def load_video_channel(video_channel_data: dict) -> VideoChannel:
-    """
-    Load a single video channel, and its playlists, into the database
-
-    Arg:
-        video_channel_data (dict):
-            the normalized video channel data
-    Returns:
-        VideoChannel: the updated or created video channel
-    """
-    playlists_data = video_channel_data.pop("playlists", [])
-    video_channel = upsert_video_channel(video_channel_data)
-    load_playlists(video_channel, playlists_data)
-
     return video_channel
 
 
@@ -2045,38 +1990,3 @@ def unpublish_removed_youtube_channels(channel_ids: list[str]) -> None:
     # Backstop: catch videos orphaned by anything the per-playlist path missed,
     # such as a run that died partway through or a playlist load that bailed
     unpublish_orphaned_videos()
-
-
-def load_youtube_video_channels(video_channels_data: iter) -> list[VideoChannel]:
-    """
-    Load a list of video channels
-
-    Args:
-        video_channels_data (iter of dict): iterable of the video channels data
-
-    Returns:
-        list of VideoChannel: the loaded video channels
-    """
-    video_channels = []
-    channel_ids = []
-    for video_channel_data in video_channels_data:
-        channel_id = video_channel_data["channel_id"]
-        channel_ids.append(channel_id)
-        try:
-            video_channel = load_video_channel(video_channel_data)
-        except ExtractException:
-            # video_channel_data has lazily evaluated generators,
-            # one of them could raise an extraction error
-            # this is a small pollution of separation of concerns
-            # but this allows us to stream the extracted data w/ generators
-            # as opposed to having to load everything into memory,
-            # which will eventually fail
-            log.exception(
-                "Error with extracted video channel: channel_id=%s", channel_id
-            )
-        else:
-            video_channels.append(video_channel)
-
-    unpublish_removed_youtube_channels(channel_ids)
-
-    return video_channels

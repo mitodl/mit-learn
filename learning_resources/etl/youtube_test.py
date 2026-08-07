@@ -251,36 +251,6 @@ def extracted_and_transformed_values(youtube_api_responses):
     return extracted, transformed
 
 
-def _resolve_extracted_channels(channels):
-    """Resolve the nested generator data"""
-    return [
-        (
-            offered_by,
-            channel_data,
-            list(map(_resolve_extracted_playlist, playlists)),
-        )
-        for offered_by, channel_data, playlists in channels
-    ]
-
-
-def _resolve_extracted_playlist(playlist):
-    """Resolve a playlist and its nested generators"""
-    playlist_data, videos, create_videos = playlist
-    return (playlist_data, list(videos), create_videos)
-
-
-@pytest.fixture
-def mock_raw_caption_data():
-    """Mock data for raw youtube video caption"""
-    return '<?xml version="1.0" encoding="utf-8" ?><transcript><text start="0" dur="0.5"></text><text start="0.5" dur="3.36">PROFESSOR: So, now we come to\nthe place where arithmetic,</text><text start="3.86" dur="2.67">modulo n or\nremainder arithmetic,</text><text start="6.53" dur="3.05">starts to be a little bit\ndifferent and that involves</text><text start="9.58" dur="2.729">taking inverses and cancelling.</text></transcript>'
-
-
-@pytest.fixture
-def mock_parsed_transcript_data():
-    """Mock data for parsed video caption"""
-    return "PROFESSOR: So, now we come to the place where arithmetic,\nmodulo n or remainder arithmetic,\nstarts to be a little bit different and that involves\ntaking inverses and cancelling."
-
-
 def test_get_captions_for_video(mocker):
     """Test fetching caption data for a video when non auto-generated english caption is available"""
     caption_text = "English: Not Auto-generated"
@@ -338,38 +308,6 @@ def test_get_captions_for_video_no_captions(mocker):
 
     video = Mock()
     assert youtube.get_captions_for_video(video) is None
-
-
-@pytest.mark.usefixtures("mock_youtube_client", "mocked_github_channel_response")
-def test_extract(extracted_and_transformed_values):
-    """Test that extract returns expected responses"""
-    extracted, _ = extracted_and_transformed_values
-    results = _resolve_extracted_channels(youtube.extract())
-    assert results == extracted
-
-
-@pytest.mark.parametrize(
-    ("key", "url"),
-    [
-        (None, "https://youtube.test.edu"),
-        ("key", None),
-    ],
-)
-def test_extract_with_unset_keys(settings, key, url):
-    """Test youtube video ETL extract with no keys set"""
-    settings.YOUTUBE_DEVELOPER_KEY = key
-    settings.YOUTUBE_CONFIG_URL = url
-
-    assert _resolve_extracted_channels(youtube.extract()) == []
-
-
-@pytest.mark.usefixtures("video_settings", "mocked_github_channel_response")
-@pytest.mark.parametrize("yaml_parser_response", [None, {}, {"channels": []}])
-def test_extract_with_no_channels(mocker, yaml_parser_response):
-    """Test youtube video ETL extract with no channels in data"""
-    mocker.patch("yaml.safe_load", return_value=yaml_parser_response)
-
-    assert _resolve_extracted_channels(youtube.extract()) == []
 
 
 @pytest.mark.django_db
@@ -473,23 +411,6 @@ def test_extract_playlists_create_videos(
     assert create_videos is expected
 
 
-@pytest.mark.django_db
-@pytest.mark.parametrize(
-    ("error", "raised_exception", "message"),
-    [
-        (StopIteration, None, None),
-        (HttpError, ExtractException, "Error fetching channels: channel_ids="),
-    ],
-)
-def test_extract_channels_errors(error, raised_exception, message):
-    """Test that extract_playlist_items handles errors as expected"""
-    client = Mock(channels=Mock(side_effect=error(Mock(), b"")))
-    if raised_exception:
-        with pytest.raises(raised_exception) as err:
-            list(youtube.extract_channels(client, [{"channel_id": "channel_id"}]))
-        assert message in str(err)
-
-
 @pytest.mark.parametrize("items", [[{"id": "channel_id", "snippet": {}}], []])
 def test_extract_channel(items):
     """extract_channel should return the single channel youtube has, if any"""
@@ -550,22 +471,6 @@ def test_transform_playlist(
         "url": extracted[0][2][0][0]["snippet"]["thumbnails"]["high"]["url"],
         "alt": extracted[0][2][0][0]["snippet"]["title"],
     }
-
-
-def test_transform(extracted_and_transformed_values):
-    """Test youtube transform"""
-    extracted, transformed = extracted_and_transformed_values
-    channels = youtube.transform(extracted)
-    assert [
-        {
-            **channel,
-            "playlists": [
-                {**playlist, "videos": list(playlist["videos"])}
-                for playlist in channel["playlists"]
-            ],
-        }
-        for channel in channels
-    ] == transformed
 
 
 @pytest.mark.parametrize(
