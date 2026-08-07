@@ -1,14 +1,33 @@
 import { act, renderHook, setupLocationMock } from "@/test-utils"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
+import type { BasketWithProduct } from "@mitodl/mitxonline-api-axios/v2"
 import { useReplaceBasketItem } from "./useReplaceBasketItem"
 
+const basket = (
+  overrides: Partial<BasketWithProduct> = {},
+): BasketWithProduct => ({
+  id: 7,
+  basket_items: [],
+  total_price: 0,
+  discounted_price: 0,
+  discounts: [],
+  ...overrides,
+})
+
+/**
+ * `useAddToBasket().mutate` hands the created basket to `onSuccess` — the hook
+ * relies on it to read `anonymous_id`. Shared between the default mock and the
+ * per-test overrides so the two cannot drift apart.
+ */
+type AddToBasketOpts = { onSuccess?: (basket: BasketWithProduct) => void }
+
 const reset = jest.fn()
-const mutate = jest.fn(
-  (_productId: number, opts?: { onSuccess?: () => void }) =>
-    opts?.onSuccess?.(),
+const mutate = jest.fn((_productId: number, opts?: AddToBasketOpts) =>
+  opts?.onSuccess?.(basket()),
 )
-const mutateAsync = jest.fn().mockResolvedValue({ id: 7 })
+const mutateAsync = jest.fn().mockResolvedValue(basket())
 const clearMutate = jest.fn(
+  // The hook's clear-basket callback takes no arguments.
   (_vars: undefined, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.(),
 )
 const clearMutateAsync = jest.fn().mockResolvedValue(undefined)
@@ -99,5 +118,50 @@ describe("useReplaceBasketItem", () => {
 
     expect(mutateAsync).not.toHaveBeenCalled()
     expect(assign).not.toHaveBeenCalled()
+  })
+
+  test("appends anonymous_basket_id to the redirect url for an anonymous basket (sync path)", () => {
+    const assign = jest.mocked(window.location.assign)
+    mutate.mockImplementationOnce((_productId, opts) =>
+      opts?.onSuccess?.(basket({ id: 9, anonymous_id: "abc-123" })),
+    )
+    const { result } = renderHook(() => useReplaceBasketItem())
+
+    act(() => {
+      result.current.mutate(42)
+    })
+
+    const calledUrl = new URL(assign.mock.calls[0][0])
+    expect(calledUrl.searchParams.get("anonymous_basket_id")).toBe("abc-123")
+  })
+
+  test("appends anonymous_basket_id to the redirect url for an anonymous basket (async path)", async () => {
+    const assign = jest.mocked(window.location.assign)
+    mutateAsync.mockResolvedValueOnce(
+      basket({ id: 9, anonymous_id: "abc-123" }),
+    )
+    const { result } = renderHook(() => useReplaceBasketItem())
+
+    await act(async () => {
+      await result.current.mutateAsync(42)
+    })
+
+    const calledUrl = new URL(assign.mock.calls[0][0])
+    expect(calledUrl.searchParams.get("anonymous_basket_id")).toBe("abc-123")
+  })
+
+  test("does not append anonymous_basket_id when the basket belongs to a real user", () => {
+    const assign = jest.mocked(window.location.assign)
+    mutate.mockImplementationOnce((_productId, opts) =>
+      opts?.onSuccess?.(basket({ id: 9, user: 1, anonymous_id: null })),
+    )
+    const { result } = renderHook(() => useReplaceBasketItem())
+
+    act(() => {
+      result.current.mutate(42)
+    })
+
+    const calledUrl = new URL(assign.mock.calls[0][0])
+    expect(calledUrl.searchParams.has("anonymous_basket_id")).toBe(false)
   })
 })
