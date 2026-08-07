@@ -241,10 +241,10 @@ describe("useProgramEnrollment — actions", () => {
       products: [product],
     })
     setMockResponse.delete(mitxUrls.baskets.clear(), undefined)
-    setMockResponse.post(mitxUrls.baskets.createFromProduct(product.id), {
-      id: 1,
-      items: [],
-    })
+    setMockResponse.post(
+      mitxUrls.baskets.createFromProduct(product.id),
+      mitxFactories.baskets.basket(),
+    )
 
     const { result } = renderHook(
       () =>
@@ -374,7 +374,7 @@ describe("useProgramEnrollment — actions", () => {
     const clearUrl = mitxUrls.baskets.clear()
     const basketUrl = mitxUrls.baskets.createFromProduct(product.id)
     setMockResponse.delete(clearUrl, undefined)
-    setMockResponse.post(basketUrl, { id: 1, items: [] })
+    setMockResponse.post(basketUrl, mitxFactories.baskets.basket())
 
     const { result } = renderHook(() => useProgramEnrollment(program), {
       wrapper,
@@ -412,7 +412,7 @@ describe("useProgramEnrollment — actions", () => {
     const clearUrl = mitxUrls.baskets.clear()
     const basketUrl = mitxUrls.baskets.createFromProduct(product.id)
     setMockResponse.delete(clearUrl, undefined)
-    setMockResponse.post(basketUrl, { id: 1, items: [] })
+    setMockResponse.post(basketUrl, mitxFactories.baskets.basket())
 
     const onRequireSignup = jest.fn()
 

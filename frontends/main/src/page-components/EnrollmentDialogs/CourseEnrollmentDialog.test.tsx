@@ -364,7 +364,7 @@ describe("CourseEnrollmentDialog", () => {
       const clearUrl = mitxUrls.baskets.clear()
       setMockResponse.delete(clearUrl, undefined)
       const basketUrl = mitxUrls.baskets.createFromProduct(product.id)
-      setMockResponse.post(basketUrl, { id: 1, items: [] })
+      setMockResponse.post(basketUrl, mitxFactories.baskets.basket())
 
       renderWithProviders(<div />)
       await openDialog(course)

@@ -485,10 +485,10 @@ describe("CoursePage", () => {
         )
         setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), [])
         setMockResponse.delete(mitxUrls.baskets.clear(), undefined)
-        setMockResponse.post(mitxUrls.baskets.createFromProduct(product.id), {
-          id: 1,
-          items: [],
-        })
+        setMockResponse.post(
+          mitxUrls.baskets.createFromProduct(product.id),
+          mitxFactories.baskets.basket(),
+        )
 
         renderWithProviders(<CoursePage readableId={course.readable_id} />)
 
