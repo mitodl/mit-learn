@@ -1421,6 +1421,79 @@ export type CurrentEducationEnum =
   (typeof CurrentEducationEnum)[keyof typeof CurrentEducationEnum]
 
 /**
+ * Serializer for the requesting user.  Unlike UserSerializer this exposes the user\'s own email plus whether they can manage their credentials, both of which the settings page needs. It is read-only: users change their email through Keycloak, not through us.
+ * @export
+ * @interface CurrentUser
+ */
+export interface CurrentUser {
+  /**
+   *
+   * @type {number}
+   * @memberof CurrentUser
+   */
+  id: number
+  /**
+   *
+   * @type {string}
+   * @memberof CurrentUser
+   */
+  username: string
+  /**
+   *
+   * @type {string}
+   * @memberof CurrentUser
+   */
+  global_id: string | null
+  /**
+   *
+   * @type {Profile}
+   * @memberof CurrentUser
+   */
+  profile?: Profile
+  /**
+   * Get the user\'s email address (blank for anonymous users)
+   * @type {string}
+   * @memberof CurrentUser
+   */
+  email: string
+  /**
+   *
+   * @type {string}
+   * @memberof CurrentUser
+   */
+  first_name: string
+  /**
+   *
+   * @type {string}
+   * @memberof CurrentUser
+   */
+  last_name: string
+  /**
+   *
+   * @type {boolean}
+   * @memberof CurrentUser
+   */
+  is_article_editor: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof CurrentUser
+   */
+  is_learning_path_editor: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof CurrentUser
+   */
+  is_authenticated: boolean
+  /**
+   * Whether the user signs in through an external identity provider, and so cannot change their email or password through us.
+   * @type {boolean}
+   * @memberof CurrentUser
+   */
+  is_sso_user: boolean
+}
+/**
  * * `online` - Online * `hybrid` - Hybrid * `in_person` - In-Person * `offline` - Offline
  * @export
  * @enum {string}
@@ -10459,7 +10532,7 @@ export const UsersApiFp = function (configuration?: Configuration) {
     async usersMeRetrieve(
       options?: RawAxiosRequestConfig,
     ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<CurrentUser>
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.usersMeRetrieve(options)
@@ -10619,7 +10692,9 @@ export const UsersApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    usersMeRetrieve(options?: RawAxiosRequestConfig): AxiosPromise<User> {
+    usersMeRetrieve(
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<CurrentUser> {
       return localVarFp
         .usersMeRetrieve(options)
         .then((request) => request(axios, basePath))
