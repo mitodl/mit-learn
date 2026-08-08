@@ -666,7 +666,7 @@ export const DeliveryEnum = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -731,7 +731,7 @@ export const DepartmentEnum = {
   "21H": "21H",
   /** Literature */
   "21L": "21L",
-  /** Music and Theater Arts */
+  /** Music */
   "21M": "21M",
   /** Nuclear Science and Engineering */
   NUMBER_22: "22",
@@ -2621,6 +2621,8 @@ export interface LearningResourceSummary {
    * @nullable
    */
   url?: string | null
+  /** @maxLength 256 */
+  title: string
 }
 
 /**
@@ -3274,7 +3276,7 @@ export interface PercolateQuerySubscriptionRequestRequest {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -3488,7 +3490,8 @@ export interface Podcast {
 export interface PodcastEpisode {
   readonly id: number
   /** Get the podcast id(s) the episode belongs to */
-  readonly podcasts: readonly string[]
+  readonly podcasts: readonly number[]
+  readonly parent_podcasts: readonly PodcastEpisodeParent[]
   transcript?: string
   /** @maxLength 2048 */
   audio_url: string
@@ -3504,6 +3507,15 @@ export interface PodcastEpisode {
   duration?: string | null
   /** @nullable */
   rss?: string | null
+}
+
+/**
+ * Minimal parent-podcast summary embedded in an episode.
+ */
+export interface PodcastEpisodeParent {
+  id: number
+  title: string
+  readable_id: string
 }
 
 /**
@@ -5002,6 +5014,14 @@ export interface VideoPlaylist {
   /** @nullable */
   readonly channel: VideoPlaylistChannel
   video_count: number
+  /** @nullable */
+  readonly parent_learning_resource_id: number | null
+  /** @nullable */
+  readonly parent_title: string | null
+  /** @nullable */
+  readonly parent_url: string | null
+  /** Extract the course number(s) from the parent course, if any */
+  readonly parent_course_numbers: readonly string[]
 }
 
 /**
@@ -5689,6 +5709,8 @@ export interface WebsiteContent {
    * @pattern ^[-a-zA-Z0-9_]+$
    */
   slug?: string
+  /** @maxLength 2083 */
+  readonly cover_image: string
 }
 
 /**
@@ -6127,7 +6149,7 @@ export type CoursesListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -6602,7 +6624,7 @@ export type FeaturedListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -6994,7 +7016,7 @@ export type LearningResourceDisplayInfoListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -7351,7 +7373,7 @@ export type LearningResourcesListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -7712,7 +7734,7 @@ export type LearningResourcesSimilarListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -7781,6 +7803,10 @@ export type LearningResourcesSimilarListParams = {
    * @nullable
    */
   professional?: boolean | null
+  /**
+   * The resource category for the resource
+   */
+  resource_category?: string[]
   /**
  * The type of learning resource
 
@@ -7865,7 +7891,7 @@ export const LearningResourcesSimilarListDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -8115,7 +8141,7 @@ export type LearningResourcesVectorSimilarListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -8184,6 +8210,10 @@ export type LearningResourcesVectorSimilarListParams = {
    * @nullable
    */
   professional?: boolean | null
+  /**
+   * The resource category for the resource
+   */
+  resource_category?: string[]
   /**
  * The type of learning resource
 
@@ -8268,7 +8298,7 @@ export const LearningResourcesVectorSimilarListDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -8650,7 +8680,7 @@ export type LearningResourcesSummaryListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -9022,7 +9052,7 @@ export type LearningResourcesSearchRetrieveParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -9297,7 +9327,7 @@ export const LearningResourcesSearchRetrieveDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -9597,7 +9627,7 @@ export type LearningResourcesUserSubscriptionListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -9872,7 +9902,7 @@ export const LearningResourcesUserSubscriptionListDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -10172,7 +10202,7 @@ export type LearningResourcesUserSubscriptionCheckListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -10455,7 +10485,7 @@ export const LearningResourcesUserSubscriptionCheckListDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -10764,7 +10794,7 @@ export type LearningResourcesUserSubscriptionSubscribeCreateParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -11049,7 +11079,7 @@ export const LearningResourcesUserSubscriptionSubscribeCreateDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -11345,7 +11375,7 @@ export type LearningpathsListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -11739,7 +11769,7 @@ export type PodcastEpisodesListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -12096,7 +12126,7 @@ export type PodcastsListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -12468,7 +12498,7 @@ export type ProgramsListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -12810,6 +12840,12 @@ export type TopicsListParams = {
   parent_topic_id?: number[]
 }
 
+export type UnsubscribeCreate200 = { [key: string]: unknown }
+
+export type UnsubscribeCreate400 = {
+  error?: string
+}
+
 export type MediaUpload201 = {
   url?: string
 }
@@ -12885,7 +12921,7 @@ export type VideoPlaylistsListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -13257,7 +13293,7 @@ export type VideosListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
