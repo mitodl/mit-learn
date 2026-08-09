@@ -3,7 +3,7 @@
 import logging
 from collections import defaultdict
 from collections.abc import Generator
-from urllib.parse import urlencode, urlparse, urlunparse
+from urllib.parse import quote, urlencode, urlparse, urlunparse
 
 import requests
 from django.conf import settings
@@ -25,9 +25,55 @@ log = logging.getLogger(__name__)
 OVS_API_PATH = "/api/v0/public/videos/"
 
 
+def allowed_media_hosts() -> set[str]:
+    """
+    Return the set of hosts that OVS media urls are allowed to point at.
+
+    Returns:
+        set of lowercased host patterns, including the OVS API host
+    """
+    hosts = {host.lower() for host in settings.OVS_ALLOWED_MEDIA_HOSTS if host}
+    api_host = urlparse(settings.OVS_API_BASE_URL or "").hostname
+    if api_host:
+        hosts.add(api_host.lower())
+    return hosts
+
+
+def is_allowed_media_url(url: str | None) -> bool:
+    """
+    Check that a url from an OVS payload points at an allowlisted host over https.
+
+    OVS payloads (including webhook payloads, which are untrusted input) carry
+    absolute urls for thumbnails, streaming sources and subtitles. We fetch some
+    of those urls server-side and hand the rest to browsers, so a forged payload
+    could otherwise direct requests at an arbitrary, possibly internal, host.
+
+    Args:
+        url: the url to check
+
+    Returns:
+        True if the url is an https url on an allowlisted host
+    """
+    if not url:
+        return False
+    parsed = urlparse(url)
+    if parsed.scheme != "https":
+        return False
+    hostname = (parsed.hostname or "").lower()
+    if not hostname:
+        return False
+    return any(
+        hostname == allowed or (allowed.startswith(".") and hostname.endswith(allowed))
+        for allowed in allowed_media_hosts()
+    )
+
+
 def _get_cloudfront_domain(video_data: dict) -> str | None:
     """
     Extract the CloudFront domain from thumbnail or source URLs.
+
+    Only urls on an allowlisted host are considered, so the returned domain can
+    safely be used to build further urls.
 
     Args:
         video_data: OVS video API response dict
@@ -38,15 +84,13 @@ def _get_cloudfront_domain(video_data: dict) -> str | None:
     # Try thumbnails first
     for thumbnail in video_data.get("videothumbnail_set", []):
         cf_url = thumbnail.get("cloudfront_url", "")
-        if cf_url:
-            parsed = urlparse(cf_url)
-            return parsed.netloc
+        if is_allowed_media_url(cf_url):
+            return urlparse(cf_url).hostname
     # Fall back to sources
     for source in video_data.get("sources", []):
         src = source.get("src", "")
-        if src:
-            parsed = urlparse(src)
-            return parsed.netloc
+        if is_allowed_media_url(src):
+            return urlparse(src).hostname
     return None
 
 
@@ -68,9 +112,12 @@ def _build_caption_urls(video_data: dict) -> list[dict]:
 
     captions = []
     for subtitle in video_data.get("videosubtitle_set", []):
-        s3_key = subtitle.get("s3_object_key", "")
+        s3_key = quote(subtitle.get("s3_object_key", "").lstrip("/"))
         if s3_key:
             url = f"https://{cf_domain}/{s3_key}"
+            if not is_allowed_media_url(url):
+                log.warning("Skipping OVS caption url on disallowed host: %s", url)
+                continue
             captions.append(
                 {
                     "language": subtitle.get("language", "en"),
@@ -93,7 +140,10 @@ def _get_cover_image_url(video_data: dict) -> str | None:
     """
     thumbnails = video_data.get("videothumbnail_set", [])
     if thumbnails:
-        return thumbnails[0].get("cloudfront_url")
+        cover_url = thumbnails[0].get("cloudfront_url")
+        if is_allowed_media_url(cover_url):
+            return cover_url
+        log.warning("Ignoring OVS cover image url on disallowed host: %s", cover_url)
     return None
 
 
@@ -111,8 +161,11 @@ def _get_source_url(video_data: dict) -> str | None:
         src = source.get("src", "")
         if not src:
             continue
-        if urlparse(src).path.endswith(".m3u8"):
+        if not urlparse(src).path.endswith(".m3u8"):
+            continue
+        if is_allowed_media_url(src):
             return src
+        log.warning("Ignoring OVS streaming source on disallowed host: %s", src)
     return None
 
 
@@ -146,7 +199,8 @@ def _get_resource_url(video_data: dict) -> str:
     """
     Get the user-facing URL for a video resource.
 
-    Uses cta_link if available, otherwise builds a URL from OVS_API_BASE_URL.
+    Uses cta_link if it points at an allowlisted host, otherwise builds a URL
+    from OVS_API_BASE_URL.
 
     Args:
         video_data: OVS video API response dict
@@ -156,9 +210,11 @@ def _get_resource_url(video_data: dict) -> str:
     """
     cta_link = video_data.get("cta_link")
     if cta_link:
-        return cta_link
+        if is_allowed_media_url(cta_link):
+            return cta_link
+        log.warning("Ignoring OVS cta_link on disallowed host: %s", cta_link)
     base_url = settings.OVS_API_BASE_URL.rstrip("/")
-    return f"{base_url}/videos/{video_data['key']}"
+    return f"{base_url}/videos/{quote(str(video_data['key']))}"
 
 
 def extract(*, url=None) -> Generator[dict, None, None]:
@@ -263,7 +319,7 @@ def transform_collection(collection_data: dict) -> dict:
         "platform": PlatformType.ovs.name,
         "title": collection_data.get("title", ""),
         "description": collection_data.get("description", ""),
-        "url": f"{base_url}/collections/{collection_data['key']}",
+        "url": f"{base_url}/collections/{quote(str(collection_data['key']))}",
         "published": True,
     }
 
@@ -313,6 +369,12 @@ def _fetch_transcript(caption_urls: list[dict]) -> str:
     """
     for caption in caption_urls:
         if caption.get("language") == "en":
+            if not is_allowed_media_url(caption.get("url")):
+                log.warning(
+                    "Refusing to fetch transcript from disallowed host: %s",
+                    caption.get("url"),
+                )
+                break
             try:
                 result = extract_text_from_url(caption["url"], mime_type="text/vtt")
                 if result and result.get("content"):
