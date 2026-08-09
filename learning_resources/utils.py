@@ -1,16 +1,13 @@
 """Utils for learning resources"""
 
-import ipaddress
 import logging
 import re
-import socket
 from collections import defaultdict
 from functools import cache
 from hashlib import md5
 from http import HTTPStatus
 from shutil import which
 from typing import TYPE_CHECKING
-from urllib.parse import urlparse
 
 import html2text
 import rapidjson
@@ -233,40 +230,6 @@ def load_course_blocklist():
     return blocklist
 
 
-def _is_safe_public_http_url(url: str) -> bool:
-    """
-    Return True if URL is http(s), has a hostname, and resolves only to public IPs.
-    """
-    try:
-        parsed = urlparse(url)
-    except ValueError:
-        return False
-
-    if parsed.scheme not in ("http", "https"):
-        return False
-    if not parsed.hostname:
-        return False
-
-    try:
-        addrinfo = socket.getaddrinfo(parsed.hostname, None)
-    except socket.gaierror:
-        return False
-
-    for entry in addrinfo:
-        ip_str = entry[4][0]
-        ip_obj = ipaddress.ip_address(ip_str)
-        if (
-            ip_obj.is_private
-            or ip_obj.is_loopback
-            or ip_obj.is_link_local
-            or ip_obj.is_multicast
-            or ip_obj.is_reserved
-            or ip_obj.is_unspecified
-        ):
-            return False
-    return True
-
-
 def image_url_is_reachable(url: str) -> bool:
     """
     Check whether an image URL responds successfully, caching the result.
@@ -281,25 +244,22 @@ def image_url_is_reachable(url: str) -> bool:
     redis_cache = caches["redis"]
     reachable = redis_cache.get(cache_key)
     if reachable is None:
-        if not _is_safe_public_http_url(url):
-            reachable = False
-        else:
-            try:
-                response = requests.head(
-                    url, timeout=settings.REQUESTS_TIMEOUT, allow_redirects=True
+        try:
+            response = requests.head(
+                url, timeout=settings.REQUESTS_TIMEOUT, allow_redirects=True
+            )
+            if response.status_code in (
+                HTTPStatus.METHOD_NOT_ALLOWED,
+                HTTPStatus.NOT_IMPLEMENTED,
+            ):
+                # Some servers reject HEAD requests; retry without the body
+                response = requests.get(
+                    url, timeout=settings.REQUESTS_TIMEOUT, stream=True
                 )
-                if response.status_code in (
-                    HTTPStatus.METHOD_NOT_ALLOWED,
-                    HTTPStatus.NOT_IMPLEMENTED,
-                ):
-                    # Some servers reject HEAD requests; retry without the body
-                    response = requests.get(
-                        url, timeout=settings.REQUESTS_TIMEOUT, stream=True
-                    )
-                    response.close()
-                reachable = response.ok
-            except requests.RequestException:
-                reachable = False
+                response.close()
+            reachable = response.ok
+        except requests.RequestException:
+            reachable = False
         redis_cache.set(cache_key, reachable, timeout=IMAGE_URL_REACHABLE_CACHE_TIMEOUT)
     return reachable
 
