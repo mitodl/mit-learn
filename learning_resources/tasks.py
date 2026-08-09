@@ -854,18 +854,43 @@ def cleanup_deleted_content_files():
         return error
 
 
-@app.task(acks_late=True, reject_on_worker_lost=True)
-def prune_unreachable_resource_images():
+@app.task(bind=True, acks_late=True)
+def prune_unreachable_resource_images(self, *, chunk_size=None):
     """
     Delete LearningResourceImage records whose URLs no longer resolve, so that
     resources fall back to the default image everywhere (API, search, emails)
     instead of rendering a broken image.
     """
-    image_ids = (
+    if chunk_size is None:
+        chunk_size = settings.IMAGE_PRUNE_CHUNK_SIZE
+
+    image_ids = list(
         LearningResource.objects.filter(published=True, image__isnull=False)
+        .order_by("image_id")
         .values_list("image_id", flat=True)
         .distinct()
     )
+    if not image_ids:
+        return None
+
+    tasks = celery.group(
+        [
+            check_and_prune_image_batch.si(ids)
+            for ids in chunks(image_ids, chunk_size=chunk_size)
+        ]
+    )
+    return self.replace(tasks)
+
+
+@app.task(
+    acks_late=True,
+    reject_on_worker_lost=True,
+    rate_limit=settings.CELERY_RATE_LIMIT,
+)
+def check_and_prune_image_batch(image_ids: list[int]) -> int:
+    """
+    Check image reachability for a batch of image IDs and prune unreachable images.
+    """
     removed = 0
     for image in LearningResourceImage.objects.filter(id__in=image_ids).iterator():
         if image_url_is_reachable(image.url):
