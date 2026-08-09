@@ -2,6 +2,7 @@
 
 import json
 from unittest.mock import Mock
+from urllib.parse import urlparse
 
 import pytest
 import requests
@@ -23,6 +24,7 @@ from learning_resources.etl.ovs import (
     extract,
     get_ovs_transcripts,
     get_ovs_videos_for_transcripts_job,
+    is_allowed_media_url,
     transform,
     transform_collection,
     transform_video,
@@ -40,8 +42,9 @@ OVS_TEST_BASE_URL = "https://video.odl.mit.edu"
 
 @pytest.fixture(autouse=True)
 def ovs_settings(settings):
-    """Ensure OVS_API_BASE_URL is set for all tests in this module"""
+    """Ensure OVS url settings are set for all tests in this module"""
     settings.OVS_API_BASE_URL = OVS_TEST_BASE_URL
+    settings.OVS_ALLOWED_MEDIA_HOSTS = [".cloudfront.net", "example.com"]
     return settings
 
 
@@ -684,6 +687,117 @@ def test_fetch_transcript_tika_returns_none(mocker):
     ]
     result = _fetch_transcript(caption_urls)
     assert result == ""
+
+
+def test_fetch_transcript_disallowed_host(mocker):
+    """Should not request a transcript from a host outside the allowlist"""
+    mock_extract = mocker.patch("learning_resources.etl.ovs.extract_text_from_url")
+    caption_urls = [
+        {"language": "en", "url": "http://169.254.169.254/latest/meta-data/"},
+    ]
+    assert _fetch_transcript(caption_urls) == ""
+    mock_extract.assert_not_called()
+
+
+class TestMediaUrlAllowlist:
+    """Tests for is_allowed_media_url and the url filtering that depends on it"""
+
+    @pytest.mark.parametrize(
+        ("url", "expected"),
+        [
+            pytest.param(
+                "https://d1rlgptj9v7p9j.cloudfront.net/a.vtt", True, id="subdomain"
+            ),
+            pytest.param("https://example.com/a.vtt", True, id="exact_host"),
+            pytest.param(f"{OVS_TEST_BASE_URL}/videos/abc", True, id="ovs_api_host"),
+            pytest.param("http://example.com/a.vtt", False, id="not_https"),
+            pytest.param(
+                "https://evilcloudfront.net/a.vtt", False, id="suffix_lookalike"
+            ),
+            pytest.param("https://notexample.com/a.vtt", False, id="host_lookalike"),
+            pytest.param(
+                "https://example.com.evil.io/a.vtt", False, id="host_prefix_lookalike"
+            ),
+            pytest.param(
+                "https://example.com@evil.io/a.vtt", False, id="userinfo_confusion"
+            ),
+            pytest.param(
+                "http://169.254.169.254/latest/meta-data/", False, id="link_local"
+            ),
+            pytest.param("file:///etc/passwd", False, id="file_scheme"),
+            pytest.param("", False, id="empty"),
+            pytest.param(None, False, id="none"),
+        ],
+    )
+    def test_is_allowed_media_url(self, url, expected):
+        """Only https urls on allowlisted hosts are permitted"""
+        assert is_allowed_media_url(url) is expected
+
+    def test_source_url_on_disallowed_host_ignored(self):
+        """A streaming source on an unknown host is not used"""
+        assert (
+            _get_source_url({"sources": [{"src": "https://evil.io/video__index.m3u8"}]})
+            is None
+        )
+
+    def test_cover_image_on_disallowed_host_ignored(self):
+        """A thumbnail on an unknown host is not used"""
+        assert (
+            _get_cover_image_url(
+                {"videothumbnail_set": [{"cloudfront_url": "https://evil.io/t.jpg"}]}
+            )
+            is None
+        )
+
+    def test_caption_urls_require_allowed_domain(self):
+        """Captions are dropped when no allowlisted domain can be determined"""
+        assert (
+            _build_caption_urls(
+                {
+                    "videothumbnail_set": [
+                        {"cloudfront_url": "https://evil.io/t.jpg"},
+                    ],
+                    "sources": [{"src": "https://evil.io/video__index.m3u8"}],
+                    "videosubtitle_set": [
+                        {"s3_object_key": "subtitles/a.vtt", "language": "en"}
+                    ],
+                }
+            )
+            == []
+        )
+
+    def test_caption_urls_escape_object_key(self):
+        """A subtitle key cannot break out of the allowlisted host"""
+        captions = _build_caption_urls(
+            {
+                "videothumbnail_set": [
+                    {"cloudfront_url": "https://abc.cloudfront.net/t.jpg"},
+                ],
+                "videosubtitle_set": [
+                    {"s3_object_key": "/../@evil.io/a.vtt", "language": "en"}
+                ],
+            }
+        )
+        assert len(captions) == 1
+        assert urlparse(captions[0]["url"]).hostname == "abc.cloudfront.net"
+
+    def test_resource_url_ignores_disallowed_cta_link(self, settings):
+        """cta_link pointing off-allowlist falls back to the OVS url"""
+        settings.OVS_API_BASE_URL = OVS_TEST_BASE_URL
+        video = {"key": "abc123", "cta_link": "https://evil.io/watch/abc123"}
+        assert _get_resource_url(video) == f"{OVS_TEST_BASE_URL}/videos/abc123"
+
+    def test_transform_video_skips_disallowed_source(self):
+        """A video whose only source is off-allowlist is not transformed"""
+        assert (
+            transform_video(
+                {
+                    "key": "abc123",
+                    "sources": [{"src": "https://evil.io/video__index.m3u8"}],
+                }
+            )
+            is None
+        )
 
 
 def test_filters_ovs_videos_without_transcripts(ovs_platform):
