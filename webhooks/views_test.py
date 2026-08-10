@@ -259,6 +259,7 @@ def test_content_file_webhook_view_invalid_json(settings, client):
 @pytest.fixture
 def ovs_platform(settings):
     settings.OVS_API_BASE_URL = "https://video.odl.mit.edu"
+    settings.OVS_ALLOWED_MEDIA_HOSTS = [".cloudfront.net"]
     return LearningResourcePlatformFactory.create(code=PlatformType.ovs.name)
 
 
@@ -515,3 +516,155 @@ def test_ovs_video_webhook_missing_key(settings, client):
         headers={"X-MITLearn-Signature": get_secret(payload, settings)},
     )
     assert response.status_code == 400
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("field", "mutation"),
+    [
+        pytest.param(
+            "sources",
+            lambda payload: payload["sources"][0].update(
+                {"src": "http://169.254.169.254/latest/meta-data/video__index.m3u8"}
+            ),
+            id="streaming_source",
+        ),
+        pytest.param(
+            "videothumbnail_set",
+            lambda payload: payload["videothumbnail_set"][0].update(
+                {"cloudfront_url": "https://evil.io/thumb.jpg"}
+            ),
+            id="thumbnail",
+        ),
+        pytest.param(
+            "cta_link",
+            lambda payload: payload.update({"cta_link": "https://evil.io/watch"}),
+            id="cta_link",
+        ),
+    ],
+)
+def test_ovs_video_webhook_rejects_disallowed_urls(
+    settings, client, mocker, field, mutation
+):
+    """A payload url outside the OVS media allowlist is rejected, not fetched."""
+    mocker.patch("webhooks.views.clear_views_cache")
+    mock_load = mocker.patch("webhooks.views.load_ovs_video_from_webhook")
+    payload = _ovs_payload(key="ssrf")
+    mutation(payload)
+
+    url = reverse("webhooks:v1:ovs_video_webhook")
+    response = client.post(
+        url,
+        data=json.dumps(payload),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(payload, settings)},
+    )
+    assert response.status_code == 400
+    assert field in response.json()
+    mock_load.assert_not_called()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "hostile_url",
+    [
+        # urllib reads the host as du3yhovcx8dht.cloudfront.net, browsers read
+        # it as evil.io
+        pytest.param(
+            "https://evil.io\\@du3yhovcx8dht.cloudfront.net/x.jpg", id="backslash"
+        ),
+        pytest.param("https://[", id="unparseable"),
+        pytest.param(5, id="not_a_string"),
+        pytest.param(
+            {"src": "https://du3yhovcx8dht.cloudfront.net/x.jpg"}, id="object"
+        ),
+    ],
+)
+def test_ovs_video_webhook_rejects_hostile_urls(settings, client, mocker, hostile_url):
+    """Urls urllib and browsers disagree about are rejected with a 400, not a 500."""
+    mocker.patch("webhooks.views.clear_views_cache")
+    mock_load = mocker.patch("webhooks.views.load_ovs_video_from_webhook")
+    settings.OVS_ALLOWED_MEDIA_HOSTS = [".cloudfront.net"]
+    payload = _ovs_payload(key="hostile")
+    payload["cta_link"] = hostile_url
+
+    url = reverse("webhooks:v1:ovs_video_webhook")
+    response = client.post(
+        url,
+        data=json.dumps(payload),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(payload, settings)},
+    )
+    assert response.status_code == 400
+    assert "cta_link" in response.json()
+    mock_load.assert_not_called()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "payload_update",
+    [
+        pytest.param({"key": "abc/../../evil"}, id="key"),
+        pytest.param({"collection": {"key": "col/../evil"}}, id="collection_key"),
+    ],
+)
+def test_ovs_video_webhook_rejects_structural_keys(
+    settings, client, mocker, payload_update
+):
+    """Keys that could alter a url or index path are rejected."""
+    mocker.patch("webhooks.views.clear_views_cache")
+    mock_load = mocker.patch("webhooks.views.load_ovs_video_from_webhook")
+    payload = {**_ovs_payload(), **payload_update}
+
+    url = reverse("webhooks:v1:ovs_video_webhook")
+    response = client.post(
+        url,
+        data=json.dumps(payload),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(payload, settings)},
+    )
+    assert response.status_code == 400
+    mock_load.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_ovs_video_webhook_delete_rejects_structural_video_id(settings, client, mocker):
+    """A delete payload with a structural video_id is rejected."""
+    mocker.patch("webhooks.views.clear_views_cache")
+    mock_delete = mocker.patch("webhooks.views.resource_delete_actions")
+
+    payload = {"video_id": "../../evil", "delete": True}
+    url = reverse("webhooks:v1:ovs_video_webhook")
+    response = client.post(
+        url,
+        data=json.dumps(payload),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(payload, settings)},
+    )
+    assert response.status_code == 400
+    mock_delete.assert_not_called()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "payload",
+    [
+        pytest.param([1, 2, 3], id="list_body"),
+        pytest.param({"key": "abc", "sources": 5}, id="sources_not_a_list"),
+        pytest.param({"key": "abc", "videothumbnail_set": "x"}, id="thumbnails_string"),
+        pytest.param({"key": "abc", "collection": "x"}, id="collection_not_object"),
+    ],
+)
+def test_ovs_video_webhook_malformed_payload(settings, client, mocker, payload):
+    """Structurally invalid payloads are rejected with a 400, not a 500."""
+    mocker.patch("webhooks.views.clear_views_cache")
+    mock_load = mocker.patch("webhooks.views.load_ovs_video_from_webhook")
+    url = reverse("webhooks:v1:ovs_video_webhook")
+    response = client.post(
+        url,
+        data=json.dumps(payload),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(payload, settings)},
+    )
+    assert response.status_code == 400
+    mock_load.assert_not_called()
