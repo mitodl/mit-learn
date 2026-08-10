@@ -151,6 +151,8 @@ def transform_canvas_content_files(
     zipfile_path = course_zipfile.absolute()
     published_items = get_published_items(zipfile_path, url_config)
 
+    failed_source_paths = []
+
     def _generate_content():
         """Inner generator for yielding content data"""
         with (
@@ -166,7 +168,11 @@ def transform_canvas_content_files(
                     log.debug("skipping unpublished file %s", member.filename)
 
             for content_data in process_olx_path(
-                olx_path, run, overwrite=overwrite, use_ocr=True
+                olx_path,
+                run,
+                overwrite=overwrite,
+                use_ocr=True,
+                failed_source_paths=failed_source_paths,
             ):
                 url_path = content_data["source_path"].lstrip(
                     content_data["source_path"].split("/")[0]
@@ -189,6 +195,10 @@ def transform_canvas_content_files(
         full_path = Path(basedir) / Path(content_data["source_path"])
         published_keys.append(get_edx_module_id(str(full_path), run))
         yield content_data
+    # files whose extraction failed are retained, not treated as unpublished
+    for source_path in failed_source_paths:
+        full_path = Path(basedir) / Path(source_path)
+        published_keys.append(get_edx_module_id(str(full_path), run))
     unpublished_content = run.content_files.exclude(key__in=published_keys)
     # remove unpublished contentfiles
     bulk_resources_unpublished_actions(
