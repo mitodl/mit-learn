@@ -55,6 +55,8 @@ from vector_search.constants import (
     QDRANT_OPTIMIZER_THRESHOLD_SMALL,
     QDRANT_RESOURCE_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
+    RESOURCES_PAYLOAD_EXCLUDE,
+    RESOURCES_RETRIEVE_PAYLOAD,
 )
 from vector_search.encoders.utils import dense_encoder, sparse_encoder
 from vector_search.utils import (
@@ -65,6 +67,7 @@ from vector_search.utils import (
     _generate_content_file_points,
     _get_text_splitter,
     _is_markdown_content,
+    _resource_payload_hits,
     _resource_vector_hits,
     _set_payload,
     async_qdrant_aggregations,
@@ -77,6 +80,7 @@ from vector_search.utils import (
     filter_existing_qdrant_points,
     qdrant_query_conditions,
     remove_qdrant_records,
+    resources_payload_selector,
     should_generate_content_embeddings,
     should_generate_resource_embeddings,
     update_content_file_payload,
@@ -2341,6 +2345,155 @@ def test_resource_vector_hits_duplicate_readable_ids_different_platforms():
     assert result_2[0]["platform"]["code"] == "ocw"
     assert r_xpro.id == result_2[1]["id"]
     assert result_2[1]["platform"]["code"] == "xpro"
+
+
+def test_resources_payload_selector_excludes_indexing_fields(settings):
+    """The selector should ask for the whole payload minus indexing-only keys"""
+    settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD = True
+    selector = resources_payload_selector()
+    assert isinstance(selector, models.PayloadSelectorExclude)
+    assert selector.exclude == RESOURCES_PAYLOAD_EXCLUDE
+
+
+def test_resources_payload_selector_kill_switch(settings):
+    """With payload hits disabled we only fetch the DB hydration lookup fields"""
+    settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD = False
+    assert resources_payload_selector() == RESOURCES_RETRIEVE_PAYLOAD
+
+
+def test_resource_payload_hits_preserves_order_and_dedupes():
+    """Hits come straight from the payloads, in Qdrant order, deduped by platform:id"""
+    search_result = [
+        MagicMock(
+            payload={
+                "readable_id": "course-2",
+                "platform": {"code": "ocw"},
+                "title": "Second",
+            }
+        ),
+        MagicMock(
+            payload={
+                "readable_id": "course-1",
+                "platform": {"code": "ocw"},
+                "title": "First",
+            }
+        ),
+        # same readable_id as the first hit, different platform: kept
+        MagicMock(
+            payload={
+                "readable_id": "course-2",
+                "platform": {"code": "xpro"},
+                "title": "Second on xpro",
+            }
+        ),
+        # exact duplicate of the first hit: dropped
+        MagicMock(
+            payload={
+                "readable_id": "course-2",
+                "platform": {"code": "ocw"},
+                "title": "Second",
+            }
+        ),
+        # unusable without a readable_id: dropped
+        MagicMock(payload={"platform": {"code": "ocw"}, "title": "No readable id"}),
+    ]
+
+    hits = _resource_payload_hits(search_result)
+
+    assert [(hit["readable_id"], hit["platform"]["code"]) for hit in hits] == [
+        ("course-2", "ocw"),
+        ("course-1", "ocw"),
+        ("course-2", "xpro"),
+    ]
+    assert hits[0]["title"] == "Second"
+
+
+def test_resource_payload_hits_handles_null_platform():
+    """A resource indexed without a platform should still produce a hit"""
+    hits = _resource_payload_hits(
+        [MagicMock(payload={"readable_id": "course-1", "platform": None})]
+    )
+    assert [hit["readable_id"] for hit in hits] == ["course-1"]
+
+
+def test_resource_payload_hits_trims_indexing_only_course_number_fields():
+    """
+    Qdrant payload selectors cannot descend into lists of objects, so the extra
+    course number fields the indexing serializer adds are trimmed in Python.
+    """
+    payload = {
+        "readable_id": "course-1",
+        "platform": {"code": "ocw"},
+        "course": {
+            "course_numbers": [
+                {
+                    "value": "6.006",
+                    "listing_type": "Primary",
+                    "department": {"department_id": "6"},
+                    "primary": True,
+                    "sort_coursenum": "06.006",
+                }
+            ]
+        },
+    }
+
+    hits = _resource_payload_hits([MagicMock(payload=payload)])
+
+    assert hits[0]["course"]["course_numbers"] == [
+        {
+            "value": "6.006",
+            "listing_type": "Primary",
+            "department": {"department_id": "6"},
+        }
+    ]
+    # the payload dict Qdrant handed us is not mutated
+    assert "sort_coursenum" in payload["course"]["course_numbers"][0]
+
+
+@pytest.mark.parametrize(
+    "course",
+    [None, {}, {"course_numbers": None}],
+)
+def test_resource_payload_hits_tolerates_missing_course_numbers(course):
+    """Non-course resources pass through the course number trim untouched"""
+    hits = _resource_payload_hits(
+        [MagicMock(payload={"readable_id": "video-1", "course": course})]
+    )
+    assert hits[0]["course"] == course
+
+
+def test_resource_payload_hits_matches_hydrated_hits():
+    """
+    The payload path should return what the database hydration path returns,
+    modulo the fields the indexing serializer adds on top of the API shape.
+    """
+    resource = LearningResourceFactory.create(
+        is_course=True, platform=LearningResourcePlatformFactory.create(code="ocw")
+    )
+    payload = next(iter(serialize_bulk_learning_resources([resource.id])))
+    for excluded in RESOURCES_PAYLOAD_EXCLUDE:
+        # simulate what Qdrant's PayloadSelectorExclude strips before we see it
+        top_level, _, nested = excluded.partition(".")
+        if nested:
+            if isinstance(payload.get(top_level), dict):
+                payload[top_level].pop(nested, None)
+        else:
+            payload.pop(top_level, None)
+
+    hydrated = _resource_vector_hits(
+        [
+            MagicMock(
+                payload={
+                    "readable_id": resource.readable_id,
+                    "platform": {"code": "ocw"},
+                }
+            )
+        ]
+    )
+    from_payload = _resource_payload_hits([MagicMock(payload=payload)])
+
+    assert len(from_payload) == 1
+    assert set(from_payload[0]) == set(hydrated[0])
 
 
 def _make_facet_hit(count=0, value="test"):

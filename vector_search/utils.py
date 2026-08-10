@@ -42,6 +42,7 @@ from main.utils import checksum_for_content, chunks
 from vector_search.constants import (
     COLLECTION_PARAM_MAP,
     CONTENT_FILES_COLLECTION_NAME,
+    COURSE_NUMBER_INDEXING_ONLY_FIELDS,
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_INDEXES,
@@ -60,6 +61,8 @@ from vector_search.constants import (
     QDRANT_RESOURCE_PARAM_MAP,
     QDRANT_TOPIC_INDEXES,
     RESOURCES_COLLECTION_NAME,
+    RESOURCES_PAYLOAD_EXCLUDE,
+    RESOURCES_RETRIEVE_PAYLOAD,
     TOPICS_COLLECTION_NAME,
     VECTOR_SEARCH_SCORE_BOOST,
 )
@@ -1148,6 +1151,74 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
             ],
             wait=False,
         )
+
+
+def resources_payload_selector():
+    """
+    Return the `with_payload` value to use for the resources collection.
+
+    When hits are served from the payload we want everything the API response
+    needs, minus the indexing-only keys. Otherwise we only need the two fields
+    the database hydration path looks resources up by.
+    """
+    if settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD:
+        return models.PayloadSelectorExclude(exclude=RESOURCES_PAYLOAD_EXCLUDE)
+    return RESOURCES_RETRIEVE_PAYLOAD
+
+
+def _trim_indexing_only_list_fields(payload):
+    """
+    Drop indexing-only keys the Qdrant payload selector cannot reach.
+
+    Selectors descend into objects but not into lists of objects, so the extra
+    fields the indexing serializer puts on each course number survive the
+    exclude and have to be removed here.
+    """
+    course = payload.get("course")
+    if not isinstance(course, dict) or not isinstance(
+        course.get("course_numbers"), list
+    ):
+        return payload
+    return {
+        **payload,
+        "course": {
+            **course,
+            "course_numbers": [
+                {
+                    key: value
+                    for key, value in course_number.items()
+                    if key not in COURSE_NUMBER_INDEXING_ONLY_FIELDS
+                }
+                if isinstance(course_number, dict)
+                else course_number
+                for course_number in course["course_numbers"]
+            ],
+        },
+    }
+
+
+def _resource_payload_hits(search_result):
+    """
+    Build resource hits from the Qdrant payloads themselves.
+
+    The payload is the resource as the indexing serializer wrote it, so it
+    already carries every field the API response needs -- no database
+    hydration required. Dedupes on platform:readable_id and preserves the
+    Qdrant ranking, the same way the hydrated path does.
+    """
+    hits = []
+    seen = set()
+    for hit in search_result:
+        payload = hit.payload or {}
+        readable_id = payload.get("readable_id")
+        if not readable_id:
+            continue
+        key = f"{(payload.get('platform') or {}).get('code', '')}:{readable_id}"
+        if key in seen:
+            continue
+        seen.add(key)
+        hits.append(_trim_indexing_only_list_fields(payload))
+    return hits
 
 
 def _resource_vector_hits(search_result):
