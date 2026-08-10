@@ -25,9 +25,6 @@ from learning_resources.constants import (
     PlatformType,
 )
 from learning_resources.etl.constants import XPRO_PLATFORM_TRANSFORM, ETLSource
-from learning_resources.etl.micromasters import (
-    READABLE_ID_PREFIX as MICROMASTERS_READABLE_ID_PREFIX,
-)
 from learning_resources.etl.utils import (
     generate_course_numbers_json,
     get_department_id_by_name,
@@ -326,53 +323,6 @@ def transform_ocw_course(row: dict) -> dict:
             }
         ],
         "published": published,
-        "image": _image(row.get("image_url")),
-        "url": row.get("url"),
-        "description": clean_data(row.get("description")),
-    }
-
-
-# ---------------------------------------------------------------------------
-# MicroMasters
-# ---------------------------------------------------------------------------
-
-
-def transform_micromasters_program(row: dict) -> dict:
-    """Transform an integrations__learn__micromasters_programs row.
-
-    MicroMasters courses are hosted on edX; child course readable_ids are
-    the edX course keys, so program->course linking matches on
-    ``PlatformType.edx``, same as the API-based MicroMasters ETL.
-    """
-    title = row["title"]
-    # The view emits the bare `program_id` (e.g. "3"); the API-based ETL
-    # (learning_resources.etl.micromasters) prefixes it to
-    # "micromasters-program-3", which is what's already in prod. Passing
-    # the bare id through would create a duplicate program and the prune
-    # step would then unpublish the real one.
-    readable_id = f"{MICROMASTERS_READABLE_ID_PREFIX}{row['readable_id']}"
-    return {
-        "readable_id": readable_id,
-        "platform": PlatformType.edx.name,
-        "etl_source": ETLSource.micromasters.name,
-        "resource_type": LearningResourceType.program.name,
-        "title": title,
-        "offered_by": {"code": OfferedBy.mitx.name},
-        # integrations__learn__micromasters_programs exposes no topics
-        # column (unlike the other Cohort 1 views) — omitting this key
-        # entirely would still default to [] in loaders.load_program's
-        # `program_data.pop("topics", [])`, which load_topics treats as
-        # "clear all topics", wiping out whatever's curated today on every
-        # sync. `None` is loaders.py's existing sentinel for "not provided,
-        # leave alone" (see the analogous `departments_data = ... pop(...,
-        # None)` a few lines below load_program's topics handling).
-        "topics": None,
-        "courses": [
-            _course_stub(course_id, PlatformType.edx.name)
-            for course_id in _split(row.get("courses"))
-        ],
-        "runs": [_program_run(readable_id, title, row)],
-        "published": _parse_bool(row.get("published")),
         "image": _image(row.get("image_url")),
         "url": row.get("url"),
         "description": clean_data(row.get("description")),

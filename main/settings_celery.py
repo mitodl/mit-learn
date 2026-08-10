@@ -263,11 +263,6 @@ if not CELERY_BEAT_DISABLED and get_string("TRINO_HOST", None):
                 "schedule": crontab(minute=15, hour=11),
                 "kwargs": {"full_refresh": True},
             },
-            "warehouse-sync-micromasters-programs-every-1-days": {
-                "task": "learning_resources.tasks.SyncMicromastersProgramsTask",
-                "schedule": crontab(minute=30, hour=11),
-                "kwargs": {"full_refresh": True},
-            },
         }
     )
 
@@ -287,7 +282,6 @@ if not CELERY_BEAT_DISABLED and get_string("TRINO_HOST", None):
 # webhook-driven, so cutting it over means disabling the webhook, not
 # removing a schedule entry.
 _API_ETL_BEAT_ENTRIES_BY_SOURCE = {
-    "micromasters": ("update-micromasters-programs-every-1-days",),
     "mit_edx": ("update_edx-courses-every-1-days",),
     "mitxonline": ("update-mitxonline-courses-every-6-hours",),
     "xpro": ("update-xpro-courses-every-1-days",),

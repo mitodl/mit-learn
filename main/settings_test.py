@@ -335,7 +335,6 @@ class TestSettings(TestCase):
             assert "update-xpro-courses-every-1-days" not in schedule
             # Sources that have not been cut over are untouched...
             assert "update_edx-courses-every-1-days" in schedule
-            assert "update-micromasters-programs-every-1-days" in schedule
             # ...and content-file imports keep running for cut-over sources,
             # since the warehouse views carry catalog metadata only.
             assert "update-mitxonline-files-every-1-day" in schedule

@@ -1272,12 +1272,6 @@ def test_warehouse_sync_courses_task_wiring(  # noqa: PLR0913
             "transform_xpro_program",
             ETLSource.xpro.name,
         ),
-        (
-            "SyncMicromastersProgramsTask",
-            "integrations__learn__micromasters_programs",
-            "transform_micromasters_program",
-            ETLSource.micromasters.name,
-        ),
     ],
 )
 def test_warehouse_sync_programs_task_wiring(  # noqa: PLR0913

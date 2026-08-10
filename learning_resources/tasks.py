@@ -1015,29 +1015,3 @@ class SyncOCWCoursesTask(BaseWarehouseETLTask):
 
 
 SyncOCWCoursesTask = app.register_task(SyncOCWCoursesTask())
-
-
-class SyncMicromastersProgramsTask(BaseWarehouseETLTask):
-    """Warehouse-pull MicroMasters programs into MIT Learn."""
-
-    name = "learning_resources.tasks.SyncMicromastersProgramsTask"
-    view_name = f"{_INTEGRATIONS_SCHEMA}.integrations__learn__micromasters_programs"
-
-    def fetch_and_upsert(self, conn, *, since=None) -> int:
-        """Pull, transform, and upsert rows from this task's warehouse view."""
-        programs = [
-            catalog_sources.transform_micromasters_program(row)
-            for row in iter_rows(conn, self.view_name, since=since)
-        ]
-        loaded = load_programs(
-            ETLSource.micromasters.name,
-            programs,
-            config=ProgramLoaderConfig(
-                courses=CourseLoaderConfig(fetch_only=True), prune=since is None
-            ),
-        )
-        clear_views_cache()
-        return len(loaded)
-
-
-SyncMicromastersProgramsTask = app.register_task(SyncMicromastersProgramsTask())
