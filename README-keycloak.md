@@ -78,6 +78,23 @@ there emails a confirmation link rather than changing the address immediately,
 and the new address reaches Learn when Keycloak pushes it over SCIM. The local
 realm has verification off, so the change applies straight away.
 
+### Controlling user provisioning from APISIX headers
+
+By default, `ApisixUserMiddleware` both creates users it hasn't seen before and keeps
+existing users and their profiles in sync with the APISIX userinfo headers. Two settings
+control that, in `backend.local.env` (both default to `True`):
+
+- `MITOL_APIGATEWAY_USERINFO_CREATE` - controls whether the middleware will create _new_
+  users. If `False`, users have to be pre-created (for example via SCIM) before they can
+  authenticate; an unknown identity is treated as anonymous.
+- `MITOL_APIGATEWAY_USERINFO_UPDATE` - controls whether the middleware will update
+  _existing_ users. If `False`, neither the `User` nor its `Profile` is written from the
+  headers, so make sure a backchannel (SCIM) is keeping that data in sync with Keycloak.
+
+These names match the settings in
+[mitol-django-apigateway](https://github.com/mitodl/ol-django/tree/main/src/apigateway),
+which this middleware is intended to be replaced by.
+
 ### MITx Online integration
 
 The user dashboard at `/dashboard` includes some integration with the MITx Online
