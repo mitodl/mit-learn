@@ -6,11 +6,11 @@ import json
 import random
 from pathlib import Path
 
+import markdown
 import pytest
 import yaml
 from faker import Faker
 
-import markdown
 from data_fixtures import utils as data_utils
 from learning_resources import utils
 from learning_resources.constants import (
