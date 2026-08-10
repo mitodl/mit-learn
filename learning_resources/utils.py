@@ -257,7 +257,9 @@ def image_url_is_reachable(url: str) -> bool:
                     url, timeout=settings.REQUESTS_TIMEOUT, stream=True
                 )
                 response.close()
-            reachable = response.ok
+            reachable = (
+                HTTPStatus.OK <= response.status_code < HTTPStatus.MULTIPLE_CHOICES
+            )
         except requests.RequestException:
             reachable = False
         redis_cache.set(cache_key, reachable, timeout=IMAGE_URL_REACHABLE_CACHE_TIMEOUT)

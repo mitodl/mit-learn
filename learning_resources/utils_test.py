@@ -6,13 +6,13 @@ import json
 import random
 from pathlib import Path
 
-import markdown
 import pytest
 import requests
 import responses
 import yaml
 from faker import Faker
 
+import markdown
 from data_fixtures import utils as data_utils
 from learning_resources import utils
 from learning_resources.constants import (
@@ -1311,7 +1311,7 @@ def test_sanitize_llm_text(text, expected):
 
 @pytest.mark.parametrize(
     ("status", "expected"),
-    [(200, True), (301, True), (404, False), (403, False), (500, False)],
+    [(200, True), (301, False), (404, False), (403, False), (500, False)],
 )
 def test_image_url_is_reachable(mocked_responses, status, expected):
     """image_url_is_reachable should be True only for successful responses"""
