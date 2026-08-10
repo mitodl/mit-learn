@@ -128,7 +128,7 @@ OVS_API_BASE_URL = get_string(
 # beginning with a "." matches any subdomain of that domain.
 OVS_ALLOWED_MEDIA_HOSTS = get_list_of_str(
     "OVS_ALLOWED_MEDIA_HOSTS",
-    [".cloudfront.net"],
+    [],
 )
 
 # course catalog podcast etl settings
