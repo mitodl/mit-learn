@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.77.2
+Version 0.77.2 (Released August 10, 2026)
 --------------
 
 - Fix flaky url-matching tests with unique factory urls (#3724)
