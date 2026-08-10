@@ -12,7 +12,7 @@ const organization = (
       description: faker.lorem.paragraph(),
       logo: faker.image.url(),
       slug: faker.lorem.slug(),
-      sso_organization_id: null,
+      sso_organization_id: faker.string.uuid(),
       contracts: [],
     },
     overrides,

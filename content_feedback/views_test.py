@@ -2,6 +2,7 @@
 
 import pytest
 from django.urls import reverse
+from rest_framework.test import APIClient
 
 from content_feedback.factories import ContentFeedbackFactory
 from content_feedback.models import ContentFeedback
@@ -26,10 +27,24 @@ def _payload(**overrides):
     return payload
 
 
-def test_submit_requires_authentication(client):
-    """Anonymous users cannot submit feedback."""
+def test_submit_allows_anonymous():
+    """Anonymous users can submit without a CSRF token; the record has no user."""
+    # enforce_csrf_checks=True mirrors production SessionAuthentication: CSRF is
+    # only enforced for session-authenticated callers, so an anonymous POST with
+    # no token still succeeds.
+    client = APIClient(enforce_csrf_checks=True)
     response = client.post(reverse("content_feedback:v0:content_feedback"), _payload())
-    assert response.status_code in (401, 403)
+    assert response.status_code == 201
+    assert ContentFeedback.objects.count() == 1
+    assert ContentFeedback.objects.get().user is None
+
+
+def test_authenticated_without_csrf_token_rejected(user):
+    """A session-authenticated POST without a CSRF token is rejected (403)."""
+    client = APIClient(enforce_csrf_checks=True)
+    client.force_login(user)
+    response = client.post(reverse("content_feedback:v0:content_feedback"), _payload())
+    assert response.status_code == 403
     assert ContentFeedback.objects.count() == 0
 
 
@@ -119,7 +134,6 @@ def test_factory_builds_valid_record():
 def test_submit_rate_limited(user_client, mocker):
     """Exceeding the per-user rate returns 429; a different user is unaffected."""
     from django.core.cache.backends.locmem import LocMemCache
-    from rest_framework.test import APIClient
 
     from main.factories import UserFactory
     from main.throttles import RedisScopedRateThrottle
@@ -141,6 +155,8 @@ def test_submit_rate_limited(user_client, mocker):
     # The limit is keyed per authenticated user: a different user still gets
     # through even after the first user is throttled. (The user_client fixture
     # shares one APIClient, so build a distinct client for the second user.)
+    # NB: anonymous requests instead key on client IP, which is spoofable via
+    # X-Forwarded-For -- tracked as a follow-up (mitodl/hq#12775).
     other_client = APIClient()
     other_client.force_login(UserFactory.create())
     assert other_client.post(url, _payload()).status_code == 201

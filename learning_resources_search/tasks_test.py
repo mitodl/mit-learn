@@ -3,6 +3,8 @@
 from collections import OrderedDict
 
 import pytest
+import requests
+import responses
 from celery.exceptions import Ignore, Retry
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -44,8 +46,10 @@ from learning_resources_search.tasks import (
     _generate_subscription_digest_subject,
     _get_percolated_rows,
     _group_percolated_rows,
+    _image_url_is_reachable,
     _infer_percolate_group,
     _maybe_finish_reindex_job,
+    _validated_resource_image_url,
     bulk_deindex_learning_resources,
     deindex_document,
     deindex_run_content_files,
@@ -64,6 +68,7 @@ from learning_resources_search.tasks import (
 from main.factories import TaskBatchFactory, TaskJobFactory, UserFactory
 from main.models import TaskBatch, TaskJob
 from main.test_utils import assert_not_raises
+from main.utils import frontend_absolute_url
 
 pytestmark = pytest.mark.django_db
 User = get_user_model()
@@ -84,6 +89,19 @@ def _wrap_retry_mock(mocker):
 def mocked_api(mocker):
     """Mock object that patches the channels API"""
     return mocker.patch("learning_resources_search.tasks.api")
+
+
+@pytest.fixture(autouse=True)
+def mock_image_url_is_reachable(mocker, request):
+    """
+    Stub the digest email's image reachability check so tests don't make real
+    requests. Tests that use mocked_responses exercise the real function.
+    """
+    if "mocked_responses" in request.fixturenames:
+        return None
+    return mocker.patch(
+        "learning_resources_search.tasks._image_url_is_reachable", return_value=True
+    )
 
 
 def test_upsert_learning_resource(mocked_api):
@@ -1722,6 +1740,73 @@ def test_digest_email_template(mocked_api, mocker, mocked_celery):
     assert user.id == task_args[0]
     for topic in topics:
         assert topic in template_data
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [(200, True), (404, False), (403, False), (500, False)],
+)
+def test_image_url_is_reachable(mocked_responses, status, expected):
+    """_image_url_is_reachable should be True only for successful responses"""
+    url = "http://example.com/image.jpg"
+    mocked_responses.add(responses.HEAD, url, status=status)
+    assert _image_url_is_reachable(url) is expected
+
+
+@pytest.mark.parametrize(("final_status", "expected"), [(200, True), (404, False)])
+def test_image_url_is_reachable_follows_redirect(
+    mocked_responses, final_status, expected
+):
+    """A redirect is followed through to the destination's status"""
+    url = "http://example.com/image.jpg"
+    redirected_to = "http://example.com/moved.jpg"
+    mocked_responses.add(
+        responses.HEAD, url, status=301, headers={"Location": redirected_to}
+    )
+    mocked_responses.add(responses.HEAD, redirected_to, status=final_status)
+    assert _image_url_is_reachable(url) is expected
+
+
+def test_image_url_is_reachable_head_not_allowed(mocked_responses):
+    """Servers that reject HEAD should be retried with GET"""
+    url = "http://example.com/image.jpg"
+    mocked_responses.add(responses.HEAD, url, status=405)
+    mocked_responses.add(responses.GET, url, status=200)
+    assert _image_url_is_reachable(url) is True
+
+
+def test_image_url_is_reachable_connection_error(mocked_responses):
+    """A request that errors out counts as unreachable"""
+    url = "http://example.com/image.jpg"
+    mocked_responses.add(
+        responses.HEAD, url, body=requests.exceptions.ConnectionError()
+    )
+    assert _image_url_is_reachable(url) is False
+
+
+@pytest.mark.parametrize("reachable", [True, False])
+def test_validated_resource_image_url(mock_image_url_is_reachable, reachable):
+    """
+    The digest email should use the resource image only if its URL is
+    reachable, and the default image otherwise
+    """
+    mock_image_url_is_reachable.return_value = reachable
+    resource = LearningResourceFactory.create(is_course=True)
+    validated_url = _validated_resource_image_url(resource)
+    if reachable:
+        assert validated_url == resource.image.url
+    else:
+        assert validated_url == frontend_absolute_url("/images/default_resource.jpg")
+    mock_image_url_is_reachable.assert_called_once_with(resource.image.url)
+
+
+def test_validated_resource_image_url_no_image(mock_image_url_is_reachable):
+    """The digest email should use the default image if the resource has none"""
+    resource = LearningResourceFactory.create(is_course=True, no_image=True)
+    assert _validated_resource_image_url(resource) == frontend_absolute_url(
+        "/images/default_resource.jpg"
+    )
+    mock_image_url_is_reachable.assert_not_called()
 
 
 def test_subscription_digest_subject():

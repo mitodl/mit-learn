@@ -10,7 +10,6 @@ import os
 import re
 import tarfile
 import uuid
-import zipfile
 from collections import Counter
 from collections.abc import Generator
 from datetime import UTC, datetime
@@ -899,18 +898,13 @@ def get_bucket_by_name(bucket_name: str) -> object:
 
 def calc_checksum(filename) -> str:
     """
-    Return the md5 checksum of the specified filepath
+    Return a checksum for the specified tar archive
 
     Args:
-        filename(str): The path to the file to checksum
+        filename(str): The path to the tar archive to checksum
     Returns:
-        str: The md5 checksum of the file
+        str: checksum derived from the archive members' header checksums
     """
-    if zipfile.is_zipfile(filename):
-        with zipfile.ZipFile(filename, "r") as zip_file:
-            return str(
-                hash(tuple(f"{zp.filename}:{zp.file_size}" for zp in zip_file.filelist))
-            )
     with tarfile.open(filename, "r") as tgz_file:
         return str(hash(tuple(ti.chksum for ti in tgz_file.getmembers())))
 

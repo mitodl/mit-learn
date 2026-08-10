@@ -26,23 +26,24 @@ describe("OrganizationCards", () => {
     count: number,
     withContracts: boolean = true,
   ): OrganizationPage[] => {
-    return Array.from({ length: count }, (_, i) => ({
-      id: i + 1,
-      name: `Test Organization ${i + 1}`,
-      description: `Description for org ${i + 1}`,
-      logo: `https://example.com/logo${i + 1}.png`,
-      slug: `org-test-${i + 1}`,
-      sso_organization_id: null,
-      contracts: withContracts
-        ? [
-            mitxOnlineFactories.contracts.contract({
-              id: i + 1,
-              name: `Contract ${i + 1}`,
-              organization: i + 1,
-            }),
-          ]
-        : [],
-    }))
+    return Array.from({ length: count }, (_, i) =>
+      mitxOnlineFactories.organizations.organization({
+        id: i + 1,
+        name: `Test Organization ${i + 1}`,
+        description: `Description for org ${i + 1}`,
+        logo: `https://example.com/logo${i + 1}.png`,
+        slug: `org-test-${i + 1}`,
+        contracts: withContracts
+          ? [
+              mitxOnlineFactories.contracts.contract({
+                id: i + 1,
+                name: `Contract ${i + 1}`,
+                organization: i + 1,
+              }),
+            ]
+          : [],
+      }),
+    )
   }
 
   const setup = ({ organizations = [] }: SetupOptions = {}) => {
@@ -82,7 +83,7 @@ describe("OrganizationCards", () => {
   })
 
   it("displays organization logo", async () => {
-    const organization: OrganizationPage = {
+    const organization = mitxOnlineFactories.organizations.organization({
       id: 1,
       name: "Test Organization",
       description: "Test Description",
@@ -96,7 +97,7 @@ describe("OrganizationCards", () => {
           name: "Contract 1",
         }),
       ],
-    }
+    })
     setup({ organizations: [organization] })
 
     const image = await screen.findByAltText("")
@@ -110,7 +111,7 @@ describe("OrganizationCards", () => {
 
   describe("when organization has contracts", () => {
     it("renders contract cards with correct information", async () => {
-      const organization: OrganizationPage = {
+      const organization = mitxOnlineFactories.organizations.organization({
         id: 1,
         name: "Test Organization",
         description: "Test description",
@@ -129,7 +130,7 @@ describe("OrganizationCards", () => {
             organization: 1,
           }),
         ],
-      }
+      })
 
       setup({ organizations: [organization] })
 
@@ -163,7 +164,7 @@ describe("OrganizationCards", () => {
         organization: 1,
         slug: "contract-2",
       })
-      const organization: OrganizationPage = {
+      const organization = mitxOnlineFactories.organizations.organization({
         id: 1,
         name: "Test Organization",
         description: "Test description",
@@ -171,7 +172,7 @@ describe("OrganizationCards", () => {
         slug: "org-test-org",
         sso_organization_id: null,
         contracts: [contract1, contract2],
-      }
+      })
 
       setup({ organizations: [organization] })
 
@@ -196,7 +197,7 @@ describe("OrganizationCards", () => {
     })
 
     it("renders cards for both mobile and desktop screen sizes", async () => {
-      const organization: OrganizationPage = {
+      const organization = mitxOnlineFactories.organizations.organization({
         id: 1,
         name: "Test Organization",
         description: "Test description",
@@ -210,7 +211,7 @@ describe("OrganizationCards", () => {
             organization: 1,
           }),
         ],
-      }
+      })
 
       setup({ organizations: [organization] })
 
@@ -222,7 +223,7 @@ describe("OrganizationCards", () => {
 
   describe("when organization has no matching contracts", () => {
     it("renders organization header but no contract cards", async () => {
-      const organization: OrganizationPage = {
+      const organization = mitxOnlineFactories.organizations.organization({
         id: 1,
         name: "Test Organization",
         description: "Test description",
@@ -230,7 +231,7 @@ describe("OrganizationCards", () => {
         slug: "org-test-org",
         sso_organization_id: null,
         contracts: [], // No contracts for this organization
-      }
+      })
 
       setup({ organizations: [organization] })
 
@@ -251,7 +252,7 @@ describe("OrganizationCards", () => {
 
   describe("with multiple organizations", () => {
     it("renders all organizations with their respective contracts", async () => {
-      const org1: OrganizationPage = {
+      const org1 = mitxOnlineFactories.organizations.organization({
         id: 1,
         name: "Organization One",
         description: "Test description",
@@ -272,8 +273,8 @@ describe("OrganizationCards", () => {
             slug: "org1-contract-2",
           }),
         ],
-      }
-      const org2: OrganizationPage = {
+      })
+      const org2 = mitxOnlineFactories.organizations.organization({
         id: 2,
         name: "Organization Two",
         description: "Test description",
@@ -288,7 +289,7 @@ describe("OrganizationCards", () => {
             slug: "org2-contract-1",
           }),
         ],
-      }
+      })
 
       setup({ organizations: [org1, org2] })
 
@@ -377,7 +378,7 @@ describe("OrganizationCards", () => {
         organization: 1,
         slug: "test-contract",
       })
-      const organization: OrganizationPage = {
+      const organization = mitxOnlineFactories.organizations.organization({
         id: 1,
         name: "Test Organization",
         description: "Test description",
@@ -385,7 +386,7 @@ describe("OrganizationCards", () => {
         slug: "org-my-company",
         sso_organization_id: null,
         contracts: [contract],
-      }
+      })
 
       setup({ organizations: [organization] })
 
@@ -405,7 +406,7 @@ describe("OrganizationCards", () => {
         organization: 1,
         slug: "test-contract",
       })
-      const organization: OrganizationPage = {
+      const organization = mitxOnlineFactories.organizations.organization({
         id: 1,
         name: "Test Organization",
         description: "Test description",
@@ -413,7 +414,7 @@ describe("OrganizationCards", () => {
         slug: "my-company", // No 'org-' prefix
         sso_organization_id: null,
         contracts: [contract],
-      }
+      })
 
       setup({ organizations: [organization] })
 
@@ -427,7 +428,7 @@ describe("OrganizationCards", () => {
     })
 
     it("filters contracts correctly when none match organization ID", async () => {
-      const organization: OrganizationPage = {
+      const organization = mitxOnlineFactories.organizations.organization({
         id: 1,
         name: "Test Organization",
         description: "Test description",
@@ -435,7 +436,7 @@ describe("OrganizationCards", () => {
         slug: "org-test-org",
         sso_organization_id: null,
         contracts: [], // No contracts for this organization
-      }
+      })
 
       setup({ organizations: [organization] })
 

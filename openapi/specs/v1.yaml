@@ -13798,9 +13798,11 @@ components:
         key:
           type: string
           minLength: 1
+          pattern: ^[A-Za-z0-9._-]{1,255}$
         video_id:
           type: string
           minLength: 1
+          pattern: ^[A-Za-z0-9._-]{1,255}$
         delete:
           type: boolean
           default: false

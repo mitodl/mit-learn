@@ -1,6 +1,7 @@
 """Shared functions for EdX sites"""
 
 import logging
+from itertools import chain
 from pathlib import Path
 from tarfile import ReadError
 from tempfile import TemporaryDirectory
@@ -114,9 +115,10 @@ def build_run_lookup(
 
 def process_course_archive(
     bucket, key: str, run: LearningResourceRun, *, overwrite: bool = False
-) -> None:
+) -> bool:
     """
-    Download and process a course archive from S3.
+    Download and process a course archive from S3, skipping the download
+    entirely when run.archive_key already matches the content-addressed key.
 
     Args:
         bucket: S3 bucket object
@@ -125,8 +127,11 @@ def process_course_archive(
         overwrite(bool): Whether to overwrite existing content files
 
     Returns:
-        bool: True if successfully processed, False if skipped due to matching checksum
+        bool: False if skipped via matching archive_key, True otherwise
     """
+    if run.archive_key == key and not overwrite:
+        log.debug("Archive key unchanged for %s, skipping download", key)
+        return False
     with TemporaryDirectory() as export_tempdir:
         course_tarpath = Path(export_tempdir, key.rsplit("/", maxsplit=1)[-1])
         log.info("course tarpath for run %s is %s", run.run_id, course_tarpath)
@@ -135,20 +140,35 @@ def process_course_archive(
             checksum = calc_checksum(course_tarpath)
         except ReadError:
             log.exception("Error reading tar file %s, skipping", course_tarpath)
-            return False
+            return True
         if run.checksum == checksum and not overwrite:
+            # unchanged content under a new key: record it to skip future downloads
+            run.archive_key = key
+            run.save(update_fields=["archive_key"])
             log.info("Checksums match for %s, skipping load", key)
-            return False
+            return True
         try:
+            content_files_data = iter(
+                transform_content_files(course_tarpath, run, overwrite=overwrite)
+            )
+            first = next(content_files_data, None)
+            if first is None:
+                # empty archive: stop re-downloading it
+                run.archive_key = key
+                run.save(update_fields=["archive_key"])
+                return True
             content_files_ids = load_content_files(
-                run,
-                transform_content_files(course_tarpath, run, overwrite=overwrite),
+                run, chain([first], content_files_data)
             )
             if content_files_ids:
                 run.checksum = checksum
-                run.save(update_fields=["checksum"])
+                run.archive_key = key
+                run.save(update_fields=["checksum", "archive_key"])
+            # else: files yielded but none loaded — save nothing so the next
+            # sync retries
         except:  # noqa: E722
             log.exception("Error ingesting OLX content data for %s", key)
+    return True
 
 
 def get_most_recent_course_archives(etl_source: str) -> list[str]:
@@ -315,6 +335,7 @@ def sync_edx_course_files(
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     run_lookup = build_run_lookup(etl_source, ids)
 
+    skipped = processed = 0
     for key in keys:
         normalized_key_id = extract_run_id_from_key(etl_source, key)
         matching_runs = run_lookup.get(normalized_key_id)
@@ -327,4 +348,13 @@ def sync_edx_course_files(
             log.warning("There are %d runs for %s", len(matching_runs), key)
 
         run = matching_runs[0]
-        process_course_archive(bucket, key, run, overwrite=overwrite)
+        if process_course_archive(bucket, key, run, overwrite=overwrite):
+            processed += 1
+        else:
+            skipped += 1
+    log.info(
+        "%s content file sync: %d unchanged archives skipped, %d processed",
+        etl_source,
+        skipped,
+        processed,
+    )
