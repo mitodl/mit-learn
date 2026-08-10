@@ -1,6 +1,17 @@
 Release Notes
 =============
 
+Version 0.77.2 (Released August 10, 2026)
+--------------
+
+- Fix flaky url-matching tests with unique factory urls (#3724)
+- Add course code to learning resource embedding context (#3700)
+- Sort learning resources by denormalized view_count instead of live Count() (#3711)
+- refactor: V1 — Clean up and de-duplicate the VideoPlaylistCollectionPage folder (#3706)
+- added a fallback to populate run readable ids for contentfiles withou… (#3719)
+- Include facets from urls in channel pages (#3695)
+- mitxonline course numbers (#3703)
+
 Version 0.77.1 (Released August 05, 2026)
 --------------
 
