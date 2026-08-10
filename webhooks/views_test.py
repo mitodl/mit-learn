@@ -259,6 +259,7 @@ def test_content_file_webhook_view_invalid_json(settings, client):
 @pytest.fixture
 def ovs_platform(settings):
     settings.OVS_API_BASE_URL = "https://video.odl.mit.edu"
+    settings.OVS_ALLOWED_MEDIA_HOSTS = [".cloudfront.net"]
     return LearningResourcePlatformFactory.create(code=PlatformType.ovs.name)
 
 
@@ -560,6 +561,42 @@ def test_ovs_video_webhook_rejects_disallowed_urls(
     )
     assert response.status_code == 400
     assert field in response.json()
+    mock_load.assert_not_called()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "hostile_url",
+    [
+        # urllib reads the host as du3yhovcx8dht.cloudfront.net, browsers read
+        # it as evil.io
+        pytest.param(
+            "https://evil.io\\@du3yhovcx8dht.cloudfront.net/x.jpg", id="backslash"
+        ),
+        pytest.param("https://[", id="unparseable"),
+        pytest.param(5, id="not_a_string"),
+        pytest.param(
+            {"src": "https://du3yhovcx8dht.cloudfront.net/x.jpg"}, id="object"
+        ),
+    ],
+)
+def test_ovs_video_webhook_rejects_hostile_urls(settings, client, mocker, hostile_url):
+    """Urls urllib and browsers disagree about are rejected with a 400, not a 500."""
+    mocker.patch("webhooks.views.clear_views_cache")
+    mock_load = mocker.patch("webhooks.views.load_ovs_video_from_webhook")
+    settings.OVS_ALLOWED_MEDIA_HOSTS = [".cloudfront.net"]
+    payload = _ovs_payload(key="hostile")
+    payload["cta_link"] = hostile_url
+
+    url = reverse("webhooks:v1:ovs_video_webhook")
+    response = client.post(
+        url,
+        data=json.dumps(payload),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(payload, settings)},
+    )
+    assert response.status_code == 400
+    assert "cta_link" in response.json()
     mock_load.assert_not_called()
 
 

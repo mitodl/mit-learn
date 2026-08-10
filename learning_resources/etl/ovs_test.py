@@ -727,11 +727,71 @@ class TestMediaUrlAllowlist:
             pytest.param("file:///etc/passwd", False, id="file_scheme"),
             pytest.param("", False, id="empty"),
             pytest.param(None, False, id="none"),
+            # urllib reads the host of these as example.com, browsers read it
+            # as evil.io, so they must not be treated as allowlisted
+            pytest.param(
+                "https://evil.io\\@example.com/a.vtt", False, id="backslash_userinfo"
+            ),
+            pytest.param("https://evil.io\\.example.com/a.vtt", False, id="backslash"),
+            pytest.param("https:/\\evil.io/a.vtt", False, id="leading_backslash"),
+            # malformed urls that urlparse refuses to parse
+            pytest.param("https://[", False, id="unterminated_ipv6"),
+            pytest.param("https://[::1]bad]/a.vtt", False, id="bad_ipv6"),
+            # payload values are not guaranteed to be strings
+            pytest.param(123, False, id="int"),
+            pytest.param({"url": "https://example.com"}, False, id="dict"),
+            pytest.param(["https://example.com"], False, id="list"),
+            pytest.param(True, False, id="bool"),
         ],
     )
     def test_is_allowed_media_url(self, url, expected):
         """Only https urls on allowlisted hosts are permitted"""
         assert is_allowed_media_url(url) is expected
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://[",
+            123,
+            {"url": "https://example.com"},
+            "https://evil.io\\@example.com/video__index.m3u8",
+        ],
+    )
+    def test_hostile_urls_do_not_crash_transform(self, url):
+        """A malformed or non-string url is rejected rather than raising"""
+        video_data = {
+            "key": "abc123",
+            "cta_link": url,
+            "sources": [{"src": url}, {"src": "https://example.com/v__index.m3u8"}],
+            "videothumbnail_set": [{"cloudfront_url": url}],
+            "videosubtitle_set": [{"s3_object_key": "subtitles/a.vtt"}],
+        }
+        transformed = transform_video(video_data)
+        assert transformed["url"] == f"{OVS_TEST_BASE_URL}/videos/abc123"
+        assert transformed["video"]["streaming_url"] == (
+            "https://example.com/v__index.m3u8"
+        )
+        assert transformed["image"] is None
+        assert urlparse(transformed["video"]["caption_urls"][0]["url"]).hostname == (
+            "example.com"
+        )
+
+    def test_caption_urls_skip_non_string_object_key(self):
+        """A subtitle whose s3_object_key is not a string is skipped"""
+        assert (
+            _build_caption_urls(
+                {
+                    "videothumbnail_set": [
+                        {"cloudfront_url": "https://abc.cloudfront.net/t.jpg"},
+                    ],
+                    "videosubtitle_set": [
+                        {"s3_object_key": 5, "language": "en"},
+                        {"s3_object_key": None, "language": "fr"},
+                    ],
+                }
+            )
+            == []
+        )
 
     def test_source_url_on_disallowed_host_ignored(self):
         """A streaming source on an unknown host is not used"""
