@@ -3,6 +3,7 @@ Django settings for celery.
 """
 
 from celery.schedules import crontab
+from django.core.exceptions import ImproperlyConfigured
 from redbeat import RedBeatScheduler
 
 from main.envs import get_bool, get_int, get_string
@@ -269,6 +270,52 @@ if not CELERY_BEAT_DISABLED and get_string("TRINO_HOST", None):
             },
         }
     )
+
+# Per-source cutover switch for the API-based catalog ETL entries above.
+#
+# Deliberately *not* keyed on TRINO_HOST: during the parallel-validation
+# window TRINO_HOST is set and both pipelines must run so their outputs can
+# be compared. Cutover is a separate, per-source decision made once a
+# source clears validation, so it gets its own setting — a comma-separated
+# list of ETLSource names (e.g. "mitxonline,xpro").
+#
+# Only the catalog-metadata tasks are listed here. The `import_all_*_files`
+# tasks stay scheduled regardless of cutover: the integrations__learn__*
+# views carry course/program metadata only, not content files.
+#
+# OCW has no entry because it has no API-based beat task — it is
+# webhook-driven, so cutting it over means disabling the webhook, not
+# removing a schedule entry.
+_API_ETL_BEAT_ENTRIES_BY_SOURCE = {
+    "micromasters": ("update-micromasters-programs-every-1-days",),
+    "mit_edx": ("update_edx-courses-every-1-days",),
+    "mitxonline": ("update-mitxonline-courses-every-6-hours",),
+    "xpro": ("update-xpro-courses-every-1-days",),
+}
+
+WAREHOUSE_ETL_CUTOVER_SOURCES = [
+    source.strip()
+    for source in get_string("WAREHOUSE_ETL_CUTOVER_SOURCES", "").split(",")
+    if source.strip()
+]
+
+_unknown_cutover_sources = sorted(
+    set(WAREHOUSE_ETL_CUTOVER_SOURCES) - set(_API_ETL_BEAT_ENTRIES_BY_SOURCE)
+)
+if _unknown_cutover_sources:
+    # Fail loud rather than silently leaving a legacy task scheduled: a
+    # typo here would mean both pipelines keep writing the same rows long
+    # after the source was believed to be cut over.
+    msg = (
+        f"WAREHOUSE_ETL_CUTOVER_SOURCES contains unrecognized source(s): "
+        f"{', '.join(_unknown_cutover_sources)}. "
+        f"Valid values: {', '.join(sorted(_API_ETL_BEAT_ENTRIES_BY_SOURCE))}"
+    )
+    raise ImproperlyConfigured(msg)
+
+for _source in WAREHOUSE_ETL_CUTOVER_SOURCES:
+    for _beat_entry in _API_ETL_BEAT_ENTRIES_BY_SOURCE[_source]:
+        CELERY_BEAT_SCHEDULE.pop(_beat_entry, None)
 
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"

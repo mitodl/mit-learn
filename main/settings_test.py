@@ -306,6 +306,56 @@ class TestSettings(TestCase):
             settings_vars = self.reload_settings(module="main.settings_celery")
             assert settings_vars["CELERY_RESULT_EXPIRES"] == 120
 
+    def test_warehouse_etl_cutover_sources_empty_by_default(self):
+        """The API-based catalog ETL entries stay scheduled with no cutover set."""
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            assert settings_vars["WAREHOUSE_ETL_CUTOVER_SOURCES"] == []
+            schedule = settings_vars["CELERY_BEAT_SCHEDULE"]
+            assert "update-mitxonline-courses-every-6-hours" in schedule
+            assert "update-xpro-courses-every-1-days" in schedule
+
+    def test_warehouse_etl_cutover_sources_removes_api_beat_entries(self):
+        """A cut-over source drops its API-based beat entry, and only that entry."""
+        with mock.patch.dict(
+            "os.environ",
+            {
+                **REQUIRED_SETTINGS,
+                "WAREHOUSE_ETL_CUTOVER_SOURCES": "mitxonline, xpro",
+            },
+            clear=True,
+        ):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            assert settings_vars["WAREHOUSE_ETL_CUTOVER_SOURCES"] == [
+                "mitxonline",
+                "xpro",
+            ]
+            schedule = settings_vars["CELERY_BEAT_SCHEDULE"]
+            assert "update-mitxonline-courses-every-6-hours" not in schedule
+            assert "update-xpro-courses-every-1-days" not in schedule
+            # Sources that have not been cut over are untouched...
+            assert "update_edx-courses-every-1-days" in schedule
+            assert "update-micromasters-programs-every-1-days" in schedule
+            # ...and content-file imports keep running for cut-over sources,
+            # since the warehouse views carry catalog metadata only.
+            assert "update-mitxonline-files-every-1-day" in schedule
+            assert "update-xpro-files-every-1-day" in schedule
+
+    def test_warehouse_etl_cutover_sources_rejects_unknown_source(self):
+        """A typo'd source name fails loudly instead of leaving both pipelines on."""
+        with (
+            mock.patch.dict(
+                "os.environ",
+                {
+                    **REQUIRED_SETTINGS,
+                    "WAREHOUSE_ETL_CUTOVER_SOURCES": "mitxonline,mitx_online",
+                },
+                clear=True,
+            ),
+            pytest.raises(ImproperlyConfigured, match="mitx_online"),
+        ):
+            self.reload_settings(module="main.settings_celery")
+
     def _assert_s3_storage_config(
         self,
         storages_dict,
