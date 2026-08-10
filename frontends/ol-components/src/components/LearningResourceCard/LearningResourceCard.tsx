@@ -12,6 +12,7 @@ import {
   useImageWithFallback,
 } from "ol-utilities"
 import type { Size } from "../Card/Card"
+import type { PushUrl } from "../LinkAdapter/LinkAdapter"
 import { BaseLearningResourceCard } from "../BaseLearningResourceCard/BaseLearningResourceCard"
 import type { ActionButtonInfo } from "../BaseLearningResourceCard/BaseLearningResourceCard"
 import { LearningResourceListCard } from "./LearningResourceListCard"
@@ -33,7 +34,7 @@ interface LearningResourceCardProps {
    * If set, a plain click pushes this URL with window.history.pushState
    * rather than navigating to href. See LinkAdapter for the full rules.
    */
-  pushUrl?: string
+  pushUrl?: PushUrl
   onAddToLearningPathClick?: ResourceIdCallback | null
   onAddToUserListClick?: ResourceIdCallback | null
   inUserList?: boolean

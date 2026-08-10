@@ -24,6 +24,25 @@ test("A plain click pushes pushUrl instead of following href", async () => {
 })
 
 /**
+ * The function form exists so callers can defer reading state until the click.
+ * Rendering before the value is knowable and asserting on the pushed URL is
+ * what distinguishes it from the string form.
+ */
+test("A function pushUrl is called at click time", async () => {
+  let target = "?sortby=stale"
+  renderWithTheme(
+    <LinkAdapter href="#canonical" pushUrl={() => target}>
+      Go
+    </LinkAdapter>,
+  )
+  target = "?sortby=new"
+
+  await user.click(screen.getByRole("link"))
+
+  expect(window.location.search).toBe("?sortby=new")
+})
+
+/**
  * One row per modifier, because this is the test that pins the modifier list
  * itself and each key is a separate operand of the guard — dropping one is the
  * plausible mis-implementation, and Ctrl is the Windows/Linux new-tab gesture.

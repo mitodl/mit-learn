@@ -12,6 +12,7 @@ import styled from "@emotion/styled"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { pxToRem } from "../ThemeProvider/typography"
 import { Link } from "../Link/Link"
+import type { PushUrl } from "../LinkAdapter/LinkAdapter"
 import { default as NextImage, ImageProps as NextImageProps } from "next/image"
 import { truncateText } from "../TruncateText/TruncateText"
 
@@ -29,7 +30,7 @@ export type Size = "small" | "medium"
  */
 export type LinkTargetProps =
   | { href?: undefined; pushUrl?: never }
-  | { href: string; pushUrl?: string }
+  | { href: string; pushUrl?: PushUrl }
 
 type LinkableProps = {
   children?: ReactNode

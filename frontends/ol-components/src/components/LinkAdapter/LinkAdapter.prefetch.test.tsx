@@ -28,6 +28,19 @@ test("pushUrl disables prefetching, since a plain click never follows href", () 
   )
 })
 
+test("a function pushUrl disables prefetching too", () => {
+  renderWithTheme(
+    <LinkAdapter href="/search?resource=1" pushUrl={() => "?resource=1"}>
+      Go
+    </LinkAdapter>,
+  )
+
+  expect(mockNextLink).toHaveBeenCalledWith(
+    expect.objectContaining({ prefetch: false }),
+    undefined,
+  )
+})
+
 test("a link without pushUrl keeps next/link's default prefetching", () => {
   renderWithTheme(<LinkAdapter href="/search?resource=1">Go</LinkAdapter>)
 

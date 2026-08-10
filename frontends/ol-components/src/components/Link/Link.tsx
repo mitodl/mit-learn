@@ -3,6 +3,7 @@ import styled from "@emotion/styled"
 import { css } from "@emotion/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { LinkAdapter } from "../LinkAdapter/LinkAdapter"
+import type { PushUrl } from "../LinkAdapter/LinkAdapter"
 
 type LinkStyleProps = {
   color: "black" | "white" | "red"
@@ -74,7 +75,7 @@ type LinkProps = LinkStyleProps &
      * If set, a plain click pushes this URL with window.history.pushState
      * rather than navigating to href. See LinkAdapter for the full rules.
      */
-    pushUrl?: string
+    pushUrl?: PushUrl
     scroll?: boolean
     prefetch?: boolean
   }

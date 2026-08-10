@@ -6,7 +6,7 @@ import {
   AddToLearningPathDialog,
   AddToUserListDialog,
 } from "../Dialogs/AddToListDialog"
-import { useResourceDrawerPushUrl } from "../LearningResourceDrawer/useResourceDrawerPushUrl"
+import { resourceDrawerPushUrl } from "../LearningResourceDrawer/resourceDrawerPushUrl"
 import { resourceDrawerSearch } from "@/common/urls"
 import { useUserMe } from "api/hooks/user"
 import { LearningResource } from "api"
@@ -106,7 +106,6 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
     inLearningPath,
     onClick,
   } = useResourceCard(resource)
-  const getPushUrl = useResourceDrawerPushUrl()
 
   const composedOnClick = onCardClick
     ? () => {
@@ -127,7 +126,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
             ? resourceDrawerSearch(resource.id, resource.title)
             : undefined
         }
-        pushUrl={resource ? getPushUrl(resource) : undefined}
+        pushUrl={resource ? () => resourceDrawerPushUrl(resource) : undefined}
         onAddToLearningPathClick={handleAddToLearningPathClick}
         onAddToUserListClick={handleAddToUserListClick}
         inUserList={inUserList}

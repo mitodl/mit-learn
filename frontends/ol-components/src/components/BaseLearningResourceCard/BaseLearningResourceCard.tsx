@@ -5,6 +5,7 @@ import Skeleton from "@mui/material/Skeleton"
 import { RiAwardFill } from "@remixicon/react"
 import { Card } from "../Card/Card"
 import type { Size, LinkTargetProps } from "../Card/Card"
+import type { PushUrl } from "../LinkAdapter/LinkAdapter"
 import { ListCard } from "../Card/ListCard"
 import { ListCardCondensed } from "../Card/ListCardCondensed"
 import { ActionButton } from "@mitodl/smoot-design"
@@ -94,7 +95,7 @@ interface BaseLearningResourceCardProps {
    * Distinct from `onClick`, which is on the card container and fires for
    * every click inside the card, buttons included.
    */
-  pushUrl?: string
+  pushUrl?: PushUrl
   onClick?: React.MouseEventHandler<HTMLElement>
   headingLevel?: number
   // Display data

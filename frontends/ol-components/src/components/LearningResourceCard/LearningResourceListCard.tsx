@@ -17,6 +17,7 @@ import {
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { BaseLearningResourceCard } from "../BaseLearningResourceCard/BaseLearningResourceCard"
 import type { ActionButtonInfo } from "../BaseLearningResourceCard/BaseLearningResourceCard"
+import type { PushUrl } from "../LinkAdapter/LinkAdapter"
 
 export const CardLabel = styled.span`
   color: ${theme.custom.colors.silverGrayDark};
@@ -135,7 +136,7 @@ interface LearningResourceListCardProps {
    * If set, a plain click pushes this URL with window.history.pushState
    * rather than navigating to href. See LinkAdapter for the full rules.
    */
-  pushUrl?: string
+  pushUrl?: PushUrl
   onAddToLearningPathClick?: ResourceIdCallback | null
   onAddToUserListClick?: ResourceIdCallback | null
   editMenu?: React.ReactNode | null
