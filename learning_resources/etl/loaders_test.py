@@ -2140,6 +2140,22 @@ def test_load_problem_files(mocker):
         ).exists()
 
 
+def test_load_problem_files_retains_failed_source_paths():
+    """Problem files whose extraction failed are not deleted as orphans"""
+    run = LearningResourceRunFactory.create()
+    failed = TutorProblemFileFactory.create(
+        run=run, source_path="web_resources/ai/tutor/p1/failed.pdf"
+    )
+    orphan = TutorProblemFileFactory.create(
+        run=run, source_path="web_resources/ai/tutor/p2/orphan.pdf"
+    )
+
+    load_problem_files(run, [], failed_source_paths=[failed.source_path])
+
+    assert TutorProblemFile.objects.filter(id=failed.id).exists()
+    assert not TutorProblemFile.objects.filter(id=orphan.id).exists()
+
+
 def test_load_image():
     """Test that image resources are uniquely created or retrieved based on parameters"""
     resource_url = "https://mit.edu"

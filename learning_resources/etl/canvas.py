@@ -70,12 +70,20 @@ def sync_canvas_archive(bucket, key: str, overwrite):
                 canvas_content_files,
             )
 
+            failed_problem_paths = []
             canvas_problem_files = list(
                 transform_canvas_problem_files(
-                    course_archive_path, run, overwrite=overwrite
+                    course_archive_path,
+                    run,
+                    overwrite=overwrite,
+                    failed_source_paths=failed_problem_paths,
                 )
             )
-            problem_files_ids = load_problem_files(run, canvas_problem_files)
+            problem_files_ids = load_problem_files(
+                run,
+                canvas_problem_files,
+                failed_source_paths=failed_problem_paths,
+            )
             content_loaded = content_files_ids or not canvas_content_files
             # load_problem_file swallows per-file errors and returns None
             problems_loaded = any(problem_files_ids) or not canvas_problem_files
@@ -208,7 +216,11 @@ def transform_canvas_content_files(
 
 
 def transform_canvas_problem_files(
-    course_zipfile: Path, run: LearningResourceRun, *, overwrite
+    course_zipfile: Path,
+    run: LearningResourceRun,
+    *,
+    overwrite,
+    failed_source_paths: list | None = None,
 ) -> Generator[dict, None, None]:
     """
     Transform problem files from a Canvas course zipfile
@@ -229,6 +241,7 @@ def transform_canvas_problem_files(
             valid_file_types=VALID_TUTOR_PROBLEM_FILE_TYPES,
             is_tutor_problem_file_import=True,
             use_ocr=True,
+            failed_source_paths=failed_source_paths,
         ):
             keys_to_keep = [
                 "run",
