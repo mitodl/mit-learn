@@ -18,15 +18,13 @@ from main.throttles import RedisScopedRateThrottle
     },
 )
 class ContentFeedbackView(CreateAPIView):
-    """Accept per-block content feedback submissions (append-only).
-
-    Uses AllowAny: courseware-only learners have no mit-learn/APISIX session,
-    so requiring auth would 403 nearly all of them. Authenticated rows record
-    the user; anonymous rows store null (mirrors learn-ai/AskTIM).
-    """
+    """Accept per-block content feedback submissions (append-only)."""
 
     queryset = ContentFeedback.objects.all()
     serializer_class = ContentFeedbackSerializer
+    # AllowAny: courseware-only learners have no mit-learn/APISIX session, so
+    # requiring auth would 403 nearly all of them. Authenticated rows record the
+    # user; anonymous rows store null (mirrors learn-ai/AskTIM).
     permission_classes = (AllowAny,)
     throttle_classes = (RedisScopedRateThrottle,)
     throttle_scope = "content_feedback"
