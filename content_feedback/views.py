@@ -2,7 +2,7 @@
 
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.generics import CreateAPIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 
 from content_feedback.models import ContentFeedback
 from content_feedback.serializers import ContentFeedbackSerializer
@@ -22,10 +22,14 @@ class ContentFeedbackView(CreateAPIView):
 
     queryset = ContentFeedback.objects.all()
     serializer_class = ContentFeedbackSerializer
-    permission_classes = (IsAuthenticated,)
+    # AllowAny: courseware-only learners have no mit-learn/APISIX session, so
+    # requiring auth would 403 nearly all of them. Authenticated rows record the
+    # user; anonymous rows store null (mirrors learn-ai/AskTIM).
+    permission_classes = (AllowAny,)
     throttle_classes = (RedisScopedRateThrottle,)
     throttle_scope = "content_feedback"
 
     def perform_create(self, serializer):
-        """Attribute the feedback to the authenticated user (server-side)."""
-        serializer.save(user=self.request.user)
+        """Attribute to the request user when authenticated, else store null."""
+        user = self.request.user if self.request.user.is_authenticated else None
+        serializer.save(user=user)
