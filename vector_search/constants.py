@@ -149,6 +149,27 @@ QDRANT_TOPIC_INDEXES = {
 CONTENT_FILES_RETRIEVE_PAYLOAD = True
 RESOURCES_RETRIEVE_PAYLOAD = ["readable_id", "platform"]
 
+# Payload keys dropped when resource hits are served straight from the Qdrant
+# payload (VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD). The first group is what the
+# indexing serializer adds on top of the LearningResourceSerializer shape the
+# API returns; the second is bulk the search response never renders.
+RESOURCES_PAYLOAD_EXCLUDE = [
+    "_id",
+    "resource_relations",
+    "is_learning_material",
+    "resource_age_date",
+    "featured_rank",
+    "is_incomplete_or_stale",
+    "vector_embedding",
+    "content_files",
+    "video.transcript",
+]
+
+# Qdrant payload selectors descend into objects but not into lists of objects,
+# so the extra fields SearchCourseNumberSerializer puts on each course number
+# cannot be named in RESOURCES_PAYLOAD_EXCLUDE and are trimmed in Python.
+COURSE_NUMBER_INDEXING_ONLY_FIELDS = frozenset({"sort_coursenum", "primary"})
+
 
 COLLECTION_PARAM_MAP = {
     RESOURCES_COLLECTION_NAME: QDRANT_RESOURCE_PARAM_MAP,
