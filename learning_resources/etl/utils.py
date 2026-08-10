@@ -804,6 +804,7 @@ def process_olx_path(  # noqa: PLR0913
     valid_file_types=VALID_TEXT_FILE_TYPES,
     is_tutor_problem_file_import=False,
     use_ocr=False,
+    failed_source_paths: list | None = None,
 ) -> Generator[dict, None, None]:
     """Process OLX path and yield content dictionaries."""
     video_srt_metadata = get_video_metadata(olx_path, run)
@@ -814,25 +815,35 @@ def process_olx_path(  # noqa: PLR0913
         source_path = metadata.get("source_path")
         key = get_edx_module_id(source_path, run)
 
-        existing_record = _get_existing_record(
-            source_path, key, run, is_tutor_problem_file_import
-        )
+        try:
+            existing_record = _get_existing_record(
+                source_path, key, run, is_tutor_problem_file_import
+            )
 
-        if _should_reprocess(existing_record, metadata, overwrite):
-            content_dict = _extract_content(
-                document,
-                metadata,
-                olx_path,
-                key,
-                use_ocr=use_ocr,
-                is_tutor_problem=is_tutor_problem_file_import,
+            if _should_reprocess(existing_record, metadata, overwrite):
+                content_dict = _extract_content(
+                    document,
+                    metadata,
+                    olx_path,
+                    key,
+                    use_ocr=use_ocr,
+                    is_tutor_problem=is_tutor_problem_file_import,
+                )
+                if content_dict is None:
+                    continue
+            else:
+                content_dict = _get_cached_content(
+                    existing_record, is_tutor_problem_file_import
+                )
+        except Exception:
+            log.exception(
+                "Extraction failed for %s in run %s, skipping file",
+                source_path,
+                run.id,
             )
-            if content_dict is None:
-                continue
-        else:
-            content_dict = _get_cached_content(
-                existing_record, is_tutor_problem_file_import
-            )
+            if failed_source_paths is not None:
+                failed_source_paths.append(source_path)
+            continue
 
         yield _build_result(
             olx_path, metadata, key, run, video_srt_metadata, content_dict

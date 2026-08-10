@@ -1176,3 +1176,33 @@ def test_extract_content_ocr_failure_falls_back_to_tika(mocker, settings, tmp_pa
         use_ocr=True,
     )
     assert result["content"] == "tika text"
+
+
+@pytest.mark.django_db
+def test_process_olx_path_skips_failed_files(mocker, tmp_path):
+    """A file whose extraction raises is skipped and recorded; other files still yield"""
+    run = LearningResourceRunFactory.create()
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "good.html").write_text("<p>good</p>")
+    (static_dir / "bad.html").write_text("<p>bad</p>")
+
+    def fake_extract(document, metadata, olx_path, key, **kwargs):
+        if "bad.html" in metadata["source_path"]:
+            msg = "converter output missing"
+            raise FileNotFoundError(msg)
+        return {"content": "text", "content_title": ""}
+
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content", side_effect=fake_extract
+    )
+    failed = []
+    results = list(
+        utils.process_olx_path(
+            str(tmp_path), run, overwrite=True, failed_source_paths=failed
+        )
+    )
+    assert len(results) == 1
+    assert "good.html" in results[0]["source_path"]
+    assert len(failed) == 1
+    assert "bad.html" in failed[0]
