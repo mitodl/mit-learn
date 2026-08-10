@@ -1014,6 +1014,7 @@ def load_content_files(
     content_files_data: list[dict],
     *,
     calc_completeness: bool = False,
+    failed_keys: list | None = None,
 ) -> list[int]:
     """
     Sync all content files for a course run to database and S3 if not present in DB
@@ -1022,6 +1023,8 @@ def load_content_files(
         course_run (LearningResourceRun): a course run
         content_files_data (list or generator): Details about the content files
         calc_completeness: bool: Whether to calculate the completeness score
+        failed_keys: list: Keys of content files whose extraction failed and
+            should be exempted from the stale/unpublish pass
 
     Returns:
         list of int: Ids of the ContentFile objects that were created/updated
@@ -1047,6 +1050,8 @@ def load_content_files(
         stale_published_files = ContentFile.objects.filter(
             run=course_run, published=True
         ).exclude(id__in=content_files_ids)
+        if failed_keys:
+            stale_published_files = stale_published_files.exclude(key__in=failed_keys)
         stale_direct_resource_ids = list(
             stale_published_files.filter(direct_learning_resource__isnull=False)
             .values_list("direct_learning_resource_id", flat=True)

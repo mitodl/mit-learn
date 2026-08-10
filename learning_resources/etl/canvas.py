@@ -60,14 +60,20 @@ def sync_canvas_archive(bucket, key: str, overwrite):
             overwrite=overwrite,
         )
         if run:
+            failed_content_keys = []
             canvas_content_files = list(
                 transform_canvas_content_files(
-                    course_archive_path, run, url_config=url_config, overwrite=overwrite
+                    course_archive_path,
+                    run,
+                    url_config=url_config,
+                    overwrite=overwrite,
+                    failed_keys=failed_content_keys,
                 )
             )
             content_files_ids = load_content_files(
                 run,
                 canvas_content_files,
+                failed_keys=failed_content_keys,
             )
 
             failed_problem_paths = []
@@ -150,10 +156,18 @@ def run_for_canvas_archive(course_archive_path, course_folder, checksum, overwri
 
 
 def transform_canvas_content_files(
-    course_zipfile: Path, run: LearningResourceRun, url_config: dict, *, overwrite
+    course_zipfile: Path,
+    run: LearningResourceRun,
+    url_config: dict,
+    *,
+    overwrite,
+    failed_keys: list | None = None,
 ) -> Generator[dict, None, None]:
     """
     Transform published content files from a Canvas course zipfile
+
+    Files whose extraction fails are skipped and their existing records
+    are retained (not deleted/unpublished).
     """
     basedir = course_zipfile.name.split(".")[0]
     zipfile_path = course_zipfile.absolute()
@@ -206,7 +220,10 @@ def transform_canvas_content_files(
     # files whose extraction failed are retained, not treated as unpublished
     for source_path in failed_source_paths:
         full_path = Path(basedir) / Path(source_path)
-        published_keys.append(get_edx_module_id(str(full_path), run))
+        failed_key = get_edx_module_id(str(full_path), run)
+        published_keys.append(failed_key)
+        if failed_keys is not None:
+            failed_keys.append(failed_key)
     unpublished_content = run.content_files.exclude(key__in=published_keys)
     # remove unpublished contentfiles
     bulk_resources_unpublished_actions(
@@ -224,6 +241,9 @@ def transform_canvas_problem_files(
 ) -> Generator[dict, None, None]:
     """
     Transform problem files from a Canvas course zipfile
+
+    Files whose extraction fails are skipped and their existing records
+    are retained (not deleted/unpublished).
     """
     basedir = course_zipfile.name.split(".")[0]
     with (

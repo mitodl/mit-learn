@@ -1993,6 +1993,46 @@ def test_load_content_files_does_not_update_already_unpublished_stale_files(mock
     assert stale_unpublished_file.updated_on == old_timestamp
 
 
+def test_load_content_files_failed_keys_stay_published(mocker):
+    """Contentfiles whose extraction failed are not unpublished as stale"""
+    course = LearningResourceFactory.create(is_course=True, create_runs=False)
+    course_run = LearningResourceRunFactory.create(
+        published=True, learning_resource=course
+    )
+    loaded_cf = ContentFileFactory.create(
+        run=course_run, published=True, key="loaded-key"
+    )
+    failed_cf = ContentFileFactory.create(
+        run=course_run, published=True, key="failed-key"
+    )
+    stale_cf = ContentFileFactory.create(
+        run=course_run, published=True, key="stale-key"
+    )
+
+    mocker.patch(
+        "learning_resources.etl.loaders.load_content_file",
+        return_value=loaded_cf.id,
+        autospec=True,
+    )
+    mocker.patch(
+        "learning_resources.etl.loaders.content_files_loaded_actions",
+        autospec=True,
+    )
+
+    result = load_content_files(
+        course_run,
+        [{"key": "loaded-key", "content": "text"}],
+        failed_keys=["failed-key"],
+    )
+
+    assert result == [loaded_cf.id]
+
+    failed_cf.refresh_from_db()
+    stale_cf.refresh_from_db()
+    assert failed_cf.published is True
+    assert stale_cf.published is False
+
+
 @pytest.mark.parametrize("test_mode", [True, False])
 def test_load_test_mode_resource_content_files(
     mocker, mock_course_archive_bucket, test_mode
