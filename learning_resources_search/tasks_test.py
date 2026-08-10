@@ -3,6 +3,8 @@
 from collections import OrderedDict
 
 import pytest
+import requests
+import responses
 from celery.exceptions import Ignore, Retry
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -44,6 +46,7 @@ from learning_resources_search.tasks import (
     _generate_subscription_digest_subject,
     _get_percolated_rows,
     _group_percolated_rows,
+    _image_url_is_reachable,
     _infer_percolate_group,
     _maybe_finish_reindex_job,
     _validated_resource_image_url,
@@ -89,10 +92,15 @@ def mocked_api(mocker):
 
 
 @pytest.fixture(autouse=True)
-def mock_image_url_is_reachable(mocker):
-    """Mock the image URL reachability check to avoid network requests"""
+def mock_image_url_is_reachable(mocker, request):
+    """
+    Stub the digest email's image reachability check so tests don't make real
+    requests. Tests that use mocked_responses exercise the real function.
+    """
+    if "mocked_responses" in request.fixturenames:
+        return None
     return mocker.patch(
-        "learning_resources_search.tasks.image_url_is_reachable", return_value=True
+        "learning_resources_search.tasks._image_url_is_reachable", return_value=True
     )
 
 
@@ -1732,6 +1740,48 @@ def test_digest_email_template(mocked_api, mocker, mocked_celery):
     assert user.id == task_args[0]
     for topic in topics:
         assert topic in template_data
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [(200, True), (404, False), (403, False), (500, False)],
+)
+def test_image_url_is_reachable(mocked_responses, status, expected):
+    """_image_url_is_reachable should be True only for successful responses"""
+    url = "http://example.com/image.jpg"
+    mocked_responses.add(responses.HEAD, url, status=status)
+    assert _image_url_is_reachable(url) is expected
+
+
+@pytest.mark.parametrize(("final_status", "expected"), [(200, True), (404, False)])
+def test_image_url_is_reachable_follows_redirect(
+    mocked_responses, final_status, expected
+):
+    """A redirect is followed through to the destination's status"""
+    url = "http://example.com/image.jpg"
+    redirected_to = "http://example.com/moved.jpg"
+    mocked_responses.add(
+        responses.HEAD, url, status=301, headers={"Location": redirected_to}
+    )
+    mocked_responses.add(responses.HEAD, redirected_to, status=final_status)
+    assert _image_url_is_reachable(url) is expected
+
+
+def test_image_url_is_reachable_head_not_allowed(mocked_responses):
+    """Servers that reject HEAD should be retried with GET"""
+    url = "http://example.com/image.jpg"
+    mocked_responses.add(responses.HEAD, url, status=405)
+    mocked_responses.add(responses.GET, url, status=200)
+    assert _image_url_is_reachable(url) is True
+
+
+def test_image_url_is_reachable_connection_error(mocked_responses):
+    """A request that errors out counts as unreachable"""
+    url = "http://example.com/image.jpg"
+    mocked_responses.add(
+        responses.HEAD, url, body=requests.exceptions.ConnectionError()
+    )
+    assert _image_url_is_reachable(url) is False
 
 
 @pytest.mark.parametrize("reachable", [True, False])

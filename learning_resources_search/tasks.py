@@ -5,11 +5,13 @@ import itertools
 import logging
 from collections import OrderedDict
 from contextlib import contextmanager
+from http import HTTPStatus
 from itertools import groupby
 from random import random
 from urllib.parse import urlencode
 
 import celery
+import requests
 from celery.exceptions import Ignore
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -27,7 +29,7 @@ from learning_resources.models import (
     LearningResourceDepartment,
     LearningResourceOfferor,
 )
-from learning_resources.utils import image_url_is_reachable, load_course_blocklist
+from learning_resources.utils import load_course_blocklist
 from learning_resources.views import FeaturedViewSet
 from learning_resources_search import indexing_api as api
 from learning_resources_search.api import (
@@ -67,6 +69,9 @@ from profiles.utils import send_template_email
 
 User = get_user_model()
 log = logging.getLogger(__name__)
+
+# Timeout for the digest email's image liveness check
+IMAGE_CHECK_TIMEOUT_SECONDS = 5
 
 
 # For our tasks that attempt to partially update a document, there's a chance that
@@ -220,6 +225,31 @@ def _group_percolated_rows(rows):
     return grouped_data
 
 
+def _image_url_is_reachable(url):
+    """
+    Check whether an image URL responds successfully.
+
+    Uses a short timeout: this runs while building a digest email, so a slow
+    or hanging image host should not hold up the send.
+    """
+    try:
+        response = requests.head(
+            url, timeout=IMAGE_CHECK_TIMEOUT_SECONDS, allow_redirects=True
+        )
+        if response.status_code in (
+            HTTPStatus.METHOD_NOT_ALLOWED,
+            HTTPStatus.NOT_IMPLEMENTED,
+        ):
+            # some servers reject HEAD; retry without downloading the body
+            response = requests.get(
+                url, timeout=IMAGE_CHECK_TIMEOUT_SECONDS, stream=True
+            )
+            response.close()
+    except requests.RequestException:
+        return False
+    return HTTPStatus.OK <= response.status_code < HTTPStatus.MULTIPLE_CHOICES
+
+
 def _validated_resource_image_url(resource):
     """
     Return the resource's image URL if it is reachable, otherwise the default
@@ -229,7 +259,7 @@ def _validated_resource_image_url(resource):
     if (
         resource.image
         and resource.image.url
-        and image_url_is_reachable(resource.image.url)
+        and _image_url_is_reachable(resource.image.url)
     ):
         return resource.image.url
     return frontend_absolute_url("/images/default_resource.jpg")
