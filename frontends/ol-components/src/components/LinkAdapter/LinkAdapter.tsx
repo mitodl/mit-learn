@@ -1,6 +1,9 @@
 import React from "react"
 import NextLink from "next/link"
 import type { LinkProps } from "next/link"
+import invariant from "tiny-invariant"
+
+const isSamePage = (url: string) => url.startsWith("?") || url.startsWith("#")
 
 /**
  * A URL for {@link LinkAdapterExtraProps.pushUrl}, or a function returning one.
@@ -24,6 +27,11 @@ type LinkAdapterExtraProps = Pick<LinkProps, "scroll" | "prefetch"> & {
    * `pushUrl === href` is the "shallow routing" case: a query-param update
    * that must not hit the Next server for an RSC payload, which would cause
    * refetches and hydration mismatches for modal views like the drawer.
+   *
+   * Must be same-page — starting with `?` or `#`. A push does not re-render
+   * the route, so a URL naming a different page would only make the address
+   * bar disagree with what is on screen. Anything else is a development-time
+   * error and falls back to navigating `href`.
    *
    * Modified clicks (⌘, Ctrl, Shift, Alt), clicks a caller's own onClick has
    * already prevented, and links with a `target` are left alone, so they get
@@ -53,12 +61,27 @@ const LinkAdapter = ({ pushUrl, href = "", ...props }: LinkAdapterProps) => {
         if (e.defaultPrevented) return
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
         if (e.currentTarget.target && e.currentTarget.target !== "_self") return
+        const url = typeof pushUrl === "function" ? pushUrl() : pushUrl
+        if (!isSamePage(url)) {
+          /**
+           * Next patches `pushState` to dispatch ACTION_RESTORE carrying the
+           * *current* entry's router tree, so an external push swaps the
+           * canonical URL without re-rendering the route. Same-page is the only
+           * URL for which that is the intent; anything else would leave the
+           * address bar describing a page that is not the one mounted.
+           *
+           * Falling through rather than throwing keeps a released build on the
+           * correct page: `href` is a real URL, so the click becomes a full
+           * navigation instead of a dead link.
+           */
+          invariant(
+            process.env.NODE_ENV === "production",
+            `pushUrl must be same-page, starting with "?" or "#". Got "${url}".`,
+          )
+          return
+        }
         e.preventDefault()
-        window.history.pushState(
-          {},
-          "",
-          typeof pushUrl === "function" ? pushUrl() : pushUrl,
-        )
+        window.history.pushState({}, "", url)
       }}
     />
   )

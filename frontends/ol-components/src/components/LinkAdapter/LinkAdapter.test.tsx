@@ -72,6 +72,35 @@ test.each([
   },
 )
 
+/**
+ * A push does not re-render the route, so a cross-page pushUrl would only
+ * desynchronize the address bar from the page. The guard is a development-time
+ * error that falls back to navigating href.
+ */
+test("A pushUrl naming another page throws, and the click follows href", async () => {
+  // A listener that throws is reported to window rather than rethrown to the
+  // caller, so catch it there. preventDefault keeps jsdom from also logging it
+  // as an unhandled error, which would fail the test on console output.
+  const onError = jest.fn((e: ErrorEvent) => e.preventDefault())
+  window.addEventListener("error", onError)
+  renderWithTheme(
+    <LinkAdapter href="#canonical" pushUrl="/search?resource=1">
+      Go
+    </LinkAdapter>,
+  )
+
+  await user.click(screen.getByRole("link"))
+  window.removeEventListener("error", onError)
+
+  expect(onError.mock.calls[0][0].error).toEqual(
+    expect.objectContaining({
+      message:
+        'Invariant failed: pushUrl must be same-page, starting with "?" or "#". Got "/search?resource=1".',
+    }),
+  )
+  expect(window.location.hash).toBe("#canonical")
+})
+
 test("A click already prevented by a caller's onClick is left alone", async () => {
   renderWithTheme(
     <LinkAdapter
