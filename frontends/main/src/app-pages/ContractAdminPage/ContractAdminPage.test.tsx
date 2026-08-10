@@ -1,5 +1,5 @@
 import React from "react"
-import { renderWithProviders, screen, user } from "@/test-utils"
+import { renderWithProviders, screen, user, within } from "@/test-utils"
 import { act, waitFor } from "@testing-library/react"
 import { setMockResponse } from "api/test-utils"
 import { factories, urls } from "api/mitxonline-test-utils"
@@ -459,6 +459,75 @@ describe("ContractAdminPage", () => {
       expect(csv).toContain("bob@example.com")
     })
 
+    test("exports the Status column reflecting email delivery status, with Redeemed taking precedence over email_status", async () => {
+      const { org, contract } = makeOrgWithContract()
+      setupPage(org, contract, { total_codes: 3 })
+
+      const deliveredCode = factories.contracts.contractCode({
+        redemption_status: "assigned",
+        assigned_to: "delivered@example.com",
+        email_status: "delivered",
+      })
+      const failedCode = factories.contracts.contractCode({
+        redemption_status: "assigned",
+        assigned_to: "failed@example.com",
+        email_status: "failed",
+      })
+      // Redeemed with a stale email_status still on the record — CSV should
+      // show "Redeemed", not fall back to the email_status-derived label.
+      const redeemedCode = factories.contracts.contractCode({
+        redemption_status: "redeemed",
+        assigned_to: "assignee@example.com",
+        redeemed_by: "redeemer@example.com",
+        redeemed_on: new Date().toISOString(),
+        email_status: "opened",
+      })
+
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 1,
+          page_size: 500,
+        }),
+        factories.contracts.paginatedContractCodes([
+          deliveredCode,
+          failedCode,
+          redeemedCode,
+        ]),
+      )
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByRole("button", { name: "Export CSV" })
+      await user.click(screen.getByRole("button", { name: "Export CSV" }))
+
+      await waitFor(() => {
+        expect(mockCreateObjectURL).toHaveBeenCalledWith(expect.any(Blob))
+      })
+      const blob = mockCreateObjectURL.mock.calls[0][0] as Blob
+      const csv = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsText(blob)
+      })
+
+      // Status is the 3rd CSV column (Assigned to, Redeemed by, Status, ...).
+      // Parsed by row rather than a full-row string match since assigned_on
+      // is a non-deterministic faker date.
+      const statusFor = (assignedTo: string) => {
+        const row = csv
+          .split("\n")
+          .find((line) => line.startsWith(`${assignedTo},`))
+        return row?.split(",")[2]
+      }
+
+      expect(statusFor("delivered@example.com")).toBe("Pending - Delivered")
+      expect(statusFor("failed@example.com")).toBe("Failed")
+      expect(statusFor("assignee@example.com")).toBe("Redeemed")
+    })
+
     test("shows error alert when the export request fails", async () => {
       allowConsoleErrors()
       const { org, contract } = makeOrgWithContract()
@@ -878,6 +947,19 @@ describe("ContractAdminPage", () => {
       return { org, contract }
     }
 
+    // "Pending"/"Redeemed" also appear as a header stat label and a filter
+    // tab, so an unscoped getByText for those two would be ambiguous. Scope
+    // to the row via its ARIA role — an accessibility-meaningful boundary
+    // set by this page's own markup, not a third-party implementation detail
+    // like a MUI-generated class name.
+    const getRow = (assignedTo: string) => {
+      const row = screen.getByText(assignedTo).closest('[role="row"]')
+      if (!row) {
+        throw new Error(`Could not find a row for "${assignedTo}"`)
+      }
+      return row as HTMLElement
+    }
+
     beforeEach(() => {
       mockedUseFeatureFlagsLoaded.mockReturnValue(true)
       mockedUseFeatureFlagEnabled.mockReturnValue(true)
@@ -897,7 +979,7 @@ describe("ContractAdminPage", () => {
 
       await screen.findByText("pending@example.com")
       expect(
-        screen.getByText("Pending", { selector: ".MuiChip-label" }),
+        within(getRow("pending@example.com")).getByText("Pending"),
       ).toBeInTheDocument()
     })
 
@@ -915,7 +997,7 @@ describe("ContractAdminPage", () => {
 
       await screen.findByText("pending@example.com")
       expect(
-        screen.getByText("Pending", { selector: ".MuiChip-label" }),
+        within(getRow("pending@example.com")).getByText("Pending"),
       ).toBeInTheDocument()
     })
 
@@ -980,16 +1062,33 @@ describe("ContractAdminPage", () => {
       )
 
       await screen.findByText("bounced@example.com")
+      const explanation =
+        "Delivery failed — the recipient's email address may be invalid, unreachable, or blocked by their mail server."
+
       // "Failed" is the accessible name (from the visible label); the
       // explanation is a description, not baked into the name — MUI's
       // describeChild renders it as a native `title` attribute while closed,
       // and swaps it for a live aria-describedby while the tooltip is open.
       expect(screen.getByText("Failed")).toBeInTheDocument()
-      expect(
-        screen.getByTitle(
-          "Delivery failed — the recipient's email address may be invalid, unreachable, or blocked by their mail server.",
-        ),
-      ).toBeInTheDocument()
+      const pill = screen.getByTitle(explanation)
+      // In the tab order, so keyboard users can reach it. (MUI only opens the
+      // tooltip on *keyboard* focus via the CSS :focus-visible pseudo-class,
+      // which jsdom does not implement — https://github.com/mui/material-ui,
+      // consistent with MUI's own isFocusVisible fallback for jsdom — so the
+      // open-on-focus behavior itself isn't simulable here. Hover exercises
+      // the same underlying open/describe mechanism without that gate.)
+      expect(pill).toHaveAttribute("tabindex", "0")
+
+      await user.hover(pill)
+      await screen.findByText(explanation)
+      // The id-bearing tooltip container and the element getByText resolves
+      // to aren't the same node, so assert via the id lookup rather than
+      // comparing element identity/`.id` directly.
+      const describedById = pill.getAttribute("aria-describedby")
+      expect(describedById).toBeTruthy()
+      expect(document.getElementById(describedById!)).toHaveTextContent(
+        explanation,
+      )
     })
 
     test("shows 'Redeemed' once a code is redeemed, regardless of its email_status", async () => {
@@ -1008,7 +1107,7 @@ describe("ContractAdminPage", () => {
 
       await screen.findByText("redeemed@example.com")
       expect(
-        screen.getByText("Redeemed", { selector: ".MuiChip-label" }),
+        within(getRow("assignee@example.com")).getByText("Redeemed"),
       ).toBeInTheDocument()
       expect(screen.queryByText("Pending - Opened")).not.toBeInTheDocument()
     })

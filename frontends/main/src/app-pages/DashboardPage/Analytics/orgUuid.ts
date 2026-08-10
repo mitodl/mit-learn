@@ -6,23 +6,19 @@ import type { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
  * Online and StarRocks (see mitodl/ol-analytics-api#13).
  *
  * MITx Online exposes it on `OrganizationPageSerializer` as
- * `sso_organization_id` (mitodl/mitxonline#3789). That change has not been cut
- * into a release of `@mitodl/mitxonline-api-axios` yet, so the generated
- * `OrganizationPage` type does not declare the field and we have to read it
- * off the wire ourselves.
+ * `sso_organization_id` (mitodl/mitxonline#3789, released in
+ * `@mitodl/mitxonline-api-axios@2026.8.6`). The generated type now declares
+ * it as always present (`string | null`), but a mit-learn deploy can still
+ * talk to an older MITx Online that predates that PR and simply omits the
+ * field from the response — the type can't see that, so this stays a
+ * defensive read rather than a direct `org.sso_organization_id` access.
  *
- * Returning `null` when it is absent is the load-bearing part: it is exactly
- * what happens when mit-learn is pointed at a MITx Online deploy that predates
- * that PR, and it must surface as "analytics unavailable for this org" rather
- * than as a request to the analytics API with `undefined` in the path.
- *
- * TODO: delete this and read `org.sso_organization_id` directly once the
- * regenerated client is picked up in `frontends/api/package.json`.
+ * Returning `null` for that case (as well as for a genuine `null` or empty
+ * string) is the load-bearing part: it must surface as "analytics
+ * unavailable for this org" rather than as a request to the analytics API
+ * with `undefined` in the path.
  */
-const getOrgUuid = (org: OrganizationPage | undefined): string | null => {
-  const value = (org as { sso_organization_id?: unknown } | undefined)
-    ?.sso_organization_id
-  return typeof value === "string" && value.length > 0 ? value : null
-}
+const getOrgUuid = (org: OrganizationPage | undefined): string | null =>
+  org?.sso_organization_id || null
 
 export { getOrgUuid }

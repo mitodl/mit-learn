@@ -839,7 +839,10 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                             />
                           )
                           return status === "failed" ? (
-                            <Tooltip title={FAILED_EMAIL_EXPLANATION} describeChild>
+                            <Tooltip
+                              title={FAILED_EMAIL_EXPLANATION}
+                              describeChild
+                            >
                               {badge}
                             </Tooltip>
                           ) : (
