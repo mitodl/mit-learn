@@ -1150,3 +1150,29 @@ def test_extract_content_ocr_fallback_to_tika(mocker, settings, tmp_path):
     )
 
     assert result == {"content": "tika content", "content_title": "Tika Title"}
+
+
+def test_extract_content_ocr_failure_falls_back_to_tika(mocker, settings, tmp_path):
+    """An OCR crash (e.g. missing converter output JSON) should fall through to tika"""
+    settings.SKIP_TIKA = False
+    mocker.patch("learning_resources.etl.utils._should_use_ocr", return_value=True)
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content_with_ocr",
+        side_effect=FileNotFoundError("no converter output json"),
+    )
+    mocker.patch(
+        "learning_resources.etl.utils.extract_text_metadata",
+        return_value={"content": "tika text", "metadata": {"title": "doc title"}},
+    )
+    result = utils._extract_content(  # noqa: SLF001
+        b"pdf bytes",
+        {
+            "source_path": "web_resources/7.06_Fall2025_Exam1_answers.pdf",
+            "file_extension": ".pdf",
+            "mime_type": "application/pdf",
+        },
+        str(tmp_path),
+        "test-key",
+        use_ocr=True,
+    )
+    assert result["content"] == "tika text"
