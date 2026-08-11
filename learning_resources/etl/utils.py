@@ -655,10 +655,8 @@ def _extract_content(  # noqa: PLR0913
     ):
         try:
             content_dict = _extract_content_with_ocr(file_path, is_tutor_problem)
-        except Exception:
-            log.exception(
-                "OCR extraction failed for %s, falling back to tika", file_path
-            )
+        except Exception:  # noqa: BLE001
+            log.warning("OCR extraction failed for %s, falling back to tika", file_path)
             content_dict = None
         if content_dict:
             return content_dict

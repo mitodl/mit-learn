@@ -1152,7 +1152,9 @@ def test_extract_content_ocr_fallback_to_tika(mocker, settings, tmp_path):
     assert result == {"content": "tika content", "content_title": "Tika Title"}
 
 
-def test_extract_content_ocr_failure_falls_back_to_tika(mocker, settings, tmp_path):
+def test_extract_content_ocr_failure_falls_back_to_tika(
+    mocker, settings, tmp_path, caplog
+):
     """An OCR crash (e.g. missing converter output JSON) should fall through to tika"""
     settings.SKIP_TIKA = False
     mocker.patch("learning_resources.etl.utils._should_use_ocr", return_value=True)
@@ -1176,6 +1178,9 @@ def test_extract_content_ocr_failure_falls_back_to_tika(mocker, settings, tmp_pa
         use_ocr=True,
     )
     assert result["content"] == "tika text"
+    ocr_records = [r for r in caplog.records if "OCR extraction failed" in r.message]
+    assert ocr_records
+    assert all(r.levelname == "WARNING" for r in ocr_records)
 
 
 @pytest.mark.django_db
