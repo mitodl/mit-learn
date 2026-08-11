@@ -15,7 +15,9 @@ from qdrant_client.models import PointStruct
 
 import vector_search.utils as vs_utils
 from learning_resources.constants import (
+    CONTENT_FILE_LARGE_FIELDS,
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
+    LearningResourceType,
 )
 from learning_resources.factories import (
     ContentFileFactory,
@@ -25,7 +27,7 @@ from learning_resources.factories import (
     LearningResourceRunFactory,
     LearningResourceTopicFactory,
 )
-from learning_resources.models import LearningResource
+from learning_resources.models import ContentFile, LearningResource
 from learning_resources.serializers import LearningResourceMetadataDisplaySerializer
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
@@ -2462,30 +2464,79 @@ def test_resource_payload_hits_tolerates_missing_course_numbers(course):
     assert hits[0]["course"] == course
 
 
-def test_resource_payload_hits_matches_hydrated_hits():
+def _add_direct_content_files(resource, count=2, **kwargs):
     """
-    The payload path should return what the database hydration path returns,
-    modulo the fields the indexing serializer adds on top of the API shape.
+    Attach the direct content files that video/document responses nest.
+
+    ContentFileFactory._create always fills in run or learning_resource, but the
+    model's check constraint requires a direct content file to have neither, so
+    the foreign key is moved after creation.
     """
-    resource = LearningResourceFactory.create(
-        is_course=True, platform=LearningResourcePlatformFactory.create(code="ocw")
+    content_files = ContentFileFactory.create_batch(
+        count, learning_resource=resource, **kwargs
     )
-    payload = next(iter(serialize_bulk_learning_resources([resource.id])))
+    ContentFile.objects.filter(id__in=[cf.id for cf in content_files]).update(
+        learning_resource=None, direct_learning_resource=resource
+    )
+    return content_files
+
+
+def _payload_as_search_sees_it(resource_id):
+    """
+    Return the indexed payload minus what PayloadSelectorExclude strips,
+    i.e. exactly what _resource_payload_hits receives from a search.
+    """
+    payload = next(iter(serialize_bulk_learning_resources([resource_id])))
     for excluded in RESOURCES_PAYLOAD_EXCLUDE:
-        # simulate what Qdrant's PayloadSelectorExclude strips before we see it
         top_level, _, nested = excluded.partition(".")
         if nested:
             if isinstance(payload.get(top_level), dict):
                 payload[top_level].pop(nested, None)
         else:
             payload.pop(top_level, None)
+    return payload
 
+
+def test_content_files_is_not_excluded_from_the_payload():
+    """
+    content_files must stay in the payload: document and video responses declare
+    it, and search cards fall back to content_files[0].image_src for the
+    thumbnail. Its large text fields are trimmed in Python instead, because a
+    Qdrant payload selector cannot descend into a list of objects.
+    """
+    assert "content_files" not in RESOURCES_PAYLOAD_EXCLUDE
+
+
+@pytest.mark.parametrize(
+    ("factory_kwargs", "has_content_files"),
+    [
+        ({"is_course": True}, False),
+        ({"is_video": True}, True),
+        ({"resource_type": LearningResourceType.document.name}, True),
+    ],
+)
+def test_resource_payload_hits_matches_hydrated_hits(factory_kwargs, has_content_files):
+    """
+    The payload path should return what the database hydration path returns,
+    modulo the fields the indexing serializer adds on top of the API shape --
+    including the nested content_files that document and video responses
+    declare.
+    """
+    resource = LearningResourceFactory.create(**factory_kwargs)
+    if has_content_files:
+        _add_direct_content_files(
+            resource, image_src="https://img.youtube.com/thumb.jpg"
+        )
+
+    payload = _payload_as_search_sees_it(resource.id)
     hydrated = _resource_vector_hits(
         [
             MagicMock(
                 payload={
                     "readable_id": resource.readable_id,
-                    "platform": {"code": "ocw"},
+                    "platform": {
+                        "code": resource.platform.code if resource.platform else ""
+                    },
                 }
             )
         ]
@@ -2494,6 +2545,61 @@ def test_resource_payload_hits_matches_hydrated_hits():
 
     assert len(from_payload) == 1
     assert set(from_payload[0]) == set(hydrated[0])
+
+    if has_content_files:
+        # the nested field must carry the API's shape, not the indexing shape
+        assert from_payload[0]["content_files"]
+        assert {frozenset(cf) for cf in from_payload[0]["content_files"]} == {
+            frozenset(cf) for cf in hydrated[0]["content_files"]
+        }
+
+
+@pytest.mark.parametrize(
+    "resource_type",
+    [LearningResourceType.video.name, LearningResourceType.document.name],
+)
+def test_resource_payload_hits_keeps_content_files_thumbnail_fallback(resource_type):
+    """
+    Search cards use content_files[0].image_src as the thumbnail when the
+    resource has no image, so the payload path must keep the nested content
+    files -- minus the large text the indexing serializer re-adds.
+    """
+    payload = {
+        "readable_id": f"{resource_type}-1",
+        "platform": {"code": "youtube"},
+        "resource_type": resource_type,
+        "image": None,
+        "content_files": [
+            {
+                "id": 1,
+                "key": "lecture.pdf",
+                "title": "Lecture",
+                "image_src": "https://img.youtube.com/thumb.jpg",
+                "content": "the full extracted text, many kilobytes of it",
+                "summary": "a generated summary",
+                "flashcards": [{"question": "q", "answer": "a"}],
+            }
+        ],
+    }
+
+    hits = _resource_payload_hits([MagicMock(payload=payload)])
+    content_file = hits[0]["content_files"][0]
+
+    assert content_file["image_src"] == "https://img.youtube.com/thumb.jpg"
+    assert content_file["key"] == "lecture.pdf"
+    assert content_file["title"] == "Lecture"
+    assert set(CONTENT_FILE_LARGE_FIELDS).isdisjoint(content_file)
+    # the payload dict Qdrant handed us is not mutated
+    assert "content" in payload["content_files"][0]
+
+
+@pytest.mark.parametrize("content_files", [None, [], "not-a-list"])
+def test_resource_payload_hits_tolerates_odd_content_files(content_files):
+    """Resources without nested content files pass through untouched"""
+    hits = _resource_payload_hits(
+        [MagicMock(payload={"readable_id": "c-1", "content_files": content_files})]
+    )
+    assert hits[0]["content_files"] == content_files
 
 
 def _make_facet_hit(count=0, value="test"):

@@ -12,6 +12,7 @@ from django.db.models import Prefetch, Q
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
 from learning_resources.constants import (
+    CONTENT_FILE_LARGE_FIELDS,
     PROGRAM_COURSE_CACHE_KEY_TEST_MODE,
 )
 from learning_resources.models import (
@@ -1166,35 +1167,54 @@ def resources_payload_selector():
     return RESOURCES_RETRIEVE_PAYLOAD
 
 
+def _without_keys(items, drop_keys):
+    """Drop drop_keys from every dict in a list, leaving non-dicts alone"""
+    return [
+        {key: value for key, value in item.items() if key not in drop_keys}
+        if isinstance(item, dict)
+        else item
+        for item in items
+    ]
+
+
 def _trim_indexing_only_list_fields(payload):
     """
     Drop indexing-only keys the Qdrant payload selector cannot reach.
 
-    Selectors descend into objects but not into lists of objects, so the extra
-    fields the indexing serializer puts on each course number survive the
-    exclude and have to be removed here.
+    Selectors descend into objects but not into lists of objects, so anything
+    the indexing serializer adds *inside* a list survives the exclude and has
+    to be removed here:
+
+    - course.course_numbers[] carries sort_coursenum and primary, which
+      SearchCourseNumberSerializer adds on top of CourseNumberSerializer.
+    - content_files[] is re-serialized with the full ContentFileSerializer for
+      nested search, so it carries the large text fields that the API's
+      NestedContentFileSerializer omits. The rest of the field must survive:
+      document and video responses declare it, and search cards use
+      content_files[0].image_src as the thumbnail fallback.
     """
+    trimmed = payload
+
     course = payload.get("course")
-    if not isinstance(course, dict) or not isinstance(
-        course.get("course_numbers"), list
-    ):
-        return payload
-    return {
-        **payload,
-        "course": {
-            **course,
-            "course_numbers": [
-                {
-                    key: value
-                    for key, value in course_number.items()
-                    if key not in COURSE_NUMBER_INDEXING_ONLY_FIELDS
-                }
-                if isinstance(course_number, dict)
-                else course_number
-                for course_number in course["course_numbers"]
-            ],
-        },
-    }
+    if isinstance(course, dict) and isinstance(course.get("course_numbers"), list):
+        trimmed = {
+            **trimmed,
+            "course": {
+                **course,
+                "course_numbers": _without_keys(
+                    course["course_numbers"], COURSE_NUMBER_INDEXING_ONLY_FIELDS
+                ),
+            },
+        }
+
+    content_files = payload.get("content_files")
+    if isinstance(content_files, list):
+        trimmed = {
+            **trimmed,
+            "content_files": _without_keys(content_files, CONTENT_FILE_LARGE_FIELDS),
+        }
+
+    return trimmed
 
 
 def _resource_payload_hits(search_result):

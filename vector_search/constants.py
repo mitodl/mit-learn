@@ -150,9 +150,16 @@ CONTENT_FILES_RETRIEVE_PAYLOAD = True
 RESOURCES_RETRIEVE_PAYLOAD = ["readable_id", "platform"]
 
 # Payload keys dropped when resource hits are served straight from the Qdrant
-# payload (VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD). The first group is what the
-# indexing serializer adds on top of the LearningResourceSerializer shape the
-# API returns; the second is bulk the search response never renders.
+# payload (VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD): what the indexing serializer
+# adds on top of the LearningResourceSerializer shape the API returns, plus
+# video.transcript, which the response never renders.
+#
+# content_files is NOT excluded. Document and video responses declare it
+# (NestedContentFileSerializer), and search cards fall back to
+# content_files[0].image_src for the thumbnail when the resource has no image.
+# The indexing serializer re-serializes it with the *full* ContentFileSerializer,
+# so its large text fields are trimmed in Python instead -- see
+# _trim_indexing_only_list_fields.
 RESOURCES_PAYLOAD_EXCLUDE = [
     "_id",
     "resource_relations",
@@ -161,7 +168,6 @@ RESOURCES_PAYLOAD_EXCLUDE = [
     "featured_rank",
     "is_incomplete_or_stale",
     "vector_embedding",
-    "content_files",
     "video.transcript",
 ]
 
