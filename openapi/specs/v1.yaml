@@ -13508,9 +13508,51 @@ components:
         title:
           type: string
           maxLength: 256
+        resource_type:
+          $ref: '#/components/schemas/LearningResourceSummaryResourceTypeEnum'
+        canonical_parent_ids:
+          type: array
+          items:
+            type: integer
+          description: 'Ids of the parents that form part of this resource''s URL:
+            the parent podcasts of a podcast episode, the playlists of a video. Empty
+            for every other resource type. Parents are not filtered by `published`,
+            so an id here may belong to a resource this endpoint will not return.'
+          readOnly: true
       required:
+      - canonical_parent_ids
       - id
+      - resource_type
       - title
+    LearningResourceSummaryResourceTypeEnum:
+      enum:
+      - course
+      - program
+      - learning_path
+      - podcast
+      - podcast_episode
+      - video
+      - video_playlist
+      - document
+      type: string
+      description: |-
+        * `course` - Course
+        * `program` - Program
+        * `learning_path` - Learning Path
+        * `podcast` - Podcast
+        * `podcast_episode` - Podcast Episode
+        * `video` - Video
+        * `video_playlist` - Video Playlist
+        * `document` - Document
+      x-enum-descriptions:
+      - Course
+      - Program
+      - Learning Path
+      - Podcast
+      - Podcast Episode
+      - Video
+      - Video Playlist
+      - Document
     LearningResourceTopic:
       type: object
       description: Serializer for LearningResourceTopic model
