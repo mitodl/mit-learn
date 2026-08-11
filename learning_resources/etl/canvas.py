@@ -90,14 +90,18 @@ def sync_canvas_archive(bucket, key: str, overwrite):
                 canvas_problem_files,
                 failed_source_paths=failed_problem_paths,
             )
-            content_loaded = content_files_ids or (
-                not canvas_content_files and not failed_content_keys
-            )
+            content_loaded = content_files_ids or not canvas_content_files
             # load_problem_file swallows per-file errors and returns None
-            problems_loaded = any(problem_files_ids) or (
-                not canvas_problem_files and not failed_problem_paths
+            problems_loaded = any(problem_files_ids) or not canvas_problem_files
+            # extraction failures are judged course-wide: a partial failure
+            # (anything loaded) still stamps, but if every file failed the
+            # course must not masquerade as legitimately empty
+            anything_loaded = bool(content_files_ids) or any(problem_files_ids)
+            all_extractions_failed = (
+                bool(failed_content_keys or failed_problem_paths)
+                and not anything_loaded
             )
-            if content_loaded and problems_loaded:
+            if content_loaded and problems_loaded and not all_extractions_failed:
                 # a failed or empty load must be retried on the next sync, so
                 # only mark processed once everything loaded (or was unpublished)
                 run.checksum = checksum

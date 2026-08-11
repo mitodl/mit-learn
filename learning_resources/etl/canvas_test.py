@@ -2535,3 +2535,26 @@ def test_sync_canvas_archive_total_failure_does_not_stamp_checksum(mocker, sync_
     )
 
     assert _canvas_run(readable_id).checksum is None
+
+
+def test_sync_canvas_archive_partial_problem_failure_still_stamps(mocker, sync_mocks):
+    """A course whose only tutor problem file fails extraction must still stamp
+    the checksum when content files loaded — retry happens on archive change,
+    not every sync
+    """
+
+    def fake_problems(_path, _run, *, overwrite, failed_source_paths=None):
+        failed_source_paths.append("tutorbot/p1/broken.pdf")
+        return iter([])
+
+    mocker.patch(
+        "learning_resources.etl.canvas.transform_canvas_problem_files",
+        side_effect=fake_problems,
+    )
+    sync_mocks.load_problems.return_value = []
+
+    readable_id = sync_canvas_archive(
+        sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
+    )
+
+    assert _canvas_run(readable_id).checksum
