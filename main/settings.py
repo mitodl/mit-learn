@@ -800,6 +800,18 @@ QDRANT_ENCODER = get_string(
     name="QDRANT_ENCODER", default="vector_search.encoders.gensim.GensimEncoder"
 )
 
+# Max Sentry alerts the embeddings healthcheck sends per alert type per run. The
+# healthcheck reports per resource, so an environment that is simply behind on
+# embedding (e.g. RC) would otherwise burn thousands of events in one run.
+# Production should set this high (a large backlog there is a real incident, not
+# expected drift); 0 or less disables the cap entirely. The default is deliberately
+# low so an unconfigured environment can't spend the quota, and the cap sends one
+# explicit notice when it engages, so a capped run is never mistaken for a clean one.
+EMBEDDINGS_HEALTHCHECK_ALERT_CAP = get_int(
+    name="EMBEDDINGS_HEALTHCHECK_ALERT_CAP",
+    default=20,
+)
+
 QDRANT_POINT_UPLOAD_BATCH_SIZE = get_int(
     name="QDRANT_POINT_UPLOAD_BATCH_SIZE", default=1000
 )
