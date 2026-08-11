@@ -6,6 +6,7 @@ import pytest
 from django.db.models import Max
 from django.urls import reverse
 
+from channels.factories import ChannelFactory
 from learning_resources import factories, models
 from learning_resources.constants import (
     LearningResourceRelationTypes,
@@ -565,3 +566,97 @@ def test_adding_to_learning_path_not_effect_existing_membership(client, staff_us
         new_additional_parent_count + 1
         == new_additional_parent.learning_resource.resources.count()
     )
+
+
+@pytest.fixture
+def mock_featured_clear(mocker):
+    """Mock the clear_featured_caches task"""
+    return mocker.patch("learning_resources.tasks.clear_featured_caches")
+
+
+def test_learning_path_update_clears_featured_caches(
+    client, user, mock_featured_clear, django_capture_on_commit_callbacks
+):
+    """PATCHing a featured learning path enqueues the cache-clear task on commit"""
+    update_editor_group(user, True)  # noqa: FBT003
+    path_resource = factories.LearningResourceFactory.create(
+        is_learning_path=True, learning_path__author=user, published=True
+    )
+    channel = ChannelFactory.create(is_unit=True, featured_list=path_resource)
+    client.force_login(user)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = client.patch(
+            reverse("lr:v1:learningpaths_api-detail", args=[path_resource.id]),
+            data={"title": "New title"},
+            format="json",
+        )
+
+    assert resp.status_code == 200
+    mock_featured_clear.delay.assert_called_once_with([channel.name])
+
+
+def test_learning_path_update_not_featured_no_clear(
+    client, user, mock_featured_clear, django_capture_on_commit_callbacks
+):
+    """PATCHing a learning path that is no channel's featured list enqueues nothing"""
+    update_editor_group(user, True)  # noqa: FBT003
+    path_resource = factories.LearningResourceFactory.create(
+        is_learning_path=True, learning_path__author=user, published=True
+    )
+    client.force_login(user)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = client.patch(
+            reverse("lr:v1:learningpaths_api-detail", args=[path_resource.id]),
+            data={"title": "New title"},
+            format="json",
+        )
+
+    assert resp.status_code == 200
+    mock_featured_clear.delay.assert_not_called()
+
+
+def test_learning_path_delete_clears_featured_caches(
+    client, user, mock_featured_clear, django_capture_on_commit_callbacks
+):
+    """Deleting a featured path resolves channel names before the delete and enqueues"""
+    update_editor_group(user, True)  # noqa: FBT003
+    learning_path = factories.LearningPathFactory.create()
+    channel = ChannelFactory.create(
+        is_unit=True, featured_list=learning_path.learning_resource
+    )
+    client.force_login(user)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = client.delete(
+            reverse(
+                "lr:v1:learningpaths_api-detail",
+                args=[learning_path.learning_resource.id],
+            )
+        )
+
+    assert resp.status_code == 204
+    mock_featured_clear.delay.assert_called_once_with([channel.name])
+
+
+def test_featured_cache_clear_enqueue_failure_does_not_break_save(
+    client, user, mock_featured_clear, django_capture_on_commit_callbacks
+):
+    """A failing task enqueue (broker down) must not break the API response"""
+    mock_featured_clear.delay.side_effect = Exception("broker down")
+    update_editor_group(user, True)  # noqa: FBT003
+    path_resource = factories.LearningResourceFactory.create(
+        is_learning_path=True, learning_path__author=user, published=True
+    )
+    ChannelFactory.create(is_unit=True, featured_list=path_resource)
+    client.force_login(user)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = client.patch(
+            reverse("lr:v1:learningpaths_api-detail", args=[path_resource.id]),
+            data={"title": "New title"},
+            format="json",
+        )
+
+    assert resp.status_code == 200

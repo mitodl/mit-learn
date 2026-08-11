@@ -479,6 +479,36 @@ class PodcastEpisodeViewSet(BaseLearningResourceViewSet):
         ).filter(published=True)
 
 
+def _enqueue_featured_cache_clear(path_resource_ids):
+    """
+    If any of the given learning paths is a unit channel's featured list,
+    enqueue a post-commit task to clear the featured-list caches.
+
+    Never raises into the caller's request (best-effort, per hq#11979).
+    """
+    channel_names = list(
+        Channel.objects.filter(
+            featured_list_id__in=path_resource_ids,
+            channel_type=ChannelType.unit.name,
+        ).values_list("name", flat=True)
+    )
+    if not channel_names:
+        return
+
+    def _delay_clear():
+        from learning_resources import tasks
+
+        try:
+            tasks.clear_featured_caches.delay(channel_names)
+        except Exception:
+            log.exception(
+                "Failed to enqueue featured cache clear for channels %s",
+                channel_names,
+            )
+
+    transaction.on_commit(_delay_clear)
+
+
 @extend_schema_view(
     list=extend_schema(
         summary="List", description="Get a paginated list of learning paths"
@@ -542,6 +572,18 @@ class LearningPathViewSet(BaseLearningResourceViewSet, viewsets.ModelViewSet):
             self.get_queryset(), pk=serializer.instance.pk
         )
         return Response(serializer.data)
+
+    def perform_update(self, serializer):
+        super().perform_update(serializer)
+        _enqueue_featured_cache_clear([serializer.instance.id])
+
+    def perform_destroy(self, instance):
+        # Resolve channel names before the delete (Channel.featured_list is
+        # on_delete=SET_NULL); the atomic block defers the on_commit enqueue
+        # until after the delete commits.
+        with transaction.atomic():
+            _enqueue_featured_cache_clear([instance.id])
+            super().perform_destroy(instance)
 
 
 @extend_schema_view(
