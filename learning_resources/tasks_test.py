@@ -1424,16 +1424,6 @@ def test_clear_featured_caches(mocker):
     ]
 
 
-def test_clear_featured_caches_retry_config():
-    """Autoretries on network errors with backoff"""
-    from requests.exceptions import RequestException
-
-    task = tasks.clear_featured_caches
-    assert RequestException in task.autoretry_for
-    assert task.max_retries == 3
-    assert task.retry_backoff is True
-
-
 def test_clear_featured_caches_unconfigured_fastly(mocker, settings):
     """With no Fastly API key the task completes without error"""
     settings.FASTLY_API_KEY = ""

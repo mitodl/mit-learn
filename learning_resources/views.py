@@ -30,7 +30,7 @@ from rest_framework_nested.viewsets import NestedViewSetMixin
 from authentication.decorators import blocked_ip_exempt
 from channels.constants import ChannelType
 from channels.models import Channel
-from learning_resources import permissions
+from learning_resources import permissions, tasks
 from learning_resources.constants import (
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
     LearningResourceRelationTypes,
@@ -496,8 +496,6 @@ def _enqueue_featured_cache_clear(path_resource_ids):
         return
 
     def _delay_clear():
-        from learning_resources import tasks
-
         try:
             tasks.clear_featured_caches.delay(channel_names)
         except Exception:
@@ -816,9 +814,7 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
                     relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
                     position=last_index + 1,
                 )
-        _enqueue_featured_cache_clear(
-            {*previous_parent_ids, *(int(pk) for pk in learning_path_ids)}
-        )
+        _enqueue_featured_cache_clear({*previous_parent_ids, *learning_path_ids})
         current_relationships = LearningResourceRelationship.objects.prefetch_related(
             Prefetch(
                 "child",
