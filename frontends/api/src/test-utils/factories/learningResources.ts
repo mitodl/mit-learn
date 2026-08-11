@@ -363,9 +363,11 @@ const learningResource: PartialFactory<LearningResource> = (overrides = {}) => {
 
 const learningResources = makePaginatedFactory(learningResource)
 
-const learningResourceSummary: LearningResourceFactory<
-  LearningResourceSummary
-> = (overrides = {}) => {
+// Not a LearningResourceFactory: summaries carry every resource type, so
+// resource_type has to be overridable.
+const learningResourceSummary: Factory<LearningResourceSummary> = (
+  overrides = {},
+) => {
   return {
     id: uniqueEnforcerId.enforce(() => faker.number.int()),
     last_modified: faker.date.recent().toISOString(),
