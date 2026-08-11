@@ -1610,6 +1610,9 @@ def test_process_course_archive_retains_failed_file(mocker, tmp_path):
     mocker.patch(
         "learning_resources.etl.utils._extract_content", side_effect=fake_extract
     )
+    # search-index plugin hook, not under test; depends on randomized resource
+    # fields and hits a nonexistent opensearch in CI
+    mocker.patch("learning_resources.etl.loaders.content_files_loaded_actions")
 
     key = "20240101/courses/course.tar.gz"
     process_course_archive(bucket, key, run)
