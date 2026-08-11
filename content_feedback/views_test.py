@@ -155,8 +155,42 @@ def test_submit_rate_limited(user_client, mocker):
     # The limit is keyed per authenticated user: a different user still gets
     # through even after the first user is throttled. (The user_client fixture
     # shares one APIClient, so build a distinct client for the second user.)
-    # NB: anonymous requests instead key on client IP, which is spoofable via
-    # X-Forwarded-For -- tracked as a follow-up (mitodl/hq#12775).
     other_client = APIClient()
     other_client.force_login(UserFactory.create())
     assert other_client.post(url, _payload()).status_code == 201
+
+
+def test_anonymous_throttle_ignores_spoofed_xff(mocker):
+    """A rotating client-supplied X-Forwarded-For cannot bypass the anon limit.
+
+    Anonymous requests key on the real client IP, which our infrastructure
+    (APISIX + nginx = NUM_PROXIES hops) appends to X-Forwarded-For. A client can
+    prepend anything to that header, so the throttle must ignore the spoofable
+    left side and key on the trusted entry (mitodl/hq#12775).
+    """
+    from django.core.cache.backends.locmem import LocMemCache
+
+    from main.throttles import RedisScopedRateThrottle
+
+    mocker.patch.object(
+        RedisScopedRateThrottle, "cache", LocMemCache("throttle-test", {})
+    )
+    mocker.patch.object(
+        RedisScopedRateThrottle, "THROTTLE_RATES", {"content_feedback": "2/min"}
+    )
+
+    url = reverse("content_feedback:v0:content_feedback")
+    client = APIClient(enforce_csrf_checks=True)
+
+    # Same real client (203.0.113.5) and trusted proxy (10.0.0.1); only the
+    # spoofable, client-controlled left entry rotates. All three share a bucket.
+    def post(spoofed_ip):
+        return client.post(
+            url,
+            _payload(),
+            HTTP_X_FORWARDED_FOR=f"{spoofed_ip}, 203.0.113.5, 10.0.0.1",
+        )
+
+    assert post("9.9.9.1").status_code == 201
+    assert post("9.9.9.2").status_code == 201
+    assert post("9.9.9.3").status_code == 429
