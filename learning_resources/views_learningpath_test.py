@@ -574,25 +574,43 @@ def mock_featured_clear(mocker):
     return mocker.patch("learning_resources.tasks.clear_featured_caches")
 
 
-def test_learning_path_update_clears_featured_caches(
-    client, user, mock_featured_clear, django_capture_on_commit_callbacks
-):
-    """PATCHing a featured learning path enqueues the cache-clear task on commit"""
+@pytest.fixture
+def featured_path(client, user):
+    """Create a learning path featured by a unit channel and log in an editor"""
     update_editor_group(user, True)  # noqa: FBT003
-    path_resource = factories.LearningResourceFactory.create(
-        is_learning_path=True, learning_path__author=user, published=True
-    )
-    channel = ChannelFactory.create(is_unit=True, featured_list=path_resource)
+    path = factories.LearningPathFactory.create(author=user)
+    channel = ChannelFactory.create(is_unit=True, featured_list=path.learning_resource)
     client.force_login(user)
+    return path, channel
+
+
+@pytest.mark.parametrize(
+    ("method", "data", "expected_status"),
+    [("patch", {"title": "New title"}, 200), ("delete", None, 204)],
+)
+def test_learning_path_write_clears_featured_caches(  # noqa: PLR0913
+    client,
+    featured_path,
+    mock_featured_clear,
+    django_capture_on_commit_callbacks,
+    method,
+    data,
+    expected_status,
+):
+    """
+    Updating or deleting a featured learning path enqueues the cache-clear
+    task on commit (delete resolves channel names before the row is gone)
+    """
+    path, channel = featured_path
 
     with django_capture_on_commit_callbacks(execute=True):
-        resp = client.patch(
-            reverse("lr:v1:learningpaths_api-detail", args=[path_resource.id]),
-            data={"title": "New title"},
+        resp = getattr(client, method)(
+            reverse("lr:v1:learningpaths_api-detail", args=[path.learning_resource.id]),
+            data=data,
             format="json",
         )
 
-    assert resp.status_code == 200
+    assert resp.status_code == expected_status
     mock_featured_clear.delay.assert_called_once_with([channel.name])
 
 
@@ -601,14 +619,12 @@ def test_learning_path_update_not_featured_no_clear(
 ):
     """PATCHing a learning path that is no channel's featured list enqueues nothing"""
     update_editor_group(user, True)  # noqa: FBT003
-    path_resource = factories.LearningResourceFactory.create(
-        is_learning_path=True, learning_path__author=user, published=True
-    )
+    path = factories.LearningPathFactory.create(author=user)
     client.force_login(user)
 
     with django_capture_on_commit_callbacks(execute=True):
         resp = client.patch(
-            reverse("lr:v1:learningpaths_api-detail", args=[path_resource.id]),
+            reverse("lr:v1:learningpaths_api-detail", args=[path.learning_resource.id]),
             data={"title": "New title"},
             format="json",
         )
@@ -617,44 +633,16 @@ def test_learning_path_update_not_featured_no_clear(
     mock_featured_clear.delay.assert_not_called()
 
 
-def test_learning_path_delete_clears_featured_caches(
-    client, user, mock_featured_clear, django_capture_on_commit_callbacks
-):
-    """Deleting a featured path resolves channel names before the delete and enqueues"""
-    update_editor_group(user, True)  # noqa: FBT003
-    learning_path = factories.LearningPathFactory.create()
-    channel = ChannelFactory.create(
-        is_unit=True, featured_list=learning_path.learning_resource
-    )
-    client.force_login(user)
-
-    with django_capture_on_commit_callbacks(execute=True):
-        resp = client.delete(
-            reverse(
-                "lr:v1:learningpaths_api-detail",
-                args=[learning_path.learning_resource.id],
-            )
-        )
-
-    assert resp.status_code == 204
-    mock_featured_clear.delay.assert_called_once_with([channel.name])
-
-
 def test_featured_cache_clear_enqueue_failure_does_not_break_save(
-    client, user, mock_featured_clear, django_capture_on_commit_callbacks
+    client, featured_path, mock_featured_clear, django_capture_on_commit_callbacks
 ):
     """A failing task enqueue (broker down) must not break the API response"""
     mock_featured_clear.delay.side_effect = Exception("broker down")
-    update_editor_group(user, True)  # noqa: FBT003
-    path_resource = factories.LearningResourceFactory.create(
-        is_learning_path=True, learning_path__author=user, published=True
-    )
-    ChannelFactory.create(is_unit=True, featured_list=path_resource)
-    client.force_login(user)
+    path, _ = featured_path
 
     with django_capture_on_commit_callbacks(execute=True):
         resp = client.patch(
-            reverse("lr:v1:learningpaths_api-detail", args=[path_resource.id]),
+            reverse("lr:v1:learningpaths_api-detail", args=[path.learning_resource.id]),
             data={"title": "New title"},
             format="json",
         )
@@ -663,22 +651,16 @@ def test_featured_cache_clear_enqueue_failure_does_not_break_save(
 
 
 def test_learning_path_item_create_clears_featured_caches(
-    client, user, mock_featured_clear, django_capture_on_commit_callbacks
+    client, featured_path, mock_featured_clear, django_capture_on_commit_callbacks
 ):
     """Adding an item to a featured path enqueues the cache-clear task"""
-    update_editor_group(user, True)  # noqa: FBT003
-    learning_path = factories.LearningPathFactory.create()
-    channel = ChannelFactory.create(
-        is_unit=True, featured_list=learning_path.learning_resource
-    )
+    path, channel = featured_path
     course = factories.CourseFactory.create()
-    client.force_login(user)
 
     with django_capture_on_commit_callbacks(execute=True):
         resp = client.post(
             reverse(
-                "lr:v1:learningpathitems_api-list",
-                args=[learning_path.learning_resource.id],
+                "lr:v1:learningpathitems_api-list", args=[path.learning_resource.id]
             ),
             data={"child": course.learning_resource.id},
             format="json",
@@ -689,28 +671,23 @@ def test_learning_path_item_create_clears_featured_caches(
 
 
 def test_learning_path_item_update_clears_featured_caches(
-    client, user, mock_featured_clear, django_capture_on_commit_callbacks
+    client, featured_path, mock_featured_clear, django_capture_on_commit_callbacks
 ):
     """Reordering an item in a featured path enqueues the cache-clear task"""
-    update_editor_group(user, True)  # noqa: FBT003
-    learning_path = factories.LearningPathFactory.create()
-    learning_path.learning_resource.children.all().delete()
+    path, channel = featured_path
+    path.learning_resource.children.all().delete()
     items = sorted(
         factories.LearningPathRelationshipFactory.create_batch(
-            2, parent=learning_path.learning_resource
+            2, parent=path.learning_resource
         ),
         key=lambda item: item.position,
     )
-    channel = ChannelFactory.create(
-        is_unit=True, featured_list=learning_path.learning_resource
-    )
-    client.force_login(user)
 
     with django_capture_on_commit_callbacks(execute=True):
         resp = client.patch(
             reverse(
                 "lr:v1:learningpathitems_api-detail",
-                args=[learning_path.learning_resource.id, items[0].id],
+                args=[path.learning_resource.id, items[0].id],
             ),
             data={"position": items[1].position},
             format="json",
@@ -721,25 +698,20 @@ def test_learning_path_item_update_clears_featured_caches(
 
 
 def test_learning_path_item_delete_clears_featured_caches(
-    client, user, mock_featured_clear, django_capture_on_commit_callbacks
+    client, featured_path, mock_featured_clear, django_capture_on_commit_callbacks
 ):
     """Removing an item from a featured path enqueues the cache-clear task"""
-    update_editor_group(user, True)  # noqa: FBT003
-    learning_path = factories.LearningPathFactory.create()
-    learning_path.learning_resource.children.all().delete()
+    path, channel = featured_path
+    path.learning_resource.children.all().delete()
     items = factories.LearningPathRelationshipFactory.create_batch(
-        2, parent=learning_path.learning_resource
+        2, parent=path.learning_resource
     )
-    channel = ChannelFactory.create(
-        is_unit=True, featured_list=learning_path.learning_resource
-    )
-    client.force_login(user)
 
     with django_capture_on_commit_callbacks(execute=True):
         resp = client.delete(
             reverse(
                 "lr:v1:learningpathitems_api-detail",
-                args=[learning_path.learning_resource.id, items[0].id],
+                args=[path.learning_resource.id, items[0].id],
             )
         )
 
