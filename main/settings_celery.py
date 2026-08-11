@@ -136,7 +136,7 @@ CELERY_BEAT_SCHEDULE = (
             "schedule": crontab(
                 minute=0, hour=5, day_of_week=0
             ),  # 12:00 PM EST on Sundays
-            "kwargs": {"overwrite": False},
+            "kwargs": {"canvas_course_ids": None, "overwrite": False},
         },
         "update_posthog_events": {
             "task": "learning_resources.tasks.get_learning_resource_views",

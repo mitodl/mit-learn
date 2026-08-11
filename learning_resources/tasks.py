@@ -610,11 +610,13 @@ def ingest_edx_run_archive(
 
 
 @app.task(acks_late=True)
-def sync_canvas_courses(canvas_course_ids, overwrite):
+def sync_canvas_courses(canvas_course_ids=None, overwrite=False):  # noqa: FBT002
     """
     Sync all canvas course files
 
     Args:
+        canvas_course_ids (list or None): If set, sync only these canvas course
+            ids. If None, sync every course and unpublish stale ones.
         overwrite (bool): Whether to overwrite existing content files
     """
 
