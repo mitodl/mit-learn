@@ -62,7 +62,9 @@ describe("AccountActionAlert", () => {
     const { location } = renderAtUrl(
       "?account_action=update-email&account_action_status=success&keep=me",
     )
-    await screen.findByText("Check your inbox for a confirmation link to finish updating your email address.")
+    await screen.findByText(
+      "Check your inbox for a confirmation link to finish updating your email address.",
+    )
 
     expect(location.current.searchParams.get("account_action")).toBe(null)
     expect(location.current.searchParams.get("account_action_status")).toBe(
