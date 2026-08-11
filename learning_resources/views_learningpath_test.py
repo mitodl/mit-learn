@@ -745,3 +745,34 @@ def test_learning_path_item_delete_clears_featured_caches(
 
     assert resp.status_code == 204
     mock_featured_clear.delay.assert_called_once_with([channel.name])
+
+
+def test_set_learning_path_relationships_clears_featured_caches(
+    client, staff_user, mock_featured_clear, django_capture_on_commit_callbacks
+):
+    """Bulk membership set enqueues clears for both added and removed featured paths"""
+    course = factories.CourseFactory.create()
+    added_path = factories.LearningPathFactory.create(author=staff_user)
+    removed_path = factories.LearningPathFactory.create(author=staff_user)
+    factories.LearningPathRelationshipFactory.create(
+        parent=removed_path.learning_resource, child=course.learning_resource
+    )
+    added_channel = ChannelFactory.create(
+        is_unit=True, featured_list=added_path.learning_resource
+    )
+    removed_channel = ChannelFactory.create(
+        is_unit=True, featured_list=removed_path.learning_resource
+    )
+    url = reverse(
+        "lr:v1:learning_resource_relationships_api-learning-paths",
+        args=[course.learning_resource.id],
+    )
+    client.force_login(staff_user)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = client.patch(f"{url}?learning_path_id={added_path.learning_resource.id}")
+
+    assert resp.status_code == 200
+    mock_featured_clear.delay.assert_called_once()
+    (names,) = mock_featured_clear.delay.call_args.args
+    assert sorted(names) == sorted([added_channel.name, removed_channel.name])

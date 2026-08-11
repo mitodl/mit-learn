@@ -787,6 +787,9 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
             relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
             parent__resource_type=LearningResourceType.learning_path.name,
         )
+        previous_parent_ids = list(
+            current_relationships.values_list("parent_id", flat=True)
+        )
         # Remove the resource from lists it WAS in before but is not in now
         current_relationships.exclude(parent_id__in=learning_path_ids).delete()
         current_parent_lists = current_relationships.values_list("parent_id", flat=True)
@@ -813,6 +816,9 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
                     relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
                     position=last_index + 1,
                 )
+        _enqueue_featured_cache_clear(
+            {*previous_parent_ids, *(int(pk) for pk in learning_path_ids)}
+        )
         current_relationships = LearningResourceRelationship.objects.prefetch_related(
             Prefetch(
                 "child",
