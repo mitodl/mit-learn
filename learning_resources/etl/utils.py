@@ -66,6 +66,10 @@ from learning_resources.models import (
 log = logging.getLogger(__name__)
 
 
+class InvalidPDFError(Exception):
+    """Raised when a PDF fails pypdf validation before extraction."""
+
+
 def load_offeror_topic_map(offeror_code: str):
     """
     Load the topic mappings from the database.
@@ -648,8 +652,8 @@ def _extract_content(  # noqa: PLR0913
     file_extension = metadata.get("file_extension")
     file_path = Path(olx_path) / Path(source_path)
     if file_extension == ".pdf" and file_path.is_file() and not pdf_is_valid(file_path):
-        log.warning("Skipping invalid pdf %s", file_path)
-        return None
+        msg = f"Invalid PDF {file_path}"
+        raise InvalidPDFError(msg)
     if _should_use_ocr(
         file_extension=file_extension, file_path=file_path, use_ocr=use_ocr
     ):
