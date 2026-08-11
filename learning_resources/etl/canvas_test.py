@@ -2460,3 +2460,78 @@ def test_sync_canvas_archive_saves_checksum_for_legitimately_empty_course(
         sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
     )
     assert _canvas_run(readable_id).checksum
+
+
+TWO_FILE_MANIFEST_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
+<manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+  <resources>
+    <resource identifier="RES3" type="webcontent">
+      <file href="web_resources/file3.html"/>
+    </resource>
+    <resource identifier="RES4" type="webcontent">
+      <file href="web_resources/file4.pdf"/>
+    </resource>
+  </resources>
+</manifest>
+"""
+
+
+def test_sync_canvas_archive_partial_failure_retains_and_stamps(
+    mocker, tmp_path, sync_mocks
+):
+    """One raising file: others yield, failed record survives the transform's
+    delete pass, failed_keys reaches load_content_files, checksum is stamped
+    """
+    two_file_zip = make_timed_lock_zip(
+        tmp_path,
+        "2001-01-01T00:00:00",
+        name="two_files.zip",
+        manifest_xml=TWO_FILE_MANIFEST_XML,
+    )
+    with zipfile.ZipFile(two_file_zip, "a") as zf:
+        zf.writestr("web_resources/file4.pdf", b"%PDF-fake")
+
+    def fake_download(_key, dest):
+        Path(dest).write_bytes(two_file_zip.read_bytes())
+
+    sync_mocks.bucket.download_file.side_effect = fake_download
+
+    # first sync materializes the resource/run (loaders are mocked, so no rows)
+    key = "canvas/course_content/1/abc.imscc"
+    readable_id = sync_canvas_archive(sync_mocks.bucket, key, overwrite=False)
+    run = _canvas_run(readable_id)
+    failing_key = get_edx_module_id(str(Path("abc") / "web_resources/file4.pdf"), run)
+    existing = ContentFileFactory.create(run=run, key=failing_key, published=True)
+
+    def fake_extract(document, metadata, olx_path, key, **kwargs):
+        if "file4.pdf" in metadata["source_path"]:
+            msg = "converter output missing"
+            raise FileNotFoundError(msg)
+        return {"content": "TEXT", "content_title": ""}
+
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content", side_effect=fake_extract
+    )
+
+    sync_canvas_archive(sync_mocks.bucket, key, overwrite=True)
+
+    assert ContentFile.objects.filter(id=existing.id).exists()
+    assert sync_mocks.load_content.call_args.kwargs["failed_keys"] == [failing_key]
+    assert _canvas_run(readable_id).checksum
+
+
+def test_sync_canvas_archive_total_failure_does_not_stamp_checksum(mocker, sync_mocks):
+    """Every file raising: checksum NOT stamped, so next sync retries"""
+    # a bare MagicMock return is truthy and would satisfy content_loaded via
+    # content_files_ids, bypassing the gate under test
+    sync_mocks.load_content.return_value = []
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content",
+        side_effect=FileNotFoundError("converter output missing"),
+    )
+
+    readable_id = sync_canvas_archive(
+        sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
+    )
+
+    assert _canvas_run(readable_id).checksum is None

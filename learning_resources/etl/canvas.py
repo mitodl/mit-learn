@@ -90,9 +90,13 @@ def sync_canvas_archive(bucket, key: str, overwrite):
                 canvas_problem_files,
                 failed_source_paths=failed_problem_paths,
             )
-            content_loaded = content_files_ids or not canvas_content_files
+            content_loaded = content_files_ids or (
+                not canvas_content_files and not failed_content_keys
+            )
             # load_problem_file swallows per-file errors and returns None
-            problems_loaded = any(problem_files_ids) or not canvas_problem_files
+            problems_loaded = any(problem_files_ids) or (
+                not canvas_problem_files and not failed_problem_paths
+            )
             if content_loaded and problems_loaded:
                 # a failed or empty load must be retried on the next sync, so
                 # only mark processed once everything loaded (or was unpublished)
