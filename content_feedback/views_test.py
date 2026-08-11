@@ -161,12 +161,13 @@ def test_submit_rate_limited(user_client, mocker):
 
 
 def test_anonymous_throttle_ignores_spoofed_xff(mocker):
-    """A rotating client-supplied X-Forwarded-For cannot bypass the anon limit.
+    """The anon throttle keys on the trusted client IP, not the spoofable header.
 
-    Anonymous requests key on the real client IP, which our infrastructure
-    (APISIX + nginx = NUM_PROXIES hops) appends to X-Forwarded-For. A client can
-    prepend anything to that header, so the throttle must ignore the spoofable
-    left side and key on the trusted entry (mitodl/hq#12775).
+    Our infrastructure (APISIX + nginx = NUM_PROXIES hops) appends the real
+    client IP to X-Forwarded-For; a client can prepend anything to the left. So
+    the throttle must key on the trusted entry (2nd from the right), which means
+    both: rotating the spoofable left side cannot bypass the limit, and a
+    genuinely different client still gets its own bucket (mitodl/hq#12775).
     """
     from django.core.cache.backends.locmem import LocMemCache
 
@@ -182,15 +183,22 @@ def test_anonymous_throttle_ignores_spoofed_xff(mocker):
     url = reverse("content_feedback:v0:content_feedback")
     client = APIClient(enforce_csrf_checks=True)
 
-    # Same real client (203.0.113.5) and trusted proxy (10.0.0.1); only the
-    # spoofable, client-controlled left entry rotates. All three share a bucket.
-    def post(spoofed_ip):
+    # XFF shape mirrors prod: "<client-controlled>, <real client>, <trusted
+    # proxy>". NUM_PROXIES=2 keys on the real client (2nd from the right).
+    def post(spoofed_ip, real_client="203.0.113.5"):
         return client.post(
             url,
             _payload(),
-            HTTP_X_FORWARDED_FOR=f"{spoofed_ip}, 203.0.113.5, 10.0.0.1",
+            HTTP_X_FORWARDED_FOR=f"{spoofed_ip}, {real_client}, 10.0.0.1",
         )
 
+    # Rotating only the spoofable left entry does not mint new buckets: the one
+    # trusted client keys all three, so the third request is throttled.
     assert post("9.9.9.1").status_code == 201
     assert post("9.9.9.2").status_code == 201
     assert post("9.9.9.3").status_code == 429
+
+    # A genuinely different client (different 2nd-from-right entry) gets a fresh
+    # bucket. This distinguishes correct keying from a constant peer/proxy
+    # address, which would instead collapse every client into the bucket above.
+    assert post("9.9.9.9", real_client="203.0.113.9").status_code == 201
