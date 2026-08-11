@@ -160,6 +160,11 @@ RESOURCES_RETRIEVE_PAYLOAD = ["readable_id", "platform"]
 # The indexing serializer re-serializes it with the *full* ContentFileSerializer,
 # so its large text fields are trimmed in Python instead -- see
 # _trim_indexing_only_list_fields.
+#
+# This is deliberately not a copy of SOURCE_EXCLUDED_FIELDS: vector_embedding is
+# an OpenSearch-only field (grafted on by
+# serialize_bulk_learning_resources_with_embeddings), and in Qdrant the dense
+# vector lives on the point, not in the payload.
 RESOURCES_PAYLOAD_EXCLUDE = [
     "_id",
     "resource_relations",
@@ -167,7 +172,6 @@ RESOURCES_PAYLOAD_EXCLUDE = [
     "resource_age_date",
     "featured_rank",
     "is_incomplete_or_stale",
-    "vector_embedding",
     "video.transcript",
 ]
 
