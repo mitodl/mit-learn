@@ -1588,7 +1588,12 @@ def test_process_course_archive_retains_failed_file(mocker, tmp_path):
     """One raising file: others load, its existing ContentFile stays published,
     checksum and archive_key are stamped
     """
-    run = LearningResourceRunFactory.create(archive_key=None, checksum=None)
+    # load_content_files no-ops for non-course resources; pin the random factory
+    run = LearningResourceRunFactory.create(
+        archive_key=None,
+        checksum=None,
+        learning_resource=LearningResourceFactory.create(is_course=True),
+    )
     tarball = _make_olx_tarball(tmp_path)
     bucket = mocker.MagicMock()
     bucket.download_file.side_effect = lambda _key, dest: shutil.copy(tarball, dest)
@@ -1620,7 +1625,11 @@ def test_process_course_archive_retains_failed_file(mocker, tmp_path):
 
 def test_process_course_archive_all_failures_not_marked_empty(mocker, tmp_path):
     """Every file raising: archive_key is NOT stamped, so the archive retries"""
-    run = LearningResourceRunFactory.create(archive_key=None, checksum=None)
+    run = LearningResourceRunFactory.create(
+        archive_key=None,
+        checksum=None,
+        learning_resource=LearningResourceFactory.create(is_course=True),
+    )
     tarball = _make_olx_tarball(tmp_path)
     bucket = mocker.MagicMock()
     bucket.download_file.side_effect = lambda _key, dest: shutil.copy(tarball, dest)
