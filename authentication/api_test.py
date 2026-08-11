@@ -85,9 +85,7 @@ def mock_keycloak_admin(mocker):
         "authentication.api.keycloak_api.is_admin_client_configured",
         return_value=True,
     )
-    return mocker.patch(
-        "authentication.api.keycloak_api.get_admin_client"
-    ).return_value
+    return mocker.patch("authentication.api.keycloak_api.get_admin_client").return_value
 
 
 @pytest.fixture
