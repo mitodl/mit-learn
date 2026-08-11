@@ -11,13 +11,12 @@ from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views import View
 from django.views.generic.base import RedirectView
 
-from authentication.api import is_sso_user, sync_email_from_keycloak
+from authentication.api import is_sso_user
 from authentication.constants import (
     ACCOUNT_ACTION_PARAM,
     ACCOUNT_ACTION_STATUS_PARAM,
     KEYCLOAK_ACTION_STATUSES,
     KEYCLOAK_ACTIONS,
-    AccountAction,
     AccountActionStatus,
     parse_account_action,
 )
@@ -252,36 +251,9 @@ class AccountActionCompleteView(RedirectView):
     Land the user back on the frontend after a Keycloak account action.
 
     Keycloak appends `kc_action_status`, which tells us whether the action
-    succeeded so the frontend can show an alert. For an email change we also
-    trade the authorization code for the new address, because the gateway's
-    cached userinfo still holds the old one.
+    succeeded so the frontend can show an alert. Getting a changed address into
+    Learn is Keycloak's job, pushed over SCIM.
     """
-
-    def sync_changed_email(self, next_url, action) -> bool:
-        """
-        Pull the new email from Keycloak after an email change.
-
-        Returns True only if the stored email actually changed. A False means
-        either that Keycloak still reports the old address — with verify_email
-        on, the change is pending a confirmation link — or that we could not
-        read Keycloak at all. The caller uses this to avoid telling the user
-        their email changed when it has not.
-        """
-        code = self.request.GET.get("code")
-        if not code:
-            log.warning(
-                "Account action callback for %s had no authorization code; "
-                "cannot read the updated email from Keycloak",
-                action,
-            )
-            return False
-
-        return sync_email_from_keycloak(
-            code=code,
-            redirect_uri=build_account_action_callback_url(
-                self.request, next_url=next_url, action=action
-            ),
-        )
 
     def get_redirect_url(self, *args, **kwargs):  # noqa: ARG002
         """Get the frontend URL, annotated with the outcome of the action"""
@@ -305,17 +277,6 @@ class AccountActionCompleteView(RedirectView):
                 ",".join(sorted(self.request.GET.keys())),
             )
             return next_url
-
-        # Keycloak reports success once it has *accepted* an email change, which
-        # with verify_email on means it emailed a confirmation link rather than
-        # applying anything. Only claim the address changed if reading it back
-        # from Keycloak proves it did.
-        if (
-            action == AccountAction.UPDATE_EMAIL
-            and status is AccountActionStatus.SUCCESS
-            and not self.sync_changed_email(next_url, action)
-        ):
-            status = AccountActionStatus.PENDING
 
         return with_query_params(
             next_url,

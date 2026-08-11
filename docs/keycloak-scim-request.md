@@ -38,8 +38,8 @@ stack.
 - A user adapter that maps the SCIM `emails` attribute onto `User.email`
   (`users.adapters.LearnUserAdapter` → `mitol.scim.adapters.UserAdapter`)
 - Learn will not overwrite a SCIM-delivered email from its stale gateway header
-  (mitodl/mit-learn#3726 changes `ApisixUserMiddleware` to stop re-applying the
-  header's email once a session is established)
+  (mitodl/mit-learn#3747 makes `ApisixUserMiddleware`'s userinfo updates
+  togglable, so deployed environments disable them and let SCIM be the writer)
 
 So the receiving side is in place. **This has been verified**, not just read off
 the code — see _Verifying_ below. What's missing is the push configuration, plus
@@ -49,16 +49,36 @@ credentials for it.
 
 ### 1. Learn side — provision credentials for inbound SCIM
 
-**Already built.** Run once per environment:
+Once per environment, create a staff service user and a bearer token bound to it:
 
 ```bash
-python manage.py provision_scim_client
+python manage.py shell -c "
+from django.contrib.auth import get_user_model
+from oauth2_provider.models import Application, AccessToken
+from django.utils import timezone
+from datetime import timedelta
+import secrets
+
+User = get_user_model()
+user, _ = User.objects.get_or_create(
+    username='scim-keycloak', defaults={'email': 'scim-keycloak@mit.edu'})
+user.is_staff = user.is_active = True
+user.save()
+
+app, _ = Application.objects.get_or_create(
+    name='scim-keycloak',
+    defaults={'user': user,
+              'client_type': Application.CLIENT_CONFIDENTIAL,
+              'authorization_grant_type': Application.GRANT_CLIENT_CREDENTIALS})
+
+token = AccessToken.objects.create(
+    user=user, application=app, token=secrets.token_urlsafe(48),
+    expires=timezone.now() + timedelta(days=3650), scope='read write')
+print('bearer token:', token.token)
+"
 ```
 
-It creates a staff service user (`scim-keycloak`), an OAuth2 application, and a
-bearer token bound to that user, then prints the token and the values Keycloak
-needs. Idempotent; `--rotate-token` issues a new one, since the token is only
-displayed when created.
+The token is stored unhashed, so it can be read back later if mislaid.
 
 Why a bearer token and not the client_credentials grant: Learn's SCIM endpoints
 are guarded by Learn's own OAuth2 provider, where `OAuth2TokenMiddleware` resolves

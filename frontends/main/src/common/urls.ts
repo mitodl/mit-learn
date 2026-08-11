@@ -300,12 +300,6 @@ export enum AccountActionStatus {
   Cancelled = "cancelled",
   Error = "error",
   Unavailable = "unavailable",
-  /**
-   * Keycloak accepted the change but hasn't applied it: realms with
-   * verify_email on email a confirmation link and only apply the change once
-   * it's clicked.
-   */
-  Pending = "pending",
 }
 
 export const ACCOUNT_ACTION_PARAM = "account_action"

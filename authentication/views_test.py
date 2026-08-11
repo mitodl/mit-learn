@@ -436,17 +436,14 @@ def test_account_action_start_sso_user(settings, client, user, mock_is_sso_user)
 
 
 @pytest.mark.parametrize("kc_action_status", ["success", "cancelled", "error"])
-def test_account_action_complete(settings, client, mock_sync_email, kc_action_status):
+def test_account_action_complete(settings, client, kc_action_status):
     """The callback should hand the action's outcome back to the frontend"""
-    # A confirmed change, so "success" is reported as-is rather than downgraded.
-    mock_sync_email.return_value = True
     next_url = urljoin(settings.APP_BASE_URL, "/dashboard/settings")
     callback_params = urlencode(
         {
             "next": next_url,
             "account_action": "update-email",
             "kc_action_status": kc_action_status,
-            "code": "ignored-authorization-code",
         }
     )
     resp = client.get(f"{reverse('account-action-complete')}?{callback_params}")
@@ -504,115 +501,6 @@ def test_account_action_disallowed_next(settings, client):
     )
 
 
-@pytest.fixture
-def mock_sync_email(mocker):
-    """Mock the Keycloak email sync so tests don't reach the token endpoint"""
-    return mocker.patch("authentication.views.sync_email_from_keycloak")
-
-
-def test_account_action_complete_syncs_email(settings, client, user, mock_sync_email):
-    """A successful email change pulls the new address from Keycloak"""
-    client.force_login(user)
-    next_url = urljoin(settings.APP_BASE_URL, "/dashboard/settings")
-    params = urlencode(
-        {
-            "next": next_url,
-            "account_action": "update-email",
-            "kc_action_status": "success",
-            "code": "an-authorization-code",
-        }
-    )
-
-    resp = client.get(f"{reverse('account-action-complete')}?{params}")
-
-    assert resp.status_code == 302
-    mock_sync_email.assert_called_once()
-    kwargs = mock_sync_email.call_args.kwargs
-    assert kwargs["code"] == "an-authorization-code"
-    # redirect_uri must match what the start view sent, or Keycloak rejects it
-    assert kwargs["redirect_uri"] == (
-        f"{settings.MITOL_API_BASE_URL.removesuffix('/')}"
-        f"{reverse('account-action-complete')}"
-        f"?{urlencode({'next': next_url, 'account_action': 'update-email'})}"
-    )
-
-
-@pytest.mark.parametrize(
-    "callback_params",
-    [
-        pytest.param(
-            {
-                "account_action": "update-password",
-                "kc_action_status": "success",
-                "code": "c",
-            },
-            id="password-change",
-        ),
-        pytest.param(
-            {
-                "account_action": "update-email",
-                "kc_action_status": "cancelled",
-                "code": "c",
-            },
-            id="cancelled",
-        ),
-        pytest.param(
-            {
-                "account_action": "update-email",
-                "kc_action_status": "error",
-                "code": "c",
-            },
-            id="failed",
-        ),
-        pytest.param(
-            {"account_action": "update-email", "kc_action_status": "success"},
-            id="no-code",
-        ),
-    ],
-)
-def test_account_action_complete_does_not_sync_email(
-    settings, client, user, mock_sync_email, callback_params
-):
-    """Only a successful email change triggers the Keycloak lookup"""
-    client.force_login(user)
-    params = urlencode(
-        {
-            "next": urljoin(settings.APP_BASE_URL, "/dashboard/settings"),
-            **callback_params,
-        }
-    )
-
-    resp = client.get(f"{reverse('account-action-complete')}?{params}")
-
-    assert resp.status_code == 302
-    mock_sync_email.assert_not_called()
-
-
-def test_account_action_complete_syncs_without_session(
-    settings, client, mock_sync_email
-):
-    """
-    The sync runs even with no authenticated Django user.
-
-    The APISIX middleware logs the user out on any request lacking an
-    X-UserInfo header, which is the case on this callback when the gateway isn't
-    in front of Django. The user is identified from Keycloak's `sub` instead.
-    """
-    params = urlencode(
-        {
-            "next": urljoin(settings.APP_BASE_URL, "/dashboard/settings"),
-            "account_action": "update-email",
-            "kc_action_status": "success",
-            "code": "a-code",
-        }
-    )
-
-    resp = client.get(f"{reverse('account-action-complete')}?{params}")
-
-    assert resp.status_code == 302
-    mock_sync_email.assert_called_once()
-
-
 @pytest.mark.usefixtures("mock_is_sso_user")
 def test_account_action_start_unconfigured_client(settings, client):
     """
@@ -633,52 +521,3 @@ def test_account_action_start_unconfigured_client(settings, client):
     )
     settings_url = f"{settings.APP_BASE_URL.removesuffix('/')}/dashboard/settings"
     assert resp.headers["Location"] == f"{settings_url}?{expected_params}"
-
-
-def test_account_action_complete_pending_when_email_unchanged(
-    settings, client, mock_sync_email
-):
-    """
-    Keycloak's "success" means accepted, not applied.
-
-    Realms with verify_email on — which is all deployed environments — email a
-    confirmation link and only change the address once it is clicked. Reporting
-    success there would tell the user their email changed when it has not, so
-    the status is downgraded to pending when reading Keycloak back shows the
-    address is unchanged.
-    """
-    mock_sync_email.return_value = False
-    params = urlencode(
-        {
-            "next": urljoin(settings.APP_BASE_URL, "/dashboard/settings"),
-            "account_action": "update-email",
-            "kc_action_status": "success",
-            "code": "a-code",
-        }
-    )
-
-    resp = client.get(f"{reverse('account-action-complete')}?{params}")
-
-    assert resp.status_code == 302
-    assert "account_action_status=pending" in resp.headers["Location"]
-    assert "account_action_status=success" not in resp.headers["Location"]
-
-
-def test_account_action_complete_password_never_pending(
-    settings, client, mock_sync_email
-):
-    """A password change applies immediately, so it is never downgraded"""
-    params = urlencode(
-        {
-            "next": urljoin(settings.APP_BASE_URL, "/dashboard/settings"),
-            "account_action": "update-password",
-            "kc_action_status": "success",
-            "code": "a-code",
-        }
-    )
-
-    resp = client.get(f"{reverse('account-action-complete')}?{params}")
-
-    assert resp.status_code == 302
-    assert "account_action_status=success" in resp.headers["Location"]
-    mock_sync_email.assert_not_called()

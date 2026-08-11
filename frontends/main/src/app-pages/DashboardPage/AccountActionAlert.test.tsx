@@ -11,16 +11,12 @@ describe("AccountActionAlert", () => {
   test.each([
     {
       search: "?account_action=update-email&account_action_status=success",
-      message: "Your email address has been updated.",
+      message:
+        "Check your inbox for a confirmation link to finish updating your email address.",
     },
     {
       search: "?account_action=update-password&account_action_status=success",
       message: "Your password has been updated.",
-    },
-    {
-      search: "?account_action=update-email&account_action_status=pending",
-      message:
-        "Almost done — check your inbox for a confirmation link to finish updating your email address.",
     },
     {
       search: "?account_action=update-email&account_action_status=error",
@@ -66,7 +62,7 @@ describe("AccountActionAlert", () => {
     const { location } = renderAtUrl(
       "?account_action=update-email&account_action_status=success&keep=me",
     )
-    await screen.findByText("Your email address has been updated.")
+    await screen.findByText("Check your inbox for a confirmation link to finish updating your email address.")
 
     expect(location.current.searchParams.get("account_action")).toBe(null)
     expect(location.current.searchParams.get("account_action_status")).toBe(

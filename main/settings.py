@@ -703,10 +703,6 @@ KEYCLOAK_CLIENT_ID = get_string(
     name="KEYCLOAK_CLIENT_ID",
     default=None,
 )
-KEYCLOAK_CLIENT_SECRET = get_string(
-    name="KEYCLOAK_CLIENT_SECRET",
-    default=None,
-)
 
 MICROMASTERS_CMS_API_URL = get_string("MICROMASTERS_CMS_API_URL", None)
 

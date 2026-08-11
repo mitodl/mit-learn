@@ -94,22 +94,6 @@ services:
     profiles:
       - load-testing
 
-  # Catches every email Keycloak sends, so flows that depend on a real inbox —
-  # notably the confirmation link for changing your email address — can be tested
-  # locally. Deployed environments have verify_email enabled, so without this the
-  # local flow silently diverges from production.
-  # Web UI: http://localhost:${MAILPIT_UI_PORT:-8025}
-  mailpit:
-    profiles:
-      - keycloak
-    image: axllent/mailpit:latest
-    ports:
-      - ${MAILPIT_UI_PORT:-8025}:8025
-      - ${MAILPIT_SMTP_PORT:-1025}:1025
-    environment:
-      - MP_SMTP_AUTH_ACCEPT_ANY=true
-      - MP_SMTP_AUTH_ALLOW_INSECURE=true
-
   keycloak:
     profiles:
       - keycloak
@@ -117,8 +101,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      mailpit:
-        condition: service_started
     ports:
       - ${KEYCLOAK_PORT}:${KEYCLOAK_PORT}
       - ${KEYCLOAK_SSL_PORT}:${KEYCLOAK_SSL_PORT}
@@ -136,9 +118,7 @@ services:
       - ./config/keycloak/tls:/etc/x509/https
       - ./config/keycloak/realms:/opt/keycloak/data/import
       - ./config/keycloak/providers:/opt/keycloak/providers
-      # Keycloak 17+ (Quarkus) reads themes from /opt/keycloak/themes; the old
-      # /opt/jboss path was the WildFly distribution's and is silently ignored.
-      - ./config/keycloak/themes:/opt/keycloak/themes
+      - ./config/keycloak/themes:/opt/jboss/keycloak/themes
 
   apigateway:
     profiles:

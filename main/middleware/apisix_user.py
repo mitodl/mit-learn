@@ -33,21 +33,6 @@ USER_SYNC_FIELDS = (
     "last_name",
 )
 
-# Fields we stop trusting the header for once a session is established.
-#
-# APISIX caches userinfo in its session and only writes it at initial
-# authentication — refreshing the access token does not refresh it — so for the
-# life of that session (14 days in deployed environments) the header keeps
-# serving the email the user had when they logged in. Re-applying it here would
-# undo an email change moments after Keycloak accepted it.
-#
-# mitxonline avoids this by skipping *all* field syncing for an already
-# authenticated user, relying on Keycloak's SCIM push as the backchannel. MIT
-# Learn has no SCIM provisioning configured, so we keep syncing everything else
-# from the header and single out email, which has an explicit sync path in
-# authentication.api.sync_email_from_keycloak.
-STALE_ON_ESTABLISHED_SESSION = ("email",)
-
 
 def user_fields_from_headers(decoded_headers: Mapping[str, Any]) -> dict[str, Any]:
     """Map the decoded user headers to the synced User fields."""
@@ -60,28 +45,9 @@ def user_fields_from_headers(decoded_headers: Mapping[str, Any]) -> dict[str, An
     }
 
 
-def syncable_user_fields(
-    user_fields: Mapping[str, Any], *, established_session: bool
-) -> dict[str, Any]:
-    """
-    Narrow the header fields to those still worth trusting.
-
-    On an established session the header's cached email may predate a change the
-    user just made, so it is dropped. See STALE_ON_ESTABLISHED_SESSION.
-    """
-    if not established_session:
-        return dict(user_fields)
-
-    return {
-        field: value
-        for field, value in user_fields.items()
-        if field not in STALE_ON_ESTABLISHED_SESSION
-    }
-
-
 def user_needs_update(user: "User", user_fields: Mapping[str, Any]) -> bool:
-    """Return True if any of the given User fields differs from the headers."""
-    return any(getattr(user, field) != value for field, value in user_fields.items())
+    """Return True if any synced User field differs from the headers."""
+    return any(getattr(user, field) != user_fields[field] for field in USER_SYNC_FIELDS)
 
 
 def profile_needs_update(user: "User", profile_data: Mapping[str, Any] | None) -> bool:
@@ -173,13 +139,11 @@ def get_user_from_apisix_headers(  # noqa: C901
     )
     user_fields = user_fields_from_headers(decoded_headers)
 
-    established_session = bool(
+    if (
         request.user
         and request.user.is_authenticated
         and request.user.global_id == global_id
-    )
-
-    if established_session:
+    ):
         user = request.user
         created = False
     else:
@@ -227,14 +191,10 @@ def get_user_from_apisix_headers(  # noqa: C901
         user.set_unusable_password()
         user.is_active = True
         user.save()
-    else:
-        syncable = syncable_user_fields(
-            user_fields, established_session=established_session
-        )
-        if user_needs_update(user, syncable):
-            for field, value in syncable.items():
-                setattr(user, field, value)
-            user.save(update_fields=[*syncable, "updated_on"])
+    elif user_needs_update(user, user_fields):
+        for field, value in user_fields.items():
+            setattr(user, field, value)
+        user.save(update_fields=[*user_fields, "updated_on"])
 
     if created:
         user_created_actions(user=user, is_new=True, details=profile_data)

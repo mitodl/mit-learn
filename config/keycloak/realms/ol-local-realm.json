@@ -1,10 +1,7 @@
 {
   "id": "160c333f-6b79-44a1-8bfc-e9ca019584bb",
   "realm": "ol-local",
-  "displayName": "MIT Learn",
-  "loginTheme": "ol-learn",
-  "emailTheme": "ol-learn",
-  "accountTheme": "ol-learn",
+  "displayName": "OL Local",
   "displayNameHtml": "",
   "notBefore": 0,
   "defaultSignatureAlgorithm": "RS256",
@@ -35,7 +32,7 @@
   "registrationAllowed": true,
   "registrationEmailAsUsername": true,
   "rememberMe": false,
-  "verifyEmail": true,
+  "verifyEmail": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
@@ -1685,15 +1682,7 @@
     "xXSSProtection": "1; mode=block",
     "strictTransportSecurity": "max-age=31536000; includeSubDomains"
   },
-  "smtpServer": {
-    "host": "mailpit",
-    "port": "1025",
-    "from": "no-reply@open.odl.local",
-    "fromDisplayName": "MIT Learn (local)",
-    "auth": "",
-    "ssl": "",
-    "starttls": ""
-  },
+  "smtpServer": {},
   "eventsEnabled": false,
   "eventsListeners": ["jboss-logging"],
   "enabledEventTypes": [],

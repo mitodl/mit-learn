@@ -38,10 +38,6 @@ class AccountActionStatus(StrEnum):
     CANCELLED = "cancelled"
     ERROR = "error"
     # Keycloak accepted the request but hasn't applied it yet. Realms with
-    # verify_email enabled — which is all deployed environments — email a
-    # confirmation link on an email change and only apply it once that link is
-    # clicked, so "success" from Keycloak means "email sent", not "changed".
-    PENDING = "pending"
     # The user authenticates through an external identity provider, so the
     # action isn't theirs to perform.
     UNAVAILABLE = "unavailable"

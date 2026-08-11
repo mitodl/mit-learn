@@ -73,59 +73,10 @@ handling authentication request to identity provider" page, and its logs show
 
 `UPDATE_PASSWORD` is a built-in action and needs neither step.
 
-#### Email, and why it matters for changing your email
-
-Deployed realms have `verify_email` enabled, which changes the flow materially:
-submitting the "Update your email" form does **not** change the address. Keycloak
-emails a confirmation link to the new address and only applies the change once
-that link is clicked. Testing against a local realm with verification off will
-give you a different flow than production.
-
-The `keycloak` profile therefore includes **Mailpit**, which captures every email
-Keycloak sends. Nothing leaves your machine, so any address works.
-
-- Inbox: http://localhost:8025
-- The realm export points Keycloak's SMTP at `mailpit:1025` and sets
-  `verifyEmail: true`, matching the deployed realms.
-
-`--import-realm` skips realms that already exist, so an existing local setup
-needs this applied once by hand — Keycloak admin → _Realm settings → Email_
-(host `mailpit`, port `1025`, from `no-reply@open.odl.local`, no auth/SSL/TLS),
-and _Realm settings → Login → Verify email_ on.
-
-One gotcha when using the **Test connection** button: Keycloak sends the test to
-the _logged-in admin user's own_ address, so it returns a 500 with only
-`Failed to send email` in the logs if that user has no email set. Set one on the
-`admin` user in the `master` realm first.
-
-#### The MIT Learn login theme
-
-Out of the box, local Keycloak serves the stock Keycloak login pages, so the
-change-email and change-password forms look nothing like the deployed ones. The
-branded theme is `ol-learn`, built from
-[ol-keycloakify](https://github.com/mitodl/ol-keycloakify) and shipped as a
-provider jar inside the `mitodl/keycloak` image that deployed environments run.
-
-To get it locally:
-
-```bash
-./scripts/fetch_keycloak_theme.sh
-docker compose restart keycloak
-```
-
-That lifts the theme jar out of `mitodl/keycloak` into
-`config/keycloak/providers/` (gitignored), where Keycloak loads it. The realm
-export sets `loginTheme`/`emailTheme`/`accountTheme` to `ol-learn`; if your realm
-predates that, set it once under Realm settings → Themes, since `--import-realm`
-skips realms that already exist.
-
-The jar is copied rather than running `mitodl/keycloak` locally on purpose: that
-image tracks a newer Keycloak than docker-compose pins, and Keycloak database
-migrations are one-way, so starting it against an existing local realm database
-cannot be undone.
-
-Keycloak re-runs its build on the first start after a provider is added, so that
-start takes noticeably longer than usual.
+Note that deployed realms have `verify_email` enabled, so submitting the form
+there emails a confirmation link rather than changing the address immediately,
+and the new address reaches Learn when Keycloak pushes it over SCIM. The local
+realm has verification off, so the change applies straight away.
 
 ### MITx Online integration
 
