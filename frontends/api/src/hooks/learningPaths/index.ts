@@ -13,6 +13,7 @@ import type {
 } from "../../generated/v1"
 import { learningPathsApi } from "../../clients"
 import { learningPathQueries, learningPathKeys } from "./queries"
+import { learningResourceKeys } from "../learningResources/queries"
 import { useUserHasPermission, Permission } from "api/hooks/user"
 
 const useLearningPathsList = (
@@ -71,6 +72,9 @@ const useLearningPathUpdate = () => {
       queryClient.invalidateQueries({
         queryKey: learningPathKeys.detail(vars.id),
       })
+      queryClient.invalidateQueries({
+        queryKey: learningResourceKeys.featuredRoot(),
+      })
     },
   })
 }
@@ -84,6 +88,9 @@ const useLearningPathDestroy = () => {
       queryClient.invalidateQueries({ queryKey: learningPathKeys.listRoot() })
       queryClient.invalidateQueries({
         queryKey: learningPathKeys.membershipList(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: learningResourceKeys.featuredRoot(),
       })
     },
   })
@@ -108,6 +115,9 @@ const useLearningPathListItemMove = () => {
     onSettled: (_data, _err, vars) => {
       queryClient.invalidateQueries({
         queryKey: learningPathKeys.infiniteItemsRoot(vars.parent),
+      })
+      queryClient.invalidateQueries({
+        queryKey: learningResourceKeys.featuredRoot(),
       })
     },
   })
