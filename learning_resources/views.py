@@ -887,6 +887,7 @@ class LearningPathItemsViewSet(ResourceListItemsViewSet, viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(parent_id=self.kwargs.get("learning_resource_id"))
+        _enqueue_featured_cache_clear([self.kwargs.get("learning_resource_id")])
 
         relationship = LearningResourceRelationship.objects.prefetch_related(
             Prefetch("child", queryset=LearningResource.objects.for_serialization())
@@ -899,7 +900,9 @@ class LearningPathItemsViewSet(ResourceListItemsViewSet, viewsets.ModelViewSet):
         return Response(response_serializer.data, status=201, headers=headers)
 
     def update(self, request, *args, **kwargs):
-        return super().update(request, *args, **kwargs)
+        response = super().update(request, *args, **kwargs)
+        _enqueue_featured_cache_clear([self.kwargs.get("learning_resource_id")])
+        return response
 
     def perform_destroy(self, instance):
         """Delete the relationship and update the positions of the remaining items"""
@@ -910,6 +913,7 @@ class LearningPathItemsViewSet(ResourceListItemsViewSet, viewsets.ModelViewSet):
                 position__gt=instance.position,
             ).update(position=F("position") - 1)
             instance.delete()
+            _enqueue_featured_cache_clear([instance.parent_id])
 
 
 @extend_schema_view(

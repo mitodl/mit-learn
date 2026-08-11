@@ -660,3 +660,88 @@ def test_featured_cache_clear_enqueue_failure_does_not_break_save(
         )
 
     assert resp.status_code == 200
+
+
+def test_learning_path_item_create_clears_featured_caches(
+    client, user, mock_featured_clear, django_capture_on_commit_callbacks
+):
+    """Adding an item to a featured path enqueues the cache-clear task"""
+    update_editor_group(user, True)  # noqa: FBT003
+    learning_path = factories.LearningPathFactory.create()
+    channel = ChannelFactory.create(
+        is_unit=True, featured_list=learning_path.learning_resource
+    )
+    course = factories.CourseFactory.create()
+    client.force_login(user)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = client.post(
+            reverse(
+                "lr:v1:learningpathitems_api-list",
+                args=[learning_path.learning_resource.id],
+            ),
+            data={"child": course.learning_resource.id},
+            format="json",
+        )
+
+    assert resp.status_code == 201
+    mock_featured_clear.delay.assert_called_once_with([channel.name])
+
+
+def test_learning_path_item_update_clears_featured_caches(
+    client, user, mock_featured_clear, django_capture_on_commit_callbacks
+):
+    """Reordering an item in a featured path enqueues the cache-clear task"""
+    update_editor_group(user, True)  # noqa: FBT003
+    learning_path = factories.LearningPathFactory.create()
+    learning_path.learning_resource.children.all().delete()
+    items = sorted(
+        factories.LearningPathRelationshipFactory.create_batch(
+            2, parent=learning_path.learning_resource
+        ),
+        key=lambda item: item.position,
+    )
+    channel = ChannelFactory.create(
+        is_unit=True, featured_list=learning_path.learning_resource
+    )
+    client.force_login(user)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = client.patch(
+            reverse(
+                "lr:v1:learningpathitems_api-detail",
+                args=[learning_path.learning_resource.id, items[0].id],
+            ),
+            data={"position": items[1].position},
+            format="json",
+        )
+
+    assert resp.status_code == 200
+    mock_featured_clear.delay.assert_called_once_with([channel.name])
+
+
+def test_learning_path_item_delete_clears_featured_caches(
+    client, user, mock_featured_clear, django_capture_on_commit_callbacks
+):
+    """Removing an item from a featured path enqueues the cache-clear task"""
+    update_editor_group(user, True)  # noqa: FBT003
+    learning_path = factories.LearningPathFactory.create()
+    learning_path.learning_resource.children.all().delete()
+    items = factories.LearningPathRelationshipFactory.create_batch(
+        2, parent=learning_path.learning_resource
+    )
+    channel = ChannelFactory.create(
+        is_unit=True, featured_list=learning_path.learning_resource
+    )
+    client.force_login(user)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = client.delete(
+            reverse(
+                "lr:v1:learningpathitems_api-detail",
+                args=[learning_path.learning_resource.id, items[0].id],
+            )
+        )
+
+    assert resp.status_code == 204
+    mock_featured_clear.delay.assert_called_once_with([channel.name])
