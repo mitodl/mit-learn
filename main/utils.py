@@ -212,7 +212,7 @@ def _cache_page_ignoring_cookies(  # noqa: C901
     return inner_decorator
 
 
-def call_fastly_purge_api(relative_url, timeout=30):
+def call_fastly_purge_api(relative_url, timeout=30, *, soft=False):
     """
     Call the Fastly purge API.
 
@@ -223,6 +223,8 @@ def call_fastly_purge_api(relative_url, timeout=30):
     Args:
         - relative_url  The relative URL to purge.
         - timeout       Timeout in seconds for the request (default: 30)
+        - soft          If True, send a soft purge (Fastly-Soft-Purge: 1) so
+                        Fastly marks the object stale instead of evicting it
     Returns:
         - Dict of the response (resp.json)
     Raises:
@@ -241,6 +243,9 @@ def call_fastly_purge_api(relative_url, timeout=30):
     log.info(f"Purging relative URL {relative_url}: {api_url}")  # noqa: G004
 
     headers = {}
+
+    if soft:
+        headers["Fastly-Soft-Purge"] = "1"
 
     if settings.FASTLY_API_KEY:
         headers["fastly-key"] = settings.FASTLY_API_KEY
