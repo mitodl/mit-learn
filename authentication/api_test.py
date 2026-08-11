@@ -4,7 +4,6 @@ from uuid import uuid4
 
 import pytest
 from django.contrib.auth import get_user_model
-from django.core.cache import caches
 from keycloak.exceptions import KeycloakError
 
 from authentication import api
@@ -87,26 +86,6 @@ def mock_keycloak_admin(mocker):
     return mocker.patch("authentication.api.keycloak_api.get_admin_client").return_value
 
 
-@pytest.fixture
-def sso_cache(settings):
-    """
-    Give is_sso_user a working cache.
-
-    conftest swaps the redis cache for a dummy backend so tests don't share
-    state; the caching behaviour still needs somewhere real to write.
-    """
-    settings.CACHES = {
-        **settings.CACHES,
-        "redis": {
-            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-            "LOCATION": "is-sso-user-test",
-        },
-    }
-    cache = caches["redis"]
-    cache.clear()
-    return cache
-
-
 @pytest.mark.parametrize(
     ("social_logins", "expected"),
     [
@@ -116,17 +95,20 @@ def sso_cache(settings):
 )
 def test_is_sso_user(mock_keycloak_admin, social_logins, expected):
     """Users with a federated identity in Keycloak are SSO users"""
-    user = UserFactory.create(global_id=uuid4().hex)
+    user = UserFactory.create(global_id=uuid4().hex, is_sso_user=None)
     mock_keycloak_admin.get_user_social_logins.return_value = social_logins
 
     assert api.is_sso_user(user) is expected
     mock_keycloak_admin.get_user_social_logins.assert_called_once_with(user.global_id)
 
+    # the answer is recorded, not just returned
+    user.refresh_from_db()
+    assert user.is_sso_user is expected
 
-@pytest.mark.usefixtures("sso_cache")
-def test_is_sso_user_is_cached(mock_keycloak_admin):
-    """Keycloak should only be asked once per user"""
-    user = UserFactory.create(global_id=uuid4().hex)
+
+def test_is_sso_user_only_asks_keycloak_once(mock_keycloak_admin):
+    """Once stored on the user, Keycloak isn't consulted again"""
+    user = UserFactory.create(global_id=uuid4().hex, is_sso_user=None)
     mock_keycloak_admin.get_user_social_logins.return_value = [
         {"identityProvider": "touchstone"}
     ]
@@ -136,9 +118,27 @@ def test_is_sso_user_is_cached(mock_keycloak_admin):
     assert mock_keycloak_admin.get_user_social_logins.call_count == 1
 
 
+@pytest.mark.parametrize("stored", [True, False])
+def test_is_sso_user_stored_value_wins(mock_keycloak_admin, stored):
+    """
+    An explicitly set flag overrides Keycloak.
+
+    This is what lets someone keep an account after leaving the organization
+    that provided their identity: clear the flag and they can manage their own
+    email and password, whatever Keycloak still reports.
+    """
+    user = UserFactory.create(global_id=uuid4().hex, is_sso_user=stored)
+    mock_keycloak_admin.get_user_social_logins.return_value = [
+        {"identityProvider": "touchstone"}
+    ]
+
+    assert api.is_sso_user(user) is stored
+    mock_keycloak_admin.get_user_social_logins.assert_not_called()
+
+
 def test_is_sso_user_no_global_id(mock_keycloak_admin):
     """Users who have never been through Keycloak can't be SSO users"""
-    user = UserFactory.create(global_id=None)
+    user = UserFactory.create(global_id=None, is_sso_user=None)
 
     assert api.is_sso_user(user) is False
     mock_keycloak_admin.get_user_social_logins.assert_not_called()
@@ -151,18 +151,23 @@ def test_is_sso_user_admin_client_unconfigured(mocker):
         return_value=False,
     )
     get_admin_client = mocker.patch("authentication.api.keycloak_api.get_admin_client")
-    user = UserFactory.create(global_id=uuid4().hex)
+    user = UserFactory.create(global_id=uuid4().hex, is_sso_user=None)
 
     assert api.is_sso_user(user) is False
     get_admin_client.assert_not_called()
+    user.refresh_from_db()
+    assert user.is_sso_user is None
 
 
 def test_is_sso_user_keycloak_error(mock_keycloak_admin):
     """A Keycloak failure shouldn't take the settings page down with it"""
-    user = UserFactory.create(global_id=uuid4().hex)
+    user = UserFactory.create(global_id=uuid4().hex, is_sso_user=None)
     mock_keycloak_admin.get_user_social_logins.side_effect = KeycloakError("boom")
 
     assert api.is_sso_user(user) is False
+    # left null so a later read retries rather than recording a guess
+    user.refresh_from_db()
+    assert user.is_sso_user is None
 
 
 @pytest.mark.parametrize(
