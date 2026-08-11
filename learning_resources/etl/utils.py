@@ -808,7 +808,13 @@ def process_olx_path(  # noqa: PLR0913
     use_ocr=False,
     failed_source_paths: list | None = None,
 ) -> Generator[dict, None, None]:
-    """Process OLX path and yield content dictionaries."""
+    """
+    Process OLX path and yield content dictionaries.
+
+    failed_source_paths is a caller-owned list appended to in place with the
+    source_path of each file whose processing raises; it is only complete once
+    the generator is fully exhausted.
+    """
     video_srt_metadata = get_video_metadata(olx_path, run)
 
     for document, metadata in documents_from_olx(

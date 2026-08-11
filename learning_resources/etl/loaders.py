@@ -1023,8 +1023,9 @@ def load_content_files(
         course_run (LearningResourceRun): a course run
         content_files_data (list or generator): Details about the content files
         calc_completeness: bool: Whether to calculate the completeness score
-        failed_keys: list: Keys of content files whose extraction failed and
-            should be exempted from the stale/unpublish pass
+        failed_keys: list: caller-owned list of ContentFile keys whose
+            extraction failed, mutated in place while content_files_data is
+            consumed; those records are exempted from the stale/unpublish pass
 
     Returns:
         list of int: Ids of the ContentFile objects that were created/updated
@@ -1203,6 +1204,7 @@ def load_problem_file(
 def load_problem_files(
     course_run: LearningResourceRun,
     problem_files_data: list[dict],
+    *,
     failed_source_paths: list | None = None,
 ) -> list[int]:
     """
@@ -1211,8 +1213,9 @@ def load_problem_files(
     Args:
         course_run (LearningResourceRun): a course run
         problem_files_data (list or generator): Details about the problem files
-        failed_source_paths (list): source paths whose extraction failed; these
-            are retained rather than deleted as orphans
+        failed_source_paths (list): caller-owned list of source paths whose
+            extraction failed, mutated in place while problem_files_data is
+            consumed; those records are retained rather than deleted as orphans
 
     Returns:
         list of int: Ids of the TutorProblemFile objects that were created/updated
