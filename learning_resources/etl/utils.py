@@ -853,7 +853,11 @@ def process_olx_path(  # noqa: PLR0913
 
 
 def transform_content_files(
-    course_tarpath: Path, run: LearningResourceRun, *, overwrite: bool
+    course_tarpath: Path,
+    run: LearningResourceRun,
+    *,
+    overwrite: bool,
+    failed_keys: list | None = None,
 ) -> Generator[dict, None, None]:
     """
     Pass content to tika, then return JSON document with transformed content inside it
@@ -861,15 +865,25 @@ def transform_content_files(
     Args:
         course_tarpath (str): The path to the tarball which contains the OLX
         run (LearningResourceRun): The run associated witb the content files
+        failed_keys (list): caller-owned list extended in place with the
+            ContentFile keys of files whose extraction failed; valid only once
+            the generator is fully exhausted
 
     Yields:
         dict: content from file
     """
     basedir = course_tarpath.name.split(".")[0]
+    failed_source_paths = []
     with TemporaryDirectory(prefix=basedir) as inner_tempdir:
         check_call(["tar", "xf", course_tarpath], cwd=inner_tempdir)  # noqa: S603,S607
         olx_path = glob.glob(inner_tempdir + "/*")[0]  # noqa: PTH207
-        yield from process_olx_path(olx_path, run, overwrite=overwrite)
+        yield from process_olx_path(
+            olx_path, run, overwrite=overwrite, failed_source_paths=failed_source_paths
+        )
+    if failed_keys is not None:
+        failed_keys.extend(
+            get_edx_module_id(source_path, run) for source_path in failed_source_paths
+        )
 
 
 def get_s3_prefix_for_source(etl_source: str) -> str:

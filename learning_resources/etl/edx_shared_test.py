@@ -1,5 +1,7 @@
 """ETL utils test"""
 
+import shutil
+import tarfile
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -16,13 +18,15 @@ from learning_resources.etl.edx_shared import (
     process_course_archive,
     sync_edx_course_files,
 )
-from learning_resources.etl.utils import get_s3_prefix_for_source
+from learning_resources.etl.utils import get_edx_module_id, get_s3_prefix_for_source
 from learning_resources.factories import (
+    ContentFileFactory,
     CourseFactory,
     LearningResourceFactory,
     LearningResourcePlatformFactory,
     LearningResourceRunFactory,
 )
+from learning_resources.models import ContentFile
 
 pytestmark = pytest.mark.django_db
 
@@ -1565,3 +1569,69 @@ def test_process_course_archive_overwrite_bypasses_key_gate(mocker):
     run.refresh_from_db()
     assert run.archive_key == key
     assert run.checksum == "newchecksum"
+
+
+def _make_olx_tarball(tmp_path):
+    """Build a minimal OLX tarball with one good and one bad static file"""
+    course_dir = tmp_path / "course"
+    static_dir = course_dir / "static"
+    static_dir.mkdir(parents=True)
+    (static_dir / "good.html").write_text("<p>good</p>")
+    (static_dir / "bad.html").write_text("<p>bad</p>")
+    tarball = tmp_path / "course.tar.gz"
+    with tarfile.open(tarball, "w:gz") as tar:
+        tar.add(course_dir, arcname="course")
+    return tarball
+
+
+def test_process_course_archive_retains_failed_file(mocker, tmp_path):
+    """One raising file: others load, its existing ContentFile stays published,
+    checksum and archive_key are stamped
+    """
+    run = LearningResourceRunFactory.create(archive_key=None, checksum=None)
+    tarball = _make_olx_tarball(tmp_path)
+    bucket = mocker.MagicMock()
+    bucket.download_file.side_effect = lambda _key, dest: shutil.copy(tarball, dest)
+
+    failing_key = get_edx_module_id("course/static/bad.html", run)
+    existing = ContentFileFactory.create(run=run, key=failing_key, published=True)
+
+    def fake_extract(document, metadata, olx_path, key, **kwargs):
+        if "bad.html" in metadata["source_path"]:
+            msg = "converter output missing"
+            raise FileNotFoundError(msg)
+        return {"content": "text", "content_title": ""}
+
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content", side_effect=fake_extract
+    )
+
+    key = "20240101/courses/course.tar.gz"
+    process_course_archive(bucket, key, run)
+
+    good_key = get_edx_module_id("course/static/good.html", run)
+    assert ContentFile.objects.filter(run=run, key=good_key).exists()
+    existing.refresh_from_db()
+    assert existing.published is True
+    run.refresh_from_db()
+    assert run.checksum
+    assert run.archive_key == key
+
+
+def test_process_course_archive_all_failures_not_marked_empty(mocker, tmp_path):
+    """Every file raising: archive_key is NOT stamped, so the archive retries"""
+    run = LearningResourceRunFactory.create(archive_key=None, checksum=None)
+    tarball = _make_olx_tarball(tmp_path)
+    bucket = mocker.MagicMock()
+    bucket.download_file.side_effect = lambda _key, dest: shutil.copy(tarball, dest)
+
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content",
+        side_effect=FileNotFoundError("converter output missing"),
+    )
+
+    process_course_archive(bucket, "20240101/courses/course.tar.gz", run)
+
+    run.refresh_from_db()
+    assert run.archive_key is None
+    assert run.checksum is None
