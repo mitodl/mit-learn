@@ -86,7 +86,7 @@ def mock_keycloak_admin(mocker):
         return_value=True,
     )
     return mocker.patch(
-        "authentication.api.main_keycloak.get_admin_client"
+        "authentication.api.keycloak_api.get_admin_client"
     ).return_value
 
 
@@ -153,7 +153,7 @@ def test_is_sso_user_admin_client_unconfigured(mocker):
         "authentication.api.keycloak_api.is_admin_client_configured",
         return_value=False,
     )
-    get_admin_client = mocker.patch("authentication.api.main_keycloak.get_admin_client")
+    get_admin_client = mocker.patch("authentication.api.keycloak_api.get_admin_client")
     user = UserFactory.create(global_id=uuid4().hex)
 
     assert api.is_sso_user(user) is False

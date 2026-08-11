@@ -12,7 +12,6 @@ from mitol.keycloak import api as keycloak_api
 from requests.exceptions import RequestException
 
 from authentication.hooks import get_plugin_manager
-from main import keycloak as main_keycloak
 from profiles import api as profile_api
 
 User = get_user_model()
@@ -82,7 +81,7 @@ def is_sso_user(user) -> bool:
         return cached
 
     try:
-        admin_client = main_keycloak.get_admin_client()
+        admin_client = keycloak_api.get_admin_client()
         is_sso = bool(admin_client.get_user_social_logins(global_id))
     except (KeycloakError, RequestException):
         log.exception("Failed to fetch federated identities for user %s", user.id)

@@ -60,7 +60,7 @@ def test_sync_email_optin_to_keycloak_not_configured(mocker):
     mocker.patch.object(
         api.keycloak_api, "is_admin_client_configured", return_value=False
     )
-    update_user_mock = mocker.patch.object(api.main_keycloak, "update_user_attributes")
+    update_user_mock = mocker.patch.object(api.keycloak_api, "update_user")
     user = UserFactory.build(global_id="some-global-id")
 
     sync_email_optin_to_keycloak(user, email_optin=True)
@@ -73,7 +73,7 @@ def test_sync_email_optin_to_keycloak_no_global_id(mocker):
     mocker.patch.object(
         api.keycloak_api, "is_admin_client_configured", return_value=True
     )
-    update_user_mock = mocker.patch.object(api.main_keycloak, "update_user_attributes")
+    update_user_mock = mocker.patch.object(api.keycloak_api, "update_user")
     user = UserFactory.build(global_id=None)
 
     sync_email_optin_to_keycloak(user, email_optin=True)
@@ -86,7 +86,7 @@ def test_sync_email_optin_to_keycloak_success(mocker):
     mocker.patch.object(
         api.keycloak_api, "is_admin_client_configured", return_value=True
     )
-    update_user_mock = mocker.patch.object(api.main_keycloak, "update_user_attributes")
+    update_user_mock = mocker.patch.object(api.keycloak_api, "update_user")
     user = UserFactory.build(global_id="some-global-id")
 
     sync_email_optin_to_keycloak(user, email_optin=True)
@@ -102,7 +102,7 @@ def test_sync_email_optin_to_keycloak_failure(mocker):
         api.keycloak_api, "is_admin_client_configured", return_value=True
     )
     mocker.patch.object(
-        api.main_keycloak, "update_user_attributes", side_effect=KeycloakError("boom")
+        api.keycloak_api, "update_user", side_effect=KeycloakError("boom")
     )
     user = UserFactory.build(global_id="some-global-id")
 

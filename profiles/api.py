@@ -6,7 +6,6 @@ import tldextract
 from mitol.keycloak import api as keycloak_api
 from mitol.keycloak.data_models import UserAttributes
 
-from main import keycloak as main_keycloak
 from profiles.models import (
     PERSONAL_SITE_TYPE,
     SITE_TYPE_OPTIONS,
@@ -64,6 +63,6 @@ def sync_email_optin_to_keycloak(user, *, email_optin):
         )
         return
 
-    main_keycloak.update_user_attributes(
+    keycloak_api.update_user(
         user.global_id, attributes=UserAttributes(email_optin=1 if email_optin else 0)
     )
