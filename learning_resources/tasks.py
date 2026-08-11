@@ -13,6 +13,7 @@ from django.conf import settings
 from django.db import OperationalError
 from django.db.models import Q
 from django.utils import timezone
+from requests.exceptions import RequestException
 
 from learning_resources.constants import LearningResourceType
 from learning_resources.etl import loaders, ovs, pipelines, youtube
@@ -57,7 +58,7 @@ from learning_resources_search.exceptions import RetryError
 from main.celery import app
 from main.constants import ISOFORMAT
 from main.decorators import cooldown_task
-from main.utils import chunks, clear_views_cache, now_in_utc
+from main.utils import call_fastly_purge_api, chunks, clear_views_cache, now_in_utc
 
 log = logging.getLogger(__name__)
 
@@ -76,6 +77,21 @@ def update_next_start_date_and_prices():
             )
     clear_views_cache()
     return len(resources)
+
+
+@app.task(autoretry_for=(RequestException,), retry_backoff=True, max_retries=3)
+def clear_featured_caches(channel_names):
+    """
+    Clear cached featured-list data for the given unit channels: the Redis
+    view cache first, then Fastly pages so re-renders fetch fresh API data.
+    Channel pages are hard-purged (the editor's refresh must be decisively
+    fresh); the homepage is soft-purged to keep its stale-while-revalidate
+    grace for visitors.
+    """
+    clear_views_cache(key_prefix="featured_resources")
+    for name in channel_names:
+        call_fastly_purge_api(f"/c/unit/{name}", timeout=5)
+    call_fastly_purge_api("/", timeout=5, soft=True)
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)

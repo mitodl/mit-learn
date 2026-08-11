@@ -1401,3 +1401,41 @@ def test_cleanup_deleted_content_files_returns_error_on_unexpected_exception(moc
     result = cleanup_deleted_content_files()
 
     assert result == "cleanup_deleted_content_files threw an error"
+
+
+def test_clear_featured_caches(mocker):
+    """Clears the Redis prefix first, then purges channel pages hard and homepage soft"""
+    manager = mocker.Mock()
+    manager.attach_mock(
+        mocker.patch("learning_resources.tasks.clear_views_cache"),
+        "clear_views_cache",
+    )
+    manager.attach_mock(
+        mocker.patch("learning_resources.tasks.call_fastly_purge_api"), "purge"
+    )
+
+    tasks.clear_featured_caches.run(["mitx", "ocw"])
+
+    assert manager.mock_calls == [
+        mocker.call.clear_views_cache(key_prefix="featured_resources"),
+        mocker.call.purge("/c/unit/mitx", timeout=5),
+        mocker.call.purge("/c/unit/ocw", timeout=5),
+        mocker.call.purge("/", timeout=5, soft=True),
+    ]
+
+
+def test_clear_featured_caches_retry_config():
+    """Autoretries on network errors with backoff"""
+    from requests.exceptions import RequestException
+
+    task = tasks.clear_featured_caches
+    assert RequestException in task.autoretry_for
+    assert task.max_retries == 3
+    assert task.retry_backoff is True
+
+
+def test_clear_featured_caches_unconfigured_fastly(mocker, settings):
+    """With no Fastly API key the task completes without error"""
+    settings.FASTLY_API_KEY = ""
+    mocker.patch("learning_resources.tasks.clear_views_cache")
+    tasks.clear_featured_caches.run(["mitx"])
