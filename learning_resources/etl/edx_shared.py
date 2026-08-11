@@ -148,17 +148,23 @@ def process_course_archive(
             log.info("Checksums match for %s, skipping load", key)
             return True
         try:
+            failed_keys = []
             content_files_data = iter(
-                transform_content_files(course_tarpath, run, overwrite=overwrite)
+                transform_content_files(
+                    course_tarpath, run, overwrite=overwrite, failed_keys=failed_keys
+                )
             )
             first = next(content_files_data, None)
             if first is None:
+                if failed_keys:
+                    # every file failed: retry next sync, don't mark as empty
+                    return True
                 # empty archive: stop re-downloading it
                 run.archive_key = key
                 run.save(update_fields=["archive_key"])
                 return True
             content_files_ids = load_content_files(
-                run, chain([first], content_files_data)
+                run, chain([first], content_files_data), failed_keys=failed_keys
             )
             if content_files_ids:
                 run.checksum = checksum

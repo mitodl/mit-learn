@@ -66,6 +66,10 @@ from learning_resources.models import (
 log = logging.getLogger(__name__)
 
 
+class InvalidPDFError(Exception):
+    """Raised when a PDF fails pypdf validation before extraction."""
+
+
 def load_offeror_topic_map(offeror_code: str):
     """
     Load the topic mappings from the database.
@@ -580,8 +584,10 @@ def pdf_is_valid(pdf_path: Path) -> bool:
         if len(reader.pages) > 0:
             reader.pages[0].extract_text()
             return True
-    except Exception:
-        log.exception("PDF validation error for %s", pdf_path)
+    except Exception:  # noqa: BLE001
+        # warning, not exception: the caller raises InvalidPDFError and
+        # process_olx_path emits the single Sentry event for this file
+        log.warning("PDF validation error for %s", pdf_path, exc_info=True)
     return False
 
 
@@ -648,12 +654,16 @@ def _extract_content(  # noqa: PLR0913
     file_extension = metadata.get("file_extension")
     file_path = Path(olx_path) / Path(source_path)
     if file_extension == ".pdf" and file_path.is_file() and not pdf_is_valid(file_path):
-        log.warning("Skipping invalid pdf %s", file_path)
-        return None
+        msg = f"Invalid PDF {file_path}"
+        raise InvalidPDFError(msg)
     if _should_use_ocr(
         file_extension=file_extension, file_path=file_path, use_ocr=use_ocr
     ):
-        content_dict = _extract_content_with_ocr(file_path, is_tutor_problem)
+        try:
+            content_dict = _extract_content_with_ocr(file_path, is_tutor_problem)
+        except Exception:  # noqa: BLE001
+            log.warning("OCR extraction failed for %s, falling back to tika", file_path)
+            content_dict = None
         if content_dict:
             return content_dict
 
@@ -798,8 +808,15 @@ def process_olx_path(  # noqa: PLR0913
     valid_file_types=VALID_TEXT_FILE_TYPES,
     is_tutor_problem_file_import=False,
     use_ocr=False,
+    failed_source_paths: list | None = None,
 ) -> Generator[dict, None, None]:
-    """Process OLX path and yield content dictionaries."""
+    """
+    Process OLX path and yield content dictionaries.
+
+    failed_source_paths is a caller-owned list appended to in place with the
+    source_path of each file whose processing raises; it is only complete once
+    the generator is fully exhausted.
+    """
     video_srt_metadata = get_video_metadata(olx_path, run)
 
     for document, metadata in documents_from_olx(
@@ -808,25 +825,35 @@ def process_olx_path(  # noqa: PLR0913
         source_path = metadata.get("source_path")
         key = get_edx_module_id(source_path, run)
 
-        existing_record = _get_existing_record(
-            source_path, key, run, is_tutor_problem_file_import
-        )
+        try:
+            existing_record = _get_existing_record(
+                source_path, key, run, is_tutor_problem_file_import
+            )
 
-        if _should_reprocess(existing_record, metadata, overwrite):
-            content_dict = _extract_content(
-                document,
-                metadata,
-                olx_path,
-                key,
-                use_ocr=use_ocr,
-                is_tutor_problem=is_tutor_problem_file_import,
+            if _should_reprocess(existing_record, metadata, overwrite):
+                content_dict = _extract_content(
+                    document,
+                    metadata,
+                    olx_path,
+                    key,
+                    use_ocr=use_ocr,
+                    is_tutor_problem=is_tutor_problem_file_import,
+                )
+                if content_dict is None:
+                    continue
+            else:
+                content_dict = _get_cached_content(
+                    existing_record, is_tutor_problem_file_import
+                )
+        except Exception:
+            log.exception(
+                "Extraction failed for %s in run %s, skipping file",
+                source_path,
+                run.id,
             )
-            if content_dict is None:
-                continue
-        else:
-            content_dict = _get_cached_content(
-                existing_record, is_tutor_problem_file_import
-            )
+            if failed_source_paths is not None:
+                failed_source_paths.append(source_path)
+            continue
 
         yield _build_result(
             olx_path, metadata, key, run, video_srt_metadata, content_dict
@@ -834,7 +861,11 @@ def process_olx_path(  # noqa: PLR0913
 
 
 def transform_content_files(
-    course_tarpath: Path, run: LearningResourceRun, *, overwrite: bool
+    course_tarpath: Path,
+    run: LearningResourceRun,
+    *,
+    overwrite: bool,
+    failed_keys: list | None = None,
 ) -> Generator[dict, None, None]:
     """
     Pass content to tika, then return JSON document with transformed content inside it
@@ -842,15 +873,25 @@ def transform_content_files(
     Args:
         course_tarpath (str): The path to the tarball which contains the OLX
         run (LearningResourceRun): The run associated witb the content files
+        failed_keys (list): caller-owned list extended in place with the
+            ContentFile keys of files whose extraction failed; valid only once
+            the generator is fully exhausted
 
     Yields:
         dict: content from file
     """
     basedir = course_tarpath.name.split(".")[0]
+    failed_source_paths = []
     with TemporaryDirectory(prefix=basedir) as inner_tempdir:
         check_call(["tar", "xf", course_tarpath], cwd=inner_tempdir)  # noqa: S603,S607
         olx_path = glob.glob(inner_tempdir + "/*")[0]  # noqa: PTH207
-        yield from process_olx_path(olx_path, run, overwrite=overwrite)
+        yield from process_olx_path(
+            olx_path, run, overwrite=overwrite, failed_source_paths=failed_source_paths
+        )
+    if failed_keys is not None:
+        failed_keys.extend(
+            get_edx_module_id(source_path, run) for source_path in failed_source_paths
+        )
 
 
 def get_s3_prefix_for_source(etl_source: str) -> str:

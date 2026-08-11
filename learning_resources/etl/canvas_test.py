@@ -37,7 +37,7 @@ from learning_resources.factories import (
     LearningResourceRunFactory,
     TutorProblemFileFactory,
 )
-from learning_resources.models import LearningResource
+from learning_resources.models import ContentFile, LearningResource
 from learning_resources_search.constants import CONTENT_FILE_TYPE
 from main.utils import now_in_utc
 
@@ -449,6 +449,91 @@ def test_transform_canvas_content_files_removes_unpublished_content(mocker, tmp_
     )
 
     # Ensure unpublished content is deleted and unpublished actions called
+    bulk_unpub.assert_called_once_with([unpublished_cf.id], CONTENT_FILE_TYPE)
+
+
+def test_transform_canvas_content_files_retains_failed_files(mocker, tmp_path):
+    """A file whose extraction raises must not be deleted; true orphans still are"""
+    resource = LearningResourceFactory.create(etl_source=ETLSource.canvas.name)
+    run = LearningResourceRunFactory.create(learning_resource=resource)
+
+    published_path = "/test/published/file1.html"
+    unpublished_path = "/test/unpublished/file2.html"
+    failing_cf = ContentFileFactory.create(
+        run=run, published=True, key=get_edx_module_id(published_path, run)
+    )
+    unpublished_cf = ContentFileFactory.create(
+        run=run, published=True, key=get_edx_module_id(unpublished_path, run)
+    )
+    module_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <modules xmlns="http://canvas.instructure.com/xsd/cccv1p0">
+      <module>
+        <title>Module 1</title>
+        <items>
+          <item>
+            <workflow_state>active</workflow_state>
+            <title>Item 1</title>
+            <identifierref>RES1</identifierref>
+            <content_type>resource</content_type>
+          </item>
+          <item>
+            <workflow_state>unpublished</workflow_state>
+            <title>Item 2</title>
+            <identifierref>RES2</identifierref>
+            <content_type>resource</content_type>
+          </item>
+        </items>
+      </module>
+    </modules>
+    """
+    manifest_xml = bytes(
+        f"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent">
+          <file href="{published_path}"/>
+        </resource>
+        <resource identifier="RES2" type="webcontent">
+          <file href="{unpublished_path}"/>
+        </resource>
+      </resources>
+      <organizations>
+        <organization>
+          <item identifierref="RES1">
+            <title>Item 1</title>
+          </item>
+          <item identifierref="RES2">
+            <title>Item 2</title>
+          </item>
+        </organization>
+      </organizations>
+    </manifest>
+    """,
+        "utf-8",
+    )
+    zip_path = tmp_path / "canvas_course.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("course_settings/module_meta.xml", module_xml)
+        zf.writestr("imsmanifest.xml", manifest_xml)
+        zf.writestr(published_path, "content")
+        zf.writestr(unpublished_path, "content")
+
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content",
+        side_effect=FileNotFoundError("ocr output missing"),
+    )
+    bulk_unpub = mocker.patch(
+        "learning_resources.etl.canvas.bulk_resources_unpublished_actions"
+    )
+
+    list(
+        transform_canvas_content_files(
+            Path(zip_path), run, url_config={}, overwrite=True
+        )
+    )
+
+    assert ContentFile.objects.filter(id=failing_cf.id).exists()
+    assert not ContentFile.objects.filter(id=unpublished_cf.id).exists()
     bulk_unpub.assert_called_once_with([unpublished_cf.id], CONTENT_FILE_TYPE)
 
 
@@ -2374,4 +2459,102 @@ def test_sync_canvas_archive_saves_checksum_for_legitimately_empty_course(
     readable_id = sync_canvas_archive(
         sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
     )
+    assert _canvas_run(readable_id).checksum
+
+
+TWO_FILE_MANIFEST_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
+<manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+  <resources>
+    <resource identifier="RES3" type="webcontent">
+      <file href="web_resources/file3.html"/>
+    </resource>
+    <resource identifier="RES4" type="webcontent">
+      <file href="web_resources/file4.pdf"/>
+    </resource>
+  </resources>
+</manifest>
+"""
+
+
+def test_sync_canvas_archive_partial_failure_retains_and_stamps(
+    mocker, tmp_path, sync_mocks
+):
+    """One raising file: others yield, failed record survives the transform's
+    delete pass, failed_keys reaches load_content_files, checksum is stamped
+    """
+    two_file_zip = make_timed_lock_zip(
+        tmp_path,
+        "2001-01-01T00:00:00",
+        name="two_files.zip",
+        manifest_xml=TWO_FILE_MANIFEST_XML,
+    )
+    with zipfile.ZipFile(two_file_zip, "a") as zf:
+        zf.writestr("web_resources/file4.pdf", b"%PDF-fake")
+
+    def fake_download(_key, dest):
+        Path(dest).write_bytes(two_file_zip.read_bytes())
+
+    sync_mocks.bucket.download_file.side_effect = fake_download
+
+    # first sync materializes the resource/run (loaders are mocked, so no rows)
+    key = "canvas/course_content/1/abc.imscc"
+    readable_id = sync_canvas_archive(sync_mocks.bucket, key, overwrite=False)
+    run = _canvas_run(readable_id)
+    failing_key = get_edx_module_id(str(Path("abc") / "web_resources/file4.pdf"), run)
+    existing = ContentFileFactory.create(run=run, key=failing_key, published=True)
+
+    def fake_extract(document, metadata, olx_path, key, **kwargs):
+        if "file4.pdf" in metadata["source_path"]:
+            msg = "converter output missing"
+            raise FileNotFoundError(msg)
+        return {"content": "TEXT", "content_title": ""}
+
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content", side_effect=fake_extract
+    )
+
+    sync_canvas_archive(sync_mocks.bucket, key, overwrite=True)
+
+    assert ContentFile.objects.filter(id=existing.id).exists()
+    assert sync_mocks.load_content.call_args.kwargs["failed_keys"] == [failing_key]
+    assert _canvas_run(readable_id).checksum
+
+
+def test_sync_canvas_archive_total_failure_does_not_stamp_checksum(mocker, sync_mocks):
+    """Every file raising: checksum NOT stamped, so next sync retries"""
+    # a bare MagicMock return is truthy and would satisfy content_loaded via
+    # content_files_ids, bypassing the gate under test
+    sync_mocks.load_content.return_value = []
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content",
+        side_effect=FileNotFoundError("converter output missing"),
+    )
+
+    readable_id = sync_canvas_archive(
+        sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
+    )
+
+    assert _canvas_run(readable_id).checksum is None
+
+
+def test_sync_canvas_archive_partial_problem_failure_still_stamps(mocker, sync_mocks):
+    """A course whose only tutor problem file fails extraction must still stamp
+    the checksum when content files loaded — retry happens on archive change,
+    not every sync
+    """
+
+    def fake_problems(_path, _run, *, overwrite, failed_source_paths=None):
+        failed_source_paths.append("tutorbot/p1/broken.pdf")
+        return iter([])
+
+    mocker.patch(
+        "learning_resources.etl.canvas.transform_canvas_problem_files",
+        side_effect=fake_problems,
+    )
+    sync_mocks.load_problems.return_value = []
+
+    readable_id = sync_canvas_archive(
+        sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
+    )
+
     assert _canvas_run(readable_id).checksum

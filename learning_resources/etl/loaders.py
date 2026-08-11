@@ -1014,6 +1014,7 @@ def load_content_files(
     content_files_data: list[dict],
     *,
     calc_completeness: bool = False,
+    failed_keys: list | None = None,
 ) -> list[int]:
     """
     Sync all content files for a course run to database and S3 if not present in DB
@@ -1022,6 +1023,9 @@ def load_content_files(
         course_run (LearningResourceRun): a course run
         content_files_data (list or generator): Details about the content files
         calc_completeness: bool: Whether to calculate the completeness score
+        failed_keys: list: caller-owned list of ContentFile keys whose
+            extraction failed, mutated in place while content_files_data is
+            consumed; those records are exempted from the stale/unpublish pass
 
     Returns:
         list of int: Ids of the ContentFile objects that were created/updated
@@ -1047,6 +1051,8 @@ def load_content_files(
         stale_published_files = ContentFile.objects.filter(
             run=course_run, published=True
         ).exclude(id__in=content_files_ids)
+        if failed_keys:
+            stale_published_files = stale_published_files.exclude(key__in=failed_keys)
         stale_direct_resource_ids = list(
             stale_published_files.filter(direct_learning_resource__isnull=False)
             .values_list("direct_learning_resource_id", flat=True)
@@ -1198,6 +1204,8 @@ def load_problem_file(
 def load_problem_files(
     course_run: LearningResourceRun,
     problem_files_data: list[dict],
+    *,
+    failed_source_paths: list | None = None,
 ) -> list[int]:
     """
     Sync all problem files for canvas course
@@ -1205,6 +1213,9 @@ def load_problem_files(
     Args:
         course_run (LearningResourceRun): a course run
         problem_files_data (list or generator): Details about the problem files
+        failed_source_paths (list): caller-owned list of source paths whose
+            extraction failed, mutated in place while problem_files_data is
+            consumed; those records are retained rather than deleted as orphans
 
     Returns:
         list of int: Ids of the TutorProblemFile objects that were created/updated
@@ -1214,11 +1225,12 @@ def load_problem_files(
         load_problem_file(course_run, problem_file)
         for problem_file in problem_files_data
     ]
-    for file in (
-        TutorProblemFile.objects.filter(run=course_run)
-        .exclude(id__in=problem_files_ids)
-        .all()
-    ):
+    deletable = TutorProblemFile.objects.filter(run=course_run).exclude(
+        id__in=problem_files_ids
+    )
+    if failed_source_paths:
+        deletable = deletable.exclude(source_path__in=failed_source_paths)
+    for file in deletable.all():
         file.delete()
 
     return problem_files_ids
