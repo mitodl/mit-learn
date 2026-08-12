@@ -19,6 +19,7 @@ from drf_spectacular.utils import (
     inline_serializer,
 )
 from grpc._channel import _InactiveRpcError
+from requests.exceptions import RequestException
 from rest_framework import serializers, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
@@ -488,12 +489,16 @@ class PodcastEpisodeViewSet(BaseLearningResourceViewSet):
 def clear_featured_caches(channel_names):
     """
     Clear the Redis featured-list cache, hard-purge channel pages from
-    Fastly, and soft-purge the homepage.
+    Fastly, and soft-purge the homepage. Each Fastly purge is independently
+    best-effort so one failure doesn't leave the remaining pages stale.
     """
     clear_views_cache(key_prefix="featured_resources")
-    for name in channel_names:
-        call_fastly_purge_api(f"/c/unit/{name}", timeout=5)
-    call_fastly_purge_api("/", timeout=5, soft=True)
+    purges = [(f"/c/unit/{name}", False) for name in channel_names] + [("/", True)]
+    for relative_url, soft in purges:
+        try:
+            call_fastly_purge_api(relative_url, timeout=5, soft=soft)
+        except RequestException:
+            log.exception("Featured cache Fastly purge failed for %s", relative_url)
 
 
 def _clear_featured_caches_on_commit(path_resource_ids):

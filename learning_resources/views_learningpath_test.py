@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 from django.db.models import Max
 from django.urls import reverse
+from requests.exceptions import RequestException
 
 from channels.factories import ChannelFactory
 from learning_resources import factories, models, views
@@ -765,7 +766,20 @@ def test_clear_featured_caches(mocker):
 
     assert manager.mock_calls == [
         mocker.call.clear_views_cache(key_prefix="featured_resources"),
-        mocker.call.purge("/c/unit/mitx", timeout=5),
-        mocker.call.purge("/c/unit/ocw", timeout=5),
+        mocker.call.purge("/c/unit/mitx", timeout=5, soft=False),
+        mocker.call.purge("/c/unit/ocw", timeout=5, soft=False),
         mocker.call.purge("/", timeout=5, soft=True),
     ]
+
+
+def test_clear_featured_caches_continues_after_purge_failure(mocker):
+    """A failed channel purge must not skip the remaining Fastly purges"""
+    mocker.patch("learning_resources.views.clear_views_cache")
+    mock_purge = mocker.patch(
+        "learning_resources.views.call_fastly_purge_api",
+        side_effect=[RequestException("fastly down"), None, None],
+    )
+
+    views.clear_featured_caches(["mitx", "ocw"])
+
+    assert mock_purge.call_count == 3
