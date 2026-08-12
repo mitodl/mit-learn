@@ -1,21 +1,9 @@
 import React from "react"
-import { renderWithProviders, screen, user } from "@/test-utils"
+import { renderWithProviders, screen } from "@/test-utils"
 import GameSubNav from "./GameSubNav"
-
-jest.mock("next-nprogress-bar", () => ({
-  useRouter: jest.fn(),
-}))
-
-const mockBack = jest.fn()
-
-const { useRouter } = jest.requireMock("next-nprogress-bar")
-useRouter.mockReturnValue({ back: mockBack })
+import * as urls from "@/common/urls"
 
 describe("GameSubNav", () => {
-  beforeEach(() => {
-    mockBack.mockReset()
-  })
-
   test("shows the game's title as the page heading", () => {
     renderWithProviders(<GameSubNav title="HackSnack" />)
     expect(
@@ -23,9 +11,11 @@ describe("GameSubNav", () => {
     ).toBeInTheDocument()
   })
 
-  test("goes back when the back control is clicked", async () => {
+  test("links to the home page rather than popping history", () => {
     renderWithProviders(<GameSubNav title="HackSnack" />)
-    await user.click(screen.getByRole("button", { name: "Go back" }))
-    expect(mockBack).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole("link", { name: "Back to home" })).toHaveAttribute(
+      "href",
+      urls.HOME,
+    )
   })
 })

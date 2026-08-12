@@ -1,12 +1,11 @@
 "use client"
 
 import React from "react"
-// next-nprogress-bar wraps next/navigation's router so navigation drives the
-// site's progress bar; it is what the rest of the app uses.
-import { useRouter } from "next-nprogress-bar"
+import Link from "next/link"
 import { styled, Typography } from "ol-components"
 import type { TypographyProps } from "ol-components"
 import { RiArrowLeftSLine } from "@remixicon/react"
+import * as urls from "@/common/urls"
 
 const Bar = styled.div(({ theme }) => ({
   display: "flex",
@@ -31,7 +30,7 @@ const BarInner = styled.div({
   maxWidth: "1272px",
 })
 
-const BackButton = styled.button({
+const BackLink = styled(Link)({
   display: "flex",
   alignItems: "center",
   flexShrink: 0,
@@ -39,17 +38,14 @@ const BackButton = styled.button({
   width: "64px",
   height: "32px",
   padding: "0 16px",
-  border: "none",
-  background: "none",
-  cursor: "pointer",
   color: "inherit",
 })
 
 /**
- * Mirrors the back button's width so the title stays optically centred in the
+ * Mirrors the back link's width so the title stays optically centred in the
  * bar rather than in the space left over beside it.
  */
-const BackButtonSpacer = styled.div({
+const BackLinkSpacer = styled.div({
   flexShrink: 0,
   width: "64px",
   height: "32px",
@@ -70,24 +66,22 @@ type GameSubNavProps = {
 }
 
 /**
- * The bar above a game: a back control, and the game's name centred in it.
+ * The bar above a game: a link out of it, and the game's name centred in it.
+ *
+ * The link goes to a fixed destination rather than popping history, so that it
+ * still leads somewhere sensible when the game is opened directly by URL.
  */
 const GameSubNav: React.FC<GameSubNavProps> = ({ title }) => {
-  const router = useRouter()
   return (
     <Bar>
       <BarInner>
-        <BackButton
-          type="button"
-          aria-label="Go back"
-          onClick={() => router.back()}
-        >
+        <BackLink href={urls.HOME} aria-label="Back to home">
           <RiArrowLeftSLine size={32} aria-hidden />
-        </BackButton>
+        </BackLink>
         <Title variant="h3" component="h1">
           {title}
         </Title>
-        <BackButtonSpacer aria-hidden />
+        <BackLinkSpacer aria-hidden />
       </BarInner>
     </Bar>
   )
