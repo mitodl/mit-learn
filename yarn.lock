@@ -3341,9 +3341,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/hacksnack@npm:^0.1.0":
-  version: 0.1.0
-  resolution: "@mitodl/hacksnack@npm:0.1.0"
+"@mitodl/hacksnack@npm:^0.1.1":
+  version: 0.1.1
+  resolution: "@mitodl/hacksnack@npm:0.1.1"
   dependencies:
     pdfjs-dist: "npm:^5.7.284"
   peerDependencies:
@@ -3353,7 +3353,7 @@ __metadata:
     react-dom: ">=18"
   bin:
     hacksnack-copy-assets: scripts/copy-assets.mjs
-  checksum: 10/2cd1aca16d5b7a803e469e99c774cfb385662e94760cc2a9a34e58e0b5f93d9d11275756f9d7ba1c819acf298f01196edf0d2d3be296ecb133955b144d447767
+  checksum: 10/73d1c93bfb2ba8f9762cd2ab06e58d998b6861c45b47f3708dadbdac0d887dae03134c47b4ab6ef577250bd61bf05c9dd1209c89d43a7579a1ab00d9026cd714
   languageName: node
   linkType: hard
 
@@ -16643,7 +16643,7 @@ __metadata:
     "@happy-dom/jest-environment": "npm:^20.1.0"
     "@mitodl/arithmix": "npm:^0.2.2"
     "@mitodl/course-search-utils": "npm:^3.5.2"
-    "@mitodl/hacksnack": "npm:^0.1.0"
+    "@mitodl/hacksnack": "npm:^0.1.1"
     "@mitodl/mitxonline-api-axios": "npm:2026.8.12"
     "@mitodl/smoot-design": "npm:6.31.1"
     "@mui/base": "npm:5.0.0-beta.70"

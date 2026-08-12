@@ -17,7 +17,7 @@
     "@floating-ui/react": "^0.27.16",
     "@mitodl/arithmix": "^0.2.2",
     "@mitodl/course-search-utils": "^3.5.2",
-    "@mitodl/hacksnack": "^0.1.0",
+    "@mitodl/hacksnack": "^0.1.1",
     "@mitodl/mitxonline-api-axios": "2026.8.12",
     "@mitodl/smoot-design": "6.31.1",
     "@mui/base": "5.0.0-beta.70",
