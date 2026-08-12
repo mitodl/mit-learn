@@ -72,7 +72,7 @@ class LearningResourceTopicQuerySet(TimestampedModelQuerySet):
 
     def for_serialization(self):
         """Return a queryset for serialization"""
-        return self.annotate_channel_url()
+        return self.annotate_channel_url().order_by("name")
 
     def annotate_channel_url(self):
         """Annotate with the channel url"""
