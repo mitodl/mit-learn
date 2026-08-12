@@ -30,7 +30,7 @@ from rest_framework_nested.viewsets import NestedViewSetMixin
 from authentication.decorators import blocked_ip_exempt
 from channels.constants import ChannelType
 from channels.models import Channel
-from learning_resources import permissions, tasks
+from learning_resources import permissions
 from learning_resources.constants import (
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
     LearningResourceRelationTypes,
@@ -109,7 +109,13 @@ from main.permissions import (
     AnonymousAccessReadonlyPermission,
     is_admin_user,
 )
-from main.utils import cache_page_for_all_users, cache_page_for_anonymous_users, chunks
+from main.utils import (
+    cache_page_for_all_users,
+    cache_page_for_anonymous_users,
+    call_fastly_purge_api,
+    chunks,
+    clear_views_cache,
+)
 from vector_search.serializers import LearningResourcesSearchFiltersSerializer
 
 
@@ -479,10 +485,24 @@ class PodcastEpisodeViewSet(BaseLearningResourceViewSet):
         ).filter(published=True)
 
 
-def _enqueue_featured_cache_clear(path_resource_ids):
+def clear_featured_caches(channel_names):
     """
-    Enqueue a post-commit featured-cache clear if any of the given paths is
-    a unit channel's featured list; best-effort, never raises.
+    Clear the Redis featured-list cache, hard-purge channel pages from
+    Fastly, and soft-purge the homepage.
+    """
+    clear_views_cache(key_prefix="featured_resources")
+    for name in channel_names:
+        call_fastly_purge_api(f"/c/unit/{name}", timeout=5)
+    call_fastly_purge_api("/", timeout=5, soft=True)
+
+
+def _clear_featured_caches_on_commit(path_resource_ids):
+    """
+    Clear the featured caches after commit if any of the given paths is a
+    unit channel's featured list; best-effort, never raises.
+
+    Runs synchronously in the request (not via Celery) so the purge is done
+    by the time the editor's save returns, regardless of worker backlog.
     """
     channel_names = list(
         Channel.objects.filter(
@@ -493,16 +513,16 @@ def _enqueue_featured_cache_clear(path_resource_ids):
     if not channel_names:
         return
 
-    def _delay_clear():
+    def _clear():
         try:
-            tasks.clear_featured_caches.delay(channel_names)
+            clear_featured_caches(channel_names)
         except Exception:
             log.exception(
-                "Failed to enqueue featured cache clear for channels %s",
+                "Failed to clear featured caches for channels %s",
                 channel_names,
             )
 
-    transaction.on_commit(_delay_clear)
+    transaction.on_commit(_clear)
 
 
 @extend_schema_view(
@@ -571,14 +591,14 @@ class LearningPathViewSet(BaseLearningResourceViewSet, viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         super().perform_update(serializer)
-        _enqueue_featured_cache_clear([serializer.instance.id])
+        _clear_featured_caches_on_commit([serializer.instance.id])
 
     def perform_destroy(self, instance):
         # Resolve channel names before the delete (Channel.featured_list is
-        # on_delete=SET_NULL); the atomic block defers the on_commit enqueue
+        # on_delete=SET_NULL); the atomic block defers the on_commit clear
         # until after the delete commits.
         with transaction.atomic():
-            _enqueue_featured_cache_clear([instance.id])
+            _clear_featured_caches_on_commit([instance.id])
             super().perform_destroy(instance)
 
 
@@ -812,7 +832,7 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
                     relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
                     position=last_index + 1,
                 )
-        _enqueue_featured_cache_clear({*previous_parent_ids, *learning_path_ids})
+        _clear_featured_caches_on_commit({*previous_parent_ids, *learning_path_ids})
         current_relationships = LearningResourceRelationship.objects.prefetch_related(
             Prefetch(
                 "child",
@@ -887,7 +907,7 @@ class LearningPathItemsViewSet(ResourceListItemsViewSet, viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(parent_id=self.kwargs.get("learning_resource_id"))
-        _enqueue_featured_cache_clear([self.kwargs.get("learning_resource_id")])
+        _clear_featured_caches_on_commit([self.kwargs.get("learning_resource_id")])
 
         relationship = LearningResourceRelationship.objects.prefetch_related(
             Prefetch("child", queryset=LearningResource.objects.for_serialization())
@@ -901,7 +921,7 @@ class LearningPathItemsViewSet(ResourceListItemsViewSet, viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)
-        _enqueue_featured_cache_clear([self.kwargs.get("learning_resource_id")])
+        _clear_featured_caches_on_commit([self.kwargs.get("learning_resource_id")])
         return response
 
     def perform_destroy(self, instance):
@@ -913,7 +933,7 @@ class LearningPathItemsViewSet(ResourceListItemsViewSet, viewsets.ModelViewSet):
                 position__gt=instance.position,
             ).update(position=F("position") - 1)
             instance.delete()
-            _enqueue_featured_cache_clear([instance.parent_id])
+            _clear_featured_caches_on_commit([instance.parent_id])
 
 
 @extend_schema_view(
