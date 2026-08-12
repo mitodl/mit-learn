@@ -15,6 +15,8 @@ from authentication.api import is_sso_user
 from authentication.constants import (
     ACCOUNT_ACTION_PARAM,
     ACCOUNT_ACTION_STATUS_PARAM,
+    ACCOUNT_SETTINGS_PATH,
+    KEYCLOAK_ACTION_STATUS_PARAM,
     KEYCLOAK_ACTION_STATUSES,
     KEYCLOAK_ACTIONS,
     AccountActionStatus,
@@ -118,10 +120,6 @@ class CustomLoginView(View):
                 profile.save()
 
         return redirect(redirect_url)
-
-
-ACCOUNT_SETTINGS_PATH = "/dashboard/settings"
-KEYCLOAK_ACTION_STATUS_PARAM = "kc_action_status"
 
 
 def get_account_action_redirect_url(request):

@@ -8,6 +8,9 @@ from enum import StrEnum
 ACCOUNT_ACTION_PARAM = "account_action"
 ACCOUNT_ACTION_STATUS_PARAM = "account_action_status"
 
+# Frontend path an account action starts from and returns to.
+ACCOUNT_SETTINGS_PATH = "/dashboard/settings"
+
 
 class AccountAction(StrEnum):
     """Account actions a user can start from the settings page"""
@@ -37,7 +40,6 @@ class AccountActionStatus(StrEnum):
     SUCCESS = "success"
     CANCELLED = "cancelled"
     ERROR = "error"
-    # Keycloak accepted the request but hasn't applied it yet. Realms with
     # The user authenticates through an external identity provider, so the
     # action isn't theirs to perform.
     UNAVAILABLE = "unavailable"
@@ -49,8 +51,9 @@ KEYCLOAK_ACTIONS = {
     AccountAction.UPDATE_PASSWORD: "UPDATE_PASSWORD",
 }
 
-# Keycloak appends `kc_action_status` to the redirect URI when an application
-# initiated action finishes.
+# Keycloak appends this to the redirect URI when an application initiated action
+# finishes, with one of the values below.
+KEYCLOAK_ACTION_STATUS_PARAM = "kc_action_status"
 KEYCLOAK_ACTION_STATUSES = {
     "success": AccountActionStatus.SUCCESS,
     "cancelled": AccountActionStatus.CANCELLED,
