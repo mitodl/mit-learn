@@ -180,3 +180,5 @@ def test_topics_for_serialization_ordered_by_name():
     assert [topic.name for topic in prefetched.topics_for_serialization()] == sorted(
         names
     )
+    # the plain related manager has to agree with the prefetch: serializers use both
+    assert [topic.name for topic in resource.topics.all()] == sorted(names)

@@ -72,7 +72,7 @@ class LearningResourceTopicQuerySet(TimestampedModelQuerySet):
 
     def for_serialization(self):
         """Return a queryset for serialization"""
-        return self.annotate_channel_url().order_by("name")
+        return self.annotate_channel_url()
 
     def annotate_channel_url(self):
         """Annotate with the channel url"""
@@ -130,6 +130,7 @@ class LearningResourceTopic(TimestampedModel):
     class Meta:
         """Meta options for LearningResourceTopic"""
 
+        ordering = ["name"]
         constraints = [models.UniqueConstraint(Lower("name"), name="unique_lower_name")]
 
 
