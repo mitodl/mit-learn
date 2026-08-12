@@ -31,8 +31,7 @@
   "resolutions": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "video.js": "^8.23.7",
-    "@mitodl/hacksnack": "https://github.com/mitodl/hacksnack.git#aq/board-design"
+    "video.js": "^8.23.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.1",
