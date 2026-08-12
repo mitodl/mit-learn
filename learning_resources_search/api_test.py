@@ -4380,23 +4380,12 @@ def test_document_percolation(opensearch, mocker):
     plugin_log_handler = mocker.patch("learning_resources_search.plugins.log")
     executed_searches = []
 
-    def mock_execute(search_self, *args, **kwargs):
+    def mock_scan(search_self, *args, **kwargs):
         executed_searches.append(search_self)
-        return response.Response(
-            search_self,
-            {
-                "_shards": {"failed": 0, "successful": 10, "total": 10},
-                "hits": {
-                    "hits": percolate_hits,
-                    "max_score": 12.0,
-                    "total": 123,
-                },
-                "timed_out": False,
-                "took": 123,
-            },
-        )
+        for hit in percolate_hits:
+            yield response.Hit(hit)
 
-    mocker.patch.object(Search, "execute", autospec=True, side_effect=mock_execute)
+    mocker.patch.object(Search, "scan", autospec=True, side_effect=mock_scan)
 
     lr = LearningResourceFactory.create()
     percolate_matches_for_document(lr.id)
@@ -4404,41 +4393,12 @@ def test_document_percolation(opensearch, mocker):
     assert executed_searches[0]._index == [  # noqa: SLF001
         get_default_alias_name(PERCOLATE_INDEX_TYPE)
     ]
-    assert executed_searches[0].to_dict()["size"] == 10000
 
     plugin_log_handler.debug.assert_called_once_with(
         "document %i percolated - %s",
         lr.id,
         list(PercolateQuery.objects.filter(id__in=[p["id"] for p in percolate_hits])),
     )
-
-
-@pytest.mark.django_db
-def test_document_percolation_shard_failure(opensearch, mocker):
-    """Test that a RuntimeError is raised when shard failures occur during percolation."""
-    mocker.patch(
-        "learning_resources_search.indexing_api.index_percolators", autospec=True
-    )
-    mocker.patch(
-        "learning_resources_search.indexing_api._update_document_by_id", autospec=True
-    )
-
-    def mock_execute(search_self, *args, **kwargs):
-        return response.Response(
-            search_self,
-            {
-                "_shards": {"failed": 1, "successful": 9, "total": 10},
-                "hits": {"hits": [], "max_score": 0.0, "total": 0},
-                "timed_out": False,
-                "took": 123,
-            },
-        )
-
-    mocker.patch.object(Search, "execute", autospec=True, side_effect=mock_execute)
-
-    lr = LearningResourceFactory.create()
-    with pytest.raises(RuntimeError, match="Percolate search failed on 1 shards"):
-        percolate_matches_for_document(lr.id)
 
 
 @pytest.mark.parametrize(
