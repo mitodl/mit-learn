@@ -3341,9 +3341,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/hacksnack@npm:^0.1.0":
+"@mitodl/hacksnack@https://github.com/mitodl/hacksnack.git#aq/board-design":
   version: 0.1.0
-  resolution: "@mitodl/hacksnack@npm:0.1.0"
+  resolution: "@mitodl/hacksnack@https://github.com/mitodl/hacksnack.git#commit=a582249d2f5d6b969932be0462c27fff8c198d21"
   dependencies:
     pdfjs-dist: "npm:^5.7.284"
   peerDependencies:
@@ -3352,8 +3352,8 @@ __metadata:
     react: ">=18"
     react-dom: ">=18"
   bin:
-    hacksnack-copy-assets: scripts/copy-assets.mjs
-  checksum: 10/2cd1aca16d5b7a803e469e99c774cfb385662e94760cc2a9a34e58e0b5f93d9d11275756f9d7ba1c819acf298f01196edf0d2d3be296ecb133955b144d447767
+    hacksnack-copy-assets: ./scripts/copy-assets.mjs
+  checksum: 10/be6abf127ef8ef6d3af43f073fa0b6990793260450b13574d9c8470918605a2599bf8a28c6a46bfd070bab93f9dc33be393e87eb96d64200e0e098d414ed1cf8
   languageName: node
   linkType: hard
 

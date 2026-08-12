@@ -18,7 +18,11 @@ jest.mock("./HacksnackFlagGate", () => ({
 
 describe("hacksnack page.tsx", () => {
   beforeEach(() => {
-    jest.resetAllMocks()
+    // clearAllMocks, not resetAllMocks: the latter strips implementations from
+    // every mock including the global window.IntersectionObserver stub in
+    // jest-shared-setup, which next/link needs to prefetch. Only call history
+    // needs clearing between these tests.
+    jest.clearAllMocks()
     mockHacksnackClient.mockReturnValue(
       <div data-testid="hacksnack-client">Hacksnack Client</div>,
     )
