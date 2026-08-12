@@ -481,10 +481,8 @@ class PodcastEpisodeViewSet(BaseLearningResourceViewSet):
 
 def _enqueue_featured_cache_clear(path_resource_ids):
     """
-    If any of the given learning paths is a unit channel's featured list,
-    enqueue a post-commit task to clear the featured-list caches.
-
-    Never raises into the caller's request (best-effort, per hq#11979).
+    Enqueue a post-commit featured-cache clear if any of the given paths is
+    a unit channel's featured list; best-effort, never raises.
     """
     channel_names = list(
         Channel.objects.filter(

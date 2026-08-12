@@ -82,11 +82,8 @@ def update_next_start_date_and_prices():
 @app.task(autoretry_for=(RequestException,), retry_backoff=True, max_retries=3)
 def clear_featured_caches(channel_names):
     """
-    Clear cached featured-list data for the given unit channels: the Redis
-    view cache first, then Fastly pages so re-renders fetch fresh API data.
-    Channel pages are hard-purged (the editor's refresh must be decisively
-    fresh); the homepage is soft-purged to keep its stale-while-revalidate
-    grace for visitors.
+    Clear the Redis featured-list cache, hard-purge channel pages from
+    Fastly, and soft-purge the homepage.
     """
     clear_views_cache(key_prefix="featured_resources")
     for name in channel_names:

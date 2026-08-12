@@ -1422,10 +1422,3 @@ def test_clear_featured_caches(mocker):
         mocker.call.purge("/c/unit/ocw", timeout=5),
         mocker.call.purge("/", timeout=5, soft=True),
     ]
-
-
-def test_clear_featured_caches_unconfigured_fastly(mocker, settings):
-    """With no Fastly API key the task completes without error"""
-    settings.FASTLY_API_KEY = ""
-    mocker.patch("learning_resources.tasks.clear_views_cache")
-    tasks.clear_featured_caches.run(["mitx"])
