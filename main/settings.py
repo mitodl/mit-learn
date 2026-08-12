@@ -365,7 +365,7 @@ MITOL_APIGATEWAY_USERINFO_CREATE = get_bool(
 # info will fall out of sync with the IdP pretty quickly.
 MITOL_APIGATEWAY_USERINFO_UPDATE = get_bool(
     name="MITOL_APIGATEWAY_USERINFO_UPDATE",
-    default=True,
+    default=False,
 )
 
 # Social Auth configurations - [END]
