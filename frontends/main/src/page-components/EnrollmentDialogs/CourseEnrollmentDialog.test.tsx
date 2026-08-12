@@ -62,6 +62,13 @@ describe("CourseEnrollmentDialog", () => {
 
   setupLocationMock()
 
+  beforeEach(() => {
+    // Enrolling and adding to cart both consult the MITx Online profile through
+    // the compliance gate. The factory default has nothing missing, so it passes
+    // straight through; see JustInTimeDialog tests for the blocked case.
+    setMockResponse.get(mitxUrls.userMe.get(), mitxFactories.user.user())
+  })
+
   describe("Course run dropdown", () => {
     test("Shows one entry for each enrollable course run", async () => {
       const run1 = enrollableRun()

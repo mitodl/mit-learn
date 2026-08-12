@@ -345,6 +345,10 @@ describe("useCourseEnrollment — actions", () => {
     process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
     setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
     setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), [])
+    // Enrolling now consults the MITx Online profile through the compliance
+    // gate. The factory default has nothing missing, so it passes straight
+    // through; see JustInTimeDialog tests for the blocked case.
+    setMockResponse.get(mitxUrls.userMe.get(), mitxFactories.user.user())
   })
 
   afterEach(() => {

@@ -62,6 +62,10 @@ const user: PartialFactory<User> = (overrides = {}): User => {
       updated_on: faker.date.recent().toISOString(),
       grants: [],
       is_active: true,
+      // Read-only signal from mitxonline's export-compliance check. Empty means
+      // the profile is complete; override with field names (e.g.
+      // ["city", "postal_code"]) to exercise the just-in-time dialog.
+      compliance_missing_fields: [],
       b2b_organizations: [organization({})],
     },
     overrides,

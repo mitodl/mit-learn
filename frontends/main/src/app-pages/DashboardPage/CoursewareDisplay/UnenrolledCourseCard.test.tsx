@@ -363,8 +363,11 @@ describe.each([
   )
 
   test.each(
+    // The two independent reasons the gate blocks: MITx Online reports missing
+    // export-compliance fields, or we have no year of birth for the minimum-age
+    // requirement.
     cartesianProduct(ENROLLMENT_TRIGGERS, [
-      { userData: mitxUser({ legal_address: { country: "" } }) },
+      { userData: mitxUser({ compliance_missing_fields: ["country"] }) },
       { userData: mitxUser({ user_profile: { year_of_birth: null } }) },
     ]),
   )(

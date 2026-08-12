@@ -27,6 +27,7 @@ import { getCourseDateText } from "./courseDateUtils"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { RiArrowUpCircleLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
+import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import { useCreateVerifiedProgramEnrollment } from "api/mitxonline-hooks/enrollment"
 import { isInPast, calendarDaysUntil, NoSSR } from "ol-utilities"
 import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
@@ -97,6 +98,7 @@ const UpgradeBanner: React.FC<
 }) => {
   const replaceBasketItem = useReplaceBasketItem()
   const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment()
+  const { ensureCompliance } = useComplianceGate()
 
   const programRequestBody = programReadableIds?.length
     ? programReadableIds
@@ -113,6 +115,11 @@ const UpgradeBanner: React.FC<
 
   const handleUpgradeClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
+
+    // Gated before the try/catch: a dismissed compliance dialog is not an
+    // upgrade failure and must not surface onUpgradeFailure's error message.
+    // The checkout fallback below is gated inside useReplaceBasketItem.
+    if (!(await ensureCompliance())) return
 
     if (canOneClickUpgrade) {
       try {
