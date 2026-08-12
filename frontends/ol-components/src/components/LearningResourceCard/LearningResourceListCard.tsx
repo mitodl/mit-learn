@@ -92,7 +92,10 @@ export const Count = ({ resource }: { resource: LearningResource }) => {
   if (resource.resource_type !== ResourceTypeEnum.LearningPath) {
     return null
   }
-  const count = resource.learning_path.item_count
+  const count = resource.learning_path?.item_count
+  if (count === undefined) {
+    return null
+  }
   return (
     <div>
       <span>{count}</span> {pluralize("item", count)}
