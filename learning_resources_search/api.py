@@ -35,6 +35,7 @@ from learning_resources_search.constants import (
     LEARNING_RESOURCE_QUERY_FIELDS,
     LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS,
     LEARNING_RESOURCE_TYPES,
+    PERCOLATE_INDEX_TYPE,
     PROGRAM_TYPE,
     RUN_INSTRUCTORS_QUERY_FIELDS,
     RUN_LEVEL_QUERY_FIELDS,
@@ -668,12 +669,16 @@ def percolate_matches_for_document(document_id):
     """
     resource = LearningResource.objects.get(id=document_id)
     index = get_default_alias_name(resource.resource_type)
-    search = Search()
+    search = Search(index=get_default_alias_name(PERCOLATE_INDEX_TYPE))[0:10000]
     percolate_ids = []
     try:
         results = search.query(
             Percolate(field="query", index=index, id=str(document_id))
         ).execute()
+        failed_shards = results.to_dict().get("_shards", {}).get("failed", 0)
+        if failed_shards > 0:
+            msg = f"Percolate search failed on {failed_shards} shards"
+            raise RuntimeError(msg)
         percolate_ids = [result.id for result in results.hits]
     except NotFoundError:
         log.info("document %s not found in index", document_id)
