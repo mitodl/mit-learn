@@ -155,8 +155,50 @@ def test_submit_rate_limited(user_client, mocker):
     # The limit is keyed per authenticated user: a different user still gets
     # through even after the first user is throttled. (The user_client fixture
     # shares one APIClient, so build a distinct client for the second user.)
-    # NB: anonymous requests instead key on client IP, which is spoofable via
-    # X-Forwarded-For -- tracked as a follow-up (mitodl/hq#12775).
     other_client = APIClient()
     other_client.force_login(UserFactory.create())
     assert other_client.post(url, _payload()).status_code == 201
+
+
+def test_anonymous_throttle_ignores_spoofed_xff(mocker):
+    """The anon throttle keys on the trusted client IP, not the spoofable header.
+
+    Our infrastructure (APISIX + nginx = NUM_PROXIES hops) appends the real
+    client IP to X-Forwarded-For; a client can prepend anything to the left. So
+    the throttle must key on the trusted entry (2nd from the right), which means
+    both: rotating the spoofable left side cannot bypass the limit, and a
+    genuinely different client still gets its own bucket (mitodl/hq#12775).
+    """
+    from django.core.cache.backends.locmem import LocMemCache
+
+    from main.throttles import RedisScopedRateThrottle
+
+    mocker.patch.object(
+        RedisScopedRateThrottle, "cache", LocMemCache("throttle-test", {})
+    )
+    mocker.patch.object(
+        RedisScopedRateThrottle, "THROTTLE_RATES", {"content_feedback": "2/min"}
+    )
+
+    url = reverse("content_feedback:v0:content_feedback")
+    client = APIClient(enforce_csrf_checks=True)
+
+    # XFF shape mirrors prod: "<client-controlled>, <real client>, <trusted
+    # proxy>". NUM_PROXIES=2 keys on the real client (2nd from the right).
+    def post(spoofed_ip, real_client="203.0.113.5"):
+        return client.post(
+            url,
+            _payload(),
+            HTTP_X_FORWARDED_FOR=f"{spoofed_ip}, {real_client}, 10.0.0.1",
+        )
+
+    # Rotating only the spoofable left entry does not mint new buckets: the one
+    # trusted client keys all three, so the third request is throttled.
+    assert post("9.9.9.1").status_code == 201
+    assert post("9.9.9.2").status_code == 201
+    assert post("9.9.9.3").status_code == 429
+
+    # A genuinely different client (different 2nd-from-right entry) gets a fresh
+    # bucket. This distinguishes correct keying from a constant peer/proxy
+    # address, which would instead collapse every client into the bucket above.
+    assert post("9.9.9.9", real_client="203.0.113.9").status_code == 201
