@@ -14,10 +14,11 @@ from learning_resources.factories import (
     LearningPathFactory,
     LearningResourceFactory,
     LearningResourceRunFactory,
+    LearningResourceTopicFactory,
     LearningResourceViewEventFactory,
     ProgramFactory,
 )
-from learning_resources.models import LearningResource
+from learning_resources.models import LearningResource, LearningResourceTopic
 
 pytestmark = [pytest.mark.django_db]
 
@@ -158,4 +159,24 @@ def test_learning_resources_in_featured_lists_count():
         .get(id=resource.id)
         .in_featured_lists
         == 1
+    )
+
+
+def test_topics_for_serialization_ordered_by_name():
+    """Topics should serialize in alphabetical order regardless of creation order"""
+    names = ["Physics", "Biology", "Chemistry"]
+    for name in names:
+        LearningResourceTopicFactory.create(name=name)
+    resource = LearningResourceFactory.create()
+    resource.topics.set(LearningResourceTopic.objects.filter(name__in=names))
+
+    assert [
+        topic.name
+        for topic in LearningResourceTopic.objects.filter(
+            name__in=names
+        ).for_serialization()
+    ] == sorted(names)
+    prefetched = LearningResource.objects.for_serialization().get(id=resource.id)
+    assert [topic.name for topic in prefetched.topics_for_serialization()] == sorted(
+        names
     )
