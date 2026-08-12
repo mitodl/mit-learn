@@ -88,8 +88,12 @@ export const getMetadataAsync = async ({
     )
     title = data?.title
     description = data?.description ?? ""
-    image = data?.image?.url || image
-    imageAlt = image === data?.image?.url ? imageAlt : data?.image?.alt || ""
+    // Image and alt move together: taking the resource's image means taking its
+    // alt, and falling back to the caller's image means keeping the caller's.
+    if (data?.image?.url) {
+      image = data.image.url
+      imageAlt = data.image.alt || ""
+    }
     alts.canonical = canonicalResourceDrawerUrl(learningResourceId, data?.title)
   }
 

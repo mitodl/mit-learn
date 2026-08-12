@@ -24,6 +24,7 @@ const LearningResourceListCardCondensed: React.FC<
   resource,
   className,
   href,
+  pushUrl,
   onAddToLearningPathClick,
   onAddToUserListClick,
   editMenu,
@@ -93,6 +94,7 @@ const LearningResourceListCardCondensed: React.FC<
       list
       condensed
       href={href}
+      pushUrl={pushUrl}
       onClick={onClick}
       headingLevel={headingLevel}
       title={resource.title}

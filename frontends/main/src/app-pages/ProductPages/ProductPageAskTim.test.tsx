@@ -10,6 +10,7 @@ import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { PostHogEvents } from "@/common/constants"
 import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
+import { slugify } from "@/common/slugs"
 import { ResourceTypeEnum, type LearningResource } from "api"
 
 jest.mock("posthog-js/react", () => ({
@@ -55,6 +56,43 @@ describe("ProductPageAskTimButton", () => {
     expect(
       screen.getByRole("link", { name: /ask tim about this course/i }),
     ).toBeInTheDocument()
+  })
+
+  const askTimParams = () => {
+    const link = screen.getByRole("link", {
+      name: /ask tim about this course/i,
+    })
+    return new URLSearchParams(link.getAttribute("href")?.slice(1) ?? "")
+  }
+
+  /**
+   * The resource_category override is load-bearing: the factory default is a
+   * random word, and the link's accessible name — how askTimParams finds it —
+   * is built from it.
+   *
+   * The stale resource_title in the host URL matters too: the query string is
+   * inherited wholesale, so a slug left by a previously-open drawer would
+   * otherwise be paired with this resource's id.
+   */
+  test("Ask TIM's link keeps the host page's params and carries this resource's slug", () => {
+    delete window.__ENV
+    const resource = factories.learningResources.course({
+      resource_category: "Course",
+    })
+
+    renderWithProviders(<ProductPageAskTimButton resource={resource} />, {
+      url: "/courses/foo?sortby=new&resource_title=some-other-thing",
+    })
+
+    const params = askTimParams()
+
+    expect(params.get("sortby")).toBe("new")
+    expect(params.get(RESOURCE_DRAWER_PARAMS.resource)).toBe(
+      String(resource.id),
+    )
+    expect(params.get(RESOURCE_DRAWER_PARAMS.resource_title)).toBe(
+      slugify(resource.title),
+    )
   })
 })
 
