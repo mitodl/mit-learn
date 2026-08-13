@@ -353,14 +353,6 @@ class LearningResourceViewSet(
         name="Get learning resources summary",
         pagination_class=SummaryPagination,
     )
-    @method_decorator(
-        # no timeout: REDIS_VIEW_CACHE_DURATION is then read per request, so
-        # setting it to 0 disables this cache
-        cache_page_for_anonymous_users(
-            cache="redis",
-            key_prefix="learning_resources_summary",
-        )
-    )
     def summary(self, request, **kwargs):  # noqa: ARG002
         """
         Get learning resources summary data.

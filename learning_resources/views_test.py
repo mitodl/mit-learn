@@ -1726,42 +1726,6 @@ def test_summary_count_omits_the_parent_ids_annotation(
     assert "canonical_parent_ids" not in count_sql
 
 
-@pytest.fixture
-def enabled_view_cache(settings, request):
-    """Enable view caching for tests that assert cached responses."""
-    settings.REDIS_VIEW_CACHE_DURATION = 60
-    settings.CACHES = {
-        **settings.CACHES,
-        "redis": {
-            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-            "LOCATION": request.node.nodeid,
-        },
-    }
-
-
-@pytest.mark.usefixtures("enabled_view_cache")
-def test_summary_caches_each_page_separately(client):
-    """The action is cached, per (limit, offset) rather than per path."""
-    LearningResourceFactory.create_batch(4)
-    ids = list(
-        LearningResource.objects.filter(published=True)
-        .order_by("id")
-        .values_list("id", flat=True)
-    )
-    url = reverse("lr:v1:learning_resources_api-summary")
-
-    def page(offset):
-        resp = client.get(url, {"limit": 2, "offset": offset})
-        return [item["id"] for item in resp.json()["results"]]
-
-    assert page(0) == ids[:2]
-    assert page(2) == ids[2:4]
-
-    LearningResource.objects.filter(id=ids[2]).update(published=False)
-
-    assert page(2) == ids[2:4]
-
-
 @pytest.mark.parametrize(
     "user_role",
     [
