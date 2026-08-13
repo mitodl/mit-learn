@@ -371,6 +371,8 @@ const learningResourceSummary: LearningResourceFactory<
     last_modified: faker.date.recent().toISOString(),
     url: faker.internet.url(),
     title: faker.lorem.words(3),
+    resource_type: learningResourceType(),
+    canonical_parent_ids: [],
     ...overrides,
   }
 }

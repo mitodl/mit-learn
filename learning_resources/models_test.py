@@ -14,6 +14,7 @@ from learning_resources.factories import (
     LearningPathFactory,
     LearningResourceFactory,
     LearningResourceRunFactory,
+    LearningResourceTopicFactory,
     LearningResourceViewEventFactory,
     ProgramFactory,
 )
@@ -159,3 +160,17 @@ def test_learning_resources_in_featured_lists_count():
         .in_featured_lists
         == 1
     )
+
+
+def test_topics_for_serialization_ordered_by_name():
+    """Topics should serialize in alphabetical order regardless of creation order"""
+    names = ["Physics", "Biology", "Chemistry"]
+    resource = LearningResourceFactory.create()
+    resource.topics.set([LearningResourceTopicFactory.create(name=n) for n in names])
+
+    prefetched = LearningResource.objects.for_serialization().get(id=resource.id)
+    assert [topic.name for topic in prefetched.topics_for_serialization()] == sorted(
+        names
+    )
+    # the plain related manager has to agree with the prefetch: serializers use both
+    assert [topic.name for topic in resource.topics.all()] == sorted(names)

@@ -17,6 +17,7 @@ import {
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { BaseLearningResourceCard } from "../BaseLearningResourceCard/BaseLearningResourceCard"
 import type { ActionButtonInfo } from "../BaseLearningResourceCard/BaseLearningResourceCard"
+import type { PushUrl } from "../LinkAdapter/LinkAdapter"
 
 export const CardLabel = styled.span`
   color: ${theme.custom.colors.silverGrayDark};
@@ -91,7 +92,10 @@ export const Count = ({ resource }: { resource: LearningResource }) => {
   if (resource.resource_type !== ResourceTypeEnum.LearningPath) {
     return null
   }
-  const count = resource.learning_path.item_count
+  const count = resource.learning_path?.item_count
+  if (count === undefined) {
+    return null
+  }
   return (
     <div>
       <span>{count}</span> {pluralize("item", count)}
@@ -131,6 +135,11 @@ interface LearningResourceListCardProps {
   resource?: LearningResource | null
   className?: string
   href?: string
+  /**
+   * If set, a plain click pushes this URL with window.history.pushState
+   * rather than navigating to href. See LinkAdapter for the full rules.
+   */
+  pushUrl?: PushUrl
   onAddToLearningPathClick?: ResourceIdCallback | null
   onAddToUserListClick?: ResourceIdCallback | null
   editMenu?: React.ReactNode | null
@@ -146,6 +155,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   resource,
   className,
   href,
+  pushUrl,
   onAddToLearningPathClick,
   onAddToUserListClick,
   editMenu,
@@ -212,6 +222,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       className={className}
       list
       href={href}
+      pushUrl={pushUrl}
       onClick={onClick}
       headingLevel={headingLevel}
       imageSrc={imageSrc}

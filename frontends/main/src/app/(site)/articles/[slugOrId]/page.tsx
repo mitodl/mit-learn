@@ -5,7 +5,7 @@ import { WebsiteContentDetail } from "@/app-pages/WebsiteContent/WebsiteContentD
 import { getQueryClient } from "@/app/getQueryClient"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { extractLearningResourceIds } from "@/page-components/TiptapEditor/extensions/utils"
-import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
+import { safeGenerateMetadata, getMetadataAsync } from "@/common/metadata"
 import {
   extractImageMetadata,
   extractWebsiteContentDescription,
@@ -31,11 +31,12 @@ export const generateMetadata = async (
     const description = extractWebsiteContentDescription(content)
     const leadImage = extractImageMetadata(content)
 
-    return standardizeMetadata({
+    return getMetadataAsync({
       title: content.title,
       description,
       image: leadImage?.src,
       imageAlt: leadImage?.alt,
+      searchParams: props.searchParams,
     })
   })
 }

@@ -36,7 +36,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.77.2"
+VERSION = "0.77.3"
 
 log = logging.getLogger()
 
@@ -649,6 +649,12 @@ REST_FRAMEWORK = {
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.NamespaceVersioning",
     "ALLOWED_VERSIONS": ["v0", "v1"],
     "ORDERING_PARAM": "sortby",
+    # Trusted reverse-proxy hops in front of the app (APISIX + nginx). Anonymous
+    # throttles identify the client via the Nth-from-last X-Forwarded-For entry;
+    # without this DRF keys on the whole header, which a client can spoof to
+    # bypass the limit (mitodl/hq#12775). nginx appends, so only the rightmost
+    # NUM_PROXIES entries are added by our infrastructure and can be trusted.
+    "NUM_PROXIES": get_int("NUM_PROXIES", 2),
     "DEFAULT_THROTTLE_RATES": {
         # Rate format is "<count>/<period>" (e.g. "10/min", "30/hour"); a blank
         # env value -> "" or None -> None -> throttle is a no-op (kill switch).

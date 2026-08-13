@@ -949,7 +949,7 @@ def test_process_olx_path_malformed_sjson(mocker, settings):
 
 def test_process_olx_path_encrypted_pdf(mocker, settings, tmp_path):
     """
-    Test that process_olx_path logs an error and skips encrypted PDFs
+    Test that process_olx_path records encrypted PDFs as failures and skips them
     """
     settings.OCR_MODEL = "test_model"
     settings.SKIP_TIKA = False
@@ -998,17 +998,22 @@ def test_process_olx_path_encrypted_pdf(mocker, settings, tmp_path):
         side_effect=pypdf.errors.FileNotDecryptedError,
     )
 
+    failed = []
     results = list(
         utils.process_olx_path(
             str(olx_path),
             run,
             overwrite=True,
             use_ocr=True,
+            failed_source_paths=failed,
         )
     )
 
     assert len(results) == 0
-    mock_log.warning.assert_called_with("Skipping invalid pdf %s", full_path)
+    assert failed == [source_rel_path]
+    mock_log.exception.assert_called_with(
+        "Extraction failed for %s in run %s, skipping file", source_rel_path, run.id
+    )
     tika_from_buffer_mock.assert_not_called()
 
 
@@ -1150,3 +1155,85 @@ def test_extract_content_ocr_fallback_to_tika(mocker, settings, tmp_path):
     )
 
     assert result == {"content": "tika content", "content_title": "Tika Title"}
+
+
+def test_extract_content_ocr_failure_falls_back_to_tika(
+    mocker, settings, tmp_path, caplog
+):
+    """An OCR crash (e.g. missing converter output JSON) should fall through to tika"""
+    settings.SKIP_TIKA = False
+    mocker.patch("learning_resources.etl.utils._should_use_ocr", return_value=True)
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content_with_ocr",
+        side_effect=FileNotFoundError("no converter output json"),
+    )
+    mocker.patch(
+        "learning_resources.etl.utils.extract_text_metadata",
+        return_value={"content": "tika text", "metadata": {"title": "doc title"}},
+    )
+    result = utils._extract_content(  # noqa: SLF001
+        b"pdf bytes",
+        {
+            "source_path": "web_resources/7.06_Fall2025_Exam1_answers.pdf",
+            "file_extension": ".pdf",
+            "mime_type": "application/pdf",
+        },
+        str(tmp_path),
+        "test-key",
+        use_ocr=True,
+    )
+    assert result["content"] == "tika text"
+    ocr_records = [r for r in caplog.records if "OCR extraction failed" in r.message]
+    assert ocr_records
+    assert all(r.levelname == "WARNING" for r in ocr_records)
+
+
+@pytest.mark.django_db
+def test_process_olx_path_skips_failed_files(mocker, tmp_path):
+    """A file whose extraction raises is skipped and recorded; other files still yield"""
+    run = LearningResourceRunFactory.create()
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "good.html").write_text("<p>good</p>")
+    (static_dir / "bad.html").write_text("<p>bad</p>")
+
+    def fake_extract(document, metadata, olx_path, key, **kwargs):
+        if "bad.html" in metadata["source_path"]:
+            msg = "converter output missing"
+            raise FileNotFoundError(msg)
+        return {"content": "text", "content_title": ""}
+
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content", side_effect=fake_extract
+    )
+    failed = []
+    results = list(
+        utils.process_olx_path(
+            str(tmp_path), run, overwrite=True, failed_source_paths=failed
+        )
+    )
+    assert len(results) == 1
+    assert "good.html" in results[0]["source_path"]
+    assert len(failed) == 1
+    assert "bad.html" in failed[0]
+
+
+def test_extract_content_invalid_pdf_raises(mocker, settings, tmp_path):
+    """A PDF failing pdf_is_valid raises, so process_olx_path records a failure
+    instead of the old silent drop
+    """
+    settings.SKIP_TIKA = False  # _extract_content short-circuits before pdf_is_valid
+    (tmp_path / "bad.pdf").write_bytes(b"%PDF- not really")
+    mocker.patch("learning_resources.etl.utils.pdf_is_valid", return_value=False)
+
+    with pytest.raises(utils.InvalidPDFError):
+        utils._extract_content(  # noqa: SLF001
+            b"%PDF- not really",
+            {
+                "source_path": "bad.pdf",
+                "file_extension": ".pdf",
+                "mime_type": "application/pdf",
+            },
+            str(tmp_path),
+            "test-key",
+        )

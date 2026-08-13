@@ -60,26 +60,48 @@ def sync_canvas_archive(bucket, key: str, overwrite):
             overwrite=overwrite,
         )
         if run:
+            failed_content_keys = []
             canvas_content_files = list(
                 transform_canvas_content_files(
-                    course_archive_path, run, url_config=url_config, overwrite=overwrite
+                    course_archive_path,
+                    run,
+                    url_config=url_config,
+                    overwrite=overwrite,
+                    failed_keys=failed_content_keys,
                 )
             )
             content_files_ids = load_content_files(
                 run,
                 canvas_content_files,
+                failed_keys=failed_content_keys,
             )
 
+            failed_problem_paths = []
             canvas_problem_files = list(
                 transform_canvas_problem_files(
-                    course_archive_path, run, overwrite=overwrite
+                    course_archive_path,
+                    run,
+                    overwrite=overwrite,
+                    failed_source_paths=failed_problem_paths,
                 )
             )
-            problem_files_ids = load_problem_files(run, canvas_problem_files)
+            problem_files_ids = load_problem_files(
+                run,
+                canvas_problem_files,
+                failed_source_paths=failed_problem_paths,
+            )
             content_loaded = content_files_ids or not canvas_content_files
             # load_problem_file swallows per-file errors and returns None
             problems_loaded = any(problem_files_ids) or not canvas_problem_files
-            if content_loaded and problems_loaded:
+            # extraction failures are judged course-wide: a partial failure
+            # (anything loaded) still stamps, but if every file failed the
+            # course must not masquerade as legitimately empty
+            anything_loaded = bool(content_files_ids) or any(problem_files_ids)
+            all_extractions_failed = (
+                bool(failed_content_keys or failed_problem_paths)
+                and not anything_loaded
+            )
+            if content_loaded and problems_loaded and not all_extractions_failed:
                 # a failed or empty load must be retried on the next sync, so
                 # only mark processed once everything loaded (or was unpublished)
                 run.checksum = checksum
@@ -142,14 +164,24 @@ def run_for_canvas_archive(course_archive_path, course_folder, checksum, overwri
 
 
 def transform_canvas_content_files(
-    course_zipfile: Path, run: LearningResourceRun, url_config: dict, *, overwrite
+    course_zipfile: Path,
+    run: LearningResourceRun,
+    url_config: dict,
+    *,
+    overwrite,
+    failed_keys: list | None = None,
 ) -> Generator[dict, None, None]:
     """
     Transform published content files from a Canvas course zipfile
+
+    Files whose extraction fails are skipped and their existing records
+    are retained (not deleted/unpublished).
     """
     basedir = course_zipfile.name.split(".")[0]
     zipfile_path = course_zipfile.absolute()
     published_items = get_published_items(zipfile_path, url_config)
+
+    failed_source_paths = []
 
     def _generate_content():
         """Inner generator for yielding content data"""
@@ -166,7 +198,11 @@ def transform_canvas_content_files(
                     log.debug("skipping unpublished file %s", member.filename)
 
             for content_data in process_olx_path(
-                olx_path, run, overwrite=overwrite, use_ocr=True
+                olx_path,
+                run,
+                overwrite=overwrite,
+                use_ocr=True,
+                failed_source_paths=failed_source_paths,
             ):
                 url_path = content_data["source_path"].lstrip(
                     content_data["source_path"].split("/")[0]
@@ -189,6 +225,13 @@ def transform_canvas_content_files(
         full_path = Path(basedir) / Path(content_data["source_path"])
         published_keys.append(get_edx_module_id(str(full_path), run))
         yield content_data
+    # files whose extraction failed are retained, not treated as unpublished
+    for source_path in failed_source_paths:
+        full_path = Path(basedir) / Path(source_path)
+        failed_key = get_edx_module_id(str(full_path), run)
+        published_keys.append(failed_key)
+        if failed_keys is not None:
+            failed_keys.append(failed_key)
     unpublished_content = run.content_files.exclude(key__in=published_keys)
     # remove unpublished contentfiles
     bulk_resources_unpublished_actions(
@@ -198,10 +241,17 @@ def transform_canvas_content_files(
 
 
 def transform_canvas_problem_files(
-    course_zipfile: Path, run: LearningResourceRun, *, overwrite
+    course_zipfile: Path,
+    run: LearningResourceRun,
+    *,
+    overwrite,
+    failed_source_paths: list | None = None,
 ) -> Generator[dict, None, None]:
     """
     Transform problem files from a Canvas course zipfile
+
+    Files whose extraction fails are skipped and their existing records
+    are retained (not deleted/unpublished).
     """
     basedir = course_zipfile.name.split(".")[0]
     with (
@@ -219,6 +269,7 @@ def transform_canvas_problem_files(
             valid_file_types=VALID_TUTOR_PROBLEM_FILE_TYPES,
             is_tutor_problem_file_import=True,
             use_ocr=True,
+            failed_source_paths=failed_source_paths,
         ):
             keys_to_keep = [
                 "run",

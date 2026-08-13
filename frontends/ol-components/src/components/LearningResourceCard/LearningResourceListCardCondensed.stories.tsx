@@ -31,6 +31,7 @@ const meta: Meta<StoryProps> = {
         <LearningResourceListCardCondensed
           {...args}
           href={`?resource=${args.resource?.id}`}
+          pushUrl={`?resource=${args.resource?.id}`}
         />
         {excerpt && <pre>{JSON.stringify(excerptObj, null, 2)}</pre>}
       </Stack>
