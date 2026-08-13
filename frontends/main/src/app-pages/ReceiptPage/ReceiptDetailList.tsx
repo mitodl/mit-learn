@@ -70,8 +70,11 @@ const ReceiptDetailList: React.FC<{
   className?: string
 }> = ({ rows, className }) => (
   <Rows className={className}>
-    {populatedRows(rows).map(({ label, value }) => (
-      <Row key={label}>
+    {populatedRows(rows).map(({ label, value }, index) => (
+      // Labels repeat when an order has more than one line, so position is the
+      // only unique key available.
+      // eslint-disable-next-line react/no-array-index-key
+      <Row key={`${label}-${index}`}>
         <Label>{label}</Label>
         <Value>{value}</Value>
       </Row>

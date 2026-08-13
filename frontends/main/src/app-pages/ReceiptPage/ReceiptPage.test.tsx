@@ -234,6 +234,62 @@ describe("ReceiptPage", () => {
     ).toHaveTextContent("Paypal")
   })
 
+  // Parity with the MITx Online receipt, which shows the payer's email for PayPal
+  // orders in place of card details.
+  test("shows the payer email for Paypal orders", async () => {
+    setupApis({
+      order: mitxonline.factories.orders.order({
+        id: ORDER_ID,
+        transactions: {
+          payment_method: "paypal",
+          bill_to_email: "payer@example.com",
+          name: "Peter Pinch",
+        },
+      }),
+    })
+
+    renderWithProviders(<ReceiptPage orderId={ORDER_ID} />)
+
+    expect(
+      await findValueFor("Payment Information", "Email:"),
+    ).toHaveTextContent("payer@example.com")
+  })
+
+  // Parity: MITx Online shows a per-line total. It is redundant on a single-line
+  // order, where it equals the order total shown below.
+  test("omits the per-line total on a single-line order", async () => {
+    setupApis({
+      order: mitxonline.factories.orders.order({
+        id: ORDER_ID,
+        lines: [mitxonline.factories.orders.transactionLine()],
+      }),
+    })
+
+    renderWithProviders(<ReceiptPage orderId={ORDER_ID} />)
+
+    await screen.findByRole("heading", { name: "Order Information" })
+    expect(screen.queryByText("Line Total:")).not.toBeInTheDocument()
+  })
+
+  test("shows a per-line total when the order has multiple lines", async () => {
+    setupApis({
+      order: mitxonline.factories.orders.order({
+        id: ORDER_ID,
+        lines: [
+          mitxonline.factories.orders.transactionLine({ total_paid: "100.00" }),
+          mitxonline.factories.orders.transactionLine({ total_paid: "250.00" }),
+        ],
+      }),
+    })
+
+    renderWithProviders(<ReceiptPage orderId={ORDER_ID} />)
+
+    await screen.findByRole("heading", { name: "Order Information" })
+    expect(screen.getAllByText("Line Total:")).toHaveLength(2)
+    expect(screen.getByText("$100.00")).toBeInTheDocument()
+    expect(screen.getByText("$250.00")).toBeInTheDocument()
+  })
+
   test("shows the discount code when one was redeemed", async () => {
     const discountCode = "30468acf5a4e4c3c9c31a262caf984c9" // pragma: allowlist secret
     setupApis({

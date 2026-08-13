@@ -164,6 +164,12 @@ const getOrderDetailRows = (order: Order): ReceiptDetail[] => [
       value:
         Number(line.discount) > 0 ? `-${formatMoney(line.discount)}` : null,
     },
+    {
+      // Per-line total, as the MITx Online receipt shows. Omitted for a
+      // single-line order, where it just restates the order total below.
+      label: "Line Total:",
+      value: order.lines.length > 1 ? formatMoney(line.total_paid) : null,
+    },
   ]),
   { label: "Order Number:", value: order.reference_number },
   { label: "Order Date:", value: formatReceiptDate(order.created_on) },
@@ -205,6 +211,8 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
   const paymentRows = order
     ? populatedRows([
         { label: "Name:", value: order.transactions?.name },
+        // PayPal orders carry the payer's email instead of card details.
+        { label: "Email:", value: order.transactions?.bill_to_email },
         { label: "Payment Method:", value: formatPaymentMethod(order) },
       ])
     : []
