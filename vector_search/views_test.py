@@ -49,6 +49,21 @@ def mock_qdrant(mocker):
     return qdrant
 
 
+def _hybrid_prefetch_for_model(search_params, model_name):
+    """Find the innermost hybrid prefetch for a named Qdrant vector."""
+    prefetches = search_params["prefetch"]
+    if isinstance(prefetches, models.Prefetch):
+        prefetches = prefetches.prefetch
+
+    for prefetch in prefetches:
+        for nested_prefetch in prefetch.prefetch or []:
+            if nested_prefetch.using == model_name:
+                return nested_prefetch
+
+    msg = f"No hybrid prefetch found for {model_name}"
+    raise AssertionError(msg)
+
+
 def test_vector_search_filters(mocker, client):
     """Test vector search with query uses query filters"""
 
@@ -558,7 +573,7 @@ def test_vector_search_sortby_pagination(mocker, client):
 
 
 def test_vector_search_with_score_cutoff_enforces_max_limit(mocker, client, settings):
-    """A query with a score cutoff should enforce VECTOR_SEARCH_PAGE_MAX_LIMIT."""
+    """A hybrid query with a score cutoff should enforce VECTOR_SEARCH_PAGE_MAX_LIMIT."""
 
     mock_qdrant = mocker.patch(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
@@ -591,7 +606,16 @@ def test_vector_search_with_score_cutoff_enforces_max_limit(mocker, client, sett
     call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
     assert call_kwargs["limit"] == 5
     assert call_kwargs["offset"] == 0
-    assert call_kwargs["score_threshold"] == 0.6
+    assert "score_threshold" not in call_kwargs
+
+    dense_prefetch = _hybrid_prefetch_for_model(
+        call_kwargs, dense_encoder().model_short_name()
+    )
+    sparse_prefetch = _hybrid_prefetch_for_model(
+        call_kwargs, sparse_encoder().model_short_name()
+    )
+    assert dense_prefetch.score_threshold == 0.6
+    assert sparse_prefetch.score_threshold is None
 
 
 def test_vector_search_sortby_scroll_pagination(mocker, client):
@@ -804,7 +828,7 @@ def test_vector_search_sortby_with_score_cutoff_manually_sorted(mocker, client):
 def test_vector_search_with_score_cutoff_enforces_min_score(
     mocker, client, settings, hybrid_search
 ):
-    """A query with a score cutoff should clamp score_threshold to the configured minimum score and enforce the page max limit."""
+    """A query with a score cutoff should clamp to the configured minimum score and enforce the page max limit."""
 
     mock_qdrant = mocker.patch(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
@@ -837,7 +861,11 @@ def test_vector_search_with_score_cutoff_enforces_min_score(
     assert call_kwargs["limit"] == 5
     assert call_kwargs["offset"] == 0
     if hybrid_search:
-        assert call_kwargs["score_threshold"] == settings.HYBRID_VECTOR_SEARCH_MIN_SCORE
+        assert "score_threshold" not in call_kwargs
+        dense_prefetch = _hybrid_prefetch_for_model(
+            call_kwargs, dense_encoder().model_short_name()
+        )
+        assert dense_prefetch.score_threshold == settings.HYBRID_VECTOR_SEARCH_MIN_SCORE
     else:
         assert call_kwargs["score_threshold"] == settings.DENSE_VECTOR_SEARCH_MIN_SCORE
 
@@ -868,22 +896,34 @@ def test_build_search_params_sort_with_cutoff_score(
             score_cutoff=min_score,
         )
     )
-    assert not (
-        isinstance(search_params["query"], models.OrderByQuery)
-        and "score_cutoff" in search_params
-    ), (
-        "OrderByQuery query should never be used with a score_cutoff, because Qdrant does not support score_threshold with OrderByQuery.  If both are provided, the view should fall back to a FusionQuery and do manual sorting on the client side."
-    )
+    if sortby and min_score is not None:
+        assert not isinstance(search_params["query"], models.OrderByQuery), (
+            "OrderByQuery should not be used with a score cutoff. If both are "
+            "provided, the view should fall back to vector ranking and do manual "
+            "sorting on the client side."
+        )
 
     if query_string and min_score is not None:
         if sortby and hybrid_search:
             assert isinstance(search_params["query"], models.FusionQuery)
 
-        assert search_params["score_threshold"] == (
-            settings.HYBRID_VECTOR_SEARCH_MIN_SCORE
-            if hybrid_search
-            else settings.DENSE_VECTOR_SEARCH_MIN_SCORE
-        )
+        if hybrid_search:
+            assert "score_threshold" not in search_params
+            dense_prefetch = _hybrid_prefetch_for_model(
+                search_params, dense_encoder().model_short_name()
+            )
+            sparse_prefetch = _hybrid_prefetch_for_model(
+                search_params, sparse_encoder().model_short_name()
+            )
+            assert dense_prefetch.score_threshold == (
+                settings.HYBRID_VECTOR_SEARCH_MIN_SCORE
+            )
+            assert sparse_prefetch.score_threshold is None
+        else:
+            assert (
+                search_params["score_threshold"]
+                == settings.DENSE_VECTOR_SEARCH_MIN_SCORE
+            )
 
     if sortby and min_score is None:
         assert isinstance(search_params["query"], models.OrderByQuery)

@@ -166,7 +166,7 @@ class QdrantView(APIView):
             "limit": limit,
         }
         normalized_score = _normalize_score_cutoff(score_cutoff, hybrid_search)
-        if normalized_score is not None:
+        if normalized_score is not None and not hybrid_search:
             search_params["score_threshold"] = normalized_score
 
         if hybrid_search:
@@ -182,6 +182,15 @@ class QdrantView(APIView):
                     ]
                 )
             )
+            dense_prefetch_params = {
+                "filter": search_filter,
+                "query": dense_query,
+                "using": encoder_dense.model_short_name(),
+                "limit": prefetch_limit,
+            }
+            if normalized_score is not None:
+                dense_prefetch_params["score_threshold"] = normalized_score
+
             prefetch_params = [
                 models.Prefetch(
                     query=custom_formula_query,
@@ -198,17 +207,10 @@ class QdrantView(APIView):
                 models.Prefetch(
                     query=custom_formula_query,
                     limit=prefetch_limit,
-                    prefetch=[
-                        models.Prefetch(
-                            filter=search_filter,
-                            query=dense_query,
-                            using=encoder_dense.model_short_name(),
-                            limit=prefetch_limit,
-                        )
-                    ],
+                    prefetch=[models.Prefetch(**dense_prefetch_params)],
                 ),
             ]
-            if order_by and "score_threshold" not in search_params:
+            if order_by and normalized_score is None:
                 # Nest: vector prefetches → fusion prefetch → order_by query
                 search_params["prefetch"] = models.Prefetch(
                     prefetch=prefetch_params,
@@ -225,7 +227,7 @@ class QdrantView(APIView):
             dense_query = await db_sync_to_async(encoder_dense.embed_query)(
                 query_string
             )
-            if order_by and "score_threshold" not in search_params:
+            if order_by and normalized_score is None:
                 # Nest: dense vector prefetch → order_by query
                 search_params["prefetch"] = models.Prefetch(
                     query=dense_query,

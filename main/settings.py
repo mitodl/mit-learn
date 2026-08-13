@@ -827,13 +827,13 @@ DENSE_VECTOR_SEARCH_MIN_SCORE = get_float(
     name="DENSE_VECTOR_SEARCH_MIN_SCORE", default=0.3
 )
 
-# the minimum similarity score for hybrid search (Reciprocal Rank Fusion)
+# the minimum dense cosine similarity score for hybrid search
 HYBRID_VECTOR_SEARCH_MIN_SCORE = get_float(
-    name="HYBRID_VECTOR_SEARCH_MIN_SCORE", default=0.1
+    name="HYBRID_VECTOR_SEARCH_MIN_SCORE", default=0.5
 )
 
 # hard limit for special cases where we need to return all results without pagination
-VECTOR_SEARCH_PAGE_MAX_LIMIT = get_int("VECTOR_SEARCH_PAGE_MAX_LIMIT", 200)
+VECTOR_SEARCH_PAGE_MAX_LIMIT = get_int("VECTOR_SEARCH_PAGE_MAX_LIMIT", 20)
 
 # toggle to use requests (default for local) or webdriver which renders js elements
 EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(
