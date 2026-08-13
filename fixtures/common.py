@@ -55,6 +55,7 @@ def warnings_as_errors():
         warnings.filterwarnings(
             "ignore",
             message=r"LogEntryManager\.log_action\(\) is deprecated.*",
+            module=r"safedelete\.admin",
             category=DeprecationWarning,
         )
         yield
