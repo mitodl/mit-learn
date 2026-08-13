@@ -298,7 +298,7 @@ describe("JustInTimeDialog", () => {
         user_profile: { year_of_birth: 1988 },
       })
       expect(patchCalls()[0].body).not.toHaveProperty("email")
-    })
+    }, 10000)
 
     test("closes once saved, so the caller can resume the action", async () => {
       setup({

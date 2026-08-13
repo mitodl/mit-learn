@@ -24,22 +24,35 @@ import { needsComplianceInfo } from "@/page-components/EnrollmentDialogs/complia
  */
 const useComplianceGate = () => {
   const queryClient = useQueryClient()
+  // Collapses concurrent callers (e.g. a double-clicked enroll button) onto a
+  // single check, so a second click can't slip through and start its own
+  // mutation while the first is still awaiting the profile fetch or dialog.
+  const inFlight = React.useRef<Promise<boolean> | null>(null)
 
-  const ensureCompliance = React.useCallback(async (): Promise<boolean> => {
-    let user
-    try {
-      // Fetched on demand rather than subscribed to, so merely rendering an
-      // enroll button costs no request, and the compliance state backing the
-      // decision is read at the moment the user acts on it.
-      user = await queryClient.fetchQuery(mitxUserQueries.me())
-    } catch {
-      // Without a definitive answer, don't stand between the user and the
-      // action: MITx Online remains the authority and will reject the
-      // enrollment itself if the profile really is incomplete.
-      return true
-    }
-    if (!needsComplianceInfo(user)) return true
-    return (await NiceModal.show(JustInTimeDialog)) === true
+  const ensureCompliance = React.useCallback((): Promise<boolean> => {
+    if (inFlight.current) return inFlight.current
+
+    const promise = (async (): Promise<boolean> => {
+      let user
+      try {
+        // Fetched on demand rather than subscribed to, so merely rendering an
+        // enroll button costs no request, and the compliance state backing the
+        // decision is read at the moment the user acts on it.
+        user = await queryClient.fetchQuery(mitxUserQueries.me())
+      } catch {
+        // Without a definitive answer, don't stand between the user and the
+        // action: MITx Online remains the authority and will reject the
+        // enrollment itself if the profile really is incomplete.
+        return true
+      }
+      if (!needsComplianceInfo(user)) return true
+      return (await NiceModal.show(JustInTimeDialog)) === true
+    })().finally(() => {
+      inFlight.current = null
+    })
+
+    inFlight.current = promise
+    return promise
   }, [queryClient])
 
   return { ensureCompliance }

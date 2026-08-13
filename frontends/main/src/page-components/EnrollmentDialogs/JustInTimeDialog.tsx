@@ -202,9 +202,15 @@ const JustInTimeDialogInner: React.FC = () => {
       <SimpleSelectField
         {...shared}
         options={options}
-        // Until the options have loaded, MUI would warn about a value that is
-        // not among them.
-        value={spec.kind === "country" && !countries.data ? "" : value}
+        // Until the countries have loaded, MUI would warn about a value that
+        // is not among the options — country's own list is empty, and so is
+        // state's (it's derived from the matched country's subdivisions).
+        value={
+          (spec.kind === "country" || spec.kind === "state") &&
+          !countries.data
+            ? ""
+            : value
+        }
         onChange={
           spec.kind === "country" ? handleCountryChange : formik.handleChange
         }
