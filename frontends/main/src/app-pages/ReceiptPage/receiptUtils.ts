@@ -51,7 +51,7 @@ const formatStreetAddress = (
 const formatPaymentMethod = (order: Order): string | null => {
   const transaction = order.transactions
   if (!transaction) return null
-  if (transaction.payment_method === "paypal") return "Paypal"
+  if (transaction.payment_method === "paypal") return "PayPal"
   const parts = [transaction.card_type, transaction.card_number].filter(Boolean)
   return parts.length > 0 ? parts.join(" | ") : null
 }

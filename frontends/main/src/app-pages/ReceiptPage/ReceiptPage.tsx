@@ -260,10 +260,16 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
           <ErrorState>
             <Typography variant="body1">
               We could not load this receipt.{" "}
-              <SupportLink href={`mailto:${SUPPORT_EMAIL}`}>
-                Contact support
-              </SupportLink>{" "}
-              if the problem persists.
+              {SUPPORT_EMAIL ? (
+                <>
+                  <SupportLink href={`mailto:${SUPPORT_EMAIL}`}>
+                    Contact support
+                  </SupportLink>{" "}
+                  if the problem persists.
+                </>
+              ) : (
+                "Please try again in a moment."
+              )}
             </Typography>
             <ButtonLink variant="secondary" href={urls.DASHBOARD_HOME}>
               Back to Dashboard

@@ -34,8 +34,12 @@ const orderQueries = {
    * Enrollments carry no reference to their order, so getting from a run or
    * program to its receipt means searching these lines — see
    * `useOrderIdForRun` / `useOrderIdForProgram`.
+   *
+   * `opts` is required rather than defaulted: older deployments drop the
+   * pagination envelope when `limit` is absent and return a bare array, which
+   * would not match the declared return type.
    */
-  historyList: (opts: OrdersApiOrdersHistoryListRequest = {}) =>
+  historyList: (opts: OrdersApiOrdersHistoryListRequest) =>
     queryOptions({
       queryKey: orderKeys.historyList(opts),
       queryFn: async (): Promise<PaginatedOrderHistoryList> => {

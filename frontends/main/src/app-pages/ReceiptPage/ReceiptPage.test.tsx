@@ -231,7 +231,7 @@ describe("ReceiptPage", () => {
 
     expect(
       await findValueFor("Payment Information", "Payment Method:"),
-    ).toHaveTextContent("Paypal")
+    ).toHaveTextContent("PayPal")
   })
 
   // Parity with the MITx Online receipt, which shows the payer's email for PayPal
