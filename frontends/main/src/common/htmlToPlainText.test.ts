@@ -40,4 +40,18 @@ describe("htmlToPlainText", () => {
   it("returns an empty string for empty input", () => {
     expect(htmlToPlainText("")).toBe("")
   })
+
+  // The markup-free fast path returns without sanitizing. These pin the two
+  // behaviours it would silently drop if its guard were widened to skip them.
+  it("decodes entities in text that has no tags", () => {
+    expect(htmlToPlainText("Tom &amp; Jerry")).toBe("Tom & Jerry")
+  })
+
+  it("collapses whitespace in text that has no tags or entities", () => {
+    expect(htmlToPlainText("  Spaced   out\n\ttext  ")).toBe("Spaced out text")
+  })
+
+  it("leaves a bare > in markup-free text alone", () => {
+    expect(htmlToPlainText("2 > 1")).toBe("2 > 1")
+  })
 })
