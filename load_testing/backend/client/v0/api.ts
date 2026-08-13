@@ -16,6 +16,8 @@ import type {
   Channel,
   ChannelCounts,
   ChannelsListParams,
+  ContentFeedback,
+  ContentFeedbackRequest,
   ContentFileVectorSearchResponse,
   FeedItem,
   FeedSource,
@@ -63,10 +65,9 @@ export class MITLearnAPIClient {
   }
 
   /**
- * CRUD Operations related to Channels. Channels may represent groups
-or organizations at MIT and are a high-level categorization of content.
- * @summary List
- */
+   * List published channels.
+   * @summary List
+   */
   channelsList(
     params?: ChannelsListParams,
     requestParameters?: Params,
@@ -247,6 +248,48 @@ or organizations at MIT and are a high-level categorization of content.
       response,
       data,
       operationId: "ckeditor_retrieve",
+    }
+  }
+
+  /**
+   * Accept per-block content feedback submissions (append-only).
+   */
+  contentFeedbackCreate(
+    contentFeedbackRequest: ContentFeedbackRequest,
+    requestParameters?: Params,
+  ): {
+    response: Response
+    data: ContentFeedback
+    operationId: string
+  } {
+    const k6url = new URL(this.cleanBaseUrl + `/api/v0/content_feedback/`)
+    const mergedRequestParameters = this._mergeRequestParameters(
+      requestParameters || {},
+      this.commonRequestParameters,
+    )
+    const response = http.request(
+      "POST",
+      k6url.toString(),
+      JSON.stringify(contentFeedbackRequest),
+      {
+        ...mergedRequestParameters,
+        headers: {
+          ...mergedRequestParameters?.headers,
+          "Content-Type": "application/json",
+        },
+      },
+    )
+    let data
+
+    try {
+      data = response.json()
+    } catch {
+      data = response.body
+    }
+    return {
+      response,
+      data,
+      operationId: "content_feedback_create",
     }
   }
 

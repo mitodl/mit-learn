@@ -122,10 +122,7 @@ export const CertificateDesiredEnum = {
 } as const
 
 export type Channel =
-  | TopicChannel
-  | DepartmentChannel
-  | UnitChannel
-  | PathwayChannel
+  TopicChannel | DepartmentChannel | UnitChannel | PathwayChannel
 
 /**
  * Serializer for resource counts associated with Channel
@@ -192,6 +189,80 @@ export const ChannelTypeEnum = {
 export interface ChannelUnitDetail {
   readonly unit: LearningResourceOfferorDetail
 }
+
+/**
+ * Serializer for content feedback submissions.
+
+``user`` is set server-side from the request (never client-supplied). Each
+valid submission is persisted as a new append-only record.
+ */
+export interface ContentFeedback {
+  /** @maxLength 255 */
+  course_id: string
+  /** @maxLength 255 */
+  course_name?: string
+  /** @maxLength 255 */
+  block_usage_key: string
+  /** @maxLength 64 */
+  block_type?: string
+  /** @maxLength 255 */
+  block_display_name?: string
+  /** @maxLength 255 */
+  unit_title?: string
+  /** @maxLength 2083 */
+  url?: string
+  sentiment: ContentFeedbackSentimentEnum
+  comment?: string
+}
+
+/**
+ * Serializer for content feedback submissions.
+
+``user`` is set server-side from the request (never client-supplied). Each
+valid submission is persisted as a new append-only record.
+ */
+export interface ContentFeedbackRequest {
+  /**
+   * @minLength 1
+   * @maxLength 255
+   */
+  course_id: string
+  /** @maxLength 255 */
+  course_name?: string
+  /**
+   * @minLength 1
+   * @maxLength 255
+   */
+  block_usage_key: string
+  /** @maxLength 64 */
+  block_type?: string
+  /** @maxLength 255 */
+  block_display_name?: string
+  /** @maxLength 255 */
+  unit_title?: string
+  /** @maxLength 2083 */
+  url?: string
+  sentiment: ContentFeedbackSentimentEnum
+  comment?: string
+}
+
+/**
+ * * `positive` - Positive
+ * `negative` - Negative
+ * `idea` - Idea
+ */
+export type ContentFeedbackSentimentEnum =
+  (typeof ContentFeedbackSentimentEnum)[keyof typeof ContentFeedbackSentimentEnum]
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const ContentFeedbackSentimentEnum = {
+  /** Positive */
+  positive: "positive",
+  /** Negative */
+  negative: "negative",
+  /** Idea */
+  idea: "idea",
+} as const
 
 /**
  * Serializer class for course run ContentFiles
@@ -666,7 +737,7 @@ export interface DepartmentChannel {
    * Get the avatar image URL
    * @nullable
    */
-  avatar?: string | null
+  readonly avatar: string | null
   /**
    * Get the avatar image small URL
    * @nullable
@@ -681,7 +752,7 @@ export interface DepartmentChannel {
    * Get the banner image URL
    * @nullable
    */
-  banner?: string | null
+  readonly banner: string | null
   readonly lists: readonly LearningPathPreview[]
   /** Get the URL for the channel */
   readonly channel_url: string
@@ -1884,7 +1955,7 @@ export interface PathwayChannel {
    * Get the avatar image URL
    * @nullable
    */
-  avatar?: string | null
+  readonly avatar: string | null
   /**
    * Get the avatar image small URL
    * @nullable
@@ -1899,7 +1970,7 @@ export interface PathwayChannel {
    * Get the banner image URL
    * @nullable
    */
-  banner?: string | null
+  readonly banner: string | null
   readonly lists: readonly LearningPathPreview[]
   /** Get the URL for the channel */
   readonly channel_url: string
@@ -1973,7 +2044,8 @@ export interface Podcast {
 export interface PodcastEpisode {
   readonly id: number
   /** Get the podcast id(s) the episode belongs to */
-  readonly podcasts: readonly string[]
+  readonly podcasts: readonly number[]
+  readonly parent_podcasts: readonly PodcastEpisodeParent[]
   transcript?: string
   /** @maxLength 2048 */
   audio_url: string
@@ -1989,6 +2061,15 @@ export interface PodcastEpisode {
   duration?: string | null
   /** @nullable */
   rss?: string | null
+}
+
+/**
+ * Minimal parent-podcast summary embedded in an episode.
+ */
+export interface PodcastEpisodeParent {
+  id: number
+  title: string
+  readable_id: string
 }
 
 /**
@@ -2498,6 +2579,7 @@ export interface Profile {
   readonly profile_image_small: string
   /** Custom getter for medium profile image */
   readonly profile_image_medium: string
+  email_optin?: boolean
   /** @nullable */
   bio?: string | null
   /**
@@ -3056,7 +3138,7 @@ export interface TopicChannel {
    * Get the avatar image URL
    * @nullable
    */
-  avatar?: string | null
+  readonly avatar: string | null
   /**
    * Get the avatar image small URL
    * @nullable
@@ -3071,7 +3153,7 @@ export interface TopicChannel {
    * Get the banner image URL
    * @nullable
    */
-  banner?: string | null
+  readonly banner: string | null
   readonly lists: readonly LearningPathPreview[]
   /** Get the URL for the channel */
   readonly channel_url: string
@@ -3150,7 +3232,7 @@ export interface UnitChannel {
    * Get the avatar image URL
    * @nullable
    */
-  avatar?: string | null
+  readonly avatar: string | null
   /**
    * Get the avatar image small URL
    * @nullable
@@ -3165,7 +3247,7 @@ export interface UnitChannel {
    * Get the banner image URL
    * @nullable
    */
-  banner?: string | null
+  readonly banner: string | null
   readonly lists: readonly LearningPathPreview[]
   /** Get the URL for the channel */
   readonly channel_url: string
@@ -3294,6 +3376,14 @@ export interface VideoPlaylist {
   /** @nullable */
   readonly channel: VideoPlaylistChannel
   video_count: number
+  /** @nullable */
+  readonly parent_learning_resource_id: number | null
+  /** @nullable */
+  readonly parent_title: string | null
+  /** @nullable */
+  readonly parent_url: string | null
+  /** Extract the course number(s) from the parent course, if any */
+  readonly parent_course_numbers: readonly string[]
 }
 
 /**
@@ -4188,7 +4278,7 @@ export type VectorLearningResourcesSearchRetrieveParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -4286,6 +4376,10 @@ export type VectorLearningResourcesSearchRetrieveParams = {
    * @minLength 1
    */
   readable_id?: string
+  /**
+   * The resource category for the resource
+   */
+  resource_category?: string[]
   /**
  * The type of learning resource
 
@@ -4449,7 +4543,7 @@ export const VectorLearningResourcesSearchRetrieveDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
