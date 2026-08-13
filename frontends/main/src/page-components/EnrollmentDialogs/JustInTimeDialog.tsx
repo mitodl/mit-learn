@@ -206,8 +206,7 @@ const JustInTimeDialogInner: React.FC = () => {
         // is not among the options — country's own list is empty, and so is
         // state's (it's derived from the matched country's subdivisions).
         value={
-          (spec.kind === "country" || spec.kind === "state") &&
-          !countries.data
+          (spec.kind === "country" || spec.kind === "state") && !countries.data
             ? ""
             : value
         }
