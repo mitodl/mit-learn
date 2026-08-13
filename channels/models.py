@@ -279,7 +279,7 @@ class ChannelGroupRole(TimestampedModel):
 
     class Meta:
         unique_together = (("channel", "group", "role"),)
-        index_together = (("channel", "role"),)
+        indexes = [models.Index(fields=["channel", "role"])]
 
     def __str__(self):
         return (
