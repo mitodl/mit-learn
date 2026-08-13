@@ -279,7 +279,11 @@ class ChannelGroupRole(TimestampedModel):
 
     class Meta:
         unique_together = (("channel", "group", "role"),)
-        indexes = [models.Index(fields=["channel", "role"])]
+        indexes = [
+            models.Index(
+                fields=["channel", "role"], name="channelgrouprole_ch_role_idx"
+            )
+        ]
 
     def __str__(self):
         return (
