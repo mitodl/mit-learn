@@ -26,6 +26,7 @@ from main.utils import (
     _sorted_query_string,
     cache_page_for_all_users,
     cache_page_for_anonymous_users,
+    call_fastly_purge_api,
     chunks,
     clean_data,
     clear_views_cache,
@@ -678,3 +679,16 @@ def test_clear_views_cache_uses_large_itersize(mock_caches):
 
     mock_cache.delete_pattern.assert_called_once_with("views.*", itersize=1000)
     assert result == 3
+
+
+@pytest.mark.parametrize("soft", [True, False])
+def test_call_fastly_purge_api_soft_header(mocker, settings, soft):
+    """soft=True sends the Fastly-Soft-Purge: 1 header; default sends none"""
+    settings.FASTLY_API_KEY = "fake-key"
+    mock_request = mocker.patch("main.utils.requests.request")
+    mock_request.return_value.json.return_value = {"status": "ok"}
+
+    call_fastly_purge_api("/c/unit/mitx", soft=soft)
+
+    headers = mock_request.call_args.kwargs["headers"]
+    assert headers.get("Fastly-Soft-Purge") == ("1" if soft else None)

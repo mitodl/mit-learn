@@ -15,6 +15,7 @@ import {
   useLearningPathCreate,
   useLearningPathDestroy,
   useLearningPathUpdate,
+  useLearningPathListItemMove,
 } from "./index"
 import { learningPathKeys } from "./queries"
 
@@ -163,6 +164,9 @@ describe("LearningPath CRUD", () => {
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["learningPaths", "membershipList"],
     })
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: learningResourceKeys.featuredRoot(),
+    })
   })
 
   test("useLearningPathUpdate calls correct API", async () => {
@@ -189,6 +193,32 @@ describe("LearningPath CRUD", () => {
     })
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["learningPaths", "detail", path.id],
+    })
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: learningResourceKeys.featuredRoot(),
+    })
+  })
+
+  test("useLearningPathListItemMove invalidates featured and items queries", async () => {
+    const { path, relationship, pathUrls } = makeData()
+    setMockResponse.patch(pathUrls.relationshipDetails, relationship)
+
+    const { wrapper, queryClient } = setupReactQueryTest()
+    jest.spyOn(queryClient, "invalidateQueries")
+
+    const { result } = renderHook(useLearningPathListItemMove, { wrapper })
+    result.current.mutate({
+      parent: path.id,
+      id: relationship.id,
+      position: relationship.position,
+    })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: learningPathKeys.infiniteItemsRoot(path.id),
+    })
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: learningResourceKeys.featuredRoot(),
     })
   })
 })
