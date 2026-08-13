@@ -165,6 +165,9 @@ const useLearningResourceSetLearningPathRelationships = () => {
        * Additionally, the lists we've removed from the resource are not easily available.
        */
       queryClient.invalidateQueries({ queryKey: learningPathKeys.root })
+      queryClient.invalidateQueries({
+        queryKey: learningResourceKeys.featuredRoot(),
+      })
     },
   })
 }

@@ -126,6 +126,17 @@ class LearningResourceRelationTypes(TextChoices):
     COURSE_LEARNING_MATERIALS = "COURSE_LEARNING_MATERIALS", "Course Learning Materials"
 
 
+# Relation types whose parent forms part of the child's URL. A resource's type
+# admits only one of them, so they can be read as a single list.
+CANONICAL_PARENT_RELATION_TYPES = (
+    LearningResourceRelationTypes.PODCAST_EPISODES.value,
+    LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+)
+
+# Feeds Meta.ordering, so changing it needs a migration.
+RELATIONSHIP_ORDERING = ("position", "id")
+
+
 GROUP_STAFF_LISTS_EDITORS = "learning_path_editors"
 
 
