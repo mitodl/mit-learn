@@ -15,8 +15,9 @@ import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 import mitLearnLogo from "@/public/images/mit-learn-logo-black.svg"
 import { env } from "@/env"
 import * as urls from "@/common/urls"
-import { ReceiptDetailList, populatedGroups } from "./ReceiptDetailList"
-import type { ReceiptDetailGroup } from "./ReceiptDetailList"
+import { ReceiptCard, ReceiptCardStack } from "./ReceiptCard"
+import { ReceiptDetailList, populatedRows } from "./ReceiptDetailList"
+import type { ReceiptDetail } from "./ReceiptDetailList"
 import { ReceiptOrderSummary } from "./ReceiptOrderSummary"
 import {
   formatDateRange,
@@ -38,56 +39,97 @@ const Background = styled.div(({ theme }) => ({
   minHeight: "100%",
 }))
 
-const PageContainer = styled(Container)({
-  paddingTop: "40px",
-  paddingBottom: "80px",
+const PageContainer = styled(Container)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "24px",
+  paddingTop: "64px",
+  paddingBottom: "64px",
+  [theme.breakpoints.down("sm")]: {
+    paddingTop: "32px",
+    paddingBottom: "32px",
+  },
+}))
+
+const TitleRow = styled.div({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "16px",
 })
 
-const ButtonBar = styled.div({
+const PageHeading = styled.h1(({ theme }) => ({
+  ...theme.typography.h3,
+  color: theme.custom.colors.black,
+  margin: 0,
+  [theme.breakpoints.down("sm")]: theme.typography.h5,
+}))
+
+const Actions = styled.div(({ theme }) => ({
   display: "flex",
-  gap: "8px",
-  justifyContent: "space-between",
+  gap: "32px",
+  flexShrink: 0,
+  [theme.breakpoints.down("sm")]: {
+    gap: "16px",
+  },
   // Neither button belongs in a printed receipt.
   "@media print": {
     display: "none",
   },
-})
+}))
 
+/**
+ * Two columns on desktop with the summary on the right; one column on mobile with
+ * the summary first. The summary leads in the DOM so mobile needs no reordering,
+ * and desktop places it explicitly in the second column.
+ */
 const Columns = styled.div(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) 424px",
-  gap: "32px",
+  gap: "40px",
+  gridTemplateColumns: "minmax(0, 1fr)",
   alignItems: "start",
-  paddingTop: "16px",
-  [theme.breakpoints.down("md")]: {
-    gridTemplateColumns: "minmax(0, 1fr)",
+  [theme.breakpoints.up("md")]: {
+    gridTemplateColumns: "minmax(0, 825fr) minmax(0, 411fr)",
   },
 }))
 
-const MainColumn = styled.div({
+const SummaryColumn = styled.div(({ theme }) => ({
+  [theme.breakpoints.up("md")]: {
+    gridColumn: 2,
+    gridRow: 1,
+  },
+}))
+
+const DetailColumn = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: "32px",
+  gap: "16px",
+  [theme.breakpoints.up("md")]: {
+    gridColumn: 1,
+    gridRow: 1,
+  },
+}))
+
+const SectionHeading = styled.h2(({ theme }) => ({
+  ...theme.typography.h5,
+  color: theme.custom.colors.red,
+  margin: 0,
+  [theme.breakpoints.down("sm")]: theme.typography.subtitle1,
+}))
+
+const IssuerCard = styled(ReceiptCard)({
+  padding: "32px",
 })
 
-const Section = styled.section({
-  display: "flex",
-  flexDirection: "column",
-  gap: "8px",
-})
-
-const IssuerLogo = styled(Image)({
+const IssuerLogo = styled(Image)(({ theme }) => ({
   display: "block",
-  // `Section` stretches its children, which would scale the logo up.
   alignSelf: "flex-start",
   width: "auto",
-  height: "40px",
-})
-
-const TitleSection = styled.div({
-  paddingTop: "32px",
-  paddingBottom: "4px",
-})
+  height: "34px",
+  [theme.breakpoints.down("sm")]: {
+    height: "24px",
+  },
+}))
 
 const SupportLink = styled.a(({ theme }) => ({
   color: theme.custom.colors.red,
@@ -97,13 +139,20 @@ const SupportLink = styled.a(({ theme }) => ({
   },
 }))
 
+const ErrorState = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: "16px",
+})
+
 /**
  * One group of rows per line item, then the order-level rows. The design's "Tax"
  * and "HSN" rows are omitted — the payload has no such fields. "CEUs" is wired up
  * but MITx Online always returns null for it today.
  */
-const getOrderDetailGroups = (order: Order): ReceiptDetailGroup[] => {
-  const lineGroups: ReceiptDetailGroup[] = order.lines.map((line) => [
+const getOrderDetailRows = (order: Order): ReceiptDetail[] => [
+  ...order.lines.flatMap((line) => [
     { label: "Order Item:", value: line.content_title },
     { label: "Dates:", value: formatDateRange(line.start_date, line.end_date) },
     { label: "Product Number:", value: line.readable_id },
@@ -115,25 +164,18 @@ const getOrderDetailGroups = (order: Order): ReceiptDetailGroup[] => {
       value:
         Number(line.discount) > 0 ? `-${formatMoney(line.discount)}` : null,
     },
-  ])
-
-  return [
-    ...lineGroups,
-    [
-      { label: "Order Number:", value: order.reference_number },
-      { label: "Order Date:", value: formatReceiptDate(order.created_on) },
-      { label: "Discount Code:", value: getDiscountCode(order) },
-      { label: "Total Paid:", value: formatMoney(order.total_price_paid) },
-    ],
-  ]
-}
+  ]),
+  { label: "Order Number:", value: order.reference_number },
+  { label: "Order Date:", value: formatReceiptDate(order.created_on) },
+  { label: "Discount Code:", value: getDiscountCode(order) },
+  { label: "Total Paid:", value: formatMoney(order.total_price_paid) },
+]
 
 const ReceiptSkeleton: React.FC = () => (
-  <MainColumn>
-    <Skeleton variant="text" width="30%" height={36} />
+  <DetailColumn>
     <Skeleton variant="rectangular" width="100%" height={280} />
     <Skeleton variant="rectangular" width="100%" height={120} />
-  </MainColumn>
+  </DetailColumn>
 )
 
 const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
@@ -152,25 +194,18 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
    * Filtered up front so a section with no rows can be dropped along with its
    * heading — zero-value orders have no payment or billing details at all.
    */
-  const customerGroups = order
-    ? populatedGroups([
-        [
-          { label: "Name:", value: user?.name },
-          { label: "Email:", value: user?.email },
-          {
-            label: "Address:",
-            value: formatStreetAddress(order.street_address),
-          },
-        ],
+  const customerRows = order
+    ? populatedRows([
+        { label: "Name:", value: user?.name },
+        { label: "Email:", value: user?.email },
+        { label: "Address:", value: formatStreetAddress(order.street_address) },
       ])
     : []
 
-  const paymentGroups = order
-    ? populatedGroups([
-        [
-          { label: "Name:", value: order.transactions?.name },
-          { label: "Payment Method:", value: formatPaymentMethod(order) },
-        ],
+  const paymentRows = order
+    ? populatedRows([
+        { label: "Name:", value: order.transactions?.name },
+        { label: "Payment Method:", value: formatPaymentMethod(order) },
       ])
     : []
 
@@ -191,33 +226,30 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
   return (
     <Background>
       <PageContainer>
-        <ButtonBar>
-          <Button
-            variant="tertiary"
-            startIcon={<RiArrowLeftLine />}
-            onClick={() => router.back()}
-          >
-            Back
-          </Button>
-          <Button
-            variant="tertiary"
-            startIcon={<RiPrinterLine />}
-            onClick={() => window.print()}
-          >
-            Print
-          </Button>
-        </ButtonBar>
-
-        <TitleSection>
-          <Typography component="h1" variant="h3">
-            Receipt
-          </Typography>
-        </TitleSection>
+        <TitleRow>
+          <PageHeading>Receipt</PageHeading>
+          <Actions>
+            <Button
+              variant="tertiary"
+              startIcon={<RiArrowLeftLine />}
+              onClick={() => router.back()}
+            >
+              Back
+            </Button>
+            <Button
+              variant="tertiary"
+              startIcon={<RiPrinterLine />}
+              onClick={() => window.print()}
+            >
+              Print
+            </Button>
+          </Actions>
+        </TitleRow>
 
         {orderQuery.isPending ? (
           <ReceiptSkeleton />
         ) : orderQuery.isError || !order ? (
-          <MainColumn>
+          <ErrorState>
             <Typography variant="body1">
               We could not load this receipt.{" "}
               <SupportLink href={`mailto:${SUPPORT_EMAIL}`}>
@@ -228,56 +260,52 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
             <ButtonLink variant="secondary" href={urls.DASHBOARD_HOME}>
               Back to Dashboard
             </ButtonLink>
-          </MainColumn>
+          </ErrorState>
         ) : (
           <Columns>
-            <MainColumn>
-              <Section>
-                <Typography variant="h5" component="h2">
-                  Order Information
-                </Typography>
-                <ReceiptDetailList groups={getOrderDetailGroups(order)} />
-              </Section>
+            <SummaryColumn>
+              <ReceiptOrderSummary order={order} />
+            </SummaryColumn>
 
-              {customerGroups.length > 0 ? (
-                <Section>
-                  <Typography variant="h5" component="h2">
-                    Customer Information
-                  </Typography>
-                  <ReceiptDetailList groups={customerGroups} />
-                </Section>
-              ) : null}
+            <DetailColumn>
+              <ReceiptCardStack>
+                <ReceiptCard as="section">
+                  <SectionHeading>Order Information</SectionHeading>
+                  <ReceiptDetailList rows={getOrderDetailRows(order)} />
+                </ReceiptCard>
 
-              {paymentGroups.length > 0 ? (
-                <Section>
-                  <Typography variant="h5" component="h2">
-                    Payment Information
-                  </Typography>
-                  <ReceiptDetailList groups={paymentGroups} />
-                </Section>
-              ) : null}
+                {customerRows.length > 0 ? (
+                  <ReceiptCard as="section">
+                    <SectionHeading>Customer Information</SectionHeading>
+                    <ReceiptDetailList rows={customerRows} />
+                  </ReceiptCard>
+                ) : null}
 
-              <Section>
+                {paymentRows.length > 0 ? (
+                  <ReceiptCard as="section">
+                    <SectionHeading>Payment Information</SectionHeading>
+                    <ReceiptDetailList rows={paymentRows} />
+                  </ReceiptCard>
+                ) : null}
+              </ReceiptCardStack>
+
+              <IssuerCard as="section">
                 <IssuerLogo src={mitLearnLogo} alt="MIT Learn" />
                 <ReceiptDetailList
-                  groups={[
-                    [
-                      { label: "Address:", value: MIT_LEARN_ADDRESS },
-                      {
-                        label: "Support:",
-                        value: SUPPORT_EMAIL ? (
-                          <SupportLink href={`mailto:${SUPPORT_EMAIL}`}>
-                            {SUPPORT_EMAIL}
-                          </SupportLink>
-                        ) : null,
-                      },
-                    ],
+                  rows={[
+                    { label: "Address:", value: MIT_LEARN_ADDRESS },
+                    {
+                      label: "Support:",
+                      value: SUPPORT_EMAIL ? (
+                        <SupportLink href={`mailto:${SUPPORT_EMAIL}`}>
+                          {SUPPORT_EMAIL}
+                        </SupportLink>
+                      ) : null,
+                    },
                   ]}
                 />
-              </Section>
-            </MainColumn>
-
-            <ReceiptOrderSummary order={order} />
+              </IssuerCard>
+            </DetailColumn>
           </Columns>
         )}
       </PageContainer>
@@ -286,4 +314,4 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
 }
 
 export default ReceiptPage
-export { getOrderDetailGroups }
+export { getOrderDetailRows }
