@@ -199,6 +199,20 @@ class BaseLearningResourceViewSet(viewsets.ReadOnlyModelViewSet):
         return super().list(request, *args, **kwargs)
 
 
+class SummaryPagination(LargePagination):
+    """
+    LargePagination that keeps annotations out of the count query.
+
+    Django keeps annotations in the count of a distinct queryset, so
+    canonical_parent_ids would be evaluated once per row counted. Counting
+    distinct pks is the same number for a fraction of the work.
+    """
+
+    def get_count(self, queryset):
+        """Count distinct pks; .values() drops the annotation, .only() would not"""
+        return queryset.values(*self.count_fields).distinct().count()
+
+
 @extend_schema_view(
     list=extend_schema(
         description="Get a paginated list of learning resources.",
@@ -344,7 +358,7 @@ class LearningResourceViewSet(
         detail=False,
         methods=["GET"],
         name="Get learning resources summary",
-        pagination_class=LargePagination,
+        pagination_class=SummaryPagination,
     )
     def summary(self, request, **kwargs):  # noqa: ARG002
         """
@@ -358,7 +372,9 @@ class LearningResourceViewSet(
             # we don't use `self.get_queryset()` here because there are incomplatible
             # `select_related()` invocations and we don't need related data anyway
             LearningResource.objects.filter(published=True)
-            .only("id", "last_modified", "url", "title")
+            # a deferred field the serializer reads costs a query per row
+            .only("id", "last_modified", "url", "title", "resource_type")
+            .with_canonical_parent_ids()
             .distinct()
             # Deterministic order so offset pagination has stable page
             # boundaries.

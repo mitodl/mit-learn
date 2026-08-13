@@ -4966,7 +4966,75 @@ export interface LearningResourceSummary {
    * @memberof LearningResourceSummary
    */
   title: string
+  /**
+   *
+   * @type {LearningResourceSummaryResourceTypeEnum}
+   * @memberof LearningResourceSummary
+   */
+  resource_type: LearningResourceSummaryResourceTypeEnum
+  /**
+   * Ids of the parents that form part of this resource\'s URL: the parent podcasts of a podcast episode, the playlists of a video. Empty for every other resource type. Parents are not filtered by `published`, so an id here may belong to a resource this endpoint will not return.
+   * @type {Array<number>}
+   * @memberof LearningResourceSummary
+   */
+  canonical_parent_ids: Array<number>
 }
+
+/**
+ * * `course` - Course * `program` - Program * `learning_path` - Learning Path * `podcast` - Podcast * `podcast_episode` - Podcast Episode * `video` - Video * `video_playlist` - Video Playlist * `document` - Document
+ * @export
+ * @enum {string}
+ */
+
+export const LearningResourceSummaryResourceTypeEnumDescriptions = {
+  course: "Course",
+  program: "Program",
+  learning_path: "Learning Path",
+  podcast: "Podcast",
+  podcast_episode: "Podcast Episode",
+  video: "Video",
+  video_playlist: "Video Playlist",
+  document: "Document",
+} as const
+
+export const LearningResourceSummaryResourceTypeEnum = {
+  /**
+   * Course
+   */
+  Course: "course",
+  /**
+   * Program
+   */
+  Program: "program",
+  /**
+   * Learning Path
+   */
+  LearningPath: "learning_path",
+  /**
+   * Podcast
+   */
+  Podcast: "podcast",
+  /**
+   * Podcast Episode
+   */
+  PodcastEpisode: "podcast_episode",
+  /**
+   * Video
+   */
+  Video: "video",
+  /**
+   * Video Playlist
+   */
+  VideoPlaylist: "video_playlist",
+  /**
+   * Document
+   */
+  Document: "document",
+} as const
+
+export type LearningResourceSummaryResourceTypeEnum =
+  (typeof LearningResourceSummaryResourceTypeEnum)[keyof typeof LearningResourceSummaryResourceTypeEnum]
+
 /**
  * Serializer for LearningResourceTopic model
  * @export
