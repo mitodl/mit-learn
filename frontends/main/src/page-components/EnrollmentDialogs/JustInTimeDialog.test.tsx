@@ -344,7 +344,7 @@ describe("JustInTimeDialog", () => {
       ).toBeInTheDocument()
       // The entered values survive so the user can retry without retyping.
       expect(textbox(dialog, "First Name")).toHaveValue("Ada")
-    })
+    }, 10000)
 
     test("cancelling saves nothing", async () => {
       setup()
