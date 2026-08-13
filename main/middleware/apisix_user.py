@@ -12,7 +12,6 @@ from django.contrib.auth.middleware import RemoteUserMiddleware
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.http import HttpRequest
-from django.http.response import HttpResponseBase
 from posthog import Posthog
 
 from authentication.api import user_created_actions
@@ -215,7 +214,7 @@ class ApisixUserMiddleware(RemoteUserMiddleware):
 
     header = "HTTP_X_USERINFO"
 
-    def process_request(self, request: HttpRequest) -> HttpResponseBase | None:
+    def process_request(self, request: HttpRequest) -> None:
         """
         Modify the header to contain username, pass off to RemoteUserMiddleware
         """
@@ -242,7 +241,7 @@ class ApisixUserMiddleware(RemoteUserMiddleware):
                 # Already logged in as this user: skip login() so we don't cycle
                 # the session and write last_login on every request.
                 request.user = apisix_user
-                return self.get_response(request)
+                return None
 
             if request.user.is_authenticated and request.user != apisix_user:
                 # The user is authenticated, but doesn't match the user we got
@@ -266,4 +265,4 @@ class ApisixUserMiddleware(RemoteUserMiddleware):
             log.debug("Forcing user logout because no APISIX user was found")
             logout(request)
 
-        return self.get_response(request)
+        return None
