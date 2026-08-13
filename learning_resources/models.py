@@ -130,6 +130,7 @@ class LearningResourceTopic(TimestampedModel):
     class Meta:
         """Meta options for LearningResourceTopic"""
 
+        ordering = ["name"]
         constraints = [models.UniqueConstraint(Lower("name"), name="unique_lower_name")]
 
 
