@@ -343,6 +343,20 @@ const TermsPage: React.FC = () => {
             not responsible for unauthorized access or misuse of personal
             information you voluntarily provide in violation of this policy.
           </BodyText>
+          <BodyText variant="body1" style={{ fontWeight: "bold" }}>
+            AI Tutor Chatbot:
+          </BodyText>
+          <BodyText variant="body1">
+            MIT Learn provides an AI Tutor Chatbot as a learning tool in
+            conjunction with certain Offerings. It is intended to help you
+            review course concepts, ask questions, and receive study guidance.
+            As with all AI technology, the use is not error-free and you remain
+            responsible for verifying all information against official course
+            materials, assignments, and instructor guidance. Use of the AI Tutor
+            Chatbot does not guarantee improved grades, assignment credit or
+            course completion. You remain fully responsible for all Course work
+            and for compliance with MIT Learn's Honor Code.
+          </BodyText>
 
           <Header component="h1" variant="h3">
             Certificates of Completion
@@ -508,6 +522,18 @@ const TermsPage: React.FC = () => {
             time of purchase in order to receive a discount. No discounts can be
             applied after the purchase request has been submitted. Offers cannot
             be combined for additional discounts.
+          </BodyText>
+          <BodyText variant="body1" style={{ fontWeight: "bold" }}>
+            Bundled MicroMasters Purchases.
+          </BodyText>
+          <BodyText variant="body1">
+            All MicroMasters bundle purchases grant access to register
+            ("Entitlement") for the certificate tracks of included courses for
+            twenty-four (24) months from the date of purchase ("Expiration
+            Date"). Upon the Expiration Date, your ability to register for any
+            included course certificate track using the bundle will
+            automatically terminate, and any unused Entitlements will expire and
+            cannot be redeemed thereafter.
           </BodyText>
           <BodyText variant="body1" style={{ fontWeight: "bold" }}>
             Transfers / Substitutions / Deferments.
@@ -784,7 +810,7 @@ const TermsPage: React.FC = () => {
             inconvenience of forum).
           </BodyText>
           <BodyText variant="body1">
-            These terms of service were last updated on June 1, 2026.
+            These terms of service were last updated on July 23, 2026.
           </BodyText>
         </BodyContainer>
       </PageContainer>
