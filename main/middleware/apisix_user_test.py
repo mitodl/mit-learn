@@ -199,9 +199,11 @@ def test_get_request_different_user_logout(mocker, client, same_user):
     )
     mocker.patch("main.middleware.apisix_user.login")
     mock_logout = mocker.patch("main.middleware.apisix_user.logout")
-    apisix_middleware = ApisixUserMiddleware(mocker.Mock())
-    apisix_middleware.process_request(mock_request)
+    mock_get_response = mocker.Mock(return_value="response")
+    apisix_middleware = ApisixUserMiddleware(mock_get_response)
+    assert apisix_middleware(mock_request) == "response"
     assert mock_logout.call_count == (0 if same_user else 1)
+    mock_get_response.assert_called_once_with(mock_request)
 
 
 @pytest.mark.django_db(transaction=True)
