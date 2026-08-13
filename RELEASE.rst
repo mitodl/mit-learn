@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.77.3
+Version 0.77.3 (Released August 13, 2026)
 --------------
 
 - fix broken images in subscription emails (#3737)
