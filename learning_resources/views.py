@@ -202,7 +202,7 @@ class SummaryPagination(LargePagination):
     """
 
     def get_count(self, queryset):
-        """Count distinct pks, which the annotations play no part in"""
+        """Count distinct pks; .values() drops the annotation, .only() would not"""
         return queryset.values(*self.count_fields).distinct().count()
 
 
