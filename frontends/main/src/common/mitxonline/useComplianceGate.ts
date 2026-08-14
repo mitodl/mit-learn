@@ -30,15 +30,26 @@ const useComplianceGate = () => {
   const inFlight = React.useRef<Promise<boolean> | null>(null)
 
   const ensureCompliance = React.useCallback((): Promise<boolean> => {
-    if (inFlight.current) return inFlight.current
+    if (inFlight.current) {
+      // A second caller arriving while the first is still in flight (e.g. a
+      // double-clicked enroll button) must not also resume once the first
+      // resolves true -- only the action that actually initiated the check
+      // should proceed, or both fire their own enroll/basket mutation.
+      return inFlight.current.then(() => false)
+    }
 
     const promise = (async (): Promise<boolean> => {
       let user
       try {
         // Fetched on demand rather than subscribed to, so merely rendering an
         // enroll button costs no request, and the compliance state backing the
-        // decision is read at the moment the user acts on it.
-        user = await queryClient.fetchQuery(mitxUserQueries.me())
+        // decision is read at the moment the user acts on it -- staleTime: 0
+        // overrides the query client's default so a cached profile from
+        // minutes ago can't stand in for a live check.
+        user = await queryClient.fetchQuery({
+          ...mitxUserQueries.me(),
+          staleTime: 0,
+        })
       } catch {
         // Without a definitive answer, don't stand between the user and the
         // action: MITx Online remains the authority and will reject the

@@ -228,6 +228,31 @@ describe("JustInTimeDialog", () => {
       expect(state).toHaveTextContent("Please Select")
       expect(textbox(dialog, "Zip Code")).toHaveValue("")
     })
+
+    test("switching between two subdivision countries clears the stale state and postal code", async () => {
+      // US -> Canada takes neither branch of the old subdivision-vs-not check
+      // (both require a subdivision), which is exactly the case that let a
+      // US state code survive into Canada's province list.
+      setup()
+      const dialog = await openDialog()
+
+      await chooseOption(combobox(dialog, "Country"), "United States")
+      await chooseOption(
+        await within(dialog).findByRole("combobox", { name: "State/Province" }),
+        "Massachusetts",
+      )
+      await user.type(textbox(dialog, "Zip Code"), "02139")
+
+      await chooseOption(combobox(dialog, "Country"), "Canada")
+
+      const state = await within(dialog).findByRole("combobox", {
+        name: "State/Province",
+      })
+      // Must not still read "Massachusetts" -- that option doesn't exist in
+      // Canada's list, which is what produced MUI's out-of-range warning.
+      expect(state).toHaveTextContent("Please Select")
+      expect(textbox(dialog, "Postal Code")).toHaveValue("")
+    })
   })
 
   describe("validation", () => {

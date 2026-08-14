@@ -124,6 +124,15 @@ const JustInTimeDialogInner: React.FC = () => {
   const handleCountryChange = (event: SelectChangeEvent<string>) => {
     const nextCountry = event.target.value
     formik.setFieldValue("country", nextCountry)
+    // A subdivision code (and, similarly, a postal/zip code) is only ever
+    // meaningful under the country it was entered for -- e.g. "US-MA" isn't
+    // an option in Canada's province list. Clearing both unconditionally,
+    // before branching below, avoids a stale value surviving a switch
+    // between two countries that both require them (US -> CA), which would
+    // otherwise leave the state select holding a value absent from its own
+    // options.
+    formik.setFieldValue("state", "")
+    formik.setFieldValue("postal_code", "")
     const nextName = countries.data?.find(
       ({ code }) => code === nextCountry,
     )?.name
@@ -134,10 +143,6 @@ const JustInTimeDialogInner: React.FC = () => {
         `${FIELD_SPECS.state.label} and ${postalCodeLabel(nextCountry)} are required for ${nextName ?? "this country"}.`,
       )
     } else {
-      // A subdivision or postal code from the previous country no longer
-      // applies, and both fields are about to disappear from the form.
-      formik.setFieldValue("state", "")
-      formik.setFieldValue("postal_code", "")
       setSubdivisionNotice("")
     }
   }
