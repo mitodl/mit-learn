@@ -40,7 +40,8 @@ export type OrgAnalyticsResponse<RowT> = {
 export type ContractUtilization = {
   organization_key: string
   organization_name: string
-  contract_pk: number
+  contract_pk: string
+  contract_id: string
   b2b_contract_name: string
   b2b_contract_is_active: boolean
   b2b_contract_start_date: string | null
@@ -58,9 +59,10 @@ export type ContractUtilization = {
 export type EnrollmentCompletionFunnel = {
   organization_key: string
   organization_name: string
-  contract_pk: number
+  contract_pk: string
+  contract_id: string
   b2b_contract_name: string
-  courserun_pk: number
+  courserun_pk: string
   courserun_readable_id: string
   courserun_title: string
   enrolled_learners: number
@@ -82,19 +84,25 @@ export type MonthlyEngagementTrend = {
   activity_year_and_month: string
   monthly_active_learners: number
   new_enrollments: number | null
+  enrolling_learners: number | null
   certificates_earned: number | null
-  total_videos_watched: number
-  total_problems_attempted: number
-  total_chatbot_interactions: number
+  certified_learners: number | null
+  total_videos_watched: number | null
+  video_watchers: number | null
+  total_problems_attempted: number | null
+  problem_attempters: number | null
+  total_chatbot_interactions: number | null
+  chatbot_users: number | null
 }
 
 /** `mv_b2b_program_funnel` — grain: org x contract x program. */
 export type ProgramFunnel = {
   organization_key: string
   organization_name: string
-  contract_pk: number
+  contract_pk: string
+  contract_id: string
   b2b_contract_name: string
-  program_pk: number
+  program_pk: string
   program_title: string
   total_courses: number
   enrolled_in_contract_courses: number
@@ -136,6 +144,41 @@ export type ContentEngagementDepth = {
   chatbot_adoption_pct: number | null
   certificates_earned: number | null
 }
+
+/**
+ * Contract identity, carried by every row of a contract-grained view.
+ *
+ * `contract_id` is MITx Online's `ContractPage.page_ptr_id` — the value in that
+ * dashboard's URLs, and the only one the analytics API will filter on.
+ * `contract_pk` is the warehouse's own md5 surrogate: useful as a stable row
+ * key, never as a path segment.
+ */
+type ContractIdentity = {
+  contract_pk: string
+  contract_id: string
+  b2b_contract_name: string
+}
+
+/**
+ * `mv_b2b_contract_monthly_engagement_trend` — grain: org x contract x month.
+ *
+ * The same columns as {@link MonthlyEngagementTrend} plus the contract. Note
+ * these rows do NOT partition the org-level ones: a learner active under two
+ * of an org's contracts is counted in both, so summing
+ * `monthly_active_learners` across contracts can exceed the org's own figure.
+ */
+export type ContractMonthlyEngagementTrend = MonthlyEngagementTrend &
+  ContractIdentity
+
+/**
+ * `mv_b2b_contract_content_engagement_depth` — grain: org x contract x run.
+ *
+ * Unlike the trend view these rows ARE a partition of the org-level ones: a
+ * course run belongs to exactly one contract, so naming the contract labels a
+ * row rather than splitting it.
+ */
+export type ContractContentEngagementDepth = ContentEngagementDepth &
+  ContractIdentity
 
 /**
  * LIMIT/OFFSET paging, shared by every multi-row endpoint. The API caps `limit`
