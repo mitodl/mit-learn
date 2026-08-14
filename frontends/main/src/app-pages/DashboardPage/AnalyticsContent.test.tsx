@@ -13,6 +13,7 @@ import type { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
+import { contractAdminView } from "@/common/urls"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import AnalyticsContent from "./AnalyticsContent"
 
@@ -825,12 +826,67 @@ describe("AnalyticsContent, contract-scoped", () => {
     // The slug resolves to no contract, so there is no id to put in the path.
     // Better an empty state than a request with `undefined` in the URL, which
     // the API would answer 403 — indistinguishable from a real denial.
-    await waitFor(() => {
-      expect(makeRequest).not.toHaveBeenCalledWith(
-        expect.objectContaining({
-          url: expect.stringContaining("/contracts/"),
-        }),
-      )
-    })
+    //
+    // Await the settled unavailable state FIRST. A bare `waitFor` around a
+    // negative assertion passes on its first tick, before the manager-org
+    // lookup has even resolved, so it would hold even if a contract request
+    // were issued a moment later.
+    await screen.findByText(/Analytics is not available for this organization/)
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining("/contracts/"),
+      }),
+    )
+  })
+
+  test("'Manage seats' targets the contract being viewed, not the org's first", async () => {
+    const [first, second] = [
+      factories.contracts.contract(),
+      factories.contracts.contract(),
+    ]
+    const org = orgWithUuid({ contracts: [first, second] })
+    setManagerOrgs([org])
+
+    const contractId = String(second.id)
+    const page = { limit: 200 }
+    setMockResponse.get(
+      analyticsUrls.contracts.contractUtilization(ORG_UUID, contractId, page),
+      analyticsFactories.envelope([analyticsFactories.contractUtilization()], {
+        as_of: AS_OF,
+      }),
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.engagementTrend(ORG_UUID, contractId, page),
+      analyticsFactories.envelope(
+        [analyticsFactories.contractMonthlyEngagementTrend()],
+        { as_of: AS_OF },
+      ),
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, contractId, page),
+      analyticsFactories.envelope(
+        [analyticsFactories.enrollmentCompletionFunnel()],
+        { as_of: AS_OF },
+      ),
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.programFunnel(ORG_UUID, contractId, page),
+      analyticsFactories.envelope([analyticsFactories.programFunnel()], {
+        as_of: AS_OF,
+      }),
+    )
+
+    const orgSlug = org.slug.replace(/^org-/, "")
+    renderWithProviders(
+      <AnalyticsContent orgSlug={orgSlug} contractSlug={second.slug} />,
+    )
+
+    // Pointing at contracts[0] here would send a manager viewing the second
+    // contract's analytics to the first contract's seat admin.
+    const link = await screen.findByRole("link", { name: "Manage seats" })
+    expect(link).toHaveAttribute(
+      "href",
+      contractAdminView(orgSlug, second.slug),
+    )
   })
 })
