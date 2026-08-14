@@ -39,24 +39,31 @@ const useComplianceGate = () => {
     }
 
     const promise = (async (): Promise<boolean> => {
-      let user
+      // Defaults to "missing" so a failed check fails closed: with no
+      // definitive answer, treat it the same as compliance info being
+      // missing rather than letting the action through unchecked.
+      let missing = true
       try {
         // Fetched on demand rather than subscribed to, so merely rendering an
         // enroll button costs no request, and the compliance state backing the
         // decision is read at the moment the user acts on it -- staleTime: 0
         // overrides the query client's default so a cached profile from
         // minutes ago can't stand in for a live check.
-        user = await queryClient.fetchQuery({
+        const user = await queryClient.fetchQuery({
           ...mitxUserQueries.me(),
           staleTime: 0,
         })
+        missing = needsComplianceInfo(user)
       } catch {
-        // Without a definitive answer, don't stand between the user and the
-        // action: MITx Online remains the authority and will reject the
-        // enrollment itself if the profile really is incomplete.
-        return true
+        // Swallow the fetch error -- `missing` already defaults to `true`,
+        // which routes into the dialog below. The dialog fetches the profile
+        // itself and lets the user submit fresh values regardless of why
+        // this pre-check failed, so it doubles as the retry surface: a
+        // transient failure here just means the dialog opens with blank
+        // fields instead of prefilled ones, and a real backend outage
+        // surfaces as the dialog's own save-error alert.
       }
-      if (!needsComplianceInfo(user)) return true
+      if (!missing) return true
       return (await NiceModal.show(JustInTimeDialog)) === true
     })().finally(() => {
       inFlight.current = null

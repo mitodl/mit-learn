@@ -94,6 +94,26 @@ describe("useComplianceGate", () => {
     )
   })
 
+  test("fails closed when the profile check itself fails -- shows the dialog rather than proceeding", async () => {
+    setMockResponse.get(mitxonline.urls.userMe.get(), "Server error", {
+      code: 500,
+    })
+    setMockResponse.get(mitxonline.urls.countries.list(), [])
+
+    const { result } = renderHook(() => useComplianceGate(), { wrapper })
+
+    const ensured = result.current.ensureCompliance()
+
+    // A failed pre-check must not be indistinguishable from "compliant" --
+    // it routes into the same dialog as a definite "info is missing".
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }))
+
+    await expect(ensured).resolves.toBe(false)
+  })
+
   test("does not reuse a stale cached profile -- checks fresh on every call", async () => {
     const compliant = mitxonline.factories.user.user({
       compliance_missing_fields: [],
