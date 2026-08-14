@@ -82,7 +82,10 @@ const JustInTimeDialogInner: React.FC = () => {
     onSubmit: async (values) => {
       try {
         await updateUser.mutateAsync({
-          PatchedUserRequest: jitPatchPayload(values),
+          PatchedUserRequest: jitPatchPayload(
+            values,
+            user.data?.user_profile?.year_of_birth,
+          ),
         })
       } catch {
         // Keep the dialog open so the entered values survive; the error alert

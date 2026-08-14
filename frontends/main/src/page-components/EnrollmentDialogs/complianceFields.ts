@@ -283,8 +283,19 @@ const jitSchema = Yup.object().shape({
  * `email` is never sent — see {@link EditableJitField}. Because the dialog
  * renders the whole address, we submit it whole rather than diffing, which
  * sidesteps partial-update semantics on the nested serializer.
+ *
+ * `user_profile` is the exception: it is only included when `year_of_birth`
+ * actually changed from `currentYearOfBirth`. mitxonline's `UserSerializer`
+ * recomputes `addl_field_flag` from whatever keys are present in the
+ * `user_profile` payload rather than the stored profile, so a PATCH
+ * containing only `year_of_birth` unconditionally resets that flag to
+ * `false` — sending the branch on every submit would silently clobber it for
+ * any user who already had it set.
  */
-const jitPatchPayload = (values: JitFormValues): PatchedUserRequest => {
+const jitPatchPayload = (
+  values: JitFormValues,
+  currentYearOfBirth: number | null | undefined,
+): PatchedUserRequest => {
   const legalAddress: LegalAddressRequest = {
     first_name: values.first_name.trim(),
     last_name: values.last_name.trim(),
@@ -300,12 +311,12 @@ const jitPatchPayload = (values: JitFormValues): PatchedUserRequest => {
       ? values.postal_code.trim()
       : "",
   }
-  return {
-    legal_address: legalAddress,
-    user_profile: {
-      year_of_birth: Number.parseInt(values.year_of_birth, 10),
-    },
+  const yearOfBirth = Number.parseInt(values.year_of_birth, 10)
+  const payload: PatchedUserRequest = { legal_address: legalAddress }
+  if (yearOfBirth !== currentYearOfBirth) {
+    payload.user_profile = { year_of_birth: yearOfBirth }
   }
+  return payload
 }
 
 export {

@@ -204,7 +204,7 @@ describe("initialJitValues", () => {
 
 describe("jitPatchPayload", () => {
   test("splits fields between legal_address and user_profile", () => {
-    expect(jitPatchPayload(values())).toEqual({
+    expect(jitPatchPayload(values(), 1975)).toEqual({
       legal_address: {
         first_name: "Ada",
         last_name: "Lovelace",
@@ -220,7 +220,7 @@ describe("jitPatchPayload", () => {
   })
 
   test("never sends email, which is owned by the SSO account", () => {
-    const payload = jitPatchPayload(values())
+    const payload = jitPatchPayload(values(), 1975)
     expect(payload).not.toHaveProperty("email")
     expect(payload.legal_address).not.toHaveProperty("email")
   })
@@ -232,6 +232,7 @@ describe("jitPatchPayload", () => {
         city: " Cambridge ",
         postal_code: " 1 ",
       }),
+      1975,
     )
     expect(payload.legal_address).toMatchObject({
       first_name: "Ada",
@@ -243,7 +244,10 @@ describe("jitPatchPayload", () => {
   test("drops a subdivision that does not apply to the chosen country", () => {
     // Someone who had US-MA stored and switches to the UK must not submit a US
     // state under a country that has none.
-    const payload = jitPatchPayload(values({ country: "GB", state: "US-MA" }))
+    const payload = jitPatchPayload(
+      values({ country: "GB", state: "US-MA" }),
+      1975,
+    )
     expect(payload.legal_address?.state).toBe("")
   })
 
@@ -252,14 +256,34 @@ describe("jitPatchPayload", () => {
     // changes, so a stale value from when it was visible must not be sent.
     const payload = jitPatchPayload(
       values({ country: "GB", postal_code: "02139" }),
+      1975,
     )
     expect(payload.legal_address?.postal_code).toBe("")
   })
 
   test("year of birth is sent as an integer", () => {
     expect(
-      jitPatchPayload(values({ year_of_birth: "1975" })).user_profile,
+      jitPatchPayload(values({ year_of_birth: "1975" }), 1990).user_profile,
     ).toEqual({ year_of_birth: 1975 })
+  })
+
+  test("omits user_profile when year of birth is unchanged", () => {
+    // mitxonline's UserSerializer recomputes addl_field_flag from whichever
+    // keys are present in the user_profile payload, not the stored profile —
+    // sending year_of_birth on every submit would silently reset that flag
+    // for a user who already had it set, even though nothing changed.
+    const payload = jitPatchPayload(values({ year_of_birth: "1990" }), 1990)
+    expect(payload).not.toHaveProperty("user_profile")
+  })
+
+  test("includes user_profile when year of birth is newly set", () => {
+    const payload = jitPatchPayload(values({ year_of_birth: "1990" }), null)
+    expect(payload.user_profile).toEqual({ year_of_birth: 1990 })
+  })
+
+  test("includes user_profile when year of birth changed", () => {
+    const payload = jitPatchPayload(values({ year_of_birth: "1990" }), 1975)
+    expect(payload.user_profile).toEqual({ year_of_birth: 1990 })
   })
 })
 
