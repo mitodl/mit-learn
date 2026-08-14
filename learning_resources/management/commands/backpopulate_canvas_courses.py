@@ -3,7 +3,6 @@
 from django.core.management import BaseCommand
 
 from learning_resources.tasks import sync_canvas_courses
-from main.utils import now_in_utc
 
 
 class Command(BaseCommand):
@@ -42,10 +41,12 @@ class Command(BaseCommand):
             overwrite=options["force_overwrite"],
         )
         self.stdout.write(f"Started task {task} to get courses from Canvas")
-        self.stdout.write("Waiting on task...")
-        start = now_in_utc()
-        task.get()
-        total_seconds = (now_in_utc() - start).total_seconds()
+        self.stdout.write("Waiting for the archive listing...")
+        queued = task.get()
+        if queued is None:
+            self.stdout.write(self.style.ERROR("No Canvas archives found"))
+            return
         self.stdout.write(
-            f"Population of Canvas file data finished, took {total_seconds} seconds"
+            f"Queued {queued} Canvas course(s) for ingestion. Each course is "
+            "imported by its own task; check the celery logs for progress."
         )
