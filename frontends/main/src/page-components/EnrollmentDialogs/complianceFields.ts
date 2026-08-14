@@ -111,6 +111,16 @@ const SUBDIVISION_COUNTRIES = new Set(["US", "CA"])
 const requiresSubdivision = (country: string | null | undefined): boolean =>
   SUBDIVISION_COUNTRIES.has((country ?? "").trim().toUpperCase())
 
+/**
+ * The postal-code field's label follows local terminology: US calls it a
+ * "Zip Code", everywhere else (including Canada) calls it a "Postal Code".
+ * The field itself is only shown for {@link SUBDIVISION_COUNTRIES}, so the
+ * fallback here never actually renders — it exists so a label is always
+ * defined rather than undefined mid-render while the country is unset.
+ */
+const postalCodeLabel = (country: string | null | undefined): string =>
+  (country ?? "").trim().toUpperCase() === "US" ? "Zip Code" : "Postal Code"
+
 type CountrySubdivision = { code: string; name: string }
 
 /**
@@ -146,6 +156,23 @@ const yearOfBirthOptions = (): string[] => {
 }
 
 /**
+ * `compliance_missing_fields` entries this dialog can actually resolve.
+ *
+ * mitxonline flags `state`/`postal_code` as missing whenever they're empty,
+ * for *every* country (mitodl/mitxonline#3850) — not just
+ * {@link SUBDIVISION_COUNTRIES}, unlike the CyberSource check itself. The
+ * dialog only collects those two fields for US/CA, so for anyone else they
+ * can never be cleared. Counting them here would gate that entire population
+ * on every enroll attempt, forever, with no field in the form to fix it —
+ * so they're disregarded unless the stored country actually requires them.
+ */
+const relevantMissingFields = (user: User): string[] => {
+  const missing = user.compliance_missing_fields ?? []
+  if (requiresSubdivision(user.legal_address?.country)) return missing
+  return missing.filter((field) => field !== "state" && field !== "postal_code")
+}
+
+/**
  * Whether the user must supply profile information before enrolling.
  *
  * Two independent reasons, either of which opens the dialog: MITx Online
@@ -154,10 +181,9 @@ const yearOfBirthOptions = (): string[] => {
  */
 const needsComplianceInfo = (user: User | undefined): boolean => {
   if (!user) return false
-  // compliance_missing_fields is typed as required, but a deployment that
-  // predates mitodl/mitxonline#3818 omits it. Absent means "nothing missing".
-  const missingCompliance = user.compliance_missing_fields?.length ?? 0
-  return missingCompliance > 0 || !user.user_profile?.year_of_birth
+  return (
+    relevantMissingFields(user).length > 0 || !user.user_profile?.year_of_birth
+  )
 }
 
 /**
@@ -244,7 +270,10 @@ const jitSchema = Yup.object().shape({
   street_address_2: Yup.string(),
   city: requiredWhen("city", "City is required"),
   state: requiredWhen("state", "State or province is required"),
-  postal_code: requiredWhen("postal_code", "Postal code is required"),
+  // Generic on purpose: the field's own label switches between "Zip Code"
+  // (US) and "Postal Code" (CA), and this message has to read sensibly under
+  // either without needing its own country-reactive lookup.
+  postal_code: requiredWhen("postal_code", "ZIP/postal code is required"),
   year_of_birth: requiredWhen("year_of_birth", "Year of birth is required"),
 })
 
@@ -263,10 +292,13 @@ const jitPatchPayload = (values: JitFormValues): PatchedUserRequest => {
     street_address_1: values.street_address_1.trim(),
     street_address_2: values.street_address_2.trim(),
     city: values.city.trim(),
-    // A US state is meaningless under a country that has no subdivisions, so a
+    // A US state, or a postal code entered while the field was visible, is
+    // meaningless under a country that has no subdivisions, so a
     // previously-stored value is dropped rather than carried over.
     state: requiresSubdivision(values.country) ? values.state : "",
-    postal_code: values.postal_code.trim(),
+    postal_code: requiresSubdivision(values.country)
+      ? values.postal_code.trim()
+      : "",
   }
   return {
     legal_address: legalAddress,
@@ -283,6 +315,7 @@ export {
   MINIMUM_AGE,
   SUBDIVISION_COUNTRIES,
   requiresSubdivision,
+  postalCodeLabel,
   subdivisionOptions,
   isFieldRequired,
   yearOfBirthOptions,

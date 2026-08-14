@@ -88,7 +88,6 @@ describe("JustInTimeDialog", () => {
       "Address",
       "Address Line 2 (optional)",
       "City",
-      "Postal Code",
     ].forEach((label) => expect(textbox(dialog, label)).toBeVisible())
 
     expect(combobox(dialog, "Country")).toBeVisible()
@@ -128,7 +127,7 @@ describe("JustInTimeDialog", () => {
   })
 
   describe("country-conditional subdivision fields", () => {
-    test("State is absent for a country with no subdivisions", async () => {
+    test("State and Postal Code are absent for a country with no subdivisions", async () => {
       setup({ legal_address: { country: "GB" } })
       const dialog = await openDialog()
 
@@ -138,9 +137,15 @@ describe("JustInTimeDialog", () => {
       expect(
         within(dialog).queryByRole("combobox", { name: "State/Province" }),
       ).not.toBeInTheDocument()
+      expect(
+        within(dialog).queryByRole("textbox", { name: "Postal Code" }),
+      ).not.toBeInTheDocument()
+      expect(
+        within(dialog).queryByRole("textbox", { name: "Zip Code" }),
+      ).not.toBeInTheDocument()
     })
 
-    test("selecting the US reveals State and announces the new requirement", async () => {
+    test("selecting the US reveals State and a Zip Code field, and announces the new requirement", async () => {
       // compliance_missing_fields cannot warn about these: it is computed from
       // the country already stored, which here is none.
       setup()
@@ -155,14 +160,43 @@ describe("JustInTimeDialog", () => {
       await chooseOption(state, "Massachusetts")
       expect(state).toHaveTextContent("Massachusetts")
 
+      // US uses local terminology, not the generic "Postal Code" label.
+      expect(textbox(dialog, "Zip Code")).toBeVisible()
+      expect(
+        within(dialog).queryByRole("textbox", { name: "Postal Code" }),
+      ).not.toBeInTheDocument()
+
       expect(
         within(dialog).getByText(
-          "State/Province and Postal Code are required for United States.",
+          "State/Province and Zip Code are required for United States.",
         ),
       ).toBeInTheDocument()
     })
 
-    test("switching to a country without subdivisions clears the chosen state", async () => {
+    test("selecting Canada reveals State and a Postal Code field (not Zip Code)", async () => {
+      setup()
+      const dialog = await openDialog()
+
+      await chooseOption(combobox(dialog, "Country"), "Canada")
+
+      const state = await within(dialog).findByRole("combobox", {
+        name: "State/Province",
+      })
+      expect(state).toBeVisible()
+
+      expect(textbox(dialog, "Postal Code")).toBeVisible()
+      expect(
+        within(dialog).queryByRole("textbox", { name: "Zip Code" }),
+      ).not.toBeInTheDocument()
+
+      expect(
+        within(dialog).getByText(
+          "State/Province and Postal Code are required for Canada.",
+        ),
+      ).toBeInTheDocument()
+    })
+
+    test("switching to a country without subdivisions clears the chosen state and postal code", async () => {
       setup()
       const dialog = await openDialog()
 
@@ -171,6 +205,7 @@ describe("JustInTimeDialog", () => {
         await within(dialog).findByRole("combobox", { name: "State/Province" }),
         "Massachusetts",
       )
+      await user.type(textbox(dialog, "Zip Code"), "02139")
       await chooseOption(combobox(dialog, "Country"), "United Kingdom")
 
       await waitFor(() =>
@@ -178,13 +213,20 @@ describe("JustInTimeDialog", () => {
           within(dialog).queryByRole("combobox", { name: "State/Province" }),
         ).not.toBeInTheDocument(),
       )
+      expect(
+        within(dialog).queryByRole("textbox", { name: "Zip Code" }),
+      ).not.toBeInTheDocument()
+      expect(
+        within(dialog).queryByRole("textbox", { name: "Postal Code" }),
+      ).not.toBeInTheDocument()
 
-      // Re-selecting the US must not resurrect the stale subdivision.
+      // Re-selecting the US must not resurrect the stale subdivision or postal code.
       await chooseOption(combobox(dialog, "Country"), "United States")
       const state = await within(dialog).findByRole("combobox", {
         name: "State/Province",
       })
       expect(state).toHaveTextContent("Please Select")
+      expect(textbox(dialog, "Zip Code")).toHaveValue("")
     })
   })
 
@@ -244,7 +286,7 @@ describe("JustInTimeDialog", () => {
       expect(patchCalls()).toHaveLength(0)
     })
 
-    test("postal code is not required outside the US and Canada", async () => {
+    test("postal code is neither shown nor required outside the US and Canada", async () => {
       setup({
         legal_address: {
           first_name: "Ada",
@@ -257,6 +299,10 @@ describe("JustInTimeDialog", () => {
       })
       const dialog = await openDialog()
       await waitFor(() => expect(textbox(dialog, "City")).toHaveValue("London"))
+
+      expect(
+        within(dialog).queryByRole("textbox", { name: "Postal Code" }),
+      ).not.toBeInTheDocument()
 
       await user.click(within(dialog).getByRole("button", { name: "Submit" }))
 
@@ -278,7 +324,8 @@ describe("JustInTimeDialog", () => {
         await within(dialog).findByRole("combobox", { name: "State/Province" }),
         "Massachusetts",
       )
-      await user.type(textbox(dialog, "Postal Code"), "02139")
+      // US uses "Zip Code", not the generic "Postal Code" label.
+      await user.type(textbox(dialog, "Zip Code"), "02139")
       await chooseOption(combobox(dialog, "Year of Birth"), "1988")
 
       await user.click(within(dialog).getByRole("button", { name: "Submit" }))

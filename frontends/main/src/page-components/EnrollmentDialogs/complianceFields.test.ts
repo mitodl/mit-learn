@@ -6,6 +6,7 @@ import {
   isFieldRequired,
   jitPatchPayload,
   needsComplianceInfo,
+  postalCodeLabel,
   requiresSubdivision,
   subdivisionOptions,
   yearOfBirthOptions,
@@ -65,6 +66,59 @@ describe("needsComplianceInfo", () => {
     })
     delete (user as Partial<User>).compliance_missing_fields
     expect(needsComplianceInfo(user)).toBe(false)
+  })
+
+  test("postal_code/state reported missing outside US/CA -> not blocked", () => {
+    // mitodl/mitxonline#3850 flags these as missing whenever they're empty,
+    // for every country, but the dialog only ever collects them for US/CA —
+    // so outside those countries, they can never be resolved. Counting them
+    // here would gate an entire population forever with no field to fix it.
+    const user = mitxFactories.user.user({
+      compliance_missing_fields: ["postal_code", "state"],
+      legal_address: { country: "FR" },
+      user_profile: { year_of_birth: 1990 },
+    })
+    expect(needsComplianceInfo(user)).toBe(false)
+  })
+
+  test("postal_code/state reported missing for US/CA -> blocked", () => {
+    const user = mitxFactories.user.user({
+      compliance_missing_fields: ["postal_code"],
+      legal_address: { country: "US" },
+      user_profile: { year_of_birth: 1990 },
+    })
+    expect(needsComplianceInfo(user)).toBe(true)
+  })
+
+  test("a genuinely missing field outside US/CA still blocks", () => {
+    // Only postal_code/state get the always-flagged-everywhere treatment;
+    // other fields still gate normally regardless of country.
+    const user = mitxFactories.user.user({
+      compliance_missing_fields: ["postal_code", "city"],
+      legal_address: { country: "FR" },
+      user_profile: { year_of_birth: 1990 },
+    })
+    expect(needsComplianceInfo(user)).toBe(true)
+  })
+})
+
+describe("postalCodeLabel", () => {
+  test.each([
+    ["US", "Zip Code"],
+    ["us", "Zip Code"],
+    [" US ", "Zip Code"],
+  ])("%s -> %s", (country, expected) => {
+    expect(postalCodeLabel(country)).toBe(expected)
+  })
+
+  test.each([
+    ["CA", "Postal Code"],
+    ["GB", "Postal Code"],
+    ["", "Postal Code"],
+    [null, "Postal Code"],
+    [undefined, "Postal Code"],
+  ])("%s -> %s", (country, expected) => {
+    expect(postalCodeLabel(country)).toBe(expected)
   })
 })
 
@@ -191,6 +245,15 @@ describe("jitPatchPayload", () => {
     // state under a country that has none.
     const payload = jitPatchPayload(values({ country: "GB", state: "US-MA" }))
     expect(payload.legal_address?.state).toBe("")
+  })
+
+  test("drops a postal code entered before switching to a country without subdivisions", () => {
+    // Mirrors the state case above: the field is hidden once the country
+    // changes, so a stale value from when it was visible must not be sent.
+    const payload = jitPatchPayload(
+      values({ country: "GB", postal_code: "02139" }),
+    )
+    expect(payload.legal_address?.postal_code).toBe("")
   })
 
   test("year of birth is sent as an integer", () => {

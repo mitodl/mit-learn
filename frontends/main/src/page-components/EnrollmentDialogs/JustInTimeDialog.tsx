@@ -25,6 +25,7 @@ import {
   isFieldRequired,
   jitPatchPayload,
   jitSchema,
+  postalCodeLabel,
   requiresSubdivision,
   subdivisionOptions,
   yearOfBirthOptions,
@@ -127,14 +128,16 @@ const JustInTimeDialogInner: React.FC = () => {
       ({ code }) => code === nextCountry,
     )?.name
     if (requiresSubdivision(nextCountry)) {
-      // State and Postal Code appear (or become required) as a result of this
+      // State and postal code appear (or become required) as a result of this
       // change, so announce it rather than inserting fields silently.
       setSubdivisionNotice(
-        `${FIELD_SPECS.state.label} and ${FIELD_SPECS.postal_code.label} are required for ${nextName ?? "this country"}.`,
+        `${FIELD_SPECS.state.label} and ${postalCodeLabel(nextCountry)} are required for ${nextName ?? "this country"}.`,
       )
     } else {
-      // A subdivision from the previous country no longer applies.
+      // A subdivision or postal code from the previous country no longer
+      // applies, and both fields are about to disappear from the form.
       formik.setFieldValue("state", "")
+      formik.setFieldValue("postal_code", "")
       setSubdivisionNotice("")
     }
   }
@@ -159,7 +162,10 @@ const JustInTimeDialogInner: React.FC = () => {
     const value = formik.values[name]
     const shared = {
       name,
-      label: spec.label,
+      label:
+        name === "postal_code"
+          ? postalCodeLabel(formik.values.country)
+          : spec.label,
       required: isFieldRequired(name, formik.values.country),
       error: !!errors[name],
       errorText: errors[name],
@@ -223,7 +229,8 @@ const JustInTimeDialogInner: React.FC = () => {
   }
 
   const visibleFields = JIT_FIELDS.filter(
-    (field) => field !== "state" || showSubdivision,
+    (field) =>
+      (field !== "state" && field !== "postal_code") || showSubdivision,
   )
 
   return (
