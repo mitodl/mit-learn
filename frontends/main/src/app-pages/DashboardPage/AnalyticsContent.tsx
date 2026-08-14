@@ -347,7 +347,10 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     return <ErrorContent title="Access denied" timSays="403" />
   }
 
-  const firstContractSlug = org.contracts[0]?.slug
+  // On a contract-scoped page this must be the contract being viewed, not the
+  // org's first one, or "Manage seats" silently sends the manager to a
+  // different contract's admin page.
+  const manageSeatsSlug = contract?.slug ?? org.contracts[0]?.slug
 
   const header = (
     <HeaderSection>
@@ -360,11 +363,11 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           <PageSubtitle>Analytics</PageSubtitle>
         </div>
       </OrgDetailsContainer>
-      {firstContractSlug ? (
+      {manageSeatsSlug ? (
         <ButtonLink
           size="small"
           variant="bordered"
-          href={contractAdminView(orgSlug, firstContractSlug)}
+          href={contractAdminView(orgSlug, manageSeatsSlug)}
         >
           Manage seats
         </ButtonLink>
