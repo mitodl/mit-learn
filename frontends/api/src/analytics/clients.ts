@@ -3,6 +3,8 @@ import axiosInstance from "./axios"
 import type {
   AnalyticsPageParams,
   ContentEngagementDepth,
+  ContractContentEngagementDepth,
+  ContractMonthlyEngagementTrend,
   ContractUtilization,
   EnrollmentCompletionFunnel,
   MonthlyEngagementTrend,
@@ -104,4 +106,111 @@ const analyticsOrganizationsApi = {
     ),
 }
 
-export { analyticsOrganizationsApi, B2B_DASHBOARD_ROOT }
+/**
+ * `contractId` is MITx Online's `ContractPage.page_ptr_id` — the same value the
+ * manager dashboard puts in its own URLs, and what the analytics API filters
+ * on. NOT the contract slug the MIT Learn route carries, and NOT the
+ * warehouse's `contract_pk` surrogate; resolve the slug to an id from the
+ * org's `contracts` list before calling any of these.
+ *
+ * The org segment stays in the path even though a contract id identifies a
+ * contract on its own: the API filters on both, so that a manager of one org
+ * cannot read another's contract by naming it.
+ */
+const contractRoot = (organizationId: string, contractId: string) =>
+  `${orgRoot(organizationId)}/contracts/${encodeURIComponent(contractId)}`
+
+const getContractResource = <RowT>(
+  organizationId: string,
+  contractId: string,
+  resource: string,
+  page: AnalyticsPageParams | undefined,
+  signal: AbortSignal | undefined,
+): Promise<AxiosResponse<OrgAnalyticsResponse<RowT>>> =>
+  axiosInstance.get<OrgAnalyticsResponse<RowT>>(
+    `${contractRoot(organizationId, contractId)}/${resource}`,
+    { params: page, signal },
+  )
+
+/**
+ * The contract-scoped half of the same five endpoints, mirroring MITx Online's
+ * manager dashboard (which nests contracts under an organization). Same
+ * envelope, same paging, same suppression — only the scope differs.
+ *
+ * Two of the five read materialized views that exist only at contract grain
+ * (engagement-trend, content-engagement); the rest read the same views as the
+ * org endpoints, filtered down.
+ */
+const analyticsContractsApi = {
+  contractUtilization: (
+    organizationId: string,
+    contractId: string,
+    page?: AnalyticsPageParams,
+    signal?: AbortSignal,
+  ) =>
+    getContractResource<ContractUtilization>(
+      organizationId,
+      contractId,
+      "contract-utilization",
+      page,
+      signal,
+    ),
+
+  enrollmentFunnel: (
+    organizationId: string,
+    contractId: string,
+    page?: AnalyticsPageParams,
+    signal?: AbortSignal,
+  ) =>
+    getContractResource<EnrollmentCompletionFunnel>(
+      organizationId,
+      contractId,
+      "enrollment-funnel",
+      page,
+      signal,
+    ),
+
+  engagementTrend: (
+    organizationId: string,
+    contractId: string,
+    page?: AnalyticsPageParams,
+    signal?: AbortSignal,
+  ) =>
+    getContractResource<ContractMonthlyEngagementTrend>(
+      organizationId,
+      contractId,
+      "engagement-trend",
+      page,
+      signal,
+    ),
+
+  programFunnel: (
+    organizationId: string,
+    contractId: string,
+    page?: AnalyticsPageParams,
+    signal?: AbortSignal,
+  ) =>
+    getContractResource<ProgramFunnel>(
+      organizationId,
+      contractId,
+      "program-funnel",
+      page,
+      signal,
+    ),
+
+  contentEngagement: (
+    organizationId: string,
+    contractId: string,
+    page?: AnalyticsPageParams,
+    signal?: AbortSignal,
+  ) =>
+    getContractResource<ContractContentEngagementDepth>(
+      organizationId,
+      contractId,
+      "content-engagement",
+      page,
+      signal,
+    ),
+}
+
+export { analyticsOrganizationsApi, analyticsContractsApi, B2B_DASHBOARD_ROOT }
