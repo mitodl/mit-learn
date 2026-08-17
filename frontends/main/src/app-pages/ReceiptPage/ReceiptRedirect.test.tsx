@@ -79,6 +79,29 @@ describe("ReceiptByRunRedirect", () => {
     })
   })
 
+  test("announces loading and then the redirect", async () => {
+    setMockResponse.get(
+      HISTORY_URL,
+      mitxonline.factories.orders.orderHistoryList([
+        mitxonline.factories.orders.orderHistory({
+          id: ORDER_ID,
+          state: "fulfilled",
+          lines: [courseRunLine(RUN_ID)],
+        }),
+      ]),
+    )
+
+    renderWithProviders(<ReceiptByRunRedirect runId={RUN_ID} />)
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading receipt.")
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Receipt found. Redirecting.",
+      )
+    })
+  })
+
   test("picks the most recent matching order", async () => {
     setMockResponse.get(
       HISTORY_URL,

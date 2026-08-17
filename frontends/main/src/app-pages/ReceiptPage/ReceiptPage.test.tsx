@@ -500,11 +500,25 @@ describe("ReceiptPage", () => {
 
     renderWithProviders(<ReceiptPage orderId={ORDER_ID} />)
 
-    expect(
-      await screen.findByText(/We could not load this receipt/i),
-    ).toBeInTheDocument()
+    // An alert, so the failure is read out rather than silently replacing the
+    // skeleton.
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /We could not load this receipt/i,
+    )
     expect(
       screen.getByRole("link", { name: "Back to Dashboard" }),
     ).toHaveAttribute("href", "/dashboard")
+  })
+
+  test("announces loading and then the loaded receipt", async () => {
+    setupApis()
+
+    renderWithProviders(<ReceiptPage orderId={ORDER_ID} />)
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading receipt.")
+
+    await screen.findByRole("heading", { name: "Order Summary" })
+
+    expect(screen.getByRole("status")).toHaveTextContent("Receipt loaded.")
   })
 })

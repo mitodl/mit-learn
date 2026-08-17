@@ -3,6 +3,7 @@
 import React from "react"
 import { useRouter } from "next-nprogress-bar"
 import { Container, Skeleton, styled } from "ol-components"
+import { VisuallyHidden } from "@mitodl/smoot-design"
 import * as urls from "@/common/urls"
 import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 import {
@@ -39,6 +40,10 @@ const ReceiptRedirect: React.FC<{ resolution: OrderIdResolution }> = ({
   if (isPending || orderId !== null) {
     return (
       <PageContainer>
+        {/* Skeletons carry no ARIA, and this route only ever shows them. */}
+        <VisuallyHidden role="status" aria-live="polite" aria-atomic="true">
+          {isPending ? "Loading receipt." : "Receipt found. Redirecting."}
+        </VisuallyHidden>
         <Skeleton variant="text" width="30%" height={36} />
         <Skeleton variant="rectangular" width="100%" height={280} />
       </PageContainer>

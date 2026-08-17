@@ -6,7 +6,7 @@ import { useRouter } from "next-nprogress-bar"
 import { useQuery } from "@tanstack/react-query"
 import { RiArrowLeftLine, RiPrinterLine } from "@remixicon/react"
 import { Container, Skeleton, Typography, styled } from "ol-components"
-import { Button, ButtonLink } from "@mitodl/smoot-design"
+import { Button, ButtonLink, VisuallyHidden } from "@mitodl/smoot-design"
 import { orderQueries } from "api/mitxonline-hooks/orders"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import type { Order } from "@mitodl/mitxonline-api-axios/v2"
@@ -231,9 +231,24 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
     return <NotFoundPage />
   }
 
+  /**
+   * The heading and buttons render before the receipt does, and skeletons carry no
+   * ARIA, so the swap needs announcing. Failure is left to `ErrorState`, which is
+   * an assertive live region of its own.
+   */
+  const statusMessage = orderQuery.isPending
+    ? "Loading receipt."
+    : order
+      ? "Receipt loaded."
+      : null
+
   return (
     <Background>
       <PageContainer>
+        <VisuallyHidden role="status" aria-live="polite" aria-atomic="true">
+          {statusMessage}
+        </VisuallyHidden>
+
         <TitleRow>
           <PageHeading>Receipt</PageHeading>
           <Actions>
@@ -257,7 +272,7 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
         {orderQuery.isPending ? (
           <ReceiptSkeleton />
         ) : orderQuery.isError || !order ? (
-          <ErrorState>
+          <ErrorState role="alert">
             <Typography variant="body1">
               We could not load this receipt.{" "}
               {SUPPORT_EMAIL ? (
