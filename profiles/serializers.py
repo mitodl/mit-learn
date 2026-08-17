@@ -404,12 +404,12 @@ class CurrentUserSerializer(UserSerializer):
     read-only: users change their email through Keycloak, not through us.
     """
 
-    email = serializers.SerializerMethodField()
+    # AnonymousUser has no email attribute, and a read-only field whose
+    # attribute is missing is dropped from the output entirely (the same reason
+    # first_name/last_name don't appear for anonymous users). The default keeps
+    # the key present and blank instead.
+    email = serializers.CharField(read_only=True, default="")
     is_sso_user = serializers.SerializerMethodField()
-
-    def get_email(self, instance) -> str:
-        """Get the user's email address (blank for anonymous users)"""
-        return getattr(instance, "email", "") or ""
 
     def get_is_sso_user(self, instance) -> bool:
         """

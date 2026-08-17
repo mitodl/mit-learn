@@ -2395,8 +2395,8 @@ components:
           $ref: '#/components/schemas/Profile'
         email:
           type: string
-          description: Get the user's email address (blank for anonymous users)
           readOnly: true
+          default: ''
         first_name:
           type: string
           readOnly: true
