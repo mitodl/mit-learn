@@ -810,7 +810,7 @@ const TermsPage: React.FC = () => {
             inconvenience of forum).
           </BodyText>
           <BodyText variant="body1">
-            These terms of service were last updated on July 23, 2026.
+            These terms of service were last updated on August 17, 2026.
           </BodyText>
         </BodyContainer>
       </PageContainer>
