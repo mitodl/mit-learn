@@ -37,8 +37,9 @@ def mock_login(mocker):
 @pytest.fixture(autouse=True)
 def userinfo_flag_defaults(settings):
     """
-    Pin the userinfo create/update flags to their defaults.
-    Keeps these tests independent of whatever is set in backend.local.env.
+    Turn both userinfo create/update flags on, so the tests that exercise the full
+    create-and-sync behavior get it regardless of the setting defaults or of whatever
+    is set in backend.local.env. Tests for the disabled paths override these.
     """
     settings.MITOL_APIGATEWAY_USERINFO_CREATE = True
     settings.MITOL_APIGATEWAY_USERINFO_UPDATE = True
