@@ -4,6 +4,7 @@ import type {
   Nested,
   Order,
   OrderHistory,
+  OrderRefundsInner,
   OrderStreetAddress,
   OrderTransactions,
   PaginatedOrderHistoryList,
@@ -63,6 +64,14 @@ const redeemedDiscount = (
     discount_code: faker.string.alphanumeric(12),
     ...overrides,
   },
+})
+
+const orderRefund = (
+  overrides: Partial<OrderRefundsInner> = {},
+): OrderRefundsInner => ({
+  amount: Number(faker.commerce.price({ min: 5, max: 500 })),
+  date: faker.date.past().toISOString(),
+  ...overrides,
 })
 
 const order = (overrides: Partial<Order> = {}): Order => ({
@@ -139,6 +148,7 @@ export {
   order,
   orderHistory,
   orderHistoryList,
+  orderRefund,
   orderStreetAddress,
   orderTransactions,
   line,

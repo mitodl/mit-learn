@@ -1,8 +1,9 @@
 import React from "react"
 import { styled } from "ol-components"
+import { StateEnum } from "@mitodl/mitxonline-api-axios/v2"
 import type { Order } from "@mitodl/mitxonline-api-axios/v2"
 import { ReceiptCard } from "./ReceiptCard"
-import { formatMoney } from "./receiptUtils"
+import { formatMoney, formatReceiptDate } from "./receiptUtils"
 
 const SummaryCard = styled(ReceiptCard)(({ theme }) => ({
   gap: "20px",
@@ -56,6 +57,14 @@ const DiscountValue = styled(RowValue)(({ theme }) => ({
   color: theme.custom.colors.green,
 }))
 
+const RefundLabel = styled(RowLabel)(({ theme }) => ({
+  color: theme.custom.colors.red,
+}))
+
+const RefundValue = styled(RowValue)(({ theme }) => ({
+  color: theme.custom.colors.red,
+}))
+
 const TotalRow = styled(Row)(({ theme }) => ({
   ...theme.typography.h5,
   color: theme.custom.colors.darkGray2,
@@ -73,6 +82,30 @@ const getTotalDiscount = (order: Order): number =>
 
 const getTotalQuantity = (order: Order): number =>
   order.lines.reduce((total, line) => total + line.quantity, 0)
+
+const isRefundedState = (state: Order["state"]): boolean =>
+  state === StateEnum.Refunded || state === StateEnum.PartiallyRefunded
+
+/**
+ * One row per refund, so a refunded order does not read as a plain paid receipt.
+ * `total_price_paid` is stamped at fulfillment and a refund never reduces it, so
+ * the total below stays at the amount charged.
+ *
+ * Refunds normally come from refund transactions, but the
+ * `refund_fulfilled_order` management command flips an order's state without
+ * writing one — hence the state fallback, which has no amount to show.
+ */
+const getRefundRows = (order: Order): { label: string; amount?: number }[] => {
+  if (order.refunds.length > 0) {
+    return order.refunds.map((refund) => ({
+      label: refund.date
+        ? `Refund applied (${formatReceiptDate(refund.date)})`
+        : "Refund applied",
+      amount: refund.amount,
+    }))
+  }
+  return isRefundedState(order.state) ? [{ label: "Refund applied" }] : []
+}
 
 /**
  * Per-item prices, discount and quantity totals, and the amount paid. The
@@ -109,6 +142,17 @@ const ReceiptOrderSummary: React.FC<{ order: Order; className?: string }> = ({
           <RowLabel>Quantity</RowLabel>
           <RowValue>{`x ${totalQuantity}`}</RowValue>
         </Row>
+        {getRefundRows(order).map(({ label, amount }, index) => (
+          // An order can carry several refunds and nothing identifies them, so
+          // position is the only stable key available.
+          // eslint-disable-next-line react/no-array-index-key
+          <Row key={`${label}-${index}`}>
+            <RefundLabel>{label}</RefundLabel>
+            {amount === undefined ? null : (
+              <RefundValue>{`- ${formatMoney(amount)}`}</RefundValue>
+            )}
+          </Row>
+        ))}
       </Rows>
       <TotalRow>
         <span>Total:</span>

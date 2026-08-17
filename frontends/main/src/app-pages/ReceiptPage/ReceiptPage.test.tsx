@@ -398,6 +398,74 @@ describe("ReceiptPage", () => {
     expect(summary).toHaveTextContent("$3,029.20")
   })
 
+  test("shows a row per refund, leaving the total at the amount charged", async () => {
+    setupApis({
+      order: mitxonline.factories.orders.order({
+        id: ORDER_ID,
+        state: "partially_refunded",
+        total_price_paid: "1524.60",
+        refunds: [
+          mitxonline.factories.orders.orderRefund({
+            amount: 500,
+            date: "2024-07-02T00:00:00Z",
+          }),
+          mitxonline.factories.orders.orderRefund({
+            amount: 24.6,
+            date: "2024-08-15T00:00:00Z",
+          }),
+        ],
+      }),
+    })
+
+    renderWithProviders(<ReceiptPage orderId={ORDER_ID} />)
+
+    const summary = (
+      await screen.findByRole("heading", { name: "Order Summary" })
+    ).closest("div")!
+
+    expect(summary).toHaveTextContent("Refund applied (July 02, 2024)")
+    expect(summary).toHaveTextContent("- $500.00")
+    expect(summary).toHaveTextContent("Refund applied (August 15, 2024)")
+    expect(summary).toHaveTextContent("- $24.60")
+    // total_price_paid is stamped at fulfillment; a refund never reduces it.
+    expect(summary).toHaveTextContent("$1,524.60")
+  })
+
+  // `refund_fulfilled_order` flips the state without writing a refund transaction.
+  test("notes a refund when the state says refunded but no refunds are recorded", async () => {
+    setupApis({
+      order: mitxonline.factories.orders.order({
+        id: ORDER_ID,
+        state: "refunded",
+        refunds: [],
+      }),
+    })
+
+    renderWithProviders(<ReceiptPage orderId={ORDER_ID} />)
+
+    const summary = (
+      await screen.findByRole("heading", { name: "Order Summary" })
+    ).closest("div")!
+
+    expect(summary).toHaveTextContent("Refund applied")
+  })
+
+  test("shows no refund row on a fulfilled order", async () => {
+    setupApis({
+      order: mitxonline.factories.orders.order({
+        id: ORDER_ID,
+        state: "fulfilled",
+        refunds: [],
+      }),
+    })
+
+    renderWithProviders(<ReceiptPage orderId={ORDER_ID} />)
+
+    await screen.findByRole("heading", { name: "Order Summary" })
+
+    expect(screen.queryByText(/Refund applied/)).not.toBeInTheDocument()
+  })
+
   // Someone else's order 404s like a missing one; both get the generic 404.
   test("renders the generic 404 when the order is not found or not yours", async () => {
     setMockResponse.get(
