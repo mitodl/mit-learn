@@ -1,6 +1,41 @@
 Release Notes
 =============
 
+Version 0.77.3 (Released August 13, 2026)
+--------------
+
+- fix broken images in subscription emails (#3737)
+- Fix: render podcast show descriptions as HTML instead of raw markup (#3721)
+- feat(content_feedback): allow anonymous submissions (#3738)
+- Fix Canvas archive change detection: deterministic checksum, save after load (#3728)
+- Skip unchanged edX course archives before downloading from S3 (#3722)
+- remove GITHUB_ACCESS_TOKEN (#3730)
+- Fix: HTML leaking into meta description tags (#3727)
+- Make recreate index resilient to pod culling (#3716)
+- Fix PostHog view-event ETL crash from duplicate view events (#3714)
+- Use CMS Certificate Title for program LinkedIn "Add to Profile" (#3518)
+- Harden GH Actions supply chain: add zizmor static analysis + 7-day dependency cool-down (#3712)
+
+Version 0.77.2 (Released August 10, 2026)
+--------------
+
+- Fix flaky url-matching tests with unique factory urls (#3724)
+- Add course code to learning resource embedding context (#3700)
+- Sort learning resources by denormalized view_count instead of live Count() (#3711)
+- refactor: V1 — Clean up and de-duplicate the VideoPlaylistCollectionPage folder (#3706)
+- added a fallback to populate run readable ids for contentfiles withou… (#3719)
+- Include facets from urls in channel pages (#3695)
+- mitxonline course numbers (#3703)
+
+Version 0.77.1 (Released August 05, 2026)
+--------------
+
+- serializer performance - cache/re-use child serializer (#3713)
+- feat: soft delete feature for news and articles content (#3681)
+- Add trackFilterCourseCatalog GTM event (#3707)
+- Rate-limit content_feedback submissions per user (#3705)
+- Use psycopg's C implementation; drop unused psycopg2 and django-server-status (#3701)
+
 Version 0.76.2 (Released August 03, 2026)
 --------------
 

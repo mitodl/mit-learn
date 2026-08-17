@@ -326,10 +326,8 @@ def test_generate_aggregate_podcast_rss():
     assert result == bs(expected_rss, "xml").prettify()
 
 
-@pytest.mark.parametrize("github_token", [None, "token"])
-def test_github_podcast_config_files(settings, mock_github_client, github_token):
+def test_github_podcast_config_files(settings, mock_github_client):
     """Test the logic for retrieving podcast config files from github"""
-    settings.GITHUB_ACCESS_TOKEN = github_token
     mock_github_client.return_value.get_repo.return_value.get_contents.return_value = [
         mock_podcast_file(),
         mock_podcast_file(),

@@ -14,6 +14,12 @@ from learning_resources.factories import (
     LearningResourceFactory,
     LearningResourceRunFactory,
 )
+from learning_resources_search.serializers import serialize_bulk_learning_resources
+from vector_search.constants import (
+    CONTENT_FILES_RETRIEVE_PAYLOAD,
+    RESOURCES_PAYLOAD_EXCLUDE,
+    RESOURCES_RETRIEVE_PAYLOAD,
+)
 from vector_search.encoders.utils import dense_encoder, sparse_encoder
 from vector_search.views import QdrantView
 
@@ -749,11 +755,11 @@ def test_vector_search_sortby_with_score_cutoff_manually_sorted(mocker, client):
 
     mock_result = mocker.MagicMock()
     mock_point_1 = mocker.MagicMock()
-    mock_point_1.payload = {"readable_id": "course-1"}
+    mock_point_1.payload = {"readable_id": "course-1", "views": 100}
     mock_point_2 = mocker.MagicMock()
-    mock_point_2.payload = {"readable_id": "course-2"}
+    mock_point_2.payload = {"readable_id": "course-2", "views": 50}
     mock_point_3 = mocker.MagicMock()
-    mock_point_3.payload = {"readable_id": "course-3"}
+    mock_point_3.payload = {"readable_id": "course-3", "views": 200}
 
     mock_result.points = [mock_point_1, mock_point_2, mock_point_3]
     mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
@@ -761,16 +767,6 @@ def test_vector_search_sortby_with_score_cutoff_manually_sorted(mocker, client):
     mocker.patch(
         "vector_search.views.async_qdrant_client",
         return_value=mock_qdrant,
-    )
-
-    mock_hits = [
-        {"readable_id": "course-1", "views": 100},
-        {"readable_id": "course-2", "views": 50},
-        {"readable_id": "course-3", "views": 200},
-    ]
-    mocker.patch(
-        "vector_search.views._resource_vector_hits",
-        return_value=mock_hits,
     )
 
     # Test descending sort: sortby=-views
@@ -1256,3 +1252,148 @@ def test_content_file_vector_search_count_is_approximate(
 
     mock_qdrant.count.assert_awaited()
     assert mock_qdrant.count.await_args.kwargs["exact"] is False
+
+
+@pytest.mark.parametrize("from_payload", [True, False])
+def test_vector_search_payload_selector(mocker, client, settings, from_payload):
+    """
+    Resource searches request the trimmed full payload when payload hits are
+    enabled, and only the two hydration lookup fields when they are not.
+    """
+    settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD = from_payload
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    empty = mocker.MagicMock()
+    empty.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=empty)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=0))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "test"},
+    )
+
+    with_payload = mock_qdrant.query_points.mock_calls[0].kwargs["with_payload"]
+    if from_payload:
+        assert with_payload == models.PayloadSelectorExclude(
+            exclude=RESOURCES_PAYLOAD_EXCLUDE
+        )
+    else:
+        assert with_payload == RESOURCES_RETRIEVE_PAYLOAD
+
+
+@pytest.mark.parametrize("from_payload", [True, False])
+def test_vector_search_scroll_payload_selector(mocker, client, settings, from_payload):
+    """
+    The scroll path (no query string) must use the same selector; it otherwise
+    defaults to the entire payload, transcripts included.
+    """
+    settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD = from_payload
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=0))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": ""},
+    )
+
+    with_payload = mock_qdrant.scroll.mock_calls[0].kwargs["with_payload"]
+    if from_payload:
+        assert with_payload == models.PayloadSelectorExclude(
+            exclude=RESOURCES_PAYLOAD_EXCLUDE
+        )
+    else:
+        assert with_payload == RESOURCES_RETRIEVE_PAYLOAD
+
+
+@pytest.mark.django_db(transaction=True)
+def test_content_file_vector_search_scroll_keeps_full_payload(
+    mocker, client, content_file_viewer
+):
+    """Content file search is unaffected: it still scrolls the whole payload"""
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=0))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    client.get(reverse("vector_search:v0:vector_content_files_search"), data={"q": ""})
+
+    assert (
+        mock_qdrant.scroll.mock_calls[0].kwargs["with_payload"]
+        == CONTENT_FILES_RETRIEVE_PAYLOAD
+    )
+
+
+@pytest.mark.django_db(transaction=True)
+def test_vector_search_returns_payload_is_not_hydrated(mocker, client):
+    """
+    With payload hits enabled the response is built from the Qdrant payload
+    rather than re-fetched from the database.
+    """
+    resource = LearningResourceFactory.create(is_course=True)
+    payload = next(iter(serialize_bulk_learning_resources([resource.id])))
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    point = mocker.MagicMock()
+    point.payload = payload
+    mock_result.points = [point]
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=1))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+    hydrate = mocker.patch("vector_search.views._resource_vector_hits")
+
+    response = client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "test"},
+    )
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert [result["readable_id"] for result in results] == [resource.readable_id]
+    assert results[0]["title"] == resource.title
+    hydrate.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_vector_search_kill_switch_hydrates_from_database(mocker, client, settings):
+    """Turning the setting off restores database hydration"""
+    settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD = False
+    resource = LearningResourceFactory.create(is_course=True)
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    point = mocker.MagicMock()
+    point.payload = {
+        "readable_id": resource.readable_id,
+        "platform": {"code": resource.platform.code},
+    }
+    mock_result.points = [point]
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=1))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+    payload_hits = mocker.patch("vector_search.views._resource_payload_hits")
+
+    response = client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "test"},
+    )
+
+    assert response.status_code == 200
+    assert [result["id"] for result in response.json()["results"]] == [resource.id]
+    payload_hits.assert_not_called()

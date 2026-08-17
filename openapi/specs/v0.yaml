@@ -147,6 +147,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ContentFeedbackRequest'
         required: true
+      security:
+      - {}
       responses:
         '201':
           content:

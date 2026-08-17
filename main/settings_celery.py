@@ -136,7 +136,7 @@ CELERY_BEAT_SCHEDULE = (
             "schedule": crontab(
                 minute=0, hour=5, day_of_week=0
             ),  # 12:00 PM EST on Sundays
-            "kwargs": {"overwrite": False},
+            "kwargs": {"canvas_course_ids": None, "overwrite": False},
         },
         "update_posthog_events": {
             "task": "learning_resources.tasks.get_learning_resource_views",
@@ -163,6 +163,10 @@ CELERY_BEAT_SCHEDULE = (
         "update-search-featured-ranks-1-days": {
             "task": "learning_resources_search.tasks.update_featured_rank",
             "schedule": crontab(minute=30, hour=7),  # 3:30am EST
+        },
+        "delete-old-task-jobs-every-1-days": {
+            "task": "main.tasks.delete_old_task_jobs",
+            "schedule": crontab(minute=0, hour=8),  # 4:00am EST
         },
         "scrape-marketing-pages-every-1-days": {
             "task": "learning_resources.tasks.scrape_marketing_pages",

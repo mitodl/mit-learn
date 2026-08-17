@@ -36,7 +36,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.76.2"
+VERSION = "0.77.3"
 
 log = logging.getLogger()
 
@@ -545,6 +545,12 @@ OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE = get_int(
     "OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE",
     get_int("OPENSEARCH_INDEXING_CHUNK_SIZE", 100),
 )
+# learning resources per dispatch_content_files reindex batch
+OPENSEARCH_REINDEX_DISPATCH_CHUNK_SIZE = get_int(
+    "OPENSEARCH_REINDEX_DISPATCH_CHUNK_SIZE", 100
+)
+# how long finished TaskJobs (and their batches) are kept before cleanup
+TASK_JOB_RETENTION_DAYS = get_int("TASK_JOB_RETENTION_DAYS", 7)
 OPENSEARCH_MIN_QUERY_SIZE = get_int("OPENSEARCH_MIN_QUERY_SIZE", 2)
 OPENSEARCH_MAX_SUGGEST_HITS = get_int("OPENSEARCH_MAX_SUGGEST_HITS", 1)
 OPENSEARCH_MAX_SUGGEST_RESULTS = get_int("OPENSEARCH_MAX_SUGGEST_RESULTS", 1)
@@ -643,6 +649,12 @@ REST_FRAMEWORK = {
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.NamespaceVersioning",
     "ALLOWED_VERSIONS": ["v0", "v1"],
     "ORDERING_PARAM": "sortby",
+    # Trusted reverse-proxy hops in front of the app (APISIX + nginx). Anonymous
+    # throttles identify the client via the Nth-from-last X-Forwarded-For entry;
+    # without this DRF keys on the whole header, which a client can spoof to
+    # bypass the limit (mitodl/hq#12775). nginx appends, so only the rightmost
+    # NUM_PROXIES entries are added by our infrastructure and can be trusted.
+    "NUM_PROXIES": get_int("NUM_PROXIES", 2),
     "DEFAULT_THROTTLE_RATES": {
         # Rate format is "<count>/<period>" (e.g. "10/min", "30/hour"); a blank
         # env value -> "" or None -> None -> throttle is a no-op (kill switch).
@@ -832,6 +844,13 @@ HYBRID_VECTOR_SEARCH_MIN_SCORE = get_float(
 
 # hard limit for special cases where we need to return all results without pagination
 VECTOR_SEARCH_PAGE_MAX_LIMIT = get_int("VECTOR_SEARCH_PAGE_MAX_LIMIT", 200)
+
+# serve learning resource search hits from the Qdrant payload instead of
+# re-hydrating them from the database. Set to False to fall back to database
+# hydration without a deploy.
+VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD = get_bool(
+    name="VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD", default=True
+)
 
 # toggle to use requests (default for local) or webdriver which renders js elements
 EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(

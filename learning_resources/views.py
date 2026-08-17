@@ -19,6 +19,7 @@ from drf_spectacular.utils import (
     inline_serializer,
 )
 from grpc._channel import _InactiveRpcError
+from requests.exceptions import RequestException
 from rest_framework import serializers, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
@@ -109,7 +110,13 @@ from main.permissions import (
     AnonymousAccessReadonlyPermission,
     is_admin_user,
 )
-from main.utils import cache_page_for_all_users, cache_page_for_anonymous_users, chunks
+from main.utils import (
+    cache_page_for_all_users,
+    cache_page_for_anonymous_users,
+    call_fastly_purge_api,
+    chunks,
+    clear_views_cache,
+)
 from vector_search.serializers import LearningResourcesSearchFiltersSerializer
 
 
@@ -190,6 +197,20 @@ class BaseLearningResourceViewSet(viewsets.ReadOnlyModelViewSet):
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
+
+
+class SummaryPagination(LargePagination):
+    """
+    LargePagination that keeps annotations out of the count query.
+
+    Django keeps annotations in the count of a distinct queryset, so
+    canonical_parent_ids would be evaluated once per row counted. Counting
+    distinct pks is the same number for a fraction of the work.
+    """
+
+    def get_count(self, queryset):
+        """Count distinct pks; .values() drops the annotation, .only() would not"""
+        return queryset.values(*self.count_fields).distinct().count()
 
 
 @extend_schema_view(
@@ -337,7 +358,7 @@ class LearningResourceViewSet(
         detail=False,
         methods=["GET"],
         name="Get learning resources summary",
-        pagination_class=LargePagination,
+        pagination_class=SummaryPagination,
     )
     def summary(self, request, **kwargs):  # noqa: ARG002
         """
@@ -351,7 +372,9 @@ class LearningResourceViewSet(
             # we don't use `self.get_queryset()` here because there are incomplatible
             # `select_related()` invocations and we don't need related data anyway
             LearningResource.objects.filter(published=True)
-            .only("id", "last_modified", "url", "title")
+            # a deferred field the serializer reads costs a query per row
+            .only("id", "last_modified", "url", "title", "resource_type")
+            .with_canonical_parent_ids()
             .distinct()
             # Deterministic order so offset pagination has stable page
             # boundaries.
@@ -479,6 +502,50 @@ class PodcastEpisodeViewSet(BaseLearningResourceViewSet):
         ).filter(published=True)
 
 
+def clear_featured_caches(channel_names):
+    """
+    Clear the Redis featured-list cache, hard-purge channel pages from
+    Fastly, and soft-purge the homepage. Each Fastly purge is independently
+    best-effort so one failure doesn't leave the remaining pages stale.
+    """
+    clear_views_cache(key_prefix="featured_resources")
+    purges = [(f"/c/unit/{name}", False) for name in channel_names] + [("/", True)]
+    for relative_url, soft in purges:
+        try:
+            call_fastly_purge_api(relative_url, timeout=5, soft=soft)
+        except RequestException:
+            log.exception("Featured cache Fastly purge failed for %s", relative_url)
+
+
+def _clear_featured_caches_on_commit(path_resource_ids):
+    """
+    Clear the featured caches after commit if any of the given paths is a
+    unit channel's featured list; best-effort, never raises.
+
+    Runs synchronously in the request (not via Celery) so the purge is done
+    by the time the editor's save returns, regardless of worker backlog.
+    """
+    channel_names = list(
+        Channel.objects.filter(
+            featured_list_id__in=path_resource_ids,
+            channel_type=ChannelType.unit.name,
+        ).values_list("name", flat=True)
+    )
+    if not channel_names:
+        return
+
+    def _clear():
+        try:
+            clear_featured_caches(channel_names)
+        except Exception:
+            log.exception(
+                "Failed to clear featured caches for channels %s",
+                channel_names,
+            )
+
+    transaction.on_commit(_clear)
+
+
 @extend_schema_view(
     list=extend_schema(
         summary="List", description="Get a paginated list of learning paths"
@@ -542,6 +609,18 @@ class LearningPathViewSet(BaseLearningResourceViewSet, viewsets.ModelViewSet):
             self.get_queryset(), pk=serializer.instance.pk
         )
         return Response(serializer.data)
+
+    def perform_update(self, serializer):
+        super().perform_update(serializer)
+        _clear_featured_caches_on_commit([serializer.instance.id])
+
+    def perform_destroy(self, instance):
+        # Resolve channel names before the delete (Channel.featured_list is
+        # on_delete=SET_NULL); the atomic block defers the on_commit clear
+        # until after the delete commits.
+        with transaction.atomic():
+            _clear_featured_caches_on_commit([instance.id])
+            super().perform_destroy(instance)
 
 
 @extend_schema_view(
@@ -745,6 +824,9 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
             relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
             parent__resource_type=LearningResourceType.learning_path.name,
         )
+        previous_parent_ids = list(
+            current_relationships.values_list("parent_id", flat=True)
+        )
         # Remove the resource from lists it WAS in before but is not in now
         current_relationships.exclude(parent_id__in=learning_path_ids).delete()
         current_parent_lists = current_relationships.values_list("parent_id", flat=True)
@@ -771,6 +853,7 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
                     relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
                     position=last_index + 1,
                 )
+        _clear_featured_caches_on_commit({*previous_parent_ids, *learning_path_ids})
         current_relationships = LearningResourceRelationship.objects.prefetch_related(
             Prefetch(
                 "child",
@@ -845,6 +928,7 @@ class LearningPathItemsViewSet(ResourceListItemsViewSet, viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(parent_id=self.kwargs.get("learning_resource_id"))
+        _clear_featured_caches_on_commit([self.kwargs.get("learning_resource_id")])
 
         relationship = LearningResourceRelationship.objects.prefetch_related(
             Prefetch("child", queryset=LearningResource.objects.for_serialization())
@@ -857,7 +941,9 @@ class LearningPathItemsViewSet(ResourceListItemsViewSet, viewsets.ModelViewSet):
         return Response(response_serializer.data, status=201, headers=headers)
 
     def update(self, request, *args, **kwargs):
-        return super().update(request, *args, **kwargs)
+        response = super().update(request, *args, **kwargs)
+        _clear_featured_caches_on_commit([self.kwargs.get("learning_resource_id")])
+        return response
 
     def perform_destroy(self, instance):
         """Delete the relationship and update the positions of the remaining items"""
@@ -868,6 +954,7 @@ class LearningPathItemsViewSet(ResourceListItemsViewSet, viewsets.ModelViewSet):
                 position__gt=instance.position,
             ).update(position=F("position") - 1)
             instance.delete()
+            _clear_featured_caches_on_commit([instance.parent_id])
 
 
 @extend_schema_view(

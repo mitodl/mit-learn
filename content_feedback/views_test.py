@@ -2,6 +2,7 @@
 
 import pytest
 from django.urls import reverse
+from rest_framework.test import APIClient
 
 from content_feedback.factories import ContentFeedbackFactory
 from content_feedback.models import ContentFeedback
@@ -26,10 +27,24 @@ def _payload(**overrides):
     return payload
 
 
-def test_submit_requires_authentication(client):
-    """Anonymous users cannot submit feedback."""
+def test_submit_allows_anonymous():
+    """Anonymous users can submit without a CSRF token; the record has no user."""
+    # enforce_csrf_checks=True mirrors production SessionAuthentication: CSRF is
+    # only enforced for session-authenticated callers, so an anonymous POST with
+    # no token still succeeds.
+    client = APIClient(enforce_csrf_checks=True)
     response = client.post(reverse("content_feedback:v0:content_feedback"), _payload())
-    assert response.status_code in (401, 403)
+    assert response.status_code == 201
+    assert ContentFeedback.objects.count() == 1
+    assert ContentFeedback.objects.get().user is None
+
+
+def test_authenticated_without_csrf_token_rejected(user):
+    """A session-authenticated POST without a CSRF token is rejected (403)."""
+    client = APIClient(enforce_csrf_checks=True)
+    client.force_login(user)
+    response = client.post(reverse("content_feedback:v0:content_feedback"), _payload())
+    assert response.status_code == 403
     assert ContentFeedback.objects.count() == 0
 
 
@@ -119,7 +134,6 @@ def test_factory_builds_valid_record():
 def test_submit_rate_limited(user_client, mocker):
     """Exceeding the per-user rate returns 429; a different user is unaffected."""
     from django.core.cache.backends.locmem import LocMemCache
-    from rest_framework.test import APIClient
 
     from main.factories import UserFactory
     from main.throttles import RedisScopedRateThrottle
@@ -144,3 +158,47 @@ def test_submit_rate_limited(user_client, mocker):
     other_client = APIClient()
     other_client.force_login(UserFactory.create())
     assert other_client.post(url, _payload()).status_code == 201
+
+
+def test_anonymous_throttle_ignores_spoofed_xff(mocker):
+    """The anon throttle keys on the trusted client IP, not the spoofable header.
+
+    Our infrastructure (APISIX + nginx = NUM_PROXIES hops) appends the real
+    client IP to X-Forwarded-For; a client can prepend anything to the left. So
+    the throttle must key on the trusted entry (2nd from the right), which means
+    both: rotating the spoofable left side cannot bypass the limit, and a
+    genuinely different client still gets its own bucket (mitodl/hq#12775).
+    """
+    from django.core.cache.backends.locmem import LocMemCache
+
+    from main.throttles import RedisScopedRateThrottle
+
+    mocker.patch.object(
+        RedisScopedRateThrottle, "cache", LocMemCache("throttle-test", {})
+    )
+    mocker.patch.object(
+        RedisScopedRateThrottle, "THROTTLE_RATES", {"content_feedback": "2/min"}
+    )
+
+    url = reverse("content_feedback:v0:content_feedback")
+    client = APIClient(enforce_csrf_checks=True)
+
+    # XFF shape mirrors prod: "<client-controlled>, <real client>, <trusted
+    # proxy>". NUM_PROXIES=2 keys on the real client (2nd from the right).
+    def post(spoofed_ip, real_client="203.0.113.5"):
+        return client.post(
+            url,
+            _payload(),
+            HTTP_X_FORWARDED_FOR=f"{spoofed_ip}, {real_client}, 10.0.0.1",
+        )
+
+    # Rotating only the spoofable left entry does not mint new buckets: the one
+    # trusted client keys all three, so the third request is throttled.
+    assert post("9.9.9.1").status_code == 201
+    assert post("9.9.9.2").status_code == 201
+    assert post("9.9.9.3").status_code == 429
+
+    # A genuinely different client (different 2nd-from-right entry) gets a fresh
+    # bucket. This distinguishes correct keying from a constant peer/proxy
+    # address, which would instead collapse every client into the bucket above.
+    assert post("9.9.9.9", real_client="203.0.113.9").status_code == 201

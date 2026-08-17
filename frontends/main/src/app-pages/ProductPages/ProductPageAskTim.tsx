@@ -14,7 +14,7 @@ import {
 } from "api/hooks/learningResources"
 import { FeatureFlags } from "@/common/feature_flags"
 import { PostHogEvents } from "@/common/constants"
-import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
+import { RESOURCE_DRAWER_PARAMS, setResourceParams } from "@/common/urls"
 import { isSyllabusChatEnabled } from "@/page-components/AiChat/syllabusChatConfig"
 
 const AskTimCard = styled.div(({ theme }) => ({
@@ -84,12 +84,12 @@ export const ProductPageAskTimButton: React.FC<
 
   const syllabusHref = useMemo(() => {
     const params = new URLSearchParams(searchParams)
-    params.set(RESOURCE_DRAWER_PARAMS.resource, String(resource.id))
+    setResourceParams(params, resource.id, resource.title)
     // syllabus_only opens the drawer in chat-only mode; the drawer treats it as
     // implying the chat is expanded, so we don't also set `syllabus`.
     params.set(RESOURCE_DRAWER_PARAMS.syllabusOnly, "")
     return `?${params.toString()}`
-  }, [searchParams, resource.id])
+  }, [searchParams, resource.id, resource.title])
 
   const onClick = useCallback(() => {
     seedDetailCache()
@@ -106,7 +106,7 @@ export const ProductPageAskTimButton: React.FC<
 
   return (
     <AskTimCard>
-      <AskTimLink shallow href={syllabusHref} onClick={onClick}>
+      <AskTimLink href={syllabusHref} pushUrl={syllabusHref} onClick={onClick}>
         <RiSparkling2Line aria-hidden />
         <AskTimLabel>
           Ask <strong>TIM</strong>

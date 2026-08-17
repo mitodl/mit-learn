@@ -45,12 +45,15 @@ const makePodcastEpisodes = (count: number): PodcastEpisodeResource[] =>
 const setupApis = ({
   episodesPage1,
   episodesPage2,
+  podcastOverrides = {},
 }: {
   episodesPage1: LearningResource[]
   episodesPage2?: LearningResource[]
+  podcastOverrides?: Partial<LearningResource>
 }) => {
   const podcast = factories.learningResources.resource({
     resource_type: ResourceTypeEnum.Podcast,
+    ...podcastOverrides,
   })
 
   // Episodes of this podcast reference it as their parent, as they would in
@@ -200,6 +203,43 @@ describe("PodcastDetailPage", () => {
 
     // Flush to the loaded state to avoid act() warnings.
     await screen.findByText(episodes[0].title!)
+  })
+
+  test("renders a formatted show description", async () => {
+    const episodes = makePodcastEpisodes(1)
+    const { podcast } = setupApis({
+      episodesPage1: episodes,
+      podcastOverrides: {
+        description: "<p>Daryl Morey &amp; Jessica Gelman</p>",
+      },
+    })
+
+    renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
+
+    expect(
+      await screen.findByText("Daryl Morey & Jessica Gelman"),
+    ).toBeInTheDocument()
+  })
+
+  test("opens external links in the show description in a new tab", async () => {
+    const episodes = makePodcastEpisodes(1)
+    const { podcast } = setupApis({
+      episodesPage1: episodes,
+      podcastOverrides: {
+        // rel="noopener noreferrer" mirrors real backend output: nh3 adds it
+        // to every <a> during ETL sanitization, regardless of destination.
+        description:
+          'Relevant Resources: <a href="https://ocw.mit.edu/" rel="noopener noreferrer">OCW</a> and <a href="/search" rel="noopener noreferrer">Search</a>.',
+      },
+    })
+
+    renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
+
+    const externalLink = await screen.findByRole("link", { name: "OCW" })
+    expect(externalLink).toHaveAttribute("target", "_blank")
+
+    const internalLink = screen.getByRole("link", { name: "Search" })
+    expect(internalLink).not.toHaveAttribute("target")
   })
 
   test("shows an error when the podcast fails to load", async () => {

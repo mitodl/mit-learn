@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, Mock
 import pytest
 from freezegun import freeze_time
 from opensearch_dsl import response
-from opensearch_dsl.query import Percolate
 
 from learning_resources.constants import OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS
 from learning_resources.factories import LearningResourceFactory
@@ -31,6 +30,7 @@ from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
     LEARNING_RESOURCE,
+    PERCOLATE_INDEX_TYPE,
     PROGRAM_TYPE,
 )
 from learning_resources_search.factories import PercolateQueryFactory
@@ -4371,30 +4371,28 @@ def test_document_percolation(opensearch, mocker):
             {
                 "_index": "test-index",
                 "_id": f"{query.id}",
-                "id": f"{query.id}",
+                "_source": {"id": query.id},
+                "id": query.id,
                 "_score": 12.0,
             }
         )
 
     plugin_log_handler = mocker.patch("learning_resources_search.plugins.log")
-    mocker.patch.object(Search, "execute")
+    executed_searches = []
 
-    Search.execute.return_value = response.Response(
-        Search().query(Percolate(field="query", index="test", id="test")),
-        {
-            "_shards": {"failed": 0, "successful": 10, "total": 10},
-            "hits": {
-                "hits": percolate_hits,
-                "max_score": 12.0,
-                "total": 123,
-            },
-            "timed_out": False,
-            "took": 123,
-        },
-    ).hits
+    def mock_scan(search_self, *args, **kwargs):
+        executed_searches.append(search_self)
+        for hit in percolate_hits:
+            yield response.Hit(hit)
+
+    mocker.patch.object(Search, "scan", autospec=True, side_effect=mock_scan)
 
     lr = LearningResourceFactory.create()
     percolate_matches_for_document(lr.id)
+
+    assert executed_searches[0]._index == [  # noqa: SLF001
+        get_default_alias_name(PERCOLATE_INDEX_TYPE)
+    ]
 
     plugin_log_handler.debug.assert_called_once_with(
         "document %i percolated - %s",

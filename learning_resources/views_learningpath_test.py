@@ -5,8 +5,10 @@ from types import SimpleNamespace
 import pytest
 from django.db.models import Max
 from django.urls import reverse
+from requests.exceptions import RequestException
 
-from learning_resources import factories, models
+from channels.factories import ChannelFactory
+from learning_resources import factories, models, views
 from learning_resources.constants import (
     LearningResourceRelationTypes,
 )
@@ -565,3 +567,219 @@ def test_adding_to_learning_path_not_effect_existing_membership(client, staff_us
         new_additional_parent_count + 1
         == new_additional_parent.learning_resource.resources.count()
     )
+
+
+@pytest.fixture
+def mock_featured_clear(mocker):
+    """Mock the synchronous clear_featured_caches function"""
+    return mocker.patch("learning_resources.views.clear_featured_caches")
+
+
+@pytest.fixture
+def featured_path(client, user):
+    """Create a learning path featured by a unit channel and log in an editor"""
+    update_editor_group(user, True)  # noqa: FBT003
+    path = factories.LearningPathFactory.create(author=user)
+    channel = ChannelFactory.create(is_unit=True, featured_list=path.learning_resource)
+    client.force_login(user)
+    return path, channel
+
+
+@pytest.mark.parametrize(
+    ("method", "data", "expected_status"),
+    [("patch", {"title": "New title"}, 200), ("delete", None, 204)],
+)
+def test_learning_path_write_clears_featured_caches(  # noqa: PLR0913
+    client,
+    featured_path,
+    mock_featured_clear,
+    django_capture_on_commit_callbacks,
+    method,
+    data,
+    expected_status,
+):
+    """
+    Updating or deleting a featured learning path clears the featured caches
+    on commit (delete resolves channel names before the row is gone)
+    """
+    path, channel = featured_path
+
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = getattr(client, method)(
+            reverse("lr:v1:learningpaths_api-detail", args=[path.learning_resource.id]),
+            data=data,
+            format="json",
+        )
+
+    assert resp.status_code == expected_status
+    mock_featured_clear.assert_called_once_with([channel.name])
+
+
+def test_learning_path_update_not_featured_no_clear(
+    client, user, mock_featured_clear, django_capture_on_commit_callbacks
+):
+    """PATCHing a learning path that is no channel's featured list clears nothing"""
+    update_editor_group(user, True)  # noqa: FBT003
+    path = factories.LearningPathFactory.create(author=user)
+    client.force_login(user)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = client.patch(
+            reverse("lr:v1:learningpaths_api-detail", args=[path.learning_resource.id]),
+            data={"title": "New title"},
+            format="json",
+        )
+
+    assert resp.status_code == 200
+    mock_featured_clear.assert_not_called()
+
+
+def test_featured_cache_clear_failure_does_not_break_save(
+    client, featured_path, mock_featured_clear, django_capture_on_commit_callbacks
+):
+    """A failing cache clear (Redis/Fastly down) must not break the API response"""
+    mock_featured_clear.side_effect = Exception("broker down")
+    path, _ = featured_path
+
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = client.patch(
+            reverse("lr:v1:learningpaths_api-detail", args=[path.learning_resource.id]),
+            data={"title": "New title"},
+            format="json",
+        )
+
+    assert resp.status_code == 200
+
+
+def test_learning_path_item_create_clears_featured_caches(
+    client, featured_path, mock_featured_clear, django_capture_on_commit_callbacks
+):
+    """Adding an item to a featured path clears the featured caches"""
+    path, channel = featured_path
+    course = factories.CourseFactory.create()
+
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = client.post(
+            reverse(
+                "lr:v1:learningpathitems_api-list", args=[path.learning_resource.id]
+            ),
+            data={"child": course.learning_resource.id},
+            format="json",
+        )
+
+    assert resp.status_code == 201
+    mock_featured_clear.assert_called_once_with([channel.name])
+
+
+def test_learning_path_item_update_clears_featured_caches(
+    client, featured_path, mock_featured_clear, django_capture_on_commit_callbacks
+):
+    """Reordering an item in a featured path clears the featured caches"""
+    path, channel = featured_path
+    path.learning_resource.children.all().delete()
+    items = sorted(
+        factories.LearningPathRelationshipFactory.create_batch(
+            2, parent=path.learning_resource
+        ),
+        key=lambda item: item.position,
+    )
+
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = client.patch(
+            reverse(
+                "lr:v1:learningpathitems_api-detail",
+                args=[path.learning_resource.id, items[0].id],
+            ),
+            data={"position": items[1].position},
+            format="json",
+        )
+
+    assert resp.status_code == 200
+    mock_featured_clear.assert_called_once_with([channel.name])
+
+
+def test_learning_path_item_delete_clears_featured_caches(
+    client, featured_path, mock_featured_clear, django_capture_on_commit_callbacks
+):
+    """Removing an item from a featured path clears the featured caches"""
+    path, channel = featured_path
+    path.learning_resource.children.all().delete()
+    items = factories.LearningPathRelationshipFactory.create_batch(
+        2, parent=path.learning_resource
+    )
+
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = client.delete(
+            reverse(
+                "lr:v1:learningpathitems_api-detail",
+                args=[path.learning_resource.id, items[0].id],
+            )
+        )
+
+    assert resp.status_code == 204
+    mock_featured_clear.assert_called_once_with([channel.name])
+
+
+def test_set_learning_path_relationships_clears_featured_caches(
+    client, staff_user, mock_featured_clear, django_capture_on_commit_callbacks
+):
+    """Bulk membership set clears caches for both added and removed featured paths"""
+    course = factories.CourseFactory.create()
+    added_path = factories.LearningPathFactory.create(author=staff_user)
+    removed_path = factories.LearningPathFactory.create(author=staff_user)
+    factories.LearningPathRelationshipFactory.create(
+        parent=removed_path.learning_resource, child=course.learning_resource
+    )
+    added_channel = ChannelFactory.create(
+        is_unit=True, featured_list=added_path.learning_resource
+    )
+    removed_channel = ChannelFactory.create(
+        is_unit=True, featured_list=removed_path.learning_resource
+    )
+    url = reverse(
+        "lr:v1:learning_resource_relationships_api-learning-paths",
+        args=[course.learning_resource.id],
+    )
+    client.force_login(staff_user)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = client.patch(f"{url}?learning_path_id={added_path.learning_resource.id}")
+
+    assert resp.status_code == 200
+    mock_featured_clear.assert_called_once()
+    (names,) = mock_featured_clear.call_args.args
+    assert sorted(names) == sorted([added_channel.name, removed_channel.name])
+
+
+def test_clear_featured_caches(mocker):
+    """Clears the Redis prefix first, then purges channel pages hard and homepage soft"""
+    manager = mocker.Mock()
+    manager.attach_mock(
+        mocker.patch("learning_resources.views.clear_views_cache"),
+        "clear_views_cache",
+    )
+    manager.attach_mock(
+        mocker.patch("learning_resources.views.call_fastly_purge_api"), "purge"
+    )
+
+    views.clear_featured_caches(["mitx", "ocw"])
+
+    assert manager.mock_calls == [
+        mocker.call.clear_views_cache(key_prefix="featured_resources"),
+        mocker.call.purge("/c/unit/mitx", timeout=5, soft=False),
+        mocker.call.purge("/c/unit/ocw", timeout=5, soft=False),
+        mocker.call.purge("/", timeout=5, soft=True),
+    ]
+
+
+def test_clear_featured_caches_continues_after_purge_failure(mocker):
+    """A failed channel purge must not skip the remaining Fastly purges"""
+    mocker.patch("learning_resources.views.clear_views_cache")
+    mock_purge = mocker.patch(
+        "learning_resources.views.call_fastly_purge_api",
+        side_effect=[RequestException("fastly down"), None, None],
+    )
+
+    views.clear_featured_caches(["mitx", "ocw"])
+
+    assert mock_purge.call_count == 3

@@ -4,6 +4,7 @@ import {
   RESOURCE_DRAWER_PARAMS,
 } from "@/common/urls"
 import { parseResourceId } from "@/common/slugs"
+import { htmlToPlainText } from "@/common/htmlToPlainText"
 import type { AxiosError } from "axios"
 import type { Metadata } from "next"
 import * as Sentry from "@sentry/nextjs"
@@ -86,9 +87,13 @@ export const getMetadataAsync = async ({
       learningResourceQueries.detail(learningResourceId),
     )
     title = data?.title
-    description = data?.description?.replace(/<\/[^>]+(>|$)/g, "") ?? ""
-    image = data?.image?.url || image
-    imageAlt = image === data?.image?.url ? imageAlt : data?.image?.alt || ""
+    description = data?.description ?? ""
+    // Image and alt move together: taking the resource's image means taking its
+    // alt, and falling back to the caller's image means keeping the caller's.
+    if (data?.image?.url) {
+      image = data.image.url
+      imageAlt = data.image.alt || ""
+    }
     alts.canonical = canonicalResourceDrawerUrl(learningResourceId, data?.title)
   }
 
@@ -118,6 +123,7 @@ export const standardizeMetadata = ({
   ...otherMeta
 }: MetadataProps = {}): Metadata => {
   title = `${title} | ${env("NEXT_PUBLIC_SITE_NAME")}`
+  description = htmlToPlainText(description)
   const socialMetadata = social
     ? {
         openGraph: {

@@ -13,6 +13,7 @@ from rest_framework.reverse import reverse
 
 from channels.factories import ChannelTopicDetailFactory, ChannelUnitDetailFactory
 from channels.models import Channel
+from learning_resources.api import update_resource_view_counts
 from learning_resources.constants import (
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
     GROUP_TUTOR_PROBLEM_VIEWERS,
@@ -25,6 +26,7 @@ from learning_resources.exceptions import WebhookException
 from learning_resources.factories import (
     ContentFileFactory,
     CourseFactory,
+    LearningPathFactory,
     LearningResourceDepartmentFactory,
     LearningResourceFactory,
     LearningResourceOfferorFactory,
@@ -40,6 +42,7 @@ from learning_resources.factories import (
     VideoPlaylistFactory,
 )
 from learning_resources.models import (
+    LearningResource,
     LearningResourceOfferor,
     LearningResourceRelationship,
     PodcastEpisode,
@@ -1055,6 +1058,10 @@ def test_popular_sort(client, resource_type):
             learning_resource=resource,
         )
 
+    # sortby=-views orders by the denormalized view_count column, so it must
+    # be populated the same way the PostHog ETL / backfill task would.
+    update_resource_view_counts()
+
     url = reverse("lr:v1:learning_resources_api-list")
 
     params = (
@@ -1540,6 +1547,8 @@ def test_learning_resources_summary_listing_endpoint(django_assert_num_queries, 
             "last_modified": lr.last_modified.isoformat().replace("+00:00", "Z"),
             "url": lr.url,
             "title": lr.title,
+            "resource_type": lr.resource_type,
+            "canonical_parent_ids": [],
         }
         for lr in published
     ] == sorted(resp.data.get("results"), key=lambda x: int(x["id"]))
@@ -1594,6 +1603,127 @@ def test_learning_resources_summary_includes_stored_url(client):
 
     assert by_id[mitx_course.id]["url"] == mitx_learn_url
     assert by_id[edx_course.id]["url"] == edx_url
+
+
+def _relate(parent, child, relation_type, position):
+    """Attach child to parent at an explicit position."""
+    return LearningResourceRelationship.objects.create(
+        parent=parent, child=child, relation_type=relation_type, position=position
+    )
+
+
+def _summary_by_id(client):
+    """Map the summary endpoint's results by resource id."""
+    resp = client.get(reverse("lr:v1:learning_resources_api-summary"))
+    return {item["id"]: item for item in resp.data["results"]}
+
+
+def test_summary_canonical_parent_ids_match_detail_endpoint_for_video(client):
+    """
+    A video's canonical_parent_ids must equal detail's `playlists`, in order.
+    Positions are the reverse of creation order, so ordering by id fails this.
+    """
+    video = VideoFactory.create().learning_resource
+    first_created = VideoPlaylistFactory.create().learning_resource
+    second_created = VideoPlaylistFactory.create().learning_resource
+    relation = LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
+    _relate(first_created, video, relation, position=1)
+    _relate(second_created, video, relation, position=0)
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[video.id])
+    ).data
+
+    assert detail["playlists"] == [second_created.id, first_created.id]
+    assert (
+        _summary_by_id(client)[video.id]["canonical_parent_ids"]
+        == (detail["playlists"])
+    )
+
+
+def test_summary_canonical_parent_ids_match_detail_endpoint_for_episode(client):
+    """
+    An episode's canonical_parent_ids must equal detail's nested podcasts.
+    Positions are equal here because ETL never sets one, which is the shape
+    production actually has.
+    """
+    episode = PodcastEpisodeFactory.create().learning_resource
+    first_created = PodcastFactory.create(episodes=[]).learning_resource
+    second_created = PodcastFactory.create(episodes=[]).learning_resource
+    relation = LearningResourceRelationTypes.PODCAST_EPISODES.value
+    _relate(first_created, episode, relation, position=0)
+    _relate(second_created, episode, relation, position=0)
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[episode.id])
+    ).data
+
+    assert detail["podcast_episode"]["podcasts"] == [
+        first_created.id,
+        second_created.id,
+    ]
+    assert (
+        _summary_by_id(client)[episode.id]["canonical_parent_ids"]
+        == (detail["podcast_episode"]["podcasts"])
+    )
+
+
+def test_summary_canonical_parent_ids_excludes_learning_path_membership(client):
+    """Learning paths are user-created and may be private; they never surface here."""
+    course = CourseFactory.create().learning_resource
+    path = LearningPathFactory.create().learning_resource
+    _relate(
+        path,
+        course,
+        LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+        position=0,
+    )
+
+    assert _summary_by_id(client)[course.id]["canonical_parent_ids"] == []
+
+
+def test_summary_canonical_parent_ids_keeps_unpublished_parents(client):
+    """An unpublished parent still owns the URL, so it is not filtered out."""
+    video = VideoFactory.create().learning_resource
+    playlist = VideoPlaylistFactory.create().learning_resource
+    _relate(
+        playlist,
+        video,
+        LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+        position=0,
+    )
+    playlist.published = False
+    playlist.save(update_fields=["published"])
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[video.id])
+    ).data
+
+    assert detail["playlists"] == [playlist.id]
+    assert _summary_by_id(client)[video.id]["canonical_parent_ids"] == [playlist.id]
+
+
+def test_summary_count_omits_the_parent_ids_annotation(
+    django_assert_num_queries, client
+):
+    """The count must not evaluate canonical_parent_ids for every row it counts."""
+    playlist = VideoPlaylistFactory.create().learning_resource
+    videos = [video.learning_resource for video in VideoFactory.create_batch(3)]
+    for position, video in enumerate(videos):
+        _relate(
+            playlist,
+            video,
+            LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+            position=position,
+        )
+
+    with django_assert_num_queries(2) as captured:
+        resp = client.get(reverse("lr:v1:learning_resources_api-summary"))
+
+    assert resp.data["count"] == LearningResource.objects.filter(published=True).count()
+    count_sql, page_sql = (query["sql"] for query in captured.captured_queries)
+    assert "canonical_parent_ids" in page_sql
+    assert "canonical_parent_ids" not in count_sql
 
 
 @pytest.mark.parametrize(

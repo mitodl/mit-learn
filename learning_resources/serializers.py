@@ -390,7 +390,13 @@ class LearningResourceRunSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.LearningResourceRun
-        exclude = ["learning_resource", "is_b2b", "is_variant", *COMMON_IGNORED_FIELDS]
+        exclude = [
+            "learning_resource",
+            "is_b2b",
+            "is_variant",
+            "archive_key",
+            *COMMON_IGNORED_FIELDS,
+        ]
 
 
 class ResourceListMixin(serializers.Serializer):
@@ -1877,8 +1883,34 @@ class LearningResourceSummarySerializer(serializers.ModelSerializer):
     for sitemap generation and other use cases requiring minimal data transfer.
     """
 
+    canonical_parent_ids = serializers.SerializerMethodField()
+
+    @extend_schema_field(
+        {
+            "type": "array",
+            "items": {"type": "integer"},
+            "description": (
+                "Ids of the parents that form part of this resource's URL: the "
+                "parent podcasts of a podcast episode, the playlists of a video. "
+                "Empty for every other resource type. Parents are not filtered "
+                "by `published`, so an id here may belong to a resource this "
+                "endpoint will not return."
+            ),
+        }
+    )
+    def get_canonical_parent_ids(self, instance) -> list[int]:
+        """Ids of the parents that form part of this resource's URL."""
+        return instance.canonical_parent_ids
+
     class Meta:
         """Meta configuration for LearningResourceSummarySerializer"""
 
         model = models.LearningResource
-        fields = ("id", "last_modified", "url", "title")
+        fields = (
+            "id",
+            "last_modified",
+            "url",
+            "title",
+            "resource_type",
+            "canonical_parent_ids",
+        )

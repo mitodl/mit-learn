@@ -1,7 +1,7 @@
 "use client"
 
-import React from "react"
-import { Typography, Skeleton, styled } from "ol-components"
+import React, { useMemo } from "react"
+import { Typography, Skeleton, styled, TypographyProps } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import { RiPlayFill, RiPauseFill } from "@remixicon/react"
 import {
@@ -12,6 +12,7 @@ import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource } from "api/v1"
 import { formatDate } from "ol-utilities"
 import { HOME, podcastEpisodePageView } from "@/common/urls"
+import { addExternalLinkTargets } from "@/common/utils"
 import PodcastContainer from "./PodcastContainer"
 import PodcastBreadcrumbs from "./PodcastBreadcrumbs"
 import { usePodcastPage } from "./usePodcastPage"
@@ -66,18 +67,28 @@ const MetaLine = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const Description = styled(Typography)(({ theme }) => ({
-  color: theme.custom.colors.darkGray2,
-  display: "block",
-  marginBottom: "16px",
-  ...theme.typography.body1,
-  lineHeight: "26px",
-  [theme.breakpoints.down("sm")]: {
-    marginBottom: "8px",
-    ...theme.typography.body2,
-    lineHeight: "22px",
-  },
-}))
+const Description = styled(Typography)<Pick<TypographyProps, "component">>(
+  ({ theme }) => ({
+    color: theme.custom.colors.darkGray2,
+    display: "block",
+    marginBottom: "16px",
+    ...theme.typography.body1,
+    lineHeight: "26px",
+    a: {
+      textDecoration: "underline",
+      color: theme.custom.colors.darkGray2,
+      fontWeight: theme.typography.fontWeightMedium,
+    },
+    "a:hover": {
+      textDecoration: "none",
+    },
+    [theme.breakpoints.down("sm")]: {
+      marginBottom: "8px",
+      ...theme.typography.body2,
+      lineHeight: "22px",
+    },
+  }),
+)
 
 const LatestEpisodeLine = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
@@ -274,6 +285,21 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
 
   const handlePlayClick = (episode: LearningResource) => toggle(episode, id)
 
+  // Podcast descriptions are sanitized on the backend with nh3 during ETL
+  // (only <a href/title> is allowed), so the HTML is safe to render verbatim
+  // — the same trust model as podcast episode descriptions. Rendering it
+  // directly keeps server and client output identical, avoiding a hydration
+  // mismatch; target="_blank" is added via addExternalLinkTargets so it's
+  // part of the HTML fed to dangerouslySetInnerHTML on both server and
+  // client, keeping SSR output byte-identical to the client's first render.
+  const description = useMemo(
+    () =>
+      resource?.description
+        ? addExternalLinkTargets(resource.description)
+        : null,
+    [resource?.description],
+  )
+
   return (
     <>
       <PageSection variant="white">
@@ -315,10 +341,14 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
                       </MetaLine>
                     )}
 
-                    {resource?.description && (
-                      <Description variant="body2">
-                        {resource.description}
-                      </Description>
+                    {description && (
+                      <Description
+                        variant="body2"
+                        component="div"
+                        dangerouslySetInnerHTML={{
+                          __html: description,
+                        }}
+                      />
                     )}
 
                     {latestEpisode && (

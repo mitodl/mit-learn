@@ -2,7 +2,7 @@
 Django settings specific to learning_resources ingestion
 """
 
-from main.envs import get_bool, get_int, get_string
+from main.envs import get_bool, get_int, get_list_of_str, get_string
 
 # EDX API Credentials
 EDX_API_URL = get_string("EDX_API_URL", None)
@@ -13,9 +13,6 @@ EDX_API_CLIENT_SECRET = get_string("EDX_API_CLIENT_SECRET", None)
 EDX_COURSE_BUCKET_PREFIX = get_string(
     "EDX_COURSE_BUCKET_PREFIX", "edxorg-raw-data/edxorg/raw_data/course_xml/"
 )
-
-# Authentication for the github api
-GITHUB_ACCESS_TOKEN = get_string("GITHUB_ACCESS_TOKEN", None)
 
 # OCW settings
 OCW_LIVE_BUCKET = get_string("OCW_LIVE_BUCKET", None)
@@ -123,6 +120,15 @@ YOUTUBE_CONFIG_URL = get_string("YOUTUBE_CONFIG_URL", None)
 OVS_API_BASE_URL = get_string(
     "OVS_API_BASE_URL",
     None,
+)
+# Hosts that OVS media urls (thumbnails, streaming sources, subtitles) may point
+# at. OVS payloads arrive over a webhook, so any url in them is untrusted input:
+# without an allowlist a forged payload could point our requests at an arbitrary
+# (possibly internal) host. The OVS_API_BASE_URL host is always allowed. An entry
+# beginning with a "." matches any subdomain of that domain.
+OVS_ALLOWED_MEDIA_HOSTS = get_list_of_str(
+    "OVS_ALLOWED_MEDIA_HOSTS",
+    [],
 )
 
 # course catalog podcast etl settings

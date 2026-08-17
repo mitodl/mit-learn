@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 import boto3
 import pandas as pd
 from django.conf import settings
+from django.db import IntegrityError, transaction
 
 from learning_resources.models import LearningResource, LearningResourceViewEvent
 from learning_resources.utils import resource_upserted_actions
@@ -28,6 +29,7 @@ class PostHogLearningResourceViewEvent:
 
     resource_id: int
     event_date: datetime
+    event_uuid: str
 
 
 def posthog_extract_lrd_view_events() -> Generator[dict, None, None]:
@@ -94,11 +96,23 @@ def posthog_transform_lrd_view_events(
         # The PostHog data files contain other kinds of events, for example llm calls.
         # We only want to the resource views
 
-        if resource_id:
-            yield PostHogLearningResourceViewEvent(
-                resource_id=resource_id,
-                event_date=event.get("timestamp"),
+        if not resource_id:
+            continue
+
+        event_uuid = event.get("uuid")
+        if not event_uuid:
+            # PostHog assigns every event a uuid, so this indicates
+            # malformed source data
+            log.warning(
+                "Skipping lrd_view event without a uuid for resource %s", resource_id
             )
+            continue
+
+        yield PostHogLearningResourceViewEvent(
+            resource_id=resource_id,
+            event_date=event.get("timestamp"),
+            event_uuid=event_uuid,
+        )
 
 
 def load_posthog_lrd_view_event(
@@ -136,9 +150,45 @@ def load_posthog_lrd_view_event(
         log.warning(skip_warning)
         return None
 
-    lr_event, _ = LearningResourceViewEvent.objects.update_or_create(
-        learning_resource=learning_resource,
-        event_date=event.event_date,
+    # The newest S3 file is re-read on every run (its last_modified is always
+    # later than the events it holds), so most events arrive already stored.
+    # Return early: stamping this uuid onto another legacy duplicate below
+    # would violate the unique index.
+    existing = LearningResourceViewEvent.objects.filter(
+        event_uuid=event.event_uuid
+    ).first()
+    if existing:
+        return existing
+
+    # Adopt a matching legacy row (loaded before event_uuid existed) so re-read
+    # S3 files don't duplicate it. Stamp only the oldest one; the legacy tail
+    # can hold duplicate (resource, event_date) rows.
+    legacy_row = (
+        LearningResourceViewEvent.objects.filter(
+            learning_resource=learning_resource,
+            event_date=event.event_date,
+            event_uuid__isnull=True,
+        )
+        .order_by("id")
+        .first()
+    )
+    if legacy_row:
+        try:
+            # Savepoint: the check above is not a lock, so a concurrent run can
+            # adopt a different duplicate for this uuid first. get_or_create
+            # below then finds that row.
+            with transaction.atomic():
+                LearningResourceViewEvent.objects.filter(pk=legacy_row.pk).update(
+                    event_uuid=event.event_uuid
+                )
+        except IntegrityError:
+            log.info(
+                "Legacy view event row for resource %s was adopted concurrently",
+                event.resource_id,
+            )
+
+    lr_event, _ = LearningResourceViewEvent.objects.get_or_create(
+        event_uuid=event.event_uuid,
         defaults={
             "learning_resource": learning_resource,
             "event_date": event.event_date,

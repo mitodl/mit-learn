@@ -12,6 +12,7 @@ const organization = (
       description: faker.lorem.paragraph(),
       logo: faker.image.url(),
       slug: faker.lorem.slug(),
+      sso_organization_id: faker.string.uuid(),
       contracts: [],
     },
     overrides,
@@ -24,6 +25,7 @@ const organization = (
     description: merged.description!,
     logo: merged.logo!,
     slug: merged.slug!,
+    sso_organization_id: merged.sso_organization_id ?? null,
     contracts: merged.contracts!,
   }
 }

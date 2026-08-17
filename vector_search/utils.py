@@ -3,6 +3,7 @@ import gc
 import logging
 import uuid
 from functools import cache
+from textwrap import dedent
 
 from asgiref.sync import sync_to_async
 from django.conf import settings
@@ -11,6 +12,7 @@ from django.db.models import Prefetch, Q
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
 from learning_resources.constants import (
+    CONTENT_FILE_LARGE_FIELDS,
     PROGRAM_COURSE_CACHE_KEY_TEST_MODE,
 )
 from learning_resources.models import (
@@ -41,6 +43,7 @@ from main.utils import checksum_for_content, chunks
 from vector_search.constants import (
     COLLECTION_PARAM_MAP,
     CONTENT_FILES_COLLECTION_NAME,
+    COURSE_NUMBER_INDEXING_ONLY_FIELDS,
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_INDEXES,
@@ -59,6 +62,8 @@ from vector_search.constants import (
     QDRANT_RESOURCE_PARAM_MAP,
     QDRANT_TOPIC_INDEXES,
     RESOURCES_COLLECTION_NAME,
+    RESOURCES_PAYLOAD_EXCLUDE,
+    RESOURCES_RETRIEVE_PAYLOAD,
     TOPICS_COLLECTION_NAME,
     VECTOR_SEARCH_SCORE_BOOST,
 )
@@ -476,10 +481,36 @@ def _learning_resource_embedding_context(document):
     resource's content files regardless of resource type. The combined
     context is truncated to the embedding model's input limit.
     """
-    context = (
-        f"{document.get('title')} "
-        f"{document.get('description')} {document.get('full_description')}"
+    description = " ".join(
+        filter(
+            None,
+            [
+                document.get("description"),
+                document.get("full_description"),
+            ],
+        )
     )
+
+    parts = [f"# {document.get('title')}", description]
+    course_numbers = document.get("course_numbers") or (
+        document.get("course", {}).get("course_numbers")
+        if isinstance(document.get("course"), dict)
+        else None
+    )
+    if course_numbers:
+        formatted_numbers = [
+            num.get("value") if isinstance(num, dict) else str(num)
+            for num in course_numbers
+            if (num.get("value") if isinstance(num, dict) else num)
+        ]
+        if formatted_numbers:
+            parts.append(f"Course numbers: {', '.join(formatted_numbers)}")
+    elif document.get("resource_type_group") == "course" and document.get(
+        "readable_id"
+    ):
+        parts.append(f"Course number: {document.get('readable_id')}")
+
+    context = dedent("\n\n".join(filter(None, parts)))
     content = "\n\n".join(
         content_file["content"]
         for content_file in document.get("content_files") or []
@@ -488,7 +519,7 @@ def _learning_resource_embedding_context(document):
     if content:
         encoder = dense_encoder()
         context = truncate_to_model_limit(
-            f"{context}\n\n# Content\n{content}",
+            f"{context}\n\n## Content\n{content}",
             encoder.model_name,
             token_encoding_name=getattr(encoder, "token_encoding_name", None),
         )
@@ -1121,6 +1152,93 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
             ],
             wait=False,
         )
+
+
+def resources_payload_selector():
+    """
+    Return the `with_payload` value to use for the resources collection.
+
+    When hits are served from the payload we want everything the API response
+    needs, minus the indexing-only keys. Otherwise we only need the two fields
+    the database hydration path looks resources up by.
+    """
+    if settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD:
+        return models.PayloadSelectorExclude(exclude=RESOURCES_PAYLOAD_EXCLUDE)
+    return RESOURCES_RETRIEVE_PAYLOAD
+
+
+def _without_keys(items, drop_keys):
+    """Drop drop_keys from every dict in a list, leaving non-dicts alone"""
+    return [
+        {key: value for key, value in item.items() if key not in drop_keys}
+        if isinstance(item, dict)
+        else item
+        for item in items
+    ]
+
+
+def _trim_indexing_only_list_fields(payload):
+    """
+    Drop indexing-only keys the Qdrant payload selector cannot reach.
+
+    Selectors descend into objects but not into lists of objects, so anything
+    the indexing serializer adds *inside* a list survives the exclude and has
+    to be removed here:
+
+    - course.course_numbers[] carries sort_coursenum and primary, which
+      SearchCourseNumberSerializer adds on top of CourseNumberSerializer.
+    - content_files[] is re-serialized with the full ContentFileSerializer for
+      nested search, so it carries the large text fields that the API's
+      NestedContentFileSerializer omits. The rest of the field must survive:
+      document and video responses declare it, and search cards use
+      content_files[0].image_src as the thumbnail fallback.
+    """
+    trimmed = payload
+
+    course = payload.get("course")
+    if isinstance(course, dict) and isinstance(course.get("course_numbers"), list):
+        trimmed = {
+            **trimmed,
+            "course": {
+                **course,
+                "course_numbers": _without_keys(
+                    course["course_numbers"], COURSE_NUMBER_INDEXING_ONLY_FIELDS
+                ),
+            },
+        }
+
+    content_files = payload.get("content_files")
+    if isinstance(content_files, list):
+        trimmed = {
+            **trimmed,
+            "content_files": _without_keys(content_files, CONTENT_FILE_LARGE_FIELDS),
+        }
+
+    return trimmed
+
+
+def _resource_payload_hits(search_result):
+    """
+    Build resource hits from the Qdrant payloads themselves.
+
+    The payload is the resource as the indexing serializer wrote it, so it
+    already carries every field the API response needs -- no database
+    hydration required. Dedupes on platform:readable_id and preserves the
+    Qdrant ranking, the same way the hydrated path does.
+    """
+    hits = []
+    seen = set()
+    for hit in search_result:
+        payload = hit.payload or {}
+        readable_id = payload.get("readable_id")
+        if not readable_id:
+            continue
+        key = f"{(payload.get('platform') or {}).get('code', '')}:{readable_id}"
+        if key in seen:
+            continue
+        seen.add(key)
+        hits.append(_trim_indexing_only_list_fields(payload))
+    return hits
 
 
 def _resource_vector_hits(search_result):

@@ -6,6 +6,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING, Optional
 
 from django.conf import settings
+from django.contrib.postgres.expressions import ArraySubquery
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import (
@@ -130,6 +131,7 @@ class LearningResourceTopic(TimestampedModel):
     class Meta:
         """Meta options for LearningResourceTopic"""
 
+        ordering = ["name"]
         constraints = [models.UniqueConstraint(Lower("name"), name="unique_lower_name")]
 
 
@@ -343,6 +345,25 @@ class LearningResourceInstructor(TimestampedModel):
 class LearningResourceQuerySet(TimestampedModelQuerySet):
     """QuerySet for LearningResource"""
 
+    def with_canonical_parent_ids(self):
+        """
+        Annotate each resource's URL-forming parent ids; `[]` if it has none.
+
+        A correlated subquery rather than an aggregate, so the outer query
+        needs no GROUP BY. It runs per row scanned rather than per row
+        returned, so deep pages pay for the rows they skip.
+        """
+        return self.annotate(
+            canonical_parent_ids=ArraySubquery(
+                LearningResourceRelationship.objects.filter(
+                    child=OuterRef("pk"),
+                    relation_type__in=constants.CANONICAL_PARENT_RELATION_TYPES,
+                )
+                .order_by(*constants.RELATIONSHIP_ORDERING)
+                .values("parent_id")
+            )
+        )
+
     def for_serialization(self):
         """Return the list of prefetches"""
         return self.prefetch_related(
@@ -374,14 +395,16 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                 "parents",
                 queryset=LearningResourceRelationship.objects.filter(
                     relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
-                ).select_related("parent"),
+                )
+                .select_related("parent")
+                .order_by(*constants.RELATIONSHIP_ORDERING),
                 to_attr="_podcasts",
             ),
             Prefetch(
                 "parents",
                 queryset=LearningResourceRelationship.objects.filter(
                     relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
-                ),
+                ).order_by(*constants.RELATIONSHIP_ORDERING),
                 to_attr="_playlists",
             ),
             Prefetch(
@@ -828,6 +851,8 @@ class LearningResourceRun(TimestampedModel):
     )
     resource_prices = models.ManyToManyField(LearningResourcePrice, blank=True)
     checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
+    # S3 key of the last-processed course archive (content-addressed)
+    archive_key = models.CharField(max_length=512, null=True, blank=True)  # noqa: DJ001
     delivery = ArrayField(
         models.CharField(
             max_length=24, db_index=True, choices=LearningResourceDelivery.as_tuple()
@@ -1051,7 +1076,7 @@ class LearningResourceRelationshipQuerySet(TimestampedModelQuerySet):
                 relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
                 child__published=False,
             )
-            .order_by("position", "id")
+            .order_by(*constants.RELATIONSHIP_ORDERING)
         )
 
 
@@ -1078,7 +1103,7 @@ class LearningResourceRelationship(TimestampedModel):
     objects = LearningResourceRelationshipQuerySet.as_manager()
 
     class Meta:
-        ordering = ["position", "id"]
+        ordering = list(constants.RELATIONSHIP_ORDERING)
 
 
 class ContentFileQuerySet(TimestampedModelQuerySet):
@@ -1566,6 +1591,25 @@ class LearningResourceViewEvent(TimestampedModel):
         editable=False,
         help_text="The date of the lrd_view event, as collected by PostHog.",
     )
+    event_uuid = models.UUIDField(
+        null=True,
+        editable=False,
+        help_text=(
+            "The PostHog event UUID. Null only for rows loaded"
+            " before this field existed."
+        ),
+    )
+
+    class Meta:
+        constraints = [
+            # Conditional so the index skips the legacy NULL rows, which would
+            # otherwise cost ~105MB of index for entries nothing ever probes.
+            models.UniqueConstraint(
+                fields=["event_uuid"],
+                condition=Q(event_uuid__isnull=False),
+                name="learning_resources_lrviewevent_event_uuid_uniq",
+            )
+        ]
 
     def __str__(self):
         """Return a string representation of the event."""

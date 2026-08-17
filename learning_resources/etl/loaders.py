@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import caches
 from django.db import transaction
-from django.db.models import Max, Q
+from django.db.models import Max, Q, QuerySet
 
 from learning_resources.constants import (
     CONTENT_TYPE_PAGE,
@@ -1014,6 +1014,7 @@ def load_content_files(
     content_files_data: list[dict],
     *,
     calc_completeness: bool = False,
+    failed_keys: list | None = None,
 ) -> list[int]:
     """
     Sync all content files for a course run to database and S3 if not present in DB
@@ -1022,6 +1023,9 @@ def load_content_files(
         course_run (LearningResourceRun): a course run
         content_files_data (list or generator): Details about the content files
         calc_completeness: bool: Whether to calculate the completeness score
+        failed_keys: list: caller-owned list of ContentFile keys whose
+            extraction failed, mutated in place while content_files_data is
+            consumed; those records are exempted from the stale/unpublish pass
 
     Returns:
         list of int: Ids of the ContentFile objects that were created/updated
@@ -1047,6 +1051,8 @@ def load_content_files(
         stale_published_files = ContentFile.objects.filter(
             run=course_run, published=True
         ).exclude(id__in=content_files_ids)
+        if failed_keys:
+            stale_published_files = stale_published_files.exclude(key__in=failed_keys)
         stale_direct_resource_ids = list(
             stale_published_files.filter(direct_learning_resource__isnull=False)
             .values_list("direct_learning_resource_id", flat=True)
@@ -1198,6 +1204,8 @@ def load_problem_file(
 def load_problem_files(
     course_run: LearningResourceRun,
     problem_files_data: list[dict],
+    *,
+    failed_source_paths: list | None = None,
 ) -> list[int]:
     """
     Sync all problem files for canvas course
@@ -1205,6 +1213,9 @@ def load_problem_files(
     Args:
         course_run (LearningResourceRun): a course run
         problem_files_data (list or generator): Details about the problem files
+        failed_source_paths (list): caller-owned list of source paths whose
+            extraction failed, mutated in place while problem_files_data is
+            consumed; those records are retained rather than deleted as orphans
 
     Returns:
         list of int: Ids of the TutorProblemFile objects that were created/updated
@@ -1214,11 +1225,12 @@ def load_problem_files(
         load_problem_file(course_run, problem_file)
         for problem_file in problem_files_data
     ]
-    for file in (
-        TutorProblemFile.objects.filter(run=course_run)
-        .exclude(id__in=problem_files_ids)
-        .all()
-    ):
+    deletable = TutorProblemFile.objects.filter(run=course_run).exclude(
+        id__in=problem_files_ids
+    )
+    if failed_source_paths:
+        deletable = deletable.exclude(source_path__in=failed_source_paths)
+    for file in deletable.all():
         file.delete()
 
     return problem_files_ids
@@ -1870,124 +1882,56 @@ def load_videos_from_content_files(
     return videos
 
 
-def load_playlists(
-    video_channel: VideoChannel, playlists_data: iter
-) -> list[LearningResource]:
+def upsert_video_channel(video_channel_data: dict) -> VideoChannel:
     """
-    Load a list of video playlists into the database
-
-    Args:
-        video_channel (VideoChannel): the video channel instance this playlist is under
-        playlists_data (iter of dict): iterable of the video playlists
-
-    Returns:
-        list of LearningResource:
-            the created or updated LearningResources for the playlists
-    """
-    playlists = [
-        playlist
-        for playlist in (
-            load_playlist(video_channel, playlist_data)
-            for playlist_data in playlists_data
-        )
-        if playlist is not None
-    ]
-    playlist_ids = [playlist.id for playlist in playlists]
-
-    # remove playlists that no longer exist
-    playlists_to_unpublish = LearningResource.objects.filter(
-        video_playlist__channel=video_channel
-    ).exclude(id__in=playlist_ids)
-
-    playlists_to_unpublish.update(published=False)
-    bulk_resources_unpublished_actions(
-        playlists_to_unpublish.values_list("id", flat=True),
-        LearningResourceType.video_playlist.name,
-    )
-
-    return playlists
-
-
-def load_video_channel(video_channel_data: dict) -> VideoChannel:
-    """
-    Load a single video channel into the database
+    Create or update the VideoChannel row itself, without touching its playlists
 
     Arg:
         video_channel_data (dict):
-            the normalized video channel data
+            the normalized video channel data, without a "playlists" key
     Returns:
         VideoChannel: the updated or created video channel
     """
-    channel_id = video_channel_data.pop("channel_id")
-    playlists_data = video_channel_data.pop("playlists", [])
-
+    channel_data = {
+        **video_channel_data,
+        "etl_source": ETLSource.youtube.name,
+        "published": True,
+    }
+    channel_id = channel_data.pop("channel_id")
     video_channel, _ = VideoChannel.objects.select_for_update().update_or_create(
-        channel_id=channel_id, defaults=video_channel_data
+        channel_id=channel_id, defaults=channel_data
     )
-    load_playlists(video_channel, playlists_data)
-
     return video_channel
 
 
-def load_youtube_video_channels(video_channels_data: iter) -> list[VideoChannel]:
+def unpublish_orphaned_videos(playlist_ids: list[int] | None = None) -> None:
     """
-    Load a list of video channels
+    Unpublish published videos that are in no published playlist.
 
     Args:
-        video_channels_data (iter of dict): iterable of the video channels data
-
-    Returns:
-        list of VideoChannel: the loaded video channels
+        playlist_ids (list of int or None): only consider the videos of these
+            playlist resources; if None, sweep every playlist video
     """
-    video_channels = []
-    channel_ids = []
-    for video_channel_data in video_channels_data:
-        channel_id = video_channel_data["channel_id"]
-        channel_ids.append(channel_id)
-        video_channel_data["etl_source"] = ETLSource.youtube.name
-        video_channel_data["published"] = True
-        try:
-            video_channel = load_video_channel(video_channel_data)
-        except ExtractException:
-            # video_channel_data has lazily evaluated generators,
-            # one of them could raise an extraction error
-            # this is a small pollution of separation of concerns
-            # but this allows us to stream the extracted data w/ generators
-            # as opposed to having to load everything into memory,
-            # which will eventually fail
-            log.exception(
-                "Error with extracted video channel: channel_id=%s", channel_id
-            )
-        else:
-            video_channels.append(video_channel)
-
-    VideoChannel.objects.filter(etl_source=ETLSource.youtube.name).exclude(
-        channel_id__in=channel_ids
-    ).update(published=False)
-
-    # Unpublish any video playlists not included in published channels
-    orphaned_playlist_ids = (
-        VideoPlaylist.objects.exclude(channel__channel_id__in=channel_ids)
-        .filter(channel__etl_source=ETLSource.youtube.name)
-        .values_list("learning_resource__id", flat=True)
+    playlist_videos = LearningResourceRelationship.objects.filter(
+        relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
+    )
+    candidates = (
+        playlist_videos.filter(parent_id__in=playlist_ids)
+        if playlist_ids is not None
+        else playlist_videos
     )
 
-    if orphaned_playlist_ids:
-        LearningResource.objects.filter(id__in=orphaned_playlist_ids).update(
-            published=False
+    orphaned_video_ids = list(
+        LearningResource.objects.filter(
+            published=True, id__in=candidates.values("child_id")
         )
-        bulk_resources_unpublished_actions(
-            orphaned_playlist_ids, LearningResourceType.video_playlist.name
+        .exclude(
+            # a video in another, still-published playlist isn't orphaned
+            id__in=playlist_videos.filter(parent__published=True).values("child_id")
         )
-
-    # Unpublish any published videos that aren't in at least one published playlist
-    orphaned_video_ids = (
-        LearningResourceRelationship.objects.filter(
-            relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
-        )
-        .exclude(parent__published=True)
-        .values_list("child", flat=True)
+        .values_list("id", flat=True)
     )
+
     if orphaned_video_ids:
         LearningResource.objects.filter(id__in=orphaned_video_ids).update(
             published=False
@@ -1996,4 +1940,65 @@ def load_youtube_video_channels(video_channels_data: iter) -> list[VideoChannel]
             orphaned_video_ids, LearningResourceType.video.name
         )
 
-    return video_channels
+
+def unpublish_playlists(playlist_resources: QuerySet) -> None:
+    """
+    Unpublish playlist resources, and any video they leave orphaned
+
+    Args:
+        playlist_resources (QuerySet): the playlist LearningResources to unpublish
+    """
+    unpublished_ids = list(playlist_resources.values_list("id", flat=True))
+    if not unpublished_ids:
+        return
+
+    LearningResource.objects.filter(id__in=unpublished_ids).update(published=False)
+    bulk_resources_unpublished_actions(
+        unpublished_ids, LearningResourceType.video_playlist.name
+    )
+    unpublish_orphaned_videos(unpublished_ids)
+
+
+def unpublish_removed_playlists(
+    video_channel: VideoChannel, playlist_ids: list[str]
+) -> None:
+    """
+    Unpublish the channel's playlists that are no longer in its youtube listing
+
+    Args:
+        video_channel (VideoChannel): the video channel
+        playlist_ids (list of str): youtube ids of the channel's current playlists
+    """
+    unpublish_playlists(
+        LearningResource.objects.filter(video_playlist__channel=video_channel).exclude(
+            readable_id__in=playlist_ids
+        )
+    )
+
+
+def unpublish_removed_youtube_channels(channel_ids: list[str]) -> None:
+    """
+    Unpublish everything youtube no longer offers under the configured channels.
+
+    Channels that aren't in channel_ids are unpublished, along with their
+    playlists and any video left without a published playlist.
+
+    Args:
+        channel_ids (list of str): youtube ids of the configured channels
+    """
+    VideoChannel.objects.filter(etl_source=ETLSource.youtube.name).exclude(
+        channel_id__in=channel_ids
+    ).update(published=False)
+
+    # Unpublish any video playlists not included in published channels
+    unpublish_playlists(
+        LearningResource.objects.filter(
+            id__in=VideoPlaylist.objects.exclude(channel__channel_id__in=channel_ids)
+            .filter(channel__etl_source=ETLSource.youtube.name)
+            .values_list("learning_resource__id", flat=True)
+        )
+    )
+
+    # Backstop: catch videos orphaned by anything the per-playlist path missed,
+    # such as a run that died partway through or a playlist load that bailed
+    unpublish_orphaned_videos()

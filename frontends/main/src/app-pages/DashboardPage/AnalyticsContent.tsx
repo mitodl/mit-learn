@@ -23,7 +23,6 @@ import EngagementTrendChart from "./Analytics/EngagementTrendChart"
 import ProgramFunnelChart from "./Analytics/ProgramFunnelChart"
 import SectionHeader from "./Analytics/SectionHeader"
 import SectionTruncation from "./Analytics/SectionTruncation"
-import { getOrgUuid } from "./Analytics/orgUuid"
 
 /**
  * Org-scoped B2B analytics, the reporting half of the org-manager dashboard
@@ -154,7 +153,12 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   } = useQuery(managerOrganizationQueries.managerOrganizationsList())
 
   const org = managerOrgs?.find(matchOrganizationBySlug(orgSlug))
-  const orgUuid = getOrgUuid(org)
+  // The Keycloak organization UUID, which is what the analytics API keys every
+  // org endpoint on (see mitodl/ol-analytics-api#13). It is null on orgs whose
+  // MITx Online record predates the field, and absent altogether against a
+  // deploy that predates mitodl/mitxonline#3789 — both must read as "analytics
+  // unavailable" rather than a request with `undefined` in the path.
+  const orgUuid = org?.sso_organization_id ?? null
   const analyticsAvailable = isAnalyticsConfigured() && !!orgUuid
 
   // Per-section page size. Raised only by that section's "Show all", so

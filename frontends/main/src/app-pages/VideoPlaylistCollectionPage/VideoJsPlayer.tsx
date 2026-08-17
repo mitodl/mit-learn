@@ -226,7 +226,3 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
 }
 
 export default VideoJsPlayer
-
-// Re-export for backward compatibility — the implementation lives in
-// videoSources.ts so it can be imported without pulling in video.js.
-export { resolveVideoSources } from "./videoSources"
