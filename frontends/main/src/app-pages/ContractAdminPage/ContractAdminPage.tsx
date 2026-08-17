@@ -327,6 +327,31 @@ const EMPTY_TABLE_MESSAGE: Record<StatusFilter, string> = {
   failed: "No failed invitations.",
 }
 
+/**
+ * A query that matches nothing is its own state, distinct from every entry
+ * above: seats exist, and some may even have the active status — they just
+ * don't match what was typed. Both the per-filter copy and the generic "No
+ * seat assignments found." misstate that, so the search case gets its own
+ * string.
+ */
+const NO_SEARCH_RESULTS_MESSAGE = "No seat assignments match your search."
+
+/**
+ * The codes query keeps the previous filter's or page's rows on screen while
+ * the next request is in flight (`keepPreviousData`), which avoids a layout
+ * jump when paginating but would otherwise leave, say, delivered rows sitting
+ * under the Failed tab with nothing to say they are stale. Fade them while
+ * that is true.
+ *
+ * The delay means a fast response never flashes the dimming, and dropping the
+ * transition on the fresh state restores full opacity immediately rather than
+ * fading back in.
+ */
+const TableBody = styled.div<{ $stale: boolean }>(({ $stale }) => ({
+  opacity: $stale ? 0.5 : 1,
+  transition: $stale ? "opacity 150ms ease 150ms" : "none",
+}))
+
 const COLUMN_FLEX = {
   assignedTo: 2,
   redeemedBy: 2,
@@ -376,7 +401,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
   const [page, setPage] = useState(1)
-  const [searchAnnouncement, setSearchAnnouncement] = useState("")
+  const [resultsAnnouncement, setResultsAnnouncement] = useState("")
   const [rowActionResult, setRowActionResult] = useState<{
     message: string
     severity: "success" | "error"
@@ -442,6 +467,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const {
     data: codes,
     isLoading: isLoadingCodes,
+    isPlaceholderData: isCodesStale,
     isError: isCodesError,
     error: codesError,
   } = useQuery({
@@ -457,22 +483,40 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     placeholderData: keepPreviousData,
   })
 
-  // Announce the result count after the query settles following a search change.
-  // Using a ref to track the last announced query so we only fire once per change,
-  // not on every re-render while loading.
-  const announcedQueryRef = useRef("")
+  // Announce the result count once the query settles after a change to the
+  // search term or the status filter — both replace the whole result set, and
+  // switching tabs is otherwise silent, since the table's own status region
+  // often lands on the same "page 1 of 1" text it started with.
+  //
+  // The ref keys on both inputs so we fire once per change rather than on every
+  // re-render while loading, and `isCodesStale` holds the announcement until
+  // the data actually belongs to the new filter — `keepPreviousData` means the
+  // query reports success with the *previous* count the moment the key changes,
+  // which would otherwise announce a number for the tab the user just left.
+  const announcedResultsRef = useRef<string | null>(null)
   useEffect(() => {
-    if (isLoadingCodes || announcedQueryRef.current === debouncedSearchQuery)
-      return
-    announcedQueryRef.current = debouncedSearchQuery
+    if (isLoadingCodes || isCodesStale) return
+    const settled = `${statusFilter}:${debouncedSearchQuery}`
+    if (announcedResultsRef.current === settled) return
+    const isFirstLoad = announcedResultsRef.current === null
+    announcedResultsRef.current = settled
+    // The initial load is not a change the user made; a count there would talk
+    // over the page announcing itself.
+    if (isFirstLoad) return
     const count = codes?.count ?? 0
-    setSearchAnnouncement("")
+    setResultsAnnouncement("")
     const id = setTimeout(
-      () => setSearchAnnouncement(`${count} result${count !== 1 ? "s" : ""}`),
+      () => setResultsAnnouncement(`${count} result${count !== 1 ? "s" : ""}`),
       0,
     )
     return () => clearTimeout(id)
-  }, [isLoadingCodes, debouncedSearchQuery, codes?.count])
+  }, [
+    isLoadingCodes,
+    isCodesStale,
+    statusFilter,
+    debouncedSearchQuery,
+    codes?.count,
+  ])
 
   if (isLoadingOrgs) {
     return (
@@ -528,11 +572,11 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
 
   const pageResults = codes?.results ?? []
 
-  // With a search term active this is a no-results state, not a no-such-status
-  // state, so fall back to the generic copy — otherwise the Failed tab would
-  // claim "No failed invitations." when failed ones exist but don't match.
+  // With a search term active this is a no-matches state, not a no-such-status
+  // state — otherwise the Failed tab would claim "No failed invitations." when
+  // failed ones exist but don't match the query.
   const emptyTableMessage = debouncedSearchQuery
-    ? EMPTY_TABLE_MESSAGE.all
+    ? NO_SEARCH_RESULTS_MESSAGE
     : EMPTY_TABLE_MESSAGE[statusFilter]
 
   const totalCount = codes?.count ?? 0
@@ -762,10 +806,17 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
             </ExportButtonWrapper>
           </SeatAssignmentsControls>
           <VisuallyHidden aria-live="polite" aria-atomic="true">
-            {searchAnnouncement}
+            {resultsAnnouncement}
           </VisuallyHidden>
           <TableCard>
-            <div role="table" aria-label="Seat assignments">
+            <div
+              role="table"
+              aria-label="Seat assignments"
+              // Marks the whole table as updating while a filter, search, or
+              // page change is in flight, including the window where the
+              // previous request's rows are still the ones on screen.
+              aria-busy={isLoadingCodes || isCodesStale}
+            >
               <div role="rowgroup">
                 <TableHeaderRow role="row">
                   <TableHeaderCell
@@ -807,12 +858,16 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                   <ActionCell role="columnheader" />
                 </TableHeaderRow>
               </div>
-              <div role="rowgroup">
-                <VisuallyHidden aria-live="polite" aria-atomic="true">
-                  {isLoadingCodes
+              <TableBody role="rowgroup" $stale={isCodesStale}>
+                <VisuallyHidden role="status" aria-atomic="true">
+                  {/* Mirrors the visible state for AT. The empty case has to
+                      use the same filter-aware copy as the cell below it —
+                      announcing the generic "no seat assignments" on the Failed
+                      tab makes exactly the claim that copy exists to avoid. */}
+                  {isLoadingCodes || isCodesStale
                     ? "Loading seat assignments"
                     : pageResults.length === 0
-                      ? "No seat assignments found"
+                      ? emptyTableMessage
                       : `Showing page ${page} of ${totalPages}`}
                 </VisuallyHidden>
                 {isLoadingCodes ? (
@@ -909,14 +964,18 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                     </TableRow>
                   ))
                 )}
-              </div>
+              </TableBody>
             </div>
             <TableFooter>
-              <TableFootnote aria-hidden="true">
-                {totalCount === 0
-                  ? "No assignments"
-                  : `Page ${page} of ${totalPages}`}
-              </TableFootnote>
+              {/* Only page position. With a filter or search active there are
+                  no rows for a reason the body already states, and a footnote
+                  reading "No assignments" under "No failed invitations." would
+                  contradict it. */}
+              {totalCount > 0 && (
+                <TableFootnote aria-hidden="true">
+                  {`Page ${page} of ${totalPages}`}
+                </TableFootnote>
+              )}
               {totalPages > 1 && (
                 <Pagination
                   count={totalPages}

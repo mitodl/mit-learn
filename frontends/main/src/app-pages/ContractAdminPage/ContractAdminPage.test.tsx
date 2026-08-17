@@ -1034,10 +1034,179 @@ describe("ContractAdminPage", () => {
 
     // Filter-aware copy: a bare "No seat assignments found." would imply the
     // contract has no seats at all, when in fact none of them failed.
-    await screen.findByText("No failed invitations.")
+    const table = screen.getByRole("table", { name: "Seat assignments" })
+    await waitFor(() => {
+      expect(
+        within(table).getByRole("cell", { name: "No failed invitations." }),
+      ).toBeInTheDocument()
+    })
+    // The live region mirrors the visible state, so it has to carry the same
+    // filter-aware copy — announcing the generic string would tell AT users the
+    // contract has no seat assignments at all.
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "No failed invitations.",
+    )
     expect(
       screen.queryByText("No seat assignments found."),
     ).not.toBeInTheDocument()
+  })
+
+  test("empty state blames the search, not the filter, while a query is active", async () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+    const { org, contract } = makeOrgWithContract()
+    setMockResponse.get(managerOrgsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [org],
+    })
+    setMockResponse.get(
+      managerContractDetailUrl(org.id, contract.id),
+      makeContractDetail(contract, {
+        total_codes: 1,
+        assigned_codes: 1,
+        redeemed_codes: 0,
+        unassigned_codes: 0,
+      }),
+    )
+
+    const deliveredCode = factories.contracts.contractCode({
+      redemption_status: "assigned",
+      assigned_to: "delivered@example.com",
+      email_status: "delivered",
+    })
+
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 25,
+      }),
+      factories.contracts.paginatedContractCodes([deliveredCode]),
+    )
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 25,
+        search_term: "z",
+      }),
+      factories.contracts.paginatedContractCodes([]),
+    )
+
+    renderWithProviders(
+      <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText("delivered@example.com")
+
+    // One character, so the 300ms debounce collapses to exactly one request —
+    // a longer term would leave intermediate prefixes unmocked if any keystroke
+    // gap outran the debounce.
+    await user.type(
+      screen.getByPlaceholderText("Search by name or email..."),
+      "z",
+    )
+
+    // Seats exist and none of them are excluded by a status filter here, so
+    // neither the per-filter copy nor "No seat assignments found." is true.
+    const table = screen.getByRole("table", { name: "Seat assignments" })
+    await waitFor(() => {
+      expect(
+        within(table).getByRole("cell", {
+          name: "No seat assignments match your search.",
+        }),
+      ).toBeInTheDocument()
+    })
+    expect(
+      screen.queryByText("No seat assignments found."),
+    ).not.toBeInTheDocument()
+  })
+
+  test("marks the table busy and dims stale rows while a filter change is in flight", async () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+    const { org, contract } = makeOrgWithContract()
+    setMockResponse.get(managerOrgsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [org],
+    })
+    setMockResponse.get(
+      managerContractDetailUrl(org.id, contract.id),
+      makeContractDetail(contract, {
+        total_codes: 2,
+        assigned_codes: 2,
+        redeemed_codes: 0,
+        unassigned_codes: 0,
+      }),
+    )
+
+    const deliveredCode = factories.contracts.contractCode({
+      redemption_status: "assigned",
+      assigned_to: "delivered@example.com",
+      email_status: "delivered",
+    })
+    const failedCode = factories.contracts.contractCode({
+      redemption_status: "assigned",
+      assigned_to: "bounced@example.com",
+      email_status: "failed",
+    })
+
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 25,
+      }),
+      factories.contracts.paginatedContractCodes([deliveredCode, failedCode]),
+    )
+    const failedCodes =
+      Promise.withResolvers<
+        ReturnType<typeof factories.contracts.paginatedContractCodes>
+      >()
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 25,
+        status: "failed",
+      }),
+      failedCodes.promise,
+    )
+
+    renderWithProviders(
+      <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText("delivered@example.com")
+
+    await user.click(screen.getByRole("tab", { name: "Failed" }))
+
+    // keepPreviousData keeps the All tab's rows on screen until the filtered
+    // response lands, so the table has to say it is updating — otherwise a
+    // delivered row sits under the Failed tab looking like a result.
+    const table = screen.getByRole("table", { name: "Seat assignments" })
+    expect(table).toHaveAttribute("aria-busy", "true")
+    expect(screen.getByText("delivered@example.com")).toBeInTheDocument()
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Loading seat assignments",
+    )
+
+    await act(async () => {
+      failedCodes.resolve(
+        factories.contracts.paginatedContractCodes([failedCode]),
+      )
+    })
+
+    await waitFor(() => {
+      expect(table).toHaveAttribute("aria-busy", "false")
+    })
+    expect(screen.queryByText("delivered@example.com")).not.toBeInTheDocument()
+    // Switching tabs replaces the whole result set, so the new size is
+    // announced — the table's own region often lands back on the same
+    // "page 1 of 1" text it started with and would say nothing.
+    await screen.findByText("1 result")
   })
 
   describe("status pill", () => {
