@@ -83,12 +83,14 @@ def test_posthog_transform_lrd_view_events(mocker, mock_posthog_event_bucket, se
     transformed_events = list(transformed_events)
     assert len(transformed_events) == 4
 
+    # event_date is a stdlib datetime: the extractor decodes parquet via pyarrow,
+    # which yields native types, so there is no pandas Timestamp to unwrap.
     assert transformed_events[0].resource_id == 3235
-    assert transformed_events[0].event_date.to_pydatetime() == datetime(
+    assert transformed_events[0].event_date == datetime(
         2025, 8, 28, 15, 20, 10, 403000, tzinfo=UTC
     )
     assert transformed_events[1].resource_id == 3235
-    assert transformed_events[1].event_date.to_pydatetime() == datetime(
+    assert transformed_events[1].event_date == datetime(
         2025, 8, 28, 15, 20, 13, 620000, tzinfo=UTC
     )
 

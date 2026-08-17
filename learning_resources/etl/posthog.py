@@ -8,7 +8,7 @@ from collections.abc import Generator
 from datetime import UTC, datetime
 
 import boto3
-import pandas as pd
+import pyarrow.parquet as pq
 from django.conf import settings
 from django.db import IntegrityError, transaction
 
@@ -16,6 +16,18 @@ from learning_resources.models import LearningResource, LearningResourceViewEven
 from learning_resources.utils import resource_upserted_actions
 
 log = logging.getLogger(__name__)
+
+# The only columns posthog_transform_lrd_view_events reads. The PostHog export
+# also carries person_properties, elements_chain, distinct_id, person_id,
+# created_at, _inserted_at and event; person_properties in particular is a JSON
+# blob comparable in size to properties, and all of them were being decoded for
+# every row and then discarded.
+POSTHOG_EVENT_COLUMNS = ["uuid", "timestamp", "properties"]
+
+# Rows decoded per batch. Bounds peak memory to roughly one batch rather than
+# one whole file, and is small enough that a batch stays cheap even though
+# properties holds the full PostHog client context per event.
+POSTHOG_EXTRACT_BATCH_SIZE = 1000
 
 
 @dataclasses.dataclass
@@ -68,9 +80,16 @@ def posthog_extract_lrd_view_events() -> Generator[dict, None, None]:
             s3_object = s3.Object(settings.POSTHOG_EVENT_S3_BUCKET, obj.key)
             parquet_data = io.BytesIO(s3_object.get()["Body"].read())
 
-            df = pd.read_parquet(parquet_data)
-            for _, row in list(df.iterrows()):
-                yield row.to_dict()
+            # Decode a batch at a time rather than materialising the whole file:
+            # the previous pandas path read every column into a DataFrame and
+            # then wrapped `iterrows()` in `list()`, which holds a Series object
+            # for every row in the file simultaneously.
+            parquet_file = pq.ParquetFile(parquet_data)
+            for batch in parquet_file.iter_batches(
+                batch_size=POSTHOG_EXTRACT_BATCH_SIZE,
+                columns=POSTHOG_EVENT_COLUMNS,
+            ):
+                yield from batch.to_pylist()
 
 
 def posthog_transform_lrd_view_events(
