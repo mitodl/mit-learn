@@ -809,6 +809,22 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
             {resultsAnnouncement}
           </VisuallyHidden>
           <TableCard>
+            {/* Mirrors the table's visible state for AT. Deliberately a sibling
+                of the table rather than a child: AT may defer live-region
+                updates while an ancestor is aria-busy, which would swallow the
+                "Loading" announcement until the load it describes is already
+                over. Staying out also leaves the rowgroup holding only rows.
+
+                The empty case has to use the same filter-aware copy as the cell
+                does — announcing the generic "no seat assignments" on the
+                Failed tab makes exactly the claim that copy exists to avoid. */}
+            <VisuallyHidden role="status" aria-atomic="true">
+              {isLoadingCodes || isCodesStale
+                ? "Loading seat assignments"
+                : pageResults.length === 0
+                  ? emptyTableMessage
+                  : `Showing page ${page} of ${totalPages}`}
+            </VisuallyHidden>
             <div
               role="table"
               aria-label="Seat assignments"
@@ -859,17 +875,6 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                 </TableHeaderRow>
               </div>
               <TableBody role="rowgroup" $stale={isCodesStale}>
-                <VisuallyHidden role="status" aria-atomic="true">
-                  {/* Mirrors the visible state for AT. The empty case has to
-                      use the same filter-aware copy as the cell below it —
-                      announcing the generic "no seat assignments" on the Failed
-                      tab makes exactly the claim that copy exists to avoid. */}
-                  {isLoadingCodes || isCodesStale
-                    ? "Loading seat assignments"
-                    : pageResults.length === 0
-                      ? emptyTableMessage
-                      : `Showing page ${page} of ${totalPages}`}
-                </VisuallyHidden>
                 {isLoadingCodes ? (
                   <>
                     {[1, 2, 3].map((i) => (

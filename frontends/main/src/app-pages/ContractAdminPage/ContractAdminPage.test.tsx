@@ -1035,11 +1035,11 @@ describe("ContractAdminPage", () => {
     // Filter-aware copy: a bare "No seat assignments found." would imply the
     // contract has no seats at all, when in fact none of them failed.
     const table = screen.getByRole("table", { name: "Seat assignments" })
-    await waitFor(() => {
-      expect(
-        within(table).getByRole("cell", { name: "No failed invitations." }),
-      ).toBeInTheDocument()
-    })
+    expect(
+      await within(table).findByRole("cell", {
+        name: "No failed invitations.",
+      }),
+    ).toBeInTheDocument()
     // The live region mirrors the visible state, so it has to carry the same
     // filter-aware copy — announcing the generic string would tell AT users the
     // contract has no seat assignments at all.
@@ -1111,13 +1111,11 @@ describe("ContractAdminPage", () => {
     // Seats exist and none of them are excluded by a status filter here, so
     // neither the per-filter copy nor "No seat assignments found." is true.
     const table = screen.getByRole("table", { name: "Seat assignments" })
-    await waitFor(() => {
-      expect(
-        within(table).getByRole("cell", {
-          name: "No seat assignments match your search.",
-        }),
-      ).toBeInTheDocument()
-    })
+    expect(
+      await within(table).findByRole("cell", {
+        name: "No seat assignments match your search.",
+      }),
+    ).toBeInTheDocument()
     expect(
       screen.queryByText("No seat assignments found."),
     ).not.toBeInTheDocument()
