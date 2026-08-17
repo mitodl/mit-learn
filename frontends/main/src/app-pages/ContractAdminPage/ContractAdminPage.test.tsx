@@ -1055,70 +1055,84 @@ describe("ContractAdminPage", () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
-    const { org, contract } = makeOrgWithContract()
-    setMockResponse.get(managerOrgsUrl, {
-      count: 1,
-      next: null,
-      previous: null,
-      results: [org],
-    })
-    setMockResponse.get(
-      managerContractDetailUrl(org.id, contract.id),
-      makeContractDetail(contract, {
-        total_codes: 1,
-        assigned_codes: 1,
-        redeemed_codes: 0,
-        unassigned_codes: 0,
-      }),
-    )
+    // Drive the clock: the 300ms search debounce plus the request it triggers
+    // has to fit inside findBy's timeout, which is a race a loaded machine
+    // loses. Real timers made this pass alone and fail in a full-suite run.
+    jest.useFakeTimers()
+    try {
+      const timerUser = user.setup({
+        advanceTimers: jest.advanceTimersByTime,
+      })
 
-    const deliveredCode = factories.contracts.contractCode({
-      redemption_status: "assigned",
-      assigned_to: "delivered@example.com",
-      email_status: "delivered",
-    })
+      const { org, contract } = makeOrgWithContract()
+      setMockResponse.get(managerOrgsUrl, {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [org],
+      })
+      setMockResponse.get(
+        managerContractDetailUrl(org.id, contract.id),
+        makeContractDetail(contract, {
+          total_codes: 1,
+          assigned_codes: 1,
+          redeemed_codes: 0,
+          unassigned_codes: 0,
+        }),
+      )
 
-    setMockResponse.get(
-      urls.contracts.managerContractCodes(org.id, contract.id, {
-        page: 1,
-        page_size: 25,
-      }),
-      factories.contracts.paginatedContractCodes([deliveredCode]),
-    )
-    setMockResponse.get(
-      urls.contracts.managerContractCodes(org.id, contract.id, {
-        page: 1,
-        page_size: 25,
-        search_term: "z",
-      }),
-      factories.contracts.paginatedContractCodes([]),
-    )
+      const deliveredCode = factories.contracts.contractCode({
+        redemption_status: "assigned",
+        assigned_to: "delivered@example.com",
+        email_status: "delivered",
+      })
 
-    renderWithProviders(
-      <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
-    )
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 1,
+          page_size: 25,
+        }),
+        factories.contracts.paginatedContractCodes([deliveredCode]),
+      )
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 1,
+          page_size: 25,
+          search_term: "z",
+        }),
+        factories.contracts.paginatedContractCodes([]),
+      )
 
-    await screen.findByText("delivered@example.com")
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
 
-    // One character, so the 300ms debounce collapses to exactly one request —
-    // a longer term would leave intermediate prefixes unmocked if any keystroke
-    // gap outran the debounce.
-    await user.type(
-      screen.getByPlaceholderText("Search by name or email..."),
-      "z",
-    )
+      await screen.findByText("delivered@example.com")
 
-    // Seats exist and none of them are excluded by a status filter here, so
-    // neither the per-filter copy nor "No seat assignments found." is true.
-    const table = screen.getByRole("table", { name: "Seat assignments" })
-    expect(
-      await within(table).findByRole("cell", {
-        name: "No seat assignments match your search.",
-      }),
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByText("No seat assignments found."),
-    ).not.toBeInTheDocument()
+      // A single character, so the debounce collapses to exactly one request
+      // and no intermediate prefix needs its own mock.
+      await timerUser.type(
+        screen.getByPlaceholderText("Search by name or email..."),
+        "z",
+      )
+      act(() => {
+        jest.advanceTimersByTime(300)
+      })
+
+      // Seats exist and none of them are excluded by a status filter here, so
+      // neither the per-filter copy nor "No seat assignments found." is true.
+      const table = screen.getByRole("table", { name: "Seat assignments" })
+      expect(
+        await within(table).findByRole("cell", {
+          name: "No seat assignments match your search.",
+        }),
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText("No seat assignments found."),
+      ).not.toBeInTheDocument()
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   test("marks the table busy and dims stale rows while a filter change is in flight", async () => {
