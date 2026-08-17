@@ -31,7 +31,8 @@
   "resolutions": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "video.js": "^8.23.7"
+    "video.js": "^8.23.7",
+    "@mitodl/arithmix": "https://github.com/mitodl/mynumbers.git#commit=26c9060c241bb04eefd1d11608230f331d85bba1"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.1",
