@@ -897,12 +897,17 @@ CONTENT_SUMMARIZER_FLASHCARD_PROMPT = get_string(
         """
     ),
 )
-# OpenTelemetry configuration
-OPENTELEMETRY_ENABLED = get_bool("OPENTELEMETRY_ENABLED", False)  # noqa: FBT003
+# OpenTelemetry configuration (consumed by mitol-django-observability).
+# Tracing turns on when OPENTELEMETRY_ENDPOINT (or the OTEL_EXPORTER_OTLP_*
+# environment variables) is set. There is no enable/disable flag: the old
+# OPENTELEMETRY_ENABLED was read by nothing, so setting it to false during an
+# incident would not have stopped tracing.
 OPENTELEMETRY_SERVICE_NAME = get_string("OPENTELEMETRY_SERVICE_NAME", "learn")
 OPENTELEMETRY_INSECURE = get_bool("OPENTELEMETRY_INSECURE", default=True)
 OPENTELEMETRY_ENDPOINT = get_string("OPENTELEMETRY_ENDPOINT", None)
-OPENTELEMETRY_TRACES_BATCH_SIZE = get_int("OPENTELEMETRY_TRACES_BATCH_SIZE", 512)
+# Name must match what telemetry.py reads; OPENTELEMETRY_TRACES_BATCH_SIZE was
+# never looked up, so the 512 default applied no matter what this was set to.
+OPENTELEMETRY_BATCH_SIZE = get_int("OPENTELEMETRY_BATCH_SIZE", 512)
 OPENTELEMETRY_EXPORT_TIMEOUT_MS = get_int("OPENTELEMETRY_EXPORT_TIMEOUT_MS", 5000)
 CANVAS_TUTORBOT_FOLDER = get_string("CANVAS_TUTORBOT_FOLDER", "web_resources/ai/tutor/")
 
