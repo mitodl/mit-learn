@@ -219,20 +219,42 @@ def load_posthog_lrd_view_event(
 
 def load_posthog_lrd_view_events(
     events: iter,
-) -> list[LearningResourceViewEvent]:
+) -> set[int]:
     """
-    Load a list of PostHogLearningResourceViewEvent into the database.
+    Load PostHogLearningResourceViewEvents into the database.
+
+    Consumes `events` one at a time and keeps only the set of learning resource
+    ids that need recounting. Returning the loaded rows instead -- as the
+    per-resource loaders in loaders.py do -- is safe at their scale but not
+    here: this is called once with a generator over the whole S3 backlog, and
+    load_posthog_lrd_view_event returns a row on every path (including the
+    early return for an event that is already stored), so retaining them meant
+    holding a model instance per event for millions of events.
 
     Args:
-    - events (list[PostHogLearningResourceViewEvent]): the events to load
+    - events (iterable[PostHogLearningResourceViewEvent]): the events to load
     Returns:
-    List of LearningResourceViewEvent
+    Set of learning resource ids whose view counts were updated
     """
 
-    events = [load_posthog_lrd_view_event(event) for event in events]
-    learning_resource_ids = {
-        event.learning_resource_id for event in events if event is not None
-    }
+    attempted = 0
+    loaded = 0
+    learning_resource_ids = set()
+
+    for event in events:
+        attempted += 1
+        lr_event = load_posthog_lrd_view_event(event)
+        if lr_event is not None:
+            loaded += 1
+            learning_resource_ids.add(lr_event.learning_resource_id)
+
+    log.info(
+        "PostHog lrd_view load: %d event(s) attempted, %d loaded, "
+        "%d learning resource(s) to recount",
+        attempted,
+        loaded,
+        len(learning_resource_ids),
+    )
 
     for resource_id in learning_resource_ids:
         learning_resource = LearningResource.objects.filter(
@@ -246,4 +268,4 @@ def load_posthog_lrd_view_events(
                 learning_resource, percolate=False, generate_embeddings=False
             )
 
-    return events
+    return learning_resource_ids

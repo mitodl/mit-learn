@@ -131,15 +131,17 @@ def test_load_posthog_lrd_view_events(
             event_date=datetime(2025, 8, 28, 15, 20, 13, 620000, tzinfo=UTC),
         )
 
-    loaded_events = posthog.load_posthog_lrd_view_events(transformed_events)
-    assert len(loaded_events) == 4
+    # The loader returns the resource ids needing a recount, not the loaded rows:
+    # it is called with a generator over the whole backlog, so it must not retain
+    # a model instance per event. All four fixture events belong to resource 3235.
+    recounted_ids = posthog.load_posthog_lrd_view_events(transformed_events)
 
     if resource_exists:
         assert LearningResourceViewEvent.objects.count() == 4
-        assert len([event for event in loaded_events if event is not None]) == 4
+        assert recounted_ids == {resource.id}
     else:
         assert LearningResourceViewEvent.objects.count() == 0
-        assert len([event for event in loaded_events if event is not None]) == 0
+        assert recounted_ids == set()
 
 
 @pytest.mark.django_db
