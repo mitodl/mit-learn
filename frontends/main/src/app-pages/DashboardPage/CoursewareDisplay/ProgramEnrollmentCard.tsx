@@ -1,5 +1,9 @@
 import React from "react"
-import { programPageView, programView } from "@/common/urls"
+import {
+  programPageView,
+  programView,
+  receiptByProgramView,
+} from "@/common/urls"
 import {
   DisplayModeEnum,
   V3UserProgramEnrollment,
@@ -60,7 +64,7 @@ export const ProgramEnrollmentCard = ({
    * Skipped for audit enrollments, which never have a receipt. Shares one
    * `orders/history` query with every other card on the dashboard.
    */
-  const { orderId: receiptOrderId } = useOrderIdForProgram(
+  const receiptResolution = useOrderIdForProgram(
     upgradedAndIncomplete ? programId : null,
   )
   const displayMode = program.display_mode
@@ -122,7 +126,8 @@ export const ProgramEnrollmentCard = ({
   }
   const receiptMenuItem = getReceiptMenuItem(
     programEnrollment.enrollment_mode,
-    receiptOrderId,
+    receiptResolution,
+    receiptByProgramView(programId),
   )
   if (receiptMenuItem) menuItems.push(receiptMenuItem)
   const contextMenu = (

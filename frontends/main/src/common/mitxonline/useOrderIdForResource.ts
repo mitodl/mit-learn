@@ -16,6 +16,13 @@ const ORDER_HISTORY_LIMIT = 100
 
 type OrderIdResolution = {
   isPending: boolean
+  /**
+   * True when the history could not be fetched, so whether a receipt exists is
+   * unknown. Distinct from `orderId === null`, which means we looked and there is
+   * genuinely no order — callers must not treat the two the same, or a failing
+   * request looks identical to "you never paid for this".
+   */
+  isError: boolean
   /** Most recent fulfilled order covering the resource. May be zero-value. */
   orderId: number | null
 }
@@ -56,14 +63,13 @@ const useOrderIdForResource = (
   })
 
   if (resourceId === null) {
-    return { isPending: false, orderId: null }
+    return { isPending: false, isError: false, orderId: null }
   }
   if (history.isPending) {
-    return { isPending: true, orderId: null }
+    return { isPending: true, isError: false, orderId: null }
   }
-  // Reported as "not found": callers render the same 404 either way.
   if (history.isError || !history.data) {
-    return { isPending: false, orderId: null }
+    return { isPending: false, isError: true, orderId: null }
   }
 
   const match = history.data.results.find(
@@ -72,7 +78,7 @@ const useOrderIdForResource = (
       order.lines.some((line) => matchesLine(line, resourceId, isVariant)),
   )
 
-  return { isPending: false, orderId: match?.id ?? null }
+  return { isPending: false, isError: false, orderId: match?.id ?? null }
 }
 
 const useOrderIdForRun = (runId: number | null): OrderIdResolution =>

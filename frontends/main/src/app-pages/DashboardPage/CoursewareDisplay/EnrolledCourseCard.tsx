@@ -33,7 +33,7 @@ import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
-import { coursePageView } from "@/common/urls"
+import { coursePageView, receiptByRunView } from "@/common/urls"
 import NiceModal from "@ebay/nice-modal-react"
 import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
 import { getReceiptMenuItem } from "./receiptMenuItem"
@@ -258,7 +258,7 @@ export const EnrolledCourseCard = ({
    * cache key), so this is a single request for the whole dashboard rather than
    * one per card.
    */
-  const { orderId: receiptOrderId } = useOrderIdForRun(
+  const receiptResolution = useOrderIdForRun(
     isVerifiedEnrollmentMode(enrollment?.enrollment_mode)
       ? (run?.id ?? null)
       : null,
@@ -467,7 +467,8 @@ export const EnrolledCourseCard = ({
 
   const receiptMenuItem = getReceiptMenuItem(
     enrollment?.enrollment_mode,
-    receiptOrderId,
+    receiptResolution,
+    receiptByRunView(run.id),
   )
   if (receiptMenuItem) menuItems.push(receiptMenuItem)
 
