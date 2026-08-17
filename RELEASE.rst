@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.77.5
+--------------
+
+- constrain percolation to percolate index (#3764)
+- perf(metadata): skip the jsdom sanitize for markup-free descriptions (#3772)
+- Vector search performance enhancements (#3754)
+- Update dependency sharp to v0.35.0 [SECURITY] (#3740)
+
 Version 0.77.4 (Released August 17, 2026)
 --------------
 
