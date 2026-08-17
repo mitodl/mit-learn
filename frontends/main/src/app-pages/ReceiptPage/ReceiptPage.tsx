@@ -232,6 +232,19 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
   }
 
   /**
+   * `router.back()` is `history.back()`, which does nothing when the receipt is the
+   * tab's only entry — a bookmarked or newly opened link. Real history is still
+   * preferred, since it returns to the dashboard with its scroll position intact.
+   */
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      router.back()
+    } else {
+      router.push(urls.DASHBOARD_HOME)
+    }
+  }
+
+  /**
    * The heading and buttons render before the receipt does, and skeletons carry no
    * ARIA, so the swap needs announcing. Failure is left to `ErrorState`, which is
    * an assertive live region of its own.
@@ -255,7 +268,7 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
             <Button
               variant="tertiary"
               startIcon={<RiArrowLeftLine />}
-              onClick={() => router.back()}
+              onClick={handleBack}
             >
               Back
             </Button>

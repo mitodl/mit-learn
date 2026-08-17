@@ -3,10 +3,12 @@ import {
   renderWithProviders,
   screen,
   setMockResponse,
+  user,
   within,
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import ReceiptPage from "./ReceiptPage"
+import * as urls from "@/common/urls"
 
 const ORDER_ID = 4242
 
@@ -508,6 +510,32 @@ describe("ReceiptPage", () => {
     expect(
       screen.getByRole("link", { name: "Back to Dashboard" }),
     ).toHaveAttribute("href", "/dashboard")
+  })
+
+  /**
+   * jsdom starts each test file with a single history entry, matching a receipt
+   * opened directly in a fresh tab.
+   */
+  test("Back goes to the dashboard when there is no history to return to", async () => {
+    setupApis()
+
+    const { location } = renderWithProviders(<ReceiptPage orderId={ORDER_ID} />)
+    await screen.findByRole("heading", { name: "Order Summary" })
+    await user.click(screen.getByRole("button", { name: "Back" }))
+
+    expect(location.current.pathname).toBe("/dashboard")
+  })
+
+  test("Back uses history when there is somewhere to return to", async () => {
+    setupApis()
+    // A second entry, so history.back() has an effect.
+    window.history.pushState({}, "", urls.receiptView(ORDER_ID))
+
+    const { location } = renderWithProviders(<ReceiptPage orderId={ORDER_ID} />)
+    await screen.findByRole("heading", { name: "Order Summary" })
+    await user.click(screen.getByRole("button", { name: "Back" }))
+
+    expect(location.current.pathname).not.toBe("/dashboard")
   })
 
   test("announces loading and then the loaded receipt", async () => {
