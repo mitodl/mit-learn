@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.77.4
+Version 0.77.4 (Released August 17, 2026)
 --------------
 
 - Sitemap fix, 1 of 2: Add canonical_parent_ids and resource_type to the summary endpoint (#3758)
