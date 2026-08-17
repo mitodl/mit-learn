@@ -917,6 +917,129 @@ describe("ContractAdminPage", () => {
     expect(screen.getByText("pending@example.com")).toBeInTheDocument()
   })
 
+  test("Failed tab filters to codes whose invite email failed", async () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+    const { org, contract } = makeOrgWithContract()
+    setMockResponse.get(managerOrgsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [org],
+    })
+    setMockResponse.get(
+      managerContractDetailUrl(org.id, contract.id),
+      makeContractDetail(contract, {
+        total_codes: 2,
+        assigned_codes: 2,
+        redeemed_codes: 0,
+        unassigned_codes: 0,
+      }),
+    )
+
+    const deliveredCode = factories.contracts.contractCode({
+      redemption_status: "assigned",
+      assigned_to: "delivered@example.com",
+      email_status: "delivered",
+    })
+    const failedCode = factories.contracts.contractCode({
+      redemption_status: "assigned",
+      assigned_to: "bounced@example.com",
+      email_status: "failed",
+    })
+
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 25,
+      }),
+      factories.contracts.paginatedContractCodes([deliveredCode, failedCode]),
+    )
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 25,
+        status: "failed",
+      }),
+      factories.contracts.paginatedContractCodes([failedCode]),
+    )
+
+    renderWithProviders(
+      <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText("delivered@example.com")
+
+    await user.click(screen.getByRole("tab", { name: "Failed" }))
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("delivered@example.com"),
+      ).not.toBeInTheDocument()
+    })
+    expect(screen.getByText("bounced@example.com")).toBeInTheDocument()
+  })
+
+  test("empty Failed tab explains that nothing failed", async () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+    const { org, contract } = makeOrgWithContract()
+    setMockResponse.get(managerOrgsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [org],
+    })
+    setMockResponse.get(
+      managerContractDetailUrl(org.id, contract.id),
+      makeContractDetail(contract, {
+        total_codes: 1,
+        assigned_codes: 1,
+        redeemed_codes: 0,
+        unassigned_codes: 0,
+      }),
+    )
+
+    const deliveredCode = factories.contracts.contractCode({
+      redemption_status: "assigned",
+      assigned_to: "delivered@example.com",
+      email_status: "delivered",
+    })
+
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 25,
+      }),
+      factories.contracts.paginatedContractCodes([deliveredCode]),
+    )
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 25,
+        status: "failed",
+      }),
+      factories.contracts.paginatedContractCodes([]),
+    )
+
+    renderWithProviders(
+      <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText("delivered@example.com")
+
+    await user.click(screen.getByRole("tab", { name: "Failed" }))
+
+    // Filter-aware copy: a bare "No seat assignments found." would imply the
+    // contract has no seats at all, when in fact none of them failed.
+    await screen.findByText("No failed invitations.")
+    expect(
+      screen.queryByText("No seat assignments found."),
+    ).not.toBeInTheDocument()
+  })
+
   describe("status pill", () => {
     const setupCodeRow = (
       code: ReturnType<typeof factories.contracts.contractCode>,
@@ -948,10 +1071,10 @@ describe("ContractAdminPage", () => {
     }
 
     // "Pending"/"Redeemed" also appear as a header stat label and a filter
-    // tab, so an unscoped getByText for those two would be ambiguous. Scope
-    // to the row via its ARIA role — an accessibility-meaningful boundary
-    // set by this page's own markup, not a third-party implementation detail
-    // like a MUI-generated class name.
+    // tab, and "Failed" as a filter tab, so an unscoped getByText for any of
+    // those would be ambiguous. Scope to the row via its ARIA role — an
+    // accessibility-meaningful boundary set by this page's own markup, not a
+    // third-party implementation detail like a MUI-generated class name.
     const getRow = (assignedTo: string) => {
       const row = screen.getByText(assignedTo).closest('[role="row"]')
       if (!row) {
@@ -1069,7 +1192,9 @@ describe("ContractAdminPage", () => {
       // explanation is a description, not baked into the name — MUI's
       // describeChild renders it as a native `title` attribute while closed,
       // and swaps it for a live aria-describedby while the tooltip is open.
-      expect(screen.getByText("Failed")).toBeInTheDocument()
+      expect(
+        within(getRow("bounced@example.com")).getByText("Failed"),
+      ).toBeInTheDocument()
       const pill = screen.getByTitle(explanation)
       // In the tab order, so keyboard users can reach it. (MUI only opens the
       // tooltip on *keyboard* focus via the CSS :focus-visible pseudo-class,

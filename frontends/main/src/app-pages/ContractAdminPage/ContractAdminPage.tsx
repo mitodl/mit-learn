@@ -48,6 +48,7 @@ import {
   managerOrganizationQueries,
   type ManagerEnrollmentCode,
 } from "api/mitxonline-hooks/organizations"
+import type { B2bManagerOrganizationsContractsCodesListStatusEnum } from "@mitodl/mitxonline-api-axios/v2"
 import type { AxiosError } from "axios"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError } from "@/common/errors"
@@ -294,7 +295,37 @@ const ActionCell = styled.div(({ theme }) => ({
   },
 }))
 
-type StatusFilter = "all" | "pending" | "redeemed"
+type StatusFilter = "all" | "pending" | "redeemed" | "failed"
+
+/**
+ * Maps a tab to the API's `status` param. The UI's "Pending" is the API's
+ * "assigned", and `assigned` means "unredeemed" regardless of email status —
+ * so it is a *superset* of `failed`, and a bounced code appears under both
+ * tabs. That overlap is intentional: the backend can't express "assigned AND
+ * NOT failed", and filtering it out client-side would desync the server's
+ * `count` from the rendered rows (wrong page count, short pages). The row's
+ * status pill is what distinguishes the two.
+ */
+const STATUS_FILTER_PARAM: Record<
+  StatusFilter,
+  B2bManagerOrganizationsContractsCodesListStatusEnum | undefined
+> = {
+  all: undefined,
+  pending: "assigned",
+  redeemed: "redeemed",
+  failed: "failed",
+}
+
+/**
+ * Per-filter empty copy. A bare "No seat assignments found." on the Failed tab
+ * would be misleading — seats do exist, none of them failed.
+ */
+const EMPTY_TABLE_MESSAGE: Record<StatusFilter, string> = {
+  all: "No seat assignments found.",
+  pending: "No pending seat assignments.",
+  redeemed: "No redeemed seat assignments.",
+  failed: "No failed invitations.",
+}
 
 const COLUMN_FLEX = {
   assignedTo: 2,
@@ -420,12 +451,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
       page,
       page_size: CODES_PAGE_SIZE,
       search_term: debouncedSearchQuery || undefined,
-      status:
-        statusFilter === "redeemed"
-          ? "redeemed"
-          : statusFilter === "pending"
-            ? "assigned"
-            : undefined,
+      status: STATUS_FILTER_PARAM[statusFilter],
     }),
     enabled: !!org && !!contract,
     placeholderData: keepPreviousData,
@@ -501,6 +527,13 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const hasExportableRows = (assignedCount ?? 0) + (redeemedCount ?? 0) > 0
 
   const pageResults = codes?.results ?? []
+
+  // With a search term active this is a no-results state, not a no-such-status
+  // state, so fall back to the generic copy — otherwise the Failed tab would
+  // claim "No failed invitations." when failed ones exist but don't match.
+  const emptyTableMessage = debouncedSearchQuery
+    ? EMPTY_TABLE_MESSAGE.all
+    : EMPTY_TABLE_MESSAGE[statusFilter]
 
   const totalCount = codes?.count ?? 0
   const totalPages = Math.ceil(totalCount / CODES_PAGE_SIZE)
@@ -701,6 +734,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                   <TabButton label="All" value="all" />
                   <TabButton label="Pending" value="pending" />
                   <TabButton label="Redeemed" value="redeemed" />
+                  <TabButton label="Failed" value="failed" />
                 </TabButtonList>
               </TabContext>
               <StyledSearchInput
@@ -798,7 +832,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                       aria-colspan={7}
                       style={{ flex: 1 }}
                     >
-                      No seat assignments found.
+                      {emptyTableMessage}
                     </EmptyTableMessage>
                   </TableRow>
                 ) : (
