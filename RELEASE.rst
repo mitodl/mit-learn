@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.77.5
+Version 0.77.5 (Released August 17, 2026)
 --------------
 
 - constrain percolation to percolate index (#3764)
