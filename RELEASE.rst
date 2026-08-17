@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.77.6
+--------------
+
+- Stream PostHog parquet in batches instead of exploding it into Series (#3780)
+
 Version 0.77.5 (Released August 17, 2026)
 --------------
 
