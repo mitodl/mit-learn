@@ -1587,11 +1587,15 @@ def filter_existing_qdrant_points_by_ids(
     Return only points that dont exist in qdrant
     """
     client = qdrant_client()
+    # existence check only: payloads/vectors would be fetched and discarded, and for
+    # content files the payload carries the chunked text
     response = client.retrieve(
         collection_name=collection_name,
         ids=point_ids,
+        with_payload=False,
+        with_vectors=False,
     )
-    existing = [record.id for record in response]
+    existing = {record.id for record in response}
     return [point_id for point_id in point_ids if point_id not in existing]
 
 
