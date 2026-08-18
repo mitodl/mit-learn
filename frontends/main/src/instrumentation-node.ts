@@ -180,22 +180,36 @@ if (process.env.NEXT_SERVER_REQUEST_LOGGING !== "false") {
   subscribeRequestLogger()
 }
 
-// OTEL_TRACES_SAMPLER_ARG controls the OTEL sampler rate — i.e. what fraction
-// of requests create spans at all. All sampled spans flow to both Sentry's
-// internal processor AND the OTLP processor (→ Alloy/Tempo).
-// Defaults to 1.0 (100%) so that Alloy receives every trace in production.
+// Two destinations, two independent knobs — but only if this one stays at 1.0.
 //
-// NOTE: OTEL_TRACES_SAMPLER is intentionally NOT read here. Sentry manages its
-// own OTEL provider via SentrySampler, which already implements parent-based
-// sampling as a built-in rule: when an incoming request carries a sampled
-// traceparent header, that decision is inherited before tracesSampleRate is
-// consulted — equivalent to parentbased_traceidratio.
+// Sentry owns the OTEL provider here, so its sampler decides whether a span is
+// *created*. A span it drops reaches neither Sentry nor the OTLP exporter, which
+// makes this a shared ceiling over both destinations rather than a Tempo dial.
+// Leave it at 1.0 and let each destination do its own sampling downstream:
+//
+//   Tempo  — the Grafana Alloy tail sampler. Tail sampling needs the whole
+//            trace to decide, so head-sampling here actively degrades it.
+//   Sentry — beforeSendTransaction below, via NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE.
+//
+// Lower it only to shed CPU in the Next.js process, accepting that Tempo loses
+// the same fraction.
+//
+// OTEL_TRACES_SAMPLER is NOT read: Sentry's SentrySampler ignores it and
+// implements parent-based sampling itself, inheriting a sampled traceparent
+// before tracesSampleRate is consulted. Setting it does nothing, so say so
+// rather than letting the next person tune a dead knob.
 const otelSampleRate = parseSampleRate(process.env.OTEL_TRACES_SAMPLER_ARG, 1)
 
-// NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE is a secondary, Sentry-only filter.
-// Of the spans that reach Sentry's processor, only this fraction are actually
-// sent to the Sentry backend. Defaults to 1.0 when unset.
-// This lets you run Alloy at 100% while keeping Sentry costs/quota lower.
+if (process.env.OTEL_TRACES_SAMPLER) {
+  console.warn(
+    `[startup] OTEL_TRACES_SAMPLER=${process.env.OTEL_TRACES_SAMPLER} is ignored. ` +
+      "Sentry owns the OTEL provider and uses its own sampler. " +
+      "Use OTEL_TRACES_SAMPLER_ARG for the span-creation rate.",
+  )
+}
+
+// Sentry's own rate, applied to transactions that already exist. Independent of
+// what Tempo receives. Defaults to 1.0 when unset.
 const sentrySampleRate = parseSampleRate(
   env("NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE"),
   1,
@@ -206,8 +220,8 @@ Sentry.init({
   release: env("NEXT_PUBLIC_VERSION"),
   environment: env("NEXT_PUBLIC_SENTRY_ENV"),
 
-  // Controls the OTEL sampler — spans not sampled here never reach any
-  // processor. Set via OTEL_TRACES_SAMPLER_ARG at runtime (K8s/Helm).
+  // Span-creation rate for BOTH destinations, not Sentry's send rate. Spans
+  // dropped here never reach any processor. Keep at 1.0; see above.
   tracesSampleRate: otelSampleRate,
 
   // Inject our OTLP exporter (and console fallback) into Sentry's OTEL
@@ -215,8 +229,8 @@ Sentry.init({
   // SentrySpanProcessor and are unaffected by beforeSendTransaction.
   openTelemetrySpanProcessors: buildSpanProcessors(),
 
-  // Secondary Sentry-only downsampler: drop transactions before they are
-  // sent to the Sentry backend, without affecting the OTLP/Alloy pipeline.
+  // Sentry's own rate. Runs after the OTLP processor has already seen the span,
+  // so dropping here does not affect what Alloy/Tempo receives.
   // Controlled by NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE.
   beforeSendTransaction: (transaction) => {
     return Math.random() < sentrySampleRate ? transaction : null
