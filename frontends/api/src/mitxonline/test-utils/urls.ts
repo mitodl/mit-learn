@@ -3,6 +3,7 @@ import type {
   CoursesApiCourseVariantRunsV3Request,
   CourseCertificatesApiCourseCertificatesRetrieveRequest,
   ProgramCertificatesApiProgramCertificatesRetrieveRequest,
+  OrdersApiOrdersHistoryListRequest,
   ProgramCollectionsApiProgramCollectionsListRequest,
   ProgramsApiProgramsListV2Request,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -155,6 +156,8 @@ const baskets = {
 const orders = {
   receipt: (orderId: number) =>
     `${getApiBaseUrl()}/api/v0/orders/receipt/${orderId}/`,
+  historyList: (params?: OrdersApiOrdersHistoryListRequest) =>
+    `${getApiBaseUrl()}/api/v0/orders/history/${queryify(params)}`,
 }
 
 const verifiedProgramEnrollments = {

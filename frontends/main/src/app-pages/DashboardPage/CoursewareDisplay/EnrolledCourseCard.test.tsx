@@ -10,10 +10,17 @@ import {
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
+import { receiptByRunView, receiptView } from "@/common/urls"
 import { makeRequest } from "api/test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { EnrolledCourseCard } from "./EnrolledCourseCard"
+import { setupOrderHistory } from "./test-utils"
+
+// Verified cards look up their order; default to none, tests override.
+beforeEach(() => {
+  setupOrderHistory()
+})
 
 const EnrollmentMode = {
   Audit: "audit",
@@ -784,12 +791,13 @@ describe.each([
       enrollment_mode: EnrollmentMode.Verified,
       grades: [mitxonline.factories.enrollment.grade({ passed: true })],
     })
+    setupOrderHistory({ runId: enrollment.run.id })
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
     await user.click(
       within(getCard()).getByRole("button", { name: "More options" }),
     )
     expect(
-      screen.getByRole("menuitem", { name: "Receipt" }),
+      await screen.findByRole("menuitem", { name: "Receipt" }),
     ).toBeInTheDocument()
   })
 
@@ -809,30 +817,77 @@ describe.each([
     ).not.toBeInTheDocument()
   })
 
-  test("Receipt links to correct MITx Online URL for verified enrollment", async () => {
+  test("Receipt links to the receipt for the order that paid for the run", async () => {
     setupUserApis()
-    const runId = faker.number.int()
+    const runId = faker.number.int({ min: 1 })
+    setupOrderHistory({ runId, orderId: 87 })
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Verified,
       grades: [mitxonline.factories.enrollment.grade({ passed: true })],
       run: { id: runId },
     })
-    const windowOpenSpy = jest
-      .spyOn(window, "open")
-      .mockImplementation(() => null)
 
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
     await user.click(
       within(getCard()).getByRole("button", { name: "More options" }),
     )
-    await user.click(screen.getByRole("menuitem", { name: "Receipt" }))
 
-    expect(windowOpenSpy).toHaveBeenCalledWith(
-      mitxonlineLegacyUrl(`/orders/receipt/by-run/${runId}/`),
-      "_blank",
-      "noopener,noreferrer",
+    expect(
+      await screen.findByRole("menuitem", { name: "Receipt" }),
+    ).toHaveAttribute("href", receiptView(87))
+  })
+
+  // Verified does not imply a run-level order, so the item must stay hidden.
+  test("Receipt is hidden for a verified enrollment with no order behind it", async () => {
+    setupUserApis()
+    const runId = faker.number.int({ min: 1 })
+    // An order exists, but for a different run.
+    setupOrderHistory({ runId: runId + 1, orderId: 87 })
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Verified,
+      grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+      run: { id: runId },
+    })
+
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    await user.click(
+      within(getCard()).getByRole("button", { name: "More options" }),
     )
-    windowOpenSpy.mockRestore()
+    // Wait for a sibling item so we know the menu has rendered.
+    await screen.findByRole("menuitem", { name: "Unenroll" })
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Receipt" }),
+    ).not.toBeInTheDocument()
+  })
+
+  /**
+   * An `orders/history` outage must not look the same as "you never paid for this".
+   * The item stays, pointing at the resolver route, which refetches and renders its
+   * own skeleton or 404 instead of the option silently vanishing from every card.
+   */
+  test("Receipt falls back to the resolver route when the order lookup fails", async () => {
+    setupUserApis()
+    const runId = faker.number.int({ min: 1 })
+    setMockResponse.get(
+      mitxonline.urls.orders.historyList({ limit: 100 }),
+      "Server error",
+      { code: 500 },
+    )
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Verified,
+      grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+      run: { id: runId },
+    })
+
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    await user.click(
+      within(getCard()).getByRole("button", { name: "More options" }),
+    )
+
+    expect(
+      await screen.findByRole("menuitem", { name: "Receipt" }),
+    ).toHaveAttribute("href", receiptByRunView(runId))
   })
 })
 
