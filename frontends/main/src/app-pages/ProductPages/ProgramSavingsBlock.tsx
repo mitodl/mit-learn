@@ -38,11 +38,7 @@ const ProgramCurrentPriceBlock = styled.div({
 })
 
 const ProgramPriceAmount = styled.span(({ theme }) => ({
-  ...theme.typography.subtitle2,
-  fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-  fontWeight: theme.typography.fontWeightBold,
-  fontSize: "34px",
-  lineHeight: "40px",
+  ...theme.typography.h2,
   color: theme.custom.colors.darkGray2,
 }))
 
@@ -66,10 +62,10 @@ const ProgramListPriceBlock = styled.div({
 })
 
 const ProgramListPriceAmount = styled.span({
-  ...theme.typography.body3,
-  fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-  fontSize: "28px",
-  lineHeight: "36px",
+  ...theme.typography.h3,
+  // h3 is bold, but the struck list price is deliberately lighter than the
+  // current price it is being compared against.
+  fontWeight: theme.typography.fontWeightRegular,
   display: "flex",
   alignItems: "flex-end" as const,
   textDecoration: "line-through",
