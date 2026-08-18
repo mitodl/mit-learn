@@ -7,24 +7,6 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 
 /**
- * Profile field names MITx Online can report in `User.compliance_missing_fields`.
- *
- * This is the value set of `BILL_TO_FIELD_TO_PROFILE_FIELD` in mitxonline's
- * `compliance/api.py` — CyberSource bill-to fields mapped back to profile field
- * names so a consumer can render them.
- */
-const COMPLIANCE_FIELDS = [
-  "first_name",
-  "last_name",
-  "email",
-  "street_address_1",
-  "city",
-  "country",
-  "state",
-  "postal_code",
-] as const
-
-/**
  * Fields the just-in-time dialog collects, in display order.
  *
  * Country leads the address block because the subdivision and postal code
@@ -50,7 +32,6 @@ const JIT_FIELDS = [
   "year_of_birth",
 ] as const
 
-type ComplianceField = (typeof COMPLIANCE_FIELDS)[number]
 type JitField = (typeof JIT_FIELDS)[number]
 
 /**
@@ -320,7 +301,6 @@ const jitPatchPayload = (
 }
 
 export {
-  COMPLIANCE_FIELDS,
   JIT_FIELDS,
   FIELD_SPECS,
   MINIMUM_AGE,
@@ -336,7 +316,6 @@ export {
   jitPatchPayload,
 }
 export type {
-  ComplianceField,
   JitField,
   EditableJitField,
   JitFormValues,
