@@ -3,7 +3,6 @@ import { getQueryClient } from "@/app/getQueryClient"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { ResourceTypeEnum } from "api"
 import { podcastPageView, podcastEpisodePageView } from "@/common/urls"
-import { parentPodcastIds } from "@/common/slugs"
 import type { GenerateSitemapResult } from "../types"
 import {
   dangerouslyDetectProductionBuildPhase,
@@ -52,7 +51,7 @@ export default constructSitemap(async (page) => {
   const BASE_URL = requiredEnv("NEXT_PUBLIC_ORIGIN")
   const queryClient = getQueryClient()
   const data = await queryClient.fetchQuery(
-    learningResourceQueries.list({
+    learningResourceQueries.summaryList({
       limit: PAGE_SIZE,
       offset: page * PAGE_SIZE,
       resource_type: RESOURCE_TYPES,
@@ -69,7 +68,7 @@ export default constructSitemap(async (page) => {
       ]
     }
     if (resource.resource_type === ResourceTypeEnum.PodcastEpisode) {
-      return parentPodcastIds(resource).map((parentPodcastId) => ({
+      return resource.canonical_parent_ids.map((parentPodcastId) => ({
         url: `${BASE_URL}${podcastEpisodePageView(
           String(resource.id),
           String(parentPodcastId),

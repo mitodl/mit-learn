@@ -8,24 +8,15 @@
  */
 
 import { propagation, trace, ROOT_CONTEXT } from "@opentelemetry/api"
-import {
-  CompositePropagator,
-  W3CBaggagePropagator,
-  W3CTraceContextPropagator,
-} from "@opentelemetry/core"
 import { SentryPropagator } from "@sentry/opentelemetry"
+import { buildPropagator } from "./otel-setup"
 
 const TRACE_ID = "0af7651916cd43dd8448eb211c80319c"
 const SPAN_ID = "b7ad6b7169203331"
 
-const composite = () =>
-  new CompositePropagator({
-    propagators: [
-      new W3CTraceContextPropagator(),
-      new W3CBaggagePropagator(),
-      new SentryPropagator(),
-    ],
-  })
+// The production composition, not a copy of it -- so reordering or dropping a
+// propagator in otel-setup.ts fails these tests rather than sailing past them.
+const composite = buildPropagator
 
 const extractedSpanContext = (
   propagator: { extract: typeof propagation.extract },
@@ -40,7 +31,7 @@ const extractedSpanContext = (
 
 describe("OTel propagator composition", () => {
   it("drops a W3C traceparent when only Sentry's propagator is used", () => {
-    // The bug this composition exists to fix. If this ever starts passing,
+    // The bug this composition exists to fix. If this ever starts failing,
     // Sentry has learned to read traceparent and the composite can go.
     const spanContext = extractedSpanContext(new SentryPropagator(), {
       traceparent: `00-${TRACE_ID}-${SPAN_ID}-01`,

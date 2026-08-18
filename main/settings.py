@@ -36,7 +36,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.77.3"
+VERSION = "0.77.6"
 
 log = logging.getLogger()
 
@@ -800,6 +800,18 @@ QDRANT_ENCODER = get_string(
     name="QDRANT_ENCODER", default="vector_search.encoders.gensim.GensimEncoder"
 )
 
+# Max Sentry alerts the embeddings healthcheck sends per alert type per run. The
+# healthcheck reports per resource, so an environment that is simply behind on
+# embedding (e.g. RC) would otherwise burn thousands of events in one run.
+# Production should set this high (a large backlog there is a real incident, not
+# expected drift); 0 or less disables the cap entirely. The default is deliberately
+# low so an unconfigured environment can't spend the quota, and the cap sends one
+# explicit notice when it engages, so a capped run is never mistaken for a clean one.
+EMBEDDINGS_HEALTHCHECK_ALERT_CAP = get_int(
+    name="EMBEDDINGS_HEALTHCHECK_ALERT_CAP",
+    default=20,
+)
+
 QDRANT_POINT_UPLOAD_BATCH_SIZE = get_int(
     name="QDRANT_POINT_UPLOAD_BATCH_SIZE", default=1000
 )
@@ -897,12 +909,17 @@ CONTENT_SUMMARIZER_FLASHCARD_PROMPT = get_string(
         """
     ),
 )
-# OpenTelemetry configuration
-OPENTELEMETRY_ENABLED = get_bool("OPENTELEMETRY_ENABLED", False)  # noqa: FBT003
+# OpenTelemetry configuration (consumed by mitol-django-observability).
+# Tracing turns on when either OPENTELEMETRY_ENDPOINT or the
+# OTEL_EXPORTER_OTLP_ENDPOINT environment variable is set -- those two and no
+# others; the signal-specific OTEL_EXPORTER_OTLP_TRACES_ENDPOINT is not
+# consulted by the released library. There is no flag to disable it.
 OPENTELEMETRY_SERVICE_NAME = get_string("OPENTELEMETRY_SERVICE_NAME", "learn")
 OPENTELEMETRY_INSECURE = get_bool("OPENTELEMETRY_INSECURE", default=True)
 OPENTELEMETRY_ENDPOINT = get_string("OPENTELEMETRY_ENDPOINT", None)
-OPENTELEMETRY_TRACES_BATCH_SIZE = get_int("OPENTELEMETRY_TRACES_BATCH_SIZE", 512)
+# Name must match what mitol.observability.telemetry looks up, or the default
+# silently applies instead.
+OPENTELEMETRY_BATCH_SIZE = get_int("OPENTELEMETRY_BATCH_SIZE", 512)
 OPENTELEMETRY_EXPORT_TIMEOUT_MS = get_int("OPENTELEMETRY_EXPORT_TIMEOUT_MS", 5000)
 CANVAS_TUTORBOT_FOLDER = get_string("CANVAS_TUTORBOT_FOLDER", "web_resources/ai/tutor/")
 

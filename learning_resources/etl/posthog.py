@@ -8,7 +8,7 @@ from collections.abc import Generator
 from datetime import UTC, datetime
 
 import boto3
-import pandas as pd
+import pyarrow.parquet as pq
 from django.conf import settings
 from django.db import IntegrityError, transaction
 
@@ -16,6 +16,18 @@ from learning_resources.models import LearningResource, LearningResourceViewEven
 from learning_resources.utils import resource_upserted_actions
 
 log = logging.getLogger(__name__)
+
+# The only columns posthog_transform_lrd_view_events reads. The PostHog export
+# also carries person_properties, elements_chain, distinct_id, person_id,
+# created_at, _inserted_at and event; person_properties in particular is a JSON
+# blob comparable in size to properties, and all of them were being decoded for
+# every row and then discarded.
+POSTHOG_EVENT_COLUMNS = ["uuid", "timestamp", "properties"]
+
+# Rows decoded per batch. Bounds peak memory to roughly one batch rather than
+# one whole file, and is small enough that a batch stays cheap even though
+# properties holds the full PostHog client context per event.
+POSTHOG_EXTRACT_BATCH_SIZE = 1000
 
 
 @dataclasses.dataclass
@@ -68,9 +80,16 @@ def posthog_extract_lrd_view_events() -> Generator[dict, None, None]:
             s3_object = s3.Object(settings.POSTHOG_EVENT_S3_BUCKET, obj.key)
             parquet_data = io.BytesIO(s3_object.get()["Body"].read())
 
-            df = pd.read_parquet(parquet_data)
-            for _, row in list(df.iterrows()):
-                yield row.to_dict()
+            # Decode a batch at a time rather than materialising the whole file:
+            # the previous pandas path read every column into a DataFrame and
+            # then wrapped `iterrows()` in `list()`, which holds a Series object
+            # for every row in the file simultaneously.
+            parquet_file = pq.ParquetFile(parquet_data)
+            for batch in parquet_file.iter_batches(
+                batch_size=POSTHOG_EXTRACT_BATCH_SIZE,
+                columns=POSTHOG_EVENT_COLUMNS,
+            ):
+                yield from batch.to_pylist()
 
 
 def posthog_transform_lrd_view_events(
@@ -200,20 +219,42 @@ def load_posthog_lrd_view_event(
 
 def load_posthog_lrd_view_events(
     events: iter,
-) -> list[LearningResourceViewEvent]:
+) -> set[int]:
     """
-    Load a list of PostHogLearningResourceViewEvent into the database.
+    Load PostHogLearningResourceViewEvents into the database.
+
+    Consumes `events` one at a time and keeps only the set of learning resource
+    ids that need recounting. Returning the loaded rows instead -- as the
+    per-resource loaders in loaders.py do -- is safe at their scale but not
+    here: this is called once with a generator over the whole S3 backlog, and
+    load_posthog_lrd_view_event returns a row on every path (including the
+    early return for an event that is already stored), so retaining them meant
+    holding a model instance per event for millions of events.
 
     Args:
-    - events (list[PostHogLearningResourceViewEvent]): the events to load
+    - events (iterable[PostHogLearningResourceViewEvent]): the events to load
     Returns:
-    List of LearningResourceViewEvent
+    Set of learning resource ids whose view counts were updated
     """
 
-    events = [load_posthog_lrd_view_event(event) for event in events]
-    learning_resource_ids = {
-        event.learning_resource_id for event in events if event is not None
-    }
+    attempted = 0
+    loaded = 0
+    learning_resource_ids = set()
+
+    for event in events:
+        attempted += 1
+        lr_event = load_posthog_lrd_view_event(event)
+        if lr_event is not None:
+            loaded += 1
+            learning_resource_ids.add(lr_event.learning_resource_id)
+
+    log.info(
+        "PostHog lrd_view load: %d event(s) attempted, %d loaded, "
+        "%d learning resource(s) to recount",
+        attempted,
+        loaded,
+        len(learning_resource_ids),
+    )
 
     for resource_id in learning_resource_ids:
         learning_resource = LearningResource.objects.filter(
@@ -227,4 +268,4 @@ def load_posthog_lrd_view_events(
                 learning_resource, percolate=False, generate_embeddings=False
             )
 
-    return events
+    return learning_resource_ids
