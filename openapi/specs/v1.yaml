@@ -9864,10 +9864,12 @@ paths:
         name: course_id
         schema:
           type: string
+          nullable: true
       - in: query
         name: course_readable_id
         schema:
           type: string
+          nullable: true
       - in: query
         name: source
         schema:
@@ -10445,8 +10447,10 @@ components:
           $ref: '#/components/schemas/SourceEnum'
         course_id:
           type: string
+          nullable: true
         course_readable_id:
           type: string
+          nullable: true
       required:
       - source
     ContentFileWebHookRequestRequest:
@@ -10459,8 +10463,10 @@ components:
           $ref: '#/components/schemas/SourceEnum'
         course_id:
           type: string
+          nullable: true
         course_readable_id:
           type: string
+          nullable: true
       required:
       - source
     Course:
