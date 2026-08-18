@@ -90,18 +90,11 @@ export const useProgramEnrollment = (
         return
       }
       if (kind === "paid") {
-        // Paid checkout runs for anonymous users too. The basket and cart live
-        // on MITx Online, which supports anonymous baskets, so we hand off
-        // directly to checkout and defer account creation to the MITx Online
-        // flow (Review → Account → Verify → Payment).
         const product = program.products[0]
         if (product) {
           replaceBasketItem.mutate(product.id)
         }
       } else if (kind === "free") {
-        // Free enrollment requires an account — there is no anonymous program
-        // enrollment — so unauthenticated users are routed to signup first
-        // (handled by the guard above).
         createProgramEnrollment.mutate(
           { V3ProgramEnrollmentRequestRequest: { program_id: program.id } },
           {

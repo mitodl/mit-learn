@@ -27,11 +27,7 @@ import {
 } from "@/test-utils"
 import { ProgramEnrollmentDisplay } from "./ProgramEnrollmentDisplay"
 import * as mitxonline from "api/mitxonline-test-utils"
-import {
-  makeRequest,
-  urls as learnUrls,
-  factories as learnFactories,
-} from "api/test-utils"
+import { makeRequest } from "api/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
@@ -43,15 +39,6 @@ const mockedUseFeatureFlagEnabled = jest
 
 describe("ProgramEnrollmentDisplay", () => {
   setupLocationMock()
-
-  // useAddToBasket/useClearBasket check Learn's own auth state (separate
-  // from mitxonline's) before invalidating the checkout-payload query.
-  beforeEach(() => {
-    setMockResponse.get(
-      learnUrls.userMe.get(),
-      learnFactories.user.user({ is_authenticated: true }),
-    )
-  })
 
   test("Filters to single program when programId is provided", async () => {
     const mitxOnlineUser = mitxonline.factories.user.user()
