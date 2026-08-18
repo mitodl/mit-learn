@@ -3,13 +3,11 @@ import {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { useQuery } from "@tanstack/react-query"
 import {
   useCreateB2bEnrollment,
   useCreateEnrollment,
   useCreateVerifiedProgramEnrollment,
 } from "api/mitxonline-hooks/enrollment"
-import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import React from "react"
 import NiceModal from "@ebay/nice-modal-react"
 import { getCourseEnrollmentAction } from "@/common/mitxonline"
@@ -18,7 +16,6 @@ import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEn
 import { trackCourseEnrolled } from "@/common/analytics/gtm"
 
 export const useEnrollmentHandler = () => {
-  const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const createB2bEnrollment = useCreateB2bEnrollment()
   const createEnrollment = useCreateEnrollment()
   const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment()
@@ -171,6 +168,5 @@ export const useEnrollmentHandler = () => {
       createEnrollment.isPending ||
       createVerifiedProgramEnrollment.isPending ||
       replaceBasketItem.isPending,
-    mitxOnlineUser: mitxOnlineUser.data,
   }
 }
