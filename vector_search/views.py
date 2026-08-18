@@ -23,7 +23,6 @@ from vector_search.constants import (
     CONTENT_FILES_RETRIEVE_PAYLOAD,
     QDRANT_RESOURCE_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
-    RESOURCES_RETRIEVE_PAYLOAD,
 )
 from vector_search.serializers import (
     ContentFileVectorSearchRequestSerializer,
@@ -34,6 +33,7 @@ from vector_search.serializers import (
 from vector_search.utils import (
     _content_file_vector_hits,
     _merge_dicts,
+    _resource_payload_hits,
     _resource_vector_hits,
     async_qdrant_aggregations,
     async_qdrant_client,
@@ -43,6 +43,7 @@ from vector_search.utils import (
     db_sync_to_async,
     dense_encoder,
     qdrant_query_conditions,
+    resources_payload_selector,
     sparse_encoder,
 )
 
@@ -150,7 +151,7 @@ class QdrantView(APIView):
             "collection_name": search_collection,
             "query_filter": search_filter,
             "with_vectors": False,
-            "with_payload": RESOURCES_RETRIEVE_PAYLOAD
+            "with_payload": resources_payload_selector()
             if search_collection == RESOURCES_COLLECTION_NAME
             else CONTENT_FILES_RETRIEVE_PAYLOAD,
             "search_params": models.SearchParams(
@@ -276,6 +277,11 @@ class QdrantView(APIView):
             "collection_name": search_collection,
             "scroll_filter": search_filter,
             "with_vectors": False,
+            # Scroll otherwise defaults to the entire payload, transcripts and
+            # all -- ask for the same fields the query path does.
+            "with_payload": resources_payload_selector()
+            if search_collection == RESOURCES_COLLECTION_NAME
+            else CONTENT_FILES_RETRIEVE_PAYLOAD,
         }
 
         if order_by:
@@ -389,6 +395,10 @@ class QdrantView(APIView):
             )
 
         if search_collection == RESOURCES_COLLECTION_NAME:
+            if settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD:
+                # Payloads are already the serialized resources -- no database
+                # round trip, so no thread hop either.
+                return _resource_payload_hits(search_result)
             return await db_sync_to_async(_resource_vector_hits)(search_result)
         else:
             return await db_sync_to_async(_content_file_vector_hits)(search_result)

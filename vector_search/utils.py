@@ -12,6 +12,7 @@ from django.db.models import Prefetch, Q
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
 from learning_resources.constants import (
+    CONTENT_FILE_LARGE_FIELDS,
     PROGRAM_COURSE_CACHE_KEY_TEST_MODE,
 )
 from learning_resources.models import (
@@ -42,6 +43,7 @@ from main.utils import checksum_for_content, chunks
 from vector_search.constants import (
     COLLECTION_PARAM_MAP,
     CONTENT_FILES_COLLECTION_NAME,
+    COURSE_NUMBER_INDEXING_ONLY_FIELDS,
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_INDEXES,
@@ -60,6 +62,8 @@ from vector_search.constants import (
     QDRANT_RESOURCE_PARAM_MAP,
     QDRANT_TOPIC_INDEXES,
     RESOURCES_COLLECTION_NAME,
+    RESOURCES_PAYLOAD_EXCLUDE,
+    RESOURCES_RETRIEVE_PAYLOAD,
     TOPICS_COLLECTION_NAME,
     VECTOR_SEARCH_SCORE_BOOST,
 )
@@ -1150,6 +1154,93 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
         )
 
 
+def resources_payload_selector():
+    """
+    Return the `with_payload` value to use for the resources collection.
+
+    When hits are served from the payload we want everything the API response
+    needs, minus the indexing-only keys. Otherwise we only need the two fields
+    the database hydration path looks resources up by.
+    """
+    if settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD:
+        return models.PayloadSelectorExclude(exclude=RESOURCES_PAYLOAD_EXCLUDE)
+    return RESOURCES_RETRIEVE_PAYLOAD
+
+
+def _without_keys(items, drop_keys):
+    """Drop drop_keys from every dict in a list, leaving non-dicts alone"""
+    return [
+        {key: value for key, value in item.items() if key not in drop_keys}
+        if isinstance(item, dict)
+        else item
+        for item in items
+    ]
+
+
+def _trim_indexing_only_list_fields(payload):
+    """
+    Drop indexing-only keys the Qdrant payload selector cannot reach.
+
+    Selectors descend into objects but not into lists of objects, so anything
+    the indexing serializer adds *inside* a list survives the exclude and has
+    to be removed here:
+
+    - course.course_numbers[] carries sort_coursenum and primary, which
+      SearchCourseNumberSerializer adds on top of CourseNumberSerializer.
+    - content_files[] is re-serialized with the full ContentFileSerializer for
+      nested search, so it carries the large text fields that the API's
+      NestedContentFileSerializer omits. The rest of the field must survive:
+      document and video responses declare it, and search cards use
+      content_files[0].image_src as the thumbnail fallback.
+    """
+    trimmed = payload
+
+    course = payload.get("course")
+    if isinstance(course, dict) and isinstance(course.get("course_numbers"), list):
+        trimmed = {
+            **trimmed,
+            "course": {
+                **course,
+                "course_numbers": _without_keys(
+                    course["course_numbers"], COURSE_NUMBER_INDEXING_ONLY_FIELDS
+                ),
+            },
+        }
+
+    content_files = payload.get("content_files")
+    if isinstance(content_files, list):
+        trimmed = {
+            **trimmed,
+            "content_files": _without_keys(content_files, CONTENT_FILE_LARGE_FIELDS),
+        }
+
+    return trimmed
+
+
+def _resource_payload_hits(search_result):
+    """
+    Build resource hits from the Qdrant payloads themselves.
+
+    The payload is the resource as the indexing serializer wrote it, so it
+    already carries every field the API response needs -- no database
+    hydration required. Dedupes on platform:readable_id and preserves the
+    Qdrant ranking, the same way the hydrated path does.
+    """
+    hits = []
+    seen = set()
+    for hit in search_result:
+        payload = hit.payload or {}
+        readable_id = payload.get("readable_id")
+        if not readable_id:
+            continue
+        key = f"{(payload.get('platform') or {}).get('code', '')}:{readable_id}"
+        if key in seen:
+            continue
+        seen.add(key)
+        hits.append(_trim_indexing_only_list_fields(payload))
+    return hits
+
+
 def _resource_vector_hits(search_result):
     readable_ids = [
         hit.payload.get("readable_id")
@@ -1496,11 +1587,15 @@ def filter_existing_qdrant_points_by_ids(
     Return only points that dont exist in qdrant
     """
     client = qdrant_client()
+    # existence check only: payloads/vectors would be fetched and discarded, and for
+    # content files the payload carries the chunked text
     response = client.retrieve(
         collection_name=collection_name,
         ids=point_ids,
+        with_payload=False,
+        with_vectors=False,
     )
-    existing = [record.id for record in response]
+    existing = {record.id for record in response}
     return [point_id for point_id in point_ids if point_id not in existing]
 
 

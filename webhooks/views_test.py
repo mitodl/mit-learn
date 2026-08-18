@@ -187,6 +187,36 @@ def test_content_file_webhook_view_canvas_success(settings, client, mocker):
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
+    ("course_id", "course_readable_id"),
+    [(2198, None), (None, "2198")],
+)
+def test_content_file_webhook_view_canvas_null_id(
+    settings, client, mocker, course_id, course_readable_id
+):
+    """
+    Test ContentFileWebhookView accepts Canvas create webhooks with null IDs
+    """
+    url = reverse("webhooks:v1:content_file_webhook")
+    mock_ingest = mocker.patch("webhooks.views.ingest_canvas_course.apply_async")
+
+    data = {
+        "source": ETLSource.canvas.name,
+        "content_path": "/path/to/canvas/course.tar.gz",
+        "course_id": course_id,
+        "course_readable_id": course_readable_id,
+    }
+    response = client.post(
+        url,
+        data=json.dumps(data),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(data, settings)},
+    )
+    assert response.status_code == 200
+    mock_ingest.assert_called_once_with(["/path/to/canvas/course.tar.gz", False])
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
     ("etl_source", "content_path", "readable_id"),
     [
         (

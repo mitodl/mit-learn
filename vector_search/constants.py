@@ -149,6 +149,37 @@ QDRANT_TOPIC_INDEXES = {
 CONTENT_FILES_RETRIEVE_PAYLOAD = True
 RESOURCES_RETRIEVE_PAYLOAD = ["readable_id", "platform"]
 
+# Payload keys dropped when resource hits are served straight from the Qdrant
+# payload (VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD): what the indexing serializer
+# adds on top of the LearningResourceSerializer shape the API returns, plus
+# video.transcript, which the response never renders.
+#
+# content_files is NOT excluded. Document and video responses declare it
+# (NestedContentFileSerializer), and search cards fall back to
+# content_files[0].image_src for the thumbnail when the resource has no image.
+# The indexing serializer re-serializes it with the *full* ContentFileSerializer,
+# so its large text fields are trimmed in Python instead -- see
+# _trim_indexing_only_list_fields.
+#
+# This is deliberately not a copy of SOURCE_EXCLUDED_FIELDS: vector_embedding is
+# an OpenSearch-only field (grafted on by
+# serialize_bulk_learning_resources_with_embeddings), and in Qdrant the dense
+# vector lives on the point, not in the payload.
+RESOURCES_PAYLOAD_EXCLUDE = [
+    "_id",
+    "resource_relations",
+    "is_learning_material",
+    "resource_age_date",
+    "featured_rank",
+    "is_incomplete_or_stale",
+    "video.transcript",
+]
+
+# Qdrant payload selectors descend into objects but not into lists of objects,
+# so the extra fields SearchCourseNumberSerializer puts on each course number
+# cannot be named in RESOURCES_PAYLOAD_EXCLUDE and are trimmed in Python.
+COURSE_NUMBER_INDEXING_ONLY_FIELDS = frozenset({"sort_coursenum", "primary"})
+
 
 COLLECTION_PARAM_MAP = {
     RESOURCES_COLLECTION_NAME: QDRANT_RESOURCE_PARAM_MAP,

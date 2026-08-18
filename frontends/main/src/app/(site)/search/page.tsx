@@ -11,6 +11,10 @@ import {
   getExtraFacetNames,
 } from "@/app-pages/SearchPage/searchRequests"
 import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
+import {
+  toUnfacetedVectorSearchParams,
+  toVectorSearchParams,
+} from "@/page-components/SearchDisplay/vectorSearchParams"
 import validateRequestParams from "@/page-components/SearchDisplay/validateRequestParams"
 import type { ResourceSearchRequest } from "@/page-components/SearchDisplay/validateRequestParams"
 import { LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest } from "api"
@@ -50,13 +54,28 @@ const Page: React.FC<PageProps<"/search">> = async ({ searchParams }) => {
   })
 
   const queryClient = getQueryClient()
+  const isVectorSearch = urlParams.get("vector_search") === "true"
+  const hasSearchTerm = typeof params.q === "string" && params.q.trim() !== ""
 
-  await Promise.all([
-    queryClient.prefetchQuery(offerorQueries.list({})),
-    queryClient.prefetchQuery(
-      learningResourceQueries.search(params as LRSearchRequest),
-    ),
-  ])
+  if (isVectorSearch) {
+    await Promise.all([
+      queryClient.prefetchQuery(offerorQueries.list({})),
+      queryClient.prefetchQuery(
+        learningResourceQueries.vectorSearch(
+          hasSearchTerm
+            ? toUnfacetedVectorSearchParams(params)
+            : toVectorSearchParams(params),
+        ),
+      ),
+    ])
+  } else {
+    await Promise.all([
+      queryClient.prefetchQuery(offerorQueries.list({})),
+      queryClient.prefetchQuery(
+        learningResourceQueries.search(params as LRSearchRequest),
+      ),
+    ])
+  }
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
