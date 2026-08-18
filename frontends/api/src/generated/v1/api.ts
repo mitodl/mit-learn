@@ -595,13 +595,13 @@ export interface ContentFileWebHookRequest {
    * @type {string}
    * @memberof ContentFileWebHookRequest
    */
-  course_id?: string
+  course_id?: string | null
   /**
    *
    * @type {string}
    * @memberof ContentFileWebHookRequest
    */
-  course_readable_id?: string
+  course_readable_id?: string | null
 }
 
 /**
@@ -627,13 +627,13 @@ export interface ContentFileWebHookRequestRequest {
    * @type {string}
    * @memberof ContentFileWebHookRequestRequest
    */
-  course_id?: string
+  course_id?: string | null
   /**
    *
    * @type {string}
    * @memberof ContentFileWebHookRequestRequest
    */
-  course_readable_id?: string
+  course_readable_id?: string | null
 }
 
 /**
@@ -33656,8 +33656,8 @@ export const WebhooksApiAxiosParamCreator = function (
      * @param {WebhooksContentFilesCreateSourceEnum} source * &#x60;mit_edx&#x60; - mit_edx * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;mit_climate&#x60; - mit_climate * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas * &#x60;ovs&#x60; - ovs
      * @param {ContentFileWebHookRequestRequest} ContentFileWebHookRequestRequest
      * @param {string} [content_path]
-     * @param {string} [course_id]
-     * @param {string} [course_readable_id]
+     * @param {string | null} [course_id]
+     * @param {string | null} [course_readable_id]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -33665,8 +33665,8 @@ export const WebhooksApiAxiosParamCreator = function (
       source: WebhooksContentFilesCreateSourceEnum,
       ContentFileWebHookRequestRequest: ContentFileWebHookRequestRequest,
       content_path?: string,
-      course_id?: string,
-      course_readable_id?: string,
+      course_id?: string | null,
+      course_readable_id?: string | null,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'source' is not null or undefined
@@ -33845,8 +33845,8 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
      * @param {WebhooksContentFilesCreateSourceEnum} source * &#x60;mit_edx&#x60; - mit_edx * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;mit_climate&#x60; - mit_climate * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas * &#x60;ovs&#x60; - ovs
      * @param {ContentFileWebHookRequestRequest} ContentFileWebHookRequestRequest
      * @param {string} [content_path]
-     * @param {string} [course_id]
-     * @param {string} [course_readable_id]
+     * @param {string | null} [course_id]
+     * @param {string | null} [course_readable_id]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -33854,8 +33854,8 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
       source: WebhooksContentFilesCreateSourceEnum,
       ContentFileWebHookRequestRequest: ContentFileWebHookRequestRequest,
       content_path?: string,
-      course_id?: string,
-      course_readable_id?: string,
+      course_id?: string | null,
+      course_readable_id?: string | null,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
@@ -34052,14 +34052,14 @@ export interface WebhooksApiWebhooksContentFilesCreateRequest {
    * @type {string}
    * @memberof WebhooksApiWebhooksContentFilesCreate
    */
-  readonly course_id?: string
+  readonly course_id?: string | null
 
   /**
    *
    * @type {string}
    * @memberof WebhooksApiWebhooksContentFilesCreate
    */
-  readonly course_readable_id?: string
+  readonly course_readable_id?: string | null
 }
 
 /**
