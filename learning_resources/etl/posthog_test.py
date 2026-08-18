@@ -321,3 +321,68 @@ def test_load_posthog_lrd_view_events_is_idempotent(mocker):
     posthog.load_posthog_lrd_view_events(events)
 
     assert LearningResourceViewEvent.objects.count() == 10
+
+
+@pytest.mark.django_db
+def test_load_posthog_lrd_view_events_accepts_string_resource_id(mocker):
+    """
+    A resource id that arrives as a string still loads.
+
+    PostHog properties are JSON, so learning_resource_id can be either an int
+    or a string. The per-event path handed it to filter(pk=...), which coerced
+    it; the batch path compares it against ids read back from the database,
+    where "3235" != 3235 would drop the event without a trace.
+    """
+    mocker.patch(
+        "learning_resources.etl.posthog.resource_upserted_actions", autospec=True
+    )
+    resource = LearningResourceFactory.create()
+
+    recounted = posthog.load_posthog_lrd_view_events(
+        [_view_event(str(resource.id), minutes_ago=1)]
+    )
+
+    assert recounted == {resource.id}
+    assert LearningResourceViewEvent.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_load_posthog_lrd_view_events_batch_survives_adoption_race(mocker):
+    """
+    An IntegrityError from bulk_update loads the batch per-event instead.
+
+    bulk_update fails the whole batch where the per-event savepoint fails a
+    single event, so without this fallback one adoption race would lose every
+    event alongside it.
+    """
+    mocker.patch(
+        "learning_resources.etl.posthog.resource_upserted_actions", autospec=True
+    )
+    resource = LearningResourceFactory.create()
+    events = [_view_event(resource.id, minutes_ago=i) for i in range(1, 4)]
+
+    # A legacy row for the first event, so the adoption path is reached at all.
+    LearningResourceViewEventFactory.create(
+        learning_resource=resource,
+        event_date=events[0].event_date,
+        event_uuid=None,
+    )
+    bulk_update = mocker.patch.object(
+        LearningResourceViewEvent.objects,
+        "bulk_update",
+        side_effect=IntegrityError("adopted concurrently"),
+    )
+
+    recounted = posthog.load_posthog_lrd_view_events(events)
+
+    assert bulk_update.called
+    assert recounted == {resource.id}
+    # All three survive via the per-event fallback: the legacy row adopted by
+    # the first event, plus a fresh row for each of the other two.
+    assert LearningResourceViewEvent.objects.count() == 3
+    assert (
+        LearningResourceViewEvent.objects.filter(
+            event_uuid__in=[uuid.UUID(event.event_uuid) for event in events]
+        ).count()
+        == 3
+    )

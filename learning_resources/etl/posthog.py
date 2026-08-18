@@ -225,52 +225,61 @@ def load_posthog_lrd_view_event(
     return lr_event
 
 
-def _event_uuid(event: PostHogLearningResourceViewEvent) -> uuid.UUID | None:
+@dataclasses.dataclass
+class _NormalizedEvent:
     """
-    Parse an event's uuid, or None if it is malformed.
+    A view event with its identifiers coerced to the types the ORM returns.
 
-    The batch path compares uuids in Python, where a str never equals the
-    uuid.UUID the ORM returns, so they have to be normalised on the way in.
+    PostHog properties are JSON, so resource_id arrives as either an int or a
+    string and event_uuid as a string. The per-event path only ever handed
+    those to the ORM, which coerced them; the batch path compares them in
+    Python against values read back from the database, where "3235" != 3235 and
+    a str never equals a uuid.UUID. Coercing once, up front, keeps membership
+    tests, legacy adoption and the returned id set all in agreement.
     """
-    try:
-        return uuid.UUID(str(event.event_uuid))
-    except (AttributeError, TypeError, ValueError):
-        log.warning(
-            "Skipping lrd_view event for resource %s - malformed uuid %r",
-            event.resource_id,
-            event.event_uuid,
-        )
-        return None
+
+    resource_id: int
+    event_date: datetime
+    event_uuid: uuid.UUID
+    source: PostHogLearningResourceViewEvent
 
 
-def _existing_resource_ids(
+def _normalize_events(
     events: list[PostHogLearningResourceViewEvent],
-) -> set[int]:
-    """
-    Return the resource ids in `events` that exist as LearningResources.
-
-    Non-integer ids are dropped before the query rather than after: a bad value
-    inside pk__in raises for the whole batch, where the per-event loader only
-    skips the one event.
-    """
-    candidate_ids = set()
+) -> list[_NormalizedEvent]:
+    """Coerce each event's identifiers, dropping any that cannot be parsed."""
+    normalized = []
     for event in events:
         try:
-            candidate_ids.add(int(event.resource_id))
+            resource_id = int(event.resource_id)
         except (TypeError, ValueError):
             log.warning(
                 "Skipping lrd_view event for resource %r - invalid ID",
                 event.resource_id,
             )
-    return set(
-        LearningResource.objects.filter(pk__in=candidate_ids).values_list(
-            "id", flat=True
+            continue
+        try:
+            event_uuid = uuid.UUID(str(event.event_uuid))
+        except (TypeError, ValueError):
+            log.warning(
+                "Skipping lrd_view event for resource %s - malformed uuid %r",
+                resource_id,
+                event.event_uuid,
+            )
+            continue
+        normalized.append(
+            _NormalizedEvent(
+                resource_id=resource_id,
+                event_date=event.event_date,
+                event_uuid=event_uuid,
+                source=event,
+            )
         )
-    )
+    return normalized
 
 
 def _claim_legacy_rows(
-    events: list[PostHogLearningResourceViewEvent],
+    events: list[_NormalizedEvent],
 ) -> list[tuple[int, uuid.UUID]]:
     """
     Pair each event with a distinct legacy row to adopt, where one exists.
@@ -280,7 +289,7 @@ def _claim_legacy_rows(
     same (resource, event_date), so a row is claimed at most once per batch.
 
     Args:
-    - events (list[PostHogLearningResourceViewEvent]): events not already stored
+    - events (list[_NormalizedEvent]): events not already stored
     Returns:
     List of (row primary key, event uuid) pairs to stamp
     """
@@ -306,7 +315,7 @@ def _claim_legacy_rows(
     for event in events:
         available = candidates.get((event.resource_id, event.event_date))
         if available:
-            assignments.append((available.pop(0), _event_uuid(event)))
+            assignments.append((available.pop(0), event.event_uuid))
     return assignments
 
 
@@ -321,13 +330,19 @@ def _load_posthog_lrd_view_event_batch(
     Returns:
     Tuple of (resource ids needing a recount, number of events loaded)
     """
-    resource_ids = _existing_resource_ids(events)
-    events = [
-        event
-        for event in events
-        if event.resource_id in resource_ids and _event_uuid(event) is not None
+    normalized = _normalize_events(events)
+    # Resolve every resource in one query. Ids are validated in
+    # _normalize_events first: a non-integer inside pk__in raises for the whole
+    # batch, where the per-event path skipped only its own event.
+    existing_resource_ids = set(
+        LearningResource.objects.filter(
+            pk__in={event.resource_id for event in normalized}
+        ).values_list("id", flat=True)
+    )
+    normalized = [
+        event for event in normalized if event.resource_id in existing_resource_ids
     ]
-    if not events:
+    if not normalized:
         return set(), 0
 
     # Most events arrive already stored: the extract re-reads the newest S3
@@ -335,12 +350,13 @@ def _load_posthog_lrd_view_event_batch(
     # it holds.
     stored_uuids = set(
         LearningResourceViewEvent.objects.filter(
-            event_uuid__in=[_event_uuid(event) for event in events]
+            event_uuid__in=[event.event_uuid for event in normalized]
         ).values_list("event_uuid", flat=True)
     )
-    new_events = [event for event in events if _event_uuid(event) not in stored_uuids]
+    resource_ids = {event.resource_id for event in normalized}
+    new_events = [event for event in normalized if event.event_uuid not in stored_uuids]
     if not new_events:
-        return {event.resource_id for event in events}, 0
+        return resource_ids, 0
 
     assignments = _claim_legacy_rows(new_events)
     if assignments:
@@ -365,16 +381,16 @@ def _load_posthog_lrd_view_event_batch(
             loaded = [
                 event
                 for event in new_events
-                if load_posthog_lrd_view_event(event) is not None
+                if load_posthog_lrd_view_event(event.source) is not None
             ]
-            return {event.resource_id for event in events}, len(loaded)
+            return resource_ids, len(loaded)
 
     LearningResourceViewEvent.objects.bulk_create(
         [
             LearningResourceViewEvent(
                 learning_resource_id=event.resource_id,
                 event_date=event.event_date,
-                event_uuid=_event_uuid(event),
+                event_uuid=event.event_uuid,
             )
             for event in new_events
         ],
@@ -384,7 +400,7 @@ def _load_posthog_lrd_view_event_batch(
         ignore_conflicts=True,
         batch_size=POSTHOG_LOAD_BATCH_SIZE,
     )
-    return {event.resource_id for event in events}, len(new_events)
+    return resource_ids, len(new_events)
 
 
 def load_posthog_lrd_view_events(
