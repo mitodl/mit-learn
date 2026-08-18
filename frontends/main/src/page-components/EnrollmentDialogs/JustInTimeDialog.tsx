@@ -30,7 +30,7 @@ import {
   subdivisionOptions,
   yearOfBirthOptions,
 } from "./complianceFields"
-import type { EditableJitField, JitField } from "./complianceFields"
+import type { JitField } from "./complianceFields"
 
 const SelectPlaceholder = styled("span")(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
@@ -103,9 +103,7 @@ const JustInTimeDialogInner: React.FC = () => {
   const focusedSubmitCount = React.useRef(0)
   React.useEffect(() => {
     if (submitCount === focusedSubmitCount.current) return
-    const firstInvalid = JIT_FIELDS.find(
-      (field) => field !== "email" && errors[field as EditableJitField],
-    )
+    const firstInvalid = JIT_FIELDS.find((field) => errors[field])
     if (!firstInvalid) return
     focusedSubmitCount.current = submitCount
     fieldsRef.current
@@ -120,6 +118,11 @@ const JustInTimeDialogInner: React.FC = () => {
   const showSubdivision = requiresSubdivision(formik.values.country)
 
   const handleClose = () => {
+    // A save in flight must run to completion: closing mid-submit would
+    // resolve this modal `false` while `onSubmit` could still land and
+    // resolve/hide it again, letting a cancelled action's caller and a
+    // just-completed save race for the final outcome.
+    if (formik.isSubmitting) return
     modal.resolve(false)
     modal.hide()
   }
@@ -153,20 +156,7 @@ const JustInTimeDialogInner: React.FC = () => {
   const renderField = (field: JitField) => {
     const spec = FIELD_SPECS[field]
 
-    if (spec.kind === "readonly") {
-      return (
-        <TextField
-          name={field}
-          label={spec.label}
-          value={user.data?.email ?? ""}
-          helpText="Taken from your account and used for the compliance check."
-          inputProps={{ readOnly: true }}
-          fullWidth
-        />
-      )
-    }
-
-    const name = field as EditableJitField
+    const name = field
     const value = formik.values[name]
     const shared = {
       name,
@@ -252,7 +242,11 @@ const JustInTimeDialogInner: React.FC = () => {
       onClose={handleClose}
       actions={
         <DialogActions>
-          <Button variant="secondary" onClick={handleClose}>
+          <Button
+            variant="secondary"
+            onClick={handleClose}
+            disabled={formik.isSubmitting}
+          >
             Cancel
           </Button>
           <Button

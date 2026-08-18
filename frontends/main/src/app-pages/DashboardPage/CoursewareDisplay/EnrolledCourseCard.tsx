@@ -116,12 +116,12 @@ const UpgradeBanner: React.FC<
   const handleUpgradeClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
 
-    // Gated before the try/catch: a dismissed compliance dialog is not an
-    // upgrade failure and must not surface onUpgradeFailure's error message.
-    // The checkout fallback below is gated inside useReplaceBasketItem.
-    if (!(await ensureCompliance())) return
-
     if (canOneClickUpgrade) {
+      // Gated before the try/catch: a dismissed compliance dialog is not an
+      // upgrade failure and must not surface onUpgradeFailure's error
+      // message. The checkout fallback below is gated inside
+      // useReplaceBasketItem instead, so it isn't checked twice.
+      if (!(await ensureCompliance())) return
       try {
         await createVerifiedProgramEnrollment.mutateAsync({
           courserun_id: readableId!,

@@ -37,7 +37,6 @@ const COUNTRIES = [
 
 const setup = (userOverrides: PartialDeep<MitxUser> = {}) => {
   const mitxUser = mitxFactories.user.user({
-    email: "learner@mit.edu",
     legal_address: null,
     user_profile: null,
     compliance_missing_fields: ["city", "country", "street_address_1"],
@@ -92,15 +91,6 @@ describe("JustInTimeDialog", () => {
 
     expect(combobox(dialog, "Country")).toBeVisible()
     expect(combobox(dialog, "Year of Birth")).toBeVisible()
-  })
-
-  test("email is shown but not editable, since SSO owns it", async () => {
-    setup()
-    const dialog = await openDialog()
-
-    const email = textbox(dialog, "Email")
-    await waitFor(() => expect(email).toHaveValue("learner@mit.edu"))
-    expect(email).toHaveAttribute("readonly")
   })
 
   test("prefills the fields already on file so wrong values can be corrected", async () => {
@@ -336,7 +326,7 @@ describe("JustInTimeDialog", () => {
   })
 
   describe("submission", () => {
-    test("saves the address and year of birth, and never the email", async () => {
+    test("saves the address and year of birth", async () => {
       setup()
       const dialog = await openDialog()
 
@@ -369,7 +359,6 @@ describe("JustInTimeDialog", () => {
         },
         user_profile: { year_of_birth: 1988 },
       })
-      expect(patchCalls()[0].body).not.toHaveProperty("email")
     }, 10000)
 
     test("closes once saved, so the caller can resume the action", async () => {

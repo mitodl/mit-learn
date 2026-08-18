@@ -219,12 +219,6 @@ describe("jitPatchPayload", () => {
     })
   })
 
-  test("never sends email, which is owned by the SSO account", () => {
-    const payload = jitPatchPayload(values(), 1975)
-    expect(payload).not.toHaveProperty("email")
-    expect(payload.legal_address).not.toHaveProperty("email")
-  })
-
   test("trims whitespace the backend would treat as absent", () => {
     const payload = jitPatchPayload(
       values({

@@ -9,6 +9,7 @@ import {
   theme,
 } from "ol-components"
 import { Provider as NiceModalProvider } from "@ebay/nice-modal-react"
+import { ComplianceGateProvider } from "@/common/mitxonline/useComplianceGate"
 import { usePrefetchWarnings } from "api/ssr/usePrefetchWarnings"
 import { AppProgressBar as ProgressBar } from "next-nprogress-bar"
 import type { NProgressOptions } from "next-nprogress-bar"
@@ -35,7 +36,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         <ReloadOnUserChange />
         <NextJsAppRouterCacheProvider>
           <ThemeProvider>
-            <NiceModalProvider>{children}</NiceModalProvider>
+            <NiceModalProvider>
+              <ComplianceGateProvider>{children}</ComplianceGateProvider>
+            </NiceModalProvider>
           </ThemeProvider>
         </NextJsAppRouterCacheProvider>
       </QueryClientProvider>

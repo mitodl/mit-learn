@@ -6,14 +6,16 @@ import { makeBrowserQueryClient } from "@/app/getQueryClient"
 import { makeRequest, setMockResponse } from "api/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import NiceModal from "@ebay/nice-modal-react"
-import { useComplianceGate } from "./useComplianceGate"
+import { useComplianceGate, ComplianceGateProvider } from "./useComplianceGate"
 
 const wrapper = ({ children }: { children: React.ReactNode }) => {
   const queryClient = makeBrowserQueryClient({ maxRetries: 0 })
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <NiceModal.Provider>{children}</NiceModal.Provider>
+        <NiceModal.Provider>
+          <ComplianceGateProvider>{children}</ComplianceGateProvider>
+        </NiceModal.Provider>
       </ThemeProvider>
     </QueryClientProvider>
   )
@@ -136,5 +138,54 @@ describe("useComplianceGate", () => {
     // The query client's default staleTime would otherwise let the second
     // call reuse the first's cached response without hitting the network.
     expect(profileGets.length).toBeGreaterThanOrEqual(2)
+  })
+
+  test("two separate call sites sharing a ComplianceGateProvider collapse onto one check", async () => {
+    const mitxUser = mitxonline.factories.user.user({
+      compliance_missing_fields: [],
+      legal_address: {
+        first_name: "Ada",
+        last_name: "Lovelace",
+        country: "GB",
+        street_address_1: "1 Main St",
+        city: "London",
+      },
+      user_profile: { year_of_birth: null },
+    })
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser)
+    setMockResponse.get(mitxonline.urls.countries.list(), [
+      { code: "GB", name: "United Kingdom", states: [] },
+    ])
+    setMockResponse.patch(mitxonline.urls.userMe.get(), null)
+
+    // Unlike the tests above, which call ensureCompliance() twice on the same
+    // hook instance, this calls it from two independent useComplianceGate()
+    // invocations -- e.g. two dashboard cards -- each with its own local ref.
+    // Only the shared ComplianceGateProvider ties them together.
+    const { result } = renderHook(
+      () => ({ cardA: useComplianceGate(), cardB: useComplianceGate() }),
+      { wrapper },
+    )
+
+    const first = result.current.cardA.ensureCompliance()
+    const second = result.current.cardB.ensureCompliance()
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+    // The second card's click must collapse onto the first's in-flight
+    // check rather than opening its own dialog.
+    expect(screen.getAllByRole("dialog")).toHaveLength(1)
+
+    await user.click(
+      within(dialog).getByRole("combobox", { name: "Year of Birth" }),
+    )
+    await user.click(await screen.findByRole("option", { name: "1988" }))
+    await user.click(within(dialog).getByRole("button", { name: "Submit" }))
+
+    // Only the initiating card resumes as compliant; the collapsed second
+    // card must not also fire its own enroll/basket mutation.
+    await expect(first).resolves.toBe(true)
+    await expect(second).resolves.toBe(false)
   })
 })

@@ -18,11 +18,14 @@ import type {
  *    itself. It is deliberately absent from `compliance_missing_fields`: that
  *    list is CyberSource-shaped and read-only, and year of birth is not a
  *    bill-to field. We read it straight off `user_profile` instead.
+ *
+ * Email is deliberately not collected here: it comes from the user's SSO
+ * identity, so editing it would silently diverge the MITx Online account from
+ * Keycloak, and the dialog can't change it anyway.
  */
 const JIT_FIELDS = [
   "first_name",
   "last_name",
-  "email",
   "country",
   "street_address_1",
   "street_address_2",
@@ -34,22 +37,15 @@ const JIT_FIELDS = [
 
 type JitField = (typeof JIT_FIELDS)[number]
 
-/**
- * `email` is displayed read-only rather than collected: it comes from the
- * user's SSO identity, so editing it here would silently diverge the MITx
- * Online account from Keycloak.
- */
-type EditableJitField = Exclude<JitField, "email">
-
-type JitFormValues = Record<EditableJitField, string>
+type JitFormValues = Record<JitField, string>
 
 type FieldSpec = {
   label: string
   /**
    * Which control renders this field. `country`, `state` and `year` are
-   * selects over generated option lists; `readonly` renders a disabled input.
+   * selects over generated option lists.
    */
-  kind: "text" | "readonly" | "country" | "state" | "year"
+  kind: "text" | "country" | "state" | "year"
   /** Branch of the PATCH payload this field belongs to, or null if not written. */
   patch: "legal_address" | "user_profile" | null
 }
@@ -57,7 +53,6 @@ type FieldSpec = {
 const FIELD_SPECS: Record<JitField, FieldSpec> = {
   first_name: { label: "First Name", kind: "text", patch: "legal_address" },
   last_name: { label: "Last Name", kind: "text", patch: "legal_address" },
-  email: { label: "Email", kind: "readonly", patch: null },
   country: { label: "Country", kind: "country", patch: "legal_address" },
   street_address_1: { label: "Address", kind: "text", patch: "legal_address" },
   street_address_2: {
@@ -199,13 +194,13 @@ const ALWAYS_REQUIRED_FIELDS = [
   "street_address_1",
   "city",
   "year_of_birth",
-] as const satisfies readonly EditableJitField[]
+] as const satisfies readonly JitField[]
 
 /** Fields required only for {@link SUBDIVISION_COUNTRIES}. */
 const SUBDIVISION_REQUIRED_FIELDS = [
   "state",
   "postal_code",
-] as const satisfies readonly EditableJitField[]
+] as const satisfies readonly JitField[]
 
 /**
  * Whether a field is required given the currently *selected* country.
@@ -214,7 +209,7 @@ const SUBDIVISION_REQUIRED_FIELDS = [
  * dialog marks inputs `required` from it, so the two cannot drift.
  */
 const isFieldRequired = (
-  field: EditableJitField,
+  field: JitField,
   country: string | null | undefined,
 ): boolean => {
   if ((ALWAYS_REQUIRED_FIELDS as readonly string[]).includes(field)) return true
@@ -228,7 +223,7 @@ const isFieldRequired = (
  * A string field whose required-ness is resolved from {@link isFieldRequired}
  * against the sibling `country` value.
  */
-const requiredWhen = (field: EditableJitField, message: string) =>
+const requiredWhen = (field: JitField, message: string) =>
   Yup.string().when("country", {
     is: (country: string) => isFieldRequired(field, country),
     then: (schema) => schema.trim().required(message),
@@ -261,9 +256,9 @@ const jitSchema = Yup.object().shape({
 /**
  * Build the `users/me` PATCH body.
  *
- * `email` is never sent — see {@link EditableJitField}. Because the dialog
- * renders the whole address, we submit it whole rather than diffing, which
- * sidesteps partial-update semantics on the nested serializer.
+ * Because the dialog renders the whole address, we submit it whole rather
+ * than diffing, which sidesteps partial-update semantics on the nested
+ * serializer.
  *
  * `user_profile` is the exception: it is only included when `year_of_birth`
  * actually changed from `currentYearOfBirth`. mitxonline's `UserSerializer`
@@ -315,10 +310,4 @@ export {
   jitSchema,
   jitPatchPayload,
 }
-export type {
-  JitField,
-  EditableJitField,
-  JitFormValues,
-  FieldSpec,
-  CountrySubdivision,
-}
+export type { JitField, JitFormValues, FieldSpec, CountrySubdivision }
