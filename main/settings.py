@@ -870,6 +870,20 @@ OPENAI_API_KEY = get_string(
     default=None,
 )
 
+# Hedged embedding requests: if the first request for a search query has not
+# come back within EMBEDDING_HEDGE_DELAY_SECONDS, send backup requests and use
+# whichever finishes first. The delay keeps the extra backend load proportional
+# to the tail rather than doubling it on every query - set it to 0 to always
+# send the backups immediately.
+EMBEDDING_REQUEST_HEDGING_ENABLED = get_bool(
+    name="EMBEDDING_REQUEST_HEDGING_ENABLED", default=True
+)
+EMBEDDING_HEDGE_COUNT = get_int(name="EMBEDDING_HEDGE_COUNT", default=2)
+EMBEDDING_HEDGE_DELAY_SECONDS = get_float(
+    name="EMBEDDING_HEDGE_DELAY_SECONDS", default=0.15
+)
+EMBEDDING_HEDGE_MAX_WORKERS = get_int(name="EMBEDDING_HEDGE_MAX_WORKERS", default=16)
+
 CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = get_int(
     name="CONTENT_FILE_EMBEDDING_CHUNK_SIZE", default=512
 )
