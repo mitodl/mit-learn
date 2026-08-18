@@ -168,6 +168,16 @@ CELERY_BEAT_SCHEDULE = (
             "task": "main.tasks.delete_old_task_jobs",
             "schedule": crontab(minute=0, hour=8),  # 4:00am EST
         },
+        "clear-views-cache": {
+            "task": "main.tasks.clear_views_cache",
+            # This, not REDIS_VIEW_CACHE_DURATION, is the effective lifetime of
+            # a cached view response: it bounds how stale ETL and search index
+            # changes can look to users. Lengthen it for more cache hits and
+            # less rendering load, shorten it for fresher responses.
+            "schedule": get_int(
+                "CLEAR_VIEWS_CACHE_SCHEDULE_SECONDS", 60 * 60
+            ),  # default is every hour
+        },
         "scrape-marketing-pages-every-1-days": {
             "task": "learning_resources.tasks.scrape_marketing_pages",
             "schedule": get_int(

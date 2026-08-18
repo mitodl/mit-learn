@@ -106,7 +106,6 @@ def update_featured_rank():
         featured_resources.values_list("position", flat=True).distinct().count(),
         clear_all_greater_than=True,
     )
-    clear_views_cache()
 
 
 @app.task(**PARTIAL_UPDATE_TASK_SETTINGS)
@@ -1036,7 +1035,10 @@ def start_recreate_index(job_id):
     rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
 )
 def finish_update_index(results):  # noqa: ARG001
-    """Clear cached views after update index tasks complete."""
+    """
+    Clear cached views after update index tasks complete.
+    """
+    log.info("update_index has finished successfully!")
     clear_views_cache()
 
 

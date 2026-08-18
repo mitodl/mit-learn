@@ -7,7 +7,7 @@ from django.conf import settings
 
 from main.factories import TaskBatchFactory, TaskJobFactory
 from main.models import TaskBatch, TaskJob
-from main.tasks import delete_old_task_jobs, maybe_finish_task_job
+from main.tasks import clear_views_cache, delete_old_task_jobs, maybe_finish_task_job
 from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
@@ -53,3 +53,11 @@ def test_delete_old_task_jobs():
     assert not TaskBatch.objects.filter(id=old_batch.id).exists()  # cascaded
     assert TaskJob.objects.filter(id=recent_job.id).exists()
     assert TaskBatch.objects.filter(id=recent_batch.id).exists()
+
+
+def test_clear_views_cache(mocker):
+    """The scheduled task delegates to the cache-clearing util"""
+    mock_clear = mocker.patch("main.tasks.utils.clear_views_cache", return_value=7)
+
+    assert clear_views_cache.delay().get() == 7
+    mock_clear.assert_called_once_with()
