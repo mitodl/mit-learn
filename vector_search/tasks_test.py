@@ -6,6 +6,7 @@ import pytest
 from celery.exceptions import Retry
 from django.conf import settings
 from django.core.cache.backends.locmem import LocMemCache
+from django.db.models import Q
 
 from learning_resources.etl.constants import (
     RESOURCE_FILE_ETL_SOURCES,
@@ -28,23 +29,31 @@ from learning_resources_search.constants import (
     PROGRAM_TYPE,
 )
 from learning_resources_search.exceptions import RetryError
-from learning_resources_search.serializers import serialize_bulk_content_files
+from learning_resources_search.serializers import (
+    serialize_bulk_content_files,
+    serialize_bulk_learning_resources,
+)
 from main.utils import now_in_utc
 from vector_search.constants import CONTENT_FILE_PREPASS_PAYLOAD_FIELDS
 from vector_search.tasks import (
+    _healthcheck_alert_count,
     _record_embedding_failure,
     _retry_countdown,
+    _sentry_healthcheck_log,
     embed_learning_resources_by_id,
     embed_new_content_files,
     embed_new_learning_resources,
     embed_run_content_files,
     embeddings_healthcheck,
+    embeddings_healthcheck_content_files,
+    embeddings_healthcheck_resource_embeddings,
     finalize_embeddings,
     generate_embeddings,
     remove_embeddings,
     remove_run_content_files,
     remove_unpublished_run_content_files,
     start_embed_resources,
+    summaries_healthcheck,
 )
 from vector_search.utils import vector_point_id, vector_point_key
 
@@ -998,80 +1007,518 @@ def test_embed_run_content_files_all_unchanged_dispatches_nothing(
     mocked_celery.chain.assert_not_called()
 
 
-def test_embeddings_healthcheck_no_missing_embeddings(mocker):
+def _missing_everything(batch, collection_name=None):
+    """Report every point in the batch as absent from Qdrant."""
+    return list(batch)
+
+
+def _missing_only(collection):
+    """Report every point absent for one collection, nothing missing elsewhere."""
+
+    def fake_filter(batch, collection_name=None):
+        return list(batch) if collection_name == collection else []
+
+    return fake_filter
+
+
+def test_embeddings_healthcheck_dispatches_batches_of_each_kind(mocker, mocked_celery):
     """
-    Test embeddings_healthcheck when there are no missing embeddings
+    embeddings_healthcheck should dispatch batches of resources and batches of content
+    files, each drawn from its own rows, plus the standalone summaries task
+    """
+    resources = LearningResourceFactory.create_batch(5, published=True)
+    content_files = [
+        ContentFileFactory.create(
+            run=None, learning_resource=resource, content="test", published=True
+        )
+        for resource in resources
+    ]
+    LearningResourceFactory.create_batch(2, published=False, test_mode=False)
+    expected_ids = sorted(
+        LearningResource.objects.filter(
+            Q(published=True) | Q(test_mode=True)
+        ).values_list("id", flat=True)
+    )
+    mocker.patch("vector_search.tasks.HEALTHCHECK_RESOURCE_BATCH_SIZE", 2)
+    mocker.patch("vector_search.tasks.HEALTHCHECK_CONTENT_FILE_BATCH_SIZE", 2)
+    mock_resource_check = mocker.patch(
+        "vector_search.tasks.embeddings_healthcheck_resource_embeddings", autospec=True
+    )
+    mock_content_check = mocker.patch(
+        "vector_search.tasks.embeddings_healthcheck_content_files", autospec=True
+    )
+    mock_summaries = mocker.patch(
+        "vector_search.tasks.summaries_healthcheck", autospec=True
+    )
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        embeddings_healthcheck.delay()
+
+    # the resource check is batched, and every eligible resource lands in a batch
+    resource_batches = [call.args[0] for call in mock_resource_check.si.mock_calls]
+    assert all(len(batch) <= 2 for batch in resource_batches)
+    assert sorted(rid for batch in resource_batches for rid in batch) == expected_ids
+    # the content-file check is batched over content files, not over their resources
+    content_batches = [call.args[0] for call in mock_content_check.si.mock_calls]
+    assert all(len(batch) <= 2 for batch in content_batches)
+    assert sorted(cid for batch in content_batches for cid in batch) == sorted(
+        cf.id for cf in content_files
+    )
+    assert mocked_celery.group.call_count == 1
+    assert mocked_celery.replace.call_args[0][1] == mocked_celery.group.return_value
+    assert mocked_celery.group.call_args[0][0][0] is mock_summaries.si.return_value
+    # every dispatched task shares one run_key, so they share one Sentry alert budget
+    run_keys = (
+        {call.kwargs["run_key"] for call in mock_resource_check.si.mock_calls}
+        | {call.kwargs["run_key"] for call in mock_content_check.si.mock_calls}
+        | {call.kwargs["run_key"] for call in mock_summaries.si.mock_calls}
+    )
+    assert len(run_keys) == 1
+    assert next(iter(run_keys)) is not None
+
+
+def test_embeddings_healthcheck_dispatch_only_queues_checkable_content_files(
+    mocker, mocked_celery
+):
+    """
+    Only content files the check could report on are queued -- published, with
+    content, belonging to an eligible resource. Anything else is a batch slot spent on
+    a file the check would skip, and a resource with no content files at all never
+    costs a task.
+    """
+    published_resource = LearningResourceFactory.create(
+        published=True, create_runs=False
+    )
+    run = LearningResourceRunFactory.create(
+        published=True, learning_resource=published_resource
+    )
+    by_run = ContentFileFactory.create(run=run, content="test", published=True)
+    by_resource = ContentFileFactory.create(
+        run=None, learning_resource=published_resource, content="test", published=True
+    )
+
+    # none of these should reach a content-file task
+    ContentFileFactory.create(
+        run=None, learning_resource=published_resource, content="test", published=False
+    )
+    ContentFileFactory.create(
+        run=None, learning_resource=published_resource, content="", published=True
+    )
+    ContentFileFactory.create(
+        run=None, learning_resource=published_resource, content=None, published=True
+    )
+    unpublished_resource = LearningResourceFactory.create(
+        published=False, test_mode=False, create_runs=False
+    )
+    ContentFileFactory.create(
+        run=None, learning_resource=unpublished_resource, content="test", published=True
+    )
+    # a resource with no content files at all costs no content-file task
+    LearningResourceFactory.create(published=True, create_runs=False)
+
+    mock_content_check = mocker.patch(
+        "vector_search.tasks.embeddings_healthcheck_content_files", autospec=True
+    )
+    mocker.patch(
+        "vector_search.tasks.embeddings_healthcheck_resource_embeddings", autospec=True
+    )
+    mocker.patch("vector_search.tasks.summaries_healthcheck", autospec=True)
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        embeddings_healthcheck.delay()
+
+    queued_ids = sorted(
+        cid for call in mock_content_check.si.mock_calls for cid in call.args[0]
+    )
+    assert queued_ids == sorted([by_run.id, by_resource.id])
+
+
+def test_embeddings_healthcheck_caps_a_direct_invocation(mocker, mocked_celery):
+    """
+    A direct call -- embeddings_healthcheck() in a shell rather than delay() -- has no
+    task id. Without a generated fallback every dispatched task would get
+    run_key=None, and one manual run would send an uncapped alert per affected
+    resource.
+    """
+    LearningResourceFactory.create_batch(3, published=True)
+    mock_resource_check = mocker.patch(
+        "vector_search.tasks.embeddings_healthcheck_resource_embeddings", autospec=True
+    )
+    mocker.patch(
+        "vector_search.tasks.embeddings_healthcheck_content_files", autospec=True
+    )
+    mocker.patch("vector_search.tasks.summaries_healthcheck", autospec=True)
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        embeddings_healthcheck()
+
+    run_keys = {call.kwargs["run_key"] for call in mock_resource_check.si.mock_calls}
+    assert len(run_keys) == 1
+    assert next(iter(run_keys)) is not None
+
+
+def test_embeddings_healthcheck_content_files_no_missing_embeddings(mocker):
+    """
+    A content-file check should stay silent when Qdrant has every point it checks
     """
     lr = LearningResourceFactory.create(published=True)
     LearningResourceRunFactory.create(published=True, learning_resource=lr)
-    ContentFileFactory.create(run=lr.runs.first(), content="test", published=True)
+    cf = ContentFileFactory.create(run=lr.runs.first(), content="test", published=True)
     mock_sentry = mocker.patch("vector_search.tasks.sentry_sdk", autospec=True)
     mocker.patch(
         "vector_search.tasks.filter_existing_qdrant_points_by_ids", return_value=[]
     )
 
-    embeddings_healthcheck()
+    embeddings_healthcheck_content_files([cf.id])
     assert mock_sentry.capture_message.call_count == 0
 
 
-def test_embeddings_healthcheck_missing_both(mocker):
+def test_embeddings_healthcheck_resource_embeddings_no_missing(mocker):
     """
-    Test embeddings_healthcheck when there are missing content files and learning resources
+    A batched resource check should stay silent when Qdrant has every point
+    """
+    resources = LearningResourceFactory.create_batch(3, published=True)
+    mock_log = mocker.patch("vector_search.tasks._sentry_healthcheck_log")
+    mocker.patch(
+        "vector_search.tasks.filter_existing_qdrant_points_by_ids", return_value=[]
+    )
+
+    embeddings_healthcheck_resource_embeddings([lr.id for lr in resources])
+    assert mock_log.call_count == 0
+
+
+def test_embeddings_healthcheck_resource_embeddings_batches_qdrant_lookups(mocker):
+    """
+    A batch must cost one Qdrant lookup per HEALTHCHECK_POINT_BATCH_SIZE points rather
+    than one per resource: checking resources one at a time is what turned a full run
+    into thousands of round trips.
+    """
+    resources = LearningResourceFactory.create_batch(5, published=True)
+    mocker.patch("vector_search.tasks.HEALTHCHECK_POINT_BATCH_SIZE", 2)
+    mock_filter = mocker.patch(
+        "vector_search.tasks.filter_existing_qdrant_points_by_ids", return_value=[]
+    )
+
+    embeddings_healthcheck_resource_embeddings([lr.id for lr in resources])
+
+    # 5 points at 2 per lookup is 3 lookups, not 5
+    assert mock_filter.call_count == 3
+
+
+def test_embeddings_healthcheck_resource_embeddings_reports_the_batch_once(mocker):
+    """
+    A batch sends one alert listing the resources it found, rather than one alert per
+    resource, so a batch costs a single slice of the per-run cap
+    """
+    resources = LearningResourceFactory.create_batch(3, published=True)
+    mocker.patch(
+        "vector_search.tasks.filter_existing_qdrant_points_by_ids",
+        side_effect=_missing_everything,
+    )
+    mock_log = mocker.patch("vector_search.tasks._sentry_healthcheck_log")
+
+    embeddings_healthcheck_resource_embeddings([lr.id for lr in resources])
+
+    assert mock_log.call_count == 1
+    assert mock_log.mock_calls[0].args[1] == "missing_learning_resource_embeddings"
+    context = mock_log.mock_calls[0].args[2]
+    assert context["count"] == len(resources)
+    assert sorted(context["ids"]) == sorted(lr.id for lr in resources)
+    # the readable ids identify the resources without needing a lookup from Sentry
+    assert sorted(context["readable_ids"]) == sorted(lr.readable_id for lr in resources)
+
+
+def test_embeddings_healthcheck_resource_embeddings_ignores_present_resources(mocker):
+    """
+    Only the resources Qdrant is actually missing are reported, so a batch can't
+    implicate the resources it merely shared a task with
+    """
+    present, missing = LearningResourceFactory.create_batch(2, published=True)
+    missing_point_ids = [
+        vector_point_id(vector_point_key(serialized))
+        for serialized in serialize_bulk_learning_resources([missing.id])
+    ]
+    mocker.patch(
+        "vector_search.tasks.filter_existing_qdrant_points_by_ids",
+        side_effect=lambda point_ids, **_: [
+            p for p in point_ids if p in missing_point_ids
+        ],
+    )
+    mock_log = mocker.patch("vector_search.tasks._sentry_healthcheck_log")
+
+    embeddings_healthcheck_resource_embeddings([present.id, missing.id])
+
+    assert mock_log.call_count == 1
+    assert mock_log.mock_calls[0].args[2]["ids"] == [missing.id]
+
+
+def test_embeddings_healthcheck_reports_both_kinds_of_gap(mocker):
+    """
+    The two checks together report both the missing content files and the missing
+    resource embeddings, each under its own alert type carrying its own ids
     """
     lr = LearningResourceFactory.create(published=True, create_runs=False)
     LearningResourceRunFactory.create(published=True, learning_resource=lr)
     cf = ContentFileFactory.create(run=lr.runs.first(), content="test", published=True)
     mocker.patch(
         "vector_search.tasks.filter_existing_qdrant_points_by_ids",
-        side_effect=[
-            [vector_point_id(lr.readable_id)],
-            [
-                vector_point_id(
-                    f"{cf.run.learning_resource.id}.{cf.run.run_id}.{cf.key}.0"
-                )
-            ],
-        ],
+        side_effect=_missing_everything,
     )
-    mock_sentry = mocker.patch("vector_search.tasks.sentry_sdk.capture_message")
+    mock_log = mocker.patch("vector_search.tasks._sentry_healthcheck_log")
 
-    embeddings_healthcheck()
+    embeddings_healthcheck_content_files([cf.id])
+    embeddings_healthcheck_resource_embeddings([lr.id])
 
-    assert mock_sentry.call_count == 2
+    assert mock_log.call_count == 2
+    by_alert_type = {call.args[1]: call.args[2] for call in mock_log.mock_calls}
+    assert by_alert_type["missing_content_file_embeddings"]["ids"] == [cf.id]
+    assert by_alert_type["missing_learning_resource_embeddings"]["ids"] == [lr.id]
+    # each alert carries the ids it found rather than a count alone
+    for context in by_alert_type.values():
+        assert context["count"] == 1
 
 
-def test_embeddings_healthcheck_checks_all_runs(mocker):
+def test_embeddings_healthcheck_content_files_checks_all_runs(mocker):
     """
-    embeddings_healthcheck should check content files from every run, not just best_run
+    A content-file check should check content files from every run, not just best_run
     """
     from vector_search.constants import CONTENT_FILES_COLLECTION_NAME
 
     lr = LearningResourceFactory.create(published=True, create_runs=False)
     run_a = LearningResourceRunFactory.create(published=True, learning_resource=lr)
     run_b = LearningResourceRunFactory.create(published=True, learning_resource=lr)
-    ContentFileFactory.create(run=run_a, content="test", published=True)
-    ContentFileFactory.create(run=run_b, content="test", published=True)
-
-    def fake_filter(batch, collection_name=None):
-        # report every content file point as missing, no missing resources
-        return list(batch) if collection_name == CONTENT_FILES_COLLECTION_NAME else []
+    cf_a = ContentFileFactory.create(run=run_a, content="test", published=True)
+    cf_b = ContentFileFactory.create(run=run_b, content="test", published=True)
 
     mocker.patch(
         "vector_search.tasks.filter_existing_qdrant_points_by_ids",
-        side_effect=fake_filter,
+        side_effect=_missing_only(CONTENT_FILES_COLLECTION_NAME),
     )
-    mock_sentry = mocker.patch("vector_search.tasks.sentry_sdk.capture_message")
+    mock_log = mocker.patch("vector_search.tasks._sentry_healthcheck_log")
 
-    embeddings_healthcheck()
+    embeddings_healthcheck_content_files([cf_a.id, cf_b.id])
 
-    assert (
-        mock_sentry.mock_calls[0].args[0]
-        == "Warning: 2 missing content file embeddings detected"
-    )
+    assert mock_log.call_count == 1
+    assert mock_log.mock_calls[0].args[1] == "missing_content_file_embeddings"
+    context = mock_log.mock_calls[0].args[2]
+    assert context["count"] == 2
+    assert sorted(context["ids"]) == sorted([cf_a.id, cf_b.id])
 
 
-def test_embeddings_healthcheck_missing_summaries(mocker):
+def test_embeddings_healthcheck_content_files_ignores_files_outside_its_batch(mocker):
     """
-    Test embeddings_healthcheck for missing contentfile summaries/flashcards
+    A batch only reports the content files it was given, so sibling tasks can't
+    double-report the same content files
+    """
+    mine = LearningResourceFactory.create(published=True, create_runs=False)
+    run_mine = LearningResourceRunFactory.create(published=True, learning_resource=mine)
+    my_cf = ContentFileFactory.create(run=run_mine, content="test", published=True)
+
+    theirs = LearningResourceFactory.create(published=True, create_runs=False)
+    run_theirs = LearningResourceRunFactory.create(
+        published=True, learning_resource=theirs
+    )
+    other_cf = ContentFileFactory.create(run=run_theirs, content="test", published=True)
+
+    mocker.patch(
+        "vector_search.tasks.filter_existing_qdrant_points_by_ids",
+        side_effect=_missing_everything,
+    )
+    mock_log = mocker.patch("vector_search.tasks._sentry_healthcheck_log")
+
+    embeddings_healthcheck_content_files([my_cf.id])
+
+    reported_file_ids = {
+        file_id
+        for call in mock_log.mock_calls
+        for file_id in call.args[2].get("ids", [])
+    }
+    assert reported_file_ids == {my_cf.id}
+    assert other_cf.id not in reported_file_ids
+
+
+def test_embeddings_healthcheck_sentry_messages_are_count_free(mocker):
+    """
+    Sentry messages must not interpolate counts or ids, or the per-resource
+    reports each become a separate Sentry issue instead of grouped occurrences
+    of one. Details live in the context, which is keyed by alert_type.
+    """
+    lr = LearningResourceFactory.create(published=True, create_runs=False)
+    LearningResourceRunFactory.create(published=True, learning_resource=lr)
+    cf = ContentFileFactory.create(run=lr.runs.first(), content="test", published=True)
+    mocker.patch(
+        "vector_search.tasks.filter_existing_qdrant_points_by_ids",
+        side_effect=_missing_everything,
+    )
+    mock_scope = mocker.MagicMock()
+    mocker.patch(
+        "vector_search.tasks.sentry_sdk.new_scope"
+    ).return_value.__enter__.return_value = mock_scope
+    mock_capture = mocker.patch("vector_search.tasks.sentry_sdk.capture_message")
+
+    embeddings_healthcheck_content_files([cf.id])
+    embeddings_healthcheck_resource_embeddings([lr.id])
+
+    messages = [call.args[0] for call in mock_capture.mock_calls]
+    assert set(messages) == {
+        "Warning: content files are missing embeddings",
+        "Warning: learning resources are missing their embeddings",
+    }
+    assert not any(char.isdigit() for message in messages for char in message)
+    # context key tracks the alert, so resource alerts aren't filed under a
+    # content-file key
+    context_keys = [call.args[0] for call in mock_scope.set_context.mock_calls]
+    assert sorted(context_keys) == [
+        "missing_content_file_embeddings",
+        "missing_learning_resource_embeddings",
+    ]
+
+
+def test_sentry_healthcheck_log_caps_alerts_per_run(mocker, embed_cache, settings):
+    """
+    An environment that is simply behind on embedding produces one alert per
+    affected resource, so the per-run cap must stop sending after the limit rather
+    than spending the whole Sentry quota on one expected condition.
+    """
+    settings.EMBEDDINGS_HEALTHCHECK_ALERT_CAP = 3
+    mock_capture = mocker.patch("vector_search.tasks.sentry_sdk.capture_message")
+
+    for _ in range(10):
+        _sentry_healthcheck_log(
+            "embeddings", "missing_thing", {"a": 1}, "Warning: thing", run_key="run-1"
+        )
+
+    messages = [call.args[0] for call in mock_capture.mock_calls]
+    # 3 real alerts, then exactly one notice that the cap engaged, then silence
+    assert messages == [
+        "Warning: thing",
+        "Warning: thing",
+        "Warning: thing",
+        "Warning: healthcheck alerts suppressed after reaching the per-run cap",
+    ]
+
+
+def test_sentry_healthcheck_log_cap_is_per_alert_type(mocker, embed_cache, settings):
+    """
+    Each alert type gets its own budget, so a flood of one kind can't hide a
+    different kind of failure entirely. A run works through resources for hours, so a
+    shared budget would go to whichever check found something first.
+    """
+    settings.EMBEDDINGS_HEALTHCHECK_ALERT_CAP = 1
+    mock_capture = mocker.patch("vector_search.tasks.sentry_sdk.capture_message")
+
+    for _ in range(50):
+        _sentry_healthcheck_log(
+            "embeddings", "type_a", {}, "Warning: a", run_key="run-1"
+        )
+    _sentry_healthcheck_log("embeddings", "type_b", {}, "Warning: b", run_key="run-1")
+
+    messages = [call.args[0] for call in mock_capture.mock_calls]
+    assert messages.count("Warning: a") == 1
+    assert messages.count("Warning: b") == 1
+
+
+def test_sentry_healthcheck_log_notifies_once_per_capped_type(
+    mocker, embed_cache, settings
+):
+    """
+    Each capped type reports that it was capped exactly once, so a capped run is
+    never mistaken for a clean one and isn't itself a flood
+    """
+    settings.EMBEDDINGS_HEALTHCHECK_ALERT_CAP = 1
+    mock_capture = mocker.patch("vector_search.tasks.sentry_sdk.capture_message")
+
+    for alert_type in ("type_a", "type_b"):
+        for _ in range(5):
+            _sentry_healthcheck_log(
+                "embeddings", alert_type, {}, f"Warning: {alert_type}", run_key="run-1"
+            )
+
+    messages = [call.args[0] for call in mock_capture.mock_calls]
+    suppressed = "Warning: healthcheck alerts suppressed after reaching the per-run cap"
+    assert messages.count(suppressed) == 2
+
+
+def test_healthcheck_alert_count_does_not_reset_on_concurrent_create(
+    mocker, embed_cache
+):
+    """
+    Workers racing to create a run's counter must not each be handed a count of 1:
+    the healthcheck fans out across workers, so a lost count means the cap overshoots
+    by however many raced.
+    """
+    real_incr = embed_cache.incr
+    raises_left = 2
+
+    def racing_incr(*args, **kwargs):
+        # both racers check the counter before either has created it, so both see it
+        # as absent; afterwards the key really does exist
+        nonlocal raises_left
+        if raises_left:
+            raises_left -= 1
+            raise ValueError
+        return real_incr(*args, **kwargs)
+
+    mocker.patch.object(embed_cache, "incr", side_effect=racing_incr)
+
+    counts = [_healthcheck_alert_count("run-1", "type_a") for _ in range(2)]
+
+    # the racer that won add() counts 1; the loser falls through to a real incr
+    # rather than resetting the counter and counting 1 as well
+    assert counts == [1, 2]
+
+
+def test_sentry_healthcheck_log_cap_is_per_run(mocker, embed_cache, settings):
+    """
+    The budget resets between runs, so a capped run doesn't silence the next one
+    """
+    settings.EMBEDDINGS_HEALTHCHECK_ALERT_CAP = 1
+    mock_capture = mocker.patch("vector_search.tasks.sentry_sdk.capture_message")
+
+    for run_key in ("run-1", "run-2"):
+        for _ in range(3):
+            _sentry_healthcheck_log(
+                "embeddings", "missing_thing", {}, "Warning: thing", run_key=run_key
+            )
+
+    messages = [call.args[0] for call in mock_capture.mock_calls]
+    assert messages.count("Warning: thing") == 2
+
+
+@pytest.mark.parametrize("cap", [0, -1])
+def test_sentry_healthcheck_log_cap_disabled(mocker, embed_cache, settings, cap):
+    """
+    A cap of 0 or less disables capping, for environments (production) where a
+    large backlog is a real incident rather than expected drift
+    """
+    settings.EMBEDDINGS_HEALTHCHECK_ALERT_CAP = cap
+    mock_capture = mocker.patch("vector_search.tasks.sentry_sdk.capture_message")
+
+    for _ in range(10):
+        _sentry_healthcheck_log(
+            "embeddings", "missing_thing", {}, "Warning: thing", run_key="run-1"
+        )
+
+    assert mock_capture.call_count == 10
+
+
+def test_sentry_healthcheck_log_uncapped_without_run_key(mocker, embed_cache, settings):
+    """
+    Callers with no run_key (direct invocations) are uncapped, so the cap can't
+    silently swallow one-off checks
+    """
+    settings.EMBEDDINGS_HEALTHCHECK_ALERT_CAP = 1
+    mock_capture = mocker.patch("vector_search.tasks.sentry_sdk.capture_message")
+
+    for _ in range(5):
+        _sentry_healthcheck_log("embeddings", "missing_thing", {}, "Warning: thing")
+
+    assert mock_capture.call_count == 5
+
+
+def test_summaries_healthcheck_missing_summaries(mocker):
+    """
+    Test summaries_healthcheck for missing contentfile summaries/flashcards
     """
     content_extension = [".srt"]
     content_type = ["file"]
@@ -1107,17 +1554,17 @@ def test_embeddings_healthcheck_missing_summaries(mocker):
     )
     mock_sentry = mocker.patch("vector_search.tasks.sentry_sdk.capture_message")
 
-    embeddings_healthcheck()
+    summaries_healthcheck()
     assert mock_sentry.call_count == 1
     assert (
         mock_sentry.mock_calls[0].args[0]
-        == "Warning: 1 missing content file summaries detected"
+        == "Warning: missing content file summaries detected"
     )
 
 
-def test_embeddings_healthcheck_excludes_already_summarized(mocker):
+def test_summaries_healthcheck_excludes_already_summarized(mocker):
     """
-    embeddings_healthcheck should not count content files that already have
+    summaries_healthcheck should not count content files that already have
     a summary as missing (regression test for passing overwrite=True
     implicitly by mis-ordering get_unprocessed_content_file_ids arguments)
     """
@@ -1156,13 +1603,13 @@ def test_embeddings_healthcheck_excludes_already_summarized(mocker):
     )
     mock_sentry = mocker.patch("vector_search.tasks.sentry_sdk.capture_message")
 
-    embeddings_healthcheck()
+    summaries_healthcheck()
     assert mock_sentry.call_count == 0
 
 
-def test_embeddings_healthcheck_summaries_scoped_to_require_summaries(mocker):
+def test_summaries_healthcheck_scoped_to_require_summaries(mocker):
     """
-    embeddings_healthcheck should only count missing summaries for learning
+    summaries_healthcheck should only count missing summaries for learning
     resources that require them, not every learning resource (regression
     test for get_unprocessed_content_file_ids never receiving
     learning_resource_ids)
@@ -1201,7 +1648,7 @@ def test_embeddings_healthcheck_summaries_scoped_to_require_summaries(mocker):
     )
     mock_sentry = mocker.patch("vector_search.tasks.sentry_sdk.capture_message")
 
-    embeddings_healthcheck()
+    summaries_healthcheck()
     assert mock_sentry.call_count == 0
 
 
