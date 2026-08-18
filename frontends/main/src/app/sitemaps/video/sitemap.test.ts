@@ -3,7 +3,6 @@ import { generateSitemaps, default as sitemap } from "./sitemap"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { ResourceTypeEnum } from "api"
 import { videoDetailPageView, videoPlaylistPageView } from "@/common/urls"
-import { videoPlaylistIds } from "@/common/slugs"
 
 const RESOURCE_TYPES = [ResourceTypeEnum.Video, ResourceTypeEnum.VideoPlaylist]
 
@@ -35,18 +34,24 @@ describe("Video Sitemaps", () => {
 
   it("generates expected URLs for video and video playlist resources", async () => {
     const page = faker.number.int({ min: 5, max: 10 })
-    const videoList = factories.learningResources.videos({
-      count: 3,
-      pageSize: 3,
+    const playlistId = faker.number.int()
+    const otherPlaylistId = faker.number.int()
+    // A video in several playlists is addressed by its first, matching the
+    // canonical tag and the bare-URL redirect on the video page.
+    const videoWithPlaylists = factories.learningResources.resourceSummary({
+      resource_type: ResourceTypeEnum.Video,
+      canonical_parent_ids: [playlistId, otherPlaylistId],
     })
-    const playlistList = factories.learningResources.videoPlaylists({
-      count: 2,
-      pageSize: 2,
+    const videoWithoutPlaylist = factories.learningResources.resourceSummary({
+      resource_type: ResourceTypeEnum.Video,
     })
-    const results = [...videoList.results, ...playlistList.results]
+    const playlist = factories.learningResources.resourceSummary({
+      resource_type: ResourceTypeEnum.VideoPlaylist,
+    })
+    const results = [videoWithPlaylists, videoWithoutPlaylist, playlist]
 
     setMockResponse.get(
-      urls.learningResources.list({
+      urls.learningResources.summaryList({
         limit: 1_000,
         offset: page * 1_000,
         resource_type: RESOURCE_TYPES,
@@ -55,28 +60,31 @@ describe("Video Sitemaps", () => {
     )
 
     const sitemapPage = await sitemap({ id: Promise.resolve(String(page)) })
-    expect(sitemapPage).toEqual(
-      results.map((resource) => {
-        const base = "http://test.learn.odl.local:8062"
-        if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
-          return {
-            url: `${base}${videoPlaylistPageView(
-              String(resource.id),
-              resource.title,
-            )}`,
-            lastModified: resource.last_modified ?? undefined,
-          }
-        }
-        const [firstPlaylist] = videoPlaylistIds(resource)
-        return {
-          url: `${base}${videoDetailPageView(
-            resource.id,
-            firstPlaylist,
-            resource.title,
-          )}`,
-          lastModified: resource.last_modified ?? undefined,
-        }
-      }),
-    )
+    const base = "http://test.learn.odl.local:8062"
+    expect(sitemapPage).toEqual([
+      {
+        url: `${base}${videoDetailPageView(
+          videoWithPlaylists.id,
+          playlistId,
+          videoWithPlaylists.title,
+        )}`,
+        lastModified: videoWithPlaylists.last_modified ?? undefined,
+      },
+      {
+        url: `${base}${videoDetailPageView(
+          videoWithoutPlaylist.id,
+          undefined,
+          videoWithoutPlaylist.title,
+        )}`,
+        lastModified: videoWithoutPlaylist.last_modified ?? undefined,
+      },
+      {
+        url: `${base}${videoPlaylistPageView(
+          String(playlist.id),
+          playlist.title,
+        )}`,
+        lastModified: playlist.last_modified ?? undefined,
+      },
+    ])
   })
 })
