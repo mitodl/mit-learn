@@ -25,6 +25,67 @@ const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
 const makeContract = factories.contracts.contract
 
+/**
+ * Mock the order history that verified enrollment cards fetch to decide whether to
+ * show a "Receipt" item. Required in any suite rendering a verified enrollment,
+ * or the unmocked request fails the test. Defaults to an empty history (no
+ * receipt); pass `runId`/`programId` to make one resolve.
+ */
+const setupOrderHistory = ({
+  runId,
+  programId,
+  orderId = faker.number.int({ min: 1 }),
+}: {
+  runId?: number
+  programId?: number
+  orderId?: number
+} = {}) => {
+  const lines = []
+  if (runId !== undefined) {
+    lines.push(
+      factories.orders.line({
+        product: factories.orders.product({
+          purchasable_object: {
+            id: runId,
+            title: "Some Run",
+            course: { id: faker.number.int(), title: "Some Course" },
+          },
+        }),
+      }),
+    )
+  }
+  if (programId !== undefined) {
+    lines.push(
+      factories.orders.line({
+        product: factories.orders.product({
+          purchasable_object: {
+            id: programId,
+            title: "Some Program",
+            readable_id: "program-v1:MITxT+SysEng",
+          },
+        }),
+      }),
+    )
+  }
+
+  setMockResponse.get(
+    urls.orders.historyList({ limit: 100 }),
+    factories.orders.orderHistoryList(
+      lines.length > 0
+        ? [
+            factories.orders.orderHistory({
+              id: orderId,
+              state: "fulfilled",
+              lines,
+            }),
+          ]
+        : [],
+    ),
+  )
+
+  return { orderId }
+}
+
 const dashboardCourse: PartialFactory<CourseWithCourseRunsSerializerV2> = (
   ...overrides
 ) => {
@@ -563,6 +624,7 @@ const buildProgramScenario = (
 export {
   dashboardCourse,
   dashboardProgram,
+  setupOrderHistory,
   setupEnrollments,
   setupProgramsAndCourses,
   setupOrgAndUser,

@@ -33,10 +33,11 @@ import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
-import { coursePageView } from "@/common/urls"
+import { coursePageView, receiptByRunView } from "@/common/urls"
 import NiceModal from "@ebay/nice-modal-react"
 import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
 import { getReceiptMenuItem } from "./receiptMenuItem"
+import { useOrderIdForRun } from "@/common/mitxonline/useOrderIdForResource"
 import {
   CourseRunEnrollmentV3,
   V3UserProgramEnrollment,
@@ -251,6 +252,17 @@ export const EnrolledCourseCard = ({
     ) : null
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const isStaff = mitxOnlineUser.data?.is_staff
+  /**
+   * Only verified enrollments can have a receipt, so the lookup is skipped
+   * entirely for audit ones. Every card shares one `orders/history` query (same
+   * cache key), so this is a single request for the whole dashboard rather than
+   * one per card.
+   */
+  const receiptResolution = useOrderIdForRun(
+    isVerifiedEnrollmentMode(enrollment?.enrollment_mode)
+      ? (run?.id ?? null)
+      : null,
+  )
   const title = isCompact ? course.title : run?.title || course.title
   const coursewareUrl = run?.courseware_url
   const certificateLink = getCertificateLink(
@@ -455,7 +467,8 @@ export const EnrolledCourseCard = ({
 
   const receiptMenuItem = getReceiptMenuItem(
     enrollment?.enrollment_mode,
-    `/orders/receipt/by-run/${enrollment?.run.id}/`,
+    receiptResolution,
+    receiptByRunView(run.id),
   )
   if (receiptMenuItem) menuItems.push(receiptMenuItem)
 

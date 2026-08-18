@@ -12,9 +12,10 @@ import { urls, factories } from "api/mitxonline-test-utils"
 import {
   createCoursesWithContractRuns,
   createTestContracts,
+  setupOrderHistory,
   setupOrgAndUser,
-  setupProgramsAndCourses,
   setupOrgDashboardMocks,
+  setupProgramsAndCourses,
 } from "./CoursewareDisplay/test-utils"
 import {
   CourseWithCourseRunsSerializerV2,
@@ -25,6 +26,11 @@ import invariant from "tiny-invariant"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { contractAdminView } from "@/common/urls"
+
+// Verified cards look up their order; default to none, tests override.
+beforeEach(() => {
+  setupOrderHistory()
+})
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
