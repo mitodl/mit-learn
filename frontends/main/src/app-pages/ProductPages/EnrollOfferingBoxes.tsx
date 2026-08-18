@@ -21,6 +21,8 @@ type EnrollOfferingBoxesProps = {
   isError: boolean
   /** Top-right plain price for the certificate card. */
   price: React.ReactNode
+  /** Render that price one step smaller, for one too wide to sit beside the title. */
+  compactPrice?: boolean
   /** Full-width price presentation; suppresses `price` (program savings only). */
   priceBlock?: React.ReactNode
   financialAid: { href: string; applied: boolean } | null
@@ -46,6 +48,7 @@ const EnrollOfferingBoxes: React.FC<EnrollOfferingBoxesProps> = ({
   isPending,
   isError,
   price,
+  compactPrice,
   priceBlock,
   financialAid,
   productNoun,
@@ -82,6 +85,7 @@ const EnrollOfferingBoxes: React.FC<EnrollOfferingBoxesProps> = ({
         <OfferingCell data-card="cert">
           <CertificateTrackCard
             price={price}
+            compactPrice={compactPrice}
             priceBlock={priceBlock}
             financialAid={financialAid}
             productNoun={productNoun}
@@ -104,6 +108,7 @@ const EnrollOfferingBoxes: React.FC<EnrollOfferingBoxesProps> = ({
       <OfferingCell data-card="cert">
         <CertificateTrackCard
           price={price}
+          compactPrice={compactPrice}
           priceBlock={priceBlock}
           financialAid={financialAid}
           productNoun={productNoun}

@@ -3,6 +3,7 @@ import type {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
+import { toPriceRange } from "@/common/mitxonline"
 import { useCourseEnrollment } from "./useCourseEnrollment"
 import { useCourseCertificatePrice } from "./useCourseCertificatePrice"
 import EnrollOfferingBoxes from "./EnrollOfferingBoxes"
@@ -25,6 +26,8 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
     })
 
   const { price, financialAid } = useCourseCertificatePrice(course, selectedRun)
+  // Same predicate the hook formats on, so the sizing tracks the display.
+  const isRange = toPriceRange(course) !== null
 
   // Show the in-card "Certificate deadline passed" note in both degraded
   // states (deadlinePassed and archived), but only when the run actually
@@ -40,6 +43,7 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
       isPending={isPending}
       isError={isError}
       price={price}
+      compactPrice={isRange}
       financialAid={financialAid}
       productNoun="course"
       certificateDeadlineNote={certificateDeadlineNote}

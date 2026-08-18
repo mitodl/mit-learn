@@ -492,3 +492,64 @@ describe("CourseEnrollArea — financial assistance link", () => {
     expect(screen.queryByText("$75")).not.toBeInTheDocument()
   })
 })
+
+describe("CourseEnrollArea — advertised price range", () => {
+  const makePaidRun = (product: ReturnType<typeof makeProduct>) =>
+    makeRun({
+      is_enrollable: true,
+      is_upgradable: true,
+      is_archived: false,
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [product],
+    })
+
+  test("a course advertising a range shows it in place of the run's price", () => {
+    setupAuth()
+    const run = makePaidRun(makeProduct({ price: "1000" }))
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      min_price: 250,
+      max_price: 1000,
+    })
+
+    renderWithProviders(
+      <CourseEnrollArea course={course} selectedRun={getSelectedRun(course)} />,
+    )
+
+    expect(screen.getByText("$250 – $1,000")).toBeInTheDocument()
+  })
+
+  test("an approved flexible price does not collapse the range to one number", async () => {
+    // The range is what anyone might pay; the user's own price is only settled at
+    // checkout, so approval does not narrow the display.
+    setupAuth()
+    const product = makeProduct({ price: "1000" })
+    const run = makePaidRun(product)
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      min_price: 250,
+      max_price: 1000,
+      page: { financial_assistance_form_url: "/financial-aid/" },
+    })
+    setMockResponse.get(
+      mitxUrls.products.userFlexiblePriceDetail(product.id),
+      makeFlexiblePrice({
+        product_flexible_price: makeDiscount({
+          discount_type: "dollars-off",
+          amount: "750.00",
+        }),
+      }),
+    )
+
+    renderWithProviders(
+      <CourseEnrollArea course={course} selectedRun={getSelectedRun(course)} />,
+    )
+
+    await screen.findByRole("link", {
+      name: "Financial assistance approved (applied at checkout)",
+    })
+    expect(screen.getByText("$250 – $1,000")).toBeInTheDocument()
+  })
+})

@@ -14,6 +14,7 @@ const FinancialAidLink = styled.a(({ theme }) => ({
 
 type CertificateTrackCardProps = {
   price: React.ReactNode
+  compactPrice?: boolean
   financialAid?: { href: string; applied: boolean } | null
   productNoun: "course" | "program"
   priceBlock?: React.ReactNode
@@ -23,6 +24,7 @@ type CertificateTrackCardProps = {
 
 const CertificateTrackCard: React.FC<CertificateTrackCardProps> = ({
   price,
+  compactPrice,
   financialAid,
   productNoun,
   priceBlock,
@@ -35,6 +37,7 @@ const CertificateTrackCard: React.FC<CertificateTrackCardProps> = ({
       title="Certificate Track"
       subtitle="Earn a verified certificate of completion"
       price={price}
+      compactPrice={compactPrice}
       priceBlock={priceBlock}
       action={action}
       fill={fill}

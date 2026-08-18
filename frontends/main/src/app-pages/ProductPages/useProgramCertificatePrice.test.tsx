@@ -75,11 +75,62 @@ describe("useProgramCertificatePrice", () => {
     })
 
     expect(result.current.savings).toEqual({
-      currentAmount: 800,
+      current: { min: 800, max: 800 },
       listAmount: 1000,
       totalCourses: getTotalRequiredCourses(program),
     })
     expect(result.current.price).toBe(formatPrice(800, { avoidCents: true }))
+  })
+
+  describe("advertised price range", () => {
+    test("an advertised range is displayed in place of the product price", () => {
+      const program = programs.program({
+        products: [courses.product({ price: "1000" })],
+        min_price: 250,
+        max_price: 1000,
+      })
+
+      const { result } = renderHook(() => useProgramCertificatePrice(program), {
+        wrapper,
+      })
+
+      expect(result.current.price).toBe("$250 – $1,000")
+    })
+
+    test("savings are measured against the top of the range", () => {
+      const program = programs.program({
+        products: [courses.product({ price: "1000" })],
+        min_price: 250,
+        max_price: 1000,
+        page: { list_price: "1200" },
+      })
+
+      const { result } = renderHook(() => useProgramCertificatePrice(program), {
+        wrapper,
+      })
+
+      expect(result.current.savings).toEqual({
+        current: { min: 250, max: 1000 },
+        listAmount: 1200,
+        totalCourses: getTotalRequiredCourses(program),
+      })
+    })
+
+    test("a list price inside the range is not a saving at every price, so savings drop", () => {
+      const program = programs.program({
+        products: [courses.product({ price: "1000" })],
+        min_price: 250,
+        max_price: 1000,
+        page: { list_price: "800" },
+      })
+
+      const { result } = renderHook(() => useProgramCertificatePrice(program), {
+        wrapper,
+      })
+
+      expect(result.current.savings).toBeNull()
+      expect(result.current.price).toBe("$250 – $1,000")
+    })
   })
 
   describe("financial aid", () => {

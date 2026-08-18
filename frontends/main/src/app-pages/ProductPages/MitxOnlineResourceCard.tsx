@@ -15,7 +15,11 @@ import {
   LocalDate,
   useImageWithFallback,
 } from "ol-utilities"
-import { formatPrice, getBestRun, getEnrollmentType } from "@/common/mitxonline"
+import {
+  formatResourcePrice,
+  getBestRun,
+  getEnrollmentType,
+} from "@/common/mitxonline"
 
 type CommonCardProps = {
   href: string
@@ -40,37 +44,6 @@ type MitxOnlineProgramCardProps = CommonCardProps & {
 type MitxOnlineResourceCardProps =
   | MitxOnlineCourseCardProps
   | MitxOnlineProgramCardProps
-
-const formatResourcePrice = (
-  resource: { min_price?: number | null; max_price?: number | null },
-  productPrice: string | number | undefined | null,
-): string | null => {
-  const { min_price: minPrice, max_price: maxPrice } = resource
-
-  if (
-    minPrice !== null &&
-    minPrice !== undefined &&
-    maxPrice !== null &&
-    maxPrice !== undefined &&
-    minPrice !== maxPrice
-  ) {
-    const formattedMinPrice = formatPrice(minPrice, { avoidCents: true })
-    const formattedMaxPrice = formatPrice(maxPrice, { avoidCents: true })
-
-    return `${formattedMinPrice} - ${formattedMaxPrice}`
-  }
-
-  if (productPrice !== undefined && productPrice !== null) {
-    return formatPrice(productPrice, { avoidCents: true })
-  }
-
-  const single = minPrice ?? maxPrice
-  if (single !== null && single !== undefined) {
-    return formatPrice(single, { avoidCents: true })
-  }
-
-  return null
-}
 
 type CardData = {
   title: string

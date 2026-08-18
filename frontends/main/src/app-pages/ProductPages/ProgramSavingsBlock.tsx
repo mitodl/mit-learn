@@ -2,7 +2,8 @@ import React from "react"
 import { styled } from "@mitodl/smoot-design"
 import { theme } from "ol-components"
 import { pluralize } from "ol-utilities"
-import { formatPrice } from "@/common/mitxonline"
+import type { PriceRange } from "@/common/mitxonline"
+import { formatPrice, formatPriceRange } from "@/common/mitxonline"
 
 /* Ported from ProductSummary.tsx's ProgramPriceRow. Renders the full-width
  * savings block: current program price beside the struck member-course
@@ -19,16 +20,17 @@ const ProgramPaySection = styled.div(({ theme }) => ({
 /**
  * Horizontal row: [current price block] | [list price block], separated by a
  * rule. Wraps so wide price strings stack instead of overflowing the card in
- * narrow cells (half-width tablet cell, small phones).
+ * narrow cells (half-width tablet cell, small phones) -- and an advertised
+ * range never fits beside a list price at the desktop sidebar width, so the
+ * wrapped state is the normal one for ranges rather than an edge case.
  *
  * The separator is a gap decoration rather than an element between the two
  * blocks, because it is only meaningful when they share a line. A rule is
  * painted into gaps that exist, so wrapping removes it for free; a sibling
- * element stranded itself at the end of the first line instead, and CSS has
- * no way to select "the item that ended up first on a wrapped line" for it to
- * hide itself. Where gap decorations are unsupported no rule is drawn at all,
+ * element would strand itself at the end of the first line, which is what it
+ * used to do. Where gap decorations are unsupported no rule is drawn at all,
  * which is a fine resting state -- the two prices are already distinguished by
- * size, weight, colour, strikethrough, and their captions.
+ * size, colour, strikethrough, and their captions.
  */
 const ProgramPriceRowInner = styled.div({
   display: "flex",
@@ -104,8 +106,11 @@ const ProgramSavingsDetailText = styled.span({
 })
 
 type ProgramSavingsBlockProps = {
-  /** Purchasable program price. */
-  currentAmount: number
+  /**
+   * What the program costs: an advertised range, or `min === max` for a single
+   * purchasable price.
+   */
+  current: PriceRange
   /** CMS list price: the member courses purchased separately. */
   listAmount: number
   /** Required course count, for the "N courses separately" sentence. */
@@ -116,19 +121,27 @@ type ProgramSavingsBlockProps = {
  * Full-width price presentation for a program whose bundle price beats buying
  * the member courses separately: current price beside the struck list price,
  * plus the "Save $X compared to purchasing N courses separately" line.
+ *
+ * When the program advertises a range, the saving is only guaranteed against the
+ * top of it, so the amount reads as a floor ("Save $150+").
  */
 const ProgramSavingsBlock: React.FC<ProgramSavingsBlockProps> = ({
-  currentAmount,
+  current,
   listAmount,
   totalCourses,
 }) => {
-  const savingsAmount = listAmount - currentAmount
+  const savingsAmount = listAmount - current.max
+  // Against a range, only the saving versus its top end is guaranteed.
+  const isRange = current.min < current.max
+  const savingsLabel = `Save ${formatPrice(savingsAmount, { avoidCents: true })}${
+    isRange ? "+" : ""
+  }`
   return (
     <ProgramPaySection>
       <ProgramPriceRowInner>
         <ProgramCurrentPriceBlock>
           <ProgramPriceAmount>
-            {formatPrice(currentAmount, { avoidCents: true })}
+            {formatPriceRange(current, { avoidCents: true })}
           </ProgramPriceAmount>
           <ProgramPriceSuffix>full program</ProgramPriceSuffix>
         </ProgramCurrentPriceBlock>
@@ -145,9 +158,7 @@ const ProgramSavingsBlock: React.FC<ProgramSavingsBlockProps> = ({
         </ProgramListPriceBlock>
       </ProgramPriceRowInner>
       <ProgramDiscountRow>
-        <ProgramSavingsText>
-          Save {formatPrice(savingsAmount, { avoidCents: true })}
-        </ProgramSavingsText>{" "}
+        <ProgramSavingsText>{savingsLabel}</ProgramSavingsText>{" "}
         <ProgramSavingsDetailText>
           compared to purchasing {totalCourses}{" "}
           {pluralize("course", totalCourses)} separately
