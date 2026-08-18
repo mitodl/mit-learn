@@ -17,17 +17,30 @@ const ProgramPaySection = styled.div(({ theme }) => ({
 }))
 
 /**
- * Horizontal row: [current price block] | [vertical divider] | [list price
- * block]. Wraps so wide price strings stack instead of overflowing the card
- * in narrow cells (half-width tablet cell, small phones).
+ * Horizontal row: [current price block] | [list price block], separated by a
+ * rule. Wraps so wide price strings stack instead of overflowing the card in
+ * narrow cells (half-width tablet cell, small phones).
+ *
+ * The separator is a gap decoration rather than an element between the two
+ * blocks, because it is only meaningful when they share a line. A rule is
+ * painted into gaps that exist, so wrapping removes it for free; a sibling
+ * element stranded itself at the end of the first line instead, and CSS has
+ * no way to select "the item that ended up first on a wrapped line" for it to
+ * hide itself. Where gap decorations are unsupported no rule is drawn at all,
+ * which is a fine resting state -- the two prices are already distinguished by
+ * size, weight, colour, strikethrough, and their captions.
  */
 const ProgramPriceRowInner = styled.div({
   display: "flex",
   flexDirection: "row" as const,
   alignItems: "flex-end" as const,
   flexWrap: "wrap" as const,
-  gap: "24px",
+  // The rule is painted down the middle of the column gap, so the gap carries
+  // the space on both sides of it that the divider element used to get from a
+  // gap of its own on either side.
+  columnGap: "48px",
   rowGap: "12px",
+  columnRule: `1px solid ${theme.custom.colors.lightGray2}`,
 })
 
 const ProgramCurrentPriceBlock = styled.div({
@@ -45,13 +58,6 @@ const ProgramPriceAmount = styled.span(({ theme }) => ({
 const ProgramPriceSuffix = styled.span(({ theme }) => ({
   ...theme.typography.body3,
   color: theme.custom.colors.silverGrayDark,
-}))
-
-const ProgramVerticalDivider = styled.div(() => ({
-  width: "1px",
-  height: "48px",
-  backgroundColor: theme.custom.colors.lightGray2,
-  flexShrink: 0,
 }))
 
 const ProgramListPriceBlock = styled.div({
@@ -126,7 +132,6 @@ const ProgramSavingsBlock: React.FC<ProgramSavingsBlockProps> = ({
           </ProgramPriceAmount>
           <ProgramPriceSuffix>full program</ProgramPriceSuffix>
         </ProgramCurrentPriceBlock>
-        <ProgramVerticalDivider />
         <ProgramListPriceBlock
           role="group"
           aria-label={`Original price: ${formatPrice(listAmount, { avoidCents: true })} purchased separately`}
