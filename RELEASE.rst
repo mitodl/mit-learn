@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.77.7
+--------------
+
+- Show the game sub-nav above Arithmix (#3774)
+- chore(otel): delete a dead flag and fix a setting name that was never read (#3783)
+- Page the podcast and video sitemaps off the summary endpoint (#3759)
+- docs(otel): say plainly that the OTEL sampler is a ceiling over both destinations (#3781)
+
 Version 0.77.6 (Released August 17, 2026)
 --------------
 
