@@ -2,6 +2,8 @@
 
 import uuid
 
+import pytest
+
 
 def test_anon_error(client):
     """Test that we get an error as we expect from a nonsense URL with an anonymous session."""
@@ -17,6 +19,56 @@ def test_authed_error(user_client):
     response = user_client.get(f"/{uuid.uuid4()}")
 
     assert response.status_code == 404
+
+
+@pytest.mark.parametrize("method", ["post", "put", "patch", "delete"])
+def test_unmatched_api_route_is_404_for_any_method(client, method):
+    """An unmatched API route is a 404 regardless of the request method.
+
+    api_view() defaults to GET-only, which used to turn every non-GET client
+    error into a misleading `405 Method Not Allowed`.
+    """
+
+    response = getattr(client, method)(f"/api/v1/{uuid.uuid4()}/")
+
+    assert response.status_code == 404
+    assert response.json()["error_type"] == "Http404"
+
+
+def test_permission_denied_is_403(client, mocker):
+    """A view raising PermissionDenied reports 403, not 404 or 405."""
+
+    mocker.patch(
+        "webhooks.decorators.validate_webhook_signature",
+        return_value=False,
+    )
+
+    response = client.post(
+        "/api/v1/webhooks/content_files/",
+        data="{}",
+        content_type="application/json",
+    )
+
+    assert response.status_code == 403
+    assert response.json()["error_type"] == "PermissionDenied"
+
+
+def test_bad_request_is_400(client, mocker):
+    """A view raising BadRequest reports 400, not 404 or 405."""
+
+    mocker.patch(
+        "webhooks.decorators.validate_webhook_signature",
+        return_value=True,
+    )
+
+    response = client.post(
+        "/api/v1/webhooks/content_files/",
+        data="{}",
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error_type"] == "BadRequest"
 
 
 def test_redirect_route(settings, user_client):

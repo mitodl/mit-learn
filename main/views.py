@@ -2,6 +2,7 @@
 Base utility views. Handles errors and feature list views.
 """
 
+from django.core.exceptions import BadRequest, PermissionDenied, SuspiciousOperation
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -11,24 +12,34 @@ from rest_framework.viewsets import ViewSet
 from main.features import get_all_feature_flags, is_enabled
 
 
-@api_view()
+@api_view(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
 @permission_classes([AllowAny])
 def handle_error(
     request,  # noqa: ARG001
-    exception=None,  # noqa: ARG001
+    exception=None,
 ):
-    """Client Error"""
+    """Render the 400/403/404 handlers as JSON, preserving the real status."""
 
-    # This is a generic handler, since the api_view decorator means DRF will
-    # usurp error handling and provide whatever response is actually necessary.
-    # There's a 404 here just as a fallback.
+    # Every method has to be spelled out above: api_view() defaults to
+    # GET-only, so any POST that raised PermissionDenied or BadRequest was
+    # answered `405 Method Not Allowed, Allow: GET, OPTIONS` and the actual
+    # reason never reached the caller.
+    if isinstance(exception, PermissionDenied):
+        status_code = status.HTTP_403_FORBIDDEN
+        error_type = "PermissionDenied"
+        detail = "You do not have permission to perform this action."
+    elif isinstance(exception, BadRequest | SuspiciousOperation):
+        status_code = status.HTTP_400_BAD_REQUEST
+        error_type = "BadRequest"
+        detail = "The request could not be processed."
+    else:
+        status_code = status.HTTP_404_NOT_FOUND
+        error_type = "Http404"
+        detail = "The specified resource was not found."
 
     return Response(
-        {
-            "detail": "The specified resource was not found.",
-            "error_type": "Http404",
-        },
-        status=status.HTTP_404_NOT_FOUND,
+        {"detail": detail, "error_type": error_type},
+        status=status_code,
     )
 
 
