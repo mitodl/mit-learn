@@ -12,7 +12,7 @@ from rest_framework.viewsets import ViewSet
 from main.features import get_all_feature_flags, is_enabled
 
 
-@api_view(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
+@api_view(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "TRACE"])
 @permission_classes([AllowAny])
 def handle_error(
     request,  # noqa: ARG001
@@ -20,10 +20,10 @@ def handle_error(
 ):
     """Render the 400/403/404 handlers as JSON, preserving the real status."""
 
-    # Every method has to be spelled out above: api_view() defaults to
-    # GET-only, so any POST that raised PermissionDenied or BadRequest was
-    # answered `405 Method Not Allowed, Allow: GET, OPTIONS` and the actual
-    # reason never reached the caller.
+    # Every method in Django's View.http_method_names has to be spelled out
+    # above: api_view() defaults to GET-only, so any POST that raised
+    # PermissionDenied or BadRequest was answered `405 Method Not Allowed,
+    # Allow: GET, OPTIONS` and the actual reason never reached the caller.
     if isinstance(exception, PermissionDenied):
         status_code = status.HTTP_403_FORBIDDEN
         error_type = "PermissionDenied"

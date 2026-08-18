@@ -21,7 +21,7 @@ def test_authed_error(user_client):
     assert response.status_code == 404
 
 
-@pytest.mark.parametrize("method", ["post", "put", "patch", "delete"])
+@pytest.mark.parametrize("method", ["post", "put", "patch", "delete", "trace"])
 def test_unmatched_api_route_is_404_for_any_method(client, method):
     """An unmatched API route is a 404 regardless of the request method.
 
