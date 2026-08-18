@@ -3557,15 +3557,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/arithmix@https://github.com/mitodl/mynumbers.git#commit=26c9060c241bb04eefd1d11608230f331d85bba1":
-  version: 0.2.2
-  resolution: "@mitodl/arithmix@https://github.com/mitodl/mynumbers.git#commit=26c9060c241bb04eefd1d11608230f331d85bba1"
+"@mitodl/arithmix@npm:^0.2.3":
+  version: 0.2.3
+  resolution: "@mitodl/arithmix@npm:0.2.3"
   peerDependencies:
     "@emotion/react": ">=11"
     "@emotion/styled": ">=11"
     react: ">=18"
     react-dom: ">=18"
-  checksum: 10/2b144097da43a680c3b41b2ceece402e4a461f9a35656ed4108b03c894bd9d96e9cac166a0718f505809406c8250e7320668702facb5ee8a1d1822ee99cc1d24
+  checksum: 10/266647410413773cbbbad69a6d1420e9b9d43fba1794194ce652085650172e39cd42c6526322d0343f44577684f5f9eee70934241013102ad5ef1f9f35bee9bc
   languageName: node
   linkType: hard
 
@@ -16895,7 +16895,7 @@ __metadata:
     "@faker-js/faker": "npm:^10.0.0"
     "@floating-ui/react": "npm:^0.27.16"
     "@happy-dom/jest-environment": "npm:^20.1.0"
-    "@mitodl/arithmix": "https://github.com/mitodl/mynumbers.git#ahtesham/design-change"
+    "@mitodl/arithmix": "npm:^0.2.3"
     "@mitodl/course-search-utils": "npm:^3.5.2"
     "@mitodl/hacksnack": "npm:^0.1.1"
     "@mitodl/mitxonline-api-axios": "npm:2026.8.6"

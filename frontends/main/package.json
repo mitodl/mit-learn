@@ -15,7 +15,7 @@
     "@emotion/cache": "^11.13.1",
     "@emotion/styled": "^11.11.0",
     "@floating-ui/react": "^0.27.16",
-    "@mitodl/arithmix": "https://github.com/mitodl/mynumbers.git#ahtesham/design-change",
+    "@mitodl/arithmix": "^0.2.3",
     "@mitodl/course-search-utils": "^3.5.2",
     "@mitodl/hacksnack": "^0.1.1",
     "@mitodl/mitxonline-api-axios": "2026.8.6",
