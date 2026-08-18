@@ -53,6 +53,18 @@ import { SentryContextManager } from "@sentry/nextjs"
 import { SentryPropagator, SentrySpanProcessor } from "@sentry/opentelemetry"
 
 /**
+ * Options for Sentry's HTTP integration.
+ *
+ * `spans: true` is load-bearing and easy to lose. Sentry stops instrumenting
+ * node:http for spans under skipOpenTelemetrySetup
+ * (_shouldUseOtelHttpInstrumentation returns false), so without this there is
+ * no server span at all and the SSR render becomes invisible -- a silent
+ * nothing, not an error. It lives here as a named constant so a regression has
+ * to delete something a test asserts on.
+ */
+export const SENTRY_HTTP_INTEGRATION_OPTIONS = { spans: true } as const
+
+/**
  * Resource built from OTEL_SERVICE_NAME and OTEL_RESOURCE_ATTRIBUTES via the
  * SDK's own spec-compliant parser, layered over the SDK defaults.
  *

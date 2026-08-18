@@ -14,7 +14,10 @@ import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http"
 import diagnosticsChannel from "node:diagnostics_channel"
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { createRequestLogEntry, hasOtlpEndpointConfig } from "./otel-utils"
-import { installOpenTelemetry } from "./otel-setup"
+import {
+  SENTRY_HTTP_INTEGRATION_OPTIONS,
+  installOpenTelemetry,
+} from "./otel-setup"
 import { parseSampleRate } from "./sentry-utils"
 import { env } from "@/env"
 import { validateEnv } from "../validateEnv"
@@ -165,8 +168,8 @@ Sentry.init({
   // is set (_shouldUseOtelHttpInstrumentation in integrations/http.ts returns
   // false), unless spans is passed explicitly. Without this there is no server
   // span at all and the SSR render becomes invisible -- a silent failure, so
-  // it is asserted in otel-setup.test.ts rather than left to review.
-  integrations: [Sentry.httpIntegration({ spans: true })],
+  // it is asserted in otel-setup.test.ts via SENTRY_HTTP_INTEGRATION_OPTIONS.
+  integrations: [Sentry.httpIntegration(SENTRY_HTTP_INTEGRATION_OPTIONS)],
 
   // No longer the OTEL sampler. Our provider's sampler governs span creation;
   // this is the fraction of already-created transactions Sentry keeps, applied

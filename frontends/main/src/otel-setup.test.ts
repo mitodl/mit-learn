@@ -4,7 +4,12 @@
  */
 
 import { ROOT_CONTEXT, trace } from "@opentelemetry/api"
-import { buildPropagator, buildResource, buildSampler } from "./otel-setup"
+import {
+  SENTRY_HTTP_INTEGRATION_OPTIONS,
+  buildPropagator,
+  buildResource,
+  buildSampler,
+} from "./otel-setup"
 
 // The example ids from the W3C trace-context spec.
 const TRACE_ID = "0af7651916cd43dd8448eb211c80319c" // pragma: allowlist secret
@@ -77,5 +82,14 @@ describe("buildPropagator", () => {
     )
 
     expect(trace.getSpanContext(ctx)?.traceId).toBe(TRACE_ID)
+  })
+})
+
+describe("SENTRY_HTTP_INTEGRATION_OPTIONS", () => {
+  it("keeps HTTP spans enabled", () => {
+    // Under skipOpenTelemetrySetup Sentry stops instrumenting node:http for
+    // spans unless this is passed. Losing it removes every server span and
+    // reports no error, so it is asserted rather than trusted to review.
+    expect(SENTRY_HTTP_INTEGRATION_OPTIONS.spans).toBe(true)
   })
 })
