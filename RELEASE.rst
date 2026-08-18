@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.77.8
+--------------
+
+- Batch the PostHog view-event loader instead of querying per event (#3785)
+- feat: Collect required compliance fields before any enrollment or checkout (#3766)
+- receipt page (#3717)
+- Allow for null course ids in webhook payload (#3776)
+- make healthcheck resistant to k8 pod culling (#3760)
+
 Version 0.77.7 (Released August 18, 2026)
 --------------
 
