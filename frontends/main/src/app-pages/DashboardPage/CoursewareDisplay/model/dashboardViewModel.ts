@@ -270,10 +270,6 @@ export const getRequirementsProgress = (
 // End of absorbed helpers
 // ---------------------------------------------------------------------------
 
-const getMaxEnrollmentGrade = (enrollment: CourseRunEnrollmentV3): number => {
-  return Math.max(0, ...enrollment.grades.map((grade) => grade.grade ?? 0))
-}
-
 const enrollmentBelongsToCourse = (
   course: CourseWithCourseRunsSerializerV2,
   enrollment: CourseRunEnrollmentV3,
@@ -287,8 +283,8 @@ const enrollmentBelongsToCourse = (
 
 /**
  * Sorts enrollments by their run's `start_date`, most recent first. Runs
- * without a valid `start_date` sort last. Shared by `selectBestEnrollment`
- * (as its recency tiebreak) and `filterVariantSiblings` (so the "other
+ * without a valid `start_date` sort last. Shared by `selectBestEnrollment`,
+ * `pickCertificateEnrollment` and `filterVariantSiblings` (so the "other
  * runs" list a card renders is in a stable, meaningful order rather than
  * arbitrary database order).
  */
@@ -306,57 +302,43 @@ const sortEnrollmentsByStartDateDesc = (
 }
 
 /**
- * Picks the single best enrollment from a group of enrollments that all
- * represent the same underlying course (e.g. multiple runs a learner has
- * enrolled in). Used by `selectBestEnrollment` (single course) and
- * `pickDisplayedHomeEnrollments` (one group per course+variant).
+ * Picks the enrollment whose run the learner is currently sitting in, from a
+ * group of enrollments that all represent the same underlying course. Used by
+ * `selectBestEnrollment` (single course) and `pickDisplayedHomeEnrollments`
+ * (one group per course+variant).
  *
- * Priority:
- * 1. Prefer enrollment with a certificate
- * 2. If tied, prefer highest grade
- * 3. If still tied (including "neither has a certificate or grade"),
- *    prefer the more recent run — see `sortEnrollmentsByStartDateDesc`.
- *    When NEITHER candidate has a certificate or grade at all, "more
- *    recent" specifically means the most recent run that isn't upcoming
- *    (i.e. the current/in-progress or most recently completed run, never
- *    an unstarted future run); if every run is upcoming, the soonest one
- *    is used.
+ * Priority: the most recent run that has started and not ended, else the most
+ * recently started run, else the soonest upcoming one.
+ *
+ * Certificates and grades deliberately play no part. A certificate earned on
+ * an older run stays visible via `pickCertificateEnrollment`, so it does not
+ * need to drag its run into the displayed slot.
  */
 const pickBestEnrollmentFromGroup = (
   enrollments: CourseRunEnrollmentV3[],
 ): CourseRunEnrollmentV3 => {
   const sorted = sortEnrollmentsByStartDateDesc(enrollments)
-  const hasAnyAchievement = sorted.some(
-    (e) => !!e.certificate?.uuid || getMaxEnrollmentGrade(e) > 0,
+  const withStartDate = sorted.filter((e) => e.run.start_date)
+  const started = withStartDate.filter(
+    (e) => e.run.start_date && isInPast(e.run.start_date),
   )
-
-  if (!hasAnyAchievement) {
-    const withStartDate = sorted.filter((e) => e.run.start_date)
-    const started = withStartDate.filter(
-      (e) => e.run.start_date && isInPast(e.run.start_date),
-    )
-    // `withStartDate`/`sorted` are ordered most-recent-first, so the last
-    // entry is the earliest (soonest upcoming) when nothing has started yet.
-    return started[0] ?? withStartDate[withStartDate.length - 1] ?? sorted[0]
-  }
-
-  return sorted.reduce((best, current) => {
-    const bestHasCert = !!best.certificate?.uuid
-    const currentHasCert = !!current.certificate?.uuid
-    if (currentHasCert && !bestHasCert) return current
-    if (bestHasCert && !currentHasCert) return best
-
-    const bestGrade = getMaxEnrollmentGrade(best)
-    const currentGrade = getMaxEnrollmentGrade(current)
-    if (currentGrade !== bestGrade) {
-      return currentGrade > bestGrade ? current : best
-    }
-
-    // Cert state and grade are tied; `sorted` is ordered most-recent-first,
-    // so `best` (encountered first) is already the more recent candidate.
-    return best
-  })
+  const active = started.filter(
+    (e) => !e.run.end_date || !isInPast(e.run.end_date),
+  )
+  // Ordered most-recent-first, so the last entry of `withStartDate` is the
+  // soonest upcoming run when nothing has started yet.
+  return active[0] ?? started[0] ?? withStartDate.at(-1) ?? sorted[0]
 }
+
+/**
+ * A certificate belongs to the course, not to whichever run a card happens to
+ * display, so cards resolve it across the learner's whole group of enrollments
+ * for that course. Most recent certificate-bearing run wins.
+ */
+const pickCertificateEnrollment = (
+  enrollments: CourseRunEnrollmentV3[],
+): CourseRunEnrollmentV3 | undefined =>
+  sortEnrollmentsByStartDateDesc(enrollments).find((e) => !!e.certificate?.uuid)
 
 const groupCourseRunEnrollmentsByCourseId = (
   enrollments: CourseRunEnrollmentV3[],
@@ -1421,6 +1403,7 @@ export {
   selectVariantRunForCourse,
   filterVariantSiblings,
   pickDisplayedHomeEnrollments,
+  pickCertificateEnrollment,
 }
 
 export type { RequirementSectionItem, RequirementSection }

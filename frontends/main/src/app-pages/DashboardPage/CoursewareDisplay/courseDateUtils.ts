@@ -1,5 +1,22 @@
 import { calendarDaysUntil, formatCalendarDays, isInPast } from "ol-utilities"
 
+export type RunTimeState = "upcoming" | "underway" | "ended"
+
+/**
+ * Where a run sits relative to now. Shared by the card's progress badge and the
+ * sibling-runs accordion so the two can never disagree about whether the
+ * displayed run is still going. Absent or unparseable dates fall back to
+ * "underway", which is how the cards behaved before dates were consulted.
+ */
+export const getRunTimeState = (
+  startDate?: string | null,
+  endDate?: string | null,
+): RunTimeState => {
+  if (startDate && isInPast(startDate) === false) return "upcoming"
+  if (endDate && isInPast(endDate) === true) return "ended"
+  return "underway"
+}
+
 export const getCourseDateText = (
   startDate?: string | null,
   endDate?: string | null,

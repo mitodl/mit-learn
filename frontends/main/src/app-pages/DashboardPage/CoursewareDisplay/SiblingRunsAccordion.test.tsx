@@ -139,6 +139,52 @@ describe("SiblingRunsToggle + SiblingRunsPanel", () => {
     expect(screen.getByText(/Jan 5, 2026/)).toBeInTheDocument()
   })
 
+  test.each([
+    {
+      case: "still running",
+      startDate: moment().subtract(90, "days").toISOString(),
+      endDate: moment().add(30, "days").toISOString(),
+      expectLabel: true,
+    },
+    {
+      case: "already ended",
+      startDate: moment().subtract(90, "days").toISOString(),
+      endDate: moment().subtract(30, "days").toISOString(),
+      expectLabel: false,
+    },
+    {
+      case: "not yet started",
+      startDate: moment().add(30, "days").toISOString(),
+      endDate: moment().add(90, "days").toISOString(),
+      expectLabel: false,
+    },
+  ])(
+    "current run $case: 'In Progress' label shown = $expectLabel",
+    async ({ startDate, endDate, expectLabel }) => {
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        certificate: null,
+        grades: [],
+        run: {
+          start_date: startDate,
+          end_date: endDate,
+        },
+      })
+      renderWithProviders(
+        <SiblingRunsAccordionHarness
+          enrollment={enrollment}
+          siblingEnrollments={[makeEnrollment()]}
+        />,
+      )
+      await expandAccordion()
+      expect(await screen.findByText("Current run:")).toBeInTheDocument()
+      if (expectLabel) {
+        expect(screen.getByText(/In Progress/)).toBeInTheDocument()
+      } else {
+        expect(screen.queryByText(/In Progress/)).not.toBeInTheDocument()
+      }
+    },
+  )
+
   test("each sibling with a courseware URL shows a 'View content' link after expanding", async () => {
     const urlA = faker.internet.url()
     const urlB = faker.internet.url()

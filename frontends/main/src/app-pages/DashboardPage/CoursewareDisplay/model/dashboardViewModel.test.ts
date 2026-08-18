@@ -36,6 +36,9 @@ import {
   sortVariants,
 } from "./dashboardViewModel"
 
+const daysFromNow = (days: number) =>
+  new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
+
 describe("dashboardViewModel", () => {
   describe("selectBestEnrollment", () => {
     test("returns null when there are no matching course enrollments", () => {
@@ -49,87 +52,125 @@ describe("dashboardViewModel", () => {
       expect(selectBestEnrollment(course, enrollments)).toBeNull()
     })
 
-    test("prefers enrollment with certificate over one without", () => {
-      const run = factories.courses.courseRun({ id: 1 })
-      const course = factories.courses.course({ courseruns: [run] })
-      const noCertificate = factories.enrollment.courseEnrollment({
-        run: { id: 1 },
-        certificate: null,
-      })
-      const withCertificate = factories.enrollment.courseEnrollment({
-        run: { id: 1 },
-        certificate: { uuid: "cert-123" },
-      })
-
-      expect(
-        selectBestEnrollment(course, [noCertificate, withCertificate]),
-      ).toEqual(withCertificate)
-    })
-
-    test("prefers highest grade when certificate state is tied", () => {
-      const run = factories.courses.courseRun({ id: 1 })
-      const course = factories.courses.course({ courseruns: [run] })
-      const lower = factories.enrollment.courseEnrollment({
-        run: { id: 1 },
-        certificate: null,
-        grades: [factories.enrollment.grade({ grade: 0.6 })],
-      })
-      const higher = factories.enrollment.courseEnrollment({
-        run: { id: 1 },
-        certificate: null,
-        grades: [factories.enrollment.grade({ grade: 0.9 })],
-      })
-
-      expect(selectBestEnrollment(course, [lower, higher])).toEqual(higher)
-    })
-
-    test("prefers highest grade over recency, even when the higher grade is on the older run", () => {
-      const olderRun = factories.courses.courseRun({
+    test("ignores certificates when choosing the displayed run", () => {
+      const endedRun = factories.courses.courseRun({
         id: 101,
-        start_date: "2020-01-01T00:00:00Z",
+        start_date: daysFromNow(-400),
+        end_date: daysFromNow(-300),
       })
-      const newerRun = factories.courses.courseRun({
+      const activeRun = factories.courses.courseRun({
         id: 202,
-        start_date: "2024-01-01T00:00:00Z",
+        start_date: daysFromNow(-30),
+        end_date: daysFromNow(30),
       })
       const course = factories.courses.course({
-        courseruns: [olderRun, newerRun],
+        courseruns: [endedRun, activeRun],
       })
-      const olderHigherGrade = factories.enrollment.courseEnrollment({
-        run: { id: olderRun.id, start_date: olderRun.start_date },
-        certificate: null,
+      const endedWithCertificate = factories.enrollment.courseEnrollment({
+        run: {
+          id: endedRun.id,
+          start_date: endedRun.start_date,
+          end_date: endedRun.end_date,
+        },
+        certificate: { uuid: "cert-123" },
         grades: [factories.enrollment.grade({ grade: 0.95 })],
       })
-      const newerLowerGrade = factories.enrollment.courseEnrollment({
-        run: { id: newerRun.id, start_date: newerRun.start_date },
+      const activeWithoutCertificate = factories.enrollment.courseEnrollment({
+        run: {
+          id: activeRun.id,
+          start_date: activeRun.start_date,
+          end_date: activeRun.end_date,
+        },
         certificate: null,
-        grades: [factories.enrollment.grade({ grade: 0.4 })],
+        grades: [],
       })
 
       expect(
-        selectBestEnrollment(course, [olderHigherGrade, newerLowerGrade]),
-      ).toEqual(olderHigherGrade)
+        selectBestEnrollment(course, [
+          endedWithCertificate,
+          activeWithoutCertificate,
+        ]),
+      ).toEqual(activeWithoutCertificate)
     })
 
-    test("prefers the more recent run when certificates and grades are tied", () => {
+    test("prefers the run in progress over an ended run with a higher grade", () => {
+      const oldestRun = factories.courses.courseRun({
+        id: 101,
+        start_date: daysFromNow(-570),
+        end_date: daysFromNow(-70),
+      })
+      const olderRun = factories.courses.courseRun({
+        id: 202,
+        start_date: daysFromNow(-210),
+        end_date: daysFromNow(-80),
+      })
+      const activeRun = factories.courses.courseRun({
+        id: 303,
+        start_date: daysFromNow(-98),
+        end_date: daysFromNow(1),
+      })
+      const course = factories.courses.course({
+        courseruns: [oldestRun, olderRun, activeRun],
+      })
+      const enrollmentFor = (
+        run: {
+          id: number
+          start_date?: string | null
+          end_date?: string | null
+        },
+        grade: number,
+      ) =>
+        factories.enrollment.courseEnrollment({
+          run: {
+            id: run.id,
+            start_date: run.start_date,
+            end_date: run.end_date,
+          },
+          certificate: null,
+          grades: [factories.enrollment.grade({ grade })],
+        })
+      const oldestEnrollment = enrollmentFor(oldestRun, 0.4)
+      const olderEnrollment = enrollmentFor(olderRun, 0.12)
+      const activeEnrollment = enrollmentFor(activeRun, 0.18)
+
+      expect(
+        selectBestEnrollment(course, [
+          oldestEnrollment,
+          olderEnrollment,
+          activeEnrollment,
+        ]),
+      ).toEqual(activeEnrollment)
+    })
+
+    test("prefers the more recent run when every run has ended", () => {
       const olderRun = factories.courses.courseRun({
         id: 101,
-        start_date: "2020-01-01T00:00:00Z",
+        start_date: daysFromNow(-800),
+        end_date: daysFromNow(-700),
       })
       const newerRun = factories.courses.courseRun({
         id: 202,
-        start_date: "2024-01-01T00:00:00Z",
+        start_date: daysFromNow(-400),
+        end_date: daysFromNow(-300),
       })
       const course = factories.courses.course({
         courseruns: [olderRun, newerRun],
       })
       const olderEnrollment = factories.enrollment.courseEnrollment({
-        run: { id: olderRun.id, start_date: olderRun.start_date },
+        run: {
+          id: olderRun.id,
+          start_date: olderRun.start_date,
+          end_date: olderRun.end_date,
+        },
         certificate: { uuid: "cert-1" },
         grades: [factories.enrollment.grade({ grade: 0.8 })],
       })
       const newerEnrollment = factories.enrollment.courseEnrollment({
-        run: { id: newerRun.id, start_date: newerRun.start_date },
+        run: {
+          id: newerRun.id,
+          start_date: newerRun.start_date,
+          end_date: newerRun.end_date,
+        },
         certificate: { uuid: "cert-2" },
         grades: [factories.enrollment.grade({ grade: 0.8 })],
       })
@@ -170,25 +211,35 @@ describe("dashboardViewModel", () => {
       )
     })
 
-    test("when neither enrollment has a certificate or grade, prefers the most recent run that has already started", () => {
+    test("prefers the most recent run that has already started", () => {
       const olderRun = factories.courses.courseRun({
         id: 101,
-        start_date: "2020-01-01T00:00:00Z",
+        start_date: daysFromNow(-800),
+        end_date: daysFromNow(-700),
       })
       const newerRun = factories.courses.courseRun({
         id: 202,
-        start_date: "2024-01-01T00:00:00Z",
+        start_date: daysFromNow(-400),
+        end_date: daysFromNow(-300),
       })
       const course = factories.courses.course({
         courseruns: [olderRun, newerRun],
       })
       const olderEnrollment = factories.enrollment.courseEnrollment({
-        run: { id: olderRun.id, start_date: olderRun.start_date },
+        run: {
+          id: olderRun.id,
+          start_date: olderRun.start_date,
+          end_date: olderRun.end_date,
+        },
         certificate: null,
         grades: [],
       })
       const newerEnrollment = factories.enrollment.courseEnrollment({
-        run: { id: newerRun.id, start_date: newerRun.start_date },
+        run: {
+          id: newerRun.id,
+          start_date: newerRun.start_date,
+          end_date: newerRun.end_date,
+        },
         certificate: null,
         grades: [],
       })
@@ -201,9 +252,7 @@ describe("dashboardViewModel", () => {
       ).toEqual(newerEnrollment)
     })
 
-    test("when neither enrollment has a certificate or grade, does not pick an upcoming run over the current in-progress run", () => {
-      const daysFromNow = (days: number) =>
-        new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
+    test("does not pick an upcoming run over the current in-progress run", () => {
       const pastRun = factories.courses.courseRun({
         id: 101,
         start_date: daysFromNow(-400),
@@ -259,9 +308,7 @@ describe("dashboardViewModel", () => {
       ).toEqual(currentEnrollment)
     })
 
-    test("when neither enrollment has a certificate or grade and every run is upcoming, prefers the soonest one", () => {
-      const daysFromNow = (days: number) =>
-        new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
+    test("when every run is upcoming, prefers the soonest one", () => {
       const soonerRun = factories.courses.courseRun({
         id: 101,
         start_date: daysFromNow(10),
@@ -968,24 +1015,32 @@ describe("dashboardViewModel", () => {
       expect(entry.displayedRun?.id).toBe(run.id)
     })
 
-    test("without selected language picks best legacy enrollment (cert > grade)", () => {
+    test("without selected language picks the in-progress run via the legacy path", () => {
       const run = factories.courses.courseRun({ id: 301 })
       const course = factories.courses.course({ courseruns: [run] })
-      const noCert = factories.enrollment.courseEnrollment({
-        run: { id: run.id },
-        certificate: null,
-        grades: [factories.enrollment.grade({ grade: 0.5, passed: false })],
-      })
-      const withCert = factories.enrollment.courseEnrollment({
-        run: { id: run.id },
+      const ended = factories.enrollment.courseEnrollment({
+        run: {
+          id: run.id,
+          start_date: daysFromNow(-400),
+          end_date: daysFromNow(-300),
+        },
         certificate: { uuid: "cert-abc" },
         grades: [factories.enrollment.grade({ grade: 0.9, passed: true })],
       })
+      const inProgress = factories.enrollment.courseEnrollment({
+        run: {
+          id: run.id,
+          start_date: daysFromNow(-30),
+          end_date: daysFromNow(30),
+        },
+        certificate: null,
+        grades: [factories.enrollment.grade({ grade: 0.5, passed: false })],
+      })
 
       // no selectedLanguageKey → legacy path
-      const entry = buildCourseEntry(course, [noCert, withCert], {})!
+      const entry = buildCourseEntry(course, [ended, inProgress], {})!
 
-      expect(entry.displayedEnrollment).toBe(withCert)
+      expect(entry.displayedEnrollment).toBe(inProgress)
     })
 
     test("contract-scoped: does not pick an enrollment from a different contract", () => {
@@ -1052,17 +1107,25 @@ describe("dashboardViewModel", () => {
       const run = factories.courses.courseRun({ id: 601 })
       const course = factories.courses.course({ courseruns: [run] })
       const e1 = factories.enrollment.courseEnrollment({
-        run: { id: run.id },
+        run: {
+          id: run.id,
+          start_date: daysFromNow(-400),
+          end_date: daysFromNow(-300),
+        },
         certificate: null,
       })
       const e2 = factories.enrollment.courseEnrollment({
-        run: { id: run.id },
-        certificate: { uuid: "cert-xyz" },
+        run: {
+          id: run.id,
+          start_date: daysFromNow(-30),
+          end_date: daysFromNow(30),
+        },
+        certificate: null,
       })
 
       const entry = buildCourseEntry(course, [e1, e2], {})!
 
-      // displayedEnrollment picks best one (e2), but all remain on entry
+      // displayedEnrollment picks the run in progress (e2), but all remain on entry
       expect(entry.enrollments).toEqual([e1, e2])
       expect(entry.displayedEnrollment).toBe(e2)
     })
@@ -2345,54 +2408,35 @@ describe("pickDisplayedHomeEnrollments", () => {
     expect(pickDisplayedHomeEnrollments([a, b])).toHaveLength(1)
   })
 
-  test("prefers the enrollment with a certificate over one without", () => {
+  test("picks the run in progress over an ended run holding the certificate", () => {
     const courseId = 10
-    const noCert = factories.enrollment.courseEnrollment({
+    const endedWithCert = factories.enrollment.courseEnrollment({
       run: {
         course: { id: courseId },
         language: "en",
         variant_industry: undefined,
         variant_length: undefined,
-      },
-      certificate: null,
-      grades: [],
-    })
-    const withCert = factories.enrollment.courseEnrollment({
-      run: {
-        course: { id: courseId },
-        language: "en",
-        variant_industry: undefined,
-        variant_length: undefined,
+        start_date: daysFromNow(-400),
+        end_date: daysFromNow(-300),
       },
       certificate: { uuid: "cert-abc", link: "/certificate/cert-abc/" },
-      grades: [],
+      grades: [factories.enrollment.grade({ grade: 0.9 })],
     })
-    expect(pickDisplayedHomeEnrollments([noCert, withCert])).toEqual([withCert])
-  })
-
-  test("prefers the higher grade when certificate state is tied", () => {
-    const courseId = 10
-    const lower = factories.enrollment.courseEnrollment({
+    const inProgress = factories.enrollment.courseEnrollment({
       run: {
         course: { id: courseId },
         language: "en",
         variant_industry: undefined,
         variant_length: undefined,
+        start_date: daysFromNow(-30),
+        end_date: daysFromNow(30),
       },
       certificate: null,
       grades: [factories.enrollment.grade({ grade: 0.6 })],
     })
-    const higher = factories.enrollment.courseEnrollment({
-      run: {
-        course: { id: courseId },
-        language: "en",
-        variant_industry: undefined,
-        variant_length: undefined,
-      },
-      certificate: null,
-      grades: [factories.enrollment.grade({ grade: 0.9 })],
-    })
-    expect(pickDisplayedHomeEnrollments([lower, higher])).toEqual([higher])
+    expect(pickDisplayedHomeEnrollments([endedWithCert, inProgress])).toEqual([
+      inProgress,
+    ])
   })
 
   test("keeps enrollments for different variants of the same course as separate cards", () => {

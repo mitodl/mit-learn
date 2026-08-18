@@ -11,7 +11,8 @@ import {
   RiSubtractLine,
   RiTimeLine,
 } from "@remixicon/react"
-import { isInPast, formatDate } from "ol-utilities"
+import { formatDate } from "ol-utilities"
+import { getRunTimeState } from "./courseDateUtils"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import NextLink from "next/link"
 import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
@@ -122,9 +123,12 @@ const formatRunDateRange = (
   return parts.join(" – ")
 }
 
-const getRunStatusLabel = (status: EnrollmentStatus): string => {
+const getRunStatusLabel = (
+  status: EnrollmentStatus,
+  isUnderway: boolean,
+): string => {
   if (status === EnrollmentStatus.Completed) return "Completed"
-  if (status === EnrollmentStatus.Enrolled) return "In Progress"
+  if (status === EnrollmentStatus.Enrolled && isUnderway) return "In Progress"
   return ""
 }
 
@@ -240,7 +244,14 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
     type: DashboardType.CourseRunEnrollment,
     data: enrollment,
   })
-  const currentStatusLabel = getRunStatusLabel(currentStatus)
+  const currentTimeState = getRunTimeState(
+    currentRun?.start_date,
+    currentRun?.end_date,
+  )
+  const currentStatusLabel = getRunStatusLabel(
+    currentStatus,
+    currentTimeState === "underway",
+  )
   const currentDateRange = formatRunDateRange(
     currentRun?.start_date,
     currentRun?.end_date,
@@ -262,7 +273,17 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
         <RunsListBox>
           <RunListRow
             isFirst
-            icon={<EnrollmentStatusIcon status={currentStatus} />}
+            icon={
+              currentStatus === EnrollmentStatus.Completed ? (
+                <EnrollmentStatusIcon status={currentStatus} />
+              ) : currentTimeState === "upcoming" ? (
+                <UpcomingRunIcon aria-hidden="true" />
+              ) : currentTimeState === "ended" ? (
+                <ExpiredRunIcon aria-hidden="true" />
+              ) : (
+                <EnrollmentStatusIcon status={currentStatus} />
+              )
+            }
             labelPrefix="Current run:"
             labelValue={currentLabelValue}
             coursewareUrl={currentRun?.courseware_url}
@@ -271,8 +292,9 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
           {siblingEnrollments.map((e) => {
             const startDate = e.run?.start_date
             const endDate = e.run?.end_date
-            const isUpcoming = startDate && !isInPast(startDate)
-            const isExpired = endDate && isInPast(endDate)
+            const timeState = getRunTimeState(startDate, endDate)
+            const isUpcoming = timeState === "upcoming"
+            const isExpired = timeState === "ended"
             const dateRange = formatRunDateRange(startDate, endDate)
             const fullLabel = isUpcoming ? `Upcoming: ${dateRange}` : dateRange
             const runEnrollmentStatus = getDashboardEnrollmentStatus({

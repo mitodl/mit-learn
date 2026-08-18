@@ -22,6 +22,7 @@ import {
   DashboardType,
   getCertificateLink,
   getDashboardEnrollmentStatus,
+  pickCertificateEnrollment,
 } from "./model/dashboardViewModel"
 import { getCourseDateText } from "./courseDateUtils"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
@@ -273,7 +274,8 @@ export const EnrolledCourseCard = ({
   const title = isCompact ? course.title : run?.title || course.title
   const coursewareUrl = run?.courseware_url
   const certificateLink = getCertificateLink(
-    enrollment?.certificate?.link,
+    pickCertificateEnrollment([enrollment, ...(siblingEnrollments ?? [])])
+      ?.certificate?.link,
     "course",
   )
   const enrollmentMode = enrollment?.enrollment_mode
@@ -499,7 +501,11 @@ export const EnrolledCourseCard = ({
   const progressBadgeSection =
     isModule && isCompact ? null : (
       <Stack direction="row" gap="4px" alignItems="center">
-        <ProgressBadge enrollmentStatus={enrollmentStatus} />
+        <ProgressBadge
+          enrollmentStatus={enrollmentStatus}
+          startDate={startDate}
+          endDate={endDate}
+        />
         <Separator />
         {cardTypeLabel}
       </Stack>
