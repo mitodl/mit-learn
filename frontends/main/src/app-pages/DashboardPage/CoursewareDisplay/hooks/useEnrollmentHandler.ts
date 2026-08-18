@@ -3,29 +3,27 @@ import {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { useQuery } from "@tanstack/react-query"
 import {
   useCreateB2bEnrollment,
   useCreateEnrollment,
   useCreateVerifiedProgramEnrollment,
 } from "api/mitxonline-hooks/enrollment"
-import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import React from "react"
-import { JustInTimeDialog } from "../DashboardDialogs"
 import NiceModal from "@ebay/nice-modal-react"
 import { getCourseEnrollmentAction } from "@/common/mitxonline"
+import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
 import { trackCourseEnrolled } from "@/common/analytics/gtm"
 
 export const useEnrollmentHandler = () => {
-  const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const createB2bEnrollment = useCreateB2bEnrollment()
   const createEnrollment = useCreateEnrollment()
   const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment()
   const replaceBasketItem = useReplaceBasketItem()
+  const { ensureCompliance } = useComplianceGate()
 
   const enroll = React.useCallback(
-    ({
+    async ({
       course,
       readableId,
       href,
@@ -70,31 +68,21 @@ export const useEnrollmentHandler = () => {
           })
           return
         }
-        const userCountry = mitxOnlineUser.data?.legal_address?.country
-        const userYearOfBirth = mitxOnlineUser.data?.user_profile?.year_of_birth
-        const showJustInTimeDialog = !userCountry || !userYearOfBirth
+        if (!(await ensureCompliance())) return
 
-        if (showJustInTimeDialog) {
-          NiceModal.show(JustInTimeDialog, {
-            href: destinationUrl,
-            readableId,
-            programId: b2bProgramId,
-          })
-        } else {
-          createB2bEnrollment.mutate(
-            {
-              readable_id: readableId,
-              B2BEnrollRequestRequest: b2bProgramId
-                ? { program_id: b2bProgramId }
-                : undefined,
+        createB2bEnrollment.mutate(
+          {
+            readable_id: readableId,
+            B2BEnrollRequestRequest: b2bProgramId
+              ? { program_id: b2bProgramId }
+              : undefined,
+          },
+          {
+            onSuccess: () => {
+              window.location.href = destinationUrl
             },
-            {
-              onSuccess: () => {
-                window.location.href = destinationUrl
-              },
-            },
-          )
-        }
+          },
+        )
       } else if (
         isVerifiedProgram &&
         readableId &&
@@ -121,6 +109,7 @@ export const useEnrollmentHandler = () => {
           : programCoursewareId
             ? [programCoursewareId]
             : []
+        if (!(await ensureCompliance())) return
         createVerifiedProgramEnrollment.mutate(
           { courserun_id: readableId, request_body: requestBody },
           {
@@ -133,6 +122,7 @@ export const useEnrollmentHandler = () => {
         const enrollmentAction = getCourseEnrollmentAction(course)
 
         if (enrollmentAction.type === "audit") {
+          if (!(await ensureCompliance())) return
           createEnrollment.mutate(
             { run_id: enrollmentAction.run.id },
             {
@@ -163,8 +153,7 @@ export const useEnrollmentHandler = () => {
       }
     },
     [
-      mitxOnlineUser.data?.legal_address?.country,
-      mitxOnlineUser.data?.user_profile?.year_of_birth,
+      ensureCompliance,
       createB2bEnrollment,
       createEnrollment,
       createVerifiedProgramEnrollment,
@@ -179,6 +168,5 @@ export const useEnrollmentHandler = () => {
       createEnrollment.isPending ||
       createVerifiedProgramEnrollment.isPending ||
       replaceBasketItem.isPending,
-    mitxOnlineUser: mitxOnlineUser.data,
   }
 }

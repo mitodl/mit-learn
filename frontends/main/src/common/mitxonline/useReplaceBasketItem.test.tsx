@@ -1,6 +1,19 @@
 import { act, renderHook, setupLocationMock } from "@/test-utils"
+import React from "react"
+import { QueryClientProvider } from "@tanstack/react-query"
+import { makeBrowserQueryClient } from "@/app/getQueryClient"
+import { setMockResponse } from "api/test-utils"
+import * as mitxonline from "api/mitxonline-test-utils"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "./useReplaceBasketItem"
+
+// The compliance gate fetches the MITx Online user through react-query.
+const wrapper = ({ children }: { children: React.ReactNode }) => {
+  const queryClient = makeBrowserQueryClient({ maxRetries: 0 })
+  return (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
+}
 
 const reset = jest.fn()
 const mutate = jest.fn(
@@ -34,13 +47,19 @@ describe("useReplaceBasketItem", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    // The compliance gate reads the MITx Online user before touching the
+    // basket. A complete profile (the factory default) lets it through.
+    setMockResponse.get(
+      mitxonline.urls.userMe.get(),
+      mitxonline.factories.user.user(),
+    )
   })
 
-  test("redirects after the sync mutate path succeeds", () => {
+  test("redirects after the sync mutate path succeeds", async () => {
     const assign = jest.mocked(window.location.assign)
-    const { result } = renderHook(() => useReplaceBasketItem())
+    const { result } = renderHook(() => useReplaceBasketItem(), { wrapper })
 
-    act(() => {
+    await act(async () => {
       result.current.mutate(42)
     })
 
@@ -58,7 +77,7 @@ describe("useReplaceBasketItem", () => {
 
   test("redirects after the async mutateAsync path succeeds", async () => {
     const assign = jest.mocked(window.location.assign)
-    const { result } = renderHook(() => useReplaceBasketItem())
+    const { result } = renderHook(() => useReplaceBasketItem(), { wrapper })
 
     await act(async () => {
       await result.current.mutateAsync(42)
@@ -70,14 +89,14 @@ describe("useReplaceBasketItem", () => {
     expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
   })
 
-  test("does not add or redirect when the sync clear never succeeds", () => {
+  test("does not add or redirect when the sync clear never succeeds", async () => {
     const assign = jest.mocked(window.location.assign)
     // Simulate clear failing: its onSuccess is never invoked. This also pins the
     // ordering — add must be nested inside clear's onSuccess, not fired directly.
     clearMutate.mockImplementationOnce(() => {})
-    const { result } = renderHook(() => useReplaceBasketItem())
+    const { result } = renderHook(() => useReplaceBasketItem(), { wrapper })
 
-    act(() => {
+    await act(async () => {
       result.current.mutate(42)
     })
 
@@ -89,7 +108,7 @@ describe("useReplaceBasketItem", () => {
   test("does not add or redirect when the async clear rejects", async () => {
     const assign = jest.mocked(window.location.assign)
     clearMutateAsync.mockRejectedValueOnce(new Error("clear failed"))
-    const { result } = renderHook(() => useReplaceBasketItem())
+    const { result } = renderHook(() => useReplaceBasketItem(), { wrapper })
 
     await act(async () => {
       await expect(result.current.mutateAsync(42)).rejects.toThrow(

@@ -85,11 +85,11 @@ const order = (overrides: Partial<Order> = {}): Order => ({
   lines: [transactionLine()],
   discounts: [],
   refunds: [],
+  refund_eligible: false,
   reference_number: faker.string.alphanumeric(10),
   created_on: faker.date.past().toISOString(),
   transactions: orderTransactions(),
   street_address: orderStreetAddress(),
-  refund_eligible: false,
   ...overrides,
 })
 

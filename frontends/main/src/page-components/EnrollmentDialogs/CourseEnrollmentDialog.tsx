@@ -27,6 +27,7 @@ import {
 } from "@/common/mitxonline"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
+import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import { useRouter } from "next-nprogress-bar"
 import { useQuery } from "@tanstack/react-query"
 import { productQueries } from "api/mitxonline-hooks/products"
@@ -330,6 +331,9 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
   const enrollmentType = getEnrollmentType(run?.enrollment_modes)
   const createEnrollment = useCreateEnrollment()
   const router = useRouter()
+  // The "Add to Cart" path inside CertificateUpsell is gated by
+  // useReplaceBasketItem; this free-enrollment submit gates here.
+  const { ensureCompliance } = useComplianceGate()
   return (
     <StyledFormDialog
       {...muiDialogV5(modal)}
@@ -343,6 +347,7 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
       onSubmit={async (e) => {
         e.preventDefault()
         if (!run) return
+        if (!(await ensureCompliance())) return
         createEnrollment.mutate(
           {
             run_id: run.id,
