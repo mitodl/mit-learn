@@ -822,18 +822,15 @@ VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = get_int(
 )
 
 
-# the minimum similarity score for dense only search
+# the minimum dense cosine similarity score a vector search result must have,
+# in both dense-only and hybrid search (hybrid gates its sparse leg to the
+# same dense-admitted points, so both modes share one floor)
 DENSE_VECTOR_SEARCH_MIN_SCORE = get_float(
     name="DENSE_VECTOR_SEARCH_MIN_SCORE", default=0.3
 )
 
-# the minimum dense cosine similarity score for hybrid search
-HYBRID_VECTOR_SEARCH_MIN_SCORE = get_float(
-    name="HYBRID_VECTOR_SEARCH_MIN_SCORE", default=0.5
-)
-
 # hard limit for special cases where we need to return all results without pagination
-VECTOR_SEARCH_PAGE_MAX_LIMIT = get_int("VECTOR_SEARCH_PAGE_MAX_LIMIT", 200)
+VECTOR_SEARCH_PAGE_MAX_LIMIT = get_int("VECTOR_SEARCH_PAGE_MAX_LIMIT", 20)
 
 # toggle to use requests (default for local) or webdriver which renders js elements
 EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(

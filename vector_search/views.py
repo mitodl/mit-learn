@@ -49,17 +49,12 @@ from vector_search.utils import (
 log = logging.getLogger(__name__)
 
 
-def _normalize_score_cutoff(value, hybrid_search_enabled):
+def _normalize_score_cutoff(value):
     try:
         value = float(value)
     except (TypeError, ValueError):
         return None
-    min_score_cutoff = (
-        settings.HYBRID_VECTOR_SEARCH_MIN_SCORE
-        if hybrid_search_enabled
-        else settings.DENSE_VECTOR_SEARCH_MIN_SCORE
-    )
-    return max(value, min_score_cutoff)
+    return max(value, settings.DENSE_VECTOR_SEARCH_MIN_SCORE)
 
 
 def _sort_key(x, field):
@@ -145,6 +140,7 @@ class QdrantView(APIView):
         encoder_sparse,
         hybrid_search,
         score_cutoff: float | None,
+        client,
     ):
         search_params = {
             "collection_name": search_collection,
@@ -165,7 +161,7 @@ class QdrantView(APIView):
             ),
             "limit": limit,
         }
-        normalized_score = _normalize_score_cutoff(score_cutoff, hybrid_search)
+        normalized_score = _normalize_score_cutoff(score_cutoff)
         if normalized_score is not None and not hybrid_search:
             search_params["score_threshold"] = normalized_score
 
@@ -188,8 +184,41 @@ class QdrantView(APIView):
                 "using": encoder_dense.model_short_name(),
                 "limit": prefetch_limit,
             }
+            sparse_filter = search_filter
             if normalized_score is not None:
                 dense_prefetch_params["score_threshold"] = normalized_score
+                # A sparse (lexical) match's own score has no relationship to
+                # dense cosine similarity, and RRF grants a candidate full
+                # rank-based fusion credit just for appearing in a branch --
+                # regardless of how weak that branch's match actually was. Left
+                # unrestricted, the sparse leg can admit points score_cutoff
+                # is meant to exclude (e.g. a generic word matching hundreds
+                # of unrelated documents). Restrict the sparse leg to the same
+                # points the dense query itself would admit, so lexical
+                # overlap can still influence ranking but can never by itself
+                # get a point past score_cutoff.
+                dense_admitted = await client.query_points(
+                    collection_name=search_collection,
+                    query_filter=search_filter,
+                    using=encoder_dense.model_short_name(),
+                    query=dense_query,
+                    score_threshold=normalized_score,
+                    limit=prefetch_limit,
+                    with_payload=False,
+                    with_vectors=False,
+                )
+                id_filter = models.Filter(
+                    must=[
+                        models.HasIdCondition(
+                            has_id=[point.id for point in dense_admitted.points]
+                        )
+                    ]
+                )
+                sparse_filter = (
+                    models.Filter(must=[search_filter, id_filter])
+                    if search_filter is not None
+                    else id_filter
+                )
 
             prefetch_params = [
                 models.Prefetch(
@@ -197,7 +226,7 @@ class QdrantView(APIView):
                     limit=prefetch_limit,
                     prefetch=[
                         models.Prefetch(
-                            filter=search_filter,
+                            filter=sparse_filter,
                             query=sparse_query,
                             using=encoder_sparse.model_short_name(),
                             limit=prefetch_limit,
@@ -362,6 +391,7 @@ class QdrantView(APIView):
                 encoder_sparse,
                 hybrid_search,
                 score_cutoff,
+                client,
             )
 
             if "group_by" in params:
@@ -524,7 +554,7 @@ class QdrantView(APIView):
         *,
         hybrid_search: bool = False,
     ):
-        normalized_score = _normalize_score_cutoff(score_cutoff, hybrid_search)
+        normalized_score = _normalize_score_cutoff(score_cutoff)
         if query_string and normalized_score is not None:
             hits = await self._async_vector_hits(
                 query_string,

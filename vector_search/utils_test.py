@@ -2173,7 +2173,10 @@ def test_vector_search_hybrid(mocker, client):
         reverse("vector_search:v0:vector_learning_resources_search"), data=params
     )
 
-    mock_qdrant.query_points.assert_called_once()
+    # Hybrid mode with a cutoff issues an earlier, separate dense-only probe
+    # first (to gate the sparse leg); call_args defaults to the most recent
+    # call, which is the real fused query.
+    assert mock_qdrant.query_points.call_count == 2
     call_args = mock_qdrant.query_points.call_args.kwargs
 
     assert isinstance(call_args["query"], models.FusionQuery)

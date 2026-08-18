@@ -234,8 +234,9 @@ class LearningResourcesVectorSearchRequestSerializer(
         required=False,
         help_text=(
             "The minimum dense cosine similarity score a result must have to be "
-            "returned. Defaults to 0.0 when omitted, but the server clamps the "
-            "effective cutoff to the minimum allowed for the selected search mode."
+            "returned, in both dense and hybrid search. Defaults to 0.0 when "
+            "omitted, but the server clamps the effective cutoff to a "
+            "configured minimum."
         ),
         default=0.0,
     )

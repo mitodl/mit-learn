@@ -71,7 +71,9 @@ def test_vector_search_filters(mocker, client):
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
     mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
-    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points = mocker.AsyncMock(
+        return_value=mocker.MagicMock(points=[])
+    )
     mock_qdrant.query_points_groups = mocker.AsyncMock()
     mocker.patch(
         "vector_search.views.async_qdrant_client",
@@ -125,7 +127,9 @@ def test_vector_search_filters_empty_query(mocker, client):
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
     mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
-    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points = mocker.AsyncMock(
+        return_value=mocker.MagicMock(points=[])
+    )
     mock_qdrant.query_points_groups = mocker.AsyncMock()
     mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
     mocker.patch(
@@ -192,7 +196,9 @@ def test_content_file_vector_search_filters(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
     mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
-    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points = mocker.AsyncMock(
+        return_value=mocker.MagicMock(points=[])
+    )
     mock_qdrant.query_points_groups = mocker.AsyncMock()
     mocker.patch(
         "vector_search.views.async_qdrant_client",
@@ -277,7 +283,9 @@ def test_content_file_vector_search_filters_empty_query(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
     mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
-    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points = mocker.AsyncMock(
+        return_value=mocker.MagicMock(points=[])
+    )
     mock_qdrant.query_points_groups = mocker.AsyncMock()
     mocker.patch(
         "vector_search.views.async_qdrant_client",
@@ -339,7 +347,9 @@ def test_content_file_vector_search_filters_custom_collection(
     )()
     custom_collection_name = "foo_bar_collection"
     mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
-    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points = mocker.AsyncMock(
+        return_value=mocker.MagicMock(points=[])
+    )
     mock_qdrant.query_points_groups = mocker.AsyncMock()
     mocker.patch(
         "vector_search.views.async_qdrant_client",
@@ -385,7 +395,9 @@ def test_content_file_vector_search_group_parameters(mocker, client, django_user
     custom_collection_name = "foo_bar_collection"
 
     mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
-    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points = mocker.AsyncMock(
+        return_value=mocker.MagicMock(points=[])
+    )
     mock_qdrant.query_points_groups = mocker.AsyncMock()
     mocker.patch(
         "vector_search.views.async_qdrant_client",
@@ -481,7 +493,9 @@ def test_vector_search_sortby_parameter(  # noqa: PLR0913
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
     mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
-    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points = mocker.AsyncMock(
+        return_value=mocker.MagicMock(points=[])
+    )
     mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
     mocker.patch(
         "vector_search.views.async_qdrant_client",
@@ -506,7 +520,10 @@ def test_vector_search_sortby_parameter(  # noqa: PLR0913
     )
 
     if query_string:
-        call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
+        # hybrid mode with a cutoff issues an earlier, separate dense-only
+        # probe first (to gate the sparse leg); the last call is always the
+        # real fused/ordered query.
+        call_kwargs = mock_qdrant.query_points.mock_calls[-1].kwargs
         if hybrid_search:
             if sortby and min_score is None:
                 assert isinstance(call_kwargs["query"], models.OrderByQuery)
@@ -603,7 +620,9 @@ def test_vector_search_with_score_cutoff_enforces_max_limit(mocker, client, sett
         reverse("vector_search:v0:vector_learning_resources_search"), data=params
     )
 
-    call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
+    # The last call is the real fused query; the earlier call is the
+    # dense-only probe that gates the sparse leg.
+    call_kwargs = mock_qdrant.query_points.mock_calls[-1].kwargs
     assert call_kwargs["limit"] == 5
     assert call_kwargs["offset"] == 0
     assert "score_threshold" not in call_kwargs
@@ -638,7 +657,9 @@ def test_vector_search_sortby_scroll_pagination(mocker, client):
 
     # scroll returns (points, next_page_offset=None) when order_by is used
     mock_qdrant.scroll = mocker.AsyncMock(return_value=(mock_points, None))
-    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points = mocker.AsyncMock(
+        return_value=mocker.MagicMock(points=[])
+    )
     mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=100))
     mocker.patch(
         "vector_search.views.async_qdrant_client",
@@ -773,10 +794,13 @@ def test_vector_search_sortby_with_score_cutoff_manually_sorted(mocker, client):
 
     mock_result = mocker.MagicMock()
     mock_point_1 = mocker.MagicMock()
+    mock_point_1.id = "point-1"
     mock_point_1.payload = {"readable_id": "course-1"}
     mock_point_2 = mocker.MagicMock()
+    mock_point_2.id = "point-2"
     mock_point_2.payload = {"readable_id": "course-2"}
     mock_point_3 = mocker.MagicMock()
+    mock_point_3.id = "point-3"
     mock_point_3.payload = {"readable_id": "course-3"}
 
     mock_result.points = [mock_point_1, mock_point_2, mock_point_3]
@@ -857,7 +881,10 @@ def test_vector_search_with_score_cutoff_enforces_min_score(
         reverse("vector_search:v0:vector_learning_resources_search"), data=params
     )
 
-    call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
+    # The last call is the real fused/dense query; hybrid mode issues an
+    # earlier, separate dense-only probe first (to gate the sparse leg), so
+    # index -1 rather than 0 is the one carrying the request's own limit/offset.
+    call_kwargs = mock_qdrant.query_points.mock_calls[-1].kwargs
     assert call_kwargs["limit"] == 5
     assert call_kwargs["offset"] == 0
     if hybrid_search:
@@ -865,7 +892,7 @@ def test_vector_search_with_score_cutoff_enforces_min_score(
         dense_prefetch = _hybrid_prefetch_for_model(
             call_kwargs, dense_encoder().model_short_name()
         )
-        assert dense_prefetch.score_threshold == settings.HYBRID_VECTOR_SEARCH_MIN_SCORE
+        assert dense_prefetch.score_threshold == settings.DENSE_VECTOR_SEARCH_MIN_SCORE
     else:
         assert call_kwargs["score_threshold"] == settings.DENSE_VECTOR_SEARCH_MIN_SCORE
 
@@ -874,13 +901,18 @@ def test_vector_search_with_score_cutoff_enforces_min_score(
 @pytest.mark.parametrize("hybrid_search", [True, False])
 @pytest.mark.parametrize("min_score", [0.0, 0.1, None])
 @pytest.mark.parametrize("sortby", ["-views", "views", None])
-def test_build_search_params_sort_with_cutoff_score(
-    settings, query_string, hybrid_search, min_score, sortby
+def test_build_search_params_sort_with_cutoff_score(  # noqa: PLR0913
+    mocker, settings, query_string, hybrid_search, min_score, sortby
 ):
     """
     Test that _build_search_params returns correct search parameters when sortby and score_cutoff are both provided.
     """
     view = QdrantView()
+
+    mock_client = mocker.AsyncMock()
+    dense_admitted = mocker.MagicMock()
+    dense_admitted.points = []
+    mock_client.query_points = mocker.AsyncMock(return_value=dense_admitted)
 
     search_params = asyncio.run(
         view._build_search_params(  # noqa: SLF001
@@ -894,6 +926,7 @@ def test_build_search_params_sort_with_cutoff_score(
             encoder_sparse=sparse_encoder(),
             hybrid_search=hybrid_search,
             score_cutoff=min_score,
+            client=mock_client,
         )
     )
     if sortby and min_score is not None:
@@ -916,9 +949,28 @@ def test_build_search_params_sort_with_cutoff_score(
                 search_params, sparse_encoder().model_short_name()
             )
             assert dense_prefetch.score_threshold == (
-                settings.HYBRID_VECTOR_SEARCH_MIN_SCORE
+                settings.DENSE_VECTOR_SEARCH_MIN_SCORE
             )
             assert sparse_prefetch.score_threshold is None
+            # The sparse leg has no score_threshold of its own -- it's gated
+            # instead by restricting it to the IDs the dense-only probe
+            # admitted, so a sparse-only match can never bypass score_cutoff.
+            id_conditions = [
+                condition
+                for condition in sparse_prefetch.filter.must
+                if isinstance(condition, models.HasIdCondition)
+            ]
+            assert len(id_conditions) == 1
+            mock_client.query_points.assert_any_call(
+                collection_name=None,
+                query_filter=None,
+                using=dense_encoder().model_short_name(),
+                query=mocker.ANY,
+                score_threshold=settings.DENSE_VECTOR_SEARCH_MIN_SCORE,
+                limit=100,
+                with_payload=False,
+                with_vectors=False,
+            )
         else:
             assert (
                 search_params["score_threshold"]
@@ -965,7 +1017,9 @@ def test_content_file_search_restricts_resource_query_to_best_run(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
     mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
-    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points = mocker.AsyncMock(
+        return_value=mocker.MagicMock(points=[])
+    )
     mock_qdrant.query_points_groups = mocker.AsyncMock()
     mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
     mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
@@ -1009,7 +1063,9 @@ def test_content_file_search_test_mode_not_restricted(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
     mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
-    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points = mocker.AsyncMock(
+        return_value=mocker.MagicMock(points=[])
+    )
     mock_qdrant.query_points_groups = mocker.AsyncMock()
     mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
     mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
@@ -1050,7 +1106,9 @@ def test_content_file_search_explicit_run_not_overridden(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
     mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
-    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points = mocker.AsyncMock(
+        return_value=mocker.MagicMock(points=[])
+    )
     mock_qdrant.query_points_groups = mocker.AsyncMock()
     mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
     mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
@@ -1109,7 +1167,9 @@ def test_content_file_search_no_best_run_metadata_only(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
     mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
-    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points = mocker.AsyncMock(
+        return_value=mocker.MagicMock(points=[])
+    )
     mock_qdrant.query_points_groups = mocker.AsyncMock()
     mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
     mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
