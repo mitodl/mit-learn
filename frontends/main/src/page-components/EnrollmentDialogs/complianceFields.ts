@@ -299,7 +299,6 @@ export {
   JIT_FIELDS,
   FIELD_SPECS,
   MINIMUM_AGE,
-  SUBDIVISION_COUNTRIES,
   requiresSubdivision,
   postalCodeLabel,
   subdivisionOptions,
@@ -310,4 +309,4 @@ export {
   jitSchema,
   jitPatchPayload,
 }
-export type { JitField, JitFormValues, FieldSpec, CountrySubdivision }
+export type { JitField, JitFormValues }

@@ -288,5 +288,4 @@ const JustInTimeDialogInner: React.FC = () => {
 
 const JustInTimeDialog = NiceModal.create(JustInTimeDialogInner)
 
-export default JustInTimeDialog
 export { JustInTimeDialog }
