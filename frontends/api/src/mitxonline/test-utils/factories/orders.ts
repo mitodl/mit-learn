@@ -77,7 +77,10 @@ const orderRefund = (
 const order = (overrides: Partial<Order> = {}): Order => ({
   id: faker.number.int(),
   state: "fulfilled",
-  purchaser: [],
+  purchaser: {
+    country: "US",
+    email: faker.internet.email(),
+  },
   total_price_paid: faker.commerce.price({ min: 50, max: 500 }),
   lines: [transactionLine()],
   discounts: [],
@@ -86,6 +89,7 @@ const order = (overrides: Partial<Order> = {}): Order => ({
   created_on: faker.date.past().toISOString(),
   transactions: orderTransactions(),
   street_address: orderStreetAddress(),
+  refund_eligible: false,
   ...overrides,
 })
 
@@ -131,6 +135,7 @@ const orderHistory = (overrides: Partial<OrderHistory> = {}): OrderHistory => ({
   created_on: faker.date.past().toISOString(),
   titles: [],
   updated_on: faker.date.past().toISOString(),
+  refund_eligible: false,
   ...overrides,
 })
 
