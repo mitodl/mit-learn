@@ -1,10 +1,12 @@
 """Tests for the PostHog ETL library."""
 
+import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
-from django.db import IntegrityError
+from django.db import IntegrityError, connection
+from django.test.utils import CaptureQueriesContext
 from freezegun import freeze_time
 
 from learning_resources.etl import posthog
@@ -220,3 +222,102 @@ def test_load_posthog_lrd_view_event_adoption_lost_to_concurrent_run(mocker):
 
     assert lr_event is not None
     assert LearningResourceViewEvent.objects.filter(event_uuid=event_uuid).count() == 1
+
+
+def _view_event(resource_id, *, minutes_ago=0):
+    """Build a transformed event without going through parquet."""
+    return posthog.PostHogLearningResourceViewEvent(
+        resource_id=resource_id,
+        event_date=now_in_utc() - timedelta(minutes=minutes_ago),
+        event_uuid=str(uuid.uuid4()),
+    )
+
+
+@pytest.mark.django_db
+def test_load_posthog_lrd_view_events_does_not_query_per_event(mocker):
+    """
+    Query count must not scale with the number of events.
+
+    The per-event path cost 2-8 queries each, which is what made a full backlog
+    pass outrun the celery visibility timeout; past that, acks_late redelivers
+    the still-running task to another worker and the copies multiply until they
+    own the pool.
+    """
+    mocker.patch(
+        "learning_resources.etl.posthog.resource_upserted_actions", autospec=True
+    )
+    resource = LearningResourceFactory.create()
+
+    with CaptureQueriesContext(connection) as small:
+        posthog.load_posthog_lrd_view_events(
+            [_view_event(resource.id, minutes_ago=i) for i in range(5)]
+        )
+    with CaptureQueriesContext(connection) as large:
+        posthog.load_posthog_lrd_view_events(
+            [_view_event(resource.id, minutes_ago=i) for i in range(100, 200)]
+        )
+
+    assert LearningResourceViewEvent.objects.count() == 105
+    # 20x the events, same number of round trips: both fit in one batch.
+    assert len(large.captured_queries) == len(small.captured_queries)
+
+
+@pytest.mark.django_db
+def test_load_posthog_lrd_view_events_spans_batches(mocker, settings):
+    """Events beyond one batch are still loaded."""
+    mocker.patch(
+        "learning_resources.etl.posthog.resource_upserted_actions", autospec=True
+    )
+    mocker.patch.object(posthog, "POSTHOG_LOAD_BATCH_SIZE", 10)
+    resource = LearningResourceFactory.create()
+
+    recounted = posthog.load_posthog_lrd_view_events(
+        [_view_event(resource.id, minutes_ago=i) for i in range(25)]
+    )
+
+    assert recounted == {resource.id}
+    assert LearningResourceViewEvent.objects.count() == 25
+
+
+@pytest.mark.django_db
+def test_load_posthog_lrd_view_events_survives_invalid_resource_id(mocker):
+    """
+    A malformed resource id skips its own event, not the whole batch.
+
+    The per-event path caught ValueError per event; batched, an unfiltered bad
+    id inside pk__in would raise and lose every event alongside it.
+    """
+    mocker.patch(
+        "learning_resources.etl.posthog.resource_upserted_actions", autospec=True
+    )
+    resource = LearningResourceFactory.create()
+    events = [
+        _view_event(resource.id, minutes_ago=1),
+        _view_event("not-an-integer", minutes_ago=2),
+        _view_event(resource.id, minutes_ago=3),
+    ]
+
+    recounted = posthog.load_posthog_lrd_view_events(events)
+
+    assert recounted == {resource.id}
+    assert LearningResourceViewEvent.objects.count() == 2
+
+
+@pytest.mark.django_db
+def test_load_posthog_lrd_view_events_is_idempotent(mocker):
+    """Re-loading the same events inserts nothing further.
+
+    bulk_create(ignore_conflicts=True) leans on the partial unique index over
+    event_uuid, so a repeat run -- which is every run, since the newest S3
+    object is always re-read -- converges instead of duplicating.
+    """
+    mocker.patch(
+        "learning_resources.etl.posthog.resource_upserted_actions", autospec=True
+    )
+    resource = LearningResourceFactory.create()
+    events = [_view_event(resource.id, minutes_ago=i) for i in range(10)]
+
+    posthog.load_posthog_lrd_view_events(events)
+    posthog.load_posthog_lrd_view_events(events)
+
+    assert LearningResourceViewEvent.objects.count() == 10
