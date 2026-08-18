@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.77.7
+Version 0.77.7 (Released August 18, 2026)
 --------------
 
 - Show the game sub-nav above Arithmix (#3774)
