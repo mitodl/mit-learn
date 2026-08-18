@@ -90,7 +90,6 @@ const order = (overrides: Partial<Order> = {}): Order => ({
   created_on: faker.date.past().toISOString(),
   transactions: orderTransactions(),
   street_address: orderStreetAddress(),
-  refund_eligible: false,
   ...overrides,
 })
 
