@@ -142,6 +142,80 @@ describe("dashboardViewModel", () => {
       ).toEqual(activeEnrollment)
     })
 
+    test("treats a run with no start date as underway rather than skipping it", () => {
+      const undatedRun = factories.courses.courseRun({ id: 101 })
+      const endedRun = factories.courses.courseRun({
+        id: 202,
+        start_date: daysFromNow(-400),
+        end_date: daysFromNow(-300),
+      })
+      const course = factories.courses.course({
+        courseruns: [undatedRun, endedRun],
+      })
+      // An open enrollment with no dates on file; `getRunTimeState` calls this
+      // underway, so selection has to agree or the card would show the ended
+      // run and then label it "Ended".
+      const undatedEnrollment = factories.enrollment.courseEnrollment({
+        run: { id: undatedRun.id, start_date: null, end_date: null },
+        certificate: null,
+        grades: [],
+      })
+      const endedEnrollment = factories.enrollment.courseEnrollment({
+        run: {
+          id: endedRun.id,
+          start_date: endedRun.start_date,
+          end_date: endedRun.end_date,
+        },
+        certificate: null,
+        grades: [],
+      })
+
+      expect(
+        selectBestEnrollment(course, [undatedEnrollment, endedEnrollment]),
+      ).toEqual(undatedEnrollment)
+      expect(
+        selectBestEnrollment(course, [endedEnrollment, undatedEnrollment]),
+      ).toEqual(undatedEnrollment)
+    })
+
+    test("treats a run with no end date as still underway", () => {
+      const openEndedRun = factories.courses.courseRun({
+        id: 101,
+        start_date: daysFromNow(-30),
+      })
+      const endedRun = factories.courses.courseRun({
+        id: 202,
+        start_date: daysFromNow(-20),
+        end_date: daysFromNow(-1),
+      })
+      const course = factories.courses.course({
+        courseruns: [openEndedRun, endedRun],
+      })
+      const openEndedEnrollment = factories.enrollment.courseEnrollment({
+        run: {
+          id: openEndedRun.id,
+          start_date: openEndedRun.start_date,
+          end_date: null,
+        },
+        certificate: null,
+        grades: [],
+      })
+      const endedEnrollment = factories.enrollment.courseEnrollment({
+        run: {
+          id: endedRun.id,
+          start_date: endedRun.start_date,
+          end_date: endedRun.end_date,
+        },
+        certificate: null,
+        grades: [],
+      })
+
+      // The ended run started more recently, so recency alone would pick it.
+      expect(
+        selectBestEnrollment(course, [openEndedEnrollment, endedEnrollment]),
+      ).toEqual(openEndedEnrollment)
+    })
+
     test("prefers the more recent run when every run has ended", () => {
       const olderRun = factories.courses.courseRun({
         id: 101,

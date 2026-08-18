@@ -20,7 +20,8 @@ import type {
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import { isInPast } from "ol-utilities"
+import { getRunTimeState } from "../courseDateUtils"
+import type { RunTimeState } from "../courseDateUtils"
 import {
   getBestRun,
   getIdsFromReqTree,
@@ -307,8 +308,14 @@ const sortEnrollmentsByStartDateDesc = (
  * `selectBestEnrollment` (single course) and `pickDisplayedHomeEnrollments`
  * (one group per course+variant).
  *
- * Priority: the most recent run that has started and not ended, else the most
- * recently started run, else the soonest upcoming one.
+ * Priority: the most recent run that is underway, else the most recent run
+ * that has ended, else the soonest upcoming one.
+ *
+ * Runs are classified by `getRunTimeState`, the same helper the card's badge
+ * and the sibling-runs accordion label use, so the run this picks can never be
+ * described in a way that contradicts why it was picked. That includes runs
+ * with missing or unparseable dates, which count as underway: an undated open
+ * enrollment should outrank a run that demonstrably ended.
  *
  * Certificates and grades deliberately play no part. A certificate earned on
  * an older run stays visible via `pickCertificateEnrollment`, so it does not
@@ -318,16 +325,26 @@ const pickBestEnrollmentFromGroup = (
   enrollments: CourseRunEnrollmentV3[],
 ): CourseRunEnrollmentV3 => {
   const sorted = sortEnrollmentsByStartDateDesc(enrollments)
-  const withStartDate = sorted.filter((e) => e.run.start_date)
-  const started = withStartDate.filter(
-    (e) => e.run.start_date && isInPast(e.run.start_date),
+  const byTimeState: Record<RunTimeState, CourseRunEnrollmentV3[]> = {
+    upcoming: [],
+    underway: [],
+    ended: [],
+  }
+  for (const enrollment of sorted) {
+    const timeState = getRunTimeState(
+      enrollment.run.start_date,
+      enrollment.run.end_date,
+    )
+    byTimeState[timeState].push(enrollment)
+  }
+  // `sorted` is most-recent-first, so each group's first entry is its latest
+  // run and the last upcoming entry is the one starting soonest.
+  return (
+    byTimeState.underway[0] ??
+    byTimeState.ended[0] ??
+    byTimeState.upcoming.at(-1) ??
+    sorted[0]
   )
-  const active = started.filter(
-    (e) => !e.run.end_date || !isInPast(e.run.end_date),
-  )
-  // Ordered most-recent-first, so the last entry of `withStartDate` is the
-  // soonest upcoming run when nothing has started yet.
-  return active[0] ?? started[0] ?? withStartDate.at(-1) ?? sorted[0]
 }
 
 /**
