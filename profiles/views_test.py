@@ -394,21 +394,25 @@ def test_get_user_by_me(mocker, client, user, is_anonymous):
             "id": None,
             "username": "",
             "global_id": None,
+            "email": "",
             "is_learning_path_editor": False,
             "is_article_editor": False,
             "is_authenticated": False,
+            "is_sso_user": False,
         }
     else:
         assert resp.json() == {
             "id": user.id,
             "username": user.username,
             "global_id": user.global_id,
+            "email": user.email,
             "first_name": user.first_name,
             "last_name": user.last_name,
             "is_learning_path_editor": False,
             "is_article_editor": False,
             "profile": ProfileSerializer(user.profile).data,
             "is_authenticated": True,
+            "is_sso_user": False,
         }
 
 

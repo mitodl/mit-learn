@@ -1,5 +1,7 @@
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import {
+  AccountAction,
+  accountAction,
   auth,
   coursePageView,
   ocwLearnPageView,
@@ -62,6 +64,33 @@ test.each([
   "login encodes the next parameter appropriately",
   ({ loginNext, signupNext, expected }) => {
     expect(auth({ next: loginNext, signupNext })).toBe(expected)
+  },
+)
+
+test.each([
+  {
+    action: AccountAction.UpdateEmail,
+    expected: [
+      `${MITOL_API_BASE_URL}/account/action/start/update-email/`,
+      "?next=http%3A%2F%2Ftest.learn.odl.local%3A8062%2Fdashboard%2Fsettings",
+    ].join(""),
+  },
+  {
+    action: AccountAction.UpdatePassword,
+    expected: [
+      `${MITOL_API_BASE_URL}/account/action/start/update-password/`,
+      "?next=http%3A%2F%2Ftest.learn.odl.local%3A8062%2Fdashboard%2Fsettings",
+    ].join(""),
+  },
+])(
+  "accountAction points at Django with an encoded next URL",
+  ({ action, expected }) => {
+    expect(
+      accountAction(action, {
+        pathname: "/dashboard/settings",
+        searchParams: null,
+      }),
+    ).toBe(expected)
   },
 )
 

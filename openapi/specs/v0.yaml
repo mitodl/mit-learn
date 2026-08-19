@@ -691,7 +691,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/CurrentUser'
           description: ''
   /api/v0/vector_content_files_search/:
     get:
@@ -2374,6 +2374,63 @@ components:
       - Junior secondary/junior high/middle school
       - No formal education
       - Other education
+    CurrentUser:
+      type: object
+      description: |-
+        Serializer for the requesting user.
+
+        Unlike UserSerializer this exposes the user's own email plus whether they
+        can manage their credentials, both of which the settings page needs. It is
+        read-only: users change their email through Keycloak, not through us.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+        global_id:
+          type: string
+          readOnly: true
+          nullable: true
+        profile:
+          $ref: '#/components/schemas/Profile'
+        email:
+          type: string
+          readOnly: true
+          default: ''
+        first_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+        is_article_editor:
+          type: boolean
+          readOnly: true
+        is_learning_path_editor:
+          type: boolean
+          readOnly: true
+        is_authenticated:
+          type: boolean
+          readOnly: true
+        is_sso_user:
+          type: boolean
+          description: |-
+            Whether the user signs in through an external identity provider, and so
+            cannot change their email or password through us.
+          readOnly: true
+      required:
+      - email
+      - first_name
+      - global_id
+      - id
+      - is_article_editor
+      - is_authenticated
+      - is_learning_path_editor
+      - is_sso_user
+      - last_name
+      - username
     DeliveryEnum:
       enum:
       - online

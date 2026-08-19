@@ -395,6 +395,33 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "username", "global_id", "is_authenticated")
 
 
+class CurrentUserSerializer(UserSerializer):
+    """
+    Serializer for the requesting user.
+
+    Unlike UserSerializer this exposes the user's own email plus whether they
+    can manage their credentials, both of which the settings page needs. It is
+    read-only: users change their email through Keycloak, not through us.
+    """
+
+    # AnonymousUser has no email attribute, and a read-only field whose
+    # attribute is missing is dropped from the output entirely (the same reason
+    # first_name/last_name don't appear for anonymous users). The default keeps
+    # the key present and blank instead.
+    email = serializers.CharField(read_only=True, default="")
+    is_sso_user = serializers.SerializerMethodField()
+
+    def get_is_sso_user(self, instance) -> bool:
+        """
+        Whether the user signs in through an external identity provider, and so
+        cannot change their email or password through us.
+        """
+        return auth_api.is_sso_user(instance)
+
+    class Meta(UserSerializer.Meta):
+        fields = (*UserSerializer.Meta.fields, "is_sso_user")
+
+
 class ProgramCertificateSerializer(serializers.ModelSerializer):
     """
     Serializer for Program Certificates

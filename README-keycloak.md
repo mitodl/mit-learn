@@ -51,6 +51,33 @@ follow these steps:
 2. Add `DISABLE_APISIX_USER_MIDDLEWARE=True` to your `backend.local.env` file
 3. Set `COMPOSE_PROFILES=backend,frontend` in your .env file
 
+### Changing email and password
+
+The settings page at `/dashboard/settings` lets users change their email and
+password by handing off to Keycloak ("application initiated actions"). Two
+things have to be in place for `kc_action=UPDATE_EMAIL` to work:
+
+1. Keycloak must be started with the `update-email` feature. `UPDATE_EMAIL` is
+   still a preview feature, so it is listed explicitly in the `keycloak`
+   service's `--features` flag in `docker-compose.services.yml`.
+2. The `UPDATE_EMAIL` required action must be registered in the realm. It is in
+   `config/keycloak/realms/ol-local-realm.json`, but `--import-realm` skips
+   realms that already exist in the database. If you set Keycloak up before this
+   was added, register it once via Keycloak admin
+   (Authentication → Required actions → Register → Update Email), or reset the
+   Keycloak database so the realm re-imports.
+
+Without both, Keycloak fails the request with a generic "Unexpected error when
+handling authentication request to identity provider" page, and its logs show
+`NullPointerException ... "requiredActionProvider" is null`.
+
+`UPDATE_PASSWORD` is a built-in action and needs neither step.
+
+Note that deployed realms have `verify_email` enabled, so submitting the form
+there emails a confirmation link rather than changing the address immediately,
+and the new address reaches Learn when Keycloak pushes it over SCIM. The local
+realm has verification off, so the change applies straight away.
+
 ### MITx Online integration
 
 The user dashboard at `/dashboard` includes some integration with the MITx Online

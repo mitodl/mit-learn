@@ -705,6 +705,16 @@ KEYCLOAK_REALM_NAME = get_string(
     name="KEYCLOAK_REALM_NAME",
     default="olapps",
 )
+# The OIDC client used to start Keycloak "application initiated actions"
+# (update email / update password) and to exchange the resulting authorization
+# code. Deliberately has no default: the account action callback URL has to be a
+# registered redirect URI on this client, so guessing a client here fails at
+# Keycloak with an opaque error. Deployed environments must set it (mitxonline
+# does the same with `ol-mitxonline-client`).
+KEYCLOAK_CLIENT_ID = get_string(
+    name="KEYCLOAK_CLIENT_ID",
+    default=None,
+)
 
 MICROMASTERS_CMS_API_URL = get_string("MICROMASTERS_CMS_API_URL", None)
 
