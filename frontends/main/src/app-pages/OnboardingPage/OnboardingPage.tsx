@@ -36,8 +36,10 @@ import {
 } from "@/common/profile"
 import { useSearchParams } from "next/navigation"
 import { PostHogEvents } from "@/common/constants"
+import { trackAccountCreated } from "@/common/analytics/gtm"
 
 const NUM_STEPS = 5
+const ACCOUNT_CREATED_SESSION_KEY = "gtm_account_created_tracked"
 
 const FlexContainer = styled(Container)({
   display: "flex",
@@ -200,6 +202,26 @@ const OnboardingPage: React.FC = () => {
       router.prefetch(nextUrl)
     }
   }, [nextUrl, router])
+
+  useEffect(() => {
+    if (!profile) return
+
+    let alreadyTracked = false
+    try {
+      alreadyTracked = Boolean(
+        sessionStorage.getItem(ACCOUNT_CREATED_SESSION_KEY),
+      )
+      if (!alreadyTracked) {
+        sessionStorage.setItem(ACCOUNT_CREATED_SESSION_KEY, "1")
+      }
+    } catch {
+      // Storage may be unavailable; fall back to tracking without persistence.
+    }
+
+    if (!alreadyTracked) {
+      trackAccountCreated()
+    }
+  }, [profile])
 
   const handleBack = () => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1)

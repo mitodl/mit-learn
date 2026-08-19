@@ -8,6 +8,7 @@ import { Link, Skeleton, styled } from "ol-components"
 import { orderQueries } from "api/mitxonline-hooks/orders"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { DASHBOARD_MY_LEARNING } from "@/common/urls"
+import { trackCheckoutCompleted } from "@/common/analytics/gtm"
 import {
   ENROLLMENT_STATUS_PARAM,
   ENROLLMENT_ERROR_TYPE_PARAM,
@@ -181,6 +182,24 @@ const EnrollmentRedirectAlert: React.FC = () => {
     ...orderQueries.receipt(request?.kind === "paid" ? request.orderId : 0),
     enabled: request?.kind === "paid",
   })
+
+  const checkoutCompletedTracked = React.useRef(false)
+  React.useEffect(() => {
+    if (request?.kind !== "paid") return
+    if (paidReceipt.isPending) return
+    if (checkoutCompletedTracked.current) return
+    checkoutCompletedTracked.current = true
+
+    const parsedValue = paidReceipt.data
+      ? Number(paidReceipt.data.total_price_paid)
+      : NaN
+
+    trackCheckoutCompleted({
+      orderId: request.orderId,
+      courseName: paidReceipt.data?.lines[0]?.content_title,
+      value: Number.isNaN(parsedValue) ? null : parsedValue,
+    })
+  }, [request, paidReceipt.isPending, paidReceipt.data])
 
   if (request?.kind === "error") {
     const errorMessage =
