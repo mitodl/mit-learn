@@ -65,6 +65,23 @@ import { SentryPropagator, SentrySpanProcessor } from "@sentry/opentelemetry"
 export const SENTRY_HTTP_INTEGRATION_OPTIONS = { spans: true } as const
 
 /**
+ * Kept on Sentry.init even though our provider owns the sampler.
+ *
+ * It no longer selects a rate: with skipOpenTelemetrySetup, SentrySampler is
+ * never installed, so span creation is governed by the ParentBased sampler in
+ * installOpenTelemetry(). What it still does is make hasSpansEnabled() true.
+ * Drop it and that returns false, and Sentry's own span APIs
+ * (startSpan/startInactiveSpan) wrap their context in suppressTracing() --
+ * every span Sentry or the Next.js integration creates becomes
+ * non-recording. Verified against @sentry/opentelemetry 10.50.0, where the
+ * suppression sits at both call sites.
+ *
+ * Sentry's actual sampling stays in beforeSendTransaction, so this being 1 does
+ * not put the shared ceiling back.
+ */
+export const SENTRY_SPANS_ENABLED_SAMPLE_RATE = 1
+
+/**
  * Resource built from OTEL_SERVICE_NAME and OTEL_RESOURCE_ATTRIBUTES via the
  * SDK's own spec-compliant parser, layered over the SDK defaults.
  *
