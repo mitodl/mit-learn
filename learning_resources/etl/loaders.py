@@ -62,7 +62,6 @@ from learning_resources.utils import (
     bulk_resources_unpublished_actions,
     content_files_loaded_actions,
     load_course_blocklist,
-    load_course_duplicates,
     resource_delete_actions,
     resource_run_unpublished_actions,
     resource_unpublished_actions,
@@ -405,10 +404,9 @@ def load_run(
     return learning_resource_run
 
 
-def upsert_course_or_program(  # noqa: C901, PLR0912
+def upsert_course_or_program(  # noqa: C901
     resource_data: dict,
     blocklist: list[str],
-    duplicates: list[dict],
     resource_type: str,
     *,
     config: CourseLoaderConfig = None,
@@ -421,8 +419,6 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
             a dict of course/program data values
         blocklist (list of str):
             list of course/program ids not to load
-        duplicates (list of dict):
-            list of duplicate course/program data
         resource_type (str):
             the type of resource to load (course or program)
         config (CourseLoaderConfig):
@@ -448,14 +444,6 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
         else:
             resource_category = LearningResourceType.program.value
         resource_data["resource_category"] = resource_category
-    deduplicated_course_id = next(
-        (
-            record["course_id"]
-            for record in duplicates
-            if readable_id in record["duplicate_course_ids"]
-        ),
-        None,
-    )
     platform = LearningResourcePlatform.objects.filter(code=platform_name).first()
     if not platform:
         log.exception(
@@ -465,23 +453,12 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
         )
         return None, None
 
-    if deduplicated_course_id and readable_id != deduplicated_course_id:
-        duplicate_resource = LearningResource.objects.filter(
-            platform=platform, readable_id=readable_id
-        ).first()
-        if duplicate_resource:
-            duplicate_resource.published = False
-            duplicate_resource.save()
-            resource_unpublished_actions(duplicate_resource)
-
-    resource_id = deduplicated_course_id or readable_id
-
     if config and config.fetch_only:
         # Do not upsert the course, it should already exist.
         # Just find it and return it.
         resource = (
             LearningResource.objects.filter(
-                readable_id=resource_id,
+                readable_id=readable_id,
                 platform=platform,
                 resource_type=resource_type,
             )
@@ -489,11 +466,11 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
             .first()
         )
         if not resource:
-            log.warning("No published or test_mode resource found for %s", resource_id)
+            log.warning("No published or test_mode resource found for %s", readable_id)
         return resource, False
 
     if unique_field_name != READABLE_ID_FIELD:
-        resource_data[READABLE_ID_FIELD] = resource_id
+        resource_data[READABLE_ID_FIELD] = readable_id
         # Some dupes may result, so we should delete all but the
         # most recently updated resource w/matching unique value
         existing_courses = LearningResource.objects.filter(
@@ -521,7 +498,7 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
             defaults=resource_data,
         )
     else:
-        unique_field_value = resource_id
+        unique_field_value = readable_id
     return LearningResource.objects.select_for_update().update_or_create(
         **{unique_field_name: unique_field_value},
         platform=platform,
@@ -533,7 +510,6 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
 def load_course(
     resource_data: dict,
     blocklist: list[str],
-    duplicates: list[dict],
     *,
     config=CourseLoaderConfig(),
 ) -> LearningResource:
@@ -545,8 +521,6 @@ def load_course(
             a dict of course data values
         blocklist (list of str):
             list of course ids not to load
-        duplicates (list of dict):
-            list of duplicate course data
         config (CourseLoaderConfig):
             configuration on how to load this program
 
@@ -569,7 +543,6 @@ def load_course(
         learning_resource, created = upsert_course_or_program(
             resource_data,
             blocklist,
-            duplicates,
             LearningResourceType.course.name,
             config=config,
         )
@@ -635,15 +608,13 @@ def load_courses(
         A list of course LearningResources
     """
     blocklist = load_course_blocklist()
-    duplicates = load_course_duplicates(etl_source)
 
     courses_list = list(courses_data or [])
 
     courses = [
         course
         for course in [
-            load_course(course, blocklist, duplicates, config=config)
-            for course in courses_list
+            load_course(course, blocklist, config=config) for course in courses_list
         ]
         if course is not None
     ]
@@ -682,7 +653,6 @@ class LoadedProgramCourse(NamedTuple):
 def load_program(
     program_data: dict,
     blocklist: list[str],
-    duplicates: list[dict],
     *,
     config=ProgramLoaderConfig(),
 ) -> ProgramLoadResult:
@@ -694,8 +664,6 @@ def load_program(
             a dict of program data values
         blocklist (list of str):
             list of course ids not to load
-        duplicates (list of dict):
-            list of duplicate course data
         config (ProgramLoaderConfig):
             configuration on how to load this program
 
@@ -719,7 +687,7 @@ def load_program(
 
     with transaction.atomic():
         learning_resource, created = upsert_course_or_program(
-            program_data, [], [], LearningResourceType.program.name
+            program_data, [], LearningResourceType.program.name
         )
         if not learning_resource:
             return ProgramLoadResult(
@@ -756,9 +724,7 @@ def load_program(
                 continue
 
             explicit_position = course_data.pop("position", None)
-            course_resource = load_course(
-                course_data, blocklist, duplicates, config=config.courses
-            )
+            course_resource = load_course(course_data, blocklist, config=config.courses)
             if course_resource:
                 loaded_courses.append(
                     LoadedProgramCourse(
@@ -876,6 +842,105 @@ def _create_child_program_relationships(
         ).exclude(child_id__in=kept_child_ids).delete()
 
 
+def load_program_children(
+    etl_source: str,
+    child_programs_by_parent: dict[str, list[dict]],
+    loaded_readable_ids: Iterable[str],
+) -> int:
+    """
+    Run pass 2 for programs loaded separately: link children and index.
+
+    Parents are resolved by readable id rather than carried over from pass 1,
+    so this can run as its own task after a fan-out of program loads. Indexing
+    covers every program in loaded_readable_ids, not just the linked parents,
+    because pass 1 deliberately left indexing until the relationships existed.
+    Programs outside that set are left alone: they were dropped from the
+    catalog, and the prune that swept them already deindexed them.
+
+    Args:
+        etl_source (str): the ETL source of the programs
+        child_programs_by_parent (dict): parent readable id -> child program data
+        loaded_readable_ids (iterable of str): readable ids of every program
+            this run loaded, which are the ones that still need indexing
+
+    Returns:
+        int: the number of parent programs whose children were linked
+    """
+    resources_by_readable_id = {
+        resource.readable_id: resource
+        for resource in LearningResource.objects.filter(
+            etl_source=etl_source,
+            resource_type=LearningResourceType.program.name,
+            readable_id__in=set(loaded_readable_ids),
+        )
+    }
+    deferred_child_programs = [
+        (resources_by_readable_id[readable_id], child_programs_data)
+        for readable_id, child_programs_data in child_programs_by_parent.items()
+        if child_programs_data and readable_id in resources_by_readable_id
+    ]
+    _create_child_program_relationships(deferred_child_programs)
+
+    for resource in resources_by_readable_id.values():
+        update_index(resource, newly_created=False)
+
+    return len(deferred_child_programs)
+
+
+def prune_resources(
+    etl_source: str,
+    resource_type: str,
+    keep_readable_ids: Iterable[str],
+    *,
+    protect_test_mode: bool = True,
+) -> int:
+    """
+    Unpublish resources of etl_source that are no longer in the upstream catalog.
+
+    This is the same sweep the `prune` loader configs do, but driven off the
+    extracted catalog instead of off what was loaded, so it can run before the
+    loads rather than after them. That matters when the loads are fanned out
+    across tasks: a task that is culled mid-run can no longer take live
+    resources down with it by simply failing to report them as loaded.
+
+    An empty keep set is treated as a failed extraction rather than as "the
+    catalog is empty", since unpublishing everything is not recoverable.
+
+    Args:
+        etl_source (str): the ETL source to prune
+        resource_type (str): the LearningResourceType to prune
+        keep_readable_ids (iterable of str): readable ids still in the catalog
+        protect_test_mode (bool): whether test_mode resources are left alone
+
+    Returns:
+        int: the number of resources unpublished
+    """
+    keep = set(keep_readable_ids)
+    if not keep:
+        log.error(
+            "No %s %ss to keep, skipping prune rather than unpublishing everything",
+            etl_source,
+            resource_type,
+        )
+        return 0
+
+    stale = LearningResource.objects.filter(
+        etl_source=etl_source, resource_type=resource_type
+    ).exclude(readable_id__in=keep)
+    if protect_test_mode:
+        stale = stale.exclude(test_mode=True)
+
+    pruned = 0
+    for learning_resource in stale:
+        learning_resource.published = False
+        learning_resource.save()
+        resource_unpublished_actions(learning_resource)
+        pruned += 1
+    if pruned:
+        log.info("Unpublished %d stale %s %ss", pruned, etl_source, resource_type)
+    return pruned
+
+
 def load_programs(
     etl_source: str, programs_data: Iterable[dict], *, config=ProgramLoaderConfig()
 ) -> list[LearningResource]:
@@ -890,18 +955,17 @@ def load_programs(
     PROGRAM_PROGRAMS or PROGRAM_COURSES based on child `display_mode`.
     """
     blocklist = load_course_blocklist()
-    duplicates = load_course_duplicates(etl_source)
 
     # Pass 1: load all programs and their course children
-    results: list[ProgramLoadResult] = []
-    deferred_child_programs = []
-    for program_data in programs_data:
-        result = load_program(program_data, blocklist, duplicates, config=config)
-        results.append(result)
-        if result.resource and result.child_programs_data:
-            deferred_child_programs.append(
-                (result.resource, result.child_programs_data)
-            )
+    results = [
+        load_program(program_data, blocklist, config=config)
+        for program_data in programs_data
+    ]
+    deferred_child_programs = [
+        (result.resource, result.child_programs_data)
+        for result in results
+        if result.resource and result.child_programs_data
+    ]
 
     # Pass 2: create child program relationships now that all programs exist
     _create_child_program_relationships(deferred_child_programs)

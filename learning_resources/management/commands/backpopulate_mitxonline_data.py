@@ -48,6 +48,9 @@ class Command(ConfirmDeleteMixin, TestResourceConfigurationMixin, BaseCommand):
             self.stdout.write(
                 f"Population of MITX Online data finished, took {total_seconds} seconds"
             )
+            # the ETL now fans out into chunked subtasks, so the chain reports
+            # the catalog it ended up with rather than a per-run load count
             self.stdout.write(
-                f"Populated {count} resources. See celery logs for details."
+                f"MITx Online now has {count} published resources. "
+                "See celery logs for details."
             )

@@ -227,24 +227,6 @@ def load_course_blocklist():
     return blocklist
 
 
-def load_course_duplicates(etl_source: str) -> list:
-    """
-    Get a list of blocklisted course ids for an ETL pipeline source
-    Args:
-        etl_source (string): the ETL source for which course duplicates are needed
-    Returns:
-        list of lists of courses which are duplicates of each other
-    """
-    duplicates_url = settings.DUPLICATE_COURSES_URL
-    if duplicates_url is not None:
-        response = requests.get(duplicates_url, timeout=settings.REQUESTS_TIMEOUT)
-        response.raise_for_status()
-        duplicates_for_all_sources = yaml.safe_load(response.text)
-        if etl_source in duplicates_for_all_sources:
-            return duplicates_for_all_sources[etl_source]
-    return []
-
-
 @retry(
     ClientError, tries=settings.MAX_S3_GET_ITERATIONS, delay=1, backoff=2, jitter=(1, 5)
 )

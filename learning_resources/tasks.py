@@ -15,7 +15,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from learning_resources.constants import LearningResourceType
-from learning_resources.etl import loaders, ovs, pipelines, youtube
+from learning_resources.etl import loaders, mitxonline, ovs, pipelines, youtube
 from learning_resources.etl.canvas import (
     sync_canvas_archive,
 )
@@ -109,13 +109,148 @@ def get_mit_edx_data(
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
-@cooldown_task(wait_time=900)
-def get_mitxonline_data() -> int | None:
-    """Execute the MITX Online ETL pipeline"""
-    courses = pipelines.mitxonline_courses_etl()
-    programs = pipelines.mitxonline_programs_etl()
+def prune_mitxonline_data(
+    course_readable_ids: list[str], program_readable_ids: list[str]
+) -> int:
+    """
+    Unpublish MITx Online resources that are no longer in the upstream catalog.
+
+    This runs ahead of the loads rather than after them, so a load task that is
+    culled mid-run cannot take live resources down with it by failing to report
+    them as loaded. The catalog listing already says which resources MITx
+    Online still offers, so the sweep never needs to wait on the fan-out.
+
+    Args:
+        course_readable_ids (list of str): readable ids of every live course
+        program_readable_ids (list of str): readable ids of every live program
+
+    Returns:
+        int: the number of resources unpublished
+    """
+    return loaders.prune_resources(
+        ETLSource.mitxonline.name,
+        LearningResourceType.course.name,
+        course_readable_ids,
+    ) + loaders.prune_resources(
+        ETLSource.mitxonline.name,
+        LearningResourceType.program.name,
+        program_readable_ids,
+        # programs have never been protected from pruning by test_mode; keeping
+        # that as-is so this refactor doesn't quietly change what gets swept
+        protect_test_mode=False,
+    )
+
+
+@app.task(acks_late=True, reject_on_worker_lost=True)
+def load_mitxonline_courses(readable_ids: list[str]) -> int:
+    """
+    Load one chunk of the MITx Online course catalog.
+
+    Args:
+        readable_ids (list of str): readable ids of the courses to load
+
+    Returns:
+        int: the number of courses loaded
+    """
+    return len(pipelines.mitxonline_courses_etl(readable_ids))
+
+
+@app.task(acks_late=True, reject_on_worker_lost=True)
+def load_mitxonline_programs(readable_ids: list[str]) -> int:
+    """
+    Load one chunk of the MITx Online program catalog.
+
+    Args:
+        readable_ids (list of str): readable ids of the programs to load
+
+    Returns:
+        int: the number of programs loaded
+    """
+    return len(pipelines.mitxonline_programs_etl(readable_ids))
+
+
+@app.task(acks_late=True, reject_on_worker_lost=True)
+def finish_mitxonline_data() -> int:
+    """
+    Link MITx Online child programs and index them, once every program exists.
+
+    The program load tasks deliberately leave both undone: a child-program
+    relationship can only be resolved after all the programs it points at have
+    been loaded, and indexing a program before its relationships exist would
+    put an incomplete document in the search index.
+
+    Returns:
+        int: the number of published MITx Online resources
+    """
+    pipelines.mitxonline_program_children_etl()
     clear_views_cache()
-    return len(courses) + len(programs)
+    return LearningResource.objects.filter(
+        etl_source=ETLSource.mitxonline.name, published=True
+    ).count()
+
+
+@app.task(bind=True, acks_late=True, reject_on_worker_lost=True)
+@cooldown_task(wait_time=900)
+def get_mitxonline_data(self, *, chunk_size: int | None = None) -> int | None:
+    """
+    Execute the MITX Online ETL pipeline as independently restartable subtasks.
+
+    This task only enumerates the catalog and fans the work out, so it holds no
+    long-running work of its own. Each chunk re-fetches the slice of the
+    catalog it needs, which costs extra requests against an API that is not
+    rate limited but means a culled pod only ever costs that one chunk.
+
+    The chain enforces the two orderings the loaders require: courses before
+    programs, because programs link to their courses with
+    CourseLoaderConfig(fetch_only=True) and will silently skip a course that
+    does not exist yet; and every program before the child-program linking.
+
+    Args:
+        chunk_size (int or None): how many resources to load per subtask
+
+    Returns:
+        int | None: the number of published resources, or None if the call was
+            skipped due to rate limiting or the catalog came back empty.
+    """
+    chunk_size = chunk_size or settings.LEARNING_COURSE_ITERATOR_CHUNK_SIZE
+
+    courses = mitxonline.extract_courses()
+    programs = mitxonline.extract_programs()
+    course_readable_ids = mitxonline.loadable_course_readable_ids(courses)
+    program_readable_ids = [program["readable_id"] for program in programs]
+
+    if not course_readable_ids:
+        # an empty catalog would sweep every MITx Online course away, so treat
+        # it as a failed extraction rather than as "MITx Online offers nothing"
+        log.error("No MITx Online courses extracted, skipping run")
+        return None
+
+    log.info(
+        "Queueing %d MITx Online courses and %d programs in chunks of %d",
+        len(course_readable_ids),
+        len(program_readable_ids),
+        chunk_size,
+    )
+    etl_steps = [
+        prune_mitxonline_data.si(course_readable_ids, program_readable_ids),
+        celery.group(
+            [
+                load_mitxonline_courses.si(ids)
+                for ids in chunks(course_readable_ids, chunk_size=chunk_size)
+            ]
+        ),
+    ]
+    if program_readable_ids:
+        etl_steps.append(
+            celery.group(
+                [
+                    load_mitxonline_programs.si(ids)
+                    for ids in chunks(program_readable_ids, chunk_size=chunk_size)
+                ]
+            )
+        )
+    etl_steps.append(finish_mitxonline_data.si())
+    return self.replace(celery.chain(*etl_steps))
 
 
 @app.task

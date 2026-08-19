@@ -211,41 +211,6 @@ def test_load_blocklist_cached(cached_ids, settings, mocker):
     mock_cache.set.assert_not_called()
 
 
-@pytest.mark.parametrize("url", [None, "http://test.me"])
-@pytest.mark.parametrize("etl_source", ["mitx", "other"])
-def test_load_course_duplicates(url, etl_source, settings, mocker):
-    """Test that a list of duplicate course id sets is returned if a URL is set"""
-    settings.DUPLICATE_COURSES_URL = url
-    file_content = """
----
-mitx:
-  - duplicate_course_ids:
-      - MITx+1
-      - MITx+2
-      - MITx+3
-    course_id: MITx+1
-"""
-
-    mock_request = mocker.patch(
-        "requests.get", autospec=True, return_value=mocker.Mock(text=file_content)
-    )
-    duplicates = utils.load_course_duplicates(etl_source)
-    if url is None:
-        mock_request.assert_not_called()
-        assert duplicates == []
-    elif etl_source == "other":
-        mock_request.assert_called_once_with(url, timeout=settings.REQUESTS_TIMEOUT)
-        assert duplicates == []
-    else:
-        mock_request.assert_called_once_with(url, timeout=settings.REQUESTS_TIMEOUT)
-        assert duplicates == [
-            {
-                "duplicate_course_ids": ["MITx+1", "MITx+2", "MITx+3"],
-                "course_id": "MITx+1",
-            }
-        ]
-
-
 def test_safe_load_bad_json(mocker):
     """Test that safe_load_json returns an empty dict for invalid JSON"""
     mock_logger = mocker.patch("learning_resources.utils.log.exception")

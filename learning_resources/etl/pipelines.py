@@ -54,21 +54,106 @@ mit_edx_programs_etl = compose(
     mit_edx_programs.extract,
 )
 
-mitxonline_programs_etl = compose(
-    load_programs(
+# The MITx Online pipelines run one chunk of the catalog at a time so that a
+# culled pod only costs that chunk. Neither prunes: the catalog-wide sweep is
+# driven off the extracted listing before the chunks are queued (see
+# learning_resources.tasks.get_mitxonline_data), since a chunk cannot tell
+# which of the other chunks' resources are still live.
+MITXONLINE_COURSE_LOADER_CONFIG = CourseLoaderConfig(prune=True)
+MITXONLINE_PROGRAM_LOADER_CONFIG = ProgramLoaderConfig(
+    courses=CourseLoaderConfig(fetch_only=True), prune=True
+)
+
+
+def mitxonline_courses_etl(readable_ids: list[str]) -> list[LearningResource]:
+    """
+    Run the MITx Online course ETL for one chunk of the catalog.
+
+    Failures are isolated per course: these chunks run as a celery group that
+    the program group chains off, and one failed task poisons the chord header
+    so the programs would never run.
+
+    Args:
+        readable_ids (list of str): readable ids of the courses to load
+
+    Returns:
+        list of LearningResource: the loaded courses
+    """
+    if not readable_ids:
+        return []
+    blocklist = loaders.load_course_blocklist()
+
+    courses = []
+    for course_data in mitxonline.transform_courses(
+        mitxonline.extract_courses_by_readable_ids(readable_ids)
+    ):
+        readable_id = course_data.get("readable_id")
+        try:
+            course = loaders.load_course(
+                course_data,
+                blocklist,
+                config=MITXONLINE_COURSE_LOADER_CONFIG,
+            )
+        except Exception:
+            log.exception("Failed to load MITx Online course %s", readable_id)
+            continue
+        if course is not None:
+            courses.append(course)
+    return courses
+
+
+def mitxonline_programs_etl(readable_ids: list[str]) -> list[LearningResource]:
+    """
+    Run the MITx Online program ETL for one chunk of the catalog.
+
+    Child-program relationships and search indexing are deferred to
+    mitxonline_program_children_etl, which runs once every program exists.
+    Failures are isolated per program for the same reason as in
+    mitxonline_courses_etl.
+
+    Args:
+        readable_ids (list of str): readable ids of the programs to load
+
+    Returns:
+        list of LearningResource: the loaded programs
+    """
+    if not readable_ids:
+        return []
+    blocklist = loaders.load_course_blocklist()
+
+    programs = []
+    for program_data in mitxonline.transform_programs(
+        mitxonline.extract_programs(), readable_ids
+    ):
+        readable_id = program_data.get("readable_id")
+        try:
+            result = loaders.load_program(
+                program_data,
+                blocklist,
+                config=MITXONLINE_PROGRAM_LOADER_CONFIG,
+            )
+        except Exception:
+            log.exception("Failed to load MITx Online program %s", readable_id)
+            continue
+        if result.resource is not None:
+            programs.append(result.resource)
+    return programs
+
+
+def mitxonline_program_children_etl() -> int:
+    """
+    Link MITx Online child programs and index programs, after all are loaded.
+
+    Returns:
+        int: the number of parent programs whose children were linked
+    """
+    programs = mitxonline.extract_programs()
+    return loaders.load_program_children(
         ETLSource.mitxonline.name,
-        config=ProgramLoaderConfig(
-            courses=CourseLoaderConfig(fetch_only=True), prune=True
-        ),
-    ),
-    mitxonline.transform_programs,
-    mitxonline.extract_programs,
-)
-mitxonline_courses_etl = compose(
-    load_courses(ETLSource.mitxonline.name, config=CourseLoaderConfig(prune=True)),
-    mitxonline.transform_courses,
-    mitxonline.extract_courses,
-)
+        mitxonline.transform_child_programs(programs),
+        [program["readable_id"] for program in programs],
+    )
+
 
 oll_etl = compose(
     load_courses(ETLSource.oll.name, config=CourseLoaderConfig(prune=True)),
@@ -135,7 +220,7 @@ def ocw_courses_etl(
             )
             if data:
                 ocw_course_data = ocw.transform_course(data)
-                course_resource = loaders.load_course(ocw_course_data, [], [])
+                course_resource = loaders.load_course(ocw_course_data, [])
                 course_run = course_resource.runs.filter(published=True).first()
 
                 if course_resource and not skip_content_files:

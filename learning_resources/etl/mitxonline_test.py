@@ -28,14 +28,17 @@ from learning_resources.etl.mitxonline import (
     _transform_image,
     _transform_run,
     extract_courses,
+    extract_courses_by_readable_ids,
     extract_programs,
     get_child_positions,
     get_course_ids_from_req_tree,
     get_program_ids_from_req_tree,
     is_fully_enrollable,
+    loadable_course_readable_ids,
     parse_certificate_type,
     parse_page_attribute,
     parse_prices,
+    transform_child_programs,
     transform_courses,
     transform_programs,
     transform_topics,
@@ -509,6 +512,87 @@ def test_transform_programs_stamps_position_on_child_programs(mocker, settings):
     by_readable = {cp["readable_id"]: cp for cp in parent["child_programs"]}
     assert by_readable["child-as-course"]["position"] == 1
     assert by_readable["child-as-program"]["position"] is None
+
+
+def test_transform_programs_only_yields_requested_readable_ids(mocker, settings):
+    """
+    A chunked run transforms only its own programs, but still needs the whole
+    catalog passed in so a req_tree can resolve any program it references
+    """
+    settings.MITX_ONLINE_BASE_URL = "https://mitxonline.mit.edu"
+    settings.APP_BASE_URL = "https://learn.example.test/"
+    mocker.patch(
+        "learning_resources.etl.mitxonline._fetch_courses_by_ids",
+        return_value=[],
+    )
+    with open("./test_json/mitxonline_child_program_positions.json") as f:  # noqa: PTH123
+        programs = json.load(f)
+
+    result = list(transform_programs(programs, ["parent"]))
+
+    assert [program["readable_id"] for program in result] == ["parent"]
+    # the sliced-out children are still resolved, so the parent keeps its links
+    assert {cp["readable_id"] for cp in result[0]["child_programs"]} == {
+        "child-as-course",
+        "child-as-program",
+    }
+
+
+def test_transform_child_programs_matches_transform_programs(mocker, settings):
+    """
+    The cheap linking path must derive the same child data as the full
+    transform, without paying for the per-course API fetches
+    """
+    settings.MITX_ONLINE_BASE_URL = "https://mitxonline.mit.edu"
+    settings.APP_BASE_URL = "https://learn.example.test/"
+    mock_fetch_courses = mocker.patch(
+        "learning_resources.etl.mitxonline._fetch_courses_by_ids",
+        return_value=[],
+    )
+    with open("./test_json/mitxonline_child_program_positions.json") as f:  # noqa: PTH123
+        programs = json.load(f)
+    expected = {
+        program["readable_id"]: program["child_programs"]
+        for program in transform_programs(programs)
+        if program["child_programs"]
+    }
+    mock_fetch_courses.reset_mock()
+
+    assert transform_child_programs(programs) == expected
+    mock_fetch_courses.assert_not_called()
+
+
+def test_loadable_course_readable_ids_drops_excluded_courses():
+    """
+    The prune keep set must drop the same courses transform_courses does, or an
+    excluded course would survive a prune it fails today
+    """
+    courses = [
+        {"readable_id": "course-v1:MITx+1", "title": "Real Course"},
+        {"readable_id": "course-v1:MITx+2", "title": "Something proctored exam"},
+    ]
+
+    assert loadable_course_readable_ids(courses) == ["course-v1:MITx+1"]
+
+
+def test_extract_courses_by_readable_ids(mocker):
+    """A chunk should re-fetch the catalog and keep only its own slice"""
+    catalog = [
+        {"readable_id": "course-v1:MITx+1"},
+        {"readable_id": "course-v1:MITx+2"},
+        {"readable_id": "course-v1:MITx+3"},
+    ]
+    mock_extract = mocker.patch(
+        "learning_resources.etl.mitxonline.extract_courses", return_value=catalog
+    )
+
+    result = extract_courses_by_readable_ids(["course-v1:MITx+1", "course-v1:MITx+3"])
+
+    assert result == [catalog[0], catalog[2]]
+    # an empty chunk must not hit the API at all
+    mock_extract.reset_mock()
+    assert extract_courses_by_readable_ids([]) == []
+    mock_extract.assert_not_called()
 
 
 @pytest.mark.parametrize(

@@ -207,6 +207,59 @@ def extract_courses():
     return []
 
 
+def is_excluded_course(course: dict) -> bool:
+    """
+    Return True if a course should never be loaded (e.g. proctored exams).
+
+    Args:
+        course (dict): extracted MITx Online course data
+
+    Returns:
+        bool: whether the course is excluded from the catalog
+    """
+    return bool(re.search(EXCLUDE_REGEX, course["title"], re.IGNORECASE))
+
+
+def loadable_course_readable_ids(courses: list[dict]) -> list[str]:
+    """
+    Return the readable ids of the extracted courses that will actually be loaded.
+
+    This is the catalog's own answer to "which courses does MITx Online still
+    offer", so it can be used to prune stale resources without waiting on the
+    loads themselves. It has to apply the same exclusion filter transform_courses
+    does, otherwise excluded courses would survive a prune they fail today.
+
+    Args:
+        courses (list of dict): extracted MITx Online course data
+
+    Returns:
+        list of str: readable ids of the courses that survive exclusion
+    """
+    return [
+        course["readable_id"] for course in courses if not is_excluded_course(course)
+    ]
+
+
+def extract_courses_by_readable_ids(readable_ids: list[str]) -> list[dict]:
+    """
+    Extract only the named courses from the MITx Online catalog.
+
+    The catalog listing is re-fetched rather than handed down from the task that
+    enumerated it: the API is not rate limited, and refetching keeps each chunk
+    of the ETL independently restartable after a pod is culled.
+
+    Args:
+        readable_ids (list of str): readable ids of the courses to extract
+
+    Returns:
+        list of dict: extracted course data for the requested courses
+    """
+    if not readable_ids:
+        return []
+    wanted = set(readable_ids)
+    return [course for course in extract_courses() if course["readable_id"] in wanted]
+
+
 def parse_prices(
     parent_data: dict, mode_data: list, *, fully_enrollable: bool = True
 ) -> list[dict]:
@@ -465,7 +518,7 @@ def transform_courses(courses):
     return [
         _transform_course(course)
         for course in courses
-        if not re.search(EXCLUDE_REGEX, course["title"], re.IGNORECASE)
+        if not is_excluded_course(course)
     ]
 
 
@@ -673,12 +726,79 @@ def _fetch_courses_by_ids(course_ids):
     return []
 
 
-def transform_programs(programs: list[dict]) -> Iterator[dict]:
+def _transform_child_programs(
+    program: dict,
+    programs_by_id: dict[int, dict],
+    child_positions: dict[tuple[str, int], int],
+) -> list[dict]:
+    """
+    Return the child program data for a single program's req_tree.
+
+    Args:
+        program (dict): the extracted program data
+        programs_by_id (dict): mapping of program id to extracted program data
+        child_positions (dict): (resource_type, id) -> position map for the program
+
+    Returns:
+        list of dict: readable_id/display_mode/position for each child program
+    """
+    child_programs = []
+    for pid in get_program_ids_from_req_tree(program.get("req_tree", [])):
+        if pid not in programs_by_id:
+            log.warning(
+                "Program %s references missing child program id=%s in req_tree",
+                program.get("readable_id"),
+                pid,
+            )
+            continue
+        child_programs.append(
+            {
+                "readable_id": programs_by_id[pid]["readable_id"],
+                "display_mode": programs_by_id[pid].get("display_mode"),
+                "position": child_positions.get(("program", pid)),
+            }
+        )
+    return child_programs
+
+
+def transform_child_programs(programs: list[dict]) -> dict[str, list[dict]]:
+    """
+    Map each program's readable id to its child program data.
+
+    This is the child-program half of transform_programs, without the
+    per-course API fetches, so the pass-2 linking step can re-derive what it
+    needs cheaply instead of receiving it from the program load tasks.
+
+    Args:
+        programs (list of dict): the full extracted MITx Online program catalog
+
+    Returns:
+        dict: parent readable id -> child program data, for parents that have any
+    """
+    programs_by_id = {p["id"]: p for p in programs}
+    child_programs_by_parent = {}
+    for program in programs:
+        child_programs = _transform_child_programs(
+            program,
+            programs_by_id,
+            get_child_positions(program.get("req_tree", []), programs_by_id),
+        )
+        if child_programs:
+            child_programs_by_parent[program["readable_id"]] = child_programs
+    return child_programs_by_parent
+
+
+def transform_programs(
+    programs: list[dict], readable_ids: list[str] | None = None
+) -> Iterator[dict]:
     """
     Transform the MITX Online catalog data
 
     Args:
         programs (list of dict): the MITX Online programs data
+        readable_ids (list of str or None): if given, transform only these
+            programs. The full program list is still required, since a
+            req_tree may reference any program in the catalog.
 
     Yields:
         Iterator[dict]: transformed program data for each program
@@ -686,7 +806,10 @@ def transform_programs(programs: list[dict]) -> Iterator[dict]:
     """
     # normalize the MITx Online data
     programs_by_id = {p["id"]: p for p in programs}
+    wanted = set(readable_ids) if readable_ids is not None else None
     for program in programs:
+        if wanted is not None and program["readable_id"] not in wanted:
+            continue
         child_positions = get_child_positions(
             program.get("req_tree", []), programs_by_id
         )
@@ -695,11 +818,7 @@ def transform_programs(programs: list[dict]) -> Iterator[dict]:
         )
         mitx_id_by_readable = {c["readable_id"]: c["id"] for c in fetched_courses}
         courses = transform_courses(
-            [
-                course
-                for course in fetched_courses
-                if not re.search(EXCLUDE_REGEX, course["title"], re.IGNORECASE)
-            ]
+            [course for course in fetched_courses if not is_excluded_course(course)]
         )
         for course in courses:
             mitx_id = mitx_id_by_readable.get(course["readable_id"])
@@ -747,23 +866,9 @@ def transform_programs(programs: list[dict]) -> Iterator[dict]:
             "min_weekly_hours": parse_string_to_int(program.get("min_weekly_hours")),
             "max_weekly_hours": parse_string_to_int(program.get("max_weekly_hours")),
         }
-        child_program_ids = get_program_ids_from_req_tree(program.get("req_tree", []))
-        child_programs = []
-        for pid in child_program_ids:
-            if pid not in programs_by_id:
-                log.warning(
-                    "Program %s references missing child program id=%s in req_tree",
-                    program.get("readable_id"),
-                    pid,
-                )
-                continue
-            child_programs.append(
-                {
-                    "readable_id": programs_by_id[pid]["readable_id"],
-                    "display_mode": programs_by_id[pid].get("display_mode"),
-                    "position": child_positions.get(("program", pid)),
-                }
-            )
+        child_programs = _transform_child_programs(
+            program, programs_by_id, child_positions
+        )
         has_certification = parse_certification(OFFERED_BY["code"], [run])
         strip_enrollment_modes([run])
         yield {

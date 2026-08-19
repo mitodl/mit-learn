@@ -76,7 +76,9 @@ def test_cache_is_cleared_after_task_run(mocker, mocked_celery):
     tasks.get_mit_edx_data.delay()
     tasks.update_next_start_date_and_prices.delay()
     tasks.get_mit_edx_data.delay()
-    tasks.get_mitxonline_data.delay()
+    # get_mitxonline_data is absent on purpose: like get_youtube_data it only
+    # queues the fan-out, and finish_mitxonline_data does the invalidating
+    tasks.finish_mitxonline_data.delay()
     tasks.get_oll_data.delay()
     tasks.get_xpro_data.delay()
     tasks.get_podcast_data.delay()
@@ -102,12 +104,184 @@ def test_get_mit_edx_data_valid(mocker):
     mock_pipelines.mit_edx_programs_etl.assert_called_once_with(None)
 
 
-def test_get_mitxonline_data(mocker):
-    """Verify that the get_mitxonline_data invokes the MITx Online ETL pipeline"""
+@pytest.fixture
+def mitxonline_catalog(mocker):
+    """Mock the MITx Online catalog listing with 3 courses and 2 programs"""
+    mocker.patch(
+        "learning_resources.tasks.mitxonline.extract_courses",
+        return_value=[
+            {"readable_id": "course-v1:MITx+1", "title": "One"},
+            {"readable_id": "course-v1:MITx+2", "title": "Two"},
+            # excluded by transform, so it must not survive the prune either
+            {"readable_id": "course-v1:MITx+3", "title": "Three PROCTORED EXAM"},
+        ],
+    )
+    return mocker.patch(
+        "learning_resources.tasks.mitxonline.extract_programs",
+        return_value=[
+            {"readable_id": "program-v1:MITx+A"},
+            {"readable_id": "program-v1:MITx+B"},
+        ],
+    )
+
+
+def test_get_mitxonline_data(mocker, mocked_celery, mitxonline_catalog):
+    """
+    get_mitxonline_data should fan the catalog out into chunked subtasks rather
+    than loading it inline, so a culled pod only costs one chunk
+    """
+    prune_mock = mocker.patch("learning_resources.tasks.prune_mitxonline_data.si")
+    courses_mock = mocker.patch("learning_resources.tasks.load_mitxonline_courses.si")
+    programs_mock = mocker.patch("learning_resources.tasks.load_mitxonline_programs.si")
+    finish_mock = mocker.patch("learning_resources.tasks.finish_mitxonline_data.si")
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        tasks.get_mitxonline_data.delay(chunk_size=2)
+
+    # the proctored exam is excluded from the keep set, matching what the
+    # transform would have dropped, so the prune still sweeps it
+    prune_mock.assert_called_once_with(
+        ["course-v1:MITx+1", "course-v1:MITx+2"],
+        ["program-v1:MITx+A", "program-v1:MITx+B"],
+    )
+    assert [call.args[0] for call in courses_mock.call_args_list] == [
+        ["course-v1:MITx+1", "course-v1:MITx+2"]
+    ]
+    assert [call.args[0] for call in programs_mock.call_args_list] == [
+        ["program-v1:MITx+A", "program-v1:MITx+B"]
+    ]
+    assert finish_mock.call_count == 1
+
+    # the chain enforces prune -> courses -> programs -> link; courses must
+    # finish before programs because programs link courses with fetch_only
+    chain_steps = mocked_celery.chain.call_args.args
+    assert chain_steps[0] == prune_mock.return_value
+    assert chain_steps[-1] == finish_mock.return_value
+    assert mocked_celery.group.call_count == 2
+    assert mocked_celery.replace.call_count == 1
+
+
+def test_get_mitxonline_data_empty_catalog(mocker, mocked_celery):
+    """
+    An empty course listing should queue nothing and prune nothing, rather than
+    reading as "MITx Online offers no courses" and unpublishing the catalog
+    """
+    mocker.patch("learning_resources.tasks.mitxonline.extract_courses", return_value=[])
+    mocker.patch(
+        "learning_resources.tasks.mitxonline.extract_programs", return_value=[]
+    )
+    prune_mock = mocker.patch("learning_resources.tasks.prune_mitxonline_data.si")
+
+    assert tasks.get_mitxonline_data.delay().get() is None
+
+    assert prune_mock.call_count == 0
+    assert mocked_celery.group.call_count == 0
+    assert mocked_celery.replace.call_count == 0
+
+
+def test_get_mitxonline_data_no_programs(mocker, mocked_celery):
+    """A catalog with no programs should still load its courses"""
+    mocker.patch(
+        "learning_resources.tasks.mitxonline.extract_courses",
+        return_value=[{"readable_id": "course-v1:MITx+1", "title": "One"}],
+    )
+    mocker.patch(
+        "learning_resources.tasks.mitxonline.extract_programs", return_value=[]
+    )
+    programs_mock = mocker.patch("learning_resources.tasks.load_mitxonline_programs.si")
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        tasks.get_mitxonline_data.delay()
+
+    assert programs_mock.call_count == 0
+    # only the course group; no empty program group in the chain
+    assert mocked_celery.group.call_count == 1
+
+
+def test_load_mitxonline_chunk_tasks(mocker):
+    """The chunk tasks should delegate to their pipelines and report counts"""
     mock_pipelines = mocker.patch("learning_resources.tasks.pipelines")
-    tasks.get_mitxonline_data.delay()
-    mock_pipelines.mitxonline_programs_etl.assert_called_once_with()
-    mock_pipelines.mitxonline_courses_etl.assert_called_once_with()
+    mock_pipelines.mitxonline_courses_etl.return_value = [1, 2]
+    mock_pipelines.mitxonline_programs_etl.return_value = [1]
+
+    assert tasks.load_mitxonline_courses.delay(["a", "b"]).get() == 2
+    assert tasks.load_mitxonline_programs.delay(["c"]).get() == 1
+
+    mock_pipelines.mitxonline_courses_etl.assert_called_once_with(["a", "b"])
+    mock_pipelines.mitxonline_programs_etl.assert_called_once_with(["c"])
+
+
+def test_prune_mitxonline_data(mocker):
+    """
+    prune_mitxonline_data should unpublish resources missing from the catalog,
+    driven by the listing rather than by what the load tasks reported
+    """
+    mock_unpublished_actions = mocker.patch(
+        "learning_resources.etl.loaders.resource_unpublished_actions"
+    )
+    live_course, stale_course = (
+        LearningResourceFactory.create(
+            readable_id=readable_id,
+            etl_source=ETLSource.mitxonline.name,
+            published=True,
+            resource_type=LearningResourceType.course.name,
+        )
+        for readable_id in ("course-v1:MITx+1", "course-v1:MITx+gone")
+    )
+    live_program, stale_program = (
+        LearningResourceFactory.create(
+            readable_id=readable_id,
+            etl_source=ETLSource.mitxonline.name,
+            published=True,
+            resource_type=LearningResourceType.program.name,
+        )
+        for readable_id in ("program-v1:MITx+A", "program-v1:MITx+gone")
+    )
+    other_source = LearningResourceFactory.create(
+        readable_id="course-v1:MITx+gone",
+        etl_source=ETLSource.mit_edx.name,
+        published=True,
+        resource_type=LearningResourceType.course.name,
+    )
+
+    pruned = tasks.prune_mitxonline_data.delay(
+        ["course-v1:MITx+1"], ["program-v1:MITx+A"]
+    ).get()
+
+    assert pruned == 2
+    assert not LearningResource.objects.get(id=stale_course.id).published
+    assert not LearningResource.objects.get(id=stale_program.id).published
+    assert LearningResource.objects.get(id=live_course.id).published
+    assert LearningResource.objects.get(id=live_program.id).published
+    # another source's catalog is not this sweep's business
+    assert LearningResource.objects.get(id=other_source.id).published
+    assert mock_unpublished_actions.call_count == 2
+
+
+def test_finish_mitxonline_data(mocker):
+    """
+    finish_mitxonline_data should link child programs and invalidate the cache
+    once every program exists
+    """
+    mock_pipelines = mocker.patch("learning_resources.tasks.pipelines")
+    mock_clear_views_cache = mocker.patch("learning_resources.tasks.clear_views_cache")
+    LearningResourceFactory.create(
+        readable_id="program-v1:MITx+A",
+        etl_source=ETLSource.mitxonline.name,
+        published=True,
+        resource_type=LearningResourceType.program.name,
+    )
+    LearningResourceFactory.create(
+        readable_id="course-v1:MITx+gone",
+        etl_source=ETLSource.mitxonline.name,
+        published=False,
+        resource_type=LearningResourceType.course.name,
+    )
+
+    assert tasks.finish_mitxonline_data.delay().get() == 1
+
+    mock_pipelines.mitxonline_program_children_etl.assert_called_once_with()
+    assert mock_clear_views_cache.call_count == 1
 
 
 def test_get_oll_data(mocker):
