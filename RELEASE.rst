@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.77.8
+Version 0.77.8 (Released August 19, 2026)
 --------------
 
 - Batch the PostHog view-event loader instead of querying per event (#3785)
