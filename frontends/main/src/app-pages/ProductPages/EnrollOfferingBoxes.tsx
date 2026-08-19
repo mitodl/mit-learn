@@ -21,7 +21,7 @@ type EnrollOfferingBoxesProps = {
   isError: boolean
   /** Top-right plain price for the certificate card. */
   price: React.ReactNode
-  /** Render that price one step smaller, for one too wide to sit beside the title. */
+  /** Render that price at the title's size, for one too wide to sit beside the title at h4. */
   compactPrice?: boolean
   /** Full-width price presentation; suppresses `price` (program savings only). */
   priceBlock?: React.ReactNode

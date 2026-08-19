@@ -115,8 +115,9 @@ const TrackSubtitle = styled.div(({ theme }) => ({
 
 const PriceContainer = styled.div<{ $compact?: boolean }>(
   ({ theme, $compact }) => ({
-    ...($compact ? theme.typography.h5 : theme.typography.h4),
-    // Match TrackTitle's line height so the price does not set the row's.
+    ...($compact ? theme.typography.subtitle1 : theme.typography.h4),
+    // Match TrackTitle's line height so the price does not set the row's. A
+    // no-op for subtitle1, which already has it; h4 would otherwise add 10px.
     lineHeight: theme.typography.subtitle1.lineHeight,
     color: theme.custom.colors.darkGray2,
     whiteSpace: "nowrap",
@@ -180,11 +181,12 @@ type TrackCardProps = {
   /** Optional note between the header and the feature list. */
   note?: React.ReactNode
   /**
-   * Render the price one step down the heading scale. For prices too wide to
-   * sit beside the title otherwise — an advertised range is about half again as
-   * wide as a single price. Sizes the price element itself rather than nesting a
-   * smaller one inside it, which would leave the text on a line box struck for
-   * the larger size.
+   * Render the price at the title's own size (subtitle1, a weight lighter)
+   * instead of the h4 a single price gets. For advertised ranges, which are
+   * about half again as wide as a single price and do not fit beside the title
+   * at h4. Sizes the price element itself rather than nesting a smaller one
+   * inside it, which would leave the text on a line box struck for the larger
+   * size.
    */
   compactPrice?: boolean
   /** Optional full-width price block (e.g., savings). When provided, the top-right price is omitted. */
