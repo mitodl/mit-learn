@@ -19,6 +19,7 @@ from learning_resources.etl import loaders, ovs, pipelines, youtube
 from learning_resources.etl.canvas import (
     sync_canvas_archive,
 )
+from learning_resources.etl.canvas_utils import canvas_course_folder
 from learning_resources.etl.constants import (
     MARKETING_PAGE_FILE_TYPE,
     RESOURCE_FILE_ETL_SOURCES,
@@ -703,7 +704,7 @@ def summarize_unprocessed_content(
     return self.replace(summarizer_tasks)
 
 
-@app.task(acks_late=True)
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def ingest_canvas_course(archive_path, overwrite):
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     return sync_canvas_archive(bucket, archive_path, overwrite=overwrite)
@@ -722,15 +723,62 @@ def ingest_edx_run_archive(
     )
 
 
-@app.task(acks_late=True)
+def unpublish_removed_canvas_courses(course_folders: list[str]) -> int:
+    """
+    Unpublish and delete canvas courses that no longer have an archive in S3.
+
+    A canvas readable id is f"{course_folder}-{course_code}", so the archive's
+    S3 folder identifies its resource on its own - the same mapping the canvas
+    delete webhook uses to find a resource from a canvas course id. That means
+    the S3 listing already knows which courses are still offered and the sweep
+    doesn't have to wait on the imports to report back.
+
+    Args:
+        course_folders (list of str): folders of every archive currently in S3
+
+    Returns:
+        int: the number of stale courses deleted
+    """
+    if not course_folders:
+        log.error("No canvas archives listed, skipping stale course cleanup")
+        return 0
+
+    current_folders = set(course_folders)
+    stale_ids = [
+        resource_id
+        for resource_id, readable_id in LearningResource.objects.filter(
+            etl_source=ETLSource.canvas.name
+        ).values_list("id", "readable_id")
+        if readable_id.split("-", 1)[0] not in current_folders
+    ]
+    if not stale_ids:
+        log.info("No stale canvas courses to delete")
+        return 0
+
+    stale_courses = LearningResource.objects.filter(id__in=stale_ids)
+    stale_courses.update(test_mode=False, published=False)
+
+    for resource in stale_courses:
+        resource_unpublished_actions(resource)
+    log.info("Unpublished %d stale canvas courses", len(stale_ids))
+    return len(stale_ids)
+
+
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def sync_canvas_courses(canvas_course_ids=None, overwrite=False):  # noqa: FBT002
     """
-    Sync all canvas course files
+    Sync all canvas courses from the S3 bucket, queuing an ingestion task per course.
+
+    Each course is ingested by its own independent task; nothing waits on them,
+    so this returns as soon as the archives are queued.
 
     Args:
         canvas_course_ids (list or None): If set, sync only these canvas course
             ids. If None, sync every course and unpublish stale ones.
         overwrite (bool): Whether to overwrite existing content files
+
+    Returns:
+        int or None: the number of courses queued, or None if no archives were found
     """
 
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
@@ -741,7 +789,7 @@ def sync_canvas_courses(canvas_course_ids=None, overwrite=False):  # noqa: FBT00
 
     for archive in exports:
         key = archive.key
-        course_folder = key.lstrip(settings.CANVAS_COURSE_BUCKET_PREFIX).split("/")[0]
+        course_folder = canvas_course_folder(key)
         log.info("processing course folder %s", course_folder)
 
         if (
@@ -756,24 +804,23 @@ def sync_canvas_courses(canvas_course_ids=None, overwrite=False):  # noqa: FBT00
             )
         ):
             latest_archives[course_folder] = archive
-    canvas_readable_ids = []
 
-    for archive in latest_archives.values():
-        key = archive.key
-        log.info("Ingesting canvas course %s", key)
-        resource_readable_id = ingest_canvas_course(
-            key,
-            overwrite=overwrite,
-        )
-        canvas_readable_ids.append(resource_readable_id)
+    if not latest_archives:
+        # an empty listing would sweep every canvas course away, so treat it as
+        # a failed run rather than as "canvas offers nothing"
+        log.error("No canvas archives found under %s", s3_prefix)
+        return None
 
     if not canvas_course_ids:
-        stale_courses = LearningResource.objects.filter(
-            etl_source=ETLSource.canvas.name
-        ).exclude(readable_id__in=canvas_readable_ids)
-        stale_courses.update(test_mode=False, published=False)
-        [resource_unpublished_actions(resource) for resource in stale_courses]
-        stale_courses.delete()
+        # only a full run lists every archive; a run filtered to specific
+        # courses must not unpublish the rest. Sweeping before the fan-out
+        # means a culled import can't hold up (or lose) the cleanup.
+        unpublish_removed_canvas_courses(list(latest_archives.keys()))
+
+    log.info("Queueing %d canvas course archives", len(latest_archives))
+    for archive in latest_archives.values():
+        ingest_canvas_course.delay(archive.key, overwrite)
+    return len(latest_archives)
 
 
 @app.task(bind=True)
