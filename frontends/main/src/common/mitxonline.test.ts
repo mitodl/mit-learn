@@ -77,7 +77,7 @@ describe("formatPriceRange", () => {
 describe("formatResourcePrice", () => {
   test("prefers the advertised range over the product price", () => {
     expect(
-      formatResourcePrice({ min_price: 250, max_price: 1000 }, "1000.00"),
+      formatResourcePrice({ min_price: 250, max_price: 1000 }, "600.00"),
     ).toBe("$250 – $1,000")
   })
 

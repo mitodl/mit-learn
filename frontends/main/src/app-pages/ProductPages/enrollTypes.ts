@@ -18,6 +18,18 @@ export type EnrollAreaState =
   | { status: "none" }
 
 /**
+ * The financial aid state for a certificate card. `applied` reports an approved
+ * flexible price; `pending` reports that the user-scoped lookup answering that
+ * question is still in flight, which callers use to withhold the link rather
+ * than render the "apply" call to action at an already-approved user.
+ */
+export type FinancialAid = {
+  href: string
+  applied: boolean
+  pending: boolean
+}
+
+/**
  * What a product lets you enroll in right now — the ACTIONABLE offering, not
  * the raw enrollment modes (a paid path additionally requires a purchasable
  * product). Derived by courseRun.getCourseScenario (per selected run) and

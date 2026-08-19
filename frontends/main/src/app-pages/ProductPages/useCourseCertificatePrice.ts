@@ -10,10 +10,11 @@ import {
   mitxonlineLegacyUrl,
   formatResourcePrice,
 } from "@/common/mitxonline"
+import type { FinancialAid } from "./enrollTypes"
 
 type CourseCertificatePriceResult = {
   price: string | null
-  financialAid: { href: string; applied: boolean } | null
+  financialAid: FinancialAid | null
 }
 
 /**
@@ -42,17 +43,22 @@ export const useCourseCertificatePrice = (
     enabled: isAuthenticated && canPurchase && hasFinancialAid,
   })
 
-  if (!product?.price) return { price: null, financialAid: null }
-
   const financialAid = hasFinancialAid
     ? {
         href: mitxonlineLegacyUrl(financialAidUrl),
         applied: !!userFlexiblePrice.data?.product_flexible_price?.id,
+        // isLoading, not isPending: a disabled query stays pending forever, and
+        // this one is disabled for anonymous visitors, who are never approved
+        // and so have nothing to wait for.
+        pending: userFlexiblePrice.isLoading,
       }
     : null
 
+  // An advertised range displays even with no purchasable product, so the
+  // InfoBox agrees with MitxOnlineResourceCard for the same resource; without
+  // either a range or a product price there is nothing to show.
   return {
-    price: formatResourcePrice(course, product.price),
+    price: formatResourcePrice(course, product?.price || null),
     financialAid,
   }
 }

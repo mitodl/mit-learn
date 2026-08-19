@@ -405,7 +405,7 @@ describe("CourseEnrollArea — financial assistance link", () => {
       // real id, which is the only field the "approved" state keys off
       // (useCourseCertificatePrice: !!product_flexible_price?.id).
       flexiblePrice: () => makeFlexiblePrice(),
-      linkText: "Financial aid applied (visible at checkout)",
+      linkText: "Financial aid approved (visible at checkout)",
     },
   ])(
     "paidOnly course with financial_assistance_form_url shows link — $name",
@@ -485,7 +485,7 @@ describe("CourseEnrollArea — financial assistance link", () => {
 
     // Approved aid is surfaced as the text note, applied at checkout
     await screen.findByRole("link", {
-      name: "Financial aid applied (visible at checkout)",
+      name: "Financial aid approved (visible at checkout)",
     })
     // Full price shows; the flexible-price discount is not applied to the display
     expect(screen.getByText("$100")).toBeInTheDocument()
@@ -505,7 +505,7 @@ describe("CourseEnrollArea — advertised price range", () => {
 
   test("a course advertising a range shows it in place of the run's price", () => {
     setupAuth()
-    const run = makePaidRun(makeProduct({ price: "1000" }))
+    const run = makePaidRun(makeProduct({ price: "600" }))
     const course = makeCourse({
       next_run_id: run.id,
       courseruns: [run],
@@ -548,7 +548,7 @@ describe("CourseEnrollArea — advertised price range", () => {
     )
 
     await screen.findByRole("link", {
-      name: "Financial aid applied (visible at checkout)",
+      name: "Financial aid approved (visible at checkout)",
     })
     expect(screen.getByText("$250 – $1,000")).toBeInTheDocument()
   })

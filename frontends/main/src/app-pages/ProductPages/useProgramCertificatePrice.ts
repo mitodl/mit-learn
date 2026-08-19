@@ -3,6 +3,7 @@ import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import { productQueries } from "api/mitxonline-hooks/products"
 import { useUserIsAuthenticated } from "api/hooks/user"
 import type { PriceRange } from "@/common/mitxonline"
+import type { FinancialAid } from "./enrollTypes"
 import {
   formatResourcePrice,
   getEnrollmentType,
@@ -35,7 +36,7 @@ type ProgramCertificatePriceResult = {
    * it (see ProgramSavingsBlock); program-as-course display never does.
    */
   savings: ProgramSavings | null
-  financialAid: { href: string; applied: boolean } | null
+  financialAid: FinancialAid | null
 }
 
 const toNumericPrice = (value: unknown): number | null => {
@@ -76,16 +77,26 @@ export const useProgramCertificatePrice = (
       hasFinancialAid,
   })
 
-  if (!product?.price) {
-    return { price: null, savings: null, financialAid: null }
-  }
-
   const financialAid = hasFinancialAid
     ? {
         href: mitxonlineLegacyUrl(financialAidUrl!),
         applied: !!userFlexiblePrice.data?.product_flexible_price?.id,
+        // isLoading, not isPending: a disabled query stays pending forever, and
+        // this one is disabled for anonymous visitors, who are never approved
+        // and so have nothing to wait for.
+        pending: userFlexiblePrice.isLoading,
       }
     : null
+
+  // An advertised range displays even with no purchasable product, so the
+  // InfoBox agrees with MitxOnlineResourceCard for the same resource. Savings
+  // stay behind the product guard: there is nothing to have saved without a
+  // price you would actually pay.
+  const price = formatResourcePrice(program, product?.price || null)
+
+  if (!product?.price) {
+    return { price, savings: null, financialAid }
+  }
 
   const productAmount = toNumericPrice(product.price)
   const current =
@@ -103,11 +114,7 @@ export const useProgramCertificatePrice = (
         }
       : null
 
-  return {
-    price: formatResourcePrice(program, product.price),
-    savings,
-    financialAid,
-  }
+  return { price, savings, financialAid }
 }
 
 export type { ProgramSavings, ProgramCertificatePriceResult }

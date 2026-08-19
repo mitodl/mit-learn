@@ -116,6 +116,8 @@ const TrackSubtitle = styled.div(({ theme }) => ({
 const PriceContainer = styled.div<{ $compact?: boolean }>(
   ({ theme, $compact }) => ({
     ...($compact ? theme.typography.h5 : theme.typography.h4),
+    // Match TrackTitle's line height so the price does not set the row's.
+    lineHeight: theme.typography.subtitle1.lineHeight,
     color: theme.custom.colors.darkGray2,
     whiteSpace: "nowrap",
     // Stay right-aligned whether it sits beside the title or wraps below it.

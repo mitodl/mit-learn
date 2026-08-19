@@ -10,7 +10,7 @@ import {
   ChooseYourPath,
   FullRowCell,
 } from "./EnrollAreaParts"
-import type { EnrollAreaState, Offering } from "./enrollTypes"
+import type { EnrollAreaState, FinancialAid, Offering } from "./enrollTypes"
 
 type EnrollOfferingBoxesProps = {
   /** Actionable offering — drives which boxes render and the "both" layout. */
@@ -25,7 +25,7 @@ type EnrollOfferingBoxesProps = {
   compactPrice?: boolean
   /** Full-width price presentation; suppresses `price` (program savings only). */
   priceBlock?: React.ReactNode
-  financialAid: { href: string; applied: boolean } | null
+  financialAid: FinancialAid | null
   productNoun: "course" | "program"
   /** Course-only: show the "Certificate deadline passed" note in the free card. */
   certificateDeadlineNote?: boolean

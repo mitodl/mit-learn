@@ -53,7 +53,7 @@ describe("CertificateTrackCard", () => {
     {
       name: "applied (visible at checkout), when applied",
       applied: true,
-      linkText: "Financial aid applied (visible at checkout)",
+      linkText: "Financial aid approved (visible at checkout)",
     },
   ])(
     "renders financial aid link to the form — $name",
@@ -63,7 +63,7 @@ describe("CertificateTrackCard", () => {
         <CertificateTrackCard
           price={<span>$250</span>}
           productNoun="course"
-          financialAid={{ href, applied }}
+          financialAid={{ href, applied, pending: false }}
         />,
       )
       const link = screen.getByRole("link", { name: linkText })
@@ -71,6 +71,21 @@ describe("CertificateTrackCard", () => {
       expect(link).toHaveAttribute("href", href)
     },
   )
+
+  test("reserves the row without a link while approval is still loading", () => {
+    renderWithProviders(
+      <CertificateTrackCard
+        price={<span>$250</span>}
+        productNoun="course"
+        financialAid={{
+          href: "https://example.com/financial-aid",
+          applied: false,
+          pending: true,
+        }}
+      />,
+    )
+    expect(screen.queryByRole("link", { name: /financial aid/i })).toBeNull()
+  })
 
   test("does not render a financial aid link when financialAid is not provided", () => {
     renderWithProviders(
