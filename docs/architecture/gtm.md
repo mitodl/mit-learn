@@ -1,5 +1,5 @@
 ---
-parent: How-To
+parent: Architecture
 nav_order: 2
 ---
 
