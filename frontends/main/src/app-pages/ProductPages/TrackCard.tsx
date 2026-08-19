@@ -53,11 +53,26 @@ const CardBody = styled.div<{ $variant: CardVariant; $fill?: boolean }>(
   }),
 )
 
-const CardHeader = styled.div({
+const CardHeader = styled.div<{ $hasAside?: boolean }>(({ $hasAside }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
-  gap: "8px",
+  // The aside belongs to the title, not the subtitle, so it sits tight under
+  // the title row (see TitleGroup) and the subtitle gets a wider break below it
+  // than the 8px that separates the header's rows when there is no aside.
+  gap: $hasAside ? "16px" : "8px",
+  width: "100%",
+}))
+
+/**
+ * The title row plus its optional aside, grouped so the aside reads as a
+ * continuation of the title rather than as another header row.
+ */
+const TitleGroup = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: "4px",
   width: "100%",
 })
 
@@ -172,6 +187,8 @@ type TrackCardProps = {
   compactPrice?: boolean
   /** Optional full-width price block (e.g., savings). When provided, the top-right price is omitted. */
   priceBlock?: React.ReactNode
+  /** Optional row directly beneath the title row, e.g. the financial aid link. */
+  headerAside?: React.ReactNode
   action?: React.ReactNode
   fill?: boolean
 }
@@ -185,19 +202,23 @@ const TrackCard: React.FC<TrackCardProps> = ({
   children,
   note,
   priceBlock,
+  headerAside,
   action,
   fill,
 }) => {
   return (
     <CardShell $fill={fill}>
       <CardBody $variant={variant} $fill={fill}>
-        <CardHeader>
-          <TitleRow>
-            <TrackTitle>{title}</TrackTitle>
-            {priceBlock ? null : (
-              <PriceContainer $compact={compactPrice}>{price}</PriceContainer>
-            )}
-          </TitleRow>
+        <CardHeader $hasAside={!!headerAside}>
+          <TitleGroup>
+            <TitleRow>
+              <TrackTitle>{title}</TrackTitle>
+              {priceBlock ? null : (
+                <PriceContainer $compact={compactPrice}>{price}</PriceContainer>
+              )}
+            </TitleRow>
+            {headerAside}
+          </TitleGroup>
           <TrackSubtitle>{subtitle}</TrackSubtitle>
         </CardHeader>
 

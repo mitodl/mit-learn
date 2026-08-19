@@ -90,7 +90,7 @@ describe("InfoBoxProgramAsCourse — financial assistance", () => {
 
     await screen.findByRole("button", { name: "Enroll" })
     expect(
-      screen.getByRole("link", { name: "Financial assistance available" }),
+      screen.getByRole("link", { name: "Apply for financial aid" }),
     ).toBeInTheDocument()
   })
 })

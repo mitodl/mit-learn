@@ -397,7 +397,7 @@ describe("CourseEnrollArea — financial assistance link", () => {
     {
       name: "available, when aid not yet applied",
       flexiblePrice: () => makeFlexiblePrice({ product_flexible_price: null }),
-      linkText: "Financial assistance available",
+      linkText: "Apply for financial aid",
     },
     {
       name: "approved (applied at checkout), when aid is approved",
@@ -405,7 +405,7 @@ describe("CourseEnrollArea — financial assistance link", () => {
       // real id, which is the only field the "approved" state keys off
       // (useCourseCertificatePrice: !!product_flexible_price?.id).
       flexiblePrice: () => makeFlexiblePrice(),
-      linkText: "Financial assistance approved (applied at checkout)",
+      linkText: "Financial aid applied (visible at checkout)",
     },
   ])(
     "paidOnly course with financial_assistance_form_url shows link — $name",
@@ -485,7 +485,7 @@ describe("CourseEnrollArea — financial assistance link", () => {
 
     // Approved aid is surfaced as the text note, applied at checkout
     await screen.findByRole("link", {
-      name: "Financial assistance approved (applied at checkout)",
+      name: "Financial aid applied (visible at checkout)",
     })
     // Full price shows; the flexible-price discount is not applied to the display
     expect(screen.getByText("$100")).toBeInTheDocument()
@@ -548,7 +548,7 @@ describe("CourseEnrollArea — advertised price range", () => {
     )
 
     await screen.findByRole("link", {
-      name: "Financial assistance approved (applied at checkout)",
+      name: "Financial aid applied (visible at checkout)",
     })
     expect(screen.getByText("$250 – $1,000")).toBeInTheDocument()
   })

@@ -46,14 +46,14 @@ describe("CertificateTrackCard", () => {
 
   test.each([
     {
-      name: "available, when not applied",
+      name: "apply, when not applied",
       applied: false,
-      linkText: "Financial assistance available",
+      linkText: "Apply for financial aid",
     },
     {
-      name: "approved (applied at checkout), when applied",
+      name: "applied (visible at checkout), when applied",
       applied: true,
-      linkText: "Financial assistance approved (applied at checkout)",
+      linkText: "Financial aid applied (visible at checkout)",
     },
   ])(
     "renders financial aid link to the form — $name",
@@ -76,9 +76,7 @@ describe("CertificateTrackCard", () => {
     renderWithProviders(
       <CertificateTrackCard price={<span>$250</span>} productNoun="course" />,
     )
-    expect(
-      screen.queryByRole("link", { name: /Financial assistance/ }),
-    ).toBeNull()
+    expect(screen.queryByRole("link", { name: /financial aid/i })).toBeNull()
   })
 
   test("renders the action node when provided", () => {
