@@ -14,11 +14,7 @@ import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http"
 import diagnosticsChannel from "node:diagnostics_channel"
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { createRequestLogEntry, hasOtlpEndpointConfig } from "./otel-utils"
-import {
-  SENTRY_HTTP_INTEGRATION_OPTIONS,
-  SENTRY_SPANS_ENABLED_SAMPLE_RATE,
-  installOpenTelemetry,
-} from "./otel-setup"
+import { SPAN_CREATION_SAMPLE_RATE, installOpenTelemetry } from "./otel-setup"
 import { parseSampleRate } from "./sentry-utils"
 import { env } from "@/env"
 import { validateEnv } from "../validateEnv"
@@ -57,6 +53,13 @@ if (appVersion) {
     : prefix
 }
 
+// Sentry sets this itself, but only `if (!options.skipOpenTelemetrySetup)` --
+// and we skip it. Sentry's nativeNodeFetchIntegration is still in the defaults,
+// so without this every server-side fetch gets two spans: one from Next's
+// patch-fetch, one from Sentry's undici instrumentation. Set before Sentry.init
+// so it lands ahead of patch-fetch.
+process.env.NEXT_OTEL_FETCH_DISABLED = "1"
+
 /**
  * Span processors that export to Alloy/Tempo, appended after Sentry's own.
  *
@@ -65,8 +68,8 @@ if (appVersion) {
  * service.name from birth rather than having it patched on at export.
  *
  * LOCAL TESTING (no Grafana Alloy required):
- * Set OTEL_TRACES_EXPORTER=console and OTEL_TRACES_SAMPLER_ARG=1.0 to print
- * completed spans as JSON to stdout. See env/frontend.env for details.
+ * Set OTEL_TRACES_EXPORTER=console to print completed spans as JSON to stdout.
+ * See env/frontend.env for details.
  */
 function buildSpanProcessors(): SpanProcessor[] {
   if (hasOtlpEndpointConfig(process.env)) {
@@ -93,8 +96,9 @@ const NEXT_INTERNAL_PATH = /^\/(_next\/|__nextjs_|favicon\.ico)/
 /**
  * Subscribe to Node's built-in HTTP server diagnostics channels and emit a
  * structured JSON log line per completed request. This runs independently of
- * the OTEL sampler — every request is logged regardless of OTEL_TRACES_SAMPLER_ARG
- * — so the logs can be used as ground truth for verifying OTEL trace coverage.
+ * the OTEL sampler — every request is logged regardless of any sampling
+ * decision — so the logs can be used as ground truth for verifying OTEL trace
+ * coverage.
  *
  * Enabled by default; set NEXT_SERVER_REQUEST_LOGGING=false to disable.
  *
@@ -138,19 +142,8 @@ if (process.env.NEXT_SERVER_REQUEST_LOGGING !== "false") {
   subscribeRequestLogger()
 }
 
-// Root rate for our own sampler, wrapped in ParentBased so an upstream
-// decision wins. Traefik is the root for next.learn.mit.edu and samples every
-// request, and the Alloy tail sampler makes the real keep/drop call once it can
-// see the whole trace -- so this governs CPU spent building spans, not what
-// ends up in Tempo. Defaults to 1.0.
-//
-// OTEL_TRACES_SAMPLER is still not read: the sampler is constructed directly
-// in otel-setup.ts, and honouring the variable would mean reimplementing the
-// SDK's env parsing for no gain.
-const otelSampleRate = parseSampleRate(process.env.OTEL_TRACES_SAMPLER_ARG, 1)
-
-// Sentry's own rate, independent of the above. Applied to transactions that
-// already exist, so lowering it costs Tempo nothing.
+// Sentry's own rate, independent of span creation. Applied to transactions
+// that already exist, so lowering it costs Tempo nothing.
 const sentrySampleRate = parseSampleRate(
   env("NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE"),
   1,
@@ -161,26 +154,18 @@ Sentry.init({
   release: env("NEXT_PUBLIC_VERSION"),
   environment: env("NEXT_PUBLIC_SENTRY_ENV"),
 
-  // We build the provider, sampler, resource, propagator and context manager
-  // ourselves in installOpenTelemetry() below. See otel-setup.ts for why.
+  // We build the provider, resource, propagator and context manager ourselves
+  // in installOpenTelemetry() below. See otel-setup.ts for why -- and for why
+  // the sampler is deliberately still Sentry's.
   skipOpenTelemetrySetup: true,
 
-  // Sentry stops instrumenting node:http for spans when skipOpenTelemetrySetup
-  // is set (_shouldUseOtelHttpInstrumentation in integrations/http.ts returns
-  // false), unless spans is passed explicitly. Without this there is no server
-  // span at all and the SSR render becomes invisible -- a silent failure, so
-  // it is asserted in otel-setup.test.ts via SENTRY_HTTP_INTEGRATION_OPTIONS.
-  integrations: [Sentry.httpIntegration(SENTRY_HTTP_INTEGRATION_OPTIONS)],
+  // Governs span creation, so it stays at 1: a span never created is a span
+  // Tempo never sees. Not Sentry's volume knob. See otel-setup.ts.
+  tracesSampleRate: SPAN_CREATION_SAMPLE_RATE,
 
-  // Not the OTEL sampler any more -- our provider owns that. This is what
-  // keeps hasSpansEnabled() true so Sentry's own span APIs are not wrapped in
-  // suppressTracing(). See otel-setup.ts.
-  tracesSampleRate: SENTRY_SPANS_ENABLED_SAMPLE_RATE,
-
-  // No longer the OTEL sampler. Our provider's sampler governs span creation;
-  // this is the fraction of already-created transactions Sentry keeps, applied
-  // by beforeSendTransaction below. The two are now independent by
-  // construction rather than by keeping one of them pinned at 1.0.
+  // Sentry's volume knob: the fraction of already-created transactions Sentry
+  // keeps. Independent of what reaches Tempo, which is why the rate above can
+  // stay pinned at 1.
   beforeSendTransaction: (transaction) => {
     return Math.random() < sentrySampleRate ? transaction : null
   },
@@ -188,14 +173,6 @@ Sentry.init({
   debug: false,
 })
 
-// After Sentry.init: SentrySpanProcessor needs a client to report through, and
-// Sentry has by then declined to register its own globals.
-installOpenTelemetry({
-  sampleRate: otelSampleRate,
-  spanProcessors: buildSpanProcessors(),
-})
-
-// Throws if the pipeline is inconsistent -- e.g. a context manager or
-// propagator Sentry cannot work with. Cheap, and the alternative is finding
-// out from missing spans in production.
-Sentry.validateOpenTelemetrySetup()
+// After Sentry.init: SentrySampler and SentrySpanProcessor both need a client,
+// and Sentry has by then declined to register its own globals.
+installOpenTelemetry({ spanProcessors: buildSpanProcessors() })

@@ -5,11 +5,9 @@
 
 import { ROOT_CONTEXT, trace } from "@opentelemetry/api"
 import {
-  SENTRY_HTTP_INTEGRATION_OPTIONS,
-  SENTRY_SPANS_ENABLED_SAMPLE_RATE,
+  SPAN_CREATION_SAMPLE_RATE,
   buildPropagator,
   buildResource,
-  buildSampler,
 } from "./otel-setup"
 
 // The example ids from the W3C trace-context spec.
@@ -47,31 +45,6 @@ describe("buildResource", () => {
   })
 })
 
-describe("buildSampler", () => {
-  const parentSampled = trace.setSpanContext(ROOT_CONTEXT, {
-    traceId: TRACE_ID,
-    spanId: SPAN_ID,
-    traceFlags: 1,
-    isRemote: true,
-  })
-
-  it("honours a sampled parent even at a root rate of zero", () => {
-    // Traefik is the root for next.learn.mit.edu and samples everything; the
-    // Alloy tail sampler makes the real decision. A root rate that ignored the
-    // parent would sever the edge trace.
-    const decision = buildSampler(0).shouldSample(
-      parentSampled,
-      TRACE_ID,
-      "span",
-      0,
-      {},
-      [],
-    )
-
-    expect(decision.decision).toBe(2) // RECORD_AND_SAMPLED
-  })
-})
-
 describe("buildPropagator", () => {
   it("extracts a W3C traceparent", () => {
     const ctx = buildPropagator().extract(
@@ -86,22 +59,13 @@ describe("buildPropagator", () => {
   })
 })
 
-describe("SENTRY_HTTP_INTEGRATION_OPTIONS", () => {
-  it("keeps HTTP spans enabled", () => {
-    // Under skipOpenTelemetrySetup Sentry stops instrumenting node:http for
-    // spans unless this is passed. Losing it removes every server span and
-    // reports no error, so it is asserted rather than trusted to review.
-    expect(SENTRY_HTTP_INTEGRATION_OPTIONS.spans).toBe(true)
-  })
-})
-
-describe("SENTRY_SPANS_ENABLED_SAMPLE_RATE", () => {
-  it("keeps Sentry's spans enabled", () => {
-    // Without a tracesSampleRate (or tracesSampler) hasSpansEnabled() is false,
-    // and Sentry wraps startSpan/startInactiveSpan in suppressTracing() -- every
-    // span Sentry or the Next.js integration creates goes non-recording. It does
-    // not pick a rate: our provider's sampler does that, and Sentry's own
-    // sampling stays in beforeSendTransaction.
-    expect(SENTRY_SPANS_ENABLED_SAMPLE_RATE).toBeGreaterThan(0)
+describe("SPAN_CREATION_SAMPLE_RATE", () => {
+  it("creates every span, leaving keep/drop to the Alloy tail sampler", () => {
+    // Head sampling below 1 cannot be undone downstream: a span that is never
+    // created is a span Tempo never sees. This also has to stay above 0 to keep
+    // hasSpansEnabled() true -- at 0 Sentry wraps startSpan/startInactiveSpan in
+    // suppressTracing() and httpIntegration's server-span gate fails, both
+    // silently. Sentry's own volume is beforeSendTransaction's job.
+    expect(SPAN_CREATION_SAMPLE_RATE).toBe(1)
   })
 })
