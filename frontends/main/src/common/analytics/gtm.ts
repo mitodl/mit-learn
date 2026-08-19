@@ -231,6 +231,36 @@ const trackBeginCheckout = (courseName?: string | null) => {
   })
 }
 
+type CheckoutCompletedParams = {
+  orderId: number
+  courseName?: string | null
+  value?: number | null
+}
+
+/**
+ * Fired when a user returns from the external checkout flow with a
+ * confirmed-fulfilled paid order. The completion counterpart to
+ * trackBeginCheckout — maps to "Checkout Completed" in the marketing event
+ * plan.
+ */
+const trackCheckoutCompleted = (params: CheckoutCompletedParams) => {
+  pushGtmEvent("checkout-completed", {
+    "order-id": params.orderId,
+    ...(params.courseName ? { "course-name": params.courseName } : {}),
+    ...(params.value !== null && params.value !== undefined
+      ? { "order-value": params.value }
+      : {}),
+  })
+}
+
+/**
+ * Fired once, the first time a newly created account reaches the onboarding
+ * flow. Maps to "Account Created" in the marketing event plan.
+ */
+const trackAccountCreated = () => {
+  pushGtmEvent("account-created")
+}
+
 /**
  * Fired when a user clicks an organic social share link (Facebook, Twitter, LinkedIn).
  * Maps to "Click on Organic Social Post" in the marketing event plan.
@@ -273,8 +303,15 @@ export {
   trackFilterCourseCatalog,
   trackReturnVisit,
   trackBeginCheckout,
+  trackCheckoutCompleted,
+  trackAccountCreated,
   trackOrganicSocialClick,
   trackViewProgramDetails,
 }
 
-export type { AddToCartParams, CatalogFilterParams, CourseProgramViewParams }
+export type {
+  AddToCartParams,
+  CatalogFilterParams,
+  CourseProgramViewParams,
+  CheckoutCompletedParams,
+}
