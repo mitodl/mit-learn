@@ -53,12 +53,13 @@ if (appVersion) {
     : prefix
 }
 
-// Sentry sets this itself, but only `if (!options.skipOpenTelemetrySetup)` --
-// and we skip it. Sentry's nativeNodeFetchIntegration is still in the defaults,
-// so without this every server-side fetch gets two spans: one from Next's
-// patch-fetch, one from Sentry's undici instrumentation. Set before Sentry.init
-// so it lands ahead of patch-fetch.
-process.env.NEXT_OTEL_FETCH_DISABLED = "1"
+// NEXT_OTEL_FETCH_DISABLED is deliberately NOT set here. Sentry sets it only
+// `if (!options.skipOpenTelemetrySetup)`, which is easy to read as an omission
+// to correct -- but nativeNodeFetchIntegration's _shouldInstrumentSpans is
+// `!clientOptions.skipOpenTelemetrySetup && hasSpansEnabled(clientOptions)`,
+// so under skipOpenTelemetrySetup Sentry emits no fetch spans at all. There is
+// nothing to de-duplicate, and setting it would leave server-side fetch with no
+// spans from anyone. Next's patch-fetch is the only source, so it stays on.
 
 /**
  * Span processors that export to Alloy/Tempo, appended after Sentry's own.
