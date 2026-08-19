@@ -6,7 +6,7 @@ describe("ProgramSavingsBlock", () => {
   test("renders current price, struck list price with original-price semantics, and the savings sentence", () => {
     renderWithProviders(
       <ProgramSavingsBlock
-        currentAmount={800}
+        current={{ min: 800, max: 800 }}
         listAmount={1000}
         totalCourses={4}
       />,
@@ -27,10 +27,24 @@ describe("ProgramSavingsBlock", () => {
     ).toBeInTheDocument()
   })
 
+  test("an advertised range shows both ends, and the saving reads as a floor", () => {
+    renderWithProviders(
+      <ProgramSavingsBlock
+        current={{ min: 500, max: 800 }}
+        listAmount={1000}
+        totalCourses={4}
+      />,
+    )
+
+    expect(screen.getByText("$500 – $800")).toBeInTheDocument()
+    // Only the saving against the top of the range is guaranteed.
+    expect(screen.getByText("Save $200+")).toBeInTheDocument()
+  })
+
   test("singular course count reads 'course', not 'courses'", () => {
     renderWithProviders(
       <ProgramSavingsBlock
-        currentAmount={90}
+        current={{ min: 90, max: 90 }}
         listAmount={100}
         totalCourses={1}
       />,

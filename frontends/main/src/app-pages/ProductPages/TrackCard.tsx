@@ -53,21 +53,45 @@ const CardBody = styled.div<{ $variant: CardVariant; $fill?: boolean }>(
   }),
 )
 
-const TopRow = styled.div({
+const CardHeader = styled.div<{ $hasAside?: boolean }>(({ $hasAside }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  // The aside belongs to the title, not the subtitle, so it sits tight under
+  // the title row (see TitleGroup) and the subtitle gets a wider break below it
+  // than the 8px that separates the header's rows when there is no aside.
+  gap: $hasAside ? "16px" : "8px",
+  width: "100%",
+}))
+
+/**
+ * The title row plus its optional aside, grouped so the aside reads as a
+ * continuation of the title rather than as another header row.
+ */
+const TitleGroup = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: "4px",
+  width: "100%",
+})
+
+/**
+ * Title and price only — the subtitle sits below at full card width. Keeping it
+ * out of this row means the price has to clear just the title, and the subtitle
+ * gets the whole card to stay on one line.
+ */
+const TitleRow = styled.div({
   display: "flex",
   flexDirection: "row",
   alignItems: "flex-start",
   justifyContent: "space-between",
+  flexWrap: "wrap",
   gap: "8px",
+  // A wrapped price reads as its own row, so give it more room than the 8px
+  // separating the header's rows.
+  rowGap: "12px",
   width: "100%",
-})
-
-const LeftCol = styled.div({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "flex-start",
-  gap: "8px",
-  flexGrow: 1,
 })
 
 const TrackTitle = styled.h3(({ theme }) => ({
@@ -75,6 +99,13 @@ const TrackTitle = styled.h3(({ theme }) => ({
   fontWeight: theme.typography.fontWeightBold,
   color: theme.custom.colors.darkGray2,
   margin: 0,
+  /**
+   * Grows to push the price right, but never narrows below its own text: a flex
+   * item's wrap decision uses its max-content width, so a price that cannot fit
+   * beside the untruncated title wraps to its own line (see TitleRow's
+   * flexWrap) rather than breaking the title across two.
+   */
+  flexGrow: 1,
 }))
 
 const TrackSubtitle = styled.div(({ theme }) => ({
@@ -82,11 +113,18 @@ const TrackSubtitle = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
 }))
 
-const PriceContainer = styled.div(({ theme }) => ({
-  ...theme.typography.h4,
-  color: theme.custom.colors.darkGray2,
-  whiteSpace: "nowrap",
-}))
+const PriceContainer = styled.div<{ $compact?: boolean }>(
+  ({ theme, $compact }) => ({
+    ...($compact ? theme.typography.subtitle1 : theme.typography.h4),
+    // Match TrackTitle's line height so the price does not set the row's. A
+    // no-op for subtitle1, which already has it; h4 would otherwise add 10px.
+    lineHeight: theme.typography.subtitle1.lineHeight,
+    color: theme.custom.colors.darkGray2,
+    whiteSpace: "nowrap",
+    // Stay right-aligned whether it sits beside the title or wraps below it.
+    marginLeft: "auto",
+  }),
+)
 
 const FullWidthPrice = styled.div({
   width: "100%",
@@ -142,8 +180,19 @@ type TrackCardProps = {
   children: React.ReactNode
   /** Optional note between the header and the feature list. */
   note?: React.ReactNode
+  /**
+   * Render the price at the title's own size (subtitle1, a weight lighter)
+   * instead of the h4 a single price gets. For advertised ranges, which are
+   * about half again as wide as a single price and do not fit beside the title
+   * at h4. Sizes the price element itself rather than nesting a smaller one
+   * inside it, which would leave the text on a line box struck for the larger
+   * size.
+   */
+  compactPrice?: boolean
   /** Optional full-width price block (e.g., savings). When provided, the top-right price is omitted. */
   priceBlock?: React.ReactNode
+  /** Optional row directly beneath the title row, e.g. the financial aid link. */
+  headerAside?: React.ReactNode
   action?: React.ReactNode
   fill?: boolean
 }
@@ -153,22 +202,29 @@ const TrackCard: React.FC<TrackCardProps> = ({
   title,
   subtitle,
   price,
+  compactPrice,
   children,
   note,
   priceBlock,
+  headerAside,
   action,
   fill,
 }) => {
   return (
     <CardShell $fill={fill}>
       <CardBody $variant={variant} $fill={fill}>
-        <TopRow>
-          <LeftCol>
-            <TrackTitle>{title}</TrackTitle>
-            <TrackSubtitle>{subtitle}</TrackSubtitle>
-          </LeftCol>
-          {priceBlock ? null : <PriceContainer>{price}</PriceContainer>}
-        </TopRow>
+        <CardHeader $hasAside={!!headerAside}>
+          <TitleGroup>
+            <TitleRow>
+              <TrackTitle>{title}</TrackTitle>
+              {priceBlock ? null : (
+                <PriceContainer $compact={compactPrice}>{price}</PriceContainer>
+              )}
+            </TitleRow>
+            {headerAside}
+          </TitleGroup>
+          <TrackSubtitle>{subtitle}</TrackSubtitle>
+        </CardHeader>
 
         {priceBlock ? <FullWidthPrice>{priceBlock}</FullWidthPrice> : null}
 

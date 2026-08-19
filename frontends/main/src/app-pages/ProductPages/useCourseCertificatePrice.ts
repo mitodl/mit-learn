@@ -8,20 +8,23 @@ import { useUserIsAuthenticated } from "api/hooks/user"
 import {
   canPurchaseRun,
   mitxonlineLegacyUrl,
-  formatPrice,
+  formatResourcePrice,
 } from "@/common/mitxonline"
+import type { FinancialAid } from "./enrollTypes"
 
 type CourseCertificatePriceResult = {
   price: string | null
-  financialAid: { href: string; applied: boolean } | null
+  financialAid: FinancialAid | null
 }
 
 /**
  * Returns the price and financial aid info for a course's Certificate Track
- * card. The displayed price is always the full certificate price — a financial
- * aid discount is not reflected here; it is surfaced as a text note ("applied at
- * checkout") because the discount is applied later, in checkout. `applied`
- * reports whether the user already has an approved flexible price.
+ * card. The displayed price is the course's advertised range when it has one,
+ * otherwise the run product's full price. A financial aid discount is never
+ * reflected in it — not even for a user whose flexible price is already
+ * approved — because the discount is applied later, in checkout; it is surfaced
+ * as a text note instead. `applied` reports whether the user has an approved
+ * flexible price.
  */
 export const useCourseCertificatePrice = (
   course: CourseWithCourseRunsSerializerV2,
@@ -40,17 +43,22 @@ export const useCourseCertificatePrice = (
     enabled: isAuthenticated && canPurchase && hasFinancialAid,
   })
 
-  if (!product?.price) return { price: null, financialAid: null }
-
   const financialAid = hasFinancialAid
     ? {
         href: mitxonlineLegacyUrl(financialAidUrl),
         applied: !!userFlexiblePrice.data?.product_flexible_price?.id,
+        // isLoading, not isPending: a disabled query stays pending forever, and
+        // this one is disabled for anonymous visitors, who are never approved
+        // and so have nothing to wait for.
+        pending: userFlexiblePrice.isLoading,
       }
     : null
 
+  // An advertised range displays even with no purchasable product, so the
+  // InfoBox agrees with MitxOnlineResourceCard for the same resource; without
+  // either a range or a product price there is nothing to show.
   return {
-    price: formatPrice(product.price, { avoidCents: true }),
+    price: formatResourcePrice(course, product?.price || null),
     financialAid,
   }
 }

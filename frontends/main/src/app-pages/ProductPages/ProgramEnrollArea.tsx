@@ -1,5 +1,6 @@
 import React from "react"
 import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
+import { toPriceRange } from "@/common/mitxonline"
 import { useProgramEnrollment } from "./useProgramEnrollment"
 import { useProgramCertificatePrice } from "./useProgramCertificatePrice"
 import ProgramSavingsBlock from "./ProgramSavingsBlock"
@@ -28,6 +29,8 @@ const ProgramEnrollArea: React.FC<ProgramEnrollAreaProps> = ({
   // shows the plain price even when a list price is set.
   const priceBlock =
     !displayAsCourse && savings ? <ProgramSavingsBlock {...savings} /> : null
+  // Same predicate the hook formats on, so the sizing tracks the display.
+  const isRange = toPriceRange(program) !== null
 
   return (
     <EnrollOfferingBoxes
@@ -37,6 +40,7 @@ const ProgramEnrollArea: React.FC<ProgramEnrollAreaProps> = ({
       isPending={isPending}
       isError={isError}
       price={price}
+      compactPrice={isRange}
       priceBlock={priceBlock}
       financialAid={financialAid}
       productNoun={displayAsCourse ? "course" : "program"}
