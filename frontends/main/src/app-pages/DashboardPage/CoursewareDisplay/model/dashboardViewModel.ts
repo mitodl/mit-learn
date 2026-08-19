@@ -190,6 +190,18 @@ export const getProgramEnrollmentStatus = (
   return EnrollmentStatus.NotEnrolled
 }
 
+/**
+ * Whether the learner ever passed this course, across every run they enrolled
+ * in.
+ *
+ * Completion belongs to the course, not to whichever run a card is displaying,
+ * so this must not go through `selectBestEnrollment`. That picks the run
+ * currently underway, which for a learner who passed an older run and then
+ * re-enrolled is the new, ungraded one.
+ */
+const courseIsCompleted = (enrollments: CourseRunEnrollmentV3[]): boolean =>
+  enrollments.some((e) => e.grades.some((g) => g.passed))
+
 const isLeafRequirementNodeCompleted = (
   node: V2ProgramRequirement,
   courseEnrollments: Record<number, CourseRunEnrollmentV3[]>,
@@ -199,8 +211,7 @@ const isLeafRequirementNodeCompleted = (
     node.data.node_type === "course" &&
     typeof node.data.course === "number"
   ) {
-    const enrollments = courseEnrollments[node.data.course] ?? []
-    return enrollments.some((e) => e.grades.some((g) => g.passed))
+    return courseIsCompleted(courseEnrollments[node.data.course] ?? [])
   }
   if (node.data.node_type === "program" && node.data.required_program) {
     return !!programEnrollments[node.data.required_program]?.certificate
@@ -1421,6 +1432,7 @@ export {
   filterVariantSiblings,
   pickDisplayedHomeEnrollments,
   pickCertificateEnrollment,
+  courseIsCompleted,
 }
 
 export type { RequirementSectionItem, RequirementSection }
