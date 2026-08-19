@@ -24,13 +24,20 @@ const ProgramPaySection = styled.div(({ theme }) => ({
  * range never fits beside a list price at the desktop sidebar width, so the
  * wrapped state is the normal one for ranges rather than an edge case.
  *
- * The separator is a gap decoration rather than an element between the two
- * blocks, because it is only meaningful when they share a line. A rule is
- * painted into gaps that exist, so wrapping removes it for free; a sibling
- * element would strand itself at the end of the first line, which is what it
- * used to do. Where gap decorations are unsupported no rule is drawn at all,
- * which is a fine resting state -- the two prices are already distinguished by
- * size, colour, strikethrough, and their captions.
+ * The rule is only meaningful when the two blocks share a line, so it is drawn
+ * per block rather than as a sibling element between them: each block paints a
+ * rule in the gap preceding it, and the row clips whatever lands at its left
+ * content edge. A block that starts a line -- the first one, or the second one
+ * once the row has wrapped -- puts its rule exactly there, so it is clipped
+ * away; only a block sitting beside a predecessor keeps its rule. That defers
+ * the decision to the browser's own layout, so no width breakpoint has to
+ * predict where the prices wrap, and a sibling element cannot strand itself at
+ * the end of the first line the way it originally did.
+ *
+ * `column-rule` expresses this directly, but painting it into flex gaps is CSS
+ * Gap Decorations (css-gaps-1), which is Chromium-only as of 2026 -- Firefox
+ * and Safari draw nothing, and `@supports` cannot detect the difference because
+ * the declaration parses everywhere for multi-column layout. Hence the clip.
  */
 const ProgramPriceRowInner = styled.div({
   display: "flex",
@@ -42,7 +49,20 @@ const ProgramPriceRowInner = styled.div({
   // gap of its own on either side.
   columnGap: "48px",
   rowGap: "12px",
-  columnRule: `1px solid ${theme.custom.colors.lightGray2}`,
+  // Clips the rule of whichever block starts a line.
+  overflow: "hidden",
+  "> *": { position: "relative" },
+  "> *::before": {
+    content: '""',
+    position: "absolute",
+    // Down the middle of the column gap preceding this block.
+    left: "-24px",
+    // Span the row's full height, however tall the blocks are; the clip above
+    // trims the overhang.
+    top: "-9999px",
+    bottom: "-9999px",
+    borderLeft: `1px solid ${theme.custom.colors.lightGray2}`,
+  },
 })
 
 const ProgramCurrentPriceBlock = styled.div({
