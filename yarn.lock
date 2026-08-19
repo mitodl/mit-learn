@@ -4525,6 +4525,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@opentelemetry/core@npm:^2.0.1":
+  version: 2.10.0
+  resolution: "@opentelemetry/core@npm:2.10.0"
+  dependencies:
+    "@opentelemetry/semantic-conventions": "npm:^1.29.0"
+  peerDependencies:
+    "@opentelemetry/api": ">=1.0.0 <1.10.0"
+  checksum: 10/b95d912461d878a23e092317a98eb593b2316e0e63bb0618f351aba8fcb92253553ba8d4ceac3f575b4152325a85da2cf39f4e68123088ef47429f7328c971e5
+  languageName: node
+  linkType: hard
+
 "@opentelemetry/exporter-trace-otlp-http@npm:^0.214.0":
   version: 0.214.0
   resolution: "@opentelemetry/exporter-trace-otlp-http@npm:0.214.0"
@@ -6288,7 +6299,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sentry/nextjs@npm:^10.50.0":
+"@sentry/nextjs@npm:10.50.0":
   version: 10.50.0
   resolution: "@sentry/nextjs@npm:10.50.0"
   dependencies:
@@ -16905,6 +16916,7 @@ __metadata:
     "@mui/material-nextjs": "npm:^6.4.3"
     "@mui/x-charts": "npm:^8.29.2"
     "@opentelemetry/api": "npm:^1.9.1"
+    "@opentelemetry/core": "npm:^2.0.1"
     "@opentelemetry/exporter-trace-otlp-http": "npm:^0.214.0"
     "@opentelemetry/resources": "npm:^2.6.1"
     "@opentelemetry/sdk-trace-base": "npm:^2.6.1"
@@ -16912,7 +16924,8 @@ __metadata:
     "@radix-ui/react-popover": "npm:^1.1.15"
     "@react-pdf/renderer": "npm:^4.3.0"
     "@remixicon/react": "npm:^4.2.0"
-    "@sentry/nextjs": "npm:^10.50.0"
+    "@sentry/nextjs": "npm:10.50.0"
+    "@sentry/opentelemetry": "npm:10.50.0"
     "@tanstack/react-query": "npm:^5.66.0"
     "@testing-library/jest-dom": "npm:^6.4.8"
     "@testing-library/react": "npm:^16.3.0"

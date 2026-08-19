@@ -5,6 +5,7 @@
 
 import * as Sentry from "@sentry/nextjs"
 import type { Context, Span } from "@opentelemetry/api"
+import { propagation } from "@opentelemetry/api"
 import {
   BatchSpanProcessor,
   ConsoleSpanExporter,
@@ -21,6 +22,7 @@ import {
   detectResourceOverrides,
   hasOtlpEndpointConfig,
 } from "./otel-utils"
+import { buildPropagator } from "./otel-setup"
 import { parseSampleRate } from "./sentry-utils"
 import { env } from "@/env"
 import { validateEnv } from "../validateEnv"
@@ -214,6 +216,24 @@ const sentrySampleRate = parseSampleRate(
   env("NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE"),
   1,
 )
+
+// MUST run before Sentry.init(). Sentry's SDK installs SentryPropagator as the
+// global propagator (initOtel.ts), and its extract() reads only sentry-trace
+// and baggage -- never traceparent -- while its inject() *does* write one. That
+// asymmetry means every W3C-only caller is dropped: Traefik fronts
+// next.learn.mit.edu and sends traceparent, so the SSR render started a fresh
+// trace instead of continuing the edge's. Keycloak, behind the same Traefik,
+// joins fine because Quarkus uses the standard W3C propagator.
+//
+// setGlobalPropagator refuses a second registration and returns false, so this
+// cannot be applied afterwards -- registering here means Sentry's own call is
+// the one that no-ops, and this composite stays.
+//
+// Order matters. Sentry goes last so it still wins when sentry-trace is
+// present, which keeps today's browser-originated traces intact; its extract()
+// returns the context untouched when that header is absent, so W3C's
+// extraction survives for edge traffic. See otel-setup.ts.
+propagation.setGlobalPropagator(buildPropagator())
 
 Sentry.init({
   dsn: env("NEXT_PUBLIC_SENTRY_DSN"),
