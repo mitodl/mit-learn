@@ -352,6 +352,22 @@ DISABLE_APISIX_USER_MIDDLEWARE = get_bool(
     default=False,
 )
 
+# Set to True to create users that we see but aren't aware of.
+# Set to False if you're managing that elsewhere (like with SCIM).
+# Named to match mitol-django-apigateway, which we intend to port to.
+MITOL_APIGATEWAY_USERINFO_CREATE = get_bool(
+    name="MITOL_APIGATEWAY_USERINFO_CREATE",
+    default=True,
+)
+
+# Set to True to update users we've seen before. If you set this to False, make
+# sure there's a backchannel way to update the user data (SCIM, etc) or user
+# info will fall out of sync with the IdP pretty quickly.
+MITOL_APIGATEWAY_USERINFO_UPDATE = get_bool(
+    name="MITOL_APIGATEWAY_USERINFO_UPDATE",
+    default=False,
+)
+
 # Social Auth configurations - [END]
 
 # Static files (CSS, JavaScript, Images)
