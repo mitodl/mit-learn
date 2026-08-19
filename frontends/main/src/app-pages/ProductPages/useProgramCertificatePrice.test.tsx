@@ -1,5 +1,6 @@
 import React from "react"
 import { QueryClientProvider } from "@tanstack/react-query"
+import invariant from "tiny-invariant"
 import { renderHook, waitFor, setMockResponse } from "@/test-utils"
 import { makeBrowserQueryClient } from "@/app/getQueryClient"
 import {
@@ -37,6 +38,7 @@ describe("useProgramCertificatePrice", () => {
 
   test("no product: the advertised price still shows, nothing else does", () => {
     const program = programs.program({ products: [] })
+    invariant(program.min_price, "the factory advertises a price")
 
     const { result } = renderHook(() => useProgramCertificatePrice(program), {
       wrapper,
