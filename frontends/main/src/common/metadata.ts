@@ -94,6 +94,25 @@ export const getMetadataAsync = async ({
       image = data.image.url
       imageAlt = data.image.alt || ""
     }
+    /**
+     * The drawer URL is self-canonical, including for resources that also have
+     * a dedicated page (video, video_playlist, podcast, podcast_episode).
+     *
+     * Decision: keep it self-canonical for now. The duplicate is addressed on
+     * the advertising side instead — ../app/sitemaps/resources/sitemap.ts no
+     * longer submits drawer URLs for those four types, so we stop nominating two
+     * self-canonical URLs for the same content. That does not stop the drawer URL
+     * being crawled when it is linked or shared, which only a cross-canonical
+     * pointing at the dedicated page would fix.
+     *
+     * Not done here because the dedicated URL for a video or a podcast episode
+     * includes a parent id (playlist / podcast), and `canonical_parent_ids` is
+     * served only by the summary endpoint's LearningResourceSummary — not by the
+     * detail response fetched above. Building it would need a second request per
+     * page or that field added to the detail serializer. Guessing the parent is
+     * worse than the duplicate: it would emit a canonical pointing at a URL the
+     * dedicated page itself redirects away from.
+     */
     alts.canonical = canonicalResourceDrawerUrl(learningResourceId, data?.title)
   }
 
