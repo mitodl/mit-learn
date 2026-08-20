@@ -2,6 +2,7 @@
 
 import React from "react"
 import Image from "next/image"
+import Link from "next/link"
 import {
   keepPreviousData,
   useQuery,
@@ -17,6 +18,7 @@ import {
   analyticsOrganizationQueries,
 } from "api/analytics-hooks/organizations"
 import type {
+  ContractMonthlyEngagementTrend,
   ContractUtilization,
   EnrollmentCompletionFunnel,
   MonthlyEngagementTrend,
@@ -28,7 +30,7 @@ import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { contractAdminView } from "@/common/urls"
+import { contractAdminView, organizationAnalyticsView } from "@/common/urls"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import ContractKpiCards from "./Analytics/ContractKpiCards"
@@ -168,6 +170,47 @@ type SectionQueries = {
   programs: SectionQuery<ProgramFunnel>
 }
 
+/**
+ * Widens only a factory's query-key type param, leaving its row type checked
+ * against `SectionQueries`. Same trade `erase` makes in
+ * `hooks/organizations/queries.test.ts`, narrowed to the key alone: wiring a
+ * section to a factory whose row type doesn't match still fails to compile.
+ */
+const eraseKey = <RowT,>(
+  // Nothing here reads the query key; only the row type above is meant to
+  // stay checked against `SectionQueries`.
+  factory: (page: { limit: number }) => UseQueryOptions<
+    OrgAnalyticsResponse<RowT>,
+    Error,
+    OrgAnalyticsResponse<RowT>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    any
+  >,
+): SectionQuery<RowT> => factory
+
+/**
+ * `analyticsContractQueries.engagementTrend` returns
+ * `ContractMonthlyEngagementTrend` -- the same columns as
+ * `MonthlyEngagementTrend` plus the contract identity -- rather than
+ * `MonthlyEngagementTrend` itself, the one section where the org- and
+ * contract-scoped factories disagree on row type. `eraseKey` can't bridge
+ * that the way it does for the other three sections: `UseQueryOptions` uses
+ * the row type contravariantly in `select`, so a superset row type isn't
+ * assignable through generics alone. `EngagementTrendChart` only reads the
+ * shared columns, so erasing it here is safe.
+ */
+const eraseContractTrendRow = (
+  // Nothing here reads the query key.
+  factory: (page: { limit: number }) => UseQueryOptions<
+    OrgAnalyticsResponse<ContractMonthlyEngagementTrend>,
+    Error,
+    OrgAnalyticsResponse<ContractMonthlyEngagementTrend>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    any
+  >,
+): SectionQuery<MonthlyEngagementTrend> =>
+  factory as unknown as SectionQuery<MonthlyEngagementTrend>
+
 type AnalyticsContentInternalProps = {
   orgSlug: string
   /**
@@ -208,6 +251,11 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   // contract that simply does not exist.
   const analyticsAvailable =
     isAnalyticsConfigured() && !!orgUuid && (!contractSlug || !!contractId)
+  // The narrower case of the above: the org itself is fine, only the
+  // contract slug doesn't resolve (a stale or mistyped link). Kept distinct
+  // from `analyticsAvailable` so the notice can point at the broken link
+  // instead of telling a manager on a perfectly valid org to contact support.
+  const contractUnresolved = !!contractSlug && !!orgUuid && !contractId
 
   // Per-section page size. Raised only by that section's "Show all", so
   // expanding a truncated course table never refetches the other three.
@@ -233,41 +281,48 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   // shapes, so the scope is chosen once here and nothing below this line
   // changes with it. The hook count and order stay fixed either way.
   //
-  // The cast on the way out is load-bearing. The two branches build query keys
-  // of different lengths (contract keys carry two more segments) and
-  // `queryOptions` is invariant in the key type, so the inferred union leaves
-  // `useQuery` unable to pick an overload. Erasing the key while keeping the
-  // row type is exactly the trade the repo's own query tests make (`erase` in
-  // hooks/organizations/queries.test.ts): the key still comes from the query
-  // factories, and nothing here reads it.
+  // The `eraseKey` wrap on each factory is load-bearing. The two branches
+  // build query keys of different lengths (contract keys carry two more
+  // segments) and `queryOptions` is invariant in the key type, so the
+  // inferred union leaves `useQuery` unable to pick an overload. Widening
+  // just the key -- rather than the whole options object -- keeps each
+  // section's row type checked against `SectionQueries`.
   const scoped = React.useMemo(() => {
     const orgId = orgUuid ?? ""
     return contractId
       ? {
-          utilization: (page: { limit: number }) =>
+          utilization: eraseKey<ContractUtilization>((page) =>
             analyticsContractQueries.contractUtilization(
               orgId,
               contractId,
               page,
             ),
-          trend: (page: { limit: number }) =>
+          ),
+          trend: eraseContractTrendRow((page) =>
             analyticsContractQueries.engagementTrend(orgId, contractId, page),
-          courses: (page: { limit: number }) =>
+          ),
+          courses: eraseKey<EnrollmentCompletionFunnel>((page) =>
             analyticsContractQueries.enrollmentFunnel(orgId, contractId, page),
-          programs: (page: { limit: number }) =>
+          ),
+          programs: eraseKey<ProgramFunnel>((page) =>
             analyticsContractQueries.programFunnel(orgId, contractId, page),
+          ),
         }
       : {
-          utilization: (page: { limit: number }) =>
+          utilization: eraseKey<ContractUtilization>((page) =>
             analyticsOrganizationQueries.contractUtilization(orgId, page),
-          trend: (page: { limit: number }) =>
+          ),
+          trend: eraseKey<MonthlyEngagementTrend>((page) =>
             analyticsOrganizationQueries.engagementTrend(orgId, page),
-          courses: (page: { limit: number }) =>
+          ),
+          courses: eraseKey<EnrollmentCompletionFunnel>((page) =>
             analyticsOrganizationQueries.enrollmentFunnel(orgId, page),
-          programs: (page: { limit: number }) =>
+          ),
+          programs: eraseKey<ProgramFunnel>((page) =>
             analyticsOrganizationQueries.programFunnel(orgId, page),
+          ),
         }
-  }, [orgUuid, contractId]) as unknown as SectionQueries
+  }, [orgUuid, contractId]) satisfies SectionQueries
 
   const utilization = useQuery({
     ...scoped.utilization({ limit: limits.utilization }),
@@ -380,11 +435,21 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
       <Stack gap="24px">
         {header}
         <Notice>
-          {isAnalyticsConfigured()
-            ? // The org record has no Keycloak organization UUID, which is
-              // what the analytics API keys on. Nothing the manager can fix.
-              "Analytics is not available for this organization yet. Please contact support if you expect to see data here."
-            : "Analytics is not available in this environment."}
+          {contractUnresolved ? (
+            <>
+              This contract link could not be found for {org.name}. Try{" "}
+              <Link href={organizationAnalyticsView(orgSlug)}>
+                organization-wide analytics
+              </Link>{" "}
+              instead.
+            </>
+          ) : isAnalyticsConfigured() ? (
+            // The org record has no Keycloak organization UUID, which is
+            // what the analytics API keys on. Nothing the manager can fix.
+            "Analytics is not available for this organization yet. Please contact support if you expect to see data here."
+          ) : (
+            "Analytics is not available in this environment."
+          )}
         </Notice>
       </Stack>
     )
