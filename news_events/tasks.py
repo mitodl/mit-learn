@@ -1,7 +1,6 @@
 """Tasks for news_events"""
 
 from main.celery import app
-from main.utils import clear_views_cache
 from news_events.etl import pipelines
 
 
@@ -9,42 +8,36 @@ from news_events.etl import pipelines
 def get_medium_mit_news():
     """Run the Medium MIT News ETL pipeline"""
     pipelines.medium_mit_news_etl()
-    clear_views_cache()
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
 def get_ol_events():
     """Run the Open Learning Events ETL pipeline"""
     pipelines.ol_events_etl()
-    clear_views_cache()
 
 
 @app.task
 def get_sloan_exec_news():
     """Run the Sloan executive education news ETL pipeline"""
     pipelines.sloan_exec_news_etl()
-    clear_views_cache()
 
 
 @app.task
 def get_sloan_exec_webinars():
     """Run the Sloan webinars ETL pipeline"""
     pipelines.sloan_webinars_etl()
-    clear_views_cache()
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
 def get_mitpe_news():
     """Run the MIT Professional Education news ETL pipeline"""
     pipelines.mitpe_news_etl()
-    clear_views_cache()
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
 def get_mitpe_events():
     """Run the MIT Professional Education events ETL pipeline"""
     pipelines.mitpe_events_etl()
-    clear_views_cache()
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
@@ -52,14 +45,12 @@ def get_website_content_news():
     """Run the website content news ETL pipeline"""
 
     pipelines.articles_news_etl()
-    clear_views_cache()
 
 
 @app.task(name="news_events.tasks.get_articles_news")
 def get_articles_news():
     """Backward-compatible alias for get_website_content_news."""
     pipelines.articles_news_etl()
-    clear_views_cache()
 
 
 @app.task(
@@ -90,7 +81,6 @@ def sync_website_content_to_news(self, content_id: int):
 
         sync_single_website_content_news_to_news(content)
 
-        clear_views_cache()
         logger.info(
             "Successfully synced content %s to news feed",
             content_id,
