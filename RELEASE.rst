@@ -1,6 +1,58 @@
 Release Notes
 =============
 
+Version 0.77.8 (Released August 19, 2026)
+--------------
+
+- Batch the PostHog view-event loader instead of querying per event (#3785)
+- feat: Collect required compliance fields before any enrollment or checkout (#3766)
+- receipt page (#3717)
+- Allow for null course ids in webhook payload (#3776)
+- make healthcheck resistant to k8 pod culling (#3760)
+
+Version 0.77.7 (Released August 18, 2026)
+--------------
+
+- Show the game sub-nav above Arithmix (#3774)
+- chore(otel): delete a dead flag and fix a setting name that was never read (#3783)
+- Page the podcast and video sitemaps off the summary endpoint (#3759)
+- docs(otel): say plainly that the OTEL sampler is a ceiling over both destinations (#3781)
+
+Version 0.77.6 (Released August 17, 2026)
+--------------
+
+- Stream PostHog parquet in batches instead of exploding it into Series (#3780)
+
+Version 0.77.5 (Released August 17, 2026)
+--------------
+
+- constrain percolation to percolate index (#3764)
+- perf(metadata): skip the jsdom sanitize for markup-free descriptions (#3772)
+- Vector search performance enhancements (#3754)
+- Update dependency sharp to v0.35.0 [SECURITY] (#3740)
+
+Version 0.77.4 (Released August 17, 2026)
+--------------
+
+- Sitemap fix, 1 of 2: Add canonical_parent_ids and resource_type to the summary endpoint (#3758)
+- Clear featured-list caches when featured learning paths are edited (#3757)
+- Order topics deterministically in serialization queryset (#3765)
+- Update dependency cryptography to v50 [SECURITY] (#3741)
+- Update opendataloader-pdf to 2.x (#3763)
+- fix: Cards only link to canonical URLs (#3745)
+- fix: bump the hacksnack game version (#3762)
+- fix: add navbar for games (#3744)
+- fix(content_feedback): prevent anonymous rate-limit bypass via spoofed X-Forwarded-For (#3751)
+- Bump cipher-base from 1.0.4 to 1.0.7 (#3755)
+- Bump protobufjs from 7.5.4 to 7.6.5 (#3731)
+- refactor youtube etl (#3739)
+- passing canvas_course_ids to scheduled celery task (#3749)
+- Bump pbkdf2 from 3.1.2 to 3.1.6 (#3732)
+- Feat: Show email delivery status on ContractAdminPage seat table (#3733)
+- Isolate per-file extraction failures in canvas and edX content syncs (#3753)
+- prevent request forgery (#3743)
+- Update @mitodl/mitxonline-api-axios to 2026.8.6 (#3734)
+
 Version 0.77.3 (Released August 13, 2026)
 --------------
 

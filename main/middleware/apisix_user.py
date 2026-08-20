@@ -105,7 +105,59 @@ def decode_apisix_headers(
     }
 
 
-def get_user_from_apisix_headers(  # noqa: C901
+def resolve_apisix_user(
+    request: HttpRequest,
+    global_id: str,
+    email: str,
+    user_fields: Mapping[str, Any],
+) -> "tuple[User | None, bool]":
+    """
+    Find the user matching the APISIX headers, creating one if that's allowed.
+
+    Args:
+        request: Django request object
+        global_id: global_id from the APISIX headers
+        email: email from the APISIX headers
+        user_fields: User field values to create a new user with
+
+    Returns:
+        (user, created) tuple. user is None if the identity is ambiguous, or if
+        it's unknown and MITOL_APIGATEWAY_USERINFO_CREATE is disabled.
+
+    """
+    User = get_user_model()
+
+    if (
+        request.user
+        and request.user.is_authenticated
+        and request.user.global_id == global_id
+    ):
+        return request.user, False
+
+    candidates = User.objects.filter(
+        Q(global_id=global_id) | Q(global_id__isnull=True, email=email)
+    ).select_related("profile")
+
+    try:
+        if settings.MITOL_APIGATEWAY_USERINFO_CREATE:
+            return candidates.get_or_create(defaults=user_fields)
+        return candidates.get(), False
+    except User.MultipleObjectsReturned:
+        log.exception(
+            "Ambiguous APISIX user identity for global_id=%s and email=%s",
+            global_id,
+            email,
+        )
+    except User.DoesNotExist:
+        log.debug(
+            "resolve_apisix_user: User %s not found and user creation is disabled",
+            global_id,
+        )
+
+    return None, False
+
+
+def get_user_from_apisix_headers(
     request: HttpRequest,
     decoded_headers: Mapping[str, Any] | None,
     original_header: str,
@@ -139,29 +191,9 @@ def get_user_from_apisix_headers(  # noqa: C901
     )
     user_fields = user_fields_from_headers(decoded_headers)
 
-    if (
-        request.user
-        and request.user.is_authenticated
-        and request.user.global_id == global_id
-    ):
-        user = request.user
-        created = False
-    else:
-        try:
-            user, created = (
-                User.objects.filter(
-                    Q(global_id=global_id) | Q(global_id__isnull=True, email=email)
-                )
-                .select_related("profile")
-                .get_or_create(defaults=user_fields)
-            )
-        except User.MultipleObjectsReturned:
-            log.exception(
-                "Ambiguous APISIX user identity for global_id=%s and email=%s",
-                global_id,
-                email,
-            )
-            return None
+    user, created = resolve_apisix_user(request, global_id, email, user_fields)
+    if user is None:
+        return None
 
     if created:
         log.info(
@@ -191,7 +223,9 @@ def get_user_from_apisix_headers(  # noqa: C901
         user.set_unusable_password()
         user.is_active = True
         user.save()
-    elif user_needs_update(user, user_fields):
+    elif settings.MITOL_APIGATEWAY_USERINFO_UPDATE and user_needs_update(
+        user, user_fields
+    ):
         for field, value in user_fields.items():
             setattr(user, field, value)
         user.save(update_fields=[*user_fields, "updated_on"])
@@ -199,7 +233,9 @@ def get_user_from_apisix_headers(  # noqa: C901
     if created:
         user_created_actions(user=user, is_new=True, details=profile_data)
         user = User.objects.select_related("profile").get(pk=user.pk)
-    elif profile_needs_update(user, profile_data):
+    elif settings.MITOL_APIGATEWAY_USERINFO_UPDATE and profile_needs_update(
+        user, profile_data
+    ):
         log.debug(
             "get_user_from_apisix_headers: Updating profile for %s",
             global_id,

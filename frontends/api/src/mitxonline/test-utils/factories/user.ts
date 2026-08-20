@@ -12,7 +12,13 @@ const enforcerId = new UniqueEnforcer()
 
 const legalAddress = (): LegalAddress => ({
   country: faker.location.countryCode(),
-  state: faker.datatype.boolean() ? faker.location.state() : null,
+  // Real values are ISO-3166-2 codes (e.g. "US-MA"), not the full names
+  // faker.location.state() returns, and only a handful of countries even
+  // have subdivisions. A random name for a random country is never a value
+  // a state <select> would recognize, so it renders as an out-of-range MUI
+  // warning whenever the random country happens to require one (e.g. "US") --
+  // default to null and let tests that care override with a real code.
+  state: null,
 })
 
 const userProfile = (): UserProfile => ({
@@ -62,6 +68,10 @@ const user: PartialFactory<User> = (overrides = {}): User => {
       updated_on: faker.date.recent().toISOString(),
       grants: [],
       is_active: true,
+      // Read-only signal from mitxonline's export-compliance check. Empty means
+      // the profile is complete; override with field names (e.g.
+      // ["city", "postal_code"]) to exercise the just-in-time dialog.
+      compliance_missing_fields: [],
       b2b_organizations: [organization({})],
     },
     overrides,

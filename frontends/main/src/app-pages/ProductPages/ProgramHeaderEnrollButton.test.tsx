@@ -30,6 +30,9 @@ const makeUser = factories.user.user
 function setupAuth() {
   setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
   setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
+  // Clicking enroll consults the MITx Online profile through the compliance
+  // gate; the factory default has nothing missing, so it passes straight through.
+  setMockResponse.get(mitxUrls.userMe.get(), mitxFactories.user.user())
 }
 
 describe("ProgramHeaderEnrollButton", () => {

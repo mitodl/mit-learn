@@ -27,6 +27,9 @@ const baseProgram: Factory<BaseProgram> = (overrides = {}) => {
 }
 
 const program: PartialFactory<V2ProgramDetail> = (overrides = {}) => {
+  // Almost every real program advertises a single price (min === max); an
+  // advertised range is the flexible-pricing exception, so tests opt into it.
+  const advertisedPrice = faker.number.int({ min: 50, max: 5000 })
   const defaults: V2ProgramDetail = {
     id: uniqueProgramId.enforce(() => faker.number.int()),
     title: faker.lorem.words(3),
@@ -87,8 +90,8 @@ const program: PartialFactory<V2ProgramDetail> = (overrides = {}) => {
     min_weekly_hours: `${faker.number.int({ min: 1, max: 5 })} hours`,
     max_weekly_hours: `${faker.number.int({ min: 6, max: 10 })} hours`,
     start_date: faker.date.past().toISOString(),
-    max_price: faker.number.int({ min: 50, max: 5000 }),
-    min_price: faker.number.int({ min: 50, max: 5000 }),
+    max_price: advertisedPrice,
+    min_price: advertisedPrice,
     enrollment_start: faker.helpers.maybe(() =>
       faker.date.past().toISOString(),
     ),

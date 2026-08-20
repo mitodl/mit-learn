@@ -16,6 +16,7 @@ from learning_resources.constants import (
 )
 from learning_resources.etl.canvas_utils import (
     canvas_course_checksum,
+    canvas_course_folder,
     canvas_course_url,
     canvas_url_config,
     get_published_items,
@@ -31,7 +32,10 @@ from learning_resources.models import (
     LearningResourcePlatform,
     LearningResourceRun,
 )
-from learning_resources.utils import bulk_resources_unpublished_actions
+from learning_resources.utils import (
+    bulk_resources_unpublished_actions,
+    resource_unpublished_actions,
+)
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
 )
@@ -46,7 +50,7 @@ def sync_canvas_archive(bucket, key: str, overwrite):
     """
     from learning_resources.etl.loaders import load_content_files, load_problem_files
 
-    course_folder = key.lstrip(settings.CANVAS_COURSE_BUCKET_PREFIX).split("/")[0]
+    course_folder = canvas_course_folder(key)
     url_config_file = f"{key.split('.imscc', maxsplit=1)[0]}.metadata.json"
     with TemporaryDirectory() as export_tempdir:
         course_archive_path = Path(export_tempdir, key.rsplit("/", maxsplit=1)[-1])
@@ -130,7 +134,8 @@ def run_for_canvas_archive(course_archive_path, course_folder, checksum, overwri
         except (ValueError, TypeError):
             log.warning("Invalid end_at date format: %s", end_at)
 
-    readable_id = f"{course_folder}-{course_info.get('course_code')}"
+    course_code = course_info.get("course_code")
+    readable_id = f"{course_folder}-{course_code}"
     # create placeholder learning resource
     resource, _ = LearningResource.objects.update_or_create(
         readable_id=readable_id,
@@ -147,6 +152,28 @@ def run_for_canvas_archive(course_archive_path, course_folder, checksum, overwri
             "resource_category": LearningResourceType.course.value,
         },
     )
+
+    if course_code:
+        orphaned_resources = LearningResource.objects.filter(
+            etl_source=ETLSource.canvas.name,
+            readable_id__istartswith=f"{course_folder}-",
+        ).exclude(id=resource.id)
+        # the update doubles as the guard so the common (no orphans) case is one query
+        if orphaned_resources.update(test_mode=False, published=False):
+            orphans = list(orphaned_resources)
+            log.info(
+                "Deleting %d resources orphaned by a course code change in folder %s",
+                len(orphans),
+                course_folder,
+            )
+            for orphan in orphans:
+                resource_unpublished_actions(orphan)
+    else:
+        log.warning(
+            "Canvas archive in folder %s has no course code; skipping orphan cleanup",
+            course_folder,
+        )
+
     if resource.runs.count() == 0:
         LearningResourceRun.objects.create(
             run_id=f"{readable_id}+canvas",

@@ -6,6 +6,7 @@ import type {
 import { userQueries } from "api/hooks/user"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
+import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import { enrollmentAlertSuccessUrl } from "@/common/mitxonline"
 import { useRouter } from "next-nprogress-bar"
 import { usePostHog } from "posthog-js/react"
@@ -63,6 +64,9 @@ export const useCourseEnrollment = (
   const createEnrollment = useCreateEnrollment()
   const router = useRouter()
   const posthog = usePostHog()
+  // Paid enrollments are gated inside useReplaceBasketItem; the free track
+  // calls the enrollment endpoint directly and so gates here.
+  const { ensureCompliance } = useComplianceGate()
 
   const isEnrolledInSelected =
     selectedRun !== undefined && enrolledRunIds.includes(selectedRun.id)
@@ -82,7 +86,7 @@ export const useCourseEnrollment = (
 
   const makeOnClick =
     (kind: EnrollActionKind, label: string): EnrollAction["onClick"] =>
-    (e) => {
+    async (e) => {
       fireEnrollCta(posthog, {
         placement: opts?.tracking.placement,
         kind,
@@ -103,6 +107,7 @@ export const useCourseEnrollment = (
         }
       } else if (kind === "free") {
         if (selectedRun) {
+          if (!(await ensureCompliance())) return
           createEnrollment.mutate(
             { run_id: selectedRun.id },
             {

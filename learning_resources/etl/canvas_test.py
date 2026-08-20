@@ -20,6 +20,7 @@ from learning_resources.etl.canvas import (
 from learning_resources.etl.canvas_utils import (
     _compact_element,
     canvas_course_checksum,
+    canvas_course_folder,
     get_published_items,
     is_file_published,
     parse_canvas_files,
@@ -165,6 +166,111 @@ def test_parse_canvas_settings_handles_namespaces(tmp_path):
     attrs = parse_canvas_settings(zip_path)
     assert attrs["title"] == "Namespaced Title"
     assert attrs["course_code"] == "NS-101"
+
+
+@pytest.mark.parametrize(
+    ("prefix", "key", "expected"),
+    [
+        ("canvas/course_content", "canvas/course_content/12345/a.imscc", "12345"),
+        ("canvas/course_content/", "canvas/course_content/12345/a.imscc", "12345"),
+        ("canvas/", "canvas/1/a.imscc", "1"),
+        # a folder whose name is spelled with characters from the prefix must
+        # survive - str.lstrip would eat it, str.removeprefix does not
+        ("canvas/course_content", "canvas/course_content/course/a.imscc", "course"),
+    ],
+)
+def test_canvas_course_folder(settings, prefix, key, expected):
+    """canvas_course_folder should strip the bucket prefix, not a character set"""
+    settings.CANVAS_COURSE_BUCKET_PREFIX = prefix
+    assert canvas_course_folder(key) == expected
+
+
+@pytest.mark.django_db
+def test_run_for_canvas_archive_unpublishes_course_code_orphans(tmp_path, mocker):
+    """
+    A course whose code changed leaves a resource behind under its old readable
+    id. The S3 listing can't see that, so the course's own sync must clean it up.
+    """
+    mocker.patch(
+        "learning_resources.etl.canvas.parse_canvas_settings",
+        return_value={"title": "Test Course", "course_code": "NEW101"},
+    )
+    mocker.patch(
+        "learning_resources.etl.canvas_utils.parse_context_xml",
+        return_value={"course_id": "123", "canvas_domain": "mit.edu"},
+    )
+    mock_unpublished_actions = mocker.patch(
+        "learning_resources.etl.canvas.resource_unpublished_actions"
+    )
+    orphan = LearningResourceFactory.create(
+        readable_id="123-OLD101",
+        etl_source=ETLSource.canvas.name,
+        resource_type=LearningResourceType.course.name,
+        published=True,
+        test_mode=True,
+    )
+    # another folder's course, and another source sharing the prefix, both stay
+    other_course = LearningResourceFactory.create(
+        readable_id="1234-OTHER",
+        etl_source=ETLSource.canvas.name,
+        resource_type=LearningResourceType.course.name,
+    )
+    other_source = LearningResourceFactory.create(
+        readable_id="123-EDX",
+        etl_source=ETLSource.mit_edx.name,
+        resource_type=LearningResourceType.course.name,
+    )
+
+    run_for_canvas_archive(
+        tmp_path / "archive.zip",
+        course_folder="123",
+        checksum="abc123",
+        overwrite=True,
+    )
+
+    assert not LearningResource.objects.get(id=orphan.id).published
+    assert LearningResource.objects.filter(readable_id="123-NEW101").exists()
+    assert LearningResource.objects.filter(id=other_course.id).exists()
+    assert LearningResource.objects.filter(id=other_source.id).exists()
+    assert mock_unpublished_actions.call_count == 1
+
+
+@pytest.mark.django_db
+def test_run_for_canvas_archive_keeps_orphans_without_course_code(tmp_path, mocker):
+    """
+    An archive missing course_settings.xml has no course code to compare against,
+    so it must not treat the folder's real resource as an orphan and delete it.
+    """
+    mocker.patch(
+        "learning_resources.etl.canvas.parse_canvas_settings",
+        return_value={},
+    )
+    mocker.patch(
+        "learning_resources.etl.canvas_utils.parse_context_xml",
+        return_value={"course_id": "123", "canvas_domain": "mit.edu"},
+    )
+    mock_unpublished_actions = mocker.patch(
+        "learning_resources.etl.canvas.resource_unpublished_actions"
+    )
+    existing = LearningResourceFactory.create(
+        readable_id="123-REAL101",
+        etl_source=ETLSource.canvas.name,
+        resource_type=LearningResourceType.course.name,
+        published=True,
+        test_mode=True,
+    )
+
+    run_for_canvas_archive(
+        tmp_path / "archive.zip",
+        course_folder="123",
+        checksum="abc123",
+        overwrite=True,
+    )
+
+    existing.refresh_from_db()
+    assert existing.published is True
+    assert existing.test_mode is True
+    assert mock_unpublished_actions.call_count == 0
 
 
 @pytest.mark.django_db

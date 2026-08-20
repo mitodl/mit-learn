@@ -31,6 +31,7 @@ from learning_resources.tasks import (
     marketing_page_for_resources,
     scrape_marketing_pages,
     sync_canvas_courses,
+    unpublish_removed_canvas_courses,
     update_next_start_date_and_prices,
     update_ocw_learning_material_resources,
 )
@@ -62,34 +63,6 @@ def mock_blocklist(mocker):
     return mocker.patch(
         "learning_resources.tasks.load_course_blocklist", return_value=[]
     )
-
-
-def test_cache_is_cleared_after_task_run(mocker, mocked_celery):
-    """Test that the search cache is cleared out after every task run"""
-    mocker.patch("learning_resources.tasks.ocw_courses_etl", autospec=True)
-    mocker.patch("learning_resources.tasks.get_content_tasks", autospec=True)
-    mocker.patch("learning_resources.tasks.pipelines")
-    mocked_clear_views_cache = mocker.patch(
-        "learning_resources.tasks.clear_views_cache"
-    )
-    tasks.get_mit_edx_data.delay()
-    tasks.update_next_start_date_and_prices.delay()
-    tasks.get_mit_edx_data.delay()
-    tasks.get_mitxonline_data.delay()
-    tasks.get_oll_data.delay()
-    tasks.get_xpro_data.delay()
-    tasks.get_podcast_data.delay()
-
-    tasks.get_ocw_courses.delay(
-        url_paths=[OCW_TEST_PREFIX],
-        force_overwrite=False,
-        skip_content_files=True,
-    )
-
-    # get_youtube_data is absent on purpose: it only queues the fan-out, whose
-    # writes land long after it returns, so it has nothing to invalidate
-    tasks.get_youtube_transcripts.delay()
-    assert mocked_clear_views_cache.call_count == 9
 
 
 def test_get_mit_edx_data_valid(mocker):
@@ -1149,13 +1122,10 @@ def test_scrape_marketing_pages_queues_healable_programs(
     assert course.id not in queued_ids
 
 
-@pytest.mark.parametrize("canvas_ids", [["1"], None])
-def test_sync_canvas_courses(settings, mocker, django_assert_num_queries, canvas_ids):
-    """
-    sync_canvas_courses should unpublish and delete stale canvas LearningResources
-    """
+@pytest.fixture
+def canvas_archive_bucket(settings, mocker):
+    """Mock an S3 bucket holding one archive each for canvas folders 1 and 2"""
     settings.CANVAS_COURSE_BUCKET_PREFIX = "canvas/"
-    mocker.patch("learning_resources.tasks.resource_unpublished_actions")
     mock_bucket = mocker.Mock()
     mock_archive1 = mocker.Mock()
     mock_archive1.key = "canvas/1/archive1.imscc"
@@ -1167,51 +1137,148 @@ def test_sync_canvas_courses(settings, mocker, django_assert_num_queries, canvas
     mocker.patch(
         "learning_resources.tasks.get_bucket_by_name", return_value=mock_bucket
     )
+    return mock_bucket
 
-    # Create two canvas LearningResources - one stale
 
-    lr1 = LearningResourceFactory.create(
-        readable_id="course1",
-        etl_source=ETLSource.canvas.name,
-        published=True,
-        test_mode=True,
-        resource_type="course",
-    )
-    lr2 = LearningResourceFactory.create(
-        readable_id="course2",
-        etl_source=ETLSource.canvas.name,
-        published=True,
-        test_mode=True,
-        resource_type="course",
-    )
-    lr_stale = LearningResourceFactory.create(
-        readable_id="course3",
-        etl_source=ETLSource.canvas.name,
-        published=True,
-        test_mode=True,
-        resource_type="course",
+@pytest.mark.parametrize("canvas_ids", [["1"], None])
+def test_sync_canvas_courses(mocker, mocked_celery, canvas_archive_bucket, canvas_ids):
+    """
+    sync_canvas_courses should queue one ingest task per archive rather than
+    importing the courses inline
+    """
+    delay_mock = mocker.patch("learning_resources.tasks.ingest_canvas_course.delay")
+    sweep_mock = mocker.patch(
+        "learning_resources.tasks.unpublish_removed_canvas_courses"
     )
 
-    # Patch ingest_canvas_course to return the readable_ids for the two non-stale courses
-    mock_ingest_course = mocker.patch(
-        "learning_resources.tasks.ingest_canvas_course",
-        side_effect=["course1", "course2"],
-    )
-    sync_canvas_courses(canvas_course_ids=canvas_ids, overwrite=False)
+    queued = sync_canvas_courses.delay(
+        canvas_course_ids=canvas_ids, overwrite=False
+    ).get()
 
-    # The stale course should be unpublished and deleted
+    queued_keys = [call.args[0] for call in delay_mock.call_args_list]
     if canvas_ids:
-        assert LearningResource.objects.filter(id=lr_stale.id).exists()
+        # a filtered run only queues the courses it was asked for, and doesn't
+        # list every archive, so it must not sweep
+        assert queued_keys == ["canvas/1/archive1.imscc"]
+        assert sweep_mock.call_count == 0
     else:
-        assert not LearningResource.objects.filter(id=lr_stale.id).exists()
-    # The non-stale courses should still exist
+        assert sorted(queued_keys) == [
+            "canvas/1/archive1.imscc",
+            "canvas/2/archive2.imscc",
+        ]
+        # the sweep is driven by the listing, and runs before the fan-out so a
+        # culled import can't hold it up
+        assert sorted(sweep_mock.call_args.args[0]) == ["1", "2"]
+    assert queued == len(queued_keys)
+    # the imports are independent tasks - nothing waits on them, so the sync
+    # must not build a group/chord just to fan out
+    assert mocked_celery.group.call_count == 0
+    assert mocked_celery.replace.call_count == 0
+
+
+def test_sync_canvas_courses_no_archives(mocker, mocked_celery, canvas_archive_bucket):
+    """
+    An empty bucket listing should queue nothing and sweep nothing, rather than
+    reading as "canvas offers no courses" and deleting the catalog
+    """
+    canvas_archive_bucket.objects.filter.return_value = []
+    delay_mock = mocker.patch("learning_resources.tasks.ingest_canvas_course.delay")
+    sweep_mock = mocker.patch(
+        "learning_resources.tasks.unpublish_removed_canvas_courses"
+    )
+
+    assert sync_canvas_courses.delay(overwrite=False).get() is None
+
+    assert delay_mock.call_count == 0
+    assert sweep_mock.call_count == 0
+    assert mocked_celery.group.call_count == 0
+    assert mocked_celery.replace.call_count == 0
+
+
+def test_unpublish_removed_canvas_courses(mocker):
+    """
+    unpublish_removed_canvas_courses should delete canvas resources whose course
+    folder is no longer in the S3 listing, matching on the readable id prefix
+    """
+    mock_unpublished_actions = mocker.patch(
+        "learning_resources.tasks.resource_unpublished_actions"
+    )
+    lr1, lr2, lr_stale = (
+        LearningResourceFactory.create(
+            readable_id=readable_id,
+            etl_source=ETLSource.canvas.name,
+            published=True,
+            test_mode=True,
+            resource_type="course",
+        )
+        # folder "1" must not match folder "12"'s course, hence the trailing "-"
+        for readable_id in ("1-COURSE1", "12-COURSE12", "3-COURSE3")
+    )
+    other_source = LearningResourceFactory.create(
+        readable_id="3-COURSE3-edx",
+        etl_source=ETLSource.mit_edx.name,
+        published=True,
+        resource_type="course",
+    )
+
+    assert unpublish_removed_canvas_courses(["1", "12"]) == 1
+
+    assert not LearningResource.objects.get(id=lr_stale.id).published
     assert LearningResource.objects.filter(id=lr1.id).exists()
     assert LearningResource.objects.filter(id=lr2.id).exists()
+    assert LearningResource.objects.filter(id=other_source.id).exists()
+    assert mock_unpublished_actions.call_count == 1
+    # the hook skips content files on a test_mode resource, so it must be handed
+    # the resource as it is after the unpublish, not as it was before
+    unpublished = mock_unpublished_actions.call_args.args[0]
+    assert unpublished.id == lr_stale.id
+    assert unpublished.test_mode is False
+    assert unpublished.published is False
 
-    if canvas_ids:
-        assert mock_ingest_course.call_count == 1
-    else:
-        assert mock_ingest_course.call_count == 2
+
+def test_unpublish_removed_canvas_courses_none_stale(mocker):
+    """
+    A listing covering every course folder should delete nothing, without
+    unpublishing the courses it is keeping
+    """
+    mock_unpublished_actions = mocker.patch(
+        "learning_resources.tasks.resource_unpublished_actions"
+    )
+    resource = LearningResourceFactory.create(
+        readable_id="1-COURSE1",
+        etl_source=ETLSource.canvas.name,
+        published=True,
+        test_mode=True,
+        resource_type="course",
+    )
+
+    assert unpublish_removed_canvas_courses(["1"]) == 0
+
+    resource.refresh_from_db()
+    assert resource.published is True
+    assert resource.test_mode is True
+    assert mock_unpublished_actions.call_count == 0
+
+
+def test_unpublish_removed_canvas_courses_empty(mocker):
+    """
+    A listing that came back empty should leave every canvas course alone rather
+    than deleting the whole catalog
+    """
+    mocker.patch("learning_resources.tasks.resource_unpublished_actions")
+    resource = LearningResourceFactory.create(
+        readable_id="1-COURSE1",
+        etl_source=ETLSource.canvas.name,
+        published=True,
+        test_mode=True,
+        resource_type="course",
+    )
+
+    assert unpublish_removed_canvas_courses([]) == 0
+
+    resource.refresh_from_db()
+    assert resource.published is True
+    assert resource.test_mode is True
 
 
 @pytest.mark.parametrize(

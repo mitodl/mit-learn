@@ -139,6 +139,74 @@ describe("SiblingRunsToggle + SiblingRunsPanel", () => {
     expect(screen.getByText(/Jan 5, 2026/)).toBeInTheDocument()
   })
 
+  // The run icons are aria-hidden, so this label is the only status a screen
+  // reader gets for the current run. Every time state has to produce words.
+  test.each([
+    {
+      case: "still running",
+      startDate: moment().subtract(90, "days").toISOString(),
+      endDate: moment().add(30, "days").toISOString(),
+      expected: "In Progress",
+    },
+    {
+      case: "already ended",
+      startDate: moment().subtract(90, "days").toISOString(),
+      endDate: moment().subtract(30, "days").toISOString(),
+      expected: "Ended",
+    },
+    {
+      case: "not yet started",
+      startDate: moment().add(30, "days").toISOString(),
+      endDate: moment().add(90, "days").toISOString(),
+      expected: "Upcoming",
+    },
+  ])(
+    "current run $case is labelled '$expected'",
+    async ({ startDate, endDate, expected }) => {
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        certificate: null,
+        grades: [],
+        run: {
+          start_date: startDate,
+          end_date: endDate,
+        },
+      })
+      renderWithProviders(
+        <SiblingRunsAccordionHarness
+          enrollment={enrollment}
+          siblingEnrollments={[]}
+        />,
+      )
+      await expandAccordion()
+      const row = (await screen.findByText("Current run:")).closest("div")
+      expect(row).toHaveTextContent(`(${expected})`)
+    },
+  )
+
+  test("a past sibling run announces that it has ended", async () => {
+    const enrollment = makeEnrollment({
+      start_date: moment().subtract(30, "days").toISOString(),
+      end_date: moment().add(30, "days").toISOString(),
+    })
+    const pastSibling = makeEnrollment({
+      start_date: moment().subtract(400, "days").toISOString(),
+      end_date: moment().subtract(300, "days").toISOString(),
+    })
+    renderWithProviders(
+      <SiblingRunsAccordionHarness
+        enrollment={enrollment}
+        siblingEnrollments={[pastSibling]}
+      />,
+    )
+    await expandAccordion()
+    // The row shows only a date range visually; the expired icon is
+    // aria-hidden, so the status has to reach screen readers some other way.
+    expect(await screen.findByText("Ended")).toBeInTheDocument()
+    expect(
+      screen.getByRole("link", { name: /View content for .*\(Ended\)/ }),
+    ).toBeInTheDocument()
+  })
+
   test("each sibling with a courseware URL shows a 'View content' link after expanding", async () => {
     const urlA = faker.internet.url()
     const urlB = faker.internet.url()

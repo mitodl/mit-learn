@@ -14,14 +14,7 @@ import {
   V3UserProgramEnrollment,
   V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
-import {
-  EnrollmentStatus,
-  getEnrollmentStatus,
-  getKey,
-  getProgramEnrollmentStatus,
-  ResourceType,
-  selectBestEnrollment,
-} from "./helpers"
+import { getKey, getProgramEnrollmentStatus, ResourceType } from "./helpers"
 import { ProgressBadge } from "./ProgressBadge"
 import { CoursewareCard } from "./CoursewareCard"
 import {
@@ -34,6 +27,7 @@ import {
 import {
   getCertificateLink,
   buildCourseEntry,
+  courseIsCompleted,
 } from "./model/dashboardViewModel"
 import {
   getIdsFromReqTree,
@@ -309,21 +303,18 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
       Boolean(course),
     )
 
+  // Counted across all of a course's enrollments rather than the one a card
+  // would display: the displayed run is the one underway, so a learner who
+  // passed an earlier run and re-enrolled would otherwise stop counting as
+  // having completed the course.
   const enrolledCount = displayedModuleCourses.filter((course) => {
-    const bestEnrollment = selectBestEnrollment(
-      course,
-      moduleEnrollmentsByCourseId[course.id] || [],
-    )
-    return getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Enrolled
+    const enrollments = moduleEnrollmentsByCourseId[course.id] || []
+    return enrollments.length > 0 && !courseIsCompleted(enrollments)
   }).length
 
-  const completedCount = displayedModuleCourses.filter((course) => {
-    const bestEnrollment = selectBestEnrollment(
-      course,
-      moduleEnrollmentsByCourseId[course.id] || [],
-    )
-    return getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Completed
-  }).length
+  const completedCount = displayedModuleCourses.filter((course) =>
+    courseIsCompleted(moduleEnrollmentsByCourseId[course.id] || []),
+  ).length
 
   const totalCount = displayedModuleCourses.length
 

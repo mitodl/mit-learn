@@ -37,23 +37,24 @@ describe("Podcast Sitemaps", () => {
 
   it("generates expected URLs for podcast resources", async () => {
     const page = faker.number.int({ min: 5, max: 10 })
-    const podcastList = factories.learningResources.podcasts({
-      count: 3,
-      pageSize: 3,
-    })
+    const results = Array.from({ length: 3 }, () =>
+      factories.learningResources.resourceSummary({
+        resource_type: ResourceTypeEnum.Podcast,
+      }),
+    )
 
     setMockResponse.get(
-      urls.learningResources.list({
+      urls.learningResources.summaryList({
         limit: 1_000,
         offset: page * 1_000,
         resource_type: RESOURCE_TYPES,
       }),
-      podcastList,
+      { count: results.length, next: null, previous: null, results },
     )
 
     const sitemapPage = await sitemap({ id: Promise.resolve(String(page)) })
     expect(sitemapPage).toEqual(
-      podcastList.results.map((resource) => ({
+      results.map((resource) => ({
         url: `http://test.learn.odl.local:8062${podcastPageView(
           String(resource.id),
           resource.title,
@@ -70,14 +71,16 @@ describe("Podcast Sitemaps", () => {
     const podcastId1 = faker.number.int()
     const podcastId2 = faker.number.int()
     const episodeWithMultipleParents =
-      factories.learningResources.podcastEpisode({
-        podcast_episode: { podcasts: [podcastId1, podcastId2] },
+      factories.learningResources.resourceSummary({
+        resource_type: ResourceTypeEnum.PodcastEpisode,
+        canonical_parent_ids: [podcastId1, podcastId2],
       })
-    const episodeWithOneParent = factories.learningResources.podcastEpisode({
-      podcast_episode: { podcasts: [podcastId1] },
+    const episodeWithOneParent = factories.learningResources.resourceSummary({
+      resource_type: ResourceTypeEnum.PodcastEpisode,
+      canonical_parent_ids: [podcastId1],
     })
-    const episodeWithoutParent = factories.learningResources.podcastEpisode({
-      podcast_episode: { podcasts: [] },
+    const episodeWithoutParent = factories.learningResources.resourceSummary({
+      resource_type: ResourceTypeEnum.PodcastEpisode,
     })
     const results = [
       episodeWithMultipleParents,
@@ -86,7 +89,7 @@ describe("Podcast Sitemaps", () => {
     ]
 
     setMockResponse.get(
-      urls.learningResources.list({
+      urls.learningResources.summaryList({
         limit: 1_000,
         offset: page * 1_000,
         resource_type: RESOURCE_TYPES,

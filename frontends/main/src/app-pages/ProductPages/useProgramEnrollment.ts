@@ -3,6 +3,7 @@ import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import { userQueries } from "api/hooks/user"
 import { useCreateProgramEnrollment } from "api/mitxonline-hooks/enrollment"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
+import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import { enrollmentAlertSuccessUrl } from "@/common/mitxonline"
 import { useRouter } from "next-nprogress-bar"
 import { usePostHog } from "posthog-js/react"
@@ -51,6 +52,9 @@ export const useProgramEnrollment = (
   const createProgramEnrollment = useCreateProgramEnrollment()
   const router = useRouter()
   const posthog = usePostHog()
+  // Paid enrollments are gated inside useReplaceBasketItem; the free track
+  // calls the enrollment endpoint directly and so gates here.
+  const { ensureCompliance } = useComplianceGate()
 
   const offering = getProgramOffering(program)
 
@@ -64,7 +68,7 @@ export const useProgramEnrollment = (
 
   const makeOnClick =
     (kind: EnrollActionKind, label: string): EnrollAction["onClick"] =>
-    (e) => {
+    async (e) => {
       // Same event as the course hook; `resourceType: "program"` distinguishes
       // program CTA clicks (including program-as-course display).
       fireEnrollCta(posthog, {
@@ -84,6 +88,7 @@ export const useProgramEnrollment = (
           replaceBasketItem.mutate(product.id)
         }
       } else if (kind === "free") {
+        if (!(await ensureCompliance())) return
         createProgramEnrollment.mutate(
           { V3ProgramEnrollmentRequestRequest: { program_id: program.id } },
           {

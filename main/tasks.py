@@ -5,6 +5,7 @@ import logging
 
 from django.conf import settings
 
+from main import utils
 from main.celery import app
 from main.models import TaskBatch, TaskJob
 from main.utils import now_in_utc
@@ -43,3 +44,13 @@ def delete_old_task_jobs():
     threshold = now_in_utc() - datetime.timedelta(days=settings.TASK_JOB_RETENTION_DAYS)
     deleted, _ = TaskJob.objects.filter(updated_on__lt=threshold).delete()
     log.info("Deleted %d old task job/batch rows", deleted)
+
+
+@app.task
+def clear_views_cache():
+    """
+    Drop cached view responses
+    """
+    cleared = utils.clear_views_cache()
+    log.info("Cleared %d cached view responses", cleared)
+    return cleared

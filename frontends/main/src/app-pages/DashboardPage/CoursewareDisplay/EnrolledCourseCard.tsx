@@ -22,21 +22,24 @@ import {
   DashboardType,
   getCertificateLink,
   getDashboardEnrollmentStatus,
+  pickCertificateEnrollment,
 } from "./model/dashboardViewModel"
 import { getCourseDateText } from "./courseDateUtils"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { RiArrowUpCircleLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
+import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import { useCreateVerifiedProgramEnrollment } from "api/mitxonline-hooks/enrollment"
 import { isInPast, calendarDaysUntil, NoSSR } from "ol-utilities"
 import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
-import { coursePageView } from "@/common/urls"
+import { coursePageView, receiptByRunView } from "@/common/urls"
 import NiceModal from "@ebay/nice-modal-react"
 import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
 import { getReceiptMenuItem } from "./receiptMenuItem"
+import { useOrderIdForRun } from "@/common/mitxonline/useOrderIdForResource"
 import {
   CourseRunEnrollmentV3,
   V3UserProgramEnrollment,
@@ -97,6 +100,7 @@ const UpgradeBanner: React.FC<
 }) => {
   const replaceBasketItem = useReplaceBasketItem()
   const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment()
+  const { ensureCompliance } = useComplianceGate()
 
   const programRequestBody = programReadableIds?.length
     ? programReadableIds
@@ -115,6 +119,11 @@ const UpgradeBanner: React.FC<
     e.preventDefault()
 
     if (canOneClickUpgrade) {
+      // Gated before the try/catch: a dismissed compliance dialog is not an
+      // upgrade failure and must not surface onUpgradeFailure's error
+      // message. The checkout fallback below is gated inside
+      // useReplaceBasketItem instead, so it isn't checked twice.
+      if (!(await ensureCompliance())) return
       try {
         await createVerifiedProgramEnrollment.mutateAsync({
           courserun_id: readableId!,
@@ -251,10 +260,22 @@ export const EnrolledCourseCard = ({
     ) : null
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const isStaff = mitxOnlineUser.data?.is_staff
+  /**
+   * Only verified enrollments can have a receipt, so the lookup is skipped
+   * entirely for audit ones. Every card shares one `orders/history` query (same
+   * cache key), so this is a single request for the whole dashboard rather than
+   * one per card.
+   */
+  const receiptResolution = useOrderIdForRun(
+    isVerifiedEnrollmentMode(enrollment?.enrollment_mode)
+      ? (run?.id ?? null)
+      : null,
+  )
   const title = isCompact ? course.title : run?.title || course.title
   const coursewareUrl = run?.courseware_url
   const certificateLink = getCertificateLink(
-    enrollment?.certificate?.link,
+    pickCertificateEnrollment([enrollment, ...(siblingEnrollments ?? [])])
+      ?.certificate?.link,
     "course",
   )
   const enrollmentMode = enrollment?.enrollment_mode
@@ -455,7 +476,8 @@ export const EnrolledCourseCard = ({
 
   const receiptMenuItem = getReceiptMenuItem(
     enrollment?.enrollment_mode,
-    `/orders/receipt/by-run/${enrollment?.run.id}/`,
+    receiptResolution,
+    receiptByRunView(run.id),
   )
   if (receiptMenuItem) menuItems.push(receiptMenuItem)
 
@@ -479,7 +501,11 @@ export const EnrolledCourseCard = ({
   const progressBadgeSection =
     isModule && isCompact ? null : (
       <Stack direction="row" gap="4px" alignItems="center">
-        <ProgressBadge enrollmentStatus={enrollmentStatus} />
+        <ProgressBadge
+          enrollmentStatus={enrollmentStatus}
+          startDate={startDate}
+          endDate={endDate}
+        />
         <Separator />
         {cardTypeLabel}
       </Stack>

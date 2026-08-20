@@ -221,6 +221,10 @@ describe("useProgramEnrollment — actions", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+    // Enrolling now consults the MITx Online profile through the compliance
+    // gate. The factory default has nothing missing, so it passes straight
+    // through; see JustInTimeDialog tests for the blocked case.
+    setMockResponse.get(mitxUrls.userMe.get(), mitxFactories.user.user())
   })
 
   afterEach(() => {
