@@ -270,6 +270,15 @@ class ContentSummarizerConfigurationAdmin(admin.ModelAdmin):
     )
 
 
+class ETLSourceOwnershipAdmin(admin.ModelAdmin):
+    """ETLSourceOwnership Admin"""
+
+    model = models.ETLSourceOwnership
+    list_display = ("etl_source", "resource_type", "mode", "updated_on")
+    list_filter = ("etl_source", "mode")
+    search_fields = ("etl_source", "resource_type")
+
+
 admin.site.register(models.LearningResourceTopic, LearningResourceTopicAdmin)
 admin.site.register(models.LearningResourceInstructor, LearningResourceInstructorAdmin)
 admin.site.register(models.LearningResource, LearningResourceAdmin)
@@ -285,3 +294,4 @@ admin.site.register(models.ContentFile, ContentFileAdmin)
 admin.site.register(
     models.ContentSummarizerConfiguration, ContentSummarizerConfigurationAdmin
 )
+admin.site.register(models.ETLSourceOwnership, ETLSourceOwnershipAdmin)

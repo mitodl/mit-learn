@@ -17,10 +17,11 @@ from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.factories import (
     ContentFileFactory,
+    ETLSourceOwnershipFactory,
     LearningResourceFactory,
     LearningResourceRunFactory,
 )
-from learning_resources.models import ContentFile, LearningResource
+from learning_resources.models import ContentFile, ETLSourceOwnership, LearningResource
 from learning_resources.tasks import (
     cleanup_deleted_content_files,
     get_ocw_data,
@@ -1307,6 +1308,37 @@ def test_unpublish_removed_canvas_courses_empty(mocker):
     resource.refresh_from_db()
     assert resource.published is True
     assert resource.test_mode is True
+
+
+def test_sync_canvas_courses_skips_entirely_when_push_owned(settings, mocker):
+    """
+    sync_canvas_courses should not ingest archives or unpublish/delete stale
+    courses once canvas courses are push-owned.
+    """
+    settings.CANVAS_COURSE_BUCKET_PREFIX = "canvas/"
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.canvas.name,
+        resource_type=LearningResourceType.course.name,
+        mode=ETLSourceOwnership.Mode.PUSH,
+    )
+    mocker.patch("learning_resources.tasks.resource_unpublished_actions")
+    mock_get_bucket = mocker.patch("learning_resources.tasks.get_bucket_by_name")
+    mock_ingest_course = mocker.patch("learning_resources.tasks.ingest_canvas_course")
+
+    lr_stale = LearningResourceFactory.create(
+        readable_id="course3",
+        etl_source=ETLSource.canvas.name,
+        published=True,
+        test_mode=True,
+        resource_type="course",
+    )
+
+    sync_canvas_courses(canvas_course_ids=None, overwrite=False)
+
+    mock_get_bucket.assert_not_called()
+    mock_ingest_course.assert_not_called()
+    lr_stale.refresh_from_db()
+    assert lr_stale.published is True
 
 
 @pytest.mark.parametrize(

@@ -34,6 +34,7 @@ from learning_resources.etl.loaders import (
     load_learning_materials,
     load_run_dependent_values,
 )
+from learning_resources.etl.ownership import pull_write_allowed
 from learning_resources.etl.pipelines import ocw_courses_etl
 from learning_resources.etl.utils import (
     get_bucket_by_name,
@@ -780,6 +781,13 @@ def sync_canvas_courses(canvas_course_ids=None, overwrite=False):  # noqa: FBT00
     Returns:
         int or None: the number of courses queued, or None if no archives were found
     """
+    if not pull_write_allowed(ETLSource.canvas.name, LearningResourceType.course.name):
+        log.info(
+            "Skipping pull-ETL write for %s/%s: ownership is push",
+            ETLSource.canvas.name,
+            LearningResourceType.course.name,
+        )
+        return
 
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     s3_prefix = get_s3_prefix_for_source(ETLSource.canvas.name)
