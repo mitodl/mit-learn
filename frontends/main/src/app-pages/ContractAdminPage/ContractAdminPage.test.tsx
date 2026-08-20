@@ -1267,9 +1267,10 @@ describe("ContractAdminPage", () => {
     // mutation invalidates every filter for this contract. The second fetch
     // is held open so the busy/dimmed state can be asserted before resolving.
     let allCodesCalls = 0
-    const allCodesRefetch = Promise.withResolvers<
-      ReturnType<typeof factories.contracts.paginatedContractCodes>
-    >()
+    const allCodesRefetch =
+      Promise.withResolvers<
+        ReturnType<typeof factories.contracts.paginatedContractCodes>
+      >()
     setMockResponse.get(
       urls.contracts.managerContractCodes(org.id, contract.id, {
         page: 1,
@@ -1335,9 +1336,7 @@ describe("ContractAdminPage", () => {
     )
 
     await act(async () => {
-      allCodesRefetch.resolve(
-        factories.contracts.paginatedContractCodes([]),
-      )
+      allCodesRefetch.resolve(factories.contracts.paginatedContractCodes([]))
     })
 
     await waitFor(() => {
