@@ -1,6 +1,23 @@
 Release Notes
 =============
 
+Version 0.77.8 (Released August 19, 2026)
+--------------
+
+- Batch the PostHog view-event loader instead of querying per event (#3785)
+- feat: Collect required compliance fields before any enrollment or checkout (#3766)
+- receipt page (#3717)
+- Allow for null course ids in webhook payload (#3776)
+- make healthcheck resistant to k8 pod culling (#3760)
+
+Version 0.77.7 (Released August 18, 2026)
+--------------
+
+- Show the game sub-nav above Arithmix (#3774)
+- chore(otel): delete a dead flag and fix a setting name that was never read (#3783)
+- Page the podcast and video sitemaps off the summary endpoint (#3759)
+- docs(otel): say plainly that the OTEL sampler is a ceiling over both destinations (#3781)
+
 Version 0.77.6 (Released August 17, 2026)
 --------------
 

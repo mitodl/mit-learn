@@ -118,6 +118,9 @@ const setupApis = ({
     learnUrls.userMe.get(),
     learnFactories.user.user({ is_authenticated: false }),
   )
+  // Clicking enroll consults the MITx Online profile through the compliance
+  // gate; the factory default has nothing missing, so it passes straight through.
+  setMockResponse.get(mitxUrls.userMe.get(), mitxFactories.user.user())
 
   const stayUpdatedFormId =
     process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID?.trim()

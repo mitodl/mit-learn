@@ -10,10 +10,17 @@ import {
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
+import { receiptByRunView, receiptView } from "@/common/urls"
 import { makeRequest } from "api/test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { EnrolledCourseCard } from "./EnrolledCourseCard"
+import { setupOrderHistory } from "./test-utils"
+
+// Verified cards look up their order; default to none, tests override.
+beforeEach(() => {
+  setupOrderHistory()
+})
 
 const EnrollmentMode = {
   Audit: "audit",
@@ -166,6 +173,33 @@ describe.each([
       name: /View Certificate/,
     })
     expect(certLink).toHaveAttribute(
+      "href",
+      `https://courses.example.com/certificate/course/${certUuid}/`,
+    )
+  })
+
+  test("shows View Certificate link when the certificate is on a sibling run", () => {
+    setupUserApis()
+    const certUuid = faker.string.uuid()
+    const certificateLink = `https://courses.example.com/certificate/${certUuid}/`
+    const displayedEnrollment =
+      mitxonline.factories.enrollment.courseEnrollment({
+        certificate: null,
+        run: currentRunDates,
+      })
+    const earlierEnrollment = mitxonline.factories.enrollment.courseEnrollment({
+      certificate: { uuid: certUuid, link: certificateLink },
+      run: pastRunDates,
+    })
+    renderWithProviders(
+      <EnrolledCourseCard
+        enrollment={displayedEnrollment}
+        siblingEnrollments={[earlierEnrollment]}
+      />,
+    )
+    expect(
+      within(getCard()).getByRole("link", { name: /View Certificate/ }),
+    ).toHaveAttribute(
       "href",
       `https://courses.example.com/certificate/course/${certUuid}/`,
     )
@@ -784,12 +818,13 @@ describe.each([
       enrollment_mode: EnrollmentMode.Verified,
       grades: [mitxonline.factories.enrollment.grade({ passed: true })],
     })
+    setupOrderHistory({ runId: enrollment.run.id })
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
     await user.click(
       within(getCard()).getByRole("button", { name: "More options" }),
     )
     expect(
-      screen.getByRole("menuitem", { name: "Receipt" }),
+      await screen.findByRole("menuitem", { name: "Receipt" }),
     ).toBeInTheDocument()
   })
 
@@ -809,30 +844,77 @@ describe.each([
     ).not.toBeInTheDocument()
   })
 
-  test("Receipt links to correct MITx Online URL for verified enrollment", async () => {
+  test("Receipt links to the receipt for the order that paid for the run", async () => {
     setupUserApis()
-    const runId = faker.number.int()
+    const runId = faker.number.int({ min: 1 })
+    setupOrderHistory({ runId, orderId: 87 })
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Verified,
       grades: [mitxonline.factories.enrollment.grade({ passed: true })],
       run: { id: runId },
     })
-    const windowOpenSpy = jest
-      .spyOn(window, "open")
-      .mockImplementation(() => null)
 
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
     await user.click(
       within(getCard()).getByRole("button", { name: "More options" }),
     )
-    await user.click(screen.getByRole("menuitem", { name: "Receipt" }))
 
-    expect(windowOpenSpy).toHaveBeenCalledWith(
-      mitxonlineLegacyUrl(`/orders/receipt/by-run/${runId}/`),
-      "_blank",
-      "noopener,noreferrer",
+    expect(
+      await screen.findByRole("menuitem", { name: "Receipt" }),
+    ).toHaveAttribute("href", receiptView(87))
+  })
+
+  // Verified does not imply a run-level order, so the item must stay hidden.
+  test("Receipt is hidden for a verified enrollment with no order behind it", async () => {
+    setupUserApis()
+    const runId = faker.number.int({ min: 1 })
+    // An order exists, but for a different run.
+    setupOrderHistory({ runId: runId + 1, orderId: 87 })
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Verified,
+      grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+      run: { id: runId },
+    })
+
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    await user.click(
+      within(getCard()).getByRole("button", { name: "More options" }),
     )
-    windowOpenSpy.mockRestore()
+    // Wait for a sibling item so we know the menu has rendered.
+    await screen.findByRole("menuitem", { name: "Unenroll" })
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Receipt" }),
+    ).not.toBeInTheDocument()
+  })
+
+  /**
+   * An `orders/history` outage must not look the same as "you never paid for this".
+   * The item stays, pointing at the resolver route, which refetches and renders its
+   * own skeleton or 404 instead of the option silently vanishing from every card.
+   */
+  test("Receipt falls back to the resolver route when the order lookup fails", async () => {
+    setupUserApis()
+    const runId = faker.number.int({ min: 1 })
+    setMockResponse.get(
+      mitxonline.urls.orders.historyList({ limit: 100 }),
+      "Server error",
+      { code: 500 },
+    )
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Verified,
+      grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+      run: { id: runId },
+    })
+
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    await user.click(
+      within(getCard()).getByRole("button", { name: "More options" }),
+    )
+
+    expect(
+      await screen.findByRole("menuitem", { name: "Receipt" }),
+    ).toHaveAttribute("href", receiptByRunView(runId))
   })
 })
 
@@ -1030,12 +1112,30 @@ describe("EnrolledCourseCard progress badge", () => {
 
   const getDesktopCard = () => screen.getByTestId("enrollment-card-desktop")
 
+  // The badge describes the displayed run, so every case pins the run dates it
+  // reads rather than leaving them to the factory's random values.
   test.each([
     {
+      case: "run underway",
+      runDates: currentRunDates,
       enrollmentData: { grades: [], certificate: null },
       expectedLabel: "In Progress",
     },
     {
+      case: "run not yet started",
+      runDates: futureRunDates,
+      enrollmentData: { grades: [], certificate: null },
+      expectedLabel: "Not Started",
+    },
+    {
+      case: "run over without a certificate",
+      runDates: pastRunDates,
+      enrollmentData: { grades: [], certificate: null },
+      expectedLabel: "Ended",
+    },
+    {
+      case: "certificate earned",
+      runDates: pastRunDates,
       enrollmentData: {
         grades: [mitxonline.factories.enrollment.grade({ passed: true })],
         certificate: {
@@ -1046,12 +1146,13 @@ describe("EnrolledCourseCard progress badge", () => {
       expectedLabel: "Completed",
     },
   ])(
-    "shows '$expectedLabel' next to the card type label",
-    ({ enrollmentData, expectedLabel }) => {
+    "shows '$expectedLabel' next to the card type label ($case)",
+    ({ runDates, enrollmentData, expectedLabel }) => {
       setupUserApis()
       const enrollment = mitxonline.factories.enrollment.courseEnrollment({
         ...enrollmentData,
         b2b_contract_id: null,
+        run: runDates,
       })
       renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
       expect(

@@ -3,7 +3,7 @@
 import uuid
 
 from django.contrib.auth.models import AbstractUser
-from django.db.models import CharField, UUIDField
+from django.db.models import BooleanField, CharField, UUIDField
 from django_scim.models import AbstractSCIMUserMixin
 
 from main.models import TimestampedModel
@@ -18,6 +18,21 @@ class User(AbstractUser, AbstractSCIMUserMixin, TimestampedModel):
         null=True,
         unique=True,
         default=None,
+    )
+
+    # Null until first needed, then filled in from Keycloak's federated identity
+    # links (see authentication.api.is_sso_user). Stored rather than derived on
+    # each read because it effectively never changes on its own, and because
+    # making it editable is useful: clearing the flag grants someone local
+    # credentials, so they can keep an account after leaving the organization
+    # that provided their identity.
+    is_sso_user = BooleanField(
+        null=True,
+        default=None,
+        help_text=(
+            "Authenticates via an external identity provider, so cannot change "
+            "their own email or password. Blank until determined from Keycloak."
+        ),
     )
 
     def get_or_generate_unsubscribe_uuid(self) -> uuid.UUID:

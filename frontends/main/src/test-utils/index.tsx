@@ -4,10 +4,11 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query"
 import { ThemeProvider } from "ol-components"
 import { Provider as NiceModalProvider } from "@ebay/nice-modal-react"
 
+import { ComplianceGateProvider } from "@/common/mitxonline/useComplianceGate"
 import { makeBrowserQueryClient } from "@/app/getQueryClient"
 import { render } from "@testing-library/react"
 import { factories, setMockResponse } from "api/test-utils"
-import type { User } from "api/hooks/user"
+import type { CurrentUser, User } from "api/hooks/user"
 import { userQueries } from "api/hooks/user"
 import {
   mockRouter,
@@ -35,13 +36,13 @@ setupRoutes()
 
 interface TestAppOptions {
   url: string
-  user: Partial<User>
+  user: Partial<CurrentUser>
 }
 
 const defaultTestAppOptions = {
   url: "/",
 }
-const defaultUser: User = factories.user.user()
+const defaultUser: CurrentUser = factories.user.user()
 
 const TestProviders: React.FC<{
   children: React.ReactNode
@@ -49,7 +50,9 @@ const TestProviders: React.FC<{
 }> = ({ children, queryClient }) => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
-      <NiceModalProvider>{children}</NiceModalProvider>
+      <NiceModalProvider>
+        <ComplianceGateProvider>{children}</ComplianceGateProvider>
+      </NiceModalProvider>
     </ThemeProvider>
   </QueryClientProvider>
 )
@@ -316,4 +319,4 @@ export {
 } from "@testing-library/react"
 export { default as user } from "@testing-library/user-event"
 
-export type { TestAppOptions, User }
+export type { TestAppOptions, CurrentUser, User }

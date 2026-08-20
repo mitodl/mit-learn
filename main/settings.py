@@ -36,7 +36,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.77.6"
+VERSION = "0.77.8"
 
 log = logging.getLogger()
 
@@ -349,6 +349,22 @@ APISIX_USERDATA_MAP = {
 }
 DISABLE_APISIX_USER_MIDDLEWARE = get_bool(
     name="DISABLE_APISIX_USER_MIDDLEWARE",
+    default=False,
+)
+
+# Set to True to create users that we see but aren't aware of.
+# Set to False if you're managing that elsewhere (like with SCIM).
+# Named to match mitol-django-apigateway, which we intend to port to.
+MITOL_APIGATEWAY_USERINFO_CREATE = get_bool(
+    name="MITOL_APIGATEWAY_USERINFO_CREATE",
+    default=True,
+)
+
+# Set to True to update users we've seen before. If you set this to False, make
+# sure there's a backchannel way to update the user data (SCIM, etc) or user
+# info will fall out of sync with the IdP pretty quickly.
+MITOL_APIGATEWAY_USERINFO_UPDATE = get_bool(
+    name="MITOL_APIGATEWAY_USERINFO_UPDATE",
     default=False,
 )
 
@@ -704,6 +720,16 @@ KEYCLOAK_BASE_URL = get_string(
 KEYCLOAK_REALM_NAME = get_string(
     name="KEYCLOAK_REALM_NAME",
     default="olapps",
+)
+# The OIDC client used to start Keycloak "application initiated actions"
+# (update email / update password) and to exchange the resulting authorization
+# code. Deliberately has no default: the account action callback URL has to be a
+# registered redirect URI on this client, so guessing a client here fails at
+# Keycloak with an opaque error. Deployed environments must set it (mitxonline
+# does the same with `ol-mitxonline-client`).
+KEYCLOAK_CLIENT_ID = get_string(
+    name="KEYCLOAK_CLIENT_ID",
+    default=None,
 )
 
 MICROMASTERS_CMS_API_URL = get_string("MICROMASTERS_CMS_API_URL", None)

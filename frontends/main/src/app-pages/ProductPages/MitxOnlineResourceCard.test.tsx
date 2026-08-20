@@ -273,7 +273,7 @@ describe("MitxOnlineResourceCard", () => {
         href: "/test",
         list: true,
       })
-      expect(container.textContent).toContain("$100 - $500")
+      expect(container.textContent).toContain("$100 – $500")
     })
 
     test("shows 'Free' and certificate price when both free and paid", () => {

@@ -518,6 +518,20 @@ def canvas_course_url(course_archive_path) -> str:
     return f"https://{context_info.get('canvas_domain')}/courses/{context_info.get('course_id')}/"
 
 
+def canvas_course_folder(key: str) -> str:
+    """
+    Return the folder a canvas archive sits in, which is its canvas course id.
+
+    Args:
+        key (str): the archive's S3 key
+    Returns:
+        str: the archive's course folder
+    """
+    return (
+        key.removeprefix(settings.CANVAS_COURSE_BUCKET_PREFIX).strip("/").split("/")[0]
+    )
+
+
 def _url_config_key(item):
     """
     Get the key to look up an item from the url_config dictionary

@@ -46,14 +46,14 @@ describe("CertificateTrackCard", () => {
 
   test.each([
     {
-      name: "available, when not applied",
+      name: "apply, when not applied",
       applied: false,
-      linkText: "Financial assistance available",
+      linkText: "Apply for financial aid",
     },
     {
-      name: "approved (applied at checkout), when applied",
+      name: "applied (visible at checkout), when applied",
       applied: true,
-      linkText: "Financial assistance approved (applied at checkout)",
+      linkText: "Financial aid approved (visible at checkout)",
     },
   ])(
     "renders financial aid link to the form — $name",
@@ -63,7 +63,7 @@ describe("CertificateTrackCard", () => {
         <CertificateTrackCard
           price={<span>$250</span>}
           productNoun="course"
-          financialAid={{ href, applied }}
+          financialAid={{ href, applied, pending: false }}
         />,
       )
       const link = screen.getByRole("link", { name: linkText })
@@ -72,13 +72,26 @@ describe("CertificateTrackCard", () => {
     },
   )
 
+  test("reserves the row without a link while approval is still loading", () => {
+    renderWithProviders(
+      <CertificateTrackCard
+        price={<span>$250</span>}
+        productNoun="course"
+        financialAid={{
+          href: "https://example.com/financial-aid",
+          applied: false,
+          pending: true,
+        }}
+      />,
+    )
+    expect(screen.queryByRole("link", { name: /financial aid/i })).toBeNull()
+  })
+
   test("does not render a financial aid link when financialAid is not provided", () => {
     renderWithProviders(
       <CertificateTrackCard price={<span>$250</span>} productNoun="course" />,
     )
-    expect(
-      screen.queryByRole("link", { name: /Financial assistance/ }),
-    ).toBeNull()
+    expect(screen.queryByRole("link", { name: /financial aid/i })).toBeNull()
   })
 
   test("renders the action node when provided", () => {

@@ -3,21 +3,42 @@ import { SettingsContent } from "./SettingsContent"
 import { renderWithProviders, screen, within, user } from "@/test-utils"
 import { urls, setMockResponse, factories, makeRequest } from "api/test-utils"
 import type { LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionCheckListRequest as CheckSubscriptionRequest } from "api"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
+import { AccountAction, accountAction } from "@/common/urls"
+
+jest.mock("posthog-js/react", () => ({
+  ...jest.requireActual("posthog-js/react"),
+  useFeatureFlagEnabled: jest.fn(),
+}))
+const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+
+const enableAccountManagement = (enabled: boolean) => {
+  mockedUseFeatureFlagEnabled.mockImplementation((flag) =>
+    flag === FeatureFlags.AccountManagement ? enabled : false,
+  )
+}
 
 type SetupApisOptions = {
   isAuthenticated?: boolean
   isSubscribed?: boolean
   subscriptionRequest?: CheckSubscriptionRequest
   emailOptin?: boolean | null
+  email?: string
+  isSsoUser?: boolean
 }
 const setupApis = ({
   isAuthenticated = false,
   isSubscribed = false,
   subscriptionRequest = {},
   emailOptin = null,
+  email = "learner@mit.edu",
+  isSsoUser = false,
 }: SetupApisOptions = {}) => {
   setMockResponse.get(urls.userMe.get(), {
     is_authenticated: isAuthenticated,
+    email,
+    is_sso_user: isSsoUser,
   })
 
   setMockResponse.get(urls.profileMe.get(), { email_optin: emailOptin })
@@ -148,5 +169,66 @@ describe("SettingsPage email preferences", () => {
         url: urls.profileMe.patch(),
       }),
     )
+  })
+})
+
+describe("SettingsPage email & password", () => {
+  const CHANGE_EMAIL = /change email/i
+  const CHANGE_PASSWORD = /change password/i
+
+  test("Links hand the user off to Django, which redirects to Keycloak", async () => {
+    enableAccountManagement(true)
+    setupApis({ isAuthenticated: true, email: "learner@mit.edu" })
+    renderWithProviders(<SettingsContent />)
+
+    const next = { pathname: "/dashboard/settings", searchParams: null }
+
+    const changeEmail = await screen.findByRole("link", { name: CHANGE_EMAIL })
+    expect(changeEmail).toHaveAttribute(
+      "href",
+      accountAction(AccountAction.UpdateEmail, next),
+    )
+
+    const changePassword = await screen.findByRole("link", {
+      name: CHANGE_PASSWORD,
+    })
+    expect(changePassword).toHaveAttribute(
+      "href",
+      accountAction(AccountAction.UpdatePassword, next),
+    )
+
+    expect(await screen.findByText("learner@mit.edu")).toBeInTheDocument()
+  })
+
+  test("Section is hidden when the feature flag is off", async () => {
+    enableAccountManagement(false)
+    setupApis({ isAuthenticated: true })
+    renderWithProviders(<SettingsContent />)
+
+    await screen.findByRole("checkbox", {
+      name: /receive emails from mit learn/i,
+    })
+    expect(
+      screen.queryByRole("link", { name: CHANGE_EMAIL }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("link", { name: CHANGE_PASSWORD }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("Section is hidden for SSO users, whose credentials we don't own", async () => {
+    enableAccountManagement(true)
+    setupApis({ isAuthenticated: true, isSsoUser: true })
+    renderWithProviders(<SettingsContent />)
+
+    await screen.findByRole("checkbox", {
+      name: /receive emails from mit learn/i,
+    })
+    expect(
+      screen.queryByRole("link", { name: CHANGE_EMAIL }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("link", { name: CHANGE_PASSWORD }),
+    ).not.toBeInTheDocument()
   })
 })

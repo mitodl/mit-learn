@@ -10,7 +10,7 @@ import {
   ChooseYourPath,
   FullRowCell,
 } from "./EnrollAreaParts"
-import type { EnrollAreaState, Offering } from "./enrollTypes"
+import type { EnrollAreaState, FinancialAid, Offering } from "./enrollTypes"
 
 type EnrollOfferingBoxesProps = {
   /** Actionable offering — drives which boxes render and the "both" layout. */
@@ -21,9 +21,11 @@ type EnrollOfferingBoxesProps = {
   isError: boolean
   /** Top-right plain price for the certificate card. */
   price: React.ReactNode
+  /** Render that price at the title's size, for one too wide to sit beside the title at h4. */
+  compactPrice?: boolean
   /** Full-width price presentation; suppresses `price` (program savings only). */
   priceBlock?: React.ReactNode
-  financialAid: { href: string; applied: boolean } | null
+  financialAid: FinancialAid | null
   productNoun: "course" | "program"
   /** Course-only: show the "Certificate deadline passed" note in the free card. */
   certificateDeadlineNote?: boolean
@@ -46,6 +48,7 @@ const EnrollOfferingBoxes: React.FC<EnrollOfferingBoxesProps> = ({
   isPending,
   isError,
   price,
+  compactPrice,
   priceBlock,
   financialAid,
   productNoun,
@@ -82,6 +85,7 @@ const EnrollOfferingBoxes: React.FC<EnrollOfferingBoxesProps> = ({
         <OfferingCell data-card="cert">
           <CertificateTrackCard
             price={price}
+            compactPrice={compactPrice}
             priceBlock={priceBlock}
             financialAid={financialAid}
             productNoun={productNoun}
@@ -104,6 +108,7 @@ const EnrollOfferingBoxes: React.FC<EnrollOfferingBoxesProps> = ({
       <OfferingCell data-card="cert">
         <CertificateTrackCard
           price={price}
+          compactPrice={compactPrice}
           priceBlock={priceBlock}
           financialAid={financialAid}
           productNoun={productNoun}

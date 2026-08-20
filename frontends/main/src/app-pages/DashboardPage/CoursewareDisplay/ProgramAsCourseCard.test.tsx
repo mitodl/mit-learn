@@ -127,6 +127,52 @@ describe("ProgramAsCourseCard", () => {
     ).toBeGreaterThan(0)
   })
 
+  test("counts a course as complete when an earlier run was passed and the learner re-enrolled", async () => {
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+    const [moduleOne] = cardData.moduleCourses
+    // enrollment_mode is pinned to audit on both: the factory picks it at
+    // random, and a verified enrollment sends the card looking for a receipt
+    // via orders/history, which is not mocked here. The count only reads grades.
+    const passedEnrollment = mitxonline.factories.enrollment.courseEnrollment({
+      run: {
+        ...moduleOne.courseruns[0],
+        course: moduleOne,
+        start_date: moment().subtract(400, "days").toISOString(),
+        end_date: moment().subtract(300, "days").toISOString(),
+      },
+      enrollment_mode: "audit",
+      grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+      certificate: null,
+    })
+    const reEnrollment = mitxonline.factories.enrollment.courseEnrollment({
+      run: {
+        course: moduleOne,
+        start_date: moment().subtract(30, "days").toISOString(),
+        end_date: moment().add(30, "days").toISOString(),
+      },
+      enrollment_mode: "audit",
+      grades: [],
+      certificate: null,
+    })
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={{
+          [moduleOne.id]: [passedEnrollment, reEnrollment],
+        }}
+        courseProgramEnrollment={cardData.courseProgramEnrollment}
+      />,
+    )
+
+    // The re-enrollment is the run the card displays, but completion belongs to
+    // the course, so the passed earlier run still has to count.
+    expect(
+      await screen.findByText("2 Modules (1 of 2 complete)"),
+    ).toBeInTheDocument()
+  })
+
   test("module rows show an enrollment status indicator instead of a 'Module' label", async () => {
     const cardData = setupCardData({ includeProgramEnrollment: true })
 
