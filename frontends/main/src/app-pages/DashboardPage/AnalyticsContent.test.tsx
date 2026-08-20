@@ -13,7 +13,7 @@ import type { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
-import { contractAdminView } from "@/common/urls"
+import { contractAdminView, organizationAnalyticsView } from "@/common/urls"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import AnalyticsContent from "./AnalyticsContent"
 
@@ -831,12 +831,30 @@ describe("AnalyticsContent, contract-scoped", () => {
     // negative assertion passes on its first tick, before the manager-org
     // lookup has even resolved, so it would hold even if a contract request
     // were issued a moment later.
-    await screen.findByText(/Analytics is not available for this organization/)
+    await screen.findByText(/This contract link could not be found/)
     expect(makeRequest).not.toHaveBeenCalledWith(
       expect.objectContaining({
         url: expect.stringContaining("/contracts/"),
       }),
     )
+  })
+
+  test("an unresolved contract slug points the manager at org-wide analytics, not a dead end", async () => {
+    const org = orgWithUuid()
+    setManagerOrgs([org])
+    const orgSlug = org.slug.replace(/^org-/, "")
+
+    renderWithProviders(
+      <AnalyticsContent
+        orgSlug={orgSlug}
+        contractSlug="not-a-contract-of-this-org"
+      />,
+    )
+
+    const link = await screen.findByRole("link", {
+      name: "organization-wide analytics",
+    })
+    expect(link).toHaveAttribute("href", organizationAnalyticsView(orgSlug))
   })
 
   test("'Manage seats' targets the contract being viewed, not the org's first", async () => {
