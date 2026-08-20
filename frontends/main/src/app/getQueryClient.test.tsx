@@ -51,6 +51,28 @@ test.each(cartesianProduct(RETRY_CASES, QUERY_CLIENTS))(
   },
 )
 
+describe("browser client staleTime", () => {
+  const S_MAXAGE_SECONDS = 7200
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    process.env = { ...originalEnv }
+  })
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  // Hydrated queries must not be stale on arrival: HTML served from the CDN can
+  // be up to s-maxage old, and a shorter staleTime refetches on hydration.
+  test("is the CDN TTL, in milliseconds", () => {
+    process.env.NEXT_PUBLIC_CACHE_S_MAXAGE_SECONDS = String(S_MAXAGE_SECONDS)
+    const queryClient = makeBrowserQueryClient()
+    expect(queryClient.getDefaultOptions().queries?.staleTime).toBe(
+      S_MAXAGE_SECONDS * 1000,
+    )
+  })
+})
+
 test("server client retryDelay uses exponential backoff clamped to 1000ms", () => {
   const queryClient = getServerQueryClient()
   const retryDelay = queryClient.getDefaultOptions().queries?.retryDelay

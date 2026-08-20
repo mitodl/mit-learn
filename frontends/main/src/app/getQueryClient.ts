@@ -5,6 +5,7 @@ import type { AxiosError } from "axios"
 import { cache } from "react"
 import { notFound } from "next/navigation"
 import { bootstrapApiClients } from "@/bootstrap/api"
+import { getCacheSMaxageSeconds } from "@/common/config"
 
 /** Max retries after first failure */
 const MAX_RETRIES = 3
@@ -148,19 +149,12 @@ const makeBrowserQueryClient = (
     defaultOptions: {
       queries: {
         /**
-         * Public API content is server-rendered to the base page and cached by the CDN.
-         * Keep staleTime >= CDN TTL so hydrated queries are not immediately refetched.
-         * The CDN TTL is specified by the s-max-age value in the Cache-Control header
-         * in next.config.js.
-         *
-         * Most content is stable for ~24 hours (ETL cadence), but if staleTime is shorter
-         * than the CDN TTL, React Query will refetch on hydration once the cached HTML
-         * is older than staleTime.
-         *
-         * This can cause visible content flicker for unstable endpoints (e.g. the
-         * featured learning resource list, which is intentionally randomized).
+         * Public API content is server-rendered to the base page and cached by the
+         * CDN, so staleTime must be >= the CDN TTL: once the cached HTML is older
+         * than staleTime, React Query refetches on hydration. A long staleTime is
+         * fine because most content is stable for ~24 hours (ETL cadence).
          */
-        staleTime: 30 * 60 * 1000,
+        staleTime: getCacheSMaxageSeconds() * 1000,
 
         /**
          * Throw runtime errors instead of marking query as errored.

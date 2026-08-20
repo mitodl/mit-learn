@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { getCacheSMaxageSeconds } from "@/common/config"
 
 /**
  * Matches paths ending in a known static-asset extension (e.g. .js, .css,
@@ -105,20 +106,19 @@ export function mitxonlineSurrogateKey(pathname: string): string | null {
 
 /**
  * Next.js proxy (formerly "middleware"): sets the Cache-Control header at
- * request time so that NEXT_CACHE_S_MAXAGE_SECONDS is read from the Kubernetes
- * environment rather than baked into the Docker image at build time.
+ * request time so the CDN TTL is read from the Kubernetes environment rather
+ * than baked into the Docker image at build time.
  *
  * next.config.js `headers()` runs at build time and cannot read env vars that
- * vary across environments (QA vs production). Proxy runs on the Node.js
- * runtime on every request, so process.env is always the live value.
+ * vary across environments (QA vs production). Proxy always runs on the
+ * Node.js runtime, on every request, so the env read is always the live value.
  */
 export function proxy(request: NextRequest) {
   if (!isPageRoute(request.nextUrl.pathname)) {
     return NextResponse.next()
   }
 
-  const sMaxage = process.env.NEXT_CACHE_S_MAXAGE_SECONDS || "1800"
-  const cacheControl = `s-maxage=${sMaxage}, stale-if-error=86400, stale-while-revalidate=86400`
+  const cacheControl = `s-maxage=${getCacheSMaxageSeconds()}, stale-if-error=86400, stale-while-revalidate=86400`
 
   const response = NextResponse.next()
   response.headers.set("Cache-Control", cacheControl)
