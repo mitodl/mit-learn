@@ -3557,15 +3557,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/arithmix@npm:^0.2.3":
-  version: 0.2.3
-  resolution: "@mitodl/arithmix@npm:0.2.3"
+"@mitodl/arithmix@npm:^0.2.4":
+  version: 0.2.4
+  resolution: "@mitodl/arithmix@npm:0.2.4"
   peerDependencies:
     "@emotion/react": ">=11"
     "@emotion/styled": ">=11"
     react: ">=18"
     react-dom: ">=18"
-  checksum: 10/266647410413773cbbbad69a6d1420e9b9d43fba1794194ce652085650172e39cd42c6526322d0343f44577684f5f9eee70934241013102ad5ef1f9f35bee9bc
+  checksum: 10/0446f5d75db18a18d60432bf7aec508d8533797ee7d17084fc52534f29944fbcc7354dbe11c36b33b51cd5b800fe88603eaf53e5e8d370827cfb40ebab9d7e70
   languageName: node
   linkType: hard
 
@@ -3595,9 +3595,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/hacksnack@npm:^0.1.1":
-  version: 0.1.1
-  resolution: "@mitodl/hacksnack@npm:0.1.1"
+"@mitodl/hacksnack@npm:^0.1.2":
+  version: 0.1.2
+  resolution: "@mitodl/hacksnack@npm:0.1.2"
   dependencies:
     pdfjs-dist: "npm:^5.7.284"
   peerDependencies:
@@ -3607,7 +3607,7 @@ __metadata:
     react-dom: ">=18"
   bin:
     hacksnack-copy-assets: scripts/copy-assets.mjs
-  checksum: 10/73d1c93bfb2ba8f9762cd2ab06e58d998b6861c45b47f3708dadbdac0d887dae03134c47b4ab6ef577250bd61bf05c9dd1209c89d43a7579a1ab00d9026cd714
+  checksum: 10/5754444c3b7ba2149faa37819278ad7e91df01d4ed36c6c2f3dbba75d7e50e3c22c97b6323318291b43818bdcfb529220724546166a76d615dd512748a481661
   languageName: node
   linkType: hard
 
@@ -16906,9 +16906,9 @@ __metadata:
     "@faker-js/faker": "npm:^10.0.0"
     "@floating-ui/react": "npm:^0.27.16"
     "@happy-dom/jest-environment": "npm:^20.1.0"
-    "@mitodl/arithmix": "npm:^0.2.3"
+    "@mitodl/arithmix": "npm:^0.2.4"
     "@mitodl/course-search-utils": "npm:^3.5.2"
-    "@mitodl/hacksnack": "npm:^0.1.1"
+    "@mitodl/hacksnack": "npm:^0.1.2"
     "@mitodl/mitxonline-api-axios": "npm:2026.8.18"
     "@mitodl/smoot-design": "npm:6.31.1"
     "@mui/base": "npm:5.0.0-beta.70"
