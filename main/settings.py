@@ -873,6 +873,16 @@ HYBRID_VECTOR_SEARCH_MIN_SCORE = get_float(
 # hard limit for special cases where we need to return all results without pagination
 VECTOR_SEARCH_PAGE_MAX_LIMIT = get_int("VECTOR_SEARCH_PAGE_MAX_LIMIT", 200)
 
+# Maximum score penalty, in percent, for incomplete resources in vector search.
+# A resource with completeness = 0 keeps (100 - penalty)% of its score; partially
+# complete resources are penalized proportionally to their incompleteness.
+# 0 disables the penalty. Mirrors DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY,
+# which does the same thing for OpenSearch, but is tuned separately because
+# vector scores are on a different scale.
+VECTOR_SEARCH_MAX_INCOMPLETENESS_PENALTY = get_float(
+    name="VECTOR_SEARCH_MAX_INCOMPLETENESS_PENALTY", default=90
+)
+
 # serve learning resource search hits from the Qdrant payload instead of
 # re-hydrating them from the database. Set to False to fall back to database
 # hydration without a deploy.

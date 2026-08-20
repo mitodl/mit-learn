@@ -42,6 +42,7 @@ from learning_resources_search.serializers import (
 from main.utils import checksum_for_content, chunks
 from vector_search.constants import (
     COLLECTION_PARAM_MAP,
+    COMPLETENESS_PAYLOAD_KEY,
     CONTENT_FILES_COLLECTION_NAME,
     COURSE_NUMBER_INDEXING_ONLY_FIELDS,
     QDRANT_CONTENT_FILE_INDEXES,
@@ -1742,6 +1743,59 @@ def custom_score_formula(collection_name: str) -> list[models.MultExpression]:
                 )
             )
     return score_expressions
+
+
+def completeness_penalty_expression(
+    collection_name: str,
+) -> models.SumExpression | None:
+    """
+    Build the multiplier that penalizes incomplete resources.
+
+    Mirrors the OpenSearch script_score in
+    learning_resources_search.api.generate_sort_clause:
+
+        score * (completeness * penalty + (1 - penalty))
+
+    A resource with completeness == 1 keeps its score, one with
+    completeness == 0 keeps (1 - penalty) of it, and everything in between is
+    penalized linearly. Returns None when the penalty is disabled or the
+    collection carries no completeness (only resources do).
+    """
+    if collection_name != RESOURCES_COLLECTION_NAME:
+        return None
+    penalty = (settings.VECTOR_SEARCH_MAX_INCOMPLETENESS_PENALTY or 0) / 100
+    # A penalty above 100% would drive scores negative and invert the ranking
+    penalty = min(max(penalty, 0), 1)
+    if not penalty:
+        return None
+    return models.SumExpression(
+        sum=[
+            models.MultExpression(mult=[COMPLETENESS_PAYLOAD_KEY, penalty]),
+            1 - penalty,
+        ]
+    )
+
+
+def score_formula_query(collection_name: str) -> models.FormulaQuery | None:
+    """
+    Build the rescoring formula for a collection: the VECTOR_SEARCH_SCORE_BOOST
+    boosts added to the relevance score, then scaled down by the completeness
+    penalty. Returns None when neither applies, so callers can skip the
+    rescoring stage entirely.
+    """
+    boost_expressions = custom_score_formula(collection_name)
+    completeness_multiplier = completeness_penalty_expression(collection_name)
+    if not boost_expressions and completeness_multiplier is None:
+        return None
+    formula = models.SumExpression(sum=["$score", *boost_expressions])
+    if completeness_multiplier is None:
+        return models.FormulaQuery(formula=formula)
+    return models.FormulaQuery(
+        formula=models.MultExpression(mult=[formula, completeness_multiplier]),
+        # Points indexed before completeness was added to the payload, and any
+        # resource type that does not carry it, score as fully complete.
+        defaults={COMPLETENESS_PAYLOAD_KEY: 1.0},
+    )
 
 
 def db_sync_to_async(func):
