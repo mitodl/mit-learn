@@ -11,7 +11,6 @@ import {
   getRequirementsProgress,
   getProgramEnrollmentStatus,
   getKey,
-  selectBestEnrollment,
   getEnrollmentStatus,
   ResourceType,
 } from "./helpers"
@@ -285,103 +284,8 @@ describe("helpers", () => {
     })
   })
 
-  describe("selectBestEnrollment", () => {
-    test("returns null when no enrollments match course", () => {
-      const course = factories.courses.course({
-        courseruns: [factories.courses.courseRun({ id: 1 })],
-      })
-      const enrollments = [
-        factories.enrollment.courseEnrollment({
-          run: { id: 999 },
-        }),
-      ]
-
-      const result = selectBestEnrollment(course, enrollments)
-      expect(result).toBeNull()
-    })
-
-    test("returns enrollment with certificate over one without", () => {
-      const run = factories.courses.courseRun({ id: 1 })
-      const course = factories.courses.course({ courseruns: [run] })
-
-      const enrollmentNoCert = factories.enrollment.courseEnrollment({
-        run: { id: 1 },
-        certificate: null,
-      })
-      const enrollmentWithCert = factories.enrollment.courseEnrollment({
-        run: { id: 1 },
-        certificate: { uuid: "cert-123" },
-      })
-
-      const result = selectBestEnrollment(course, [
-        enrollmentNoCert,
-        enrollmentWithCert,
-      ])
-      expect(result).toEqual(enrollmentWithCert)
-    })
-
-    test("returns enrollment with higher grade when both have no certificate", () => {
-      const run = factories.courses.courseRun({ id: 1 })
-      const course = factories.courses.course({ courseruns: [run] })
-
-      const enrollmentLowGrade = factories.enrollment.courseEnrollment({
-        run: { id: 1 },
-        certificate: null,
-        grades: [factories.enrollment.grade({ grade: 0.5 })],
-      })
-      const enrollmentHighGrade = factories.enrollment.courseEnrollment({
-        run: { id: 1 },
-        certificate: null,
-        grades: [factories.enrollment.grade({ grade: 0.9 })],
-      })
-
-      const result = selectBestEnrollment(course, [
-        enrollmentLowGrade,
-        enrollmentHighGrade,
-      ])
-      expect(result).toEqual(enrollmentHighGrade)
-    })
-
-    test("returns the more recent enrollment when both have certificates and the same grade", () => {
-      const run = factories.courses.courseRun({ id: 1 })
-      const course = factories.courses.course({ courseruns: [run] })
-
-      const enrollment1 = factories.enrollment.courseEnrollment({
-        run: { id: 1, start_date: "2020-01-01T00:00:00Z" },
-        certificate: { uuid: "cert-1" },
-        grades: [factories.enrollment.grade({ grade: 0.8 })],
-      })
-      const enrollment2 = factories.enrollment.courseEnrollment({
-        run: { id: 1, start_date: "2023-01-01T00:00:00Z" },
-        certificate: { uuid: "cert-2" },
-        grades: [factories.enrollment.grade({ grade: 0.8 })],
-      })
-
-      const result = selectBestEnrollment(course, [enrollment1, enrollment2])
-      expect(result).toEqual(enrollment2)
-    })
-
-    test("handles multiple course runs", () => {
-      const run1 = factories.courses.courseRun({ id: 1 })
-      const run2 = factories.courses.courseRun({ id: 2 })
-      const course = factories.courses.course({ courseruns: [run1, run2] })
-
-      const enrollmentRun1 = factories.enrollment.courseEnrollment({
-        run: { id: 1 },
-        grades: [factories.enrollment.grade({ grade: 0.7 })],
-      })
-      const enrollmentRun2 = factories.enrollment.courseEnrollment({
-        run: { id: 2 },
-        grades: [factories.enrollment.grade({ grade: 0.9 })],
-      })
-
-      const result = selectBestEnrollment(course, [
-        enrollmentRun1,
-        enrollmentRun2,
-      ])
-      expect(result).toEqual(enrollmentRun2) // Higher grade
-    })
-  })
+  // `selectBestEnrollment` is covered in model/dashboardViewModel.test.ts,
+  // where the run dates its policy reads are pinned.
 
   describe("getEnrollmentStatus", () => {
     test("returns NotEnrolled for null enrollment", () => {

@@ -313,6 +313,42 @@ export const auth = (opts: LoginUrlOpts) => {
   return url.toString()
 }
 
+/**
+ * Keycloak account actions the user can start from the settings page.
+ *
+ * Must stay in sync with `AccountAction` in authentication/constants.py.
+ */
+export enum AccountAction {
+  UpdateEmail = "update-email",
+  UpdatePassword = "update-password",
+}
+
+/**
+ * Outcome of an account action, reported back on the URL we're returned to.
+ *
+ * Must stay in sync with `AccountActionStatus` in authentication/constants.py.
+ */
+export enum AccountActionStatus {
+  Success = "success",
+  Cancelled = "cancelled",
+  Error = "error",
+  Unavailable = "unavailable",
+}
+
+export const ACCOUNT_ACTION_PARAM = "account_action"
+export const ACCOUNT_ACTION_STATUS_PARAM = "account_action_status"
+
+/**
+ * Returns the URL that hands the user off to Keycloak to change their email or
+ * password. Django owns the handoff — it holds the OIDC client config and
+ * validates the user is allowed to perform the action.
+ */
+export const accountAction = (action: AccountAction, next: UrlDescriptor) => {
+  const url = new URL(`${MITOL_API_BASE_URL}/account/action/start/${action}/`)
+  url.searchParams.set("next", stringifyUrlDescriptor(next))
+  return url.toString()
+}
+
 export const ECOMMERCE_CART = "/cart/" as const
 
 export const B2B_ATTACH_VIEW = "/enrollmentcode/[code]"

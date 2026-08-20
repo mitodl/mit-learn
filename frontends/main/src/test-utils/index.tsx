@@ -8,7 +8,7 @@ import { ComplianceGateProvider } from "@/common/mitxonline/useComplianceGate"
 import { makeBrowserQueryClient } from "@/app/getQueryClient"
 import { render } from "@testing-library/react"
 import { factories, setMockResponse } from "api/test-utils"
-import type { User } from "api/hooks/user"
+import type { CurrentUser, User } from "api/hooks/user"
 import { userQueries } from "api/hooks/user"
 import {
   mockRouter,
@@ -36,13 +36,13 @@ setupRoutes()
 
 interface TestAppOptions {
   url: string
-  user: Partial<User>
+  user: Partial<CurrentUser>
 }
 
 const defaultTestAppOptions = {
   url: "/",
 }
-const defaultUser: User = factories.user.user()
+const defaultUser: CurrentUser = factories.user.user()
 
 const TestProviders: React.FC<{
   children: React.ReactNode
@@ -319,4 +319,4 @@ export {
 } from "@testing-library/react"
 export { default as user } from "@testing-library/user-event"
 
-export type { TestAppOptions, User }
+export type { TestAppOptions, CurrentUser, User }

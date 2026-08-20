@@ -104,13 +104,18 @@ describe("HomeEnrollmentsDisplay", () => {
     const sharedCourseId = faker.number.int()
     // Both enrollments share the same course and have identical default variant
     // fields, so they should collapse to a single card.
-    // Run A is the more recent of the two so the dedup policy (recency,
-    // since neither has a certificate or grade) deterministically picks it.
+    // Run A is the one in progress, so the recency-based dedup policy
+    // deterministically picks it. Both dates are pinned because that policy
+    // reads start_date and end_date, which the factory would otherwise fill
+    // with random values.
+    const daysFromNow = (days: number) =>
+      new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
     const enrollmentA = mitxonline.factories.enrollment.courseEnrollment({
       run: {
         title: "Same Course — Run A",
         course: { id: sharedCourseId },
-        start_date: "2024-01-01T00:00:00Z",
+        start_date: daysFromNow(-30),
+        end_date: daysFromNow(30),
       },
       certificate: null,
       grades: [],
@@ -119,7 +124,8 @@ describe("HomeEnrollmentsDisplay", () => {
       run: {
         title: "Same Course — Run B",
         course: { id: sharedCourseId },
-        start_date: "2020-01-01T00:00:00Z",
+        start_date: daysFromNow(-800),
+        end_date: daysFromNow(-700),
       },
       certificate: null,
       grades: [],

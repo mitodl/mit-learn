@@ -22,6 +22,7 @@ from profiles.api import ensure_profile
 from profiles.models import Profile, ProgramCertificate, ProgramLetter, UserWebsite
 from profiles.permissions import HasEditPermission, HasSiteEditPermission
 from profiles.serializers import (
+    CurrentUserSerializer,
     ProfileSerializer,
     ProgramCertificateSerializer,
     ProgramLetterSerializer,
@@ -49,7 +50,7 @@ class UserViewSet(viewsets.ModelViewSet):
 class CurrentUserRetrieveViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """User retrieve and update viewsets for the current user"""
 
-    serializer_class = UserSerializer
+    serializer_class = CurrentUserSerializer
     permission_classes = (
         AnonymousAccessReadonlyPermission,
         HasEditPermission,

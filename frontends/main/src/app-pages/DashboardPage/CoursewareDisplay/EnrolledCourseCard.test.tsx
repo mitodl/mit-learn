@@ -178,6 +178,33 @@ describe.each([
     )
   })
 
+  test("shows View Certificate link when the certificate is on a sibling run", () => {
+    setupUserApis()
+    const certUuid = faker.string.uuid()
+    const certificateLink = `https://courses.example.com/certificate/${certUuid}/`
+    const displayedEnrollment =
+      mitxonline.factories.enrollment.courseEnrollment({
+        certificate: null,
+        run: currentRunDates,
+      })
+    const earlierEnrollment = mitxonline.factories.enrollment.courseEnrollment({
+      certificate: { uuid: certUuid, link: certificateLink },
+      run: pastRunDates,
+    })
+    renderWithProviders(
+      <EnrolledCourseCard
+        enrollment={displayedEnrollment}
+        siblingEnrollments={[earlierEnrollment]}
+      />,
+    )
+    expect(
+      within(getCard()).getByRole("link", { name: /View Certificate/ }),
+    ).toHaveAttribute(
+      "href",
+      `https://courses.example.com/certificate/course/${certUuid}/`,
+    )
+  })
+
   test("does not show View Certificate when certificate is absent", () => {
     setupUserApis()
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
@@ -1085,12 +1112,30 @@ describe("EnrolledCourseCard progress badge", () => {
 
   const getDesktopCard = () => screen.getByTestId("enrollment-card-desktop")
 
+  // The badge describes the displayed run, so every case pins the run dates it
+  // reads rather than leaving them to the factory's random values.
   test.each([
     {
+      case: "run underway",
+      runDates: currentRunDates,
       enrollmentData: { grades: [], certificate: null },
       expectedLabel: "In Progress",
     },
     {
+      case: "run not yet started",
+      runDates: futureRunDates,
+      enrollmentData: { grades: [], certificate: null },
+      expectedLabel: "Not Started",
+    },
+    {
+      case: "run over without a certificate",
+      runDates: pastRunDates,
+      enrollmentData: { grades: [], certificate: null },
+      expectedLabel: "Ended",
+    },
+    {
+      case: "certificate earned",
+      runDates: pastRunDates,
       enrollmentData: {
         grades: [mitxonline.factories.enrollment.grade({ passed: true })],
         certificate: {
@@ -1101,12 +1146,13 @@ describe("EnrolledCourseCard progress badge", () => {
       expectedLabel: "Completed",
     },
   ])(
-    "shows '$expectedLabel' next to the card type label",
-    ({ enrollmentData, expectedLabel }) => {
+    "shows '$expectedLabel' next to the card type label ($case)",
+    ({ runDates, enrollmentData, expectedLabel }) => {
       setupUserApis()
       const enrollment = mitxonline.factories.enrollment.courseEnrollment({
         ...enrollmentData,
         b2b_contract_id: null,
+        run: runDates,
       })
       renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
       expect(

@@ -4,7 +4,7 @@ import json
 from base64 import b64encode
 from typing import NamedTuple
 from unittest.mock import MagicMock
-from urllib.parse import urljoin
+from urllib.parse import parse_qs, quote, urljoin, urlparse
 
 import pytest
 from django.test import RequestFactory
@@ -339,3 +339,185 @@ def test_login_org_user_redirect(
         mock_send_welcome_email.assert_not_called()
     else:
         mock_send_welcome_email.assert_called_once_with(user.id)
+
+
+@pytest.fixture
+def mock_is_sso_user(mocker):
+    """Mock the SSO lookup, which otherwise talks to the Keycloak admin API"""
+    return mocker.patch("authentication.views.is_sso_user", return_value=False)
+
+
+@pytest.fixture(autouse=True)
+def account_action_settings(settings):
+    """
+    Pin the settings the account action flow reads.
+
+    KEYCLOAK_CLIENT_ID has no default and MITOL_API_BASE_URL defaults to empty,
+    so without this these tests assert against whatever the environment
+    happens to provide — passing locally and failing in CI.
+    """
+    settings.KEYCLOAK_BASE_URL = "https://sso.example.edu"
+    settings.KEYCLOAK_REALM_NAME = "olapps"
+    settings.KEYCLOAK_CLIENT_ID = "ol-mitlearn-client"
+    settings.KEYCLOAK_CLIENT_SECRET = "a-secret"  # noqa: S105
+    settings.MITOL_API_BASE_URL = "https://api.example.edu"
+    return settings
+
+
+@pytest.mark.parametrize(
+    ("action", "kc_action"),
+    [
+        ("update-email", "UPDATE_EMAIL"),
+        ("update-password", "UPDATE_PASSWORD"),
+    ],
+)
+@pytest.mark.usefixtures("mock_is_sso_user")
+def test_account_action_start(settings, client, action, kc_action):
+    """The start view should send the user to Keycloak with the right kc_action"""
+    next_url = urljoin(settings.APP_BASE_URL, "/dashboard/settings")
+    resp = client.get(
+        f"{reverse('account-action-start', kwargs={'action': action})}"
+        f"?next={quote(next_url)}"
+    )
+
+    assert resp.status_code == 302
+    parsed = urlparse(resp.headers["Location"])
+
+    assert (
+        f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+        == f"{settings.KEYCLOAK_BASE_URL.removesuffix('/')}/realms/"
+        f"{settings.KEYCLOAK_REALM_NAME}/protocol/openid-connect/auth"
+    )
+
+    expected_callback = (
+        f"{settings.MITOL_API_BASE_URL.removesuffix('/')}"
+        f"{reverse('account-action-complete')}"
+        f"?{urlencode({'next': next_url, 'account_action': action})}"
+    )
+    assert parse_qs(parsed.query) == {
+        "kc_action": [kc_action],
+        "scope": ["openid email"],
+        "response_type": ["code"],
+        "client_id": [settings.KEYCLOAK_CLIENT_ID],
+        "redirect_uri": [expected_callback],
+    }
+
+
+@pytest.mark.usefixtures("mock_is_sso_user")
+def test_account_action_start_unknown_action(settings, client):
+    """An unrecognized action should bounce back to settings with an error"""
+    resp = client.get(
+        reverse("account-action-start", kwargs={"action": "delete-account"})
+    )
+
+    assert resp.status_code == 302
+    expected_params = urlencode(
+        {"account_action": "delete-account", "account_action_status": "error"}
+    )
+    settings_url = f"{settings.APP_BASE_URL.removesuffix('/')}/dashboard/settings"
+    assert resp.headers["Location"] == f"{settings_url}?{expected_params}"
+
+
+def test_account_action_start_sso_user(settings, client, user, mock_is_sso_user):
+    """SSO users should never be sent to Keycloak to change their credentials"""
+    mock_is_sso_user.return_value = True
+    client.force_login(user)
+
+    resp = client.get(
+        reverse("account-action-start", kwargs={"action": "update-email"})
+    )
+
+    assert resp.status_code == 302
+    expected_params = urlencode(
+        {"account_action": "update-email", "account_action_status": "unavailable"}
+    )
+    settings_url = f"{settings.APP_BASE_URL.removesuffix('/')}/dashboard/settings"
+    assert resp.headers["Location"] == f"{settings_url}?{expected_params}"
+
+
+@pytest.mark.parametrize("kc_action_status", ["success", "cancelled", "error"])
+def test_account_action_complete(settings, client, kc_action_status):
+    """The callback should hand the action's outcome back to the frontend"""
+    next_url = urljoin(settings.APP_BASE_URL, "/dashboard/settings")
+    callback_params = urlencode(
+        {
+            "next": next_url,
+            "account_action": "update-email",
+            "kc_action_status": kc_action_status,
+        }
+    )
+    resp = client.get(f"{reverse('account-action-complete')}?{callback_params}")
+
+    expected_params = urlencode(
+        {
+            "account_action": "update-email",
+            "account_action_status": kc_action_status,
+        }
+    )
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == f"{next_url}?{expected_params}"
+
+
+@pytest.mark.parametrize(
+    ("action", "kc_action_status"),
+    [
+        # Keycloak didn't report an outcome
+        ("update-email", None),
+        ("update-email", "who-knows"),
+        # Not an action we started
+        ("delete-account", "success"),
+        (None, "success"),
+    ],
+)
+def test_account_action_complete_unusable_params(
+    settings, client, action, kc_action_status
+):
+    """Without a usable outcome the user is returned without an alert"""
+    next_url = urljoin(settings.APP_BASE_URL, "/dashboard/settings")
+    params = {"next": next_url}
+    if action is not None:
+        params["account_action"] = action
+    if kc_action_status is not None:
+        params["kc_action_status"] = kc_action_status
+
+    resp = client.get(f"{reverse('account-action-complete')}?{urlencode(params)}")
+
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == next_url
+
+
+@pytest.mark.usefixtures("mock_is_sso_user")
+def test_account_action_disallowed_next(settings, client):
+    """A `next` pointing off-site falls back to the settings page"""
+    resp = client.get(
+        f"{reverse('account-action-complete')}?"
+        f"{urlencode({'next': 'https://malicious.com/phish'})}"
+    )
+
+    assert resp.status_code == 302
+    assert (
+        resp.headers["Location"]
+        == f"{settings.APP_BASE_URL.removesuffix('/')}/dashboard/settings"
+    )
+
+
+@pytest.mark.usefixtures("mock_is_sso_user")
+def test_account_action_start_unconfigured_client(settings, client):
+    """
+    An environment without KEYCLOAK_CLIENT_ID must not 500.
+
+    The setting has no default, and urlencode raises TypeError on None, so
+    without a guard every click on Change Email would be a server error.
+    """
+    settings.KEYCLOAK_CLIENT_ID = None
+
+    resp = client.get(
+        reverse("account-action-start", kwargs={"action": "update-email"})
+    )
+
+    assert resp.status_code == 302
+    expected_params = urlencode(
+        {"account_action": "update-email", "account_action_status": "error"}
+    )
+    settings_url = f"{settings.APP_BASE_URL.removesuffix('/')}/dashboard/settings"
+    assert resp.headers["Location"] == f"{settings_url}?{expected_params}"

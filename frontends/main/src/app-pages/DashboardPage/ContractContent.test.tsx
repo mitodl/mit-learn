@@ -51,6 +51,16 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL
 const managerOrganizationsUrl = `${API_BASE_URL}/api/v0/b2b/manager/organizations/`
 
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
+
+// The progress badge describes the displayed run, so any enrollment whose badge
+// is asserted has to pin the dates it reads instead of taking the factory's
+// random ones.
+const daysFromNow = (days: number) =>
+  new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
+const underwayRunDates = {
+  start_date: daysFromNow(-30),
+  end_date: daysFromNow(30),
+}
 const makeGrade = factories.enrollment.grade
 
 const normalizeCourseForCardAssertions = (
@@ -297,6 +307,7 @@ describe("ContractContent", () => {
             id: normalizedCoursesA[1].id,
             title: normalizedCoursesA[1].title,
           },
+          ...underwayRunDates,
         },
         grades: [],
         certificate: null,
@@ -1244,6 +1255,7 @@ describe("ContractContent", () => {
             (r) => r.b2b_contract === contractIds[0],
           )?.id,
           course: { id: courses[1].id, title: courses[1].title },
+          ...underwayRunDates,
         },
         b2b_contract_id: contracts[0].id,
         b2b_organization_id: contracts[0].organization,

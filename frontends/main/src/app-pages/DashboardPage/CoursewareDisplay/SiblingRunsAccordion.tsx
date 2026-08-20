@@ -11,7 +11,10 @@ import {
   RiSubtractLine,
   RiTimeLine,
 } from "@remixicon/react"
-import { isInPast, formatDate } from "ol-utilities"
+import { formatDate } from "ol-utilities"
+import { getRunTimeState } from "./courseDateUtils"
+import type { RunTimeState } from "./courseDateUtils"
+import { VisuallyHidden } from "@mitodl/smoot-design"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import NextLink from "next/link"
 import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
@@ -122,8 +125,21 @@ const formatRunDateRange = (
   return parts.join(" – ")
 }
 
-const getRunStatusLabel = (status: EnrollmentStatus): string => {
+/**
+ * Every state gets words, not just "In Progress". The run icons are
+ * `aria-hidden`, so anything conveyed only by an icon is silent to a screen
+ * reader; this label is the sole status text on the row.
+ *
+ * "Upcoming" rather than the badge's "Not Started" because the sibling rows in
+ * this same list already prefix future runs with "Upcoming:".
+ */
+const getRunStatusLabel = (
+  status: EnrollmentStatus,
+  timeState: RunTimeState,
+): string => {
   if (status === EnrollmentStatus.Completed) return "Completed"
+  if (timeState === "upcoming") return "Upcoming"
+  if (timeState === "ended") return "Ended"
   if (status === EnrollmentStatus.Enrolled) return "In Progress"
   return ""
 }
@@ -240,7 +256,11 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
     type: DashboardType.CourseRunEnrollment,
     data: enrollment,
   })
-  const currentStatusLabel = getRunStatusLabel(currentStatus)
+  const currentTimeState = getRunTimeState(
+    currentRun?.start_date,
+    currentRun?.end_date,
+  )
+  const currentStatusLabel = getRunStatusLabel(currentStatus, currentTimeState)
   const currentDateRange = formatRunDateRange(
     currentRun?.start_date,
     currentRun?.end_date,
@@ -262,7 +282,17 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
         <RunsListBox>
           <RunListRow
             isFirst
-            icon={<EnrollmentStatusIcon status={currentStatus} />}
+            icon={
+              currentStatus === EnrollmentStatus.Completed ? (
+                <EnrollmentStatusIcon status={currentStatus} />
+              ) : currentTimeState === "upcoming" ? (
+                <UpcomingRunIcon aria-hidden="true" />
+              ) : currentTimeState === "ended" ? (
+                <ExpiredRunIcon aria-hidden="true" />
+              ) : (
+                <EnrollmentStatusIcon status={currentStatus} />
+              )
+            }
             labelPrefix="Current run:"
             labelValue={currentLabelValue}
             coursewareUrl={currentRun?.courseware_url}
@@ -271,10 +301,15 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
           {siblingEnrollments.map((e) => {
             const startDate = e.run?.start_date
             const endDate = e.run?.end_date
-            const isUpcoming = startDate && !isInPast(startDate)
-            const isExpired = endDate && isInPast(endDate)
+            const timeState = getRunTimeState(startDate, endDate)
+            const isUpcoming = timeState === "upcoming"
+            const isExpired = timeState === "ended"
             const dateRange = formatRunDateRange(startDate, endDate)
-            const fullLabel = isUpcoming ? `Upcoming: ${dateRange}` : dateRange
+            const fullLabel = isUpcoming
+              ? `Upcoming: ${dateRange}`
+              : isExpired
+                ? `${dateRange} (Ended)`
+                : dateRange
             const runEnrollmentStatus = getDashboardEnrollmentStatus({
               type: DashboardType.CourseRunEnrollment,
               data: e,
@@ -286,9 +321,16 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
                 isFirst={false}
                 icon={
                   isUpcoming ? (
+                    // The visible "Upcoming:" prefix already says this.
                     <UpcomingRunIcon aria-hidden="true" />
                   ) : isExpired ? (
-                    <ExpiredRunIcon aria-hidden="true" />
+                    <>
+                      <ExpiredRunIcon aria-hidden="true" />
+                      {/* A past sibling row shows only a date range, so
+                          without this the icon is the only thing saying the
+                          run is over and screen readers get nothing. */}
+                      <VisuallyHidden>Ended</VisuallyHidden>
+                    </>
                   ) : (
                     <EnrollmentStatusIcon status={runEnrollmentStatus} />
                   )

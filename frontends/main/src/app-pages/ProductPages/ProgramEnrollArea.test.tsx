@@ -238,7 +238,7 @@ describe("ProgramEnrollArea — financial assistance link", () => {
     await screen.findByRole("button", { name: "Enroll in Program" })
     const certCell = document.querySelector("[data-card='cert']") as HTMLElement
     const link = within(certCell).getByRole("link", {
-      name: "Financial assistance available",
+      name: "Apply for financial aid",
     })
     expect(link).toHaveAttribute(
       "href",
