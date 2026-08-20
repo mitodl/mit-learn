@@ -337,11 +337,15 @@ const EMPTY_TABLE_MESSAGE: Record<StatusFilter, string> = {
 const NO_SEARCH_RESULTS_MESSAGE = "No seat assignments match your search."
 
 /**
- * The codes query keeps the previous filter's or page's rows on screen while
- * the next request is in flight (`keepPreviousData`), which avoids a layout
- * jump when paginating but would otherwise leave, say, delivered rows sitting
- * under the Failed tab with nothing to say they are stale. Fade them while
- * that is true.
+ * `$stale` is true whenever the rows on screen might not match the server:
+ * either `keepPreviousData` is carrying over the previous filter's or page's
+ * rows while the next request is in flight (which avoids a layout jump when
+ * paginating, but would otherwise leave, say, delivered rows sitting under
+ * the Failed tab with nothing to say they are stale), or the current
+ * filter's own cached rows are being silently revalidated in the background
+ * — e.g. a row mutation like resending an invite invalidates every tab/page/
+ * search for the contract, not just the active one. Fade the rows while
+ * either is true.
  *
  * The delay means a fast response never flashes the dimming, and dropping the
  * transition on the fresh state restores full opacity immediately rather than
@@ -468,6 +472,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     data: codes,
     isLoading: isLoadingCodes,
     isPlaceholderData: isCodesStale,
+    isFetching: isCodesFetching,
     isError: isCodesError,
     error: codesError,
   } = useQuery({
@@ -483,19 +488,30 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     placeholderData: keepPreviousData,
   })
 
+  // `isCodesStale` (isPlaceholderData) only covers rows carried over from a
+  // different query key via `keepPreviousData` — it goes false as soon as
+  // React Query has a cache entry for the current key, even if that entry was
+  // invalidated (e.g. by a row mutation like resending an invite, which
+  // invalidates every tab/page/search for the contract at once) and is being
+  // silently refetched in the background. `isCodesFetching` catches that case.
+  const isCodesRevalidating = isCodesStale || isCodesFetching
+  const isCodesBusy = isLoadingCodes || isCodesRevalidating
+
   // Announce the result count once the query settles after a change to the
   // search term or the status filter — both replace the whole result set, and
   // switching tabs is otherwise silent, since the table's own status region
   // often lands on the same "page 1 of 1" text it started with.
   //
   // The ref keys on both inputs so we fire once per change rather than on every
-  // re-render while loading, and `isCodesStale` holds the announcement until
-  // the data actually belongs to the new filter — `keepPreviousData` means the
-  // query reports success with the *previous* count the moment the key changes,
-  // which would otherwise announce a number for the tab the user just left.
+  // re-render while loading, and `isCodesBusy` holds the announcement until the
+  // data actually belongs to the new filter and any revalidation of it has
+  // resolved — otherwise a stale count could be announced immediately (from
+  // `keepPreviousData` on a key change, or from revisiting a cached-but-
+  // invalidated tab) and never corrected once the real data arrives, since the
+  // ref would already mark this filter/search combo as announced.
   const announcedResultsRef = useRef<string | null>(null)
   useEffect(() => {
-    if (isLoadingCodes || isCodesStale) return
+    if (isCodesBusy) return
     const settled = `${statusFilter}:${debouncedSearchQuery}`
     if (announcedResultsRef.current === settled) return
     const isFirstLoad = announcedResultsRef.current === null
@@ -510,13 +526,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
       0,
     )
     return () => clearTimeout(id)
-  }, [
-    isLoadingCodes,
-    isCodesStale,
-    statusFilter,
-    debouncedSearchQuery,
-    codes?.count,
-  ])
+  }, [isCodesBusy, statusFilter, debouncedSearchQuery, codes?.count])
 
   if (isLoadingOrgs) {
     return (
@@ -819,7 +829,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                 does — announcing the generic "no seat assignments" on the
                 Failed tab makes exactly the claim that copy exists to avoid. */}
             <VisuallyHidden role="status" aria-atomic="true">
-              {isLoadingCodes || isCodesStale
+              {isCodesBusy
                 ? "Loading seat assignments"
                 : pageResults.length === 0
                   ? emptyTableMessage
@@ -830,8 +840,10 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
               aria-label="Seat assignments"
               // Marks the whole table as updating while a filter, search, or
               // page change is in flight, including the window where the
-              // previous request's rows are still the ones on screen.
-              aria-busy={isLoadingCodes || isCodesStale}
+              // previous request's rows are still the ones on screen, and
+              // while a mutation-triggered background refetch is revalidating
+              // rows already shown for the current filter/page.
+              aria-busy={isCodesBusy}
             >
               <div role="rowgroup">
                 <TableHeaderRow role="row">
@@ -874,7 +886,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                   <ActionCell role="columnheader" />
                 </TableHeaderRow>
               </div>
-              <TableBody role="rowgroup" $stale={isCodesStale}>
+              <TableBody role="rowgroup" $stale={isCodesRevalidating}>
                 {isLoadingCodes ? (
                   <>
                     {[1, 2, 3].map((i) => (

@@ -1221,6 +1221,130 @@ describe("ContractAdminPage", () => {
     await screen.findByText("1 result")
   })
 
+  // isPlaceholderData (keepPreviousData) only reflects rows carried over from
+  // a different query key — it's false the moment React Query has a cache
+  // entry for the current key, even if a mutation invalidated it and a
+  // refetch is running in the background. isFetching is what's true then, so
+  // the busy/dimmed state has to account for it too, or a revisited tab looks
+  // "done" while it's still silently revalidating.
+  test("revisiting a tab invalidated by a row mutation stays busy/dimmed until the refetch resolves", async () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+    const { org, contract } = makeOrgWithContract()
+    setMockResponse.get(managerOrgsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [org],
+    })
+
+    let contractDetailCalls = 0
+    setMockResponse.get(managerContractDetailUrl(org.id, contract.id), () => {
+      contractDetailCalls += 1
+      return contractDetailCalls === 1
+        ? makeContractDetail(contract, {
+            total_codes: 2,
+            assigned_codes: 2,
+            redeemed_codes: 0,
+            unassigned_codes: 0,
+          })
+        : makeContractDetail(contract, {
+            total_codes: 2,
+            assigned_codes: 1,
+            redeemed_codes: 0,
+            unassigned_codes: 1,
+          })
+    })
+
+    const assignedCode = factories.contracts.contractCode({
+      redemption_status: "assigned",
+      assigned_to: "pending@example.com",
+    })
+
+    // The All tab's own query key is fetched twice in this test: once on the
+    // initial visit, and once when it's revisited after the Pending-tab
+    // mutation invalidates every filter for this contract. The second fetch
+    // is held open so the busy/dimmed state can be asserted before resolving.
+    let allCodesCalls = 0
+    const allCodesRefetch = Promise.withResolvers<
+      ReturnType<typeof factories.contracts.paginatedContractCodes>
+    >()
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 25,
+      }),
+      () => {
+        allCodesCalls += 1
+        return allCodesCalls === 1
+          ? factories.contracts.paginatedContractCodes([assignedCode])
+          : allCodesRefetch.promise
+      },
+    )
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 25,
+        status: "assigned",
+      }),
+      factories.contracts.paginatedContractCodes([assignedCode]),
+    )
+    setMockResponse.delete(
+      urls.contracts.managerContractCodeRevoke(
+        org.id,
+        contract.id,
+        assignedCode.code,
+      ),
+      assignedCode,
+    )
+
+    renderWithProviders(
+      <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+    )
+
+    // Load and cache the All tab.
+    await screen.findByText("pending@example.com")
+
+    // Visit and cache the Pending tab too.
+    await user.click(screen.getByRole("tab", { name: "Pending" }))
+    await screen.findByText("pending@example.com")
+
+    // Release the seat from the Pending tab — this invalidates every cached
+    // filter/page for the contract, including the All tab visited earlier.
+    await user.click(screen.getByRole("button", { name: /more actions/i }))
+    await user.click(screen.getByRole("menuitem", { name: "Release seat" }))
+    await user.click(screen.getByRole("button", { name: "Release seat" }))
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("group", { name: "Unassigned" }),
+      ).toHaveTextContent("1")
+    })
+
+    // Revisit the All tab: React Query already has a (now-invalidated) cache
+    // entry for this exact key, so the cached row shows immediately —
+    // isLoading and isPlaceholderData are both false — while the second,
+    // deferred fetch above refetches it in the background.
+    await user.click(screen.getByRole("tab", { name: "All" }))
+
+    const table = screen.getByRole("table", { name: "Seat assignments" })
+    expect(table).toHaveAttribute("aria-busy", "true")
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Loading seat assignments",
+    )
+
+    await act(async () => {
+      allCodesRefetch.resolve(
+        factories.contracts.paginatedContractCodes([]),
+      )
+    })
+
+    await waitFor(() => {
+      expect(table).toHaveAttribute("aria-busy", "false")
+    })
+  })
+
   describe("status pill", () => {
     const setupCodeRow = (
       code: ReturnType<typeof factories.contracts.contractCode>,
