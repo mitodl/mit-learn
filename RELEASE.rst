@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+Version 0.77.9
+--------------
+
+- always select currently running course run for card context (#3792)
+- refactor(otel): own the OpenTelemetry setup instead of patching Sentry's (#3788)
+- Display price ranges on product pages (#3794)
+- Make apisix userinfo updates togglable (#3747)
+- make canvas etl resistant to pod culling (#3779)
+- fix(otel): continue the edge trace by extracting W3C traceparent (#3787)
+- Update Terms of Service (MicroMasters bundle, AI Tutor, date) (#3767)
+- feat(settings): change email and password via Keycloak (#3726)
+
 Version 0.77.8 (Released August 19, 2026)
 --------------
 
