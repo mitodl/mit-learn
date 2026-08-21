@@ -636,6 +636,9 @@ const podcastEpisode: LearningResourceFactory<PodcastEpisodeResource> = (
         duration: faker.helpers.arrayElement(["PT1H13M44S", "PT2H30M", "PT1M"]),
         audio_url: faker.internet.url(),
         episode_link: faker.internet.url(),
+        // Most episodes have no transcript: only 9 of the 38 feeds Learn
+        // ingests publish a podcast:transcript tag. Opt in per test.
+        has_transcript: false,
       },
     },
     overrides,

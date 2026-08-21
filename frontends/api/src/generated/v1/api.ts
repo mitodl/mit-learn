@@ -6965,11 +6965,11 @@ export interface PodcastEpisode {
    */
   parent_podcasts: Array<PodcastEpisodeParent>
   /**
-   *
-   * @type {string}
+   * Whether a transcript is available from the transcript endpoint.  The text itself is excluded from this serializer, so this is how a client knows whether to fetch it.
+   * @type {boolean}
    * @memberof PodcastEpisode
    */
-  transcript?: string
+  has_transcript: boolean
   /**
    *
    * @type {string}
@@ -6988,12 +6988,6 @@ export interface PodcastEpisode {
    * @memberof PodcastEpisode
    */
   duration?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastEpisode
-   */
-  rss?: string | null
 }
 /**
  * Minimal parent-podcast summary embedded in an episode.
@@ -7031,12 +7025,6 @@ export interface PodcastEpisodeRequest {
    * @type {string}
    * @memberof PodcastEpisodeRequest
    */
-  transcript?: string
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastEpisodeRequest
-   */
   audio_url: string
   /**
    *
@@ -7050,12 +7038,6 @@ export interface PodcastEpisodeRequest {
    * @memberof PodcastEpisodeRequest
    */
   duration?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastEpisodeRequest
-   */
-  rss?: string | null
 }
 /**
  * Serializer for podcast episode resources
@@ -7510,6 +7492,25 @@ export const PodcastEpisodeResourceResourceTypeEnum = {
 export type PodcastEpisodeResourceResourceTypeEnum =
   (typeof PodcastEpisodeResourceResourceTypeEnum)[keyof typeof PodcastEpisodeResourceResourceTypeEnum]
 
+/**
+ * Serializer for a single podcast episode\'s transcript.  Kept out of PodcastEpisodeSerializer so the text is only ever sent when a client asks for this one episode\'s transcript.
+ * @export
+ * @interface PodcastEpisodeTranscript
+ */
+export interface PodcastEpisodeTranscript {
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastEpisodeTranscript
+   */
+  id: number
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeTranscript
+   */
+  transcript?: string
+}
 /**
  * Serializer for Podcasts
  * @export
@@ -26759,6 +26760,52 @@ export const PodcastEpisodesApiAxiosParamCreator = function (
         options: localVarRequestOptions,
       }
     },
+    /**
+     * Fetch one episode\'s transcript.  Served separately from the episode payload because the text runs tens of kilobytes; `podcast_episode.has_transcript` says whether there is anything here to fetch.  Args: id (integer): The id of the podcast episode  Returns: The episode\'s transcript and the feed url it was fetched from
+     * @summary Get a podcast episode transcript
+     * @param {number} id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    podcastEpisodesTranscriptRetrieve: async (
+      id: number,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'id' is not null or undefined
+      assertParamExists("podcastEpisodesTranscriptRetrieve", "id", id)
+      const localVarPath = `/api/v1/podcast_episodes/{id}/transcript/`.replace(
+        `{${"id"}}`,
+        encodeURIComponent(String(id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
   }
 }
 
@@ -26885,6 +26932,40 @@ export const PodcastEpisodesApiFp = function (configuration?: Configuration) {
           configuration,
         )(axios, operationBasePath || basePath)
     },
+    /**
+     * Fetch one episode\'s transcript.  Served separately from the episode payload because the text runs tens of kilobytes; `podcast_episode.has_transcript` says whether there is anything here to fetch.  Args: id (integer): The id of the podcast episode  Returns: The episode\'s transcript and the feed url it was fetched from
+     * @summary Get a podcast episode transcript
+     * @param {number} id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async podcastEpisodesTranscriptRetrieve(
+      id: number,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<PodcastEpisodeTranscript>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.podcastEpisodesTranscriptRetrieve(
+          id,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap[
+          "PodcastEpisodesApi.podcastEpisodesTranscriptRetrieve"
+        ]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
   }
 }
 
@@ -26947,6 +27028,21 @@ export const PodcastEpisodesApiFactory = function (
     ): AxiosPromise<PodcastEpisodeResource> {
       return localVarFp
         .podcastEpisodesRetrieve(requestParameters.id, options)
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * Fetch one episode\'s transcript.  Served separately from the episode payload because the text runs tens of kilobytes; `podcast_episode.has_transcript` says whether there is anything here to fetch.  Args: id (integer): The id of the podcast episode  Returns: The episode\'s transcript and the feed url it was fetched from
+     * @summary Get a podcast episode transcript
+     * @param {PodcastEpisodesApiPodcastEpisodesTranscriptRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    podcastEpisodesTranscriptRetrieve(
+      requestParameters: PodcastEpisodesApiPodcastEpisodesTranscriptRetrieveRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<PodcastEpisodeTranscript> {
+      return localVarFp
+        .podcastEpisodesTranscriptRetrieve(requestParameters.id, options)
         .then((request) => request(axios, basePath))
     },
   }
@@ -27100,6 +27196,20 @@ export interface PodcastEpisodesApiPodcastEpisodesRetrieveRequest {
 }
 
 /**
+ * Request parameters for podcastEpisodesTranscriptRetrieve operation in PodcastEpisodesApi.
+ * @export
+ * @interface PodcastEpisodesApiPodcastEpisodesTranscriptRetrieveRequest
+ */
+export interface PodcastEpisodesApiPodcastEpisodesTranscriptRetrieveRequest {
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastEpisodesApiPodcastEpisodesTranscriptRetrieve
+   */
+  readonly id: number
+}
+
+/**
  * PodcastEpisodesApi - object-oriented interface
  * @export
  * @class PodcastEpisodesApi
@@ -27157,6 +27267,23 @@ export class PodcastEpisodesApi extends BaseAPI {
   ) {
     return PodcastEpisodesApiFp(this.configuration)
       .podcastEpisodesRetrieve(requestParameters.id, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
+
+  /**
+   * Fetch one episode\'s transcript.  Served separately from the episode payload because the text runs tens of kilobytes; `podcast_episode.has_transcript` says whether there is anything here to fetch.  Args: id (integer): The id of the podcast episode  Returns: The episode\'s transcript and the feed url it was fetched from
+   * @summary Get a podcast episode transcript
+   * @param {PodcastEpisodesApiPodcastEpisodesTranscriptRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof PodcastEpisodesApi
+   */
+  public podcastEpisodesTranscriptRetrieve(
+    requestParameters: PodcastEpisodesApiPodcastEpisodesTranscriptRetrieveRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return PodcastEpisodesApiFp(this.configuration)
+      .podcastEpisodesTranscriptRetrieve(requestParameters.id, options)
       .then((request) => request(this.axios, this.basePath))
   }
 }

@@ -8,12 +8,19 @@ import yaml
 from bs4 import BeautifulSoup as bs  # noqa: N813
 from dateutil.parser import parse
 from django.conf import settings
+from django.db.models import Q, QuerySet
 from requests.exceptions import HTTPError
 
 from learning_resources.constants import Availability, LearningResourceType
 from learning_resources.etl.constants import ETLSource
+from learning_resources.etl.loaders import update_index
+from learning_resources.etl.podcast_transcript import (
+    BROWSER_UA_HEADERS,
+    fetch_transcript,
+    transcript_tags_from_rss,
+)
 from learning_resources.etl.utils import iso8601_duration
-from learning_resources.models import PodcastEpisode
+from learning_resources.models import LearningResource, PodcastEpisode
 from main.constants import (
     ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
     ALLOWED_HTML_TAGS_WITH_LINKS,
@@ -23,12 +30,6 @@ from main.utils import clean_data, frontend_absolute_url, now_in_utc
 CONFIG_FILE_REPO = "mitodl/open-podcast-data"
 CONFIG_FILE_FOLDER = "podcasts"
 TIMESTAMP_FORMAT = "%a, %d %b %Y  %H:%M:%S %z"
-BROWSER_UA_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/39.0.2171.95 Safari/537.36"
-}
-
 log = logging.getLogger()
 
 
@@ -190,6 +191,10 @@ def transform_episode(rss_data, offered_by, topics, parent_image):
                 if rss_data.find("itunes:duration")
                 else None
             ),
+            # `rss` carries the <podcast:transcript> tags too, so the
+            # transcript job needs no reference field of its own. Do not add
+            # `transcript` here: load_podcast_episode passes this dict to
+            # update_or_create(defaults=...), which would blank it every run.
             "rss": rss_data.prettify(),
         },
         "availability": Availability.anytime.name,
@@ -257,6 +262,65 @@ def transform(extracted_podcasts):
         except AttributeError:
             log.exception("Error parsing podcast data from %s", config_data["rss_url"])
             continue
+
+
+def get_podcast_episodes_for_transcripts_job(
+    *, overwrite: bool = False
+) -> QuerySet[LearningResource]:
+    """
+    Get podcast episode resources that need transcripts.
+
+    Args:
+        overwrite: if True, include episodes that already have transcripts
+
+    Returns:
+        QuerySet of LearningResource objects
+    """
+    episode_resources = LearningResource.objects.select_related(
+        "podcast_episode"
+    ).filter(
+        # Both spellings: a declared xmlns:podcast is stored as
+        # "<podcast:transcript", an undeclared one loses the prefix and is
+        # stored as "<transcript". Matching the bracket rather than the bare
+        # word excludes descriptions that merely mention a transcript.
+        Q(podcast_episode__rss__contains=":transcript")
+        | Q(podcast_episode__rss__contains="<transcript"),
+        published=True,
+        resource_type=LearningResourceType.podcast_episode.name,
+    )
+
+    if not overwrite:
+        episode_resources = episode_resources.filter(podcast_episode__transcript="")
+
+    return episode_resources
+
+
+def get_podcast_transcripts(episode_resources: QuerySet[LearningResource]) -> None:
+    """
+    Fetch transcripts for podcast episodes from their podcast:transcript urls.
+
+    Args:
+        episode_resources: LearningResource objects with a related podcast_episode
+    """
+    for resource in episode_resources:
+        # Per-episode guard: one malformed feed fragment or unreachable host
+        # must not abort the batch and skip every episode after it. extract()
+        # above gets this wrong -- it lets requests' ConnectionError escape,
+        # which is why a single dead feed kills the whole podcast ETL run.
+        try:
+            episode = resource.podcast_episode
+            entries = transcript_tags_from_rss(episode.rss)
+            if not entries:
+                continue
+            transcript = fetch_transcript(entries)
+            if transcript:
+                episode.transcript = transcript
+                episode.save()
+                update_index(resource, newly_created=False)
+        except Exception:
+            log.exception(
+                "Error fetching transcript for podcast episode %s", resource.id
+            )
 
 
 def get_all_mit_podcasts_channel_rss():

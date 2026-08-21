@@ -4095,11 +4095,11 @@ export interface PodcastEpisode {
    */
   parent_podcasts: Array<PodcastEpisodeParent>
   /**
-   *
-   * @type {string}
+   * Whether a transcript is available from the transcript endpoint.  The text itself is excluded from this serializer, so this is how a client knows whether to fetch it.
+   * @type {boolean}
    * @memberof PodcastEpisode
    */
-  transcript?: string
+  has_transcript: boolean
   /**
    *
    * @type {string}
@@ -4118,12 +4118,6 @@ export interface PodcastEpisode {
    * @memberof PodcastEpisode
    */
   duration?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastEpisode
-   */
-  rss?: string | null
 }
 /**
  * Minimal parent-podcast summary embedded in an episode.
