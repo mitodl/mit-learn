@@ -72,8 +72,9 @@ type RefundState = {
   status: string
   tone: Tone
   /**
-   * Dated line under the status. Labelled for what the date actually marks:
-   * only a completed refund has been processed.
+   * Dated line under the status, labelled for what the date actually marks.
+   * A submitted request says "Requested" rather than the design's "Processed",
+   * since at that point nothing has been — pending design review.
    */
   timestamp?: { label: string; value?: string | null }
   notes?: { text: string; emphasis?: boolean }[]
@@ -111,6 +112,9 @@ const getRefundState = (order: Order): RefundState | null => {
       return {
         status: "Refund declined",
         tone: "red",
+        // Waiting on a branch client built from mitxonline 170fb603c, which
+        // adds `refund_reviewed_on`. Until then this is the submission date,
+        // so it is labelled as one.
         timestamp: { label: "Requested", value: order.refund_requested_on },
         notes: [
           { text: "We're unable to issue a refund for this order." },
