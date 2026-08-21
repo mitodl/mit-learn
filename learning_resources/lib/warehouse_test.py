@@ -350,6 +350,36 @@ def test_base_warehouse_etl_task_fetch_and_upsert_is_abstract():
         task.fetch_and_upsert(conn=None)
 
 
+@patch("learning_resources.lib.warehouse.connect_to_warehouse")
+def test_base_warehouse_etl_task_rejects_non_int_return(mock_connect):
+    """A subclass that forgets `return count` (implicitly returning None,
+    or any other non-int) fails loudly, and — critically — never advances
+    the watermark, so the run's data isn't silently skipped by every
+    future incremental pull.
+    """
+    mock_connect.return_value = MagicMock()
+
+    class _BrokenTask(BaseWarehouseETLTask):
+        name = "test.BrokenTask"
+        view_name = (
+            "ol_data_lake_production.ol_warehouse_production_integrations"
+            ".integrations__learn__test"
+        )
+
+        def fetch_and_upsert(self, conn, *, since=None):
+            pass  # forgot to return count
+
+    task = _BrokenTask()
+    mock_cache = MagicMock()
+
+    with patch("learning_resources.lib.warehouse.caches") as mock_caches:
+        mock_caches.__getitem__.return_value = mock_cache
+        with pytest.raises(TypeError, match="must return int"):
+            task.run(full_refresh=False)
+
+    mock_cache.set.assert_not_called()
+
+
 def test_base_warehouse_etl_task_acks_late():
     """acks_late=True, matching the rest of the ETL task fleet (get_ocw_data,
     ingest_edx_run_archive, etc.) — a worker lost mid-pull shouldn't lose
