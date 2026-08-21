@@ -63,10 +63,14 @@ describe("RefundRequestDialog, inside the refund window", () => {
     within(dialog).getByText("Original payment method")
   })
 
-  test("offers every reason the design lists", async () => {
+  test("offers every reason the design lists, with Other last", async () => {
     const dialog = await openDialog()
 
-    for (const label of [
+    expect(
+      within(dialog)
+        .getAllByRole("radio")
+        .map((radio) => radio.closest("label")?.textContent),
+    ).toEqual([
       "I do not have enough time",
       "Course is not what I expected",
       "I had a technical issue",
@@ -74,9 +78,7 @@ describe("RefundRequestDialog, inside the refund window", () => {
       "I purchased by mistake",
       "Prefer not to say",
       "Other",
-    ]) {
-      within(dialog).getByRole("radio", { name: label })
-    }
+    ])
   })
 
   test("submits the chosen reason once consent is given", async () => {
