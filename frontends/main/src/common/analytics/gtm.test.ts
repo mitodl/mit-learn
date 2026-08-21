@@ -15,6 +15,8 @@ import {
   trackFilterCourseCatalog,
   trackReturnVisit,
   trackBeginCheckout,
+  trackCheckoutCompleted,
+  trackAccountCreated,
   trackOrganicSocialClick,
   trackViewProgramDetails,
 } from "./gtm"
@@ -291,6 +293,45 @@ describe("trackBeginCheckout", () => {
   it("pushes a begin-checkout event without course name when null", () => {
     trackBeginCheckout(null)
     expect(window.dataLayer).toContainEqual({ event: "begin-checkout" })
+  })
+})
+
+describe("trackCheckoutCompleted", () => {
+  it("pushes a checkout-completed event with all fields", () => {
+    trackCheckoutCompleted({
+      orderId: 17,
+      courseName: "Data Science Fundamentals",
+      value: 199.99,
+    })
+    expect(window.dataLayer).toContainEqual({
+      event: "checkout-completed",
+      "order-id": 17,
+      "course-name": "Data Science Fundamentals",
+      "order-value": 199.99,
+    })
+  })
+
+  it("omits course-name and order-value when not provided", () => {
+    trackCheckoutCompleted({ orderId: 17 })
+    expect(window.dataLayer).toContainEqual({
+      event: "checkout-completed",
+      "order-id": 17,
+    })
+  })
+
+  it("omits order-value when null", () => {
+    trackCheckoutCompleted({ orderId: 17, value: null })
+    expect(window.dataLayer).toContainEqual({
+      event: "checkout-completed",
+      "order-id": 17,
+    })
+  })
+})
+
+describe("trackAccountCreated", () => {
+  it("pushes an account-created event", () => {
+    trackAccountCreated()
+    expect(window.dataLayer).toContainEqual({ event: "account-created" })
   })
 })
 
