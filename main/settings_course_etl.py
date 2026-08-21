@@ -31,7 +31,6 @@ BLOCKLISTED_COURSES_URL = get_string(
     "BLOCKLISTED_COURSES_URL",
     "https://raw.githubusercontent.com/mitodl/open-resource-blocklists/master/courses.txt",
 )
-DUPLICATE_COURSES_URL = get_string("DUPLICATE_COURSES_URL", None)
 
 
 # Iterator chunk size for MITx and xPRO courses

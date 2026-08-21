@@ -135,7 +135,7 @@ def ocw_courses_etl(
             )
             if data:
                 ocw_course_data = ocw.transform_course(data)
-                course_resource = loaders.load_course(ocw_course_data, [], [])
+                course_resource = loaders.load_course(ocw_course_data, [])
                 course_run = course_resource.runs.filter(published=True).first()
 
                 if course_resource and not skip_content_files:
