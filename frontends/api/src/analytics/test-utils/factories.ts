@@ -18,6 +18,16 @@ import type {
 
 const organizationId = () => faker.string.uuid()
 
+/**
+ * `contract_pk`, `courserun_pk` and `program_pk` are dbt surrogate keys —
+ * `dbt_utils.generate_surrogate_key` MD5-hashes its inputs, so they are
+ * 32-character lowercase hex strings, never integers. Fixtures that generated
+ * numbers here were passing while production sent strings (ol-analytics-api#29,
+ * which 500ed on exactly that mismatch server-side).
+ */
+const surrogateKey = () =>
+  faker.string.hexadecimal({ length: 32, casing: "lower", prefix: "" })
+
 const envelope = <RowT>(
   data: RowT[],
   overrides: Partial<OrgAnalyticsResponse<RowT>> = {},
@@ -36,7 +46,7 @@ const contractUtilization = (
 ): ContractUtilization => ({
   organization_key: faker.string.alphanumeric(6).toUpperCase(),
   organization_name: faker.company.name(),
-  contract_pk: faker.number.int({ min: 1, max: 10000 }),
+  contract_pk: surrogateKey(),
   b2b_contract_name: `${faker.company.name()} Contract`,
   b2b_contract_is_active: true,
   b2b_contract_start_date: "2026-01-01",
@@ -56,9 +66,9 @@ const enrollmentCompletionFunnel = (
 ): EnrollmentCompletionFunnel => ({
   organization_key: faker.string.alphanumeric(6).toUpperCase(),
   organization_name: faker.company.name(),
-  contract_pk: faker.number.int({ min: 1, max: 10000 }),
+  contract_pk: surrogateKey(),
   b2b_contract_name: `${faker.company.name()} Contract`,
-  courserun_pk: faker.number.int({ min: 1, max: 10000 }),
+  courserun_pk: surrogateKey(),
   courserun_readable_id: `course-v1:MITx+${faker.string.alphanumeric(5)}+2026`,
   courserun_title: faker.commerce.productName(),
   enrolled_learners: 40,
@@ -78,10 +88,15 @@ const monthlyEngagementTrend = (
   activity_year_and_month: "2026-01",
   monthly_active_learners: 30,
   new_enrollments: 12,
+  enrolling_learners: 10,
   certificates_earned: 5,
+  certified_learners: 5,
   total_videos_watched: 900,
+  video_watchers: 22,
   total_problems_attempted: 1200,
+  problem_attempters: 25,
   total_chatbot_interactions: 80,
+  chatbot_users: 14,
   ...overrides,
 })
 
@@ -90,9 +105,9 @@ const programFunnel = (
 ): ProgramFunnel => ({
   organization_key: faker.string.alphanumeric(6).toUpperCase(),
   organization_name: faker.company.name(),
-  contract_pk: faker.number.int({ min: 1, max: 10000 }),
+  contract_pk: surrogateKey(),
   b2b_contract_name: `${faker.company.name()} Contract`,
-  program_pk: faker.number.int({ min: 1, max: 10000 }),
+  program_pk: surrogateKey(),
   program_title: `${faker.commerce.department()} Program`,
   total_courses: 6,
   enrolled_in_contract_courses: 50,
@@ -112,8 +127,10 @@ const contentEngagementDepth = (
   engaged_learners: 28,
   engagement_rate_pct: 70,
   total_videos_watched: 800,
+  video_watchers: 22,
   avg_videos_per_engaged_learner: 28.6,
   total_problems_attempted: 1000,
+  problem_attempters: 24,
   avg_problems_per_engaged_learner: 35.7,
   total_chatbot_interactions: 60,
   chatbot_users: 14,
