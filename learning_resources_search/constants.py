@@ -266,6 +266,11 @@ LEARNING_RESOURCE_MAP = {
             }
         }
     },
+    "podcast_episode": {
+        "properties": {
+            "transcript": ENGLISH_TEXT_FIELD,
+        }
+    },
     "video": {
         "properties": {
             "duration": {"type": "keyword"},
@@ -440,6 +445,7 @@ LEARNING_RESOURCE_QUERY_FIELDS = [
     "course_feature",
     "ocw_topics.english",
     "video.transcript.english",
+    "podcast_episode.transcript.english",
 ]
 
 TOPICS_QUERY_FIELDS = ["topics.name"]
@@ -514,6 +520,10 @@ SOURCE_EXCLUDED_FIELDS = [
     *CONTENT_FILE_LARGE_FIELDS,
     "vector_embedding",
     "video.transcript",
+    "podcast_episode.transcript",
+    # Indexed by dynamic mapping until the serializer stopped emitting it;
+    # excluded so existing indices stop returning the raw feed XML in hits.
+    "podcast_episode.rss",
     *[f"content_files.{field}" for field in CONTENT_FILE_LARGE_FIELDS],
 ]
 

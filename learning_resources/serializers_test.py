@@ -147,8 +147,9 @@ def test_serialize_podcast_episode_to_json():
             ).values_list("parent__id", flat=True),
             "parent_podcasts": [],
             "id": podcast_episode.id,
-            "rss": podcast_episode.rss,
-            "transcript": podcast_episode.transcript,
+            # transcript and rss are excluded: the transcript
+            # is served from the dedicated endpoint, gated on has_transcript.
+            "has_transcript": bool(podcast_episode.transcript),
         },
     )
 

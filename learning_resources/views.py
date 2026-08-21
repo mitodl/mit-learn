@@ -86,6 +86,7 @@ from learning_resources.serializers import (
     MicroLearningPathRelationshipSerializer,
     MicroUserListRelationshipSerializer,
     PodcastEpisodeResourceSerializer,
+    PodcastEpisodeTranscriptSerializer,
     PodcastResourceSerializer,
     ProgramResourceSerializer,
     SetLearningPathsRequestSerializer,
@@ -500,6 +501,48 @@ class PodcastEpisodeViewSet(BaseLearningResourceViewSet):
         return self._get_base_queryset(
             resource_type=LearningResourceType.podcast_episode.name
         ).filter(published=True)
+
+    @extend_schema(
+        summary="Get a podcast episode transcript",
+        parameters=[
+            OpenApiParameter(name="id", type=int, location=OpenApiParameter.PATH),
+        ],
+        responses=PodcastEpisodeTranscriptSerializer(),
+    )
+    @action(
+        detail=True,
+        methods=["GET"],
+        name="Fetch the transcript for a podcast episode by id",
+        pagination_class=None,
+    )
+    @method_decorator(
+        cache_page_for_all_users(
+            settings.REDIS_VIEW_CACHE_DURATION,
+            cache="redis",
+            key_prefix="podcast_transcript",
+        )
+    )
+    def transcript(self, request, *_, **kwargs):  # noqa: ARG002
+        """
+        Fetch one episode's transcript.
+
+        Served separately from the episode payload because the text runs tens
+        of kilobytes; `podcast_episode.has_transcript` says whether there is
+        anything here to fetch.
+
+        Args:
+        id (integer): The id of the podcast episode
+
+        Returns:
+        The episode's transcript and the feed url it was fetched from
+        """
+        # self.get_object() rather than int(kwargs["id"]): DRF's
+        # get_object_or_404 turns a ValueError from a non-numeric id into a 404,
+        # where int() would raise and 500.
+        resource = self.get_object()
+        return Response(
+            PodcastEpisodeTranscriptSerializer(instance=resource.podcast_episode).data
+        )
 
 
 def clear_featured_caches(channel_names):

@@ -1,12 +1,14 @@
 "use client"
 
 import React, { useMemo } from "react"
-import { Typography, Skeleton, styled, TypographyProps } from "ol-components"
+import { Typography, Skeleton, styled } from "ol-components"
 import { RiPlayFill, RiPauseFill } from "@remixicon/react"
 import {
   useLearningResourcesDetail,
   useInfiniteLearningResourceItems,
+  podcastEpisodeQueries,
 } from "api/hooks/learningResources"
+import { useQuery } from "@tanstack/react-query"
 
 import { ResourceTypeEnum } from "api/v1"
 import type { PodcastEpisodeResource } from "api/v1"
@@ -32,6 +34,8 @@ import {
 } from "./PodcastsListingPage/styled"
 
 import PodcastShareButton from "./PodcastShareButton"
+import EpisodeContentTabs from "./EpisodeContentTabs"
+import { buildPodcastEpisodeStructuredData } from "./podcastEpisodeStructuredData"
 import { env } from "@/env"
 
 const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
@@ -115,31 +119,6 @@ const Topics = styled.span(({ theme }) => ({
   },
 }))
 
-const Description = styled(Typography)<Pick<TypographyProps, "component">>(
-  ({ theme }) => ({
-    color: theme.custom.colors.darkGray2,
-    display: "block",
-    marginBottom: "32px",
-    marginTop: "32px",
-    fontSize: "18px",
-    fontStyle: "normal",
-    lineHeight: "32px",
-    a: {
-      textDecoration: "underline",
-      color: theme.custom.colors.darkGray2,
-      fontWeight: theme.typography.fontWeightMedium,
-    },
-    "a:hover": {
-      textDecoration: "none",
-    },
-    [theme.breakpoints.down("sm")]: {
-      ...theme.typography.body1,
-      lineHeight: "24px",
-      marginTop: "16px",
-    },
-  }),
-)
-
 const StyledPodcastShareButton = styled(PodcastShareButton)({
   padding: "18px 12px",
   margin: "0 0 24px",
@@ -222,6 +201,16 @@ export const PodcastEpisodeDetailPage: React.FC<
     ? getEpisodeParentPodcast(episode, Number(podcastId))
     : null
 
+  // The transcript is served from its own endpoint because the text runs tens
+  // of kilobytes; has_transcript gates the request so episodes without one
+  // (most of them) never issue it.
+  const hasTranscript = !!(episode as PodcastEpisodeResource | undefined)
+    ?.podcast_episode?.has_transcript
+  const { data: transcriptData } = useQuery({
+    ...podcastEpisodeQueries.transcript(Number(episodeId)),
+    enabled: hasTranscript,
+  })
+
   const { data: episodesData } = useInfiniteLearningResourceItems(
     Number(podcastId),
     { learning_resource_id: Number(podcastId), limit: EPISODES_PAGE_SIZE },
@@ -277,8 +266,30 @@ export const PodcastEpisodeDetailPage: React.FC<
     [episode?.description],
   )
 
+  // PodcastEpisode JSON-LD for search indexing. Rendered as a plain <script>
+  // tag so crawlers can read it without executing any additional JS.
+  // See: https://schema.org/PodcastEpisode
+  const structuredData = !episodeLoading
+    ? buildPodcastEpisodeStructuredData(episode as PodcastEpisodeResource, {
+        url: sharePageUrl || undefined,
+        seriesUrl: podcastId
+          ? `${NEXT_PUBLIC_ORIGIN}${podcastHref}`
+          : undefined,
+      })
+    : null
+
   return (
     <>
+      {structuredData && (
+        <script
+          type="application/ld+json"
+          // JSON.stringify does not escape </ by default; replace prevents
+          // a malicious title/description from breaking out of the script tag.
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData).replace(/<\//g, "<\\/"),
+          }}
+        />
+      )}
       <PageSection variant="gray">
         <PodcastBreadcrumbs
           ancestors={[
@@ -344,19 +355,10 @@ export const PodcastEpisodeDetailPage: React.FC<
                     />
                   )}
                 </PodcastShareSection>
-                {description && (
-                  // Rendered as a <div>, not the default <p>: the sanitized
-                  // description contains block elements (<p>, <ul>, <li>) which are
-                  // invalid inside a <p>. The browser would reparent them during
-                  // parsing, diverging from the server HTML and breaking hydration.
-                  <Description
-                    variant="body1"
-                    component="div"
-                    dangerouslySetInnerHTML={{
-                      __html: description,
-                    }}
-                  />
-                )}
+                <EpisodeContentTabs
+                  descriptionHtml={description}
+                  transcript={transcriptData?.transcript ?? null}
+                />
               </>
             )}
           </PodcastContainer>

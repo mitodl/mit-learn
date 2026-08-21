@@ -44,12 +44,19 @@ type SetupOptions = {
   episodeOverrides?: Partial<LearningResource>
   podcastOverrides?: Partial<LearningResource>
   moreEpisodes?: LearningResource[]
+  /**
+   * When set, the episode reports has_transcript and the transcript endpoint
+   * returns this text. Paragraphs are separated by a blank line, as the ETL
+   * normalizer emits them.
+   */
+  transcript?: string
 }
 
 const setupApis = ({
   episodeOverrides = {},
   podcastOverrides = {},
   moreEpisodes,
+  transcript,
 }: SetupOptions = {}) => {
   const podcast = makePodcast(podcastOverrides)
   const episodeOverridesEpisode = (
@@ -66,9 +73,17 @@ const setupApis = ({
           readable_id: podcast.readable_id,
         },
       ],
+      has_transcript: transcript !== undefined,
       ...episodeOverridesEpisode,
     },
   } as Partial<LearningResource>)
+
+  if (transcript !== undefined) {
+    setMockResponse.get(urls.podcastEpisodes.transcript(episode.id), {
+      id: episode.id,
+      transcript,
+    })
+  }
 
   setMockResponse.get(
     urls.learningResources.details({ id: episode.id }),
@@ -418,5 +433,166 @@ describe("PodcastEpisodeDetailPage", () => {
     expect(screen.getByTestId("player-track-title")).toHaveTextContent(
       moreEpisode.title!,
     )
+  })
+
+  describe("Description / Transcript tabs", () => {
+    const TRANSCRIPT =
+      "Host: Welcome back to the show.\n\nGuest: Thanks for having me."
+
+    const renderPage = (opts: SetupOptions) => {
+      const { episode, podcast } = setupApis({ moreEpisodes: [], ...opts })
+      renderWithProviders(
+        <PodcastEpisodeDetailPage
+          episodeId={String(episode.id)}
+          podcastId={String(podcast.id)}
+        />,
+      )
+      return { episode, podcast }
+    }
+
+    test("shows no tablist when the episode has no transcript", async () => {
+      renderPage({
+        episodeOverrides: { description: "Just a description." },
+      })
+
+      // findAllByText: the episode title renders twice, in the breadcrumb and
+      // as the h1.
+      await screen.findByText("Just a description.")
+      expect(screen.queryByRole("tablist")).not.toBeInTheDocument()
+    })
+
+    test("shows no tablist when there is a transcript but no description", async () => {
+      // Tabs would open on an empty Description panel, so the transcript
+      // stands alone instead.
+      renderPage({
+        episodeOverrides: { description: "" },
+        transcript: TRANSCRIPT,
+      })
+
+      await screen.findByText("Host: Welcome back to the show.")
+      expect(screen.queryByRole("tablist")).not.toBeInTheDocument()
+    })
+
+    test("defaults to the Description tab", async () => {
+      renderPage({
+        episodeOverrides: { description: "Just a description." },
+        transcript: TRANSCRIPT,
+      })
+
+      const description = await screen.findByRole("tab", {
+        name: "Description",
+      })
+      expect(description).toHaveAttribute("aria-selected", "true")
+      expect(screen.getByRole("tab", { name: "Transcript" })).toHaveAttribute(
+        "aria-selected",
+        "false",
+      )
+    })
+
+    test("keeps both panels in the DOM, toggling only `hidden`", async () => {
+      // This is what keeps the transcript crawlable: search engines index DOM
+      // content hidden with `hidden`, but never content that appears only
+      // after a click. A conditional mount would silently break it.
+      renderPage({
+        episodeOverrides: { description: "Just a description." },
+        transcript: TRANSCRIPT,
+      })
+
+      await screen.findByRole("tab", { name: "Transcript" })
+      const panels = document.querySelectorAll('[role="tabpanel"]')
+      expect(panels).toHaveLength(2)
+
+      const [descriptionPanel, transcriptPanel] = Array.from(panels)
+      expect(descriptionPanel).not.toHaveAttribute("hidden")
+      expect(transcriptPanel).toHaveAttribute("hidden")
+
+      // The inactive panel's text is present in the DOM, not merely mounted.
+      expect(transcriptPanel).toHaveTextContent("Welcome back to the show.")
+      expect(transcriptPanel).toHaveTextContent("Thanks for having me.")
+
+      await user.click(screen.getByRole("tab", { name: "Transcript" }))
+
+      expect(document.querySelectorAll('[role="tabpanel"]')).toHaveLength(2)
+      expect(descriptionPanel).toHaveAttribute("hidden")
+      expect(transcriptPanel).not.toHaveAttribute("hidden")
+      expect(descriptionPanel).toHaveTextContent("Just a description.")
+    })
+
+    test("moves focus between tabs with arrow keys, activating on Enter", async () => {
+      // The WAI-ARIA APG manual-activation pattern, which is MUI's default and
+      // what every other tabset in this app uses: arrows move focus, Enter or
+      // Space selects. (Automatic activation would need
+      // selectionFollowsFocus on the TabButtonList.)
+      renderPage({
+        episodeOverrides: { description: "Just a description." },
+        transcript: TRANSCRIPT,
+      })
+
+      const description = await screen.findByRole("tab", {
+        name: "Description",
+      })
+      const transcript = screen.getByRole("tab", { name: "Transcript" })
+
+      description.focus()
+      await user.keyboard("{ArrowRight}")
+      expect(transcript).toHaveFocus()
+      expect(description).toHaveAttribute("aria-selected", "true")
+
+      await user.keyboard("{Enter}")
+      expect(transcript).toHaveAttribute("aria-selected", "true")
+      expect(description).toHaveAttribute("aria-selected", "false")
+
+      await user.keyboard("{ArrowLeft}")
+      expect(description).toHaveFocus()
+      await user.keyboard("{Enter}")
+      expect(description).toHaveAttribute("aria-selected", "true")
+    })
+
+    test("exposes a roving tab stop across the tablist", async () => {
+      // Only the selected tab is reachable by Tab; the others are -1 so the
+      // whole tablist is one stop, per the APG pattern.
+      renderPage({ transcript: TRANSCRIPT })
+
+      const description = await screen.findByRole("tab", {
+        name: "Description",
+      })
+      const transcript = screen.getByRole("tab", { name: "Transcript" })
+      expect(description).toHaveAttribute("tabindex", "0")
+      expect(transcript).toHaveAttribute("tabindex", "-1")
+    })
+
+    test("renders transcript paragraphs as escaped text, not HTML", async () => {
+      // The description is nh3-sanitized during ETL; the transcript is
+      // third-party text that was never sanitized for markup, so it must stay
+      // escaped.
+      renderPage({
+        transcript: "Host: <img src=x onerror=alert(1)> and <b>bold</b>.",
+      })
+
+      const transcriptTab = await screen.findByRole("tab", {
+        name: "Transcript",
+      })
+      await user.click(transcriptTab)
+
+      const panel = screen.getByRole("tabpanel", { name: "Transcript" })
+      expect(panel).toHaveTextContent("<img src=x onerror=alert(1)>")
+      expect(panel.querySelector("img")).toBeNull()
+      expect(panel.querySelector("b")).toBeNull()
+    })
+
+    test("splits the transcript into one paragraph per turn", async () => {
+      renderPage({ transcript: TRANSCRIPT })
+
+      // The panel has to be activated before querying it by role: a `hidden`
+      // panel is excluded from the accessibility tree, so getByRole cannot see
+      // it even though it is in the DOM.
+      await user.click(await screen.findByRole("tab", { name: "Transcript" }))
+
+      const panel = screen.getByRole("tabpanel", { name: "Transcript" })
+      const paragraphs = panel.querySelectorAll("p")
+      expect(paragraphs).toHaveLength(2)
+      expect(paragraphs[0]).toHaveTextContent("Host: Welcome back to the show.")
+      expect(paragraphs[1]).toHaveTextContent("Guest: Thanks for having me.")
+    })
   })
 })

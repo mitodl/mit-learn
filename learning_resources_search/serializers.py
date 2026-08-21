@@ -140,6 +140,14 @@ def serialize_learning_resource_for_update(
     ):
         serialized_data["video"]["transcript"] = learning_resource_obj.video.transcript
 
+    if (
+        learning_resource_obj.resource_type == LearningResourceType.podcast_episode.name
+        and hasattr(learning_resource_obj, "podcast_episode")
+    ):
+        serialized_data["podcast_episode"]["transcript"] = (
+            learning_resource_obj.podcast_episode.transcript
+        )
+
     if serialized_data.get("content_files"):
         # The API serializer omits full text; re-serialize with the full
         # serializer for nested search. Serializes content_files twice, which
