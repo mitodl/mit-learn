@@ -63,18 +63,21 @@ describe("ReceiptRefundCard", () => {
     ).not.toBeInTheDocument()
   })
 
-  test("A declined request explains itself and offers no button", () => {
+  test("A declined request dates the decision, not the submission", () => {
     renderWithProviders(
       <ReceiptRefundCard
         order={makeOrder({
           refund_status: RefundStatusEnum.Denied,
-          refund_requested_on: "2025-06-23T00:00:00Z",
+          refund_requested_on: "2025-06-01T00:00:00Z",
+          refund_reviewed_on: "2025-06-23T00:00:00Z",
         })}
         onRequestRefund={jest.fn()}
       />,
     )
 
     screen.getByText("Refund declined")
+    screen.getByText("Reviewed June 23, 2025")
+    expect(screen.queryByText(/June 1, 2025/)).not.toBeInTheDocument()
     screen.getByText("We're unable to issue a refund for this order.")
     expect(
       screen.queryByRole("button", { name: "Request Refund" }),
