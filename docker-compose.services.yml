@@ -31,7 +31,7 @@ services:
   redis:
     profiles:
       - backend
-    image: redis:8.2.2
+    image: redis:8.2.2@sha256:4521b581dbddea6e7d81f8fe95ede93f5648aaa66a9dacd581611bf6fe7527bd
     healthcheck:
       test: ["CMD", "redis-cli", "ping", "|", "grep", "PONG"]
       interval: 3s
@@ -40,7 +40,7 @@ services:
     ports:
       - "6379"
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:latest@sha256:057ee3a8da769fe7310dd3537b4dc7583bf87a95ce8ac43c0af5a46bc580d1fc
     ports:
       - "6333:6333"
     volumes:
@@ -68,12 +68,12 @@ services:
   tika:
     profiles:
       - backend
-    image: apache/tika:2.5.0
+    image: apache/tika:2.5.0@sha256:d680d1d7136f35de43294e7b80ac495da463f069b0f1d59be1ebac5f0543f075
     ports:
       - "9998:9998"
 
   locust:
-    image: locustio/locust
+    image: locustio/locust@sha256:0d7e43081c5f9437aed6513dc5827ec6984f024d00141a201a5b6be6e9a63e5d
     ports:
       - "8089:8089"
     volumes:
@@ -85,7 +85,7 @@ services:
       - load-testing
 
   locust-worker:
-    image: locustio/locust
+    image: locustio/locust@sha256:0d7e43081c5f9437aed6513dc5827ec6984f024d00141a201a5b6be6e9a63e5d
     volumes:
       - ./load_testing_locust:/mnt/locust
     command: -f /mnt/locust/locustfile.py --worker --master-host locust
