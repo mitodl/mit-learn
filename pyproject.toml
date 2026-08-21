@@ -114,6 +114,7 @@ dependencies = [
     "urllib3>=2.0.0,<3",
     "wrapt>=1.14.1,<2",
     "youtube-transcript-api>=1.0.0,<1.1",
+    "pypdf>=6.9.1,<7",
     "pypdfium2>=5.0.0,<6",
     "pyarrow>=24,<25",
     "django-zeal>=2.0.4,<3",
