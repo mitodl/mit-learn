@@ -93,6 +93,7 @@ const order = (overrides: Partial<Order> = {}): Order => ({
   refund_status: RefundStatusEnum.Eligible,
   refund_deadline: faker.date.future().toISOString(),
   refund_requested_on: null,
+  refund_reviewed_on: null,
   reference_number: faker.string.alphanumeric(10),
   created_on: faker.date.past().toISOString(),
   transactions: orderTransactions(),
