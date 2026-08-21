@@ -3,7 +3,8 @@
 import pytest
 
 from main.factories import UserFactory
-from profiles.tasks import send_welcome_email
+from profiles.models import ProgramCertificate
+from profiles.tasks import SyncProgramCertificatesTask, send_welcome_email
 
 
 @pytest.mark.django_db
@@ -114,3 +115,49 @@ def test_send_welcome_email_handles_missing_profile_relation(mocker):
         context={"display_name": "profile-missing"},
         is_transactional=True,
     )
+
+
+@pytest.mark.django_db
+def test_sync_program_certificates_task_upserts_iterated_rows(mocker):
+    """fetch_and_upsert calls upsert_program_certificate for every row
+    iter_rows yields, and returns the row count.
+    """
+    rows = [
+        {"record_hash": "a", "program_title": "Program A"},
+        {"record_hash": "b", "program_title": "Program B"},
+    ]
+    mocker.patch("profiles.tasks.iter_rows", return_value=iter(rows))
+    mocked_upsert = mocker.patch("profiles.tasks.upsert_program_certificate")
+
+    count = SyncProgramCertificatesTask.fetch_and_upsert(conn=mocker.Mock())
+
+    assert count == 2
+    assert mocked_upsert.call_count == 2
+    mocked_upsert.assert_any_call(rows[0])
+    mocked_upsert.assert_any_call(rows[1])
+
+
+def test_sync_program_certificates_task_view_name_is_fully_qualified():
+    """view_name is a fully-qualified catalog.database.table name, per
+    learning_resources.lib.warehouse.iter_rows's contract.
+    """
+    assert SyncProgramCertificatesTask.view_name == (
+        "ol_data_lake_production.ol_warehouse_production_integrations"
+        ".integrations__learn__program_certificates"
+    )
+
+
+@pytest.mark.django_db
+def test_sync_program_certificates_task_does_not_prune(mocker):
+    """A full_refresh run must never delete rows this pull didn't see —
+    see profiles.etl.upsert_program_certificate's docstring.
+    """
+    ProgramCertificate.objects.create(record_hash="untouched", user_email="")
+    mocker.patch(
+        "profiles.tasks.iter_rows",
+        return_value=iter([{"record_hash": "abc123"}]),
+    )
+
+    SyncProgramCertificatesTask.fetch_and_upsert(conn=mocker.Mock())
+
+    assert ProgramCertificate.objects.filter(record_hash="untouched").exists()

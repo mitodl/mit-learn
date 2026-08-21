@@ -5,11 +5,38 @@ import logging
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 
+from learning_resources.lib.warehouse import BaseWarehouseETLTask, iter_rows
 from main.celery import app
+from profiles.etl import upsert_program_certificate
 from profiles.utils import send_template_email
 
 log = logging.getLogger(__name__)
 User = get_user_model()
+
+
+class SyncProgramCertificatesTask(BaseWarehouseETLTask):
+    """Warehouse-pull sync of profiles.ProgramCertificate, replacing the
+    Hightouch sync into external.programcertificate (mitodl/hq#12954).
+    """
+
+    name = "profiles.tasks.SyncProgramCertificatesTask"
+    view_name = (
+        "ol_data_lake_production.ol_warehouse_production_integrations"
+        ".integrations__learn__program_certificates"
+    )
+
+    def fetch_and_upsert(self, conn, *, since=None) -> int:
+        """Upsert every row iter_rows yields; see profiles.etl for why this
+        never prunes, even on a full_refresh run.
+        """
+        count = 0
+        for row in iter_rows(conn, self.view_name, since=since):
+            upsert_program_certificate(row)
+            count += 1
+        return count
+
+
+SyncProgramCertificatesTask = app.register_task(SyncProgramCertificatesTask())
 
 
 @app.task
