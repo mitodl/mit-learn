@@ -253,6 +253,21 @@ class BaseWarehouseETLTask(Task):
         finally:
             conn.close()
 
+        # A subclass that forgets `return count` (or returns the wrong
+        # type) implicitly returns None — checked before advancing the
+        # watermark, not just before the %d-formatted log line below, so a
+        # broken fetch_and_upsert fails loudly here instead of silently
+        # advancing the watermark and then crashing on the log call,
+        # which would permanently skip whatever this run should have
+        # picked up (the watermark update wouldn't roll back on that
+        # crash).
+        if not isinstance(count, int):
+            msg = (
+                f"{self.__class__.__name__}.fetch_and_upsert must return "
+                f"int, got {type(count).__name__}"
+            )
+            raise TypeError(msg)
+
         if not full_refresh:
             self._set_watermark(fetch_started_at - _WATERMARK_LOOKBACK)
 
