@@ -1,9 +1,13 @@
 """SQL warehouse pull infrastructure for data platform consumption.
 
-Connects to StarRocks over the MySQL wire protocol via a standard DB-API 2.0
-cursor (``execute`` / ``fetchmany`` / ``description``), which
-``iter_rows``/``BaseWarehouseETLTask`` below consume without any
-StarRocks-specific logic.
+Query engine is not hard-wired into the ETL tasks or row-iteration logic:
+the concrete backend is selected at connect time via
+``settings.WAREHOUSE_BACKEND``. StarRocks is the only implemented backend
+today, but any engine exposing a standard Python DB-API 2.0 cursor
+(``execute`` / ``fetchmany`` / ``description`` — e.g. DuckDB) is a drop-in
+addition: add a ``_connect_<backend>`` function and register it in
+``_CONNECTORS`` below. ``iter_rows`` and ``BaseWarehouseETLTask`` need no
+changes to support a new backend.
 """
 
 import logging
@@ -45,9 +49,11 @@ def _connect_starrocks():
 
     if not settings.STARROCKS_HOST or not settings.STARROCKS_USER:
         msg = (
-            "STARROCKS_HOST/STARROCKS_USER are not set. Set "
-            "STARROCKS_HOST/STARROCKS_PORT/STARROCKS_USER/STARROCKS_PASSWORD "
-            "(and optionally STARROCKS_CATALOG) to enable warehouse-pull ETL."
+            "WAREHOUSE_BACKEND is 'starrocks' but STARROCKS_HOST/"
+            "STARROCKS_USER are not set. Set STARROCKS_HOST/STARROCKS_PORT/"
+            "STARROCKS_USER/STARROCKS_PASSWORD (and optionally "
+            "STARROCKS_CATALOG), or switch WAREHOUSE_BACKEND to a "
+            "configured backend."
         )
         raise ImproperlyConfigured(msg)
 
@@ -61,21 +67,34 @@ def _connect_starrocks():
     )
 
 
+_CONNECTORS = {
+    "starrocks": _connect_starrocks,
+}
+
+
 def connect_to_warehouse():
-    """Open and return a DB-API connection to the StarRocks warehouse.
+    """Open and return a DB-API connection for the configured warehouse backend.
 
     Returns:
-        A DB-API 2.0 connection (``pymysql.connections.Connection``).
+        A DB-API 2.0 connection (``pymysql.connections.Connection`` today).
 
     Raises:
+        ValueError: If ``settings.WAREHOUSE_BACKEND`` names an unknown backend.
         Exception: propagated if the connection attempt fails.
     """
+    backend = settings.WAREHOUSE_BACKEND
     try:
-        conn = _connect_starrocks()
+        connector = _CONNECTORS[backend]
+    except KeyError:
+        msg = f"Unknown WAREHOUSE_BACKEND: {backend!r}"
+        raise ValueError(msg) from None
+
+    try:
+        conn = connector()
     except Exception:
-        log.exception("Failed to connect to StarRocks warehouse")
+        log.exception("Failed to connect to warehouse backend %s", backend)
         raise
-    log.info("Connected to StarRocks warehouse")
+    log.info("Connected to warehouse backend %s", backend)
     return conn
 
 
@@ -112,10 +131,12 @@ def iter_rows(conn, view_name, *, since=None, batch_size=1000):
     if since is not None:
         # `since` is produced by our own watermark tracking, never user
         # input, so a formatted literal is safe here (no parameterization
-        # needed) — and `TIMESTAMP '...'` literal syntax is understood by
-        # StarRocks/MySQL.
+        # needed). A bare quoted string, NOT a `TIMESTAMP '...'` literal —
+        # confirmed against a live StarRocks instance that the `TIMESTAMP`
+        # keyword form is a syntax error there (StarRocks implicitly casts
+        # a string literal compared against a DATETIME column instead).
         watermark = since.strftime(_WATERMARK_SQL_FORMAT)[:-3]
-        query += f" WHERE last_modified > TIMESTAMP '{watermark}'"
+        query += f" WHERE last_modified > '{watermark}'"
 
     cur = conn.cursor()
     try:

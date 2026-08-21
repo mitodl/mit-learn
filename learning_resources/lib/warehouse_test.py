@@ -18,6 +18,7 @@ from freezegun import freeze_time
 # module self-contained and fast (no database, no app registry needed).
 if not django_settings.configured:
     django_settings.configure(
+        WAREHOUSE_BACKEND="starrocks",
         STARROCKS_HOST="starrocks.example.com",
         STARROCKS_PORT=9030,
         STARROCKS_USER="testuser",
@@ -50,6 +51,7 @@ def _patch_settings(**kwargs):
 
 def _warehouse_settings(**overrides):
     settings = {
+        "WAREHOUSE_BACKEND": "starrocks",
         "STARROCKS_HOST": "starrocks.example.com",
         "STARROCKS_PORT": 9030,
         "STARROCKS_USER": "testuser",
@@ -74,8 +76,8 @@ def _make_cursor(columns, rows):
 
 
 @patch("pymysql.connect")
-def test_connect_to_warehouse_uses_settings(mock_connect):
-    """connect_to_warehouse passes Django settings through to pymysql.connect."""
+def test_connect_to_warehouse_starrocks_uses_settings(mock_connect):
+    """connect_to_warehouse dispatches to StarRocks and passes settings through."""
     mock_conn = MagicMock()
     mock_connect.return_value = mock_conn
 
@@ -108,6 +110,15 @@ def test_connect_to_warehouse_requires_host_and_user():
     with (
         _patch_settings(**_warehouse_settings(STARROCKS_HOST=None)),
         pytest.raises(ImproperlyConfigured, match="STARROCKS_HOST"),
+    ):
+        connect_to_warehouse()
+
+
+def test_connect_to_warehouse_rejects_unknown_backend():
+    """connect_to_warehouse raises ValueError for an unconfigured backend name."""
+    with (
+        _patch_settings(**_warehouse_settings(WAREHOUSE_BACKEND="snowflake")),
+        pytest.raises(ValueError, match="Unknown WAREHOUSE_BACKEND"),
     ):
         connect_to_warehouse()
 
@@ -207,7 +218,7 @@ def test_iter_rows_with_since_filters_on_last_modified():
     query = cursor.execute.call_args.args[0]
     assert query == (
         "SELECT * FROM catalog.schema.my_view "
-        "WHERE last_modified > TIMESTAMP '2026-06-15 12:30:00.000'"
+        "WHERE last_modified > '2026-06-15 12:30:00.000'"
     )
 
 
