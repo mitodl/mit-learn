@@ -28,6 +28,8 @@ const transactionLine = (
   total_paid: faker.commerce.price({ min: 50, max: 500 }),
   discount: "0.00",
   price: faker.commerce.price({ min: 50, max: 500 }),
+  // MITx Online course runs almost always carry an audit track.
+  has_free_audit: true,
   ...overrides,
 })
 
