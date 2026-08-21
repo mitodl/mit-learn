@@ -50,6 +50,19 @@ import SectionError from "./SectionError"
  * k-anonymity floor, and the two halves of a cell are suppressed
  * independently, so both go through `SuppressibleValue`. A suppressed number
  * is never a zero.
+ *
+ * # Denominators
+ *
+ * Read off `mv_b2b_content_engagement_depth.sql` in ol-data-platform, not
+ * guessed from the field names — the two families do not share a base:
+ *
+ *  - `engagement_rate_pct` and `chatbot_adoption_pct` divide by
+ *    `total_enrolled_learners`, which is why the engaged cell says
+ *    "of enrolled".
+ *  - `avg_videos_per_engaged_learner` and `avg_problems_per_engaged_learner`
+ *    divide by `engaged_learners`, so their columns must say "per engaged
+ *    learner". "Per learner" would read as per *enrolled* learner and quietly
+ *    overstate the figure on any run where engagement is weak.
  */
 
 const CourseTitle = styled.span(({ theme }) => ({
@@ -161,14 +174,14 @@ const ContentEngagementTable: React.FC<{
               $flex={COLUMN_FLEX.videos}
               $numeric
             >
-              Videos per learner
+              Videos per engaged learner
             </TableHeaderCell>
             <TableHeaderCell
               role="columnheader"
               $flex={COLUMN_FLEX.problems}
               $numeric
             >
-              Problems per learner
+              Problems per engaged learner
             </TableHeaderCell>
             <TableHeaderCell
               role="columnheader"
@@ -213,7 +226,7 @@ const ContentEngagementTable: React.FC<{
                 </span>
               </TableCell>
               <TableCell role="cell" $flex={COLUMN_FLEX.videos} $numeric>
-                <MobileLabel>Videos per learner</MobileLabel>
+                <MobileLabel>Videos per engaged learner</MobileLabel>
                 <span>
                   <SuppressibleValue
                     value={row.avg_videos_per_engaged_learner}
@@ -226,7 +239,7 @@ const ContentEngagementTable: React.FC<{
                 </span>
               </TableCell>
               <TableCell role="cell" $flex={COLUMN_FLEX.problems} $numeric>
-                <MobileLabel>Problems per learner</MobileLabel>
+                <MobileLabel>Problems per engaged learner</MobileLabel>
                 <span>
                   <SuppressibleValue
                     value={row.avg_problems_per_engaged_learner}
