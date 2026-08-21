@@ -122,10 +122,26 @@ describe("proxy", () => {
   const makeRequest = (pathname: string) =>
     new NextRequest(new URL(pathname, "https://learn.mit.edu"))
 
+  const S_MAXAGE_SECONDS = 7200
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    process.env = {
+      ...originalEnv,
+      NEXT_PUBLIC_CACHE_S_MAXAGE_SECONDS: String(S_MAXAGE_SECONDS),
+    }
+  })
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
   test("tags generic page routes with Cache-Control and html-pages Surrogate-Key", () => {
     const response = proxy(makeRequest("/about"))
     expect(response.headers.get("Surrogate-Key")).toBe("html-pages")
-    expect(response.headers.get("Cache-Control")).toContain("s-maxage=")
+    // s-maxage is in seconds, and comes from the configured CDN TTL.
+    expect(response.headers.get("Cache-Control")).toBe(
+      `s-maxage=${S_MAXAGE_SECONDS}, stale-if-error=86400, stale-while-revalidate=86400`,
+    )
   })
 
   test("appends per-item surrogate key for MITxOnline course pages", () => {
@@ -133,7 +149,6 @@ describe("proxy", () => {
     expect(response.headers.get("Surrogate-Key")).toBe(
       "html-pages mitxonline:course:course-v1:MITxT+5.601x",
     )
-    expect(response.headers.get("Cache-Control")).toContain("s-maxage=")
   })
 
   test("appends per-item surrogate key for MITxOnline program pages (/programs/)", () => {
