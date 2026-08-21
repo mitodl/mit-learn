@@ -227,7 +227,11 @@ CELERY_BEAT_SCHEDULE = (
 # Doesn't participate in the cutover-switch mechanism below: Hightouch runs
 # externally, not as an MIT Learn Celery task, so there's no legacy beat
 # entry here to retire once validated.
-if not CELERY_BEAT_DISABLED and get_string("STARROCKS_HOST", None):
+if (
+    not CELERY_BEAT_DISABLED
+    and get_string("STARROCKS_HOST", None)
+    and get_string("STARROCKS_USER", None)
+):
     CELERY_BEAT_SCHEDULE.update(
         {
             "warehouse-sync-program-certificates-every-1-days": {
