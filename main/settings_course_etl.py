@@ -151,3 +151,15 @@ CONTENT_BASE_URL_OLL = get_string(
     "CONTENT_BASE_URL_OLL", "https://openlearninglibrary.mit.edu"
 )
 CONTENT_BASE_URL_EDX = get_string("CONTENT_BASE_URL_EDX", "https://courses.edx.org")
+
+# Warehouse-pull settings for Cohort 1 catalog ETL, used to query the
+# integrations schema views exposed by the OL Data Platform. WAREHOUSE_BACKEND
+# selects the connector without touching ETL task code (see
+# learning_resources.lib.warehouse). Backend-specific credentials are
+# namespaced (e.g. STARROCKS_*) so future backends (e.g. a DuckDB-based
+# local/offline mode) can sit alongside without colliding.
+WAREHOUSE_BACKEND = get_string("WAREHOUSE_BACKEND", "starrocks")
+STARROCKS_HOST = get_string("STARROCKS_HOST", None)
+STARROCKS_PORT = get_int("STARROCKS_PORT", 9030)
+STARROCKS_USER = get_string("STARROCKS_USER", None)
+STARROCKS_PASSWORD = get_string("STARROCKS_PASSWORD", None)
