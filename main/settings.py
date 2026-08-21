@@ -294,7 +294,13 @@ DATABASES = {"default": DEFAULT_DATABASE_CONFIG}
 
 DATABASE_ROUTERS = ["main.routers.ExternalSchemaRouter"]
 
-EXTERNAL_MODELS = ["programcertificate"]
+# "programcertificate" was removed from here deliberately (was
+# EXTERNAL_MODELS = ["programcertificate"]): this app is now the writer of
+# that table (profiles.tasks.SyncProgramCertificatesTask, replacing the
+# Hightouch sync per mitodl/hq#12954) rather than a read-only consumer of
+# rows Hightouch wrote. If another external-schema, write-once-elsewhere
+# model needs the same protection in the future, add it here.
+EXTERNAL_MODELS = []
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.8/topics/i18n/
