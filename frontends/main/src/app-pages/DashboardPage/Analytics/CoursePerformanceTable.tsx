@@ -98,7 +98,7 @@ const CoursePerformanceTable: React.FC<{
   // The view's grain includes the contract, so a course run appears once per
   // contract it is offered under. Grouping by contract keeps those rows from
   // reading as duplicates; the label is dropped when there is only one.
-  const contracts = new Map<number, EnrollmentCompletionFunnel[]>()
+  const contracts = new Map<string, EnrollmentCompletionFunnel[]>()
   rows.forEach((row) => {
     const existing = contracts.get(row.contract_pk)
     if (existing) {

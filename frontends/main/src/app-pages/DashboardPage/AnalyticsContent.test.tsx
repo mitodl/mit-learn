@@ -1,6 +1,6 @@
 import React from "react"
 import { renderWithProviders, screen, TestingErrorBoundary } from "@/test-utils"
-import { setMockResponse } from "api/test-utils"
+import { setMockResponse, makeRequest } from "api/test-utils"
 import { factories, urls } from "api/mitxonline-test-utils"
 import {
   factories as analyticsFactories,
@@ -13,6 +13,7 @@ import type { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
+import { contractAdminView, organizationAnalyticsView } from "@/common/urls"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import AnalyticsContent from "./AnalyticsContent"
 
@@ -431,7 +432,7 @@ describe("AnalyticsContent", () => {
     const courseRows = (count: number) =>
       Array.from({ length: count }, (_, index) =>
         analyticsFactories.enrollmentCompletionFunnel({
-          courserun_pk: index + 1,
+          courserun_pk: String(index + 1),
           courserun_title: `Course ${index + 1}`,
         }),
       )
@@ -607,5 +608,169 @@ describe("AnalyticsContent", () => {
         screen.queryByRole("button", { name: /Show all/ }),
       ).not.toBeInTheDocument()
     })
+  })
+})
+
+describe("AnalyticsContent, contract-scoped", () => {
+  beforeEach(() => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    setMockResponse.get(
+      urls.userMe.get(),
+      factories.user.user({ email: "manager@test.com" }),
+    )
+  })
+
+  test("requests the contract-nested endpoints, resolving the slug to a contract id", async () => {
+    const contract = factories.contracts.contract()
+    const org = orgWithUuid({ contracts: [contract] })
+    setManagerOrgs([org])
+
+    const contractId = String(contract.id)
+    const page = { limit: 200 }
+    // Only the contract-nested URLs are mocked. An org-scoped request would
+    // find no mock and fail the render, which is the assertion: this route must
+    // not silently fall back to org-wide numbers for a contract-scoped page.
+    setMockResponse.get(
+      analyticsUrls.contracts.contractUtilization(ORG_UUID, contractId, page),
+      analyticsFactories.envelope([analyticsFactories.contractUtilization()], {
+        as_of: AS_OF,
+      }),
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.engagementTrend(ORG_UUID, contractId, page),
+      analyticsFactories.envelope(
+        [analyticsFactories.contractMonthlyEngagementTrend()],
+        { as_of: AS_OF },
+      ),
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, contractId, page),
+      analyticsFactories.envelope(
+        [analyticsFactories.enrollmentCompletionFunnel()],
+        { as_of: AS_OF },
+      ),
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.programFunnel(ORG_UUID, contractId, page),
+      analyticsFactories.envelope([analyticsFactories.programFunnel()], {
+        as_of: AS_OF,
+      }),
+    )
+
+    renderWithProviders(
+      <AnalyticsContent
+        orgSlug={org.slug.replace(/^org-/, "")}
+        contractSlug={contract.slug}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: analyticsUrls.contracts.contractUtilization(
+            ORG_UUID,
+            contractId,
+            page,
+          ),
+        }),
+      )
+    })
+  })
+
+  test("a contract slug that is not in this org requests nothing at all", async () => {
+    const org = orgWithUuid()
+    setManagerOrgs([org])
+
+    renderWithProviders(
+      <AnalyticsContent
+        orgSlug={org.slug.replace(/^org-/, "")}
+        contractSlug="not-a-contract-of-this-org"
+      />,
+    )
+
+    // The slug resolves to no contract, so there is no id to put in the path.
+    // Better an empty state than a request with `undefined` in the URL, which
+    // the API would answer 403 — indistinguishable from a real denial.
+    //
+    // Await the settled unavailable state FIRST. A bare `waitFor` around a
+    // negative assertion passes on its first tick, before the manager-org
+    // lookup has even resolved, so it would hold even if a contract request
+    // were issued a moment later.
+    await screen.findByText(/This contract link could not be found/)
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining("/contracts/"),
+      }),
+    )
+  })
+
+  test("an unresolved contract slug points the manager at org-wide analytics, not a dead end", async () => {
+    const org = orgWithUuid()
+    setManagerOrgs([org])
+    const orgSlug = org.slug.replace(/^org-/, "")
+
+    renderWithProviders(
+      <AnalyticsContent
+        orgSlug={orgSlug}
+        contractSlug="not-a-contract-of-this-org"
+      />,
+    )
+
+    const link = await screen.findByRole("link", {
+      name: "organization-wide analytics",
+    })
+    expect(link).toHaveAttribute("href", organizationAnalyticsView(orgSlug))
+  })
+
+  test("'Manage seats' targets the contract being viewed, not the org's first", async () => {
+    const [first, second] = [
+      factories.contracts.contract(),
+      factories.contracts.contract(),
+    ]
+    const org = orgWithUuid({ contracts: [first, second] })
+    setManagerOrgs([org])
+
+    const contractId = String(second.id)
+    const page = { limit: 200 }
+    setMockResponse.get(
+      analyticsUrls.contracts.contractUtilization(ORG_UUID, contractId, page),
+      analyticsFactories.envelope([analyticsFactories.contractUtilization()], {
+        as_of: AS_OF,
+      }),
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.engagementTrend(ORG_UUID, contractId, page),
+      analyticsFactories.envelope(
+        [analyticsFactories.contractMonthlyEngagementTrend()],
+        { as_of: AS_OF },
+      ),
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, contractId, page),
+      analyticsFactories.envelope(
+        [analyticsFactories.enrollmentCompletionFunnel()],
+        { as_of: AS_OF },
+      ),
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.programFunnel(ORG_UUID, contractId, page),
+      analyticsFactories.envelope([analyticsFactories.programFunnel()], {
+        as_of: AS_OF,
+      }),
+    )
+
+    const orgSlug = org.slug.replace(/^org-/, "")
+    renderWithProviders(
+      <AnalyticsContent orgSlug={orgSlug} contractSlug={second.slug} />,
+    )
+
+    // Pointing at contracts[0] here would send a manager viewing the second
+    // contract's analytics to the first contract's seat admin.
+    const link = await screen.findByRole("link", { name: "Manage seats" })
+    expect(link).toHaveAttribute(
+      "href",
+      contractAdminView(orgSlug, second.slug),
+    )
   })
 })

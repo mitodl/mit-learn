@@ -54,7 +54,7 @@ import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { organizationAnalyticsView } from "@/common/urls"
+import { contractAnalyticsView } from "@/common/urls"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 
@@ -696,15 +696,15 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                   </>
                 ) : null}
               </ContractSubtitle>
-              {/* Analytics is the reporting half of this dashboard and is
-                  org-scoped, so it lives at its own URL rather than under this
-                  contract. Behind its own flag: the analytics API is not
-                  deployed everywhere this page is. */}
+              {/* Analytics is the reporting half of this dashboard, and is
+                  now scoped to this contract rather than the whole org, so it
+                  lives under this contract's URL. Behind its own flag: the
+                  analytics API is not deployed everywhere this page is. */}
               {analyticsEnabled ? (
                 <AnalyticsLink
                   color="red"
                   size="small"
-                  href={organizationAnalyticsView(orgSlug)}
+                  href={contractAnalyticsView(orgSlug, contractSlug)}
                 >
                   View analytics
                 </AnalyticsLink>
