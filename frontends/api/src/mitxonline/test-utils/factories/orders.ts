@@ -10,8 +10,10 @@ import type {
   PaginatedOrderHistoryList,
   Product,
   RedeemedDiscount,
+  RefundRequest,
   TransactionLine,
 } from "@mitodl/mitxonline-api-axios/v2"
+import { RefundStatusEnum } from "@mitodl/mitxonline-api-axios/v2"
 
 const transactionLine = (
   overrides: Partial<TransactionLine> = {},
@@ -26,6 +28,8 @@ const transactionLine = (
   total_paid: faker.commerce.price({ min: 50, max: 500 }),
   discount: "0.00",
   price: faker.commerce.price({ min: 50, max: 500 }),
+  // MITx Online course runs almost always carry an audit track.
+  has_free_audit: true,
   ...overrides,
 })
 
@@ -85,11 +89,27 @@ const order = (overrides: Partial<Order> = {}): Order => ({
   lines: [transactionLine()],
   discounts: [],
   refunds: [],
-  refund_eligible: false,
+  // Default to the state a freshly purchased order is in, so tests opt into
+  // the other refund states rather than out of an arbitrary one.
+  refund_eligible: true,
+  refund_status: RefundStatusEnum.Eligible,
+  refund_deadline: faker.date.future().toISOString(),
+  refund_requested_on: null,
+  refund_reviewed_on: null,
   reference_number: faker.string.alphanumeric(10),
   created_on: faker.date.past().toISOString(),
   transactions: orderTransactions(),
   street_address: orderStreetAddress(),
+  ...overrides,
+})
+
+const refundRequest = (
+  overrides: Partial<RefundRequest> = {},
+): RefundRequest => ({
+  order: faker.number.int(),
+  refund_reason: "course_not_as_expected",
+  refund_reason_text: "",
+  consent_given: true,
   ...overrides,
 })
 
@@ -135,7 +155,7 @@ const orderHistory = (overrides: Partial<OrderHistory> = {}): OrderHistory => ({
   created_on: faker.date.past().toISOString(),
   titles: [],
   updated_on: faker.date.past().toISOString(),
-  refund_eligible: false,
+  refund_eligible: true,
   ...overrides,
 })
 
@@ -159,5 +179,6 @@ export {
   line,
   product,
   redeemedDiscount,
+  refundRequest,
   transactionLine,
 }

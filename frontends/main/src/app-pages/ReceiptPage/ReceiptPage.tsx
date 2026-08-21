@@ -6,9 +6,11 @@ import { useRouter } from "next-nprogress-bar"
 import { useQuery } from "@tanstack/react-query"
 import { RiArrowLeftLine, RiPrinterLine } from "@remixicon/react"
 import { Container, Skeleton, Typography, styled } from "ol-components"
+import NiceModal from "@ebay/nice-modal-react"
 import { Button, ButtonLink, VisuallyHidden } from "@mitodl/smoot-design"
 import { orderQueries } from "api/mitxonline-hooks/orders"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
+import { RefundStatusEnum } from "@mitodl/mitxonline-api-axios/v2"
 import type { Order } from "@mitodl/mitxonline-api-axios/v2"
 import type { AxiosError } from "axios"
 import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
@@ -19,6 +21,8 @@ import { ReceiptCard, ReceiptCardStack } from "./ReceiptCard"
 import { ReceiptDetailList, populatedRows } from "./ReceiptDetailList"
 import type { ReceiptDetail } from "./ReceiptDetailList"
 import { ReceiptOrderSummary } from "./ReceiptOrderSummary"
+import { ReceiptRefundCard } from "./ReceiptRefundCard"
+import { RefundRequestDialog } from "./RefundRequestDialog"
 import {
   formatDateRange,
   formatMoney,
@@ -94,11 +98,24 @@ const Columns = styled.div(({ theme }) => ({
 }))
 
 const SummaryColumn = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "32px",
   [theme.breakpoints.up("md")]: {
     gridColumn: 2,
     gridRow: 1,
   },
+  // The refund actions are not part of a printed receipt.
+  "@media print": {
+    gap: 0,
+  },
 }))
+
+const PrintHiddenRefundCard = styled(ReceiptRefundCard)({
+  "@media print": {
+    display: "none",
+  },
+})
 
 const DetailColumn = styled.div(({ theme }) => ({
   display: "flex",
@@ -307,6 +324,17 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
           <Columns>
             <SummaryColumn>
               <ReceiptOrderSummary order={order} />
+              <PrintHiddenRefundCard
+                order={order}
+                onRequestRefund={() =>
+                  NiceModal.show(RefundRequestDialog, {
+                    order,
+                    title: order.lines[0]?.content_title ?? "this course",
+                    isLate:
+                      order.refund_status === RefundStatusEnum.WindowClosed,
+                  })
+                }
+              />
             </SummaryColumn>
 
             <DetailColumn>

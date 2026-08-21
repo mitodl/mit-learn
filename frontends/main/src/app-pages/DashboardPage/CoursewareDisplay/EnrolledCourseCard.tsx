@@ -261,16 +261,14 @@ export const EnrolledCourseCard = ({
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const isStaff = mitxOnlineUser.data?.is_staff
   /**
-   * Only verified enrollments can have a receipt, so the lookup is skipped
-   * entirely for audit ones. Every card shares one `orders/history` query (same
-   * cache key), so this is a single request for the whole dashboard rather than
-   * one per card.
+   * Enrollment mode does not decide this: a refund returns the learner to audit,
+   * and the receipt is where they confirm it went through. Whether an order
+   * exists is the only question, and the lookup answers it.
+   *
+   * Every card shares one `orders/history` query (same cache key), so this is a
+   * single request for the whole dashboard rather than one per card.
    */
-  const receiptResolution = useOrderIdForRun(
-    isVerifiedEnrollmentMode(enrollment?.enrollment_mode)
-      ? (run?.id ?? null)
-      : null,
-  )
+  const receiptResolution = useOrderIdForRun(run?.id ?? null)
   const title = isCompact ? course.title : run?.title || course.title
   const coursewareUrl = run?.courseware_url
   const certificateLink = getCertificateLink(
@@ -475,7 +473,6 @@ export const EnrolledCourseCard = ({
   )
 
   const receiptMenuItem = getReceiptMenuItem(
-    enrollment?.enrollment_mode,
     receiptResolution,
     receiptByRunView(run.id),
   )
