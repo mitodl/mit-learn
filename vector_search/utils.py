@@ -1749,17 +1749,10 @@ def completeness_penalty_expression(
     collection_name: str,
 ) -> models.SumExpression | None:
     """
-    Build the multiplier that penalizes incomplete resources.
+    Build the incompleteness penalty multiplier, mirroring the OpenSearch
+    script_score: completeness * penalty + (1 - penalty).
 
-    Mirrors the OpenSearch script_score in
-    learning_resources_search.api.generate_sort_clause:
-
-        score * (completeness * penalty + (1 - penalty))
-
-    A resource with completeness == 1 keeps its score, one with
-    completeness == 0 keeps (1 - penalty) of it, and everything in between is
-    penalized linearly. Returns None when the penalty is disabled or the
-    collection carries no completeness (only resources do).
+    None when the penalty is disabled or the collection has no completeness.
     """
     if collection_name != RESOURCES_COLLECTION_NAME:
         return None
@@ -1778,10 +1771,9 @@ def completeness_penalty_expression(
 
 def score_formula_query(collection_name: str) -> models.FormulaQuery | None:
     """
-    Build the rescoring formula for a collection: the VECTOR_SEARCH_SCORE_BOOST
-    boosts added to the relevance score, then scaled down by the completeness
-    penalty. Returns None when neither applies, so callers can skip the
-    rescoring stage entirely.
+    Build a collection's rescoring formula: VECTOR_SEARCH_SCORE_BOOST boosts
+    added to the score, then scaled by the completeness penalty. None when
+    neither applies, so callers can skip rescoring entirely.
     """
     boost_expressions = custom_score_formula(collection_name)
     completeness_multiplier = completeness_penalty_expression(collection_name)
