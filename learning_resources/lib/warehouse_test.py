@@ -23,7 +23,6 @@ if not django_settings.configured:
         STARROCKS_PORT=9030,
         STARROCKS_USER="testuser",
         STARROCKS_PASSWORD="secret",  # noqa: S106
-        STARROCKS_CATALOG="ol_data_lake_production",
     )
     django.setup()
 
@@ -56,7 +55,6 @@ def _warehouse_settings(**overrides):
         "STARROCKS_PORT": 9030,
         "STARROCKS_USER": "testuser",
         "STARROCKS_PASSWORD": "secret",
-        "STARROCKS_CATALOG": "ol_data_lake_production",
     }
     settings.update(overrides)
     return settings
@@ -90,7 +88,7 @@ def test_connect_to_warehouse_starrocks_uses_settings(mock_connect):
     assert call_kwargs["port"] == 9030
     assert call_kwargs["user"] == "testuser"
     assert call_kwargs["password"] == "secret"  # noqa: S105
-    assert call_kwargs["database"] == "ol_data_lake_production"
+    assert "database" not in call_kwargs
 
 
 @patch("pymysql.connect", side_effect=OSError("unreachable"))

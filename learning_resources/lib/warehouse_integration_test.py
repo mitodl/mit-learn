@@ -10,6 +10,7 @@ the DB-API wiring itself works against a real StarRocks server, which a
 mock can't do.
 """
 
+import os
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -25,7 +26,15 @@ pytestmark = [
     ),
 ]
 
-_TEST_DB = "test_integrations"
+# CI runs `pytest -n logical` (see scripts/test/python_tests.sh); these
+# tests share one real StarRocks table across a CREATE/INSERT/DROP
+# lifecycle, so two xdist workers running this module's tests concurrently
+# would race on it (one worker's teardown DROP colliding with another's
+# still-running test, or their inserted rows contaminating each other's
+# assertions). PYTEST_XDIST_WORKER is unset (falls back to "master") when
+# not running under xdist, so this is a no-op outside CI.
+_WORKER_ID = os.environ.get("PYTEST_XDIST_WORKER", "master")
+_TEST_DB = f"test_integrations_{_WORKER_ID}"
 _TEST_TABLE = "integrations__learn__test"
 _TEST_VIEW = f"{_TEST_DB}.{_TEST_TABLE}"
 

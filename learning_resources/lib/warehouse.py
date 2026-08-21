@@ -40,6 +40,12 @@ _WATERMARK_SQL_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 def _connect_starrocks():
     """Open a StarRocks DB-API connection using Django settings.
 
+    No database is set at connect time — pymysql's `database=` becomes
+    MySQL's COM_INIT_DB, which StarRocks resolves as a database name (or a
+    `catalog.database` pair), never a bare catalog name alone. Every
+    view_name used with this connection must stay fully catalog-qualified
+    (catalog.database.table) as a result — see iter_rows's docstring.
+
     Raises:
         ImproperlyConfigured: If STARROCKS_HOST or STARROCKS_USER is unset —
             fails fast with a clear message instead of pymysql attempting
@@ -51,9 +57,8 @@ def _connect_starrocks():
         msg = (
             "WAREHOUSE_BACKEND is 'starrocks' but STARROCKS_HOST/"
             "STARROCKS_USER are not set. Set STARROCKS_HOST/STARROCKS_PORT/"
-            "STARROCKS_USER/STARROCKS_PASSWORD (and optionally "
-            "STARROCKS_CATALOG), or switch WAREHOUSE_BACKEND to a "
-            "configured backend."
+            "STARROCKS_USER/STARROCKS_PASSWORD, or switch WAREHOUSE_BACKEND "
+            "to a configured backend."
         )
         raise ImproperlyConfigured(msg)
 
@@ -62,7 +67,6 @@ def _connect_starrocks():
         port=settings.STARROCKS_PORT,
         user=settings.STARROCKS_USER,
         password=settings.STARROCKS_PASSWORD,
-        database=settings.STARROCKS_CATALOG or None,
         cursorclass=pymysql.cursors.Cursor,
     )
 
