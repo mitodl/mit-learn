@@ -23,7 +23,7 @@ type OrderIdResolution = {
    * request looks identical to "you never paid for this".
    */
   isError: boolean
-  /** Most recent fulfilled order covering the resource. May be zero-value. */
+  /** Most recent paid-for order covering the resource. May be zero-value. */
   orderId: number | null
 }
 
@@ -49,10 +49,18 @@ const matchesLine = (
 }
 
 /**
- * Most recent fulfilled order covering a resource. History comes back
- * newest-first. Refunded orders are excluded, matching `ReceiptByRunView` —
- * revisit when the refund section is built.
+ * Most recent order covering a resource. History comes back newest-first.
+ *
+ * Refunded orders count: the receipt is where a learner sees that their refund
+ * came through, so hiding it once the money is back would remove the page at
+ * the moment it is most worth reading.
  */
+const RECEIPT_STATES: string[] = [
+  StateEnum.Fulfilled,
+  StateEnum.Refunded,
+  StateEnum.PartiallyRefunded,
+]
+
 const useOrderIdForResource = (
   resourceId: number | null,
   isVariant: (obj: ProductPurchasableObject) => boolean,
@@ -74,7 +82,7 @@ const useOrderIdForResource = (
 
   const match = history.data.results.find(
     (order: OrderHistory) =>
-      order.state === StateEnum.Fulfilled &&
+      RECEIPT_STATES.includes(order.state) &&
       order.lines.some((line) => matchesLine(line, resourceId, isVariant)),
   )
 

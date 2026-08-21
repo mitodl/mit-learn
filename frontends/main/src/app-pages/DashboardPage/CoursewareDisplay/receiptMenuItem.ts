@@ -1,5 +1,4 @@
 import { SimpleMenuItem } from "ol-components"
-import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { receiptView } from "@/common/urls"
 import type { OrderIdResolution } from "@/common/mitxonline/useOrderIdForResource"
 
@@ -7,8 +6,11 @@ import type { OrderIdResolution } from "@/common/mitxonline/useOrderIdForResourc
  * The "Receipt" item for a dashboard card, or null when there is nothing to link
  * to.
  *
- * Verified track alone is not enough — a program purchase can upgrade an existing
- * audit enrollment without creating any order, leaving no receipt.
+ * Whether an order exists is the only thing that decides this. Enrollment mode
+ * does not: a refund moves the learner back to audit, and that is exactly when
+ * they want the receipt. A learner who reached the verified track without
+ * paying — a program purchase can upgrade an audit enrollment without creating
+ * an order — has no matching order, so the lookup below already hides the item.
  *
  * The three reasons `orderId` can be null are deliberately not equivalent:
  *
@@ -20,11 +22,9 @@ import type { OrderIdResolution } from "@/common/mitxonline/useOrderIdForResourc
  * - looked up and found nothing — genuinely no receipt, so hide the item
  */
 const getReceiptMenuItem = (
-  enrollmentMode: string | null | undefined,
   resolution: OrderIdResolution,
   resolverHref: string,
 ): SimpleMenuItem | null => {
-  if (!enrollmentMode || !isVerifiedEnrollmentMode(enrollmentMode)) return null
   if (resolution.isPending) return null
 
   const href =
