@@ -108,12 +108,17 @@ const contentEngagementDepth = (
   organization_name: faker.company.name(),
   courserun_readable_id: `course-v1:MITx+${faker.string.alphanumeric(5)}+2026`,
   courserun_title: faker.commerce.productName(),
+  // Internally consistent with the view's arithmetic: the rates divide by
+  // total_enrolled_learners, the averages by engaged_learners (800/28, 1000/28),
+  // and every activity cohort is a subset of engaged_learners.
   total_enrolled_learners: 40,
   engaged_learners: 28,
   engagement_rate_pct: 70,
   total_videos_watched: 800,
+  video_watchers: 22,
   avg_videos_per_engaged_learner: 28.6,
   total_problems_attempted: 1000,
+  problem_attempters: 25,
   avg_problems_per_engaged_learner: 35.7,
   total_chatbot_interactions: 60,
   chatbot_users: 14,
