@@ -41,15 +41,23 @@ import SectionError from "./SectionError"
  *
  * # Two numbers per cell
  *
- * Eleven metrics will not fit as eleven columns at this table's density. Each
- * activity column therefore leads with the per-engaged-learner rate — the
- * figure that is comparable across course runs of different sizes — and prints
- * the raw total under it, rather than dropping either.
+ * Thirteen metrics will not fit as thirteen columns at this table's density.
+ * Each activity column therefore leads with the rate — the figure that is
+ * comparable across course runs of different sizes — and prints the raw total
+ * under it, rather than dropping either.
+ *
+ * The total is printed with the cohort that produced it ("22 learners, 800
+ * watched"), not alone. A bare activity total invites the reader to divide it
+ * by the learners they can see, which is the wrong denominator: only the
+ * learners who did that particular thing contributed to it, and that is a
+ * narrower group than `engaged_learners`. It is also the group the anonymity
+ * floor is applied to, so showing it is what makes a suppressed total legible
+ * rather than arbitrary.
  *
  * Every metric except `total_enrolled_learners` is nullable under the
- * k-anonymity floor, and the two halves of a cell are suppressed
- * independently, so both go through `SuppressibleValue`. A suppressed number
- * is never a zero.
+ * k-anonymity floor, and each figure in a cell is suppressed on its own, so
+ * every one of them goes through `SuppressibleValue`. A suppressed number is
+ * never a zero.
  *
  * # Denominators
  *
@@ -82,6 +90,23 @@ const Detail = styled.span(({ theme }) => ({
   ...theme.typography.body3,
   color: theme.custom.colors.silverGrayDark,
   display: "block",
+}))
+
+/**
+ * Every cell here carries two lines of value, which the shared cell's mobile
+ * layout is not built for: it sets the label beside the value, and a label as
+ * long as "Problems per engaged learner" leaves so little room that
+ * "96 learners, 9,134 attempted" breaks across four lines. Below `md` the
+ * label therefore sits above its value rather than beside it, giving the pair
+ * the full width of the row. Applied to every labelled cell in the table, not
+ * only the two-line ones, so the column of labels stays straight.
+ */
+const StackedCell = styled(TableCell)(({ theme }) => ({
+  [theme.breakpoints.down("md")]: {
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: "2px",
+  },
 }))
 
 const COLUMN_FLEX = {
@@ -137,8 +162,10 @@ const ContentEngagementTable: React.FC<{
       row.engaged_learners,
       row.engagement_rate_pct,
       row.total_videos_watched,
+      row.video_watchers,
       row.avg_videos_per_engaged_learner,
       row.total_problems_attempted,
+      row.problem_attempters,
       row.avg_problems_per_engaged_learner,
       row.total_chatbot_interactions,
       row.chatbot_users,
@@ -208,11 +235,11 @@ const ContentEngagementTable: React.FC<{
                   <CourseId>{row.courserun_readable_id}</CourseId>
                 </span>
               </TableCell>
-              <TableCell role="cell" $flex={COLUMN_FLEX.enrolled} $numeric>
+              <StackedCell role="cell" $flex={COLUMN_FLEX.enrolled} $numeric>
                 <MobileLabel>Enrolled</MobileLabel>
                 {formatCount(row.total_enrolled_learners)}
-              </TableCell>
-              <TableCell role="cell" $flex={COLUMN_FLEX.engaged} $numeric>
+              </StackedCell>
+              <StackedCell role="cell" $flex={COLUMN_FLEX.engaged} $numeric>
                 <MobileLabel>Engaged</MobileLabel>
                 <span>
                   <SuppressibleValue value={row.engaged_learners} />
@@ -224,8 +251,8 @@ const ContentEngagementTable: React.FC<{
                     of enrolled
                   </Detail>
                 </span>
-              </TableCell>
-              <TableCell role="cell" $flex={COLUMN_FLEX.videos} $numeric>
+              </StackedCell>
+              <StackedCell role="cell" $flex={COLUMN_FLEX.videos} $numeric>
                 <MobileLabel>Videos per engaged learner</MobileLabel>
                 <span>
                   <SuppressibleValue
@@ -233,12 +260,13 @@ const ContentEngagementTable: React.FC<{
                     format={formatAverage}
                   />
                   <Detail>
+                    <SuppressibleValue value={row.video_watchers} /> learners,{" "}
                     <SuppressibleValue value={row.total_videos_watched} />{" "}
                     watched
                   </Detail>
                 </span>
-              </TableCell>
-              <TableCell role="cell" $flex={COLUMN_FLEX.problems} $numeric>
+              </StackedCell>
+              <StackedCell role="cell" $flex={COLUMN_FLEX.problems} $numeric>
                 <MobileLabel>Problems per engaged learner</MobileLabel>
                 <span>
                   <SuppressibleValue
@@ -246,12 +274,14 @@ const ContentEngagementTable: React.FC<{
                     format={formatAverage}
                   />
                   <Detail>
+                    <SuppressibleValue value={row.problem_attempters} />{" "}
+                    learners,{" "}
                     <SuppressibleValue value={row.total_problems_attempted} />{" "}
                     attempted
                   </Detail>
                 </span>
-              </TableCell>
-              <TableCell role="cell" $flex={COLUMN_FLEX.chatbot} $numeric>
+              </StackedCell>
+              <StackedCell role="cell" $flex={COLUMN_FLEX.chatbot} $numeric>
                 <MobileLabel>Chatbot adoption</MobileLabel>
                 <span>
                   <SuppressibleValue
@@ -264,11 +294,15 @@ const ContentEngagementTable: React.FC<{
                     interactions
                   </Detail>
                 </span>
-              </TableCell>
-              <TableCell role="cell" $flex={COLUMN_FLEX.certificates} $numeric>
+              </StackedCell>
+              <StackedCell
+                role="cell"
+                $flex={COLUMN_FLEX.certificates}
+                $numeric
+              >
                 <MobileLabel>Certificates</MobileLabel>
                 <SuppressibleValue value={row.certificates_earned} />
-              </TableCell>
+              </StackedCell>
             </TableRow>
           ))}
         </div>

@@ -363,8 +363,10 @@ describe("AnalyticsContent", () => {
             engaged_learners: 28,
             engagement_rate_pct: 70,
             total_videos_watched: 800,
+            video_watchers: 22,
             avg_videos_per_engaged_learner: 28.6,
             total_problems_attempted: 1000,
+            problem_attempters: 25,
             avg_problems_per_engaged_learner: 35.7,
             total_chatbot_interactions: 60,
             chatbot_users: 14,
@@ -386,9 +388,13 @@ describe("AnalyticsContent", () => {
       expect(within(table).getByText("28")).toBeInTheDocument()
       expect(within(table).getByText("70% of enrolled")).toBeInTheDocument()
       expect(within(table).getByText("28.6")).toBeInTheDocument()
-      expect(within(table).getByText("800 watched")).toBeInTheDocument()
+      expect(
+        within(table).getByText("22 learners, 800 watched"),
+      ).toBeInTheDocument()
       expect(within(table).getByText("35.7")).toBeInTheDocument()
-      expect(within(table).getByText("1,000 attempted")).toBeInTheDocument()
+      expect(
+        within(table).getByText("25 learners, 1,000 attempted"),
+      ).toBeInTheDocument()
       expect(within(table).getByText("35%")).toBeInTheDocument()
       expect(
         within(table).getByText("14 learners, 60 interactions"),
@@ -397,11 +403,14 @@ describe("AnalyticsContent", () => {
     })
 
     /**
-     * The event totals and the per-learner rates are suppressed independently,
-     * so a cell can have one half withheld and the other not. Neither half may
-     * fall back to zero.
+     * Suppression arrives per activity, not per row: the API floors each
+     * activity total through the cohort that produced it, so a sub-floor
+     * cohort takes its total and its average down with it while a healthier
+     * activity in the same row keeps all three of its figures. This models
+     * that shape — videos and chatbot withheld, problems intact — rather than
+     * an arbitrary mix of nulls, and asserts no withheld figure becomes a 0.
      */
-    test("marks each suppressed half of a content engagement cell", async () => {
+    test("withholds an activity together with the cohort that produced it", async () => {
       const org = orgWithUuid()
       setManagerOrgs([org])
       setAnalyticsResponses({
@@ -409,9 +418,16 @@ describe("AnalyticsContent", () => {
           analyticsFactories.contentEngagementDepth({
             courserun_title: "Sparse Widgets",
             total_enrolled_learners: 12,
-            total_videos_watched: 800,
+            engaged_learners: 8,
+            engagement_rate_pct: 66.7,
+            // Too few watchers to report, so the total and the average
+            // derived from it go too.
+            video_watchers: null,
+            total_videos_watched: null,
             avg_videos_per_engaged_learner: null,
+            // Same for the chatbot.
             chatbot_users: null,
+            total_chatbot_interactions: null,
             chatbot_adoption_pct: null,
             certificates_earned: null,
           }),
@@ -424,13 +440,16 @@ describe("AnalyticsContent", () => {
 
       await screen.findByText("Sparse Widgets")
       const table = screen.getByRole("table", { name: "Content engagement" })
-      // The withheld average, the two withheld chatbot figures and the
-      // withheld certificate count — four marks, and no stray zeroes.
+      // Three per withheld activity (rate, cohort, total) plus the withheld
+      // certificate count.
       expect(
         within(table).getAllByLabelText(/Withheld: too few learners/),
-      ).toHaveLength(4)
-      // The half that was not suppressed still reports its real total.
-      expect(within(table).getByText("800 watched")).toBeInTheDocument()
+      ).toHaveLength(7)
+      // The activity that cleared the floor still reports all three figures.
+      expect(within(table).getByText("35.7")).toBeInTheDocument()
+      expect(
+        within(table).getByText("25 learners, 1,000 attempted"),
+      ).toBeInTheDocument()
       expect(within(table).queryByText("0")).not.toBeInTheDocument()
     })
 
