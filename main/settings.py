@@ -873,14 +873,18 @@ HYBRID_VECTOR_SEARCH_MIN_SCORE = get_float(
 # hard limit for special cases where we need to return all results without pagination
 VECTOR_SEARCH_PAGE_MAX_LIMIT = get_int("VECTOR_SEARCH_PAGE_MAX_LIMIT", 200)
 
-# Maximum score penalty, in percent, for incomplete resources in vector search.
-# A resource with completeness = 0 keeps (100 - penalty)% of its score; partially
-# complete resources are penalized proportionally to their incompleteness.
-# 0 disables the penalty. Mirrors DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY,
-# which does the same thing for OpenSearch, but is tuned separately because
-# vector scores are on a different scale.
-VECTOR_SEARCH_MAX_INCOMPLETENESS_PENALTY = get_float(
-    name="VECTOR_SEARCH_MAX_INCOMPLETENESS_PENALTY", default=90
+# Score subtracted from a completeness = 0 resource in vector search, scaled
+# linearly by incompleteness. 0 disables the penalty.
+#
+# In *score units*, not the percent DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY
+# uses on the OpenSearch side. The OpenSearch penalty is multiplicative, which
+# works there because BM25 is unbounded and an exact match scores multiples of a
+# topical one. Similarity scores are bounded and sit in a narrow band (~0.55-0.75
+# across a whole result page), so scaling them by completeness makes completeness
+# the primary sort key and buries exact matches on incomplete courses. Subtracting
+# a fixed budget demotes them without erasing the relevance signal.
+VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = get_float(
+    name="VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT", default=0.05
 )
 
 # serve learning resource search hits from the Qdrant payload instead of

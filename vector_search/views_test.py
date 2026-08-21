@@ -848,8 +848,8 @@ def test_vector_search_with_score_cutoff_enforces_min_score(
 
 
 def _completeness_penalty(formula_query):
-    """Pull the completeness multiplier out of a resource score formula."""
-    return formula_query.formula.mult[1]
+    """Pull the completeness penalty term out of a resource score formula."""
+    return formula_query.formula.sum[-1]
 
 
 @pytest.mark.parametrize("hybrid_search", [True, False])
@@ -857,7 +857,7 @@ def test_vector_search_applies_completeness_penalty(
     mocker, client, settings, hybrid_search
 ):
     """Both search modes must rescore resources with the completeness penalty."""
-    settings.VECTOR_SEARCH_MAX_INCOMPLETENESS_PENALTY = 90
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
 
     mock_qdrant = mocker.patch(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
@@ -897,7 +897,7 @@ def test_dense_vector_search_without_formula_queries_vectors_directly(
     mocker, client, settings
 ):
     """With nothing to rescore, dense search skips the prefetch entirely."""
-    settings.VECTOR_SEARCH_MAX_INCOMPLETENESS_PENALTY = 0
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0
     mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
 
     mock_qdrant = mocker.patch(
@@ -925,7 +925,7 @@ def test_content_file_search_has_no_completeness_penalty(
     mocker, client, settings, content_file_viewer
 ):
     """Content file payloads carry no completeness, so nothing is penalized."""
-    settings.VECTOR_SEARCH_MAX_INCOMPLETENESS_PENALTY = 90
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
 
     mock_qdrant = mocker.patch(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()

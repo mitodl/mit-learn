@@ -1747,43 +1747,47 @@ def custom_score_formula(collection_name: str) -> list[models.MultExpression]:
 
 def completeness_penalty_expression(
     collection_name: str,
-) -> models.SumExpression | None:
+) -> models.NegExpression | None:
     """
-    Build the incompleteness penalty multiplier, mirroring the OpenSearch
-    script_score: completeness * penalty + (1 - penalty).
+    Build the incompleteness penalty term: -weight * (1 - completeness), to be
+    added to the score.
 
-    None when the penalty is disabled or the collection has no completeness.
+    Deliberately additive rather than the multiplicative form OpenSearch uses --
+    see VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT. None when the penalty is
+    disabled or the collection has no completeness.
     """
     if collection_name != RESOURCES_COLLECTION_NAME:
         return None
-    penalty = (settings.VECTOR_SEARCH_MAX_INCOMPLETENESS_PENALTY or 0) / 100
-    # A penalty above 100% would drive scores negative and invert the ranking
-    penalty = min(max(penalty, 0), 1)
-    if not penalty:
+    weight = max(settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT or 0, 0)
+    if not weight:
         return None
-    return models.SumExpression(
-        sum=[
-            models.MultExpression(mult=[COMPLETENESS_PAYLOAD_KEY, penalty]),
-            1 - penalty,
-        ]
+    return models.NegExpression(
+        neg=models.MultExpression(
+            mult=[
+                weight,
+                models.SumExpression(
+                    sum=[1, models.NegExpression(neg=COMPLETENESS_PAYLOAD_KEY)]
+                ),
+            ]
+        )
     )
 
 
 def score_formula_query(collection_name: str) -> models.FormulaQuery | None:
     """
-    Build a collection's rescoring formula: VECTOR_SEARCH_SCORE_BOOST boosts
-    added to the score, then scaled by the completeness penalty. None when
+    Build a collection's rescoring formula: the score, plus the
+    VECTOR_SEARCH_SCORE_BOOST boosts, minus the incompleteness penalty. None when
     neither applies, so callers can skip rescoring entirely.
     """
     boost_expressions = custom_score_formula(collection_name)
-    completeness_multiplier = completeness_penalty_expression(collection_name)
-    if not boost_expressions and completeness_multiplier is None:
+    penalty = completeness_penalty_expression(collection_name)
+    if not boost_expressions and penalty is None:
         return None
-    formula = models.SumExpression(sum=["$score", *boost_expressions])
-    if completeness_multiplier is None:
-        return models.FormulaQuery(formula=formula)
+    terms = ["$score", *boost_expressions]
+    if penalty is None:
+        return models.FormulaQuery(formula=models.SumExpression(sum=terms))
     return models.FormulaQuery(
-        formula=models.MultExpression(mult=[formula, completeness_multiplier]),
+        formula=models.SumExpression(sum=[*terms, penalty]),
         # Points indexed before completeness was added to the payload, and any
         # resource type that does not carry it, score as fully complete.
         defaults={COMPLETENESS_PAYLOAD_KEY: 1.0},

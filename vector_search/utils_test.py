@@ -2932,49 +2932,37 @@ def test_custom_score_formula_defaults(mocker):
 
 
 def test_completeness_penalty_expression(settings):
-    """
-    The penalty must mirror the OpenSearch script_score:
-    completeness * penalty + (1 - penalty).
-    """
-    settings.VECTOR_SEARCH_MAX_INCOMPLETENESS_PENALTY = 90
+    """The penalty subtracts weight * (1 - completeness) from the score."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
 
     expression = completeness_penalty_expression(RESOURCES_COLLECTION_NAME)
 
-    assert isinstance(expression, models.SumExpression)
-    completeness_term, remainder = expression.sum
-    assert isinstance(completeness_term, models.MultExpression)
-    assert completeness_term.mult == [COMPLETENESS_PAYLOAD_KEY, 0.9]
-    assert remainder == pytest.approx(0.1)
+    assert isinstance(expression, models.NegExpression)
+    weight, incompleteness = expression.neg.mult
+    assert weight == 0.05
+    # 1 - completeness
+    assert incompleteness.sum[0] == 1
+    assert incompleteness.sum[1].neg == COMPLETENESS_PAYLOAD_KEY
 
 
-@pytest.mark.parametrize("penalty", [0, None])
-def test_completeness_penalty_expression_disabled(settings, penalty):
-    """A penalty of 0 (or unset) leaves scores alone."""
-    settings.VECTOR_SEARCH_MAX_INCOMPLETENESS_PENALTY = penalty
+@pytest.mark.parametrize("weight", [0, None, -1])
+def test_completeness_penalty_expression_disabled(settings, weight):
+    """A weight of 0, unset, or negative leaves scores alone."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = weight
 
     assert completeness_penalty_expression(RESOURCES_COLLECTION_NAME) is None
 
 
-def test_completeness_penalty_expression_clamped(settings):
-    """A penalty above 100% is clamped so scores never go negative."""
-    settings.VECTOR_SEARCH_MAX_INCOMPLETENESS_PENALTY = 150
-
-    expression = completeness_penalty_expression(RESOURCES_COLLECTION_NAME)
-
-    assert expression.sum[0].mult == [COMPLETENESS_PAYLOAD_KEY, 1]
-    assert expression.sum[1] == 0
-
-
 def test_completeness_penalty_expression_other_collections(settings):
     """Only resource payloads carry completeness, so only they are penalized."""
-    settings.VECTOR_SEARCH_MAX_INCOMPLETENESS_PENALTY = 90
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
 
     assert completeness_penalty_expression(CONTENT_FILES_COLLECTION_NAME) is None
 
 
 def test_score_formula_query_combines_boosts_and_penalty(mocker, settings):
-    """Boosts are added to the score, then the whole thing is penalized."""
-    settings.VECTOR_SEARCH_MAX_INCOMPLETENESS_PENALTY = 90
+    """Boosts add to the score and the penalty subtracts from it."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
     mocker.patch(
         "vector_search.utils.VECTOR_SEARCH_SCORE_BOOST",
         {RESOURCES_COLLECTION_NAME: [{"boost": 0.15, "params": {"free": True}}]},
@@ -2983,29 +2971,27 @@ def test_score_formula_query_combines_boosts_and_penalty(mocker, settings):
     formula_query = score_formula_query(RESOURCES_COLLECTION_NAME)
 
     assert formula_query.defaults == {COMPLETENESS_PAYLOAD_KEY: 1.0}
-    assert isinstance(formula_query.formula, models.MultExpression)
-    boosted_score, penalty = formula_query.formula.mult
-    assert isinstance(boosted_score, models.SumExpression)
-    assert boosted_score.sum[0] == "$score"
-    assert isinstance(boosted_score.sum[1], models.MultExpression)
+    score, boost, penalty = formula_query.formula.sum
+    assert score == "$score"
+    assert isinstance(boost, models.MultExpression)
     assert penalty == completeness_penalty_expression(RESOURCES_COLLECTION_NAME)
 
 
 def test_score_formula_query_penalty_only(mocker, settings):
-    """With no boosts configured the formula is just the penalty."""
-    settings.VECTOR_SEARCH_MAX_INCOMPLETENESS_PENALTY = 90
+    """With no boosts configured the formula is the score minus the penalty."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
     mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
 
     formula_query = score_formula_query(RESOURCES_COLLECTION_NAME)
 
-    boosted_score, penalty = formula_query.formula.mult
-    assert boosted_score.sum == ["$score"]
+    score, penalty = formula_query.formula.sum
+    assert score == "$score"
     assert penalty == completeness_penalty_expression(RESOURCES_COLLECTION_NAME)
 
 
 def test_score_formula_query_boosts_only(mocker, settings):
     """With the penalty disabled the formula keeps the boosts and no defaults."""
-    settings.VECTOR_SEARCH_MAX_INCOMPLETENESS_PENALTY = 0
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0
     mocker.patch(
         "vector_search.utils.VECTOR_SEARCH_SCORE_BOOST",
         {RESOURCES_COLLECTION_NAME: [{"boost": 0.15, "params": {"free": True}}]},
@@ -3014,13 +3000,14 @@ def test_score_formula_query_boosts_only(mocker, settings):
     formula_query = score_formula_query(RESOURCES_COLLECTION_NAME)
 
     assert not formula_query.defaults
-    assert isinstance(formula_query.formula, models.SumExpression)
-    assert formula_query.formula.sum[0] == "$score"
+    score, boost = formula_query.formula.sum
+    assert score == "$score"
+    assert isinstance(boost, models.MultExpression)
 
 
 def test_score_formula_query_nothing_to_apply(mocker, settings):
     """Nothing to boost and nothing to penalize means no rescoring stage."""
-    settings.VECTOR_SEARCH_MAX_INCOMPLETENESS_PENALTY = 90
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
     mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
 
     assert score_formula_query(CONTENT_FILES_COLLECTION_NAME) is None
