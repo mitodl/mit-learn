@@ -33,6 +33,7 @@ if not django_settings.configured:
 
 
 from learning_resources.lib.warehouse import (
+    _WATERMARK_LOOKBACK,
     BaseWarehouseETLTask,
     connect_to_warehouse,
     iter_rows,
@@ -456,7 +457,8 @@ def test_full_refresh_does_not_advance_watermark(mock_connect):
 
 @patch("learning_resources.lib.warehouse.connect_to_warehouse")
 def test_incremental_watermark_is_stamped_before_fetch_not_after(mock_connect):
-    """The watermark records when the fetch *started*, not when it finished.
+    """The watermark records when the fetch *started* (minus the lookback
+    window), not when it finished.
 
     Otherwise a row modified while a long-running fetch is in flight would
     fall in the gap between this pull's window and the next incremental
@@ -485,7 +487,7 @@ def test_incremental_watermark_is_stamped_before_fetch_not_after(mock_connect):
             task.run(full_refresh=False)
 
     stored_watermark = mock_cache.set.call_args.args[1]
-    assert stored_watermark == fetch_started_at
+    assert stored_watermark == fetch_started_at - _WATERMARK_LOOKBACK
 
 
 @patch("learning_resources.lib.warehouse.connect_to_warehouse")
