@@ -431,7 +431,7 @@ describe("AnalyticsContent", () => {
     const courseRows = (count: number) =>
       Array.from({ length: count }, (_, index) =>
         analyticsFactories.enrollmentCompletionFunnel({
-          courserun_pk: index + 1,
+          courserun_pk: String(index + 1),
           courserun_title: `Course ${index + 1}`,
         }),
       )
