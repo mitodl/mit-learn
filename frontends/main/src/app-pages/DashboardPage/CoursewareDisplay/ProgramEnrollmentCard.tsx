@@ -125,7 +125,6 @@ export const ProgramEnrollmentCard = ({
     })
   }
   const receiptMenuItem = getReceiptMenuItem(
-    programEnrollment.enrollment_mode,
     receiptResolution,
     receiptByProgramView(programId),
   )

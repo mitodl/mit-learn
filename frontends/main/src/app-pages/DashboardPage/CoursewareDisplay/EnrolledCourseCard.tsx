@@ -475,7 +475,6 @@ export const EnrolledCourseCard = ({
   )
 
   const receiptMenuItem = getReceiptMenuItem(
-    enrollment?.enrollment_mode,
     receiptResolution,
     receiptByRunView(run.id),
   )
