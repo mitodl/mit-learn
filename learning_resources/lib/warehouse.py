@@ -13,7 +13,7 @@ changes to support a new backend.
 import logging
 import re
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import sentry_sdk
 from celery import Task
@@ -35,6 +35,17 @@ _SAFE_IDENTIFIER = re.compile(r"^[a-zA-Z0-9_.]+\Z")
 # for what is ETL bookkeeping, not domain data.
 _WATERMARK_CACHE = "durable"
 _WATERMARK_SQL_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
+
+# Subtracted from the wall-clock watermark before it's stored: this consumer
+# doesn't know the warehouse's own build/replication lag, so a row modified
+# just before fetch_started_at could still be invisible in the queried view
+# at query time (a dbt run hasn't rebuilt yet, an Iceberg commit hasn't
+# landed) and would otherwise be permanently skipped by every future
+# incremental pull, since its true last_modified is already below the
+# watermark. This overlap trades a few harmlessly-reprocessed rows each
+# incremental run (upsert is idempotent) for closing that skip window, as
+# long as warehouse lag never exceeds it.
+_WATERMARK_LOOKBACK = timedelta(minutes=10)
 
 
 def _connect_starrocks():
@@ -187,7 +198,10 @@ class BaseWarehouseETLTask(Task):
       in which case it behaves like a full pull). ``fetch_and_upsert``
       should pass ``since`` through to ``iter_rows`` and skip pruning —
       a partial pull must never be treated as the complete state of the
-      source. On success the watermark is advanced to "now".
+      source. On success the watermark is advanced to "now minus
+      ``_WATERMARK_LOOKBACK``" (not exactly "now") — see that constant's
+      comment for why a bare wall-clock watermark can permanently skip
+      warehouse rows under build/replication lag.
 
     Example::
 
@@ -240,7 +254,7 @@ class BaseWarehouseETLTask(Task):
             conn.close()
 
         if not full_refresh:
-            self._set_watermark(fetch_started_at)
+            self._set_watermark(fetch_started_at - _WATERMARK_LOOKBACK)
 
         elapsed = time.monotonic() - start
         log.info(
