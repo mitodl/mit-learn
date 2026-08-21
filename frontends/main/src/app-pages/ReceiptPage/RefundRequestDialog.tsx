@@ -20,7 +20,13 @@ import type { Order } from "@mitodl/mitxonline-api-axios/v2"
 import { useCreateRefundRequest } from "api/mitxonline-hooks/orders"
 import { formatMoney } from "./receiptUtils"
 
-/** The reasons the design offers, in the order and wording it shows them. */
+/**
+ * The reasons the design offers, in the wording it uses.
+ *
+ * "Other" is last rather than fourth, where the design puts it. Everything after
+ * it there is still a specific reason, so both the tab order and the rendered
+ * column read as though the list restarts. The set of options is unchanged.
+ */
 const REFUND_REASONS = [
   { value: RefundReasonEnum.NotEnoughTime, label: "I do not have enough time" },
   {
@@ -31,7 +37,6 @@ const REFUND_REASONS = [
     value: RefundReasonEnum.TechnicalDifficulties,
     label: "I had a technical issue",
   },
-  { value: RefundReasonEnum.Other, label: "Other" },
   {
     value: RefundReasonEnum.CourseTooDifficult,
     label: "Course is too difficult",
@@ -41,6 +46,7 @@ const REFUND_REASONS = [
     label: "I purchased by mistake",
   },
   { value: RefundReasonEnum.PreferNotToSay, label: "Prefer not to say" },
+  { value: RefundReasonEnum.Other, label: "Other" },
 ]
 
 const REASON_TEXT_MAX = 1000
@@ -85,14 +91,21 @@ const Summary = styled.dl(({ theme }) => ({
 /**
  * Two columns on desktop, one on mobile. `RadioChoiceField` renders a single
  * column, so the layout is applied to its group from here.
+ *
+ * The grid flows down the first column before starting the second, as the design
+ * does. Row-major would scatter the options into a different arrangement than
+ * the list order, so reading across a row would suggest a pairing that is not
+ * there.
  */
 const Reasons = styled(RadioChoiceField)(({ theme }) => ({
   ".MuiRadioGroup-root": {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridAutoFlow: "column",
+    gridTemplateRows: `repeat(${Math.ceil(REFUND_REASONS.length / 2)}, auto)`,
     columnGap: "24px",
     [theme.breakpoints.down("sm")]: {
-      gridTemplateColumns: "1fr",
+      gridAutoFlow: "row",
+      gridTemplateRows: "none",
     },
   },
 }))
