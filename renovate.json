@@ -3,7 +3,7 @@
   "extends": ["local>mitodl/.github:renovate-config"],
   "packageRules": [
     {
-      "allowedVersions": "<5",
+      "allowedVersions": "<6",
       "matchPackageNames": ["django", "Django"]
     }
   ]
