@@ -19,6 +19,7 @@ import { ReceiptCard, ReceiptCardStack } from "./ReceiptCard"
 import { ReceiptDetailList, populatedRows } from "./ReceiptDetailList"
 import type { ReceiptDetail } from "./ReceiptDetailList"
 import { ReceiptOrderSummary } from "./ReceiptOrderSummary"
+import { ReceiptRefundCard } from "./ReceiptRefundCard"
 import {
   formatDateRange,
   formatMoney,
@@ -94,11 +95,24 @@ const Columns = styled.div(({ theme }) => ({
 }))
 
 const SummaryColumn = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "32px",
   [theme.breakpoints.up("md")]: {
     gridColumn: 2,
     gridRow: 1,
   },
+  // The refund actions are not part of a printed receipt.
+  "@media print": {
+    gap: 0,
+  },
 }))
+
+const PrintHiddenRefundCard = styled(ReceiptRefundCard)({
+  "@media print": {
+    display: "none",
+  },
+})
 
 const DetailColumn = styled.div(({ theme }) => ({
   display: "flex",
@@ -307,6 +321,7 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
           <Columns>
             <SummaryColumn>
               <ReceiptOrderSummary order={order} />
+              <PrintHiddenRefundCard order={order} />
             </SummaryColumn>
 
             <DetailColumn>
