@@ -48,6 +48,7 @@ const RESOURCE_SEARCH_PARAMS = [
   "resource_type",
   "resource_type_group",
   "search_mode",
+  "show_ocw_files",
   "slop",
   "sortby",
   "topic",
@@ -90,8 +91,8 @@ type AppSearchParam = ServerSearchParam | (typeof CLIENT_ONLY_PARAMS)[number]
  * `searchParams` to the cache-key whitelist. Enforced repo-wide by the
  * `@typescript-eslint/no-restricted-types` ban on `PageProps`.
  */
-// eslint-disable-next-line @typescript-eslint/no-restricted-types -- the one sanctioned PageProps reference; this is the wrapper
 type AppPageProps<Route extends AppRoutes> = Omit<
+  // eslint-disable-next-line @typescript-eslint/no-restricted-types -- the one sanctioned PageProps reference; this is the wrapper
   PageProps<Route>,
   "searchParams"
 > & {

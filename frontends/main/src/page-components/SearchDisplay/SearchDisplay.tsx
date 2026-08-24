@@ -52,7 +52,7 @@ import type {
   BooleanFacets,
   FacetManifest,
 } from "@mitodl/course-search-utils"
-import { useSearchParams } from "@mitodl/course-search-utils/next"
+import { useAppSearchParams } from "@/common/useAppSearchParams"
 import { ResourceTypeGroupTabs } from "./ResourceTypeGroupTabs"
 import ProfessionalToggle from "./ProfessionalToggle"
 import { trackFilterCourseCatalog } from "@/common/analytics/gtm"
@@ -568,7 +568,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   hidePagination = false,
   adminOptionsSlot,
 }) => {
-  const [searchParams] = useSearchParams()
+  const searchParams = useAppSearchParams()
   const [expandAdminOptions, setExpandAdminOptions] = useState(false)
 
   const { data: adminParams, isLoading: isAdminParamsLoading } =
