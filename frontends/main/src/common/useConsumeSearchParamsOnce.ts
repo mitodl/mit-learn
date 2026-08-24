@@ -2,6 +2,7 @@
 
 import React from "react"
 import { useAppSearchParams } from "./useAppSearchParams"
+import type { RegisteredSearchParams } from "./searchParams"
 
 type ConsumedSearchParamsResult<T> = {
   value: T | undefined
@@ -9,7 +10,7 @@ type ConsumedSearchParamsResult<T> = {
 }
 
 type SearchParamsParser<T> = (
-  searchParams: URLSearchParams,
+  searchParams: RegisteredSearchParams,
 ) => ConsumedSearchParamsResult<T> | null
 
 /**

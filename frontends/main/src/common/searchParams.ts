@@ -16,6 +16,14 @@ import type { AppRoutes } from "../../.next/types/routes"
  *
  * (`_rsc`, the remaining Fastly whitelist entry, is framework-managed and
  * never read by app code, so it is deliberately not registered.)
+ *
+ * Known exception: `resource_title`, `syllabus`, `syllabus_only`, and
+ * `recommender` are read via ol-components' RoutedDrawer (exempt from the
+ * useSearchParams import ban) without being registered or cache-keyed. That
+ * is safe only while drawer content renders nothing during SSR (RoutedDrawer
+ * mounts closed and opens in an effect, with no `keepMounted`). If drawers
+ * ever SSR their content, these params must be added to the Fastly whitelist
+ * and this registry.
  */
 
 /** Mirrors Object.keys(resourceSearchValidators) — pinned by searchParams.test.ts */
@@ -79,9 +87,24 @@ const SERVER_KEYED_PARAMS = [
 type ServerSearchParam = (typeof SERVER_KEYED_PARAMS)[number]
 
 /**
+ * Read-only view of URL query params whose named lookups (`get`/`getAll`/
+ * `has`) accept registered params only. Use this as the parameter type of
+ * any helper that reads params by name: it prevents the helper body from
+ * reading unregistered names, while still accepting the useAppSearchParams
+ * result AND plain URLSearchParams values (whose lookups take any string).
+ */
+interface RegisteredSearchParams {
+  get(name: ServerSearchParam): string | null
+  getAll(name: ServerSearchParam): string[]
+  has(name: ServerSearchParam): boolean
+  keys(): Iterable<string>
+  toString(): string
+}
+
+/**
  * Drop-in replacement for Next's global `PageProps` that narrows
- * `searchParams` to the cache-key whitelist. Enforced repo-wide by the
- * `@typescript-eslint/no-restricted-types` ban on `PageProps`.
+ * `searchParams` to the cache-key whitelist. Enforced within `main/src` by
+ * the `@typescript-eslint/no-restricted-types` ban on `PageProps`.
  */
 type AppPageProps<Route extends AppRoutes> = Omit<
   // eslint-disable-next-line @typescript-eslint/no-restricted-types -- the one sanctioned PageProps reference; this is the wrapper
@@ -91,5 +114,5 @@ type AppPageProps<Route extends AppRoutes> = Omit<
   searchParams: Promise<Partial<Record<ServerSearchParam, string | string[]>>>
 }
 
-export { RESOURCE_SEARCH_PARAMS, APP_SERVER_PARAMS, SERVER_KEYED_PARAMS }
-export type { ServerSearchParam, AppPageProps }
+export { RESOURCE_SEARCH_PARAMS, SERVER_KEYED_PARAMS }
+export type { ServerSearchParam, RegisteredSearchParams, AppPageProps }

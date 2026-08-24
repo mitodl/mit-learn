@@ -1,7 +1,6 @@
-import * as fs from "fs"
-import * as path from "path"
 import { resourceSearchValidators } from "@mitodl/course-search-utils"
-import { RESOURCE_SEARCH_PARAMS } from "./searchParams"
+import { LearningResourcesSearchRetrieveAggregationsEnum } from "api"
+import { RESOURCE_SEARCH_PARAMS, SERVER_KEYED_PARAMS } from "./searchParams"
 import type { AppPageProps } from "./searchParams"
 
 /**
@@ -16,26 +15,18 @@ test("RESOURCE_SEARCH_PARAMS stays in sync with resourceSearchValidators", () =>
   )
 })
 
-const findPageFiles = (dir: string): string[] =>
-  fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = path.join(dir, entry.name)
-    if (entry.isDirectory()) return findPageFiles(full)
-    return entry.name === "page.tsx" ? [full] : []
-  })
-
 /**
- * Every page must type its props with AppPageProps (even pages that ignore
- * their props) so no page can hand-type `searchParams` and read a query
- * param outside the CDN cache-key whitelist. See @/common/searchParams.
+ * getExtraFacetNames promotes any URL key found in the aggregations enum
+ * into SSR search requests, so every enum value must be cache-keyed. If
+ * this fails after an OpenAPI regen, update the Fastly whitelist first,
+ * then the registry (same drill as above).
  */
-test("every page.tsx consumes AppPageProps", () => {
-  const appDir = path.join(__dirname, "../app")
-  const pages = findPageFiles(appDir)
-  expect(pages.length).toBeGreaterThan(40)
-  const offenders = pages
-    .filter((file) => !fs.readFileSync(file, "utf8").includes("AppPageProps"))
-    .map((file) => path.relative(appDir, file))
-  expect(offenders).toEqual([])
+test("aggregation params are all cache-keyed", () => {
+  const registered = new Set<string>(SERVER_KEYED_PARAMS)
+  const unregistered = Object.values(
+    LearningResourcesSearchRetrieveAggregationsEnum,
+  ).filter((name) => !registered.has(name))
+  expect(unregistered).toEqual([])
 })
 
 /**

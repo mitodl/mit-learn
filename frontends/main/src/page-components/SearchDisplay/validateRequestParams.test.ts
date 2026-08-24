@@ -36,6 +36,14 @@ describe("SearchDisplay validateRequestParams", () => {
     })
   })
 
+  test("Present-but-invalid boolean values are omitted, not set undefined", () => {
+    expect(
+      validateRequestParams({
+        free: "nonsense",
+      }),
+    ).toStrictEqual({})
+  })
+
   test("Values are filtered to enums", async () => {
     expect(
       validateRequestParams({

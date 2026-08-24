@@ -157,7 +157,10 @@ module.exports = {
       },
     },
     {
-      files: ["./main/src/**/*.ts", "./main/src/**/*.tsx"],
+      // Leading ./**/ keeps these globs working from any cwd: pre-commit
+      // lints from the repo root (paths start with frontends/), while
+      // lint-check runs from frontends/ (paths start with main/).
+      files: ["./**/main/src/**/*.ts", "./**/main/src/**/*.tsx"],
       rules: {
         "@typescript-eslint/no-restricted-types": [
           "error",
@@ -173,10 +176,12 @@ module.exports = {
       },
     },
     {
-      // Belt-and-suspenders with the AppPageProps jest test in
-      // main/src/common/searchParams.test.ts: a page hand-typing its
-      // searchParams prop would bypass the cache-key whitelist registry.
-      files: ["./main/src/app/**/page.tsx"],
+      // A page hand-typing its searchParams prop (directly or via a sibling
+      // props file) would bypass the cache-key whitelist registry; require
+      // AppPageProps instead. Scoped to all non-test app files so the type
+      // can't simply be declared next door to the page.
+      files: ["./**/main/src/app/**/*.ts", "./**/main/src/app/**/*.tsx"],
+      excludedFiles: ["./**/main/src/app/**/*.test.{ts,tsx}"],
       rules: {
         ...restrictedSyntax({ banInlineSearchParams: true }),
       },
@@ -306,7 +311,9 @@ function restrictedSyntax({
   }
   if (banInlineSearchParams) {
     selectors.push({
-      selector: "TSPropertySignature[key.name='searchParams']",
+      // key.name matches `searchParams:`, key.value matches `"searchParams":`
+      selector:
+        "TSPropertySignature[key.name='searchParams'], TSPropertySignature[key.value='searchParams']",
       message:
         "Do not hand-type searchParams. Type page props with AppPageProps from @/common/searchParams so query param reads stay within the CDN cache-key whitelist (hq#12925).",
     })
