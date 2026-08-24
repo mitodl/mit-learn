@@ -1,18 +1,20 @@
 import { resourceSearchValidators } from "@mitodl/course-search-utils"
 import { LearningResourcesSearchRetrieveAggregationsEnum } from "api"
-import { RESOURCE_SEARCH_PARAMS, SERVER_KEYED_PARAMS } from "./searchParams"
+import { SERVER_KEYED_PARAMS } from "./searchParams"
 import type { AppPageProps } from "./searchParams"
 
 /**
- * If this fails, a @mitodl/course-search-utils upgrade changed the search
- * param set. The Fastly cache-key whitelist must be updated FIRST —
+ * If this fails, a @mitodl/course-search-utils upgrade added search params.
+ * The Fastly cache-key whitelist must be updated FIRST —
  * ol-infrastructure: src/ol_infrastructure/applications/mit_learn/snippets/cache_key_query_whitelist.vcl
- * — then update RESOURCE_SEARCH_PARAMS to match. See hq#12925.
+ * — then add the params to SERVER_KEYED_PARAMS. See hq#12925.
  */
-test("RESOURCE_SEARCH_PARAMS stays in sync with resourceSearchValidators", () => {
-  expect([...RESOURCE_SEARCH_PARAMS].sort()).toEqual(
-    Object.keys(resourceSearchValidators).sort(),
+test("every resourceSearchValidators param is cache-keyed", () => {
+  const registered = new Set<string>(SERVER_KEYED_PARAMS)
+  const unregistered = Object.keys(resourceSearchValidators).filter(
+    (name) => !registered.has(name),
   )
+  expect(unregistered).toEqual([])
 })
 
 /**

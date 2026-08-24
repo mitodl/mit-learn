@@ -12,7 +12,7 @@ import type { AppRoutes } from "../../.next/types/routes"
  * See https://github.com/mitodl/hq/issues/12925.
  *
  * To use a new query param: add it to the Fastly whitelist in
- * ol-infrastructure FIRST, then to APP_SERVER_PARAMS here.
+ * ol-infrastructure FIRST, then to SERVER_KEYED_PARAMS here.
  *
  * (`_rsc`, the remaining Fastly whitelist entry, is framework-managed and
  * never read by app code, so it is deliberately not registered.)
@@ -26,8 +26,9 @@ import type { AppRoutes } from "../../.next/types/routes"
  * and this registry.
  */
 
-/** Mirrors Object.keys(resourceSearchValidators) — pinned by searchParams.test.ts */
-const RESOURCE_SEARCH_PARAMS = [
+const SERVER_KEYED_PARAMS = [
+  // Search facet params — Object.keys(resourceSearchValidators) from
+  // @mitodl/course-search-utils, pinned by searchParams.test.ts. Sorted.
   "aggregations",
   "certification",
   "certification_type",
@@ -57,9 +58,7 @@ const RESOURCE_SEARCH_PARAMS = [
   "sortby",
   "topic",
   "yearly_decay_percent",
-] as const
-
-const APP_SERVER_PARAMS = [
+  // Application params.
   "resource",
   "page",
   "vector_search",
@@ -77,11 +76,6 @@ const APP_SERVER_PARAMS = [
   "order_id",
   "account_action",
   "account_action_status",
-] as const
-
-const SERVER_KEYED_PARAMS = [
-  ...RESOURCE_SEARCH_PARAMS,
-  ...APP_SERVER_PARAMS,
 ] as const
 
 type ServerSearchParam = (typeof SERVER_KEYED_PARAMS)[number]
@@ -114,5 +108,5 @@ type AppPageProps<Route extends AppRoutes> = Omit<
   searchParams: Promise<Partial<Record<ServerSearchParam, string | string[]>>>
 }
 
-export { RESOURCE_SEARCH_PARAMS, SERVER_KEYED_PARAMS }
+export { SERVER_KEYED_PARAMS }
 export type { ServerSearchParam, RegisteredSearchParams, AppPageProps }
