@@ -144,7 +144,6 @@ dev = [
     "pytest-cov>=7.0.0,<8",
     "pytest-django>=4.5.2,<5",
     "pytest-env>=1.0.0,<2",
-    "pytest-freezegun>=0.4.2,<0.5",
     "pytest-mock>=3.10.0,<4",
     "pytest-repeat>=0.9.4",
     "responses>=0.25.0,<0.26",

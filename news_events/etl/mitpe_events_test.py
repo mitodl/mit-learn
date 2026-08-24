@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+from freezegun import freeze_time
 
 from news_events.etl.mitpe_events import extract, transform
 
@@ -28,7 +29,7 @@ def test_extract(mitpe_events_json_data):
     assert extract() == mitpe_events_json_data
 
 
-@pytest.mark.freeze_time("2020-05-21")
+@freeze_time("2020-05-21")
 def test_transform(mitpe_events_json_data):
     """Assert that the transform function returns the expected data"""
     source_and_items = transform(extract())
