@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.77.10
+Version 0.77.10 (Released August 24, 2026)
 ---------------
 
 - version bump for the mynumber and hacksnack games (#3798)
