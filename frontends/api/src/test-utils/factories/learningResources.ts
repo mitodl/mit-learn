@@ -368,13 +368,17 @@ const learningResources = makePaginatedFactory(learningResource)
 const learningResourceSummary: Factory<LearningResourceSummary> = (
   overrides = {},
 ) => {
+  const id = uniqueEnforcerId.enforce(() => faker.number.int())
   return {
-    id: uniqueEnforcerId.enforce(() => faker.number.int()),
+    id,
     last_modified: faker.date.recent().toISOString(),
     url: faker.internet.url(),
     title: faker.lorem.words(3),
     resource_type: learningResourceType(),
     canonical_parent_ids: [],
+    // Where the resource lives on Learn. The drawer is the fallback every
+    // resource has, so the default is the shape with no dedicated page.
+    learn_url: `${faker.internet.url({ appendSlash: false })}/search?resource=${id}`,
     ...overrides,
   }
 }

@@ -845,6 +845,12 @@ export interface CourseResource {
    */
   best_run_id: number | null
   /**
+   * Where this resource lives within Learn
+   * @type {string}
+   * @memberof CourseResource
+   */
+  learn_url: string
+  /**
    *
    * @type {CourseResourceResourceTypeEnum}
    * @memberof CourseResource
@@ -1647,6 +1653,12 @@ export interface DocumentResource {
    * @memberof DocumentResource
    */
   best_run_id: number | null
+  /**
+   * Where this resource lives within Learn
+   * @type {string}
+   * @memberof DocumentResource
+   */
+  learn_url: string
   /**
    *
    * @type {DocumentResourceResourceTypeEnum}
@@ -3405,6 +3417,12 @@ export interface LearningPathResource {
    */
   best_run_id: number | null
   /**
+   * Where this resource lives within Learn
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  learn_url: string
+  /**
    *
    * @type {LearningPathResourceResourceTypeEnum}
    * @memberof LearningPathResource
@@ -4978,6 +4996,12 @@ export interface LearningResourceSummary {
    * @memberof LearningResourceSummary
    */
   canonical_parent_ids: Array<number>
+  /**
+   * Where this resource lives within Learn
+   * @type {string}
+   * @memberof LearningResourceSummary
+   */
+  learn_url: string
 }
 
 /**
@@ -7190,6 +7214,12 @@ export interface PodcastEpisodeResource {
    */
   best_run_id: number | null
   /**
+   * Where this resource lives within Learn
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  learn_url: string
+  /**
    *
    * @type {PodcastEpisodeResourceResourceTypeEnum}
    * @memberof PodcastEpisodeResource
@@ -7673,6 +7703,12 @@ export interface PodcastResource {
    * @memberof PodcastResource
    */
   best_run_id: number | null
+  /**
+   * Where this resource lives within Learn
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  learn_url: string
   /**
    *
    * @type {PodcastResourceResourceTypeEnum}
@@ -8395,6 +8431,12 @@ export interface ProgramResource {
    * @memberof ProgramResource
    */
   best_run_id: number | null
+  /**
+   * Where this resource lives within Learn
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  learn_url: string
   /**
    *
    * @type {ProgramResourceResourceTypeEnum}
@@ -9583,6 +9625,12 @@ export interface VideoPlaylistResource {
    */
   best_run_id: number | null
   /**
+   * Where this resource lives within Learn
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  learn_url: string
+  /**
    *
    * @type {VideoPlaylistResourceResourceTypeEnum}
    * @memberof VideoPlaylistResource
@@ -10048,6 +10096,12 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   best_run_id: number | null
+  /**
+   * Where this resource lives within Learn
+   * @type {string}
+   * @memberof VideoResource
+   */
+  learn_url: string
   /**
    *
    * @type {VideoResourceResourceTypeEnum}
