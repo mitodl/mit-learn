@@ -208,8 +208,8 @@ def get_user_from_apisix_headers(
             # shared with other MIT applications that use their own integer
             # user ids, so integer ids collide across applications.
             posthog.capture(
-                global_id,
                 event=PostHogEvents.ACCOUNT_CREATED.value,
+                distinct_id=global_id,
                 properties={
                     "$current_url": request.build_absolute_uri(),
                     "global_id": global_id,
