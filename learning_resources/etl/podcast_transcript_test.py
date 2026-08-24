@@ -4,6 +4,8 @@ import pytest
 from bs4 import BeautifulSoup as bs  # noqa: N813
 
 from learning_resources.etl.podcast_transcript import (
+    MAX_TRANSCRIPT_CANDIDATES,
+    TRANSCRIPT_TYPE_PREFERENCE,
     _is_public_ip,
     _parsed_public_url,
     fetch_transcript,
@@ -12,6 +14,7 @@ from learning_resources.etl.podcast_transcript import (
     parse_plain,
     parse_podcast_index_json,
     parse_transcript_tags,
+    rank_transcript_candidates,
     select_transcript_url,
     transcript_tags_from_rss,
 )
@@ -204,6 +207,82 @@ def test_select_transcript_url_handles_empty():
     """No tags means no selection"""
     assert select_transcript_url([]) is None
     assert select_transcript_url(None) is None
+
+
+def test_rank_transcript_candidates_keeps_every_usable_tag():
+    """
+    Ranking returns the losers too, so fetch_transcript can fall through.
+
+    A feed lists the same transcript in several formats, so a broken url in the
+    preferred one must not cost the episode the transcript entirely.
+    """
+    entries = [
+        {"url": "h", "type": "text/html", "language": None},
+        {"url": "p", "type": "text/plain", "language": None},
+        {"url": "v", "type": "text/vtt", "language": None},
+    ]
+    assert [c.url for c in rank_transcript_candidates(entries)] == ["p", "v", "h"]
+
+
+def test_rank_transcript_candidates_drops_unusable_tags():
+    """Unparseable types and non-English languages never become candidates"""
+    entries = [
+        {"url": "x", "type": "application/pdf", "language": None},
+        {"url": "es", "type": "text/vtt", "language": "es"},
+        {"url": "v", "type": "text/vtt", "language": "en"},
+    ]
+    assert [c.url for c in rank_transcript_candidates(entries)] == ["v"]
+
+
+def test_rank_transcript_candidates_caps_the_list(caplog):
+    """One item cannot provoke unbounded requests, and the cap is not silent"""
+    entries = [
+        {"url": f"u{index}", "type": mime_type, "language": None}
+        for index, mime_type in enumerate(TRANSCRIPT_TYPE_PREFERENCE)
+    ]
+    candidates = rank_transcript_candidates(entries)
+    assert [c.media_type for c in candidates] == list(
+        TRANSCRIPT_TYPE_PREFERENCE[:MAX_TRANSCRIPT_CANDIDATES]
+    )
+    assert "trying only the best" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("url", "declared_type", "expected"),
+    [
+        # The spec makes `type` required; some feeds omit it anyway.
+        ("https://h.example/t.srt", None, "application/x-subrip"),
+        ("https://h.example/t.srt", "", "application/x-subrip"),
+        # A spelling outside TRANSCRIPT_TYPE_PREFERENCE.
+        ("https://h.example/t.srt", "text/srt", "application/x-subrip"),
+        ("https://h.example/t.vtt", None, "text/vtt"),
+        ("https://h.example/t.json", None, "application/json"),
+        ("https://h.example/t.txt", None, "text/plain"),
+        ("https://h.example/t.htm", None, "text/html"),
+        # A query string must not defeat the extension read.
+        ("https://h.example/t.vtt?token=abc", None, "text/vtt"),
+        # Nothing to go on: no usable type, no extension we can parse.
+        ("https://h.example/transcript", None, None),
+        ("https://h.example/t.pdf", None, None),
+    ],
+)
+def test_media_type_falls_back_to_the_url_extension(url, declared_type, expected):
+    """
+    A tag with no usable `type` is identified by its url extension instead.
+
+    Dropping it would make the episode look transcript-less. The response's own
+    Content-Type is still checked before the body is parsed.
+    """
+    candidates = rank_transcript_candidates(
+        [{"url": url, "type": declared_type, "language": None}]
+    )
+    assert (candidates[0].media_type if candidates else None) == expected
+
+
+def test_declared_type_wins_over_the_url_extension():
+    """A recognised `type` is authoritative even when the extension disagrees"""
+    entries = [{"url": "https://h.example/t.html", "type": "text/vtt"}]
+    assert rank_transcript_candidates(entries)[0].media_type == "text/vtt"
 
 
 VTT = """WEBVTT
@@ -659,3 +738,96 @@ def test_fetch_transcript_falls_back_when_the_charset_is_unknown(
     )
     entries = [{"url": "https://ok.example/t.vtt", "type": "text/vtt"}]
     assert fetch_transcript(entries).startswith("Susan Silbey: Welcome to the show,")
+
+
+def test_fetch_transcript_falls_back_to_the_next_format(mocked_responses, public_dns):
+    """
+    A 404 on the preferred format falls through to the next one.
+
+    Feeds publish the same transcript several ways, so giving up on the first
+    failure loses a transcript that was there all along -- and because the
+    episode keeps an empty transcript, the same broken url is retried every run.
+    """
+    mocked_responses.add(mocked_responses.GET, "https://ok.example/t.vtt", status=404)
+    mocked_responses.add(
+        mocked_responses.GET,
+        "https://ok.example/t.srt",
+        body=SRT,
+        content_type="application/srt",
+    )
+    entries = [
+        {"url": "https://ok.example/t.srt", "type": "application/srt"},
+        {"url": "https://ok.example/t.vtt", "type": "text/vtt"},
+    ]
+    assert "swollen lymph nodes" in fetch_transcript(entries)
+
+
+def test_fetch_transcript_falls_back_past_an_html_error_page(
+    mocked_responses,
+    public_dns,
+):
+    """An error page served for the preferred format is not the end of it"""
+    mocked_responses.add(
+        mocked_responses.GET,
+        "https://ok.example/t.vtt",
+        body="<html><body>Not found</body></html>",
+        content_type="text/html",
+    )
+    mocked_responses.add(
+        mocked_responses.GET,
+        "https://ok.example/t.srt",
+        body=SRT,
+        content_type="application/srt",
+    )
+    entries = [
+        {"url": "https://ok.example/t.vtt", "type": "text/vtt"},
+        {"url": "https://ok.example/t.srt", "type": "application/srt"},
+    ]
+    assert "swollen lymph nodes" in fetch_transcript(entries)
+
+
+def test_fetch_transcript_falls_back_past_an_empty_parse(mocked_responses, public_dns):
+    """A well-formed caption file with no cues in it is still no transcript"""
+    mocked_responses.add(
+        mocked_responses.GET,
+        "https://ok.example/t.vtt",
+        body="WEBVTT\n\n",
+        content_type="text/vtt",
+    )
+    mocked_responses.add(
+        mocked_responses.GET,
+        "https://ok.example/t.srt",
+        body=SRT,
+        content_type="application/srt",
+    )
+    entries = [
+        {"url": "https://ok.example/t.vtt", "type": "text/vtt"},
+        {"url": "https://ok.example/t.srt", "type": "application/srt"},
+    ]
+    assert "swollen lymph nodes" in fetch_transcript(entries)
+
+
+def test_fetch_transcript_empty_when_every_candidate_fails(
+    mocked_responses,
+    public_dns,
+):
+    """Exhausting the candidate list is the only way to give up"""
+    mocked_responses.add(mocked_responses.GET, "https://ok.example/t.vtt", status=404)
+    mocked_responses.add(mocked_responses.GET, "https://ok.example/t.srt", status=500)
+    entries = [
+        {"url": "https://ok.example/t.vtt", "type": "text/vtt"},
+        {"url": "https://ok.example/t.srt", "type": "application/srt"},
+    ]
+    assert fetch_transcript(entries) == ""
+
+
+def test_fetch_transcript_uses_an_untyped_url(mocked_responses, public_dns):
+    """A tag with no `type` at all is fetched on the strength of its extension"""
+    mocked_responses.add(
+        mocked_responses.GET,
+        "https://ok.example/t.srt",
+        body=SRT,
+        content_type="application/srt",
+    )
+    entries = [{"url": "https://ok.example/t.srt", "type": None}]
+    assert "swollen lymph nodes" in fetch_transcript(entries)

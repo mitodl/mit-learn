@@ -1,10 +1,10 @@
 """
 Fetch and normalize Podcasting 2.0 ``<podcast:transcript>`` files.
 
-An item may carry the same transcript in several formats, so picking one is
-part of the job. Transcript urls come from third-party feeds and there is no
-usable host allowlist (podcasts are hosted anywhere), so they are fetched under
-the guards in ``_checked_response``.
+An item may carry the same transcript in several formats, so ranking them and
+working down the list until one yields text is part of the job. Transcript urls
+come from third-party feeds and there is no usable host allowlist (podcasts are
+hosted anywhere), so they are fetched under the guards in ``_checked_response``.
 
 Spec: https://github.com/Podcastindex-org/podcast-namespace/blob/main/docs/tags/transcript.md
 """
@@ -16,6 +16,8 @@ import logging
 import re
 import socket
 from email.message import Message
+from pathlib import PurePosixPath
+from typing import NamedTuple
 from urllib.parse import ParseResult, urljoin, urlparse
 
 import requests
@@ -35,6 +37,23 @@ TRANSCRIPT_TYPE_PREFERENCE = (
     "application/json",
     "text/html",
 )
+
+# The spec makes `type` required, but some feeds omit it and others use a
+# spelling outside TRANSCRIPT_TYPE_PREFERENCE ("text/srt" among them). The url
+# extension identifies the format well enough to try, and the Content-Type
+# check in `_served_type_matches` still guards what comes back.
+TRANSCRIPT_TYPE_BY_EXTENSION = {
+    ".txt": "text/plain",
+    ".vtt": "text/vtt",
+    ".srt": "application/x-subrip",
+    ".json": "application/json",
+    ".html": "text/html",
+    ".htm": "text/html",
+}
+
+# A feed item publishes one transcript per format, so a handful is the real
+# ceiling; the cap only bounds the requests one hostile item can provoke.
+MAX_TRANSCRIPT_CANDIDATES = 4
 
 # Several transcript hosts (buzzsprout among them) 403 the default
 # python-requests User-Agent, so requests are made as a browser. Shared with
@@ -147,30 +166,110 @@ def _language_is_usable(language: object) -> bool:
     return isinstance(language, str) and language.lower().startswith("en")
 
 
-def select_transcript_url(entries: list[dict]) -> dict | None:
+def _media_type_from_url(url: object) -> str | None:
     """
-    Pick the transcript tag to fetch from all the tags on one feed item.
+    Infer a transcript's media type from its url extension.
+
+    Args:
+        url: the transcript url
+
+    Returns:
+        a type from ``TRANSCRIPT_TYPE_PREFERENCE``, or None if the extension
+        identifies nothing we can parse
+    """
+    if not isinstance(url, str):
+        return None
+    try:
+        path = urlparse(url).path
+    except ValueError:
+        return None
+    return TRANSCRIPT_TYPE_BY_EXTENSION.get(PurePosixPath(path).suffix.lower())
+
+
+def _resolved_media_type(entry: dict) -> str | None:
+    """
+    Work out which parser a transcript tag needs.
+
+    A declared ``type`` we recognize is authoritative. Otherwise the url
+    extension is tried, so a tag that omits ``type`` or spells it unusually is
+    not discarded outright -- the response's own Content-Type is still checked
+    against the result in ``_served_type_matches``.
+
+    Args:
+        entry: a ``{"url", "type", "language"}`` dict
+
+    Returns:
+        a type from ``TRANSCRIPT_TYPE_PREFERENCE``, or None if none applies
+    """
+    declared = (entry.get("type") or "").split(";")[0].strip().lower()
+    if declared in TRANSCRIPT_TYPE_PREFERENCE:
+        return declared
+    return _media_type_from_url(entry.get("url"))
+
+
+class TranscriptCandidate(NamedTuple):
+    """A transcript tag worth fetching, with its media type resolved."""
+
+    url: str
+    media_type: str
+    entry: dict
+
+
+def rank_transcript_candidates(entries: list[dict]) -> list[TranscriptCandidate]:
+    """
+    Rank one feed item's transcript tags into the order they should be tried.
+
+    Every usable tag is returned, not only the best one. The formats a feed
+    lists are almost always the same transcript, so a 404, an oversized body or
+    an HTML error page on the preferred format should fall through to the next
+    rather than cost the episode a transcript the feed also published as SRT or
+    JSON.
 
     Args:
         entries: ``{"url", "type", "language"}`` dicts, in feed order
 
     Returns:
-        the chosen entry, or None if none is usable
+        candidates in fetch order, at most ``MAX_TRANSCRIPT_CANDIDATES``
     """
     ranked = []
     for index, entry in enumerate(entries or []):
         url = entry.get("url")
-        mime_type = (entry.get("type") or "").split(";")[0].strip().lower()
-        if not url or mime_type not in TRANSCRIPT_TYPE_PREFERENCE:
+        media_type = _resolved_media_type(entry)
+        if not url or media_type is None:
             continue
         if not _language_is_usable(entry.get("language")):
             continue
-        # Feed order is the final tiebreak, so the choice is deterministic when
+        # Feed order is the final tiebreak, so the order is deterministic when
         # a feed repeats a format.
-        ranked.append((TRANSCRIPT_TYPE_PREFERENCE.index(mime_type), index, entry))
-    if not ranked:
-        return None
-    return min(ranked)[2]
+        ranked.append(
+            (
+                TRANSCRIPT_TYPE_PREFERENCE.index(media_type),
+                index,
+                TranscriptCandidate(url=url, media_type=media_type, entry=entry),
+            )
+        )
+    ranked.sort(key=lambda item: item[:2])
+    if len(ranked) > MAX_TRANSCRIPT_CANDIDATES:
+        log.warning(
+            "Item lists %d usable transcripts, trying only the best %d",
+            len(ranked),
+            MAX_TRANSCRIPT_CANDIDATES,
+        )
+    return [candidate for *_, candidate in ranked[:MAX_TRANSCRIPT_CANDIDATES]]
+
+
+def select_transcript_url(entries: list[dict]) -> dict | None:
+    """
+    Pick the single best transcript tag from all the tags on one feed item.
+
+    Args:
+        entries: ``{"url", "type", "language"}`` dicts, in feed order
+
+    Returns:
+        the best entry, or None if none is usable
+    """
+    candidates = rank_transcript_candidates(entries)
+    return candidates[0].entry if candidates else None
 
 
 def _is_public_ip(address: str) -> bool:
@@ -694,21 +793,17 @@ def _served_type_matches(served_type: str, declared_type: str) -> bool:
     return served_type in srt_types and declared_type in srt_types
 
 
-def fetch_transcript(entries: list[dict]) -> str:
+def _fetch_candidate(candidate: TranscriptCandidate) -> str:
     """
-    Fetch and normalize the best transcript among a feed item's transcript tags.
+    Fetch and normalize one transcript candidate.
 
     Args:
-        entries: ``{"url", "type", "language"}`` dicts, in feed order
+        candidate: the transcript to fetch
 
     Returns:
-        the normalized transcript text, or "" if none could be fetched
+        the normalized transcript text, or "" if this candidate yielded nothing
     """
-    entry = select_transcript_url(entries)
-    if entry is None:
-        return ""
-    url = entry["url"]
-    declared_type = entry["type"].split(";")[0].strip().lower()
+    url = candidate.url
     # One `except` around the request *and* the streamed read: a
     # ChunkedEncodingError or ReadTimeout part-way through the body is a
     # RequestException raised by iter_content, not by get(), and letting it
@@ -721,20 +816,43 @@ def fetch_transcript(entries: list[dict]) -> str:
             served_type = (
                 response.headers.get("Content-Type", "").split(";")[0].strip().lower()
             )
-            if not _served_type_matches(served_type, declared_type):
+            if not _served_type_matches(served_type, candidate.media_type):
                 log.warning(
                     "Transcript at %s declared %s but served %s, skipping",
                     url,
-                    declared_type,
+                    candidate.media_type,
                     served_type,
                 )
                 return ""
             body = _read_capped(response)
         finally:
             response.close()
-    except requests.RequestException:
-        log.exception("Failed to fetch transcript from %s", url)
+    except requests.RequestException as exc:
+        # Not fatal and not exceptional: fetch_transcript falls through to the
+        # next format, so this is logged as a warning rather than a traceback.
+        log.warning("Failed to fetch transcript from %s: %s", url, exc)
         return ""
     if not body:
         return ""
-    return PARSERS[declared_type](body)[:MAX_TRANSCRIPT_CHARS]
+    return PARSERS[candidate.media_type](body)[:MAX_TRANSCRIPT_CHARS]
+
+
+def fetch_transcript(entries: list[dict]) -> str:
+    """
+    Fetch and normalize the best usable transcript among a feed item's tags.
+
+    Candidates are tried in preference order until one yields text: a broken
+    url in the preferred format must not cost the episode a transcript the feed
+    also published in another one.
+
+    Args:
+        entries: ``{"url", "type", "language"}`` dicts, in feed order
+
+    Returns:
+        the normalized transcript text, or "" if none could be fetched
+    """
+    for candidate in rank_transcript_candidates(entries):
+        transcript = _fetch_candidate(candidate)
+        if transcript:
+            return transcript
+    return ""
