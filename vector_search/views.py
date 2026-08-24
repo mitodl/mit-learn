@@ -370,6 +370,7 @@ class QdrantView(APIView):
             )
             if prefetch_max_limit is not None:
                 prefetch_limit = min(prefetch_limit, prefetch_max_limit)
+            prefetch_limit = max(prefetch_limit, offset + limit)
 
             search_params = await self._build_search_params(
                 query_string,

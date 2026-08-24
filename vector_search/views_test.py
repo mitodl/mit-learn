@@ -998,6 +998,39 @@ def test_build_search_params_sort_with_cutoff_score(
             assert search_params["query"].order_by.direction == models.Direction.ASC
 
 
+def test_prefetch_limit_at_least_offset_plus_limit(mocker, settings):
+    """Ensure prefetch_limit is at least offset + limit even when prefetch_max_limit is smaller."""
+    settings.VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = 500
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    mock_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    view = QdrantView()
+    view_spy = mocker.spy(view, "_build_search_params")
+
+    asyncio.run(
+        view._async_vector_hits(  # noqa: SLF001
+            query_string="test",
+            params={},
+            limit=10,
+            offset=600,
+            hybrid_search=True,
+        )
+    )
+
+    assert view_spy.call_count == 1
+    # offset + limit = 610, which exceeds max cap 500, so prefetch_limit must be clamped to 610
+    # positional arg index 4 of bound _build_search_params is prefetch_limit (0: query, 1: collection, 2: filter, 3: limit, 4: prefetch_limit)
+    prefetch_limit_arg = view_spy.call_args.args[4]
+    assert prefetch_limit_arg == 610
+
+
 @pytest.mark.django_db(transaction=True)
 def test_content_file_search_restricts_resource_query_to_best_run(
     mocker, client, django_user_model
