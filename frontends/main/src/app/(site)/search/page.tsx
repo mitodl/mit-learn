@@ -17,7 +17,6 @@ import {
   toVectorSearchParams,
 } from "@/page-components/SearchDisplay/vectorSearchParams"
 import validateRequestParams from "@/page-components/SearchDisplay/validateRequestParams"
-import type { ResourceSearchRequest } from "@/page-components/SearchDisplay/validateRequestParams"
 import { LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest } from "api"
 import { getQueryClient } from "@/app/getQueryClient"
 
@@ -33,9 +32,7 @@ export async function generateMetadata({
 }
 
 const Page: React.FC<AppPageProps<"/search">> = async ({ searchParams }) => {
-  const search = (await searchParams) as ResourceSearchRequest & {
-    page?: string
-  }
+  const search = await searchParams
 
   const urlParams = new URLSearchParams(
     Object.entries(search).flatMap(([key, value]) =>
