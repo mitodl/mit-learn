@@ -11,6 +11,27 @@ import type { AppRoutes } from "../../.next/types/routes"
  * error, so every param the app can read is one the CDN keys on.
  * See https://github.com/mitodl/hq/issues/12925.
  *
+ * There are two ways a query param can influence server rendering:
+ *
+ * 1. Read in a server component — the `searchParams` prop of a page.tsx or
+ *    generateMetadata. Un-keyed, this is the severe case: the wrong variant
+ *    is baked into the cached HTML/RSC payload and never corrects.
+ * 2. Read in a client component via useSearchParams. The app is
+ *    force-dynamic, so client components also render once on the server for
+ *    the initial HTML ("client component" really means "client AND
+ *    server"). Un-keyed, this self-heals at hydration — the client router
+ *    re-reads window.location — at the cost of a wrong first paint and a
+ *    hydration error.
+ *
+ * Some type-2 reads never reach the server-rendered HTML at all, e.g. a
+ * param only consumed inside an effect (`account_action_status`). Those
+ * could be left un-keyed, but we register ALL readable params anyway:
+ * "readable ⇔ cache-keyed" is the simple rule, params like that cost
+ * little fragmentation, and nothing would catch a later refactor moving an
+ * effect-only read into render. The fragmentation this whitelist fights
+ * comes from truly irrelevant params (`utm_*`, stale crawler params),
+ * which stay unreadable and un-keyed.
+ *
  * To use a new query param: add it to the Fastly whitelist in
  * ol-infrastructure FIRST, then to SERVER_KEYED_PARAMS here.
  *
@@ -19,11 +40,11 @@ import type { AppRoutes } from "../../.next/types/routes"
  *
  * Known exception: `resource_title`, `syllabus`, `syllabus_only`, and
  * `recommender` are read via ol-components' RoutedDrawer (exempt from the
- * useSearchParams import ban) without being registered or cache-keyed. That
- * is safe only while drawer content renders nothing during SSR (RoutedDrawer
- * mounts closed and opens in an effect, with no `keepMounted`). If drawers
- * ever SSR their content, these params must be added to the Fastly whitelist
- * and this registry.
+ * useSearchParams import ban) without being registered or cache-keyed.
+ * Like the effect-only case above, that is safe only while drawer content
+ * renders nothing during SSR (RoutedDrawer mounts closed and opens in an
+ * effect, with no `keepMounted`). If drawers ever SSR their content, these
+ * params must be added to the Fastly whitelist and this registry.
  */
 
 const SERVER_KEYED_PARAMS = [
