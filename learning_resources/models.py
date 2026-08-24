@@ -1271,9 +1271,6 @@ class ContentFile(TimestampedModel):
         super().save(**kwargs)
 
     class Meta:
-        unique_together = (
-            ("key", "run", "learning_resource", "direct_learning_resource"),
-        )
         verbose_name = "contentfile"
         # add constraint so that atleast run or learning_resource is defined (not both)
         constraints = [
@@ -1294,6 +1291,24 @@ class ContentFile(TimestampedModel):
                     "Both learning_resource and run cannot be defined at the"
                     " same time."
                 ),
+            ),
+            # One partial unique index per parent identity. A single index over
+            # all three nullable FKs would never reject anything, since Postgres
+            # treats NULLs as distinct.
+            models.UniqueConstraint(
+                fields=["run", "key"],
+                condition=models.Q(run__isnull=False),
+                name="contentfile_run_key_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=["learning_resource", "key"],
+                condition=models.Q(learning_resource__isnull=False),
+                name="contentfile_learning_resource_key_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=["direct_learning_resource", "key"],
+                condition=models.Q(direct_learning_resource__isnull=False),
+                name="contentfile_direct_learning_resource_key_uniq",
             ),
         ]
 

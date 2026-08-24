@@ -969,6 +969,85 @@ def test_marketing_page_for_non_program_skips_children_content(mocker, settings)
 
 
 @pytest.mark.django_db
+def test_marketing_page_for_resources_sets_key_in_defaults(mocker):
+    """The ContentFile must be created with key/url already set via defaults.
+
+    Setting key at create time (rather than a later .save()) is what lets the
+    (learning_resource, key) constraint catch a concurrent create as a
+    collision that update_or_create can retry against.
+    """
+    course = models.LearningResource.objects.create(
+        title="Test Course",
+        url="https://example.com/course",
+        resource_type="course",
+        published=True,
+    )
+
+    scraper = mocker.Mock()
+    scraper.scrape.return_value = "<html><body><p>content</p></body></html>"
+    mocker.patch("learning_resources.tasks.scraper_for_site", return_value=scraper)
+    mocker.patch("learning_resources.tasks.html_to_markdown", return_value="content")
+    mocker.patch("vector_search.tasks.generate_embeddings")
+    mocker.patch("learning_resources_search.tasks.upsert_content_file")
+
+    update_or_create_spy = mocker.spy(models.ContentFile.objects, "update_or_create")
+
+    marketing_page_for_resources([course.id])
+
+    defaults = update_or_create_spy.call_args.kwargs["defaults"]
+    assert defaults["key"] == course.url
+    assert defaults["url"] == course.url
+
+    content_file = models.ContentFile.objects.get(
+        learning_resource=course, file_type=MARKETING_PAGE_FILE_TYPE
+    )
+    assert content_file.key == course.url
+    assert content_file.url == course.url
+
+
+@pytest.mark.django_db
+def test_marketing_page_for_resources_updates_existing_on_url_change(mocker):
+    """A resource whose url changed should update its existing marketing
+    ContentFile in place, not create a second one.
+
+    The update_or_create lookup is (learning_resource, file_type) - it must
+    not include key, or a changed url would miss the existing row.
+    """
+    course = models.LearningResource.objects.create(
+        title="Test Course",
+        url="https://example.com/course-new-url",
+        resource_type="course",
+        published=True,
+    )
+    old_url = "https://example.com/course-old-url"
+    existing = ContentFileFactory.create(
+        learning_resource=course,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        key=old_url,
+        url=old_url,
+        file_extension=".md",
+    )
+
+    scraper = mocker.Mock()
+    scraper.scrape.return_value = "<html><body><p>content</p></body></html>"
+    mocker.patch("learning_resources.tasks.scraper_for_site", return_value=scraper)
+    mocker.patch("learning_resources.tasks.html_to_markdown", return_value="content")
+    mocker.patch("vector_search.tasks.generate_embeddings")
+    mocker.patch("learning_resources_search.tasks.upsert_content_file")
+
+    marketing_page_for_resources([course.id])
+
+    marketing_files = models.ContentFile.objects.filter(
+        learning_resource=course, file_type=MARKETING_PAGE_FILE_TYPE
+    )
+    assert marketing_files.count() == 1
+    updated = marketing_files.get()
+    assert updated.id == existing.id
+    assert updated.key == course.url
+    assert updated.url == course.url
+
+
+@pytest.mark.django_db
 def test_scrape_marketing_pages(mocker, settings, mocked_celery):
     """Test that scrape_marketing_pages correctly identifies resources without marketing pages"""
 

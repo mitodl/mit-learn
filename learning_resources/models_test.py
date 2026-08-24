@@ -3,6 +3,7 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from django.db import IntegrityError, transaction
 
 from channels.factories import ChannelFactory
 from learning_resources.constants import (
@@ -18,7 +19,7 @@ from learning_resources.factories import (
     LearningResourceViewEventFactory,
     ProgramFactory,
 )
-from learning_resources.models import LearningResource
+from learning_resources.models import ContentFile, LearningResource
 
 pytestmark = [pytest.mark.django_db]
 
@@ -174,3 +175,22 @@ def test_topics_for_serialization_ordered_by_name():
     )
     # the plain related manager has to agree with the prefetch: serializers use both
     assert [topic.name for topic in resource.topics.all()] == sorted(names)
+
+
+def test_content_file_run_key_unique():
+    """A second ContentFile with the same (run, key) is rejected"""
+    run = LearningResourceRunFactory.create()
+    ContentFile.objects.create(run=run, key="file.pdf")
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        ContentFile.objects.create(run=run, key="file.pdf")
+
+
+def test_content_file_same_key_different_runs():
+    """The same key on two different runs is fine"""
+    for _ in range(2):
+        ContentFile.objects.create(
+            run=LearningResourceRunFactory.create(), key="file.pdf"
+        )
+
+    assert ContentFile.objects.filter(key="file.pdf").count() == 2

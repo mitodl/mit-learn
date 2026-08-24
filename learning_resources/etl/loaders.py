@@ -942,9 +942,22 @@ def load_content_file(
     """
     try:
         content_file_tags = content_file_data.pop("content_tags", [])
-        content_file, _ = ContentFile.objects.update_or_create(
-            run=course_run, key=content_file_data.get("key"), defaults=content_file_data
-        )
+        key = content_file_data.get("key")
+        try:
+            content_file, _ = ContentFile.objects.update_or_create(
+                run=course_run, key=key, defaults=content_file_data
+            )
+        except ContentFile.MultipleObjectsReturned:
+            # Duplicates from before the unique constraint existed: collapse
+            # to the best row (keep LLM summaries), then retry.
+            dupes = ContentFile.objects.filter(run=course_run, key=key)
+            keep = sorted(
+                dupes, key=lambda cf: (bool(cf.summary), cf.updated_on, cf.id)
+            )[-1]
+            dupes.exclude(id=keep.id).delete()
+            content_file, _ = ContentFile.objects.update_or_create(
+                run=course_run, key=key, defaults=content_file_data
+            )
         load_content_tags(content_file, content_file_tags, is_content_file=True)
         return content_file.id  # noqa: TRY300
     except:  # noqa: E722
