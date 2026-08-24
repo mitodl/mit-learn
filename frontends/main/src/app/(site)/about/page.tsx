@@ -1,4 +1,3 @@
-import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import { Metadata } from "next"
 import { AboutPage } from "@/app-pages/AboutPage/AboutPage"
@@ -8,7 +7,7 @@ export const metadata: Metadata = standardizeMetadata({
   title: "About Us",
 })
 
-const Page: React.FC<AppPageProps<"/about">> = () => {
+const Page: React.FC = () => {
   return <AboutPage />
 }
 

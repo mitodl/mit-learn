@@ -9,9 +9,7 @@ jest.mock("./ArithmixClient", () => ({
 
 describe("arithmix page.tsx", () => {
   test("renders the ArithmixClient", () => {
-    renderWithProviders(
-      <Page params={Promise.resolve({})} searchParams={Promise.resolve({})} />,
-    )
+    renderWithProviders(<Page />)
     expect(screen.getByTestId("arithmix-client")).toBeInTheDocument()
   })
 

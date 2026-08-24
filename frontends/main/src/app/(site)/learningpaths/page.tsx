@@ -1,4 +1,3 @@
-import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import { Metadata } from "next"
 import { standardizeMetadata } from "@/common/metadata"
@@ -10,7 +9,7 @@ export const metadata: Metadata = standardizeMetadata({
   title: "Learning Paths",
 })
 
-const Page: React.FC<AppPageProps<"/learningpaths">> = () => {
+const Page: React.FC = () => {
   return (
     <RestrictedRoute requires={Permission.LearningPathEditor}>
       <LearningPathListingPage />

@@ -1,4 +1,3 @@
-import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import { Metadata } from "next"
 import { standardizeMetadata } from "@/common/metadata"
@@ -11,7 +10,7 @@ export const metadata: Metadata = standardizeMetadata({
   social: false,
 })
 
-const Page: React.FC<AppPageProps<"/onboarding">> = () => {
+const Page: React.FC = () => {
   return (
     <RestrictedRoute requires={Permission.Authenticated}>
       <OnboardingPage />

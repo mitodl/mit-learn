@@ -1,4 +1,3 @@
-import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import { Metadata } from "next"
 import { standardizeMetadata } from "@/common/metadata"
@@ -8,7 +7,7 @@ export const metadata: Metadata = standardizeMetadata({
   title: "Arithmix",
 })
 
-const Page: React.FC<AppPageProps<"/games/arithmix/[[...rest]]">> = () => {
+const Page: React.FC = () => {
   return <ArithmixClient />
 }
 
