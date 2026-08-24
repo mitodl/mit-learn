@@ -554,7 +554,7 @@ const Certificate = ({
   badgeProgramType?: string | null
   userName?: string
   ceus?: string
-  signatories: SignatoryItem[]
+  signatories?: SignatoryItem[]
   issueDate?: string | null
   uuid: string
 }) => {
@@ -634,7 +634,10 @@ const CourseCertificate = ({
 }) => {
   const userName = certificate.user.name
 
-  const signatories = certificate.certificate_page.signatory_items
+  // certificate_page is null when the certificate was issued with no
+  // certificate_page_revision. The certificate itself is still valid, so render
+  // it without the page-derived detail rather than failing the whole page.
+  const signatories = certificate.certificate_page?.signatory_items
   const issueDate = certificate?.issue_date
 
   return (
@@ -657,9 +660,9 @@ const ProgramCertificate = ({
 }) => {
   const userName = certificate.user.name
 
-  const ceus = certificate.certificate_page.CEUs
+  const ceus = certificate.certificate_page?.CEUs
 
-  const signatories = certificate.certificate_page.signatory_items
+  const signatories = certificate.certificate_page?.signatory_items
 
   const issueDate = certificate?.issue_date
 

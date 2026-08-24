@@ -233,6 +233,53 @@ describe("CertificatePage", () => {
     await screen.findByRole("button", { name: "Share" })
     await screen.findByRole("button", { name: "Print" })
   })
+
+  it.each([
+    { certificateType: CertificateType.Course, label: "course" },
+    { certificateType: CertificateType.Program, label: "program" },
+  ])(
+    "renders a $label certificate whose certificate_page is null",
+    async ({ certificateType }) => {
+      // certificate_page_revision is a nullable FK on mitxonline's certificate
+      // models, so certificate_page comes back null for a certificate issued
+      // without one. The certificate is still valid - render it rather than
+      // throwing and taking the whole page down.
+      const isCourse = certificateType === CertificateType.Course
+      const certificate = isCourse
+        ? factories.mitxonline.courseCertificate()
+        : factories.mitxonline.programCertificate()
+      // @ts-expect-error the generated client types this non-nullable; the API
+      // schema was wrong and is being corrected upstream.
+      certificate.certificate_page = null
+
+      if (isCourse) {
+        setMockResponse.get(
+          mitxonline.urls.certificates.courseCertificatesRetrieve({
+            uuid: certificate.uuid,
+          }),
+          certificate,
+        )
+      } else {
+        setMockResponse.get(
+          mitxonline.urls.certificates.programCertificatesRetrieve({
+            uuid: certificate.uuid,
+          }),
+          certificate,
+        )
+      }
+
+      renderWithProviders(
+        <CertificatePage
+          certificateType={certificateType}
+          uuid={certificate.uuid}
+          pageUrl={`https://${process.env.NEXT_PUBLIC_ORIGIN}/certificate/${certificateType}/${certificate.uuid}`}
+        />,
+      )
+
+      await screen.findAllByText(certificate.user.name!)
+      await screen.findAllByText(certificate.uuid)
+    },
+  )
 })
 
 describe("CertificatePage - SharePopover", () => {
