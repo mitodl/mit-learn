@@ -627,6 +627,8 @@ def test_serialize_bulk_learning_resources(mocker):
             ]
         if resource.resource_type == LearningResourceType.video.name:
             data["video"]["transcript"] = resource.video.transcript
+        if resource.resource_type == LearningResourceType.podcast_episode.name:
+            data["podcast_episode"]["transcript"] = resource.podcast_episode.transcript
         expected.append(data)
 
     for result, exp in zip(results, expected):
@@ -713,6 +715,10 @@ def test_serialize_learning_resource_for_bulk(  # noqa: PLR0913
     resource_data = LearningResourceSerializer(resource).data
     if resource_type == LearningResourceType.video.name:
         resource_data["video"]["transcript"] = resource.video.transcript
+    if resource_type == LearningResourceType.podcast_episode.name:
+        resource_data["podcast_episode"]["transcript"] = (
+            resource.podcast_episode.transcript
+        )
     assert serializers.serialize_learning_resource_for_bulk(resource) == {
         "_id": resource.id,
         "resource_relations": {"name": "resource"},

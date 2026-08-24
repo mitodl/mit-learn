@@ -1468,3 +1468,18 @@ def test_cleanup_deleted_content_files_returns_error_on_unexpected_exception(moc
     result = cleanup_deleted_content_files()
 
     assert result == "cleanup_deleted_content_files threw an error"
+
+
+def test_get_podcast_transcripts(mocker):
+    """Verify that get_podcast_transcripts invokes the correct podcast ETL functions"""
+
+    mock_etl_podcast = mocker.patch("learning_resources.tasks.podcast")
+
+    tasks.get_podcast_transcripts(overwrite=True)
+
+    mock_etl_podcast.get_podcast_episodes_for_transcripts_job.assert_called_once_with(
+        overwrite=True
+    )
+    mock_etl_podcast.get_podcast_transcripts.assert_called_once_with(
+        mock_etl_podcast.get_podcast_episodes_for_transcripts_job.return_value
+    )

@@ -16,13 +16,17 @@ from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.podcast import (
     extract,
     generate_aggregate_podcast_rss,
+    get_podcast_episodes_for_transcripts_job,
+    get_podcast_transcripts,
     github_podcast_config_files,
     transform,
+    transform_episode,
     validate_podcast_config,
 )
 from learning_resources.factories import (
     PodcastEpisodeFactory,
 )
+from learning_resources.models import LearningResource
 from main.utils import frontend_absolute_url
 
 pytestmark = pytest.mark.django_db
@@ -353,3 +357,131 @@ def test_github_podcast_config_files(settings, mock_github_client):
 def test_validate_podcast_config(config, errors):
     """Test the logic for validating podcast config files"""
     assert validate_podcast_config(config) == errors
+
+
+@pytest.mark.parametrize(
+    ("rss", "expected"),
+    [
+        # Feed declared xmlns:podcast, so prettify() kept the prefix.
+        ('<item><podcast:transcript url="https://x/t.vtt"/></item>', True),
+        # Feed omitted the declaration, so lxml dropped the prefix on the way in.
+        ('<item><transcript url="https://x/t.vtt"/></item>', True),
+        # A description that merely mentions a transcript must not be selected.
+        ("<item><description>Full transcript at our site</description></item>", False),
+        ("<item><title>No tags</title></item>", False),
+        (None, False),
+    ],
+)
+def test_get_podcast_episodes_for_transcripts_job_selection(rss, expected):
+    """Only episodes whose stored feed XML opens a transcript tag are candidates"""
+    episode = PodcastEpisodeFactory.create(rss=rss, transcript="")
+    selected = get_podcast_episodes_for_transcripts_job().filter(
+        id=episode.learning_resource_id
+    )
+    assert selected.exists() is expected
+
+
+@pytest.mark.parametrize("overwrite", [True, False])
+def test_get_podcast_episodes_for_transcripts_job_overwrite(overwrite):
+    """A populated transcript is only re-fetched when overwrite is set"""
+    episode = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt"/></item>',
+        transcript="already fetched",
+    )
+    selected = get_podcast_episodes_for_transcripts_job(overwrite=overwrite).filter(
+        id=episode.learning_resource_id
+    )
+    assert selected.exists() is overwrite
+
+
+def test_get_podcast_episodes_for_transcripts_job_excludes_unpublished():
+    """Unpublished episodes are never candidates"""
+    episode = PodcastEpisodeFactory.create(
+        is_unpublished=True,
+        rss='<item><podcast:transcript url="https://x/t.vtt"/></item>',
+        transcript="",
+    )
+    assert (
+        not get_podcast_episodes_for_transcripts_job()
+        .filter(id=episode.learning_resource_id)
+        .exists()
+    )
+
+
+def test_get_podcast_transcripts_saves_and_reindexes(mocker):
+    """A fetched transcript is saved and the resource reindexed"""
+    mocker.patch(
+        "learning_resources.etl.podcast.fetch_transcript",
+        return_value="Host: the transcript.",
+    )
+    mock_update_index = mocker.patch("learning_resources.etl.podcast.update_index")
+    episode = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt" type="text/vtt"/></item>',
+        transcript="",
+    )
+
+    get_podcast_transcripts(
+        LearningResource.objects.filter(id=episode.learning_resource_id)
+    )
+
+    episode.refresh_from_db()
+    assert episode.transcript == "Host: the transcript."
+    mock_update_index.assert_called_once()
+
+
+def test_get_podcast_transcripts_skips_when_fetch_returns_nothing(mocker):
+    """A failed fetch leaves the transcript empty and does not reindex"""
+    mocker.patch("learning_resources.etl.podcast.fetch_transcript", return_value="")
+    mock_update_index = mocker.patch("learning_resources.etl.podcast.update_index")
+    episode = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt"/></item>', transcript=""
+    )
+
+    get_podcast_transcripts(
+        LearningResource.objects.filter(id=episode.learning_resource_id)
+    )
+
+    episode.refresh_from_db()
+    assert episode.transcript == ""
+    mock_update_index.assert_not_called()
+
+
+def test_get_podcast_transcripts_survives_one_bad_episode(mocker):
+    """One episode raising must not abort the batch"""
+    mocker.patch(
+        "learning_resources.etl.podcast.fetch_transcript",
+        side_effect=[ValueError("boom"), "Host: the second one."],
+    )
+    mocker.patch("learning_resources.etl.podcast.update_index")
+    rss = '<item><podcast:transcript url="https://x/t.vtt"/></item>'
+    first = PodcastEpisodeFactory.create(rss=rss, transcript="")
+    second = PodcastEpisodeFactory.create(rss=rss, transcript="")
+
+    get_podcast_transcripts(
+        LearningResource.objects.filter(
+            id__in=[first.learning_resource_id, second.learning_resource_id]
+        ).order_by("id")
+    )
+
+    first.refresh_from_db()
+    second.refresh_from_db()
+    assert first.transcript == ""
+    assert second.transcript == "Host: the second one."
+
+
+def test_transform_episode_omits_transcript(mock_github_client):
+    """
+    transform_episode must never emit a `transcript` key.
+
+    load_podcast_episode passes the podcast_episode dict to
+    update_or_create(defaults=...), so including it would blank every fetched
+    transcript on the next ETL run.
+    """
+    podcast_list = [mock_podcast_file()]
+    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = (
+        podcast_list
+    )
+    item = bs(rss_content(), "xml").find("item")
+    assert (
+        "transcript" not in transform_episode(item, None, [], None)["podcast_episode"]
+    )
