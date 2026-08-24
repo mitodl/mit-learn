@@ -2,7 +2,7 @@ import React from "react"
 import { factories, setMockResponse, urls } from "api/test-utils"
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource, PodcastEpisodeResource } from "api/v1"
-import { renderWithProviders, screen, user } from "@/test-utils"
+import { renderWithProviders, screen, user, waitFor } from "@/test-utils"
 import { PodcastEpisodeDetailPage } from "./PodcastEpisodeDetailPage"
 
 jest.mock("./PodcastPlayer", () =>
@@ -50,6 +50,10 @@ type SetupOptions = {
    * normalizer emits them.
    */
   transcript?: string
+  /** Report has_transcript, but leave the transcript request in flight. */
+  transcriptPending?: boolean
+  /** Report has_transcript, but fail the transcript request. */
+  transcriptFails?: boolean
 }
 
 const setupApis = ({
@@ -57,6 +61,8 @@ const setupApis = ({
   podcastOverrides = {},
   moreEpisodes,
   transcript,
+  transcriptPending = false,
+  transcriptFails = false,
 }: SetupOptions = {}) => {
   const podcast = makePodcast(podcastOverrides)
   const episodeOverridesEpisode = (
@@ -73,7 +79,8 @@ const setupApis = ({
           readable_id: podcast.readable_id,
         },
       ],
-      has_transcript: transcript !== undefined,
+      has_transcript:
+        transcript !== undefined || transcriptPending || transcriptFails,
       ...episodeOverridesEpisode,
     },
   } as Partial<LearningResource>)
@@ -83,6 +90,20 @@ const setupApis = ({
       id: episode.id,
       transcript,
     })
+  }
+  if (transcriptPending) {
+    // A promise that never settles keeps the query in its loading state.
+    setMockResponse.get(
+      urls.podcastEpisodes.transcript(episode.id),
+      new Promise(() => {}),
+    )
+  }
+  if (transcriptFails) {
+    setMockResponse.get(
+      urls.podcastEpisodes.transcript(episode.id),
+      "Server error",
+      { code: 500 },
+    )
   }
 
   setMockResponse.get(
@@ -362,6 +383,41 @@ describe("PodcastEpisodeDetailPage", () => {
     )
   })
 
+  test("escapes every < in the JSON-LD, not just </", async () => {
+    // Episode titles come straight from third-party RSS with no sanitization
+    // (podcast.transform_episode reads rss_data.title.text verbatim). Escaping
+    // only `</` stops `</script>` but not `<!--<script>`, which puts the HTML
+    // parser into the script-data-escaped state it then never leaves,
+    // swallowing the rest of the document.
+    const hostileTitle = "Ep 1 <!--<script>alert(1)</script>"
+    const { episode, podcast } = setupApis({
+      moreEpisodes: [],
+      episodeOverrides: {
+        title: hostileTitle,
+        last_modified: "2026-01-02T03:04:05Z",
+      },
+    })
+    renderWithProviders(
+      <PodcastEpisodeDetailPage
+        episodeId={String(episode.id)}
+        podcastId={String(podcast.id)}
+      />,
+    )
+
+    // The JSON-LD renders once the episode query resolves.
+    await waitFor(() =>
+      expect(
+        document.querySelector('script[type="application/ld+json"]'),
+      ).toBeInTheDocument(),
+    )
+    const script = document.querySelector('script[type="application/ld+json"]')!
+    // No raw "<" survives into the script element's text.
+    expect(script.innerHTML).not.toContain("<")
+    expect(script.innerHTML).toContain("\\u003c")
+    // ...and the payload is still valid JSON carrying the real title.
+    expect(JSON.parse(script.innerHTML).name).toBe(hostileTitle)
+  })
+
   test("shows a loading skeleton while the episode is fetching", async () => {
     const { episode, podcast } = setupApis({ moreEpisodes: [] })
 
@@ -515,7 +571,10 @@ describe("PodcastEpisodeDetailPage", () => {
         transcript: TRANSCRIPT,
       })
 
-      await screen.findByRole("tab", { name: "Transcript" })
+      // Waits for the transcript text, not just the tab: the tablist now
+      // appears as soon as the episode reports a transcript, so the tab is
+      // present while the request is still in flight.
+      await screen.findByText("Host: Welcome back to the show.")
       const panels = document.querySelectorAll('[role="tabpanel"]')
       expect(panels).toHaveLength(2)
 
@@ -595,6 +654,87 @@ describe("PodcastEpisodeDetailPage", () => {
       expect(panel).toHaveTextContent("<img src=x onerror=alert(1)>")
       expect(panel.querySelector("img")).toBeNull()
       expect(panel.querySelector("b")).toBeNull()
+    })
+
+    test("shows the tablist with a busy panel while the transcript loads", async () => {
+      // The tablist appears as soon as the episode reports a transcript, not
+      // when the text lands, so the tab set does not shift under someone
+      // already reading the description.
+      renderPage({
+        episodeOverrides: { description: "Just a description." },
+        transcriptPending: true,
+      })
+
+      const transcriptTab = await screen.findByRole("tab", {
+        name: "Transcript",
+      })
+      await user.click(transcriptTab)
+
+      const panel = screen.getByRole("tabpanel", { name: "Transcript" })
+      expect(panel).toHaveAttribute("aria-busy", "true")
+      expect(screen.getByTestId("transcript-skeleton")).toBeInTheDocument()
+      // The live region carries the outcome for screen reader users.
+      expect(screen.getByRole("status")).toHaveTextContent("Loading transcript")
+      // Nothing to reach by keyboard yet, so the panel takes no tab stop.
+      expect(panel).not.toHaveAttribute("tabindex")
+    })
+
+    test("says so when the transcript fails to load", async () => {
+      // has_transcript is true and the JSON-LD advertises a transcript, so
+      // dropping the tab silently would leave the claim unexplained.
+      renderPage({
+        episodeOverrides: { description: "Just a description." },
+        transcriptFails: true,
+      })
+
+      await user.click(await screen.findByRole("tab", { name: "Transcript" }))
+
+      const panel = screen.getByRole("tabpanel", { name: "Transcript" })
+      expect(panel).toHaveTextContent("The transcript could not be loaded.")
+      expect(panel).toHaveAttribute("aria-busy", "false")
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "The transcript could not be loaded.",
+      )
+    })
+
+    test("withdraws the tablist when the endpoint returns an empty transcript", async () => {
+      // The endpoint is cached, so an episode whose transcript landed after
+      // something first requested it serves "" for a while. That is nothing to
+      // show, not a load that never finishes -- the tab appears on the
+      // episode's has_transcript and then withdraws, rather than leaving a
+      // skeleton that never resolves.
+      renderPage({
+        episodeOverrides: { description: "Just a description." },
+        transcript: "",
+      })
+
+      await screen.findByRole("tab", { name: "Transcript" })
+      await waitFor(() =>
+        expect(screen.queryByRole("tablist")).not.toBeInTheDocument(),
+      )
+      expect(
+        screen.queryByTestId("transcript-skeleton"),
+      ).not.toBeInTheDocument()
+      expect(screen.getByText("Just a description.")).toBeInTheDocument()
+    })
+
+    test("puts the tab stop on the panel, not on a child", async () => {
+      // WAI-ARIA APG: the tabpanel itself is the focusable element, so focus
+      // lands with the panel's role and name announced. A focusable inner div
+      // would announce only raw text.
+      renderPage({
+        episodeOverrides: { description: "Just a description." },
+        transcript: TRANSCRIPT,
+      })
+
+      await user.click(await screen.findByRole("tab", { name: "Transcript" }))
+
+      const panel = screen.getByRole("tabpanel", { name: "Transcript" })
+      expect(panel).toHaveAttribute("tabindex", "0")
+      expect(panel.querySelectorAll("[tabindex]")).toHaveLength(0)
+
+      await user.tab()
+      expect(panel).toHaveFocus()
     })
 
     test("splits the transcript into one paragraph per turn", async () => {

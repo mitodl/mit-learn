@@ -35,6 +35,7 @@ import {
 
 import PodcastShareButton from "./PodcastShareButton"
 import EpisodeContentTabs from "./EpisodeContentTabs"
+import type { TranscriptState } from "./EpisodeContentTabs"
 import { buildPodcastEpisodeStructuredData } from "./podcastEpisodeStructuredData"
 import { env } from "@/env"
 
@@ -206,10 +207,24 @@ export const PodcastEpisodeDetailPage: React.FC<
   // (most of them) never issue it.
   const hasTranscript = !!(episode as PodcastEpisodeResource | undefined)
     ?.podcast_episode?.has_transcript
-  const { data: transcriptData } = useQuery({
+  const { data: transcriptData, isError: transcriptError } = useQuery({
     ...podcastEpisodeQueries.transcript(Number(episodeId)),
     enabled: hasTranscript,
   })
+
+  // A resolved-but-empty payload counts as absent, not as still loading: the
+  // endpoint is cached, so an episode whose transcript landed after something
+  // first requested it serves "" for a while. Treating that as `loading` would
+  // leave a skeleton that never resolves.
+  const transcript: TranscriptState = !hasTranscript
+    ? { status: "absent" }
+    : transcriptError
+      ? { status: "error" }
+      : transcriptData
+        ? transcriptData.transcript
+          ? { status: "ready", text: transcriptData.transcript }
+          : { status: "absent" }
+        : { status: "loading" }
 
   const { data: episodesData } = useInfiniteLearningResourceItems(
     Number(podcastId),
@@ -286,10 +301,13 @@ export const PodcastEpisodeDetailPage: React.FC<
       {structuredData && (
         <script
           type="application/ld+json"
-          // JSON.stringify does not escape </ by default; replace prevents
-          // a malicious title/description from breaking out of the script tag.
+          // Every `<` is escaped, not just `</`. Escaping `</` alone stops
+          // `</script>` but not `<!--<script>`, which puts the parser into the
+          // script-data-escaped state it then never leaves, swallowing the rest
+          // of the document. Episode titles come straight from third-party RSS
+          // with no sanitization. \u003c is valid JSON and inert in HTML.
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(structuredData).replace(/<\//g, "<\\/"),
+            __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
           }}
         />
       )}
@@ -360,7 +378,7 @@ export const PodcastEpisodeDetailPage: React.FC<
                 </PodcastShareSection>
                 <EpisodeContentTabs
                   descriptionHtml={description}
-                  transcript={transcriptData?.transcript ?? null}
+                  transcript={transcript}
                 />
               </>
             )}
