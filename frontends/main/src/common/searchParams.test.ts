@@ -1,3 +1,5 @@
+import * as fs from "fs"
+import * as path from "path"
 import { resourceSearchValidators } from "@mitodl/course-search-utils"
 import { RESOURCE_SEARCH_PARAMS } from "./searchParams"
 import type { AppPageProps } from "./searchParams"
@@ -12,6 +14,28 @@ test("RESOURCE_SEARCH_PARAMS stays in sync with resourceSearchValidators", () =>
   expect([...RESOURCE_SEARCH_PARAMS].sort()).toEqual(
     Object.keys(resourceSearchValidators).sort(),
   )
+})
+
+const findPageFiles = (dir: string): string[] =>
+  fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory()) return findPageFiles(full)
+    return entry.name === "page.tsx" ? [full] : []
+  })
+
+/**
+ * Every page must type its props with AppPageProps (even pages that ignore
+ * their props) so no page can hand-type `searchParams` and read a query
+ * param outside the CDN cache-key whitelist. See @/common/searchParams.
+ */
+test("every page.tsx consumes AppPageProps", () => {
+  const appDir = path.join(__dirname, "../app")
+  const pages = findPageFiles(appDir)
+  expect(pages.length).toBeGreaterThan(40)
+  const offenders = pages
+    .filter((file) => !fs.readFileSync(file, "utf8").includes("AppPageProps"))
+    .map((file) => path.relative(appDir, file))
+  expect(offenders).toEqual([])
 })
 
 /**

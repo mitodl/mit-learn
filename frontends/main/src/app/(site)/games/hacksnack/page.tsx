@@ -4,12 +4,13 @@ import { standardizeMetadata } from "@/common/metadata"
 import GameSubNav from "@/components/GameSubNav/GameSubNav"
 import HacksnackClient from "./HacksnackClient"
 import HacksnackFlagGate from "./HacksnackFlagGate"
+import type { AppPageProps } from "@/common/searchParams"
 
 export const metadata: Metadata = standardizeMetadata({
   title: "Hack Snack",
 })
 
-const Page: React.FC = () => {
+const Page: React.FC<AppPageProps<"/games/hacksnack">> = () => {
   const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY
   return (
     <HacksnackFlagGate>

@@ -29,7 +29,9 @@ describe("hacksnack page.tsx", () => {
   })
 
   test("renders the HacksnackClient", () => {
-    renderWithProviders(<Page />)
+    renderWithProviders(
+      <Page params={Promise.resolve({})} searchParams={Promise.resolve({})} />,
+    )
     expect(screen.getByTestId("hacksnack-client")).toBeInTheDocument()
   })
 
@@ -39,7 +41,9 @@ describe("hacksnack page.tsx", () => {
 
   test("passes GOOGLE_MAPS_API_KEY to HacksnackClient", () => {
     process.env.GOOGLE_MAPS_API_KEY = "maps-key-123"
-    renderWithProviders(<Page />)
+    renderWithProviders(
+      <Page params={Promise.resolve({})} searchParams={Promise.resolve({})} />,
+    )
     expect(mockHacksnackClient).toHaveBeenCalledWith(
       expect.objectContaining({ googleMapsApiKey: "maps-key-123" }),
     )
@@ -48,7 +52,9 @@ describe("hacksnack page.tsx", () => {
 
   test("passes undefined googleMapsApiKey when env var is unset", () => {
     delete process.env.GOOGLE_MAPS_API_KEY
-    renderWithProviders(<Page />)
+    renderWithProviders(
+      <Page params={Promise.resolve({})} searchParams={Promise.resolve({})} />,
+    )
     expect(mockHacksnackClient).toHaveBeenCalledWith(
       expect.objectContaining({ googleMapsApiKey: undefined }),
     )

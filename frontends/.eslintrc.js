@@ -173,6 +173,15 @@ module.exports = {
       },
     },
     {
+      // Belt-and-suspenders with the AppPageProps jest test in
+      // main/src/common/searchParams.test.ts: a page hand-typing its
+      // searchParams prop would bypass the cache-key whitelist registry.
+      files: ["./main/src/app/**/page.tsx"],
+      rules: {
+        ...restrictedSyntax({ banInlineSearchParams: true }),
+      },
+    },
+    {
       // Tests/setup legitimately set & read process.env.NEXT_PUBLIC_* directly
       // (jsdom). Lift only the NEXT_PUBLIC_* ban for these; keep other selectors.
       // next.config.js is intentionally NOT exempt: NEXT_PUBLIC_* are absent at
@@ -250,7 +259,10 @@ function restrictedImports({ paths = [], patterns = [] } = {}) {
   }
 }
 
-function restrictedSyntax({ allowPublicEnv = false } = {}) {
+function restrictedSyntax({
+  allowPublicEnv = false,
+  banInlineSearchParams = false,
+} = {}) {
   /**
    * Shared no-restricted-syntax config. Factored into a helper (like
    * restrictedImports above) so the NEXT_PUBLIC_* process.env ban can be lifted
@@ -290,6 +302,13 @@ function restrictedSyntax({ allowPublicEnv = false } = {}) {
         "MemberExpression[object.object.name='process'][object.property.name='env'][property.name=/^NEXT_PUBLIC_/], MemberExpression[object.object.name='process'][object.property.name='env'][property.value=/^NEXT_PUBLIC_/]",
       message:
         "Do not read NEXT_PUBLIC_* from process.env directly: values are inlined at build time and are empty in the standalone Docker image. Use env() or requiredEnv() from @/env instead.",
+    })
+  }
+  if (banInlineSearchParams) {
+    selectors.push({
+      selector: "TSPropertySignature[key.name='searchParams']",
+      message:
+        "Do not hand-type searchParams. Type page props with AppPageProps from @/common/searchParams so query param reads stay within the CDN cache-key whitelist (hq#12925).",
     })
   }
   return { "no-restricted-syntax": ["error", ...selectors] }
