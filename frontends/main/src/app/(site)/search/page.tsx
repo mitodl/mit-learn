@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import {
@@ -20,7 +21,9 @@ import type { ResourceSearchRequest } from "@/page-components/SearchDisplay/vali
 import { LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest } from "api"
 import { getQueryClient } from "@/app/getQueryClient"
 
-export async function generateMetadata({ searchParams }: PageProps<"/search">) {
+export async function generateMetadata({
+  searchParams,
+}: AppPageProps<"/search">) {
   return safeGenerateMetadata(async () => {
     return getMetadataAsync({
       title: "Search",
@@ -29,7 +32,7 @@ export async function generateMetadata({ searchParams }: PageProps<"/search">) {
   })
 }
 
-const Page: React.FC<PageProps<"/search">> = async ({ searchParams }) => {
+const Page: React.FC<AppPageProps<"/search">> = async ({ searchParams }) => {
   const search = (await searchParams) as ResourceSearchRequest & {
     page?: string
   }

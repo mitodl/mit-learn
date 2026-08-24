@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import { Metadata } from "next"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
@@ -11,7 +12,7 @@ export const metadata: Metadata = standardizeMetadata({
   title: "Departments",
 })
 
-const Page: React.FC<PageProps<"/departments">> = async () => {
+const Page: React.FC<AppPageProps<"/departments">> = async () => {
   const queryClient = getQueryClient()
 
   await Promise.all([

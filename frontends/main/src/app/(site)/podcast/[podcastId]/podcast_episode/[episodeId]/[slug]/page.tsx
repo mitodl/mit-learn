@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { PodcastEpisodeDetailPage } from "@/app-pages/PodcastPage/PodcastEpisodeDetailPage"
@@ -22,7 +23,7 @@ import {
 } from "@/common/urls"
 
 type Props =
-  PageProps<"/podcast/[podcastId]/podcast_episode/[episodeId]/[slug]">
+  AppPageProps<"/podcast/[podcastId]/podcast_episode/[episodeId]/[slug]">
 
 export const generateMetadata = async (props: Props) => {
   const { podcastId, episodeId } = await props.params

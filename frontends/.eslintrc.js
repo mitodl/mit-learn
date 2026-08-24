@@ -145,6 +145,22 @@ module.exports = {
       },
     },
     {
+      files: ["./main/src/**/*.ts", "./main/src/**/*.tsx"],
+      rules: {
+        "@typescript-eslint/no-restricted-types": [
+          "error",
+          {
+            types: {
+              PageProps: {
+                message:
+                  "Use AppPageProps from @/common/searchParams — its searchParams type enforces the CDN cache-key whitelist (hq#12925).",
+              },
+            },
+          },
+        ],
+      },
+    },
+    {
       // Tests/setup legitimately set & read process.env.NEXT_PUBLIC_* directly
       // (jsdom). Lift only the NEXT_PUBLIC_* ban for these; keep other selectors.
       // next.config.js is intentionally NOT exempt: NEXT_PUBLIC_* are absent at

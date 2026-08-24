@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import { Metadata } from "next"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
@@ -10,7 +11,7 @@ export const metadata: Metadata = standardizeMetadata({
   title: "Units",
 })
 
-const Page: React.FC<PageProps<"/units">> = async () => {
+const Page: React.FC<AppPageProps<"/units">> = async () => {
   const queryClient = getQueryClient()
 
   await Promise.all([

@@ -4,6 +4,7 @@ import {
   RESOURCE_DRAWER_PARAMS,
 } from "@/common/urls"
 import { parseResourceId } from "@/common/slugs"
+import type { ServerSearchParam } from "@/common/searchParams"
 import { htmlToPlainText } from "@/common/htmlToPlainText"
 import type { AxiosError } from "axios"
 import type { Metadata } from "next"
@@ -19,7 +20,7 @@ type MetadataAsyncProps = {
   description?: string
   image?: string
   imageAlt?: string
-  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>
+  searchParams?: Promise<Partial<Record<ServerSearchParam, string | string[]>>>
   social?: boolean
 } & Metadata
 

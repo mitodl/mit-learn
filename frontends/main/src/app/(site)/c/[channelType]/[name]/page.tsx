@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import ChannelPage from "@/app-pages/ChannelPage/ChannelPage"
 import { ChannelTypeEnum } from "api/v0"
@@ -28,7 +29,7 @@ import { getQueryClient } from "@/app/getQueryClient"
 export async function generateMetadata({
   searchParams,
   params,
-}: PageProps<"/c/[channelType]/[name]">) {
+}: AppPageProps<"/c/[channelType]/[name]">) {
   const { channelType, name } = await params
 
   return safeGenerateMetadata(async () => {
@@ -46,7 +47,7 @@ export async function generateMetadata({
   })
 }
 
-const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
+const Page: React.FC<AppPageProps<"/c/[channelType]/[name]">> = async ({
   params,
   searchParams,
 }) => {

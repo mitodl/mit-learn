@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import { env } from "@/env"
 import React from "react"
 import { Metadata } from "next"
@@ -22,7 +23,7 @@ enum CertificateType {
 
 export async function generateMetadata({
   params,
-}: PageProps<"/certificate/[certificateType]/[uuid]">): Promise<Metadata> {
+}: AppPageProps<"/certificate/[certificateType]/[uuid]">): Promise<Metadata> {
   const { certificateType, uuid } = await params
 
   return safeGenerateMetadata(async () => {
@@ -66,7 +67,7 @@ export async function generateMetadata({
 }
 
 const Page: React.FC<
-  PageProps<"/certificate/[certificateType]/[uuid]">
+  AppPageProps<"/certificate/[certificateType]/[uuid]">
 > = async ({ params }) => {
   const { certificateType, uuid } = await params
 
