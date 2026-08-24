@@ -1,9 +1,11 @@
 import type { PodcastEpisodeParent, PodcastEpisodeResource } from "api/v1"
 
 // ISO-8601 duration pattern (e.g. "PT17M16S"). Schema.org requires this format
-// for the `duration` property.
+// for the `duration` property. Every component is optional, so the two
+// negative lookaheads carry the "at least one component" rule: without them
+// "P", "PT" and "P1DT" all pass and reach the JSON-LD as invalid durations.
 const ISO_8601_DURATION_RE =
-  /^P(?:\d+Y)?(?:\d+M)?(?:\d+W)?(?:\d+D)?(?:T(?:\d+H)?(?:\d+M)?(?:\d+(?:\.\d+)?S)?)?$/
+  /^P(?!$)(?:\d+Y)?(?:\d+M)?(?:\d+W)?(?:\d+D)?(?:T(?!$)(?:\d+H)?(?:\d+M)?(?:\d+(?:\.\d+)?S)?)?$/
 
 type BuildOptions = {
   /** Absolute canonical url of the episode page */
