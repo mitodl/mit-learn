@@ -60,12 +60,18 @@ const TranscriptBody = styled(Body)({
   },
 }) as typeof Body
 
-// Focus lands here rather than on a child, so the ring belongs to the panel.
-const TranscriptPanel = styled(TabPanel)({
+// Focus lands on the panel rather than on a child, so the ring belongs here.
+const ContentPanel = styled(TabPanel)({
   "&:focus-visible": {
     outlineOffset: "4px",
   },
 })
+
+// A tabpanel whose content holds nothing focusable takes a tab stop of its own
+// so keyboard users can reach it; one that does hold something focusable must
+// not (WAI-ARIA APG). Descriptions are nh3-sanitized with <a> allowed, so a
+// link is the only focusable thing one can contain.
+const CONTAINS_LINK_RE = /<a[\s>]/i
 
 const SkeletonLine = styled(Skeleton)({
   marginBottom: "16px",
@@ -158,6 +164,9 @@ const EpisodeContentTabs: React.FC<EpisodeContentTabsProps> = ({
     [transcript],
   )
 
+  const descriptionIsFocusable =
+    !!descriptionHtml && CONTAINS_LINK_RE.test(descriptionHtml)
+
   const description = descriptionHtml ? (
     // Rendered as a <div>, not the default <p>: the sanitized description
     // contains block elements which are invalid inside a <p>, and the browser
@@ -220,10 +229,14 @@ const EpisodeContentTabs: React.FC<EpisodeContentTabsProps> = ({
         <TabButton label="Description" value={DESCRIPTION_TAB} />
         <TabButton label="Transcript" value={TRANSCRIPT_TAB} />
       </TabsList>
-      <TabPanel value={DESCRIPTION_TAB} keepMounted>
+      <ContentPanel
+        value={DESCRIPTION_TAB}
+        keepMounted
+        tabIndex={descriptionIsFocusable ? undefined : 0}
+      >
         {description}
-      </TabPanel>
-      <TranscriptPanel
+      </ContentPanel>
+      <ContentPanel
         value={TRANSCRIPT_TAB}
         keepMounted
         aria-busy={transcript.status === "loading"}
@@ -234,7 +247,7 @@ const EpisodeContentTabs: React.FC<EpisodeContentTabsProps> = ({
         tabIndex={transcript.status === "ready" ? 0 : undefined}
       >
         {transcriptContent}
-      </TranscriptPanel>
+      </ContentPanel>
     </TabContext>
   )
 }

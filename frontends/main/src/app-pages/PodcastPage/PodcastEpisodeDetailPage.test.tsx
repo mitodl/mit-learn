@@ -737,6 +737,38 @@ describe("PodcastEpisodeDetailPage", () => {
       expect(panel).toHaveFocus()
     })
 
+    test("gives a text-only Description panel a tab stop", async () => {
+      // WAI-ARIA APG: a tabpanel holding nothing focusable takes a tab stop so
+      // keyboard users can reach it; one holding a link must not, or the panel
+      // and the link become two stops for the same content. Descriptions are
+      // nh3-sanitized with <a> allowed, so a link is the only focusable thing
+      // one can contain.
+      renderPage({
+        episodeOverrides: { description: "Just static text." },
+        transcript: TRANSCRIPT,
+      })
+      await screen.findByRole("tab", { name: "Description" })
+      expect(
+        screen.getByRole("tabpanel", { name: "Description" }),
+      ).toHaveAttribute("tabindex", "0")
+    })
+
+    test("gives a Description panel containing a link no tab stop", async () => {
+      renderPage({
+        episodeOverrides: {
+          description:
+            '<p>See <a href="https://example.com">the notes</a>.</p>',
+        },
+        transcript: TRANSCRIPT,
+      })
+
+      await screen.findByRole("tab", { name: "Description" })
+      const panel = screen.getByRole("tabpanel", { name: "Description" })
+      expect(panel).not.toHaveAttribute("tabindex")
+      // The link itself is the tab stop into this panel.
+      expect(panel.querySelector("a")).toBeInTheDocument()
+    })
+
     test("splits the transcript into one paragraph per turn", async () => {
       renderPage({ transcript: TRANSCRIPT })
 
