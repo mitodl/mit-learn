@@ -3,7 +3,7 @@
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- this is the sanctioned wrapper around useSearchParams; see @/common/searchParams
 import { useSearchParams } from "next/navigation"
 import type { ReadonlyURLSearchParams } from "next/navigation"
-import type { AppSearchParam } from "./searchParams"
+import type { ServerSearchParam } from "./searchParams"
 
 /**
  * The page URL's search params, with named lookups restricted to params
@@ -12,9 +12,9 @@ import type { AppSearchParam } from "./searchParams"
  * URLSearchParams is expected all work unchanged.
  */
 interface AppSearchParams extends ReadonlyURLSearchParams {
-  get(name: AppSearchParam): string | null
-  getAll(name: AppSearchParam): string[]
-  has(name: AppSearchParam): boolean
+  get(name: ServerSearchParam): string | null
+  getAll(name: ServerSearchParam): string[]
+  has(name: ServerSearchParam): boolean
 }
 
 /**

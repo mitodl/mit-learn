@@ -1,9 +1,5 @@
 import { resourceSearchValidators } from "@mitodl/course-search-utils"
-import {
-  RESOURCE_SEARCH_PARAMS,
-  SERVER_KEYED_PARAMS,
-  CLIENT_ONLY_PARAMS,
-} from "./searchParams"
+import { RESOURCE_SEARCH_PARAMS } from "./searchParams"
 import type { AppPageProps } from "./searchParams"
 
 /**
@@ -16,11 +12,6 @@ test("RESOURCE_SEARCH_PARAMS stays in sync with resourceSearchValidators", () =>
   expect([...RESOURCE_SEARCH_PARAMS].sort()).toEqual(
     Object.keys(resourceSearchValidators).sort(),
   )
-})
-
-test("registry tiers do not overlap", () => {
-  const server = new Set<string>(SERVER_KEYED_PARAMS)
-  expect(CLIENT_ONLY_PARAMS.filter((p) => server.has(p))).toEqual([])
 })
 
 /**
