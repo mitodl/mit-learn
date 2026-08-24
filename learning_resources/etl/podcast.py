@@ -317,11 +317,33 @@ def get_podcast_transcripts(episode_resources: QuerySet[LearningResource]) -> No
             if not entries:
                 continue
             transcript = fetch_transcript(entries)
-            if transcript:
-                episode.transcript = transcript
-                episode.save()
+            if not transcript:
+                continue
+            episode.transcript = transcript
+            # update_fields, so a long batch cannot revert metadata: the
+            # queryset is evaluated in full when the loop starts, but a save
+            # can land much later -- long enough for the podcast ETL, which
+            # runs 30 minutes earlier, to have rewritten rss, audio_url or
+            # duration. An unrestricted save() would write the stale values
+            # back. updated_on is listed explicitly because Django only bumps
+            # auto_now fields that appear in update_fields.
+            episode.save(update_fields=["transcript", "updated_on"])
+            # Counted before indexing, not after. The transcript is committed
+            # either way, and the default filter excludes a non-empty
+            # transcript, so the row is never re-selected -- if indexing fails,
+            # the cached response must still be evicted or it outlives the row
+            # it describes.
+            updated += 1
+            try:
                 update_index(resource, newly_created=False)
-                updated += 1
+            except Exception:
+                # Logged apart from a fetch failure so the message is honest
+                # about what broke. Nothing retries this: there is no scheduled
+                # reindex, so the episode stays out of search until one is run.
+                log.exception(
+                    "Saved transcript for podcast episode %s but indexing failed",
+                    resource.id,
+                )
         except Exception:
             log.exception(
                 "Error fetching transcript for podcast episode %s", resource.id

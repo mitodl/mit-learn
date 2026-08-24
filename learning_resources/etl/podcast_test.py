@@ -26,7 +26,7 @@ from learning_resources.etl.podcast import (
 from learning_resources.factories import (
     PodcastEpisodeFactory,
 )
-from learning_resources.models import LearningResource
+from learning_resources.models import LearningResource, PodcastEpisode
 from main.utils import frontend_absolute_url
 
 pytestmark = pytest.mark.django_db
@@ -526,3 +526,128 @@ def test_get_podcast_transcripts_leaves_the_cache_alone_when_nothing_changed(moc
     )
 
     mock_clear.assert_not_called()
+
+
+def test_get_podcast_transcripts_does_not_clobber_concurrent_metadata(mocker):
+    """
+    A save must not revert metadata the podcast ETL wrote in the meantime.
+
+    The queryset is evaluated in full when the loop starts, but a save can land
+    much later, so an unrestricted save() would write the stale row back. The
+    podcast ETL runs 30 minutes before this job and rewrites rss, audio_url and
+    duration on every run.
+    """
+    episode = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt" type="text/vtt"/></item>',
+        transcript="",
+        duration="PT1M",
+    )
+
+    def fetch_and_race(_entries):
+        # Stands in for the podcast ETL updating the row while the transcript
+        # request is in flight.
+        PodcastEpisode.objects.filter(pk=episode.pk).update(duration="PT2M")
+        return "Host: the transcript."
+
+    mocker.patch(
+        "learning_resources.etl.podcast.fetch_transcript",
+        side_effect=fetch_and_race,
+    )
+    mocker.patch("learning_resources.etl.podcast.update_index")
+
+    get_podcast_transcripts(
+        LearningResource.objects.filter(id=episode.learning_resource_id)
+    )
+
+    episode.refresh_from_db()
+    assert episode.transcript == "Host: the transcript."
+    assert episode.duration == "PT2M"
+
+
+def test_get_podcast_transcripts_bumps_updated_on(mocker):
+    """
+    update_fields must list updated_on explicitly.
+
+    Django only bumps auto_now fields that appear in update_fields, so omitting
+    it would leave the row's timestamp stale after a real change.
+    """
+    mocker.patch(
+        "learning_resources.etl.podcast.fetch_transcript",
+        return_value="Host: the transcript.",
+    )
+    mocker.patch("learning_resources.etl.podcast.update_index")
+    episode = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt" type="text/vtt"/></item>',
+        transcript="",
+    )
+    before = episode.updated_on
+
+    get_podcast_transcripts(
+        LearningResource.objects.filter(id=episode.learning_resource_id)
+    )
+
+    episode.refresh_from_db()
+    assert episode.updated_on > before
+
+
+def test_get_podcast_transcripts_clears_the_cache_when_indexing_fails(mocker):
+    """
+    An indexing failure must not also skip cache invalidation.
+
+    The transcript is committed either way, and the default filter excludes a
+    non-empty transcript, so the row is never re-selected -- a stale cached
+    response would outlive the row it describes.
+    """
+    mocker.patch(
+        "learning_resources.etl.podcast.fetch_transcript",
+        return_value="Host: the transcript.",
+    )
+    mocker.patch(
+        "learning_resources.etl.podcast.update_index",
+        side_effect=RuntimeError("opensearch down"),
+    )
+    mock_clear = mocker.patch("learning_resources.etl.podcast.clear_views_cache")
+    episode = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt" type="text/vtt"/></item>',
+        transcript="",
+    )
+
+    get_podcast_transcripts(
+        LearningResource.objects.filter(id=episode.learning_resource_id)
+    )
+
+    episode.refresh_from_db()
+    assert episode.transcript == "Host: the transcript."
+    mock_clear.assert_called_once_with(key_prefix="podcast_transcript")
+
+
+def test_get_podcast_transcripts_indexing_failure_does_not_stop_the_batch(mocker):
+    """One episode failing to index must not skip the episodes after it"""
+    mocker.patch(
+        "learning_resources.etl.podcast.fetch_transcript",
+        return_value="Host: the transcript.",
+    )
+    mocker.patch(
+        "learning_resources.etl.podcast.update_index",
+        side_effect=[RuntimeError("opensearch down"), None],
+    )
+    mocker.patch("learning_resources.etl.podcast.clear_views_cache")
+    first = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt" type="text/vtt"/></item>',
+        transcript="",
+    )
+    second = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt" type="text/vtt"/></item>',
+        transcript="",
+    )
+
+    get_podcast_transcripts(
+        LearningResource.objects.filter(
+            id__in=[first.learning_resource_id, second.learning_resource_id]
+        ).order_by("id")
+    )
+
+    first.refresh_from_db()
+    second.refresh_from_db()
+    assert first.transcript == "Host: the transcript."
+    assert second.transcript == "Host: the transcript."
