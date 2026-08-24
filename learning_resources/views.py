@@ -534,7 +534,7 @@ class PodcastEpisodeViewSet(BaseLearningResourceViewSet):
         id (integer): The id of the podcast episode
 
         Returns:
-        The episode's transcript and the feed url it was fetched from
+        The episode id and its transcript text
         """
         # self.get_object() rather than int(kwargs["id"]): DRF's
         # get_object_or_404 turns a ValueError from a non-numeric id into a 404,

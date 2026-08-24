@@ -298,6 +298,9 @@ describe("PodcastEpisodeDetailPage", () => {
   test("names the URL's podcast (not the first parent) for a multi-parent episode", async () => {
     const episode = makePodcastEpisode()
     episode.podcast_episode.audio_url = "https://example.com/ep.mp3"
+    // The resource factory leaves last_modified unset, and the JSON-LD is
+    // omitted without it.
+    episode.last_modified = "2026-01-02T03:04:05Z"
     const podcastA = makePodcast({ title: "Podcast A" })
     const podcastB = makePodcast({ title: "Podcast B" })
     // The episode belongs to both A and B; the user is on B's URL.
@@ -342,6 +345,20 @@ describe("PodcastEpisodeDetailPage", () => {
     // The header/breadcrumb and the player bar must agree on Podcast B.
     expect(screen.getByTestId("player-podcast-name")).toHaveTextContent(
       "Podcast B",
+    )
+
+    // So must the JSON-LD: partOfSeries takes its url from the podcast in the
+    // current route, so taking the name from parent_podcasts[0] instead would
+    // publish Podcast A's name against Podcast B's url.
+    const jsonLd = JSON.parse(
+      document.querySelector('script[type="application/ld+json"]')!.innerHTML,
+    )
+    expect(jsonLd.partOfSeries).toEqual(
+      expect.objectContaining({
+        "@type": "PodcastSeries",
+        name: "Podcast B",
+        url: expect.stringContaining(`/podcast/${podcastB.id}/`),
+      }),
     )
   })
 

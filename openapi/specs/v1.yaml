@@ -7549,7 +7549,7 @@ paths:
         id (integer): The id of the podcast episode
 
         Returns:
-        The episode's transcript and the feed url it was fetched from
+        The episode id and its transcript text
       summary: Get a podcast episode transcript
       parameters:
       - in: path

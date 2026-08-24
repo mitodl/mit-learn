@@ -318,6 +318,26 @@ def test_parse_cue_format_empty():
     assert parse_cue_format("") == ""
 
 
+def test_parse_cue_format_decodes_character_references():
+    """
+    WebVTT requires "&" to be written "&amp;", so cue text arrives escaped.
+
+    Left encoded, the stored transcript shows the literal entity and React
+    escapes the ampersand a second time on render. Decoding happens after the
+    tags are stripped so an escaped "&lt;i&gt;" stays text.
+    """
+    vtt = (
+        "WEBVTT\n\n"
+        "00:00:01.000 --> 00:00:03.000\n"
+        "<v Ada &amp; Grace>R&amp;D at &lt;MIT&gt;&nbsp;matters.\n\n"
+        "00:00:03.000 --> 00:00:05.000\n"
+        "<v Bob>Fifty&nbsp;percent.\n"
+    )
+    assert parse_cue_format(vtt) == (
+        "Ada & Grace: R&D at <MIT> matters.\n\nBob: Fifty percent."
+    )
+
+
 def test_parse_podcast_index_json_merges_fragmented_segments():
     """
     The podcastindex format fragments body mid-sentence.
@@ -369,6 +389,24 @@ def test_parse_html_plain_document():
     """A well-formed HTML transcript is just its text"""
     html = "<html><body><p>First para.</p><p>Second para.</p></body></html>"
     assert parse_html(html) == "First para.\n\nSecond para."
+
+
+def test_parse_html_does_not_double_decode_entities():
+    """
+    get_text() has already resolved character references.
+
+    Decoding a second time would turn a doubly-escaped "&amp;amp;" -- how a
+    literal "&amp;" is written in HTML -- into a bare ampersand, on both the
+    plain and the cue-dump branch.
+    """
+    assert parse_html("<p>Write &amp;amp; for an ampersand.</p>") == (
+        "Write &amp; for an ampersand."
+    )
+    captivate = (
+        "<p>1</p><p>00:00:00,567 --&gt; 00:00:03,570</p>"
+        "<p>Write &amp;amp; for an ampersand.</p>"
+    )
+    assert parse_html(captivate) == "Write &amp; for an ampersand."
 
 
 def test_parse_plain_preserves_paragraphs():
@@ -572,3 +610,52 @@ def test_fetch_transcript_survives_request_failure(mocked_responses, public_dns)
     mocked_responses.add(mocked_responses.GET, "https://ok.example/t.vtt", status=500)
     entries = [{"url": "https://ok.example/t.vtt", "type": "text/vtt"}]
     assert fetch_transcript(entries) == ""
+
+
+def test_fetch_transcript_decodes_utf8_without_a_declared_charset(
+    mocked_responses,
+    public_dns,
+):
+    """
+    Most hosts serve text/* with no charset parameter.
+
+    requests reports ISO-8859-1 for those (RFC 2616), so trusting
+    response.encoding would turn every non-ASCII name into mojibake.
+    """
+    body = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nJos\u00e9 was na\u00efve.\n"
+    mocked_responses.add(
+        mocked_responses.GET,
+        "https://ok.example/t.vtt",
+        body=body.encode("utf-8"),
+        content_type="text/vtt",
+    )
+    entries = [{"url": "https://ok.example/t.vtt", "type": "text/vtt"}]
+    assert fetch_transcript(entries) == "Jos\u00e9 was na\u00efve."
+
+
+def test_fetch_transcript_honours_a_declared_charset(mocked_responses, public_dns):
+    """A charset the server actually declared is the one used"""
+    body = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nJos\u00e9 was here.\n"
+    mocked_responses.add(
+        mocked_responses.GET,
+        "https://ok.example/t.vtt",
+        body=body.encode("iso-8859-1"),
+        content_type="text/vtt; charset=iso-8859-1",
+    )
+    entries = [{"url": "https://ok.example/t.vtt", "type": "text/vtt"}]
+    assert fetch_transcript(entries) == "Jos\u00e9 was here."
+
+
+def test_fetch_transcript_falls_back_when_the_charset_is_unknown(
+    mocked_responses,
+    public_dns,
+):
+    """A nonsense charset name is not worth discarding the body over"""
+    mocked_responses.add(
+        mocked_responses.GET,
+        "https://ok.example/t.vtt",
+        body=VTT.encode("utf-8"),
+        content_type="text/vtt; charset=not-a-charset",
+    )
+    entries = [{"url": "https://ok.example/t.vtt", "type": "text/vtt"}]
+    assert fetch_transcript(entries).startswith("Susan Silbey: Welcome to the show,")

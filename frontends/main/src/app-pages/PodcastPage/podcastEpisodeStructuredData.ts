@@ -1,4 +1,4 @@
-import type { PodcastEpisodeResource } from "api/v1"
+import type { PodcastEpisodeParent, PodcastEpisodeResource } from "api/v1"
 
 // ISO-8601 duration pattern (e.g. "PT17M16S"). Schema.org requires this format
 // for the `duration` property.
@@ -8,6 +8,14 @@ const ISO_8601_DURATION_RE =
 type BuildOptions = {
   /** Absolute canonical url of the episode page */
   url?: string
+  /**
+   * The parent podcast series the episode is being viewed under, as resolved
+   * by `getEpisodeParentPodcast`. Required rather than picked from
+   * `parent_podcasts[0]` here: an episode can belong to several series, and
+   * choosing one independently of the caller would pair that series' name with
+   * `seriesUrl`, which the caller builds from the parent in the current url.
+   */
+  series: PodcastEpisodeParent | null
   /** Absolute canonical url of the parent podcast page */
   seriesUrl?: string
 }
@@ -28,12 +36,11 @@ type BuildOptions = {
  */
 export function buildPodcastEpisodeStructuredData(
   episode: PodcastEpisodeResource | undefined,
-  { url, seriesUrl }: BuildOptions = {},
+  { url, series, seriesUrl }: BuildOptions,
 ): Record<string, unknown> | null {
   if (!episode || !episode.last_modified) return null
 
   const details = episode.podcast_episode
-  const series = episode.podcast_episode?.parent_podcasts?.[0]
 
   const durationIso =
     details?.duration && ISO_8601_DURATION_RE.test(details.duration)

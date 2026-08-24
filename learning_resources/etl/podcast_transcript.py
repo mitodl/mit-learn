@@ -9,11 +9,13 @@ the guards in ``_checked_response``.
 Spec: https://github.com/Podcastindex-org/podcast-namespace/blob/main/docs/tags/transcript.md
 """
 
+import html
 import ipaddress
 import json
 import logging
 import re
 import socket
+from email.message import Message
 from urllib.parse import ParseResult, urljoin, urlparse
 
 import requests
@@ -275,6 +277,29 @@ def _parsed_public_url(url: object) -> ParseResult | None:
     return parsed
 
 
+def _declared_encoding(response: requests.Response) -> str | None:
+    """
+    Return the charset the server actually declared, if any.
+
+    ``response.encoding`` cannot be used for this: requests follows RFC 2616
+    and reports ISO-8859-1 for any ``text/*`` response that omits the charset
+    parameter, which most transcript hosts do. Decoding a UTF-8 transcript that
+    way turns every smart quote and non-ASCII name into mojibake.
+
+    Args:
+        response: the transcript response
+
+    Returns:
+        the declared charset, or None if the server declared none
+    """
+    message = Message()
+    message["Content-Type"] = response.headers.get("Content-Type", "")
+    charset = message.get_param("charset")
+    # get_param returns a (charset, language, value) tuple for an RFC 2231
+    # parameter, which a charset is never legitimately encoded as.
+    return charset if isinstance(charset, str) else None
+
+
 def _read_capped(response: requests.Response) -> str | None:
     """
     Read a response body, abandoning it if it exceeds ``MAX_SOURCE_BYTES``.
@@ -298,7 +323,15 @@ def _read_capped(response: requests.Response) -> str | None:
             return None
         chunks.append(chunk)
     body = b"".join(chunks)
-    return body.decode(response.encoding or "utf-8", errors="replace")
+    encoding = _declared_encoding(response) or "utf-8"
+    try:
+        return body.decode(encoding, errors="replace")
+    except LookupError:
+        # An unrecognized charset name is not worth discarding the body over.
+        log.warning(
+            "Transcript at %s declared unknown charset %s", response.url, encoding
+        )
+        return body.decode("utf-8", errors="replace")
 
 
 def _checked_response(url: str) -> requests.Response | None:
@@ -396,7 +429,9 @@ def _split_speaker(text: str) -> tuple[str | None, str]:
     return match.group(1).strip(), text[match.end() :]
 
 
-def _cue_speaker_and_text(payload: list[str]) -> tuple[str | None, str, str]:
+def _cue_speaker_and_text(
+    payload: list[str], *, decode_entities: bool = True
+) -> tuple[str | None, str, str]:
     """
     Reduce one cue's payload lines to a speaker and its text.
 
@@ -409,6 +444,8 @@ def _cue_speaker_and_text(payload: list[str]) -> tuple[str | None, str, str]:
 
     Args:
         payload: the cue's payload lines
+        decode_entities: whether the payload still carries HTML character
+            references, as a caption file read off the wire does
 
     Returns:
         the speaker name (or None), the text with any label removed, and the
@@ -418,6 +455,14 @@ def _cue_speaker_and_text(payload: list[str]) -> tuple[str | None, str, str]:
     voice = VTT_VOICE_RE.search(joined)
     speaker = voice.group(1).strip() if voice else None
     verbatim = VTT_TAG_RE.sub("", joined).strip()
+    if decode_entities:
+        # WebVTT requires "&" to be written "&amp;", so cue text arrives with
+        # character references intact and would otherwise be stored literally.
+        # Decoding after the tags are stripped keeps a literal "&lt;i&gt;" as
+        # text rather than turning it into a tag to remove.
+        verbatim = html.unescape(verbatim)
+        if speaker:
+            speaker = html.unescape(speaker)
     label_free = verbatim
     if speaker is None:
         speaker, label_free = _split_speaker(verbatim)
@@ -507,7 +552,7 @@ def _turns_to_text(turns: list[tuple[str | None, str, str]]) -> str:
     return "\n\n".join(paragraphs)
 
 
-def parse_cue_format(text: str) -> str:
+def parse_cue_format(text: str, *, decode_entities: bool = True) -> str:
     """
     Normalize a VTT or SRT body to prose.
 
@@ -516,12 +561,17 @@ def parse_cue_format(text: str) -> str:
 
     Args:
         text: the raw caption file body
+        decode_entities: whether cue text still carries HTML character
+            references. Pass False for text an HTML parser has already decoded.
 
     Returns:
         normalized transcript text
     """
     return _turns_to_text(
-        [_cue_speaker_and_text(payload) for payload in _cue_blocks(text)]
+        [
+            _cue_speaker_and_text(payload, decode_entities=decode_entities)
+            for payload in _cue_blocks(text)
+        ]
     )
 
 
@@ -584,7 +634,9 @@ def parse_html(text: str) -> str:
         tag.append("\n\n")
     extracted = soup.get_text()
     if "-->" in extracted:
-        return parse_cue_format(extracted)
+        # get_text() has already resolved character references; decoding them a
+        # second time would collapse a doubly-escaped "&amp;amp;" to a bare "&".
+        return parse_cue_format(extracted, decode_entities=False)
     return parse_plain(extracted)
 
 

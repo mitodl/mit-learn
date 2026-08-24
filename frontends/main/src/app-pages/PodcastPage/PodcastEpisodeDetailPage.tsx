@@ -272,6 +272,9 @@ export const PodcastEpisodeDetailPage: React.FC<
   const structuredData = !episodeLoading
     ? buildPodcastEpisodeStructuredData(episode as PodcastEpisodeResource, {
         url: sharePageUrl || undefined,
+        // The same parent the breadcrumb and podcastHref use, so partOfSeries'
+        // name and url always describe one series.
+        series: parentPodcast,
         seriesUrl: podcastId
           ? `${NEXT_PUBLIC_ORIGIN}${podcastHref}`
           : undefined,

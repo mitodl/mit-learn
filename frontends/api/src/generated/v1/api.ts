@@ -26761,7 +26761,7 @@ export const PodcastEpisodesApiAxiosParamCreator = function (
       }
     },
     /**
-     * Fetch one episode\'s transcript.  Served separately from the episode payload because the text runs tens of kilobytes; `podcast_episode.has_transcript` says whether there is anything here to fetch.  Args: id (integer): The id of the podcast episode  Returns: The episode\'s transcript and the feed url it was fetched from
+     * Fetch one episode\'s transcript.  Served separately from the episode payload because the text runs tens of kilobytes; `podcast_episode.has_transcript` says whether there is anything here to fetch.  Args: id (integer): The id of the podcast episode  Returns: The episode id and its transcript text
      * @summary Get a podcast episode transcript
      * @param {number} id
      * @param {*} [options] Override http request option.
@@ -26933,7 +26933,7 @@ export const PodcastEpisodesApiFp = function (configuration?: Configuration) {
         )(axios, operationBasePath || basePath)
     },
     /**
-     * Fetch one episode\'s transcript.  Served separately from the episode payload because the text runs tens of kilobytes; `podcast_episode.has_transcript` says whether there is anything here to fetch.  Args: id (integer): The id of the podcast episode  Returns: The episode\'s transcript and the feed url it was fetched from
+     * Fetch one episode\'s transcript.  Served separately from the episode payload because the text runs tens of kilobytes; `podcast_episode.has_transcript` says whether there is anything here to fetch.  Args: id (integer): The id of the podcast episode  Returns: The episode id and its transcript text
      * @summary Get a podcast episode transcript
      * @param {number} id
      * @param {*} [options] Override http request option.
@@ -27031,7 +27031,7 @@ export const PodcastEpisodesApiFactory = function (
         .then((request) => request(axios, basePath))
     },
     /**
-     * Fetch one episode\'s transcript.  Served separately from the episode payload because the text runs tens of kilobytes; `podcast_episode.has_transcript` says whether there is anything here to fetch.  Args: id (integer): The id of the podcast episode  Returns: The episode\'s transcript and the feed url it was fetched from
+     * Fetch one episode\'s transcript.  Served separately from the episode payload because the text runs tens of kilobytes; `podcast_episode.has_transcript` says whether there is anything here to fetch.  Args: id (integer): The id of the podcast episode  Returns: The episode id and its transcript text
      * @summary Get a podcast episode transcript
      * @param {PodcastEpisodesApiPodcastEpisodesTranscriptRetrieveRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
@@ -27271,7 +27271,7 @@ export class PodcastEpisodesApi extends BaseAPI {
   }
 
   /**
-   * Fetch one episode\'s transcript.  Served separately from the episode payload because the text runs tens of kilobytes; `podcast_episode.has_transcript` says whether there is anything here to fetch.  Args: id (integer): The id of the podcast episode  Returns: The episode\'s transcript and the feed url it was fetched from
+   * Fetch one episode\'s transcript.  Served separately from the episode payload because the text runs tens of kilobytes; `podcast_episode.has_transcript` says whether there is anything here to fetch.  Args: id (integer): The id of the podcast episode  Returns: The episode id and its transcript text
    * @summary Get a podcast episode transcript
    * @param {PodcastEpisodesApiPodcastEpisodesTranscriptRetrieveRequest} requestParameters Request parameters.
    * @param {*} [options] Override http request option.
