@@ -304,9 +304,7 @@ def get_podcast_transcripts(episode_resources: QuerySet[LearningResource]) -> No
     """
     for resource in episode_resources:
         # Per-episode guard: one malformed feed fragment or unreachable host
-        # must not abort the batch and skip every episode after it. extract()
-        # above gets this wrong -- it lets requests' ConnectionError escape,
-        # which is why a single dead feed kills the whole podcast ETL run.
+        # must not abort the batch and skip every episode after it.
         try:
             episode = resource.podcast_episode
             entries = transcript_tags_from_rss(episode.rss)
