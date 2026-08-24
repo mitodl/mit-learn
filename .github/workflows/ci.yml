@@ -277,7 +277,7 @@ jobs:
   # `openapi-diff` is absent from `needs` because `needs` can only reference jobs in
   # this same workflow file, and `openapi-diff` runs in its own workflow (triggered on
   # `pull_request` rather than `push`). It now has an `--err-ignore` allowlist
-  # (openapi/specs/oasdiff-err-ignore.txt) for intentional breaking changes, so it
+  # (openapi/oasdiff-err-ignore.txt) for intentional breaking changes, so it
   # should be required directly, alongside `ci-gate`, in the ol-infrastructure ruleset
   # -- its job name is stable and isn't subject to the renaming/matrix drift `ci-gate`
   # exists to solve.
