@@ -11,11 +11,20 @@ duplicate protection, so a fresh duplicate can land mid-build and fail
 CREATE UNIQUE INDEX CONCURRENTLY.
 """
 
-from django.db import DatabaseError, migrations, models
+import time
+
+from django.db import DatabaseError, OperationalError, migrations, models
 from django.db.models import Q
 
 TABLE = "learning_resources_contentfile"
 TAGS_TABLE = "learning_resources_contentfile_content_tags"
+
+# Django's deterministic name for the old unique_together constraint
+# (verified identical in local and production databases).
+OLD_UNIQUE_CONSTRAINT = (
+    "learning_resources_conte_key_run_id_learning_reso_cf8309bd_uniq"
+)
+OLD_UNIQUE_COLUMNS = "key, run_id, learning_resource_id, direct_learning_resource_id"
 
 # (parent column, index name)
 IDENTITIES = [
@@ -81,6 +90,42 @@ def noop(apps, schema_editor):
     """Do nothing on reverse - deleted duplicates cannot be restored."""
 
 
+def drop_old_unique_together(apps, schema_editor):
+    """
+    Drop the old unique_together constraint without risking a lock queue.
+
+    DROP CONSTRAINT needs ACCESS EXCLUSIVE; if a long-running query holds the
+    table, the lock request queues and blocks all traffic behind it. A short
+    lock_timeout aborts the attempt instead, and we retry.
+    """
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute("SET lock_timeout = '5s'")
+        try:
+            for attempt in range(1, BUILD_ATTEMPTS + 1):
+                try:
+                    cursor.execute(
+                        f"ALTER TABLE {TABLE}"
+                        f' DROP CONSTRAINT IF EXISTS "{OLD_UNIQUE_CONSTRAINT}"'
+                    )
+                except OperationalError:
+                    if attempt == BUILD_ATTEMPTS:
+                        raise
+                    time.sleep(5)
+                else:
+                    break
+        finally:
+            cursor.execute("RESET lock_timeout")
+
+
+def restore_old_unique_together(apps, schema_editor):
+    """Recreate the old (ineffective) unique constraint on rollback"""
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute(
+            f'ALTER TABLE {TABLE} ADD CONSTRAINT "{OLD_UNIQUE_CONSTRAINT}"'
+            f" UNIQUE ({OLD_UNIQUE_COLUMNS})"
+        )
+
+
 def _build_index(column, name):
     """Forward function: build one partial unique index, retrying on races"""
 
@@ -130,9 +175,20 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunPython(dedupe_content_files, noop),
-        migrations.AlterUniqueTogether(
-            name="contentfile",
-            unique_together=set(),
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.AlterUniqueTogether(
+                    name="contentfile",
+                    unique_together=set(),
+                ),
+            ],
+            database_operations=[
+                migrations.RunPython(
+                    drop_old_unique_together,
+                    restore_old_unique_together,
+                    atomic=False,
+                ),
+            ],
         ),
         *[
             migrations.SeparateDatabaseAndState(

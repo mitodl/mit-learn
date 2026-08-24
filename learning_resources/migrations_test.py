@@ -154,6 +154,31 @@ def test_dedupe_leaves_distinct_rows_alone():
     assert set(ContentFile.objects.values_list("id", flat=True)) == ids
 
 
+def constraint_exists(name):
+    """Check whether a table constraint exists"""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = %s)", [name]
+        )
+        return cursor.fetchone()[0]
+
+
+def test_drop_old_unique_together_round_trip():
+    """The old constraint drops cleanly, idempotently, and restores on reverse"""
+    schema_editor = connection.schema_editor()
+    assert not constraint_exists(migration.OLD_UNIQUE_CONSTRAINT)
+
+    migration.restore_old_unique_together(apps, schema_editor)
+    assert constraint_exists(migration.OLD_UNIQUE_CONSTRAINT)
+
+    migration.drop_old_unique_together(apps, schema_editor)
+    assert not constraint_exists(migration.OLD_UNIQUE_CONSTRAINT)
+
+    # IF EXISTS makes a rerun after a partial failure safe
+    migration.drop_old_unique_together(apps, schema_editor)
+    assert not constraint_exists(migration.OLD_UNIQUE_CONSTRAINT)
+
+
 @pytest.mark.django_db(transaction=True)
 def test_build_index_retries_after_duplicate():
     """
