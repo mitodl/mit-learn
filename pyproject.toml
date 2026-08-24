@@ -11,7 +11,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "Django==4.2.30",
+    "Django==5.2.16",
     "attrs>=25.0.0,<26",
     "base36>=0.1.1,<0.2",
     "beautifulsoup4>=4.8.2,<5",
@@ -30,7 +30,7 @@ dependencies = [
     "django-bitfield>=2.2.0,<3",
     "django-cache-memoize>=0.2.0,<0.3",
     "django-cors-headers>=4.0.0,<5",
-    "django-filter>=2.4.0,<3",
+    "django-filter>=26.1",
     "django-guardian>=3.0.0,<4",
     "django-health-check>=3.24.0,<4",
     "django-imagekit>=6.0.0,<7",
@@ -144,7 +144,6 @@ dev = [
     "pytest-cov>=7.0.0,<8",
     "pytest-django>=4.5.2,<5",
     "pytest-env>=1.0.0,<2",
-    "pytest-freezegun>=0.4.2,<0.5",
     "pytest-mock>=3.10.0,<4",
     "pytest-repeat>=0.9.4",
     "responses>=0.25.0,<0.26",

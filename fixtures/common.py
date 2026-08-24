@@ -50,6 +50,14 @@ def warnings_as_errors():
             module=".*(api_jwt|api_jws|rest_framework_jwt|astroid|bs4|celery|factory|botocore|posthog|pydantic).*",
             category=DeprecationWarning,
         )
+        # django-safedelete 1.4.1 (latest) still calls LogEntry.objects.log_action(),
+        # deprecated in Django 5.2. Drop once upstream moves to log_actions().
+        warnings.filterwarnings(
+            "ignore",
+            message=r"LogEntryManager\.log_action\(\) is deprecated.*",
+            module=r"safedelete\.admin",
+            category=DeprecationWarning,
+        )
         yield
     finally:
         warnings.resetwarnings()
