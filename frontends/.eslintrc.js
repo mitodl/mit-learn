@@ -55,6 +55,12 @@ module.exports = {
           ],
           message: "Please import from @mitodl/smoot-design instead.",
         },
+        {
+          name: "next/navigation",
+          importNames: ["useSearchParams"],
+          message:
+            "Use useAppSearchParams from @/common/useAppSearchParams — query param reads go through the registry in @/common/searchParams (hq#12925).",
+        },
       ],
       patterns: [
         {

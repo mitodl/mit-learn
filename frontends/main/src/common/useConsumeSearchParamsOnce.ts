@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { useSearchParams } from "next/navigation"
+import { useAppSearchParams } from "./useAppSearchParams"
 
 type ConsumedSearchParamsResult<T> = {
   value: T | undefined
@@ -25,7 +25,7 @@ type SearchParamsParser<T> = (
 const useConsumeSearchParamsOnce = <T>(
   parse: SearchParamsParser<T>,
 ): T | undefined => {
-  const searchParams = useSearchParams()
+  const searchParams = useAppSearchParams()
   const [consumed, setConsumed] = React.useState<T | undefined>(undefined)
   const processed = React.useRef(false)
 
