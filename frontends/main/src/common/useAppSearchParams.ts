@@ -22,8 +22,7 @@ interface AppSearchParams extends ReadonlyURLSearchParams {
  * lint). Reading a param not registered in @/common/searchParams is a type
  * error — see that module's docs for how to register one.
  */
-const useAppSearchParams = (): AppSearchParams =>
-  useSearchParams() as AppSearchParams
+const useAppSearchParams = (): AppSearchParams => useSearchParams()
 
 export { useAppSearchParams }
 export type { AppSearchParams }
