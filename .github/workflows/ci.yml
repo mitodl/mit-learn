@@ -274,9 +274,13 @@ jobs:
   # Requiring `ci-gate` instead keeps the list of what must pass in the same file as
   # the jobs it names, so adding or renaming a job is one edit in one repo.
   #
-  # `openapi-diff` is deliberately absent: it lives in its own workflow and fails on
-  # INTENTIONAL breaking API changes (`oasdiff breaking --fail-on ERR`), so gating
-  # merges on it would mean bypassing the ruleset on every deliberate API change.
+  # `openapi-diff` is absent from `needs` because `needs` can only reference jobs in
+  # this same workflow file, and `openapi-diff` runs in its own workflow (triggered on
+  # `pull_request` rather than `push`). It now has an `--err-ignore` allowlist
+  # (openapi/specs/oasdiff-err-ignore.txt) for intentional breaking changes, so it
+  # should be required directly, alongside `ci-gate`, in the ol-infrastructure ruleset
+  # -- its job name is stable and isn't subject to the renaming/matrix drift `ci-gate`
+  # exists to solve.
   ci-gate:
     needs:
       - python-tests

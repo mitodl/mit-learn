@@ -67,6 +67,7 @@ jobs:
             --volume ${{ github.workspace }}:${{ github.workspace }}:ro \
             -e GITHUB_WORKSPACE=${{ github.workspace }} \
             tufin/oasdiff breaking \
+            --err-ignore head/openapi/specs/oasdiff-err-ignore.txt \
             --fail-on ERR \
             --format githubactions \
             --composed --flatten-allof \
