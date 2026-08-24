@@ -25,7 +25,12 @@ from main.constants import (
     ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
     ALLOWED_HTML_TAGS_WITH_LINKS,
 )
-from main.utils import clean_data, frontend_absolute_url, now_in_utc
+from main.utils import (
+    clean_data,
+    clear_views_cache,
+    frontend_absolute_url,
+    now_in_utc,
+)
 
 CONFIG_FILE_REPO = "mitodl/open-podcast-data"
 CONFIG_FILE_FOLDER = "podcasts"
@@ -302,6 +307,7 @@ def get_podcast_transcripts(episode_resources: QuerySet[LearningResource]) -> No
     Args:
         episode_resources: LearningResource objects with a related podcast_episode
     """
+    updated = 0
     for resource in episode_resources:
         # Per-episode guard: one malformed feed fragment or unreachable host
         # must not abort the batch and skip every episode after it.
@@ -315,10 +321,20 @@ def get_podcast_transcripts(episode_resources: QuerySet[LearningResource]) -> No
                 episode.transcript = transcript
                 episode.save()
                 update_index(resource, newly_created=False)
+                updated += 1
         except Exception:
             log.exception(
                 "Error fetching transcript for podcast episode %s", resource.id
             )
+
+    if updated:
+        # The transcript endpoint caches responses for
+        # REDIS_VIEW_CACHE_DURATION, so without this an --overwrite run or a
+        # feed publishing a corrected transcript would keep serving the old
+        # text for up to a day. Cleared once for the batch rather than per
+        # episode: the keys vary by request, so the prefix is the unit.
+        clear_views_cache(key_prefix="podcast_transcript")
+        log.info("Updated transcripts for %i podcast episodes", updated)
 
 
 def get_all_mit_podcasts_channel_rss():

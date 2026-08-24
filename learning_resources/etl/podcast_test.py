@@ -485,3 +485,44 @@ def test_transform_episode_omits_transcript(mock_github_client):
     assert (
         "transcript" not in transform_episode(item, None, [], None)["podcast_episode"]
     )
+
+
+def test_get_podcast_transcripts_clears_the_view_cache(mocker):
+    """
+    A saved transcript invalidates the cached transcript responses.
+
+    The endpoint caches for REDIS_VIEW_CACHE_DURATION, so an --overwrite run
+    would otherwise keep serving the superseded text for up to a day.
+    """
+    mocker.patch(
+        "learning_resources.etl.podcast.fetch_transcript",
+        return_value="Host: the transcript.",
+    )
+    mocker.patch("learning_resources.etl.podcast.update_index")
+    mock_clear = mocker.patch("learning_resources.etl.podcast.clear_views_cache")
+    episode = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt" type="text/vtt"/></item>',
+        transcript="",
+    )
+
+    get_podcast_transcripts(
+        LearningResource.objects.filter(id=episode.learning_resource_id)
+    )
+
+    mock_clear.assert_called_once_with(key_prefix="podcast_transcript")
+
+
+def test_get_podcast_transcripts_leaves_the_cache_alone_when_nothing_changed(mocker):
+    """A run that saves nothing must not evict responses that are still valid"""
+    mocker.patch("learning_resources.etl.podcast.fetch_transcript", return_value="")
+    mocker.patch("learning_resources.etl.podcast.update_index")
+    mock_clear = mocker.patch("learning_resources.etl.podcast.clear_views_cache")
+    episode = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt"/></item>', transcript=""
+    )
+
+    get_podcast_transcripts(
+        LearningResource.objects.filter(id=episode.learning_resource_id)
+    )
+
+    mock_clear.assert_not_called()
