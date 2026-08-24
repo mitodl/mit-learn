@@ -14,6 +14,13 @@
  * therefore means "suppressed to protect learner privacy", NOT zero and NOT
  * missing — render it as such (see `SuppressibleValue` in the dashboard) and
  * never coerce it to 0 in a chart or an average.
+ *
+ * The activity totals (`total_videos_watched` and friends) are nullable for a
+ * less obvious reason: they count events, not learners, so the floor is applied
+ * through the cohort that produced them rather than to the total itself. A
+ * large total suppresses when few enough learners are behind it — 500 videos
+ * watched by 2 learners comes back `null`. Do not infer from a big number that
+ * it is safe to display, and do not treat a `null` total as "no activity".
  */
 
 /**
@@ -40,7 +47,7 @@ export type OrgAnalyticsResponse<RowT> = {
 export type ContractUtilization = {
   organization_key: string
   organization_name: string
-  contract_pk: number
+  contract_pk: string
   b2b_contract_name: string
   b2b_contract_is_active: boolean
   b2b_contract_start_date: string | null
@@ -58,9 +65,9 @@ export type ContractUtilization = {
 export type EnrollmentCompletionFunnel = {
   organization_key: string
   organization_name: string
-  contract_pk: number
+  contract_pk: string
   b2b_contract_name: string
-  courserun_pk: number
+  courserun_pk: string
   courserun_readable_id: string
   courserun_title: string
   enrolled_learners: number
@@ -82,19 +89,24 @@ export type MonthlyEngagementTrend = {
   activity_year_and_month: string
   monthly_active_learners: number
   new_enrollments: number | null
+  enrolling_learners: number | null
   certificates_earned: number | null
-  total_videos_watched: number
-  total_problems_attempted: number
-  total_chatbot_interactions: number
+  certified_learners: number | null
+  total_videos_watched: number | null
+  video_watchers: number | null
+  total_problems_attempted: number | null
+  problem_attempters: number | null
+  total_chatbot_interactions: number | null
+  chatbot_users: number | null
 }
 
 /** `mv_b2b_program_funnel` — grain: org x contract x program. */
 export type ProgramFunnel = {
   organization_key: string
   organization_name: string
-  contract_pk: number
+  contract_pk: string
   b2b_contract_name: string
-  program_pk: number
+  program_pk: string
   program_title: string
   total_courses: number
   enrolled_in_contract_courses: number
@@ -112,8 +124,10 @@ export type ContentEngagementDepth = {
   engaged_learners: number | null
   engagement_rate_pct: number | null
   total_videos_watched: number | null
+  video_watchers: number | null
   avg_videos_per_engaged_learner: number | null
   total_problems_attempted: number | null
+  problem_attempters: number | null
   avg_problems_per_engaged_learner: number | null
   total_chatbot_interactions: number | null
   chatbot_users: number | null
