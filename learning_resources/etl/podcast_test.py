@@ -355,6 +355,9 @@ def test_github_podcast_config_files(settings, mock_github_client):
     assert len(results) == 2
 
 
+MISSING_RSS_URL = "Required key 'rss_url' is not present or not a url"
+
+
 @pytest.mark.parametrize(
     ("config", "errors"),
     [
@@ -364,6 +367,11 @@ def test_github_podcast_config_files(settings, mock_github_client):
             ["Podcast data should be a dict"],
         ),
         (None, ["podcast config data is empty"]),
+        ({"website": "http://test.edu"}, [MISSING_RSS_URL]),
+        # a bare `rss_url:` in the yaml, or a non-string scalar
+        ({"rss_url": None}, [MISSING_RSS_URL]),
+        ({"rss_url": ""}, [MISSING_RSS_URL]),
+        ({"rss_url": 123}, [MISSING_RSS_URL]),
         ({"rss_url": "http://test.edu", "website": "http://test.edu"}, []),
     ],
 )

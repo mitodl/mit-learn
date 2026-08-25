@@ -70,8 +70,9 @@ def validate_podcast_config(podcast_config):
         errors.append("Podcast data should be a dict")
         return errors
 
-    if "rss_url" not in podcast_config:
-        errors.append("Required key 'rss_url' is not present")
+    rss_url = podcast_config.get("rss_url")
+    if not isinstance(rss_url, str) or not rss_url.strip():
+        errors.append("Required key 'rss_url' is not present or not a url")
 
     return errors
 
