@@ -1294,20 +1294,24 @@ class ContentFile(TimestampedModel):
             ),
             # One partial unique index per parent identity. A single index over
             # all three nullable FKs would never reject anything, since Postgres
-            # treats NULLs as distinct.
+            # treats NULLs as distinct. nulls_distinct=False so keyless rows on
+            # the same parent also collide instead of duplicating.
             models.UniqueConstraint(
                 fields=["run", "key"],
                 condition=models.Q(run__isnull=False),
+                nulls_distinct=False,
                 name="contentfile_run_key_uniq",
             ),
             models.UniqueConstraint(
                 fields=["learning_resource", "key"],
                 condition=models.Q(learning_resource__isnull=False),
+                nulls_distinct=False,
                 name="contentfile_learning_resource_key_uniq",
             ),
             models.UniqueConstraint(
                 fields=["direct_learning_resource", "key"],
                 condition=models.Q(direct_learning_resource__isnull=False),
+                nulls_distinct=False,
                 name="contentfile_direct_learning_resource_key_uniq",
             ),
         ]

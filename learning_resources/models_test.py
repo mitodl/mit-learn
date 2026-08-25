@@ -184,3 +184,12 @@ def test_content_file_run_key_unique():
 
     with pytest.raises(IntegrityError), transaction.atomic():
         ContentFile.objects.create(run=run, key="file.pdf")
+
+
+def test_content_file_null_key_unique():
+    """NULLS NOT DISTINCT: a second keyless ContentFile on the same run is rejected"""
+    run = LearningResourceRunFactory.create()
+    ContentFile.objects.create(run=run, key=None)
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        ContentFile.objects.create(run=run, key=None)

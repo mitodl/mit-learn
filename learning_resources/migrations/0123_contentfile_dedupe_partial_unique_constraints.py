@@ -38,7 +38,8 @@ IDENTITIES = [
 BUILD_ATTEMPTS = 3
 
 # NULL keys partition together, which is what we want here: two keyless rows on
-# the same parent from the same ingest race are duplicates of each other. Keep
+# the same parent from the same ingest race are duplicates of each other (the
+# NULLS NOT DISTINCT indexes enforce the same rule going forward). Keep
 # priority: a row with a summary (expensive LLM output) first, then the most
 # recently updated, then the highest id.
 #
@@ -116,13 +117,18 @@ def _build_index(column, name):
         for attempt in range(1, BUILD_ATTEMPTS + 1):
             with connection.cursor() as cursor:
                 # A previously failed CONCURRENTLY build leaves an INVALID
-                # index behind; clear it before (re)building.
-                cursor.execute(f'DROP INDEX IF EXISTS "{name}"')
+                # index behind; clear it before (re)building. CONCURRENTLY so
+                # the drop cannot queue an ACCESS EXCLUSIVE lock behind a
+                # long-running query and stall traffic.
+                cursor.execute(f'DROP INDEX CONCURRENTLY IF EXISTS "{name}"')
             try:
                 with connection.cursor() as cursor:
+                    # NULLS NOT DISTINCT so keyless rows on the same parent
+                    # collide too (key is nullable; PG >= 15).
                     cursor.execute(
                         f'CREATE UNIQUE INDEX CONCURRENTLY "{name}"'
                         f" ON {TABLE} ({column}, key)"
+                        f" NULLS NOT DISTINCT"
                         f" WHERE {column} IS NOT NULL"
                     )
             except DatabaseError:
@@ -140,7 +146,7 @@ def _drop_index(name):
 
     def reverse(apps, schema_editor):
         with schema_editor.connection.cursor() as cursor:
-            cursor.execute(f'DROP INDEX IF EXISTS "{name}"')
+            cursor.execute(f'DROP INDEX CONCURRENTLY IF EXISTS "{name}"')
 
     return reverse
 
@@ -185,6 +191,7 @@ class Migration(migrations.Migration):
                                 **{f"{column.removesuffix('_id')}__isnull": False}
                             ),
                             fields=(column.removesuffix("_id"), "key"),
+                            nulls_distinct=False,
                             name=name,
                         ),
                     ),
