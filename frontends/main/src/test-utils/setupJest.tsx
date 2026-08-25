@@ -8,7 +8,10 @@ import {
   assertMockAdapterInstalled,
 } from "api/test-utils/mockAxios"
 import preloadAll from "jest-next-dynamic-ts"
-import { dismissErrorToast } from "@/page-components/Toaster/toastStore"
+import {
+  dismissErrorToast,
+  getToastSnapshot,
+} from "@/page-components/Toaster/toastStore"
 
 // Wrapped in `() => …` to defer the identifier lookup past TDZ — jest.mock
 // is hoisted above imports, so passing `mockAxiosFactory` directly would
@@ -72,10 +75,28 @@ beforeEach(() => {
   document.querySelector("title")?.remove()
 
   // The error-toast store is module-level global state; a toast fired by one
-  // test would otherwise persist into the next.
+  // test would otherwise persist into the next. (The afterEach below usually
+  // clears it, but a toast can land asynchronously after that check runs.)
   dismissErrorToast()
 
   assertMockAdapterInstalled()
+})
+
+afterEach(() => {
+  // Every mutation failure raises the global error toast unless the call site
+  // opts out. A toast left showing at the end of a test means the test drove a
+  // failure without deciding which error surface the user should see.
+  const toast = getToastSnapshot()
+  if (toast) {
+    dismissErrorToast()
+    throw new Error(
+      [
+        `A mutation failure fired the global error toast ("${toast.message}") and the test did not acknowledge it.`,
+        '- If the component renders its own inline error for this failure, opt out of the toast: pass `meta: SILENCE_ERROR_TOAST` (from "api/mutation-meta") to the mutation hook.',
+        '- If the toast is the intended error surface, acknowledge it in the test: `await expectErrorToast(...)` (from "@/test-utils").',
+      ].join("\n"),
+    )
+  }
 })
 
 window.scrollTo = jest.fn()

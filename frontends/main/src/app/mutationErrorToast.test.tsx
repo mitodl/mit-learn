@@ -1,6 +1,11 @@
 import React from "react"
 import { useMutation } from "@tanstack/react-query"
-import { renderWithProviders, screen, user } from "@/test-utils"
+import {
+  renderWithProviders,
+  screen,
+  user,
+  expectErrorToast,
+} from "@/test-utils"
 import { GENERIC_ERROR_MESSAGE } from "@/app/getQueryClient"
 import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import type { MutationErrorMeta } from "api/mutation-meta"
@@ -44,6 +49,7 @@ test("a mutation failure with no meta shows the global error toast", async () =>
   expect(await screen.findByRole("alert")).toHaveTextContent(
     GENERIC_ERROR_MESSAGE,
   )
+  await expectErrorToast(GENERIC_ERROR_MESSAGE)
 })
 
 test("a mutation with SILENCE_ERROR_TOAST shows only its inline error, no toast", async () => {

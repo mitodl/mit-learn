@@ -183,6 +183,18 @@ expect(consoleError).toHaveBeenCalled()
 // In rare cases, TestingErrorBoundary can be used to test thrown errors.
 ```
 
+**Mutation failures and the global error toast:**
+
+Every mutation failure raises a global error toast unless the call site opts out (`meta: SILENCE_ERROR_TOAST`), and an `afterEach` fails any test that leaves a toast unacknowledged.
+
+```tsx
+import { expectErrorToast } from "@/test-utils"
+// After driving a mutation failure whose intended error surface is the toast:
+await expectErrorToast("Something went wrong")
+// If the component shows its own inline error instead, don't acknowledge —
+// opt the component out of the toast with `meta: SILENCE_ERROR_TOAST`.
+```
+
 ## Troubleshooting
 
 - **"No response specified"** → Mock the API call with `setMockResponse`
