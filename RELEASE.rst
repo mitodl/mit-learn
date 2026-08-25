@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.77.12
+---------------
+
+- Add department 21T (Theater Arts) (#3668)
+- Preconnect to the API and Typekit origins (#3819)
+- Add a content-engagement panel to the B2B analytics dashboard (#3806)
+
 Version 0.77.11 (Released August 25, 2026)
 ---------------
 
