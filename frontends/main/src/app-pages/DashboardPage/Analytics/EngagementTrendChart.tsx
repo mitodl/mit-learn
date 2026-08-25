@@ -34,8 +34,9 @@ import SectionError from "./SectionError"
  * `total_chatbot_interactions` — those are counts of *events*, run three or
  * four orders of magnitude larger, and putting them here would need a second
  * y-scale. A dual-axis chart invites the reader to compare two things that were
- * never on the same scale, so they are deliberately left out; they belong in a
- * separate content-engagement panel.
+ * never on the same scale, so they are deliberately left out; they are
+ * reported by `ContentEngagementTable` instead, which pairs each with a
+ * per-learner rate rather than plotting it.
  *
  * # Suppressed months
  *

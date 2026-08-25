@@ -1278,7 +1278,7 @@ class ContentFile(TimestampedModel):
         # add constraint so that atleast run or learning_resource is defined (not both)
         constraints = [
             models.CheckConstraint(
-                check=(
+                condition=(
                     models.Q(learning_resource__isnull=False, run__isnull=True)
                     | models.Q(run__isnull=False, learning_resource__isnull=True)
                     | models.Q(

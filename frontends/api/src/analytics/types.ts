@@ -102,7 +102,21 @@ export type ProgramFunnel = {
   program_course_completers: number | null
 }
 
-/** `mv_b2b_content_engagement_depth` — grain: org x course run, all-time. */
+/**
+ * `mv_b2b_content_engagement_depth` — grain: org x course run, all-time.
+ *
+ * Three of these columns are cohort counts rather than metrics a reader asked
+ * for: `video_watchers`, `problem_attempters` and `chatbot_users` are the
+ * distinct learners behind the activity total beside each of them. The view
+ * publishes them so the API can apply the anonymity floor to the cohort that
+ * actually produced a sum rather than to a superset of it — an average over
+ * one learner *is* that learner's value, however many learners were merely
+ * "engaged". Keep each one next to the total it accounts for.
+ *
+ * The two `avg_*_per_engaged_learner` columns divide by `engaged_learners`,
+ * as their names say; the totals above them are contributed only by the
+ * narrower cohorts. That split is why both are suppressible independently.
+ */
 export type ContentEngagementDepth = {
   organization_key: string
   organization_name: string
@@ -112,8 +126,10 @@ export type ContentEngagementDepth = {
   engaged_learners: number | null
   engagement_rate_pct: number | null
   total_videos_watched: number | null
+  video_watchers: number | null
   avg_videos_per_engaged_learner: number | null
   total_problems_attempted: number | null
+  problem_attempters: number | null
   avg_problems_per_engaged_learner: number | null
   total_chatbot_interactions: number | null
   chatbot_users: number | null

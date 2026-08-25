@@ -43,7 +43,7 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="contentfile",
             constraint=models.CheckConstraint(
-                check=models.Q(
+                condition=models.Q(
                     models.Q(
                         ("learning_resource__isnull", False), ("run__isnull", True)
                     ),
