@@ -70,10 +70,20 @@ DELETE FROM {table} WHERE id IN (SELECT id FROM losers)
 
 def _dedupe_identity(connection, column):
     """Delete all but the best row in each (parent, key) group for one parent"""
-    with connection.cursor() as cursor:
-        cursor.execute(
-            DEDUPE_SQL.format(column=column, table=TABLE, tags_table=TAGS_TABLE)
-        )
+    for attempt in range(1, BUILD_ATTEMPTS + 1):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    DEDUPE_SQL.format(column=column, table=TABLE, tags_table=TAGS_TABLE)
+                )
+        except DatabaseError:
+            # A tag row committed mid-statement is invisible to the statement
+            # snapshot but not to the FK check, which aborts the parent
+            # delete. Retry with a fresh snapshot that includes it.
+            if attempt == BUILD_ATTEMPTS:
+                raise
+        else:
+            return
 
 
 def dedupe_content_files(apps, schema_editor):
