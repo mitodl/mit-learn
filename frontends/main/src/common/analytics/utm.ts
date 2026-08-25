@@ -1,10 +1,31 @@
 type UtmParams = {
+  /**
+   * which platform or site sent the visitor (e.g. Google, a newsletter)
+   */
   utm_source?: string
+  /**
+   * the type of channel used (e.g. email, paid ad, organic social)
+   */
   utm_medium?: string
+  /**
+   * the name of the marketing campaign
+   */
   utm_campaign?: string
+  /**
+   * the paid search keyword that triggered the ad, if applicable
+   */
   utm_term?: string
+  /**
+   * which specific ad or link variant was clicked (for A/B-tested links)
+   */
   utm_content?: string
+  /**
+   * Google's click ID, present when the visit came from a Google Ads click
+   */
   gclid?: string
+  /**
+   * LinkedIn's click ID, present when the visit came from a LinkedIn Ads click
+   */
   li_fat_id?: string
 }
 
