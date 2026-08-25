@@ -8,7 +8,7 @@ import yaml
 from bs4 import BeautifulSoup as bs  # noqa: N813
 from dateutil.parser import parse
 from django.conf import settings
-from requests.exceptions import HTTPError
+from requests.exceptions import RequestException
 
 from learning_resources.constants import Availability, LearningResourceType
 from learning_resources.etl.constants import ETLSource
@@ -131,15 +131,19 @@ def extract():
     for playlist_config in configs:
         rss_url = playlist_config["rss_url"]
         try:
-            response = requests.get(rss_url, headers=BROWSER_UA_HEADERS)  # noqa: S113
+            response = requests.get(
+                rss_url,
+                headers=BROWSER_UA_HEADERS,
+                timeout=settings.REQUESTS_TIMEOUT,
+            )
             response.raise_for_status()
 
             feed = bs(response.content, "xml")
             yield (feed, playlist_config)
-        except ConnectionResetError:
-            log.warning("Connection reset error for rss url %s", rss_url)
-        except (ConnectionError, HTTPError):
-            log.exception("Invalid rss url %s", rss_url)
+        except RequestException:
+            # RequestException is the base class for every requests failure,
+            # including its own ConnectionError, which is not the builtin one.
+            log.exception("Could not fetch rss url %s", rss_url)
 
 
 def transform_episode(rss_data, offered_by, topics, parent_image):

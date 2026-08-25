@@ -9,7 +9,8 @@ from bs4 import BeautifulSoup as bs  # noqa: N813
 from dateutil.tz import tzutc
 from django.conf import settings
 from freezegun import freeze_time
-from requests.exceptions import HTTPError
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import HTTPError, Timeout
 
 from learning_resources.constants import Availability, LearningResourceType, OfferedBy
 from learning_resources.etl.constants import ETLSource
@@ -233,29 +234,9 @@ def test_transform_with_error(mocker, mock_github_client):
     assert results[0]["url"] == "http://website.url/podcast"
 
 
-def test_extract_connection_reset_error(mocker, mock_github_client):
-    """Test extract handles ConnectionResetError gracefully"""
-    mock_warning_log = mocker.patch("learning_resources.etl.podcast.log.warning")
-    mocker.patch(
-        "learning_resources.etl.podcast.requests.get",
-        side_effect=ConnectionResetError,
-    )
-    podcast_list = [mock_podcast_file()]
-    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = (
-        podcast_list
-    )
-
-    results = list(extract())
-
-    assert results == []
-    mock_warning_log.assert_called_once_with(
-        "Connection reset error for rss url %s", "http://website.url/podcast/rss.xml"
-    )
-
-
-@pytest.mark.parametrize("exception_cls", [ConnectionError, HTTPError])
-def test_extract_connection_error(mocker, mock_github_client, exception_cls):
-    """Test extract handles ConnectionError and HTTPError gracefully"""
+@pytest.mark.parametrize("exception_cls", [RequestsConnectionError, HTTPError, Timeout])
+def test_extract_request_error(mocker, mock_github_client, exception_cls):
+    """Test extract logs and skips a feed that can't be fetched"""
     mock_exception_log = mocker.patch("learning_resources.etl.podcast.log.exception")
     mocker.patch(
         "learning_resources.etl.podcast.requests.get",
@@ -270,8 +251,42 @@ def test_extract_connection_error(mocker, mock_github_client, exception_cls):
 
     assert results == []
     mock_exception_log.assert_called_once_with(
-        "Invalid rss url %s", "http://website.url/podcast/rss.xml"
+        "Could not fetch rss url %s", "http://website.url/podcast/rss.xml"
     )
+
+
+def test_extract_continues_after_unreachable_feed(mocker, mock_github_client):
+    """An unreachable feed should not stop the feeds after it"""
+    mocker.patch(
+        "learning_resources.etl.podcast.requests.get",
+        side_effect=[RequestsConnectionError, mocker.Mock(content=rss_content())],
+    )
+    good_config = mock_podcast_file(rss_url="http://website.url/good/rss.xml")
+    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = [
+        mock_podcast_file(rss_url="http://unreachable.url/rss.xml"),
+        good_config,
+    ]
+
+    results = list(extract())
+
+    assert results == [
+        (bs(rss_content(), "xml"), yaml.safe_load(good_config.decoded_content))
+    ]
+
+
+def test_extract_passes_timeout(mocker, mock_github_client):
+    """Test extract sets a request timeout"""
+    mock_get = mocker.patch(
+        "learning_resources.etl.podcast.requests.get",
+        return_value=mocker.Mock(content=rss_content()),
+    )
+    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = [
+        mock_podcast_file()
+    ]
+
+    list(extract())
+
+    assert mock_get.call_args.kwargs["timeout"] == settings.REQUESTS_TIMEOUT
 
 
 @pytest.mark.django_db
