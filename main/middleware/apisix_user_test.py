@@ -69,7 +69,9 @@ def test_get_request(mocker, mock_login, settings):
     """Test that a valid request creates a new user."""
     close_old_connections()
     settings.POSTHOG_PROJECT_API_KEY = "fake-key"
-    mock_posthog_cls = mocker.patch("main.middleware.apisix_user.Posthog")
+    mock_posthog_cls = mocker.patch(
+        "main.middleware.apisix_user.Posthog", autospec=True
+    )
     mock_request = mocker.Mock(
         META={
             "HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode()),
@@ -88,8 +90,8 @@ def test_get_request(mocker, mock_login, settings):
     assert user.global_id == apisix_user_info["sub"]
     mock_posthog_cls.assert_called_once()
     mock_posthog_cls.return_value.capture.assert_called_once_with(
-        apisix_user_info["sub"],
         event=PostHogEvents.ACCOUNT_CREATED.value,
+        distinct_id=apisix_user_info["sub"],
         properties=mocker.ANY,
     )
 
@@ -99,7 +101,9 @@ def test_get_request_no_posthog_key(mocker, mock_login, settings):
     """Test that PostHog is not called when POSTHOG_PROJECT_API_KEY is empty."""
     close_old_connections()
     settings.POSTHOG_PROJECT_API_KEY = ""
-    mock_posthog_cls = mocker.patch("main.middleware.apisix_user.Posthog")
+    mock_posthog_cls = mocker.patch(
+        "main.middleware.apisix_user.Posthog", autospec=True
+    )
     mock_request = mocker.Mock(
         META={
             "HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode()),
@@ -170,7 +174,7 @@ def test_get_request_ambiguous_identity_fails_closed(mocker, mock_login):
     mock_get_response = mocker.Mock(return_value="response")
     apisix_middleware = ApisixUserMiddleware(mock_get_response)
 
-    assert apisix_middleware.process_request(mock_request) == "response"
+    assert apisix_middleware(mock_request) == "response"
 
     mock_login.assert_not_called()
     mock_get_response.assert_called_once_with(mock_request)
@@ -199,9 +203,11 @@ def test_get_request_different_user_logout(mocker, client, same_user):
     )
     mocker.patch("main.middleware.apisix_user.login")
     mock_logout = mocker.patch("main.middleware.apisix_user.logout")
-    apisix_middleware = ApisixUserMiddleware(mocker.Mock())
-    apisix_middleware.process_request(mock_request)
+    mock_get_response = mocker.Mock(return_value="response")
+    apisix_middleware = ApisixUserMiddleware(mock_get_response)
+    assert apisix_middleware(mock_request) == "response"
     assert mock_logout.call_count == (0 if same_user else 1)
+    mock_get_response.assert_called_once_with(mock_request)
 
 
 @pytest.mark.django_db(transaction=True)

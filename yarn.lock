@@ -3557,23 +3557,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/arithmix@npm:^0.2.4":
-  version: 0.2.4
-  resolution: "@mitodl/arithmix@npm:0.2.4"
+"@mitodl/arithmix@npm:^0.2.5":
+  version: 0.2.5
+  resolution: "@mitodl/arithmix@npm:0.2.5"
   peerDependencies:
     "@emotion/react": ">=11"
     "@emotion/styled": ">=11"
     react: ">=18"
     react-dom: ">=18"
-  checksum: 10/0446f5d75db18a18d60432bf7aec508d8533797ee7d17084fc52534f29944fbcc7354dbe11c36b33b51cd5b800fe88603eaf53e5e8d370827cfb40ebab9d7e70
+  checksum: 10/48ba61eb110621a75c20cad74fe4aa7a0523f23aa68de1586ef9d918c9a0113ea525e02e577bdba2b4f85fa46a272d63829d79f74da91803198b55c233d65aa9
   languageName: node
   linkType: hard
 
-"@mitodl/course-search-utils@npm:^3.5.2":
-  version: 3.5.2
-  resolution: "@mitodl/course-search-utils@npm:3.5.2"
+"@mitodl/course-search-utils@npm:^3.8.0":
+  version: 3.8.0
+  resolution: "@mitodl/course-search-utils@npm:3.8.0"
   dependencies:
-    "@mitodl/mit-learn-api-axios": "npm:^2026.3.4"
+    "@mitodl/mit-learn-api-axios": "npm:^2026.8.19"
     "@remixicon/react": "npm:^4.2.0"
     axios: "npm:^1.6.7"
     fuse.js: "npm:^7.0.0"
@@ -3591,7 +3591,7 @@ __metadata:
       optional: true
     react-router:
       optional: true
-  checksum: 10/1889d2ea1ba2494fed6c45a598fb802d8ff3896db92d98d652afa52b480107ac042c91c7e5fd91cfbd4b1ac994a0041abb2a76990d22c83d71af9675102057f7
+  checksum: 10/6c4db32e04f38690cef129e536a446039e2557c1ef40362a103cf86b93fcd8e6c1075ac2da095b3dcf85a85aa6588cd04368b4acbd60cef6f7e4c5928211ece4
   languageName: node
   linkType: hard
 
@@ -3621,13 +3621,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/mit-learn-api-axios@npm:^2026.3.4":
-  version: 2026.3.4
-  resolution: "@mitodl/mit-learn-api-axios@npm:2026.3.4"
+"@mitodl/mit-learn-api-axios@npm:^2026.8.19":
+  version: 2026.8.24
+  resolution: "@mitodl/mit-learn-api-axios@npm:2026.8.24"
   dependencies:
     "@types/node": "npm:^22.0.0"
     axios: "npm:^1.6.5"
-  checksum: 10/1617b281821aaee9f44a4a1e6632cd8a2441277d17044265f2004f6e0ec1532095e5a85d334dc9666737ebdbe44144bb4690c4cc9d033a9e065c4bcf66f648c3
+  checksum: 10/b8652f3bae36939c09571db75ef26fae269977cb9afe409dd31bd1f60dcc3d408a348af4b6edcf950ebb865130682691330f535a69eb6e2cd87e802e128654f3
   languageName: node
   linkType: hard
 
@@ -16906,8 +16906,8 @@ __metadata:
     "@faker-js/faker": "npm:^10.0.0"
     "@floating-ui/react": "npm:^0.27.16"
     "@happy-dom/jest-environment": "npm:^20.1.0"
-    "@mitodl/arithmix": "npm:^0.2.4"
-    "@mitodl/course-search-utils": "npm:^3.5.2"
+    "@mitodl/arithmix": "npm:^0.2.5"
+    "@mitodl/course-search-utils": "npm:^3.8.0"
     "@mitodl/hacksnack": "npm:^0.1.2"
     "@mitodl/mitxonline-api-axios": "npm:2026.8.18"
     "@mitodl/smoot-design": "npm:6.33.1"
