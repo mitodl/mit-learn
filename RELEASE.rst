@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.77.11
+Version 0.77.11 (Released August 25, 2026)
 ---------------
 
 - fix: bump version for arithmix game (#3832)
