@@ -12,10 +12,9 @@ from django.db.models import Q, QuerySet
 from requests.exceptions import HTTPError
 
 from learning_resources.constants import Availability, LearningResourceType
-from learning_resources.etl.constants import ETLSource
+from learning_resources.etl.constants import BROWSER_UA_HEADERS, ETLSource
 from learning_resources.etl.loaders import update_index
 from learning_resources.etl.podcast_transcript import (
-    BROWSER_UA_HEADERS,
     fetch_transcript,
     transcript_tags_from_rss,
 )

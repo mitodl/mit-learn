@@ -23,6 +23,8 @@ from urllib.parse import ParseResult, urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup as bs  # noqa: N813
 
+from learning_resources.etl.constants import BROWSER_UA_HEADERS
+
 log = logging.getLogger(__name__)
 
 # Ordered by the quality of the files MIT's feeds actually serve; the spec
@@ -54,15 +56,6 @@ TRANSCRIPT_TYPE_BY_EXTENSION = {
 # A feed item publishes one transcript per format, so a handful is the real
 # ceiling; the cap only bounds the requests one hostile item can provoke.
 MAX_TRANSCRIPT_CANDIDATES = 4
-
-# Several transcript hosts (buzzsprout among them) 403 the default
-# python-requests User-Agent, so requests are made as a browser. Shared with
-# podcast.extract(), which needs the same for the feeds themselves.
-BROWSER_UA_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/39.0.2171.95 Safari/537.36"
-}
 
 # Generous ceilings; the largest real transcript is ~80KB. These only bound a
 # hostile or broken response.
@@ -212,7 +205,6 @@ class TranscriptCandidate(NamedTuple):
 
     url: str
     media_type: str
-    entry: dict
 
 
 def rank_transcript_candidates(entries: list[dict]) -> list[TranscriptCandidate]:
@@ -245,7 +237,7 @@ def rank_transcript_candidates(entries: list[dict]) -> list[TranscriptCandidate]
             (
                 TRANSCRIPT_TYPE_PREFERENCE.index(media_type),
                 index,
-                TranscriptCandidate(url=url, media_type=media_type, entry=entry),
+                TranscriptCandidate(url=url, media_type=media_type),
             )
         )
     ranked.sort(key=lambda item: item[:2])
@@ -256,20 +248,6 @@ def rank_transcript_candidates(entries: list[dict]) -> list[TranscriptCandidate]
             MAX_TRANSCRIPT_CANDIDATES,
         )
     return [candidate for *_, candidate in ranked[:MAX_TRANSCRIPT_CANDIDATES]]
-
-
-def select_transcript_url(entries: list[dict]) -> dict | None:
-    """
-    Pick the single best transcript tag from all the tags on one feed item.
-
-    Args:
-        entries: ``{"url", "type", "language"}`` dicts, in feed order
-
-    Returns:
-        the best entry, or None if none is usable
-    """
-    candidates = rank_transcript_candidates(entries)
-    return candidates[0].entry if candidates else None
 
 
 def _is_public_ip(address: str) -> bool:

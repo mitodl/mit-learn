@@ -15,7 +15,6 @@ from learning_resources.etl.podcast_transcript import (
     parse_podcast_index_json,
     parse_transcript_tags,
     rank_transcript_candidates,
-    select_transcript_url,
     transcript_tags_from_rss,
 )
 
@@ -135,7 +134,7 @@ def test_parse_transcript_tags_skips_tags_with_no_url():
     assert parse_transcript_tags(_item('<podcast:transcript type="text/vtt"/>')) == []
 
 
-def test_select_transcript_url_prefers_better_formats():
+def test_rank_transcript_candidates_prefers_better_formats():
     """
     Formats are ranked by the quality of the files feeds actually serve.
 
@@ -149,17 +148,19 @@ def test_select_transcript_url_prefers_better_formats():
         {"url": "v", "type": "text/vtt", "language": None},
         {"url": "p", "type": "text/plain", "language": None},
     ]
-    assert select_transcript_url(entries)["url"] == "p"
-    assert select_transcript_url(entries[:-1])["url"] == "v"
-    assert select_transcript_url(entries[:-2])["url"] == "s"
-    assert select_transcript_url(entries[:1])["url"] == "h"
+    # html ranks last and so falls outside MAX_TRANSCRIPT_CANDIDATES here; on
+    # its own it is still a usable candidate.
+    assert [c.url for c in rank_transcript_candidates(entries)] == ["p", "v", "s", "j"]
+    assert [c.url for c in rank_transcript_candidates(entries[:1])] == ["h"]
 
 
-def test_select_transcript_url_accepts_both_srt_spellings():
+def test_rank_transcript_candidates_accepts_both_srt_spellings():
     """application/srt is non-standard but three MIT feeds send it"""
     for mime_type in ("application/srt", "application/x-subrip"):
         entry = {"url": "s", "type": mime_type, "language": None}
-        assert select_transcript_url([entry]) == entry
+        assert [c.media_type for c in rank_transcript_candidates([entry])] == [
+            mime_type
+        ]
 
 
 @pytest.mark.parametrize(
@@ -174,7 +175,7 @@ def test_select_transcript_url_accepts_both_srt_spellings():
         ("de-DE", False),
     ],
 )
-def test_select_transcript_url_language_filter(language, expected):
+def test_rank_transcript_candidates_language_filter(language, expected):
     """
     Non-English transcripts are dropped, not merely deranked.
 
@@ -183,30 +184,29 @@ def test_select_transcript_url_language_filter(language, expected):
     nothing.
     """
     entry = {"url": "v", "type": "text/vtt", "language": language}
-    assert (select_transcript_url([entry]) is not None) is expected
+    assert bool(rank_transcript_candidates([entry])) is expected
 
 
-def test_select_transcript_url_prefers_english_over_unlabeled():
-    """An explicit en tag wins over one with no language, at the same type"""
-    unlabeled = {"url": "a", "type": "text/vtt", "language": None}
-    english = {"url": "b", "type": "text/plain", "language": "en"}
-    assert select_transcript_url([unlabeled, english])["url"] == "b"
+def test_rank_transcript_candidates_ignores_language_in_ordering():
+    """
+    Language decides inclusion, never rank.
+
+    An explicit ``en`` tag is no better than an absent one -- an absent
+    language means the feed's own, which is English for every podcast Learn
+    ingests -- so format preference still decides.
+    """
+    unlabeled = {"url": "a", "type": "text/plain", "language": None}
+    english = {"url": "b", "type": "text/vtt", "language": "en"}
+    assert [c.url for c in rank_transcript_candidates([english, unlabeled])] == [
+        "a",
+        "b",
+    ]
 
 
-def test_select_transcript_url_ignores_unknown_types():
-    """A type we have no parser for is not selectable"""
-    assert (
-        select_transcript_url(
-            [{"url": "x", "type": "application/pdf", "language": None}]
-        )
-        is None
-    )
-
-
-def test_select_transcript_url_handles_empty():
-    """No tags means no selection"""
-    assert select_transcript_url([]) is None
-    assert select_transcript_url(None) is None
+def test_rank_transcript_candidates_handles_empty():
+    """No tags means no candidates, and a missing list is not an error"""
+    assert rank_transcript_candidates([]) == []
+    assert rank_transcript_candidates(None) == []
 
 
 def test_rank_transcript_candidates_keeps_every_usable_tag():
