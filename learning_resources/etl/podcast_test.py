@@ -72,7 +72,7 @@ def mock_rss_request(mocker):
     """
 
     mocker.patch(
-        "learning_resources.etl.podcast.requests.get",
+        "learning_resources.etl.podcast.requests.Session.get",
         side_effect=[mocker.Mock(content=rss_content())],
     )
 
@@ -84,7 +84,7 @@ def mock_rss_request_with_bad_rss_file(mocker):
     """
 
     mocker.patch(
-        "learning_resources.etl.podcast.requests.get",
+        "learning_resources.etl.podcast.requests.Session.get",
         side_effect=[mocker.Mock(content=""), mocker.Mock(content=rss_content())],
     )
 
@@ -239,7 +239,7 @@ def test_extract_request_error(mocker, mock_github_client, exception_cls):
     """Test extract logs and skips a feed that can't be fetched"""
     mock_exception_log = mocker.patch("learning_resources.etl.podcast.log.exception")
     mocker.patch(
-        "learning_resources.etl.podcast.requests.get",
+        "learning_resources.etl.podcast.requests.Session.get",
         side_effect=exception_cls,
     )
     podcast_list = [mock_podcast_file()]
@@ -255,29 +255,10 @@ def test_extract_request_error(mocker, mock_github_client, exception_cls):
     )
 
 
-def test_extract_continues_after_unreachable_feed(mocker, mock_github_client):
-    """An unreachable feed should not stop the feeds after it"""
-    mocker.patch(
-        "learning_resources.etl.podcast.requests.get",
-        side_effect=[RequestsConnectionError, mocker.Mock(content=rss_content())],
-    )
-    good_config = mock_podcast_file(rss_url="http://website.url/good/rss.xml")
-    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = [
-        mock_podcast_file(rss_url="http://unreachable.url/rss.xml"),
-        good_config,
-    ]
-
-    results = list(extract())
-
-    assert results == [
-        (bs(rss_content(), "xml"), yaml.safe_load(good_config.decoded_content))
-    ]
-
-
 def test_extract_passes_timeout(mocker, mock_github_client):
-    """Test extract sets a request timeout"""
+    """Test extract sets connect and read timeouts"""
     mock_get = mocker.patch(
-        "learning_resources.etl.podcast.requests.get",
+        "learning_resources.etl.podcast.requests.Session.get",
         return_value=mocker.Mock(content=rss_content()),
     )
     mock_github_client.return_value.get_repo.return_value.get_contents.return_value = [
@@ -286,7 +267,28 @@ def test_extract_passes_timeout(mocker, mock_github_client):
 
     list(extract())
 
-    assert mock_get.call_args.kwargs["timeout"] == settings.REQUESTS_TIMEOUT
+    connect_timeout, read_timeout = mock_get.call_args.kwargs["timeout"]
+    assert connect_timeout > 0
+    assert read_timeout == settings.REQUESTS_TIMEOUT
+
+
+def test_extract_unreachable_feed(mocker, mock_github_client):
+    """An unreachable feed should be tracked, and not stop the feeds after it"""
+    mocker.patch(
+        "learning_resources.etl.podcast.requests.Session.get",
+        side_effect=[RequestsConnectionError, mocker.Mock(content=rss_content())],
+    )
+    good_config = mock_podcast_file(rss_url="http://website.url/good/rss.xml")
+    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = [
+        mock_podcast_file(rss_url="http://unreachable.url/rss.xml"),
+        good_config,
+    ]
+    tracked_ids = []
+
+    assert list(extract(tracked_ids=tracked_ids)) == [
+        (bs(rss_content(), "xml"), yaml.safe_load(good_config.decoded_content))
+    ]
+    assert tracked_ids == ["unreachable.url/rss.xml", "website.url/good/rss.xml"]
 
 
 @pytest.mark.django_db

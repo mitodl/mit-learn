@@ -8,7 +8,9 @@ import yaml
 from bs4 import BeautifulSoup as bs  # noqa: N813
 from dateutil.parser import parse
 from django.conf import settings
+from requests.adapters import HTTPAdapter
 from requests.exceptions import RequestException
+from urllib3.util.retry import Retry
 
 from learning_resources.constants import Availability, LearningResourceType
 from learning_resources.etl.constants import ETLSource
@@ -116,9 +118,14 @@ def parse_readable_id_from_url(url):
     return url.split("//")[-1]
 
 
-def extract():
+def extract(tracked_ids: list[str] | None = None):
     """
     Function for extracting podcast data
+
+    Args:
+        tracked_ids (list): caller-owned list, filled with the readable id of
+            every configured feed so the loader can tell a podcast we no longer
+            track apart from one this run couldn't fetch or parse
 
     Returns:
         A generator that returns tupes ((BeautifulSoup object, dict)) with the rss and config data for the podcast
@@ -128,13 +135,28 @@ def extract():
     if not configs:
         return
 
+    if tracked_ids is not None:
+        tracked_ids.extend(
+            parse_readable_id_from_url(config["rss_url"]) for config in configs
+        )
+
+    session = requests.Session()
+    adapter = HTTPAdapter(
+        max_retries=Retry(
+            total=2, backoff_factor=1, status_forcelist=(429, 500, 502, 503, 504)
+        )
+    )
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+
     for playlist_config in configs:
         rss_url = playlist_config["rss_url"]
         try:
-            response = requests.get(
+            response = session.get(
                 rss_url,
                 headers=BROWSER_UA_HEADERS,
-                timeout=settings.REQUESTS_TIMEOUT,
+                # separate connect timeout so a dead host fails fast on retries
+                timeout=(10, settings.REQUESTS_TIMEOUT),
             )
             response.raise_for_status()
 
