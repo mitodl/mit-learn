@@ -1,6 +1,30 @@
 Release Notes
 =============
 
+Version 0.77.11
+---------------
+
+- fix: bump version for arithmix game (#3832)
+- vector search completeness penalty (#3805)
+- feat(cohort-1): StarRocks warehouse-pull ETL machinery (#3807)
+- Update dependency llama-index-llms-openai to >=0.7.10,<0.8 (#3826)
+- Update dependency posthog to v7 (#2765)
+- Update Django to 5.2 (#3768)
+- fix: bullet lists and mailto links in About section  (#3802)
+- Revert broken Renovate merges (#3812-#3816) (#3822)
+- Update dependency tiktoken to >=0.13,<0.14 (#3816)
+- Update dependency ruff to v0.16.2 (#3815)
+- Update dependency llama-index-llms-openai to >=0.7.10,<0.8 (#3814)
+- Update dependency litellm to v1.95.0 (#3813)
+- Update dependency drf-spectacular to >=0.30,<0.31 (#3812)
+- Update apache/apisix Docker tag to v3.17.0 (#2708)
+- Drive React Query staleTime from the CDN TTL (#3804)
+- get rid of duplicate course checks (#3803)
+- feat: add a Failed filter tab to the B2B contract admin page (#3778)
+- Clear redis cache on a schedule (#3789)
+- adding fix for hiding offeror facets in hybrid search (#3786)
+- chore(deps): mitol-django-observability 2026.3.11 -> 2026.8.19 (#3796)
+
 Version 0.77.10 (Released August 24, 2026)
 ---------------
 
