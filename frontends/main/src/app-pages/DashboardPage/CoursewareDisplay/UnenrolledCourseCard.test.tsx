@@ -1,5 +1,6 @@
 import React from "react"
 import {
+  expectErrorToast,
   renderWithProviders,
   screen,
   setMockResponse,
@@ -819,6 +820,75 @@ describe.each([
         screen.queryByRole("dialog", { name: course.title }),
       ).not.toBeInTheDocument()
     })
+  })
+})
+
+describe("UnenrolledCourseCard enrollment error toast", () => {
+  setupLocationMock()
+
+  const getCard = () => screen.getByTestId("enrollment-card-desktop")
+
+  test("Failed course enrollment surfaces a course-specific error toast", async () => {
+    setupUserApis()
+    const run = mitxonline.factories.courses.courseRun({
+      b2b_contract: null,
+      is_enrollable: true,
+      enrollment_modes: [
+        mitxonline.factories.courses.enrollmentMode({
+          requires_payment: false,
+        }),
+      ],
+    })
+    const course = mitxOnlineCourse({ courseruns: [run], next_run_id: run.id })
+
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+    setMockResponse.post(
+      mitxonline.urls.enrollment.enrollmentsListV1(),
+      {},
+      { code: 500 },
+    )
+
+    renderWithProviders(<UnenrolledCourseCard course={course} />)
+
+    await user.click(within(getCard()).getByTestId("courseware-button"))
+
+    await expectErrorToast(
+      "Something went wrong enrolling you in this course. Please try again.",
+    )
+  })
+
+  test("Failed verified program enrollment surfaces a program-specific error toast", async () => {
+    setupUserApis()
+    const run = mitxonline.factories.courses.courseRun({
+      b2b_contract: null,
+      is_enrollable: true,
+      courseware_url: faker.internet.url(),
+    })
+    const course = mitxOnlineCourse({ courseruns: [run], next_run_id: run.id })
+
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        enrollment_mode: "verified",
+      })
+
+    setMockResponse.post(
+      mitxonline.urls.verifiedProgramEnrollments.create(run.courseware_id),
+      {},
+      { code: 500 },
+    )
+
+    renderWithProviders(
+      <UnenrolledCourseCard
+        course={course}
+        ancestorContext={{ programEnrollment }}
+      />,
+    )
+
+    await user.click(within(getCard()).getByTestId("courseware-button"))
+
+    await expectErrorToast(
+      "Something went wrong enrolling you in this program. Please try again.",
+    )
   })
 })
 

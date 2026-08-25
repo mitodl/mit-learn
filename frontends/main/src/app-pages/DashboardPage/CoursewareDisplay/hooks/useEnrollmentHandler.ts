@@ -15,10 +15,21 @@ import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
 import { trackCourseEnrolled } from "@/common/analytics/gtm"
 
+const ENROLL_COURSE_ERROR =
+  "Something went wrong enrolling you in this course. Please try again."
+const ENROLL_PROGRAM_ERROR =
+  "Something went wrong enrolling you in this program. Please try again."
+
 export const useEnrollmentHandler = () => {
-  const createB2bEnrollment = useCreateB2bEnrollment()
-  const createEnrollment = useCreateEnrollment()
-  const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment()
+  const createB2bEnrollment = useCreateB2bEnrollment({
+    meta: { errorMessage: ENROLL_COURSE_ERROR },
+  })
+  const createEnrollment = useCreateEnrollment({
+    meta: { errorMessage: ENROLL_COURSE_ERROR },
+  })
+  const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment({
+    meta: { errorMessage: ENROLL_PROGRAM_ERROR },
+  })
   const replaceBasketItem = useReplaceBasketItem()
   const { ensureCompliance } = useComplianceGate()
 
