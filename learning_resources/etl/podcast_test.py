@@ -1,6 +1,8 @@
 """Tests for Podcast ETL functions"""
 
 import datetime
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from unittest.mock import Mock
 
 import pytest
@@ -255,6 +257,37 @@ def test_extract_request_error(mocker, mock_github_client, exception_cls):
     )
 
 
+def test_extract_retries_a_transient_status(
+    mock_github_client, rss_server, mocked_responses
+):
+    """A 503 should be retried rather than costing the feed"""
+    rss_url, hits = rss_server(failures=1)
+    mocked_responses.add_passthru("http://127.0.0.1")
+    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = [
+        mock_podcast_file(rss_url=rss_url)
+    ]
+
+    results = list(extract())
+
+    assert len(results) == 1
+    assert results[0][0].channel.title.text == "A Podcast"
+    assert len(hits) == 2
+
+
+def test_extract_stops_after_the_retry_limit(
+    mock_github_client, rss_server, mocked_responses
+):
+    """A feed that keeps failing is attempted a bounded number of times"""
+    rss_url, hits = rss_server(failures=99)
+    mocked_responses.add_passthru("http://127.0.0.1")
+    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = [
+        mock_podcast_file(rss_url=rss_url)
+    ]
+
+    assert list(extract()) == []
+    assert len(hits) == 3
+
+
 def test_extract_passes_timeout(mocker, mock_github_client):
     """Test extract sets connect and read timeouts"""
     mock_get = mocker.patch(
@@ -270,6 +303,42 @@ def test_extract_passes_timeout(mocker, mock_github_client):
     connect_timeout, read_timeout = mock_get.call_args.kwargs["timeout"]
     assert connect_timeout > 0
     assert read_timeout == settings.REQUESTS_TIMEOUT
+
+
+@pytest.fixture
+def rss_server():
+    """
+    Serve the test feed from a local socket, after N failed responses.
+
+    The retry adapter lives below Session.get, so the tests that patch it
+    can't see retries at all - this is the only way to exercise them.
+    """
+    servers = []
+
+    def start(*, failures):
+        hits = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                hits.append(self.path)
+                body = b"" if len(hits) <= failures else rss_content().encode()
+                self.send_response(503 if len(hits) <= failures else 200)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *args):
+                """Keep the test output quiet"""
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        servers.append(server)
+        return f"http://127.0.0.1:{server.server_port}/rss.xml", hits
+
+    yield start
+
+    for server in servers:
+        server.shutdown()
 
 
 def test_extract_unreachable_feed(mocker, mock_github_client):
