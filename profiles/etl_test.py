@@ -27,10 +27,10 @@ def _row(**overrides):
         "user_gender": "f",
         "user_year_of_birth": "1815",
         "user_country": "GB",
-        "user_address_state_or_territory": None,
+        "user_address_state_or_territory": "Greater London",
         "user_address_city": "London",
-        "user_address_postal_code": None,
-        "user_street_address": None,
+        "user_address_postal_code": "NW1 2DB",
+        "user_street_address": "12 Marylebone Road",
         "program_completion_timestamp": datetime(2026, 1, 1, tzinfo=UTC),
     }
     row.update(overrides)
@@ -56,7 +56,10 @@ def test_transform_program_certificate_maps_all_fields():
     assert fields["user_gender"] == "f"
     assert fields["user_year_of_birth"] == "1815"
     assert fields["user_country"] == "GB"
+    assert fields["user_address_state_or_territory"] == "Greater London"
     assert fields["user_address_city"] == "London"
+    assert fields["user_address_postal_code"] == "NW1 2DB"
+    assert fields["user_street_address"] == "12 Marylebone Road"
     assert fields["program_completion_timestamp"] == datetime(2026, 1, 1, tzinfo=UTC)
     assert "record_hash" not in fields
 

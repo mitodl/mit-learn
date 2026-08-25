@@ -28,11 +28,46 @@ class SyncProgramCertificatesTask(BaseWarehouseETLTask):
     def fetch_and_upsert(self, conn, *, since=None) -> int:
         """Upsert every row iter_rows yields; see profiles.etl for why this
         never prunes, even on a full_refresh run.
+
+        A row that fails to upsert is logged and skipped rather than aborting
+        the batch — one malformed certificate shouldn't cost every other
+        learner their sync. Skipped rows aren't lost: the daily beat schedule
+        runs full_refresh, which re-reads the whole view, so a row that fails
+        today is retried tomorrow.
+
+        The one case that still raises is *every* row failing, which is not a
+        bad-row problem — it's the database or the model being broken. Letting
+        that return normally would advance an incremental run's watermark past
+        a window nothing was written for, permanently skipping it (see
+        BaseWarehouseETLTask.run).
         """
         count = 0
+        failed = 0
         for row in iter_rows(conn, self.view_name, since=since):
-            upsert_program_certificate(row)
-            count += 1
+            try:
+                upsert_program_certificate(row)
+            except Exception:
+                failed += 1
+                log.exception(
+                    "Failed to upsert program certificate record_hash=%s",
+                    row.get("record_hash"),
+                )
+            else:
+                count += 1
+
+        if failed:
+            if count == 0:
+                msg = (
+                    f"{self.__class__.__name__}: all {failed} rows failed to "
+                    f"upsert; refusing to report success"
+                )
+                raise RuntimeError(msg)
+            log.error(
+                "%s: skipped %d of %d rows that failed to upsert",
+                self.__class__.__name__,
+                failed,
+                count + failed,
+            )
         return count
 
 

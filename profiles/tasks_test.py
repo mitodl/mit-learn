@@ -161,3 +161,53 @@ def test_sync_program_certificates_task_does_not_prune(mocker):
     SyncProgramCertificatesTask.fetch_and_upsert(conn=mocker.Mock())
 
     assert ProgramCertificate.objects.filter(record_hash="untouched").exists()
+
+
+@pytest.mark.django_db
+def test_sync_program_certificates_task_skips_rows_that_fail_to_upsert(mocker):
+    """One bad row is logged and skipped rather than aborting the batch, so
+    the remaining certificates still sync.
+    """
+    rows = [
+        {"record_hash": "a"},
+        {"record_hash": "bad"},
+        {"record_hash": "c"},
+    ]
+    mocker.patch("profiles.tasks.iter_rows", return_value=iter(rows))
+    mocker.patch(
+        "profiles.tasks.upsert_program_certificate",
+        side_effect=[None, ValueError("bad row"), None],
+    )
+
+    count = SyncProgramCertificatesTask.fetch_and_upsert(conn=mocker.Mock())
+
+    assert count == 2
+
+
+@pytest.mark.django_db
+def test_sync_program_certificates_task_raises_when_every_row_fails(mocker):
+    """A batch where nothing succeeded is a broken database or model, not a
+    bad row — it must not report success, or an incremental run would advance
+    its watermark past a window it never wrote.
+    """
+    mocker.patch(
+        "profiles.tasks.iter_rows",
+        return_value=iter([{"record_hash": "a"}, {"record_hash": "b"}]),
+    )
+    mocker.patch(
+        "profiles.tasks.upsert_program_certificate",
+        side_effect=ValueError("everything is broken"),
+    )
+
+    with pytest.raises(RuntimeError, match="all 2 rows failed"):
+        SyncProgramCertificatesTask.fetch_and_upsert(conn=mocker.Mock())
+
+
+@pytest.mark.django_db
+def test_sync_program_certificates_task_empty_batch_is_not_a_failure(mocker):
+    """An empty view yields no rows and no failures — that's a successful
+    no-op run, not the all-rows-failed case.
+    """
+    mocker.patch("profiles.tasks.iter_rows", return_value=iter([]))
+
+    assert SyncProgramCertificatesTask.fetch_and_upsert(conn=mocker.Mock()) == 0
