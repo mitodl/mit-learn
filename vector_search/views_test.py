@@ -18,9 +18,11 @@ from learning_resources_search.serializers import serialize_bulk_learning_resour
 from vector_search.constants import (
     COMPLETENESS_PAYLOAD_KEY,
     CONTENT_FILES_RETRIEVE_PAYLOAD,
+    RESOURCE_AGE_DATE_PAYLOAD_KEY,
     RESOURCES_COLLECTION_NAME,
     RESOURCES_PAYLOAD_EXCLUDE,
     RESOURCES_RETRIEVE_PAYLOAD,
+    SECONDS_PER_YEAR,
 )
 from vector_search.encoders.utils import dense_encoder, sparse_encoder
 from vector_search.utils import score_formula_query
@@ -847,9 +849,19 @@ def test_vector_search_with_score_cutoff_enforces_min_score(
         )
 
 
-def _completeness_penalty(formula_query):
-    """Pull the completeness penalty term out of a resource score formula."""
+def _penalty(formula_query):
+    """Pull the trailing penalty term out of a resource score formula."""
     return formula_query.formula.sum[-1]
+
+
+def _formula_queries(call_kwargs, hybrid_search):
+    """Return the score formulas a query_points call rescores with."""
+    if hybrid_search:
+        # One rescored prefetch per vector arm, fused afterwards
+        assert isinstance(call_kwargs["query"], models.FusionQuery)
+        return [prefetch.query for prefetch in call_kwargs["prefetch"]]
+    assert call_kwargs["prefetch"].using == dense_encoder().model_short_name()
+    return [call_kwargs["query"]]
 
 
 @pytest.mark.parametrize("hybrid_search", [True, False])
@@ -858,6 +870,7 @@ def test_vector_search_applies_completeness_penalty(
 ):
     """Both search modes must rescore resources with the completeness penalty."""
     settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0
 
     mock_qdrant = mocker.patch(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
@@ -874,23 +887,55 @@ def test_vector_search_applies_completeness_penalty(
     )
 
     call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
-    expected_penalty = _completeness_penalty(
-        score_formula_query(RESOURCES_COLLECTION_NAME)
-    )
-
-    if hybrid_search:
-        # One rescored prefetch per vector arm, fused afterwards
-        assert isinstance(call_kwargs["query"], models.FusionQuery)
-        formula_queries = [prefetch.query for prefetch in call_kwargs["prefetch"]]
-    else:
-        formula_queries = [call_kwargs["query"]]
-        assert call_kwargs["prefetch"].using == dense_encoder().model_short_name()
+    expected_penalty = _penalty(score_formula_query(RESOURCES_COLLECTION_NAME))
+    formula_queries = _formula_queries(call_kwargs, hybrid_search)
 
     assert formula_queries
     for formula_query in formula_queries:
         assert isinstance(formula_query, models.FormulaQuery)
         assert formula_query.defaults == {COMPLETENESS_PAYLOAD_KEY: 1.0}
-        assert _completeness_penalty(formula_query) == expected_penalty
+        assert _penalty(formula_query) == expected_penalty
+
+
+@pytest.mark.parametrize("hybrid_search", [True, False])
+def test_vector_search_applies_staleness_penalty(
+    mocker, client, settings, hybrid_search
+):
+    """Both search modes must rescore resources with the staleness penalty."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    mock_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "test", "hybrid_search": hybrid_search},
+    )
+
+    formula_queries = _formula_queries(
+        mock_qdrant.query_points.mock_calls[0].kwargs, hybrid_search
+    )
+
+    assert formula_queries
+    for formula_query in formula_queries:
+        assert isinstance(formula_query, models.FormulaQuery)
+        # resources with no age date -- those with an upcoming run -- are scored
+        # as if published at query time, so they take no penalty
+        assert list(formula_query.defaults) == [RESOURCE_AGE_DATE_PAYLOAD_KEY]
+        weight, staleness = _penalty(formula_query).neg.mult
+        assert weight == settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT
+        decay = staleness.sum[1].neg.lin_decay
+        assert decay.x.datetime_key == RESOURCE_AGE_DATE_PAYLOAD_KEY
+        assert decay.scale == (
+            settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS * SECONDS_PER_YEAR
+        )
 
 
 def test_dense_vector_search_without_formula_queries_vectors_directly(
@@ -898,6 +943,7 @@ def test_dense_vector_search_without_formula_queries_vectors_directly(
 ):
     """With nothing to rescore, dense search skips the prefetch entirely."""
     settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0
     mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
 
     mock_qdrant = mocker.patch(
@@ -921,11 +967,12 @@ def test_dense_vector_search_without_formula_queries_vectors_directly(
 
 
 @pytest.mark.django_db(transaction=True)
-def test_content_file_search_has_no_completeness_penalty(
+def test_content_file_search_has_no_resource_penalties(
     mocker, client, settings, content_file_viewer
 ):
-    """Content file payloads carry no completeness, so nothing is penalized."""
+    """Content file payloads carry neither completeness nor an age date."""
     settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
 
     mock_qdrant = mocker.patch(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
