@@ -14,6 +14,7 @@ import type {
 } from "../../generated/v1"
 import { userlistKeys, userlistQueries } from "./queries"
 import { useUserIsAuthenticated } from "api/hooks/user"
+import type { MutationHookOptions } from "../../mutations/mutationMeta"
 
 const useUserListList = (
   params: ListRequest = {},
@@ -29,7 +30,7 @@ const useUserListsDetail = (id: number) => {
   return useQuery(userlistQueries.detail(id))
 }
 
-const useUserListCreate = () => {
+const useUserListCreate = ({ meta }: MutationHookOptions = {}) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (params: CreateRequest["UserListRequest"]) =>
@@ -39,9 +40,10 @@ const useUserListCreate = () => {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: userlistKeys.listRoot() })
     },
+    meta,
   })
 }
-const useUserListUpdate = () => {
+const useUserListUpdate = ({ meta }: MutationHookOptions = {}) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (params: Pick<UserList, "id"> & Partial<UserList>) =>
@@ -53,6 +55,7 @@ const useUserListUpdate = () => {
       queryClient.invalidateQueries({ queryKey: userlistKeys.listRoot() })
       queryClient.invalidateQueries({ queryKey: userlistKeys.detail(vars.id) })
     },
+    meta,
   })
 }
 

@@ -16,6 +16,7 @@ import {
   useDestroyProgramEnrollment,
   useUpdateEnrollment,
 } from "api/mitxonline-hooks/enrollment"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
 import {
   trackCourseUnenrolled,
@@ -54,7 +55,9 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
       }
     },
   })
-  const updateEnrollment = useUpdateEnrollment()
+  // Renders its own inline error below (updateEnrollment.isError), so suppress
+  // the global error toast.
+  const updateEnrollment = useUpdateEnrollment({ meta: SILENCE_ERROR_TOAST })
   return (
     <FormDialog
       title={"Email Settings"}
@@ -117,7 +120,9 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
   enrollment,
 }) => {
   const modal = NiceModal.useModal()
-  const destroyEnrollment = useDestroyEnrollment()
+  // Renders its own inline error below (destroyEnrollment.isError), so suppress
+  // the global error toast.
+  const destroyEnrollment = useDestroyEnrollment({ meta: SILENCE_ERROR_TOAST })
   const formik = useFormik({
     enableReinitialize: true,
     validateOnChange: false,
@@ -189,7 +194,11 @@ const UnenrollProgramDialogInner: React.FC<UnenrollProgramDialogProps> = ({
   programId,
 }) => {
   const modal = NiceModal.useModal()
-  const destroyProgramEnrollment = useDestroyProgramEnrollment()
+  // Renders its own inline error below (destroyProgramEnrollment.isError), so
+  // suppress the global error toast.
+  const destroyProgramEnrollment = useDestroyProgramEnrollment({
+    meta: SILENCE_ERROR_TOAST,
+  })
   const formik = useFormik({
     enableReinitialize: true,
     validateOnChange: false,

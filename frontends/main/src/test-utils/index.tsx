@@ -6,6 +6,7 @@ import { Provider as NiceModalProvider } from "@ebay/nice-modal-react"
 
 import { ComplianceGateProvider } from "@/common/mitxonline/useComplianceGate"
 import { makeBrowserQueryClient } from "@/app/getQueryClient"
+import { Toaster } from "@/page-components/Toaster/Toaster"
 import { render } from "@testing-library/react"
 import { factories, setMockResponse } from "api/test-utils"
 import type { CurrentUser, User } from "api/hooks/user"
@@ -53,6 +54,10 @@ const TestProviders: React.FC<{
       <NiceModalProvider>
         <ComplianceGateProvider>{children}</ComplianceGateProvider>
       </NiceModalProvider>
+      {/* Mirror the real app (see providers.tsx) so the global mutation-error
+          toast renders in tests. This makes a missing `showErrorToast: false`
+          opt-out at a site with its own inline error a visible double-alert. */}
+      <Toaster />
     </ThemeProvider>
   </QueryClientProvider>
 )

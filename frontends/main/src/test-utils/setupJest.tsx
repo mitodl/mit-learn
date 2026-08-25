@@ -8,6 +8,7 @@ import {
   assertMockAdapterInstalled,
 } from "api/test-utils/mockAxios"
 import preloadAll from "jest-next-dynamic-ts"
+import { dismissErrorToast } from "@/page-components/Toaster/toastStore"
 
 // Wrapped in `() => …` to defer the identifier lookup past TDZ — jest.mock
 // is hoisted above imports, so passing `mockAxiosFactory` directly would
@@ -69,6 +70,10 @@ beforeEach(() => {
   // container. So we need to clear it manually.
   // document.head.innerHTML = ""
   document.querySelector("title")?.remove()
+
+  // The error-toast store is module-level global state; a toast fired by one
+  // test would otherwise persist into the next.
+  dismissErrorToast()
 
   assertMockAdapterInstalled()
 })
