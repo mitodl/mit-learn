@@ -292,12 +292,23 @@ const learningResourceCourseNumber: Factory<CourseNumber> = (
   }
 }
 
+/**
+ * Default `learn_url`: the drawer, which is the one location every resource
+ * has. Deliberately not resource-type aware — the dedicated-page shapes need a
+ * title slug, and duplicating the frontend's slugify into this workspace is
+ * exactly the drift that the backend's `learn_url` exists to remove. A test
+ * that cares about a dedicated page should override this.
+ */
+const drawerLearnUrl = (id: number) =>
+  `${faker.internet.url({ appendSlash: false })}/search?resource=${id}`
+
 const _learningResourceShared = (): Partial<
   Omit<LearningResource, "resource_type">
 > => {
   const free = Math.random() < 0.5
+  const id = uniqueEnforcerId.enforce(() => faker.number.int())
   return {
-    id: uniqueEnforcerId.enforce(() => faker.number.int()),
+    id,
     professional: faker.datatype.boolean(),
     certification: false,
     departments: [learningResourceDepartment()],
@@ -328,6 +339,7 @@ const _learningResourceShared = (): Partial<
      */
     resource_category: faker.lorem.word(),
     url: faker.internet.url(),
+    learn_url: drawerLearnUrl(id),
   }
 }
 
@@ -376,9 +388,7 @@ const learningResourceSummary: Factory<LearningResourceSummary> = (
     title: faker.lorem.words(3),
     resource_type: learningResourceType(),
     canonical_parent_ids: [],
-    // Where the resource lives on Learn. The drawer is the fallback every
-    // resource has, so the default is the shape with no dedicated page.
-    learn_url: `${faker.internet.url({ appendSlash: false })}/search?resource=${id}`,
+    learn_url: drawerLearnUrl(id),
     ...overrides,
   }
 }
