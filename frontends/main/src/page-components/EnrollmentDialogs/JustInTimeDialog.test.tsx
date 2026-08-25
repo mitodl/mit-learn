@@ -398,11 +398,9 @@ describe("JustInTimeDialog", () => {
 
       await user.click(within(dialog).getByRole("button", { name: "Submit" }))
 
-      expect(
-        await within(dialog).findByText(
-          "There was a problem saving your details. Please try again later.",
-        ),
-      ).toBeInTheDocument()
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "There was a problem saving your details. Please try again later.",
+      )
       // The entered values survive so the user can retry without retyping.
       expect(textbox(dialog, "First Name")).toHaveValue("Ada")
     }, 10000)

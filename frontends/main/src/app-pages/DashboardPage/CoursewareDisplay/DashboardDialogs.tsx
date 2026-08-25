@@ -43,16 +43,16 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
     initialValues: {
       receive_emails: enrollment.edx_emails_subscription ?? true,
     },
-    onSubmit: async () => {
-      await updateEnrollment.mutateAsync({
-        id: enrollment.id,
-        PatchedUpdateCourseRunEnrollmentRequest: {
-          receive_emails: formik.values.receive_emails,
+    onSubmit: () => {
+      updateEnrollment.mutate(
+        {
+          id: enrollment.id,
+          PatchedUpdateCourseRunEnrollmentRequest: {
+            receive_emails: formik.values.receive_emails,
+          },
         },
-      })
-      if (!updateEnrollment.isError) {
-        modal.hide()
-      }
+        { onSuccess: () => modal.hide() },
+      )
     },
   })
   // Renders its own inline error below (updateEnrollment.isError), so suppress
@@ -128,12 +128,13 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
     validateOnChange: false,
     validateOnBlur: false,
     initialValues: {},
-    onSubmit: async () => {
-      await destroyEnrollment.mutateAsync(enrollment.id)
-      if (!destroyEnrollment.isError) {
-        trackCourseUnenrolled(title)
-        modal.hide()
-      }
+    onSubmit: () => {
+      destroyEnrollment.mutate(enrollment.id, {
+        onSuccess: () => {
+          trackCourseUnenrolled(title)
+          modal.hide()
+        },
+      })
     },
   })
   return (
@@ -204,10 +205,13 @@ const UnenrollProgramDialogInner: React.FC<UnenrollProgramDialogProps> = ({
     validateOnChange: false,
     validateOnBlur: false,
     initialValues: {},
-    onSubmit: async () => {
-      await destroyProgramEnrollment.mutateAsync(programId)
-      trackProgramUnenrolled(title)
-      modal.hide()
+    onSubmit: () => {
+      destroyProgramEnrollment.mutate(programId, {
+        onSuccess: () => {
+          trackProgramUnenrolled(title)
+          modal.hide()
+        },
+      })
     },
   })
   return (
