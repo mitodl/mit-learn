@@ -163,12 +163,18 @@ def constraint_exists(name):
         return cursor.fetchone()[0]
 
 
-def test_drop_old_unique_together_round_trip():
-    """The old constraint drops cleanly, idempotently, and restores on reverse"""
+def test_drop_old_unique_together():
+    """The old constraint drops cleanly and idempotently"""
     schema_editor = connection.schema_editor()
     assert not constraint_exists(migration.OLD_UNIQUE_CONSTRAINT)
 
-    migration.restore_old_unique_together(apps, schema_editor)
+    # recreate the pre-migration constraint so there is something to drop
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"ALTER TABLE {migration.TABLE}"
+            f' ADD CONSTRAINT "{migration.OLD_UNIQUE_CONSTRAINT}" UNIQUE'
+            " (key, run_id, learning_resource_id, direct_learning_resource_id)"
+        )
     assert constraint_exists(migration.OLD_UNIQUE_CONSTRAINT)
 
     migration.drop_old_unique_together(apps, schema_editor)

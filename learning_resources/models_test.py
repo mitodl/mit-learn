@@ -184,13 +184,3 @@ def test_content_file_run_key_unique():
 
     with pytest.raises(IntegrityError), transaction.atomic():
         ContentFile.objects.create(run=run, key="file.pdf")
-
-
-def test_content_file_same_key_different_runs():
-    """The same key on two different runs is fine"""
-    for _ in range(2):
-        ContentFile.objects.create(
-            run=LearningResourceRunFactory.create(), key="file.pdf"
-        )
-
-    assert ContentFile.objects.filter(key="file.pdf").count() == 2

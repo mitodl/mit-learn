@@ -948,8 +948,9 @@ def load_content_file(
                 run=course_run, key=key, defaults=content_file_data
             )
         except ContentFile.MultipleObjectsReturned:
-            # Duplicates from before the unique constraint existed: collapse
-            # to the best row (keep LLM summaries), then retry.
+            # Celery workers roll concurrently with the migrate job, so this
+            # can run against pre-migration duplicates for a few minutes.
+            # Collapse to the best row (keep LLM summaries), then retry.
             dupes = ContentFile.objects.filter(run=course_run, key=key)
             keep = sorted(
                 dupes, key=lambda cf: (bool(cf.summary), cf.updated_on, cf.id)

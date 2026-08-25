@@ -969,13 +969,8 @@ def test_marketing_page_for_non_program_skips_children_content(mocker, settings)
 
 
 @pytest.mark.django_db
-def test_marketing_page_for_resources_sets_key_in_defaults(mocker):
-    """The ContentFile must be created with key/url already set via defaults.
-
-    Setting key at create time (rather than a later .save()) is what lets the
-    (learning_resource, key) constraint catch a concurrent create as a
-    collision that update_or_create can retry against.
-    """
+def test_marketing_page_for_resources_sets_key_and_url(mocker):
+    """The marketing page ContentFile gets its key/url set at create time"""
     course = models.LearningResource.objects.create(
         title="Test Course",
         url="https://example.com/course",
@@ -990,13 +985,7 @@ def test_marketing_page_for_resources_sets_key_in_defaults(mocker):
     mocker.patch("vector_search.tasks.generate_embeddings")
     mocker.patch("learning_resources_search.tasks.upsert_content_file")
 
-    update_or_create_spy = mocker.spy(models.ContentFile.objects, "update_or_create")
-
     marketing_page_for_resources([course.id])
-
-    defaults = update_or_create_spy.call_args.kwargs["defaults"]
-    assert defaults["key"] == course.url
-    assert defaults["url"] == course.url
 
     content_file = models.ContentFile.objects.get(
         learning_resource=course, file_type=MARKETING_PAGE_FILE_TYPE

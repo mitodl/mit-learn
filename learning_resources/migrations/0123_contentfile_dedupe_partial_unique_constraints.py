@@ -6,9 +6,9 @@ The old unique_together spanned three nullable FKs, so every row had a NULL in
 the index and Postgres never rejected anything. Dedupe and constraint creation
 live in the same migration so ingestion cannot introduce a new duplicate in
 between, and each concurrent index build re-dedupes and retries on failure:
-while this migration runs, the previous release is still ingesting without any
-duplicate protection, so a fresh duplicate can land mid-build and fail
-CREATE UNIQUE INDEX CONCURRENTLY.
+ingestion keeps running while this migration runs (old-release pods, plus
+celery workers that roll concurrently with the pre-deploy migrate job), so a
+fresh duplicate can land mid-build and fail CREATE UNIQUE INDEX CONCURRENTLY.
 """
 
 import time
@@ -24,7 +24,6 @@ TAGS_TABLE = "learning_resources_contentfile_content_tags"
 OLD_UNIQUE_CONSTRAINT = (
     "learning_resources_conte_key_run_id_learning_reso_cf8309bd_uniq"
 )
-OLD_UNIQUE_COLUMNS = "key, run_id, learning_resource_id, direct_learning_resource_id"
 
 # (parent column, index name)
 IDENTITIES = [
@@ -36,58 +35,50 @@ IDENTITIES = [
     ),
 ]
 
-DELETE_BATCH_SIZE = 5000
 BUILD_ATTEMPTS = 3
 
 # NULL keys partition together, which is what we want here: two keyless rows on
 # the same parent from the same ingest race are duplicates of each other. Keep
 # priority: a row with a summary (expensive LLM output) first, then the most
 # recently updated, then the highest id.
-LOSER_IDS_SQL = """
-SELECT id FROM (
-    SELECT
-        id,
-        ROW_NUMBER() OVER (
-            PARTITION BY {column}, key
-            ORDER BY (COALESCE(summary, '') <> '') DESC, updated_on DESC, id DESC
-        ) AS rn
-    FROM {table}
-    WHERE {column} IS NOT NULL
-) ranked
-WHERE ranked.rn > 1
+#
+# One statement, so both deletes see the same loser set even while the previous
+# release is still inserting rows. The through table's FK has no database-level
+# ON DELETE CASCADE (Django emulates it in the ORM), but its RI trigger fires
+# at end of statement, after the CTE has removed the tag rows.
+DEDUPE_SQL = """
+WITH losers AS (
+    SELECT id FROM (
+        SELECT
+            id,
+            ROW_NUMBER() OVER (
+                PARTITION BY {column}, key
+                ORDER BY (COALESCE(summary, '') <> '') DESC, updated_on DESC, id DESC
+            ) AS rn
+        FROM {table}
+        WHERE {column} IS NOT NULL
+    ) ranked
+    WHERE ranked.rn > 1
+),
+deleted_tags AS (
+    DELETE FROM {tags_table} WHERE contentfile_id IN (SELECT id FROM losers)
+)
+DELETE FROM {table} WHERE id IN (SELECT id FROM losers)
 """
 
 
 def _dedupe_identity(connection, column):
     """Delete all but the best row in each (parent, key) group for one parent"""
     with connection.cursor() as cursor:
-        cursor.execute(LOSER_IDS_SQL.format(column=column, table=TABLE))
-        loser_ids = [row[0] for row in cursor.fetchall()]
-
-    for start in range(0, len(loser_ids), DELETE_BATCH_SIZE):
-        batch = loser_ids[start : start + DELETE_BATCH_SIZE]
-        with connection.cursor() as cursor:
-            # The through table's FK has no database-level ON DELETE CASCADE
-            # (Django emulates it in the ORM), so its rows must go first or
-            # the row delete hits a FK violation.
-            cursor.execute(
-                f"DELETE FROM {TAGS_TABLE} WHERE contentfile_id = ANY(%s)",  # noqa: S608
-                [batch],
-            )
-            cursor.execute(
-                f"DELETE FROM {TABLE} WHERE id = ANY(%s)",  # noqa: S608
-                [batch],
-            )
+        cursor.execute(
+            DEDUPE_SQL.format(column=column, table=TABLE, tags_table=TAGS_TABLE)
+        )
 
 
 def dedupe_content_files(apps, schema_editor):
     """Delete duplicate rows for all three parent identities"""
     for column, _ in IDENTITIES:
         _dedupe_identity(schema_editor.connection, column)
-
-
-def noop(apps, schema_editor):
-    """Do nothing on reverse - deleted duplicates cannot be restored."""
 
 
 def drop_old_unique_together(apps, schema_editor):
@@ -115,15 +106,6 @@ def drop_old_unique_together(apps, schema_editor):
                     break
         finally:
             cursor.execute("RESET lock_timeout")
-
-
-def restore_old_unique_together(apps, schema_editor):
-    """Recreate the old (ineffective) unique constraint on rollback"""
-    with schema_editor.connection.cursor() as cursor:
-        cursor.execute(
-            f'ALTER TABLE {TABLE} ADD CONSTRAINT "{OLD_UNIQUE_CONSTRAINT}"'
-            f" UNIQUE ({OLD_UNIQUE_COLUMNS})"
-        )
 
 
 def _build_index(column, name):
@@ -174,7 +156,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(dedupe_content_files, noop),
+        # reverse is a no-op: deleted duplicates cannot be restored
+        migrations.RunPython(dedupe_content_files, migrations.RunPython.noop),
         migrations.SeparateDatabaseAndState(
             state_operations=[
                 migrations.AlterUniqueTogether(
@@ -183,9 +166,11 @@ class Migration(migrations.Migration):
                 ),
             ],
             database_operations=[
+                # reverse is a no-op: the old constraint never rejected
+                # anything, so nothing is lost by not recreating it
                 migrations.RunPython(
                     drop_old_unique_together,
-                    restore_old_unique_together,
+                    migrations.RunPython.noop,
                     atomic=False,
                 ),
             ],
