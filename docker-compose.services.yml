@@ -39,6 +39,22 @@ services:
       retries: 10
     ports:
       - "6379"
+  starrocks:
+    profiles:
+      - backend
+    # All-in-one FE+BE image, for local dev/test only — production StarRocks
+    # is a separately-operated cluster (see learning_resources.lib.warehouse).
+    image: starrocks/allin1-ubuntu:4.1.4
+    ports:
+      - "9030:9030" # FE MySQL-protocol query port
+      - "8030:8030" # FE HTTP port
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/9030'"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+
   qdrant:
     image: qdrant/qdrant:latest
     ports:
@@ -123,7 +139,7 @@ services:
   apigateway:
     profiles:
       - apisix
-    image: apache/apisix:3.13.0-debian # versions above this drop the local port on redirects
+    image: apache/apisix:3.17.0-debian@sha256:0e5377839f4ff5e322a5686ab6ce6797ba768008aca1bfc9b71149c3b326c4df # versions above this drop the local port on redirects
     <<: *default-extra-hosts
     environment:
       - CSRF_COOKIE_DOMAIN=${CSRF_COOKIE_DOMAIN:-.odl.local}

@@ -79,12 +79,14 @@ const setAnalyticsResponses = ({
   trend = [analyticsFactories.monthlyEngagementTrend()],
   courses = [analyticsFactories.enrollmentCompletionFunnel()],
   programs = [analyticsFactories.programFunnel()],
+  content = [analyticsFactories.contentEngagementDepth()],
   page = { limit: 200 },
 }: {
   utilization?: ReturnType<typeof analyticsFactories.contractUtilization>[]
   trend?: ReturnType<typeof analyticsFactories.monthlyEngagementTrend>[]
   courses?: ReturnType<typeof analyticsFactories.enrollmentCompletionFunnel>[]
   programs?: ReturnType<typeof analyticsFactories.programFunnel>[]
+  content?: ReturnType<typeof analyticsFactories.contentEngagementDepth>[]
   page?: { limit: number }
 } = {}) => {
   setMockResponse.get(
@@ -102,6 +104,10 @@ const setAnalyticsResponses = ({
   setMockResponse.get(
     analyticsUrls.organizations.programFunnel(ORG_UUID, page),
     analyticsFactories.envelope(programs, { as_of: AS_OF }),
+  )
+  setMockResponse.get(
+    analyticsUrls.organizations.contentEngagement(ORG_UUID, page),
+    analyticsFactories.envelope(content, { as_of: AS_OF }),
   )
 }
 
@@ -168,6 +174,10 @@ describe("AnalyticsContent", () => {
       )
       setMockResponse.get(
         analyticsUrls.organizations.programFunnel(ORG_UUID, page),
+        ...forbidden,
+      )
+      setMockResponse.get(
+        analyticsUrls.organizations.contentEngagement(ORG_UUID, page),
         ...forbidden,
       )
 
@@ -241,10 +251,13 @@ describe("AnalyticsContent", () => {
       expect(
         screen.getByRole("heading", { name: "Program funnel" }),
       ).toBeInTheDocument()
+      expect(
+        screen.getByRole("heading", { name: "Content engagement" }),
+      ).toBeInTheDocument()
 
       // One "Data as of" per section — freshness is per materialized view.
       const asOfLabels = await screen.findAllByText(/Data as of/)
-      expect(asOfLabels).toHaveLength(4)
+      expect(asOfLabels).toHaveLength(5)
     })
 
     test("renders the KPI figures from contract utilization", async () => {
@@ -294,7 +307,10 @@ describe("AnalyticsContent", () => {
       )
 
       await screen.findByText("Intro to Widgets")
-      expect(screen.getByText("40")).toBeInTheDocument()
+      // Scoped: the content engagement table reports its own enrolled count
+      // for the same course runs, so an unscoped "40" is ambiguous.
+      const table = screen.getByRole("table", { name: "Course performance" })
+      expect(within(table).getByText("40")).toBeInTheDocument()
       expect(
         screen.getAllByLabelText(/Withheld: too few learners/).length,
       ).toBeGreaterThan(0)
@@ -331,6 +347,112 @@ describe("AnalyticsContent", () => {
       expect(within(table).getByText("12")).toBeInTheDocument()
     })
 
+    /**
+     * Eleven metrics are folded into seven columns by pairing each activity
+     * rate with its raw total, so this asserts both halves of every paired
+     * cell actually reach the page rather than only the headline figure.
+     */
+    test("renders content engagement rates alongside their raw totals", async () => {
+      const org = orgWithUuid()
+      setManagerOrgs([org])
+      setAnalyticsResponses({
+        content: [
+          analyticsFactories.contentEngagementDepth({
+            courserun_title: "Deep Widgets",
+            total_enrolled_learners: 40,
+            engaged_learners: 28,
+            engagement_rate_pct: 70,
+            total_videos_watched: 800,
+            video_watchers: 22,
+            avg_videos_per_engaged_learner: 28.6,
+            total_problems_attempted: 1000,
+            problem_attempters: 25,
+            avg_problems_per_engaged_learner: 35.7,
+            total_chatbot_interactions: 60,
+            chatbot_users: 14,
+            chatbot_adoption_pct: 35,
+            certificates_earned: 16,
+          }),
+        ],
+      })
+
+      renderWithProviders(
+        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} />,
+      )
+
+      await screen.findByText("Deep Widgets")
+      // Scoped: the course performance table above carries counts of the same
+      // magnitude for the same course runs.
+      const table = screen.getByRole("table", { name: "Content engagement" })
+      expect(within(table).getByText("40")).toBeInTheDocument()
+      expect(within(table).getByText("28")).toBeInTheDocument()
+      expect(within(table).getByText("70% of enrolled")).toBeInTheDocument()
+      expect(within(table).getByText("28.6")).toBeInTheDocument()
+      expect(
+        within(table).getByText("22 learners, 800 watched"),
+      ).toBeInTheDocument()
+      expect(within(table).getByText("35.7")).toBeInTheDocument()
+      expect(
+        within(table).getByText("25 learners, 1,000 attempted"),
+      ).toBeInTheDocument()
+      expect(within(table).getByText("35%")).toBeInTheDocument()
+      expect(
+        within(table).getByText("14 learners, 60 interactions"),
+      ).toBeInTheDocument()
+      expect(within(table).getByText("16")).toBeInTheDocument()
+    })
+
+    /**
+     * Suppression arrives per activity, not per row: the API floors each
+     * activity total through the cohort that produced it, so a sub-floor
+     * cohort takes its total and its average down with it while a healthier
+     * activity in the same row keeps all three of its figures. This models
+     * that shape — videos and chatbot withheld, problems intact — rather than
+     * an arbitrary mix of nulls, and asserts no withheld figure becomes a 0.
+     */
+    test("withholds an activity together with the cohort that produced it", async () => {
+      const org = orgWithUuid()
+      setManagerOrgs([org])
+      setAnalyticsResponses({
+        content: [
+          analyticsFactories.contentEngagementDepth({
+            courserun_title: "Sparse Widgets",
+            total_enrolled_learners: 12,
+            engaged_learners: 8,
+            engagement_rate_pct: 66.7,
+            // Too few watchers to report, so the total and the average
+            // derived from it go too.
+            video_watchers: null,
+            total_videos_watched: null,
+            avg_videos_per_engaged_learner: null,
+            // Same for the chatbot.
+            chatbot_users: null,
+            total_chatbot_interactions: null,
+            chatbot_adoption_pct: null,
+            certificates_earned: null,
+          }),
+        ],
+      })
+
+      renderWithProviders(
+        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} />,
+      )
+
+      await screen.findByText("Sparse Widgets")
+      const table = screen.getByRole("table", { name: "Content engagement" })
+      // Three per withheld activity (rate, cohort, total) plus the withheld
+      // certificate count.
+      expect(
+        within(table).getAllByLabelText(/Withheld: too few learners/),
+      ).toHaveLength(7)
+      // The activity that cleared the floor still reports all three figures.
+      expect(within(table).getByText("35.7")).toBeInTheDocument()
+      expect(
+        within(table).getByText("25 learners, 1,000 attempted"),
+      ).toBeInTheDocument()
+      expect(within(table).queryByText("0")).not.toBeInTheDocument()
+    })
+
     test("says so when a view has never refreshed rather than implying freshness", async () => {
       const org = orgWithUuid()
       setManagerOrgs([org])
@@ -356,6 +478,10 @@ describe("AnalyticsContent", () => {
         analyticsUrls.organizations.programFunnel(ORG_UUID, page),
         analyticsFactories.envelope([], { as_of: null }),
       )
+      setMockResponse.get(
+        analyticsUrls.organizations.contentEngagement(ORG_UUID, page),
+        analyticsFactories.envelope([], { as_of: null }),
+      )
 
       renderWithProviders(
         <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} />,
@@ -363,14 +489,19 @@ describe("AnalyticsContent", () => {
 
       expect(
         (await screen.findAllByText("Data not yet refreshed")).length,
-      ).toBe(4)
+      ).toBe(5)
       expect(screen.queryByText(/Data as of/)).not.toBeInTheDocument()
     })
 
     test("renders empty states rather than blank sections", async () => {
       const org = orgWithUuid()
       setManagerOrgs([org])
-      setAnalyticsResponses({ courses: [], programs: [], trend: [] })
+      setAnalyticsResponses({
+        courses: [],
+        programs: [],
+        trend: [],
+        content: [],
+      })
 
       renderWithProviders(
         <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} />,
@@ -379,6 +510,9 @@ describe("AnalyticsContent", () => {
       await screen.findByText("No course enrollments recorded yet.")
       expect(
         screen.getByText("No program enrollments recorded yet."),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText("No content engagement recorded yet."),
       ).toBeInTheDocument()
     })
 
@@ -414,8 +548,8 @@ describe("AnalyticsContent", () => {
       expect(
         screen.queryByText("Data not yet refreshed"),
       ).not.toBeInTheDocument()
-      // The three sections that did load keep their own freshness stamp.
-      expect(screen.getAllByText(/Data as of/)).toHaveLength(3)
+      // The sections that did load keep their own freshness stamp.
+      expect(screen.getAllByText(/Data as of/)).toHaveLength(4)
       expect(
         screen.getByText(/Some analytics could not be loaded/),
       ).toBeInTheDocument()

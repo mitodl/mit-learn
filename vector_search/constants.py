@@ -43,6 +43,11 @@ QDRANT_CONTENT_FILE_PARAM_MAP = {
     "checksum": "checksum",
 }
 
+# Payload key holding a resource's completeness score (0-1), the same value the
+# OpenSearch script_score penalizes incomplete OCW courses by. Only the resources
+# collection carries it; content file payloads do not.
+COMPLETENESS_PAYLOAD_KEY = "completeness"
+
 QDRANT_RESOURCE_PARAM_MAP = {
     "readable_id": "readable_id",
     "resource_type": "resource_type",
@@ -96,6 +101,9 @@ QDRANT_LEARNING_RESOURCE_INDEXES = {
     "next_start_date": models.PayloadSchemaType.DATETIME,
     "created_on": models.PayloadSchemaType.DATETIME,
     "views": models.PayloadSchemaType.INTEGER,
+    # Not filterable or facetable -- indexed because Qdrant rejects a scoring
+    # formula that reads an unindexed payload key (see COMPLETENESS_PAYLOAD_KEY).
+    COMPLETENESS_PAYLOAD_KEY: models.PayloadSchemaType.FLOAT,
 }
 
 

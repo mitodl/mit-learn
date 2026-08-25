@@ -49,6 +49,7 @@ from learning_resources.etl.loaders import (
     load_podcast,
     load_podcast_episode,
     load_podcasts,
+    load_prices,
     load_problem_file,
     load_problem_files,
     load_program,
@@ -141,14 +142,6 @@ def mock_blocklist(mocker):
     """Mock the load_course_blocklist function"""
     return mocker.patch(
         "learning_resources.etl.loaders.load_course_blocklist", return_value=[]
-    )
-
-
-@pytest.fixture(autouse=True)
-def mock_duplicates(mocker):
-    """Mock the load_course_duplicates function"""
-    return mocker.patch(
-        "learning_resources.etl.loaders.load_course_duplicates", return_value=[]
     )
 
 
@@ -295,7 +288,6 @@ def test_load_program(  # noqa: PLR0913
             **delivery_data,
         },
         [],
-        [],
     )
 
     assert Program.objects.count() == 1
@@ -364,7 +356,6 @@ def test_load_program_preserves_preset_resource_category(mock_upsert_tasks):
             "resource_category": LearningResourceType.course.value,
         },
         [],
-        [],
     )
 
     assert result.resource_category == LearningResourceType.course.value
@@ -398,7 +389,6 @@ def test_load_program_defaults_resource_category(mock_upsert_tasks):
             "runs": [run_data],
             "courses": [],
         },
-        [],
         [],
     )
 
@@ -485,7 +475,7 @@ def test_load_program_bad_platform(mocker):
         "published": True,
         "courses": [],
     }
-    result, _, _ = load_program(props, [], [], config=ProgramLoaderConfig(prune=True))
+    result, _, _ = load_program(props, [], config=ProgramLoaderConfig(prune=True))
     assert result is None
     mock_log.assert_called_once_with(
         "Platform %s is null or not in database: %s", bad_platform, "abc123"
@@ -611,7 +601,7 @@ def test_load_course(  # noqa: PLR0913, PLR0912, PLR0915
 
     blocklist = [learning_resource.readable_id] if blocklisted else []
 
-    result = load_course(props, blocklist, [], config=CourseLoaderConfig(prune=True))
+    result = load_course(props, blocklist, config=CourseLoaderConfig(prune=True))
     assert result.professional is True
 
     if is_published and is_run_published and not blocklisted and has_upcoming_run:
@@ -706,7 +696,7 @@ def test_load_course_updates_course_numbers(mock_upsert_tasks):
         "course": {"course_numbers": new_course_numbers},
     }
 
-    load_course(props, [], [], config=CourseLoaderConfig(prune=True))
+    load_course(props, [], config=CourseLoaderConfig(prune=True))
 
     assert Course.objects.count() == 1
     course.refresh_from_db()
@@ -735,7 +725,7 @@ def test_load_course_bad_platform(mocker):
             }
         ],
     }
-    result = load_course(props, [], [], config=CourseLoaderConfig(prune=True))
+    result = load_course(props, [], config=CourseLoaderConfig(prune=True))
     assert result is None
     mock_log.assert_called_once_with(
         "Platform %s is null or not in database: %s", bad_platform, "abc123"
@@ -786,7 +776,7 @@ def test_load_course_prune_preserves_checksum_on_unpublished_runs():
         ],
     }
 
-    load_course(props, [], [], config=CourseLoaderConfig(prune=True))
+    load_course(props, [], config=CourseLoaderConfig(prune=True))
 
     retained_run.refresh_from_db()
     pruned_run.refresh_from_db()
@@ -841,7 +831,6 @@ def test_load_program_prune_preserves_checksum_on_unpublished_runs():
             "courses": [],
         },
         [],
-        [],
     )
 
     retained_run.refresh_from_db()
@@ -851,94 +840,6 @@ def test_load_program_prune_preserves_checksum_on_unpublished_runs():
     assert pruned_run.published is False
     # checksum is preserved (not nulled) so an unchanged archive re-ingest is skipped
     assert pruned_run.checksum == "pruned_checksum"
-
-
-@pytest.mark.parametrize("course_exists", [True, False])
-@pytest.mark.parametrize("course_id_is_duplicate", [True, False])
-@pytest.mark.parametrize("duplicate_course_exists", [True, False])
-def test_load_duplicate_course(
-    mock_upsert_tasks,
-    course_exists,
-    course_id_is_duplicate,
-    duplicate_course_exists,
-):
-    """Test that load_course loads the course"""
-    platform = LearningResourcePlatformFactory.create()
-
-    course = (
-        CourseFactory.create(learning_resource__runs=[], platform=platform.code)
-        if course_exists
-        else CourseFactory.build()
-    )
-
-    duplicate_course = (
-        CourseFactory.create(learning_resource__runs=[], platform=platform.code)
-        if duplicate_course_exists
-        else CourseFactory.build()
-    )
-
-    if course_exists and duplicate_course_exists:
-        assert Course.objects.count() == 2
-    elif course_exists or duplicate_course_exists:
-        assert Course.objects.count() == 1
-    else:
-        assert Course.objects.count() == 0
-
-    duplicates = [
-        {
-            "course_id": course.learning_resource.readable_id,
-            "duplicate_course_ids": [
-                course.learning_resource.readable_id,
-                duplicate_course.learning_resource.readable_id,
-            ],
-        }
-    ]
-
-    course_id = (
-        duplicate_course.learning_resource.readable_id
-        if course_id_is_duplicate
-        else course.learning_resource.readable_id
-    )
-
-    props = {
-        "readable_id": course_id,
-        "platform": platform.code,
-        "title": "New title",
-        "description": "something",
-        "runs": [
-            {
-                "run_id": course.learning_resource.readable_id,
-                "enrollment_start": "2017-01-01T00:00:00Z",
-                "start_date": "2017-01-20T00:00:00Z",
-                "end_date": "2017-06-20T00:00:00Z",
-            }
-        ],
-    }
-
-    result = load_course(props, [], duplicates)
-
-    if course_id_is_duplicate and duplicate_course_exists:
-        mock_upsert_tasks.deindex_learning_resource_immutable_signature.assert_called()
-    else:
-        mock_upsert_tasks.deindex_learning_resource_immutable_signature.assert_not_called()
-    if course.learning_resource.id:
-        mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_called_with(
-            course.learning_resource.id
-        )
-
-    assert Course.objects.count() == (2 if duplicate_course_exists else 1)
-
-    assert isinstance(result, LearningResource)
-
-    saved_course = LearningResource.objects.filter(
-        readable_id=course.learning_resource.readable_id
-    ).first()
-
-    for key, value in props.items():
-        assert getattr(result, key) == value, f"Property {key} should equal {value}"
-        assert getattr(saved_course, key) == value, (
-            f"Property {key} should be updated to {value} in the database"
-        )
 
 
 @pytest.mark.parametrize("unique_url", [True, False])
@@ -973,7 +874,7 @@ def test_load_course_unique_urls(unique_url):
             }
         ],
     }
-    result = load_course(props, [], [])
+    result = load_course(props, [])
     assert result.readable_id == readable_id
     assert result.url == unique_url
     assert result.published is True
@@ -1016,7 +917,7 @@ def test_load_course_old_id_new_url():
             }
         ],
     }
-    result = load_course(props, [], [])
+    result = load_course(props, [])
     assert result.readable_id == readable_id
     assert result.url == unique_url
     assert result.published is True
@@ -1043,7 +944,7 @@ def test_load_course_fetch_only(mocker, course_exists):
         "platform": platform.code,
         "offered_by": {"code": OfferedBy.ocw.name},
     }
-    result = load_course(props, [], [], config=CourseLoaderConfig(fetch_only=True))
+    result = load_course(props, [], config=CourseLoaderConfig(fetch_only=True))
     if course_exists:
         assert result == resource
         mock_warn.assert_not_called()
@@ -1128,6 +1029,40 @@ def test_load_run(mocker, run_exists, status, certification):
         )
     else:
         mock_import_task.delay.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_load_run_none_instructors_and_prices_leave_existing_values_alone(mocker):
+    """`None` (not an omitted key, which still defaults to `[]`) for
+    run_data's "instructors"/"prices" is the sentinel for "not provided by
+    this source, leave alone" — same convention load_topics already uses
+    for `topics_data`. A source that doesn't have instructor/price data
+    (e.g. the warehouse-pull transforms) must not wipe out values another
+    pipeline already populated.
+    """
+    mocker.patch("learning_resources.tasks.import_content_files")
+    course = LearningResourceFactory.create(
+        is_course=True, runs=[], certification=True, etl_source=ETLSource.xpro.value
+    )
+    run = LearningResourceRunFactory.create(learning_resource=course, prices=[])
+    instructor = LearningResourceInstructorFactory.create(full_name="Jane Doe")
+    load_instructors(run, [{"full_name": instructor.full_name}])
+    load_prices(run, [{"amount": Decimal("49.00"), "currency": CURRENCY_USD}])
+    run.prices = [Decimal("49.00")]
+    run.save()
+
+    run_data = {
+        "run_id": run.run_id,
+        "title": run.title,
+        "instructors": None,
+        "prices": None,
+    }
+    result = load_run(course, run_data)
+
+    assert result.id == run.id
+    assert [i.full_name for i in result.instructors.all()] == [instructor.full_name]
+    assert [p.amount for p in result.resource_prices.all()] == [Decimal("49.00")]
+    assert result.prices == [Decimal("49.00")]
 
 
 @pytest.mark.parametrize(
@@ -1513,7 +1448,7 @@ def test_load_offered_bys(
 
 
 @pytest.mark.parametrize("prune", [True, False])
-def test_load_courses(mocker, mock_blocklist, mock_duplicates, prune):
+def test_load_courses(mocker, mock_blocklist, prune):
     """Test that load_courses calls the expected functions"""
 
     course_to_unpublish = CourseFactory.create(etl_source=ETLSource.xpro.name)
@@ -1535,16 +1470,14 @@ def test_load_courses(mocker, mock_blocklist, mock_duplicates, prune):
         mock_load_course.assert_any_call(
             course_data,
             mock_blocklist.return_value,
-            mock_duplicates.return_value,
             config=config,
         )
     mock_blocklist.assert_called_once_with()
-    mock_duplicates.assert_called_once_with(ETLSource.xpro.name)
     course_to_unpublish.refresh_from_db()
     assert course_to_unpublish.learning_resource.published is not prune
 
 
-def test_load_programs(mocker, mock_blocklist, mock_duplicates):
+def test_load_programs(mocker, mock_blocklist):
     """Test that load_programs calls the expected functions"""
     program_data = [{"courses": [{"platform": "a"}, {}], "id": 5}]
 
@@ -1560,7 +1493,6 @@ def test_load_programs(mocker, mock_blocklist, mock_duplicates):
     load_programs("mitx", program_data, config=ProgramLoaderConfig(prune=True))
     assert mock_load_program.call_count == len(program_data)
     mock_blocklist.assert_called_once()
-    mock_duplicates.assert_called_once_with("mitx")
 
 
 @pytest.fixture
@@ -1685,7 +1617,6 @@ def test_load_program_honors_explicit_course_position(mock_upsert_tasks):
             "availability": program.learning_resource.availability,
             "courses": program_courses,
         },
-        [],
         [],
     )
 
@@ -3270,7 +3201,7 @@ def test_load_course_percolation(
         props["runs"] = []
 
     blocklist = [learning_resource.readable_id] if blocklisted else []
-    result = load_course(props, blocklist, [], config=CourseLoaderConfig(prune=True))
+    result = load_course(props, blocklist, config=CourseLoaderConfig(prune=True))
     mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_called_with(
         result.id
     )
@@ -3569,7 +3500,7 @@ def test_course_with_unpublished_force_ingest_is_test_mode():
             }
         ],
     }
-    course = load_course(course_data, [], [])
+    course = load_course(course_data, [])
     assert course.require_summaries is True
     assert course.test_mode is True
     assert course.published is False

@@ -62,7 +62,6 @@ from learning_resources.utils import (
     bulk_resources_unpublished_actions,
     content_files_loaded_actions,
     load_course_blocklist,
-    load_course_duplicates,
     resource_delete_actions,
     resource_run_unpublished_actions,
     resource_unpublished_actions,
@@ -194,9 +193,17 @@ def load_run_dependent_values(
 
 
 def load_instructors(
-    run: LearningResourceRun, instructors_data: list[dict]
+    run: LearningResourceRun, instructors_data: list[dict] | None
 ) -> list[LearningResourceInstructor]:
-    """Load the instructors for a resource run into the database"""
+    """Load the instructors for a resource run into the database.
+
+    `None` (as opposed to `[]`) means the source didn't provide instructor
+    data at all; leave whatever's already on the run alone rather than
+    clearing it — same convention as load_topics's `topics_data`.
+    """
+    if instructors_data is None:
+        return list(run.instructors.all())
+
     instructors = []
     valid_attributes = ["first_name", "last_name"]
     relations = []
@@ -228,9 +235,17 @@ def load_instructors(
 
 
 def load_prices(
-    run: LearningResourceRun, prices_data: list[dict]
+    run: LearningResourceRun, prices_data: list[dict] | None
 ) -> list[LearningResourcePrice]:
-    """Load the prices for a resource run into the database"""
+    """Load the prices for a resource run into the database.
+
+    `None` (as opposed to `[]`) means the source didn't provide price data
+    at all; leave whatever's already on the run alone rather than clearing
+    it — same convention as load_topics's `topics_data`.
+    """
+    if prices_data is None:
+        return list(run.resource_prices.all())
+
     prices = []
     for price in prices_data:
         lr_price, _ = LearningResourcePrice.objects.get_or_create(
@@ -306,6 +321,29 @@ def load_content_tags(
     )
 
 
+def _resolve_run_prices(
+    run_data: dict,
+    resource_prices: list[dict] | None,
+    status: str | None,
+    learning_resource: LearningResource,
+) -> list[dict] | None:
+    """Normalize run_data's "prices" summary field for one run.
+
+    Returns the resource_prices list to pass to load_prices, or None if no
+    price data was provided by this source (leave existing values alone).
+    """
+    if resource_prices is None:
+        return None
+
+    run_data["prices"] = sorted({price["amount"] for price in resource_prices})
+    if status == RunStatus.archived.value or learning_resource.certification is False:
+        # Archived runs or runs of resources w/out certificates should not
+        # have prices
+        run_data["prices"] = []
+        return []
+    return resource_prices
+
+
 def load_run(
     learning_resource: LearningResource, run_data: dict
 ) -> LearningResourceRun:
@@ -323,15 +361,16 @@ def load_run(
 
     image_data = run_data.pop("image", None)
     status = run_data.pop("status", None)
+    # `None` (as opposed to an omitted key, which defaults to `[]`) is the
+    # sentinel for "not provided by this source, leave existing value
+    # alone" — same convention load_topics uses for `topics_data`. Sources
+    # that don't have instructor/price data (e.g. the warehouse-pull
+    # transforms, which lack pricing entirely) pass `None` explicitly
+    # rather than `[]`, so a sync doesn't wipe data another pipeline wrote.
     instructors_data = run_data.pop("instructors", [])
-
-    resource_prices = run_data.get("prices", [])
-    run_data["prices"] = sorted({price["amount"] for price in resource_prices})
-
-    if status == RunStatus.archived.value or learning_resource.certification is False:
-        # Archived runs or runs of resources w/out certificates should not have prices
-        run_data["prices"] = []
-        resource_prices = []
+    resource_prices = _resolve_run_prices(
+        run_data, run_data.pop("prices", []), status, learning_resource
+    )
 
     if learning_resource.test_mode:
         run_data["published"] = True
@@ -405,10 +444,9 @@ def load_run(
     return learning_resource_run
 
 
-def upsert_course_or_program(  # noqa: C901, PLR0912
+def upsert_course_or_program(  # noqa: C901
     resource_data: dict,
     blocklist: list[str],
-    duplicates: list[dict],
     resource_type: str,
     *,
     config: CourseLoaderConfig = None,
@@ -421,8 +459,6 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
             a dict of course/program data values
         blocklist (list of str):
             list of course/program ids not to load
-        duplicates (list of dict):
-            list of duplicate course/program data
         resource_type (str):
             the type of resource to load (course or program)
         config (CourseLoaderConfig):
@@ -448,14 +484,6 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
         else:
             resource_category = LearningResourceType.program.value
         resource_data["resource_category"] = resource_category
-    deduplicated_course_id = next(
-        (
-            record["course_id"]
-            for record in duplicates
-            if readable_id in record["duplicate_course_ids"]
-        ),
-        None,
-    )
     platform = LearningResourcePlatform.objects.filter(code=platform_name).first()
     if not platform:
         log.exception(
@@ -465,23 +493,12 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
         )
         return None, None
 
-    if deduplicated_course_id and readable_id != deduplicated_course_id:
-        duplicate_resource = LearningResource.objects.filter(
-            platform=platform, readable_id=readable_id
-        ).first()
-        if duplicate_resource:
-            duplicate_resource.published = False
-            duplicate_resource.save()
-            resource_unpublished_actions(duplicate_resource)
-
-    resource_id = deduplicated_course_id or readable_id
-
     if config and config.fetch_only:
         # Do not upsert the course, it should already exist.
         # Just find it and return it.
         resource = (
             LearningResource.objects.filter(
-                readable_id=resource_id,
+                readable_id=readable_id,
                 platform=platform,
                 resource_type=resource_type,
             )
@@ -489,11 +506,11 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
             .first()
         )
         if not resource:
-            log.warning("No published or test_mode resource found for %s", resource_id)
+            log.warning("No published or test_mode resource found for %s", readable_id)
         return resource, False
 
     if unique_field_name != READABLE_ID_FIELD:
-        resource_data[READABLE_ID_FIELD] = resource_id
+        resource_data[READABLE_ID_FIELD] = readable_id
         # Some dupes may result, so we should delete all but the
         # most recently updated resource w/matching unique value
         existing_courses = LearningResource.objects.filter(
@@ -521,7 +538,7 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
             defaults=resource_data,
         )
     else:
-        unique_field_value = resource_id
+        unique_field_value = readable_id
     return LearningResource.objects.select_for_update().update_or_create(
         **{unique_field_name: unique_field_value},
         platform=platform,
@@ -533,7 +550,6 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
 def load_course(
     resource_data: dict,
     blocklist: list[str],
-    duplicates: list[dict],
     *,
     config=CourseLoaderConfig(),
 ) -> LearningResource:
@@ -545,8 +561,6 @@ def load_course(
             a dict of course data values
         blocklist (list of str):
             list of course ids not to load
-        duplicates (list of dict):
-            list of duplicate course data
         config (CourseLoaderConfig):
             configuration on how to load this program
 
@@ -569,7 +583,6 @@ def load_course(
         learning_resource, created = upsert_course_or_program(
             resource_data,
             blocklist,
-            duplicates,
             LearningResourceType.course.name,
             config=config,
         )
@@ -635,15 +648,13 @@ def load_courses(
         A list of course LearningResources
     """
     blocklist = load_course_blocklist()
-    duplicates = load_course_duplicates(etl_source)
 
     courses_list = list(courses_data or [])
 
     courses = [
         course
         for course in [
-            load_course(course, blocklist, duplicates, config=config)
-            for course in courses_list
+            load_course(course, blocklist, config=config) for course in courses_list
         ]
         if course is not None
     ]
@@ -682,7 +693,6 @@ class LoadedProgramCourse(NamedTuple):
 def load_program(
     program_data: dict,
     blocklist: list[str],
-    duplicates: list[dict],
     *,
     config=ProgramLoaderConfig(),
 ) -> ProgramLoadResult:
@@ -694,8 +704,6 @@ def load_program(
             a dict of program data values
         blocklist (list of str):
             list of course ids not to load
-        duplicates (list of dict):
-            list of duplicate course data
         config (ProgramLoaderConfig):
             configuration on how to load this program
 
@@ -719,7 +727,7 @@ def load_program(
 
     with transaction.atomic():
         learning_resource, created = upsert_course_or_program(
-            program_data, [], [], LearningResourceType.program.name
+            program_data, [], LearningResourceType.program.name
         )
         if not learning_resource:
             return ProgramLoadResult(
@@ -756,9 +764,7 @@ def load_program(
                 continue
 
             explicit_position = course_data.pop("position", None)
-            course_resource = load_course(
-                course_data, blocklist, duplicates, config=config.courses
-            )
+            course_resource = load_course(course_data, blocklist, config=config.courses)
             if course_resource:
                 loaded_courses.append(
                     LoadedProgramCourse(
@@ -890,13 +896,12 @@ def load_programs(
     PROGRAM_PROGRAMS or PROGRAM_COURSES based on child `display_mode`.
     """
     blocklist = load_course_blocklist()
-    duplicates = load_course_duplicates(etl_source)
 
     # Pass 1: load all programs and their course children
     results: list[ProgramLoadResult] = []
     deferred_child_programs = []
     for program_data in programs_data:
-        result = load_program(program_data, blocklist, duplicates, config=config)
+        result = load_program(program_data, blocklist, config=config)
         results.append(result)
         if result.resource and result.child_programs_data:
             deferred_child_programs.append(

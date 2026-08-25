@@ -5,6 +5,9 @@ import {
   getCertificateInfo,
   getCertificateLinkedInUrl,
   getCertificateTitle,
+  getVerifiableCredentialDownloadAPIURL,
+  getVerifiableCredentialLinkedInURL,
+  getVerifierPlusViewerURL,
 } from "./certificateUtils"
 import { factories } from "api/test-utils"
 
@@ -190,5 +193,28 @@ describe("getCertificateLinkedInUrl", () => {
     )
 
     expect(url.searchParams.get("name")).toBe("Intro to Python")
+  })
+})
+
+describe("getVerifierPlusViewerURL", () => {
+  it("wraps the download URL in a VerifierPlus viewer link", () => {
+    const credential = factories.mitxonline.verifiableCredential()
+    const downloadUrl = getVerifiableCredentialDownloadAPIURL(credential)
+
+    expect(getVerifierPlusViewerURL(credential)).toBe(
+      `https://verifierplus.org/#verify?vc=${encodeURIComponent(downloadUrl)}`,
+    )
+  })
+})
+
+describe("getVerifiableCredentialLinkedInURL", () => {
+  it("points certUrl at the VerifierPlus viewer, not the raw JSON download endpoint", () => {
+    const credential = factories.mitxonline.verifiableCredential()
+
+    const url = new URL(getVerifiableCredentialLinkedInURL(credential))
+    const certUrl = url.searchParams.get("certUrl")
+
+    expect(certUrl).toBe(getVerifierPlusViewerURL(credential))
+    expect(certUrl).not.toBe(getVerifiableCredentialDownloadAPIURL(credential))
   })
 })

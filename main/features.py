@@ -29,7 +29,7 @@ def configure():
     """
     if settings.POSTHOG_PROJECT_API_KEY:
         posthog.default_client = posthog.Client(
-            api_key=settings.POSTHOG_PROJECT_API_KEY,
+            project_api_key=settings.POSTHOG_PROJECT_API_KEY,
             host=settings.POSTHOG_API_HOST,
             debug=settings.DEBUG,
             on_error=None,

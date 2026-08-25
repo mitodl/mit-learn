@@ -16,9 +16,6 @@ const yup = require("yup")
 const schema = yup.object().shape({
   // Server-only env vars
   MITOL_NOINDEX: yup.string().oneOf(["true", "false"]),
-  NEXT_CACHE_S_MAXAGE_SECONDS: yup
-    .string()
-    .matches(/^\d+$/, { excludeEmptyString: true }),
   // Required client/server vars — must be present in local dev and at runtime.
   NEXT_PUBLIC_ORIGIN: yup
     .string()
@@ -45,6 +42,10 @@ const schema = yup.object().shape({
   NEXT_PUBLIC_MITX_ONLINE_CSRF_COOKIE_NAME: yup.string().required(),
   // Optional client or server vars
   NEXT_PUBLIC_APPZI_URL: yup.string(),
+  // CDN TTL for HTML pages; see getCacheSMaxageSeconds in src/common/config.ts
+  NEXT_PUBLIC_CACHE_S_MAXAGE_SECONDS: yup
+    .string()
+    .matches(/^\d+$/, { excludeEmptyString: true }),
   NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS: yup
     .string()
     .oneOf(["true", "false"]),

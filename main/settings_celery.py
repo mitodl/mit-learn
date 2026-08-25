@@ -3,6 +3,7 @@ Django settings for celery.
 """
 
 from celery.schedules import crontab
+from django.core.exceptions import ImproperlyConfigured
 from redbeat import RedBeatScheduler
 
 from main.envs import get_bool, get_int, get_string
@@ -227,6 +228,47 @@ CELERY_BEAT_SCHEDULE = (
         },
     }
 )
+
+# Per-source cutover switch for warehouse-pull catalog ETL
+# (learning_resources.tasks.Sync*Task, StarRocks-backed — see
+# learning_resources.lib.warehouse.BaseWarehouseETLTask). Each stacked PR
+# that adds a source registers its beat entry above and adds itself to
+# _API_ETL_BEAT_ENTRIES_BY_SOURCE below; none are wired up yet.
+#
+# Deliberately *not* keyed on STARROCKS_HOST: during the parallel-validation
+# window for each source both pipelines must run so their outputs can be
+# compared. Cutover is a separate, per-source decision made once a source
+# clears validation, so it gets its own setting — a comma-separated list of
+# ETLSource names (e.g. "mitxonline,xpro").
+#
+# Only the catalog-metadata tasks belong here. The `import_all_*_files`
+# tasks stay scheduled regardless of cutover: the integrations__learn__*
+# views carry course/program metadata only, not content files.
+_API_ETL_BEAT_ENTRIES_BY_SOURCE: dict[str, tuple[str, ...]] = {}
+
+WAREHOUSE_ETL_CUTOVER_SOURCES = [
+    source.strip()
+    for source in get_string("WAREHOUSE_ETL_CUTOVER_SOURCES", "").split(",")
+    if source.strip()
+]
+
+_unknown_cutover_sources = sorted(
+    set(WAREHOUSE_ETL_CUTOVER_SOURCES) - set(_API_ETL_BEAT_ENTRIES_BY_SOURCE)
+)
+if _unknown_cutover_sources:
+    # Fail loud rather than silently leaving a legacy task scheduled: a
+    # typo here would mean both pipelines keep writing the same rows long
+    # after the source was believed to be cut over.
+    msg = (
+        f"WAREHOUSE_ETL_CUTOVER_SOURCES contains unrecognized source(s): "
+        f"{', '.join(_unknown_cutover_sources)}. "
+        f"Valid values: {', '.join(sorted(_API_ETL_BEAT_ENTRIES_BY_SOURCE))}"
+    )
+    raise ImproperlyConfigured(msg)
+
+for _source in WAREHOUSE_ETL_CUTOVER_SOURCES:
+    for _beat_entry in _API_ETL_BEAT_ENTRIES_BY_SOURCE[_source]:
+        CELERY_BEAT_SCHEDULE.pop(_beat_entry, None)
 
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"

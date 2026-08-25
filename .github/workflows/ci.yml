@@ -12,7 +12,7 @@ jobs:
       # Label used to access the service container
       db:
         # Docker Hub image
-        image: postgres:12.22
+        image: postgres:15
         # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
@@ -30,6 +30,20 @@ jobs:
         image: redis:8.2.2
         ports:
           - 6379:6379
+
+      starrocks:
+        # All-in-one FE+BE image, for CI/local dev only — see
+        # learning_resources.lib.warehouse for what this backs.
+        image: starrocks/allin1-ubuntu:4.1.4
+        options: >-
+          --health-cmd "bash -c 'echo > /dev/tcp/127.0.0.1/9030'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+          --health-start-period 30s
+        ports:
+          - 9030:9030
+          - 8030:8030
 
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -78,6 +92,9 @@ jobs:
           MAILGUN_SENDER_DOMAIN: other.fake.site
           OPENSEARCH_INDEX: testindex
           INDEXING_API_USERNAME: mitodl
+          STARROCKS_HOST: localhost
+          STARROCKS_PORT: "9030"
+          STARROCKS_USER: root
           MITOL_COOKIE_DOMAIN: localhost
           MITOL_COOKIE_NAME: cookie_monster
           UNSUBSCRIBE_SECRET_KEY: fake_unsubscribe_secret
