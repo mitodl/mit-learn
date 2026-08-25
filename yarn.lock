@@ -3557,15 +3557,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/arithmix@npm:^0.2.4":
-  version: 0.2.4
-  resolution: "@mitodl/arithmix@npm:0.2.4"
+"@mitodl/arithmix@npm:^0.2.5":
+  version: 0.2.5
+  resolution: "@mitodl/arithmix@npm:0.2.5"
   peerDependencies:
     "@emotion/react": ">=11"
     "@emotion/styled": ">=11"
     react: ">=18"
     react-dom: ">=18"
-  checksum: 10/0446f5d75db18a18d60432bf7aec508d8533797ee7d17084fc52534f29944fbcc7354dbe11c36b33b51cd5b800fe88603eaf53e5e8d370827cfb40ebab9d7e70
+  checksum: 10/48ba61eb110621a75c20cad74fe4aa7a0523f23aa68de1586ef9d918c9a0113ea525e02e577bdba2b4f85fa46a272d63829d79f74da91803198b55c233d65aa9
   languageName: node
   linkType: hard
 
@@ -16906,7 +16906,7 @@ __metadata:
     "@faker-js/faker": "npm:^10.0.0"
     "@floating-ui/react": "npm:^0.27.16"
     "@happy-dom/jest-environment": "npm:^20.1.0"
-    "@mitodl/arithmix": "npm:^0.2.4"
+    "@mitodl/arithmix": "npm:^0.2.5"
     "@mitodl/course-search-utils": "npm:^3.5.2"
     "@mitodl/hacksnack": "npm:^0.1.2"
     "@mitodl/mitxonline-api-axios": "npm:2026.8.18"
