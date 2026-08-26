@@ -407,3 +407,12 @@ CURRENCY_USD = "USD"
 
 GROUP_CONTENT_FILE_CONTENT_VIEWERS = "content_file_viewers"
 GROUP_TUTOR_PROBLEM_VIEWERS = "tutor_problem_viewers"
+GROUP_COURSE_AUTHORS = "course_authors"
+
+
+class CredentialMetadataField(ExtendedEnum):
+    """The Open Badges fields the credential metadata API generates"""
+
+    description = "Description"
+    criteria = "Criteria"
+    learning_goals = "Learning Goals"

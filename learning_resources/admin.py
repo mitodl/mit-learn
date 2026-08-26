@@ -270,6 +270,50 @@ class ContentSummarizerConfigurationAdmin(admin.ModelAdmin):
     )
 
 
+class CredentialMetadataConfigurationAdmin(admin.ModelAdmin):
+    """CredentialMetadataConfiguration Admin"""
+
+    model = models.CredentialMetadataConfiguration
+    list_display = (
+        "field",
+        "llm_model",
+        "temperature",
+        "max_context_tokens",
+        "is_active",
+    )
+    list_filter = ("is_active",)
+
+
+class CredentialMetadataGenerationAdmin(admin.ModelAdmin):
+    """CredentialMetadataGeneration Admin"""
+
+    model = models.CredentialMetadataGeneration
+    list_display = (
+        "learning_resource",
+        "field",
+        "llm_model",
+        "context_tokens",
+        "latency_ms",
+        "created_on",
+    )
+    list_filter = ("field", "llm_model")
+    search_fields = ("learning_resource__readable_id", "learning_resource__title")
+    # The table is append-only: it exists to explain what was generated, which
+    # editing it would defeat.
+    readonly_fields = [field.name for field in model._meta.fields]  # noqa: SLF001
+
+    def get_queryset(self, request):
+        # context_text runs tens of KB a row and nothing on the list page shows
+        # it.
+        return super().get_queryset(request).defer("context_text")
+
+    def has_add_permission(self, request):  # noqa: ARG002
+        return False
+
+    def has_change_permission(self, request, obj=None):  # noqa: ARG002
+        return False
+
+
 admin.site.register(models.LearningResourceTopic, LearningResourceTopicAdmin)
 admin.site.register(models.LearningResourceInstructor, LearningResourceInstructorAdmin)
 admin.site.register(models.LearningResource, LearningResourceAdmin)
@@ -284,4 +328,10 @@ admin.site.register(models.VideoChannel, VideoChannelAdmin)
 admin.site.register(models.ContentFile, ContentFileAdmin)
 admin.site.register(
     models.ContentSummarizerConfiguration, ContentSummarizerConfigurationAdmin
+)
+admin.site.register(
+    models.CredentialMetadataConfiguration, CredentialMetadataConfigurationAdmin
+)
+admin.site.register(
+    models.CredentialMetadataGeneration, CredentialMetadataGenerationAdmin
 )

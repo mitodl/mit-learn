@@ -22,6 +22,7 @@ from grpc._channel import _InactiveRpcError
 from requests.exceptions import RequestException
 from rest_framework import serializers, views, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound
 from rest_framework.filters import OrderingFilter
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
@@ -39,6 +40,7 @@ from learning_resources.constants import (
     PlatformType,
     PrivacyLevel,
 )
+from learning_resources.credentials import generate_credential_metadata
 from learning_resources.etl.podcast import generate_aggregate_podcast_rss
 from learning_resources.exceptions import WebhookException
 from learning_resources.filters import (
@@ -70,6 +72,8 @@ from learning_resources.permissions import (
 from learning_resources.serializers import (
     ContentFileSerializer,
     CourseResourceSerializer,
+    CredentialMetadataRequestSerializer,
+    CredentialMetadataSerializer,
     LearningPathRelationshipCreateSerializer,
     LearningPathRelationshipSerializer,
     LearningPathResourceSerializer,
@@ -117,7 +121,9 @@ from main.utils import (
     call_fastly_purge_api,
     chunks,
     clear_views_cache,
+    db_sync_to_async,
 )
+from main.views import AsyncAPIView
 from vector_search.serializers import LearningResourcesSearchFiltersSerializer
 
 
@@ -1761,3 +1767,47 @@ def problem_set_file_output(problem_set_file):
         "content": problem_set_file.content,
         "file_extension": problem_set_file.file_extension,
     }
+
+
+@extend_schema_view(
+    get=extend_schema(
+        parameters=[CredentialMetadataRequestSerializer()],
+        responses=CredentialMetadataSerializer(),
+    ),
+)
+class CredentialMetadataView(AsyncAPIView):
+    """
+    Generate Open Badges credential metadata for a learning resource.
+
+    Every request generates: there is no cache and no `regenerate` flag, so an
+    author who dislikes a draft asks again and gets a new one. Nothing is saved
+    on the resource -- the drafts are returned for a human to review, and each
+    generation is recorded in CredentialMetadataGeneration.
+
+    Author-only, because a request spends one frontier-model call per field on
+    a large prompt. The view is async so those calls, which run concurrently
+    and take seconds, occupy no blocking thread while they wait.
+    """
+
+    permission_classes = (permissions.IsAdminOrCourseAuthor,)
+
+    @extend_schema(summary="Generate credential metadata")
+    async def get(self, request):
+        request_data = CredentialMetadataRequestSerializer(data=request.GET)
+        if not request_data.is_valid():
+            return Response(request_data.errors, status=400)
+
+        readable_id = request_data.data["resource_readable_id"]
+        resource = await db_sync_to_async(
+            lambda: LearningResource.objects.filter(readable_id=readable_id).first()
+        )()
+        if not resource:
+            msg = f"No learning resource with readable_id {readable_id}"
+            raise NotFound(msg)
+
+        metadata = await generate_credential_metadata(resource, user=request.user)
+        return Response(
+            CredentialMetadataSerializer(
+                {"resource_readable_id": readable_id, **metadata}
+            ).data
+        )

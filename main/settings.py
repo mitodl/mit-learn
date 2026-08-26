@@ -990,6 +990,29 @@ CONTENT_SUMMARIZER_FLASHCARD_PROMPT = get_string(
         """
     ),
 )
+# Credential metadata generation (learning_resources/credentials.py). The
+# prompts, models and per-field token budgets are admin-editable rows of
+# CredentialMetadataConfiguration; only the retrieval knobs are settings, so
+# the Qdrant dependency on an author-facing request path has a kill switch.
+CREDENTIAL_METADATA_RETRIEVAL_ENABLED = get_bool(
+    name="CREDENTIAL_METADATA_RETRIEVAL_ENABLED", default=True
+)
+CREDENTIAL_METADATA_RETRIEVAL_QUERY = get_string(
+    name="CREDENTIAL_METADATA_RETRIEVAL_QUERY",
+    default=(
+        "course learning outcomes, skills gained, assessment and grading"
+        " criteria, syllabus"
+    ),
+)
+CREDENTIAL_METADATA_RETRIEVAL_LIMIT = get_int(
+    name="CREDENTIAL_METADATA_RETRIEVAL_LIMIT", default=50
+)
+# Chunks shorter than this are dropped: near-empty OLX stub blocks are common
+# (`prerequisites` at 4 characters median) and only crowd out real content.
+CREDENTIAL_METADATA_MIN_CHUNK_CHARS = get_int(
+    name="CREDENTIAL_METADATA_MIN_CHUNK_CHARS", default=200
+)
+
 # OpenTelemetry configuration (consumed by mitol-django-observability).
 # Telemetry turns on when any of OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
 # OTEL_EXPORTER_OTLP_METRICS_ENDPOINT or OTEL_EXPORTER_OTLP_ENDPOINT is set in

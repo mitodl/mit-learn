@@ -780,13 +780,35 @@ def json_to_markdown(obj, indent=0):
     return markdown
 
 
+# tiktoken has no encoding for non-OpenAI models, and the LLM model is
+# admin-configurable, so fall back to OpenAI's current encoding rather than
+# raising. Token counts are then approximate, which is fine for the only thing
+# they are used for: keeping a prompt inside a context window.
+FALLBACK_ENCODING_NAME = "o200k_base"
+
+
+def token_encoding(model: str = "gpt-4o"):
+    """Return the tiktoken encoding for a model, or a default one."""
+    import tiktoken
+
+    try:
+        return tiktoken.encoding_for_model(model)
+    except KeyError:
+        return tiktoken.get_encoding(
+            settings.LITELLM_TOKEN_ENCODING_NAME or FALLBACK_ENCODING_NAME
+        )
+
+
+def count_tokens(text: str, model: str = "gpt-4o") -> int:
+    """Count the tokens in text for a given model."""
+    return len(token_encoding(model).encode(text))
+
+
 def truncate_to_tokens(text: str, max_tokens: int, model: str = "gpt-4o") -> str:
     """
     Truncate text to a maximum number of tokens for a given model.
     """
-    import tiktoken
-
-    encoding = tiktoken.encoding_for_model(model)
+    encoding = token_encoding(model)
     tokens = encoding.encode(text)
     if len(tokens) <= max_tokens:
         return text

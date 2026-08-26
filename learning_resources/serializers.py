@@ -2004,3 +2004,53 @@ class LearningResourceSummarySerializer(serializers.ModelSerializer):
             "canonical_parent_ids",
             "learn_url",
         )
+
+
+class CredentialMetadataRequestSerializer(serializers.Serializer):
+    """Query parameters for the credential metadata endpoint"""
+
+    resource_readable_id = serializers.CharField(
+        required=True,
+        help_text="The readable id of the learning resource to generate metadata for",
+    )
+
+
+class CredentialMetadataSerializer(serializers.Serializer):
+    """
+    Generated Open Badges credential metadata for a learning resource.
+
+    Every field is a draft for a human to review and edit: nothing here is
+    saved on the resource, and asking again returns a different draft. A field
+    whose generation failed is absent rather than empty, so a caller does not
+    overwrite a good value with a blank one.
+    """
+
+    resource_readable_id = serializers.CharField(read_only=True)
+    description = serializers.CharField(
+        read_only=True,
+        required=False,
+        help_text="The Open Badges 3.0 description, 1-2 sentences",
+    )
+    criteria = serializers.CharField(
+        read_only=True,
+        required=False,
+        help_text=(
+            "The Open Badges 3.0 criteria narrative, rendered as a markdown"
+            " bullet list from criteria_skills"
+        ),
+    )
+    criteria_skills = serializers.ListField(
+        child=serializers.CharField(),
+        read_only=True,
+        required=False,
+        help_text=(
+            "The discrete skills the criteria narrative was rendered from, one"
+            " per bullet"
+        ),
+    )
+    learning_goals = serializers.ListField(
+        child=serializers.CharField(),
+        read_only=True,
+        required=False,
+        help_text="Learning goals for the course, focused on skills gained",
+    )

@@ -8,6 +8,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 from learning_resources.constants import (
+    GROUP_COURSE_AUTHORS,
     GROUP_STAFF_LISTS_EDITORS,
     GROUP_TUTOR_PROBLEM_VIEWERS,
     PrivacyLevel,
@@ -132,3 +133,20 @@ class IsAdminOrTutorProblemViewer(BasePermission):
         if user.is_staff or user.is_superuser:
             return True
         return user.groups.filter(name=GROUP_TUTOR_PROBLEM_VIEWERS).exists()
+
+
+class IsAdminOrCourseAuthor(BasePermission):
+    """
+    Permission for endpoints only course authors and staff may reach.
+
+    Used to gate credential metadata generation, which spends a frontier-model
+    call on a large prompt per request.
+    """
+
+    def has_permission(self, request, view):  # noqa: ARG002
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+        if user.is_staff or user.is_superuser:
+            return True
+        return user.groups.filter(name=GROUP_COURSE_AUTHORS).exists()

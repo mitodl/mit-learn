@@ -8,7 +8,6 @@ from textwrap import dedent
 
 from asgiref.sync import sync_to_async
 from django.conf import settings
-from django.db import close_old_connections
 from django.db.models import Prefetch, Q
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
@@ -40,11 +39,12 @@ from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
 )
-from main.utils import checksum_for_content, chunks
+from main.utils import checksum_for_content, chunks, db_sync_to_async
 from vector_search.constants import (
     COLLECTION_PARAM_MAP,
     COMPLETENESS_PAYLOAD_KEY,
     CONTENT_FILES_COLLECTION_NAME,
+    CONTENT_FILES_RETRIEVE_PAYLOAD,
     COURSE_NUMBER_INDEXING_ONLY_FIELDS,
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
@@ -1604,6 +1604,55 @@ def best_run_ids_for_resources(readable_ids):
     return run_ids
 
 
+async def async_content_file_chunks_for_resource(
+    readable_id: str, query_string: str, limit: int = 50
+):
+    """
+    Dense vector search over one resource's content-file chunks.
+
+    A focused counterpart to the ContentFilesVectorSearchView query path, for
+    callers that need chunk text rather than a serialized API response: no
+    hybrid arm, no facet counts, no database round trip to hydrate hits, since
+    the chunk text is already in the Qdrant payload.
+
+    Like the view, the query is restricted to each resource's best run (all
+    published runs for a test_mode resource) so a multi-run course does not
+    return the same chunk once per run. Resource readable_ids are included in
+    the run filter to match the run-less course-metadata point.
+
+    Args:
+        readable_id (str): the resource readable_id to retrieve chunks for
+        query_string (str): the retrieval query
+        limit (int): maximum number of chunks to return
+
+    Returns:
+        list[dict]: chunk payloads, highest scoring first, each with the
+            Qdrant point id added as "point_id"
+    """
+    client = async_qdrant_client()
+    encoder_dense = dense_encoder()
+    encoder_dense.cache = True
+
+    run_ids = await db_sync_to_async(best_run_ids_for_resources)([readable_id])
+    search_filter = qdrant_query_conditions(
+        {"run_readable_id": [*run_ids, readable_id]},
+        collection_name=CONTENT_FILES_COLLECTION_NAME,
+    )
+    dense_query = await db_sync_to_async(encoder_dense.embed_query)(query_string)
+    result = await client.query_points(
+        collection_name=CONTENT_FILES_COLLECTION_NAME,
+        query=dense_query,
+        using=encoder_dense.model_short_name(),
+        query_filter=search_filter,
+        with_vectors=False,
+        with_payload=CONTENT_FILES_RETRIEVE_PAYLOAD,
+        limit=limit,
+    )
+    return [
+        {**(point.payload or {}), "point_id": str(point.id)} for point in result.points
+    ]
+
+
 def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
     """
     Return a list of Qdrant FieldCondition objects based on params
@@ -1939,16 +1988,3 @@ def score_formula_query(collection_name: str) -> models.FormulaQuery | None:
         formula=models.SumExpression(sum=["$score", *boost_expressions, *penalties]),
         defaults=defaults,
     )
-
-
-def db_sync_to_async(func):
-    """Offload sync DB work to the thread pool, with per-call connection cleanup."""
-
-    def wrapper(*args, **kwargs):
-        close_old_connections()
-        try:
-            return func(*args, **kwargs)
-        finally:
-            close_old_connections()
-
-    return sync_to_async(wrapper, thread_sensitive=False)
