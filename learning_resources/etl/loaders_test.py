@@ -9,6 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from django.db import connection
 from django.forms.models import model_to_dict
 
 from learning_resources.constants import (
@@ -2046,6 +2047,75 @@ def test_load_content_file():
         assert getattr(loaded_file, key) == value, (
             f"Property {key} should equal {value}"
         )
+
+
+def test_load_content_file_updates_existing():
+    """Test that load_content_file updates an existing row for the same (run, key)"""
+    learning_resource_run = LearningResourceRunFactory.create()
+    existing = ContentFileFactory.create(run=learning_resource_run, key="some/key.pdf")
+
+    result = load_content_file(
+        learning_resource_run, {"key": "some/key.pdf", "title": "updated title"}
+    )
+
+    assert result == existing.id
+    assert ContentFile.objects.filter(run=learning_resource_run).count() == 1
+    existing.refresh_from_db()
+    assert existing.title == "updated title"
+
+
+def test_load_content_file_collapses_duplicates_keeps_summary():
+    """MultipleObjectsReturned duplicates for (run, key) collapse onto the summary-bearing row"""
+    with connection.cursor() as cur:
+        cur.execute("DROP INDEX IF EXISTS contentfile_run_key_uniq")
+
+    learning_resource_run = LearningResourceRunFactory.create()
+    key = "shared/key.pdf"
+    with_summary = ContentFileFactory.create(
+        run=learning_resource_run,
+        key=key,
+        summary="an existing summary",
+        flashcards=[{"question": "q", "answer": "a"}],
+    )
+    ContentFileFactory.create(run=learning_resource_run, key=key, summary="")
+
+    result = load_content_file(
+        learning_resource_run, {"key": key, "title": "new title"}
+    )
+
+    remaining = ContentFile.objects.filter(run=learning_resource_run, key=key)
+    assert remaining.count() == 1
+    kept = remaining.get()
+    assert kept.id == with_summary.id
+    assert result == with_summary.id
+    assert kept.title == "new title"
+    assert kept.summary == "an existing summary"
+    assert kept.flashcards == [{"question": "q", "answer": "a"}]
+
+
+def test_load_content_file_collapses_duplicates_keeps_latest_when_no_summary():
+    """When neither duplicate has a summary, the one with the latest updated_on survives"""
+    with connection.cursor() as cur:
+        cur.execute("DROP INDEX IF EXISTS contentfile_run_key_uniq")
+
+    learning_resource_run = LearningResourceRunFactory.create()
+    key = "shared/key2.pdf"
+    older = ContentFileFactory.create(run=learning_resource_run, key=key, summary="")
+    newer = ContentFileFactory.create(run=learning_resource_run, key=key, summary="")
+    ContentFile.objects.filter(id=older.id).update(
+        updated_on=now_in_utc() - timedelta(days=1)
+    )
+
+    result = load_content_file(
+        learning_resource_run, {"key": key, "title": "new title"}
+    )
+
+    remaining = ContentFile.objects.filter(run=learning_resource_run, key=key)
+    assert remaining.count() == 1
+    kept = remaining.get()
+    assert kept.id == newer.id
+    assert result == newer.id
+    assert kept.title == "new title"
 
 
 def test_load_problem_file():

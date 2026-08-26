@@ -942,9 +942,32 @@ def load_content_file(
     """
     try:
         content_file_tags = content_file_data.pop("content_tags", [])
-        content_file, _ = ContentFile.objects.update_or_create(
-            run=course_run, key=content_file_data.get("key"), defaults=content_file_data
-        )
+        key = content_file_data.get("key")
+        try:
+            content_file, _ = ContentFile.objects.update_or_create(
+                run=course_run, key=key, defaults=content_file_data
+            )
+        except ContentFile.MultipleObjectsReturned:
+            # Celery workers roll concurrently with the migrate job, so this
+            # can run against pre-migration duplicates for a few minutes.
+            # Collapse to the best row (keep LLM summaries), then retry.
+            # Locked so two workers collapsing the same (run, key) agree on
+            # one survivor instead of deleting each other's pick.
+            with transaction.atomic():
+                dupes = list(
+                    ContentFile.objects.select_for_update()
+                    .filter(run=course_run, key=key)
+                    .order_by("id")
+                )
+                keep = sorted(
+                    dupes, key=lambda cf: (bool(cf.summary), cf.updated_on, cf.id)
+                )[-1]
+                ContentFile.objects.filter(
+                    id__in=[cf.id for cf in dupes if cf.id != keep.id]
+                ).delete()
+                content_file, _ = ContentFile.objects.update_or_create(
+                    run=course_run, key=key, defaults=content_file_data
+                )
         load_content_tags(content_file, content_file_tags, is_content_file=True)
         return content_file.id  # noqa: TRY300
     except:  # noqa: E722
