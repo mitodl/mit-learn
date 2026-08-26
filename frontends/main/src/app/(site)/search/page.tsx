@@ -1,4 +1,7 @@
-import type { AppPageProps } from "@/common/searchParams"
+import type {
+  AppPageProps,
+  RegisteredSearchParams,
+} from "@/common/searchParams"
 import React from "react"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import {
@@ -34,7 +37,9 @@ export async function generateMetadata({
 const Page: React.FC<AppPageProps<"/search">> = async ({ searchParams }) => {
   const search = await searchParams
 
-  const urlParams = new URLSearchParams(
+  // RegisteredSearchParams keeps named reads on this copy within the
+  // cache-key whitelist; a bare URLSearchParams would accept any name.
+  const urlParams: RegisteredSearchParams = new URLSearchParams(
     Object.entries(search).flatMap(([key, value]) =>
       Array.isArray(value)
         ? value.map((v) => [key, v])

@@ -1,4 +1,7 @@
-import type { AppPageProps } from "@/common/searchParams"
+import type {
+  AppPageProps,
+  RegisteredSearchParams,
+} from "@/common/searchParams"
 import React from "react"
 import ChannelPage from "@/app-pages/ChannelPage/ChannelPage"
 import { ChannelTypeEnum } from "api/v0"
@@ -92,7 +95,9 @@ const Page: React.FC<AppPageProps<"/c/[channelType]/[name]">> = async ({
 
   const constantSearchParams = getConstantSearchParams(channel.search_filter)
 
-  const urlParams = new URLSearchParams(
+  // RegisteredSearchParams keeps named reads on this copy within the
+  // cache-key whitelist; a bare URLSearchParams would accept any name.
+  const urlParams: RegisteredSearchParams = new URLSearchParams(
     Object.entries(search).flatMap(([key, value]) =>
       Array.isArray(value)
         ? value.map((v) => [key, v])
