@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.77.13 (Released August 26, 2026)
+---------------
+
+- Fix ContentFile duplicates causing MultipleObjectsReturned in ingestion (#3831)
+- Add some initial docs on gtm (#3797)
+- Update dependency @mitodl/mit-learn-api-axios to v2026.8.17 (#3810)
+- Update dependency @mitodl/smoot-design to v6.33.1 (#3811)
+- fix: point LinkedIn credential link at VerifierPlus instead of raw JSON download (#3830)
+
 Version 0.77.12 (Released August 26, 2026)
 ---------------
 
