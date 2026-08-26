@@ -11,7 +11,6 @@ GENERATED = {
     "description": "A course about modelling fluid flow.",
     "criteria": "- Applied conservation laws",
     "criteria_skills": ["Applied conservation laws"],
-    "learning_goals": ["Model fluid flow"],
 }
 
 
@@ -58,7 +57,7 @@ def test_credential_metadata_non_author(
 def test_credential_metadata_generates(
     client, django_user_model, resource, mock_generate, user_role
 ):
-    """Staff and course authors get a full set of drafts"""
+    """Staff and course authors get a draft for every field"""
     if user_role == "staff":
         user = django_user_model.objects.create(is_staff=True)
     else:

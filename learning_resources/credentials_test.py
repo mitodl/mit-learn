@@ -6,10 +6,10 @@ import pytest
 
 from learning_resources.constants import CredentialMetadataField
 from learning_resources.credentials import (
+    RESPONSE_SCHEMAS,
     BadgeCriteria,
     BadgeDescription,
     CredentialContext,
-    LearningGoals,
     _prepare_marketing_page,
     build_credential_context,
     generate_credential_metadata,
@@ -50,7 +50,6 @@ Author of 40 papers on things irrelevant to this credential.
 LLM_RESPONSES = {
     BadgeDescription: {"description": "A course about modelling fluid flow."},
     BadgeCriteria: {"skills": ["Applied conservation laws", "Modelled fluid flow"]},
-    LearningGoals: {"goals": [f"Goal {index}" for index in range(10)]},
 }
 
 
@@ -278,7 +277,7 @@ def test_render_criteria_narrative():
 def test_generate_credential_metadata(
     resource, configurations, mock_llm, mock_retrieval
 ):
-    """All three fields are generated, with criteria rendered from skills"""
+    """Both fields are generated, with criteria rendered from skills"""
     user = UserFactory.create()
     metadata = asyncio.run(generate_credential_metadata(resource, user=user))
 
@@ -290,8 +289,7 @@ def test_generate_credential_metadata(
     assert metadata["criteria"] == (
         "- Applied conservation laws\n- Modelled fluid flow"
     )
-    assert metadata["learning_goals"] == [f"Goal {index}" for index in range(10)]
-    # One context, three calls over it.
+    # One context, one call per field over it.
     assert mock_retrieval.call_count == 1
 
 
@@ -310,14 +308,7 @@ def test_generate_credential_metadata_logs_generations(
     for configuration in configurations:
         generation = generations.get(field=configuration.field)
         assert (
-            generation.response
-            == LLM_RESPONSES[
-                {
-                    CredentialMetadataField.description.name: BadgeDescription,
-                    CredentialMetadataField.criteria.name: BadgeCriteria,
-                    CredentialMetadataField.learning_goals.name: LearningGoals,
-                }[configuration.field]
-            ]
+            generation.response == LLM_RESPONSES[RESPONSE_SCHEMAS[configuration.field]]
         )
         # The prompt is snapshotted, not referenced: it is admin-editable, and
         # a response stored against a mutated prompt says nothing.
@@ -371,8 +362,7 @@ def test_generate_credential_metadata_omits_empty_values(
     """An empty draft is left out rather than returned as a blank field"""
     empty = {
         BadgeDescription: {"description": ""},
-        BadgeCriteria: {"skills": []},
-        LearningGoals: {"goals": ["", None]},
+        BadgeCriteria: {"skills": ["", None]},
     }
 
     def with_structured_output(schema):

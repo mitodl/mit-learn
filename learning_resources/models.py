@@ -1691,7 +1691,7 @@ class CredentialMetadataConfiguration(TimestampedModel):
     prompt = models.TextField(help_text="Appended to the assembled course context.")
     temperature = models.FloatField(default=0.0)
     # Per-field rather than global: a 1-2 sentence description is diluted by a
-    # large context, while criteria and learning goals benefit from one.
+    # large context, while criteria benefit from one.
     max_context_tokens = models.PositiveIntegerField(
         default=16000,
         help_text="Maximum context tokens sent with this prompt.",

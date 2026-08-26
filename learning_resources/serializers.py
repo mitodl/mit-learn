@@ -2048,9 +2048,3 @@ class CredentialMetadataSerializer(serializers.Serializer):
             " per bullet"
         ),
     )
-    learning_goals = serializers.ListField(
-        child=serializers.CharField(),
-        read_only=True,
-        required=False,
-        help_text="Learning goals for the course, focused on skills gained",
-    )

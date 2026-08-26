@@ -61,20 +61,9 @@ class BadgeCriteria(TypedDict):
     ]
 
 
-class LearningGoals(TypedDict):
-    """Structured response for the learning goals field"""
-
-    goals: Annotated[
-        list[str],
-        ...,
-        "Learning goals: the skills, knowledge and abilities gained on completion",
-    ]
-
-
 RESPONSE_SCHEMAS = {
     CredentialMetadataField.description.name: BadgeDescription,
     CredentialMetadataField.criteria.name: BadgeCriteria,
-    CredentialMetadataField.learning_goals.name: LearningGoals,
 }
 
 # Sections of the marketing page below this heading -- instructor CVs and
@@ -116,7 +105,7 @@ class CredentialContext(NamedTuple):
 
     Kept as separate sections rather than one string because each field has its
     own token budget: a 1-2 sentence description is diluted by a large context
-    while criteria and learning goals benefit from one.
+    while criteria benefit from one.
     """
 
     metadata: str
@@ -386,17 +375,17 @@ async def generate_credential_metadata(resource: LearningResource, user=None) ->
     Generate every configured credential metadata field for a resource.
 
     The fields share one context and are independent, so they are generated
-    concurrently: three sequential calls take about as long as the sum of
-    their output lengths, three concurrent ones about as long as the slowest.
+    concurrently: run in sequence they take about as long as the sum of their
+    output lengths, run concurrently about as long as the slowest.
 
     Args:
         resource (LearningResource): the resource to generate metadata for
         user (User): the user the generation is logged against
 
     Returns:
-        dict: description (str), criteria (rendered narrative), criteria_skills
-            (list[str]) and learning_goals (list[str]). A field whose
-            generation failed, or which has no active configuration, is absent.
+        dict: description (str), criteria (the rendered narrative) and
+            criteria_skills (list[str]). A field whose generation failed, or
+            which has no active configuration, is absent.
     """
     configs = await db_sync_to_async(
         lambda: list(CredentialMetadataConfiguration.objects.filter(is_active=True))
@@ -428,8 +417,4 @@ async def generate_credential_metadata(resource: LearningResource, user=None) ->
             if skills:
                 metadata["criteria"] = render_criteria_narrative(skills)
                 metadata["criteria_skills"] = skills
-        elif config.field == CredentialMetadataField.learning_goals.name:
-            goals = [goal for goal in response.get("goals") or [] if goal]
-            if goals:
-                metadata["learning_goals"] = goals
     return metadata

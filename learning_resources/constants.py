@@ -415,4 +415,3 @@ class CredentialMetadataField(ExtendedEnum):
 
     description = "Description"
     criteria = "Criteria"
-    learning_goals = "Learning Goals"
