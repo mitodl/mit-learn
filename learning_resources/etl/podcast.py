@@ -8,7 +8,9 @@ import yaml
 from bs4 import BeautifulSoup as bs  # noqa: N813
 from dateutil.parser import parse
 from django.conf import settings
-from requests.exceptions import HTTPError
+from requests.adapters import HTTPAdapter
+from requests.exceptions import RequestException
+from urllib3.util.retry import Retry
 
 from learning_resources.constants import Availability, LearningResourceType
 from learning_resources.etl.constants import ETLSource
@@ -68,8 +70,9 @@ def validate_podcast_config(podcast_config):
         errors.append("Podcast data should be a dict")
         return errors
 
-    if "rss_url" not in podcast_config:
-        errors.append("Required key 'rss_url' is not present")
+    rss_url = podcast_config.get("rss_url")
+    if not isinstance(rss_url, str) or not rss_url.strip():
+        errors.append("Required key 'rss_url' is not present or not a url")
 
     return errors
 
@@ -116,9 +119,14 @@ def parse_readable_id_from_url(url):
     return url.split("//")[-1]
 
 
-def extract():
+def extract(tracked_ids: list[str] | None = None):
     """
     Function for extracting podcast data
+
+    Args:
+        tracked_ids (list): caller-owned list, filled with the readable id of
+            every configured feed so the loader can tell a podcast we no longer
+            track apart from one this run couldn't fetch or parse
 
     Returns:
         A generator that returns tupes ((BeautifulSoup object, dict)) with the rss and config data for the podcast
@@ -128,18 +136,37 @@ def extract():
     if not configs:
         return
 
+    if tracked_ids is not None:
+        tracked_ids.extend(
+            parse_readable_id_from_url(config["rss_url"]) for config in configs
+        )
+
+    session = requests.Session()
+    adapter = HTTPAdapter(
+        max_retries=Retry(
+            total=2, backoff_factor=1, status_forcelist=(429, 500, 502, 503, 504)
+        )
+    )
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+
     for playlist_config in configs:
         rss_url = playlist_config["rss_url"]
         try:
-            response = requests.get(rss_url, headers=BROWSER_UA_HEADERS)  # noqa: S113
+            response = session.get(
+                rss_url,
+                headers=BROWSER_UA_HEADERS,
+                # separate connect timeout so a dead host fails fast on retries
+                timeout=(10, settings.REQUESTS_TIMEOUT),
+            )
             response.raise_for_status()
 
             feed = bs(response.content, "xml")
             yield (feed, playlist_config)
-        except ConnectionResetError:
-            log.warning("Connection reset error for rss url %s", rss_url)
-        except (ConnectionError, HTTPError):
-            log.exception("Invalid rss url %s", rss_url)
+        except RequestException:
+            # RequestException is the base class for every requests failure,
+            # including its own ConnectionError, which is not the builtin one.
+            log.exception("Could not fetch rss url %s", rss_url)
 
 
 def transform_episode(rss_data, offered_by, topics, parent_image):

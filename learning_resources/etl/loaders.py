@@ -1376,12 +1376,18 @@ def load_podcast(podcast_data: dict) -> LearningResource:
     return learning_resource
 
 
-def load_podcasts(podcasts_data: list[dict]) -> list[LearningResource]:
+def load_podcasts(
+    podcasts_data: list[dict], tracked_ids: list[str]
+) -> list[LearningResource]:
     """
     Load a list of podcasts
 
     Args:
         podcasts_data (iter of dict): iterable of podcast data
+        tracked_ids (list of str): readable ids of every configured feed.
+            Podcasts outside this list are the ones we no longer track; a
+            podcast in it keeps its data even if this run couldn't fetch or
+            parse its feed.
 
     Returns:
         list of LearningResources:
@@ -1398,11 +1404,14 @@ def load_podcasts(podcasts_data: list[dict]) -> list[LearningResource]:
         else:
             podcast_resources.append(podcast_resource)
 
+    if not tracked_ids:
+        msg = "No podcasts to track, refusing to unpublish every podcast"
+        raise ExtractException(msg)
+
     # unpublish the podcasts and episodes we're no longer tracking
-    ids = [podcast.id for podcast in podcast_resources]
     unpublished_podcasts = LearningResource.objects.filter(
         resource_type=LearningResourceType.podcast.name
-    ).exclude(id__in=ids)
+    ).exclude(readable_id__in=tracked_ids)
     unpublished_podcasts.update(published=False)
     bulk_resources_unpublished_actions(
         unpublished_podcasts.values_list("id", flat=True),
@@ -1410,7 +1419,7 @@ def load_podcasts(podcasts_data: list[dict]) -> list[LearningResource]:
     )
     unpublished_episodes = LearningResource.objects.filter(
         resource_type=LearningResourceType.podcast_episode.name
-    ).exclude(parents__parent__in=ids)
+    ).exclude(parents__parent__readable_id__in=tracked_ids)
     unpublished_episodes.update(published=False)
     bulk_resources_unpublished_actions(
         unpublished_episodes.values_list("id", flat=True),

@@ -34,6 +34,7 @@ from learning_resources.etl.constants import (
     ProgramLoaderConfig,
 )
 from learning_resources.etl.edx_shared import sync_edx_course_files
+from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.loaders import (
     ProgramLoadResult,
     calculate_completeness,
@@ -2232,29 +2233,33 @@ def test_load_content_file_error(mocker):
     )
 
 
+def build_podcast_data(learning_resource_offeror):
+    """Build transformable data for a single podcast and its episodes"""
+    podcast = PodcastFactory.build()
+    podcast_data = model_to_dict(
+        podcast.learning_resource, exclude=non_transformable_attributes
+    )
+    podcast_data["image"] = {"url": podcast.learning_resource.image.url}
+    podcast_data["offered_by"] = {"name": learning_resource_offeror.name}
+    podcast_data["episodes"] = [
+        {
+            **model_to_dict(
+                episode.learning_resource, exclude=non_transformable_attributes
+            ),
+            "offered_by": {"name": learning_resource_offeror.name},
+        }
+        for episode in PodcastEpisodeFactory.build_batch(3)
+    ]
+    return podcast_data
+
+
 def test_load_podcasts(learning_resource_offeror, podcast_platform):
     """Test load_podcasts"""
 
-    podcasts_data = []
-    for podcast in PodcastFactory.build_batch(3):
-        episodes = PodcastEpisodeFactory.build_batch(3)
-        podcast_data = model_to_dict(
-            podcast.learning_resource, exclude=non_transformable_attributes
-        )
-        podcast_data["image"] = {"url": podcast.learning_resource.image.url}
-        podcast_data["offered_by"] = {"name": learning_resource_offeror.name}
-        episodes_data = [
-            {
-                **model_to_dict(
-                    episode.learning_resource, exclude=non_transformable_attributes
-                ),
-                "offered_by": {"name": learning_resource_offeror.name},
-            }
-            for episode in episodes
-        ]
-        podcast_data["episodes"] = episodes_data
-        podcasts_data.append(podcast_data)
-    results = load_podcasts(podcasts_data)
+    podcasts_data = [build_podcast_data(learning_resource_offeror) for _ in range(3)]
+    results = load_podcasts(
+        podcasts_data, [data["readable_id"] for data in podcasts_data]
+    )
 
     assert len(results) == len(podcasts_data)
 
@@ -2275,22 +2280,78 @@ def test_load_podcasts(learning_resource_offeror, podcast_platform):
             )
 
 
-def test_load_podcasts_unpublish(podcast_platform):
-    """Test load_podcast when a podcast gets unpublished"""
+def test_load_podcasts_unpublish(learning_resource_offeror, podcast_platform):
+    """Test load_podcasts when a podcast is no longer in the feed list"""
     podcast = PodcastFactory.create().learning_resource
     assert podcast.published is True
     assert podcast.children.count() > 0
-    for relation in podcast.children.all():
-        assert relation.child.published is True
 
-    load_podcasts([])
+    loaded_data = build_podcast_data(learning_resource_offeror)
+    load_podcasts([loaded_data], [loaded_data["readable_id"]])
 
     podcast.refresh_from_db()
 
     assert podcast.published is False
-    assert podcast.children.count() > 0
     for relation in podcast.children.all():
         assert relation.child.published is False
+
+
+def test_load_podcasts_preserves_tracked_feeds(
+    learning_resource_offeror, podcast_platform
+):
+    """A tracked podcast that didn't load this run should stay published"""
+    podcast = PodcastFactory.create().learning_resource
+    loaded_data = build_podcast_data(learning_resource_offeror)
+    assert podcast.children.count() > 0
+
+    load_podcasts([loaded_data], [podcast.readable_id, loaded_data["readable_id"]])
+
+    podcast.refresh_from_db()
+
+    assert podcast.published is True
+    for relation in podcast.children.all():
+        assert relation.child.published is True
+
+
+def test_load_podcasts_no_feeds_loaded(podcast_platform):
+    """No feed loaded at all should leave the tracked podcasts alone"""
+    podcast = PodcastFactory.create().learning_resource
+
+    assert load_podcasts([], [podcast.readable_id]) == []
+
+    podcast.refresh_from_db()
+
+    assert podcast.published is True
+    for relation in podcast.children.all():
+        assert relation.child.published is True
+
+
+def test_load_podcasts_untracked_unpublish(learning_resource_offeror, podcast_platform):
+    """A podcast whose config is gone should be unpublished"""
+    podcast = PodcastFactory.create().learning_resource
+    loaded_data = build_podcast_data(learning_resource_offeror)
+
+    load_podcasts([loaded_data], [loaded_data["readable_id"]])
+
+    podcast.refresh_from_db()
+
+    assert podcast.published is False
+    for relation in podcast.children.all():
+        assert relation.child.published is False
+
+
+def test_load_podcasts_nothing_tracked_raises(podcast_platform):
+    """Loading nothing should fail loudly rather than unpublish the catalog"""
+    podcast = PodcastFactory.create().learning_resource
+
+    with pytest.raises(ExtractException):
+        load_podcasts([], [])
+
+    podcast.refresh_from_db()
+
+    assert podcast.published is True
+    for relation in podcast.children.all():
+        assert relation.child.published is True
 
 
 @pytest.mark.parametrize("podcast_episode_exists", [True, False])
