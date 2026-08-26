@@ -5,14 +5,12 @@ import { PlainList, Stack, Typography } from "ol-components"
 
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
-import { styled } from "@mitodl/smoot-design"
+import { styled, VisuallyHidden } from "@mitodl/smoot-design"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import { notFound } from "next/navigation"
 import { HeadingIds, parseReqTree, RequirementData } from "./util"
-import {
-  getIdsFromReqTree,
-  isVerifiedEnrollmentMode,
-} from "@/common/mitxonline"
+import useReqTreeChildren from "./useReqTreeChildren"
+import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
@@ -26,7 +24,6 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
 import ProgramInfoBox from "./InfoBoxProgram"
-import { coursesQueries } from "api/mitxonline-hooks/courses"
 import MitxOnlineResourceCard from "./MitxOnlineResourceCard"
 import ProgramHeaderEnrollButton from "./ProgramHeaderEnrollButton"
 import { trackCourseProgramView } from "@/common/analytics/gtm"
@@ -69,17 +66,11 @@ type RequirementsSectionProps = {
   courses?: CourseWithCourseRunsSerializerV2[]
   childPrograms?: V2ProgramDetail[]
   isLoading?: boolean
+  showCourseFraming?: boolean
 }
 
-// Programs can have child courses and child programs. Child programs with
-// display_mode="Course" are shown as courses here and on their own product pages.
-//
-// This text always says "courses" even when some children are programs with
-// null display_mode. Correctly classifying child programs by display_mode would
-// require waiting for the child programs query to resolve, causing flicker. The
-// important use cases are course and course-like program children only; getting
-// text like "courses/programs" right across the requirements display, summary,
-// and bundle upsell would need nontrivial refactoring and design/product input.
+// Says "courses" for child programs too: those with display_mode="course" are
+// presented as courses here and on their own product pages.
 const getCompletionText = (parsedReqs: RequirementData[]) => {
   let requiredCount = 0
   let requiredElectiveCount = 0
@@ -122,6 +113,7 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
   courses,
   childPrograms,
   isLoading,
+  showCourseFraming = true,
 }) => {
   const coursesById = keyBy(courses ?? [], "id")
   const programsById = keyBy(childPrograms ?? [], "id")
@@ -133,19 +125,27 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
       component="section"
       aria-labelledby={HeadingIds.Requirements}
     >
-      <div>
-        <Typography
-          variant="h4"
-          component="h2"
-          id={HeadingIds.Requirements}
-          sx={{ marginBottom: "4px" }}
-        >
-          Courses
-        </Typography>
-        <Typography variant="body1" component="p">
-          {getCompletionText(parsedReqs)}
-        </Typography>
-      </div>
+      {showCourseFraming ? (
+        <div>
+          <Typography
+            variant="h4"
+            component="h2"
+            id={HeadingIds.Requirements}
+            sx={{ marginBottom: "4px" }}
+          >
+            Courses
+          </Typography>
+          <Typography variant="body1" component="p">
+            {getCompletionText(parsedReqs)}
+          </Typography>
+        </div>
+      ) : (
+        /* Nothing visible introduces the groups, but the section's
+           aria-labelledby still needs a target. */
+        <VisuallyHidden as="h2" id={HeadingIds.Requirements}>
+          Requirements
+        </VisuallyHidden>
+      )}
       <Stack gap={{ xs: "32px", sm: "56px" }}>
         {parsedReqs.map((req) => {
           const note = getRequirementSectionSubtitle(req)
@@ -230,25 +230,12 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   const page = pages.data?.items[0]
   const program = programs.data?.results?.[0]
 
-  const { courseIds, programIds } = program
-    ? getIdsFromReqTree(program.req_tree)
-    : { courseIds: [], programIds: [] }
-
-  const courses = useQuery({
-    ...coursesQueries.coursesList({
-      id: courseIds,
-      page_size: courseIds.length,
-    }),
-    enabled: courseIds.length > 0,
-  })
-
-  const childPrograms = useQuery({
-    ...programsQueries.programsList({
-      id: programIds,
-      page_size: programIds.length,
-    }),
-    enabled: programIds.length > 0,
-  })
+  const {
+    courses,
+    programs: childPrograms,
+    isLoading: dataLoading,
+    allChildrenAreCourseLike: showCourseFraming,
+  } = useReqTreeChildren(program)
 
   useEffect(() => {
     if (!program) return
@@ -266,10 +253,6 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
 
   const imageSrc =
     page.program_details.page?.feature_image_src || DEFAULT_RESOURCE_IMG
-
-  const dataLoading =
-    (courseIds.length > 0 && !courses.isSuccess) ||
-    (programIds.length > 0 && !childPrograms.isSuccess)
 
   return (
     <ProductPageTemplate
@@ -297,7 +280,11 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
         resource_type: "program",
       }}
       infoBox={
-        <ProgramInfoBox program={program} courses={courses.data?.results} />
+        <ProgramInfoBox
+          program={program}
+          courses={courses}
+          showCourseFraming={showCourseFraming}
+        />
       }
     >
       {page.about ? (
@@ -308,10 +295,10 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       ) : null}
       <RequirementsSection
         program={program}
-        courses={courses.data?.results}
-        childPrograms={childPrograms.data?.results}
-        // Use skeleton as fallback for loading OR error
+        courses={courses}
+        childPrograms={childPrograms}
         isLoading={dataLoading}
+        showCourseFraming={showCourseFraming}
       />
       <HowYoullLearnSection page={page} />
       {page.prerequisites ? (

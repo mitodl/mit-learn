@@ -6,6 +6,7 @@ import {
   MetadataNotFound,
 } from "@/common/metadata"
 import ProgramPage from "@/app-pages/ProductPages/ProgramPage"
+import { reqTreeChildQueries } from "@/app-pages/ProductPages/useReqTreeChildren"
 import { notFound, redirect } from "next/navigation"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { programPageView } from "@/common/urls"
@@ -71,6 +72,22 @@ const Page: React.FC<PageProps<"/programs/[readable_id]">> = async (props) => {
       }),
     )
   }
+
+  /**
+   * Serial by necessity: the route has only a readable id, and the child ids
+   * live in the program's requirement tree. Without them the requirements
+   * section paints skeletons and cannot yet tell course-like children from
+   * programs, since a req_tree node carries a child's id but not display_mode.
+   */
+  const children = reqTreeChildQueries(program)
+  await Promise.all([
+    children.courseIds.length > 0
+      ? queryClient.prefetchQuery(children.courses)
+      : null,
+    children.programIds.length > 0
+      ? queryClient.prefetchQuery(children.programs)
+      : null,
+  ])
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

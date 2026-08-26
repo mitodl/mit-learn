@@ -1237,6 +1237,36 @@ describe("ProgramSummary", () => {
 
       expect(reqRow).toHaveTextContent("3 Courses to complete program")
     })
+
+    test("Omits the row when showCourseFraming is false", () => {
+      const requirements = new RequirementTreeBuilder()
+      const tracks = requirements.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+      })
+      tracks.addProgram()
+      tracks.addProgram()
+
+      const program = factories.programs.program({
+        req_tree: requirements.serialize(),
+      })
+
+      const { view } = renderWithProviders(
+        <ProgramSummary tabletColumns={2} program={program} />,
+      )
+      // Pin that the prop is what removes the row, not a zero requirement count.
+      expect(screen.getByTestId(TestIds.RequirementsRow)).toBeVisible()
+
+      view.rerender(
+        <ProgramSummary
+          tabletColumns={2}
+          program={program}
+          showCourseFraming={false}
+        />,
+      )
+
+      expect(screen.queryByTestId(TestIds.RequirementsRow)).toBe(null)
+    })
   })
 
   describe("Duration Row", () => {
