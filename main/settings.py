@@ -990,6 +990,34 @@ CONTENT_SUMMARIZER_FLASHCARD_PROMPT = get_string(
         """
     ),
 )
+# Credential metadata generation (learning_resources/credentials.py). The
+# prompts, models and the content retrieval query are admin-editable rows of
+# CredentialMetadataConfiguration; what is left is how much it retrieves.
+CREDENTIAL_METADATA_CONTENT_CHUNK_LIMIT = get_int(
+    name="CREDENTIAL_METADATA_CONTENT_CHUNK_LIMIT", default=50
+)
+# Chunks shorter than this are dropped: near-empty OLX stub blocks are common
+# (`prerequisites` at 4 characters median) and only crowd out real content.
+CREDENTIAL_METADATA_MIN_CHUNK_CHARS = get_int(
+    name="CREDENTIAL_METADATA_MIN_CHUNK_CHARS", default=200
+)
+# How long one field's LLM call may take. litellm's own default is 6000
+# seconds, so without this a hung provider connection outlives every proxy in
+# front of it by a wide margin: the client gets a 504 while the request goes on
+# burning spend and holding its pending log write open.
+#
+# 120s is sized for the models production runs -- gpt-5 and Claude take 25-46s
+# per field, against 1-4s for the gpt-4o-mini the configurations are seeded
+# with -- and sits under the 180s read timeout the deployed path allows. That
+# ceiling is not configured from this repo: CI/QA/production reach Django
+# through an APISIX route defined in ol-infrastructure, where this path has a
+# `credential-metadata` route raising it from the 60s default the rest of the
+# application uses. Fields are generated concurrently, so this bounds the whole
+# run, and the remaining margin covers retrieval and the log write.
+CREDENTIAL_METADATA_LLM_TIMEOUT = get_int(
+    name="CREDENTIAL_METADATA_LLM_TIMEOUT", default=120
+)
+
 # OpenTelemetry configuration (consumed by mitol-django-observability).
 # Telemetry turns on when any of OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
 # OTEL_EXPORTER_OTLP_METRICS_ENDPOINT or OTEL_EXPORTER_OTLP_ENDPOINT is set in
