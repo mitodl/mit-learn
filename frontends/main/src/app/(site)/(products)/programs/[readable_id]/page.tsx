@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import {
@@ -15,7 +16,7 @@ import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { getQueryClient } from "@/app/getQueryClient"
 
 export const generateMetadata = async (
-  props: PageProps<"/programs/[readable_id]">,
+  props: AppPageProps<"/programs/[readable_id]">,
 ) => {
   const params = await props.params
   const readableId = decodeURIComponent(params.readable_id)
@@ -41,7 +42,9 @@ export const generateMetadata = async (
   })
 }
 
-const Page: React.FC<PageProps<"/programs/[readable_id]">> = async (props) => {
+const Page: React.FC<AppPageProps<"/programs/[readable_id]">> = async (
+  props,
+) => {
   const params = await props.params
   const readableId = decodeURIComponent(params.readable_id)
 

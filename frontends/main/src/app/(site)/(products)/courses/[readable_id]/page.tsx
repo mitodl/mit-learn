@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import {
@@ -14,7 +15,7 @@ import { getQueryClient } from "@/app/getQueryClient"
 import { getOutlineCoursewareId } from "@/app-pages/ProductPages/util"
 
 export const generateMetadata = async (
-  props: PageProps<"/courses/[readable_id]">,
+  props: AppPageProps<"/courses/[readable_id]">,
 ) => {
   const params = await props.params
   const readableId = decodeURIComponent(params.readable_id)
@@ -40,7 +41,9 @@ export const generateMetadata = async (
   })
 }
 
-const Page: React.FC<PageProps<"/courses/[readable_id]">> = async (props) => {
+const Page: React.FC<AppPageProps<"/courses/[readable_id]">> = async (
+  props,
+) => {
   const params = await props.params
   const readableId = decodeURIComponent(params.readable_id)
 
