@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.77.12
+Version 0.77.12 (Released August 26, 2026)
 ---------------
 
 - Add department 21T (Theater Arts) (#3668)
