@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.77.13
+Version 0.77.13 (Released August 26, 2026)
 ---------------
 
 - Fix ContentFile duplicates causing MultipleObjectsReturned in ingestion (#3831)
