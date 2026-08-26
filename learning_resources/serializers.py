@@ -1131,12 +1131,22 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
                 rendered_data[field.help_text] = display_text
         return rendered_data
 
+    def _document_heading(self):
+        """Heading prefixed to the rendered metadata document"""
+        resource_type = self.instance.get("resource_type", "course")
+        return f"# Information about this {resource_type}:"
+
+    def render_markdown(self):
+        """Render the whole resource metadata document as markdown"""
+        return (
+            f"{self._document_heading()}\n\n{json_to_markdown(self.render_document())}"
+        )
+
     def render_chunks(self):
         """Convert resource info to markdown chunks"""
         from langchain_text_splitters import RecursiveJsonSplitter
 
         rendered_doc = self.render_document()
-        resource_type = self.instance.get("resource_type", "course")
         """
         We cant use tiktoken for token size calculation so
         we use a rough calculation of 4*chunk_size characters:
@@ -1149,7 +1159,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         )
         return [
             (
-                f"# Information about this {resource_type}:\n\n"
+                f"{self._document_heading()}\n\n"
                 f"{json_to_markdown(json.loads(json_fragment))}"
             )
             for json_fragment in RecursiveJsonSplitter(
