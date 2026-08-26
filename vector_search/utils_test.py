@@ -1028,32 +1028,91 @@ def test_should_generate_for_changed_resource(mocker):
     assert result is True
 
 
-def test_embedding_context_includes_content_files():
+@pytest.fixture
+def serialized_course():
+    """Serialize a course the way the embedding pipeline sees it."""
+    resource = LearningResourceFactory.create(resource_type=COURSE_TYPE, published=True)
+    LearningResourceRunFactory.create(learning_resource=resource, published=True)
+    return next(iter(serialize_bulk_learning_resources([resource.id])))
+
+
+def test_embedding_context_is_the_course_metadata_document(serialized_course):
+    """
+    The course metadata document -- the markdown rendering of the resource
+    drawer -- is the embedding context, so instructors, prices and dates are
+    all searchable.
+    """
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
+
+    assert context.startswith("# Information about this course:")
+    assert serialized_course["title"] in context
+    assert serialized_course["description"] in context
+    assert serialized_course["full_description"] in context
+    assert "**Instructors**" in context
+    for run in serialized_course["runs"]:
+        for instructor in run["instructors"]:
+            assert instructor["full_name"] in context
+    for topic in serialized_course["topics"]:
+        assert topic["name"] in context
+
+
+def test_embedding_context_matches_rendered_metadata_document(serialized_course):
+    """
+    The context leads with the same document that gets embedded into the
+    content file collection.
+    """
+    metadata_document = LearningResourceMetadataDisplaySerializer(
+        serialized_course,
+        context=vs_utils._metadata_serializer_context(),  # noqa: SLF001
+    ).render_markdown()
+
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
+
+    assert context.startswith(metadata_document)
+
+
+def test_embedding_context_falls_back_to_description(mocker):
+    """
+    A payload the display serializer chokes on falls back to title/description
+    text instead of failing the batch.
+    """
+    mocker.patch.object(
+        LearningResourceMetadataDisplaySerializer,
+        "render_markdown",
+        side_effect=KeyError("delivery"),
+    )
+
+    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
+        {
+            "title": "A title",
+            "description": "A short description",
+            "full_description": "A full description",
+            "readable_id": "18.06",
+            "resource_type_group": "course",
+            "content_files": [],
+        }
+    )
+
+    assert context == (
+        "# A title\n\nA short description A full description\n\nCourse number: 18.06"
+    )
+
+
+def test_embedding_context_includes_content_files(serialized_course):
     """
     Content file text should be folded into the embedding context for any
     resource type, mirroring the OpenSearch query.
     """
-    serialized_resource = {
-        "title": "A title",
-        "description": "A short description",
-        "full_description": "A full description",
-        "readable_id": "18.06",
-        "resource_type_group": "course",
-        "resource_type": "course",
-        "content_files": [
-            {"content": "The first content file text"},
-            {"content": None},
-            {"content": "The second content file text"},
-        ],
-    }
+    serialized_course["content_files"] = [
+        {"content": "The first content file text"},
+        {"content": None},
+        {"content": "The second content file text"},
+    ]
 
-    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
-        serialized_resource
-    )
-    assert context == (
-        "# A title\n\nA short description A full description\n\n"
-        "Course number: 18.06\n\n## Content\n"
-        "The first content file text\n\nThe second content file text"
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
+
+    assert context.endswith(
+        "\n\n## Content\nThe first content file text\n\nThe second content file text"
     )
 
 
@@ -1067,28 +1126,16 @@ def test_embedding_context_includes_serialized_content_files():
     assert "sentinel text" in vs_utils._learning_resource_embedding_context(serialized)  # noqa: SLF001
 
 
-def test_embedding_context_without_content_files():
-    """Resources without content files should just use title/description text."""
-    serialized_resource = {
-        "title": "A title",
-        "description": "A short description",
-        "full_description": "A full description",
-        "readable_id": "18.06",
-        "resource_type_group": "course",
-        "resource_type": "course",
-        "content_files": [],
-    }
+def test_embedding_context_without_content_files(serialized_course):
+    """Resources without content files should just use the metadata document."""
+    serialized_course["content_files"] = []
 
-    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
-        serialized_resource
-    )
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
 
-    assert context == (
-        "# A title\n\nA short description A full description\n\nCourse number: 18.06"
-    )
+    assert "## Content" not in context
 
 
-def test_embedding_context_truncates_content(mocker):
+def test_embedding_context_truncates_content(mocker, serialized_course):
     """The combined context should be truncated to the embedding model's limit."""
     encoder = mocker.MagicMock(
         model_name="test-model",
@@ -1099,43 +1146,24 @@ def test_embedding_context_truncates_content(mocker):
         "vector_search.utils.truncate_to_model_limit",
         side_effect=lambda text, *_args, **_kwargs: text[:10],
     )
-    serialized_resource = {
-        "title": "A title",
-        "description": "A short description",
-        "full_description": "A full description",
-        "readable_id": "18.06",
-        "resource_type_group": "course",
-        "content_files": [{"content": "0123456789ABCDEF"}],
-        "resource_type": "course",
-    }
+    serialized_course["content_files"] = [{"content": "0123456789ABCDEF"}]
 
-    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
-        serialized_resource
-    )
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
 
-    assert context == "# A title\n"
-    truncate_mock.assert_called_once_with(
-        "# A title\n\nA short description A full description\n\n"
-        "Course number: 18.06\n\n## Content\n0123456789ABCDEF",
-        "test-model",
-        token_encoding_name="test-encoding",  # noqa: S106
-    )
+    assert context == "# Informat"
+    untruncated, model = truncate_mock.call_args.args
+    assert untruncated.endswith("## Content\n0123456789ABCDEF")
+    assert model == "test-model"
+    assert truncate_mock.call_args.kwargs == {"token_encoding_name": "test-encoding"}
 
 
-def test_embedding_context_includes_course_code():
-    """The resource's readable_id should be included as the course number."""
-    serialized_resource = {
-        "title": "Linear Algebra",
-        "description": "A short description",
-        "full_description": "A full description",
-        "readable_id": "18.06",
-        "resource_type_group": "course",
-        "content_files": [],
-    }
+def test_embedding_context_includes_course_code(serialized_course):
+    """A resource without course numbers falls back to its readable_id."""
+    serialized_course["course_numbers"] = None
+    serialized_course["course"] = None
+    serialized_course["readable_id"] = "18.06"
 
-    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
-        serialized_resource
-    )
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
 
     assert "Course number: 18.06" in context
 
@@ -1147,76 +1175,38 @@ def test_embedding_context_includes_course_code():
         (["18.06", "18.061"], "Course numbers: 18.06, 18.061"),
     ],
 )
-def test_embedding_context_includes_course_numbers(course_numbers, expected):
+def test_embedding_context_includes_course_numbers(
+    serialized_course, course_numbers, expected
+):
     """The resource's course_numbers should be formatted as a comma-separated list."""
-    serialized_resource = {
-        "title": "Linear Algebra",
-        "description": "A short description",
-        "full_description": "A full description",
-        "readable_id": "18.06",
-        "course_numbers": course_numbers,
-        "resource_type_group": "course",
-        "content_files": [],
-    }
+    serialized_course["course_numbers"] = course_numbers
 
-    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
-        serialized_resource
-    )
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
 
     assert expected in context
 
 
-def test_embedding_context_markdown_formatting():
-    """Title and content should be rendered as markdown headings."""
-    serialized_resource = {
-        "title": "Linear Algebra",
-        "description": "A short description",
-        "full_description": "A full description",
-        "readable_id": "18.06",
-        "resource_type_group": "course",
-        "content_files": [{"content": "Some content file text"}],
-    }
-
-    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
-        serialized_resource
-    )
-
-    assert context.startswith("# Linear Algebra\n")
-    assert "\n## Content\n" in context
-
-
 @pytest.mark.parametrize(
-    ("description", "full_description", "expected"),
+    ("description", "full_description"),
     [
-        (
-            "A short description",
-            "A full description",
-            "A short description A full description\n\n",
-        ),
-        (None, "A full description", "A full description\n\n"),
-        ("A short description", None, "A short description\n\n"),
-        (None, None, ""),
+        ("A short description", "A full description"),
+        (None, "A full description"),
+        ("A short description", None),
+        (None, None),
     ],
 )
 def test_embedding_context_omits_missing_descriptions(
-    description, full_description, expected
+    serialized_course, description, full_description
 ):
     """Missing description fields should be dropped rather than rendered as None."""
-    serialized_resource = {
-        "title": "Linear Algebra",
-        "description": description,
-        "full_description": full_description,
-        "readable_id": "18.06",
-        "resource_type_group": "course",
-        "content_files": [],
-        "resource_type": "course",
-    }
+    serialized_course["description"] = description
+    serialized_course["full_description"] = full_description
 
-    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
-        serialized_resource
-    )
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
 
-    assert context == f"# Linear Algebra\n\n{expected}Course number: 18.06"
+    for value in (description, full_description):
+        if value:
+            assert value in context
     assert "None" not in context
 
 
