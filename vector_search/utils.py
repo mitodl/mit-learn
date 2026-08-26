@@ -473,26 +473,77 @@ def _chunk_markdown_documents(text, metadata):
     return split_docs
 
 
-def _learning_resource_embedding_context(document):
+def _metadata_serializer_context():
+    """
+    Context for the metadata display serializer, including the per-batch
+    cache the program course lookups populate.
+    """
+    return {
+        PROGRAM_COURSE_CACHE_KEY_TEST_MODE: {},
+        "include_test_mode_children": True,
+    }
+
+
+def _resource_metadata_markdown(document, serializer_context=None):
+    """
+    Render the resource's metadata document as markdown.
+
+    This is the same document that gets chunked into the content file
+    collection by _embed_course_metadata_as_contentfile.
+    """
+    serializer = LearningResourceMetadataDisplaySerializer(
+        document,
+        context=(
+            serializer_context
+            if serializer_context is not None
+            else _metadata_serializer_context()
+        ),
+    )
+    try:
+        return serializer.render_markdown()
+    except Exception:
+        # Fall back to the plain title/description text rather than failing the
+        # whole batch. Stored Qdrant payloads predating a serializer change can
+        # be missing fields the display serializer expects.
+        logger.exception(
+            "Failed to render metadata document for %s",
+            document.get("readable_id"),
+        )
+        return "\n\n".join(
+            filter(
+                None,
+                [
+                    f"# {document.get('title')}" if document.get("title") else None,
+                    " ".join(
+                        filter(
+                            None,
+                            [
+                                document.get("description"),
+                                document.get("full_description"),
+                            ],
+                        )
+                    ),
+                ],
+            )
+        )
+
+
+def _learning_resource_embedding_context(document, serializer_context=None):
     """
     Get the embedding context for a learning resource
+
+    The resource's metadata document -- the markdown rendering of everything
+    shown in the resource drawer (title, description, instructors, prices,
+    dates, levels, ...) -- stands in for the old title/description text so
+    that vector search can match on the details the OpenSearch query exposes
+    as searchable fields.
 
     Content from any attached content files is folded in, mirroring the
     OpenSearch text query which matches against the content of all of a
     resource's content files regardless of resource type. The combined
     context is truncated to the embedding model's input limit.
     """
-    description = " ".join(
-        filter(
-            None,
-            [
-                document.get("description"),
-                document.get("full_description"),
-            ],
-        )
-    )
-
-    parts = [f"# {document.get('title')}", description]
+    parts = [_resource_metadata_markdown(document, serializer_context)]
     course_numbers = document.get("course_numbers") or (
         document.get("course", {}).get("course_numbers")
         if isinstance(document.get("course"), dict)
@@ -561,14 +612,20 @@ def _process_resource_embeddings(serialized_resources):
     ids = []
     encoder_dense = dense_encoder()
     encoder_sparse = sparse_encoder()
+    serializer_context = _metadata_serializer_context()
 
     for doc in serialized_resources:
-        if not should_generate_resource_embeddings(doc):
+        embedding_context = _learning_resource_embedding_context(
+            doc, serializer_context
+        )
+        if not should_generate_resource_embeddings(
+            doc, serializer_context, embedding_context=embedding_context
+        ):
             update_learning_resource_payload(doc)
             continue
         metadata.append(doc)
         ids.append(vector_point_id(vector_point_key(doc)))
-        docs.append(_learning_resource_embedding_context(doc))
+        docs.append(embedding_context)
     if len(docs) > 0:
         embeddings = encoder_dense.embed_documents(docs)
         sparse_embeddings = encoder_sparse.embed_documents(docs)
@@ -646,9 +703,14 @@ def _set_payload(points, document, param_map, collection_name):
         )
 
 
-def should_generate_resource_embeddings(serialized_document):
+def should_generate_resource_embeddings(
+    serialized_document, serializer_context=None, embedding_context=None
+):
     """
     Determine if we should generate embeddings for a learning resource
+
+    embedding_context is the already rendered context for serialized_document,
+    if the caller has one -- rendering it is not cheap.
     """
     client = qdrant_client()
     point_id = vector_point_id(vector_point_key(serialized_document))
@@ -659,10 +721,14 @@ def should_generate_resource_embeddings(serialized_document):
     if len(response) > 0:
         resource_payload = response[0].payload
         stored_embedding_content = _learning_resource_embedding_context(
-            resource_payload
+            resource_payload, serializer_context
         )
-        current_embedding_content = _learning_resource_embedding_context(
-            serialized_document
+        current_embedding_content = (
+            embedding_context
+            if embedding_context is not None
+            else _learning_resource_embedding_context(
+                serialized_document, serializer_context
+            )
         )
         if stored_embedding_content == current_embedding_content:
             return False
@@ -734,10 +800,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
     client = qdrant_client()
     encoder_dense = dense_encoder()
     encoder_sparse = sparse_encoder()
-    serializer_context = {
-        PROGRAM_COURSE_CACHE_KEY_TEST_MODE: {},
-        "include_test_mode_children": True,
-    }
+    serializer_context = _metadata_serializer_context()
     metadata = []
     ids = []
     docs = []
