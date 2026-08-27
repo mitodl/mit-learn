@@ -69,10 +69,21 @@ class ChannelQuerySet(TimestampedModelQuerySet):
                     "sub_channels__channel",
                     queryset=Channel.objects.annotate_channel_url(),
                 ),
+                # LearningResourceOfferor.channel_url reads
+                # channel_unit_details.first(); ordering the prefetch by pk
+                # lets that resolve from the cache and pick the same row it
+                # would have queried for.
+                Prefetch(
+                    "unit_detail__unit__channel_unit_details",
+                    queryset=ChannelUnitDetail.objects.select_related(
+                        "channel"
+                    ).order_by("pk"),
+                ),
             )
             .annotate_channel_url()
             .select_related(
                 "featured_list",
+                "unit_detail__unit",
                 "topic_detail",
                 "department_detail",
                 "unit_detail",
