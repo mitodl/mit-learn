@@ -1,8 +1,5 @@
 import { env } from "@/env"
-import {
-  canonicalResourceDrawerUrl,
-  RESOURCE_DRAWER_PARAMS,
-} from "@/common/urls"
+import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import { parseResourceId } from "@/common/slugs"
 import type { ServerSearchParam } from "@/common/searchParams"
 import { htmlToPlainText } from "@/common/htmlToPlainText"
@@ -95,7 +92,17 @@ export const getMetadataAsync = async ({
       image = data.image.url
       imageAlt = data.image.alt || ""
     }
-    alts.canonical = canonicalResourceDrawerUrl(learningResourceId, data?.title)
+    /**
+     * Canonicalize the drawer to the resource's location on Learn: its own page
+     * where it has one, else this drawer URL itself. Previously the drawer was
+     * always self-canonical, so a video or podcast episode advertised two
+     * self-canonical URLs for the same content and crawlers had no way to pick
+     * a winner. The backend owns the choice, so the canonical here, the card
+     * hrefs, and the sitemap cannot disagree.
+     */
+    if (data?.learn_url) {
+      alts.canonical = data.learn_url
+    }
   }
 
   return standardizeMetadata({

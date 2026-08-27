@@ -1,7 +1,6 @@
 import { requiredEnv } from "@/env"
 import { getQueryClient } from "@/app/getQueryClient"
 import { learningResourceQueries } from "api/hooks/learningResources"
-import { resourceDrawerSearch } from "@/common/urls"
 import type { GenerateSitemapResult } from "../types"
 import {
   dangerouslyDetectProductionBuildPhase,
@@ -11,9 +10,20 @@ import {
 const PAGE_SIZE = 1_000
 
 /**
- * As of NextJS 15.5.3, sitemaps are ALWAYS generated at build time, even with
- * the force-dynamic below (this may be a NextJS bug?). However, the
- * force-dynamic does force re-generation when requests are made in production.
+ * Every published resource, submitted under exactly one URL.
+ *
+ * `learn_url` is the resource's location within Learn — its own page where it
+ * has one (videos, playlists, podcasts, episodes, MITx Online courses and
+ * programs), else the search drawer. Because the backend decides, this sitemap
+ * covers every resource type on its own: the separate video, podcast and
+ * products sitemaps existed only to emit dedicated-page URLs the frontend had
+ * to construct itself, and submitted them *alongside* the drawer URL this
+ * sitemap emitted for the same resource. That advertised two self-canonical
+ * URLs per video and per episode and left crawlers no way to pick a winner.
+ *
+ * It also settles which parent scopes an episode's URL. This sitemap emits one
+ * URL per resource; the podcast sitemap mapped over every parent podcast, so an
+ * episode with two parents would have been submitted twice.
  */
 export const dynamic = "force-dynamic"
 
@@ -26,9 +36,9 @@ export async function generateSitemaps(): Promise<GenerateSitemapResult[]> {
   const BASE_URL = requiredEnv("NEXT_PUBLIC_ORIGIN")
   const queryClient = getQueryClient()
   const { count } = await queryClient.fetchQuery(
-    learningResourceQueries.summaryList({
-      limit: PAGE_SIZE,
-    }),
+    // Only the count is read; a full page of rows would be fetched and thrown
+    // away.
+    learningResourceQueries.summaryList({ limit: 1 }),
   )
 
   const pages = Math.ceil(count / PAGE_SIZE)
@@ -41,7 +51,6 @@ export async function generateSitemaps(): Promise<GenerateSitemapResult[]> {
 }
 
 export default constructSitemap(async (page) => {
-  const BASE_URL = requiredEnv("NEXT_PUBLIC_ORIGIN")
   const queryClient = getQueryClient()
   const data = await queryClient.fetchQuery(
     learningResourceQueries.summaryList({
@@ -51,7 +60,16 @@ export default constructSitemap(async (page) => {
   )
 
   return data.results.map((resource) => ({
-    url: `${BASE_URL}${resourceDrawerSearch(resource.id, resource.title)}`,
+    // Absolute already — the backend builds it from APP_BASE_URL.
+    url: resource.learn_url,
+    /**
+     * `last_modified` is an upstream change timestamp (openedx course
+     * `modified`, program `data_modified_timestamp`, the OCW course's S3 object
+     * mtime), not an ingest clock, so an ETL run over unchanged content does not
+     * move it. Coarser than a true content-change date, but it tracks the
+     * metadata these pages actually render. Omitting it would leave crawlers
+     * with no signal at all.
+     */
     lastModified: resource.last_modified ?? undefined,
   }))
 })

@@ -81,8 +81,12 @@ describe("standardizeMetadata", () => {
 })
 
 describe("getMetadataAsync drawer canonical", () => {
-  test("emits a slugged separate-param canonical for a valid ?resource=", async () => {
-    const resource = factories.learningResources.course()
+  test("canonicalizes the drawer to the resource's learn_url", async () => {
+    // A resource with no page of its own: learn_url is this drawer URL, so the
+    // canonical is self-referential, as before.
+    const resource = factories.learningResources.course({
+      learn_url: "http://test.learn.odl.local:8062/search?resource=42",
+    })
     setMockResponse.get(
       urls.learningResources.details({ id: resource.id }),
       resource,
@@ -90,8 +94,26 @@ describe("getMetadataAsync drawer canonical", () => {
     const meta = await getMetadataAsync({
       searchParams: Promise.resolve({ resource: String(resource.id) }),
     })
-    expect(meta.alternates?.canonical).toContain(`resource=${resource.id}`)
-    expect(meta.alternates?.canonical).toMatch(/resource_title=[a-z0-9-]+/)
+    expect(meta.alternates?.canonical).toBe(resource.learn_url)
+  })
+
+  test("canonicalizes the drawer to a dedicated page where one exists", async () => {
+    // The point of the change: a video's drawer hands its ranking signal to the
+    // video's own page instead of competing with it.
+    const resource = factories.learningResources.video({
+      learn_url:
+        "http://test.learn.odl.local:8062/video/6395/lecture-11?playlist=6384",
+    })
+    setMockResponse.get(
+      urls.learningResources.details({ id: resource.id }),
+      resource,
+    )
+    const meta = await getMetadataAsync({
+      searchParams: Promise.resolve({ resource: String(resource.id) }),
+    })
+    expect(meta.alternates?.canonical).toBe(
+      "http://test.learn.odl.local:8062/video/6395/lecture-11?playlist=6384",
+    )
   })
 
   test("no canonical override when ?resource= is not a valid id", async () => {
