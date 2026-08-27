@@ -2694,7 +2694,7 @@ requires-dist = [
     { name = "lxml", specifier = ">=6.0.0,<7" },
     { name = "markdown", specifier = ">=3.7,<4" },
     { name = "markdown2", specifier = ">=2.4.8,<3" },
-    { name = "mitol-django-common", specifier = ">=2026.4.2,<2027" },
+    { name = "mitol-django-common", specifier = ">=2026.6.16.4,<2027" },
     { name = "mitol-django-keycloak", specifier = ">=2026.7.13,<2027" },
     { name = "mitol-django-observability", specifier = ">=2026.8.19,<2027" },
     { name = "mitol-django-scim", specifier = ">=2026.4.2,<2027" },
@@ -2780,22 +2780,20 @@ dev = [
 
 [[package]]
 name = "mitol-django-common"
-version = "2026.4.2"
+version = "2026.6.16.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
     { name = "django-redis" },
     { name = "django-stubs" },
     { name = "django-webpack-loader" },
-    { name = "factory-boy" },
-    { name = "pytest" },
     { name = "pytz" },
     { name = "requests" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b1/47/1b9be48b8f5fc3cd3a9889853c78f8d8919ad0b22f1c6f4f4b92706ae45b/mitol_django_common-2026.4.2.tar.gz", hash = "sha256:609ad60133cac9d18cd5d2d4bcbc7048508b137b57c4990439de9c5016e758dd", size = 22447, upload-time = "2026-04-02T15:46:55.658Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5a/c8/bfddaffd14e2f0233e0be31ea83a82865579f9eb1ecc9514cf14edd5d574/mitol_django_common-2026.6.16.4.tar.gz", hash = "sha256:f06dee7575c4c1cfefef016459ed8c673482511b9b0f8387fc2e056844ca6a8c", size = 24357, upload-time = "2026-06-16T19:21:07.244Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bc/f5/f781062585655f35300d73317aa46cfdf9ab8f17f2142e7463e8a0722325/mitol_django_common-2026.4.2-py3-none-any.whl", hash = "sha256:4569bb3118047d2f79658fb71686584d140eaca9152b5f46ca52930fa0cddc8d", size = 32382, upload-time = "2026-04-02T15:46:54.84Z" },
+    { url = "https://files.pythonhosted.org/packages/00/d2/db0dd231888821180997dd1a0c35fcd3d7999567596d27604bcb939d0ee6/mitol_django_common-2026.6.16.4-py3-none-any.whl", hash = "sha256:3506d91de35e91bc17e65eee73fe68cfa0b73254edb66d9a59d6e9cee870580b", size = 35258, upload-time = "2026-06-16T19:21:06.429Z" },
 ]
 
 [[package]]
