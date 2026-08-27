@@ -11,6 +11,7 @@ from django.db import transaction
 from django.urls import reverse
 from drf_spectacular.utils import extend_schema_field
 from keycloak.exceptions import KeycloakError
+from mitol.common.serializers import BaseSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -45,6 +46,10 @@ class TopicInterestsField(serializers.Field):
     """
     Serializer field for topic interests
     """
+
+    def get_attribute(self, instance):
+        """Read the dual-path list instead of the raw related manager"""
+        return instance.annotated_topic_interests
 
     def to_representation(self, value):
         """Serialize the topic_interests"""
@@ -132,8 +137,9 @@ class ProfileSerializer(serializers.ModelSerializer):
             filters["certification"] = (
                 obj.certificate_desired == Profile.CertificateDesired.YES.value
             )
-        if obj.topic_interests and obj.topic_interests.count() > 0:
-            filters["topic"] = obj.topic_interests.values_list("name", flat=True)
+        topic_names = [topic.name for topic in obj.annotated_topic_interests]
+        if topic_names:
+            filters["topic"] = topic_names
         if obj.delivery:
             filters["delivery"] = obj.delivery
         return PreferencesSearchSerializer(instance=filters).data
@@ -154,6 +160,9 @@ class ProfileSerializer(serializers.ModelSerializer):
 
             if topic_interests is not None:
                 instance.topic_interests.set(topic_interests)
+                # drop any prefetched/cached list so the response reserializes
+                # the new interests
+                instance.__dict__.pop("annotated_topic_interests", None)
 
             email_optin_changed = (
                 "email_optin" in validated_data
@@ -422,10 +431,14 @@ class CurrentUserSerializer(UserSerializer):
         fields = (*UserSerializer.Meta.fields, "is_sso_user")
 
 
-class ProgramCertificateSerializer(serializers.ModelSerializer):
+class ProgramCertificateSerializer(BaseSerializer):
     """
     Serializer for Program Certificates
     """
+
+    # user_letter isn't a model field; callers attach the user's ProgramLetter
+    # to each certificate instance.
+    required_prefetches: list[str] = ["user_letter"]
 
     program_letter_generate_url = serializers.SerializerMethodField()
     program_letter_share_url = serializers.SerializerMethodField()
@@ -441,13 +454,10 @@ class ProgramCertificateSerializer(serializers.ModelSerializer):
         return letter_url
 
     def get_program_letter_share_url(self, instance) -> str:
+        # Callers attach user_letter, creating the letter if needed, so this is
+        # always a real URL -- same contract as when the get_or_create lived here.
+        letter_url = instance.user_letter.get_absolute_url()
         request = self.context.get("request")
-
-        user = User.objects.get(email=instance.user_email)
-        letter, _created = ProgramLetter.objects.get_or_create(
-            user=user, certificate=instance
-        )
-        letter_url = letter.get_absolute_url()
         if request:
             return request.build_absolute_uri(letter_url)
         return letter_url
@@ -485,6 +495,12 @@ class ProgramLetterSerializer(serializers.ModelSerializer):
     template_fields = serializers.SerializerMethodField()
 
     certificate = ProgramCertificateSerializer()
+
+    def to_representation(self, instance):
+        """Attach the letter the nested certificate serializer needs."""
+        # The view 404s a letter whose certificate is missing, so this is safe.
+        instance.certificate.user_letter = instance
+        return super().to_representation(instance)
 
     @extend_schema_field(ProgramLetterTemplateFieldSerializer())
     def get_template_fields(self, instance) -> dict:
