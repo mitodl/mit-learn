@@ -42,6 +42,27 @@ describe("learning resource factories satisfy the non-nullable contract", () => 
     },
   )
 
+  // mergeOverrides applies overrides *after* the shared defaults, so an
+  // overridden id would leave learn_url addressing the factory's original id.
+  test.each(Object.keys(resourceFactories))(
+    "%s keeps learn_url in sync with an overridden id",
+    (name) => {
+      const factory = resourceFactories[name as keyof typeof resourceFactories]
+      const resource = factory({ id: 4242 })
+
+      expect(resource.id).toBe(4242)
+      expect(resource.learn_url).toContain("resource=4242")
+    },
+  )
+
+  test("the drawer url is on the same host as the site", () => {
+    // Same-host is a real property of drawer URLs; randomising the host would
+    // hide code that wrongly treats them as external.
+    const resource = factories.course()
+
+    expect(resource.learn_url).toStartWith("http://test.learn.odl.local:8062/")
+  })
+
   test("an override wins over the default", () => {
     const resource = factories.video({
       learn_url: "https://learn.test/video/7/lecture-1?playlist=8",
