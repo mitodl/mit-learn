@@ -117,7 +117,7 @@ const ProgramDiscountRow = styled.div({
 const ProgramSavingsText = styled.span({
   ...theme.typography.subtitle3,
   fontWeight: theme.typography.fontWeightBold,
-  color: "#008000",
+  color: theme.custom.colors.green,
 })
 
 const ProgramSavingsDetailText = styled.span({
