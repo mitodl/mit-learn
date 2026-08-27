@@ -69,14 +69,10 @@ def test_sync_article_to_news_success(mocker, user):
         "news_events.etl.articles_news.sync_single_website_content_news_to_news",
         autospec=True,
     )
-    mock_clear_cache = mocker.patch(
-        "news_events.tasks.clear_views_cache", autospec=True
-    )
 
     tasks.sync_website_content_to_news(content.id)
 
     mock_sync.assert_called_once_with(content)
-    mock_clear_cache.assert_called_once()
 
 
 @pytest.mark.django_db
@@ -86,14 +82,10 @@ def test_sync_article_to_news_article_not_found(mocker, caplog):
         "news_events.etl.articles_news.sync_single_website_content_news_to_news",
         autospec=True,
     )
-    mock_clear_cache = mocker.patch(
-        "news_events.tasks.clear_views_cache", autospec=True
-    )
 
     tasks.sync_website_content_to_news(99999)
 
     mock_sync.assert_not_called()
-    mock_clear_cache.assert_not_called()
 
     assert "WebsiteContent 99999 not found or not published" in caplog.text
 
@@ -115,14 +107,10 @@ def test_sync_article_to_news_unpublished_article(mocker, user, caplog):
         "news_events.etl.articles_news.sync_single_website_content_news_to_news",
         autospec=True,
     )
-    mock_clear_cache = mocker.patch(
-        "news_events.tasks.clear_views_cache", autospec=True
-    )
 
     tasks.sync_website_content_to_news(content.id)
 
     mock_sync.assert_not_called()
-    mock_clear_cache.assert_not_called()
 
     assert f"WebsiteContent {content.id} not found or not published" in caplog.text
 
@@ -145,12 +133,8 @@ def test_sync_article_to_news_sync_failure(mocker, user):
         autospec=True,
         side_effect=Exception("Sync failed"),
     )
-    mock_clear_cache = mocker.patch(
-        "news_events.tasks.clear_views_cache", autospec=True
-    )
 
     with pytest.raises(Exception, match="Sync failed"):
         tasks.sync_website_content_to_news(content.id)
 
     mock_sync.assert_called_once_with(content)
-    mock_clear_cache.assert_not_called()

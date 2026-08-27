@@ -31,21 +31,30 @@ describe("podcast embed page.tsx server component", () => {
 
   test("calls notFound for a non-integer id", async () => {
     await expect(
-      Page({ params: Promise.resolve({ id: "abc" }) }),
+      Page({
+        params: Promise.resolve({ id: "abc" }),
+        searchParams: Promise.resolve({}),
+      }),
     ).rejects.toThrow("NEXT_NOT_FOUND")
     expect(notFound).toHaveBeenCalled()
   })
 
   test("calls notFound for id of zero", async () => {
     await expect(
-      Page({ params: Promise.resolve({ id: "0" }) }),
+      Page({
+        params: Promise.resolve({ id: "0" }),
+        searchParams: Promise.resolve({}),
+      }),
     ).rejects.toThrow("NEXT_NOT_FOUND")
     expect(notFound).toHaveBeenCalled()
   })
 
   test("calls notFound for a negative id", async () => {
     await expect(
-      Page({ params: Promise.resolve({ id: "-1" }) }),
+      Page({
+        params: Promise.resolve({ id: "-1" }),
+        searchParams: Promise.resolve({}),
+      }),
     ).rejects.toThrow("NEXT_NOT_FOUND")
     expect(notFound).toHaveBeenCalled()
   })
@@ -58,7 +67,10 @@ describe("podcast embed page.tsx server component", () => {
     )
 
     await expect(
-      Page({ params: Promise.resolve({ id: String(course.id) }) }),
+      Page({
+        params: Promise.resolve({ id: String(course.id) }),
+        searchParams: Promise.resolve({}),
+      }),
     ).rejects.toThrow("NEXT_NOT_FOUND")
     expect(notFound).toHaveBeenCalled()
   })
@@ -71,7 +83,10 @@ describe("podcast embed page.tsx server component", () => {
       episode,
     )
 
-    await Page({ params: Promise.resolve({ id: String(episode.id) }) })
+    await Page({
+      params: Promise.resolve({ id: String(episode.id) }),
+      searchParams: Promise.resolve({}),
+    })
     expect(notFound).not.toHaveBeenCalled()
   })
 })

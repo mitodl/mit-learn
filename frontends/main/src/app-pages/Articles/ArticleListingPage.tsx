@@ -2,7 +2,8 @@
 
 import React from "react"
 import Image from "next/image"
-import { useSearchParams } from "@mitodl/course-search-utils/next"
+import { useSetSearchParams } from "@mitodl/course-search-utils/next"
+import { useAppSearchParams } from "@/common/useAppSearchParams"
 import {
   Container,
   styled,
@@ -413,7 +414,8 @@ const RegularStory: React.FC<{ item: WebsiteContent }> = ({ item }) => {
 }
 
 const ArticleListingPage: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams()
+  const searchParams = useAppSearchParams()
+  const setSearchParams = useSetSearchParams()
   const parsedPage = Number.parseInt(searchParams.get("page") ?? "1", 10)
   const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1
 

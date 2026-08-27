@@ -6,7 +6,8 @@ import type {
   FacetManifest,
   UseResourceSearchParamsProps,
 } from "@mitodl/course-search-utils"
-import { useSearchParams } from "@mitodl/course-search-utils/next"
+import { useSetSearchParams } from "@mitodl/course-search-utils/next"
+import { useAppSearchParams } from "@/common/useAppSearchParams"
 import { useResourceSearchParams } from "@mitodl/course-search-utils"
 import SearchDisplay, {
   AdminTitleContainer,
@@ -93,7 +94,8 @@ const useFacetManifest = (
 }
 
 const SearchPage: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams()
+  const searchParams = useAppSearchParams()
+  const setSearchParams = useSetSearchParams()
   const extraFacetNames = useMemo(
     () => getExtraFacetNames(searchParams, defaultFacetNames) ?? [],
     [searchParams],

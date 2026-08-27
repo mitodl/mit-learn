@@ -39,11 +39,11 @@ from vector_search.utils import (
     async_qdrant_client,
     best_run_ids_for_resources,
     check_missing_content_file_ids,
-    custom_score_formula,
     db_sync_to_async,
     dense_encoder,
     qdrant_query_conditions,
     resources_payload_selector,
+    score_formula_query,
     sparse_encoder,
 )
 
@@ -170,18 +170,20 @@ class QdrantView(APIView):
         if normalized_score is not None:
             search_params["score_threshold"] = normalized_score
 
+        # Boosts and the completeness penalty, or None when neither applies to
+        # this collection.
+        formula_query = score_formula_query(search_collection)
+
         if hybrid_search:
             sparse_query, dense_query = await asyncio.gather(
                 db_sync_to_async(encoder_sparse.embed)(query_string),
                 db_sync_to_async(encoder_dense.embed_query)(query_string),
             )
-            custom_formula_query = models.FormulaQuery(
-                formula=models.SumExpression(
-                    sum=[
-                        "$score",
-                        *custom_score_formula(search_collection),
-                    ]
-                )
+            # Each arm is rescored before fusion, so the formula shapes the
+            # ranks RRF sees. With nothing to apply it is an identity rescore,
+            # which keeps the prefetch nesting the same either way.
+            custom_formula_query = formula_query or models.FormulaQuery(
+                formula=models.SumExpression(sum=["$score"])
             )
             prefetch_params = [
                 models.Prefetch(
@@ -236,6 +238,20 @@ class QdrantView(APIView):
                 search_params["query"] = models.OrderByQuery(
                     order_by=self._format_order_by(order_by)
                 )
+            elif formula_query:
+                # Nest: dense vector prefetch → formula rescore. The score
+                # threshold and search params move onto the prefetch so the
+                # cutoff keeps applying to the raw similarity score rather than
+                # the rescored one, and the vector search stays tuned.
+                search_params["prefetch"] = models.Prefetch(
+                    query=dense_query,
+                    using=encoder_dense.model_short_name(),
+                    limit=prefetch_limit,
+                    filter=search_filter,
+                    params=search_params["search_params"],
+                    score_threshold=search_params.pop("score_threshold", None),
+                )
+                search_params["query"] = formula_query
             else:
                 search_params["using"] = encoder_dense.model_short_name()
                 search_params["query"] = dense_query
@@ -354,6 +370,7 @@ class QdrantView(APIView):
             )
             if prefetch_max_limit is not None:
                 prefetch_limit = min(prefetch_limit, prefetch_max_limit)
+            prefetch_limit = max(prefetch_limit, offset + limit)
 
             search_params = await self._build_search_params(
                 query_string,

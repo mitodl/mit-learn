@@ -48,6 +48,7 @@ import {
   managerOrganizationQueries,
   type ManagerEnrollmentCode,
 } from "api/mitxonline-hooks/organizations"
+import type { B2bManagerOrganizationsContractsCodesListStatusEnum } from "@mitodl/mitxonline-api-axios/v2"
 import type { AxiosError } from "axios"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError } from "@/common/errors"
@@ -294,7 +295,66 @@ const ActionCell = styled.div(({ theme }) => ({
   },
 }))
 
-type StatusFilter = "all" | "pending" | "redeemed"
+type StatusFilter = "all" | "pending" | "redeemed" | "failed"
+
+/**
+ * Maps a tab to the API's `status` param. The UI's "Pending" is the API's
+ * "assigned", and `assigned` means "unredeemed" regardless of email status —
+ * so it is a *superset* of `failed`, and a bounced code appears under both
+ * tabs. That overlap is intentional: the backend can't express "assigned AND
+ * NOT failed", and filtering it out client-side would desync the server's
+ * `count` from the rendered rows (wrong page count, short pages). The row's
+ * status pill is what distinguishes the two.
+ */
+const STATUS_FILTER_PARAM: Record<
+  StatusFilter,
+  B2bManagerOrganizationsContractsCodesListStatusEnum | undefined
+> = {
+  all: undefined,
+  pending: "assigned",
+  redeemed: "redeemed",
+  failed: "failed",
+}
+
+/**
+ * Per-filter empty copy. A bare "No seat assignments found." on the Failed tab
+ * would be misleading — seats do exist, none of them failed.
+ */
+const EMPTY_TABLE_MESSAGE: Record<StatusFilter, string> = {
+  all: "No seat assignments found.",
+  pending: "No pending seat assignments.",
+  redeemed: "No redeemed seat assignments.",
+  failed: "No failed invitations.",
+}
+
+/**
+ * A query that matches nothing is its own state, distinct from every entry
+ * above: seats exist, and some may even have the active status — they just
+ * don't match what was typed. Both the per-filter copy and the generic "No
+ * seat assignments found." misstate that, so the search case gets its own
+ * string.
+ */
+const NO_SEARCH_RESULTS_MESSAGE = "No seat assignments match your search."
+
+/**
+ * `$stale` is true whenever the rows on screen might not match the server:
+ * either `keepPreviousData` is carrying over the previous filter's or page's
+ * rows while the next request is in flight (which avoids a layout jump when
+ * paginating, but would otherwise leave, say, delivered rows sitting under
+ * the Failed tab with nothing to say they are stale), or the current
+ * filter's own cached rows are being silently revalidated in the background
+ * — e.g. a row mutation like resending an invite invalidates every tab/page/
+ * search for the contract, not just the active one. Fade the rows while
+ * either is true.
+ *
+ * The delay means a fast response never flashes the dimming, and dropping the
+ * transition on the fresh state restores full opacity immediately rather than
+ * fading back in.
+ */
+const TableBody = styled.div<{ $stale: boolean }>(({ $stale }) => ({
+  opacity: $stale ? 0.5 : 1,
+  transition: $stale ? "opacity 150ms ease 150ms" : "none",
+}))
 
 const COLUMN_FLEX = {
   assignedTo: 2,
@@ -345,7 +405,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
   const [page, setPage] = useState(1)
-  const [searchAnnouncement, setSearchAnnouncement] = useState("")
+  const [resultsAnnouncement, setResultsAnnouncement] = useState("")
   const [rowActionResult, setRowActionResult] = useState<{
     message: string
     severity: "success" | "error"
@@ -411,6 +471,8 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const {
     data: codes,
     isLoading: isLoadingCodes,
+    isPlaceholderData: isCodesStale,
+    isFetching: isCodesFetching,
     isError: isCodesError,
     error: codesError,
   } = useQuery({
@@ -420,33 +482,51 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
       page,
       page_size: CODES_PAGE_SIZE,
       search_term: debouncedSearchQuery || undefined,
-      status:
-        statusFilter === "redeemed"
-          ? "redeemed"
-          : statusFilter === "pending"
-            ? "assigned"
-            : undefined,
+      status: STATUS_FILTER_PARAM[statusFilter],
     }),
     enabled: !!org && !!contract,
     placeholderData: keepPreviousData,
   })
 
-  // Announce the result count after the query settles following a search change.
-  // Using a ref to track the last announced query so we only fire once per change,
-  // not on every re-render while loading.
-  const announcedQueryRef = useRef("")
+  // `isCodesStale` (isPlaceholderData) only covers rows carried over from a
+  // different query key via `keepPreviousData` — it goes false as soon as
+  // React Query has a cache entry for the current key, even if that entry was
+  // invalidated (e.g. by a row mutation like resending an invite, which
+  // invalidates every tab/page/search for the contract at once) and is being
+  // silently refetched in the background. `isCodesFetching` catches that case.
+  const isCodesRevalidating = isCodesStale || isCodesFetching
+  const isCodesBusy = isLoadingCodes || isCodesRevalidating
+
+  // Announce the result count once the query settles after a change to the
+  // search term or the status filter — both replace the whole result set, and
+  // switching tabs is otherwise silent, since the table's own status region
+  // often lands on the same "page 1 of 1" text it started with.
+  //
+  // The ref keys on both inputs so we fire once per change rather than on every
+  // re-render while loading, and `isCodesBusy` holds the announcement until the
+  // data actually belongs to the new filter and any revalidation of it has
+  // resolved — otherwise a stale count could be announced immediately (from
+  // `keepPreviousData` on a key change, or from revisiting a cached-but-
+  // invalidated tab) and never corrected once the real data arrives, since the
+  // ref would already mark this filter/search combo as announced.
+  const announcedResultsRef = useRef<string | null>(null)
   useEffect(() => {
-    if (isLoadingCodes || announcedQueryRef.current === debouncedSearchQuery)
-      return
-    announcedQueryRef.current = debouncedSearchQuery
+    if (isCodesBusy) return
+    const settled = `${statusFilter}:${debouncedSearchQuery}`
+    if (announcedResultsRef.current === settled) return
+    const isFirstLoad = announcedResultsRef.current === null
+    announcedResultsRef.current = settled
+    // The initial load is not a change the user made; a count there would talk
+    // over the page announcing itself.
+    if (isFirstLoad) return
     const count = codes?.count ?? 0
-    setSearchAnnouncement("")
+    setResultsAnnouncement("")
     const id = setTimeout(
-      () => setSearchAnnouncement(`${count} result${count !== 1 ? "s" : ""}`),
+      () => setResultsAnnouncement(`${count} result${count !== 1 ? "s" : ""}`),
       0,
     )
     return () => clearTimeout(id)
-  }, [isLoadingCodes, debouncedSearchQuery, codes?.count])
+  }, [isCodesBusy, statusFilter, debouncedSearchQuery, codes?.count])
 
   if (isLoadingOrgs) {
     return (
@@ -501,6 +581,13 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const hasExportableRows = (assignedCount ?? 0) + (redeemedCount ?? 0) > 0
 
   const pageResults = codes?.results ?? []
+
+  // With a search term active this is a no-matches state, not a no-such-status
+  // state — otherwise the Failed tab would claim "No failed invitations." when
+  // failed ones exist but don't match the query.
+  const emptyTableMessage = debouncedSearchQuery
+    ? NO_SEARCH_RESULTS_MESSAGE
+    : EMPTY_TABLE_MESSAGE[statusFilter]
 
   const totalCount = codes?.count ?? 0
   const totalPages = Math.ceil(totalCount / CODES_PAGE_SIZE)
@@ -701,6 +788,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                   <TabButton label="All" value="all" />
                   <TabButton label="Pending" value="pending" />
                   <TabButton label="Redeemed" value="redeemed" />
+                  <TabButton label="Failed" value="failed" />
                 </TabButtonList>
               </TabContext>
               <StyledSearchInput
@@ -728,10 +816,35 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
             </ExportButtonWrapper>
           </SeatAssignmentsControls>
           <VisuallyHidden aria-live="polite" aria-atomic="true">
-            {searchAnnouncement}
+            {resultsAnnouncement}
           </VisuallyHidden>
           <TableCard>
-            <div role="table" aria-label="Seat assignments">
+            {/* Mirrors the table's visible state for AT. Deliberately a sibling
+                of the table rather than a child: AT may defer live-region
+                updates while an ancestor is aria-busy, which would swallow the
+                "Loading" announcement until the load it describes is already
+                over. Staying out also leaves the rowgroup holding only rows.
+
+                The empty case has to use the same filter-aware copy as the cell
+                does — announcing the generic "no seat assignments" on the
+                Failed tab makes exactly the claim that copy exists to avoid. */}
+            <VisuallyHidden role="status" aria-atomic="true">
+              {isCodesBusy
+                ? "Loading seat assignments"
+                : pageResults.length === 0
+                  ? emptyTableMessage
+                  : `Showing page ${page} of ${totalPages}`}
+            </VisuallyHidden>
+            <div
+              role="table"
+              aria-label="Seat assignments"
+              // Marks the whole table as updating while a filter, search, or
+              // page change is in flight, including the window where the
+              // previous request's rows are still the ones on screen, and
+              // while a mutation-triggered background refetch is revalidating
+              // rows already shown for the current filter/page.
+              aria-busy={isCodesBusy}
+            >
               <div role="rowgroup">
                 <TableHeaderRow role="row">
                   <TableHeaderCell
@@ -773,14 +886,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                   <ActionCell role="columnheader" />
                 </TableHeaderRow>
               </div>
-              <div role="rowgroup">
-                <VisuallyHidden aria-live="polite" aria-atomic="true">
-                  {isLoadingCodes
-                    ? "Loading seat assignments"
-                    : pageResults.length === 0
-                      ? "No seat assignments found"
-                      : `Showing page ${page} of ${totalPages}`}
-                </VisuallyHidden>
+              <TableBody role="rowgroup" $stale={isCodesRevalidating}>
                 {isLoadingCodes ? (
                   <>
                     {[1, 2, 3].map((i) => (
@@ -798,7 +904,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                       aria-colspan={7}
                       style={{ flex: 1 }}
                     >
-                      No seat assignments found.
+                      {emptyTableMessage}
                     </EmptyTableMessage>
                   </TableRow>
                 ) : (
@@ -875,14 +981,18 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                     </TableRow>
                   ))
                 )}
-              </div>
+              </TableBody>
             </div>
             <TableFooter>
-              <TableFootnote aria-hidden="true">
-                {totalCount === 0
-                  ? "No assignments"
-                  : `Page ${page} of ${totalPages}`}
-              </TableFootnote>
+              {/* Only page position. With a filter or search active there are
+                  no rows for a reason the body already states, and a footnote
+                  reading "No assignments" under "No failed invitations." would
+                  contradict it. */}
+              {totalCount > 0 && (
+                <TableFootnote aria-hidden="true">
+                  {`Page ${page} of ${totalPages}`}
+                </TableFootnote>
+              )}
               {totalPages > 1 && (
                 <Pagination
                   count={totalPages}

@@ -11,7 +11,7 @@ export const metadata: Metadata = standardizeMetadata({
   title: "Departments",
 })
 
-const Page: React.FC<PageProps<"/departments">> = async () => {
+const Page: React.FC = async () => {
   const queryClient = getQueryClient()
 
   await Promise.all([

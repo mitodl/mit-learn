@@ -1023,6 +1023,7 @@ paths:
             - 21H
             - 21L
             - 21M
+            - 21T
             - '22'
             - '24'
             - CC
@@ -1062,6 +1063,7 @@ paths:
               * `21H` - History
               * `21L` - Literature
               * `21M` - Music and Theater Arts
+              * `21T` - Theater Arts
               * `22` - Nuclear Science and Engineering
               * `24` - Linguistics and Philosophy
               * `CC` - Concourse
@@ -1086,13 +1088,14 @@ paths:
           and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
           - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
           `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
-          `22` - Nuclear Science and Engineering\n* `24` - Linguistics and Philosophy\n*
-          `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n* `EC`
-          - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
-          Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
-          Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
-          Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
-          Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
+          `21T` - Theater Arts\n* `22` - Nuclear Science and Engineering\n* `24` -
+          Linguistics and Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative
+          Media Studies/Writing\n* `EC` - Edgerton Center\n* `ES` - Experimental Study
+          Group\n* `ESD` - Engineering Systems Division\n* `HST` - Medical Engineering
+          and Science\n* `IDS` - Data, Systems, and Society\n* `MAS` - Media Arts
+          and Sciences\n* `PE` - Athletics, Physical Education and Recreation\n* `SP`
+          - Special Programs\n* `STS` - Science, Technology, and Society\n* `WGS`
+          - Women's and Gender Studies"
       - in: query
         name: free
         schema:
@@ -2209,6 +2212,10 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/CourseResourceResourceTypeEnum'
@@ -2325,6 +2332,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform
@@ -2716,6 +2724,10 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/DocumentResourceResourceTypeEnum'
@@ -2836,6 +2848,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform
@@ -3228,6 +3241,10 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/LearningPathResourceResourceTypeEnum'
@@ -3344,6 +3361,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - learning_path
       - offered_by
       - pace
@@ -4576,6 +4594,10 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastEpisodeResourceResourceTypeEnum'
@@ -4691,6 +4713,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform
@@ -4871,6 +4894,10 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastResourceResourceTypeEnum'
@@ -4986,6 +5013,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform
@@ -5449,6 +5477,10 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/ProgramResourceResourceTypeEnum'
@@ -5564,6 +5596,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform
@@ -6243,6 +6276,10 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoPlaylistResourceResourceTypeEnum'
@@ -6358,6 +6395,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform
@@ -6538,6 +6576,10 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoResourceResourceTypeEnum'
@@ -6669,6 +6711,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform

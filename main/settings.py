@@ -36,7 +36,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.77.8"
+VERSION = "0.77.15"
 
 log = logging.getLogger()
 
@@ -304,8 +304,6 @@ LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 
 USE_I18N = True
-
-USE_L10N = True
 
 USE_TZ = True
 
@@ -873,6 +871,31 @@ HYBRID_VECTOR_SEARCH_MIN_SCORE = get_float(
 # hard limit for special cases where we need to return all results without pagination
 VECTOR_SEARCH_PAGE_MAX_LIMIT = get_int("VECTOR_SEARCH_PAGE_MAX_LIMIT", 200)
 
+# Score subtracted from a completeness = 0 resource in vector search, scaled
+# linearly by incompleteness. 0 disables the penalty.
+#
+# In *score units*, not the percent DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY
+# uses on the OpenSearch side. The OpenSearch penalty is multiplicative, which
+# works there because BM25 is unbounded and an exact match scores multiples of a
+# topical one. Similarity scores are bounded and sit in a narrow band (~0.55-0.75
+# across a whole result page), so scaling them by completeness makes completeness
+# the primary sort key and buries exact matches on incomplete courses. Subtracting
+# a fixed budget demotes them without erasing the relevance signal.
+VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = get_float(
+    name="VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT", default=0.05
+)
+
+# Score subtracted from a resource that is VECTOR_SEARCH_STALENESS_HORIZON_YEARS
+# or more old in vector search, ramped linearly by age. 0 disables the penalty.
+VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = get_float(
+    name="VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT", default=0.05
+)
+
+# Age at which a resource takes the full VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT;
+VECTOR_SEARCH_STALENESS_HORIZON_YEARS = get_float(
+    name="VECTOR_SEARCH_STALENESS_HORIZON_YEARS", default=20
+)
+
 # serve learning resource search hits from the Qdrant payload instead of
 # re-hydrating them from the database. Set to False to fall back to database
 # hydration without a deploy.
@@ -950,10 +973,11 @@ CONTENT_SUMMARIZER_FLASHCARD_PROMPT = get_string(
     ),
 )
 # OpenTelemetry configuration (consumed by mitol-django-observability).
-# Tracing turns on when either OPENTELEMETRY_ENDPOINT or the
-# OTEL_EXPORTER_OTLP_ENDPOINT environment variable is set -- those two and no
-# others; the signal-specific OTEL_EXPORTER_OTLP_TRACES_ENDPOINT is not
-# consulted by the released library. There is no flag to disable it.
+# Telemetry turns on when any of OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
+# OTEL_EXPORTER_OTLP_METRICS_ENDPOINT or OTEL_EXPORTER_OTLP_ENDPOINT is set in
+# the environment, or the OPENTELEMETRY_ENDPOINT setting below is. Per signal
+# the environment is read most-specific-first, and the setting applies only
+# when the environment supplies nothing. There is no flag to disable it.
 OPENTELEMETRY_SERVICE_NAME = get_string("OPENTELEMETRY_SERVICE_NAME", "learn")
 OPENTELEMETRY_INSECURE = get_bool("OPENTELEMETRY_INSECURE", default=True)
 OPENTELEMETRY_ENDPOINT = get_string("OPENTELEMETRY_ENDPOINT", None)

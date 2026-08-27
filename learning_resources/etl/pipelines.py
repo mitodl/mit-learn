@@ -100,7 +100,16 @@ xpro_courses_etl = compose(
     xpro.extract_courses,
 )
 
-podcast_etl = compose(loaders.load_podcasts, podcast.transform, podcast.extract)
+
+def podcast_etl() -> list[LearningResource]:
+    """Execute the podcast ETL pipeline"""
+    # extract fills tracked_ids as it runs, so load_podcasts must drain the
+    # generator before it reads the list - which its load loop does
+    tracked_ids = []
+    return loaders.load_podcasts(
+        podcast.transform(podcast.extract(tracked_ids=tracked_ids)),
+        tracked_ids=tracked_ids,
+    )
 
 
 def ocw_courses_etl(
@@ -135,7 +144,7 @@ def ocw_courses_etl(
             )
             if data:
                 ocw_course_data = ocw.transform_course(data)
-                course_resource = loaders.load_course(ocw_course_data, [], [])
+                course_resource = loaders.load_course(ocw_course_data, [])
                 course_run = course_resource.runs.filter(published=True).first()
 
                 if course_resource and not skip_content_files:

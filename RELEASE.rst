@@ -1,6 +1,72 @@
 Release Notes
 =============
 
+Version 0.77.15 (Released August 27, 2026)
+---------------
+
+- Hide course-count copy for programs made of programs (#3840)
+
+Version 0.77.14 (Released August 27, 2026)
+---------------
+
+- Add learn_url, a resource's location within Learn (#3824)
+- Query param whitelist (#3828)
+- Don't let one unreachable podcast feed abort the ETL (#3836)
+- Fix flaky payment-deadline date assertions in ProductSummary tests (#3838)
+
+Version 0.77.13 (Released August 26, 2026)
+---------------
+
+- Fix ContentFile duplicates causing MultipleObjectsReturned in ingestion (#3831)
+- Add some initial docs on gtm (#3797)
+- Update dependency @mitodl/mit-learn-api-axios to v2026.8.17 (#3810)
+- Update dependency @mitodl/smoot-design to v6.33.1 (#3811)
+- fix: point LinkedIn credential link at VerifierPlus instead of raw JSON download (#3830)
+
+Version 0.77.12 (Released August 26, 2026)
+---------------
+
+- Add department 21T (Theater Arts) (#3668)
+- Preconnect to the API and Typekit origins (#3819)
+- Add a content-engagement panel to the B2B analytics dashboard (#3806)
+
+Version 0.77.11 (Released August 25, 2026)
+---------------
+
+- fix: bump version for arithmix game (#3832)
+- vector search completeness penalty (#3805)
+- feat(cohort-1): StarRocks warehouse-pull ETL machinery (#3807)
+- Update dependency llama-index-llms-openai to >=0.7.10,<0.8 (#3826)
+- Update dependency posthog to v7 (#2765)
+- Update Django to 5.2 (#3768)
+- fix: bullet lists and mailto links in About section  (#3802)
+- Revert broken Renovate merges (#3812-#3816) (#3822)
+- Update dependency tiktoken to >=0.13,<0.14 (#3816)
+- Update dependency ruff to v0.16.2 (#3815)
+- Update dependency llama-index-llms-openai to >=0.7.10,<0.8 (#3814)
+- Update dependency litellm to v1.95.0 (#3813)
+- Update dependency drf-spectacular to >=0.30,<0.31 (#3812)
+- Update apache/apisix Docker tag to v3.17.0 (#2708)
+- Drive React Query staleTime from the CDN TTL (#3804)
+- get rid of duplicate course checks (#3803)
+- feat: add a Failed filter tab to the B2B contract admin page (#3778)
+- Clear redis cache on a schedule (#3789)
+- adding fix for hiding offeror facets in hybrid search (#3786)
+- chore(deps): mitol-django-observability 2026.3.11 -> 2026.8.19 (#3796)
+
+Version 0.77.10 (Released August 24, 2026)
+---------------
+
+- version bump for the mynumber and hacksnack games (#3798)
+- always select currently running course run for card context (#3792)
+- refactor(otel): own the OpenTelemetry setup instead of patching Sentry's (#3788)
+- Display price ranges on product pages (#3794)
+- Make apisix userinfo updates togglable (#3747)
+- make canvas etl resistant to pod culling (#3779)
+- fix(otel): continue the edge trace by extracting W3C traceparent (#3787)
+- Update Terms of Service (MicroMasters bundle, AI Tutor, date) (#3767)
+- feat(settings): change email and password via Keycloak (#3726)
+
 Version 0.77.8 (Released August 19, 2026)
 --------------
 

@@ -221,6 +221,20 @@ export const getVerifiableCredentialDownloadAPIURL = (
   return `${API_BASE_URL}/api/v2/verifiable_${type}_credential/${certId}/download`
 }
 
+/*
+ * LinkedIn's "Show credential" action opens certUrl directly, so it must be a
+ * viewable page rather than the raw JSON download endpoint. VerifierPlus
+ * renders the credential (and verifies its signature) given the download URL.
+ */
+export const getVerifierPlusViewerURL = (
+  verifiableCredentialJson: VerifiableCredential,
+): string => {
+  const downloadUrl = getVerifiableCredentialDownloadAPIURL(
+    verifiableCredentialJson,
+  )
+  return `https://verifierplus.org/#verify?vc=${encodeURIComponent(downloadUrl)}`
+}
+
 export const getVerifiableCredentialLinkedInURL = (
   verifiableCredentialJson: VerifiableCredential,
 ): string => {
@@ -233,10 +247,7 @@ export const getVerifiableCredentialLinkedInURL = (
   const issueMonth =
     new Date(verifiableCredentialJson["validFrom"]).getMonth() + 1
 
-  const certUrl = getVerifiableCredentialDownloadAPIURL(
-    verifiableCredentialJson,
-  )
-  /* TODO: Should I link to the certificate page instead of the download URL? */
+  const certUrl = getVerifierPlusViewerURL(verifiableCredentialJson)
   const linkedinUrl = new URL(LINKEDIN_ADD_TO_PROFILE_BASE_URL)
   linkedinUrl.searchParams.set("startTask", "CERTIFICATION_NAME")
   linkedinUrl.searchParams.set("name", credentialName)

@@ -1,5 +1,8 @@
 import React, { useMemo } from "react"
-import { learningResourceQueries } from "api/hooks/learningResources"
+import {
+  learningResourceQueries,
+  useOfferorsList,
+} from "api/hooks/learningResources"
 import type { LearningResource } from "api"
 import type { LearningResourcesVectorSearchResponse } from "api/v0"
 import getSearchParams from "./getSearchParams"
@@ -95,6 +98,7 @@ const getVectorClientAggregations = (
   allResults: LearningResource[],
   params: ReturnType<typeof getSearchParams>,
   aggregationNames: string[],
+  displayOfferorCodes: string[],
 ) => {
   return Object.fromEntries(
     aggregationNames.map((name) => {
@@ -104,6 +108,10 @@ const getVectorClientAggregations = (
       const counts = new Map<string, number>()
       for (const resource of resultsForFacet) {
         for (const value of getResourceFacetValues(resource, name)) {
+          // only show offerors with display_facet set, matching SearchDisplay
+          if (name === "offered_by" && !displayOfferorCodes.includes(value)) {
+            continue
+          }
           counts.set(value, (counts.get(value) ?? 0) + 1)
         }
       }
@@ -131,6 +139,15 @@ const HybridSearchDisplay: React.FC<HybridSearchDisplayProps> = ({
   const isVectorQuerySearch =
     typeof props.requestParams.q === "string" &&
     props.requestParams.q.trim() !== ""
+
+  const offerorsQuery = useOfferorsList()
+  const displayOfferorCodes = useMemo(
+    () =>
+      (offerorsQuery.data?.results ?? [])
+        .filter((offeror) => offeror.code && offeror.display_facet)
+        .map((offeror) => offeror.code),
+    [offerorsQuery.data?.results],
+  )
 
   const getQueryOptions = useMemo(
     () => (params: ReturnType<typeof getSearchParams>) => {
@@ -185,12 +202,13 @@ const HybridSearchDisplay: React.FC<HybridSearchDisplayProps> = ({
                   allResults,
                   params,
                   params.aggregations,
+                  displayOfferorCodes,
                 )
               : vectorData.metadata.aggregations,
           },
         }
       },
-    [],
+    [displayOfferorCodes],
   )
 
   return (

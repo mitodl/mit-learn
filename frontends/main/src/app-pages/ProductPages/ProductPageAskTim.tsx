@@ -2,7 +2,7 @@
 
 import { env } from "@/env"
 import React, { useCallback, useMemo } from "react"
-import { useSearchParams } from "next/navigation"
+import { useAppSearchParams } from "@/common/useAppSearchParams"
 import { LinkAdapter, styled } from "ol-components"
 import { styled as smootStyled } from "@mitodl/smoot-design"
 import { RiSparkling2Line } from "@remixicon/react"
@@ -78,7 +78,7 @@ export const ProductPageAskTimButton: React.FC<
   ProductPageAskTimButtonProps
 > = ({ resource }) => {
   const posthog = usePostHog()
-  const searchParams = useSearchParams()
+  const searchParams = useAppSearchParams()
   const seedDetailCache = useLearningResourceDetailSetCache(resource)
   const categoryLabel = resource.resource_category.toLowerCase()
 

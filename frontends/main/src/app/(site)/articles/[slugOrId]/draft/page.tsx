@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import { standardizeMetadata } from "@/common/metadata"
 import { WebsiteContentDetail } from "@/app-pages/WebsiteContent/WebsiteContentDetail"
@@ -10,7 +11,7 @@ export const generateMetadata = async () => {
   })
 }
 
-const Page: React.FC<PageProps<"/articles/[slugOrId]/draft">> = async (
+const Page: React.FC<AppPageProps<"/articles/[slugOrId]/draft">> = async (
   props,
 ) => {
   const { slugOrId } = await props.params

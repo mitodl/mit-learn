@@ -12,6 +12,7 @@ import {
   useConsumeSearchParamsOnce,
   type ConsumedSearchParamsResult,
 } from "@/common/useConsumeSearchParamsOnce"
+import type { RegisteredSearchParams } from "@/common/searchParams"
 
 type AccountActionResult = {
   action: AccountAction
@@ -32,7 +33,7 @@ const isAccountActionStatus = (
   Object.values(AccountActionStatus).includes(value as AccountActionStatus)
 
 const parseAccountActionResult = (
-  searchParams: URLSearchParams,
+  searchParams: RegisteredSearchParams,
 ): ConsumedSearchParamsResult<AccountActionResult> | null => {
   const action = searchParams.get(ACCOUNT_ACTION_PARAM)
   const status = searchParams.get(ACCOUNT_ACTION_STATUS_PARAM)

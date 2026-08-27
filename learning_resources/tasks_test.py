@@ -65,34 +65,6 @@ def mock_blocklist(mocker):
     )
 
 
-def test_cache_is_cleared_after_task_run(mocker, mocked_celery):
-    """Test that the search cache is cleared out after every task run"""
-    mocker.patch("learning_resources.tasks.ocw_courses_etl", autospec=True)
-    mocker.patch("learning_resources.tasks.get_content_tasks", autospec=True)
-    mocker.patch("learning_resources.tasks.pipelines")
-    mocked_clear_views_cache = mocker.patch(
-        "learning_resources.tasks.clear_views_cache"
-    )
-    tasks.get_mit_edx_data.delay()
-    tasks.update_next_start_date_and_prices.delay()
-    tasks.get_mit_edx_data.delay()
-    tasks.get_mitxonline_data.delay()
-    tasks.get_oll_data.delay()
-    tasks.get_xpro_data.delay()
-    tasks.get_podcast_data.delay()
-
-    tasks.get_ocw_courses.delay(
-        url_paths=[OCW_TEST_PREFIX],
-        force_overwrite=False,
-        skip_content_files=True,
-    )
-
-    # get_youtube_data is absent on purpose: it only queues the fan-out, whose
-    # writes land long after it returns, so it has nothing to invalidate
-    tasks.get_youtube_transcripts.delay()
-    assert mocked_clear_views_cache.call_count == 9
-
-
 def test_get_mit_edx_data_valid(mocker):
     """Verify that the get_mit_edx_data invokes the MIT edX ETL pipelines"""
     mock_pipelines = mocker.patch("learning_resources.tasks.pipelines")
@@ -994,6 +966,74 @@ def test_marketing_page_for_non_program_skips_children_content(mocker, settings)
     mock_generate_embeddings.delay.assert_called_once_with(
         [content_file.id], "content_file", overwrite=True
     )
+
+
+@pytest.mark.django_db
+def test_marketing_page_for_resources_sets_key_and_url(mocker):
+    """The marketing page ContentFile gets its key/url set at create time"""
+    course = models.LearningResource.objects.create(
+        title="Test Course",
+        url="https://example.com/course",
+        resource_type="course",
+        published=True,
+    )
+
+    scraper = mocker.Mock()
+    scraper.scrape.return_value = "<html><body><p>content</p></body></html>"
+    mocker.patch("learning_resources.tasks.scraper_for_site", return_value=scraper)
+    mocker.patch("learning_resources.tasks.html_to_markdown", return_value="content")
+    mocker.patch("vector_search.tasks.generate_embeddings")
+    mocker.patch("learning_resources_search.tasks.upsert_content_file")
+
+    marketing_page_for_resources([course.id])
+
+    content_file = models.ContentFile.objects.get(
+        learning_resource=course, file_type=MARKETING_PAGE_FILE_TYPE
+    )
+    assert content_file.key == course.url
+    assert content_file.url == course.url
+
+
+@pytest.mark.django_db
+def test_marketing_page_for_resources_updates_existing_on_url_change(mocker):
+    """A resource whose url changed should update its existing marketing
+    ContentFile in place, not create a second one.
+
+    The update_or_create lookup is (learning_resource, file_type) - it must
+    not include key, or a changed url would miss the existing row.
+    """
+    course = models.LearningResource.objects.create(
+        title="Test Course",
+        url="https://example.com/course-new-url",
+        resource_type="course",
+        published=True,
+    )
+    old_url = "https://example.com/course-old-url"
+    existing = ContentFileFactory.create(
+        learning_resource=course,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        key=old_url,
+        url=old_url,
+        file_extension=".md",
+    )
+
+    scraper = mocker.Mock()
+    scraper.scrape.return_value = "<html><body><p>content</p></body></html>"
+    mocker.patch("learning_resources.tasks.scraper_for_site", return_value=scraper)
+    mocker.patch("learning_resources.tasks.html_to_markdown", return_value="content")
+    mocker.patch("vector_search.tasks.generate_embeddings")
+    mocker.patch("learning_resources_search.tasks.upsert_content_file")
+
+    marketing_page_for_resources([course.id])
+
+    marketing_files = models.ContentFile.objects.filter(
+        learning_resource=course, file_type=MARKETING_PAGE_FILE_TYPE
+    )
+    assert marketing_files.count() == 1
+    updated = marketing_files.get()
+    assert updated.id == existing.id
+    assert updated.key == course.url
+    assert updated.url == course.url
 
 
 @pytest.mark.django_db

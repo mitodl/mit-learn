@@ -1,5 +1,6 @@
 import asyncio
 import random
+from datetime import UTC, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock
 
@@ -8,6 +9,7 @@ from asgiref.sync import async_to_sync
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.urls import reverse
+from freezegun import freeze_time
 from langchain_core.documents import Document
 from qdrant_client import models
 from qdrant_client.http.models.models import CountResult
@@ -39,6 +41,7 @@ from learning_resources_search.serializers import (
 )
 from main.utils import checksum_for_content
 from vector_search.constants import (
+    COMPLETENESS_PAYLOAD_KEY,
     CONTENT_FILES_COLLECTION_NAME,
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
@@ -56,9 +59,11 @@ from vector_search.constants import (
     QDRANT_OPTIMIZER_THRESHOLD_MEDIUM,
     QDRANT_OPTIMIZER_THRESHOLD_SMALL,
     QDRANT_RESOURCE_PARAM_MAP,
+    RESOURCE_AGE_DATE_PAYLOAD_KEY,
     RESOURCES_COLLECTION_NAME,
     RESOURCES_PAYLOAD_EXCLUDE,
     RESOURCES_RETRIEVE_PAYLOAD,
+    SECONDS_PER_YEAR,
 )
 from vector_search.encoders.utils import dense_encoder, sparse_encoder
 from vector_search.utils import (
@@ -74,6 +79,7 @@ from vector_search.utils import (
     _set_payload,
     async_qdrant_aggregations,
     check_missing_content_file_ids,
+    completeness_penalty_expression,
     compute_optimizer_settings,
     create_qdrant_collections,
     custom_score_formula,
@@ -83,8 +89,10 @@ from vector_search.utils import (
     qdrant_query_conditions,
     remove_qdrant_records,
     resources_payload_selector,
+    score_formula_query,
     should_generate_content_embeddings,
     should_generate_resource_embeddings,
+    staleness_penalty_expression,
     update_content_file_payload,
     update_learning_resource_payload,
     update_qdrant_indexes,
@@ -2926,6 +2934,206 @@ def test_custom_score_formula_defaults(mocker):
     assert isinstance(results[0].mult[1], models.Filter)
 
     assert isinstance(results[0].mult[2], models.GaussDecayExpression)
+
+
+def test_completeness_penalty_expression(settings):
+    """The penalty subtracts weight * (1 - completeness) from the score."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+
+    expression = completeness_penalty_expression(RESOURCES_COLLECTION_NAME)
+
+    assert isinstance(expression, models.NegExpression)
+    weight, incompleteness = expression.neg.mult
+    assert weight == 0.05
+    # 1 - completeness
+    assert incompleteness.sum[0] == 1
+    assert incompleteness.sum[1].neg == COMPLETENESS_PAYLOAD_KEY
+
+
+@pytest.mark.parametrize("weight", [0, None, -1])
+def test_completeness_penalty_expression_disabled(settings, weight):
+    """A weight of 0, unset, or negative leaves scores alone."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = weight
+
+    assert completeness_penalty_expression(RESOURCES_COLLECTION_NAME) is None
+
+
+def test_completeness_penalty_expression_other_collections(settings):
+    """Only resource payloads carry completeness, so only they are penalized."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+
+    assert completeness_penalty_expression(CONTENT_FILES_COLLECTION_NAME) is None
+
+
+def test_score_formula_query_combines_boosts_and_penalty(mocker, settings):
+    """Boosts add to the score and the penalty subtracts from it."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0
+    mocker.patch(
+        "vector_search.utils.VECTOR_SEARCH_SCORE_BOOST",
+        {RESOURCES_COLLECTION_NAME: [{"boost": 0.15, "params": {"free": True}}]},
+    )
+
+    formula_query = score_formula_query(RESOURCES_COLLECTION_NAME)
+
+    assert formula_query.defaults == {COMPLETENESS_PAYLOAD_KEY: 1.0}
+    score, boost, penalty = formula_query.formula.sum
+    assert score == "$score"
+    assert isinstance(boost, models.MultExpression)
+    assert penalty == completeness_penalty_expression(RESOURCES_COLLECTION_NAME)
+
+
+def test_score_formula_query_penalty_only(mocker, settings):
+    """With no boosts configured the formula is the score minus the penalty."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+
+    formula_query = score_formula_query(RESOURCES_COLLECTION_NAME)
+
+    score, penalty = formula_query.formula.sum
+    assert score == "$score"
+    assert penalty == completeness_penalty_expression(RESOURCES_COLLECTION_NAME)
+
+
+def test_score_formula_query_boosts_only(mocker, settings):
+    """With the penalty disabled the formula keeps the boosts and no defaults."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0
+    mocker.patch(
+        "vector_search.utils.VECTOR_SEARCH_SCORE_BOOST",
+        {RESOURCES_COLLECTION_NAME: [{"boost": 0.15, "params": {"free": True}}]},
+    )
+
+    formula_query = score_formula_query(RESOURCES_COLLECTION_NAME)
+
+    assert not formula_query.defaults
+    score, boost = formula_query.formula.sum
+    assert score == "$score"
+    assert isinstance(boost, models.MultExpression)
+
+
+def test_staleness_penalty_expression(settings):
+    """The penalty decays linearly over resource_age_date, from now."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+
+    expression = staleness_penalty_expression(RESOURCES_COLLECTION_NAME, now)
+
+    assert isinstance(expression, models.NegExpression)
+    weight, staleness = expression.neg.mult
+    assert weight == 0.05
+    # 1 - decay
+    assert staleness.sum[0] == 1
+    decay = staleness.sum[1].neg.lin_decay
+    assert decay.x.datetime_key == RESOURCE_AGE_DATE_PAYLOAD_KEY
+    assert decay.target.datetime == now.isoformat()
+    assert decay.scale == 20 * SECONDS_PER_YEAR
+    # decay bottoms out at the horizon rather than halfway to it
+    assert decay.midpoint == 0.0
+
+
+@pytest.mark.parametrize("age_years", [0, 5, 20, 40])
+def test_staleness_penalty_ramps_linearly_to_the_horizon(settings, age_years):
+    """
+    The emitted decay params subtract weight * age / horizon, saturating at the
+    weight once a resource is at least a horizon old.
+    """
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+
+    expression = staleness_penalty_expression(RESOURCES_COLLECTION_NAME, now)
+    weight, staleness = expression.neg.mult
+    decay_params = staleness.sum[1].neg.lin_decay
+
+    # Qdrant's linear decay, evaluated for a resource of this age
+    age_seconds = age_years * SECONDS_PER_YEAR
+    decay = max(0, 1 - (1 - decay_params.midpoint) * age_seconds / decay_params.scale)
+    penalty = weight * (1 - decay)
+
+    assert penalty == pytest.approx(0.05 * min(age_years / 20, 1))
+
+
+@pytest.mark.parametrize("weight", [0, None, -1])
+def test_staleness_penalty_expression_disabled(settings, weight):
+    """A weight of 0, unset, or negative leaves scores alone."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = weight
+
+    assert (
+        staleness_penalty_expression(RESOURCES_COLLECTION_NAME, datetime.now(tz=UTC))
+        is None
+    )
+
+
+@pytest.mark.parametrize("horizon_years", [0, None, -1])
+def test_staleness_penalty_expression_without_horizon(settings, horizon_years):
+    """A horizon of 0, unset, or negative has no ramp to penalize along."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = horizon_years
+
+    assert (
+        staleness_penalty_expression(RESOURCES_COLLECTION_NAME, datetime.now(tz=UTC))
+        is None
+    )
+
+
+def test_staleness_penalty_expression_other_collections(settings):
+    """Only resource payloads carry an age date, so only they are penalized."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+
+    assert (
+        staleness_penalty_expression(
+            CONTENT_FILES_COLLECTION_NAME, datetime.now(tz=UTC)
+        )
+        is None
+    )
+
+
+def test_score_formula_query_combines_both_penalties(mocker, settings):
+    """Incompleteness and staleness both subtract from the score."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+
+    with freeze_time(now):
+        formula_query = score_formula_query(RESOURCES_COLLECTION_NAME)
+
+    score, completeness_penalty, staleness = formula_query.formula.sum
+    assert score == "$score"
+    assert completeness_penalty == completeness_penalty_expression(
+        RESOURCES_COLLECTION_NAME
+    )
+    assert staleness == staleness_penalty_expression(RESOURCES_COLLECTION_NAME, now)
+    # a resource with no age date is not stale, and scores as if published now
+    assert formula_query.defaults == {
+        COMPLETENESS_PAYLOAD_KEY: 1.0,
+        RESOURCE_AGE_DATE_PAYLOAD_KEY: now.isoformat(),
+    }
+
+
+def test_score_formula_query_staleness_penalty_only(mocker, settings):
+    """With incompleteness disabled, only the age date needs a default."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+
+    formula_query = score_formula_query(RESOURCES_COLLECTION_NAME)
+
+    assert list(formula_query.defaults) == [RESOURCE_AGE_DATE_PAYLOAD_KEY]
+    score, staleness = formula_query.formula.sum
+    assert score == "$score"
+    assert isinstance(staleness.neg.mult[1].sum[1].neg, models.LinDecayExpression)
+
+
+def test_score_formula_query_nothing_to_apply(mocker, settings):
+    """Nothing to boost and nothing to penalize means no rescoring stage."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+
+    assert score_formula_query(CONTENT_FILES_COLLECTION_NAME) is None
 
 
 @pytest.mark.django_db

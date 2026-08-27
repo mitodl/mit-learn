@@ -7,7 +7,10 @@ import {
   user,
 } from "@/test-utils"
 import { setMockResponse, urls, factories, makeRequest } from "api/test-utils"
-import type { LearningResourcesSearchResponse } from "api"
+import type {
+  LearningResourcesSearchResponse,
+  PaginatedLearningResourceOfferorDetailList,
+} from "api"
 import invariant from "tiny-invariant"
 import type { Channel } from "api/v0"
 import { ChannelTypeEnum } from "api/v0"
@@ -16,9 +19,11 @@ import ChannelPage from "./ChannelPage"
 const setMockApiResponses = ({
   search,
   channelPatch = {},
+  offerors,
 }: {
   search?: Partial<LearningResourcesSearchResponse>
   channelPatch?: Partial<Channel>
+  offerors?: PaginatedLearningResourceOfferorDetailList
 }) => {
   const channel = factories.channels.channel(channelPatch)
   const urlParams = new URLSearchParams(channelPatch?.search_filter)
@@ -58,7 +63,7 @@ const setMockApiResponses = ({
 
   setMockResponse.get(
     urls.offerors.list(),
-    factories.learningResources.offerors({ count: 5 }),
+    offerors ?? factories.learningResources.offerors({ count: 5 }),
   )
 
   setMockResponse.get(expect.stringContaining(urls.search.resources()), {
@@ -201,6 +206,68 @@ describe("ChannelSearch", () => {
     expect(apiSearchParams.get("q")).toBe("python")
     expect(apiSearchParams.get("topic")).toBe("Economics")
   })
+
+  test("Hybrid search 'Offered By' facet only shows facets with 'display_facet' set to true", async () => {
+    const offerors = factories.learningResources.offerors({ count: 3 })
+    offerors.results[0]!.display_facet = true
+    offerors.results[1]!.display_facet = false
+    offerors.results[2]!.display_facet = false
+
+    const resources = factories.learningResources.resources({
+      count: 3,
+    }).results
+    resources.forEach((resource, i) => {
+      resource.professional = true
+      resource.offered_by = {
+        code: offerors.results[i]!.code,
+        name: offerors.results[i]!.name,
+        channel_url: null,
+      }
+    })
+
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Topic },
+      offerors,
+      search: {
+        count: resources.length,
+        results: resources,
+        metadata: {
+          aggregations: {
+            offered_by: offerors.results.map((o, i) => ({
+              key: o.code,
+              doc_count: 10 + i,
+            })),
+          },
+          suggestions: [],
+        },
+      },
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}?q=python&professional=true`,
+    })
+
+    const showFacetButton = await screen.findByRole("button", {
+      name: /Offered By/i,
+    })
+    await user.click(showFacetButton)
+
+    const offeror0 = await screen.findByRole("checkbox", {
+      name: new RegExp(`^${offerors.results[0]!.name}`),
+    })
+    expect(offeror0).toBeVisible()
+    expect(
+      screen.queryByRole("checkbox", {
+        name: new RegExp(`^${offerors.results[1]!.name}`),
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("checkbox", {
+        name: new RegExp(`^${offerors.results[2]!.name}`),
+      }),
+    ).not.toBeInTheDocument()
+  })
+
   test.each([
     {
       searchFilter: "offered_by=ocw",

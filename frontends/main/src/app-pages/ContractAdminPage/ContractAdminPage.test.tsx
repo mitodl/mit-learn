@@ -917,6 +917,433 @@ describe("ContractAdminPage", () => {
     expect(screen.getByText("pending@example.com")).toBeInTheDocument()
   })
 
+  test("Failed tab filters to codes whose invite email failed", async () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+    const { org, contract } = makeOrgWithContract()
+    setMockResponse.get(managerOrgsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [org],
+    })
+    setMockResponse.get(
+      managerContractDetailUrl(org.id, contract.id),
+      makeContractDetail(contract, {
+        total_codes: 2,
+        assigned_codes: 2,
+        redeemed_codes: 0,
+        unassigned_codes: 0,
+      }),
+    )
+
+    const deliveredCode = factories.contracts.contractCode({
+      redemption_status: "assigned",
+      assigned_to: "delivered@example.com",
+      email_status: "delivered",
+    })
+    const failedCode = factories.contracts.contractCode({
+      redemption_status: "assigned",
+      assigned_to: "bounced@example.com",
+      email_status: "failed",
+    })
+
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 25,
+      }),
+      factories.contracts.paginatedContractCodes([deliveredCode, failedCode]),
+    )
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 25,
+        status: "failed",
+      }),
+      factories.contracts.paginatedContractCodes([failedCode]),
+    )
+
+    renderWithProviders(
+      <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText("delivered@example.com")
+
+    await user.click(screen.getByRole("tab", { name: "Failed" }))
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("delivered@example.com"),
+      ).not.toBeInTheDocument()
+    })
+    expect(screen.getByText("bounced@example.com")).toBeInTheDocument()
+  })
+
+  test("empty Failed tab explains that nothing failed", async () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+    const { org, contract } = makeOrgWithContract()
+    setMockResponse.get(managerOrgsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [org],
+    })
+    setMockResponse.get(
+      managerContractDetailUrl(org.id, contract.id),
+      makeContractDetail(contract, {
+        total_codes: 1,
+        assigned_codes: 1,
+        redeemed_codes: 0,
+        unassigned_codes: 0,
+      }),
+    )
+
+    const deliveredCode = factories.contracts.contractCode({
+      redemption_status: "assigned",
+      assigned_to: "delivered@example.com",
+      email_status: "delivered",
+    })
+
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 25,
+      }),
+      factories.contracts.paginatedContractCodes([deliveredCode]),
+    )
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 25,
+        status: "failed",
+      }),
+      factories.contracts.paginatedContractCodes([]),
+    )
+
+    renderWithProviders(
+      <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText("delivered@example.com")
+
+    await user.click(screen.getByRole("tab", { name: "Failed" }))
+
+    // Filter-aware copy: a bare "No seat assignments found." would imply the
+    // contract has no seats at all, when in fact none of them failed.
+    const table = screen.getByRole("table", { name: "Seat assignments" })
+    expect(
+      await within(table).findByRole("cell", {
+        name: "No failed invitations.",
+      }),
+    ).toBeInTheDocument()
+    // The live region mirrors the visible state, so it has to carry the same
+    // filter-aware copy — announcing the generic string would tell AT users the
+    // contract has no seat assignments at all.
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "No failed invitations.",
+    )
+    expect(
+      screen.queryByText("No seat assignments found."),
+    ).not.toBeInTheDocument()
+  })
+
+  test("empty state blames the search, not the filter, while a query is active", async () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+    // Drive the clock: the 300ms search debounce plus the request it triggers
+    // has to fit inside findBy's timeout, which is a race a loaded machine
+    // loses. Real timers made this pass alone and fail in a full-suite run.
+    jest.useFakeTimers()
+    try {
+      const timerUser = user.setup({
+        advanceTimers: jest.advanceTimersByTime,
+      })
+
+      const { org, contract } = makeOrgWithContract()
+      setMockResponse.get(managerOrgsUrl, {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [org],
+      })
+      setMockResponse.get(
+        managerContractDetailUrl(org.id, contract.id),
+        makeContractDetail(contract, {
+          total_codes: 1,
+          assigned_codes: 1,
+          redeemed_codes: 0,
+          unassigned_codes: 0,
+        }),
+      )
+
+      const deliveredCode = factories.contracts.contractCode({
+        redemption_status: "assigned",
+        assigned_to: "delivered@example.com",
+        email_status: "delivered",
+      })
+
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 1,
+          page_size: 25,
+        }),
+        factories.contracts.paginatedContractCodes([deliveredCode]),
+      )
+      setMockResponse.get(
+        urls.contracts.managerContractCodes(org.id, contract.id, {
+          page: 1,
+          page_size: 25,
+          search_term: "z",
+        }),
+        factories.contracts.paginatedContractCodes([]),
+      )
+
+      renderWithProviders(
+        <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByText("delivered@example.com")
+
+      // A single character, so the debounce collapses to exactly one request
+      // and no intermediate prefix needs its own mock.
+      await timerUser.type(
+        screen.getByPlaceholderText("Search by name or email..."),
+        "z",
+      )
+      act(() => {
+        jest.advanceTimersByTime(300)
+      })
+
+      // Seats exist and none of them are excluded by a status filter here, so
+      // neither the per-filter copy nor "No seat assignments found." is true.
+      const table = screen.getByRole("table", { name: "Seat assignments" })
+      expect(
+        await within(table).findByRole("cell", {
+          name: "No seat assignments match your search.",
+        }),
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText("No seat assignments found."),
+      ).not.toBeInTheDocument()
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  test("marks the table busy and dims stale rows while a filter change is in flight", async () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+    const { org, contract } = makeOrgWithContract()
+    setMockResponse.get(managerOrgsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [org],
+    })
+    setMockResponse.get(
+      managerContractDetailUrl(org.id, contract.id),
+      makeContractDetail(contract, {
+        total_codes: 2,
+        assigned_codes: 2,
+        redeemed_codes: 0,
+        unassigned_codes: 0,
+      }),
+    )
+
+    const deliveredCode = factories.contracts.contractCode({
+      redemption_status: "assigned",
+      assigned_to: "delivered@example.com",
+      email_status: "delivered",
+    })
+    const failedCode = factories.contracts.contractCode({
+      redemption_status: "assigned",
+      assigned_to: "bounced@example.com",
+      email_status: "failed",
+    })
+
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 25,
+      }),
+      factories.contracts.paginatedContractCodes([deliveredCode, failedCode]),
+    )
+    const failedCodes =
+      Promise.withResolvers<
+        ReturnType<typeof factories.contracts.paginatedContractCodes>
+      >()
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 25,
+        status: "failed",
+      }),
+      failedCodes.promise,
+    )
+
+    renderWithProviders(
+      <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText("delivered@example.com")
+
+    await user.click(screen.getByRole("tab", { name: "Failed" }))
+
+    // keepPreviousData keeps the All tab's rows on screen until the filtered
+    // response lands, so the table has to say it is updating — otherwise a
+    // delivered row sits under the Failed tab looking like a result.
+    const table = screen.getByRole("table", { name: "Seat assignments" })
+    expect(table).toHaveAttribute("aria-busy", "true")
+    expect(screen.getByText("delivered@example.com")).toBeInTheDocument()
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Loading seat assignments",
+    )
+
+    await act(async () => {
+      failedCodes.resolve(
+        factories.contracts.paginatedContractCodes([failedCode]),
+      )
+    })
+
+    await waitFor(() => {
+      expect(table).toHaveAttribute("aria-busy", "false")
+    })
+    expect(screen.queryByText("delivered@example.com")).not.toBeInTheDocument()
+    // Switching tabs replaces the whole result set, so the new size is
+    // announced — the table's own region often lands back on the same
+    // "page 1 of 1" text it started with and would say nothing.
+    await screen.findByText("1 result")
+  })
+
+  // isPlaceholderData (keepPreviousData) only reflects rows carried over from
+  // a different query key — it's false the moment React Query has a cache
+  // entry for the current key, even if a mutation invalidated it and a
+  // refetch is running in the background. isFetching is what's true then, so
+  // the busy/dimmed state has to account for it too, or a revisited tab looks
+  // "done" while it's still silently revalidating.
+  test("revisiting a tab invalidated by a row mutation stays busy/dimmed until the refetch resolves", async () => {
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+    const { org, contract } = makeOrgWithContract()
+    setMockResponse.get(managerOrgsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [org],
+    })
+
+    let contractDetailCalls = 0
+    setMockResponse.get(managerContractDetailUrl(org.id, contract.id), () => {
+      contractDetailCalls += 1
+      return contractDetailCalls === 1
+        ? makeContractDetail(contract, {
+            total_codes: 2,
+            assigned_codes: 2,
+            redeemed_codes: 0,
+            unassigned_codes: 0,
+          })
+        : makeContractDetail(contract, {
+            total_codes: 2,
+            assigned_codes: 1,
+            redeemed_codes: 0,
+            unassigned_codes: 1,
+          })
+    })
+
+    const assignedCode = factories.contracts.contractCode({
+      redemption_status: "assigned",
+      assigned_to: "pending@example.com",
+    })
+
+    // The All tab's own query key is fetched twice in this test: once on the
+    // initial visit, and once when it's revisited after the Pending-tab
+    // mutation invalidates every filter for this contract. The second fetch
+    // is held open so the busy/dimmed state can be asserted before resolving.
+    let allCodesCalls = 0
+    const allCodesRefetch =
+      Promise.withResolvers<
+        ReturnType<typeof factories.contracts.paginatedContractCodes>
+      >()
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 25,
+      }),
+      () => {
+        allCodesCalls += 1
+        return allCodesCalls === 1
+          ? factories.contracts.paginatedContractCodes([assignedCode])
+          : allCodesRefetch.promise
+      },
+    )
+    setMockResponse.get(
+      urls.contracts.managerContractCodes(org.id, contract.id, {
+        page: 1,
+        page_size: 25,
+        status: "assigned",
+      }),
+      factories.contracts.paginatedContractCodes([assignedCode]),
+    )
+    setMockResponse.delete(
+      urls.contracts.managerContractCodeRevoke(
+        org.id,
+        contract.id,
+        assignedCode.code,
+      ),
+      assignedCode,
+    )
+
+    renderWithProviders(
+      <ContractAdminPage orgSlug={org.slug} contractSlug={contract.slug} />,
+    )
+
+    // Load and cache the All tab.
+    await screen.findByText("pending@example.com")
+
+    // Visit and cache the Pending tab too.
+    await user.click(screen.getByRole("tab", { name: "Pending" }))
+    await screen.findByText("pending@example.com")
+
+    // Release the seat from the Pending tab — this invalidates every cached
+    // filter/page for the contract, including the All tab visited earlier.
+    await user.click(screen.getByRole("button", { name: /more actions/i }))
+    await user.click(screen.getByRole("menuitem", { name: "Release seat" }))
+    await user.click(screen.getByRole("button", { name: "Release seat" }))
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("group", { name: "Unassigned" }),
+      ).toHaveTextContent("1")
+    })
+
+    // Revisit the All tab: React Query already has a (now-invalidated) cache
+    // entry for this exact key, so the cached row shows immediately —
+    // isLoading and isPlaceholderData are both false — while the second,
+    // deferred fetch above refetches it in the background.
+    await user.click(screen.getByRole("tab", { name: "All" }))
+
+    const table = screen.getByRole("table", { name: "Seat assignments" })
+    expect(table).toHaveAttribute("aria-busy", "true")
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Loading seat assignments",
+    )
+
+    await act(async () => {
+      allCodesRefetch.resolve(factories.contracts.paginatedContractCodes([]))
+    })
+
+    await waitFor(() => {
+      expect(table).toHaveAttribute("aria-busy", "false")
+    })
+  })
+
   describe("status pill", () => {
     const setupCodeRow = (
       code: ReturnType<typeof factories.contracts.contractCode>,
@@ -948,10 +1375,10 @@ describe("ContractAdminPage", () => {
     }
 
     // "Pending"/"Redeemed" also appear as a header stat label and a filter
-    // tab, so an unscoped getByText for those two would be ambiguous. Scope
-    // to the row via its ARIA role — an accessibility-meaningful boundary
-    // set by this page's own markup, not a third-party implementation detail
-    // like a MUI-generated class name.
+    // tab, and "Failed" as a filter tab, so an unscoped getByText for any of
+    // those would be ambiguous. Scope to the row via its ARIA role — an
+    // accessibility-meaningful boundary set by this page's own markup, not a
+    // third-party implementation detail like a MUI-generated class name.
     const getRow = (assignedTo: string) => {
       const row = screen.getByText(assignedTo).closest('[role="row"]')
       if (!row) {
@@ -1069,7 +1496,9 @@ describe("ContractAdminPage", () => {
       // explanation is a description, not baked into the name — MUI's
       // describeChild renders it as a native `title` attribute while closed,
       // and swaps it for a live aria-describedby while the tooltip is open.
-      expect(screen.getByText("Failed")).toBeInTheDocument()
+      expect(
+        within(getRow("bounced@example.com")).getByText("Failed"),
+      ).toBeInTheDocument()
       const pill = screen.getByTitle(explanation)
       // In the tab order, so keyboard users can reach it. (MUI only opens the
       // tooltip on *keyboard* focus via the CSS :focus-visible pseudo-class,

@@ -58,7 +58,7 @@ from learning_resources_search.exceptions import RetryError
 from main.celery import app
 from main.constants import ISOFORMAT
 from main.decorators import cooldown_task
-from main.utils import chunks, clear_views_cache, now_in_utc
+from main.utils import chunks, now_in_utc
 
 log = logging.getLogger(__name__)
 
@@ -75,7 +75,6 @@ def update_next_start_date_and_prices():
             resource_upserted_actions(
                 resource, percolate=False, generate_embeddings=True
             )
-    clear_views_cache()
     return len(resources)
 
 
@@ -104,7 +103,6 @@ def get_mit_edx_data(
     """
     courses = pipelines.mit_edx_courses_etl(api_course_datafile)
     programs = pipelines.mit_edx_programs_etl(api_program_datafile)
-    clear_views_cache()
     return len(courses) + len(programs)
 
 
@@ -114,7 +112,6 @@ def get_mitxonline_data() -> int | None:
     """Execute the MITX Online ETL pipeline"""
     courses = pipelines.mitxonline_courses_etl()
     programs = pipelines.mitxonline_programs_etl()
-    clear_views_cache()
     return len(courses) + len(programs)
 
 
@@ -132,7 +129,6 @@ def get_oll_data(sheets_id=None) -> int | None:
 
     """
     courses = pipelines.oll_etl(sheets_id)
-    clear_views_cache()
     return len(courses)
 
 
@@ -156,7 +152,6 @@ def get_xpro_data() -> int | None:
     """Execute the xPro ETL pipeline"""
     courses = pipelines.xpro_courses_etl()
     programs = pipelines.xpro_programs_etl()
-    clear_views_cache()
     return len(courses) + len(programs)
 
 
@@ -164,7 +159,6 @@ def get_xpro_data() -> int | None:
 def get_mit_climate_data():
     """Execute the MIT Climate ETL pipeline"""
     articles = pipelines.mit_climate_etl()
-    clear_views_cache()
     return len(articles)
 
 
@@ -187,7 +181,6 @@ def get_content_files(
         log.warning("Required settings missing for %s files", etl_source)
         return
     sync_edx_course_files(etl_source, ids, keys, overwrite=overwrite)
-    clear_views_cache()
 
 
 def get_content_tasks(
@@ -327,7 +320,6 @@ def get_podcast_data():
             The number of results that were fetched
     """
     results = pipelines.podcast_etl()
-    clear_views_cache()
     return len(list(results))
 
 
@@ -341,7 +333,6 @@ def get_ovs_data():
             The number of results that were fetched
     """
     results = pipelines.ovs_etl()
-    clear_views_cache()
     return len(list(results))
 
 
@@ -368,7 +359,6 @@ def get_ocw_courses(
         start_timestamp=utc_start_timestamp,
         skip_content_files=skip_content_files,
     )
-    clear_views_cache()
 
 
 @app.task(bind=True, acks_late=True)
@@ -400,7 +390,6 @@ def update_ocw_learning_material_resources(self):  # noqa: ARG001
                 f"Error loading learning materials for course run {course_run.id}: {e}"
             )
             log.exception(error)
-    clear_views_cache()
 
 
 @app.task(bind=True, acks_late=True)
@@ -623,7 +612,6 @@ def get_youtube_transcripts(
 
     log.info("Updating transcripts for %i videos", videos.count())
     youtube.get_youtube_transcripts(videos)
-    clear_views_cache()
 
 
 @app.task(acks_late=True)
@@ -640,7 +628,6 @@ def get_ovs_transcripts(*, overwrite=False):
 
     log.info("Updating OVS transcripts for %i videos", videos.count())
     ovs.get_ovs_transcripts(videos)
-    clear_views_cache()
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
@@ -648,7 +635,6 @@ def get_learning_resource_views():
     """Load learning resource views from the PostHog ETL."""
 
     pipelines.posthog_etl()
-    clear_views_cache()
 
 
 @app.task(acks_late=True)
@@ -927,10 +913,10 @@ def marketing_page_for_resources(resource_ids):
                 file_type=MARKETING_PAGE_FILE_TYPE,
                 defaults={
                     "file_extension": ".md",
+                    "key": marketing_page_url,
+                    "url": marketing_page_url,
                 },
             )
-            content_file.key = marketing_page_url
-            content_file.url = marketing_page_url
             content = strip_markdown_images(html_to_markdown(page_content))
             if learning_resource.resource_type == LearningResourceType.program.name:
                 children_content = program_children_content.get(

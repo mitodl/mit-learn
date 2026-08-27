@@ -2,6 +2,7 @@ import asyncio
 import gc
 import logging
 import uuid
+from datetime import UTC, datetime
 from functools import cache
 from textwrap import dedent
 
@@ -42,6 +43,7 @@ from learning_resources_search.serializers import (
 from main.utils import checksum_for_content, chunks
 from vector_search.constants import (
     COLLECTION_PARAM_MAP,
+    COMPLETENESS_PAYLOAD_KEY,
     CONTENT_FILES_COLLECTION_NAME,
     COURSE_NUMBER_INDEXING_ONLY_FIELDS,
     QDRANT_CONTENT_FILE_INDEXES,
@@ -61,9 +63,11 @@ from vector_search.constants import (
     QDRANT_OPTIMIZER_THRESHOLD_SMALL,
     QDRANT_RESOURCE_PARAM_MAP,
     QDRANT_TOPIC_INDEXES,
+    RESOURCE_AGE_DATE_PAYLOAD_KEY,
     RESOURCES_COLLECTION_NAME,
     RESOURCES_PAYLOAD_EXCLUDE,
     RESOURCES_RETRIEVE_PAYLOAD,
+    SECONDS_PER_YEAR,
     TOPICS_COLLECTION_NAME,
     VECTOR_SEARCH_SCORE_BOOST,
 )
@@ -1742,6 +1746,118 @@ def custom_score_formula(collection_name: str) -> list[models.MultExpression]:
                 )
             )
     return score_expressions
+
+
+def completeness_penalty_expression(
+    collection_name: str,
+) -> models.NegExpression | None:
+    """
+    Build the incompleteness penalty term: -weight * (1 - completeness), to be
+    added to the score.
+
+    Deliberately additive rather than the multiplicative form OpenSearch uses --
+    see VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT. None when the penalty is
+    disabled or the collection has no completeness.
+    """
+    if collection_name != RESOURCES_COLLECTION_NAME:
+        return None
+    weight = max(settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT or 0, 0)
+    if not weight:
+        return None
+    return models.NegExpression(
+        neg=models.MultExpression(
+            mult=[
+                weight,
+                models.SumExpression(
+                    sum=[1, models.NegExpression(neg=COMPLETENESS_PAYLOAD_KEY)]
+                ),
+            ]
+        )
+    )
+
+
+def staleness_penalty_expression(
+    collection_name: str,
+    now: datetime,
+) -> models.NegExpression | None:
+    """
+    Build the staleness penalty term: -weight * (1 - decay), where decay ramps
+    linearly from 1 at `now` down to 0 at VECTOR_SEARCH_STALENESS_HORIZON_YEARS
+    and stays there, so the penalty grows with age and saturates at the weight.
+
+    Additive rather than the multiplicative decay OpenSearch applies -- see
+    VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT. None when the penalty is disabled or
+    the collection has no resource age.
+    """
+    if collection_name != RESOURCES_COLLECTION_NAME:
+        return None
+    weight = max(settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT or 0, 0)
+    horizon_years = settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS or 0
+    if not weight or horizon_years <= 0:
+        return None
+    return models.NegExpression(
+        neg=models.MultExpression(
+            mult=[
+                weight,
+                models.SumExpression(
+                    sum=[
+                        1,
+                        models.NegExpression(
+                            neg=models.LinDecayExpression(
+                                lin_decay=models.DecayParamsExpression(
+                                    x=models.DatetimeKeyExpression(
+                                        datetime_key=RESOURCE_AGE_DATE_PAYLOAD_KEY
+                                    ),
+                                    target=models.DatetimeExpression(
+                                        datetime=now.isoformat()
+                                    ),
+                                    scale=horizon_years * SECONDS_PER_YEAR,
+                                    # decay reaches 0 -- a full penalty -- at the
+                                    # horizon rather than the default half of it
+                                    midpoint=0.0,
+                                )
+                            )
+                        ),
+                    ]
+                ),
+            ]
+        )
+    )
+
+
+def score_formula_query(collection_name: str) -> models.FormulaQuery | None:
+    """
+    Build a collection's rescoring formula: the score, plus the
+    VECTOR_SEARCH_SCORE_BOOST boosts, minus the incompleteness and staleness
+    penalties. None when none of them apply, so callers can skip rescoring
+    entirely.
+    """
+    now = datetime.now(tz=UTC)
+    boost_expressions = custom_score_formula(collection_name)
+    penalties = []
+    # Payload values to fall back on, so that a point missing one -- indexed
+    # before the key existed, or a resource type that never carries it -- is
+    # penalized for neither.
+    defaults = {}
+
+    completeness_penalty = completeness_penalty_expression(collection_name)
+    if completeness_penalty is not None:
+        penalties.append(completeness_penalty)
+        defaults[COMPLETENESS_PAYLOAD_KEY] = 1.0
+
+    staleness_penalty = staleness_penalty_expression(collection_name, now)
+    if staleness_penalty is not None:
+        penalties.append(staleness_penalty)
+        # A null resource_age_date means an upcoming run, which is not stale, and
+        # scores as if it were published right now.
+        defaults[RESOURCE_AGE_DATE_PAYLOAD_KEY] = now.isoformat()
+
+    if not boost_expressions and not penalties:
+        return None
+    return models.FormulaQuery(
+        formula=models.SumExpression(sum=["$score", *boost_expressions, *penalties]),
+        defaults=defaults,
+    )
 
 
 def db_sync_to_async(func):

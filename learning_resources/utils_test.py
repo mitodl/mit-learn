@@ -18,6 +18,7 @@ from learning_resources.constants import (
     CONTENT_TYPE_PDF,
     CONTENT_TYPE_VIDEO,
     LearningResourceRelationTypes,
+    LearningResourceType,
 )
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE
 from learning_resources.etl.utils import get_content_type
@@ -209,41 +210,6 @@ def test_load_blocklist_cached(cached_ids, settings, mocker):
     mock_cache.get.assert_called_once_with("course_blocklist")
     mock_request.assert_not_called()
     mock_cache.set.assert_not_called()
-
-
-@pytest.mark.parametrize("url", [None, "http://test.me"])
-@pytest.mark.parametrize("etl_source", ["mitx", "other"])
-def test_load_course_duplicates(url, etl_source, settings, mocker):
-    """Test that a list of duplicate course id sets is returned if a URL is set"""
-    settings.DUPLICATE_COURSES_URL = url
-    file_content = """
----
-mitx:
-  - duplicate_course_ids:
-      - MITx+1
-      - MITx+2
-      - MITx+3
-    course_id: MITx+1
-"""
-
-    mock_request = mocker.patch(
-        "requests.get", autospec=True, return_value=mocker.Mock(text=file_content)
-    )
-    duplicates = utils.load_course_duplicates(etl_source)
-    if url is None:
-        mock_request.assert_not_called()
-        assert duplicates == []
-    elif etl_source == "other":
-        mock_request.assert_called_once_with(url, timeout=settings.REQUESTS_TIMEOUT)
-        assert duplicates == []
-    else:
-        mock_request.assert_called_once_with(url, timeout=settings.REQUESTS_TIMEOUT)
-        assert duplicates == [
-            {
-                "duplicate_course_ids": ["MITx+1", "MITx+2", "MITx+3"],
-                "course_id": "MITx+1",
-            }
-        ]
 
 
 def test_safe_load_bad_json(mocker):
@@ -1304,3 +1270,239 @@ def test_sanitize_llm_text(text, expected):
     assert result == expected
     # The result must always be storable: strict UTF-8 encoding cannot raise
     result.encode("utf-8")
+
+
+@pytest.mark.parametrize(
+    ("title", "expected"),
+    [
+        ("Hello World", "hello-world"),
+        # Accented latin reduces to its base letters
+        ("Café Über Ångström", "cafe-uber-angstrom"),
+        # Punctuation becomes a separator rather than being deleted, which is
+        # where django.utils.text.slugify diverges. Real prod title.
+        (
+            "Electricity and Magnetism: Maxwell’s Equations",  # noqa: RUF001
+            "electricity-and-magnetism-maxwell-s-equations",
+        ),
+        ("A/B Testing", "a-b-testing"),
+        ("under_scores_too", "under-scores-too"),
+        # Runs collapse, edges trim
+        ("  ...Hello   ---   World!!  ", "hello-world"),
+        # Truncated at 60 backing off to the last separator, no trailing dash
+        (
+            "Artificial Intelligence in Healthcare: Fundamentals and Applications",
+            "artificial-intelligence-in-healthcare-fundamentals-and",
+        ),
+        # No ascii letters -> blank. All three are real prod titles.
+        ("创业101: 你的客户是谁？", ""),  # noqa: RUF001
+        ("스타트업 기업가정신 102", ""),
+        ("123 456", ""),
+        ("", ""),
+    ],
+)
+def test_slugify_title(title, expected):
+    """slugify_title mirrors the frontend slugify, including its blank cases"""
+    assert utils.slugify_title(title) == expected
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Artificial Intelligence in Healthcare: Fundamentals and Applications",
+        "Architecture and Systems Engineering: Models and Methods to Manage Complexity",
+        "a" * 200,
+    ],
+)
+def test_slugify_title_truncation(title):
+    """A truncated slug stays within the cap and never ends on a separator"""
+    slug = utils.slugify_title(title)
+    assert len(slug) <= utils.SLUG_MAX_LENGTH
+    assert not slug.endswith("-")
+
+
+@pytest.mark.parametrize(
+    ("title", "expected"),
+    [
+        ("Hello World", "hello-world"),
+        # A path segment is mandatory, so a blank slug becomes the literal
+        ("创业101: 你的客户是谁？", "resource"),  # noqa: RUF001
+        ("", "resource"),
+    ],
+)
+def test_path_slug(title, expected):
+    """path_slug substitutes a literal where the title yields no slug"""
+    assert utils.path_slug(title) == expected
+
+
+@pytest.mark.parametrize(
+    ("segment", "expected"),
+    [
+        # MITx Online readable_ids depend on ':' and '+' surviving unescaped
+        ("course-v1:MITxT+14.100x", "course-v1:MITxT+14.100x"),
+        ("program-v1:UAI+B2C.2", "program-v1:UAI+B2C.2"),
+        # Anything that would change the path shape is escaped
+        ("a/b", "a%2Fb"),
+        ("a b", "a%20b"),
+        ("a?b#c", "a%3Fb%23c"),
+    ],
+)
+def test_encode_path_segment(segment, expected):
+    """Characters legal in a path segment are left unescaped"""
+    assert utils.encode_path_segment(segment) == expected
+
+
+@pytest.mark.parametrize(
+    ("title", "expected"),
+    [
+        ("Hello World", "/search?resource=7&resource_title=hello-world"),
+        # resource_title is omitted, not emitted blank
+        ("创业101", "/search?resource=7"),
+    ],
+)
+def test_resource_drawer_path(title, expected):
+    """The drawer path carries the id, and the slug only when there is one"""
+    assert utils.resource_drawer_path(7, title) == expected
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "expected_path"),
+    [
+        # Dedicated pages -----------------------------------------------------
+        (
+            {
+                "resource_type": "video",
+                "resource_id": 6385,
+                "title": "Lecture 1",
+                "parent_id": 6384,
+            },
+            "/video/6385/lecture-1?playlist=6384",
+        ),
+        # A video outside any playlist still has its own page
+        (
+            {"resource_type": "video", "resource_id": 6385, "title": "Lecture 1"},
+            "/video/6385/lecture-1",
+        ),
+        (
+            {
+                "resource_type": "video_playlist",
+                "resource_id": 6384,
+                "title": "Data Analysis",
+            },
+            "/video-playlist/6384/data-analysis",
+        ),
+        (
+            {
+                "resource_type": "podcast",
+                "resource_id": 14144,
+                "title": "Beyond Biology",
+            },
+            "/podcast/14144/beyond-biology",
+        ),
+        (
+            {
+                "resource_type": "podcast_episode",
+                "resource_id": 14145,
+                "title": "Insight to Impact",
+                "parent_id": 14144,
+            },
+            "/podcast/14144/podcast_episode/14145/insight-to-impact",
+        ),
+        # MITx Online course/program pages, keyed on readable_id
+        (
+            {
+                "resource_type": "course",
+                "resource_id": 2797,
+                "title": "Behavioral Economics",
+                "readable_id": "course-v1:MITxT+14.100x",
+                "platform_code": "mitxonline",
+            },
+            "/courses/course-v1:MITxT+14.100x",
+        ),
+        (
+            {
+                "resource_type": "program",
+                "resource_id": 2881,
+                "title": "DEDP",
+                "readable_id": "program-v1:MITx+DEDP",
+                "platform_code": "mitxonline",
+                "resource_category": "Program",
+            },
+            "/programs/program-v1:MITx+DEDP",
+        ),
+        # display_mode="course" upstream, stored as resource_category
+        (
+            {
+                "resource_type": "program",
+                "resource_id": 87435,
+                "title": "Fundamentals of Deep Learning",
+                "readable_id": "program-v1:UAI+B2C.2",
+                "platform_code": "mitxonline",
+                "resource_category": "Course",
+            },
+            "/courses/p/program-v1:UAI+B2C.2",
+        ),
+        # Drawer fallbacks ----------------------------------------------------
+        # A course on any other platform has no page of its own
+        (
+            {
+                "resource_type": "course",
+                "resource_id": 3308,
+                "title": "Infrastructure and Energy",
+                "readable_id": "11.165",
+                "platform_code": "ocw",
+            },
+            "/search?resource=3308&resource_title=infrastructure-and-energy",
+        ),
+        (
+            {
+                "resource_type": "course",
+                "resource_id": 2683,
+                "title": "Laser Fundamentals",
+                "readable_id": "course-v1:xPRO+LASERx4",
+                "platform_code": "xpro",
+            },
+            "/search?resource=2683&resource_title=laser-fundamentals",
+        ),
+        # An episode with no parent podcast has no page to address it by
+        (
+            {
+                "resource_type": "podcast_episode",
+                "resource_id": 14145,
+                "title": "Orphan Episode",
+            },
+            "/search?resource=14145&resource_title=orphan-episode",
+        ),
+        (
+            {
+                "resource_type": "document",
+                "resource_id": 99,
+                "title": "Some Document",
+            },
+            "/search?resource=99&resource_title=some-document",
+        ),
+        # MITx Online without a readable_id cannot form a product URL
+        (
+            {
+                "resource_type": "course",
+                "resource_id": 1,
+                "title": "No Readable Id",
+                "platform_code": "mitxonline",
+            },
+            "/search?resource=1&resource_title=no-readable-id",
+        ),
+    ],
+)
+def test_learn_url(settings, kwargs, expected_path):
+    """learn_url returns the dedicated page where one exists, else the drawer"""
+    settings.APP_BASE_URL = "https://learn.test/"
+    assert utils.learn_url(**kwargs) == f"https://learn.test{expected_path}"
+
+
+def test_learn_url_is_never_blank(settings):
+    """Every resource type resolves to a location, so consumers need no fallback"""
+    settings.APP_BASE_URL = "https://learn.test/"
+    for resource_type in LearningResourceType.names():
+        url = utils.learn_url(
+            resource_type=resource_type, resource_id=1, title="Some Title"
+        )
+        assert url.startswith("https://learn.test/")

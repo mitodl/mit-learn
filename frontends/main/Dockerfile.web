@@ -20,7 +20,7 @@
 #     -e NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL=http://mitxonline.odl.local:8065/ \
 #     -e NEXT_PUBLIC_MITX_ONLINE_BASE_URL=https://api.learn.mit.edu/mitxonline \
 #     -e NEXT_PUBLIC_MITX_ONLINE_CSRF_COOKIE_NAME=csrf_mitxonline \
-#     -e NEXT_CACHE_S_MAXAGE_SECONDS=7200 \
+#     -e NEXT_PUBLIC_CACHE_S_MAXAGE_SECONDS=7200 \
 #     -e NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS=true \
 #     mit-learn-nextjs:test
 

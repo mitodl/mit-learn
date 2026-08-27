@@ -17,6 +17,7 @@ import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { contractAdminView } from "@/common/urls"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
+import ContentEngagementTable from "./Analytics/ContentEngagementTable"
 import ContractKpiCards from "./Analytics/ContractKpiCards"
 import CoursePerformanceTable from "./Analytics/CoursePerformanceTable"
 import EngagementTrendChart from "./Analytics/EngagementTrendChart"
@@ -122,7 +123,7 @@ const PAGE_SIZE = 200
  */
 const MAX_PAGE_SIZE = 1000
 
-type SectionKey = "utilization" | "trend" | "courses" | "programs"
+type SectionKey = "utilization" | "trend" | "courses" | "programs" | "content"
 
 /**
  * Note there is no 401/403 branch for the analytics queries themselves. The
@@ -168,13 +169,14 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     trend: PAGE_SIZE,
     courses: PAGE_SIZE,
     programs: PAGE_SIZE,
+    content: PAGE_SIZE,
   })
 
   // One query per endpoint, each backed by its own materialized view with its
   // own refresh time, so sections load and report freshness independently.
   //
-  // Four `useQuery` calls rather than one `useQueries`, which is what this was
-  // originally. `placeholderData: keepPreviousData` is silently inert under
+  // Separate `useQuery` calls rather than one `useQueries`, which is what this
+  // was originally. `placeholderData: keepPreviousData` is silently inert under
   // `useQueries` here — on a limit change the result went straight to
   // `data: undefined`, so the section a manager had just asked to expand blanked
   // back to its skeleton, which is exactly what the option was there to prevent.
@@ -204,6 +206,13 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   const programs = useQuery({
     ...analyticsOrganizationQueries.programFunnel(orgUuid ?? "", {
       limit: limits.programs,
+    }),
+    enabled: analyticsAvailable,
+    placeholderData: keepPreviousData,
+  })
+  const content = useQuery({
+    ...analyticsOrganizationQueries.contentEngagement(orgUuid ?? "", {
+      limit: limits.content,
     }),
     enabled: analyticsAvailable,
     placeholderData: keepPreviousData,
@@ -306,7 +315,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     )
   }
 
-  const failed = [utilization, trend, courses, programs].some(
+  const failed = [utilization, trend, courses, programs, content].some(
     (query) => query.isError,
   )
 
@@ -383,6 +392,22 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           isError={programs.isError}
         />
         {truncation(programs, "programs")}
+      </Section>
+
+      <Section>
+        <SectionHeader
+          title="Content engagement"
+          description="How deeply learners engage with videos, problems and the chatbot in each course run."
+          asOf={content.data?.as_of}
+          isLoading={content.isPending}
+          isError={content.isError}
+        />
+        <ContentEngagementTable
+          rows={content.data?.data}
+          isLoading={content.isPending}
+          isError={content.isError}
+        />
+        {truncation(content, "content")}
       </Section>
     </Stack>
   )
