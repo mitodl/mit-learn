@@ -934,9 +934,8 @@ describe("CourseSummary", () => {
       renderWithProviders(
         <CourseSummary tabletColumns={2} course={course} selectedRun={run} />,
       )
-      expect(screen.getByText(/Payment deadline/)).toBeInTheDocument()
       expect(
-        screen.getByText(new RegExp(formatDate(upgradeDeadline))),
+        screen.getByText(`Payment deadline: ${formatDate(upgradeDeadline)}`),
       ).toBeInTheDocument()
     })
 
@@ -982,9 +981,8 @@ describe("CourseSummary", () => {
         />,
       )
       expect(screen.getByTestId("session-select-slot")).toBeInTheDocument()
-      expect(screen.getByText(/Payment deadline/)).toBeInTheDocument()
       expect(
-        screen.getByText(new RegExp(formatDate(upgradeDeadline))),
+        screen.getByText(`Payment deadline: ${formatDate(upgradeDeadline)}`),
       ).toBeInTheDocument()
     })
   })

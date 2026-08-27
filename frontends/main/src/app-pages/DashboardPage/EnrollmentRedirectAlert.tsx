@@ -22,6 +22,7 @@ import {
   useConsumeSearchParamsOnce,
   type ConsumedSearchParamsResult,
 } from "@/common/useConsumeSearchParamsOnce"
+import type { RegisteredSearchParams } from "@/common/searchParams"
 
 type AlertRequest =
   | { kind: "error"; errorType: string | null }
@@ -87,7 +88,7 @@ const AlertPlaceholder: React.FC<{ severity: "success" | "error" }> = ({
 )
 
 const parseAlertRequest = (
-  searchParams: URLSearchParams,
+  searchParams: RegisteredSearchParams,
 ): ConsumedSearchParamsResult<AlertRequest> | null => {
   const enrollmentStatus = searchParams.get(ENROLLMENT_STATUS_PARAM)
 

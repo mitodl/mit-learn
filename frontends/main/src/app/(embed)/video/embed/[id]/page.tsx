@@ -10,12 +10,11 @@ import {
   standardizeMetadata,
   MetadataNotFound,
 } from "@/common/metadata"
+import type { AppPageProps } from "@/common/searchParams"
 
 export const generateMetadata = ({
   params,
-}: {
-  params: Promise<{ id: string }>
-}) =>
+}: AppPageProps<"/video/embed/[id]">) =>
   safeGenerateMetadata(async () => {
     const { id } = await params
     const videoId = Number(id)
@@ -43,10 +42,7 @@ export const generateMetadata = ({
 const Page = async ({
   params,
   searchParams,
-}: {
-  params: Promise<{ id: string }>
-  searchParams?: Promise<Record<string, string | string[] | undefined>>
-}) => {
+}: AppPageProps<"/video/embed/[id]">) => {
   const { id } = await params
   const videoId = Number(id)
   if (!Number.isInteger(videoId) || videoId <= 0) {
@@ -62,8 +58,7 @@ const Page = async ({
     notFound()
   }
 
-  const resolvedSearch = await searchParams
-  const rawT = resolvedSearch?.t
+  const { t: rawT } = await searchParams
   const startTime =
     typeof rawT === "string" && /^\d+$/.test(rawT) ? Number(rawT) : undefined
 

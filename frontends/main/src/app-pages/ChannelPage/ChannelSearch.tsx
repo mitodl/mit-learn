@@ -3,7 +3,8 @@ import { ChannelTypeEnum } from "api/v0"
 import { useOfferorsList } from "api/hooks/learningResources"
 import { useResourceSearchParams } from "@mitodl/course-search-utils"
 import type { Facets, BooleanFacets } from "@mitodl/course-search-utils"
-import { useSearchParams } from "@mitodl/course-search-utils/next"
+import { useSetSearchParams } from "@mitodl/course-search-utils/next"
+import { useAppSearchParams } from "@/common/useAppSearchParams"
 import SearchDisplay from "@/page-components/SearchDisplay/SearchDisplay"
 import HybridSearchDisplay from "@/page-components/SearchDisplay/HybridSearchDisplay"
 import { Container, styled } from "ol-components"
@@ -52,7 +53,8 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
     return keyBy(offerorsQuery.data?.results ?? [], (o) => o.code)
   }, [offerorsQuery.data?.results])
 
-  const [searchParams, setSearchParams] = useSearchParams()
+  const searchParams = useAppSearchParams()
+  const setSearchParams = useSetSearchParams()
   const resourceTypeGroup = searchParams.get("resource_type_group")
 
   const { facetNames, facetManifest } = useMemo(

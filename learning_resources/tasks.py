@@ -913,10 +913,10 @@ def marketing_page_for_resources(resource_ids):
                 file_type=MARKETING_PAGE_FILE_TYPE,
                 defaults={
                     "file_extension": ".md",
+                    "key": marketing_page_url,
+                    "url": marketing_page_url,
                 },
             )
-            content_file.key = marketing_page_url
-            content_file.url = marketing_page_url
             content = strip_markdown_images(html_to_markdown(page_content))
             if learning_resource.resource_type == LearningResourceType.program.name:
                 children_content = program_children_content.get(

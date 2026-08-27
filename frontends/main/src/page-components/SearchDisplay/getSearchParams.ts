@@ -8,11 +8,12 @@ import type {
   Facets,
   BooleanFacets,
 } from "@mitodl/course-search-utils"
+import type { RegisteredSearchParams } from "@/common/searchParams"
 
 export const PAGE_SIZE = 20
 
 type SearchParams = {
-  searchParams?: URLSearchParams
+  searchParams?: RegisteredSearchParams
   requestParams: UseResourceSearchParamsResult["params"]
   constantSearchParams?: Facets & BooleanFacets
   resourceTypeGroup?: ResourceTypeGroupEnum

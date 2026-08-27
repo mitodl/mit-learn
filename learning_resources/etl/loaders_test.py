@@ -9,6 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from django.db import connection
 from django.forms.models import model_to_dict
 
 from learning_resources.constants import (
@@ -33,6 +34,7 @@ from learning_resources.etl.constants import (
     ProgramLoaderConfig,
 )
 from learning_resources.etl.edx_shared import sync_edx_course_files
+from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.loaders import (
     ProgramLoadResult,
     calculate_completeness,
@@ -49,6 +51,7 @@ from learning_resources.etl.loaders import (
     load_podcast,
     load_podcast_episode,
     load_podcasts,
+    load_prices,
     load_problem_file,
     load_problem_files,
     load_program,
@@ -1028,6 +1031,40 @@ def test_load_run(mocker, run_exists, status, certification):
         )
     else:
         mock_import_task.delay.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_load_run_none_instructors_and_prices_leave_existing_values_alone(mocker):
+    """`None` (not an omitted key, which still defaults to `[]`) for
+    run_data's "instructors"/"prices" is the sentinel for "not provided by
+    this source, leave alone" — same convention load_topics already uses
+    for `topics_data`. A source that doesn't have instructor/price data
+    (e.g. the warehouse-pull transforms) must not wipe out values another
+    pipeline already populated.
+    """
+    mocker.patch("learning_resources.tasks.import_content_files")
+    course = LearningResourceFactory.create(
+        is_course=True, runs=[], certification=True, etl_source=ETLSource.xpro.value
+    )
+    run = LearningResourceRunFactory.create(learning_resource=course, prices=[])
+    instructor = LearningResourceInstructorFactory.create(full_name="Jane Doe")
+    load_instructors(run, [{"full_name": instructor.full_name}])
+    load_prices(run, [{"amount": Decimal("49.00"), "currency": CURRENCY_USD}])
+    run.prices = [Decimal("49.00")]
+    run.save()
+
+    run_data = {
+        "run_id": run.run_id,
+        "title": run.title,
+        "instructors": None,
+        "prices": None,
+    }
+    result = load_run(course, run_data)
+
+    assert result.id == run.id
+    assert [i.full_name for i in result.instructors.all()] == [instructor.full_name]
+    assert [p.amount for p in result.resource_prices.all()] == [Decimal("49.00")]
+    assert result.prices == [Decimal("49.00")]
 
 
 @pytest.mark.parametrize(
@@ -2013,6 +2050,75 @@ def test_load_content_file():
         )
 
 
+def test_load_content_file_updates_existing():
+    """Test that load_content_file updates an existing row for the same (run, key)"""
+    learning_resource_run = LearningResourceRunFactory.create()
+    existing = ContentFileFactory.create(run=learning_resource_run, key="some/key.pdf")
+
+    result = load_content_file(
+        learning_resource_run, {"key": "some/key.pdf", "title": "updated title"}
+    )
+
+    assert result == existing.id
+    assert ContentFile.objects.filter(run=learning_resource_run).count() == 1
+    existing.refresh_from_db()
+    assert existing.title == "updated title"
+
+
+def test_load_content_file_collapses_duplicates_keeps_summary():
+    """MultipleObjectsReturned duplicates for (run, key) collapse onto the summary-bearing row"""
+    with connection.cursor() as cur:
+        cur.execute("DROP INDEX IF EXISTS contentfile_run_key_uniq")
+
+    learning_resource_run = LearningResourceRunFactory.create()
+    key = "shared/key.pdf"
+    with_summary = ContentFileFactory.create(
+        run=learning_resource_run,
+        key=key,
+        summary="an existing summary",
+        flashcards=[{"question": "q", "answer": "a"}],
+    )
+    ContentFileFactory.create(run=learning_resource_run, key=key, summary="")
+
+    result = load_content_file(
+        learning_resource_run, {"key": key, "title": "new title"}
+    )
+
+    remaining = ContentFile.objects.filter(run=learning_resource_run, key=key)
+    assert remaining.count() == 1
+    kept = remaining.get()
+    assert kept.id == with_summary.id
+    assert result == with_summary.id
+    assert kept.title == "new title"
+    assert kept.summary == "an existing summary"
+    assert kept.flashcards == [{"question": "q", "answer": "a"}]
+
+
+def test_load_content_file_collapses_duplicates_keeps_latest_when_no_summary():
+    """When neither duplicate has a summary, the one with the latest updated_on survives"""
+    with connection.cursor() as cur:
+        cur.execute("DROP INDEX IF EXISTS contentfile_run_key_uniq")
+
+    learning_resource_run = LearningResourceRunFactory.create()
+    key = "shared/key2.pdf"
+    older = ContentFileFactory.create(run=learning_resource_run, key=key, summary="")
+    newer = ContentFileFactory.create(run=learning_resource_run, key=key, summary="")
+    ContentFile.objects.filter(id=older.id).update(
+        updated_on=now_in_utc() - timedelta(days=1)
+    )
+
+    result = load_content_file(
+        learning_resource_run, {"key": key, "title": "new title"}
+    )
+
+    remaining = ContentFile.objects.filter(run=learning_resource_run, key=key)
+    assert remaining.count() == 1
+    kept = remaining.get()
+    assert kept.id == newer.id
+    assert result == newer.id
+    assert kept.title == "new title"
+
+
 def test_load_problem_file():
     """Test that load_problem_file saves a TutorProblemFile object"""
     learning_resource_run = LearningResourceRunFactory.create()
@@ -2127,29 +2233,33 @@ def test_load_content_file_error(mocker):
     )
 
 
+def build_podcast_data(learning_resource_offeror):
+    """Build transformable data for a single podcast and its episodes"""
+    podcast = PodcastFactory.build()
+    podcast_data = model_to_dict(
+        podcast.learning_resource, exclude=non_transformable_attributes
+    )
+    podcast_data["image"] = {"url": podcast.learning_resource.image.url}
+    podcast_data["offered_by"] = {"name": learning_resource_offeror.name}
+    podcast_data["episodes"] = [
+        {
+            **model_to_dict(
+                episode.learning_resource, exclude=non_transformable_attributes
+            ),
+            "offered_by": {"name": learning_resource_offeror.name},
+        }
+        for episode in PodcastEpisodeFactory.build_batch(3)
+    ]
+    return podcast_data
+
+
 def test_load_podcasts(learning_resource_offeror, podcast_platform):
     """Test load_podcasts"""
 
-    podcasts_data = []
-    for podcast in PodcastFactory.build_batch(3):
-        episodes = PodcastEpisodeFactory.build_batch(3)
-        podcast_data = model_to_dict(
-            podcast.learning_resource, exclude=non_transformable_attributes
-        )
-        podcast_data["image"] = {"url": podcast.learning_resource.image.url}
-        podcast_data["offered_by"] = {"name": learning_resource_offeror.name}
-        episodes_data = [
-            {
-                **model_to_dict(
-                    episode.learning_resource, exclude=non_transformable_attributes
-                ),
-                "offered_by": {"name": learning_resource_offeror.name},
-            }
-            for episode in episodes
-        ]
-        podcast_data["episodes"] = episodes_data
-        podcasts_data.append(podcast_data)
-    results = load_podcasts(podcasts_data)
+    podcasts_data = [build_podcast_data(learning_resource_offeror) for _ in range(3)]
+    results = load_podcasts(
+        podcasts_data, [data["readable_id"] for data in podcasts_data]
+    )
 
     assert len(results) == len(podcasts_data)
 
@@ -2170,22 +2280,78 @@ def test_load_podcasts(learning_resource_offeror, podcast_platform):
             )
 
 
-def test_load_podcasts_unpublish(podcast_platform):
-    """Test load_podcast when a podcast gets unpublished"""
+def test_load_podcasts_unpublish(learning_resource_offeror, podcast_platform):
+    """Test load_podcasts when a podcast is no longer in the feed list"""
     podcast = PodcastFactory.create().learning_resource
     assert podcast.published is True
     assert podcast.children.count() > 0
-    for relation in podcast.children.all():
-        assert relation.child.published is True
 
-    load_podcasts([])
+    loaded_data = build_podcast_data(learning_resource_offeror)
+    load_podcasts([loaded_data], [loaded_data["readable_id"]])
 
     podcast.refresh_from_db()
 
     assert podcast.published is False
-    assert podcast.children.count() > 0
     for relation in podcast.children.all():
         assert relation.child.published is False
+
+
+def test_load_podcasts_preserves_tracked_feeds(
+    learning_resource_offeror, podcast_platform
+):
+    """A tracked podcast that didn't load this run should stay published"""
+    podcast = PodcastFactory.create().learning_resource
+    loaded_data = build_podcast_data(learning_resource_offeror)
+    assert podcast.children.count() > 0
+
+    load_podcasts([loaded_data], [podcast.readable_id, loaded_data["readable_id"]])
+
+    podcast.refresh_from_db()
+
+    assert podcast.published is True
+    for relation in podcast.children.all():
+        assert relation.child.published is True
+
+
+def test_load_podcasts_no_feeds_loaded(podcast_platform):
+    """No feed loaded at all should leave the tracked podcasts alone"""
+    podcast = PodcastFactory.create().learning_resource
+
+    assert load_podcasts([], [podcast.readable_id]) == []
+
+    podcast.refresh_from_db()
+
+    assert podcast.published is True
+    for relation in podcast.children.all():
+        assert relation.child.published is True
+
+
+def test_load_podcasts_untracked_unpublish(learning_resource_offeror, podcast_platform):
+    """A podcast whose config is gone should be unpublished"""
+    podcast = PodcastFactory.create().learning_resource
+    loaded_data = build_podcast_data(learning_resource_offeror)
+
+    load_podcasts([loaded_data], [loaded_data["readable_id"]])
+
+    podcast.refresh_from_db()
+
+    assert podcast.published is False
+    for relation in podcast.children.all():
+        assert relation.child.published is False
+
+
+def test_load_podcasts_nothing_tracked_raises(podcast_platform):
+    """Loading nothing should fail loudly rather than unpublish the catalog"""
+    podcast = PodcastFactory.create().learning_resource
+
+    with pytest.raises(ExtractException):
+        load_podcasts([], [])
+
+    podcast.refresh_from_db()
+
+    assert podcast.published is True
+    for relation in podcast.children.all():
+        assert relation.child.published is True
 
 
 @pytest.mark.parametrize("podcast_episode_exists", [True, False])

@@ -193,9 +193,17 @@ def load_run_dependent_values(
 
 
 def load_instructors(
-    run: LearningResourceRun, instructors_data: list[dict]
+    run: LearningResourceRun, instructors_data: list[dict] | None
 ) -> list[LearningResourceInstructor]:
-    """Load the instructors for a resource run into the database"""
+    """Load the instructors for a resource run into the database.
+
+    `None` (as opposed to `[]`) means the source didn't provide instructor
+    data at all; leave whatever's already on the run alone rather than
+    clearing it — same convention as load_topics's `topics_data`.
+    """
+    if instructors_data is None:
+        return list(run.instructors.all())
+
     instructors = []
     valid_attributes = ["first_name", "last_name"]
     relations = []
@@ -227,9 +235,17 @@ def load_instructors(
 
 
 def load_prices(
-    run: LearningResourceRun, prices_data: list[dict]
+    run: LearningResourceRun, prices_data: list[dict] | None
 ) -> list[LearningResourcePrice]:
-    """Load the prices for a resource run into the database"""
+    """Load the prices for a resource run into the database.
+
+    `None` (as opposed to `[]`) means the source didn't provide price data
+    at all; leave whatever's already on the run alone rather than clearing
+    it — same convention as load_topics's `topics_data`.
+    """
+    if prices_data is None:
+        return list(run.resource_prices.all())
+
     prices = []
     for price in prices_data:
         lr_price, _ = LearningResourcePrice.objects.get_or_create(
@@ -305,6 +321,29 @@ def load_content_tags(
     )
 
 
+def _resolve_run_prices(
+    run_data: dict,
+    resource_prices: list[dict] | None,
+    status: str | None,
+    learning_resource: LearningResource,
+) -> list[dict] | None:
+    """Normalize run_data's "prices" summary field for one run.
+
+    Returns the resource_prices list to pass to load_prices, or None if no
+    price data was provided by this source (leave existing values alone).
+    """
+    if resource_prices is None:
+        return None
+
+    run_data["prices"] = sorted({price["amount"] for price in resource_prices})
+    if status == RunStatus.archived.value or learning_resource.certification is False:
+        # Archived runs or runs of resources w/out certificates should not
+        # have prices
+        run_data["prices"] = []
+        return []
+    return resource_prices
+
+
 def load_run(
     learning_resource: LearningResource, run_data: dict
 ) -> LearningResourceRun:
@@ -322,15 +361,16 @@ def load_run(
 
     image_data = run_data.pop("image", None)
     status = run_data.pop("status", None)
+    # `None` (as opposed to an omitted key, which defaults to `[]`) is the
+    # sentinel for "not provided by this source, leave existing value
+    # alone" — same convention load_topics uses for `topics_data`. Sources
+    # that don't have instructor/price data (e.g. the warehouse-pull
+    # transforms, which lack pricing entirely) pass `None` explicitly
+    # rather than `[]`, so a sync doesn't wipe data another pipeline wrote.
     instructors_data = run_data.pop("instructors", [])
-
-    resource_prices = run_data.get("prices", [])
-    run_data["prices"] = sorted({price["amount"] for price in resource_prices})
-
-    if status == RunStatus.archived.value or learning_resource.certification is False:
-        # Archived runs or runs of resources w/out certificates should not have prices
-        run_data["prices"] = []
-        resource_prices = []
+    resource_prices = _resolve_run_prices(
+        run_data, run_data.pop("prices", []), status, learning_resource
+    )
 
     if learning_resource.test_mode:
         run_data["published"] = True
@@ -902,9 +942,32 @@ def load_content_file(
     """
     try:
         content_file_tags = content_file_data.pop("content_tags", [])
-        content_file, _ = ContentFile.objects.update_or_create(
-            run=course_run, key=content_file_data.get("key"), defaults=content_file_data
-        )
+        key = content_file_data.get("key")
+        try:
+            content_file, _ = ContentFile.objects.update_or_create(
+                run=course_run, key=key, defaults=content_file_data
+            )
+        except ContentFile.MultipleObjectsReturned:
+            # Celery workers roll concurrently with the migrate job, so this
+            # can run against pre-migration duplicates for a few minutes.
+            # Collapse to the best row (keep LLM summaries), then retry.
+            # Locked so two workers collapsing the same (run, key) agree on
+            # one survivor instead of deleting each other's pick.
+            with transaction.atomic():
+                dupes = list(
+                    ContentFile.objects.select_for_update()
+                    .filter(run=course_run, key=key)
+                    .order_by("id")
+                )
+                keep = sorted(
+                    dupes, key=lambda cf: (bool(cf.summary), cf.updated_on, cf.id)
+                )[-1]
+                ContentFile.objects.filter(
+                    id__in=[cf.id for cf in dupes if cf.id != keep.id]
+                ).delete()
+                content_file, _ = ContentFile.objects.update_or_create(
+                    run=course_run, key=key, defaults=content_file_data
+                )
         load_content_tags(content_file, content_file_tags, is_content_file=True)
         return content_file.id  # noqa: TRY300
     except:  # noqa: E722
@@ -1313,12 +1376,18 @@ def load_podcast(podcast_data: dict) -> LearningResource:
     return learning_resource
 
 
-def load_podcasts(podcasts_data: list[dict]) -> list[LearningResource]:
+def load_podcasts(
+    podcasts_data: list[dict], tracked_ids: list[str]
+) -> list[LearningResource]:
     """
     Load a list of podcasts
 
     Args:
         podcasts_data (iter of dict): iterable of podcast data
+        tracked_ids (list of str): readable ids of every configured feed.
+            Podcasts outside this list are the ones we no longer track; a
+            podcast in it keeps its data even if this run couldn't fetch or
+            parse its feed.
 
     Returns:
         list of LearningResources:
@@ -1335,11 +1404,14 @@ def load_podcasts(podcasts_data: list[dict]) -> list[LearningResource]:
         else:
             podcast_resources.append(podcast_resource)
 
+    if not tracked_ids:
+        msg = "No podcasts to track, refusing to unpublish every podcast"
+        raise ExtractException(msg)
+
     # unpublish the podcasts and episodes we're no longer tracking
-    ids = [podcast.id for podcast in podcast_resources]
     unpublished_podcasts = LearningResource.objects.filter(
         resource_type=LearningResourceType.podcast.name
-    ).exclude(id__in=ids)
+    ).exclude(readable_id__in=tracked_ids)
     unpublished_podcasts.update(published=False)
     bulk_resources_unpublished_actions(
         unpublished_podcasts.values_list("id", flat=True),
@@ -1347,7 +1419,7 @@ def load_podcasts(podcasts_data: list[dict]) -> list[LearningResource]:
     )
     unpublished_episodes = LearningResource.objects.filter(
         resource_type=LearningResourceType.podcast_episode.name
-    ).exclude(parents__parent__in=ids)
+    ).exclude(parents__parent__readable_id__in=tracked_ids)
     unpublished_episodes.update(published=False)
     bulk_resources_unpublished_actions(
         unpublished_episodes.values_list("id", flat=True),

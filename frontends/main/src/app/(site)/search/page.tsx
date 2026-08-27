@@ -1,3 +1,7 @@
+import type {
+  AppPageProps,
+  RegisteredSearchParams,
+} from "@/common/searchParams"
 import React from "react"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import {
@@ -16,11 +20,12 @@ import {
   toVectorSearchParams,
 } from "@/page-components/SearchDisplay/vectorSearchParams"
 import validateRequestParams from "@/page-components/SearchDisplay/validateRequestParams"
-import type { ResourceSearchRequest } from "@/page-components/SearchDisplay/validateRequestParams"
 import { LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest } from "api"
 import { getQueryClient } from "@/app/getQueryClient"
 
-export async function generateMetadata({ searchParams }: PageProps<"/search">) {
+export async function generateMetadata({
+  searchParams,
+}: AppPageProps<"/search">) {
   return safeGenerateMetadata(async () => {
     return getMetadataAsync({
       title: "Search",
@@ -29,12 +34,12 @@ export async function generateMetadata({ searchParams }: PageProps<"/search">) {
   })
 }
 
-const Page: React.FC<PageProps<"/search">> = async ({ searchParams }) => {
-  const search = (await searchParams) as ResourceSearchRequest & {
-    page?: string
-  }
+const Page: React.FC<AppPageProps<"/search">> = async ({ searchParams }) => {
+  const search = await searchParams
 
-  const urlParams = new URLSearchParams(
+  // RegisteredSearchParams keeps named reads on this copy within the
+  // cache-key whitelist; a bare URLSearchParams would accept any name.
+  const urlParams: RegisteredSearchParams = new URLSearchParams(
     Object.entries(search).flatMap(([key, value]) =>
       Array.isArray(value)
         ? value.map((v) => [key, v])
