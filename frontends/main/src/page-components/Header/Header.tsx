@@ -2,7 +2,6 @@
 
 import { env } from "@/env"
 import React, { FunctionComponent } from "react"
-import type { NavData } from "ol-components"
 import {
   styled,
   AppBar,
@@ -12,41 +11,19 @@ import {
   HEADER_HEIGHT_MD,
 } from "ol-components"
 import { ActionButtonLink } from "@mitodl/smoot-design"
-import {
-  RiSearch2Line,
-  RiPencilRulerLine,
-  RiStackLine,
-  RiBookMarkedLine,
-  RiPresentationLine,
-  RiNodeTree,
-  RiVerifiedBadgeLine,
-  RiFileAddLine,
-  RiTimeLine,
-  RiPriceTag3Line,
-  RiAwardLine,
-  RiThumbUpLine,
-} from "@remixicon/react"
+import { RiSearch2Line, RiGlobalLine } from "@remixicon/react"
 import { useToggle } from "ol-utilities"
 import MITLogoLink from "@/components/MITLogoLink/MITLogoLink"
 import UserMenu from "./UserMenu"
 import { MenuButton } from "./MenuButton"
-import {
-  DEPARTMENTS,
-  TOPICS,
-  SEARCH,
-  UNITS,
-  SEARCH_NEW,
-  SEARCH_UPCOMING,
-  SEARCH_POPULAR,
-  SEARCH_FREE,
-  SEARCH_CERTIFICATE,
-  SEARCH_COURSE,
-  SEARCH_PROGRAM,
-  SEARCH_LEARNING_MATERIAL,
-} from "@/common/urls"
+import HeaderNavLink from "./HeaderNavLink"
+import { buildNavData } from "./navData"
+import { SEARCH, ORGANIZATIONAL_LEARNING } from "@/common/urls"
 import { useUserMe } from "api/hooks/user"
-import { usePostHog } from "posthog-js/react"
+import { usePostHog, useFeatureFlagEnabled } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
+import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 
 const Bar = styled(AppBar)(({ theme }) => ({
   padding: "16px 8px",
@@ -186,98 +163,6 @@ const UserView: FunctionComponent = () => {
   return user?.is_authenticated ? <LoggedInView /> : <LoggedOutView />
 }
 
-const navData: NavData = {
-  sections: [
-    {
-      title: "LEARN",
-      items: [
-        {
-          title: "Courses",
-          icon: <RiPencilRulerLine />,
-          description:
-            "Single courses on a specific subject, taught by MIT instructors",
-          href: SEARCH_COURSE,
-          posthogEvent: PostHogEvents.ClickedNavBrowseCourses,
-        },
-        {
-          title: "Programs",
-          icon: <RiStackLine />,
-          description:
-            "A series of courses for in-depth learning across a range of topics",
-          href: SEARCH_PROGRAM,
-          posthogEvent: PostHogEvents.ClickedNavBrowsePrograms,
-        },
-        {
-          title: "Learning Materials",
-          icon: <RiBookMarkedLine />,
-          description:
-            "Free learning and teaching materials, including videos, podcasts, lecture notes, and more",
-          href: SEARCH_LEARNING_MATERIAL,
-          posthogEvent: PostHogEvents.ClickedNavBrowseLearningMaterials,
-        },
-      ],
-    },
-    {
-      title: "BROWSE",
-      items: [
-        {
-          title: "By Topic",
-          icon: <RiPresentationLine />,
-          href: TOPICS,
-          posthogEvent: PostHogEvents.ClickedNavBrowseTopics,
-        },
-        {
-          title: "By Department",
-          icon: <RiNodeTree />,
-          href: DEPARTMENTS,
-          posthogEvent: PostHogEvents.ClickedNavBrowseDepartments,
-        },
-        {
-          title: "By Provider",
-          icon: <RiVerifiedBadgeLine />,
-          href: UNITS,
-          posthogEvent: PostHogEvents.ClickedNavBrowseProviders,
-        },
-      ],
-    },
-    {
-      title: "DISCOVER LEARNING RESOURCES",
-      items: [
-        {
-          title: "Recently Added",
-          icon: <RiFileAddLine />,
-          href: SEARCH_NEW,
-          posthogEvent: PostHogEvents.ClickedNavBrowseNew,
-        },
-        {
-          title: "Popular",
-          href: SEARCH_POPULAR,
-          icon: <RiThumbUpLine />,
-          posthogEvent: PostHogEvents.ClickedNavBrowsePopular,
-        },
-        {
-          title: "Upcoming",
-          icon: <RiTimeLine />,
-          href: SEARCH_UPCOMING,
-          posthogEvent: PostHogEvents.ClickedNavBrowseUpcoming,
-        },
-        {
-          title: "Free",
-          icon: <RiPriceTag3Line />,
-          href: SEARCH_FREE,
-          posthogEvent: PostHogEvents.ClickedNavBrowseFree,
-        },
-        {
-          title: "With Certificate",
-          icon: <RiAwardLine />,
-          href: SEARCH_CERTIFICATE,
-          posthogEvent: PostHogEvents.ClickedNavBrowseCertificate,
-        },
-      ],
-    },
-  ],
-}
-
 const Header: FunctionComponent = () => {
   const posthog = usePostHog()
   const [drawerOpen, toggleDrawer] = useToggle(false)
@@ -296,6 +181,22 @@ const Header: FunctionComponent = () => {
     posthogCapture(drawerToggleEvent)
   }
 
+  /**
+   * Unlike a flagged route, a nav entry has no 404 to fall back on, so it fails
+   * closed: "not loaded yet" is treated the same as "off" rather than flashing
+   * a link that may not be available.
+   */
+  const orgLearningFlag = useFeatureFlagEnabled(
+    FeatureFlags.OrganizationalLearning,
+  )
+  const flagsLoaded = useFeatureFlagsLoaded()
+  const showOrgLearning = Boolean(flagsLoaded && orgLearningFlag)
+
+  const navData = React.useMemo(
+    () => buildNavData(showOrgLearning),
+    [showOrgLearning],
+  )
+
   return (
     <div>
       <Bar position="fixed">
@@ -307,10 +208,26 @@ const Header: FunctionComponent = () => {
               ref={desktopTrigger}
               text="Explore MIT"
               onClick={menuClick}
+              // "Selected" for a drawer trigger reads as "its drawer is open".
+              active={drawerOpen}
             />
+            {showOrgLearning ? (
+              <HeaderNavLink
+                href={ORGANIZATIONAL_LEARNING}
+                label="For Organizations"
+                icon={<RiGlobalLine aria-hidden />}
+                onClick={() =>
+                  posthogCapture(PostHogEvents.ClickedNavForOrganizations)
+                }
+              />
+            ) : null}
           </DesktopOnly>
           <MobileOnly>
-            <MenuButton ref={mobileTrigger} onClick={menuClick} />
+            <MenuButton
+              ref={mobileTrigger}
+              onClick={menuClick}
+              active={drawerOpen}
+            />
             <LeftSpacer />
             <StyledMITLogoLink logo="learn" />
           </MobileOnly>

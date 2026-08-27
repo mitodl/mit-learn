@@ -5,6 +5,9 @@ export const getRecaptchaSiteKey = (): string | undefined =>
 export const getStayUpdatedHubspotFormId = (): string =>
   (env("NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID") ?? "").trim()
 
+export const getOrgLearningHubspotFormId = (): string =>
+  (env("NEXT_PUBLIC_ORG_LEARNING_HUBSPOT_FORM_ID") ?? "").trim()
+
 /** CDN TTL used when NEXT_PUBLIC_CACHE_S_MAXAGE_SECONDS is unset: local dev and CI. */
 const DEFAULT_S_MAXAGE_SECONDS = 1800
 

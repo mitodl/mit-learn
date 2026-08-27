@@ -57,6 +57,9 @@ const schema = yup.object().shape({
   NEXT_PUBLIC_VERSION: yup.string(),
   NEXT_PUBLIC_RECAPTCHA_SITE_KEY: yup.string(),
   NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID: yup.string(),
+  // HubSpot form backing the /organizational-learning lead form. Optional: the
+  // form area reports itself unavailable rather than rendering when unset.
+  NEXT_PUBLIC_ORG_LEARNING_HUBSPOT_FORM_ID: yup.string(),
   NEXT_PUBLIC_SENTRY_DSN: yup.string(),
   NEXT_PUBLIC_SENTRY_ENV: yup.string(),
   NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE: yup.string(),
