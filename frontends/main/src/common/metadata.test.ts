@@ -116,6 +116,26 @@ describe("getMetadataAsync drawer canonical", () => {
     )
   })
 
+  test.each([
+    { description: "absent", learnUrl: undefined },
+    { description: "blank", learnUrl: "" },
+  ])(
+    "falls back to the drawer canonical when learn_url is $description",
+    async ({ learnUrl }) => {
+      // A frontend deployed ahead of the backend sees no learn_url. Emitting no
+      // canonical at all would be worse than the self-canonical it replaces.
+      const resource = factories.learningResources.course()
+      setMockResponse.get(urls.learningResources.details({ id: resource.id }), {
+        ...resource,
+        learn_url: learnUrl,
+      })
+      const meta = await getMetadataAsync({
+        searchParams: Promise.resolve({ resource: String(resource.id) }),
+      })
+      expect(meta.alternates?.canonical).toContain(`resource=${resource.id}`)
+    },
+  )
+
   test("no canonical override when ?resource= is not a valid id", async () => {
     const meta = await getMetadataAsync({
       searchParams: Promise.resolve({ resource: "abc" }),

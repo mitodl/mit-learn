@@ -1,5 +1,8 @@
 import { env } from "@/env"
-import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
+import {
+  canonicalResourceDrawerUrl,
+  RESOURCE_DRAWER_PARAMS,
+} from "@/common/urls"
 import { parseResourceId } from "@/common/slugs"
 import type { ServerSearchParam } from "@/common/searchParams"
 import { htmlToPlainText } from "@/common/htmlToPlainText"
@@ -99,10 +102,15 @@ export const getMetadataAsync = async ({
      * self-canonical URLs for the same content and crawlers had no way to pick
      * a winner. The backend owns the choice, so the canonical here, the card
      * hrefs, and the sitemap cannot disagree.
+     *
+     * `learn_url` is non-nullable and never blank, but fall back to the drawer
+     * URL rather than emitting no canonical at all: a frontend deployed ahead of
+     * the backend sees the field absent, and dropping the tag entirely is worse
+     * than the self-canonical it replaces.
      */
-    if (data?.learn_url) {
-      alts.canonical = data.learn_url
-    }
+    alts.canonical =
+      data?.learn_url ||
+      canonicalResourceDrawerUrl(learningResourceId, data?.title)
   }
 
   return standardizeMetadata({

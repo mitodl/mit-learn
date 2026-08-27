@@ -7,6 +7,7 @@ import {
   AddToUserListDialog,
 } from "../Dialogs/AddToListDialog"
 import { resourceDrawerPushUrl } from "../LearningResourceDrawer/resourceDrawerPushUrl"
+import { resourceDrawerSearch } from "@/common/urls"
 import { useUserMe } from "api/hooks/user"
 import { LearningResource } from "api"
 import { SignupPopover } from "../SignupPopover/SignupPopover"
@@ -125,8 +126,19 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
          * follow this, so pointing it at the dedicated page is what stops the
          * drawer competing with that page for the same content. `pushUrl` below
          * is unaffected: a click still opens the drawer in place.
+         *
+         * `learn_url` is non-nullable and never blank, but fall back to the
+         * drawer URL anyway. The card drops `pushUrl` along with a falsy `href`
+         * (see BaseLearningResourceCard's `linkTarget`), so a frontend deployed
+         * ahead of the backend would leave the title neither a link nor
+         * clickable rather than merely pointing somewhere less ideal.
          */
-        href={resource?.learn_url}
+        href={
+          resource
+            ? resource.learn_url ||
+              resourceDrawerSearch(resource.id, resource.title)
+            : undefined
+        }
         pushUrl={resource ? () => resourceDrawerPushUrl(resource) : undefined}
         onAddToLearningPathClick={handleAddToLearningPathClick}
         onAddToUserListClick={handleAddToUserListClick}
