@@ -885,6 +885,17 @@ VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = get_float(
     name="VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT", default=0.05
 )
 
+# Score subtracted from a resource that is VECTOR_SEARCH_STALENESS_HORIZON_YEARS
+# or more old in vector search, ramped linearly by age. 0 disables the penalty.
+VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = get_float(
+    name="VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT", default=0.05
+)
+
+# Age at which a resource takes the full VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT;
+VECTOR_SEARCH_STALENESS_HORIZON_YEARS = get_float(
+    name="VECTOR_SEARCH_STALENESS_HORIZON_YEARS", default=20
+)
+
 # serve learning resource search hits from the Qdrant payload instead of
 # re-hydrating them from the database. Set to False to fall back to database
 # hydration without a deploy.
