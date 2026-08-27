@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.77.15
+---------------
+
+- Hide course-count copy for programs made of programs (#3840)
+
 Version 0.77.14 (Released August 27, 2026)
 ---------------
 
