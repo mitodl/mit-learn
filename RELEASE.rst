@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.77.14 (Released August 27, 2026)
+---------------
+
+- Add learn_url, a resource's location within Learn (#3824)
+- Query param whitelist (#3828)
+- Don't let one unreachable podcast feed abort the ETL (#3836)
+- Fix flaky payment-deadline date assertions in ProductSummary tests (#3838)
+
 Version 0.77.13 (Released August 26, 2026)
 ---------------
 
