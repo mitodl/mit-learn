@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.77.14
+Version 0.77.14 (Released August 27, 2026)
 ---------------
 
 - Add learn_url, a resource's location within Learn (#3824)
