@@ -7,6 +7,7 @@ import {
   MetadataNotFound,
 } from "@/common/metadata"
 import ProgramAsCoursePage from "@/app-pages/ProductPages/ProgramAsCoursePage"
+import { reqTreeChildQueries } from "@/app-pages/ProductPages/useReqTreeChildren"
 import { notFound, redirect } from "next/navigation"
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { programsQueries } from "api/mitxonline-hooks/programs"
@@ -76,6 +77,21 @@ const Page: React.FC<AppPageProps<"/courses/p/[readable_id]">> = async (
       }),
     )
   }
+
+  /**
+   * Serial by necessity: the route has only a readable id, and the child ids
+   * live in the program's requirement tree. Without them the modules section
+   * paints skeletons on first paint.
+   */
+  const children = reqTreeChildQueries(program)
+  await Promise.all([
+    children.courseIds.length > 0
+      ? queryClient.prefetchQuery(children.courses)
+      : null,
+    children.programIds.length > 0
+      ? queryClient.prefetchQuery(children.programs)
+      : null,
+  ])
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
