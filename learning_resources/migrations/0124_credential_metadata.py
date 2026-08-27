@@ -8,8 +8,7 @@ from learning_resources import constants
 
 # The prompts as agreed with the credential program. Seeded rather than
 # hardcoded: they will be retuned far more often than a deploy, so from here on
-# they are admin-editable data. Budgets differ per field because a 1-2 sentence
-# description is diluted by a large context, while criteria benefit from one.
+# they are admin-editable data.
 DEFAULT_CONFIGURATIONS = [
     {
         "field": constants.CredentialMetadataField.description.name,
@@ -17,7 +16,6 @@ DEFAULT_CONFIGURATIONS = [
             "Generate an Open Badges 3.0 description field with this content"
             " in 1-2 sentences."
         ),
-        "max_context_tokens": 4000,
         "max_output_tokens": 300,
     },
     {
@@ -27,7 +25,6 @@ DEFAULT_CONFIGURATIONS = [
             " bullet points that demonstrate what the learner did to complete"
             " the course."
         ),
-        "max_context_tokens": 16000,
         "max_output_tokens": 1024,
     },
 ]
@@ -111,13 +108,6 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("temperature", models.FloatField(default=0.0)),
-                (
-                    "max_context_tokens",
-                    models.PositiveIntegerField(
-                        default=16000,
-                        help_text="Maximum context tokens sent with this prompt.",
-                    ),
-                ),
                 ("max_output_tokens", models.PositiveIntegerField(default=2048)),
                 ("is_active", models.BooleanField(default=True)),
             ],
@@ -126,7 +116,7 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name="CredentialMetadataGeneration",
+            name="CredentialMetadataGenerationLog",
             fields=[
                 (
                     "id",
@@ -200,7 +190,7 @@ class Migration(migrations.Migration):
                     "learning_resource",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="credential_metadata_generations",
+                        related_name="credential_metadata_generation_logs",
                         to="learning_resources.learningresource",
                     ),
                 ),
@@ -209,7 +199,7 @@ class Migration(migrations.Migration):
                 "indexes": [
                     models.Index(
                         fields=["learning_resource", "field", "-created_on"],
-                        name="learning_re_learnin_91ce37_idx",
+                        name="learning_re_learnin_132835_idx",
                     )
                 ],
             },

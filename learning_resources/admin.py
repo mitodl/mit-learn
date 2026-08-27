@@ -278,16 +278,15 @@ class CredentialMetadataConfigurationAdmin(admin.ModelAdmin):
         "field",
         "llm_model",
         "temperature",
-        "max_context_tokens",
         "is_active",
     )
     list_filter = ("is_active",)
 
 
-class CredentialMetadataGenerationAdmin(admin.ModelAdmin):
-    """CredentialMetadataGeneration Admin"""
+class CredentialMetadataGenerationLogAdmin(admin.ModelAdmin):
+    """CredentialMetadataGenerationLog Admin"""
 
-    model = models.CredentialMetadataGeneration
+    model = models.CredentialMetadataGenerationLog
     list_display = (
         "learning_resource",
         "field",
@@ -333,5 +332,5 @@ admin.site.register(
     models.CredentialMetadataConfiguration, CredentialMetadataConfigurationAdmin
 )
 admin.site.register(
-    models.CredentialMetadataGeneration, CredentialMetadataGenerationAdmin
+    models.CredentialMetadataGenerationLog, CredentialMetadataGenerationLogAdmin
 )

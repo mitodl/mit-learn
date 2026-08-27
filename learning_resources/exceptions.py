@@ -21,7 +21,3 @@ class SummaryGenerationError(Exception):
 
 class FlashcardsGenerationError(Exception):
     """Raised if the flashcards generation fails for a content file."""
-
-
-class CredentialMetadataGenerationError(Exception):
-    """Raised if credential metadata generation fails for a learning resource."""

@@ -8,7 +8,7 @@ is nothing for a model to decide: the retrieval query is fixed, so retrieval is
 a deterministic call in our own code rather than a tool.
 
 Nothing here is cached. An author who dislikes a draft asks again and gets a
-new one; every call appends a CredentialMetadataGeneration row instead.
+new one; every call appends a CredentialMetadataGenerationLog row instead.
 """
 
 import asyncio
@@ -26,14 +26,10 @@ from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE
 from learning_resources.models import (
     ContentFile,
     CredentialMetadataConfiguration,
-    CredentialMetadataGeneration,
+    CredentialMetadataGenerationLog,
     LearningResource,
 )
-from learning_resources.utils import (
-    count_tokens,
-    sanitize_llm_text,
-    truncate_to_tokens,
-)
+from learning_resources.utils import count_tokens, sanitize_llm_text
 from main.utils import db_sync_to_async
 from vector_search.utils import async_content_file_chunks_for_resource
 
@@ -101,50 +97,33 @@ EXCLUDED_CHUNK_EXTENSIONS = frozenset({".xml", ".sjson", ".json"})
 
 class CredentialContext(NamedTuple):
     """
-    The assembled sources for one resource, before any per-field budget applies.
+    The assembled sources for one resource: its metadata, its marketing page,
+    and the content-file chunks retrieved for it.
 
-    Kept as separate sections rather than one string because each field has its
-    own token budget: a 1-2 sentence description is diluted by a large context
-    while criteria benefit from one.
+    Retrieval is what bounds the size of all this:
+    CREDENTIAL_METADATA_RETRIEVAL_LIMIT caps how many chunks can be included,
+    and every chunk is a bounded embedding chunk.
     """
 
     metadata: str
     marketing_page: str
     chunks: list[tuple[str, str]]
 
-    def assemble(self, max_tokens: int, llm_model: str) -> tuple[str, list[str]]:
+    def assemble(self) -> tuple[str, list[str]]:
         """
-        Render the context into a single string within a token budget.
-
-        Metadata always survives. The marketing page is truncated to whatever
-        remains, then chunks are added highest-scoring first, each only if it
-        fits -- a later, smaller chunk can still make it in.
+        Render every source into the single string sent to the model.
 
         Returns:
             tuple[str, list[str]]: the context text, and the Qdrant point ids
-                of the chunks that made it in
+                of the chunks it includes
         """
-        sections = [self.metadata]
-        remaining = max_tokens - count_tokens(self.metadata, llm_model)
-
-        if self.marketing_page and remaining > 0:
-            page = truncate_to_tokens(self.marketing_page, remaining, llm_model)
-            sections.append(page)
-            remaining -= count_tokens(page, llm_model)
-
-        point_ids = []
-        for point_id, text in self.chunks:
-            if remaining <= 0:
-                break
-            tokens = count_tokens(text, llm_model)
-            if tokens <= remaining:
-                sections.append(text)
-                point_ids.append(point_id)
-                remaining -= tokens
-
+        sections = [
+            self.metadata,
+            self.marketing_page,
+            *(text for _, text in self.chunks),
+        ]
         text = "\n\n".join(section for section in sections if section)
-        # Backstop: the section joins and headings are themselves tokens.
-        return truncate_to_tokens(text, max_tokens, llm_model), point_ids
+        return text, [point_id for point_id, _ in self.chunks]
 
 
 def _render_metadata(resource: LearningResource) -> str:
@@ -318,15 +297,13 @@ async def _generate_field(
     """
     Generate one credential metadata field and log the attempt.
 
-    A CredentialMetadataGeneration row is written whether or not the call
+    A CredentialMetadataGenerationLog row is written whether or not the call
     succeeds -- a failure is exactly the case the log exists to explain.
 
     Returns:
         dict | None: the structured response, or None if generation failed
     """
-    context_text, point_ids = context.assemble(
-        config.max_context_tokens, config.llm_model
-    )
+    context_text, point_ids = context.assemble()
     prompt = f"{context_text}\n\n{config.prompt}"
 
     response, error = None, ""
@@ -343,7 +320,7 @@ async def _generate_field(
         error = str(exc)
     latency_ms = int((time.monotonic() - started) * 1000)
 
-    await db_sync_to_async(CredentialMetadataGeneration.objects.create)(
+    await db_sync_to_async(CredentialMetadataGenerationLog.objects.create)(
         learning_resource=resource,
         field=config.field,
         response=response,

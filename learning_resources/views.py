@@ -1782,7 +1782,7 @@ class CredentialMetadataView(AsyncAPIView):
     Every request generates: there is no cache and no `regenerate` flag, so an
     author who dislikes a draft asks again and gets a new one. Nothing is saved
     on the resource -- the drafts are returned for a human to review, and each
-    generation is recorded in CredentialMetadataGeneration.
+    generation is recorded in CredentialMetadataGenerationLog.
 
     Author-only, because a request spends one frontier-model call per field on
     a large prompt. The view is async so those calls, which run concurrently

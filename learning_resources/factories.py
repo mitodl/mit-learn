@@ -963,15 +963,14 @@ class CredentialMetadataConfigurationFactory(DjangoModelFactory):
     llm_model = "gpt-4o-mini"
     prompt = factory.Faker("sentence")
     temperature = 0.0
-    max_context_tokens = 16000
 
     class Meta:
         model = models.CredentialMetadataConfiguration
         django_get_or_create = ("field",)
 
 
-class CredentialMetadataGenerationFactory(DjangoModelFactory):
-    """Factory for CredentialMetadataGeneration"""
+class CredentialMetadataGenerationLogFactory(DjangoModelFactory):
+    """Factory for CredentialMetadataGenerationLog"""
 
     learning_resource = factory.SubFactory(LearningResourceFactory, is_course=True)
     field = FuzzyChoice([field.name for field in constants.CredentialMetadataField])
@@ -984,4 +983,4 @@ class CredentialMetadataGenerationFactory(DjangoModelFactory):
     generated_by = factory.SubFactory(UserFactory)
 
     class Meta:
-        model = models.CredentialMetadataGeneration
+        model = models.CredentialMetadataGenerationLog

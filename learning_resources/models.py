@@ -1671,11 +1671,10 @@ class ContentSummarizerConfiguration(TimestampedModel):
 
 class CredentialMetadataConfiguration(TimestampedModel):
     """
-    Admin-editable prompt, model and context budget for one credential
-    metadata field.
+    Admin-editable prompt and model for one credential metadata field.
 
     One row per field, so the credential program can retune each prompt (and
-    pick a different model or context size for it) without a deploy. Mirrors
+    pick a different model for it) without a deploy. Mirrors
     ContentSummarizerConfiguration.
     """
 
@@ -1690,12 +1689,6 @@ class CredentialMetadataConfiguration(TimestampedModel):
     )
     prompt = models.TextField(help_text="Appended to the assembled course context.")
     temperature = models.FloatField(default=0.0)
-    # Per-field rather than global: a 1-2 sentence description is diluted by a
-    # large context, while criteria benefit from one.
-    max_context_tokens = models.PositiveIntegerField(
-        default=16000,
-        help_text="Maximum context tokens sent with this prompt.",
-    )
     max_output_tokens = models.PositiveIntegerField(default=2048)
     is_active = models.BooleanField(default=True)
 
@@ -1703,7 +1696,7 @@ class CredentialMetadataConfiguration(TimestampedModel):
         return f"CredentialMetadataConfiguration for {self.field}"
 
 
-class CredentialMetadataGeneration(TimestampedModel):
+class CredentialMetadataGenerationLog(TimestampedModel):
     """
     Append-only record of one credential metadata generation.
 
@@ -1715,7 +1708,7 @@ class CredentialMetadataGeneration(TimestampedModel):
     learning_resource = models.ForeignKey(
         LearningResource,
         on_delete=models.CASCADE,
-        related_name="credential_metadata_generations",
+        related_name="credential_metadata_generation_logs",
     )
     field = models.CharField(
         max_length=32, choices=constants.CredentialMetadataField.as_tuple()

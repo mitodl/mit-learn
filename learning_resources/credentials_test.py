@@ -23,7 +23,7 @@ from learning_resources.factories import (
 )
 from learning_resources.models import (
     CredentialMetadataConfiguration,
-    CredentialMetadataGeneration,
+    CredentialMetadataGenerationLog,
 )
 from main.factories import UserFactory
 
@@ -235,37 +235,38 @@ def test_build_credential_context_retrieval_kill_switch(
     mock_retrieval.assert_not_called()
 
 
-def test_assemble_keeps_metadata_and_fits_chunks():
-    """Chunks are added highest scoring first, and only if they fit"""
+def test_assemble_includes_every_source_highest_scoring_first():
+    """Metadata, then the marketing page, then chunks in retrieval order"""
     context = CredentialContext(
         metadata="## Course information\n- Title: Fluids",
         marketing_page="## Marketing page\n\nAbout this course.",
         chunks=[
-            ("big", "word " * 500),
-            ("small", "a short but useful chunk"),
+            ("first", "the highest scoring chunk"),
+            ("second", "the next chunk"),
         ],
     )
-    text, point_ids = context.assemble(100, "gpt-4o-mini")
+    text, point_ids = context.assemble()
 
-    assert context.metadata in text
-    # The oversized chunk is skipped rather than ending the assembly, so the
-    # smaller lower-scoring one still makes it in.
-    assert point_ids == ["small"]
-    assert "a short but useful chunk" in text
+    assert text == (
+        "## Course information\n- Title: Fluids\n\n"
+        "## Marketing page\n\nAbout this course.\n\n"
+        "the highest scoring chunk\n\n"
+        "the next chunk"
+    )
+    assert point_ids == ["first", "second"]
 
 
-def test_assemble_truncates_marketing_page_to_budget():
-    """The marketing page is cut to what the budget leaves after metadata"""
+def test_assemble_omits_a_missing_marketing_page():
+    """A resource with no marketing page leaves no empty gap in the context"""
     context = CredentialContext(
         metadata="## Course information\n- Title: Fluids",
-        marketing_page="page " * 500,
-        chunks=[("chunk-1", "a chunk that cannot possibly fit")],
+        marketing_page="",
+        chunks=[("chunk-1", "a chunk")],
     )
-    text, point_ids = context.assemble(60, "gpt-4o-mini")
+    text, point_ids = context.assemble()
 
-    assert context.metadata in text
-    assert point_ids == []
-    assert len(text) < len(context.marketing_page)
+    assert text == "## Course information\n- Title: Fluids\n\na chunk"
+    assert point_ids == ["chunk-1"]
 
 
 def test_render_criteria_narrative():
@@ -301,7 +302,7 @@ def test_generate_credential_metadata_logs_generations(
     user = UserFactory.create()
     asyncio.run(generate_credential_metadata(resource, user=user))
 
-    generations = CredentialMetadataGeneration.objects.filter(
+    generations = CredentialMetadataGenerationLog.objects.filter(
         learning_resource=resource
     )
     assert generations.count() == len(configurations)
@@ -348,7 +349,7 @@ def test_generate_credential_metadata_records_a_failure(
     assert "criteria_skills" not in metadata
     assert metadata["description"] == "A course about modelling fluid flow."
 
-    failure = CredentialMetadataGeneration.objects.get(
+    failure = CredentialMetadataGenerationLog.objects.get(
         learning_resource=resource, field=CredentialMetadataField.criteria.name
     )
     assert failure.response is None
@@ -377,7 +378,7 @@ def test_generate_credential_metadata_omits_empty_values(
     assert asyncio.run(generate_credential_metadata(resource)) == {}
     # The empty responses are still logged: what the model returned is the
     # point of the record.
-    assert CredentialMetadataGeneration.objects.count() == len(configurations)
+    assert CredentialMetadataGenerationLog.objects.count() == len(configurations)
 
 
 @pytest.mark.django_db(transaction=True)
@@ -392,7 +393,7 @@ def test_generate_credential_metadata_skips_inactive_configurations(
     metadata = asyncio.run(generate_credential_metadata(resource))
 
     assert configuration.field not in metadata
-    assert not CredentialMetadataGeneration.objects.filter(
+    assert not CredentialMetadataGenerationLog.objects.filter(
         field=configuration.field
     ).exists()
 
@@ -403,31 +404,5 @@ def test_generate_credential_metadata_without_configurations(
 ):
     """With nothing configured there is nothing to generate, and no LLM call"""
     assert asyncio.run(generate_credential_metadata(resource)) == {}
-    assert not CredentialMetadataGeneration.objects.exists()
+    assert not CredentialMetadataGenerationLog.objects.exists()
     mock_llm.with_structured_output.assert_not_called()
-
-
-@pytest.mark.django_db(transaction=True)
-def test_generate_credential_metadata_applies_per_field_budget(
-    resource, no_configurations, mock_llm, mock_retrieval
-):
-    """Each field's context is assembled against its own token budget"""
-    CredentialMetadataConfigurationFactory.create(
-        field=CredentialMetadataField.description.name,
-        max_context_tokens=30,
-    )
-    CredentialMetadataConfigurationFactory.create(
-        field=CredentialMetadataField.criteria.name,
-        max_context_tokens=2000,
-    )
-    asyncio.run(generate_credential_metadata(resource))
-
-    description, criteria = (
-        CredentialMetadataGeneration.objects.get(field=field).context_tokens
-        for field in (
-            CredentialMetadataField.description.name,
-            CredentialMetadataField.criteria.name,
-        )
-    )
-    assert description <= 30
-    assert criteria > description
