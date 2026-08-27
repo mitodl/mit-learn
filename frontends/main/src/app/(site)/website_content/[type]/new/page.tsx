@@ -2,13 +2,16 @@ import React from "react"
 import { Metadata } from "next"
 import { standardizeMetadata } from "@/common/metadata"
 import { WebsiteContentNewPage } from "@/app-pages/WebsiteContent/WebsiteContentNewPage"
+import type { AppPageProps } from "@/common/searchParams"
 
 export const metadata: Metadata = standardizeMetadata({
   title: "MIT Learn | New",
   robots: "noindex, nofollow",
 })
 
-const Page = async ({ params }: { params: Promise<{ type: string }> }) => {
+const Page = async ({
+  params,
+}: AppPageProps<"/website_content/[type]/new">) => {
   const { type } = await params
   return <WebsiteContentNewPage type={type} />
 }

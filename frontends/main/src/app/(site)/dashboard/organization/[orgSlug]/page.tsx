@@ -6,10 +6,11 @@ import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { useRouter } from "next-nprogress-bar"
 import { contractView, DASHBOARD_HOME } from "@/common/urls"
+import type { AppPageProps } from "@/common/searchParams"
 
-const Page: React.FC<{
-  params: Promise<{ orgSlug: string }>
-}> = ({ params }) => {
+const Page: React.FC<AppPageProps<"/dashboard/organization/[orgSlug]">> = ({
+  params,
+}) => {
   const router = useRouter()
   const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } = useQuery(
     mitxUserQueries.me(),

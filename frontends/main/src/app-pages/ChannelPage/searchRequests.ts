@@ -9,6 +9,7 @@ import { LearningResourceOfferor } from "api"
 import { ChannelTypeEnum } from "api/v0"
 import { getFacetManifest } from "@/page-components/SearchDisplay/getFacetManifest"
 import { getExtraFacetNames } from "@/app-pages/SearchPage/searchRequests"
+import type { RegisteredSearchParams } from "@/common/searchParams"
 
 export const getConstantSearchParams = (searchFilter?: string) => {
   const searchParams: Facets & BooleanFacets = {}
@@ -89,7 +90,7 @@ export const getFacets = (
   offerors: Record<string, LearningResourceOfferor>,
   constantSearchParams: Facets,
   resourceTypeGroup: string | null,
-  searchParams?: URLSearchParams,
+  searchParams?: RegisteredSearchParams,
 ) => {
   // Facets already surfaced by the channel type or pinned by the channel config
   // should not be duplicated as extra facets from the URL.

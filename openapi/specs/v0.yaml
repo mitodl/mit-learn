@@ -2212,6 +2212,10 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/CourseResourceResourceTypeEnum'
@@ -2328,6 +2332,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform
@@ -2719,6 +2724,10 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/DocumentResourceResourceTypeEnum'
@@ -2839,6 +2848,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform
@@ -3231,6 +3241,10 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/LearningPathResourceResourceTypeEnum'
@@ -3347,6 +3361,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - learning_path
       - offered_by
       - pace
@@ -4579,6 +4594,10 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastEpisodeResourceResourceTypeEnum'
@@ -4694,6 +4713,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform
@@ -4874,6 +4894,10 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastResourceResourceTypeEnum'
@@ -4989,6 +5013,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform
@@ -5452,6 +5477,10 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/ProgramResourceResourceTypeEnum'
@@ -5567,6 +5596,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform
@@ -6246,6 +6276,10 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoPlaylistResourceResourceTypeEnum'
@@ -6361,6 +6395,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform
@@ -6541,6 +6576,10 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoResourceResourceTypeEnum'
@@ -6672,6 +6711,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform

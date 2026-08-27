@@ -48,6 +48,18 @@ QDRANT_CONTENT_FILE_PARAM_MAP = {
 # collection carries it; content file payloads do not.
 COMPLETENESS_PAYLOAD_KEY = "completeness"
 
+# Payload key holding the date a resource is considered to have aged from -- the
+# start date of its last run, or the last modified date for learning materials.
+# Null (or absent) means nothing to penalize: resources with an upcoming run are
+# never stale. Set by the search serializer, so only the resources collection
+# carries it.
+RESOURCE_AGE_DATE_PAYLOAD_KEY = "resource_age_date"
+
+# Qdrant decay expressions measure the distance between datetimes in seconds, so
+# a staleness horizon in years is converted with this. 365 days, the same year
+# length the OpenSearch decay's 365d scale uses.
+SECONDS_PER_YEAR = 365 * 24 * 60 * 60
+
 QDRANT_RESOURCE_PARAM_MAP = {
     "readable_id": "readable_id",
     "resource_type": "resource_type",
@@ -104,6 +116,9 @@ QDRANT_LEARNING_RESOURCE_INDEXES = {
     # Not filterable or facetable -- indexed because Qdrant rejects a scoring
     # formula that reads an unindexed payload key (see COMPLETENESS_PAYLOAD_KEY).
     COMPLETENESS_PAYLOAD_KEY: models.PayloadSchemaType.FLOAT,
+    # Scoring-only for the same reason: the staleness penalty decays over it, and
+    # a datetime index is what makes it readable from a formula.
+    RESOURCE_AGE_DATE_PAYLOAD_KEY: models.PayloadSchemaType.DATETIME,
 }
 
 

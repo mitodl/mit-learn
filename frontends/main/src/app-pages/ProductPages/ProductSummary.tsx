@@ -564,10 +564,8 @@ const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
   const totalRequired = getTotalRequiredCourses(program)
   if (totalRequired === 0) return null
 
-  // Always say "Courses" here. Whether a child program should be labeled
-  // as a "course" or "program" depends on its display_mode, which can't be
-  // determined from the req_tree alone. The important use cases are course
-  // and course-like program (display_mode="Course") children only.
+  // Always "Courses": a child program counted here is presented as a course
+  // (display_mode="course"); otherwise the caller drops the row.
   return (
     <InfoRow {...others}>
       <InfoRowIcon>
@@ -706,13 +704,17 @@ const ProgramSummary: React.FC<{
   courses?: CourseWithCourseRunsSerializerV2[]
   /** Tablet metadata column count — 1 when the block is half-width (see SummaryRows). */
   tabletColumns: 1 | 2
-}> = ({ program, courses, tabletColumns }) => {
+  /** False unless every child program is presented as a course; see useReqTreeChildren. */
+  showCourseFraming?: boolean
+}> = ({ program, courses, tabletColumns, showCourseFraming = true }) => {
   return (
     <SummaryRows $tabletColumns={tabletColumns}>
-      <RequirementsRow
-        program={program}
-        data-testid={TestIds.RequirementsRow}
-      />
+      {showCourseFraming ? (
+        <RequirementsRow
+          program={program}
+          data-testid={TestIds.RequirementsRow}
+        />
+      ) : null}
       <ProgramPaceRow courses={courses} data-testid={TestIds.PaceRow} />
       <ProgramDurationRow program={program} data-testid={TestIds.DurationRow} />
       {program.certificate_available ? (

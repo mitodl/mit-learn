@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { websiteContentQueries } from "api/hooks/website_content/queries"
@@ -13,7 +14,7 @@ import {
 import { notFound } from "next/navigation"
 
 export const generateMetadata = async (
-  props: PageProps<"/articles/[slugOrId]">,
+  props: AppPageProps<"/articles/[slugOrId]">,
 ) => {
   const params = await props.params
   const { slugOrId } = params
@@ -41,7 +42,7 @@ export const generateMetadata = async (
   })
 }
 
-const Page: React.FC<PageProps<"/articles/[slugOrId]">> = async (props) => {
+const Page: React.FC<AppPageProps<"/articles/[slugOrId]">> = async (props) => {
   const { slugOrId } = await props.params
 
   const queryClient = getQueryClient()

@@ -34,7 +34,7 @@ import {
   DELIVERY_CHOICES,
   ProfileSchema,
 } from "@/common/profile"
-import { useSearchParams } from "next/navigation"
+import { useAppSearchParams } from "@/common/useAppSearchParams"
 import { PostHogEvents } from "@/common/constants"
 
 const NUM_STEPS = 5
@@ -159,7 +159,7 @@ const OnboardingPage: React.FC = () => {
   const [activeStep, setActiveStep] = React.useState<number>(0)
   const router = useRouter()
   const posthog = usePostHog()
-  const searchParams = useSearchParams()
+  const searchParams = useAppSearchParams()
   const nextUrl = searchParams.get("next")
 
   const formik = useFormik({

@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import { getQueryClient } from "@/app/getQueryClient"
 import { ResourceTypeEnum } from "api"
 import { learningResourceQueries } from "api/hooks/learningResources"
@@ -14,7 +15,7 @@ import { carrySearchParams, podcastEpisodePageView } from "@/common/urls"
  * 307-redirect to the slugged form, correcting the parent podcast id.
  */
 const Page = async (
-  props: PageProps<"/podcast/[podcastId]/podcast_episode/[episodeId]">,
+  props: AppPageProps<"/podcast/[podcastId]/podcast_episode/[episodeId]">,
 ) => {
   const { podcastId, episodeId } = await props.params
   const epId = parseResourceId(episodeId)
