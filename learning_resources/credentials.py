@@ -12,6 +12,7 @@ new one; every call appends a CredentialMetadataGenerationLog row instead.
 """
 
 import asyncio
+import json
 import logging
 import time
 from typing import Annotated, NamedTuple
@@ -62,33 +63,27 @@ RESPONSE_SCHEMAS = {
     CredentialMetadataField.criteria.name: BadgeCriteria,
 }
 
-# Sections of the marketing page below this heading -- instructor CVs and
-# publication lists, then the site footer -- are about a third of the page and
-# say nothing about skills gained.
-MARKETING_PAGE_CUT_HEADING = "## meet your instructors"
-
-# Left as-is, a prerequisites section is read as an outcome: the model reported
-# prerequisite mathematics as a skill the learner gained.
-MARKETING_PAGE_PREREQUISITES_HEADING = "## prerequisites"
-MARKETING_PAGE_PREREQUISITES_REPLACEMENT = (
-    "## Prerequisites (what a learner must already know BEFORE starting."
-    " These are entry requirements, NOT skills gained or outcomes.)"
+# Sections that say nothing about what a learner demonstrated:
+#
+# - instructor CVs and publication lists, about a third of a course page
+# - prerequisites, which are the opposite of an outcome -- left in, the model
+#   reported prerequisite mathematics as a skill the learner gained
+#
+# Dropped section by section rather than by cutting everything below the
+# heading, because a heading is not reliably last: a program page carries the
+# program's own instructors ahead of every child course's content, so cutting
+# the tail threw all of it away. Measured over 214 scraped pages, 9 have an
+# instructor heading that is not last, and 2 of those -- both programs -- lost
+# real content to the cut.
+MARKETING_PAGE_DROPPED_SECTIONS = (
+    "meet your instructors",
+    "about professor",
+    "prerequisites",
 )
 
-# The resource url is deliberately absent: with it in context the model
-# fabricated `#criteria-N` URIs off whatever host the url pointed at.
-METADATA_FIELDS = (
-    "title",
-    "readable_id",
-    "description",
-    "resource_type",
-    "certification_type",
-    "platform",
-    "offered_by",
-    "departments",
-    "topics",
-    "level",
-)
+# Heading levels that open a new section, and so end a dropped one. A deeper
+# heading (`### Prof. Somebody`) belongs to the section it sits in.
+SECTION_HEADING_LEVELS = ("# ", "## ")
 
 # Structure markup and duplicate transcript formats: never prose, and they
 # crowd out chunks that are.
@@ -127,46 +122,76 @@ class CredentialContext(NamedTuple):
 
 
 def _render_metadata(resource: LearningResource) -> str:
-    """Render the resource's own fields as a markdown block."""
+    """
+    Render the resource's own fields as JSON.
+
+    The keys are half the value: they tell the model what each string is,
+    which a bare list of values cannot. Empty fields are dropped rather than
+    sent as blanks, so the model is never asked to describe an absence.
+
+    The resource url is deliberately absent: with it in context the model
+    fabricated `#criteria-N` URIs off whatever host the url pointed at.
+    """
     best_run = resource.best_run
     values = {
         "title": resource.title,
         "readable_id": resource.readable_id,
-        "description": resource.description or "",
+        "description": resource.description,
+        "run_description": best_run.description if best_run else None,
         "resource_type": resource.resource_type,
         "certification_type": resource.certification_type,
-        "platform": resource.platform.name if resource.platform else "",
-        "offered_by": resource.offered_by.name if resource.offered_by else "",
-        "departments": ", ".join(
-            department.name for department in resource.departments.all()
-        ),
-        "topics": ", ".join(topic.name for topic in resource.topics.all()),
-        "level": ", ".join(best_run.level) if best_run and best_run.level else "",
+        "platform": resource.platform.name if resource.platform else None,
+        "offered_by": resource.offered_by.name if resource.offered_by else None,
+        "departments": [department.name for department in resource.departments.all()],
+        "topics": [topic.name for topic in resource.topics.all()],
+        "level": best_run.level if best_run else [],
     }
-    lines = [
-        f"- {field.replace('_', ' ').title()}: {values[field]}"
-        for field in METADATA_FIELDS
-        if values[field]
-    ]
-    return "## Course information\n" + "\n".join(lines)
+    return "## Course information\n" + json.dumps(
+        {key: value for key, value in values.items() if value},
+        indent=2,
+        # Titles and descriptions carry accents; escaping them to \uXXXX only
+        # makes the prompt harder for the model to read.
+        ensure_ascii=False,
+    )
+
+
+def _section_title(line: str) -> str | None:
+    """
+    Return a section heading's title, or None if the line is not one.
+
+    Titles are lowercased, because they are whatever the page's h1s and h2s
+    happened to say.
+    """
+    stripped = line.strip()
+    if not stripped.startswith(SECTION_HEADING_LEVELS):
+        return None
+    return stripped.lstrip("#").strip().lower()
 
 
 def _prepare_marketing_page(content: str) -> str:
     """
     Cut the marketing page down to the part that bears on skills gained.
 
-    Headings are matched case-insensitively on their own line, because they come
-    from whatever the page's h2s happened to say.
+    Drops every MARKETING_PAGE_DROPPED_SECTIONS section wherever it appears.
+
+    The site footer -- an MIT address, nav links and a copyright line, under no
+    heading of its own -- is left in. Truncating at the copyright line looks
+    safe and is not: a program page concatenates its child courses' pages, so
+    the first child's footer sits in the middle, and cutting there discarded up
+    to 18,500 characters of child-course content.
     """
     kept = []
+    dropping = False
     for line in content.splitlines():
-        heading = line.strip().lower()
-        if heading.startswith(MARKETING_PAGE_CUT_HEADING):
-            break
-        if heading.startswith(MARKETING_PAGE_PREREQUISITES_HEADING):
-            kept.append(MARKETING_PAGE_PREREQUISITES_REPLACEMENT)
-            continue
-        kept.append(line)
+        title = _section_title(line)
+        if title is not None:
+            # A section heading always ends whatever section preceded it, so
+            # content after a dropped one is kept.
+            dropping = title.startswith(MARKETING_PAGE_DROPPED_SECTIONS)
+
+        if not dropping:
+            kept.append(line)
+
     page = "\n".join(kept).strip()
     return f"## Marketing page\n\n{page}" if page else ""
 
@@ -206,7 +231,7 @@ def _usable_chunks(chunks: list[dict]) -> list[tuple[str, str]]:
         if chunk.get("file_extension") in EXCLUDED_CHUNK_EXTENSIONS:
             continue
         if chunk.get("file_type") == MARKETING_PAGE_FILE_TYPE:
-            # Already included in full, ahead of any budget for chunks.
+            # Already in the context in full, as its own section.
             continue
         usable.append((chunk["point_id"], _render_chunk(chunk)))
     return usable
@@ -218,10 +243,8 @@ async def _retrieve_chunks(resource: LearningResource) -> list[tuple[str, str]]:
 
     Retrieval is best-effort: metadata plus the marketing page is a viable
     degraded context, so a Qdrant outage returns a thinner draft rather than an
-    error. CREDENTIAL_METADATA_RETRIEVAL_ENABLED turns it off outright.
+    error.
     """
-    if not settings.CREDENTIAL_METADATA_RETRIEVAL_ENABLED:
-        return []
     try:
         chunks = await async_content_file_chunks_for_resource(
             resource.readable_id,

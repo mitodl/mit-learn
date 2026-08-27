@@ -991,12 +991,8 @@ CONTENT_SUMMARIZER_FLASHCARD_PROMPT = get_string(
     ),
 )
 # Credential metadata generation (learning_resources/credentials.py). The
-# prompts, models and per-field token budgets are admin-editable rows of
-# CredentialMetadataConfiguration; only the retrieval knobs are settings, so
-# the Qdrant dependency on an author-facing request path has a kill switch.
-CREDENTIAL_METADATA_RETRIEVAL_ENABLED = get_bool(
-    name="CREDENTIAL_METADATA_RETRIEVAL_ENABLED", default=True
-)
+# prompts and models are admin-editable rows of
+# CredentialMetadataConfiguration; the retrieval knobs are settings.
 CREDENTIAL_METADATA_RETRIEVAL_QUERY = get_string(
     name="CREDENTIAL_METADATA_RETRIEVAL_QUERY",
     default=(

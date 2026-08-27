@@ -297,8 +297,6 @@ class CredentialMetadataGenerationLogAdmin(admin.ModelAdmin):
     )
     list_filter = ("field", "llm_model")
     search_fields = ("learning_resource__readable_id", "learning_resource__title")
-    # The table is append-only: it exists to explain what was generated, which
-    # editing it would defeat.
     readonly_fields = [field.name for field in model._meta.fields]  # noqa: SLF001
 
     def get_queryset(self, request):

@@ -1,6 +1,7 @@
 """Tests for credential metadata generation"""
 
 import asyncio
+import json
 
 import pytest
 
@@ -27,6 +28,9 @@ from learning_resources.models import (
 )
 from main.factories import UserFactory
 
+# Shaped like a real scraped program page: the program's own instructors come
+# before every child course's content, and the site footer trails the last
+# instructor bio under no heading of its own.
 MARKETING_PAGE = """
 ## About this course
 
@@ -45,6 +49,24 @@ Multivariable calculus
 ### Prof. Somebody
 
 Author of 40 papers on things irrelevant to this credential.
+
+## Program Contents
+
+### Advanced Fluids
+
+## What you will learn
+
+- Derive the Navier-Stokes equations
+
+## Meet your instructors
+
+### Prof. Someone Else
+
+Holder of 12 patents, none of them a skill the learner gained.
+
+Massachusetts Institute of Technology
+[Terms of Service](/terms)
+\u00a9 2026 Massachusetts Institute of Technology
 """
 
 LLM_RESPONSES = {
@@ -68,7 +90,6 @@ def chunk(content, **kwargs):
 @pytest.fixture(autouse=True)
 def credential_settings(settings):
     """Point retrieval at a fixed query and leave it enabled"""
-    settings.CREDENTIAL_METADATA_RETRIEVAL_ENABLED = True
     settings.CREDENTIAL_METADATA_RETRIEVAL_QUERY = "syllabus"
     settings.CREDENTIAL_METADATA_RETRIEVAL_LIMIT = 10
     settings.CREDENTIAL_METADATA_MIN_CHUNK_CHARS = 20
@@ -137,19 +158,59 @@ def resource():
 
 
 def test_prepare_marketing_page_drops_instructors():
-    """Everything from the instructors heading on should be cut"""
+    """Every instructor section goes, wherever on the page it appears"""
     prepared = _prepare_marketing_page(MARKETING_PAGE)
     assert "Apply conservation laws" in prepared
     assert "Prof. Somebody" not in prepared
     assert "40 papers" not in prepared
+    assert "Prof. Someone Else" not in prepared
+    assert "12 patents" not in prepared
 
 
-def test_prepare_marketing_page_relabels_prerequisites():
-    """Prerequisites must be labelled as entry requirements, not outcomes"""
+def test_prepare_marketing_page_keeps_content_after_an_instructor_section():
+    """
+    An instructor heading is not the end of the page.
+
+    A program page carries the program's own instructors ahead of every child
+    course's content; cutting the tail at that heading threw all of it away.
+    """
     prepared = _prepare_marketing_page(MARKETING_PAGE)
-    assert "Multivariable calculus" in prepared
-    assert "## Prerequisites\n" not in prepared
-    assert "NOT skills gained" in prepared
+    assert "## Program Contents" in prepared
+    assert "Advanced Fluids" in prepared
+    assert "Derive the Navier-Stokes equations" in prepared
+
+
+def test_prepare_marketing_page_keeps_content_after_a_footer():
+    """
+    A copyright line does not mean the page is over.
+
+    A program page concatenates its child courses' pages, so the first child's
+    footer sits in the middle of it.
+    """
+    page = (
+        MARKETING_PAGE
+        + """
+\u00a9 2026 Massachusetts Institute of Technology
+
+## What you will learn
+
+- Solve the heat equation
+"""
+    )
+    prepared = _prepare_marketing_page(page)
+    assert "Solve the heat equation" in prepared
+
+
+def test_prepare_marketing_page_drops_prerequisites():
+    """
+    Prerequisites are the opposite of an outcome.
+
+    Left in, the model reported prerequisite mathematics as a skill the learner
+    gained on completion.
+    """
+    prepared = _prepare_marketing_page(MARKETING_PAGE)
+    assert "Multivariable calculus" not in prepared
+    assert "Prerequisites" not in prepared
 
 
 @pytest.mark.parametrize("content", ["", "   \n  "])
@@ -176,6 +237,27 @@ def test_build_credential_context_uses_every_source(resource, mock_retrieval):
         )
     ]
     mock_retrieval.assert_called_once_with(resource.readable_id, "syllabus", limit=10)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_metadata_is_json_keyed_by_field(resource, mock_retrieval):
+    """The metadata block is JSON, so every value arrives labelled"""
+    run = resource.best_run
+    run.description = "What this particular run covers."
+    run.save()
+
+    context = asyncio.run(build_credential_context(resource))
+    values = json.loads(context.metadata.removeprefix("## Course information\n"))
+
+    assert values["title"] == resource.title
+    assert values["readable_id"] == resource.readable_id
+    assert values["description"] == resource.description
+    assert values["run_description"] == "What this particular run covers."
+    assert values["topics"] == [topic.name for topic in resource.topics.all()]
+    # Empty fields are dropped rather than sent as blanks, and the url is
+    # never sent at all.
+    assert "url" not in values
+    assert all(value for value in values.values())
 
 
 @pytest.mark.django_db(transaction=True)
@@ -221,18 +303,6 @@ def test_build_credential_context_survives_retrieval_failure(resource, mocker):
 
     assert context.chunks == []
     assert "Apply conservation laws" in context.marketing_page
-
-
-@pytest.mark.django_db(transaction=True)
-def test_build_credential_context_retrieval_kill_switch(
-    resource, mock_retrieval, settings
-):
-    """CREDENTIAL_METADATA_RETRIEVAL_ENABLED=False skips Qdrant entirely"""
-    settings.CREDENTIAL_METADATA_RETRIEVAL_ENABLED = False
-    context = asyncio.run(build_credential_context(resource))
-
-    assert context.chunks == []
-    mock_retrieval.assert_not_called()
 
 
 def test_assemble_includes_every_source_highest_scoring_first():
