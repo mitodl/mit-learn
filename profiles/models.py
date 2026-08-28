@@ -1,5 +1,6 @@
 """Profile models"""
 
+from functools import cached_property
 from uuid import uuid4
 
 from django.conf import settings
@@ -200,6 +201,16 @@ class Profile(models.Model):
                 self.image_small_file = None
                 self.image_medium_file = None
         super().save(*args, **kwargs)  # pylint:disable=super-with-arguments
+
+    @cached_property
+    def annotated_topic_interests(self) -> list:
+        """
+        Topic interests with channel_url annotated for serialization.
+
+        Fallback only: API views fill this via
+        Prefetch(..., to_attr="annotated_topic_interests").
+        """
+        return list(self.topic_interests.for_serialization())
 
 
 class UserWebsite(models.Model):
