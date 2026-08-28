@@ -228,7 +228,15 @@ const DrawerContent: React.FC<{
         bottomCarousels={bottomCarousels}
         chatExpanded={chatExpanded}
         user={user}
-        shareUrl={canonicalResourceDrawerUrl(resourceId, resource.data?.title)}
+        /**
+         * Share the resource's location on Learn — its own page where it has
+         * one — so a shared link lands on the page that owns the content rather
+         * than on a drawer over the search page.
+         */
+        shareUrl={
+          resource.data?.learn_url ||
+          canonicalResourceDrawerUrl(resourceId, resource.data?.title)
+        }
         inLearningPath={inLearningPath}
         inUserList={inUserList}
         onAddToLearningPathClick={handleAddToLearningPathClick}
