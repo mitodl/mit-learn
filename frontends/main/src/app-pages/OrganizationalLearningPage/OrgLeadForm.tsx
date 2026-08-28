@@ -240,7 +240,7 @@ const OrgLeadForm: React.FC<{ className?: string }> = ({ className }) => {
       : "Failed to submit the form. Please try again."
     : null
 
-  if (hubspotFormSubmit.isSuccess) {
+  if (hubspotFormSubmit.isSuccess && audience === "organization") {
     return (
       <Card className={className}>
         <Message role="status">
@@ -284,7 +284,7 @@ const OrgLeadForm: React.FC<{ className?: string }> = ({ className }) => {
           </IndividualCta>
         </IndividualPanel>
       ) : !formId || isFormDetailError ? (
-        <MessageBody>{copy.unavailable}</MessageBody>
+        <MessageBody role="alert">{copy.unavailable}</MessageBody>
       ) : (
         <StyledHubspotForm
           form={hubspotForm}

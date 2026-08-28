@@ -91,6 +91,18 @@ describe("scrollToElement", () => {
     expect(target.getAttribute("tabindex")).toBe("0")
   })
 
+  test("leaves a naturally focusable target in the tab order", () => {
+    setReducedMotion(false)
+    document.body.innerHTML = '<button id="target">Go</button>'
+    const target = document.getElementById("target") as HTMLElement
+    target.scrollIntoView = jest.fn()
+
+    scrollToElement("target")
+
+    expect(target.hasAttribute("tabindex")).toBe(false)
+    expect(document.activeElement).toBe(target)
+  })
+
   test("does nothing when the id matches no element", () => {
     setReducedMotion(false)
     mountTarget()

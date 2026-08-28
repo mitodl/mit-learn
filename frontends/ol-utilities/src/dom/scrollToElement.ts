@@ -25,9 +25,11 @@ export const prefersReducedMotion = (): boolean =>
  *    activates a "jump to the form" control stays where they were while the
  *    page moves under them. This function moves focus to the target element
  *    using `preventScroll` so the focus call doesn't trigger its own scroll
- *    and fight the one this function performs. If the target isn't already
- *    focusable, this function adds `tabindex="-1"` to make it focusable
- *    without adding it to the tab order — the standard skip-link technique.
+ *    and fight the one this function performs. It tries focusing the target
+ *    as-is first; only if that fails to move focus (the target isn't already
+ *    focusable) does it add `tabindex="-1"` and retry — the standard
+ *    skip-link technique — so naturally focusable targets keep their normal
+ *    tab-order behavior.
  *
  * If no element matches `elementId`, this function does nothing. This lets
  * callers link to a section that a feature flag or conditional branch hasn't
@@ -39,10 +41,11 @@ export const scrollToElement = (elementId: string): void => {
   const target = document.getElementById(elementId)
   if (!target) return
 
-  if (!target.hasAttribute("tabindex")) {
-    target.setAttribute("tabindex", "-1")
-  }
   target.focus({ preventScroll: true })
+  if (document.activeElement !== target) {
+    target.setAttribute("tabindex", "-1")
+    target.focus({ preventScroll: true })
+  }
 
   target.scrollIntoView({
     behavior: prefersReducedMotion() ? "auto" : "smooth",

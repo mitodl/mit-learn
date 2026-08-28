@@ -2,7 +2,7 @@ import React from "react"
 import { HubspotForm, type HubspotFormProps } from "ol-components"
 import { setMockResponse, urls, factories, makeRequest } from "api/test-utils"
 import { faker } from "@faker-js/faker/locale/en"
-import { renderWithProviders, screen, user, waitFor } from "@/test-utils"
+import { renderWithProviders, screen, user, waitFor, act } from "@/test-utils"
 import OrgLeadForm from "./OrgLeadForm"
 import { getInTouch as copy } from "./copy"
 
@@ -152,6 +152,34 @@ describe("OrgLeadForm", () => {
     expect(await screen.findByText(copy.success.title)).toBeInTheDocument()
     // Terminal by design: inline, there is no dialog to dismiss back to a form.
     expect(screen.queryByTestId("hubspot-form")).not.toBeInTheDocument()
+  })
+
+  test("keeps the individual panel visible if the audience changes before a pending org submission resolves", async () => {
+    setupApis()
+    const submit = Promise.withResolvers<Record<string, never>>()
+    setMockResponse.post(urls.hubspot.submit(FORM_ID), submit.promise)
+    renderWithProviders(<OrgLeadForm />)
+
+    await submitForm()
+    await selectAudience(/Myself/)
+
+    // The org submission succeeds in the background while the individual
+    // path is showing — that choice must keep controlling what renders,
+    // not the async success arriving after the fact.
+    await act(async () => {
+      submit.resolve({})
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(
+      screen.getByRole("link", { name: copy.individual.ctaLabel }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(copy.success.title)).not.toBeInTheDocument()
+
+    // Confirm the submission really did succeed: switching back to the
+    // organization path surfaces the confirmation.
+    await selectAudience(/My organization/)
+    expect(await screen.findByText(copy.success.title)).toBeInTheDocument()
   })
 
   test("surfaces a submission failure instead of a false confirmation", async () => {

@@ -227,6 +227,7 @@ const Header: FunctionComponent = () => {
               ref={mobileTrigger}
               onClick={menuClick}
               active={drawerOpen}
+              aria-label="Explore MIT"
             />
             <LeftSpacer />
             <StyledMITLogoLink logo="learn" />

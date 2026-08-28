@@ -59,11 +59,18 @@ interface MenuButtonProps {
   text?: string
   onClick: React.MouseEventHandler<HTMLButtonElement> | undefined
   active?: boolean
+  "aria-label"?: string
 }
 
 const MenuButton = React.forwardRef<HTMLButtonElement, MenuButtonProps>(
-  ({ onClick, text, active }, ref) => (
-    <StyledMenuButton ref={ref} onClick={onClick} active={active}>
+  ({ onClick, text, active, "aria-label": ariaLabel }, ref) => (
+    <StyledMenuButton
+      ref={ref}
+      onClick={onClick}
+      active={active}
+      aria-expanded={active}
+      aria-label={text ? undefined : ariaLabel}
+    >
       <MenuButtonInner>
         <MenuIcon />
         {text ? <MenuButtonText>{text}</MenuButtonText> : ""}
