@@ -97,10 +97,9 @@ export const getMetadataAsync = async ({
     }
     /**
      * Canonicalize the drawer to the resource's location on Learn: its own page
-     * where it has one, else this drawer URL itself. A resource with a dedicated
-     * page therefore hands its ranking signal to that page rather than competing
-     * with it, and because the backend owns the choice, this canonical, the card
-     * hrefs and the sitemap cannot disagree.
+     * where it has one, else this drawer URL itself. The backend owns the
+     * choice, so the canonical here, the card hrefs, and the sitemap cannot
+     * disagree.
      *
      * `learn_url` is non-nullable and never blank, but fall back to the drawer
      * URL rather than emitting no canonical at all: a frontend deployed ahead of
