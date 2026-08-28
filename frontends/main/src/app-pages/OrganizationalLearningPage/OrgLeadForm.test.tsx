@@ -177,4 +177,18 @@ describe("OrgLeadForm", () => {
     // The audience selector still works — only the form itself is unavailable.
     expect(screen.getByRole("radio", { name: /Myself/ })).toBeInTheDocument()
   })
+
+  test("reports itself unavailable when the form definition fails to load", async () => {
+    setMockResponse.get(
+      urls.hubspot.details({ form_id: FORM_ID }),
+      {},
+      { code: 500 },
+    )
+    renderWithProviders(<OrgLeadForm />)
+
+    expect(await screen.findByText(copy.unavailable)).toBeInTheDocument()
+    expect(screen.queryByTestId("hubspot-form")).not.toBeInTheDocument()
+    // The audience selector still works — only the form itself is unavailable.
+    expect(screen.getByRole("radio", { name: /Myself/ })).toBeInTheDocument()
+  })
 })

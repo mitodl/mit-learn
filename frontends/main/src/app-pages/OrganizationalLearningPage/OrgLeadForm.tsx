@@ -174,9 +174,11 @@ const OrgLeadForm: React.FC<{ className?: string }> = ({ className }) => {
   const formId = getOrgLearningHubspotFormId()
   const recaptchaSiteKey = getRecaptchaSiteKey()
 
-  const { data: hubspotForm, isLoading } = useHubspotFormDetail(
-    formId ? { form_id: formId } : undefined,
-  )
+  const {
+    data: hubspotForm,
+    isLoading,
+    isError: isFormDetailError,
+  } = useHubspotFormDetail(formId ? { form_id: formId } : undefined)
   const hubspotFormSubmit = useHubspotFormSubmit()
 
   const capture = (event: string, properties?: Record<string, unknown>) => {
@@ -269,7 +271,7 @@ const OrgLeadForm: React.FC<{ className?: string }> = ({ className }) => {
             </ButtonLink>
           </IndividualActions>
         </IndividualPanel>
-      ) : !formId ? (
+      ) : !formId || isFormDetailError ? (
         <MessageBody>{copy.unavailable}</MessageBody>
       ) : (
         <StyledHubspotForm

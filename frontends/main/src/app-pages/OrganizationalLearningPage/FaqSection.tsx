@@ -79,18 +79,27 @@ const Answer = styled(AccordionDetails)(({ theme }) => ({
   },
 }))
 
-const FaqRow: React.FC<{ question: string; answer: string }> = ({
+const FaqRow: React.FC<{ index: number; question: string; answer: string }> = ({
+  index,
   question,
   answer,
 }) => {
   const [expanded, setExpanded] = React.useState(false)
+  const headerId = `faq-header-${index}`
+  const panelId = `faq-panel-${index}`
 
   return (
     <FaqItem expanded={expanded} onChange={() => setExpanded(!expanded)}>
-      <FaqSummary expandIcon={expanded ? <RiSubtractLine /> : <RiAddLine />}>
+      <FaqSummary
+        id={headerId}
+        aria-controls={panelId}
+        expandIcon={expanded ? <RiSubtractLine /> : <RiAddLine />}
+      >
         <Question expanded={expanded}>{question}</Question>
       </FaqSummary>
-      <Answer>{answer}</Answer>
+      <Answer id={panelId} aria-labelledby={headerId}>
+        {answer}
+      </Answer>
     </FaqItem>
   )
 }
@@ -103,9 +112,10 @@ const FaqSection: React.FC = () => (
         <SectionHeading id="faq-heading">{copy.title}</SectionHeading>
       </CenteredHeader>
       <Items>
-        {copy.items.map((item) => (
+        {copy.items.map((item, index) => (
           <FaqRow
             key={item.question}
+            index={index}
             question={item.question}
             answer={item.answer}
           />

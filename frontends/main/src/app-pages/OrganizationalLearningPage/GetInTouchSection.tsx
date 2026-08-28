@@ -10,7 +10,10 @@ import { getInTouch as copy } from "./copy"
 
 const DarkSection = styled(Section)(({ theme }) => ({
   backgroundColor: theme.custom.colors.darkGray2,
-  "&:focus": { outline: "none" },
+  "&:focus-visible": {
+    outline: `2px solid ${theme.custom.colors.red}`,
+    outlineOffset: "-2px",
+  },
 }))
 
 const Inner = styled(SectionInner)(({ theme }) => ({
