@@ -49,13 +49,28 @@ test("meta.getErrorMessage wins over errorMessage and receives error + variables
   expect(mockShowErrorToast).toHaveBeenCalledWith("Derived message")
 })
 
-test("falls back to generic copy when getErrorMessage throws", () => {
+test("falls back to errorMessage when getErrorMessage throws", () => {
+  fireError({
+    getErrorMessage: () => {
+      throw new Error("bad derivation")
+    },
+    errorMessage: "Static fallback.",
+  })
+  // The throw must not escape onError (which would leave the failure silent).
+  expect(mockShowErrorToast).toHaveBeenCalledWith("Static fallback.")
+})
+
+test("falls back to errorMessage when getErrorMessage returns blank", () => {
+  fireError({ getErrorMessage: () => "", errorMessage: "Static fallback." })
+  expect(mockShowErrorToast).toHaveBeenCalledWith("Static fallback.")
+})
+
+test("falls back to generic copy when getErrorMessage throws and there is no errorMessage", () => {
   fireError({
     getErrorMessage: () => {
       throw new Error("bad derivation")
     },
   })
-  // The throw must not escape onError (which would leave the failure silent).
   expect(mockShowErrorToast).toHaveBeenCalledWith(GENERIC_ERROR_MESSAGE)
 })
 

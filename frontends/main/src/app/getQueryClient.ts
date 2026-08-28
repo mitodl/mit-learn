@@ -35,15 +35,20 @@ const NO_RETRY_CODES = [400, 401, 403, 404, 405, 409, 422]
 /** Fallback error-toast copy when a mutation declares no `meta.errorMessage`. */
 export const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again."
 
+/** Blank/whitespace copy is treated as "no message" so a mistaken `""` never
+ * renders a blank toast. */
+const isMessage = (value: unknown): value is string =>
+  typeof value === "string" && value.trim() !== ""
+
 /**
  * Resolve the toast copy: `meta.getErrorMessage(error, variables)`, then
- * `meta.errorMessage`, then the generic fallback.
+ * `meta.errorMessage`, then the generic fallback. Each tier falls through to
+ * the next when it yields no message.
  *
  * Defensive by design: a call site's `getErrorMessage` could throw (e.g.
  * reading `error.response.data` on a network error with no response), and an
  * exception escaping `onError` would leave the failure completely silent — the
- * exact thing this handler exists to prevent. Empty/whitespace copy is treated
- * as "no message" so a mistaken `""` never renders a blank toast.
+ * exact thing this handler exists to prevent.
  */
 const resolveErrorMessage = (
   meta: MutationErrorMeta | undefined,
@@ -51,12 +56,13 @@ const resolveErrorMessage = (
   variables: unknown,
 ): string => {
   try {
-    const custom =
-      meta?.getErrorMessage?.(error, variables) ?? meta?.errorMessage
-    if (typeof custom === "string" && custom.trim() !== "") return custom
+    const custom = meta?.getErrorMessage?.(error, variables)
+    if (isMessage(custom)) return custom
   } catch {
-    // Fall through to the generic message.
+    // Fall through to the static message.
   }
+  const staticMessage = meta?.errorMessage
+  if (isMessage(staticMessage)) return staticMessage
   return GENERIC_ERROR_MESSAGE
 }
 
