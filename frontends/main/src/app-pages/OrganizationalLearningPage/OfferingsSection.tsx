@@ -16,10 +16,31 @@ import { offerings as copy } from "./copy"
 const CARD_ICONS = [RiTeamLine, RiBrain3Line, RiCodeBlock]
 
 const Band = styled(Section)(({ theme }) => ({
+  position: "relative",
+  overflow: "hidden",
   background: `linear-gradient(180deg, ${theme.custom.colors.lightGray1} 0%, ${theme.custom.colors.white} 100%)`,
 }))
 
+const Waves = styled.div(({ theme }) => ({
+  position: "absolute",
+  zIndex: 0,
+  top: 0,
+  left: "71.93%",
+  width: "49.05%",
+  aspectRatio: "822.02 / 1064.78",
+  backgroundImage:
+    "url('/images/organizational_learning/offerings-waves.svg')",
+  backgroundSize: "100% 100%",
+  backgroundRepeat: "no-repeat",
+  pointerEvents: "none",
+  [theme.breakpoints.down("md")]: {
+    display: "none",
+  },
+}))
+
 const Inner = styled(SectionInner)({
+  position: "relative",
+  zIndex: 1,
   display: "flex",
   flexDirection: "column",
   gap: "72px",
@@ -192,6 +213,7 @@ const Offers = styled.div({
 
 const OfferingsSection: React.FC = () => (
   <Band aria-labelledby="offerings-heading">
+    <Waves aria-hidden />
     <Inner>
       <CenteredHeader>
         <SectionEyebrow>{copy.eyebrow}</SectionEyebrow>
