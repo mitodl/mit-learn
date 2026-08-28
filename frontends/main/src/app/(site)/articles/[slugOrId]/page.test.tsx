@@ -1,5 +1,4 @@
 import { factories, setMockResponse, urls } from "api/test-utils"
-import { resourceDrawerSearch } from "@/common/urls"
 import { generateMetadata } from "./page"
 
 jest.mock("@/app/getQueryClient", () => {
@@ -46,7 +45,7 @@ test("resolving resource param: canonical points at the resource", async () => {
     searchParams: Promise.resolve({ resource: String(resource.id) }),
   })
 
-  expect(meta.alternates?.canonical).toContain(
-    resourceDrawerSearch(resource.id, resource.title),
-  )
+  // The drawer canonicalizes to the resource's location on Learn, whatever page
+  // it is opened over.
+  expect(meta.alternates?.canonical).toBe(resource.learn_url)
 })

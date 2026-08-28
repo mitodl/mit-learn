@@ -1,6 +1,5 @@
 import { factories, setMockResponse, urls } from "api/test-utils"
 import { nextNavigationMocks } from "ol-test-utilities/mocks/nextNavigation"
-import { resourceDrawerSearch } from "@/common/urls"
 import { generateMetadata } from "./page"
 
 jest.mock("@/app/getQueryClient", () => {
@@ -57,9 +56,9 @@ test("resolving resource param: canonical, title, description and image come fro
       alt: resource.image?.alt,
     }),
   ])
-  expect(meta.alternates?.canonical).toContain(
-    resourceDrawerSearch(resource.id, resource.title),
-  )
+  // The drawer canonicalizes to the resource's location on Learn, whatever page
+  // it is opened over.
+  expect(meta.alternates?.canonical).toBe(resource.learn_url)
 })
 
 test("dead resource param: the article not-founds", async () => {
