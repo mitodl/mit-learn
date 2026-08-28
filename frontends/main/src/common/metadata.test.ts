@@ -83,7 +83,7 @@ describe("standardizeMetadata", () => {
 describe("getMetadataAsync drawer canonical", () => {
   test("canonicalizes the drawer to the resource's learn_url", async () => {
     // A resource with no page of its own: learn_url is this drawer URL, so the
-    // canonical is self-referential, as before.
+    // canonical is self-referential.
     const resource = factories.learningResources.course({
       learn_url: "http://test.learn.odl.local:8062/search?resource=42",
     })
@@ -98,8 +98,6 @@ describe("getMetadataAsync drawer canonical", () => {
   })
 
   test("canonicalizes the drawer to a dedicated page where one exists", async () => {
-    // The point of the change: a video's drawer hands its ranking signal to the
-    // video's own page instead of competing with it.
     const resource = factories.learningResources.video({
       learn_url:
         "http://test.learn.odl.local:8062/video/6395/lecture-11?playlist=6384",

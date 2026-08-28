@@ -225,7 +225,7 @@ describe.each([
           user: { is_learning_path_editor: true },
           url: HOST_URL,
           props: {
-            resource: { ...makeResource(), learn_url: learnUrl } as never,
+            resource: { ...makeResource(), learn_url: learnUrl as string },
           },
         })
         invariant(resource)
