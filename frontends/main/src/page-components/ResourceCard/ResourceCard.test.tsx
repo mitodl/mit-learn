@@ -17,7 +17,7 @@ import {
 } from "../Dialogs/AddToListDialog"
 import type { ResourceCardProps } from "./ResourceCard"
 import { urls, factories, setMockResponse } from "api/test-utils"
-import { RESOURCE_DRAWER_PARAMS, resourceDrawerSearch } from "@/common/urls"
+import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import { slugify } from "@/common/slugs"
 import invariant from "tiny-invariant"
 import { LearningResourceCard } from "ol-components"
@@ -212,34 +212,6 @@ describe.each([
       // its drawer. The backend decides, so the card does no URL building.
       expect(link).toHaveAttribute("href", resource.learn_url)
     })
-
-    test.each([
-      { description: "absent", learnUrl: undefined },
-      { description: "blank", learnUrl: "" },
-    ])(
-      "falls back to the drawer url when learn_url is $description",
-      ({ learnUrl }) => {
-        // The card drops pushUrl along with a falsy href, so without a fallback
-        // the title would be neither a link nor clickable.
-        const { resource } = setup({
-          user: { is_learning_path_editor: true },
-          url: HOST_URL,
-          props: {
-            resource: { ...makeResource(), learn_url: learnUrl as string },
-          },
-        })
-        invariant(resource)
-
-        const link = screen.getByRole("link", {
-          name: new RegExp(resource.title),
-        })
-
-        expect(link).toHaveAttribute(
-          "href",
-          resourceDrawerSearch(resource.id, resource.title),
-        )
-      },
-    )
 
     test("Clicking the title pushes the host page's URL with the drawer params", async () => {
       const { resource, location } = setup({
