@@ -31,7 +31,7 @@ const Timeline = styled.div(({ theme }) => ({
   display: "flex",
   position: "relative",
   alignItems: "center",
-  margin: "16px 0 0",
+  margin: "16px 0 40px",
   "&::before": {
     content: '""',
     position: "absolute",
