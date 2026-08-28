@@ -1750,9 +1750,12 @@ components:
           type: string
           maxLength: 255
         url:
-          type: string
-          format: uri
-          maxLength: 2083
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 2083
+          - type: string
+            maxLength: 0
         sentiment:
           $ref: '#/components/schemas/ContentFeedbackSentimentEnum'
         comment:
@@ -1790,9 +1793,12 @@ components:
           type: string
           maxLength: 255
         url:
-          type: string
-          format: uri
-          maxLength: 2083
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 2083
+          - type: string
+            maxLength: 0
         sentiment:
           $ref: '#/components/schemas/ContentFeedbackSentimentEnum'
         comment:
@@ -1890,10 +1896,13 @@ components:
         checksum:
           type: string
         image_src:
-          type: string
-          format: uri
           nullable: true
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         resource_id:
           type: string
           readOnly: true
@@ -3557,9 +3566,12 @@ components:
             type: string
             maxLength: 128
         more_information:
-          type: string
-          format: uri
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         value_prop:
           type: string
         display_facet:
@@ -3975,10 +3987,13 @@ components:
         checksum:
           type: string
         image_src:
-          type: string
-          format: uri
           nullable: true
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         resource_id:
           type: string
           readOnly: true
@@ -5080,18 +5095,18 @@ components:
         image_file:
           type: string
           format: uri
-          readOnly: true
           nullable: true
+          readOnly: true
         image_small_file:
           type: string
           format: uri
-          readOnly: true
           nullable: true
+          readOnly: true
         image_medium_file:
           type: string
           format: uri
-          readOnly: true
           nullable: true
+          readOnly: true
         profile_image_small:
           type: string
           description: Custom getter for small profile image
@@ -6045,15 +6060,21 @@ components:
             $ref: '#/components/schemas/CaptionUrl'
           readOnly: true
         streaming_url:
-          type: string
-          format: uri
           readOnly: true
           nullable: true
+          oneOf:
+          - type: string
+            format: uri
+          - type: string
+            maxLength: 0
         cover_image_url:
-          type: string
-          format: uri
           readOnly: true
           nullable: true
+          oneOf:
+          - type: string
+            format: uri
+          - type: string
+            maxLength: 0
         duration:
           type: string
           maxLength: 11

@@ -374,10 +374,10 @@ export interface ContentFile {
   checksum?: string
   /**
    *
-   * @type {string}
+   * @type {ContentFileImageSrc}
    * @memberof ContentFile
    */
-  image_src?: string | null
+  image_src?: ContentFileImageSrc | null
   /**
    *
    * @type {string}
@@ -492,6 +492,12 @@ export const ContentFileContentTypeEnum = {
 
 export type ContentFileContentTypeEnum =
   (typeof ContentFileContentTypeEnum)[keyof typeof ContentFileContentTypeEnum]
+
+/**
+ * @type ContentFileImageSrc
+ * @export
+ */
+export type ContentFileImageSrc = string
 
 /**
  * SearchResponseSerializer with OpenAPI annotations for Content Files search
@@ -4311,10 +4317,10 @@ export interface LearningResourceOfferorDetail {
   content_types?: Array<string>
   /**
    *
-   * @type {string}
+   * @type {LearningResourceOfferorDetailMoreInformation}
    * @memberof LearningResourceOfferorDetail
    */
-  more_information?: string
+  more_information?: LearningResourceOfferorDetailMoreInformation
   /**
    *
    * @type {string}
@@ -4328,6 +4334,12 @@ export interface LearningResourceOfferorDetail {
    */
   display_facet?: boolean
 }
+/**
+ * @type LearningResourceOfferorDetailMoreInformation
+ * @export
+ */
+export type LearningResourceOfferorDetailMoreInformation = string
+
 /**
  * Serializer for LearningResourceOfferor with basic details
  * @export
@@ -5384,10 +5396,10 @@ export interface NestedContentFile {
   checksum?: string
   /**
    *
-   * @type {string}
+   * @type {ContentFileImageSrc}
    * @memberof NestedContentFile
    */
-  image_src?: string | null
+  image_src?: ContentFileImageSrc | null
   /**
    *
    * @type {string}
@@ -6514,11 +6526,17 @@ export interface PatchedWebsiteContentRequest {
   is_published?: boolean
   /**
    *
-   * @type {string}
+   * @type {PatchedWebsiteContentRequestSlug}
    * @memberof PatchedWebsiteContentRequest
    */
-  slug?: string
+  slug?: PatchedWebsiteContentRequestSlug
 }
+
+/**
+ * @type PatchedWebsiteContentRequestSlug
+ * @export
+ */
+export type PatchedWebsiteContentRequestSlug = string
 
 /**
  * Serializer for PercolateQuery objects
@@ -9380,16 +9398,16 @@ export interface Video {
   caption_urls: Array<CaptionUrl>
   /**
    *
-   * @type {string}
+   * @type {VideoStreamingUrl}
    * @memberof Video
    */
-  streaming_url: string | null
+  streaming_url: VideoStreamingUrl | null
   /**
    *
-   * @type {string}
+   * @type {VideoStreamingUrl}
    * @memberof Video
    */
-  cover_image_url: string | null
+  cover_image_url: VideoStreamingUrl | null
   /**
    *
    * @type {string}
@@ -10435,6 +10453,12 @@ export type VideoResourceResourceTypeEnum =
   (typeof VideoResourceResourceTypeEnum)[keyof typeof VideoResourceResourceTypeEnum]
 
 /**
+ * @type VideoStreamingUrl
+ * @export
+ */
+export type VideoStreamingUrl = string
+
+/**
  * Serializer for webhook responses.
  * @export
  * @interface WebhookResponse
@@ -10527,16 +10551,16 @@ export interface WebsiteContent {
   is_published?: boolean
   /**
    *
-   * @type {string}
+   * @type {PatchedWebsiteContentRequestSlug}
    * @memberof WebsiteContent
    */
-  slug?: string
+  slug?: PatchedWebsiteContentRequestSlug
   /**
    *
-   * @type {string}
+   * @type {WebsiteContentCoverImage}
    * @memberof WebsiteContent
    */
-  cover_image: string
+  cover_image: WebsiteContentCoverImage
 }
 
 /**
@@ -10563,6 +10587,12 @@ export const WebsiteContentContentTypeEnum = {
 
 export type WebsiteContentContentTypeEnum =
   (typeof WebsiteContentContentTypeEnum)[keyof typeof WebsiteContentContentTypeEnum]
+
+/**
+ * @type WebsiteContentCoverImage
+ * @export
+ */
+export type WebsiteContentCoverImage = string
 
 /**
  * Serializer for WebsiteContent model.
@@ -10602,10 +10632,10 @@ export interface WebsiteContentRequest {
   is_published?: boolean
   /**
    *
-   * @type {string}
+   * @type {PatchedWebsiteContentRequestSlug}
    * @memberof WebsiteContentRequest
    */
-  slug?: string
+  slug?: PatchedWebsiteContentRequestSlug
 }
 
 /**

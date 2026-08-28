@@ -10350,10 +10350,13 @@ components:
         checksum:
           type: string
         image_src:
-          type: string
-          format: uri
           nullable: true
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         resource_id:
           type: string
           readOnly: true
@@ -13033,9 +13036,12 @@ components:
             type: string
             maxLength: 128
         more_information:
-          type: string
-          format: uri
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         value_prop:
           type: string
         display_facet:
@@ -13839,10 +13845,13 @@ components:
         checksum:
           type: string
         image_src:
-          type: string
-          format: uri
           nullable: true
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         resource_id:
           type: string
           readOnly: true
@@ -14616,9 +14625,12 @@ components:
         is_published:
           type: boolean
         slug:
-          type: string
-          maxLength: 60
-          pattern: ^[-a-zA-Z0-9_]+$
+          oneOf:
+          - type: string
+            maxLength: 60
+            pattern: ^[-a-zA-Z0-9_]+$
+          - type: string
+            maxLength: 0
     PercolateQuery:
       type: object
       description: Serializer for PercolateQuery objects
@@ -16799,15 +16811,21 @@ components:
             $ref: '#/components/schemas/CaptionUrl'
           readOnly: true
         streaming_url:
-          type: string
-          format: uri
           readOnly: true
           nullable: true
+          oneOf:
+          - type: string
+            format: uri
+          - type: string
+            maxLength: 0
         cover_image_url:
-          type: string
-          format: uri
           readOnly: true
           nullable: true
+          oneOf:
+          - type: string
+            format: uri
+          - type: string
+            maxLength: 0
         duration:
           type: string
           maxLength: 11
@@ -17756,15 +17774,21 @@ components:
         is_published:
           type: boolean
         slug:
-          type: string
-          maxLength: 60
-          pattern: ^[-a-zA-Z0-9_]+$
+          oneOf:
+          - type: string
+            maxLength: 60
+            pattern: ^[-a-zA-Z0-9_]+$
+          - type: string
+            maxLength: 0
         cover_image:
-          type: string
-          format: uri
           readOnly: true
-          default: ''
-          maxLength: 2083
+          oneOf:
+          - type: string
+            format: uri
+            default: ''
+            maxLength: 2083
+          - type: string
+            maxLength: 0
       required:
       - cover_image
       - created_on
@@ -17811,8 +17835,11 @@ components:
         is_published:
           type: boolean
         slug:
-          type: string
-          maxLength: 60
-          pattern: ^[-a-zA-Z0-9_]+$
+          oneOf:
+          - type: string
+            maxLength: 60
+            pattern: ^[-a-zA-Z0-9_]+$
+          - type: string
+            maxLength: 0
       required:
       - title
