@@ -10,7 +10,6 @@ import { programsQueries } from "api/mitxonline-hooks/programs"
 import { notFound } from "next/navigation"
 import { HeadingIds, parseReqTree, RequirementData } from "./util"
 import useReqTreeChildren from "./useReqTreeChildren"
-import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
@@ -268,13 +267,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       imageSrc={imageSrc}
       videoUrl={page.video_url}
       enrollmentAction={<ProgramHeaderEnrollButton program={program} />}
-      showStayUpdated={
-        program.enrollment_modes.length > 0 &&
-        (page.show_stay_updated ?? false) &&
-        program.enrollment_modes.every((mode) =>
-          isVerifiedEnrollmentMode(mode.mode_slug),
-        )
-      }
+      showStayUpdated={page.show_stay_updated ?? false}
       resource={{
         readable_id: program.readable_id,
         resource_type: "program",

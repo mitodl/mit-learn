@@ -9,7 +9,6 @@ import { programsQueries } from "api/mitxonline-hooks/programs"
 import { notFound } from "next/navigation"
 import { HeadingIds, parseReqTree } from "./util"
 import type { RequirementItem } from "./util"
-import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import useReqTreeChildren from "./useReqTreeChildren"
 import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
@@ -242,13 +241,7 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
       enrollmentAction={
         <ProgramHeaderEnrollButton program={program} displayAsCourse />
       }
-      showStayUpdated={
-        program.enrollment_modes.length > 0 &&
-        (page.show_stay_updated ?? false) &&
-        program.enrollment_modes.every((mode) =>
-          isVerifiedEnrollmentMode(mode.mode_slug),
-        )
-      }
+      showStayUpdated={page.show_stay_updated ?? false}
       resource={{
         readable_id: program.readable_id,
         resource_type: "program",
