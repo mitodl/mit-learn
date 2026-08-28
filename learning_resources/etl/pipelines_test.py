@@ -220,9 +220,11 @@ def test_podcast_etl():
         mock_extract, mock_transform, mock_load_podcasts = patches
         result = pipelines.podcast_etl()
 
-    mock_extract.assert_called_once_with()
+    mock_extract.assert_called_once_with(tracked_ids=[])
     mock_transform.assert_called_once_with(mock_extract.return_value)
-    mock_load_podcasts.assert_called_once_with(mock_transform.return_value)
+    mock_load_podcasts.assert_called_once_with(
+        mock_transform.return_value, tracked_ids=[]
+    )
 
     assert result == mock_load_podcasts.return_value
 

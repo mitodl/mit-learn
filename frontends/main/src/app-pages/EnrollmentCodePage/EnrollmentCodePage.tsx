@@ -8,6 +8,7 @@ import {
 } from "@/common/mitxonline"
 import * as urls from "@/common/urls"
 import { useB2BAttachMutation } from "api/mitxonline-hooks/organizations"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { userQueries } from "api/hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next-nprogress-bar"
@@ -24,9 +25,14 @@ const InterstitialMessage = styled(Typography)(({ theme }) => ({
 const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
   const router = useRouter()
 
-  const enrollment = useB2BAttachMutation({
-    enrollment_code: code,
-  })
+  // Failure redirects to an error page (onError below), so suppress the global
+  // error toast.
+  const enrollment = useB2BAttachMutation(
+    {
+      enrollment_code: code,
+    },
+    { meta: SILENCE_ERROR_TOAST },
+  )
 
   const { isLoading: userLoading, data: user } = useQuery({
     ...userQueries.me(),

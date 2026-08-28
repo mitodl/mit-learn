@@ -22,6 +22,8 @@ export { default as AccordionSummary } from "@mui/material/AccordionSummary"
 export type { AccordionSummaryProps } from "@mui/material/AccordionSummary"
 export { default as AccordionDetails } from "@mui/material/AccordionDetails"
 export type { AccordionDetailsProps } from "@mui/material/AccordionDetails"
+export { default as Snackbar } from "@mui/material/Snackbar"
+export type { SnackbarProps } from "@mui/material/Snackbar"
 
 export { default as AppBar } from "@mui/material/AppBar"
 export type { AppBarProps } from "@mui/material/AppBar"

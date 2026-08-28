@@ -7,7 +7,7 @@ export const metadata: Metadata = standardizeMetadata({
   title: "Shopping Cart",
 })
 
-const Page: React.FC<PageProps<"/cart">> = () => {
+const Page: React.FC = () => {
   return <CartPage />
 }
 

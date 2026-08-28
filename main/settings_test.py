@@ -330,6 +330,55 @@ class TestSettings(TestCase):
         ):
             self.reload_settings(module="main.settings_celery")
 
+    def test_program_certificates_beat_entry_absent_without_starrocks_host(self):
+        """The certificate-sync beat entry isn't registered when StarRocks
+        isn't configured, so it can't fail on every tick in an environment
+        without warehouse connectivity.
+        """
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            assert (
+                "warehouse-sync-program-certificates-every-1-days"
+                not in settings_vars["CELERY_BEAT_SCHEDULE"]
+            )
+
+    def test_program_certificates_beat_entry_absent_with_only_starrocks_host(self):
+        """STARROCKS_HOST alone isn't enough — _connect_starrocks also
+        requires STARROCKS_USER, so gating on host alone would schedule a
+        task that fails every run with ImproperlyConfigured.
+        """
+        with mock.patch.dict(
+            "os.environ",
+            {**REQUIRED_SETTINGS, "STARROCKS_HOST": "starrocks.example.com"},
+            clear=True,
+        ):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            assert (
+                "warehouse-sync-program-certificates-every-1-days"
+                not in settings_vars["CELERY_BEAT_SCHEDULE"]
+            )
+
+    def test_program_certificates_beat_entry_present_with_starrocks_configured(self):
+        """The certificate-sync beat entry is registered once StarRocks is
+        fully configured (host and user), pointing at
+        profiles.tasks.SyncProgramCertificatesTask.
+        """
+        with mock.patch.dict(
+            "os.environ",
+            {
+                **REQUIRED_SETTINGS,
+                "STARROCKS_HOST": "starrocks.example.com",
+                "STARROCKS_USER": "testuser",
+            },
+            clear=True,
+        ):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            entry = settings_vars["CELERY_BEAT_SCHEDULE"][
+                "warehouse-sync-program-certificates-every-1-days"
+            ]
+            assert entry["task"] == "profiles.tasks.SyncProgramCertificatesTask"
+            assert entry["kwargs"] == {"full_refresh": True}
+
     def _assert_s3_storage_config(
         self,
         storages_dict,

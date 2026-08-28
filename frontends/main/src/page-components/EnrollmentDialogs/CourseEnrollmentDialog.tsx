@@ -26,6 +26,7 @@ import {
   priceWithDiscount,
 } from "@/common/mitxonline"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import { useRouter } from "next-nprogress-bar"
@@ -207,7 +208,9 @@ const CertificateUpsell: React.FC<{
   const enabled =
     (enrollmentType === "both" || enrollmentType === "paid") &&
     !!(product && courseRun && canPurchaseRun(courseRun))
-  const replaceBasketItem = useReplaceBasketItem()
+  // Renders its own inline error below (replaceBasketItem.isError), so suppress
+  // the global error toast.
+  const replaceBasketItem = useReplaceBasketItem({ meta: SILENCE_ERROR_TOAST })
   const userFlexiblePrice = useQuery({
     ...productQueries.userFlexiblePriceDetail({
       productId: product?.id ?? 0,
@@ -329,7 +332,9 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
   const [chosenRun, setChosenRun] = React.useState<string>(getDefaultOption)
   const run = course.courseruns.find((r) => `${r.id}` === chosenRun)
   const enrollmentType = getEnrollmentType(run?.enrollment_modes)
-  const createEnrollment = useCreateEnrollment()
+  // Renders its own inline error below (createEnrollment.isError), so suppress
+  // the global error toast.
+  const createEnrollment = useCreateEnrollment({ meta: SILENCE_ERROR_TOAST })
   const router = useRouter()
   // The "Add to Cart" path inside CertificateUpsell is gated by
   // useReplaceBasketItem; this free-enrollment submit gates here.

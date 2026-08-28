@@ -10,12 +10,11 @@ import {
   standardizeMetadata,
   MetadataNotFound,
 } from "@/common/metadata"
+import type { AppPageProps } from "@/common/searchParams"
 
 export const generateMetadata = ({
   params,
-}: {
-  params: Promise<{ id: string }>
-}) =>
+}: AppPageProps<"/podcast/embed/[id]">) =>
   safeGenerateMetadata(async () => {
     const { id } = await params
     const episodeId = Number(id)
@@ -40,7 +39,7 @@ export const generateMetadata = ({
     })
   })
 
-const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
+const Page = async ({ params }: AppPageProps<"/podcast/embed/[id]">) => {
   const { id } = await params
   const episodeId = Number(id)
   if (!Number.isInteger(episodeId) || episodeId <= 0) {

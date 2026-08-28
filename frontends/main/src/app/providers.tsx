@@ -15,6 +15,7 @@ import { AppProgressBar as ProgressBar } from "next-nprogress-bar"
 import type { NProgressOptions } from "next-nprogress-bar"
 import { ReloadOnUserChange } from "@/page-components/ReloadOnUserChange/ReloadOnUserChange"
 import { PublicEnvInsertedHtml } from "./components/PublicEnvInsertedHtml"
+import { Toaster } from "@/page-components/Toaster/Toaster"
 
 const PROGRESS_BAR_OPTS: NProgressOptions = { showSpinner: false }
 
@@ -39,6 +40,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             <NiceModalProvider>
               <ComplianceGateProvider>{children}</ComplianceGateProvider>
             </NiceModalProvider>
+            <Toaster />
           </ThemeProvider>
         </NextJsAppRouterCacheProvider>
       </QueryClientProvider>

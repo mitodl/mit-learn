@@ -429,10 +429,10 @@ export interface ContentFeedback {
   unit_title?: string
   /**
    *
-   * @type {string}
+   * @type {ContentFeedbackUrl}
    * @memberof ContentFeedback
    */
-  url?: string
+  url?: ContentFeedbackUrl
   /**
    *
    * @type {ContentFeedbackSentimentEnum}
@@ -491,10 +491,10 @@ export interface ContentFeedbackRequest {
   unit_title?: string
   /**
    *
-   * @type {string}
+   * @type {ContentFeedbackUrl}
    * @memberof ContentFeedbackRequest
    */
-  url?: string
+  url?: ContentFeedbackUrl
   /**
    *
    * @type {ContentFeedbackSentimentEnum}
@@ -538,6 +538,12 @@ export const ContentFeedbackSentimentEnum = {
 
 export type ContentFeedbackSentimentEnum =
   (typeof ContentFeedbackSentimentEnum)[keyof typeof ContentFeedbackSentimentEnum]
+
+/**
+ * @type ContentFeedbackUrl
+ * @export
+ */
+export type ContentFeedbackUrl = string
 
 /**
  * Serializer class for course run ContentFiles
@@ -679,10 +685,10 @@ export interface ContentFile {
   checksum?: string
   /**
    *
-   * @type {string}
+   * @type {ContentFileImageSrc}
    * @memberof ContentFile
    */
-  image_src?: string | null
+  image_src?: ContentFileImageSrc | null
   /**
    *
    * @type {string}
@@ -797,6 +803,12 @@ export const ContentFileContentTypeEnum = {
 
 export type ContentFileContentTypeEnum =
   (typeof ContentFileContentTypeEnum)[keyof typeof ContentFileContentTypeEnum]
+
+/**
+ * @type ContentFileImageSrc
+ * @export
+ */
+export type ContentFileImageSrc = string
 
 /**
  * SearchResponseSerializer with OpenAPI annotations for Content Files search
@@ -1066,6 +1078,12 @@ export interface CourseResource {
    * @memberof CourseResource
    */
   best_run_id: number | null
+  /**
+   * Where this resource lives within Learn
+   * @type {string}
+   * @memberof CourseResource
+   */
+  learn_url: string
   /**
    *
    * @type {CourseResourceResourceTypeEnum}
@@ -1839,6 +1857,12 @@ export interface DocumentResource {
    */
   best_run_id: number | null
   /**
+   * Where this resource lives within Learn
+   * @type {string}
+   * @memberof DocumentResource
+   */
+  learn_url: string
+  /**
    *
    * @type {DocumentResourceResourceTypeEnum}
    * @memberof DocumentResource
@@ -2492,6 +2516,12 @@ export interface LearningPathResource {
    */
   best_run_id: number | null
   /**
+   * Where this resource lives within Learn
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  learn_url: string
+  /**
    *
    * @type {LearningPathResourceResourceTypeEnum}
    * @memberof LearningPathResource
@@ -2903,10 +2933,10 @@ export interface LearningResourceOfferorDetail {
   content_types?: Array<string>
   /**
    *
-   * @type {string}
+   * @type {LearningResourceOfferorDetailMoreInformation}
    * @memberof LearningResourceOfferorDetail
    */
-  more_information?: string
+  more_information?: LearningResourceOfferorDetailMoreInformation
   /**
    *
    * @type {string}
@@ -2920,6 +2950,12 @@ export interface LearningResourceOfferorDetail {
    */
   display_facet?: boolean
 }
+/**
+ * @type LearningResourceOfferorDetailMoreInformation
+ * @export
+ */
+export type LearningResourceOfferorDetailMoreInformation = string
+
 /**
  * Serializer for LearningResourcePlatform
  * @export
@@ -3443,10 +3479,10 @@ export interface NestedContentFile {
   checksum?: string
   /**
    *
-   * @type {string}
+   * @type {ContentFileImageSrc}
    * @memberof NestedContentFile
    */
-  image_src?: string | null
+  image_src?: ContentFileImageSrc | null
   /**
    *
    * @type {string}
@@ -4277,6 +4313,12 @@ export interface PodcastEpisodeResource {
    */
   best_run_id: number | null
   /**
+   * Where this resource lives within Learn
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  learn_url: string
+  /**
    *
    * @type {PodcastEpisodeResourceResourceTypeEnum}
    * @memberof PodcastEpisodeResource
@@ -4589,6 +4631,12 @@ export interface PodcastResource {
    * @memberof PodcastResource
    */
   best_run_id: number | null
+  /**
+   * Where this resource lives within Learn
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  learn_url: string
   /**
    *
    * @type {PodcastResourceResourceTypeEnum}
@@ -5316,6 +5364,12 @@ export interface ProgramResource {
    * @memberof ProgramResource
    */
   best_run_id: number | null
+  /**
+   * Where this resource lives within Learn
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  learn_url: string
   /**
    *
    * @type {ProgramResourceResourceTypeEnum}
@@ -6174,16 +6228,16 @@ export interface Video {
   caption_urls: Array<CaptionUrl>
   /**
    *
-   * @type {string}
+   * @type {VideoStreamingUrl}
    * @memberof Video
    */
-  streaming_url: string | null
+  streaming_url: VideoStreamingUrl | null
   /**
    *
-   * @type {string}
+   * @type {VideoStreamingUrl}
    * @memberof Video
    */
-  cover_image_url: string | null
+  cover_image_url: VideoStreamingUrl | null
   /**
    *
    * @type {string}
@@ -6391,6 +6445,12 @@ export interface VideoPlaylistResource {
    * @memberof VideoPlaylistResource
    */
   best_run_id: number | null
+  /**
+   * Where this resource lives within Learn
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  learn_url: string
   /**
    *
    * @type {VideoPlaylistResourceResourceTypeEnum}
@@ -6705,6 +6765,12 @@ export interface VideoResource {
    */
   best_run_id: number | null
   /**
+   * Where this resource lives within Learn
+   * @type {string}
+   * @memberof VideoResource
+   */
+  learn_url: string
+  /**
    *
    * @type {VideoResourceResourceTypeEnum}
    * @memberof VideoResource
@@ -6896,6 +6962,12 @@ export const VideoResourceResourceTypeEnum = {
 
 export type VideoResourceResourceTypeEnum =
   (typeof VideoResourceResourceTypeEnum)[keyof typeof VideoResourceResourceTypeEnum]
+
+/**
+ * @type VideoStreamingUrl
+ * @export
+ */
+export type VideoStreamingUrl = string
 
 /**
  * WidgetInstance serializer

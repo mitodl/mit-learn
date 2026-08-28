@@ -1,5 +1,3 @@
-import { factories } from "api/mitxonline-test-utils"
-import type { EnrollmentMode } from "@mitodl/mitxonline-api-axios/v2"
 import { faker } from "@faker-js/faker/locale/en"
 
 export const STAY_UPDATED_FORM_ID = faker.string.uuid()
@@ -24,30 +22,3 @@ export const useStayUpdatedEnv = () => {
     }
   })
 }
-
-/**
- * Shared test.each cases for the "Stay Updated button is hidden" scenarios on
- * program-level enrollment_modes (used by ProgramPage and ProgramAsCoursePage).
- */
-export const PROGRAM_HIDE_STAY_UPDATED_CASES: {
-  label: string
-  enrollment_modes: EnrollmentMode[]
-}[] = [
-  {
-    label: "program has a non-verified enrollment mode",
-    enrollment_modes: [
-      factories.courses.enrollmentMode({ mode_slug: "audit" }),
-    ],
-  },
-  {
-    label: "program has mixed verified and non-verified modes",
-    enrollment_modes: [
-      factories.courses.enrollmentMode({ mode_slug: "verified" }),
-      factories.courses.enrollmentMode({ mode_slug: "audit" }),
-    ],
-  },
-  {
-    label: "program has no enrollment modes",
-    enrollment_modes: [],
-  },
-]

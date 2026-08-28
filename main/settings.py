@@ -36,7 +36,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.77.11"
+VERSION = "0.77.15"
 
 log = logging.getLogger()
 
@@ -294,7 +294,13 @@ DATABASES = {"default": DEFAULT_DATABASE_CONFIG}
 
 DATABASE_ROUTERS = ["main.routers.ExternalSchemaRouter"]
 
-EXTERNAL_MODELS = ["programcertificate"]
+# "programcertificate" was removed from here deliberately (was
+# EXTERNAL_MODELS = ["programcertificate"]): this app is now the writer of
+# that table (profiles.tasks.SyncProgramCertificatesTask, replacing the
+# Hightouch sync per mitodl/hq#12954) rather than a read-only consumer of
+# rows Hightouch wrote. If another external-schema, write-once-elsewhere
+# model needs the same protection in the future, add it here.
+EXTERNAL_MODELS = []
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.8/topics/i18n/
@@ -883,6 +889,17 @@ VECTOR_SEARCH_PAGE_MAX_LIMIT = get_int("VECTOR_SEARCH_PAGE_MAX_LIMIT", 200)
 # a fixed budget demotes them without erasing the relevance signal.
 VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = get_float(
     name="VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT", default=0.05
+)
+
+# Score subtracted from a resource that is VECTOR_SEARCH_STALENESS_HORIZON_YEARS
+# or more old in vector search, ramped linearly by age. 0 disables the penalty.
+VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = get_float(
+    name="VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT", default=0.05
+)
+
+# Age at which a resource takes the full VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT;
+VECTOR_SEARCH_STALENESS_HORIZON_YEARS = get_float(
+    name="VECTOR_SEARCH_STALENESS_HORIZON_YEARS", default=20
 )
 
 # serve learning resource search hits from the Qdrant payload instead of

@@ -373,8 +373,19 @@ class LearningResourceViewSet(
             # we don't use `self.get_queryset()` here because there are incomplatible
             # `select_related()` invocations and we don't need related data anyway
             LearningResource.objects.filter(published=True)
-            # a deferred field the serializer reads costs a query per row
-            .only("id", "last_modified", "url", "title", "resource_type")
+            # a deferred field the serializer reads costs a query per row.
+            # learn_url needs readable_id and resource_category; platform's PK
+            # *is* its code, so platform_id resolves without a join.
+            .only(
+                "id",
+                "last_modified",
+                "url",
+                "title",
+                "resource_type",
+                "readable_id",
+                "resource_category",
+                "platform",
+            )
             .with_canonical_parent_ids()
             .distinct()
             # Deterministic order so offset pagination has stable page

@@ -5,6 +5,7 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { userQueries } from "api/hooks/user"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import { enrollmentAlertSuccessUrl } from "@/common/mitxonline"
@@ -60,8 +61,10 @@ export const useCourseEnrollment = (
   const { runIds: enrolledRunIds, isLoading: enrollmentsIsLoading } =
     useCourseEnrolledRunIds(course)
 
-  const replaceBasketItem = useReplaceBasketItem()
-  const createEnrollment = useCreateEnrollment()
+  // This area renders its own inline enrollment-failure alert (see
+  // EnrollOfferingBoxes `isError`), so suppress the global error toast.
+  const replaceBasketItem = useReplaceBasketItem({ meta: SILENCE_ERROR_TOAST })
+  const createEnrollment = useCreateEnrollment({ meta: SILENCE_ERROR_TOAST })
   const router = useRouter()
   const posthog = usePostHog()
   // Paid enrollments are gated inside useReplaceBasketItem; the free track

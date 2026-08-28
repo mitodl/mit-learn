@@ -1,6 +1,8 @@
 """Tests for Podcast ETL functions"""
 
 import datetime
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from unittest.mock import Mock
 
 import pytest
@@ -9,7 +11,8 @@ from bs4 import BeautifulSoup as bs  # noqa: N813
 from dateutil.tz import tzutc
 from django.conf import settings
 from freezegun import freeze_time
-from requests.exceptions import HTTPError
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import HTTPError, Timeout
 
 from learning_resources.constants import Availability, LearningResourceType, OfferedBy
 from learning_resources.etl.constants import ETLSource
@@ -75,7 +78,7 @@ def mock_rss_request(mocker):
     """
 
     mocker.patch(
-        "learning_resources.etl.podcast.requests.get",
+        "learning_resources.etl.podcast.requests.Session.get",
         side_effect=[mocker.Mock(content=rss_content())],
     )
 
@@ -87,7 +90,7 @@ def mock_rss_request_with_bad_rss_file(mocker):
     """
 
     mocker.patch(
-        "learning_resources.etl.podcast.requests.get",
+        "learning_resources.etl.podcast.requests.Session.get",
         side_effect=[mocker.Mock(content=""), mocker.Mock(content=rss_content())],
     )
 
@@ -237,32 +240,12 @@ def test_transform_with_error(mocker, mock_github_client):
     assert results[0]["url"] == "http://website.url/podcast"
 
 
-def test_extract_connection_reset_error(mocker, mock_github_client):
-    """Test extract handles ConnectionResetError gracefully"""
-    mock_warning_log = mocker.patch("learning_resources.etl.podcast.log.warning")
-    mocker.patch(
-        "learning_resources.etl.podcast.requests.get",
-        side_effect=ConnectionResetError,
-    )
-    podcast_list = [mock_podcast_file()]
-    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = (
-        podcast_list
-    )
-
-    results = list(extract())
-
-    assert results == []
-    mock_warning_log.assert_called_once_with(
-        "Connection reset error for rss url %s", "http://website.url/podcast/rss.xml"
-    )
-
-
-@pytest.mark.parametrize("exception_cls", [ConnectionError, HTTPError])
-def test_extract_connection_error(mocker, mock_github_client, exception_cls):
-    """Test extract handles ConnectionError and HTTPError gracefully"""
+@pytest.mark.parametrize("exception_cls", [RequestsConnectionError, HTTPError, Timeout])
+def test_extract_request_error(mocker, mock_github_client, exception_cls):
+    """Test extract logs and skips a feed that can't be fetched"""
     mock_exception_log = mocker.patch("learning_resources.etl.podcast.log.exception")
     mocker.patch(
-        "learning_resources.etl.podcast.requests.get",
+        "learning_resources.etl.podcast.requests.Session.get",
         side_effect=exception_cls,
     )
     podcast_list = [mock_podcast_file()]
@@ -274,8 +257,111 @@ def test_extract_connection_error(mocker, mock_github_client, exception_cls):
 
     assert results == []
     mock_exception_log.assert_called_once_with(
-        "Invalid rss url %s", "http://website.url/podcast/rss.xml"
+        "Could not fetch rss url %s", "http://website.url/podcast/rss.xml"
     )
+
+
+def test_extract_retries_a_transient_status(
+    mock_github_client, rss_server, mocked_responses
+):
+    """A 503 should be retried rather than costing the feed"""
+    rss_url, hits = rss_server(failures=1)
+    mocked_responses.add_passthru("http://127.0.0.1")
+    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = [
+        mock_podcast_file(rss_url=rss_url)
+    ]
+
+    results = list(extract())
+
+    assert len(results) == 1
+    assert results[0][0].channel.title.text == "A Podcast"
+    assert len(hits) == 2
+
+
+def test_extract_stops_after_the_retry_limit(
+    mock_github_client, rss_server, mocked_responses
+):
+    """A feed that keeps failing is attempted a bounded number of times"""
+    rss_url, hits = rss_server(failures=99)
+    mocked_responses.add_passthru("http://127.0.0.1")
+    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = [
+        mock_podcast_file(rss_url=rss_url)
+    ]
+
+    assert list(extract()) == []
+    assert len(hits) == 3
+
+
+def test_extract_passes_timeout(mocker, mock_github_client):
+    """Test extract sets connect and read timeouts"""
+    mock_get = mocker.patch(
+        "learning_resources.etl.podcast.requests.Session.get",
+        return_value=mocker.Mock(content=rss_content()),
+    )
+    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = [
+        mock_podcast_file()
+    ]
+
+    list(extract())
+
+    connect_timeout, read_timeout = mock_get.call_args.kwargs["timeout"]
+    assert connect_timeout > 0
+    assert read_timeout == settings.REQUESTS_TIMEOUT
+
+
+@pytest.fixture
+def rss_server():
+    """
+    Serve the test feed from a local socket, after N failed responses.
+
+    The retry adapter lives below Session.get, so the tests that patch it
+    can't see retries at all - this is the only way to exercise them.
+    """
+    servers = []
+
+    def start(*, failures):
+        hits = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                hits.append(self.path)
+                body = b"" if len(hits) <= failures else rss_content().encode()
+                self.send_response(503 if len(hits) <= failures else 200)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *args):
+                """Keep the test output quiet"""
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        servers.append(server)
+        return f"http://127.0.0.1:{server.server_port}/rss.xml", hits
+
+    yield start
+
+    for server in servers:
+        server.shutdown()
+
+
+def test_extract_unreachable_feed(mocker, mock_github_client):
+    """An unreachable feed should be tracked, and not stop the feeds after it"""
+    mocker.patch(
+        "learning_resources.etl.podcast.requests.Session.get",
+        side_effect=[RequestsConnectionError, mocker.Mock(content=rss_content())],
+    )
+    good_config = mock_podcast_file(rss_url="http://website.url/good/rss.xml")
+    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = [
+        mock_podcast_file(rss_url="http://unreachable.url/rss.xml"),
+        good_config,
+    ]
+    tracked_ids = []
+
+    assert list(extract(tracked_ids=tracked_ids)) == [
+        (bs(rss_content(), "xml"), yaml.safe_load(good_config.decoded_content))
+    ]
+    assert tracked_ids == ["unreachable.url/rss.xml", "website.url/good/rss.xml"]
 
 
 @pytest.mark.django_db
@@ -342,6 +428,9 @@ def test_github_podcast_config_files(settings, mock_github_client):
     assert len(results) == 2
 
 
+MISSING_RSS_URL = "Required key 'rss_url' is not present or not a url"
+
+
 @pytest.mark.parametrize(
     ("config", "errors"),
     [
@@ -351,6 +440,11 @@ def test_github_podcast_config_files(settings, mock_github_client):
             ["Podcast data should be a dict"],
         ),
         (None, ["podcast config data is empty"]),
+        ({"website": "http://test.edu"}, [MISSING_RSS_URL]),
+        # a bare `rss_url:` in the yaml, or a non-string scalar
+        ({"rss_url": None}, [MISSING_RSS_URL]),
+        ({"rss_url": ""}, [MISSING_RSS_URL]),
+        ({"rss_url": 123}, [MISSING_RSS_URL]),
         ({"rss_url": "http://test.edu", "website": "http://test.edu"}, []),
     ],
 )

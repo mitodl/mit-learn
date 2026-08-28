@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import { userQueries } from "api/hooks/user"
 import { useCreateProgramEnrollment } from "api/mitxonline-hooks/enrollment"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import { enrollmentAlertSuccessUrl } from "@/common/mitxonline"
@@ -48,8 +49,12 @@ export const useProgramEnrollment = (
   const { isEnrolled, isLoading: enrollmentsIsLoading } =
     useProgramIsEnrolled(program)
 
-  const replaceBasketItem = useReplaceBasketItem()
-  const createProgramEnrollment = useCreateProgramEnrollment()
+  // This area renders its own inline enrollment-failure alert (see
+  // EnrollOfferingBoxes `isError`), so suppress the global error toast.
+  const replaceBasketItem = useReplaceBasketItem({ meta: SILENCE_ERROR_TOAST })
+  const createProgramEnrollment = useCreateProgramEnrollment({
+    meta: SILENCE_ERROR_TOAST,
+  })
   const router = useRouter()
   const posthog = usePostHog()
   // Paid enrollments are gated inside useReplaceBasketItem; the free track

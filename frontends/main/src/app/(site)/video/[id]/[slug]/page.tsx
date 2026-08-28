@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import {
@@ -24,7 +25,7 @@ import {
   videoDetailPageView,
 } from "@/common/urls"
 
-type Props = PageProps<"/video/[id]/[slug]">
+type Props = AppPageProps<"/video/[id]/[slug]">
 
 export const generateMetadata = async (props: Props) => {
   const { id } = await props.params

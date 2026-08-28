@@ -4,6 +4,7 @@ import {
   type UseResourceSearchParamsProps,
 } from "@mitodl/course-search-utils"
 import { LearningResourcesSearchRetrieveAggregationsEnum } from "api"
+import type { RegisteredSearchParams } from "@/common/searchParams"
 
 export const defaultFacetNames = [
   "resource_type",
@@ -26,7 +27,7 @@ const ALL_FACETS = Object.values(
 ).filter((name) => !NON_FACET_PARAMS.has(name)) as (keyof Facets)[]
 
 export const getExtraFacetNames = (
-  searchParams: URLSearchParams,
+  searchParams: RegisteredSearchParams,
   baseFacetNames: UseResourceSearchParamsProps["facets"] = defaultFacetNames,
 ): UseResourceSearchParamsProps["facets"] => {
   const base = new Set<string>(baseFacetNames ?? [])

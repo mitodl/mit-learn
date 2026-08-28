@@ -1,8 +1,9 @@
+import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import ProgramContent from "@/app-pages/DashboardPage/ProgramContent"
 import { notFound } from "next/navigation"
 
-const Page: React.FC<PageProps<"/dashboard/program/[id]">> = async ({
+const Page: React.FC<AppPageProps<"/dashboard/program/[id]">> = async ({
   params,
 }) => {
   const resolved = await params

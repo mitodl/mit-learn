@@ -2,10 +2,12 @@
 
 import logging
 import re
+import unicodedata
 from collections import defaultdict
 from functools import cache
 from shutil import which
 from typing import TYPE_CHECKING
+from urllib.parse import quote, urlencode
 
 import html2text
 import rapidjson
@@ -25,6 +27,7 @@ from learning_resources.constants import (
     GROUP_STAFF_LISTS_EDITORS,
     LearningResourceRelationTypes,
     LearningResourceType,
+    PlatformType,
     semester_mapping,
 )
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE
@@ -40,7 +43,7 @@ from learning_resources.models import (
     LearningResourceTopicMapping,
     UserListRelationship,
 )
-from main.utils import generate_filepath
+from main.utils import frontend_absolute_url, generate_filepath
 
 log = logging.getLogger()
 
@@ -970,3 +973,241 @@ def build_program_children_content_bulk(program_resources):
         content_by_program_id[program.id] = body[:PROGRAM_CHILDREN_CONTENT_MAX_CHARS]
 
     return content_by_program_id
+
+
+# --- Learn URLs -------------------------------------------------------------
+#
+# A resource's location within Learn. Ported from the frontend so the backend is
+# the single source of truth for these URLs (previously `frontends/main/src/
+# common/slugs.ts` and `common/urls.ts` derived them independently, and the
+# email digests derived them a third way).
+
+SLUG_MAX_LENGTH = 60
+
+# Path segments are mandatory, so a title that slugifies to nothing still needs
+# a segment. Matches the frontend's `pathSlug`.
+BLANK_SLUG_PATH_SEGMENT = "resource"
+
+# Characters that are legal, unescaped, in a path segment: ! $ & ' ( ) * + , ; = : @ ~
+# `quote` never escapes A-Za-z0-9_.-~ , so together these are exactly the set
+# the frontend's `encodePathSegment` leaves alone. MITx Online readable_ids
+# depend on it — `course-v1:MITxT+14.100x` must not become
+# `course-v1%3AMITxT%2B14.100x`.
+PATH_SEGMENT_SAFE_CHARS = "!$&'()*+,;=:@~"
+
+
+def slugify_title(title: str) -> str:
+    """
+    Derive a cosmetic URL slug from a resource title.
+
+    The slug is NEVER used for lookup; the numeric id is authoritative. Returns
+    "" when the title yields no ascii letters, which callers handle per surface:
+    path segments substitute BLANK_SLUG_PATH_SEGMENT, the drawer omits its
+    `resource_title` param.
+
+    NOT interchangeable with django.utils.text.slugify, which deletes
+    punctuation instead of converting it to "-", applies no length limit, and
+    has no "no ascii letters" rule. Those diverge on ~30% of current titles.
+
+    Args:
+        title (str): the resource title
+
+    Returns:
+        str: the slug, or "" if the title yields no ascii letters
+    """
+    normalized = unicodedata.normalize("NFKD", title or "")
+    without_marks = "".join(
+        char for char in normalized if unicodedata.category(char) != "Mn"
+    )
+    slug = re.sub(r"[^a-z0-9]+", "-", without_marks.lower()).strip("-")
+
+    if len(slug) > SLUG_MAX_LENGTH:
+        slug = slug[:SLUG_MAX_LENGTH]
+        # Back off to the last separator so the slug ends on a whole word.
+        last_dash = slug.rfind("-")
+        if last_dash != -1:
+            slug = slug[:last_dash]
+        slug = slug.rstrip("-")
+
+    return slug if re.search(r"[a-z]", slug) else ""
+
+
+def path_slug(title: str) -> str:
+    """
+    Slug for use as a mandatory path segment.
+
+    Args:
+        title (str): the resource title
+
+    Returns:
+        str: the slug, or BLANK_SLUG_PATH_SEGMENT if the title yields no slug
+    """
+    return slugify_title(title) or BLANK_SLUG_PATH_SEGMENT
+
+
+def encode_path_segment(segment: str) -> str:
+    """
+    Percent-encode a path segment, leaving characters that are legal unescaped.
+
+    Args:
+        segment (str): the raw path segment
+
+    Returns:
+        str: the encoded segment
+    """
+    return quote(str(segment), safe=PATH_SEGMENT_SAFE_CHARS)
+
+
+def resource_drawer_path(resource_id: int, title: str) -> str:
+    """
+    Path opening a resource's drawer over the search page.
+
+    `resource` is authoritative; `resource_title` is cosmetic and omitted when
+    blank rather than emitted empty.
+
+    Args:
+        resource_id (int): the resource id
+        title (str): the resource title
+
+    Returns:
+        str: the drawer path
+    """
+    params = [("resource", str(resource_id))]
+    slug = slugify_title(title)
+    if slug:
+        params.append(("resource_title", slug))
+    return f"/search?{urlencode(params)}"
+
+
+def _dedicated_page_path(  # noqa: PLR0911, PLR0913
+    *,
+    resource_type: str,
+    resource_id: int,
+    title: str,
+    readable_id: str | None,
+    resource_category: str | None,
+    platform_code: str | None,
+    parent_id: int | None,
+) -> str | None:
+    """
+    Path of a resource's own page on Learn, or None if it has no such page.
+
+    Args:
+        resource_type (str): LearningResourceType name
+        resource_id (int): the resource id
+        title (str): the resource title
+        readable_id (str or None): the resource's readable id
+        resource_category (str or None): distinguishes the two program shapes
+        platform_code (str or None): LearningResourcePlatform code
+        parent_id (int or None): canonical parent, for videos and episodes
+
+    Returns:
+        str or None: the path, or None when the resource has no dedicated page
+    """
+    slug = path_slug(title)
+
+    if resource_type == LearningResourceType.video.name:
+        base = f"/video/{resource_id}/{slug}"
+        # A video with playlists redirects bare -> playlists[0], so address it
+        # by its canonical parent.
+        return f"{base}?playlist={parent_id}" if parent_id else base
+
+    if resource_type == LearningResourceType.video_playlist.name:
+        return f"/video-playlist/{resource_id}/{slug}"
+
+    if resource_type == LearningResourceType.podcast.name:
+        return f"/podcast/{resource_id}/{slug}"
+
+    if resource_type == LearningResourceType.podcast_episode.name:
+        # An episode's URL is scoped by its parent podcast; without one there is
+        # no page to link to (the page itself 404s that case).
+        if not parent_id:
+            return None
+        return f"/podcast/{parent_id}/podcast_episode/{resource_id}/{slug}"
+
+    # Course and program pages exist only for MITx Online, and only where
+    # MITx Online has published a product page. `published` already implies
+    # that: the ETL leaves a course or program unpublished when its `page_url`
+    # is absent, so anything the API serves has one.
+    if platform_code == PlatformType.mitxonline.name and readable_id:
+        encoded_id = encode_path_segment(readable_id)
+        if resource_type == LearningResourceType.course.name:
+            return f"/courses/{encoded_id}"
+        if resource_type == LearningResourceType.program.name:
+            # A program presented as a course upstream (display_mode="course",
+            # stored as resource_category) lives under /courses/p/.
+            if resource_category == LearningResourceType.course.value:
+                return f"/courses/p/{encoded_id}"
+            return f"/programs/{encoded_id}"
+
+    return None
+
+
+def learn_url(  # noqa: PLR0913
+    *,
+    resource_type: str,
+    resource_id: int,
+    title: str,
+    readable_id: str | None = None,
+    resource_category: str | None = None,
+    platform_code: str | None = None,
+    parent_id: int | None = None,
+) -> str:
+    """
+    Absolute URL of a resource's location within Learn.
+
+    The resource's own page where it has one, else the drawer over the search
+    page. Never None: the drawer is always available, so every resource has a
+    location and consumers need no fallback of their own.
+
+    Args:
+        resource_type (str): LearningResourceType name
+        resource_id (int): the resource id
+        title (str): the resource title
+        readable_id (str or None): the resource's readable id
+        resource_category (str or None): distinguishes the two program shapes
+        platform_code (str or None): LearningResourcePlatform code
+        parent_id (int or None): canonical parent, for videos and episodes
+
+    Returns:
+        str: the absolute URL
+    """
+    path = _dedicated_page_path(
+        resource_type=resource_type,
+        resource_id=resource_id,
+        title=title,
+        readable_id=readable_id,
+        resource_category=resource_category,
+        platform_code=platform_code,
+        parent_id=parent_id,
+    ) or resource_drawer_path(resource_id, title)
+    return frontend_absolute_url(path)
+
+
+def learn_url_for_resource(resource: LearningResource, parent_ids: list[int]) -> str:
+    """
+    Absolute Learn URL for a resource instance.
+
+    Attribute access only — the caller supplies `parent_ids`, because the
+    serializers reach them differently (the summary endpoint annotates
+    `canonical_parent_ids`; the detail serializers use the `podcasts` /
+    `playlists` properties). Both are ordered by RELATIONSHIP_ORDERING, so
+    either way `parent_ids[0]` is the same parent.
+
+    Args:
+        resource (LearningResource): the resource
+        parent_ids (list of int): the resource's URL-forming parent ids
+
+    Returns:
+        str: the absolute URL
+    """
+    return learn_url(
+        resource_type=resource.resource_type,
+        resource_id=resource.id,
+        title=resource.title,
+        readable_id=resource.readable_id,
+        resource_category=resource.resource_category,
+        # `code` is the platform's primary key, so this needs no join.
+        platform_code=resource.platform_id,
+        parent_id=parent_ids[0] if parent_ids else None,
+    )

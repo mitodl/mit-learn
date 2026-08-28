@@ -30,7 +30,11 @@ from learning_resources.constants import (
     LevelType,
     Pace,
 )
-from learning_resources.utils import build_resource_summary_dict, json_to_markdown
+from learning_resources.utils import (
+    build_resource_summary_dict,
+    json_to_markdown,
+    learn_url_for_resource,
+)
 from main.serializers import COMMON_IGNORED_FIELDS, WriteableSerializerMethodField
 
 log = logging.getLogger(__name__)
@@ -1254,6 +1258,26 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
     pace = serializers.ListField(child=PaceSerializer(), read_only=True)
     children = serializers.SerializerMethodField(allow_null=True)
     best_run_id = serializers.SerializerMethodField(allow_null=True)
+    learn_url = serializers.SerializerMethodField(
+        help_text="Where this resource lives within Learn"
+    )
+
+    def get_learn_url(self, instance) -> str:
+        """
+        Return the resource's own page on Learn where it has one, else its drawer.
+
+        Never null, so consumers need no fallback of their own.
+        """
+        if instance.resource_type == constants.LearningResourceType.video.name:
+            parent_ids = [playlist.parent_id for playlist in instance.playlists]
+        elif (
+            instance.resource_type
+            == constants.LearningResourceType.podcast_episode.name
+        ):
+            parent_ids = [podcast.parent_id for podcast in instance.podcasts]
+        else:
+            parent_ids = []
+        return learn_url_for_resource(instance, parent_ids)
 
     @extend_schema_field(LearningResourceRelationshipChildField(allow_null=True))
     def get_children(self, instance):
@@ -1316,6 +1340,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
             "platform",
             "offered_by",
             "readable_id",
+            "learn_url",
         ]
         exclude = [
             "resource_tags",
@@ -1920,6 +1945,9 @@ class LearningResourceSummarySerializer(serializers.ModelSerializer):
     """
 
     canonical_parent_ids = serializers.SerializerMethodField()
+    learn_url = serializers.SerializerMethodField(
+        help_text="Where this resource lives within Learn"
+    )
 
     @extend_schema_field(
         {
@@ -1938,6 +1966,15 @@ class LearningResourceSummarySerializer(serializers.ModelSerializer):
         """Ids of the parents that form part of this resource's URL."""
         return instance.canonical_parent_ids
 
+    def get_learn_url(self, instance) -> str:
+        """
+        Return the resource's own page on Learn where it has one, else its drawer.
+
+        Reads the `canonical_parent_ids` annotation the summary queryset already
+        carries, so it costs no extra query.
+        """
+        return learn_url_for_resource(instance, instance.canonical_parent_ids)
+
     class Meta:
         """Meta configuration for LearningResourceSummarySerializer"""
 
@@ -1949,4 +1986,5 @@ class LearningResourceSummarySerializer(serializers.ModelSerializer):
             "title",
             "resource_type",
             "canonical_parent_ids",
+            "learn_url",
         )

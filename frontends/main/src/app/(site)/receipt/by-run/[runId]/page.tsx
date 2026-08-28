@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
@@ -13,7 +14,7 @@ export const metadata: Metadata = standardizeMetadata({
  * Resolves a course run to the order covering it and redirects to that order's
  * receipt. See `ReceiptRedirect` for why this route exists.
  */
-const Page: React.FC<PageProps<"/receipt/by-run/[runId]">> = async ({
+const Page: React.FC<AppPageProps<"/receipt/by-run/[runId]">> = async ({
   params,
 }) => {
   const { runId } = await params

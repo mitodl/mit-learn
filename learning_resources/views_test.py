@@ -60,10 +60,12 @@ from learning_resources.serializers import (
     VideoResourceSerializer,
     VideoSerializer,
 )
+from learning_resources.utils import encode_path_segment, path_slug
 from learning_resources.views import LearningResourceViewSet
 from learning_resources_search.api import Search
 from learning_resources_search.serializers import serialize_learning_resource_for_update
 from main.test_utils import assert_json_equal
+from main.utils import frontend_absolute_url
 
 pytestmark = [pytest.mark.django_db]
 
@@ -1549,6 +1551,13 @@ def test_learning_resources_summary_listing_endpoint(django_assert_num_queries, 
             "title": lr.title,
             "resource_type": lr.resource_type,
             "canonical_parent_ids": [],
+            # MITx Online courses get their product page; a video outside any
+            # playlist gets its own page with no ?playlist.
+            "learn_url": frontend_absolute_url(
+                f"/courses/{encode_path_segment(lr.readable_id)}"
+                if lr.resource_type == "course"
+                else f"/video/{lr.id}/{path_slug(lr.title)}"
+            ),
         }
         for lr in published
     ] == sorted(resp.data.get("results"), key=lambda x: int(x["id"]))
@@ -1701,6 +1710,66 @@ def test_summary_canonical_parent_ids_keeps_unpublished_parents(client):
 
     assert detail["playlists"] == [playlist.id]
     assert _summary_by_id(client)[video.id]["canonical_parent_ids"] == [playlist.id]
+
+
+def test_summary_learn_url_matches_detail_endpoint_for_video(client):
+    """
+    The two endpoints derive the canonical parent differently — summary from the
+    `canonical_parent_ids` annotation, detail from the `playlists` property — so
+    their learn_url must be asserted equal, not assumed.
+    """
+    video = VideoFactory.create().learning_resource
+    first_created = VideoPlaylistFactory.create().learning_resource
+    second_created = VideoPlaylistFactory.create().learning_resource
+    relation = LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
+    _relate(first_created, video, relation, position=1)
+    _relate(second_created, video, relation, position=0)
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[video.id])
+    ).data
+
+    # position, not creation order, picks the parent
+    expected = frontend_absolute_url(
+        f"/video/{video.id}/{path_slug(video.title)}?playlist={second_created.id}"
+    )
+    assert detail["learn_url"] == expected
+    assert _summary_by_id(client)[video.id]["learn_url"] == expected
+
+
+def test_summary_learn_url_matches_detail_endpoint_for_episode(client):
+    """An episode's URL is scoped by its parent podcast on both endpoints."""
+    episode = PodcastEpisodeFactory.create().learning_resource
+    first_created = PodcastFactory.create(episodes=[]).learning_resource
+    second_created = PodcastFactory.create(episodes=[]).learning_resource
+    relation = LearningResourceRelationTypes.PODCAST_EPISODES.value
+    _relate(first_created, episode, relation, position=0)
+    _relate(second_created, episode, relation, position=0)
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[episode.id])
+    ).data
+
+    # Equal positions, so the tie breaks on id -> first created wins
+    expected = frontend_absolute_url(
+        f"/podcast/{first_created.id}/podcast_episode/"
+        f"{episode.id}/{path_slug(episode.title)}"
+    )
+    assert detail["learn_url"] == expected
+    assert _summary_by_id(client)[episode.id]["learn_url"] == expected
+
+
+def test_summary_learn_url_falls_back_to_the_drawer(client):
+    """A resource with no page of its own is addressed by its drawer."""
+    course = CourseFactory.create(platform=PlatformType.ocw.name).learning_resource
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[course.id])
+    ).data
+
+    expected_prefix = frontend_absolute_url(f"/search?resource={course.id}")
+    assert detail["learn_url"].startswith(expected_prefix)
+    assert _summary_by_id(client)[course.id]["learn_url"] == detail["learn_url"]
 
 
 def test_summary_count_omits_the_parent_ids_annotation(

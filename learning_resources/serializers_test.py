@@ -333,6 +333,13 @@ def test_learning_resource_serializer(  # noqa: PLR0913
     else:
         resource_type_group = LEARNING_MATERIAL_RESOURCE_TYPE_GROUP
     assert result == expected
+
+    # learn_url's construction per resource type is covered exhaustively in
+    # utils_test; here only assert it is present and absolute, then drop it so
+    # the comparison below stays a check on the field set.
+    assert result["learn_url"].startswith(frontend_absolute_url("/"))
+    result = {key: value for key, value in result.items() if key != "learn_url"}
+
     assert result == {
         "id": resource.id,
         "title": resource.title,

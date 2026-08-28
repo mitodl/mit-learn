@@ -292,12 +292,34 @@ const learningResourceCourseNumber: Factory<CourseNumber> = (
   }
 }
 
-const _learningResourceShared = (): Partial<
-  Omit<LearningResource, "resource_type">
-> => {
+/**
+ * The app origin, matching NEXT_PUBLIC_ORIGIN in the main workspace's jest
+ * setup. Hardcoded rather than randomised per call: a drawer URL is always on
+ * the same host as the site itself, and code that distinguishes internal links
+ * from external ones relies on that. A random host would hide such a bug.
+ */
+const TEST_APP_ORIGIN = "http://test.learn.odl.local:8062"
+
+/**
+ * Default `learn_url`: the drawer, which is the one location every resource
+ * has. Deliberately not resource-type aware — the dedicated-page shapes need a
+ * title slug, and duplicating the frontend's slugify into this workspace is
+ * exactly the drift that the backend's `learn_url` exists to remove. A test
+ * that cares about a dedicated page should override this.
+ */
+const drawerLearnUrl = (id: number) =>
+  `${TEST_APP_ORIGIN}/search?resource=${id}`
+
+const _learningResourceShared = (
+  overrides: { id?: number } = {},
+): Partial<Omit<LearningResource, "resource_type">> => {
   const free = Math.random() < 0.5
+  // Honour an overridden id, or learn_url would address a different resource
+  // than the one the factory returns. mergeOverrides applies `overrides` after
+  // this, so it cannot re-derive learn_url on its own.
+  const id = overrides.id ?? uniqueEnforcerId.enforce(() => faker.number.int())
   return {
-    id: uniqueEnforcerId.enforce(() => faker.number.int()),
+    id,
     professional: faker.datatype.boolean(),
     certification: false,
     departments: [learningResourceDepartment()],
@@ -328,6 +350,7 @@ const _learningResourceShared = (): Partial<
      */
     resource_category: faker.lorem.word(),
     url: faker.internet.url(),
+    learn_url: drawerLearnUrl(id),
   }
 }
 
@@ -368,13 +391,15 @@ const learningResources = makePaginatedFactory(learningResource)
 const learningResourceSummary: Factory<LearningResourceSummary> = (
   overrides = {},
 ) => {
+  const id = overrides.id ?? uniqueEnforcerId.enforce(() => faker.number.int())
   return {
-    id: uniqueEnforcerId.enforce(() => faker.number.int()),
+    id,
     last_modified: faker.date.recent().toISOString(),
     url: faker.internet.url(),
     title: faker.lorem.words(3),
     resource_type: learningResourceType(),
     canonical_parent_ids: [],
+    learn_url: drawerLearnUrl(id),
     ...overrides,
   }
 }
@@ -385,7 +410,7 @@ const program: PartialFactory<ProgramResource> = (overrides = {}) => {
     CourseResourceCertificationTypeCodeEnum,
   )
   return mergeOverrides<ProgramResource>(
-    _learningResourceShared(),
+    _learningResourceShared(overrides),
     {
       resource_type: ResourceTypeEnum.Program,
 
@@ -425,7 +450,7 @@ const course: LearningResourceFactory<CourseResource> = (overrides = {}) => {
     CourseResourceCertificationTypeCodeEnum,
   )
   return mergeOverrides<CourseResource>(
-    _learningResourceShared(),
+    _learningResourceShared(overrides),
     {
       resource_type: ResourceTypeEnum.Course,
 
@@ -462,7 +487,7 @@ const learningPath: LearningResourceFactory<LearningPathResource> = (
   overrides = {},
 ) => {
   return mergeOverrides<LearningPathResource>(
-    _learningResourceShared(),
+    _learningResourceShared(overrides),
     {
       resource_type: ResourceTypeEnum.LearningPath,
 
@@ -579,7 +604,7 @@ const learningPathRelationships = ({
 
 const podcast: LearningResourceFactory<PodcastResource> = (overrides = {}) => {
   return mergeOverrides<PodcastResource>(
-    _learningResourceShared(),
+    _learningResourceShared(overrides),
     {
       resource_type: ResourceTypeEnum.Podcast,
 
@@ -600,7 +625,7 @@ const document: LearningResourceFactory<DocumentResource> = (
   overrides = {},
 ) => {
   return mergeOverrides<DocumentResource>(
-    _learningResourceShared(),
+    _learningResourceShared(overrides),
     {
       resource_type: ResourceTypeEnum.Document,
 
@@ -616,7 +641,7 @@ const podcastEpisode: LearningResourceFactory<PodcastEpisodeResource> = (
 ): PodcastEpisodeResource => {
   const parentPodcastId = uniqueEnforcerId.enforce(() => faker.number.int())
   return mergeOverrides<PodcastEpisodeResource>(
-    _learningResourceShared(),
+    _learningResourceShared(overrides),
     {
       resource_type: ResourceTypeEnum.PodcastEpisode,
 
@@ -649,7 +674,7 @@ const podcastEpisodes = makePaginatedFactory(podcastEpisode)
 
 const video: LearningResourceFactory<VideoResource> = (overrides = {}) => {
   return mergeOverrides<VideoResource>(
-    _learningResourceShared(),
+    _learningResourceShared(overrides),
     {
       resource_type: ResourceTypeEnum.Video,
 
@@ -669,7 +694,7 @@ const videoPlaylist: LearningResourceFactory<VideoPlaylistResource> = (
   overrides = {},
 ): VideoPlaylistResource => {
   return mergeOverrides<VideoPlaylistResource>(
-    _learningResourceShared(),
+    _learningResourceShared(overrides),
     {
       resource_type: ResourceTypeEnum.VideoPlaylist,
 

@@ -1,6 +1,35 @@
 Release Notes
 =============
 
+Version 0.77.15 (Released August 27, 2026)
+---------------
+
+- Hide course-count copy for programs made of programs (#3840)
+
+Version 0.77.14 (Released August 27, 2026)
+---------------
+
+- Add learn_url, a resource's location within Learn (#3824)
+- Query param whitelist (#3828)
+- Don't let one unreachable podcast feed abort the ETL (#3836)
+- Fix flaky payment-deadline date assertions in ProductSummary tests (#3838)
+
+Version 0.77.13 (Released August 26, 2026)
+---------------
+
+- Fix ContentFile duplicates causing MultipleObjectsReturned in ingestion (#3831)
+- Add some initial docs on gtm (#3797)
+- Update dependency @mitodl/mit-learn-api-axios to v2026.8.17 (#3810)
+- Update dependency @mitodl/smoot-design to v6.33.1 (#3811)
+- fix: point LinkedIn credential link at VerifierPlus instead of raw JSON download (#3830)
+
+Version 0.77.12 (Released August 26, 2026)
+---------------
+
+- Add department 21T (Theater Arts) (#3668)
+- Preconnect to the API and Typekit origins (#3819)
+- Add a content-engagement panel to the B2B analytics dashboard (#3806)
+
 Version 0.77.11 (Released August 25, 2026)
 ---------------
 

@@ -942,9 +942,32 @@ def load_content_file(
     """
     try:
         content_file_tags = content_file_data.pop("content_tags", [])
-        content_file, _ = ContentFile.objects.update_or_create(
-            run=course_run, key=content_file_data.get("key"), defaults=content_file_data
-        )
+        key = content_file_data.get("key")
+        try:
+            content_file, _ = ContentFile.objects.update_or_create(
+                run=course_run, key=key, defaults=content_file_data
+            )
+        except ContentFile.MultipleObjectsReturned:
+            # Celery workers roll concurrently with the migrate job, so this
+            # can run against pre-migration duplicates for a few minutes.
+            # Collapse to the best row (keep LLM summaries), then retry.
+            # Locked so two workers collapsing the same (run, key) agree on
+            # one survivor instead of deleting each other's pick.
+            with transaction.atomic():
+                dupes = list(
+                    ContentFile.objects.select_for_update()
+                    .filter(run=course_run, key=key)
+                    .order_by("id")
+                )
+                keep = sorted(
+                    dupes, key=lambda cf: (bool(cf.summary), cf.updated_on, cf.id)
+                )[-1]
+                ContentFile.objects.filter(
+                    id__in=[cf.id for cf in dupes if cf.id != keep.id]
+                ).delete()
+                content_file, _ = ContentFile.objects.update_or_create(
+                    run=course_run, key=key, defaults=content_file_data
+                )
         load_content_tags(content_file, content_file_tags, is_content_file=True)
         return content_file.id  # noqa: TRY300
     except:  # noqa: E722
@@ -1353,12 +1376,18 @@ def load_podcast(podcast_data: dict) -> LearningResource:
     return learning_resource
 
 
-def load_podcasts(podcasts_data: list[dict]) -> list[LearningResource]:
+def load_podcasts(
+    podcasts_data: list[dict], tracked_ids: list[str]
+) -> list[LearningResource]:
     """
     Load a list of podcasts
 
     Args:
         podcasts_data (iter of dict): iterable of podcast data
+        tracked_ids (list of str): readable ids of every configured feed.
+            Podcasts outside this list are the ones we no longer track; a
+            podcast in it keeps its data even if this run couldn't fetch or
+            parse its feed.
 
     Returns:
         list of LearningResources:
@@ -1375,11 +1404,14 @@ def load_podcasts(podcasts_data: list[dict]) -> list[LearningResource]:
         else:
             podcast_resources.append(podcast_resource)
 
+    if not tracked_ids:
+        msg = "No podcasts to track, refusing to unpublish every podcast"
+        raise ExtractException(msg)
+
     # unpublish the podcasts and episodes we're no longer tracking
-    ids = [podcast.id for podcast in podcast_resources]
     unpublished_podcasts = LearningResource.objects.filter(
         resource_type=LearningResourceType.podcast.name
-    ).exclude(id__in=ids)
+    ).exclude(readable_id__in=tracked_ids)
     unpublished_podcasts.update(published=False)
     bulk_resources_unpublished_actions(
         unpublished_podcasts.values_list("id", flat=True),
@@ -1387,7 +1419,7 @@ def load_podcasts(podcasts_data: list[dict]) -> list[LearningResource]:
     )
     unpublished_episodes = LearningResource.objects.filter(
         resource_type=LearningResourceType.podcast_episode.name
-    ).exclude(parents__parent__in=ids)
+    ).exclude(parents__parent__readable_id__in=tracked_ids)
     unpublished_episodes.update(published=False)
     bulk_resources_unpublished_actions(
         unpublished_episodes.values_list("id", flat=True),
