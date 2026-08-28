@@ -231,9 +231,8 @@ export const getInTouch = {
 
   individual: {
     title: "Looking to learn on your own?",
-    body: "MIT Learn is free to browse. Explore courses and programs from across MIT and enroll directly — no sales conversation needed.",
-    primaryCtaLabel: "Browse courses",
-    secondaryCtaLabel: "Browse programs",
+    body: "Explore MIT courses, programs, and free learning opportunities designed for individual learners.",
+    ctaLabel: "Explore learning for individuals",
   },
   success: {
     title: "Thanks — we'll be in touch.",

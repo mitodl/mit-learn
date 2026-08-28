@@ -81,10 +81,7 @@ describe("OrgLeadForm", () => {
     // form must be gone rather than merely hidden alongside the links.
     expect(screen.queryByTestId("hubspot-form")).not.toBeInTheDocument()
     expect(
-      screen.getByRole("link", { name: copy.individual.primaryCtaLabel }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole("link", { name: copy.individual.secondaryCtaLabel }),
+      screen.getByRole("link", { name: copy.individual.ctaLabel }),
     ).toBeInTheDocument()
   })
 
@@ -97,7 +94,7 @@ describe("OrgLeadForm", () => {
 
     expect(screen.getByTestId("hubspot-form")).toBeInTheDocument()
     expect(
-      screen.queryByRole("link", { name: copy.individual.primaryCtaLabel }),
+      screen.queryByRole("link", { name: copy.individual.ctaLabel }),
     ).not.toBeInTheDocument()
   })
 

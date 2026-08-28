@@ -8,6 +8,7 @@ import {
   RadioChoiceField,
   type RadioChoiceFieldProps,
 } from "@mitodl/smoot-design"
+import { RiArrowRightLine, RiUserLine } from "@remixicon/react"
 import { usePostHog } from "posthog-js/react"
 import {
   useHubspotFormDetail,
@@ -17,7 +18,7 @@ import {
 import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { env } from "@/env"
 import { PostHogEvents } from "@/common/constants"
-import { SEARCH_COURSE, SEARCH_PROGRAM } from "@/common/urls"
+import { SEARCH } from "@/common/urls"
 import {
   getOrgLearningHubspotFormId,
   getRecaptchaSiteKey,
@@ -125,20 +126,31 @@ const IndividualPanel = styled.div({
   display: "flex",
   flexDirection: "column",
   gap: "16px",
-  alignItems: "flex-start",
+  alignItems: "center",
+  textAlign: "center",
 })
 
-const IndividualActions = styled.div(({ theme }) => ({
-  display: "flex",
-  gap: "16px",
-  flexWrap: "wrap",
-  marginTop: "8px",
-  [theme.breakpoints.down("sm")]: {
-    flexDirection: "column",
-    alignSelf: "stretch",
-    a: { width: "100%" },
-  },
+const IndividualIcon = styled(RiUserLine)(({ theme }) => ({
+  color: theme.custom.colors.red,
+  width: "40px",
+  height: "40px",
 }))
+
+const IndividualTitle = styled.p(({ theme }) => ({
+  ...theme.typography.subtitle1,
+  color: theme.custom.colors.darkGray2,
+  margin: 0,
+}))
+
+const IndividualBody = styled.p(({ theme }) => ({
+  ...theme.typography.body1,
+  color: theme.custom.colors.silverGrayDark,
+  margin: 0,
+}))
+
+const IndividualCta = styled(ButtonLink)({
+  marginTop: "8px",
+})
 
 const Message = styled.div({
   display: "flex",
@@ -259,18 +271,17 @@ const OrgLeadForm: React.FC<{ className?: string }> = ({ className }) => {
 
       {audience === "individual" ? (
         <IndividualPanel>
-          <Message>
-            <MessageTitle>{copy.individual.title}</MessageTitle>
-            <MessageBody>{copy.individual.body}</MessageBody>
-          </Message>
-          <IndividualActions>
-            <ButtonLink href={SEARCH_COURSE} variant="primary" size="large">
-              {copy.individual.primaryCtaLabel}
-            </ButtonLink>
-            <ButtonLink href={SEARCH_PROGRAM} variant="secondary" size="large">
-              {copy.individual.secondaryCtaLabel}
-            </ButtonLink>
-          </IndividualActions>
+          <IndividualIcon aria-hidden />
+          <IndividualTitle>{copy.individual.title}</IndividualTitle>
+          <IndividualBody>{copy.individual.body}</IndividualBody>
+          <IndividualCta
+            href={SEARCH}
+            variant="primary"
+            size="large"
+            endIcon={<RiArrowRightLine />}
+          >
+            {copy.individual.ctaLabel}
+          </IndividualCta>
         </IndividualPanel>
       ) : !formId || isFormDetailError ? (
         <MessageBody>{copy.unavailable}</MessageBody>
