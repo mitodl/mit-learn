@@ -190,7 +190,7 @@ def test_custom_login_view_authenticated_user_needs_onboarding(
     if expect_onboarding:
         assert (
             response.url
-            == f"/onboarding?{urlencode({'next': expected_redirect, 'new': '1'})}"
+            == f"/onboarding?{urlencode({'next': expected_redirect, 'is_new_user': '1'})}"
         )
     else:
         assert response.url == expected_redirect

@@ -163,7 +163,7 @@ const OnboardingPage: React.FC = () => {
   const posthog = usePostHog()
   const searchParams = useAppSearchParams()
   const nextUrl = searchParams.get("next")
-  const isNewUser = searchParams.get("new") === "1"
+  const isNewUser = searchParams.get("is_new_user") === "1"
 
   const formik = useFormik({
     enableReinitialize: true,
