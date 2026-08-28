@@ -228,16 +228,22 @@ describe("OnboardingPage", () => {
       sessionStorage.clear()
     })
 
-    it("fires trackAccountCreated once the profile loads", async () => {
-      await setupAndProgressToStep(0)
+    it("fires trackAccountCreated once the profile loads for a new user", async () => {
+      await setupAndProgressToStep(0, "/onboarding?new=1")
       await waitFor(() => {
         expect(trackAccountCreated).toHaveBeenCalledTimes(1)
       })
     })
 
+    it("does not fire trackAccountCreated when the new param is absent", async () => {
+      await setupAndProgressToStep(0)
+      await findNextButton()
+      expect(trackAccountCreated).not.toHaveBeenCalled()
+    })
+
     it("does not fire trackAccountCreated again within the same session", async () => {
       sessionStorage.setItem("gtm_account_created_tracked", "1")
-      await setupAndProgressToStep(0)
+      await setupAndProgressToStep(0, "/onboarding?new=1")
       await findNextButton()
       expect(trackAccountCreated).not.toHaveBeenCalled()
     })

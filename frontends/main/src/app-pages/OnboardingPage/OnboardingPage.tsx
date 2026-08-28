@@ -163,6 +163,7 @@ const OnboardingPage: React.FC = () => {
   const posthog = usePostHog()
   const searchParams = useAppSearchParams()
   const nextUrl = searchParams.get("next")
+  const isNewUser = searchParams.get("new") === "1"
 
   const formik = useFormik({
     enableReinitialize: true,
@@ -204,7 +205,7 @@ const OnboardingPage: React.FC = () => {
   }, [nextUrl, router])
 
   useEffect(() => {
-    if (!profile) return
+    if (!profile || !isNewUser) return
 
     let alreadyTracked = false
     try {
@@ -221,7 +222,7 @@ const OnboardingPage: React.FC = () => {
     if (!alreadyTracked) {
       trackAccountCreated()
     }
-  }, [profile])
+  }, [profile, isNewUser])
 
   const handleBack = () => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1)

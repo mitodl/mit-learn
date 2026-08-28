@@ -188,7 +188,10 @@ def test_custom_login_view_authenticated_user_needs_onboarding(
     assert response.status_code == 302
 
     if expect_onboarding:
-        assert response.url == f"/onboarding?{urlencode({'next': expected_redirect})}"
+        assert (
+            response.url
+            == f"/onboarding?{urlencode({'next': expected_redirect, 'new': '1'})}"
+        )
     else:
         assert response.url == expected_redirect
     mock_send_welcome_email.assert_called_once_with(request.user.id)
