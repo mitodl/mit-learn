@@ -28,8 +28,7 @@ const Waves = styled.div(({ theme }) => ({
   left: "71.93%",
   width: "49.05%",
   aspectRatio: "822.02 / 1064.78",
-  backgroundImage:
-    "url('/images/organizational_learning/offerings-waves.svg')",
+  backgroundImage: "url('/images/organizational_learning/offerings-waves.svg')",
   backgroundSize: "100% 100%",
   backgroundRepeat: "no-repeat",
   pointerEvents: "none",
