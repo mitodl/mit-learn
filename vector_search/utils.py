@@ -572,13 +572,13 @@ def _learning_resource_embedding_context(document, serializer_context=None):
         if content_file.get("content")
     )
     if content:
-        encoder = dense_encoder()
-        context = truncate_to_model_limit(
-            f"{context}\n\n## Content\n{content}",
-            encoder.model_name,
-            token_encoding_name=getattr(encoder, "token_encoding_name", None),
-        )
-    return context
+        context = f"{context}\n\n## Content\n{content}"
+    encoder = dense_encoder()
+    return truncate_to_model_limit(
+        context,
+        encoder.model_name,
+        token_encoding_name=getattr(encoder, "token_encoding_name", None),
+    )
 
 
 def _content_file_embedding_context(document):
