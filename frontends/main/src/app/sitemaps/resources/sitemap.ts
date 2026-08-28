@@ -15,15 +15,8 @@ const PAGE_SIZE = 1_000
  * `learn_url` is the resource's location within Learn — its own page where it
  * has one (videos, playlists, podcasts, episodes, MITx Online courses and
  * programs), else the search drawer. Because the backend decides, this sitemap
- * covers every resource type on its own: the separate video, podcast and
- * products sitemaps existed only to emit dedicated-page URLs the frontend had
- * to construct itself, and submitted them *alongside* the drawer URL this
- * sitemap emitted for the same resource. That advertised two self-canonical
- * URLs per video and per episode and left crawlers no way to pick a winner.
- *
- * It also settles which parent scopes an episode's URL. This sitemap emits one
- * URL per resource; the podcast sitemap mapped over every parent podcast, so an
- * episode with two parents would have been submitted twice.
+ * covers every resource type with no per-type branching, and an episode or
+ * video with multiple parents appears once, under its canonical parent.
  */
 export const dynamic = "force-dynamic"
 

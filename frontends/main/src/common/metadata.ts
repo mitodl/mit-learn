@@ -97,16 +97,15 @@ export const getMetadataAsync = async ({
     }
     /**
      * Canonicalize the drawer to the resource's location on Learn: its own page
-     * where it has one, else this drawer URL itself. Previously the drawer was
-     * always self-canonical, so a video or podcast episode advertised two
-     * self-canonical URLs for the same content and crawlers had no way to pick
-     * a winner. The backend owns the choice, so the canonical here, the card
-     * hrefs, and the sitemap cannot disagree.
+     * where it has one, else this drawer URL itself. A resource with a dedicated
+     * page therefore hands its ranking signal to that page rather than competing
+     * with it, and because the backend owns the choice, this canonical, the card
+     * hrefs and the sitemap cannot disagree.
      *
      * `learn_url` is non-nullable and never blank, but fall back to the drawer
      * URL rather than emitting no canonical at all: a frontend deployed ahead of
-     * the backend sees the field absent, and dropping the tag entirely is worse
-     * than the self-canonical it replaces.
+     * the backend sees the field absent, and no canonical tag is worse than a
+     * self-referential one.
      */
     alts.canonical =
       data?.learn_url ||
