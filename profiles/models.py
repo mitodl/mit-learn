@@ -280,7 +280,12 @@ class ProgramCertificate(models.Model):
     program_completion_timestamp = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        managed = False
+        # Managed as of the warehouse-pull cutover (mitodl/hq#12954): Django
+        # is now the writer of this table, not Hightouch, so schema changes
+        # belong in migrations rather than in an external tool's config. The
+        # table stays in the `external` schema — other consumers still read it
+        # by that name.
+        managed = True
         db_table = '"external"."programcertificate"'
 
     def __str__(self):
