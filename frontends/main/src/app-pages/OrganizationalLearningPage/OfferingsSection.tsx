@@ -85,6 +85,7 @@ const Card = styled.li(({ theme }) => ({
     flexShrink: 0,
   },
   [theme.breakpoints.down("md")]: {
+    flex: "1 1 auto",
     padding: "24px",
   },
 }))
