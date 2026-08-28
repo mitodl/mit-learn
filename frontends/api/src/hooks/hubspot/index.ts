@@ -10,6 +10,7 @@ import type {
 } from "../../generated/v1"
 import type { HubspotFormDetailResponse } from "./queries"
 import { hubspotKeys, hubspotQueries } from "./queries"
+import type { MutationHookOptions } from "../../mutations/mutationMeta"
 
 const HUBSPOT_UTK_COOKIE = "hubspotutk"
 const HUBSPOT_UTK_MAX_AGE = 34190000 // ~13 months, matching HubSpot's tracking script
@@ -84,8 +85,9 @@ const useHubspotFormDetail = (
   })
 }
 
-const useHubspotFormSubmit = () => {
+const useHubspotFormSubmit = ({ meta }: MutationHookOptions = {}) => {
   return useMutation({
+    meta,
     mutationFn: ({
       formId,
       fields,

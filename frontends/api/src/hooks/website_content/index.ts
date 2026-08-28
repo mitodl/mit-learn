@@ -8,6 +8,7 @@ import type {
   WebsiteContent,
 } from "../../generated/v1"
 import { websiteContentQueries, websiteContentKeys } from "./queries"
+import type { MutationHookOptions } from "../../mutations/mutationMeta"
 
 const useWebsiteContentList = (
   params: WebsiteContentListRequest = {},
@@ -36,7 +37,7 @@ const useWebsiteContentDetailRetrieve = (identifier: string | undefined) => {
   })
 }
 
-const useWebsiteContentCreate = () => {
+const useWebsiteContentCreate = ({ meta }: MutationHookOptions = {}) => {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (
@@ -56,15 +57,17 @@ const useWebsiteContentCreate = () => {
     onSuccess: () => {
       client.invalidateQueries({ queryKey: websiteContentKeys.listRoot() })
     },
+    meta,
   })
 }
 
-export const useMediaUpload = () => {
+export const useMediaUpload = ({ meta }: MutationHookOptions = {}) => {
   const nextProgressCb = useRef<((percent: number) => void) | undefined>(
     undefined,
   )
 
   const mutation = useMutation({
+    meta,
     mutationFn: async (data: { file: File }) => {
       const response = await mediaApi.mediaUpload(
         { image_file: data.file },
@@ -111,7 +114,7 @@ const useWebsiteContentDestroy = () => {
     },
   })
 }
-const useWebsiteContentPartialUpdate = () => {
+const useWebsiteContentPartialUpdate = ({ meta }: MutationHookOptions = {}) => {
   const client = useQueryClient()
   return useMutation({
     mutationFn: ({
@@ -124,6 +127,7 @@ const useWebsiteContentPartialUpdate = () => {
           PatchedWebsiteContentRequest: data,
         })
         .then((response) => response.data),
+    meta,
     onSuccess: (websiteContent: WebsiteContent) => {
       client.invalidateQueries({
         queryKey: websiteContentKeys.detail(websiteContent.id),

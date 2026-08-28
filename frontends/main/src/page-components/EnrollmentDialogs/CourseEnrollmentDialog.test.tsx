@@ -213,7 +213,7 @@ describe("CourseEnrollmentDialog", () => {
       })
       await user.click(upgradeButton)
 
-      await screen.findByText(
+      expect(await screen.findByRole("alert")).toHaveTextContent(
         "There was a problem processing your enrollment. Please try again.",
       )
     })
@@ -492,13 +492,9 @@ describe("CourseEnrollmentDialog", () => {
       await user.click(enrollButton)
 
       // Check for error alert - the mutation error should be displayed
-      await waitFor(() => {
-        expect(
-          screen.getByText(
-            /There was a problem enrolling you in this course. Please try again later./i,
-          ),
-        ).toBeInTheDocument()
-      })
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        /There was a problem enrolling you in this course. Please try again later./i,
+      )
     })
   })
 

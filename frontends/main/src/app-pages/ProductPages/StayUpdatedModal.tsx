@@ -23,6 +23,7 @@ import {
   useHubspotFormSubmit,
   type HubspotSubmitField,
 } from "api/hooks/hubspot"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { trackSignUpForUpdates } from "@/common/analytics/gtm"
 
 const StayUpdatedDialogContainer = styled.div(({ theme }) => ({
@@ -94,7 +95,9 @@ const StayUpdatedDialogInner: React.FC<StayUpdatedDialogProps> = ({
   const { data: hubspotForm, isLoading } = useHubspotFormDetail(
     stayUpdatedFormId ? { form_id: stayUpdatedFormId } : undefined,
   )
-  const hubspotFormSubmit = useHubspotFormSubmit()
+  // The form renders its own inline submission error (errorText below), so
+  // suppress the global error toast.
+  const hubspotFormSubmit = useHubspotFormSubmit({ meta: SILENCE_ERROR_TOAST })
   const [email, setEmail] = useState("")
 
   const closeDialog = async () => {

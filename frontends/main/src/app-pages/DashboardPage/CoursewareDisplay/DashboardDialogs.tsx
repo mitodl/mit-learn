@@ -16,6 +16,7 @@ import {
   useDestroyProgramEnrollment,
   useUpdateEnrollment,
 } from "api/mitxonline-hooks/enrollment"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
 import {
   trackCourseUnenrolled,
@@ -42,19 +43,21 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
     initialValues: {
       receive_emails: enrollment.edx_emails_subscription ?? true,
     },
-    onSubmit: async () => {
-      await updateEnrollment.mutateAsync({
-        id: enrollment.id,
-        PatchedUpdateCourseRunEnrollmentRequest: {
-          receive_emails: formik.values.receive_emails,
+    onSubmit: () => {
+      updateEnrollment.mutate(
+        {
+          id: enrollment.id,
+          PatchedUpdateCourseRunEnrollmentRequest: {
+            receive_emails: formik.values.receive_emails,
+          },
         },
-      })
-      if (!updateEnrollment.isError) {
-        modal.hide()
-      }
+        { onSuccess: () => modal.hide() },
+      )
     },
   })
-  const updateEnrollment = useUpdateEnrollment()
+  // Renders its own inline error below (updateEnrollment.isError), so suppress
+  // the global error toast.
+  const updateEnrollment = useUpdateEnrollment({ meta: SILENCE_ERROR_TOAST })
   return (
     <FormDialog
       title={"Email Settings"}
@@ -117,18 +120,21 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
   enrollment,
 }) => {
   const modal = NiceModal.useModal()
-  const destroyEnrollment = useDestroyEnrollment()
+  // Renders its own inline error below (destroyEnrollment.isError), so suppress
+  // the global error toast.
+  const destroyEnrollment = useDestroyEnrollment({ meta: SILENCE_ERROR_TOAST })
   const formik = useFormik({
     enableReinitialize: true,
     validateOnChange: false,
     validateOnBlur: false,
     initialValues: {},
-    onSubmit: async () => {
-      await destroyEnrollment.mutateAsync(enrollment.id)
-      if (!destroyEnrollment.isError) {
-        trackCourseUnenrolled(title)
-        modal.hide()
-      }
+    onSubmit: () => {
+      destroyEnrollment.mutate(enrollment.id, {
+        onSuccess: () => {
+          trackCourseUnenrolled(title)
+          modal.hide()
+        },
+      })
     },
   })
   return (
@@ -189,16 +195,23 @@ const UnenrollProgramDialogInner: React.FC<UnenrollProgramDialogProps> = ({
   programId,
 }) => {
   const modal = NiceModal.useModal()
-  const destroyProgramEnrollment = useDestroyProgramEnrollment()
+  // Renders its own inline error below (destroyProgramEnrollment.isError), so
+  // suppress the global error toast.
+  const destroyProgramEnrollment = useDestroyProgramEnrollment({
+    meta: SILENCE_ERROR_TOAST,
+  })
   const formik = useFormik({
     enableReinitialize: true,
     validateOnChange: false,
     validateOnBlur: false,
     initialValues: {},
-    onSubmit: async () => {
-      await destroyProgramEnrollment.mutateAsync(programId)
-      trackProgramUnenrolled(title)
-      modal.hide()
+    onSubmit: () => {
+      destroyProgramEnrollment.mutate(programId, {
+        onSuccess: () => {
+          trackProgramUnenrolled(title)
+          modal.hide()
+        },
+      })
     },
   })
   return (

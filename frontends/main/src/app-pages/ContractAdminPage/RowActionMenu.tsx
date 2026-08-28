@@ -21,6 +21,7 @@ import {
   useRevokeCode,
 } from "api/mitxonline-hooks/organizations"
 import type { ManagerEnrollmentCode } from "api/mitxonline-hooks/organizations"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import type { AxiosError } from "axios"
 
 const ActionMenuItem = styled(MenuItem)(({ theme }) => ({
@@ -96,9 +97,11 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({
   const reassignDescId = useId()
   const open = Boolean(anchorEl)
 
-  const remind = useRemindCode()
-  const revoke = useRevokeCode()
-  const reassign = useReassignCode()
+  // These actions surface their outcome via the page-level result Alert (see
+  // onResult), so suppress the global error toast.
+  const remind = useRemindCode({ meta: SILENCE_ERROR_TOAST })
+  const revoke = useRevokeCode({ meta: SILENCE_ERROR_TOAST })
+  const reassign = useReassignCode({ meta: SILENCE_ERROR_TOAST })
 
   const isRedeemed = code.redemption_status === "redeemed"
   const hasAssignedEmail = Boolean(code.assigned_to?.trim())
