@@ -4,9 +4,8 @@ import { setResourceParams } from "@/common/urls"
 /**
  * The URL a card click pushes: the *current* page's URL plus the drawer's
  * params, preserving every other param and the fragment. This is deliberately
- * not the card's href — the href is the canonical `/search?resource=…` URL
- * (see `resourceDrawerSearch`), which is what crawlers and Copy Link Address
- * should get.
+ * not the card's href — the href is the resource's `learn_url`, its location on
+ * Learn, which is what crawlers and Copy Link Address should get.
  *
  * Deliberately not a hook: it reads `window.location` at click time instead of
  * subscribing to `useSearchParams()`, which is a dynamic API — a client
