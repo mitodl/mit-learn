@@ -14,6 +14,7 @@ import {
   useHubspotFormSubmit,
   type HubspotSubmitField,
 } from "api/hooks/hubspot"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { env } from "@/env"
 import { PostHogEvents } from "@/common/constants"
 import { SEARCH_COURSE, SEARCH_PROGRAM } from "@/common/urls"
@@ -179,7 +180,7 @@ const OrgLeadForm: React.FC<{ className?: string }> = ({ className }) => {
     isLoading,
     isError: isFormDetailError,
   } = useHubspotFormDetail(formId ? { form_id: formId } : undefined)
-  const hubspotFormSubmit = useHubspotFormSubmit()
+  const hubspotFormSubmit = useHubspotFormSubmit({ meta: SILENCE_ERROR_TOAST })
 
   const capture = (event: string, properties?: Record<string, unknown>) => {
     if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
