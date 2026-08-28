@@ -73,3 +73,41 @@ jobs:
             --composed --flatten-allof \
             'base/openapi/specs/*.yaml' \
             'head/openapi/specs/*.yaml'
+
+  # ONE required status check standing for this whole workflow, the same device as
+  # `ci-gate` in ci.yml and for the same reason: the ruleset that requires it lives in
+  # mitodl/ol-infrastructure, and GitHub's required status checks take an exact list of
+  # context names. A job renamed here would keep being required under its old name,
+  # which GitHub never reports again, so every PR waits forever on it.
+  #
+  # `ci-gate` cannot absorb this one: `needs` only reaches jobs in the same workflow
+  # file, and this workflow triggers on `pull_request` rather than `push`. So the two
+  # gates are required side by side.
+  openapi-diff-gate:
+    needs:
+      - openapi-diff
+    # Without this the gate is skipped when a dependency fails, and a skipped required
+    # check leaves the PR pending rather than failing it.
+    if: always()
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - name: Evaluate OpenAPI diff result
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          # Read from `needs` rather than naming each job again: adding a job to the
+          # list above is then the only edit, which is the entire point of this job.
+          # `skipped` passes so that a job legitimately gated behind an `if:` does not
+          # wedge the branch; `failure` and `cancelled` do not.
+          failed=$(echo "$NEEDS" | jq -r '
+            to_entries[]
+            | select(.value.result != "success" and .value.result != "skipped")
+            | .key')
+          if [ -n "$failed" ]; then
+            echo "::error::OpenAPI diff did not succeed: $(echo "$failed" | paste -sd, -)"
+            exit 1
+          fi
+          echo "OpenAPI diff succeeded."
