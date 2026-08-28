@@ -991,15 +991,8 @@ CONTENT_SUMMARIZER_FLASHCARD_PROMPT = get_string(
     ),
 )
 # Credential metadata generation (learning_resources/credentials.py). The
-# prompts and models are admin-editable rows of
-# CredentialMetadataConfiguration; the retrieval knobs are settings.
-CREDENTIAL_METADATA_RETRIEVAL_QUERY = get_string(
-    name="CREDENTIAL_METADATA_RETRIEVAL_QUERY",
-    default=(
-        "course learning outcomes, skills gained, assessment and grading"
-        " criteria, syllabus"
-    ),
-)
+# prompts, models and the content retrieval query are admin-editable rows of
+# CredentialMetadataConfiguration; what is left is how much it retrieves.
 CREDENTIAL_METADATA_RETRIEVAL_LIMIT = get_int(
     name="CREDENTIAL_METADATA_RETRIEVAL_LIMIT", default=50
 )

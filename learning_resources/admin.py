@@ -278,6 +278,7 @@ class CredentialMetadataConfigurationAdmin(admin.ModelAdmin):
         "field",
         "llm_model",
         "temperature",
+        "retrieval_query",
         "is_active",
     )
     list_filter = ("is_active",)

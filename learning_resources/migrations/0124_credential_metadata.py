@@ -26,6 +26,10 @@ DEFAULT_CONFIGURATIONS = [
             " the course."
         ),
         "max_output_tokens": 1024,
+        "retrieval_query": (
+            "course learning outcomes, skills gained, assessment and grading"
+            " criteria, syllabus"
+        ),
     },
 ]
 
@@ -109,6 +113,18 @@ class Migration(migrations.Migration):
                 ),
                 ("temperature", models.FloatField(default=0.0)),
                 ("max_output_tokens", models.PositiveIntegerField(default=2048)),
+                (
+                    "retrieval_query",
+                    models.TextField(
+                        blank=True,
+                        default="",
+                        help_text=(
+                            "Vector search query for course content."
+                            " Blank generates from the marketing page and"
+                            " metadata alone."
+                        ),
+                    ),
+                ),
                 ("is_active", models.BooleanField(default=True)),
             ],
             options={

@@ -7,6 +7,7 @@ import pytest
 
 from learning_resources.constants import CredentialMetadataField
 from learning_resources.credentials import (
+    FIELDS_USING_CONTENT_FILES,
     RESPONSE_SCHEMAS,
     BadgeCriteria,
     BadgeDescription,
@@ -90,7 +91,6 @@ def chunk(content, **kwargs):
 @pytest.fixture(autouse=True)
 def credential_settings(settings):
     """Point retrieval at a fixed query and leave it enabled"""
-    settings.CREDENTIAL_METADATA_RETRIEVAL_QUERY = "syllabus"
     settings.CREDENTIAL_METADATA_RETRIEVAL_LIMIT = 10
     settings.CREDENTIAL_METADATA_MIN_CHUNK_CHARS = 20
     return settings
@@ -98,14 +98,24 @@ def credential_settings(settings):
 
 @pytest.fixture
 def mock_llm(mocker):
-    """Return an LLM whose structured output is canned per response schema"""
+    """
+    Return an LLM whose structured output is canned per response schema.
+
+    `prompts` maps each response schema to the prompt it was sent, so a test
+    can assert what a given field's generator actually saw.
+    """
 
     def with_structured_output(schema):
+        async def ainvoke(prompt):
+            llm.prompts[schema] = prompt
+            return LLM_RESPONSES[schema]
+
         runnable = mocker.Mock()
-        runnable.ainvoke = mocker.AsyncMock(return_value=LLM_RESPONSES[schema])
+        runnable.ainvoke = ainvoke
         return runnable
 
     llm = mocker.Mock()
+    llm.prompts = {}
     llm.with_structured_output.side_effect = with_structured_output
     mocker.patch("learning_resources.credentials._get_llm", return_value=llm)
     return llm
@@ -138,7 +148,11 @@ def configurations(no_configurations):
     """One active configuration per credential metadata field"""
     return [
         CredentialMetadataConfigurationFactory.create(
-            field=field.name, prompt=f"Generate the {field.name}."
+            field=field.name,
+            prompt=f"Generate the {field.name}.",
+            retrieval_query=(
+                "syllabus" if field.name in FIELDS_USING_CONTENT_FILES else ""
+            ),
         )
         for field in CredentialMetadataField
     ]
@@ -222,7 +236,7 @@ def test_prepare_marketing_page_empty(content):
 @pytest.mark.django_db(transaction=True)
 def test_build_credential_context_uses_every_source(resource, mock_retrieval):
     """Context should carry resource metadata, the marketing page and chunks"""
-    context = asyncio.run(build_credential_context(resource))
+    context = asyncio.run(build_credential_context(resource, "syllabus"))
 
     assert resource.title in context.metadata
     assert resource.readable_id in context.metadata
@@ -246,7 +260,7 @@ def test_metadata_is_json_keyed_by_field(resource, mock_retrieval):
     run.description = "What this particular run covers."
     run.save()
 
-    context = asyncio.run(build_credential_context(resource))
+    context = asyncio.run(build_credential_context(resource, "syllabus"))
     values = json.loads(context.metadata.removeprefix("## Course information\n"))
 
     assert values["title"] == resource.title
@@ -264,7 +278,7 @@ def test_metadata_is_json_keyed_by_field(resource, mock_retrieval):
 def test_build_credential_context_without_marketing_page(mock_retrieval):
     """A resource with no marketing page still gets a context"""
     resource = LearningResourceFactory.create(is_course=True)
-    context = asyncio.run(build_credential_context(resource))
+    context = asyncio.run(build_credential_context(resource, "syllabus"))
 
     assert context.marketing_page == ""
     assert context.metadata
@@ -288,7 +302,7 @@ def test_build_credential_context_filters_chunks(resource, mocker, unusable):
         "learning_resources.credentials.async_content_file_chunks_for_resource",
         return_value=[payload],
     )
-    context = asyncio.run(build_credential_context(resource))
+    context = asyncio.run(build_credential_context(resource, "syllabus"))
     assert context.chunks == []
 
 
@@ -299,7 +313,7 @@ def test_build_credential_context_survives_retrieval_failure(resource, mocker):
         "learning_resources.credentials.async_content_file_chunks_for_resource",
         side_effect=ConnectionError("qdrant is down"),
     )
-    context = asyncio.run(build_credential_context(resource))
+    context = asyncio.run(build_credential_context(resource, "syllabus"))
 
     assert context.chunks == []
     assert "Apply conservation laws" in context.marketing_page
@@ -324,6 +338,22 @@ def test_assemble_includes_every_source_highest_scoring_first():
         "the next chunk"
     )
     assert point_ids == ["first", "second"]
+
+
+def test_assemble_without_chunks():
+    """Course information and the marketing page stand on their own"""
+    context = CredentialContext(
+        metadata="## Course information\n- Title: Fluids",
+        marketing_page="## Marketing page\n\nAbout this course.",
+        chunks=[("first", "the highest scoring chunk")],
+    )
+    text, point_ids = context.assemble(include_chunks=False)
+
+    assert text == (
+        "## Course information\n- Title: Fluids\n\n"
+        "## Marketing page\n\nAbout this course."
+    )
+    assert point_ids == []
 
 
 def test_assemble_omits_a_missing_marketing_page():
@@ -365,6 +395,81 @@ def test_generate_credential_metadata(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_only_criteria_is_generated_from_course_content(
+    resource, configurations, mock_llm, mock_retrieval
+):
+    """
+    Retrieved content files go to the criteria prompt alone.
+
+    Criteria are claims about what a learner did, so they need the course's own
+    material. A description is 1-2 sentences about what the course is, which the
+    metadata and marketing page already say.
+    """
+    asyncio.run(generate_credential_metadata(resource))
+
+    chunk_text = "A syllabus chunk long enough to be kept."
+    assert chunk_text in mock_llm.prompts[BadgeCriteria]
+    assert chunk_text not in mock_llm.prompts[BadgeDescription]
+    # Both still get everything the course says about itself.
+    for prompt in mock_llm.prompts.values():
+        assert resource.title in prompt
+        assert "Apply conservation laws" in prompt
+
+
+@pytest.mark.django_db(transaction=True)
+def test_retrieval_query_comes_from_the_admin(
+    resource, no_configurations, mock_llm, mock_retrieval
+):
+    """The query is whatever the criteria configuration says it is"""
+    CredentialMetadataConfigurationFactory.create(
+        field=CredentialMetadataField.criteria.name,
+        retrieval_query="grading rubric and assessments",
+    )
+
+    asyncio.run(generate_credential_metadata(resource))
+
+    mock_retrieval.assert_called_once_with(
+        resource.readable_id, "grading rubric and assessments", limit=10
+    )
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_blank_retrieval_query_retrieves_nothing(
+    resource, no_configurations, mock_llm, mock_retrieval
+):
+    """There is no vector search to run without a query"""
+    CredentialMetadataConfigurationFactory.create(
+        field=CredentialMetadataField.criteria.name, retrieval_query=""
+    )
+
+    asyncio.run(generate_credential_metadata(resource))
+
+    mock_retrieval.assert_not_called()
+    assert mock_llm.prompts[BadgeCriteria]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_description_only_generation_skips_retrieval(
+    resource, no_configurations, mock_llm, mock_retrieval
+):
+    """
+    With no field needing course content, Qdrant is never queried.
+
+    Even with a query set on the description row: the query is read from the
+    fields generated out of course content, not from whichever row has one.
+    """
+    CredentialMetadataConfigurationFactory.create(
+        field=CredentialMetadataField.description.name,
+        retrieval_query="syllabus",
+    )
+
+    asyncio.run(generate_credential_metadata(resource))
+
+    mock_retrieval.assert_not_called()
+    assert mock_llm.prompts[BadgeDescription]
+
+
+@pytest.mark.django_db(transaction=True)
 def test_generate_credential_metadata_logs_generations(
     resource, configurations, mock_llm, mock_retrieval
 ):
@@ -387,7 +492,10 @@ def test_generate_credential_metadata_logs_generations(
         assert generation.llm_model == configuration.llm_model
         assert generation.context_tokens > 0
         assert resource.title in generation.context_text
-        assert generation.retrieved_point_ids == ["point-1"]
+        # Only the fields generated from course content record chunks.
+        assert generation.retrieved_point_ids == (
+            ["point-1"] if configuration.field in FIELDS_USING_CONTENT_FILES else []
+        )
         assert generation.generated_by == user
         assert generation.error == ""
         assert generation.latency_ms is not None

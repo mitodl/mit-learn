@@ -63,6 +63,13 @@ RESPONSE_SCHEMAS = {
     CredentialMetadataField.criteria.name: BadgeCriteria,
 }
 
+# Only criteria is generated from retrieved course content. Criteria are claims
+# about what a learner actually did, so they need the course's own material --
+# syllabus, assessments, lecture prose. A description is 1-2 sentences about
+# what the course is, which the resource metadata and marketing page already
+# say directly; adding lecture text to that prompt dilutes it.
+FIELDS_USING_CONTENT_FILES = frozenset({CredentialMetadataField.criteria.name})
+
 # Sections that say nothing about what a learner demonstrated:
 #
 # - instructor CVs and publication lists, about a third of a course page
@@ -104,21 +111,22 @@ class CredentialContext(NamedTuple):
     marketing_page: str
     chunks: list[tuple[str, str]]
 
-    def assemble(self) -> tuple[str, list[str]]:
+    def assemble(self, *, include_chunks: bool = True) -> tuple[str, list[str]]:
         """
-        Render every source into the single string sent to the model.
+        Render the sources into the single string sent to the model.
+
+        Args:
+            include_chunks (bool): whether to append the retrieved content-file
+                chunks -- see FIELDS_USING_CONTENT_FILES
 
         Returns:
             tuple[str, list[str]]: the context text, and the Qdrant point ids
                 of the chunks it includes
         """
-        sections = [
-            self.metadata,
-            self.marketing_page,
-            *(text for _, text in self.chunks),
-        ]
+        chunks = self.chunks if include_chunks else []
+        sections = [self.metadata, self.marketing_page, *(text for _, text in chunks)]
         text = "\n\n".join(section for section in sections if section)
-        return text, [point_id for point_id, _ in self.chunks]
+        return text, [point_id for point_id, _ in chunks]
 
 
 def _render_metadata(resource: LearningResource) -> str:
@@ -237,7 +245,28 @@ def _usable_chunks(chunks: list[dict]) -> list[tuple[str, str]]:
     return usable
 
 
-async def _retrieve_chunks(resource: LearningResource) -> list[tuple[str, str]]:
+def retrieval_query(configs: list[CredentialMetadataConfiguration]) -> str:
+    """
+    Return the query to retrieve course content with, or "" for none.
+
+    Retrieval runs once and its chunks are shared, so the query comes from the
+    first configured field that is generated out of course content. Editable
+    per configuration in the admin, because which content a criteria prompt
+    needs is a judgement that will be retuned.
+    """
+    return next(
+        (
+            config.retrieval_query
+            for config in configs
+            if config.field in FIELDS_USING_CONTENT_FILES and config.retrieval_query
+        ),
+        "",
+    )
+
+
+async def _retrieve_chunks(
+    resource: LearningResource, query: str
+) -> list[tuple[str, str]]:
     """
     Retrieve the resource's most relevant content-file chunks.
 
@@ -248,7 +277,7 @@ async def _retrieve_chunks(resource: LearningResource) -> list[tuple[str, str]]:
     try:
         chunks = await async_content_file_chunks_for_resource(
             resource.readable_id,
-            settings.CREDENTIAL_METADATA_RETRIEVAL_QUERY,
+            query,
             limit=settings.CREDENTIAL_METADATA_RETRIEVAL_LIMIT,
         )
     except Exception:
@@ -261,21 +290,29 @@ async def _retrieve_chunks(resource: LearningResource) -> list[tuple[str, str]]:
     return _usable_chunks(chunks)
 
 
-async def build_credential_context(resource: LearningResource) -> CredentialContext:
+async def build_credential_context(
+    resource: LearningResource, query: str = ""
+) -> CredentialContext:
     """
     Assemble every source for a resource's credential metadata.
 
     Args:
         resource (LearningResource): the resource to build context for
+        query (str): the content retrieval query. Empty skips Qdrant entirely,
+            so a description-only run does not pay for a retrieval nothing
+            reads -- and there is no vector search to run without a query.
 
     Returns:
         CredentialContext: the metadata, marketing page and retrieved chunks
     """
-    metadata, marketing_page, chunks = await asyncio.gather(
+    sources = [
         db_sync_to_async(_render_metadata)(resource),
         db_sync_to_async(_marketing_page_content)(resource),
-        _retrieve_chunks(resource),
-    )
+    ]
+    if query:
+        sources.append(_retrieve_chunks(resource, query))
+    metadata, marketing_page, *retrieved = await asyncio.gather(*sources)
+    chunks = retrieved[0] if retrieved else []
     return CredentialContext(
         metadata=metadata,
         marketing_page=_prepare_marketing_page(marketing_page),
@@ -326,7 +363,9 @@ async def _generate_field(
     Returns:
         dict | None: the structured response, or None if generation failed
     """
-    context_text, point_ids = context.assemble()
+    context_text, point_ids = context.assemble(
+        include_chunks=config.field in FIELDS_USING_CONTENT_FILES
+    )
     prompt = f"{context_text}\n\n{config.prompt}"
 
     response, error = None, ""
@@ -397,7 +436,7 @@ async def generate_credential_metadata(resource: LearningResource, user=None) ->
         )
         return {}
 
-    context = await build_credential_context(resource)
+    context = await build_credential_context(resource, retrieval_query(configs))
     responses = await asyncio.gather(
         *[_generate_field(resource, config, context, user=user) for config in configs]
     )
