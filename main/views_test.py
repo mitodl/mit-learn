@@ -25,8 +25,9 @@ def test_authed_error(user_client):
 def test_unmatched_api_route_is_404_for_any_method(client, method):
     """An unmatched API route is a 404 regardless of the request method.
 
-    api_view() defaults to GET-only, which used to turn every non-GET client
-    error into a misleading `405 Method Not Allowed`.
+    handle_error used to be wrapped in `@api_view()`, which defaults to
+    GET-only and turned every non-GET client error into a misleading
+    `405 Method Not Allowed`.
     """
 
     response = getattr(client, method)(f"/api/v1/{uuid.uuid4()}/")

@@ -2,45 +2,46 @@
 Base utility views. Handles errors and feature list views.
 """
 
-from django.core.exceptions import BadRequest, PermissionDenied, SuspiciousOperation
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from django.http import JsonResponse
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
+from main.constants import PERMISSION_DENIED_ERROR_TYPE
 from main.features import get_all_feature_flags, is_enabled
 
+# Django only calls these when a DRF view has already declined the exception
+# (it isn't an APIException Http404, or PermissionDenied DRF recognizes) or
+# the error happened outside a DRF view entirely (URL resolution, middleware,
+# Django admin, oauth2_provider). By that point DRF's request pipeline
+# (content negotiation, versioning, authentication) is irrelevant, so these
+# are plain Django handlers rather than `@api_view`-wrapped ones - wrapping
+# them in DRF can only reintroduce that pipeline on a request DRF has already
+# proven isn't its to handle.
 
-@api_view(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "TRACE"])
-@permission_classes([AllowAny])
-def handle_error(
-    request,  # noqa: ARG001
-    exception=None,
-):
-    """Render the 400/403/404 handlers as JSON, preserving the real status."""
 
-    # Every method in Django's View.http_method_names has to be spelled out
-    # above: api_view() defaults to GET-only, so any POST that raised
-    # PermissionDenied or BadRequest was answered `405 Method Not Allowed,
-    # Allow: GET, OPTIONS` and the actual reason never reached the caller.
-    if isinstance(exception, PermissionDenied):
-        status_code = status.HTTP_403_FORBIDDEN
-        error_type = "PermissionDenied"
-        detail = "You do not have permission to perform this action."
-    elif isinstance(exception, BadRequest | SuspiciousOperation):
-        status_code = status.HTTP_400_BAD_REQUEST
-        error_type = "BadRequest"
-        detail = "The request could not be processed."
-    else:
-        status_code = status.HTTP_404_NOT_FOUND
-        error_type = "Http404"
-        detail = "The specified resource was not found."
-
-    return Response(
-        {"detail": detail, "error_type": error_type},
-        status=status_code,
+def _error_response(status_code, error_type, detail):
+    return JsonResponse(
+        {"detail": detail, "error_type": error_type}, status=status_code
     )
+
+
+def handle_400(request, exception=None):  # noqa: ARG001
+    """Render Django's handler400 as JSON."""
+    return _error_response(400, "BadRequest", "The request could not be processed.")
+
+
+def handle_403(request, exception=None):  # noqa: ARG001
+    """Render Django's handler403 as JSON."""
+    return _error_response(
+        403,
+        PERMISSION_DENIED_ERROR_TYPE,
+        "You do not have permission to perform this action.",
+    )
+
+
+def handle_404(request, exception=None):  # noqa: ARG001
+    """Render Django's handler404 as JSON."""
+    return _error_response(404, "Http404", "The specified resource was not found.")
 
 
 class FeaturesViewSet(ViewSet):

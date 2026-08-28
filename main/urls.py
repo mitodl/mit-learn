@@ -32,9 +32,9 @@ from main.views import FeaturesViewSet
 # via an alternation (|).
 POST_SLUG_PATTERN = "([^\\W]|-)+"
 
-handler400 = "main.views.handle_error"
-handler403 = "main.views.handle_error"
-handler404 = "main.views.handle_error"
+handler400 = "main.views.handle_400"
+handler403 = "main.views.handle_403"
+handler404 = "main.views.handle_404"
 
 features_router = DefaultRouter()
 features_router.register(r"_/features", FeaturesViewSet, basename="features")

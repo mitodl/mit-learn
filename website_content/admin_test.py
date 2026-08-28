@@ -248,11 +248,9 @@ def test_change_form_save_of_deleted_published_is_forbidden(admin_client):
     response = admin_client.post(change_url(content), change_form_post_data())
 
     # Django raises PermissionDenied and main.urls points handler403 at
-    # main.views.handle_error, which reports it as a 403 on any versioned API
-    # path. Under /admin/ there is no version namespace, so DRF's
-    # NamespaceVersioning raises NotFound from initial() before the handler
-    # body runs, and the response is a 404 either way.
-    assert response.status_code == 404
+    # main.views.handle_403, a plain Django handler with no DRF request
+    # pipeline in front of it, so the real 403 reaches the caller.
+    assert response.status_code == 403
     content.refresh_from_db()
     assert content.title == "Deleted Published"
 
