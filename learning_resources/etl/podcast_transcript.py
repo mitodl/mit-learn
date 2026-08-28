@@ -107,13 +107,14 @@ def parse_transcript_tags(item) -> list[dict]:
         item: the episode's ``<item>`` soup element, or a soup containing it
 
     Returns:
-        ``{"url", "type", "language"}`` dicts in feed order
+        ``{"url", "type", "language", "rel"}`` dicts in feed order
     """
     return [
         {
             "url": tag.get("url"),
             "type": tag.get("type") or "",
             "language": tag.get("language"),
+            "rel": tag.get("rel"),
         }
         for tag in item.find_all("transcript")
         if tag.prefix in (None, "podcast") and tag.get("url")
@@ -132,7 +133,7 @@ def transcript_tags_from_rss(rss: str | None) -> list[dict]:
         rss: the stored prettified ``<item>`` XML
 
     Returns:
-        ``{"url", "type", "language"}`` dicts in feed order
+        ``{"url", "type", "language", "rel"}`` dicts in feed order
     """
     if not rss:
         return []
@@ -189,7 +190,7 @@ def _resolved_media_type(entry: dict) -> str | None:
     against the result in ``_served_type_matches``.
 
     Args:
-        entry: a ``{"url", "type", "language"}`` dict
+        entry: a ``{"url", "type", "language", "rel"}`` dict
 
     Returns:
         a type from ``TRANSCRIPT_TYPE_PREFERENCE``, or None if none applies
@@ -205,6 +206,7 @@ class TranscriptCandidate(NamedTuple):
 
     url: str
     media_type: str
+    is_captions: bool
 
 
 def rank_transcript_candidates(entries: list[dict]) -> list[TranscriptCandidate]:
@@ -218,7 +220,7 @@ def rank_transcript_candidates(entries: list[dict]) -> list[TranscriptCandidate]
     JSON.
 
     Args:
-        entries: ``{"url", "type", "language"}`` dicts, in feed order
+        entries: ``{"url", "type", "language", "rel"}`` dicts, in feed order
 
     Returns:
         candidates in fetch order, at most ``MAX_TRANSCRIPT_CANDIDATES``
@@ -237,7 +239,11 @@ def rank_transcript_candidates(entries: list[dict]) -> list[TranscriptCandidate]
             (
                 TRANSCRIPT_TYPE_PREFERENCE.index(media_type),
                 index,
-                TranscriptCandidate(url=url, media_type=media_type),
+                TranscriptCandidate(
+                    url=url,
+                    media_type=media_type,
+                    is_captions=entry.get("rel") == "captions",
+                ),
             )
         )
     ranked.sort(key=lambda item: item[:2])
@@ -402,13 +408,17 @@ def _read_capped(response: requests.Response) -> str | None:
     body = b"".join(chunks)
     encoding = _declared_encoding(response) or "utf-8"
     try:
-        return body.decode(encoding, errors="replace")
+        text = body.decode(encoding, errors="replace")
     except LookupError:
         # An unrecognized charset name is not worth discarding the body over.
         log.warning(
             "Transcript at %s declared unknown charset %s", response.url, encoding
         )
-        return body.decode("utf-8", errors="replace")
+        text = body.decode("utf-8", errors="replace")
+    # A leading BOM would otherwise survive into the stored transcript:
+    # "﻿WEBVTT" fails the WEBVTT header match, and a BOM before a cue
+    # number fails the digit check that strips it.
+    return text.lstrip("﻿")
 
 
 def _checked_response(url: str) -> requests.Response | None:
@@ -508,7 +518,7 @@ def _split_speaker(text: str) -> tuple[str | None, str]:
 
 def _cue_speaker_and_text(
     payload: list[str], *, decode_entities: bool = True
-) -> tuple[str | None, str, str]:
+) -> tuple[str | None, str, str, bool]:
     """
     Reduce one cue's payload lines to a speaker and its text.
 
@@ -525,12 +535,14 @@ def _cue_speaker_and_text(
             references, as a caption file read off the wire does
 
     Returns:
-        the speaker name (or None), the text with any label removed, and the
-        text verbatim
+        the speaker name (or None), the text with any label removed, the text
+        verbatim, and whether the speaker came from a VTT voice tag rather
+        than a guessed inline label
     """
     joined = " ".join(payload)
     voice = VTT_VOICE_RE.search(joined)
     speaker = voice.group(1).strip() if voice else None
+    explicit = speaker is not None
     verbatim = VTT_TAG_RE.sub("", joined).strip()
     if decode_entities:
         # WebVTT requires "&" to be written "&amp;", so cue text arrives with
@@ -547,31 +559,39 @@ def _cue_speaker_and_text(
     def normalize(text: str) -> str:
         return re.sub(r"\s+", " ", text).strip()
 
-    return speaker, normalize(label_free), normalize(verbatim)
+    return speaker, normalize(label_free), normalize(verbatim), explicit
 
 
-def _speaker_labels_are_meaningful(turns: list[tuple[str | None, str, str]]) -> bool:
+def _inferred_labels_are_meaningful(
+    turns: list[tuple[str | None, str, str, bool]],
+) -> bool:
     """
-    Decide whether a cue file's speaker labels describe real turn structure.
+    Decide whether a cue file's *guessed* speaker labels describe real turns.
 
-    Formats that tag every cue (VTT voice tags, podcastindex ``speaker``) are
-    trustworthy. A file with a single label at the top is not, and honouring it
-    would attribute the whole episode to one person.
+    A label read from a VTT voice tag or a podcastindex ``speaker`` field is
+    explicit -- the format says outright who is speaking -- and is trusted
+    unconditionally by ``_turns_to_text`` regardless of what this returns. A
+    label guessed from an inline ``Name: `` prefix is not: it is
+    indistinguishable from a cue that merely contains a colon, so it is only
+    trusted once it recurs often enough to look like real turn-taking. A
+    single stray inferred label (Captivate's SRT has one across 861 cues)
+    would otherwise attribute the whole episode to one person.
 
     Args:
-        turns: ``(speaker, label_free_text, verbatim_text)`` triples in order
+        turns: ``(speaker, label_free_text, verbatim_text, explicit)`` tuples
+            in order
 
     Returns:
-        True if speaker labels should be applied
+        True if inferred speaker labels should be applied
     """
-    labeled = sum(1 for speaker, _, _ in turns if speaker)
+    inferred = sum(1 for speaker, _, _, explicit in turns if speaker and not explicit)
     return (
-        labeled >= MIN_SPEAKER_LABELS
-        and labeled * MAX_CUES_PER_SPEAKER_LABEL >= len(turns)
+        inferred >= MIN_SPEAKER_LABELS
+        and inferred * MAX_CUES_PER_SPEAKER_LABEL >= len(turns)
     )
 
 
-def _turns_to_text(turns: list[tuple[str | None, str, str]]) -> str:
+def _turns_to_text(turns: list[tuple[str | None, str, str, bool]]) -> str:
     """
     Render cues or segments as prose paragraphs.
 
@@ -581,23 +601,29 @@ def _turns_to_text(turns: list[tuple[str | None, str, str]]) -> str:
     paragraph of a turn carries the speaker label; continuations are unlabeled,
     which is how transcripts are conventionally set.
 
-    When the labels turn out not to be meaningful, the verbatim text is used so
-    that a cue which merely contains a colon keeps its opening words.
+    An explicit label (a VTT voice tag, a podcastindex ``speaker`` field) is
+    always applied. An inferred label is applied only once
+    ``_inferred_labels_are_meaningful`` finds it recurs; otherwise the verbatim
+    text is used so that a cue which merely contains a colon keeps its opening
+    words.
 
-    Consecutive identical cues are dropped: rolling captions repeat a cue
-    verbatim as the window scrolls.
+    Consecutive turns are deduplicated on speaker *and* text together, not
+    text alone: rolling captions repeat a cue verbatim as the window scrolls,
+    but two different speakers who happen to both say "Yes." are not a repeat.
 
     Args:
-        turns: ``(speaker, label_free_text, verbatim_text)`` triples in order
+        turns: ``(speaker, label_free_text, verbatim_text, explicit)`` tuples
+            in order
 
     Returns:
         paragraphs separated by a blank line
     """
-    use_speakers = _speaker_labels_are_meaningful(turns)
+    trust_inferred = _inferred_labels_are_meaningful(turns)
     paragraphs: list[str] = []
     current_speaker: str | None = None
     label_pending = False
     previous_text: str | None = None
+    previous_speaker: str | None = None
     buffer: list[str] = []
 
     def flush() -> None:
@@ -611,12 +637,22 @@ def _turns_to_text(turns: list[tuple[str | None, str, str]]) -> str:
             label_pending = False
         buffer.clear()
 
-    for speaker, label_free, verbatim in turns:
-        text = label_free if use_speakers else verbatim
-        if not text or text == previous_text:
+    for speaker, label_free, verbatim, explicit in turns:
+        use_label = explicit or trust_inferred
+        text = label_free if use_label else verbatim
+        # A continuation cue (speaker is None) inherits whoever is currently
+        # speaking, so the dedup check below compares against that speaker
+        # rather than None.
+        effective_speaker = (
+            (speaker if speaker is not None else current_speaker) if use_label else None
+        )
+        if not text or (
+            text == previous_text and effective_speaker == previous_speaker
+        ):
             continue
         previous_text = text
-        if use_speakers and speaker is not None and speaker != current_speaker:
+        previous_speaker = effective_speaker
+        if use_label and speaker is not None and speaker != current_speaker:
             flush()
             current_speaker = speaker
             label_pending = True
@@ -679,10 +715,74 @@ def parse_podcast_index_json(text: str) -> str:
             continue
         body = str(segment.get("body") or "").strip()
         speaker = segment.get("speaker")
+        speaker_name = str(speaker).strip() if speaker else None
         # The speaker is a real field here, so there is no inline label to
-        # strip: label-free and verbatim text are the same.
-        turns.append((str(speaker).strip() if speaker else None, body, body))
+        # strip: label-free and verbatim text are the same. A speaker read
+        # from this field is explicit, the same as a VTT voice tag.
+        turns.append((speaker_name, body, body, speaker_name is not None))
     return _turns_to_text(turns)
+
+
+def _preceding_cite_and_time(p) -> tuple[object, object]:
+    """
+    Find a ``<p>``'s immediately preceding ``<cite>`` and/or ``<time>`` tags.
+
+    Whitespace-only text nodes in between are skipped, but the walk stops at
+    the first other element or non-blank text, so an earlier, unrelated
+    ``<p>``'s own ``<cite>``/``<time>`` is never picked up.
+
+    Args:
+        p: the soup ``<p>`` tag
+
+    Returns:
+        the preceding ``<cite>`` tag and ``<time>`` tag, either of which may
+        be None
+    """
+    cite = time_tag = None
+    for sibling in p.previous_siblings:
+        name = getattr(sibling, "name", None)
+        if name == "cite" and cite is None:
+            cite = sibling
+        elif name == "time" and time_tag is None:
+            time_tag = sibling
+        elif name is not None or sibling.strip():
+            break
+    return cite, time_tag
+
+
+def _fold_cite_and_time(soup) -> None:
+    """
+    Merge a transcript ``<p>``'s ``<cite>`` label and ``<time>`` stamp into it.
+
+    The namespace's own HTML transcript sample nests ``<cite>``/``<time>``
+    inside the ``<p>`` they annotate; Captivate instead emits them as the
+    ``<p>``'s preceding siblings. Left alone, either shape falls apart under
+    the block-tag pass below: ``<cite>``, ``<time>``, and ``<p>`` each force
+    their own paragraph break, so "Kevin: Hello." comes out as three
+    fragments -- "Kevin", the raw timestamp, and "Hello." -- with the
+    timestamp surviving into the stored transcript. This folds both shapes
+    into one ``<p>`` so the later pass sees a single paragraph with the label
+    restored and the timestamp gone.
+
+    Args:
+        soup: the parsed HTML transcript, mutated in place
+    """
+    for p in soup.find_all("p"):
+        cite = p.find("cite")
+        time_tag = p.find("time")
+        if cite is None or time_tag is None:
+            preceding_cite, preceding_time = _preceding_cite_and_time(p)
+            cite = cite or preceding_cite
+            time_tag = time_tag or preceding_time
+        if cite is None and time_tag is None:
+            continue
+        if time_tag is not None:
+            time_tag.decompose()
+        if cite is not None:
+            speaker = cite.get_text().strip().rstrip(":").strip()
+            cite.decompose()
+            if speaker:
+                p.insert(0, f"{speaker}: ")
 
 
 def parse_html(text: str) -> str:
@@ -703,6 +803,7 @@ def parse_html(text: str) -> str:
     soup = bs(text, "html.parser")
     for tag in soup(["script", "style", "nav", "header", "footer"]):
         tag.decompose()
+    _fold_cite_and_time(soup)
     # Mark block boundaries before extracting rather than passing a separator
     # to get_text: a separator would also land between inline elements and
     # break sentences apart, while no separator at all would run consecutive
@@ -812,7 +913,14 @@ def _fetch_candidate(candidate: TranscriptCandidate) -> str:
         return ""
     if not body:
         return ""
-    return PARSERS[candidate.media_type](body)[:MAX_TRANSCRIPT_CHARS]
+    parser = PARSERS[candidate.media_type]
+    if candidate.is_captions and candidate.media_type == "text/plain":
+        # rel="captions" says the file carries cue numbers/timestamps even
+        # though it is typed text/plain, so parse_plain -- which does not
+        # know how to strip them -- would leak raw timecodes into the
+        # stored transcript.
+        parser = parse_cue_format
+    return parser(body)[:MAX_TRANSCRIPT_CHARS]
 
 
 def fetch_transcript(entries: list[dict]) -> str:
@@ -824,7 +932,7 @@ def fetch_transcript(entries: list[dict]) -> str:
     also published in another one.
 
     Args:
-        entries: ``{"url", "type", "language"}`` dicts, in feed order
+        entries: ``{"url", "type", "language", "rel"}`` dicts, in feed order
 
     Returns:
         the normalized transcript text, or "" if none could be fetched

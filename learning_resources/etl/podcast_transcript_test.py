@@ -56,6 +56,7 @@ def test_parse_transcript_tags_tolerates_undeclared_namespace(namespace):
             "url": "https://x/t.vtt",
             "type": "text/vtt",
             "language": "en",
+            "rel": "captions",
         }
     ]
 
@@ -92,11 +93,13 @@ def test_transcript_tags_survive_the_rss_round_trip():
             "url": "https://x/t.vtt",
             "type": "text/vtt",
             "language": "en",
+            "rel": None,
         },
         {
             "url": "https://x/t.srt",
             "type": "application/srt",
             "language": None,
+            "rel": "captions",
         },
     ]
 
@@ -119,6 +122,7 @@ def test_transcript_tags_survive_round_trip_without_declaration():
             "url": "https://x/t.vtt",
             "type": "text/vtt",
             "language": None,
+            "rel": None,
         }
     ]
 
@@ -285,6 +289,17 @@ def test_declared_type_wins_over_the_url_extension():
     assert rank_transcript_candidates(entries)[0].media_type == "text/vtt"
 
 
+def test_rank_transcript_candidates_flags_captions_rel():
+    """The rel="captions" hint survives onto the candidate"""
+    entries = [
+        {"url": "p", "type": "text/plain", "language": None, "rel": "captions"},
+        {"url": "v", "type": "text/vtt", "language": None, "rel": None},
+    ]
+    candidates = {c.url: c for c in rank_transcript_candidates(entries)}
+    assert candidates["p"].is_captions is True
+    assert candidates["v"].is_captions is False
+
+
 VTT = """WEBVTT
 
 NOTE
@@ -392,6 +407,38 @@ the same line
     assert parse_cue_format(srt) == "the same line"
 
 
+def test_parse_cue_format_keeps_identical_text_from_different_speakers():
+    """
+    Deduping on text alone would drop a different speaker's identical line.
+
+    Two speakers each saying "Yes." back to back is real dialogue, not a
+    rolling caption repeating itself.
+    """
+    vtt = (
+        "WEBVTT\n\n"
+        "00:00:00.000 --> 00:00:01.000\n<v Alice>Yes.\n\n"
+        "00:00:01.000 --> 00:00:02.000\n<v Bob>Yes.\n\n"
+        "00:00:02.000 --> 00:00:03.000\n<v Alice>Really?\n"
+    )
+    assert parse_cue_format(vtt) == "Alice: Yes.\n\nBob: Yes.\n\nAlice: Really?"
+
+
+def test_parse_cue_format_trusts_a_single_explicit_voice_tag():
+    """
+    An explicit VTT voice tag is trusted even in a single-cue file.
+
+    MIN_SPEAKER_LABELS exists to keep a single *guessed* inline label from
+    attributing a whole episode to one person -- it should not also strip a
+    label the format states outright.
+    """
+    vtt = (
+        "WEBVTT\n\n"
+        "00:00:00.000 --> 00:00:01.000\n"
+        "<v Host>Welcome to a very short bonus episode.\n"
+    )
+    assert parse_cue_format(vtt) == "Host: Welcome to a very short bonus episode."
+
+
 def test_parse_cue_format_empty():
     """An empty body yields an empty transcript"""
     assert parse_cue_format("") == ""
@@ -442,6 +489,15 @@ def test_parse_podcast_index_json_bad_payloads(payload):
     assert parse_podcast_index_json(payload) == ""
 
 
+def test_parse_podcast_index_json_trusts_a_single_explicit_speaker():
+    """A single segment's `speaker` field is a real field, not a guess"""
+    payload = (
+        '{"version":"1.0.0","segments":'
+        '[{"speaker":"Host","body":"Welcome to a short one."}]}'
+    )
+    assert parse_podcast_index_json(payload) == "Host: Welcome to a short one."
+
+
 def test_parse_html_recovers_captivate_srt_dump():
     """
     Captivate marks up only the first cue and dumps raw SRT after it.
@@ -462,6 +518,36 @@ def test_parse_html_recovers_captivate_srt_dump():
         assert artifact not in output
     assert "And we come back." in output
     assert "it's notable." in output
+
+
+def test_parse_html_groups_nested_cite_time_labels():
+    """
+    The namespace's own HTML sample nests <cite>/<time> inside each <p>.
+
+    Left ungrouped, <cite>, <time>, and <p> would each force their own
+    paragraph break, splitting one labeled line into three fragments.
+    """
+    html = (
+        "<p><cite>Host</cite><time>00:00:00</time>Welcome to the show.</p>"
+        "<p><cite>Guest</cite><time>00:00:05</time>Thanks for having me.</p>"
+    )
+    assert parse_html(html) == (
+        "Host: Welcome to the show.\n\nGuest: Thanks for having me."
+    )
+
+
+def test_parse_html_groups_sibling_cite_time_labels():
+    """
+    Captivate emits <cite>/<time> as a <p>'s preceding siblings, not nested.
+
+    With no SRT dump afterward to route this through the cue parser, a
+    <cite>/<time> pair left ungrouped would leave the raw timestamp
+    "00:00:00" as its own paragraph in the stored transcript.
+    """
+    html = (
+        "<cite>Sebastian Lourido:</cite><time>00:00:00</time><p>And we come back.</p>"
+    )
+    assert parse_html(html) == "Sebastian Lourido: And we come back."
 
 
 def test_parse_html_plain_document():
@@ -684,6 +770,31 @@ def test_fetch_transcript_allows_text_plain_for_any_type(
     assert "swollen lymph nodes" in fetch_transcript(entries)
 
 
+def test_fetch_transcript_routes_captions_marked_plain_through_cue_parser(
+    mocked_responses,
+    public_dns,
+):
+    """
+    rel="captions" means a "text/plain" file may still carry cue timings.
+
+    Skipping the cue parser here would let raw SRT timecodes reach the stored
+    transcript, since parse_plain does not know how to strip them.
+    """
+    mocked_responses.add(
+        mocked_responses.GET,
+        "https://ok.example/t.txt",
+        body=SRT,
+        content_type="text/plain",
+    )
+    entries = [
+        {"url": "https://ok.example/t.txt", "type": "text/plain", "rel": "captions"}
+    ]
+    output = fetch_transcript(entries)
+    assert "-->" not in output
+    assert "00:00:00" not in output
+    assert "swollen lymph nodes" in output
+
+
 def test_fetch_transcript_survives_request_failure(mocked_responses, public_dns):
     """A failing host yields no transcript rather than an exception"""
     mocked_responses.add(mocked_responses.GET, "https://ok.example/t.vtt", status=500)
@@ -710,6 +821,25 @@ def test_fetch_transcript_decodes_utf8_without_a_declared_charset(
     )
     entries = [{"url": "https://ok.example/t.vtt", "type": "text/vtt"}]
     assert fetch_transcript(entries) == "Jos\u00e9 was na\u00efve."
+
+
+def test_fetch_transcript_strips_leading_bom(mocked_responses, public_dns):
+    """
+    A UTF-8 file with a leading BOM would otherwise corrupt parsing.
+
+    "﻿WEBVTT" fails the WEBVTT header check, and a BOM before a cue
+    number fails the digit check that strips it -- either way it would
+    survive into the stored transcript.
+    """
+    body = "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nHello there.\n".encode("utf-8-sig")
+    mocked_responses.add(
+        mocked_responses.GET,
+        "https://ok.example/t.vtt",
+        body=body,
+        content_type="text/vtt",
+    )
+    entries = [{"url": "https://ok.example/t.vtt", "type": "text/vtt"}]
+    assert fetch_transcript(entries) == "Hello there."
 
 
 def test_fetch_transcript_honours_a_declared_charset(mocked_responses, public_dns):
