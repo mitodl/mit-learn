@@ -413,8 +413,11 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
 
   // On a contract-scoped page this must be the contract being viewed, not the
   // org's first one, or "Manage seats" silently sends the manager to a
-  // different contract's admin page.
-  const manageSeatsSlug = contract?.slug ?? org.contracts[0]?.slug
+  // different contract's admin page. And when that contract fails to
+  // resolve, it must stay undefined rather than falling back to the org's
+  // first contract, or the unresolved-link notice renders a "Manage seats"
+  // button pointing at an unrelated contract.
+  const manageSeatsSlug = contractSlug ? contract?.slug : org.contracts[0]?.slug
 
   const header = (
     <HeaderSection>
@@ -424,7 +427,9 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
         </ImageContainer>
         <div>
           <OrgName component="h1">{org.name}</OrgName>
-          <PageSubtitle>Analytics</PageSubtitle>
+          <PageSubtitle>
+            {contract ? `Analytics · ${contract.name}` : "Analytics"}
+          </PageSubtitle>
         </div>
       </OrgDetailsContainer>
       {manageSeatsSlug ? (

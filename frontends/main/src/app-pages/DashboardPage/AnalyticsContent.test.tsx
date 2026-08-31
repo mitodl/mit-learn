@@ -837,6 +837,11 @@ describe("AnalyticsContent, contract-scoped", () => {
         url: expect.stringContaining("/contracts/"),
       }),
     )
+    // Falling back to the org's first contract here would send a manager on
+    // a stale or mistyped link to a different contract's seat admin.
+    expect(
+      screen.queryByRole("link", { name: "Manage seats" }),
+    ).not.toBeInTheDocument()
   })
 
   test("an unresolved contract slug points the manager at org-wide analytics, not a dead end", async () => {
@@ -855,6 +860,50 @@ describe("AnalyticsContent, contract-scoped", () => {
       name: "organization-wide analytics",
     })
     expect(link).toHaveAttribute("href", organizationAnalyticsView(orgSlug))
+  })
+
+  test("names the contract being viewed, so a manager on a multi-contract org knows which one this is", async () => {
+    const contract = factories.contracts.contract({ name: "Fall 2026 Cohort" })
+    const org = orgWithUuid({ contracts: [contract] })
+    setManagerOrgs([org])
+
+    const contractId = String(contract.id)
+    const page = { limit: 200 }
+    setMockResponse.get(
+      analyticsUrls.contracts.contractUtilization(ORG_UUID, contractId, page),
+      analyticsFactories.envelope([analyticsFactories.contractUtilization()], {
+        as_of: AS_OF,
+      }),
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.engagementTrend(ORG_UUID, contractId, page),
+      analyticsFactories.envelope(
+        [analyticsFactories.contractMonthlyEngagementTrend()],
+        { as_of: AS_OF },
+      ),
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, contractId, page),
+      analyticsFactories.envelope(
+        [analyticsFactories.enrollmentCompletionFunnel()],
+        { as_of: AS_OF },
+      ),
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.programFunnel(ORG_UUID, contractId, page),
+      analyticsFactories.envelope([analyticsFactories.programFunnel()], {
+        as_of: AS_OF,
+      }),
+    )
+
+    renderWithProviders(
+      <AnalyticsContent
+        orgSlug={org.slug.replace(/^org-/, "")}
+        contractSlug={contract.slug}
+      />,
+    )
+
+    await screen.findByText("Analytics · Fall 2026 Cohort")
   })
 
   test("'Manage seats' targets the contract being viewed, not the org's first", async () => {
