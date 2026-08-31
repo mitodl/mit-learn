@@ -132,8 +132,14 @@ const ErrorText: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   </Description>
 )
 
+/*
+ * The requirement is stated in the label because smoot-design's `Checkbox`
+ * takes no `required` prop and forwards nothing to its input, so there is no
+ * way to mark it programmatically. Without this, assistive technology only
+ * learns the box is mandatory after a failed submit.
+ */
 const CONSENT_LABEL =
-  "I understand that my grades and progress towards a certificate will be removed after the refund is processed."
+  "I understand that my grades and progress towards a certificate will be removed after the refund is processed. (required)"
 
 type FormValues = {
   refund_reason: RefundReasonEnum | ""
@@ -213,6 +219,12 @@ const RefundRequestDialogInner: React.FC<RefundRequestDialogProps> = ({
    * have none and disappear from the dashboard instead. Assume the harsher
    * outcome if the order somehow has no line, rather than promising access
    * that may not survive the refund.
+   *
+   * Reading line 0 alone assumes one line per order. mitxonline can model more
+   * — `create_from_basket` writes a `Line` per product — but no checkout has
+   * ever produced a multi-line order. If one ever does, this needs to consider
+   * every line and say something sensible about a mixed order, since the
+   * request refunds the whole thing.
    */
   const hasFreeAudit = order.lines[0]?.has_free_audit ?? false
 

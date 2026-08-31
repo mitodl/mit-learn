@@ -337,6 +337,8 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
                   onRequestRefund={() =>
                     NiceModal.show(RefundRequestDialog, {
                       order,
+                      // One line per order in practice; see the note on
+                      // `hasFreeAudit` in RefundRequestDialog.
                       title: order.lines[0]?.content_title ?? "this course",
                       isLate:
                         order.refund_status === RefundStatusEnum.WindowClosed,

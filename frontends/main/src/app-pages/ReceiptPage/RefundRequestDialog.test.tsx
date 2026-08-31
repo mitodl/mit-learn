@@ -166,10 +166,9 @@ describe("RefundRequestDialog, inside the refund window", () => {
     const dialog = await openDialog()
 
     await user.click(within(dialog).getByRole("radio", { name: "Other" }))
-    await user.type(
-      within(dialog).getByRole("textbox"),
-      "Typed under Other, then thought better of it",
-    )
+    // Short on purpose: `user.type` costs a keystroke at a time, and the
+    // assertion is that the text is dropped, not what it said.
+    await user.type(within(dialog).getByRole("textbox"), "abandoned")
 
     await user.click(
       within(dialog).getByRole("radio", { name: "I purchased by mistake" }),
