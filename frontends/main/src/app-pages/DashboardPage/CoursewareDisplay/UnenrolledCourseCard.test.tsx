@@ -45,7 +45,10 @@ describe.each([
 
   test("shows course title as a focusable button (not link) when not enrolled", () => {
     setupUserApis()
-    const run = mitxonline.factories.courses.courseRun({ b2b_contract: null })
+    const run = mitxonline.factories.courses.courseRun({
+      b2b_contract: null,
+      is_enrollable: true,
+    })
     const course = mitxOnlineCourse({
       title: run.title, // match so heading text is predictable
       courseruns: [run],
