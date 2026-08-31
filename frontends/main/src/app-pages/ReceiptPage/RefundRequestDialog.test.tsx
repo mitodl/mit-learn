@@ -161,6 +161,78 @@ describe("RefundRequestDialog, inside the refund window", () => {
       }),
     ])
   })
+
+  test("abandoning 'Other' for a preset reason drops what was typed", async () => {
+    const dialog = await openDialog()
+
+    await user.click(within(dialog).getByRole("radio", { name: "Other" }))
+    await user.type(
+      within(dialog).getByRole("textbox"),
+      "Typed under Other, then thought better of it",
+    )
+
+    await user.click(
+      within(dialog).getByRole("radio", { name: "I purchased by mistake" }),
+    )
+    expect(within(dialog).queryByRole("textbox")).not.toBeInTheDocument()
+
+    await user.click(within(dialog).getByRole("checkbox"))
+    await user.click(
+      within(dialog).getByRole("button", { name: "Submit Refund Request" }),
+    )
+
+    expect(submittedRequests()).toEqual([
+      expect.objectContaining({
+        body: expect.objectContaining({
+          refund_reason: "purchased_by_mistake",
+          refund_reason_text: "",
+        }),
+      }),
+    ])
+  })
+
+  test("acting on a field clears the error it was reporting", async () => {
+    const dialog = await openDialog()
+
+    await user.click(
+      within(dialog).getByRole("button", { name: "Submit Refund Request" }),
+    )
+    within(dialog).getByText("Please select a reason for your refund request.")
+
+    await user.click(
+      within(dialog).getByRole("radio", { name: "Course is too difficult" }),
+    )
+
+    expect(
+      within(dialog).queryByText(
+        "Please select a reason for your refund request.",
+      ),
+    ).not.toBeInTheDocument()
+    // The consent error was never fixed, so clearing one must not clear both.
+    within(dialog).getByText("Please acknowledge this before continuing.")
+  })
+
+  test("a failed submit moves focus to the first field that failed", async () => {
+    const dialog = await openDialog()
+    const submit = within(dialog).getByRole("button", {
+      name: "Submit Refund Request",
+    })
+
+    await user.click(submit)
+
+    // Focus lands on the reason group, the earlier of the two failures, rather
+    // than staying on the button at the bottom of the dialog.
+    expect(
+      within(dialog).getByRole("radio", { name: "I do not have enough time" }),
+    ).toHaveFocus()
+
+    await user.click(
+      within(dialog).getByRole("radio", { name: "Prefer not to say" }),
+    )
+    await user.click(submit)
+
+    expect(within(dialog).getByRole("checkbox")).toHaveFocus()
+  })
 })
 
 describe("RefundRequestDialog, after the refund window", () => {
