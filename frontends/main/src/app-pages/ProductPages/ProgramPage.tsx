@@ -267,11 +267,11 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       imageSrc={imageSrc}
       videoUrl={page.video_url}
       enrollmentAction={<ProgramHeaderEnrollButton program={program} />}
-      showStayUpdated={page.show_stay_updated ?? false}
       resource={{
         readable_id: program.readable_id,
         resource_type: "program",
       }}
+      hubspotFormId={page.hubspot_form_id}
       infoBox={
         <ProgramInfoBox
           program={program}

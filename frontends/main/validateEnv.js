@@ -56,7 +56,6 @@ const schema = yup.object().shape({
   NEXT_PUBLIC_HUBSPOT_PORTAL_ID: yup.string(),
   NEXT_PUBLIC_VERSION: yup.string(),
   NEXT_PUBLIC_RECAPTCHA_SITE_KEY: yup.string(),
-  NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID: yup.string(),
   NEXT_PUBLIC_SENTRY_DSN: yup.string(),
   NEXT_PUBLIC_SENTRY_ENV: yup.string(),
   NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE: yup.string(),
