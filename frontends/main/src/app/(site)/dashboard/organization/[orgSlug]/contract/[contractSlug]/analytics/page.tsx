@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import AnalyticsContent from "@/app-pages/DashboardPage/AnalyticsContent"
 
@@ -8,7 +9,7 @@ import AnalyticsContent from "@/app-pages/DashboardPage/AnalyticsContent"
  * the same shape (`manager/organizations/{org}/contracts/{contract}`).
  */
 const Page: React.FC<
-  PageProps<"/dashboard/organization/[orgSlug]/contract/[contractSlug]/analytics">
+  AppPageProps<"/dashboard/organization/[orgSlug]/contract/[contractSlug]/analytics">
 > = async ({ params }) => {
   const resolved = await params
   return (
