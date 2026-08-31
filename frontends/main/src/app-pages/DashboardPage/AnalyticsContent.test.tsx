@@ -791,6 +791,13 @@ describe("AnalyticsContent, contract-scoped", () => {
         as_of: AS_OF,
       }),
     )
+    setMockResponse.get(
+      analyticsUrls.contracts.contentEngagement(ORG_UUID, contractId, page),
+      analyticsFactories.envelope(
+        [analyticsFactories.contractContentEngagementDepth()],
+        { as_of: AS_OF },
+      ),
+    )
 
     renderWithProviders(
       <AnalyticsContent
@@ -895,6 +902,13 @@ describe("AnalyticsContent, contract-scoped", () => {
         as_of: AS_OF,
       }),
     )
+    setMockResponse.get(
+      analyticsUrls.contracts.contentEngagement(ORG_UUID, contractId, page),
+      analyticsFactories.envelope(
+        [analyticsFactories.contractContentEngagementDepth()],
+        { as_of: AS_OF },
+      ),
+    )
 
     renderWithProviders(
       <AnalyticsContent
@@ -941,6 +955,13 @@ describe("AnalyticsContent, contract-scoped", () => {
       analyticsFactories.envelope([analyticsFactories.programFunnel()], {
         as_of: AS_OF,
       }),
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.contentEngagement(ORG_UUID, contractId, page),
+      analyticsFactories.envelope(
+        [analyticsFactories.contractContentEngagementDepth()],
+        { as_of: AS_OF },
+      ),
     )
 
     const orgSlug = org.slug.replace(/^org-/, "")

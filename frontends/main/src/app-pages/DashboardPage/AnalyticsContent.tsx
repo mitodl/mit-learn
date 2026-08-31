@@ -18,6 +18,8 @@ import {
   analyticsOrganizationQueries,
 } from "api/analytics-hooks/organizations"
 import type {
+  ContentEngagementDepth,
+  ContractContentEngagementDepth,
   ContractMonthlyEngagementTrend,
   ContractUtilization,
   EnrollmentCompletionFunnel,
@@ -169,6 +171,7 @@ type SectionQueries = {
   trend: SectionQuery<MonthlyEngagementTrend>
   courses: SectionQuery<EnrollmentCompletionFunnel>
   programs: SectionQuery<ProgramFunnel>
+  content: SectionQuery<ContentEngagementDepth>
 }
 
 /**
@@ -211,6 +214,24 @@ const eraseContractTrendRow = (
   >,
 ): SectionQuery<MonthlyEngagementTrend> =>
   factory as unknown as SectionQuery<MonthlyEngagementTrend>
+
+/**
+ * Same trade as `eraseContractTrendRow`, for the one other section where the
+ * contract-scoped row (`ContractContentEngagementDepth`) is a superset of the
+ * org-scoped one: it adds the contract identity that `ContentEngagementTable`
+ * never reads.
+ */
+const eraseContractContentRow = (
+  // Nothing here reads the query key.
+  factory: (page: { limit: number }) => UseQueryOptions<
+    OrgAnalyticsResponse<ContractContentEngagementDepth>,
+    Error,
+    OrgAnalyticsResponse<ContractContentEngagementDepth>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    any
+  >,
+): SectionQuery<ContentEngagementDepth> =>
+  factory as unknown as SectionQuery<ContentEngagementDepth>
 
 type AnalyticsContentInternalProps = {
   orgSlug: string
@@ -309,6 +330,9 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           programs: eraseKey<ProgramFunnel>((page) =>
             analyticsContractQueries.programFunnel(orgId, contractId, page),
           ),
+          content: eraseContractContentRow((page) =>
+            analyticsContractQueries.contentEngagement(orgId, contractId, page),
+          ),
         }
       : {
           utilization: eraseKey<ContractUtilization>((page) =>
@@ -322,6 +346,9 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           ),
           programs: eraseKey<ProgramFunnel>((page) =>
             analyticsOrganizationQueries.programFunnel(orgId, page),
+          ),
+          content: eraseKey<ContentEngagementDepth>((page) =>
+            analyticsOrganizationQueries.contentEngagement(orgId, page),
           ),
         }
   }, [orgUuid, contractId]) satisfies SectionQueries
@@ -347,9 +374,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     placeholderData: keepPreviousData,
   })
   const content = useQuery({
-    ...analyticsOrganizationQueries.contentEngagement(orgUuid ?? "", {
-      limit: limits.content,
-    }),
+    ...scoped.content({ limit: limits.content }),
     enabled: analyticsAvailable,
     placeholderData: keepPreviousData,
   })
