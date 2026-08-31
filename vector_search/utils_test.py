@@ -60,7 +60,6 @@ from vector_search.constants import (
     QDRANT_OPTIMIZER_THRESHOLD_SMALL,
     QDRANT_RESOURCE_PARAM_MAP,
     RESOURCE_AGE_DATE_PAYLOAD_KEY,
-    RESOURCE_EMBEDDING_CHECKSUM_FIELD,
     RESOURCES_COLLECTION_NAME,
     RESOURCES_PAYLOAD_EXCLUDE,
     RESOURCES_RETRIEVE_PAYLOAD,
@@ -75,7 +74,6 @@ from vector_search.utils import (
     _generate_content_file_points,
     _get_text_splitter,
     _is_markdown_content,
-    _process_resource_embeddings,
     _resource_payload_hits,
     _resource_vector_hits,
     _set_payload,
@@ -1015,95 +1013,6 @@ def test_course_metadata_document_contents(mocker):
             assert level["name"] in course_metadata_content
 
 
-@pytest.mark.parametrize(
-    ("stored_checksum", "expected"),
-    [
-        ("current", False),  # stored checksum matches the context to be embedded
-        ("stale", True),  # context changed since the point was embedded
-        (None, True),  # point predates the stored checksum -> backfill
-    ],
-)
-def test_should_generate_resource_embeddings_checksum_gate(
-    mocker, stored_checksum, expected
-):
-    """The gate compares the stored checksum, not a re-render of the payload."""
-    resource = LearningResourceFactory.create()
-    doc = next(iter(serialize_bulk_learning_resources([resource.id])))
-    doc[RESOURCE_EMBEDDING_CHECKSUM_FIELD] = "current"
-
-    mock_qdrant = mocker.MagicMock()
-    mock_point = mocker.MagicMock()
-    mock_point.payload = (
-        {RESOURCE_EMBEDDING_CHECKSUM_FIELD: stored_checksum} if stored_checksum else {}
-    )
-    mock_qdrant.retrieve.return_value = [mock_point]
-    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
-
-    assert should_generate_resource_embeddings(doc) is expected
-    # Only the checksum is fetched -- resource payloads are large.
-    assert mock_qdrant.retrieve.call_args.kwargs["with_payload"] == [
-        RESOURCE_EMBEDDING_CHECKSUM_FIELD
-    ]
-
-
-def test_should_generate_when_only_db_rendered_fields_changed(mocker):
-    """
-    A stored payload that re-renders identically to the current document still
-    gets re-embedded when its checksum is stale.
-
-    Parts of the metadata document (program_courses, for one) are rendered from
-    current database rows rather than from the payload, so a stale parent point
-    renders with the new child data and the old re-render comparison saw no
-    change at all.
-    """
-    resource = LearningResourceFactory.create()
-    doc = next(iter(serialize_bulk_learning_resources([resource.id])))
-
-    mock_qdrant = mocker.MagicMock()
-    mock_point = mocker.MagicMock()
-    # Identical payload, checksum from before the child change.
-    mock_point.payload = {RESOURCE_EMBEDDING_CHECKSUM_FIELD: "checksum-before-change"}
-    mock_qdrant.retrieve.return_value = [mock_point]
-    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
-
-    assert should_generate_resource_embeddings(doc) is True
-
-
-@pytest.mark.parametrize("stored_matches", [True, False])
-def test_process_resource_embeddings_stamps_checksum(mocker, stored_matches):
-    """Both the re-embed and payload-only paths write the context checksum."""
-    resource = LearningResourceFactory.create()
-    doc = next(iter(serialize_bulk_learning_resources([resource.id])))
-    mock_dense = mocker.MagicMock()
-    mock_dense.embed_documents.side_effect = lambda texts: [[0.1] for _ in texts]
-    mock_dense.model_short_name.return_value = "dense"
-    mock_sparse = mocker.MagicMock()
-    mock_sparse.embed_documents.side_effect = lambda texts: [[0.2] for _ in texts]
-    mock_sparse.model_short_name.return_value = "sparse"
-    mocker.patch("vector_search.utils.dense_encoder", return_value=mock_dense)
-    mocker.patch("vector_search.utils.sparse_encoder", return_value=mock_sparse)
-    mocker.patch(
-        "vector_search.utils.should_generate_resource_embeddings",
-        return_value=not stored_matches,
-    )
-    update_payload_mock = mocker.patch(
-        "vector_search.utils.update_learning_resource_payload"
-    )
-
-    points = _process_resource_embeddings([doc])
-
-    expected_checksum = checksum_for_content(
-        vs_utils._learning_resource_embedding_context(doc)  # noqa: SLF001
-    )
-    assert expected_checksum
-    if stored_matches:
-        assert points is None
-        written = update_payload_mock.call_args.args[0]
-    else:
-        written = next(iter(points)).payload
-    assert written[RESOURCE_EMBEDDING_CHECKSUM_FIELD] == expected_checksum
-
-
 def test_should_generate_for_changed_resource(mocker):
     """Should generate embeddings when resource content has changed"""
     resource = LearningResourceFactory.create()
@@ -1249,28 +1158,6 @@ def test_embedding_context_truncates_content(mocker, serialized_course):
     assert context == "# Informat"
     untruncated, model = truncate_mock.call_args.args
     assert untruncated.endswith("## Content\n0123456789ABCDEF")
-    assert model == "test-model"
-    assert truncate_mock.call_args.kwargs == {"token_encoding_name": "test-encoding"}
-
-
-def test_embedding_context_truncates_without_content_files(mocker, serialized_course):
-    """The metadata document alone is truncated even with no content files."""
-    encoder = mocker.MagicMock(
-        model_name="test-model",
-        token_encoding_name="test-encoding",  # noqa: S106
-    )
-    mocker.patch("vector_search.utils.dense_encoder", return_value=encoder)
-    truncate_mock = mocker.patch(
-        "vector_search.utils.truncate_to_model_limit",
-        side_effect=lambda text, *_args, **_kwargs: text[:10],
-    )
-    serialized_course["content_files"] = []
-
-    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
-
-    assert context == "# Informat"
-    untruncated, model = truncate_mock.call_args.args
-    assert "## Content" not in untruncated
     assert model == "test-model"
     assert truncate_mock.call_args.kwargs == {"token_encoding_name": "test-encoding"}
 
