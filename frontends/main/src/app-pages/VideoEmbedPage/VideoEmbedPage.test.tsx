@@ -9,7 +9,7 @@ jest.mock("next-nprogress-bar", () => ({
   useRouter: () => ({}),
 }))
 
-jest.mock("@/app-pages/VideoPlaylistCollectionPage/VideoJsPlayer", () => ({
+jest.mock("@/page-components/VideoPlayer/VideoJsPlayer", () => ({
   __esModule: true,
   default: (props: { sources?: { src: string; type: string }[] }) => (
     <div
