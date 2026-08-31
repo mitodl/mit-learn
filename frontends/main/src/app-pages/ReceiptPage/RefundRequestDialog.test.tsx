@@ -179,7 +179,7 @@ describe("RefundRequestDialog, after the refund window", () => {
 
     expect(within(dialog).queryAllByRole("radio")).toHaveLength(0)
     within(dialog).getByRole("textbox")
-    within(dialog).getByText("0 / 1000")
+    within(dialog).getByText("0 / 1000 characters")
   })
 
   test("submits the explanation with no preset reason", async () => {

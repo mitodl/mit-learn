@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useRef } from "react"
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import { useFormik } from "formik"
 import {
@@ -18,6 +18,7 @@ import {
 import { RefundReasonEnum } from "@mitodl/mitxonline-api-axios/v2"
 import type { Order } from "@mitodl/mitxonline-api-axios/v2"
 import { useCreateRefundRequest } from "api/mitxonline-hooks/orders"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { formatMoney } from "./receiptUtils"
 
 /**
@@ -116,6 +117,21 @@ const Counter = styled.div(({ theme }) => ({
   textAlign: "right",
 }))
 
+/**
+ * `Description` on its own is only styling. An error a screen reader will
+ * actually hear needs a live region.
+ *
+ * `role="alert"` carries this alone, without a matching `aria-describedby` on
+ * the input: neither `Checkbox` nor `RadioChoiceField` forwards arbitrary props
+ * to the control, and describing the wrapper instead does nothing, since
+ * `aria-describedby` is only read from the focused element.
+ */
+const ErrorText: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <Description error role="alert">
+    {children}
+  </Description>
+)
+
 const CONSENT_LABEL =
   "I understand that my grades and progress towards a certificate will be removed after the refund is processed."
 
@@ -125,16 +141,22 @@ type FormValues = {
   consent_given: boolean
 }
 
-/** The design marks required fields with a red asterisk after the label. */
-const Required = styled.span(({ theme }) => ({
-  color: theme.custom.colors.red,
-}))
-
 const Field = styled.div({
   display: "flex",
   flexDirection: "column",
   gap: "4px",
 })
+
+/**
+ * Whether the free-text box is on screen.
+ *
+ * Validation and submission both key off this. Anything it hides is neither
+ * checked nor sent: an error on a field the learner cannot see is one they
+ * cannot clear, and text they typed under "Other" does not describe the reason
+ * they ended up choosing.
+ */
+const showsReasonText = (values: FormValues, isLate: boolean) =>
+  isLate || values.refund_reason === RefundReasonEnum.Other
 
 /**
  * Mirrors what `RefundRequestSerializer` will accept, so the learner is told
@@ -149,11 +171,13 @@ const validate = (values: FormValues, isLate: boolean) => {
   }
   // The API requires free text whenever no preset reason explains the request:
   // after the window there are no presets, and "Other" says nothing on its own.
-  if ((isLate || values.refund_reason === RefundReasonEnum.Other) && !text) {
-    errors.refund_reason_text = "Please tell us why you're requesting a refund."
-  }
-  if (text.length > REASON_TEXT_MAX) {
-    errors.refund_reason_text = `Please keep this under ${REASON_TEXT_MAX} characters.`
+  if (showsReasonText(values, isLate)) {
+    if (!text) {
+      errors.refund_reason_text =
+        "Please tell us why you're requesting a refund."
+    } else if (text.length > REASON_TEXT_MAX) {
+      errors.refund_reason_text = `Please keep this to ${REASON_TEXT_MAX} characters or fewer.`
+    }
   }
   if (!values.consent_given) {
     errors.consent_given = "Please acknowledge this before continuing."
@@ -178,7 +202,11 @@ const RefundRequestDialogInner: React.FC<RefundRequestDialogProps> = ({
   isLate,
 }) => {
   const modal = NiceModal.useModal()
-  const createRefundRequest = useCreateRefundRequest()
+  // The dialog reports a rejected request inline, next to the submit button it
+  // came from, so the global toast would duplicate it somewhere less useful.
+  const createRefundRequest = useCreateRefundRequest({
+    meta: SILENCE_ERROR_TOAST,
+  })
 
   /**
    * Refunding usually drops the learner to the audit track, but some courses
@@ -207,7 +235,11 @@ const RefundRequestDialogInner: React.FC<RefundRequestDialogProps> = ({
           // After the window the API takes the free text alone; sending a
           // preset reason too would misreport what the learner chose.
           refund_reason: isLate ? undefined : values.refund_reason || undefined,
-          refund_reason_text: values.refund_reason_text.trim(),
+          // Only ever send what was on screen. Text typed under "Other" and
+          // then abandoned for a preset reason describes neither.
+          refund_reason_text: showsReasonText(values, isLate)
+            ? values.refund_reason_text.trim()
+            : "",
           consent_given: values.consent_given,
         },
         { onSuccess: () => modal.hide() },
@@ -215,15 +247,62 @@ const RefundRequestDialogInner: React.FC<RefundRequestDialogProps> = ({
     },
   })
 
-  const showReasonText =
-    isLate || formik.values.refund_reason === RefundReasonEnum.Other
+  const showReasonText = showsReasonText(formik.values, isLate)
+
+  // `FormDialog` owns the form element's props, so the ref goes on the body it
+  // renders instead. Every field lives inside it.
+  const bodyRef = useRef<HTMLDivElement>(null)
+
+  /**
+   * Send focus to whatever failed, in the order the fields appear. Without it a
+   * submit from the bottom of the dialog reports an error the learner may never
+   * scroll back to, and leaves a screen reader sitting on the button.
+   */
+  const focusFirstError = (
+    errors: Partial<Record<keyof FormValues, string>>,
+  ) => {
+    const first = (
+      ["refund_reason", "refund_reason_text", "consent_given"] as const
+    ).find((name) => errors[name])
+    if (!first) return
+    bodyRef.current?.querySelector<HTMLElement>(`[name="${first}"]`)?.focus()
+  }
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const errors = await formik.validateForm()
+    if (Object.keys(errors).length > 0) {
+      // Formik sets these itself on submit, but it cannot tell us which field
+      // to move to, so they are applied here alongside the focus move.
+      formik.setErrors(errors)
+      focusFirstError(errors)
+      return
+    }
+    formik.handleSubmit(event)
+  }
+
+  /**
+   * Errors are raised on submit, not on change, so a stale one would otherwise
+   * sit there after the learner has fixed it. Clearing the field's own error as
+   * they act on it keeps the message tied to the current state without
+   * validating fields they have not reached yet.
+   */
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    formik.handleChange(event)
+    if (formik.errors[event.target.name as keyof FormValues]) {
+      formik.setFieldError(event.target.name, undefined)
+    }
+  }
 
   return (
     <FormDialog
       title={isLate ? "Request refund review" : "Request refund"}
       fullWidth
+      // Fields are marked `required` for assistive tech, but the browser's own
+      // validation would block submit before formik could report anything.
+      noValidate
       onReset={formik.resetForm}
-      onSubmit={formik.handleSubmit}
+      onSubmit={handleSubmit}
       {...muiDialogV5(modal)}
       actions={
         <DialogActions>
@@ -245,7 +324,7 @@ const RefundRequestDialogInner: React.FC<RefundRequestDialogProps> = ({
         </DialogActions>
       }
     >
-      <Body>
+      <Body ref={bodyRef}>
         {isLate ? (
           <>
             <Intro>
@@ -280,23 +359,28 @@ const RefundRequestDialogInner: React.FC<RefundRequestDialogProps> = ({
             : "This course does not have a free audit version. After the refund is processed, the course will be removed from your dashboard and you'll lose access to the course materials."}
         </Alert>
 
+        {/*
+         * `RadioChoiceField` renders MUI's `RadioGroup`, which supplies the
+         * `radiogroup` role itself, and exposes no prop to mark it required or
+         * point it at a description. So the requirement is carried by the label
+         * text, and the error announces itself through `role="alert"`.
+         */}
         {isLate ? null : (
           <Field>
             <Reasons
               name="refund_reason"
-              label={
-                <>
-                  Reason for refund request <Required aria-hidden>*</Required>
-                </>
-              }
+              label="Reason for refund request (required)"
               choices={REFUND_REASONS}
               value={formik.values.refund_reason}
-              onChange={formik.handleChange}
+              onChange={handleChange}
             />
-            <Description error={Boolean(formik.errors.refund_reason)}>
-              {formik.errors.refund_reason ??
-                "Select the main reason you're requesting a refund."}
-            </Description>
+            {formik.errors.refund_reason ? (
+              <ErrorText>{formik.errors.refund_reason}</ErrorText>
+            ) : (
+              <Description>
+                Select the main reason you're requesting a refund.
+              </Description>
+            )}
           </Field>
         )}
 
@@ -304,36 +388,34 @@ const RefundRequestDialogInner: React.FC<RefundRequestDialogProps> = ({
           <div>
             <TextField
               fullWidth
+              required
               multiline={isLate}
               minRows={isLate ? 4 : undefined}
               name="refund_reason_text"
-              // The asterisk is rendered rather than set via `required`: that
-              // would mark the input required to the browser, whose native
-              // validation blocks submit before formik can report anything.
-              label={
-                <>
-                  {isLate ? "Reason for request" : "Please Specify"}{" "}
-                  <Required aria-hidden>*</Required>
-                </>
-              }
+              label={isLate ? "Reason for request" : "Please Specify"}
+              // The limit belongs in the description, not only in the counter:
+              // otherwise it is discoverable only by being rejected for it.
               helpText={
                 isLate
-                  ? "Tell us what happened and why you're requesting a refund"
-                  : undefined
+                  ? `Tell us what happened and why you're requesting a refund. Up to ${REASON_TEXT_MAX} characters.`
+                  : `Up to ${REASON_TEXT_MAX} characters.`
               }
               placeholder={
                 isLate
                   ? "Share details to help our team review your request."
                   : "Tell us your reason"
               }
+              inputProps={{ maxLength: REASON_TEXT_MAX }}
               value={formik.values.refund_reason_text}
-              onChange={formik.handleChange}
+              onChange={handleChange}
               error={Boolean(formik.errors.refund_reason_text)}
               errorText={formik.errors.refund_reason_text}
             />
             {isLate ? (
-              <Counter aria-hidden>
-                {`${formik.values.refund_reason_text.length} / ${REASON_TEXT_MAX}`}
+              // Announced only when it settles, so it does not interrupt on
+              // every keystroke.
+              <Counter aria-live="polite">
+                {`${formik.values.refund_reason_text.length} / ${REASON_TEXT_MAX} characters`}
               </Counter>
             ) : null}
           </div>
@@ -344,10 +426,10 @@ const RefundRequestDialogInner: React.FC<RefundRequestDialogProps> = ({
             name="consent_given"
             label={CONSENT_LABEL}
             checked={formik.values.consent_given}
-            onChange={formik.handleChange}
+            onChange={handleChange}
           />
           {formik.errors.consent_given ? (
-            <Description error>{formik.errors.consent_given}</Description>
+            <ErrorText>{formik.errors.consent_given}</ErrorText>
           ) : null}
         </Field>
 
