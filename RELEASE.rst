@@ -1,6 +1,23 @@
 Release Notes
 =============
 
+Version 0.78.0
+--------------
+
+- Remove remaining API endpoint N+1 queries (#3845)
+- Update dependency drf-spectacular to >=0.30,<0.31 (#3858)
+- Update dependency ruff to v0.16.3 (#3859)
+- Submit and link each resource under one URL, from learn_url (#3843)
+- Update dependency litellm to v1.96.2 (#3857)
+- Update redis Docker tag to v8.10.0 (#2706)
+- feat(cohort-1): MicroMasters/MITx Online certificate warehouse-pull sync (#3808)
+- ci: add a ci-gate job so one required check can cover the whole suite (#3825)
+- Overridable Mutation Error Toast (#3837)
+- Show Stay Updated based only on the CMS page flag (#3841)
+- staleness penalty for vector search results (#3834)
+- Update dependency Django to v5.2.17 [SECURITY] (#3849)
+- Update dependency social-auth-app-django to v5.6.0 [SECURITY] (#3850)
+
 Version 0.77.15 (Released August 27, 2026)
 ---------------
 
