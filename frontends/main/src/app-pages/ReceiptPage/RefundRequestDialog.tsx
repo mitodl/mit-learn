@@ -361,9 +361,13 @@ const RefundRequestDialogInner: React.FC<RefundRequestDialogProps> = ({
 
         {/*
          * `RadioChoiceField` renders MUI's `RadioGroup`, which supplies the
-         * `radiogroup` role itself, and exposes no prop to mark it required or
-         * point it at a description. So the requirement is carried by the label
-         * text, and the error announces itself through `role="alert"`.
+         * `radiogroup` role itself and exposes no prop to mark it required.
+         *
+         * So the requirement rides in the label rather than the description
+         * below it: `RadioChoiceField` points the group at its label with
+         * `aria-labelledby`, while the description is an unassociated sibling
+         * that a screen reader never reaches. The error announces itself
+         * through `role="alert"` for the same reason.
          */}
         {isLate ? null : (
           <Field>
