@@ -28,7 +28,10 @@ import { reqTreeChildQueries } from "./useReqTreeChildren"
 import { TestIds } from "./ProductSummary"
 import { assertHeadings, allowConsoleErrors } from "ol-test-utilities"
 import { notFound } from "next/navigation"
-import { useStayUpdatedEnv } from "./test-utils/stayUpdated"
+import {
+  STAY_UPDATED_FORM_ID,
+  withHubspotFormId,
+} from "./test-utils/stayUpdated"
 
 import { usePostHog } from "posthog-js/react"
 import invariant from "tiny-invariant"
@@ -202,8 +205,7 @@ const setupApis = ({
     learnFactories.user.user({ is_authenticated: false }),
   )
 
-  const stayUpdatedFormId =
-    process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID?.trim()
+  const stayUpdatedFormId = page.hubspot_form_id?.trim()
   if (stayUpdatedFormId) {
     setMockResponse.get(
       learnUrls.hubspot.details({ form_id: stayUpdatedFormId }),
@@ -898,14 +900,12 @@ describe("ProgramPage", () => {
   })
 
   describe("Stay Updated button", () => {
-    useStayUpdatedEnv()
-
-    test("Shows button when the page enables Stay Updated", async () => {
-      const program = makeProgram(makeReqs())
-      const page = makePage({
-        program_details: program,
-        show_stay_updated: true,
-      })
+    test("Shows button when the page has a hubspot form id", async () => {
+      const program = makeProgram({ ...makeReqs() })
+      const page = withHubspotFormId(
+        makePage({ program_details: program }),
+        STAY_UPDATED_FORM_ID,
+      )
       setupApis({ program, page })
       renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
@@ -914,28 +914,15 @@ describe("ProgramPage", () => {
       ).toBeInTheDocument()
     })
 
-    test("Hides button when the page disables Stay Updated", async () => {
-      const program = makeProgram(makeReqs())
-      const page = makePage({
-        program_details: program,
-        show_stay_updated: false,
-      })
-      setupApis({ program, page })
-      renderWithProviders(<ProgramPage readableId={program.readable_id} />)
-
-      await screen.findByRole("heading", { name: page.title })
-      expect(
-        screen.queryByRole("button", { name: "Stay Updated" }),
-      ).not.toBeInTheDocument()
-    })
-
-    test("Hides button when Stay Updated form ID is not configured", async () => {
-      delete process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID
-      const program = makeProgram(makeReqs())
-      const page = makePage({
-        program_details: program,
-        show_stay_updated: true,
-      })
+    test.each([
+      { label: "the form id is blank", hubspotFormId: "" },
+      { label: "the form id is null", hubspotFormId: null },
+    ])("Hides button when $label", async ({ hubspotFormId }) => {
+      const program = makeProgram({ ...makeReqs() })
+      const page = withHubspotFormId(
+        makePage({ program_details: program }),
+        hubspotFormId,
+      )
       setupApis({ program, page })
       renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 

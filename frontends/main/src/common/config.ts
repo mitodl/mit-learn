@@ -2,9 +2,6 @@ import { env } from "@/env"
 export const getRecaptchaSiteKey = (): string | undefined =>
   (env("NEXT_PUBLIC_RECAPTCHA_SITE_KEY") ?? "").trim() || undefined
 
-export const getStayUpdatedHubspotFormId = (): string =>
-  (env("NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID") ?? "").trim()
-
 /** CDN TTL used when NEXT_PUBLIC_CACHE_S_MAXAGE_SECONDS is unset: local dev and CI. */
 const DEFAULT_S_MAXAGE_SECONDS = 1800
 
