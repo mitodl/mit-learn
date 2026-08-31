@@ -13,6 +13,7 @@ import {
   FeaturedApi,
   MediaApi,
   VideoPlaylistsApi,
+  PodcastEpisodesApi,
   HubspotApi,
 } from "./generated/v1/api"
 
@@ -102,6 +103,11 @@ const videoPlaylistsApi = new VideoPlaylistsApi(
   BASE_PATH,
   axiosInstance,
 )
+const podcastEpisodesApi = new PodcastEpisodesApi(
+  undefined,
+  BASE_PATH,
+  axiosInstance,
+)
 const vectorLearningResourcesSearchApi = new VectorLearningResourcesSearchApi(
   undefined,
   BASE_PATH,
@@ -133,6 +139,7 @@ export {
   testimonialsApi,
   learningResourcesSearchAdminParamsApi,
   videoPlaylistsApi,
+  podcastEpisodesApi,
   vectorLearningResourcesSearchApi,
   unsubscribeApi,
 }

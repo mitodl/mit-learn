@@ -4412,8 +4412,14 @@ components:
           items:
             $ref: '#/components/schemas/PodcastEpisodeParent'
           readOnly: true
-        transcript:
-          type: string
+        has_transcript:
+          type: boolean
+          description: |-
+            Whether a transcript is available from the transcript endpoint.
+
+            The text itself is excluded from this serializer, so this is how a
+            client knows whether to fetch it.
+          readOnly: true
         audio_url:
           type: string
           format: uri
@@ -4427,11 +4433,9 @@ components:
           type: string
           nullable: true
           maxLength: 10
-        rss:
-          type: string
-          nullable: true
       required:
       - audio_url
+      - has_transcript
       - id
       - parent_podcasts
       - podcasts

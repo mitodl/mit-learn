@@ -27,6 +27,7 @@ import {
   platformsQueries,
   learningResourceKeys,
   videoPlaylistQueries,
+  podcastEpisodeQueries,
 } from "./queries"
 import { userlistKeys } from "../userLists/queries"
 import { learningPathKeys } from "../learningPaths/queries"
@@ -241,5 +242,6 @@ export {
   topicQueries,
   learningResourceKeys,
   videoPlaylistQueries,
+  podcastEpisodeQueries,
   LearningResource,
 }

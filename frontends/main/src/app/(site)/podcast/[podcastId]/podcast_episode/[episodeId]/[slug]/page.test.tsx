@@ -1,5 +1,7 @@
 import { notFound, redirect } from "next/navigation"
-import { factories, setMockResponse, urls } from "api/test-utils"
+import { dehydrate } from "@tanstack/react-query"
+import { factories, makeRequest, setMockResponse, urls } from "api/test-utils"
+import { podcastEpisodeQueries } from "api/hooks/learningResources"
 import Page, { generateMetadata } from "./page"
 
 jest.mock("@/app/getQueryClient", () => {
@@ -26,10 +28,10 @@ beforeEach(() => {
 })
 
 /** Episode belonging to `parentIds`; also stub each parent podcast detail. */
-const mockEpisode = (parentIds: number[]) => {
+const mockEpisode = (parentIds: number[], { hasTranscript = false } = {}) => {
   const episode = factories.learningResources.podcastEpisode({
     title: "Episode One",
-    podcast_episode: { podcasts: parentIds },
+    podcast_episode: { podcasts: parentIds, has_transcript: hasTranscript },
   })
   setMockResponse.get(
     urls.learningResources.details({ id: episode.id }),
@@ -97,4 +99,45 @@ test("notFound when the episode has no parent podcasts", async () => {
   await expect(
     Page(pageProps("10", String(episode.id), "episode-one")),
   ).rejects.toThrow("NEXT_NOT_FOUND")
+})
+
+/**
+ * The transcript is fetched from its own endpoint, so it only reaches the
+ * server-rendered HTML if the route prefetches it into the dehydrated state.
+ * Drop the prefetch and nothing throws -- it is caught -- the transcript panel
+ * just goes empty for crawlers while devtools still looks right.
+ */
+test("prefetches the transcript into the dehydrated state when the episode has one", async () => {
+  const episode = mockEpisode([10], { hasTranscript: true })
+  const transcript = { id: episode.id, transcript: "Some spoken words." }
+  setMockResponse.get(urls.podcastEpisodes.transcript(episode.id), transcript)
+
+  await Page(pageProps("10", String(episode.id), "episode-one"))
+
+  expect(makeRequest).toHaveBeenCalledWith(
+    expect.objectContaining({
+      method: "get",
+      url: urls.podcastEpisodes.transcript(episode.id),
+    }),
+  )
+  // dehydrate() receives the very client the route prefetched into, so its
+  // cache is what HydrationBoundary serializes into the HTML.
+  const queryClient = jest.mocked(dehydrate).mock.calls[0][0]
+  expect(
+    queryClient.getQueryData(
+      podcastEpisodeQueries.transcript(episode.id).queryKey,
+    ),
+  ).toEqual(transcript)
+})
+
+test("issues no transcript request when the episode has none", async () => {
+  const episode = mockEpisode([10])
+
+  await Page(pageProps("10", String(episode.id), "episode-one"))
+
+  expect(makeRequest).not.toHaveBeenCalledWith(
+    expect.objectContaining({
+      url: urls.podcastEpisodes.transcript(episode.id),
+    }),
+  )
 })
