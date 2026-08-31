@@ -264,9 +264,15 @@ const videoPlaylists = {
     `${getApiBaseUrl()}/api/v1/video_playlists/${params.id}/`,
 }
 
+const podcastEpisodes = {
+  transcript: (id: number) =>
+    `${getApiBaseUrl()}/api/v1/podcast_episodes/${id}/transcript/`,
+}
+
 export {
   learningResources,
   videoPlaylists,
+  podcastEpisodes,
   topics,
   learningPaths,
   articles,

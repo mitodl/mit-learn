@@ -15,7 +15,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from learning_resources.constants import LearningResourceType
-from learning_resources.etl import loaders, ovs, pipelines, youtube
+from learning_resources.etl import loaders, ovs, pipelines, podcast, youtube
 from learning_resources.etl.canvas import (
     sync_canvas_archive,
 )
@@ -628,6 +628,22 @@ def get_ovs_transcripts(*, overwrite=False):
 
     log.info("Updating OVS transcripts for %i videos", videos.count())
     ovs.get_ovs_transcripts(videos)
+
+
+@app.task(acks_late=True)
+def get_podcast_transcripts(*, overwrite=False):
+    """
+    Fetch transcripts for podcast episodes from their podcast:transcript urls.
+
+    Args:
+        overwrite (bool):
+            if true, transcripts are updated for episodes that already have one
+    """
+
+    episodes = podcast.get_podcast_episodes_for_transcripts_job(overwrite=overwrite)
+
+    log.info("Updating podcast transcripts for %i episodes", episodes.count())
+    podcast.get_podcast_transcripts(episodes)
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
