@@ -4,7 +4,8 @@ import pytest
 from django.contrib.auth.models import Group
 from django.urls import reverse
 
-from learning_resources.constants import GROUP_COURSE_AUTHORS
+from learning_resources.constants import GROUP_COURSE_AUTHORS, LearningResourceType
+from learning_resources.etl.constants import ETLSource
 from learning_resources.factories import LearningResourceFactory
 
 GENERATED = {
@@ -25,8 +26,10 @@ def mock_generate(mocker):
 
 @pytest.fixture
 def resource():
-    """Return a course to generate credential metadata for"""
-    return LearningResourceFactory.create(is_course=True)
+    """Return an MITx Online course, the only kind the endpoint generates for"""
+    return LearningResourceFactory.create(
+        is_course=True, etl_source=ETLSource.mitxonline.name
+    )
 
 
 def credential_url(readable_id=None):
@@ -99,6 +102,37 @@ def test_credential_metadata_unknown_resource(client, django_user_model, mock_ge
     response = client.get(credential_url("no-such-course"))
 
     assert response.status_code == 404
+    mock_generate.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    ("resource_type", "etl_source"),
+    [
+        (LearningResourceType.program.name, ETLSource.mitxonline.name),
+        (LearningResourceType.course.name, ETLSource.xpro.name),
+        (LearningResourceType.video.name, ETLSource.youtube.name),
+    ],
+)
+def test_credential_metadata_rejects_unsupported_resources(
+    client, django_user_model, mock_generate, resource_type, etl_source
+):
+    """
+    Only MITx Online courses are generated for.
+
+    The prompts were validated against those; a program page is a different
+    kind of document and another platform's content is differently shaped, so
+    the endpoint says so instead of returning an unreviewed draft.
+    """
+    unsupported = LearningResourceFactory.create(
+        resource_type=resource_type, etl_source=etl_source
+    )
+    client.force_login(django_user_model.objects.create(is_staff=True))
+
+    response = client.get(credential_url(unsupported.readable_id))
+
+    assert response.status_code == 400
+    assert unsupported.readable_id in str(response.json())
     mock_generate.assert_not_called()
 
 

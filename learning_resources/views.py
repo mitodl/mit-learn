@@ -22,7 +22,7 @@ from grpc._channel import _InactiveRpcError
 from requests.exceptions import RequestException
 from rest_framework import serializers, views, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.filters import OrderingFilter
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
@@ -40,6 +40,7 @@ from learning_resources.constants import (
     PlatformType,
     PrivacyLevel,
 )
+from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.podcast import generate_aggregate_podcast_rss
 from learning_resources.exceptions import WebhookException
 from learning_resources.filters import (
@@ -1786,6 +1787,9 @@ class CredentialMetadataView(AsyncAPIView):
     Author-only, because a request spends one frontier-model call per field on
     a large prompt. The view is async so those calls, which run concurrently
     and take seconds, occupy no blocking thread while they wait.
+
+    MITx Online courses only: that is what the prompts were written and
+    validated against. Anything else is a 400 rather than an unreviewed draft.
     """
 
     permission_classes = (permissions.IsAdminOrCourseAuthor,)
@@ -1808,6 +1812,22 @@ class CredentialMetadataView(AsyncAPIView):
         if not resource:
             msg = f"No learning resource with readable_id {readable_id}"
             raise NotFound(msg)
+
+        # The prompts were written and validated against MITx Online courses.
+        # A program page is a different kind of document, and another platform's
+        # content is differently shaped, so rather than return a draft nobody
+        # has reviewed the prompts against, say so.
+        if (
+            resource.resource_type != LearningResourceType.course.name
+            or resource.etl_source != ETLSource.mitxonline.name
+        ):
+            msg = (
+                f"Credential metadata is only generated for"
+                f" {ETLSource.mitxonline.name} courses;"
+                f" {readable_id} is a {resource.etl_source}"
+                f" {resource.resource_type}"
+            )
+            raise ValidationError(msg)
 
         metadata = await generate_credential_metadata(resource, user=request.user)
         return Response(

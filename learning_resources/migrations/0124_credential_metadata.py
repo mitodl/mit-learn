@@ -33,7 +33,7 @@ DEFAULT_CONFIGURATIONS = [
     },
 ]
 
-DEFAULT_LLM_MODEL = "gpt-4o-mini"
+DEFAULT_LLM_MODEL = "gpt-5"
 
 
 def add_credential_metadata_defaults(apps, schema_editor):
