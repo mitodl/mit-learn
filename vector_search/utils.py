@@ -64,6 +64,7 @@ from vector_search.constants import (
     QDRANT_RESOURCE_PARAM_MAP,
     QDRANT_TOPIC_INDEXES,
     RESOURCE_AGE_DATE_PAYLOAD_KEY,
+    RESOURCE_EMBEDDING_CHECKSUM_FIELD,
     RESOURCES_COLLECTION_NAME,
     RESOURCES_PAYLOAD_EXCLUDE,
     RESOURCES_RETRIEVE_PAYLOAD,
@@ -621,8 +622,14 @@ def _process_resource_embeddings(serialized_resources):
         embedding_context = _learning_resource_embedding_context(
             doc, serializer_context
         )
+        # Stamped on the payload of both the re-embedded and the payload-only
+        # path, so the point always carries the checksum of the text behind its
+        # current vector.
+        doc[RESOURCE_EMBEDDING_CHECKSUM_FIELD] = checksum_for_content(embedding_context)
         if not should_generate_resource_embeddings(
-            doc, serializer_context, embedding_context=embedding_context
+            doc,
+            serializer_context,
+            embedding_context=embedding_context,
         ):
             update_learning_resource_payload(doc)
             continue
@@ -712,6 +719,20 @@ def should_generate_resource_embeddings(
     """
     Determine if we should generate embeddings for a learning resource
 
+    The context rendered now is compared against the checksum stored on the
+    point when it was last embedded (RESOURCE_EMBEDDING_CHECKSUM_FIELD).
+
+    Re-rendering the *stored payload* cannot stand in for that checksum: parts
+    of the metadata document come from current database rows rather than from
+    the payload -- program_courses is rebuilt from the program's children, for
+    instance -- so after a child changes, the stale parent payload and the
+    current document both render with the new child data and compare equal,
+    leaving the parent's vector stale. Serializer formatting changes are
+    invisible the same way.
+
+    Points written before the checksum was stored have no stored value and get
+    re-embedded once to backfill it.
+
     embedding_context is the already rendered context for serialized_document,
     if the caller has one -- rendering it is not cheap.
     """
@@ -720,22 +741,23 @@ def should_generate_resource_embeddings(
     response = client.retrieve(
         collection_name=RESOURCES_COLLECTION_NAME,
         ids=[point_id],
+        with_payload=[RESOURCE_EMBEDDING_CHECKSUM_FIELD],
     )
-    if len(response) > 0:
-        resource_payload = response[0].payload
-        stored_embedding_content = _learning_resource_embedding_context(
-            resource_payload, serializer_context
+    if len(response) == 0:
+        return True
+    stored_checksum = (response[0].payload or {}).get(RESOURCE_EMBEDDING_CHECKSUM_FIELD)
+    if not stored_checksum:
+        return True
+    current_checksum = serialized_document.get(
+        RESOURCE_EMBEDDING_CHECKSUM_FIELD
+    ) or checksum_for_content(
+        embedding_context
+        if embedding_context is not None
+        else _learning_resource_embedding_context(
+            serialized_document, serializer_context
         )
-        current_embedding_content = (
-            embedding_context
-            if embedding_context is not None
-            else _learning_resource_embedding_context(
-                serialized_document, serializer_context
-            )
-        )
-        if stored_embedding_content == current_embedding_content:
-            return False
-    return True
+    )
+    return stored_checksum != current_checksum
 
 
 def _retrieve_content_file_point(
