@@ -8,6 +8,7 @@ from textwrap import dedent
 
 from asgiref.sync import sync_to_async
 from django.conf import settings
+from django.db import close_old_connections
 from django.db.models import Prefetch, Q
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
@@ -39,7 +40,7 @@ from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
 )
-from main.utils import checksum_for_content, chunks, db_sync_to_async
+from main.utils import checksum_for_content, chunks
 from vector_search.constants import (
     COLLECTION_PARAM_MAP,
     COMPLETENESS_PAYLOAD_KEY,
@@ -1988,3 +1989,16 @@ def score_formula_query(collection_name: str) -> models.FormulaQuery | None:
         formula=models.SumExpression(sum=["$score", *boost_expressions, *penalties]),
         defaults=defaults,
     )
+
+
+def db_sync_to_async(func):
+    """Offload sync DB work to the thread pool, with per-call connection cleanup."""
+
+    def wrapper(*args, **kwargs):
+        close_old_connections()
+        try:
+            return func(*args, **kwargs)
+        finally:
+            close_old_connections()
+
+    return sync_to_async(wrapper, thread_sensitive=False)
