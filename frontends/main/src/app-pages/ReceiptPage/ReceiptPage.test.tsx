@@ -7,8 +7,16 @@ import {
   within,
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { RefundStatusEnum } from "@mitodl/mitxonline-api-axios/v2"
 import ReceiptPage from "./ReceiptPage"
 import * as urls from "@/common/urls"
+import { FeatureFlags } from "@/common/feature_flags"
+
+jest.mock("posthog-js/react")
+const mockedUseFeatureFlagEnabled = jest
+  .mocked(useFeatureFlagEnabled)
+  .mockImplementation(() => false)
 
 const ORDER_ID = 4242
 
@@ -548,5 +556,62 @@ describe("ReceiptPage", () => {
     await screen.findByRole("heading", { name: "Order Summary" })
 
     expect(screen.getByRole("status")).toHaveTextContent("Receipt loaded.")
+  })
+})
+
+describe("ReceiptPage refund flag", () => {
+  /** An order the refund card would render an action for, if it rendered. */
+  const eligibleOrder = () =>
+    mitxonline.factories.orders.order({
+      id: ORDER_ID,
+      refund_status: RefundStatusEnum.Eligible,
+      refund_eligible: true,
+    })
+
+  test("hides the refund card when the flag is off", async () => {
+    mockedUseFeatureFlagEnabled.mockImplementation(() => false)
+    setupApis({ order: eligibleOrder() })
+
+    renderWithProviders(<ReceiptPage orderId={ORDER_ID} />)
+    await screen.findByRole("heading", { name: "Order Summary" })
+
+    expect(
+      screen.queryByRole("heading", { name: "Refund" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Request Refund" }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("shows the refund card when the flag is on", async () => {
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag === FeatureFlags.SelfServiceRefunds,
+    )
+    setupApis({ order: eligibleOrder() })
+
+    renderWithProviders(<ReceiptPage orderId={ORDER_ID} />)
+
+    await screen.findByRole("heading", { name: "Refund" })
+    screen.getByRole("button", { name: "Request Refund" })
+  })
+
+  test("the flag alone does not decide it: an ineligible order shows no card", async () => {
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag === FeatureFlags.SelfServiceRefunds,
+    )
+    setupApis({
+      order: mitxonline.factories.orders.order({
+        id: ORDER_ID,
+        refund_status: RefundStatusEnum.Ineligible,
+        refund_eligible: false,
+      }),
+    })
+
+    renderWithProviders(<ReceiptPage orderId={ORDER_ID} />)
+    await screen.findByRole("heading", { name: "Order Summary" })
+
+    expect(
+      screen.queryByRole("heading", { name: "Refund" }),
+    ).not.toBeInTheDocument()
   })
 })

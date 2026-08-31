@@ -7,7 +7,9 @@ import { useQuery } from "@tanstack/react-query"
 import { RiArrowLeftLine, RiPrinterLine } from "@remixicon/react"
 import { Container, Skeleton, Typography, styled } from "ol-components"
 import NiceModal from "@ebay/nice-modal-react"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 import { Button, ButtonLink, VisuallyHidden } from "@mitodl/smoot-design"
+import { FeatureFlags } from "@/common/feature_flags"
 import { orderQueries } from "api/mitxonline-hooks/orders"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { RefundStatusEnum } from "@mitodl/mitxonline-api-axios/v2"
@@ -205,6 +207,11 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
   const router = useRouter()
   const orderQuery = useQuery(orderQueries.receipt(orderId))
   /**
+   * Undefined until the flags arrive, so the card stays hidden rather than
+   * appearing and then vanishing for learners who should not see it.
+   */
+  const refundsEnabled = useFeatureFlagEnabled(FeatureFlags.SelfServiceRefunds)
+  /**
    * `Order.purchaser` has no name field. The endpoint only returns the requester's
    * own orders, so the logged-in user is the purchaser.
    */
@@ -324,17 +331,19 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
           <Columns>
             <SummaryColumn>
               <ReceiptOrderSummary order={order} />
-              <PrintHiddenRefundCard
-                order={order}
-                onRequestRefund={() =>
-                  NiceModal.show(RefundRequestDialog, {
-                    order,
-                    title: order.lines[0]?.content_title ?? "this course",
-                    isLate:
-                      order.refund_status === RefundStatusEnum.WindowClosed,
-                  })
-                }
-              />
+              {refundsEnabled ? (
+                <PrintHiddenRefundCard
+                  order={order}
+                  onRequestRefund={() =>
+                    NiceModal.show(RefundRequestDialog, {
+                      order,
+                      title: order.lines[0]?.content_title ?? "this course",
+                      isLate:
+                        order.refund_status === RefundStatusEnum.WindowClosed,
+                    })
+                  }
+                />
+              ) : null}
             </SummaryColumn>
 
             <DetailColumn>
