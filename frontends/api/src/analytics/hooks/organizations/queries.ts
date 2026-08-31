@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query"
-import { analyticsOrganizationsApi } from "../../clients"
+import { analyticsContractsApi, analyticsOrganizationsApi } from "../../clients"
 import type { AnalyticsPageParams } from "../../types"
 
 /**
@@ -96,4 +96,133 @@ const analyticsOrganizationQueries = {
     }),
 }
 
-export { analyticsOrganizationQueries, analyticsOrganizationKeys }
+/**
+ * Contract-scoped keys nest under the org's, so invalidating an organization
+ * drops its contracts' cached sections too — they are views of the same
+ * underlying data and can never be stale independently.
+ *
+ * `contractId` is MITx Online's contract id, not the route's slug.
+ */
+const analyticsContractKeys = {
+  contract: (orgId: string, contractId: string) =>
+    [
+      ...analyticsOrganizationKeys.organization(orgId),
+      "contracts",
+      contractId,
+    ] as const,
+  resource: (
+    orgId: string,
+    contractId: string,
+    resource: string,
+    page?: AnalyticsPageParams,
+  ) =>
+    [
+      ...analyticsContractKeys.contract(orgId, contractId),
+      resource,
+      page,
+    ] as const,
+}
+
+const analyticsContractQueries = {
+  contractUtilization: (
+    orgId: string,
+    contractId: string,
+    page?: AnalyticsPageParams,
+  ) =>
+    queryOptions({
+      queryKey: analyticsContractKeys.resource(
+        orgId,
+        contractId,
+        "contract-utilization",
+        page,
+      ),
+      staleTime: ANALYTICS_STALE_TIME,
+      queryFn: async ({ signal }) =>
+        analyticsContractsApi
+          .contractUtilization(orgId, contractId, page, signal)
+          .then((res) => res.data),
+    }),
+
+  enrollmentFunnel: (
+    orgId: string,
+    contractId: string,
+    page?: AnalyticsPageParams,
+  ) =>
+    queryOptions({
+      queryKey: analyticsContractKeys.resource(
+        orgId,
+        contractId,
+        "enrollment-funnel",
+        page,
+      ),
+      staleTime: ANALYTICS_STALE_TIME,
+      queryFn: async ({ signal }) =>
+        analyticsContractsApi
+          .enrollmentFunnel(orgId, contractId, page, signal)
+          .then((res) => res.data),
+    }),
+
+  engagementTrend: (
+    orgId: string,
+    contractId: string,
+    page?: AnalyticsPageParams,
+  ) =>
+    queryOptions({
+      queryKey: analyticsContractKeys.resource(
+        orgId,
+        contractId,
+        "engagement-trend",
+        page,
+      ),
+      staleTime: ANALYTICS_STALE_TIME,
+      queryFn: async ({ signal }) =>
+        analyticsContractsApi
+          .engagementTrend(orgId, contractId, page, signal)
+          .then((res) => res.data),
+    }),
+
+  programFunnel: (
+    orgId: string,
+    contractId: string,
+    page?: AnalyticsPageParams,
+  ) =>
+    queryOptions({
+      queryKey: analyticsContractKeys.resource(
+        orgId,
+        contractId,
+        "program-funnel",
+        page,
+      ),
+      staleTime: ANALYTICS_STALE_TIME,
+      queryFn: async ({ signal }) =>
+        analyticsContractsApi
+          .programFunnel(orgId, contractId, page, signal)
+          .then((res) => res.data),
+    }),
+
+  contentEngagement: (
+    orgId: string,
+    contractId: string,
+    page?: AnalyticsPageParams,
+  ) =>
+    queryOptions({
+      queryKey: analyticsContractKeys.resource(
+        orgId,
+        contractId,
+        "content-engagement",
+        page,
+      ),
+      staleTime: ANALYTICS_STALE_TIME,
+      queryFn: async ({ signal }) =>
+        analyticsContractsApi
+          .contentEngagement(orgId, contractId, page, signal)
+          .then((res) => res.data),
+    }),
+}
+
+export {
+  analyticsOrganizationQueries,
+  analyticsOrganizationKeys,
+  analyticsContractQueries,
+  analyticsContractKeys,
+}
