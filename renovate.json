@@ -7,8 +7,15 @@
       "matchPackageNames": ["django", "Django"]
     },
     {
-      "description": "Prod RDS ol-mitlearn-db-production runs postgres 15.17; CI uses postgres:15.",
+      "description": "CI tests against prod's engine: ol-mitlearn-db-production runs postgres 15.17.",
       "allowedVersions": "<16",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": ["postgres"]
+    },
+    {
+      "description": "Local compose stays a major ahead of prod for now; this keeps 16.x patches flowing without offering 17+.",
+      "allowedVersions": "<17",
+      "matchManagers": ["docker-compose"],
       "matchPackageNames": ["postgres"]
     },
     {
