@@ -40,7 +40,6 @@ from learning_resources.constants import (
     PlatformType,
     PrivacyLevel,
 )
-from learning_resources.credentials import generate_credential_metadata
 from learning_resources.etl.podcast import generate_aggregate_podcast_rss
 from learning_resources.exceptions import WebhookException
 from learning_resources.filters import (
@@ -1793,6 +1792,11 @@ class CredentialMetadataView(AsyncAPIView):
 
     @extend_schema(summary="Generate credential metadata")
     async def get(self, request):
+        # Imported here, not at module scope: credentials pulls in litellm and
+        # langchain, and the URLconf imports this module at boot. See
+        # main/boot_imports_test.py.
+        from learning_resources.credentials import generate_credential_metadata
+
         request_data = CredentialMetadataRequestSerializer(data=request.GET)
         if not request_data.is_valid():
             return Response(request_data.errors, status=400)

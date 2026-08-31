@@ -18,7 +18,7 @@ GENERATED = {
 def mock_generate(mocker):
     """Mock credential metadata generation"""
     return mocker.patch(
-        "learning_resources.views.generate_credential_metadata",
+        "learning_resources.credentials.generate_credential_metadata",
         return_value=GENERATED,
     )
 
@@ -108,7 +108,7 @@ def test_credential_metadata_omits_fields_it_could_not_generate(
 ):
     """A field that failed to generate is absent, not blank"""
     mocker.patch(
-        "learning_resources.views.generate_credential_metadata",
+        "learning_resources.credentials.generate_credential_metadata",
         return_value={"description": "Only this one worked."},
     )
     client.force_login(django_user_model.objects.create(is_staff=True))
