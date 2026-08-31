@@ -4,8 +4,19 @@ set -eo pipefail
 GENERATOR_VERSION="${GENERATOR_VERSION:-v7.2.0}"
 RUNNER="${OPENAPI_RUNNER:-auto}"
 SKIP_SPEC="${OPENAPI_SKIP_SPEC:-}"
+K8S_CONTEXT="${OPENAPI_K8S_CONTEXT:-local-dev}"
 K8S_NAMESPACE="${OPENAPI_K8S_NAMESPACE:-mit-learn}"
 K8S_DEPLOYMENT="${OPENAPI_K8S_DEPLOYMENT:-deploy/mitlearn-webapp}"
+
+# Every kubectl call names its context rather than inheriting whichever one
+# `kubectl config use-context` last selected. The spec step execs into a pod and
+# copies that pod's output over openapi/specs/, so an ambient context pointing at
+# a deployed cluster would silently produce specs describing that cluster's code.
+# ol-infrastructure/local-dev/scripts/setup.sh renames k3d's generated
+# k3d-<cluster> context to this name, and its start.sh requires it.
+kube() {
+	kubectl --context "${K8S_CONTEXT}" -n "${K8S_NAMESPACE}" "$@"
+}
 
 usage() {
 	cat <<'USAGE'
@@ -13,13 +24,18 @@ Usage: scripts/generate_openapi.sh [options]
 
   --runner auto|compose|k3d   Where to run ./manage.py generate_openapi_spec.
                               "auto" picks k3d when the webapp deployment is
-                              reachable in the current kubectl context.
+                              reachable in the kubectl context named below,
+                              and compose otherwise.
+  --context NAME              kubectl context for the k3d runner. Defaults to
+                              local-dev, the context ol-infrastructure's
+                              local-dev/scripts/setup.sh creates.
   --skip-spec                 Regenerate only the TypeScript client, from the
                               specs already in openapi/specs/.
   --generator-version TAG     openapi-generator-cli image tag.
 
-Each option has an environment equivalent: OPENAPI_RUNNER, OPENAPI_SKIP_SPEC,
-GENERATOR_VERSION, OPENAPI_K8S_NAMESPACE, OPENAPI_K8S_DEPLOYMENT.
+Each option has an environment equivalent: OPENAPI_RUNNER, OPENAPI_K8S_CONTEXT,
+OPENAPI_SKIP_SPEC, GENERATOR_VERSION, OPENAPI_K8S_NAMESPACE,
+OPENAPI_K8S_DEPLOYMENT.
 USAGE
 }
 
@@ -31,6 +47,14 @@ while [ $# -gt 0 ]; do
 		;;
 	--runner=*)
 		RUNNER="${1#*=}"
+		shift
+		;;
+	--context)
+		K8S_CONTEXT="$2"
+		shift 2
+		;;
+	--context=*)
+		K8S_CONTEXT="${1#*=}"
 		shift
 		;;
 	--skip-spec)
@@ -65,8 +89,11 @@ if [ -z "$(which docker)" ]; then
 fi
 
 if [ -z "${SKIP_SPEC}" ] && [ "${RUNNER}" = "auto" ]; then
+	# A missing context fails this too: kubectl rejects --context values it cannot
+	# resolve, so an unconfigured or differently-named cluster falls back to
+	# compose rather than reaching for whatever is currently selected.
 	if command -v kubectl >/dev/null 2>&1 &&
-		kubectl -n "${K8S_NAMESPACE}" get "${K8S_DEPLOYMENT}" >/dev/null 2>&1; then
+		kube get "${K8S_DEPLOYMENT}" >/dev/null 2>&1; then
 		RUNNER=k3d
 	else
 		RUNNER=compose
@@ -74,6 +101,13 @@ if [ -z "${SKIP_SPEC}" ] && [ "${RUNNER}" = "auto" ]; then
 fi
 
 if [ -z "${SKIP_SPEC}" ] && [ "${RUNNER}" = "k3d" ]; then
+	if ! kubectl config get-contexts "${K8S_CONTEXT}" >/dev/null 2>&1; then
+		echo "Error: kubectl context '${K8S_CONTEXT}' not found." >&2
+		echo "Run ol-infrastructure/local-dev/scripts/setup.sh to create it," >&2
+		echo "or name a different one with --context." >&2
+		exit 1
+	fi
+
 	# Tilt live-syncs the primary checkout into the webapp pod, so the pod's /src
 	# is that tree even when this script is invoked from a linked worktree. Left
 	# unchecked, the specs would describe the primary checkout's code and get
@@ -98,14 +132,15 @@ elif [ "${RUNNER}" = "compose" ]; then
 	docker compose run --no-deps --rm web \
 		./manage.py generate_openapi_spec
 elif [ "${RUNNER}" = "k3d" ]; then
-	echo "Generating OpenAPI specs with the k3d runner..."
+	echo "Generating OpenAPI specs with the k3d runner:"
+	echo "  context ${K8S_CONTEXT}, namespace ${K8S_NAMESPACE}, ${K8S_DEPLOYMENT}"
 	# Nothing written inside the pod reaches the checkout, so generate into a
 	# scratch directory and stream it back.
-	kubectl -n "${K8S_NAMESPACE}" exec "${K8S_DEPLOYMENT}" -c app -- \
+	kube exec "${K8S_DEPLOYMENT}" -c app -- \
 		sh -c 'rm -rf /tmp/openapi-specs && mkdir -p /tmp/openapi-specs'
-	kubectl -n "${K8S_NAMESPACE}" exec "${K8S_DEPLOYMENT}" -c app -- \
+	kube exec "${K8S_DEPLOYMENT}" -c app -- \
 		./manage.py generate_openapi_spec --directory /tmp/openapi-specs/
-	kubectl -n "${K8S_NAMESPACE}" exec "${K8S_DEPLOYMENT}" -c app -- \
+	kube exec "${K8S_DEPLOYMENT}" -c app -- \
 		tar cf - -C /tmp/openapi-specs . | tar xf - -C openapi/specs
 else
 	echo "Error: unknown runner '${RUNNER}' (expected auto, compose, or k3d)" >&2
