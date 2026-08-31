@@ -144,23 +144,27 @@ Article.objects.filter(is_published=True)
 ### 2. Transform
 
 ```python
-[{
-    'title': 'MIT Learn Articles',
-    'url': '/articles',
-    'feed_type': 'news',
-    'items': [{
-        'guid': 'article-1',
-        'title': 'My Article',
-        'url': '/articles/my-article',
-        'summary': 'First 500 chars...',
-        'content': 'Full text...',
-        'detail': {
-            'authors': ['John Doe'],
-            'topics': [],
-            'publish_date': '2024-01-01T00:00:00Z',
-        }
-    }]
-}]
+[
+    {
+        "title": "MIT Learn Articles",
+        "url": "/articles",
+        "feed_type": "news",
+        "items": [
+            {
+                "guid": "article-1",
+                "title": "My Article",
+                "url": "/articles/my-article",
+                "summary": "First 500 chars...",
+                "content": "Full text...",
+                "detail": {
+                    "authors": ["John Doe"],
+                    "topics": [],
+                    "publish_date": "2024-01-01T00:00:00Z",
+                },
+            }
+        ],
+    }
+]
 ```
 
 ### 3. Load
@@ -190,21 +194,20 @@ The `extract_text_from_content()` function needs customization based on your JSO
 ```python
 def extract_text_from_content(content_json: dict) -> str:
     # For Draft.js
-    blocks = content_json.get('blocks', [])
-    return ' '.join([block.get('text', '') for block in blocks])
+    blocks = content_json.get("blocks", [])
+    return " ".join([block.get("text", "") for block in blocks])
+
     # For ProseMirror
     def walk_nodes(node):
-        if node.get('type') == 'text':
-            return node.get('text', '')
-        children = node.get('content', [])
-        return ' '.join(walk_nodes(child) for child in children)
+        if node.get("type") == "text":
+            return node.get("text", "")
+        children = node.get("content", [])
+        return " ".join(walk_nodes(child) for child in children)
+
     return walk_nodes(content_json)
     # For EditorJS
-    blocks = content_json.get('blocks', [])
-    return ' '.join([
-        block.get('data', {}).get('text', '')
-        for block in blocks
-    ])
+    blocks = content_json.get("blocks", [])
+    return " ".join([block.get("data", {}).get("text", "") for block in blocks])
 ```
 
 ### 2. Add Image Support
@@ -235,7 +238,8 @@ If you add topics to your Article model:
 ```python
 class Article(TimestampedModel):
     # ... existing fields ...
-    topics = models.ManyToManyField('Topic')
+    topics = models.ManyToManyField("Topic")
+
 
 # In transform_items:
 entry = {
@@ -294,7 +298,7 @@ article = Article.objects.create(
     title="Test Article",
     content={"blocks": [{"text": "Test content"}]},
     user=user,
-    is_published=True
+    is_published=True,
 )
 ```
 
@@ -317,6 +321,7 @@ result = pipelines.articles_news_etl()
 
 # Check results
 from news_events.models import FeedSource
+
 source = FeedSource.objects.get(title="MIT Learn Articles")
 print(f"Found {source.feed_items.count()} articles in news feed")
 ```
@@ -340,6 +345,7 @@ print(f"Found {source.feed_items.count()} articles in news feed")
 3. **Check for errors:**
    ```python
    from news_events.tasks import get_articles_news
+
    get_articles_news()  # Run synchronously to see errors
    ```
 
@@ -350,6 +356,7 @@ print(f"Found {source.feed_items.count()} articles in news feed")
 - Add debug logging:
   ```python
   import logging
+
   log = logging.getLogger(__name__)
   log.info(f"Content structure: {content_json}")
   ```
