@@ -3,7 +3,7 @@
 import React, { useCallback, useMemo } from "react"
 import {
   SimpleMenu,
-  Grid,
+  Grid2 as Grid,
   LoadingSpinner,
   BannerPage,
   Container,
@@ -19,8 +19,6 @@ import { RiPencilFill, RiMore2Line, RiDeleteBinLine } from "@remixicon/react"
 
 import type { LearningPathResource } from "api"
 import { useLearningPathsList } from "api/hooks/learningPaths"
-
-import { GridColumn, GridContainer } from "@/components/GridLayout/GridLayout"
 
 import { manageListDialogs } from "@/page-components/ManageListDialogs/ManageListDialogs"
 import * as urls from "@/common/urls"
@@ -85,16 +83,15 @@ const LearningPathListingPage: React.FC = () => {
       className="learningpaths-page"
     >
       <Container maxWidth="md" style={{ paddingBottom: 100 }}>
-        <GridContainer>
-          <GridColumn variant="single-full">
+        <Grid container columnSpacing={6}>
+          <Grid size={12}>
             <ListHeaderGrid container justifyContent="space-between">
-              <Grid item>
+              <Grid>
                 <Typography variant="h3" component="h1">
                   Learning Paths
                 </Typography>
               </Grid>
               <Grid
-                item
                 justifyContent="flex-end"
                 alignItems="center"
                 display="flex"
@@ -128,8 +125,8 @@ const LearningPathListingPage: React.FC = () => {
                 </PlainList>
               )}
             </section>
-          </GridColumn>
-        </GridContainer>
+          </Grid>
+        </Grid>
       </Container>
     </BannerPage>
   )

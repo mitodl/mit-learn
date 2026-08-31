@@ -3,7 +3,7 @@ import styled from "@emotion/styled"
 import FormControl from "@mui/material/FormControl"
 import FormGroup from "@mui/material/FormGroup"
 import FormLabel from "@mui/material/FormLabel"
-import Grid, { type GridProps } from "@mui/material/Grid"
+import Grid, { type Grid2Props } from "@mui/material/Grid2"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { ChoiceBox } from "./ChoiceBox"
 import type {
@@ -44,7 +44,7 @@ const ChoiceBoxField: React.FC<ChoiceBoxFieldProps> = ({
   gridProps,
   gridItemProps,
 }: ChoiceBoxFieldProps) => {
-  const fieldGridProps: GridProps = {
+  const fieldGridProps: Grid2Props = {
     spacing: "12px",
     justifyContent: "center",
     columns: {
@@ -65,7 +65,7 @@ const ChoiceBoxField: React.FC<ChoiceBoxFieldProps> = ({
       <FormGroup>
         <Grid container {...fieldGridProps}>
           {choices.map((choice, index) => (
-            <Grid item {...gridItemProps} key={index}>
+            <Grid {...gridItemProps} key={index}>
               <ChoiceBox
                 type={type}
                 name={name}

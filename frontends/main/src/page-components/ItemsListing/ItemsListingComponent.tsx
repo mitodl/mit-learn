@@ -1,9 +1,8 @@
 import React from "react"
-import { Grid, Typography, styled } from "ol-components"
+import { Grid2 as Grid, Typography, styled } from "ol-components"
 import { Button, ButtonLink } from "@mitodl/smoot-design"
 import { RiArrowLeftLine, RiArrowUpDownLine } from "@remixicon/react"
 import { useToggle, pluralize } from "ol-utilities"
-import { GridColumn, GridContainer } from "@/components/GridLayout/GridLayout"
 import ItemsListing from "./ItemsListing"
 import type { LearningResourceListItem } from "./ItemsListing"
 import { MY_LISTS } from "@/common/urls"
@@ -84,17 +83,17 @@ const ItemsListingComponent: React.FC<ItemsListingComponentProps> = ({
   const count = list?.item_count
 
   return (
-    <GridContainer>
-      <GridColumn variant="single-full">
+    <Grid container columnSpacing={6}>
+      <Grid size={12}>
         <Grid container>
           <Grid
-            item
             container
+            size={12}
             alignItems="center"
             justifyContent="space-between"
             marginBottom="24px"
           >
-            <Grid item>
+            <Grid>
               <ButtonLink
                 href={MY_LISTS}
                 variant="tertiary"
@@ -105,19 +104,19 @@ const ItemsListingComponent: React.FC<ItemsListingComponentProps> = ({
             </Grid>
           </Grid>
           <Grid
-            item
             container
+            size={12}
             alignItems="center"
             justifyContent="space-between"
             marginBottom="24px"
           >
-            <HeaderGrid item>
+            <HeaderGrid>
               <HeaderText>{list?.title}</HeaderText>
               {list?.description && (
                 <DescriptionText>{list.description}</DescriptionText>
               )}
             </HeaderGrid>
-            <HeaderGrid item alignSelf="flex-start">
+            <HeaderGrid alignSelf="flex-start">
               {canEdit ? (
                 <EditButton variant="primary" onClick={handleEdit}>
                   Edit List
@@ -126,12 +125,12 @@ const ItemsListingComponent: React.FC<ItemsListingComponentProps> = ({
             </HeaderGrid>
           </Grid>
           <ReorderGrid
-            item
             container
+            size={12}
             alignItems="center"
             justifyContent="space-between"
           >
-            <Grid item>
+            <Grid>
               {showSort && !!items.length && (
                 <Button
                   variant="text"
@@ -143,7 +142,7 @@ const ItemsListingComponent: React.FC<ItemsListingComponentProps> = ({
                 </Button>
               )}
             </Grid>
-            <Grid item>
+            <Grid>
               {count !== undefined && count > 0 ? (
                 <CountText>{`${count} ${pluralize("item", count)}`}</CountText>
               ) : null}
@@ -159,8 +158,8 @@ const ItemsListingComponent: React.FC<ItemsListingComponentProps> = ({
           emptyMessage="There are no items in this list yet."
           condensed={condensed}
         />
-      </GridColumn>
-    </GridContainer>
+      </Grid>
+    </Grid>
   )
 }
 
