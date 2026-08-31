@@ -256,6 +256,14 @@ const NavDrawer = ({
           {...others}
         >
           <FocusTrap open={!!others.open}>
+            {/*
+              A persistent Drawer is not a MUI Modal, so it gets no built-in
+              Escape handling. The Close Navigation button above is the
+              primary keyboard exit; this listener adds the Escape shortcut a
+              user expects from a drawer. The panel is a focus-trapped region
+              rather than a control, so there is no interactive role for it.
+            */}
+            {/* eslint-disable-next-line styled-components-a11y/no-static-element-interactions */}
             <DrawerContent
               onKeyUp={(e) => {
                 if (e.key === "Escape") {

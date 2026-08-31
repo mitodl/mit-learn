@@ -883,7 +883,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                   >
                     Last sent
                   </TableHeaderCell>
-                  <ActionCell role="columnheader" />
+                  <ActionCell role="columnheader" aria-label="Actions" />
                 </TableHeaderRow>
               </div>
               <TableBody role="rowgroup" $stale={isCodesRevalidating}>

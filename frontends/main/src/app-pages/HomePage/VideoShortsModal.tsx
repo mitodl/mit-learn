@@ -218,6 +218,12 @@ const VideoWithErrorHandler = ({
   if (!src) return null
 
   return (
+    /*
+      Tap-anywhere play/pause is a pointer convenience. The same toggle is on
+      the visible PlayPauseButton and on the slide's Enter handler, so keyboard
+      users already have it; a handler here would only duplicate them.
+    */
+    /* eslint-disable-next-line styled-components-a11y/click-events-have-key-events, styled-components-a11y/no-static-element-interactions */
     <VideoPlayerContainer onClick={onVideoClick}>
       <VideoJsPlayer
         sources={sources}
@@ -501,6 +507,12 @@ const VideoShortsModal = ({
           onSlidesInView={onSlidesInView}
         >
           {videoData?.map((video: VideoResource, index: number) => (
+            /*
+              The APG carousel pattern: role="group" + aria-roledescription
+              with a roving tabindex. Enter toggles playback, matching the tap
+              target the slide already exposes.
+            */
+            /* eslint-disable-next-line styled-components-a11y/no-noninteractive-element-interactions */
             <CarouselSlide
               key={video.id}
               width={videoHeight * PORTRAIT_ASPECT_RATIO}
