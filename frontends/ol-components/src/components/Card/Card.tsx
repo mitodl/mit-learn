@@ -360,7 +360,7 @@ const Card: Card = ({
 
   if (content) {
     return (
-      // eslint-disable-next-line styled-components-a11y/click-events-have-key-events -- the click forwards to the card's own anchor (useClickChildLink), which keyboard users activate directly
+      // eslint-disable-next-line styled-components-a11y/click-events-have-key-events -- sound only while callers pair onClick with forwardClicksToLink, as BaseLearningResourceCard does: the click then forwards to the card's own anchor (useClickChildLink), which keyboard users activate directly. Unenforced -- see #3874
       <Container
         {...others}
         className={allClassNames}
@@ -374,7 +374,7 @@ const Card: Card = ({
   }
 
   return (
-    // eslint-disable-next-line styled-components-a11y/click-events-have-key-events -- see above; the anchor inside the card is the keyboard affordance
+    // eslint-disable-next-line styled-components-a11y/click-events-have-key-events -- see above; sound under the same forwardClicksToLink precondition (#3874), where the anchor inside the card is the keyboard affordance
     <Container
       {...others}
       className={allClassNames}
