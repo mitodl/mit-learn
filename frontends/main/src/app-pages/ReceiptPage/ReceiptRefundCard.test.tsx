@@ -101,6 +101,27 @@ describe("ReceiptRefundCard", () => {
     )
   })
 
+  test("Several refunds are summed and dated by the most recent", () => {
+    renderWithProviders(
+      <ReceiptRefundCard
+        order={makeOrder({
+          refund_status: RefundStatusEnum.Completed,
+          refunds: [
+            { amount: 100.0, date: "2025-07-02T00:00:00Z" },
+            { amount: 250.5, date: "2025-08-15T00:00:00Z" },
+          ],
+        })}
+      />,
+    )
+
+    // A partial refund reports `completed` too, so one transaction would
+    // understate what was actually returned.
+    screen.getByText(
+      "Your refund of $350.50 has been issued to the original payment method.",
+    )
+    screen.getByText("Processed August 15, 2025")
+  })
+
   test("A refund with no recorded transaction omits the amount", () => {
     renderWithProviders(
       <ReceiptRefundCard

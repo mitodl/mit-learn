@@ -121,19 +121,36 @@ const getRefundState = (order: Order): RefundState | null => {
         ],
       }
     case RefundStatusEnum.Completed: {
-      // `refund_fulfilled_order` flips an order's state without writing a
-      // transaction, so a completed refund does not always name an amount.
-      const refund = order.refunds[0]
+      /*
+       * An order can carry several refund transactions, and a partially
+       * refunded order reports `completed` too, so one transaction would
+       * understate what was returned. Sum them, and date the card by the most
+       * recent (ISO strings, so lexical order is chronological).
+       *
+       * `refund_fulfilled_order` flips an order's state without writing a
+       * transaction at all, so there may be nothing here to name an amount.
+       */
+      const amounts = order.refunds
+        .map((refund) => refund.amount)
+        .filter((amount): amount is number => amount !== undefined)
+      const refunded = amounts.length
+        ? amounts.reduce((sum, amount) => sum + amount, 0)
+        : undefined
+      const processedOn = order.refunds
+        .map((refund) => refund.date)
+        .filter((date): date is string => Boolean(date))
+        .sort()
+        .at(-1)
       return {
         status: "Refund completed",
         tone: "darkGreen",
-        timestamp: { label: "Processed", value: refund?.date },
+        timestamp: { label: "Processed", value: processedOn },
         notes: [
           {
             text:
-              refund?.amount === undefined
+              refunded === undefined
                 ? "Your refund has been issued to the original payment method."
-                : `Your refund of ${formatMoney(refund.amount)} has been issued to the original payment method.`,
+                : `Your refund of ${formatMoney(refunded)} has been issued to the original payment method.`,
           },
           {
             text: "May take a few business days to appear on your statement.",
