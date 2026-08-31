@@ -5,6 +5,26 @@
     {
       "allowedVersions": "<6",
       "matchPackageNames": ["django", "Django"]
+    },
+    {
+      "description": "Prod RDS ol-mitlearn-db-production runs postgres 15.17; CI uses postgres:15.",
+      "allowedVersions": "<16",
+      "matchPackageNames": ["postgres"]
+    },
+    {
+      "description": "Prod domain opensearch-mitlearn-producti runs OpenSearch_3.3.",
+      "allowedVersions": "<3.4",
+      "matchPackageNames": ["opensearchproject/opensearch"]
+    },
+    {
+      "description": "Keep the local server in the series qdrant-client ~=1.18.0 targets.",
+      "allowedVersions": "<1.19",
+      "matchPackageNames": ["qdrant/qdrant"]
+    },
+    {
+      "description": "Digest pins on local dev compose images are churn without a supply-chain benefit; Dockerfiles and Actions keep them.",
+      "matchManagers": ["docker-compose"],
+      "pinDigests": false
     }
   ]
 }
