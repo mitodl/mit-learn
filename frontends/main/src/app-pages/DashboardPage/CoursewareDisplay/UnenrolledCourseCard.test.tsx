@@ -43,7 +43,7 @@ describe.each([
 
   setupLocationMock()
 
-  test("shows course title as clickable text (not link) when not enrolled", () => {
+  test("shows course title as a focusable button (not link) when not enrolled", () => {
     setupUserApis()
     const run = mitxonline.factories.courses.courseRun({ b2b_contract: null })
     const course = mitxOnlineCourse({
@@ -59,13 +59,17 @@ describe.each([
     expect(
       within(card).queryByRole("link", { name: run.title }),
     ).not.toBeInTheDocument()
-    // Should be clickable text wrapped in a heading
+    // Should be wrapped in a heading (for AT heading navigation)...
     expect(
       within(card).getByRole("heading", { name: run.title }),
     ).toBeInTheDocument()
+    // ...containing a real, keyboard-focusable button (hq#10262)
+    expect(
+      within(card).getByRole("button", { name: run.title }),
+    ).toBeInTheDocument()
   })
 
-  test("shows course title as clickable text when B2B contract", () => {
+  test("shows course title as a focusable button when B2B contract", () => {
     setupUserApis()
     const b2bContractId = faker.number.int()
     const run = mitxonline.factories.courses.courseRun({
@@ -88,6 +92,9 @@ describe.each([
     ).not.toBeInTheDocument()
     expect(
       within(card).getByRole("heading", { name: run.title }),
+    ).toBeInTheDocument()
+    expect(
+      within(card).getByRole("button", { name: run.title }),
     ).toBeInTheDocument()
   })
 
@@ -349,11 +356,11 @@ describe.each([
       )
 
       const card = getCard()
-      const titleHeading = within(card).getByRole("heading")
+      const titleButton = within(card).getByRole("button", { name: run.title })
       const triggerElement =
         trigger === "button"
           ? within(card).getByTestId("courseware-button")
-          : titleHeading
+          : titleButton
 
       await user.click(triggerElement)
 
@@ -393,7 +400,7 @@ describe.each([
       const triggerElement =
         trigger === "button"
           ? within(card).getByTestId("courseware-button")
-          : within(card).getByRole("heading")
+          : within(card).getByRole("button", { name: run.title })
 
       await user.click(triggerElement)
 
@@ -501,7 +508,7 @@ describe.each([
         const triggerElement =
           trigger === "button"
             ? within(card).getByTestId("courseware-button")
-            : within(card).getByRole("heading")
+            : within(card).getByRole("button", { name: run.title })
 
         await user.click(triggerElement)
 
@@ -542,7 +549,7 @@ describe.each([
         const triggerElement =
           trigger === "button"
             ? within(card).getByTestId("courseware-button")
-            : within(card).getByRole("heading")
+            : within(card).getByRole("button", { name: run.title })
 
         await user.click(triggerElement)
 
@@ -593,7 +600,7 @@ describe.each([
         const triggerElement =
           trigger === "button"
             ? within(card).getByTestId("courseware-button")
-            : within(card).getByRole("heading")
+            : within(card).getByRole("button", { name: run.title })
 
         await user.click(triggerElement)
 
@@ -651,7 +658,7 @@ describe.each([
         const triggerElement =
           trigger === "button"
             ? within(card).getByTestId("courseware-button")
-            : within(card).getByRole("heading")
+            : within(card).getByRole("button", { name: run.title })
 
         await user.click(triggerElement)
 
