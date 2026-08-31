@@ -83,83 +83,81 @@ const ItemsListingComponent: React.FC<ItemsListingComponentProps> = ({
   const count = list?.item_count
 
   return (
-    <Grid container columnSpacing={6}>
-      <Grid size={12}>
-        <Grid container>
-          <Grid
-            container
-            size={12}
-            alignItems="center"
-            justifyContent="space-between"
-            marginBottom="24px"
-          >
-            <Grid>
-              <ButtonLink
-                href={MY_LISTS}
-                variant="tertiary"
-                startIcon={<RiArrowLeftLine />}
-              >
-                My Lists
-              </ButtonLink>
-            </Grid>
+    <>
+      <Grid container>
+        <Grid
+          container
+          size={12}
+          alignItems="center"
+          justifyContent="space-between"
+          marginBottom="24px"
+        >
+          <Grid>
+            <ButtonLink
+              href={MY_LISTS}
+              variant="tertiary"
+              startIcon={<RiArrowLeftLine />}
+            >
+              My Lists
+            </ButtonLink>
           </Grid>
-          <Grid
-            container
-            size={12}
-            alignItems="center"
-            justifyContent="space-between"
-            marginBottom="24px"
-          >
-            <HeaderGrid>
-              <HeaderText>{list?.title}</HeaderText>
-              {list?.description && (
-                <DescriptionText>{list.description}</DescriptionText>
-              )}
-            </HeaderGrid>
-            <HeaderGrid alignSelf="flex-start">
-              {canEdit ? (
-                <EditButton variant="primary" onClick={handleEdit}>
-                  Edit List
-                </EditButton>
-              ) : null}
-            </HeaderGrid>
-          </Grid>
-          <ReorderGrid
-            container
-            size={12}
-            alignItems="center"
-            justifyContent="space-between"
-          >
-            <Grid>
-              {showSort && !!items.length && (
-                <Button
-                  variant="text"
-                  disabled={count === 0}
-                  startIcon={isSorting ? undefined : <RiArrowUpDownLine />}
-                  onClick={toggleIsSorting.toggle}
-                >
-                  {isSorting ? "Done ordering" : "Reorder"}
-                </Button>
-              )}
-            </Grid>
-            <Grid>
-              {count !== undefined && count > 0 ? (
-                <CountText>{`${count} ${pluralize("item", count)}`}</CountText>
-              ) : null}
-            </Grid>
-          </ReorderGrid>
         </Grid>
-        <ItemsListing
-          listType={listType}
-          items={items}
-          isLoading={isLoading}
-          isRefetching={isFetching}
-          sortable={isSorting}
-          emptyMessage="There are no items in this list yet."
-          condensed={condensed}
-        />
+        <Grid
+          container
+          size={12}
+          alignItems="center"
+          justifyContent="space-between"
+          marginBottom="24px"
+        >
+          <HeaderGrid>
+            <HeaderText>{list?.title}</HeaderText>
+            {list?.description && (
+              <DescriptionText>{list.description}</DescriptionText>
+            )}
+          </HeaderGrid>
+          <HeaderGrid alignSelf="flex-start">
+            {canEdit ? (
+              <EditButton variant="primary" onClick={handleEdit}>
+                Edit List
+              </EditButton>
+            ) : null}
+          </HeaderGrid>
+        </Grid>
+        <ReorderGrid
+          container
+          size={12}
+          alignItems="center"
+          justifyContent="space-between"
+        >
+          <Grid>
+            {showSort && !!items.length && (
+              <Button
+                variant="text"
+                disabled={count === 0}
+                startIcon={isSorting ? undefined : <RiArrowUpDownLine />}
+                onClick={toggleIsSorting.toggle}
+              >
+                {isSorting ? "Done ordering" : "Reorder"}
+              </Button>
+            )}
+          </Grid>
+          <Grid>
+            {count !== undefined && count > 0 ? (
+              <CountText>{`${count} ${pluralize("item", count)}`}</CountText>
+            ) : null}
+          </Grid>
+        </ReorderGrid>
       </Grid>
-    </Grid>
+      <ItemsListing
+        listType={listType}
+        items={items}
+        isLoading={isLoading}
+        isRefetching={isFetching}
+        sortable={isSorting}
+        emptyMessage="There are no items in this list yet."
+        condensed={condensed}
+      />
+    </>
   )
 }
 

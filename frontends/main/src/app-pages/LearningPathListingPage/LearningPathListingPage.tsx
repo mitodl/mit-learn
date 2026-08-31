@@ -83,50 +83,40 @@ const LearningPathListingPage: React.FC = () => {
       className="learningpaths-page"
     >
       <Container maxWidth="md" style={{ paddingBottom: 100 }}>
-        <Grid container columnSpacing={6}>
-          <Grid size={12}>
-            <ListHeaderGrid container justifyContent="space-between">
-              <Grid>
-                <Typography variant="h3" component="h1">
-                  Learning Paths
-                </Typography>
-              </Grid>
-              <Grid
-                justifyContent="flex-end"
-                alignItems="center"
-                display="flex"
-              >
-                {canEdit ? (
-                  <Button variant="primary" onClick={handleCreate}>
-                    Create new list
-                  </Button>
-                ) : null}
-              </Grid>
-            </ListHeaderGrid>
-            <section>
-              <LoadingSpinner loading={listingQuery.isLoading} />
-              {listingQuery.data && (
-                <PlainList itemSpacing={3}>
-                  {listingQuery.data.results?.map((resource) => {
-                    return (
-                      <li key={resource.id}>
-                        <LearningResourceListCard
-                          resource={resource}
-                          href={urls.learningPathsView(resource.id)}
-                          editMenu={
-                            canEdit ? (
-                              <EditListMenu resource={resource} />
-                            ) : null
-                          }
-                        />
-                      </li>
-                    )
-                  })}
-                </PlainList>
-              )}
-            </section>
+        <ListHeaderGrid container justifyContent="space-between">
+          <Grid>
+            <Typography variant="h3" component="h1">
+              Learning Paths
+            </Typography>
           </Grid>
-        </Grid>
+          <Grid justifyContent="flex-end" alignItems="center" display="flex">
+            {canEdit ? (
+              <Button variant="primary" onClick={handleCreate}>
+                Create new list
+              </Button>
+            ) : null}
+          </Grid>
+        </ListHeaderGrid>
+        <section>
+          <LoadingSpinner loading={listingQuery.isLoading} />
+          {listingQuery.data && (
+            <PlainList itemSpacing={3}>
+              {listingQuery.data.results?.map((resource) => {
+                return (
+                  <li key={resource.id}>
+                    <LearningResourceListCard
+                      resource={resource}
+                      href={urls.learningPathsView(resource.id)}
+                      editMenu={
+                        canEdit ? <EditListMenu resource={resource} /> : null
+                      }
+                    />
+                  </li>
+                )
+              })}
+            </PlainList>
+          )}
+        </section>
       </Container>
     </BannerPage>
   )
