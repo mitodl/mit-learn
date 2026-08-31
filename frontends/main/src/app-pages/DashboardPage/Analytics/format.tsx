@@ -99,6 +99,12 @@ const SuppressedMark = styled.span(({ theme }) => ({
  */
 const Suppressed: React.FC = () => (
   <Tooltip title={SUPPRESSED_EXPLANATION}>
+    {/*
+      Focusable on purpose: the tooltip is the only way a sighted keyboard user
+      reaches the explanation, and there is no action here to justify a button.
+      Screen readers get it from aria-label without focusing.
+    */}
+    {/* eslint-disable-next-line styled-components-a11y/no-noninteractive-tabindex */}
     <SuppressedMark aria-label={SUPPRESSED_EXPLANATION} tabIndex={0}>
       —
     </SuppressedMark>

@@ -360,6 +360,7 @@ const Card: Card = ({
 
   if (content) {
     return (
+      // eslint-disable-next-line styled-components-a11y/click-events-have-key-events -- the click forwards to the card's own anchor (useClickChildLink), which keyboard users activate directly
       <Container
         {...others}
         className={allClassNames}
@@ -373,6 +374,7 @@ const Card: Card = ({
   }
 
   return (
+    // eslint-disable-next-line styled-components-a11y/click-events-have-key-events -- see above; the anchor inside the card is the keyboard affordance
     <Container
       {...others}
       className={allClassNames}

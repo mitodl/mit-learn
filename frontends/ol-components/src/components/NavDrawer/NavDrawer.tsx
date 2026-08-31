@@ -256,6 +256,13 @@ const NavDrawer = ({
           {...others}
         >
           <FocusTrap open={!!others.open}>
+            {/*
+              A persistent Drawer is not a MUI Modal, so it gets no built-in
+              Escape handling; this listener is the only way out by keyboard.
+              The panel is a focus-trapped region rather than a control, so
+              there is no interactive role to give it.
+            */}
+            {/* eslint-disable-next-line styled-components-a11y/no-static-element-interactions */}
             <DrawerContent
               onKeyUp={(e) => {
                 if (e.key === "Escape") {
