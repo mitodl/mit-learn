@@ -58,9 +58,9 @@ interface HubspotFormFieldInput {
   description?: string | null
   placeholder?: string | null
   defaultValue?: HubspotFormValue
-  defaultValues?: string[] | null
+  defaultValues?: (string | null)[] | null
   default_value?: HubspotFormValue
-  default_values?: string[] | null
+  default_values?: (string | null)[] | null
   options?: HubspotFormOptionInput[]
 }
 

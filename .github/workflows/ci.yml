@@ -218,7 +218,7 @@ jobs:
         with:
           generator: typescript-axios
           openapi-file: $OPENAPI_SCHEMA
-          generator-tag: v7.2.0
+          generator-tag: v7.25.0
           command-args: |
             --output $GENERATOR_OUTPUT_DIR_CI \
             --ignore-file-override $GENERATOR_IGNORE_FILE \
@@ -259,7 +259,7 @@ jobs:
         with:
           generator: typescript-axios
           openapi-file: $OPENAPI_SCHEMA
-          generator-tag: v7.2.0
+          generator-tag: v7.25.0
           command-args: |
             --output $GENERATOR_OUTPUT_DIR_CI \
             --ignore-file-override $GENERATOR_IGNORE_FILE \
