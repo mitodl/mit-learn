@@ -26,10 +26,15 @@ beforeEach(() => {
 })
 
 /** Episode belonging to `parentIds`; also stub each parent podcast detail. */
-const mockEpisode = (parentIds: number[]) => {
+const mockEpisode = (parentIds: number[], slug = "episode-one") => {
+  const id = 555
   const episode = factories.learningResources.podcastEpisode({
+    id,
     title: "Episode One",
     podcast_episode: { podcasts: parentIds },
+    // The backend names the slug, always under the canonical parent; the page
+    // resolves the parent segment against the request.
+    learn_url: `http://test.learn.odl.local:8062/podcast/${parentIds[0]}/podcast_episode/${id}/${slug}`,
   })
   setMockResponse.get(
     urls.learningResources.details({ id: episode.id }),
