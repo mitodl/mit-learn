@@ -1,4 +1,5 @@
 import asyncio
+import json
 import random
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -60,6 +61,7 @@ from vector_search.constants import (
     QDRANT_OPTIMIZER_THRESHOLD_SMALL,
     QDRANT_RESOURCE_PARAM_MAP,
     RESOURCE_AGE_DATE_PAYLOAD_KEY,
+    RESOURCE_EMBEDDING_CHECKSUM_FIELD,
     RESOURCES_COLLECTION_NAME,
     RESOURCES_PAYLOAD_EXCLUDE,
     RESOURCES_RETRIEVE_PAYLOAD,
@@ -88,6 +90,7 @@ from vector_search.utils import (
     filter_existing_qdrant_points,
     qdrant_query_conditions,
     remove_qdrant_records,
+    resource_embedding_checksum,
     resources_payload_selector,
     score_formula_query,
     should_generate_content_embeddings,
@@ -1013,24 +1016,78 @@ def test_course_metadata_document_contents(mocker):
             assert level["name"] in course_metadata_content
 
 
-def test_should_generate_for_changed_resource(mocker):
-    """Should generate embeddings when resource content has changed"""
-    resource = LearningResourceFactory.create()
-    serialized_resources = list(serialize_bulk_learning_resources([resource.id]))
-
+def _mock_resource_point(mocker, payload):
+    """Point the resources collection retrieve at a single stored payload."""
     mock_qdrant = mocker.MagicMock()
-    fake_payload = {
-        "title": "Different title",
-        "description": serialized_resources[0]["description"],
-        "full_description": serialized_resources[0]["full_description"],
-    }
     mock_point = mocker.MagicMock()
-    # return record with different title
-    mock_point.payload = fake_payload
-    mock_qdrant.retrieve.return_value = [mock_point]
+    mock_point.payload = payload
+    mock_qdrant.retrieve.return_value = [] if payload is None else [mock_point]
     mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
-    result = should_generate_resource_embeddings(serialized_resources[0])
-    assert result is True
+    return mock_qdrant
+
+
+def test_should_generate_for_changed_resource(mocker):
+    """Should generate embeddings when the embedding context has changed"""
+    resource = LearningResourceFactory.create()
+    doc = next(iter(serialize_bulk_learning_resources([resource.id])))
+    _mock_resource_point(
+        mocker,
+        {
+            RESOURCE_EMBEDDING_CHECKSUM_FIELD: resource_embedding_checksum(
+                "the context that was actually embedded"
+            )
+        },
+    )
+
+    assert should_generate_resource_embeddings(doc, "a different context") is True
+
+
+def test_should_not_generate_for_matching_checksum(mocker):
+    """A point whose stored checksum matches what we would embed is left alone"""
+    resource = LearningResourceFactory.create()
+    doc = next(iter(serialize_bulk_learning_resources([resource.id])))
+    context = vs_utils._learning_resource_embedding_context(doc)  # noqa: SLF001
+    _mock_resource_point(
+        mocker,
+        {RESOURCE_EMBEDDING_CHECKSUM_FIELD: resource_embedding_checksum(context)},
+    )
+
+    assert should_generate_resource_embeddings(doc, context) is False
+
+
+def test_should_generate_for_resource_without_stored_checksum(mocker):
+    """
+    Points embedded before the checksum existed have no stored value, so they
+    are re-embedded once. This is what pulls the existing catalog onto the
+    metadata-document context instead of leaving it on its old vectors.
+    """
+    resource = LearningResourceFactory.create()
+    doc = next(iter(serialize_bulk_learning_resources([resource.id])))
+    context = vs_utils._learning_resource_embedding_context(doc)  # noqa: SLF001
+    _mock_resource_point(mocker, {"title": doc["title"]})
+
+    assert should_generate_resource_embeddings(doc, context) is True
+
+
+def test_should_generate_for_missing_resource_point(mocker):
+    """A resource with no point at all is always embedded"""
+    resource = LearningResourceFactory.create()
+    doc = next(iter(serialize_bulk_learning_resources([resource.id])))
+    _mock_resource_point(mocker, None)
+
+    assert should_generate_resource_embeddings(doc, "any context") is True
+
+
+def test_resource_embedding_checksum_tracks_the_version(mocker):
+    """
+    Bumping RESOURCE_EMBEDDING_VERSION changes the checksum of unchanged text,
+    so a format change that renders the same data differently still invalidates
+    every stored point.
+    """
+    before = resource_embedding_checksum("unchanged context")
+    mocker.patch("vector_search.utils.RESOURCE_EMBEDDING_VERSION", 2)
+
+    assert resource_embedding_checksum("unchanged context") != before
 
 
 @pytest.fixture
@@ -1076,10 +1133,12 @@ def test_embedding_context_matches_rendered_metadata_document(serialized_course)
     assert context.startswith(metadata_document)
 
 
-def test_embedding_context_falls_back_to_description(mocker):
+def test_embedding_context_is_none_when_the_document_cannot_render(
+    mocker, serialized_course
+):
     """
-    A payload the display serializer chokes on falls back to title/description
-    text instead of failing the batch.
+    A document the display serializer chokes on yields no context at all,
+    rather than a degraded one.
     """
     mocker.patch.object(
         LearningResourceMetadataDisplaySerializer,
@@ -1087,19 +1146,64 @@ def test_embedding_context_falls_back_to_description(mocker):
         side_effect=KeyError("delivery"),
     )
 
-    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
-        {
-            "title": "A title",
-            "description": "A short description",
-            "full_description": "A full description",
-            "readable_id": "18.06",
-            "resource_type_group": "course",
-            "content_files": [],
-        }
-    )
+    assert vs_utils._learning_resource_embedding_context(serialized_course) is None  # noqa: SLF001
 
-    assert context == (
-        "# A title\n\nA short description A full description\n\nCourse number: 18.06"
+
+def test_unrenderable_resource_is_skipped_not_embedded(mocker, serialized_course):
+    """
+    A render failure leaves the existing point completely alone -- no embedding
+    from a degraded context, and no payload refresh either, since that would
+    overwrite the checksum of the vector the point still holds. The next run
+    retries and repairs it.
+    """
+    mocker.patch.object(
+        LearningResourceMetadataDisplaySerializer,
+        "render_markdown",
+        side_effect=KeyError("delivery"),
+    )
+    mock_qdrant = _mock_resource_point(mocker, None)
+
+    assert vs_utils._process_resource_embeddings([serialized_course]) is None  # noqa: SLF001
+    mock_qdrant.overwrite_payload.assert_not_called()
+
+
+def test_unchanged_resource_is_not_re_embedded_on_the_next_run(mocker):
+    """
+    The checksum the first run stores comes back through Qdrant as JSON -- the
+    serialized doc carries real datetimes and Decimals, the stored payload
+    carries strings -- and still matches, so the second run refreshes the
+    payload instead of re-embedding. Comparing rendered documents instead would
+    re-embed the whole catalog every run.
+    """
+    resource = LearningResourceFactory.create(resource_type=COURSE_TYPE, published=True)
+    LearningResourceRunFactory.create(learning_resource=resource, published=True)
+    mock_qdrant = _mock_resource_point(mocker, None)
+
+    points = list(
+        vs_utils._process_resource_embeddings(  # noqa: SLF001
+            serialize_bulk_learning_resources([resource.id])
+        )
+    )
+    assert len(points) == 1
+    stored_payload = json.loads(json.dumps(points[0].payload, default=str))
+    assert stored_payload[RESOURCE_EMBEDDING_CHECKSUM_FIELD]
+
+    stored_point = mocker.MagicMock()
+    stored_point.payload = stored_payload
+    mock_qdrant.retrieve.return_value = [stored_point]
+
+    assert (
+        vs_utils._process_resource_embeddings(  # noqa: SLF001
+            serialize_bulk_learning_resources([resource.id])
+        )
+        is None
+    )
+    # ...and the refresh writes the checksum back, rather than blanking the key
+    # and re-embedding on every subsequent run.
+    refreshed = mock_qdrant.overwrite_payload.call_args.kwargs["payload"]
+    assert (
+        refreshed[RESOURCE_EMBEDDING_CHECKSUM_FIELD]
+        == stored_payload[RESOURCE_EMBEDDING_CHECKSUM_FIELD]
     )
 
 
@@ -3019,9 +3123,12 @@ def test_staleness_penalty_expression(settings):
     decay = staleness.sum[1].neg.lin_decay
     assert decay.x.datetime_key == RESOURCE_AGE_DATE_PAYLOAD_KEY
     assert decay.target.datetime == now.isoformat()
-    assert decay.scale == 20 * SECONDS_PER_YEAR
-    # decay bottoms out at the horizon rather than halfway to it
-    assert decay.midpoint == 0.0
+    # Qdrant rejects a midpoint of 0, so the horizon is expressed as the default
+    # midpoint over half the scale -- the same line, bottoming out at the horizon
+    # rather than halfway to it.
+    assert decay.scale == 20 * SECONDS_PER_YEAR / 2
+    assert decay.midpoint == 0.5
+    assert 0 < decay.midpoint < 1
 
 
 @pytest.mark.parametrize("age_years", [0, 5, 20, 40])
