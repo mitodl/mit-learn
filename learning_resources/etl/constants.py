@@ -17,6 +17,14 @@ COMMON_HEADERS = {
     "User-Agent": f"CourseCatalogBot/{settings.VERSION} ({settings.APP_BASE_URL})"
 }
 
+# Several podcast hosts (buzzsprout among them) 403 the default python-requests
+# User-Agent, so the podcast feed and transcript fetches pose as a browser.
+BROWSER_UA_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/39.0.2171.95 Safari/537.36"
+}
+
 READABLE_ID_FIELD = "readable_id"
 
 MIT_OWNER_KEYS = ["MITx", "MITx_PRO"]

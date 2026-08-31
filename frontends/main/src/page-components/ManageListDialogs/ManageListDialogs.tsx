@@ -23,6 +23,7 @@ import {
   useUserListUpdate,
   useUserListDestroy,
 } from "api/hooks/userLists"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 
 const learningPathFormSchema = Yup.object().shape({
   published: Yup.boolean()
@@ -81,8 +82,10 @@ const UpsertLearningPathDialog = NiceModal.create(
     const topicsQuery = useLearningResourceTopics(undefined, {
       enabled: modal.visible,
     })
-    const createList = useLearningPathCreate()
-    const updateList = useLearningPathUpdate()
+    // The dialog renders its own inline error (mutation.isError below), so
+    // suppress the global error toast.
+    const createList = useLearningPathCreate({ meta: SILENCE_ERROR_TOAST })
+    const updateList = useLearningPathUpdate({ meta: SILENCE_ERROR_TOAST })
     const mutation = resource?.id ? updateList : createList
     const handleSubmit: FormikConfig<
       LearningPathResource | LearningPathFormValues
@@ -201,8 +204,10 @@ interface UpsertUserListDialogProps {
 const UpsertUserListDialog = NiceModal.create(
   ({ userList, title, onDestroy }: UpsertUserListDialogProps) => {
     const modal = NiceModal.useModal()
-    const createList = useUserListCreate()
-    const updateList = useUserListUpdate()
+    // The dialog renders its own inline error (mutation.isError below), so
+    // suppress the global error toast.
+    const createList = useUserListCreate({ meta: SILENCE_ERROR_TOAST })
+    const updateList = useUserListUpdate({ meta: SILENCE_ERROR_TOAST })
     const mutation = userList?.id ? updateList : createList
     const handleSubmit: FormikConfig<
       UserList | UserListFormValues

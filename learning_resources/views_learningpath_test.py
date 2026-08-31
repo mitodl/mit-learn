@@ -313,7 +313,6 @@ def test_learning_path_items_endpoint_update_items_wrong_list(client, user):
     assert resp.status_code == 404
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize("num_items", [2, 3])
 @pytest.mark.parametrize("is_editor", [True, False])
 def test_learning_path_items_endpoint_delete_items(client, user, is_editor, num_items):

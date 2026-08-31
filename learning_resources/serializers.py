@@ -465,10 +465,20 @@ class PodcastEpisodeSerializer(serializers.ModelSerializer):
 
     podcasts = serializers.SerializerMethodField()
     parent_podcasts = serializers.SerializerMethodField()
+    has_transcript = serializers.SerializerMethodField()
 
     def get_podcasts(self, instance) -> list[int]:
         """Get the podcast id(s) the episode belongs to"""
         return [podcast.parent_id for podcast in instance.learning_resource.podcasts]
+
+    def get_has_transcript(self, instance) -> bool:
+        """
+        Whether a transcript is available from the transcript endpoint.
+
+        The text itself is excluded from this serializer, so this is how a
+        client knows whether to fetch it.
+        """
+        return bool(instance.transcript)
 
     @extend_schema_field(PodcastEpisodeParentSerializer(many=True))
     def get_parent_podcasts(self, instance):
@@ -479,7 +489,33 @@ class PodcastEpisodeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.PodcastEpisode
-        exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
+        # `transcript` and `rss` are large per-episode text blobs with no
+        # consumer in a list, nested or search payload: a page of 20 episodes
+        # would carry ~700KB of transcript. Fetch the transcript from
+        # /api/v1/podcast_episodes/{id}/transcript/ instead, gated on
+        # `has_transcript`. The search index re-adds `transcript` in
+        # learning_resources_search.serializers.
+        exclude = (
+            "learning_resource",
+            "transcript",
+            "rss",
+            *COMMON_IGNORED_FIELDS,
+        )
+
+
+class PodcastEpisodeTranscriptSerializer(serializers.ModelSerializer):
+    """
+    Serializer for a single podcast episode's transcript.
+
+    Kept out of PodcastEpisodeSerializer so the text is only ever sent when a
+    client asks for this one episode's transcript.
+    """
+
+    id = serializers.IntegerField(source="learning_resource_id", read_only=True)
+
+    class Meta:
+        model = models.PodcastEpisode
+        fields = ("id", "transcript")
 
 
 class PodcastSerializer(serializers.ModelSerializer):

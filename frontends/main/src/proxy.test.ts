@@ -11,7 +11,7 @@ describe("isPageRoute", () => {
     "/courses/course-v1:MITxT+5.601x",
     "/programs/program-v1:MITxT+18.01x",
     // Sitemaps are dynamically generated and tagged for purge-on-deploy.
-    "/sitemaps/products.xml",
+    "/sitemaps/resources/sitemap/0.xml",
     "/sitemaps/sitemap-index.xml",
   ])("treats %s as a page route", (pathname) => {
     expect(isPageRoute(pathname)).toBe(true)

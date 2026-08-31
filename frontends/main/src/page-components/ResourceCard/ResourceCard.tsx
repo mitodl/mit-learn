@@ -7,7 +7,6 @@ import {
   AddToUserListDialog,
 } from "../Dialogs/AddToListDialog"
 import { resourceDrawerPushUrl } from "../LearningResourceDrawer/resourceDrawerPushUrl"
-import { resourceDrawerSearch } from "@/common/urls"
 import { useUserMe } from "api/hooks/user"
 import { LearningResource } from "api"
 import { SignupPopover } from "../SignupPopover/SignupPopover"
@@ -121,11 +120,13 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
       <LearningResourceCard
         onClick={composedOnClick}
         resource={resource}
-        href={
-          resource
-            ? resourceDrawerSearch(resource.id, resource.title)
-            : undefined
-        }
+        /**
+         * The resource's own page where it has one, else its drawer. Crawlers
+         * follow this, so pointing it at the dedicated page is what stops the
+         * drawer competing with that page for the same content. `pushUrl` below
+         * is unaffected: a click still opens the drawer in place.
+         */
+        href={resource?.learn_url}
         pushUrl={resource ? () => resourceDrawerPushUrl(resource) : undefined}
         onAddToLearningPathClick={handleAddToLearningPathClick}
         onAddToUserListClick={handleAddToUserListClick}

@@ -3,7 +3,8 @@
 from cairosvg import svg2png  # pylint:disable=no-name-in-module
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, HttpResponseRedirect
+from django.db.models import Prefetch, QuerySet
+from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.utils.decorators import method_decorator
 from django.views import View
@@ -14,6 +15,7 @@ from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from learning_resources.models import LearningResourceTopic
 from main.permissions import (
     AnonymousAccessReadonlyPermission,
     IsStaffPermission,
@@ -33,6 +35,18 @@ from profiles.utils import (
     DEFAULT_PROFILE_IMAGE,
     generate_svg_avatar,
 )
+
+
+def profiles_for_serialization() -> QuerySet[Profile]:
+    """Profiles with the relations ProfileSerializer reads."""
+    return Profile.objects.prefetch_related(
+        "userwebsite_set",
+        Prefetch(
+            "topic_interests",
+            queryset=LearningResourceTopic.objects.for_serialization(),
+            to_attr="annotated_topic_interests",
+        ),
+    )
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -69,9 +83,7 @@ class ProfileViewSet(
 
     permission_classes = (AnonymousAccessReadonlyPermission, HasEditPermission)
     serializer_class = ProfileSerializer
-    queryset = Profile.objects.prefetch_related("userwebsite_set").filter(
-        user__is_active=True
-    )
+    queryset = profiles_for_serialization().filter(user__is_active=True)
     lookup_field = "user__username"
 
     def get_object(self):
@@ -79,7 +91,12 @@ class ProfileViewSet(
 
         if self.kwargs["user__username"] == "me":
             ensure_profile(self.request.user)
-            return self.request.user.profile
+            # Fetched through the same queryset as the by-username route so the
+            # prefetches apply; deliberately without its user__is_active filter,
+            # which this branch has never applied.
+            return get_object_or_404(
+                profiles_for_serialization(), user=self.request.user
+            )
         else:
             return super().get_object()
 
@@ -106,6 +123,24 @@ class ProgramLetterViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     serializer_class = ProgramLetterSerializer
     queryset = ProgramLetter.objects.all()
 
+    def get_object(self) -> ProgramLetter:
+        """
+        Return the letter, 404ing if its certificate is gone.
+
+        certificate is nullable and its column has no FK constraint, since
+        ProgramCertificate is unmanaged, so the id can outlive the row. Every
+        field of the response derives from the certificate, so there is nothing
+        to render without it.
+        """
+        letter = super().get_object()
+        try:
+            certificate = letter.certificate
+        except ProgramCertificate.DoesNotExist as exc:
+            raise Http404 from exc
+        if certificate is None:
+            raise Http404
+        return letter
+
 
 class UserProgramCertificateViewSet(viewsets.ViewSet):
     """
@@ -122,10 +157,39 @@ class UserProgramCertificateViewSet(viewsets.ViewSet):
 
     def list(self, request):
         queryset = ProgramCertificate.objects.filter(user_email=request.user.email)
+        certificates = list(self.filter_queryset(queryset))
+        letters = self.user_letters(request.user, certificates)
+        for cert in certificates:
+            cert.user_letter = letters[cert.pk]
         serializer = ProgramCertificateSerializer(
-            self.filter_queryset(queryset), many=True, context={"request": request}
+            certificates, many=True, context={"request": request}
         )
         return Response(serializer.data)
+
+    @staticmethod
+    def user_letters(user, certificates) -> dict:
+        """
+        Map certificate id to the user's ProgramLetter, creating any that don't
+        exist yet.
+
+        Serializing a certificate has always created its letter on demand; doing
+        it here in bulk keeps that behaviour without a query per certificate.
+        """
+        letters = {
+            letter.certificate_id: letter
+            for letter in ProgramLetter.objects.filter(
+                user=user, certificate__in=certificates
+            )
+        }
+        missing = [cert for cert in certificates if cert.pk not in letters]
+        if missing:
+            letters.update(
+                (letter.certificate_id, letter)
+                for letter in ProgramLetter.objects.bulk_create(
+                    ProgramLetter(user=user, certificate=cert) for cert in missing
+                )
+            )
+        return letters
 
     def filter_queryset(self, queryset):
         for backend in list(self.filter_backends):

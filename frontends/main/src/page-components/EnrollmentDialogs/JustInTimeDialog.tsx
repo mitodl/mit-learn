@@ -18,6 +18,7 @@ import {
   mitxUserQueries,
   useUpdateUserMutation,
 } from "api/mitxonline-hooks/user"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import {
   FIELD_SPECS,
   JIT_FIELDS,
@@ -69,7 +70,11 @@ const JustInTimeDialogInner: React.FC = () => {
   const modal = NiceModal.useModal()
   const user = useQuery(mitxUserQueries.me())
   const countries = useQuery(mitxUserQueries.countries())
-  const updateUser = useUpdateUserMutation()
+  // Failures are surfaced by the inline error alert below (driven by
+  // `updateUser.isError`), so opt out of the global error toast to avoid a
+  // double alert. The caught `mutateAsync` rejection does not suppress the
+  // cache-level `onError`, so this opt-out is what prevents it.
+  const updateUser = useUpdateUserMutation({ meta: SILENCE_ERROR_TOAST })
   const fieldsRef = React.useRef<HTMLDivElement>(null)
   const [subdivisionNotice, setSubdivisionNotice] = React.useState("")
 

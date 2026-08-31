@@ -187,7 +187,9 @@ RESOURCE_EMBEDDING_VERSION = 1
 # Payload keys dropped when resource hits are served straight from the Qdrant
 # payload (VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD): what the indexing serializer
 # adds on top of the LearningResourceSerializer shape the API returns, plus
-# video.transcript, which the response never renders.
+# video.transcript and podcast_episode.transcript, which the response never
+# renders (the podcast episode page fetches its transcript from its own
+# endpoint).
 #
 # content_files is NOT excluded. Document and video responses declare it
 # (NestedContentFileSerializer), and search cards fall back to
@@ -209,6 +211,7 @@ RESOURCES_PAYLOAD_EXCLUDE = [
     "is_incomplete_or_stale",
     "video.transcript",
     RESOURCE_EMBEDDING_CHECKSUM_FIELD,
+    "podcast_episode.transcript",
 ]
 
 # Qdrant payload selectors descend into objects but not into lists of objects,

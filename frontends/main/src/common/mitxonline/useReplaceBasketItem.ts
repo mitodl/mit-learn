@@ -1,4 +1,5 @@
 import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
+import type { MutationHookOptions } from "api/mutation-meta"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { useComplianceGate } from "./useComplianceGate"
 
@@ -13,9 +14,9 @@ const cartUrl = () => mitxonlineLegacyUrl("/cart/")
  * the gate, nothing is added and no redirect happens — callers see a resolved
  * promise with no navigation, so a cancel never reads as a failure.
  */
-const useReplaceBasketItem = () => {
-  const addToBasket = useAddToBasket()
-  const clearBasket = useClearBasket()
+const useReplaceBasketItem = (opts: MutationHookOptions = {}) => {
+  const addToBasket = useAddToBasket(opts)
+  const clearBasket = useClearBasket(opts)
   const { ensureCompliance } = useComplianceGate()
 
   const redirect = () => window.location.assign(cartUrl())
