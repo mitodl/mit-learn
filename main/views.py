@@ -16,7 +16,7 @@ from main.features import get_all_feature_flags, is_enabled
 # (content negotiation, versioning, authentication) is irrelevant, so these
 # are plain Django handlers rather than `@api_view`-wrapped ones - wrapping
 # them in DRF can only reintroduce that pipeline on a request DRF has already
-# proven isn't its to handle.
+# proven isn't DRF's to handle.
 
 
 def _error_response(status_code, error_type, detail):
