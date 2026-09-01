@@ -842,6 +842,28 @@ test("Set sort", async () => {
   expect(popularitySelect).toHaveAttribute("aria-selected", "true")
 })
 
+test("Upcoming sort is unavailable on the learning materials tab", async () => {
+  // Learning materials have no runs, so none of them has a next start date
+  setMockApiResponses({ search: { count: 137 } })
+
+  const { location } = renderWithProviders(<SearchPage />, {
+    url: "?sortby=upcoming",
+  })
+
+  await user.click(
+    await screen.findByRole("tab", { name: /Learning Material/ }),
+  )
+
+  expect(location.current.search).toBe("?resource_type_group=learning_material")
+
+  const sortDropdowns = await screen.findAllByText("Sort by: Best Match")
+  await user.click(sortDropdowns[0])
+
+  expect(
+    await screen.findByRole("option", { name: "Upcoming" }),
+  ).toHaveAttribute("aria-disabled", "true")
+})
+
 test("The professional toggle updates the professional setting", async () => {
   setMockApiResponses({ search: { count: 137 } })
   const { location } = renderWithProviders(<SearchPage />)
