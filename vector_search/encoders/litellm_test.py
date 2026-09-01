@@ -358,3 +358,72 @@ def test_litellm_encoder_embed_query_bounded_under_saturation(mock_embedding, se
     assert peak["hedge"] <= settings.EMBEDDING_HEDGE_MAX_WORKERS
     # queries that could not get a pool slot degraded to running inline
     assert peak["inline"] > 0
+
+
+@patch("vector_search.encoders.litellm.embedding")
+def test_litellm_encoder_embed_query_hedge_count_one(mock_embedding, settings):
+    """
+    Test that a hedge count of 1 short circuits to a plain un-hedged request
+    """
+    settings.EMBEDDING_REQUEST_HEDGING_ENABLED = True
+    settings.EMBEDDING_HEDGE_COUNT = 1
+    settings.EMBEDDING_HEDGE_DELAY_SECONDS = 0
+
+    calling_threads = []
+
+    def side_effect(**_kwargs):
+        calling_threads.append(threading.current_thread().name)
+        return _embedding_response([0.1, 0.2, 0.3])
+
+    mock_embedding.side_effect = side_effect
+    encoder = LiteLLMEncoder("test_model")
+    res = encoder.embed_query("search query")
+
+    assert res == [0.1, 0.2, 0.3]
+    assert mock_embedding.call_count == 1
+    # no thread pool and no hedge request timeout are involved
+    assert calling_threads == [threading.current_thread().name]
+    assert "timeout" not in mock_embedding.call_args.kwargs
+
+
+@patch("vector_search.encoders.litellm.embedding")
+def test_litellm_encoder_embed_query_hedge_count_three(mock_embedding, settings):
+    """
+    Test that a hedge count of 3 sends two backups and returns the first success
+    """
+    settings.EMBEDDING_REQUEST_HEDGING_ENABLED = True
+    settings.EMBEDDING_HEDGE_COUNT = 3
+    settings.EMBEDDING_HEDGE_DELAY_SECONDS = 0
+
+    slow = 5.0
+    lock = threading.Lock()
+    calls = []
+
+    def side_effect(**_kwargs):
+        with lock:
+            calls.append(threading.current_thread().name)
+            # only the primary request is slow, both backups are fast
+            is_primary = len(calls) == 1
+        if is_primary:
+            time.sleep(slow)
+        return _embedding_response([0.1, 0.2, 0.3])
+
+    mock_embedding.side_effect = side_effect
+    encoder = LiteLLMEncoder("test_model")
+
+    start = time.monotonic()
+    res = encoder.embed_query("search query")
+    elapsed = time.monotonic() - start
+
+    assert res == [0.1, 0.2, 0.3]
+    assert elapsed < slow / 2
+
+    # both backups are sent, they may still be starting up when the winner returns
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        with lock:
+            if len(calls) == 3:
+                break
+        time.sleep(0.01)
+    assert len(calls) == 3
+    assert sum(name.startswith("embed-hedge") for name in calls) == 2

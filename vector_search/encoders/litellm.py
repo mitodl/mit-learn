@@ -146,7 +146,7 @@ class LiteLLMEncoder(BaseEncoder):
         """Embed a list of documents without hedging."""
         return [result["embedding"] for result in self.get_embedding(documents)["data"]]
 
-    def _hedged_get_embedding(self, texts, hedge_count=2, hedge_delay=0.0):
+    def _hedged_get_embedding(self, texts, hedge_count, hedge_delay):
         """
         Run concurrent embedding requests and return the first successful result.
 
@@ -174,6 +174,7 @@ class LiteLLMEncoder(BaseEncoder):
             return self.get_embedding(texts, request_timeout=timeout_seconds)
 
         pending = {primary}
+        hedge_futures = set()
         hedges_remaining = max(hedge_count - 1, 0)
         # only bound the wait while there are backups left to send
         timeout = hedge_delay if hedges_remaining else None
@@ -187,11 +188,17 @@ class LiteLLMEncoder(BaseEncoder):
             )
             for fut in done:
                 try:
-                    return fut.result()
+                    result = fut.result()
                 except Exception as exc:  # noqa: BLE001
                     log.warning("Hedged embedding request failed with error: %s", exc)
                     if first_exception is None:
                         first_exception = exc
+                else:
+                    log.info(
+                        "Embedding request won by %s request",
+                        "backup" if fut in hedge_futures else "primary",
+                    )
+                    return result
 
             if hedges_remaining:
                 # the first request is slow (or failed) - send the backups
@@ -203,15 +210,24 @@ class LiteLLMEncoder(BaseEncoder):
                     for _ in range(hedges_remaining)
                 }
                 hedges.discard(None)
-                if not hedges:
+                if hedges:
+                    log.info(
+                        "Sent %d backup embedding request(s) after %ss",
+                        len(hedges),
+                        hedge_delay,
+                    )
+                else:
                     log.warning("Hedge pool saturated, skipping backup requests")
+                hedge_futures |= hedges
                 pending |= hedges
                 hedges_remaining = 0
                 timeout = None
 
         if first_exception is not None:
             raise first_exception
-        return None
+        # unreachable: pending only empties once a request returned or raised
+        msg = "All hedged embedding requests were abandoned"
+        raise RuntimeError(msg)
 
     def embed_query(self, query):
         """
