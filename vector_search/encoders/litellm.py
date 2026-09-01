@@ -29,9 +29,9 @@ litellm.cache = Cache(
     port=redis_url.port,
     password=redis_url.password,
     ssl=redis_ssl,
-    ssl_cert_reqs="required" if redis_ssl else None,
     supported_call_types=["embedding", "aembedding"],
     ttl=settings.QDRANT_QUERY_EMBEDDING_CACHE_TTL,
+    **({"ssl_cert_reqs": "required"} if redis_ssl else {}),
 )
 
 
