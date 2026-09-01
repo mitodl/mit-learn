@@ -1918,28 +1918,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@csstools/css-syntax-patches-for-csstree@npm:^1.0.14":
-  version: 1.0.14
-  resolution: "@csstools/css-syntax-patches-for-csstree@npm:1.0.14"
-  peerDependencies:
-    postcss: ^8.4
-  checksum: 10/c783d5db307552f483d95266452a7765ca138a9e64f12d013c63e960c9c8abbf82c899a34028af1f5ad714e0e94edd97b1aa31784923c1d7d1756d775c3c1d0a
-  languageName: node
-  linkType: hard
-
-"@csstools/css-syntax-patches-for-csstree@npm:^1.0.19":
-  version: 1.1.12
-  resolution: "@csstools/css-syntax-patches-for-csstree@npm:1.1.12"
-  peerDependencies:
-    css-tree: ^3.2.1
-  peerDependenciesMeta:
-    css-tree:
-      optional: true
-  checksum: 10/ae30bf06b20b81b54165c9dda6c5d0ed1ec91ceef6d497c0a2d33c896c1bde0998ec9d8587672892ebdf157dae5ca9117f603526b298559e69cc4bf1a01e0b59
-  languageName: node
-  linkType: hard
-
-"@csstools/css-syntax-patches-for-csstree@npm:^1.0.21":
+"@csstools/css-syntax-patches-for-csstree@npm:1.0.25":
   version: 1.0.25
   resolution: "@csstools/css-syntax-patches-for-csstree@npm:1.0.25"
   checksum: 10/42dfcd164ed6a66eee8dd3fcdbdaa58d032ab8c3bb5ead2453915429367766879b25332e09379a67357fd33742b856160e7c0182c7d90be00f57571b916c18e7
