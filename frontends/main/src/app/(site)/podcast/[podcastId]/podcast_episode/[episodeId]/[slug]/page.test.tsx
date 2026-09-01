@@ -29,7 +29,11 @@ beforeEach(() => {
 
 /** Episode belonging to `parentIds`; also stub each parent podcast detail. */
 
-const mockEpisode = (parentIds: number[], { hasTranscript = false }, slug = "episode-one") => {
+const mockEpisode = (
+  parentIds: number[],
+  { hasTranscript = false },
+  slug = "episode-one",
+) => {
   const id = 555
   const episode = factories.learningResources.podcastEpisode({
     id,

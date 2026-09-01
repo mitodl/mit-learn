@@ -8,11 +8,7 @@ import {
   resolveVideoPlaylist,
   videoPlaylistIds,
 } from "@/common/slugs"
-import {
-  carrySearchParams,
-  learnUrlSlug,
-  videoDetailPath,
-} from "@/common/urls"
+import { carrySearchParams, learnUrlSlug, videoDetailPath } from "@/common/urls"
 
 /** Bare /video/{id} is never canonical → 307-redirect to slug + resolved playlist. */
 const Page = async ({ params, searchParams }: AppPageProps<"/video/[id]">) => {

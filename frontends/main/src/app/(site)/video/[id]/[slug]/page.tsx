@@ -19,11 +19,7 @@ import {
   resolveVideoPlaylist,
   videoPlaylistIds,
 } from "@/common/slugs"
-import {
-  carrySearchParams,
-  learnUrlSlug,
-  videoDetailPath,
-} from "@/common/urls"
+import { carrySearchParams, learnUrlSlug, videoDetailPath } from "@/common/urls"
 
 type Props = AppPageProps<"/video/[id]/[slug]">
 
