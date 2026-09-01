@@ -19,6 +19,11 @@ from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.loaders import update_index
 from learning_resources.etl.utils import extract_text_from_url
 from learning_resources.models import LearningResource
+from main.constants import (
+    ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
+    ALLOWED_HTML_TAGS_WITH_LINKS,
+)
+from main.utils import clean_data
 
 log = logging.getLogger(__name__)
 
@@ -216,6 +221,31 @@ def _get_source_url(video_data: dict) -> str | None:
     return None
 
 
+def clean_description(description: object) -> str:
+    """
+    Sanitize an OVS description before it is stored.
+
+    OVS descriptions are rich text authored in OVS, and every surface that shows
+    them here renders them as markup, so an unsanitized value would be live HTML
+    from a source we do not control. Links are kept - they are the point of the
+    feature - which is the same allowlist the podcast ETL uses for show notes.
+
+    Args:
+        description: the description from the OVS payload, which is untrusted
+            and not necessarily a string
+
+    Returns:
+        the sanitized description, or "" when there was nothing usable
+    """
+    if not isinstance(description, str):
+        return ""
+    return clean_data(
+        description,
+        tags=ALLOWED_HTML_TAGS_WITH_LINKS,
+        attributes=ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
+    )
+
+
 def _duration_to_iso8601(duration_seconds: float) -> str:
     """
     Convert a duration in seconds to ISO 8601 duration string.
@@ -331,7 +361,7 @@ def transform_video(video_data: dict) -> dict | None:
         "etl_source": ETLSource.ovs.name,
         "resource_type": LearningResourceType.video.name,
         "title": video_data.get("title", ""),
-        "description": video_data.get("description", ""),
+        "description": clean_description(video_data.get("description", "")),
         "url": _get_resource_url(video_data),
         "image": image_data,
         "last_modified": video_data.get("created_at"),
@@ -365,7 +395,7 @@ def transform_collection(collection_data: dict) -> dict:
         "playlist_id": collection_data["key"],
         "platform": PlatformType.ovs.name,
         "title": collection_data.get("title", ""),
-        "description": collection_data.get("description", ""),
+        "description": clean_description(collection_data.get("description", "")),
         "url": f"{base_url}/collections/{quote(str(collection_data['key']))}",
         "published": True,
     }

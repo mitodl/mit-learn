@@ -6,6 +6,7 @@ import { Typography, styled } from "ol-components"
 import { RiPlayFill, RiArrowRightSLine } from "@remixicon/react"
 import type { LearningResource } from "api/v1"
 import { formatDate, formatDurationClockTime } from "ol-utilities"
+import { stripAnchorTags } from "@/common/utils"
 
 const EpisodeNumber = styled.span<{ $isFirst?: boolean }>(
   ({ theme, $isFirst }) => ({
@@ -29,6 +30,10 @@ const EpisodeNumber = styled.span<{ $isFirst?: boolean }>(
 )
 
 const EpisodeDescription = styled(Typography)(({ theme }) => ({
+  /* Clamped preview: description markup is flattened so a list cannot blow the
+     box out. Anchors are stripped in the component (the row is itself a link). */
+  "p, ul, ol, li": { display: "inline", margin: 0, padding: 0, listStyle: "none" },
+  "p + p::before, li + li::before": { content: '" "' },
   color: theme.custom.colors.darkGray1,
   marginTop: "4px",
   maxWidth: "460px",
@@ -227,10 +232,12 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
               {episode.title}
             </EpisodeTitleLink>
 
+            {/* The whole row is a link, so anchors from the description
+                have to go - a nested <a> splits the row's own link. */}
             <EpisodeDescription
               variant="body2"
               dangerouslySetInnerHTML={{
-                __html: episode.description ?? "",
+                __html: stripAnchorTags(episode.description ?? ""),
               }}
             />
           </EpisodeInfo>

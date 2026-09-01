@@ -91,6 +91,26 @@ describe("VideoPage", () => {
 
       await screen.findByText(playlist.description!)
     })
+
+    test("renders a rich-text playlist description as markup, not tags", async () => {
+      // OVS descriptions are rich text now. The header used to interpolate the
+      // value, so an author's formatting reached the learner as visible tags.
+      const playlist = makePlaylist()
+      playlist.description =
+        '<p>A <strong>seminar</strong> series</p><ul><li>Start with ' +
+        '<a href="https://learn.mit.edu/x">session 3</a></li></ul>'
+      setupApis({ playlistId: playlist.id, videos: [], playlist })
+
+      renderWithProviders(<VideoPage playlistId={playlist.id} />)
+
+      const emphasis = await screen.findByText("seminar")
+      expect(emphasis.tagName).toBe("STRONG")
+      expect(screen.getByRole("listitem")).toBeInTheDocument()
+      expect(
+        screen.getByRole("link", { name: "session 3" }),
+      ).toHaveAttribute("href", "https://learn.mit.edu/x")
+      expect(screen.queryByText(/<strong>/)).not.toBeInTheDocument()
+    })
   })
 
   describe("featured video", () => {

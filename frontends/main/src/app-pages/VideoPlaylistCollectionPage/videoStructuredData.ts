@@ -12,6 +12,33 @@ const ISO_8601_DURATION_RE =
  *
  * See: https://developers.google.com/search/docs/appearance/structured-data/video
  */
+/*
+ * schema.org values are plain text, so the description has to be stripped of
+ * the markup OVS now sends. Deliberately not common/htmlToPlainText: that is
+ * documented server-only because it pulls in isomorphic-dompurify (jsdom), and
+ * this module is imported by a "use client" component. The input is already
+ * sanitized to a small tag set during ETL, so a strip plus the handful of
+ * entities nh3 emits is sufficient here.
+ */
+const HTML_ENTITIES: Record<string, string> = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#39;": "'",
+  "&nbsp;": " ",
+}
+
+const descriptionToPlainText = (html: string): string =>
+  html
+    // block boundaries become spaces, or adjacent paragraphs run together
+    .replace(/<\/(?:p|li|ul|ol|blockquote)>/gi, " ")
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&[a-z#0-9]+;/gi, (entity) => HTML_ENTITIES[entity.toLowerCase()] ?? entity)
+    .replace(/\s+/g, " ")
+    .trim()
+
 export function buildVideoStructuredData(
   video: VideoResource | undefined,
 ): Record<string, unknown> | null {
@@ -28,7 +55,9 @@ export function buildVideoStructuredData(
     "@context": "https://schema.org",
     "@type": "VideoObject",
     name: video.title,
-    ...(video.description ? { description: video.description } : {}),
+    ...(video.description
+      ? { description: descriptionToPlainText(video.description) }
+      : {}),
     thumbnailUrl: video.video?.cover_image_url || video.image?.url || undefined,
     uploadDate: video.last_modified,
     contentUrl: video.url ?? undefined,

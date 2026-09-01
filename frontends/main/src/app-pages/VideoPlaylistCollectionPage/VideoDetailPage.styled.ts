@@ -104,8 +104,37 @@ export const BorderLine = styled.div(({ theme }) => ({
   },
 }))
 
+/*
+ * Typography for rendered description markup. OVS descriptions are rich text
+ * now, so these surfaces receive <p>, <ul>/<ol>/<li>, <strong>/<em> and <a> -
+ * none of which the plain-text styles below cover on their own. The first/last
+ * child resets stop the block adding stray leading and trailing space.
+ */
+export const richTextDescription = {
+  p: { margin: "0 0 16px" },
+  "ul, ol": { margin: "0 0 16px", paddingLeft: "24px" },
+  li: { marginBottom: "6px" },
+  blockquote: {
+    margin: "0 0 16px",
+    paddingLeft: "16px",
+    borderLeft: `3px solid ${theme.custom.colors.lightGray2}`,
+    color: theme.custom.colors.darkGray1,
+  },
+  a: {
+    color: theme.custom.colors.red,
+    textDecoration: "underline",
+    textUnderlineOffset: "2px",
+    "&:hover": { color: theme.custom.colors.mitRed },
+  },
+  strong: { fontWeight: theme.typography.fontWeightBold },
+  em: { fontStyle: "italic" },
+  "> :first-of-type": { marginTop: 0 },
+  "> :last-child": { marginBottom: 0 },
+} as const
+
 export const DescriptionText = styled(Typography)(({ theme }) => ({
   ...theme.typography.body1,
+  ...richTextDescription,
   color: theme.custom.colors.darkGray2,
   marginBottom: "22px",
   fontSize: "18px",
@@ -188,6 +217,10 @@ export const MoreFromItemTitle = styled(Typography)({
 })
 
 export const MoreFromItemMeta = styled(Typography)({
+  /* Clamped to a couple of lines, so a real list would blow the box out.
+     Anchors are already stripped by the component; flatten the rest. */
+  "p, ul, ol, li": { display: "inline", margin: 0, padding: 0, listStyle: "none" },
+  "p + p::before, li + li::before": { content: '" "' },
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
   overflow: "hidden",

@@ -3,6 +3,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Typography, styled, theme, Skeleton } from "ol-components"
 import { formatDurationClockTime } from "ol-utilities"
+import { stripAnchorTags } from "@/common/utils"
 import type { VideoResource } from "api/v1"
 import {
   DurationBadge,
@@ -89,6 +90,10 @@ const CardMetaGroup = styled.div({
 })
 
 const CardMetaValue = styled(Typography)(({ theme }) => ({
+  /* Clamped preview: description markup is flattened so a list cannot blow the
+     box out. Anchors are stripped in the component (the row is itself a link). */
+  "p, ul, ol, li": { display: "inline", margin: 0, padding: 0, listStyle: "none" },
+  "p + p::before, li + li::before": { content: '" "' },
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
   lineHeight: "22px",
@@ -135,7 +140,11 @@ const VideoCard: React.FC<VideoCardProps> = ({ resource, href }) => {
         </CardTitleRow>
         <CardMetaRow>
           <CardMetaGroup>
-            <CardMetaValue dangerouslySetInnerHTML={{ __html: description }} />
+            {/* The whole card is a link, so anchors from the description
+                have to go - a nested <a> splits the card's own link. */}
+            <CardMetaValue
+              dangerouslySetInnerHTML={{ __html: stripAnchorTags(description) }}
+            />
           </CardMetaGroup>
         </CardMetaRow>
       </CardContent>

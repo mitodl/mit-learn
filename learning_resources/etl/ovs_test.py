@@ -16,6 +16,7 @@ from learning_resources.constants import (
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.ovs import (
     _build_caption_urls,
+    clean_description,
     _duration_to_iso8601,
     _fetch_transcript,
     _get_cover_image_url,
@@ -1023,3 +1024,69 @@ def test_skips_when_fetch_returns_empty(mocker, ovs_platform):
     mock_update_index.assert_not_called()
     video.refresh_from_db()
     assert video.transcript == ""
+
+
+class TestCleanDescription:
+    """
+    OVS descriptions are rich text now, and every surface here renders them as
+    markup, so they have to be sanitized on the way in.
+    """
+
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            ("<p>plain</p>", "<p>plain</p>"),
+            ("<p><strong>bold</strong></p>", "<p><strong>bold</strong></p>"),
+            ("<ul><li>one</li></ul>", "<ul><li>one</li></ul>"),
+        ],
+    )
+    def test_allowed_markup_survives(self, raw, expected):
+        """Formatting an author applied in OVS must reach the learner"""
+        assert clean_description(raw) == expected
+
+    def test_links_survive_with_rel(self):
+        """Links are the point of the feature; nh3 hardens them"""
+        result = clean_description('<p><a href="https://learn.mit.edu">go</a></p>')
+        assert 'href="https://learn.mit.edu"' in result
+        assert 'rel="noopener noreferrer"' in result
+
+    @pytest.mark.parametrize(
+        ("raw", "forbidden"),
+        [
+            ("<p>hi</p><script>alert(1)</script>", "script"),
+            ('<img src="x" onerror="alert(1)">', "onerror"),
+            ('<p onmouseover="alert(1)">hover</p>', "onmouseover"),
+            ('<p style="color:red">styled</p>', "style="),
+            ('<a href="javascript:alert(1)">x</a>', "javascript"),
+        ],
+    )
+    def test_dangerous_markup_is_stripped(self, raw, forbidden):
+        """A forged or compromised payload must not become live markup"""
+        assert forbidden not in clean_description(raw)
+
+    @pytest.mark.parametrize("value", [None, "", 42, {"nope": True}])
+    def test_non_string_payloads(self, value):
+        """The payload is untrusted and not necessarily a string"""
+        assert clean_description(value) == ""
+
+    def test_transform_video_sanitizes(self, ovs_video_with_subtitles, settings):
+        """The sanitizing is wired into the transform, not just available"""
+        settings.OVS_API_BASE_URL = "https://ovs.example.com"
+        video = dict(ovs_video_with_subtitles)
+        video["description"] = "<p>ok</p><script>alert(1)</script>"
+        result = transform_video(video)
+        assert "script" not in result["description"]
+        assert "<p>ok</p>" in result["description"]
+
+    def test_transform_collection_sanitizes(self, settings):
+        """Series descriptions get the same treatment as video descriptions"""
+        settings.OVS_API_BASE_URL = "https://ovs.example.com"
+        result = transform_collection(
+            {
+                "key": "abc123",
+                "title": "A series",
+                "description": "<p>ok</p><script>alert(1)</script>",
+            }
+        )
+        assert "script" not in result["description"]
+        assert "<p>ok</p>" in result["description"]

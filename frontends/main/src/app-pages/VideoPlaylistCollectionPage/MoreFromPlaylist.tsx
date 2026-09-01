@@ -4,6 +4,7 @@ import { Skeleton } from "ol-components"
 import { formatDurationClockTime } from "ol-utilities"
 import type { VideoResource } from "api/v1"
 import { videoDetailPageView, videoPlaylistPageView } from "@/common/urls"
+import { stripAnchorTags } from "@/common/utils"
 import * as Styled from "./VideoDetailPage.styled"
 
 type MoreFromPlaylistProps = {
@@ -60,7 +61,10 @@ const MoreFromPlaylistItem: React.FC<{
         </Styled.MoreFromItemTitle>
         {video.description && (
           <Styled.MoreFromItemMeta
-            dangerouslySetInnerHTML={{ __html: video.description }}
+            /* Row is a link; anchors from the description would nest. */
+            dangerouslySetInnerHTML={{
+              __html: stripAnchorTags(video.description),
+            }}
           />
         )}
       </Styled.MoreFromTextSide>
