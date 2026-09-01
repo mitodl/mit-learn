@@ -24,6 +24,12 @@ type TabConfig = {
   defaultTab?: boolean
   resource_type_group: ResourceTypeGroupEnum | null
   minWidth: number
+  /**
+   * sortby values that cannot order this tab's results, e.g. "upcoming" for
+   * learning materials, which have no runs and so no start dates. Offered
+   * disabled in the sort dropdown, and cleared from the URL on switching here.
+   */
+  unsupportedSortby?: string[]
 }
 
 type Aggregations = LearningResourcesSearchResponse["metadata"]["aggregations"]
@@ -96,6 +102,9 @@ const ResourceTypeGroupTabList: React.FC<ResourceTypeGroupTabsProps> = ({
             next.set("resource_type_group", tab.resource_type_group)
           } else {
             next.delete("resource_type_group")
+          }
+          if (tab?.unsupportedSortby?.includes(next.get("sortby") ?? "")) {
+            next.delete("sortby")
           }
           return next
         })

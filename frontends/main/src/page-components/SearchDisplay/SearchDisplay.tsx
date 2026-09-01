@@ -467,6 +467,13 @@ const getLastPage = (count: number): number => {
   return pages > MAX_PAGE ? MAX_PAGE : pages
 }
 
+/**
+ * Sorts by the next start date of a resource's upcoming runs. Nothing without
+ * runs -- no learning material -- has one, hence the tabs that declare it
+ * unsupported.
+ */
+const UPCOMING_SORT = "upcoming"
+
 const TABS: TabConfig[] = [
   {
     name: "all",
@@ -492,6 +499,7 @@ const TABS: TabConfig[] = [
     label: "Learning Materials",
     resource_type_group: ResourceTypeGroupEnum.LearningMaterial,
     minWidth: 172,
+    unsupportedSortby: [UPCOMING_SORT],
   },
 ]
 
@@ -510,7 +518,7 @@ const SORT_OPTIONS = [
   },
   {
     label: "Upcoming",
-    value: "upcoming",
+    value: UPCOMING_SORT,
   },
 ]
 
@@ -708,12 +716,20 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       trackFilterCourseCatalog({ filterName: name, filterValue: rawValue })
   }
 
+  // Kept in the list rather than removed, so a sortby that arrives in the URL
+  // still has a label to render.
+  const sortOptions = SORT_OPTIONS.map((option) =>
+    activeTab.unsupportedSortby?.includes(option.value)
+      ? { ...option, disabled: true }
+      : option,
+  )
+
   const sortDropdown = (
     <SimpleSelect
       size="small"
       value={requestParams.sortby || ""}
       onChange={(e) => setParamValue("sortby", e.target.value)}
-      options={SORT_OPTIONS}
+      options={sortOptions}
       className="sort-dropdown"
       renderValue={(value) => {
         const opt = SORT_OPTIONS.find((option) => option.value === value)
