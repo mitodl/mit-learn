@@ -154,6 +154,20 @@ const Field = styled.div({
 })
 
 /**
+ * smoot-design's `Checkbox` gives its container a fixed `height: 24px`, which
+ * assumes a label that fits on one line. This consent label wraps, so the text
+ * overflows the box and the error underneath is spaced off it. Remove once the
+ * height is `auto` upstream.
+ *
+ * `&&` because the override and the component's own style are both single
+ * emotion classes on the same element, so specificity has to break the tie
+ * rather than injection order.
+ */
+const ConsentCheckbox = styled(Checkbox)({
+  "&&": { height: "auto" },
+})
+
+/**
  * Whether the free-text box is on screen.
  *
  * Validation and submission both key off this. Anything it hides is neither
@@ -435,7 +449,7 @@ const RefundRequestDialogInner: React.FC<RefundRequestDialogProps> = ({
         ) : null}
 
         <Field>
-          <Checkbox
+          <ConsentCheckbox
             name="consent_given"
             label={CONSENT_LABEL}
             checked={formik.values.consent_given}
