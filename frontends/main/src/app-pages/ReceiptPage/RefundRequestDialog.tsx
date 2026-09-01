@@ -214,12 +214,20 @@ type RefundRequestDialogProps = {
    * rather than straight through, and the wording says so.
    */
   isLate: boolean
+  /**
+   * Called once the request is accepted, before the dialog closes. The card
+   * behind it already re-renders from the invalidated receipt, so this exists
+   * for the page to confirm the submission outright rather than leave the
+   * learner inferring it from a changed panel.
+   */
+  onSubmitted?: () => void
 }
 
 const RefundRequestDialogInner: React.FC<RefundRequestDialogProps> = ({
   order,
   title,
   isLate,
+  onSubmitted,
 }) => {
   const modal = NiceModal.useModal()
   // The dialog reports a rejected request inline, next to the submit button it
@@ -268,7 +276,12 @@ const RefundRequestDialogInner: React.FC<RefundRequestDialogProps> = ({
             : "",
           consent_given: values.consent_given,
         },
-        { onSuccess: () => modal.hide() },
+        {
+          onSuccess: () => {
+            onSubmitted?.()
+            modal.hide()
+          },
+        },
       )
     },
   })

@@ -595,6 +595,35 @@ describe("ReceiptPage refund flag", () => {
     screen.getByRole("button", { name: "Request Refund" })
   })
 
+  test("confirms the submission after a request goes through", async () => {
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag === FeatureFlags.SelfServiceRefunds,
+    )
+    setupApis({ order: eligibleOrder() })
+    setMockResponse.post(mitxonline.urls.orders.refundRequests(), {})
+
+    renderWithProviders(<ReceiptPage orderId={ORDER_ID} />)
+
+    await user.click(
+      await screen.findByRole("button", { name: "Request Refund" }),
+    )
+    const dialog = await screen.findByRole("dialog")
+
+    await user.click(
+      within(dialog).getByRole("radio", { name: "Prefer not to say" }),
+    )
+    await user.click(within(dialog).getByRole("checkbox"))
+    await user.click(
+      within(dialog).getByRole("button", { name: "Submit Refund Request" }),
+    )
+
+    // Nothing else on the page says the request landed, so the card changing
+    // underneath is not on its own a confirmation.
+    await screen.findByText(
+      "We've received your refund request. You can follow its status in the Refund panel below.",
+    )
+  })
+
   test("the flag alone does not decide it: an ineligible order shows no card", async () => {
     mockedUseFeatureFlagEnabled.mockImplementation(
       (flag) => flag === FeatureFlags.SelfServiceRefunds,
