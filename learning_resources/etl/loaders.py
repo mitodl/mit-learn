@@ -1783,7 +1783,8 @@ def load_playlist(
 
     Returns:
         LearningResource | None: the created or updated playlist resource,
-            or None if create_videos is False and not all videos could be matched
+            or None if create_videos is False and the playlist has no videos
+            or not enough videos could be matched
     """
 
     playlist_id = playlist_data.pop("playlist_id")
@@ -1800,7 +1801,7 @@ def load_playlist(
     else:
         video_resources = load_videos_from_content_files(videos_data)
 
-        if video_resources is None:
+        if not video_resources:
             existing_resource = LearningResource.objects.filter(
                 readable_id=playlist_id,
                 resource_type=LearningResourceType.video_playlist.name,

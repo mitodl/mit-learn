@@ -2802,6 +2802,45 @@ def test_load_playlist_create_videos_false(
         mock_update_index.assert_not_called()
 
 
+@pytest.mark.parametrize("playlist_exists", [True, False])
+def test_load_playlist_create_videos_false_empty_playlist(
+    mocker, playlist_exists, mock_get_similar_topics_qdrant
+):
+    """A playlist with no videos should be unpublished, not published empty"""
+    mock_update_index = mocker.patch(
+        "learning_resources.etl.loaders.update_index",
+    )
+
+    channel = VideoChannelFactory.create()
+    if playlist_exists:
+        playlist = VideoPlaylistFactory.create(channel=channel).learning_resource
+        assert playlist.published
+    else:
+        playlist = VideoPlaylistFactory.build().learning_resource
+
+    props = {
+        "playlist_id": playlist.readable_id,
+        "title": playlist.title,
+        "published": True,
+        "url": f"https://youtube.com/playlist?list={playlist.readable_id}",
+        "videos": [],
+        "create_videos": False,
+    }
+
+    result = load_playlist(channel, props)
+
+    assert result is None
+    if playlist_exists:
+        playlist.refresh_from_db()
+        assert not playlist.published
+        mock_update_index.assert_called_once_with(playlist, newly_created=False)
+    else:
+        assert not LearningResource.objects.filter(
+            readable_id=playlist.readable_id
+        ).exists()
+        mock_update_index.assert_not_called()
+
+
 def test_load_video_with_content_file(mocker):
     """Test that load_video_with_content_file creates a video resource
     combining youtube data with OCW content file data
