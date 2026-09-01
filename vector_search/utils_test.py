@@ -1274,14 +1274,17 @@ def test_embedding_context_includes_course_code(serialized_course):
 
     context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
 
-    assert "Course number: 18.06" in context
+    assert "**Course number:** 18.06" in context
 
 
 @pytest.mark.parametrize(
     ("course_numbers", "expected"),
     [
-        ([{"value": "18.06"}, {"value": "18.061"}], "Course numbers: 18.06, 18.061"),
-        (["18.06", "18.061"], "Course numbers: 18.06, 18.061"),
+        (
+            [{"value": "18.06"}, {"value": "18.061"}],
+            "**Course numbers:** 18.06, 18.061",
+        ),
+        (["18.06", "18.061"], "**Course numbers:** 18.06, 18.061"),
     ],
 )
 def test_embedding_context_includes_course_numbers(
