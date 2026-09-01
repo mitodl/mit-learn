@@ -1,6 +1,30 @@
 Release Notes
 =============
 
+Version 0.78.1 (Released September 01, 2026)
+--------------
+
+- adding initial fix (#3872)
+- Per-product Stay Updated HubSpot form id (frontend) (#3844)
+- Update dependency tiktoken to >=0.13,<0.14 (#3860)
+- feat(b2b): render the analytics dashboard scoped to a contract (#3773)
+- fix: report the real status from handle_error instead of 405 (#3791)
+- Use the green token instead of a hardcoded hex on product pages (#3847)
+- feat: show podcast episode transcripts from the podcast:transcript tag (#3821)
+- Remove remaining API endpoint N+1 queries (#3845)
+- Update dependency drf-spectacular to >=0.30,<0.31 (#3858)
+- Update dependency ruff to v0.16.3 (#3859)
+- Submit and link each resource under one URL, from learn_url (#3843)
+- Update dependency litellm to v1.96.2 (#3857)
+- Update redis Docker tag to v8.10.0 (#2706)
+- feat(cohort-1): MicroMasters/MITx Online certificate warehouse-pull sync (#3808)
+- ci: add a ci-gate job so one required check can cover the whole suite (#3825)
+- Overridable Mutation Error Toast (#3837)
+- Show Stay Updated based only on the CMS page flag (#3841)
+- staleness penalty for vector search results (#3834)
+- Update dependency Django to v5.2.17 [SECURITY] (#3849)
+- Update dependency social-auth-app-django to v5.6.0 [SECURITY] (#3850)
+
 Version 0.77.15 (Released August 27, 2026)
 ---------------
 
