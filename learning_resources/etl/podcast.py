@@ -8,29 +8,34 @@ import yaml
 from bs4 import BeautifulSoup as bs  # noqa: N813
 from dateutil.parser import parse
 from django.conf import settings
+from django.db.models import Q, QuerySet
 from requests.adapters import HTTPAdapter
 from requests.exceptions import RequestException
 from urllib3.util.retry import Retry
 
 from learning_resources.constants import Availability, LearningResourceType
-from learning_resources.etl.constants import ETLSource
+from learning_resources.etl.constants import BROWSER_UA_HEADERS, ETLSource
+from learning_resources.etl.loaders import update_index
+from learning_resources.etl.podcast_transcript import (
+    fetch_transcript,
+    transcript_tags_from_rss,
+)
 from learning_resources.etl.utils import iso8601_duration
-from learning_resources.models import PodcastEpisode
+from learning_resources.models import LearningResource, PodcastEpisode
 from main.constants import (
     ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
     ALLOWED_HTML_TAGS_WITH_LINKS,
 )
-from main.utils import clean_data, frontend_absolute_url, now_in_utc
+from main.utils import (
+    clean_data,
+    clear_views_cache,
+    frontend_absolute_url,
+    now_in_utc,
+)
 
 CONFIG_FILE_REPO = "mitodl/open-podcast-data"
 CONFIG_FILE_FOLDER = "podcasts"
 TIMESTAMP_FORMAT = "%a, %d %b %Y  %H:%M:%S %z"
-BROWSER_UA_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/39.0.2171.95 Safari/537.36"
-}
-
 log = logging.getLogger()
 
 
@@ -217,6 +222,10 @@ def transform_episode(rss_data, offered_by, topics, parent_image):
                 if rss_data.find("itunes:duration")
                 else None
             ),
+            # `rss` carries the <podcast:transcript> tags too, so the
+            # transcript job needs no reference field of its own. Do not add
+            # `transcript` here: load_podcast_episode passes this dict to
+            # update_or_create(defaults=...), which would blank it every run.
             "rss": rss_data.prettify(),
         },
         "availability": Availability.anytime.name,
@@ -284,6 +293,96 @@ def transform(extracted_podcasts):
         except AttributeError:
             log.exception("Error parsing podcast data from %s", config_data["rss_url"])
             continue
+
+
+def get_podcast_episodes_for_transcripts_job(
+    *, overwrite: bool = False
+) -> QuerySet[LearningResource]:
+    """
+    Get podcast episode resources that need transcripts.
+
+    Args:
+        overwrite: if True, include episodes that already have transcripts
+
+    Returns:
+        QuerySet of LearningResource objects
+    """
+    episode_resources = LearningResource.objects.select_related(
+        "podcast_episode"
+    ).filter(
+        # Both spellings: a declared xmlns:podcast is stored as
+        # "<podcast:transcript", an undeclared one loses the prefix and is
+        # stored as "<transcript". Matching the bracket rather than the bare
+        # word excludes descriptions that merely mention a transcript.
+        Q(podcast_episode__rss__contains=":transcript")
+        | Q(podcast_episode__rss__contains="<transcript"),
+        published=True,
+        resource_type=LearningResourceType.podcast_episode.name,
+    )
+
+    if not overwrite:
+        episode_resources = episode_resources.filter(podcast_episode__transcript="")
+
+    return episode_resources
+
+
+def get_podcast_transcripts(episode_resources: QuerySet[LearningResource]) -> None:
+    """
+    Fetch transcripts for podcast episodes from their podcast:transcript urls.
+
+    Args:
+        episode_resources: LearningResource objects with a related podcast_episode
+    """
+    updated = 0
+    for resource in episode_resources:
+        # Per-episode guard: one malformed feed fragment or unreachable host
+        # must not abort the batch and skip every episode after it.
+        try:
+            episode = resource.podcast_episode
+            entries = transcript_tags_from_rss(episode.rss)
+            if not entries:
+                continue
+            transcript = fetch_transcript(entries)
+            if not transcript:
+                continue
+            episode.transcript = transcript
+            # update_fields, so a long batch cannot revert metadata: the
+            # queryset is evaluated in full when the loop starts, but a save
+            # can land much later -- long enough for the podcast ETL, which
+            # runs 30 minutes earlier, to have rewritten rss, audio_url or
+            # duration. An unrestricted save() would write the stale values
+            # back. updated_on is listed explicitly because Django only bumps
+            # auto_now fields that appear in update_fields.
+            episode.save(update_fields=["transcript", "updated_on"])
+            # Counted before indexing, not after. The transcript is committed
+            # either way, and the default filter excludes a non-empty
+            # transcript, so the row is never re-selected -- if indexing fails,
+            # the cached response must still be evicted or it outlives the row
+            # it describes.
+            updated += 1
+            try:
+                update_index(resource, newly_created=False)
+            except Exception:
+                # Logged apart from a fetch failure so the message is honest
+                # about what broke. Nothing retries this: there is no scheduled
+                # reindex, so the episode stays out of search until one is run.
+                log.exception(
+                    "Saved transcript for podcast episode %s but indexing failed",
+                    resource.id,
+                )
+        except Exception:
+            log.exception(
+                "Error fetching transcript for podcast episode %s", resource.id
+            )
+
+    if updated:
+        # The transcript endpoint caches responses for
+        # REDIS_VIEW_CACHE_DURATION, so without this an --overwrite run or a
+        # feed publishing a corrected transcript would keep serving the old
+        # text for up to a day. Cleared once for the batch rather than per
+        # episode: the keys vary by request, so the prefix is the unit.
+        clear_views_cache(key_prefix="podcast_transcript")
+        log.info("Updated transcripts for %i podcast episodes", updated)
 
 
 def get_all_mit_podcasts_channel_rss():

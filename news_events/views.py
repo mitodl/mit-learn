@@ -72,7 +72,7 @@ class FeedSourceViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = FeedSourceSerializer
     filter_backends = [MultipleOptionsFilterBackend]
     filterset_class = FeedSourceFilter
-    queryset = FeedSource.objects.all().order_by("id")
+    queryset = FeedSource.objects.select_related("image").order_by("id")
 
     @method_decorator(
         cache_page_for_all_users(

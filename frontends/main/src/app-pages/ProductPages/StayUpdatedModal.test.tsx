@@ -37,9 +37,19 @@ const setupApis = (formOverrides: HubspotFormOverride = {}) => {
   setMockResponse.post(urls.hubspot.submit(STAY_UPDATED_FORM_ID), {})
 }
 
+const showModal = (
+  props: { productReadableId?: string; hubspotFormId?: string } = {},
+) => {
+  act(() => {
+    NiceModal.show(StayUpdatedModal, {
+      hubspotFormId: STAY_UPDATED_FORM_ID,
+      ...props,
+    })
+  })
+}
+
 describe("StayUpdatedModal", () => {
   beforeEach(() => {
-    process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID = STAY_UPDATED_FORM_ID
     process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY = "test-site-key"
     makeRequest.mockClear()
 
@@ -64,16 +74,13 @@ describe("StayUpdatedModal", () => {
   })
 
   afterEach(() => {
-    delete process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID
     delete process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
   })
 
   it("shows the form view when the modal is opened", async () => {
     setupApis()
     renderWithProviders(null)
-    act(() => {
-      NiceModal.show(StayUpdatedModal)
-    })
+    showModal()
 
     await screen.findByRole("dialog", { name: "Stay Updated" })
     expect(
@@ -91,9 +98,7 @@ describe("StayUpdatedModal", () => {
     delete process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
     setupApis()
     renderWithProviders(null)
-    act(() => {
-      NiceModal.show(StayUpdatedModal)
-    })
+    showModal()
 
     await screen.findByRole("dialog", { name: "Stay Updated" })
     const lastHubspotFormProps = mockedHubspotForm.mock.calls.at(
@@ -103,12 +108,32 @@ describe("StayUpdatedModal", () => {
     expect(lastHubspotFormProps.recaptchaSiteKey).toBeUndefined()
   })
 
+  it("uses the provided hubspotFormId to load and submit the form", async () => {
+    const CUSTOM_FORM_ID = "custom-course-form"
+    setMockResponse.get(
+      urls.hubspot.details({ form_id: CUSTOM_FORM_ID }),
+      factories.hubspot.form({ id: CUSTOM_FORM_ID, name: "Stay Updated" }),
+    )
+    setMockResponse.post(urls.hubspot.submit(CUSTOM_FORM_ID), {})
+    renderWithProviders(null)
+    showModal({ hubspotFormId: CUSTOM_FORM_ID })
+
+    await screen.findByRole("dialog", { name: "Stay Updated" })
+    await user.click(screen.getByRole("button", { name: "Notify Me" }))
+
+    expect(makeRequest).toHaveBeenCalledWith({
+      method: "post",
+      url: urls.hubspot.submit(CUSTOM_FORM_ID),
+      body: expect.objectContaining({
+        fields: expect.arrayContaining([{ name: "email", value: TEST_EMAIL }]),
+      }),
+    })
+  })
+
   it("shows the success view with the submitted email after form submission", async () => {
     setupApis()
     renderWithProviders(null)
-    act(() => {
-      NiceModal.show(StayUpdatedModal)
-    })
+    showModal()
 
     await screen.findByRole("dialog", { name: "Stay Updated" })
     await user.click(screen.getByRole("button", { name: "Notify Me" }))
@@ -120,9 +145,7 @@ describe("StayUpdatedModal", () => {
   it("replaces the form with the success view after submission", async () => {
     setupApis()
     renderWithProviders(null)
-    act(() => {
-      NiceModal.show(StayUpdatedModal)
-    })
+    showModal()
 
     await screen.findByRole("dialog", { name: "Stay Updated" })
     await user.click(screen.getByRole("button", { name: "Notify Me" }))
@@ -136,9 +159,7 @@ describe("StayUpdatedModal", () => {
   it("closes the dialog when 'Done' is clicked in the success view", async () => {
     setupApis()
     renderWithProviders(null)
-    act(() => {
-      NiceModal.show(StayUpdatedModal)
-    })
+    showModal()
 
     await screen.findByRole("dialog", { name: "Stay Updated" })
     await user.click(screen.getByRole("button", { name: "Notify Me" }))
@@ -156,9 +177,7 @@ describe("StayUpdatedModal", () => {
   it("closes the dialog when 'Cancel' is clicked in the form view", async () => {
     setupApis()
     renderWithProviders(null)
-    act(() => {
-      NiceModal.show(StayUpdatedModal)
-    })
+    showModal()
 
     await screen.findByRole("dialog", { name: "Stay Updated" })
     await user.click(screen.getByRole("button", { name: "Cancel" }))
@@ -191,11 +210,7 @@ describe("StayUpdatedModal", () => {
       ],
     })
     renderWithProviders(null)
-    act(() => {
-      NiceModal.show(StayUpdatedModal, {
-        productReadableId: TEST_PRODUCT_READABLE_ID,
-      })
-    })
+    showModal({ productReadableId: TEST_PRODUCT_READABLE_ID })
 
     await screen.findByRole("dialog", { name: "Stay Updated" })
     await user.click(screen.getByRole("button", { name: "Notify Me" }))
@@ -236,11 +251,7 @@ describe("StayUpdatedModal", () => {
       ],
     })
     renderWithProviders(null)
-    act(() => {
-      NiceModal.show(StayUpdatedModal, {
-        productReadableId: TEST_PRODUCT_READABLE_ID,
-      })
-    })
+    showModal({ productReadableId: TEST_PRODUCT_READABLE_ID })
 
     await screen.findByRole("dialog", { name: "Stay Updated" })
     await user.click(screen.getByRole("button", { name: "Notify Me" }))
@@ -281,11 +292,7 @@ describe("StayUpdatedModal", () => {
       ],
     })
     renderWithProviders(null)
-    act(() => {
-      NiceModal.show(StayUpdatedModal, {
-        productReadableId: TEST_PRODUCT_READABLE_ID,
-      })
-    })
+    showModal({ productReadableId: TEST_PRODUCT_READABLE_ID })
 
     await screen.findByRole("dialog", { name: "Stay Updated" })
     await user.click(screen.getByRole("button", { name: "Notify Me" }))
@@ -325,9 +332,7 @@ describe("StayUpdatedModal", () => {
     )
 
     renderWithProviders(null)
-    act(() => {
-      NiceModal.show(StayUpdatedModal)
-    })
+    showModal()
 
     await screen.findByRole("dialog", { name: "Stay Updated" })
     await user.click(screen.getByRole("button", { name: "Notify Me" }))

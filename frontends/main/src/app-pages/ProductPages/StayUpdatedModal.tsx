@@ -14,10 +14,7 @@ import { Button, styled } from "@mitodl/smoot-design"
 import Image from "next/image"
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import IconCheck from "@/public/images/product/icon_check.svg"
-import {
-  getRecaptchaSiteKey,
-  getStayUpdatedHubspotFormId,
-} from "@/common/config"
+import { getRecaptchaSiteKey } from "@/common/config"
 import {
   useHubspotFormDetail,
   useHubspotFormSubmit,
@@ -50,6 +47,7 @@ const PRODUCT_OF_INTEREST_FIELD_NAME = "product_of_interest"
 
 type StayUpdatedDialogProps = {
   productReadableId?: string
+  hubspotFormId?: string
 }
 
 const mapValuesToFields = (
@@ -87,10 +85,11 @@ const findProductOfInterestValue = (
 
 const StayUpdatedDialogInner: React.FC<StayUpdatedDialogProps> = ({
   productReadableId,
+  hubspotFormId,
 }) => {
   const modalState = NiceModal.useModal()
   const modal = muiDialogV5(modalState)
-  const stayUpdatedFormId = getStayUpdatedHubspotFormId()
+  const stayUpdatedFormId = hubspotFormId?.trim() ?? ""
   const recaptchaSiteKey = getRecaptchaSiteKey()
   const { data: hubspotForm, isLoading } = useHubspotFormDetail(
     stayUpdatedFormId ? { form_id: stayUpdatedFormId } : undefined,

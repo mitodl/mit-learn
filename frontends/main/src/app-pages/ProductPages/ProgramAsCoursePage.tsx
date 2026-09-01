@@ -241,11 +241,11 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
       enrollmentAction={
         <ProgramHeaderEnrollButton program={program} displayAsCourse />
       }
-      showStayUpdated={page.show_stay_updated ?? false}
       resource={{
         readable_id: program.readable_id,
         resource_type: "program",
       }}
+      hubspotFormId={page.hubspot_form_id}
       infoBox={<ProgramAsCourseInfoBox program={program} courses={courses} />}
     >
       {page.about ? (

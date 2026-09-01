@@ -3,7 +3,10 @@ import { useQuery, type UseQueryOptions } from "@tanstack/react-query"
 import { setupReactQueryTest } from "../../../hooks/test-utils"
 import { setMockResponse, makeRequest } from "../../../test-utils"
 import { factories, urls } from "../../test-utils"
-import { analyticsOrganizationQueries } from "./queries"
+import {
+  analyticsContractQueries,
+  analyticsOrganizationQueries,
+} from "./queries"
 
 const ORG_UUID = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
 
@@ -113,5 +116,91 @@ describe("analyticsOrganizationQueries", () => {
 
   test("the org id is url-encoded rather than spliced into the path raw", () => {
     expect(urls.organizations.contractUtilization("a/b")).toContain("a%2Fb")
+  })
+})
+
+const CONTRACT_ID = "101"
+
+describe("analyticsContractQueries", () => {
+  test.each([
+    {
+      name: "contractUtilization",
+      query: () =>
+        erase(
+          analyticsContractQueries.contractUtilization(ORG_UUID, CONTRACT_ID),
+        ),
+      url: urls.contracts.contractUtilization(ORG_UUID, CONTRACT_ID),
+      response: factories.envelope([factories.contractUtilization()]),
+    },
+    {
+      name: "enrollmentFunnel",
+      query: () =>
+        erase(analyticsContractQueries.enrollmentFunnel(ORG_UUID, CONTRACT_ID)),
+      url: urls.contracts.enrollmentFunnel(ORG_UUID, CONTRACT_ID),
+      response: factories.envelope([factories.enrollmentCompletionFunnel()]),
+    },
+    {
+      name: "engagementTrend",
+      query: () =>
+        erase(analyticsContractQueries.engagementTrend(ORG_UUID, CONTRACT_ID)),
+      url: urls.contracts.engagementTrend(ORG_UUID, CONTRACT_ID),
+      response: factories.envelope([
+        factories.contractMonthlyEngagementTrend(),
+      ]),
+    },
+    {
+      name: "programFunnel",
+      query: () =>
+        erase(analyticsContractQueries.programFunnel(ORG_UUID, CONTRACT_ID)),
+      url: urls.contracts.programFunnel(ORG_UUID, CONTRACT_ID),
+      response: factories.envelope([factories.programFunnel()]),
+    },
+    {
+      name: "contentEngagement",
+      query: () =>
+        erase(
+          analyticsContractQueries.contentEngagement(ORG_UUID, CONTRACT_ID),
+        ),
+      url: urls.contracts.contentEngagement(ORG_UUID, CONTRACT_ID),
+      response: factories.envelope([
+        factories.contractContentEngagementDepth(),
+      ]),
+    },
+  ])(
+    "$name requests the contract-nested path",
+    async ({ query, url, response }) => {
+      const { wrapper } = setupReactQueryTest()
+      setMockResponse.get(url, response)
+
+      const { result } = renderHook(() => useQuery(query()), { wrapper })
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true))
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "get", url }),
+      )
+    },
+  )
+
+  test("contract keys nest under the org's, and differ per contract", () => {
+    const key = analyticsContractQueries.contractUtilization(
+      ORG_UUID,
+      CONTRACT_ID,
+    ).queryKey
+    // The org prefix is intact, so invalidating an org drops its contracts too.
+    expect(key.slice(0, 3)).toEqual(["analytics", "organizations", ORG_UUID])
+    expect(key).toContain(CONTRACT_ID)
+    expect(
+      analyticsContractQueries.contractUtilization(ORG_UUID, "202").queryKey,
+    ).not.toEqual(key)
+    // And a contract-scoped result never satisfies an org-scoped read.
+    expect(key).not.toEqual(
+      analyticsOrganizationQueries.contractUtilization(ORG_UUID).queryKey,
+    )
+  })
+
+  test("the contract id is url-encoded rather than spliced into the path raw", () => {
+    expect(urls.contracts.contractUtilization(ORG_UUID, "a/b")).toContain(
+      "a%2Fb",
+    )
   })
 })

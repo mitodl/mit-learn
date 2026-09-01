@@ -36,8 +36,10 @@ import {
 } from "@/common/profile"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
 import { PostHogEvents } from "@/common/constants"
+import { trackAccountCreated } from "@/common/analytics/gtm"
 
 const NUM_STEPS = 5
+const ACCOUNT_CREATED_SESSION_KEY = "gtm_account_created_tracked"
 
 const FlexContainer = styled(Container)({
   display: "flex",
@@ -161,6 +163,7 @@ const OnboardingPage: React.FC = () => {
   const posthog = usePostHog()
   const searchParams = useAppSearchParams()
   const nextUrl = searchParams.get("next")
+  const isNewUser = searchParams.get("is_new_user") === "1"
 
   const formik = useFormik({
     enableReinitialize: true,
@@ -200,6 +203,26 @@ const OnboardingPage: React.FC = () => {
       router.prefetch(nextUrl)
     }
   }, [nextUrl, router])
+
+  useEffect(() => {
+    if (!profile || !isNewUser) return
+
+    let alreadyTracked = false
+    try {
+      alreadyTracked = Boolean(
+        sessionStorage.getItem(ACCOUNT_CREATED_SESSION_KEY),
+      )
+      if (!alreadyTracked) {
+        sessionStorage.setItem(ACCOUNT_CREATED_SESSION_KEY, "1")
+      }
+    } catch {
+      // Storage may be unavailable; fall back to tracking without persistence.
+    }
+
+    if (!alreadyTracked) {
+      trackAccountCreated()
+    }
+  }, [profile, isNewUser])
 
   const handleBack = () => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1)

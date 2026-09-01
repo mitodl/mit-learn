@@ -516,7 +516,8 @@ def test_ovs_video_webhook_invalid_signature(settings, client, mocker):
         content_type="application/json",
         headers={"X-MITLearn-Signature": "deadbeef"},
     )
-    assert response.status_code == 405
+    assert response.status_code == 403
+    assert response.json()["error_type"] == "PermissionDenied"
     mock_load.assert_not_called()
 
 

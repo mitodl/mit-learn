@@ -15,21 +15,17 @@ import TrackCard, {
  * green marks it as a resolved state rather than something to act on, so it also
  * drops the resting underline and takes one on hover instead — it stays a link
  * to the application record, but users have no reason to follow it.
- *
- * The green matches the `Save $X+` text in ProgramSavingsBlock, which can sit a
- * few rows below it in the same card. It is a raw hex in both places: the
- * `green` token is only 2.7:1 against the card and fails AA as text, and no
- * other token is this shade.
  */
-const APPROVED_GREEN = "#008000"
-
 const FinancialAidLink = styled.a<{ $approved?: boolean }>(
   linkStyles({ size: "small", color: "red" }),
-  ({ $approved }) =>
+  ({ $approved, theme }) =>
     $approved
       ? {
-          color: APPROVED_GREEN,
-          ":hover": { color: APPROVED_GREEN, textDecoration: "underline" },
+          color: theme.custom.colors.green,
+          ":hover": {
+            color: theme.custom.colors.green,
+            textDecoration: "underline",
+          },
         }
       : { textDecoration: "underline" },
 )
