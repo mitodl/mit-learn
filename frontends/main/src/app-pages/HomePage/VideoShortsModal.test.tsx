@@ -42,7 +42,7 @@ const makeMockPlayer = () => ({
 
 const mockHandles: MockPlayerHandle[] = []
 
-jest.mock("@/app-pages/VideoPlaylistCollectionPage/VideoJsPlayer", () => ({
+jest.mock("@/page-components/VideoPlayer/VideoJsPlayer", () => ({
   __esModule: true,
   default: ({
     sources,

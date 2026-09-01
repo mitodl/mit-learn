@@ -18,7 +18,7 @@ jest.mock("next-nprogress-bar", () => ({
 }))
 
 // Stub VideoJsPlayer to avoid loading video.js in the test environment
-jest.mock("./VideoJsPlayer", () => ({
+jest.mock("@/page-components/VideoPlayer/VideoJsPlayer", () => ({
   __esModule: true,
   default: (props: {
     ariaLabel?: string

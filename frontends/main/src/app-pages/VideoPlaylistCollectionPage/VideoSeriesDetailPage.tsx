@@ -13,8 +13,8 @@ import UpNextSection from "./UpNextSection"
 import * as Styled from "./VideoSeriesDetailPage.styled"
 import { env } from "@/env"
 import { buildVideoStructuredData } from "./videoStructuredData"
-import VideoResourcePlayer from "./VideoResourcePlayer"
-import type { VideoPlayerHandle } from "./VideoResourcePlayer"
+import VideoResourcePlayer from "@/page-components/VideoPlayer/VideoResourcePlayer"
+import type { VideoPlayerHandle } from "@/page-components/VideoPlayer/VideoResourcePlayer"
 
 import VideoShareButton from "./VideoShareButton"
 

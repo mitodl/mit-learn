@@ -2,7 +2,7 @@ import React from "react"
 import styled from "@emotion/styled"
 import { EditableCaption } from "../shared/EditableCaption"
 import { useLearningResourcesDetail } from "api/hooks/learningResources"
-import VideoResourcePlayer from "@/app-pages/VideoPlaylistCollectionPage/VideoResourcePlayer"
+import VideoResourcePlayer from "@/page-components/VideoPlayer/VideoResourcePlayer"
 import type { VideoResource } from "api/v1"
 
 const StyledWrapper = styled.div({

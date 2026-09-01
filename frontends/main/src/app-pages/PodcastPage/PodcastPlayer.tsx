@@ -11,8 +11,14 @@ import {
   RiCloseLine,
   RiErrorWarningLine,
 } from "@remixicon/react"
-import { useAudioPlayer, formatClockTime } from "./useAudioPlayer"
-import { usePlaybackRecovery, RETRYING_STATUS } from "./usePlaybackRecovery"
+import {
+  useAudioPlayer,
+  formatClockTime,
+} from "@/page-components/PodcastEmbedPlayer/useAudioPlayer"
+import {
+  usePlaybackRecovery,
+  RETRYING_STATUS,
+} from "@/page-components/PodcastEmbedPlayer/usePlaybackRecovery"
 import {
   TrackInfo as TrackInfoBase,
   TrackTitle as TrackTitleBase,
@@ -28,7 +34,7 @@ import {
   PlaybackError,
   PlaybackErrorText,
   RetryButton,
-} from "./AudioPlayer.styled"
+} from "@/page-components/PodcastEmbedPlayer/AudioPlayer.styled"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

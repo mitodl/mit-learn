@@ -3,7 +3,7 @@ import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { getQueryClient } from "@/app/getQueryClient"
 import { notFound } from "next/navigation"
-import PodcastEmbedPlayer from "@/app-pages/PodcastPage/PodcastEmbedPlayer"
+import PodcastEmbedPlayer from "@/page-components/PodcastEmbedPlayer/PodcastEmbedPlayer"
 import { ResourceTypeEnum } from "api/v1"
 import {
   safeGenerateMetadata,

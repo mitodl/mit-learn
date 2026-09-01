@@ -16,7 +16,7 @@ import { VideoResourceResourceTypeEnum } from "api/v1"
 import { formatDurationClockTime } from "ol-utilities"
 import { videoDetailPageView, videoPlaylistPageView } from "@/common/urls"
 import { buildVideoStructuredData } from "./videoStructuredData"
-import type { VideoPlayerHandle } from "./VideoResourcePlayer"
+import type { VideoPlayerHandle } from "@/page-components/VideoPlayer/VideoResourcePlayer"
 import * as Styled from "./VideoDetailPage.styled"
 
 const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
