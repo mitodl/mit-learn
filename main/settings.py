@@ -937,7 +937,17 @@ EMBEDDING_HEDGE_COUNT = get_int(name="EMBEDDING_HEDGE_COUNT", default=2)
 EMBEDDING_HEDGE_DELAY_SECONDS = get_float(
     name="EMBEDDING_HEDGE_DELAY_SECONDS", default=0.45
 )
+# Primary and speculative query embedding requests run in separate, bounded
+# thread pools so abandoned hedges cannot starve later primary requests. Both
+# pools reject work when full: a saturated primary pool falls back to running
+# the request inline, a saturated hedge pool skips the backups.
+EMBEDDING_QUERY_MAX_WORKERS = get_int(name="EMBEDDING_QUERY_MAX_WORKERS", default=16)
 EMBEDDING_HEDGE_MAX_WORKERS = get_int(name="EMBEDDING_HEDGE_MAX_WORKERS", default=16)
+# Explicit per-request timeout for hedged query embeddings, so a losing request
+# releases its worker instead of occupying it for the life of the connection.
+EMBEDDING_HEDGE_REQUEST_TIMEOUT_SECONDS = get_float(
+    name="EMBEDDING_HEDGE_REQUEST_TIMEOUT_SECONDS", default=10.0
+)
 
 CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = get_int(
     name="CONTENT_FILE_EMBEDDING_CHUNK_SIZE", default=512
