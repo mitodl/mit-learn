@@ -14,15 +14,13 @@ import { Button, styled } from "@mitodl/smoot-design"
 import Image from "next/image"
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import IconCheck from "@/public/images/product/icon_check.svg"
-import {
-  getRecaptchaSiteKey,
-  getStayUpdatedHubspotFormId,
-} from "@/common/config"
+import { getRecaptchaSiteKey } from "@/common/config"
 import {
   useHubspotFormDetail,
   useHubspotFormSubmit,
   type HubspotSubmitField,
 } from "api/hooks/hubspot"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { trackSignUpForUpdates } from "@/common/analytics/gtm"
 
 const StayUpdatedDialogContainer = styled.div(({ theme }) => ({
@@ -49,6 +47,7 @@ const PRODUCT_OF_INTEREST_FIELD_NAME = "product_of_interest"
 
 type StayUpdatedDialogProps = {
   productReadableId?: string
+  hubspotFormId?: string
 }
 
 const mapValuesToFields = (
@@ -86,15 +85,18 @@ const findProductOfInterestValue = (
 
 const StayUpdatedDialogInner: React.FC<StayUpdatedDialogProps> = ({
   productReadableId,
+  hubspotFormId,
 }) => {
   const modalState = NiceModal.useModal()
   const modal = muiDialogV5(modalState)
-  const stayUpdatedFormId = getStayUpdatedHubspotFormId()
+  const stayUpdatedFormId = hubspotFormId?.trim() ?? ""
   const recaptchaSiteKey = getRecaptchaSiteKey()
   const { data: hubspotForm, isLoading } = useHubspotFormDetail(
     stayUpdatedFormId ? { form_id: stayUpdatedFormId } : undefined,
   )
-  const hubspotFormSubmit = useHubspotFormSubmit()
+  // The form renders its own inline submission error (errorText below), so
+  // suppress the global error toast.
+  const hubspotFormSubmit = useHubspotFormSubmit({ meta: SILENCE_ERROR_TOAST })
   const [email, setEmail] = useState("")
 
   const closeDialog = async () => {

@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from drf_spectacular.utils import extend_schema_field
+from mitol.common.serializers import BaseSerializer
 from rest_framework import serializers
 
 from website_content import models
@@ -25,10 +26,12 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ["first_name", "last_name"]
 
 
-class WebsiteContentSerializer(serializers.ModelSerializer):
+class WebsiteContentSerializer(BaseSerializer):
     """
     Serializer for WebsiteContent model.
     """
+
+    required_prefetches: list[str] = ["user"]
 
     created_on = serializers.DateTimeField(read_only=True, required=False)
     updated_on = serializers.DateTimeField(read_only=True, required=False)

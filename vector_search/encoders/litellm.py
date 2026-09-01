@@ -16,17 +16,20 @@ from vector_search.encoders.base import BaseEncoder
 
 log = logging.getLogger()
 redis_url = urlparse(settings.CELERY_BROKER_URL)
+redis_ssl = redis_url.scheme.endswith("ss")
 
 # drop unsupported model params
 litellm.drop_params = True
 
 # these must be set directly via environ (litellm limitation)
-os.environ["REDIS_SSL"] = str(redis_url.scheme.endswith("ss"))
+os.environ["REDIS_SSL"] = str(redis_ssl)
 litellm.cache = Cache(
     type="redis",
     host=redis_url.hostname,
     port=redis_url.port,
     password=redis_url.password,
+    ssl=redis_ssl,
+    ssl_cert_reqs="required" if redis_ssl else None,
     supported_call_types=["embedding", "aembedding"],
     ttl=settings.QDRANT_QUERY_EMBEDDING_CACHE_TTL,
 )

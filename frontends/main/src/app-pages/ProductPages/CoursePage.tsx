@@ -18,7 +18,6 @@ import ProductPageTemplate from "./ProductPageTemplate"
 import WhatYoullLearnSection from "./WhatYoullLearnSection"
 import HowYoullLearnSection from "./HowYoullLearnSection"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
-import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import CourseInfoBox from "./InfoBoxCourse"
 import CourseOutlineSection from "./CourseOutlineSection"
 import {
@@ -128,21 +127,11 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       enrollmentAction={
         <CourseHeaderEnrollButton course={course} selectedRun={selectedRun} />
       }
-      showStayUpdated={
-        course.courseruns.length > 0 &&
-        (page.show_stay_updated ?? false) &&
-        course.courseruns.every(
-          (run) =>
-            run.enrollment_modes.length > 0 &&
-            run.enrollment_modes.every((mode) =>
-              isVerifiedEnrollmentMode(mode.mode_slug),
-            ),
-        )
-      }
       resource={{
         readable_id: course.readable_id,
         resource_type: "course",
       }}
+      hubspotFormId={page.hubspot_form_id}
     >
       {page.about ? (
         <AboutSection productNoun="Course" aboutHtml={page.about} />

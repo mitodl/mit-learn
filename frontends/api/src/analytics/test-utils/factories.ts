@@ -1,6 +1,8 @@
 import { faker } from "@faker-js/faker/locale/en"
 import type {
   ContentEngagementDepth,
+  ContractContentEngagementDepth,
+  ContractMonthlyEngagementTrend,
   ContractUtilization,
   EnrollmentCompletionFunnel,
   MonthlyEngagementTrend,
@@ -36,7 +38,12 @@ const contractUtilization = (
 ): ContractUtilization => ({
   organization_key: faker.string.alphanumeric(6).toUpperCase(),
   organization_name: faker.company.name(),
-  contract_pk: faker.number.int({ min: 1, max: 10000 }),
+  contract_pk: faker.string.hexadecimal({
+    length: 32,
+    casing: "lower",
+    prefix: "",
+  }),
+  contract_id: String(faker.number.int({ min: 1, max: 10000 })),
   b2b_contract_name: `${faker.company.name()} Contract`,
   b2b_contract_is_active: true,
   b2b_contract_start_date: "2026-01-01",
@@ -56,9 +63,18 @@ const enrollmentCompletionFunnel = (
 ): EnrollmentCompletionFunnel => ({
   organization_key: faker.string.alphanumeric(6).toUpperCase(),
   organization_name: faker.company.name(),
-  contract_pk: faker.number.int({ min: 1, max: 10000 }),
+  contract_pk: faker.string.hexadecimal({
+    length: 32,
+    casing: "lower",
+    prefix: "",
+  }),
+  contract_id: String(faker.number.int({ min: 1, max: 10000 })),
   b2b_contract_name: `${faker.company.name()} Contract`,
-  courserun_pk: faker.number.int({ min: 1, max: 10000 }),
+  courserun_pk: faker.string.hexadecimal({
+    length: 32,
+    casing: "lower",
+    prefix: "",
+  }),
   courserun_readable_id: `course-v1:MITx+${faker.string.alphanumeric(5)}+2026`,
   courserun_title: faker.commerce.productName(),
   enrolled_learners: 40,
@@ -78,10 +94,15 @@ const monthlyEngagementTrend = (
   activity_year_and_month: "2026-01",
   monthly_active_learners: 30,
   new_enrollments: 12,
+  enrolling_learners: 9,
   certificates_earned: 5,
+  certified_learners: 5,
   total_videos_watched: 900,
+  video_watchers: 22,
   total_problems_attempted: 1200,
+  problem_attempters: 19,
   total_chatbot_interactions: 80,
+  chatbot_users: 11,
   ...overrides,
 })
 
@@ -90,9 +111,18 @@ const programFunnel = (
 ): ProgramFunnel => ({
   organization_key: faker.string.alphanumeric(6).toUpperCase(),
   organization_name: faker.company.name(),
-  contract_pk: faker.number.int({ min: 1, max: 10000 }),
+  contract_pk: faker.string.hexadecimal({
+    length: 32,
+    casing: "lower",
+    prefix: "",
+  }),
+  contract_id: String(faker.number.int({ min: 1, max: 10000 })),
   b2b_contract_name: `${faker.company.name()} Contract`,
-  program_pk: faker.number.int({ min: 1, max: 10000 }),
+  program_pk: faker.string.hexadecimal({
+    length: 32,
+    casing: "lower",
+    prefix: "",
+  }),
   program_title: `${faker.commerce.department()} Program`,
   total_courses: 6,
   enrolled_in_contract_courses: 50,
@@ -127,8 +157,36 @@ const contentEngagementDepth = (
   ...overrides,
 })
 
+const contractIdentity = () => ({
+  contract_pk: faker.string.hexadecimal({
+    length: 32,
+    casing: "lower",
+    prefix: "",
+  }),
+  contract_id: String(faker.number.int({ min: 1, max: 10000 })),
+  b2b_contract_name: `${faker.company.name()} Contract`,
+})
+
+const contractMonthlyEngagementTrend = (
+  overrides: Partial<ContractMonthlyEngagementTrend> = {},
+): ContractMonthlyEngagementTrend => ({
+  ...monthlyEngagementTrend(),
+  ...contractIdentity(),
+  ...overrides,
+})
+
+const contractContentEngagementDepth = (
+  overrides: Partial<ContractContentEngagementDepth> = {},
+): ContractContentEngagementDepth => ({
+  ...contentEngagementDepth(),
+  ...contractIdentity(),
+  ...overrides,
+})
+
 export {
   contentEngagementDepth,
+  contractContentEngagementDepth,
+  contractMonthlyEngagementTrend,
   contractUtilization,
   enrollmentCompletionFunnel,
   envelope,

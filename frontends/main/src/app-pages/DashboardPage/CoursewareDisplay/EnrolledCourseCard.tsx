@@ -30,6 +30,7 @@ import { RiArrowUpCircleLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import { useCreateVerifiedProgramEnrollment } from "api/mitxonline-hooks/enrollment"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { isInPast, calendarDaysUntil, NoSSR } from "ol-utilities"
 import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
@@ -98,8 +99,16 @@ const UpgradeBanner: React.FC<
   onUpgradeFailure,
   ...others
 }) => {
-  const replaceBasketItem = useReplaceBasketItem()
-  const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment()
+  // Upgrade failures are caught below and surfaced via onUpgradeFailure (an
+  // inline alert in the parent), so suppress the global error toast. A caught
+  // mutateAsync rejection does NOT suppress the cache-level onError, so this
+  // opt-out is what prevents a double alert. `onUpgradeFailure` is optional —
+  // a caller that omits it has no error surface of its own, so only silence
+  // the toast when the callback is actually wired.
+  const upgradeErrorMeta = onUpgradeFailure ? { meta: SILENCE_ERROR_TOAST } : {}
+  const replaceBasketItem = useReplaceBasketItem(upgradeErrorMeta)
+  const createVerifiedProgramEnrollment =
+    useCreateVerifiedProgramEnrollment(upgradeErrorMeta)
   const { ensureCompliance } = useComplianceGate()
 
   const programRequestBody = programReadableIds?.length

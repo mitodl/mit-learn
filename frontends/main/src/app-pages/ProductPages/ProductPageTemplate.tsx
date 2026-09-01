@@ -22,7 +22,6 @@ import type { Breakpoint } from "@mui/system"
 import NiceModal from "@ebay/nice-modal-react"
 import { useHubspotFormDetail } from "api/hooks/hubspot"
 import { StayUpdatedModal } from "./StayUpdatedModal"
-import { getStayUpdatedHubspotFormId } from "@/common/config"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 import { PlatformEnum } from "api"
@@ -290,8 +289,11 @@ type ProductPageTemplateProps = {
   enrollmentAction: React.ReactNode
   children: React.ReactNode
 } & (
-  | { showStayUpdated: boolean; resource: ResourceInfo }
-  | { showStayUpdated?: false; resource?: never }
+  | {
+      resource: ResourceInfo
+      hubspotFormId?: string | null
+    }
+  | { resource?: never; hubspotFormId?: never }
 )
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   currentBreadcrumbLabel,
@@ -303,15 +305,13 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   infoBox,
   children,
   enrollmentAction,
-  showStayUpdated,
   resource,
+  hubspotFormId,
 }) => {
   const posthog = usePostHog()
   const summaryColRef = useStickyRevealTop(HEADER_HEIGHT + OFFSET_FROM_HEADER)
-  const stayUpdatedFormId = getStayUpdatedHubspotFormId()
-  const shouldShowStayUpdatedButton = Boolean(
-    stayUpdatedFormId && showStayUpdated,
-  )
+  const stayUpdatedFormId = hubspotFormId?.trim()
+  const shouldShowStayUpdatedButton = Boolean(stayUpdatedFormId && resource)
   const stayUpdatedParams = stayUpdatedFormId
     ? { form_id: stayUpdatedFormId }
     : undefined
@@ -320,7 +320,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   })
 
   const handleStayUpdatedClick = () => {
-    if (!showStayUpdated || !resource) return
+    if (!resource) return
     if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
       posthog.capture(PostHogEvents.CallToActionClicked, {
         label: "Stay Updated",
@@ -331,6 +331,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
     }
     NiceModal.show(StayUpdatedModal, {
       productReadableId: resource.readable_id,
+      hubspotFormId: stayUpdatedFormId,
     })
   }
 

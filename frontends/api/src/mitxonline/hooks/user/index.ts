@@ -5,6 +5,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query"
 import { countriesApi, usersApi } from "../../clients"
+import type { MutationHookOptions } from "../../../mutations/mutationMeta"
 import type { User } from "@mitodl/mitxonline-api-axios/v2"
 import { UsersApiUsersMePartialUpdateRequest } from "@mitodl/mitxonline-api-axios/v2"
 
@@ -39,7 +40,7 @@ const queries = {
 const useMitxOnlineUserMe = (opts: { enabled?: boolean } = {}) =>
   useQuery({ ...queries.me(), ...opts })
 
-const useUpdateUserMutation = () => {
+const useUpdateUserMutation = ({ meta }: MutationHookOptions = {}) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (opts: UsersApiUsersMePartialUpdateRequest) =>
@@ -47,6 +48,7 @@ const useUpdateUserMutation = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: userKeys.me() })
     },
+    meta,
   })
 }
 

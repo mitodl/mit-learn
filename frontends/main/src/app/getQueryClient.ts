@@ -1,11 +1,21 @@
 // Based on https://tanstack.com/query/v5/docs/framework/react/guides/advanced-ssr
 
-import { QueryClient, isServer, focusManager } from "@tanstack/react-query"
+import {
+  QueryClient,
+  MutationCache,
+  isServer,
+  focusManager,
+} from "@tanstack/react-query"
+import type { Mutation } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
 import { cache } from "react"
 import { notFound } from "next/navigation"
 import { bootstrapApiClients } from "@/bootstrap/api"
 import { getCacheSMaxageSeconds } from "@/common/config"
+import { showErrorToast } from "@/page-components/Toaster/toastStore"
+// Type-only: augments `mutation.meta` (see api/src/mutations/mutationMeta.ts).
+import "api/mutation-meta"
+import type { MutationErrorMeta } from "api/mutation-meta"
 
 /** Max retries after first failure */
 const MAX_RETRIES = 3
@@ -21,6 +31,58 @@ const BASE_RETRY_DELAY = 200
 const MAX_RETRY_DELAY = 1000
 const THROW_ERROR_CODES = [400, 401, 403]
 const NO_RETRY_CODES = [400, 401, 403, 404, 405, 409, 422]
+
+/** Fallback error-toast copy when a mutation declares no `meta.errorMessage`. */
+export const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again."
+
+/** Blank/whitespace copy is treated as "no message" so a mistaken `""` never
+ * renders a blank toast. */
+const isMessage = (value: unknown): value is string =>
+  typeof value === "string" && value.trim() !== ""
+
+/**
+ * Resolve the toast copy: `meta.getErrorMessage(error, variables)`, then
+ * `meta.errorMessage`, then the generic fallback. Each tier falls through to
+ * the next when it yields no message.
+ *
+ * Defensive by design: a call site's `getErrorMessage` could throw (e.g.
+ * reading `error.response.data` on a network error with no response), and an
+ * exception escaping `onError` would leave the failure completely silent — the
+ * exact thing this handler exists to prevent.
+ */
+const resolveErrorMessage = (
+  meta: MutationErrorMeta | undefined,
+  error: unknown,
+  variables: unknown,
+): string => {
+  try {
+    const custom = meta?.getErrorMessage?.(error, variables)
+    if (isMessage(custom)) return custom
+  } catch {
+    // Fall through to the static message.
+  }
+  const staticMessage = meta?.errorMessage
+  if (isMessage(staticMessage)) return staticMessage
+  return GENERIC_ERROR_MESSAGE
+}
+
+/**
+ * Default error handling for *all* browser mutations: show a top-center error
+ * toast unless the mutation opts out via `meta.showErrorToast === false`. This
+ * guarantees a mutation failure is never silent.
+ *
+ * Exported for unit testing; wired into the browser client's `MutationCache`.
+ */
+export const handleMutationError = (
+  error: unknown,
+  variables: unknown,
+  _context: unknown,
+  mutation: Mutation<unknown, unknown, unknown, unknown>,
+): void => {
+  const meta = mutation.meta
+  if (meta?.showErrorToast === false) return
+  showErrorToast(resolveErrorMessage(meta, error, variables))
+}
 
 /**
  * Extended QueryClient with custom fetchQueryOr404 method.
@@ -146,6 +208,7 @@ const makeBrowserQueryClient = (
 ): AugmentedQueryClient => {
   const { maxRetries } = config
   return new AugmentedQueryClient({
+    mutationCache: new MutationCache({ onError: handleMutationError }),
     defaultOptions: {
       queries: {
         /**

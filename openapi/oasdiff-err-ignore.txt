@@ -1,0 +1,12 @@
+# Allowlist for intentional breaking API changes, read by `oasdiff breaking
+# --err-ignore` in .github/workflows/openapi-diff.yml.
+#
+# Each line must contain the method + path of the changed endpoint (or the
+# keyword `components` for a components-section change) plus enough of the
+# breaking-change message to match it. Copy the line straight out of the
+# failing `openapi-diff` job's output -- oasdiff only needs the method/path
+# (or `components`) and message text to line up; order and casing don't
+# matter, and anything else on the line (a date, a ticket link) is fine.
+#
+# Example:
+#   2026-08-24 GET /api/v1/foo/ removed the success response with the status '200'

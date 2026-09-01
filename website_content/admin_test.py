@@ -247,9 +247,10 @@ def test_change_form_save_of_deleted_published_is_forbidden(admin_client):
 
     response = admin_client.post(change_url(content), change_form_post_data())
 
-    # Django raises PermissionDenied, but main.urls points handler403 at
-    # main.views.handle_error, which renders every client error as a 404.
-    assert response.status_code == 404
+    # Django raises PermissionDenied and main.urls points handler403 at
+    # main.views.handle_403, a plain Django handler with no DRF request
+    # pipeline in front of it, so the real 403 reaches the caller.
+    assert response.status_code == 403
     content.refresh_from_db()
     assert content.title == "Deleted Published"
 

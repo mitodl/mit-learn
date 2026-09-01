@@ -4,6 +4,7 @@ import React from "react"
 import { Card, Container, Typography, styled } from "ol-components"
 import { Button, ButtonLoadingIcon } from "@mitodl/smoot-design"
 import { useUnsubscribe } from "api/hooks/unsubscribe"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { UnsubscribedPage } from "@/app-pages/UnsubscribedPage/UnsubscribedPage"
 
 const PageContainer = styled(Container)({
@@ -29,7 +30,9 @@ type UnsubscribePageProps = {
 }
 
 const UnsubscribePage: React.FC<UnsubscribePageProps> = ({ token }) => {
-  const unsubscribe = useUnsubscribe()
+  // Failure renders its own error page (isError below), so suppress the global
+  // error toast.
+  const unsubscribe = useUnsubscribe({ meta: SILENCE_ERROR_TOAST })
 
   if (!token) {
     return <UnsubscribedPage errorCode="invalid_token" />

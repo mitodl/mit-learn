@@ -1,5 +1,6 @@
 import { enrollmentQueries, enrollmentKeys } from "./queries"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import type { MutationHookOptions } from "../../../mutations/mutationMeta"
 import {
   b2bApi,
   courseRunEnrollmentsApi,
@@ -14,7 +15,7 @@ import {
   VerifiedProgramEnrollmentsApiVerifiedProgramEnrollmentsCreateRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
 
-const useCreateB2bEnrollment = () => {
+const useCreateB2bEnrollment = ({ meta }: MutationHookOptions = {}) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (opts: B2bApiB2bEnrollCreateRequest) =>
@@ -24,10 +25,11 @@ const useCreateB2bEnrollment = () => {
         queryKey: enrollmentKeys.courseRunEnrollmentsList(),
       })
     },
+    meta,
   })
 }
 
-const useCreateEnrollment = () => {
+const useCreateEnrollment = ({ meta }: MutationHookOptions = {}) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (opts: CourseRunEnrollmentRequest) => {
@@ -43,10 +45,11 @@ const useCreateEnrollment = () => {
         queryKey: enrollmentKeys.programEnrollmentsList(),
       })
     },
+    meta,
   })
 }
 
-const useUpdateEnrollment = () => {
+const useUpdateEnrollment = ({ meta }: MutationHookOptions = {}) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (opts: EnrollmentsApiEnrollmentsPartialUpdateRequest) =>
@@ -56,10 +59,11 @@ const useUpdateEnrollment = () => {
         queryKey: enrollmentKeys.courseRunEnrollmentsList(),
       })
     },
+    meta,
   })
 }
 
-const useDestroyEnrollment = () => {
+const useDestroyEnrollment = ({ meta }: MutationHookOptions = {}) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (enrollmentId: number) =>
@@ -75,10 +79,11 @@ const useDestroyEnrollment = () => {
         queryKey: enrollmentKeys.courseRunEnrollmentsList(),
       })
     },
+    meta,
   })
 }
 
-const useDestroyProgramEnrollment = () => {
+const useDestroyProgramEnrollment = ({ meta }: MutationHookOptions = {}) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (programId: number) =>
@@ -96,10 +101,11 @@ const useDestroyProgramEnrollment = () => {
         queryKey: enrollmentKeys.programEnrollmentsList(),
       })
     },
+    meta,
   })
 }
 
-const useCreateProgramEnrollment = () => {
+const useCreateProgramEnrollment = ({ meta }: MutationHookOptions = {}) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (
@@ -110,10 +116,13 @@ const useCreateProgramEnrollment = () => {
         queryKey: enrollmentKeys.programEnrollmentsList(),
       })
     },
+    meta,
   })
 }
 
-const useCreateVerifiedProgramEnrollment = () => {
+const useCreateVerifiedProgramEnrollment = ({
+  meta,
+}: MutationHookOptions = {}) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (
@@ -127,6 +136,7 @@ const useCreateVerifiedProgramEnrollment = () => {
         queryKey: enrollmentKeys.programEnrollmentsList(),
       })
     },
+    meta,
   })
 }
 

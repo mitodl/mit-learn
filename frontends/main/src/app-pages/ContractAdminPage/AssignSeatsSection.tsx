@@ -15,6 +15,7 @@ import {
   useBulkAssignSeats,
   useSendTestEmail,
 } from "api/mitxonline-hooks/organizations"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import type { BulkAssignError } from "@mitodl/mitxonline-api-axios/v2"
@@ -232,8 +233,10 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
   const [errorAnnouncement, setErrorAnnouncement] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const bulkAssign = useBulkAssignSeats()
-  const sendTestEmail = useSendTestEmail()
+  // Both surface their outcome via inline Alerts (bulk-assign result Alert and
+  // the send-test-email alert), so suppress the global error toast.
+  const bulkAssign = useBulkAssignSeats({ meta: SILENCE_ERROR_TOAST })
+  const sendTestEmail = useSendTestEmail({ meta: SILENCE_ERROR_TOAST })
   const { data: user } = useQuery(mitxUserQueries.me())
 
   const submitResult = useMemo(

@@ -17,7 +17,7 @@ import {
 } from "../Dialogs/AddToListDialog"
 import type { ResourceCardProps } from "./ResourceCard"
 import { urls, factories, setMockResponse } from "api/test-utils"
-import { RESOURCE_DRAWER_PARAMS, resourceDrawerSearch } from "@/common/urls"
+import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import { slugify } from "@/common/slugs"
 import invariant from "tiny-invariant"
 import { LearningResourceCard } from "ol-components"
@@ -197,7 +197,7 @@ describe.each([
       expect(dialog).toHaveTextContent("Sign Up")
     })
 
-    test("Card links to the canonical resource URL regardless of host page", () => {
+    test("Card links to the resource's learn_url regardless of host page", () => {
       const { resource } = setup({
         user: { is_learning_path_editor: true },
         url: HOST_URL,
@@ -208,10 +208,9 @@ describe.each([
         name: new RegExp(resource.title),
       })
 
-      expect(link).toHaveAttribute(
-        "href",
-        resourceDrawerSearch(resource.id, resource.title),
-      )
+      // What crawlers follow: the resource's own page where it has one, else
+      // its drawer. The backend decides, so the card does no URL building.
+      expect(link).toHaveAttribute("href", resource.learn_url)
     })
 
     test("Clicking the title pushes the host page's URL with the drawer params", async () => {

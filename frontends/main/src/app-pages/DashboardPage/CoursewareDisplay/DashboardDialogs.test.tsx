@@ -110,6 +110,83 @@ describe("DashboardDialogs", () => {
     )
   })
 
+  test("The email settings dialog shows an inline error when the update fails", async () => {
+    const { enrollments } = setupApis()
+    const enrollment = faker.helpers.arrayElement(enrollments)
+
+    setMockResponse.patch(
+      mitxonline.urls.enrollment.courseEnrollment(enrollment.id),
+      {},
+      { code: 500 },
+    )
+    renderWithProviders(<HomeEnrollmentsDisplay />)
+
+    const cards = await screen.findAllByTestId("enrollment-card-desktop")
+    const card = cards.find(
+      (c) => !!within(c).queryByText(enrollment.run.title),
+    )
+    invariant(card)
+
+    await user.click(await within(card).findByLabelText("More options"))
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Email Settings" }),
+    )
+
+    const dialog = await screen.findByRole("dialog", { name: "Email Settings" })
+    await user.click(
+      within(dialog).getByRole("checkbox", { name: "Receive course emails" }),
+    )
+    await user.click(
+      within(dialog).getByRole("button", { name: "Save Settings" }),
+    )
+
+    // The dialog always renders a warning alert about unchecking the box, so the
+    // failure adds a second alert; pinning the count keeps a stray extra alert
+    // from passing as the inline error.
+    await waitFor(() =>
+      expect(within(dialog).getAllByRole("alert")).toHaveLength(2),
+    )
+    const [, errorAlert] = within(dialog).getAllByRole("alert")
+    expect(errorAlert).toHaveTextContent(
+      "There was a problem updating your email settings. Please try again later.",
+    )
+    // Dialog stays open so the user can retry.
+    expect(dialog).toBeInTheDocument()
+  })
+
+  test("The unenroll dialog shows an inline error when the unenroll fails", async () => {
+    const { enrollments } = setupApis()
+    const enrollment = faker.helpers.arrayElement(enrollments)
+
+    setMockResponse.delete(
+      mitxonline.urls.enrollment.courseEnrollment(enrollment.id),
+      {},
+      { code: 500 },
+    )
+    renderWithProviders(<HomeEnrollmentsDisplay />)
+
+    const cards = await screen.findAllByTestId("enrollment-card-desktop")
+    const card = cards.find(
+      (c) => !!within(c).queryByText(enrollment.run.title),
+    )
+    invariant(card)
+
+    await user.click(await within(card).findByLabelText("More options"))
+    await user.click(await screen.findByRole("menuitem", { name: "Unenroll" }))
+
+    const dialog = await screen.findByRole("dialog", {
+      name: `Unenroll from ${enrollment.run.title}`,
+    })
+    await user.click(within(dialog).getByRole("button", { name: "Unenroll" }))
+
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "There was a problem unenrolling you from this course. Please try again later.",
+    )
+    // The card survives a failed unenroll.
+    expect(card).toBeInTheDocument()
+    expect(trackCourseUnenrolled).not.toHaveBeenCalled()
+  })
+
   test("Opening the unenroll dialog and confirming the unenroll fires the proper API call", async () => {
     const { enrollments } = setupApis()
     const enrollment = faker.helpers.arrayElement(enrollments)
@@ -333,6 +410,39 @@ describe("UnenrollProgramDialog", () => {
       programEnrollment.program.title,
     )
     expect(trackCourseUnenrolled).not.toHaveBeenCalled()
+  })
+
+  test("Shows an inline error when the unenroll fails", async () => {
+    const { programEnrollment } = setupProgramCard("audit", null)
+
+    setMockResponse.delete(
+      mitxonline.urls.programEnrollments.programEnrollment(
+        programEnrollment.program.id,
+      ),
+      {},
+      { code: 500 },
+    )
+
+    renderWithProviders(
+      <CoursewareCard
+        kind="program-enrollment"
+        programEnrollment={programEnrollment}
+      />,
+    )
+
+    const desktopCard = await screen.findByTestId("enrollment-card-desktop")
+    await user.click(within(desktopCard).getByLabelText("More options"))
+    await user.click(await screen.findByRole("menuitem", { name: "Unenroll" }))
+
+    const dialog = await screen.findByRole("dialog", {
+      name: `Unenroll from ${programEnrollment.program.title}`,
+    })
+    await user.click(within(dialog).getByRole("button", { name: "Unenroll" }))
+
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "There was a problem unenrolling you from this program. Please try again later.",
+    )
+    expect(trackProgramUnenrolled).not.toHaveBeenCalled()
   })
 
   test("Cancelling the dialog does not fire the API call", async () => {

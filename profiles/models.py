@@ -1,5 +1,6 @@
 """Profile models"""
 
+from functools import cached_property
 from uuid import uuid4
 
 from django.conf import settings
@@ -201,6 +202,16 @@ class Profile(models.Model):
                 self.image_medium_file = None
         super().save(*args, **kwargs)  # pylint:disable=super-with-arguments
 
+    @cached_property
+    def annotated_topic_interests(self) -> list:
+        """
+        Topic interests with channel_url annotated for serialization.
+
+        Fallback only: API views fill this via
+        Prefetch(..., to_attr="annotated_topic_interests").
+        """
+        return list(self.topic_interests.for_serialization())
+
 
 class UserWebsite(models.Model):
     """A model for storing information for websites that should appear in a user's profile"""  # noqa: E501
@@ -280,7 +291,12 @@ class ProgramCertificate(models.Model):
     program_completion_timestamp = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        managed = False
+        # Managed as of the warehouse-pull cutover (mitodl/hq#12954): Django
+        # is now the writer of this table, not Hightouch, so schema changes
+        # belong in migrations rather than in an external tool's config. The
+        # table stays in the `external` schema — other consumers still read it
+        # by that name.
+        managed = True
         db_table = '"external"."programcertificate"'
 
     def __str__(self):

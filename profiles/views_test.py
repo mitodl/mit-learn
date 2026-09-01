@@ -241,7 +241,6 @@ def test_patch_profile_by_user(client, logged_in_profile):
     assert logged_in_profile.location == location_json
 
 
-@pytest.mark.skip_nplusone_check
 def test_patch_topic_interests(client, logged_in_profile):
     """Test that patching Profile.topic_interests works correctly"""
     topics = LearningResourceTopicFactory.create_batch(3)
@@ -507,6 +506,33 @@ def test_program_letter_api_view(mocker, client, rf, user, is_anonymous, setting
     )
 
 
+@pytest.mark.parametrize("certificate_id", [None, "no-such-record-hash"])
+def test_program_letter_api_view_without_certificate(
+    client, settings, user, certificate_id
+):
+    """
+    A letter whose certificate is gone 404s instead of erroring.
+
+    ProgramCertificate is unmanaged, so certificate_id has no FK constraint and
+    can outlive the row it points at. Every field of the response derives from
+    the certificate, so there is nothing to serve without one. Nothing is mocked
+    here on purpose: MICROMASTERS_CMS_API_URL is set because the template fetch
+    dereferences the certificate too, and the view has to stop short of it.
+    """
+    settings.DATABASE_ROUTERS = []
+    settings.EXTERNAL_MODELS = []
+    settings.MICROMASTERS_CMS_API_URL = "https://micromasters.example.com/api/v0/"
+    letter = ProgramLetter.objects.create(user=user, certificate=None)
+    if certificate_id is not None:
+        ProgramLetter.objects.filter(pk=letter.pk).update(certificate_id=certificate_id)
+
+    response = client.get(
+        reverse("profile:v1:program_letters_api-detail", args=[letter.id])
+    )
+
+    assert response.status_code == 404
+
+
 @pytest.mark.parametrize("is_anonymous", [True, False])
 def test_program_letter_api_view_returns_404_for_invalid_id(
     mocker, client, user, is_anonymous
@@ -524,7 +550,6 @@ def test_program_letter_api_view_returns_404_for_invalid_id(
     assert response.status_code == 404
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize("is_anonymous", [True, False])
 def test_list_user_program_certificates(mocker, client, user, is_anonymous):
     """
@@ -538,16 +563,31 @@ def test_list_user_program_certificates(mocker, client, user, is_anonymous):
             3,
             user_email=user.email,
         )
+    if not is_anonymous:
+        # One cert already has a letter; the GET creates the other two and
+        # reuses this one rather than issuing a second.
+        letter = ProgramLetterFactory(user=user, certificate=certs[0])
     url = reverse("profile:v0:user_program_certificates_api-list")
     resp = client.get(url)
     if not is_anonymous:
         request = get_request_object(url)
         assert resp.status_code == 200
+        assert ProgramLetter.objects.count() == len(certs)
+        assert ProgramLetter.objects.get(certificate=certs[0]).id == letter.id
+
+        letters = {
+            item.certificate_id: item
+            for item in ProgramLetter.objects.filter(certificate__in=certs)
+        }
+        for cert in certs:
+            cert.user_letter = letters[cert.pk]
         assert (
             resp.json()
             == ProgramCertificateSerializer(
                 certs, many=True, context={"request": request}
             ).data
         )
+        share_urls = [cert["program_letter_share_url"] for cert in resp.json()]
+        assert all(share_urls), share_urls
     else:
         assert resp.status_code == 403

@@ -270,3 +270,25 @@ def test_content_type_filter(client, user):
 
     assert all(r["content_type"] == "news" for r in results)
     assert len(results) == 1
+
+
+@pytest.mark.parametrize("limit", [2, 10])
+def test_list_query_count_is_constant(client, django_assert_num_queries, limit):
+    """Listing costs the same number of queries whatever the page size."""
+    for content_user in [*UserFactory.create_batch(5), None]:
+        WebsiteContent.objects.create(
+            title="t",
+            content={},
+            is_published=True,
+            user=content_user,
+            content_type="news",
+        )
+
+    url = reverse("website_content:v1:website_content-list")
+    with django_assert_num_queries(2):
+        results = client.get(url, {"limit": limit}).json()["results"]
+
+    assert len(results) == min(limit, 6)
+    # The most recently published item has no user; a nullable FK still has to
+    # serialize, which a select_related() join preserves and an inner join wouldn't.
+    assert results[0]["user"] is None

@@ -7567,6 +7567,37 @@ paths:
               schema:
                 $ref: '#/components/schemas/PodcastEpisodeResource'
           description: ''
+  /api/v1/podcast_episodes/{id}/transcript/:
+    get:
+      operationId: podcast_episodes_transcript_retrieve
+      description: |-
+        Fetch one episode's transcript.
+
+        Served separately from the episode payload because the text runs tens
+        of kilobytes; `podcast_episode.has_transcript` says whether there is
+        anything here to fetch.
+
+        Args:
+        id (integer): The id of the podcast episode
+
+        Returns:
+        The episode id and its transcript text
+      summary: Get a podcast episode transcript
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - podcast_episodes
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PodcastEpisodeTranscript'
+          description: ''
   /api/v1/podcasts/:
     get:
       operationId: podcasts_list
@@ -10350,10 +10381,13 @@ components:
         checksum:
           type: string
         image_src:
-          type: string
-          format: uri
           nullable: true
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         resource_id:
           type: string
           readOnly: true
@@ -13033,9 +13067,12 @@ components:
             type: string
             maxLength: 128
         more_information:
-          type: string
-          format: uri
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         value_prop:
           type: string
         display_facet:
@@ -13839,10 +13876,13 @@ components:
         checksum:
           type: string
         image_src:
-          type: string
-          format: uri
           nullable: true
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         resource_id:
           type: string
           readOnly: true
@@ -14616,9 +14656,12 @@ components:
         is_published:
           type: boolean
         slug:
-          type: string
-          maxLength: 60
-          pattern: ^[-a-zA-Z0-9_]+$
+          oneOf:
+          - type: string
+            maxLength: 60
+            pattern: ^[-a-zA-Z0-9_]+$
+          - type: string
+            maxLength: 0
     PercolateQuery:
       type: object
       description: Serializer for PercolateQuery objects
@@ -15019,8 +15062,14 @@ components:
           items:
             $ref: '#/components/schemas/PodcastEpisodeParent'
           readOnly: true
-        transcript:
-          type: string
+        has_transcript:
+          type: boolean
+          description: |-
+            Whether a transcript is available from the transcript endpoint.
+
+            The text itself is excluded from this serializer, so this is how a
+            client knows whether to fetch it.
+          readOnly: true
         audio_url:
           type: string
           format: uri
@@ -15034,11 +15083,9 @@ components:
           type: string
           nullable: true
           maxLength: 10
-        rss:
-          type: string
-          nullable: true
       required:
       - audio_url
+      - has_transcript
       - id
       - parent_podcasts
       - podcasts
@@ -15060,8 +15107,6 @@ components:
       type: object
       description: Serializer for PodcastEpisode
       properties:
-        transcript:
-          type: string
         audio_url:
           type: string
           format: uri
@@ -15077,9 +15122,6 @@ components:
           type: string
           nullable: true
           maxLength: 10
-        rss:
-          type: string
-          nullable: true
       required:
       - audio_url
     PodcastEpisodeResource:
@@ -15477,6 +15519,21 @@ components:
       type: string
       enum:
       - podcast_episode
+    PodcastEpisodeTranscript:
+      type: object
+      description: |-
+        Serializer for a single podcast episode's transcript.
+
+        Kept out of PodcastEpisodeSerializer so the text is only ever sent when a
+        client asks for this one episode's transcript.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        transcript:
+          type: string
+      required:
+      - id
     PodcastRequest:
       type: object
       description: Serializer for Podcasts
@@ -16799,15 +16856,21 @@ components:
             $ref: '#/components/schemas/CaptionUrl'
           readOnly: true
         streaming_url:
-          type: string
-          format: uri
           readOnly: true
           nullable: true
+          oneOf:
+          - type: string
+            format: uri
+          - type: string
+            maxLength: 0
         cover_image_url:
-          type: string
-          format: uri
           readOnly: true
           nullable: true
+          oneOf:
+          - type: string
+            format: uri
+          - type: string
+            maxLength: 0
         duration:
           type: string
           maxLength: 11
@@ -17756,15 +17819,21 @@ components:
         is_published:
           type: boolean
         slug:
-          type: string
-          maxLength: 60
-          pattern: ^[-a-zA-Z0-9_]+$
+          oneOf:
+          - type: string
+            maxLength: 60
+            pattern: ^[-a-zA-Z0-9_]+$
+          - type: string
+            maxLength: 0
         cover_image:
-          type: string
-          format: uri
           readOnly: true
-          default: ''
-          maxLength: 2083
+          oneOf:
+          - type: string
+            format: uri
+            default: ''
+            maxLength: 2083
+          - type: string
+            maxLength: 0
       required:
       - cover_image
       - created_on
@@ -17811,8 +17880,11 @@ components:
         is_published:
           type: boolean
         slug:
-          type: string
-          maxLength: 60
-          pattern: ^[-a-zA-Z0-9_]+$
+          oneOf:
+          - type: string
+            maxLength: 60
+            pattern: ^[-a-zA-Z0-9_]+$
+          - type: string
+            maxLength: 0
       required:
       - title
