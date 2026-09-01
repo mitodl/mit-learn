@@ -1022,7 +1022,8 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         for run in serialized_resource.get("runs", []):
             if run.get("level"):
                 levels.extend(lvl["name"] for lvl in run["level"])
-        return list(set(levels)) if len(levels) > 0 else None
+        # sorted for the same reason as get_instructors
+        return sorted(set(levels)) if len(levels) > 0 else None
 
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_languages(self, serialized_resource):
@@ -1031,7 +1032,8 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         for run in serialized_resource.get("runs", []):
             if run.get("languages"):
                 languages.extend(run["languages"])
-        return list(set(languages)) if len(languages) > 0 else None
+        # sorted for the same reason as get_instructors
+        return sorted(set(languages)) if len(languages) > 0 else None
 
     @extend_schema_field({"type": "string"})
     def get_offered_by(self, serialized_resource):
@@ -1109,7 +1111,11 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         for run in serialized_resource.get("runs", []):
             for instructor in run.get("instructors", []):
                 instructors.add(instructor["full_name"])
-        return list(instructors) if len(instructors) > 0 else None
+        # sorted, not list(): this rendering is the resource's embedding
+        # identity, and set order varies with the process hash seed, so an
+        # unsorted list gives each worker a different checksum for the same
+        # resource and re-embeds the catalog on every restart.
+        return sorted(instructors) if len(instructors) > 0 else None
 
     @extend_schema_field({"type": "string"})
     def get_certification(self, serialized_resource):
