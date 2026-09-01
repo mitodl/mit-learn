@@ -9,7 +9,10 @@ import {
   safeGenerateMetadata,
   standardizeMetadata,
 } from "@/common/metadata"
-import { learningResourceQueries } from "api/hooks/learningResources"
+import {
+  learningResourceQueries,
+  podcastEpisodeQueries,
+} from "api/hooks/learningResources"
 import { notFound, redirect } from "next/navigation"
 import {
   parentPodcastIds,
@@ -91,6 +94,16 @@ const Page: React.FC<Props> = async (props) => {
     `/podcast/${podcastId}/podcast_episode/${episodeId}/${slug}` !== canonical
   ) {
     redirect(carrySearchParams(canonical, await props.searchParams))
+  }
+
+  // Prefetch the transcript so it is in the dehydrated state and therefore in
+  // the served HTML. Without this it is client-fetched only, and the transcript
+  // tab panel would be empty for crawlers no matter that both panels stay
+  // mounted. Best-effort: a failure here must not take down the page.
+  if (episode.podcast_episode?.has_transcript) {
+    await queryClient
+      .prefetchQuery(podcastEpisodeQueries.transcript(epId))
+      .catch(() => undefined)
   }
 
   return (

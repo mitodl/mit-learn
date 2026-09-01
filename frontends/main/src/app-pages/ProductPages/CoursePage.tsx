@@ -127,11 +127,11 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       enrollmentAction={
         <CourseHeaderEnrollButton course={course} selectedRun={selectedRun} />
       }
-      showStayUpdated={page.show_stay_updated ?? false}
       resource={{
         readable_id: course.readable_id,
         resource_type: "course",
       }}
+      hubspotFormId={page.hubspot_form_id}
     >
       {page.about ? (
         <AboutSection productNoun="Course" aboutHtml={page.about} />

@@ -1972,3 +1972,60 @@ def test_resource_items_only_shows_published_runs(client, user):
                 >= child_data["runs"][idx - 1]["start_date"]
             )
     assert len(child_data["runs"]) == 4
+
+
+def test_podcast_episode_transcript_endpoint(client):
+    """The transcript endpoint returns the stored text for one episode"""
+    episode = PodcastEpisodeFactory.create(
+        transcript="Host: welcome back.",
+        rss='<item><podcast:transcript url="https://x/t.vtt" type="text/vtt"'
+        ' language="en"/></item>',
+    )
+
+    resp = client.get(
+        reverse(
+            "lr:v1:podcast_episodes_api-transcript",
+            args=[episode.learning_resource.id],
+        )
+    )
+
+    assert resp.status_code == 200
+    assert resp.data["transcript"] == "Host: welcome back."
+    assert resp.data["id"] == episode.learning_resource.id
+
+
+def test_podcast_episode_transcript_endpoint_empty(client):
+    """An episode with no transcript returns an empty string, not a 404"""
+    episode = PodcastEpisodeFactory.create(transcript="", rss="<item></item>")
+
+    resp = client.get(
+        reverse(
+            "lr:v1:podcast_episodes_api-transcript",
+            args=[episode.learning_resource.id],
+        )
+    )
+
+    assert resp.status_code == 200
+    assert resp.data["transcript"] == ""
+
+
+@pytest.mark.parametrize("bad_id", ["abc", "999999999"])
+def test_podcast_episode_transcript_endpoint_404(client, bad_id):
+    """
+    A non-numeric or unknown id is a 404, not a 500.
+
+    The router's lookup regex is [^/.]+, so a non-numeric id reaches the view;
+    int() would raise ValueError and 500.
+    """
+    resp = client.get(f"/api/v1/podcast_episodes/{bad_id}/transcript/")
+    assert resp.status_code == 404
+
+
+def test_podcast_episode_transcript_endpoint_rejects_other_resource_types(client):
+    """A non-episode resource id is not reachable through this endpoint"""
+    course = CourseFactory.create()
+
+    resp = client.get(
+        f"/api/v1/podcast_episodes/{course.learning_resource.id}/transcript/"
+    )
+    assert resp.status_code == 404

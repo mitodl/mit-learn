@@ -7,6 +7,7 @@ import {
   schoolsApi,
   featuredApi,
   videoPlaylistsApi,
+  podcastEpisodesApi,
   vectorLearningResourcesSearchApi,
 } from "../../clients"
 
@@ -21,6 +22,7 @@ import type {
   LearningResourcesApiLearningResourcesSummaryListRequest as LearningResourcesSummaryListRequest,
   PaginatedLearningResourceRelationshipList,
   VideoPlaylistResource,
+  PodcastEpisodeTranscript,
   LearningResourcesApiLearningResourcesVectorSimilarListRequest,
 } from "../../generated/v1"
 import type { VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorLearningResourcesSearchRetrieveRequest } from "../../generated/v0"
@@ -289,6 +291,30 @@ const videoPlaylistQueries = {
     }),
 }
 
+const podcastEpisodeKeys = {
+  root: ["podcast_episodes"],
+  detailRoot: () => [...podcastEpisodeKeys.root, "detail"],
+  detail: (id: number) => [...podcastEpisodeKeys.detailRoot(), id],
+  transcript: (id: number) => [...podcastEpisodeKeys.detail(id), "transcript"],
+}
+
+const podcastEpisodeQueries = {
+  /**
+   * An episode's transcript, served separately from the episode payload
+   * because the text runs tens of kilobytes. Gate this on
+   * `podcast_episode.has_transcript` so the ~95% of episodes with no
+   * transcript never issue the request.
+   */
+  transcript: (id: number) =>
+    queryOptions<PodcastEpisodeTranscript>({
+      queryKey: podcastEpisodeKeys.transcript(id),
+      queryFn: () =>
+        podcastEpisodesApi
+          .podcastEpisodesTranscriptRetrieve({ id })
+          .then((res) => res.data),
+    }),
+}
+
 export {
   learningResourceKeys,
   learningResourceQueries,
@@ -297,4 +323,6 @@ export {
   schoolQueries,
   offerorQueries,
   videoPlaylistQueries,
+  podcastEpisodeKeys,
+  podcastEpisodeQueries,
 }

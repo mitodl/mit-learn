@@ -26,7 +26,10 @@ import {
 import { assertHeadings } from "ol-test-utilities"
 import ProgramAsCoursePage from "./ProgramAsCoursePage"
 import { notFound } from "next/navigation"
-import { useStayUpdatedEnv } from "./test-utils/stayUpdated"
+import {
+  STAY_UPDATED_FORM_ID,
+  withHubspotFormId,
+} from "./test-utils/stayUpdated"
 import invariant from "tiny-invariant"
 import { getIdsFromReqTree } from "@/common/mitxonline"
 
@@ -103,8 +106,7 @@ const setupApis = ({
   // gate; the factory default has nothing missing, so it passes straight through.
   setMockResponse.get(urls.userMe.get(), factories.user.user())
 
-  const stayUpdatedFormId =
-    process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID?.trim()
+  const stayUpdatedFormId = page.hubspot_form_id?.trim()
   if (stayUpdatedFormId) {
     setMockResponse.get(
       learnUrls.hubspot.details({ form_id: stayUpdatedFormId }),
@@ -337,14 +339,12 @@ describe("ProgramAsCoursePage", () => {
   })
 
   describe("Stay Updated button", () => {
-    useStayUpdatedEnv()
-
-    test("Shows button when the page enables Stay Updated", async () => {
+    test("Shows button when the page has a hubspot form id", async () => {
       const program = makeProgramAsCourse()
-      const page = makePage({
-        program_details: program,
-        show_stay_updated: true,
-      })
+      const page = withHubspotFormId(
+        makePage({ program_details: program }),
+        STAY_UPDATED_FORM_ID,
+      )
       setupApis({ program, page })
       renderWithProviders(
         <ProgramAsCoursePage readableId={program.readable_id} />,
@@ -355,30 +355,15 @@ describe("ProgramAsCoursePage", () => {
       ).toBeInTheDocument()
     })
 
-    test("Hides button when the page disables Stay Updated", async () => {
+    test.each([
+      { label: "the form id is blank", hubspotFormId: "" },
+      { label: "the form id is null", hubspotFormId: null },
+    ])("Hides button when $label", async ({ hubspotFormId }) => {
       const program = makeProgramAsCourse()
-      const page = makePage({
-        program_details: program,
-        show_stay_updated: false,
-      })
-      setupApis({ program, page })
-      renderWithProviders(
-        <ProgramAsCoursePage readableId={program.readable_id} />,
+      const page = withHubspotFormId(
+        makePage({ program_details: program }),
+        hubspotFormId,
       )
-
-      await screen.findByRole("heading", { name: page.title })
-      expect(
-        screen.queryByRole("button", { name: "Stay Updated" }),
-      ).not.toBeInTheDocument()
-    })
-
-    test("Hides button when Stay Updated form ID is not configured", async () => {
-      delete process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID
-      const program = makeProgramAsCourse()
-      const page = makePage({
-        program_details: program,
-        show_stay_updated: true,
-      })
       setupApis({ program, page })
       renderWithProviders(
         <ProgramAsCoursePage readableId={program.readable_id} />,

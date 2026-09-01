@@ -18,6 +18,16 @@ const orgResource = (
     organizationId,
   )}/${resource}${queryify(params)}`
 
+const contractResource = (
+  organizationId: string,
+  contractId: string,
+  resource: string,
+  params?: AnalyticsPageParams,
+) =>
+  `${getApiBaseUrl()}${B2B_DASHBOARD_ROOT}/organizations/${encodeURIComponent(
+    organizationId,
+  )}/contracts/${encodeURIComponent(contractId)}/${resource}${queryify(params)}`
+
 const organizations = {
   contractUtilization: (organizationId: string, params?: AnalyticsPageParams) =>
     orgResource(organizationId, "contract-utilization", params),
@@ -31,4 +41,40 @@ const organizations = {
     orgResource(organizationId, "content-engagement", params),
 }
 
-export { organizations }
+const contracts = {
+  contractUtilization: (
+    organizationId: string,
+    contractId: string,
+    params?: AnalyticsPageParams,
+  ) =>
+    contractResource(
+      organizationId,
+      contractId,
+      "contract-utilization",
+      params,
+    ),
+  enrollmentFunnel: (
+    organizationId: string,
+    contractId: string,
+    params?: AnalyticsPageParams,
+  ) =>
+    contractResource(organizationId, contractId, "enrollment-funnel", params),
+  engagementTrend: (
+    organizationId: string,
+    contractId: string,
+    params?: AnalyticsPageParams,
+  ) => contractResource(organizationId, contractId, "engagement-trend", params),
+  programFunnel: (
+    organizationId: string,
+    contractId: string,
+    params?: AnalyticsPageParams,
+  ) => contractResource(organizationId, contractId, "program-funnel", params),
+  contentEngagement: (
+    organizationId: string,
+    contractId: string,
+    params?: AnalyticsPageParams,
+  ) =>
+    contractResource(organizationId, contractId, "content-engagement", params),
+}
+
+export { organizations, contracts }

@@ -216,7 +216,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
             .filter(({ allow }) => allow)
             .map(({ allow, ...item }) => item)}
           trigger={
-            <UserMenuContainer role="button" aria-label="User Menu">
+            <UserMenuContainer aria-label="User Menu">
               <UserIcon data-testid="UserIcon" />
               <UserName user={user} />
               {user?.is_authenticated ? <UserMenuChevron open={visible} /> : ""}
