@@ -9,6 +9,11 @@ import {
 import EnrollmentRedirectAlert from "./EnrollmentRedirectAlert"
 import { DASHBOARD_MY_LEARNING } from "@/common/urls"
 import * as mitxonline from "api/mitxonline-test-utils"
+import { trackCheckoutCompleted } from "@/common/analytics/gtm"
+
+jest.mock("@/common/analytics/gtm", () => ({
+  trackCheckoutCompleted: jest.fn(),
+}))
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
@@ -247,6 +252,57 @@ describe("EnrollmentRedirectAlert", () => {
         /Your certificate track enrollment is confirmed/i,
       ),
     ).toBeInTheDocument()
+  })
+
+  test("tracks checkout-completed once with order id, course name, and value from receipt", async () => {
+    const receipt = mitxonline.factories.orders.order({
+      lines: [mitxonline.factories.orders.transactionLine()],
+      total_price_paid: "199.99",
+    })
+
+    setMockResponse.get(mitxonline.urls.orders.receipt(17), receipt)
+
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?order_status=fulfilled&order_id=17",
+    })
+
+    await screen.findByRole("alert")
+
+    expect(trackCheckoutCompleted).toHaveBeenCalledTimes(1)
+    expect(trackCheckoutCompleted).toHaveBeenCalledWith({
+      orderId: 17,
+      courseName: receipt.lines[0].content_title,
+      value: 199.99,
+    })
+  })
+
+  test("tracks checkout-completed with a null value when the receipt fails to load", async () => {
+    setMockResponse.get(mitxonline.urls.orders.receipt(18), "Server error", {
+      code: 500,
+    })
+
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?order_status=fulfilled&order_id=18",
+    })
+
+    await screen.findByRole("alert")
+
+    expect(trackCheckoutCompleted).toHaveBeenCalledTimes(1)
+    expect(trackCheckoutCompleted).toHaveBeenCalledWith({
+      orderId: 18,
+      courseName: undefined,
+      value: null,
+    })
+  })
+
+  test("does not track checkout-completed for non-paid alerts", async () => {
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?enrollment_status=success&enrollment_title=Data+Science",
+    })
+
+    await screen.findByRole("alert")
+
+    expect(trackCheckoutCompleted).not.toHaveBeenCalled()
   })
 
   test.each([

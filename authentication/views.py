@@ -111,7 +111,9 @@ class CustomLoginView(View):
                 if should_skip_onboarding:
                     redirect_url = signup_redirect_url
                 else:
-                    params = urlencode({"next": signup_redirect_url})
+                    params = urlencode(
+                        {"next": signup_redirect_url, "is_new_user": "1"}
+                    )
                     redirect_url = f"{settings.MITOL_NEW_USER_LOGIN_URL}?{params}"
                     profile.save()
 
