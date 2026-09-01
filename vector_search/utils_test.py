@@ -1,6 +1,11 @@
 import asyncio
+import difflib
 import json
+import os
 import random
+import subprocess
+import sys
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock
@@ -3460,3 +3465,141 @@ def test_check_missing_content_file_ids_skips_unimportant_block_types(mocker):
     mock_present.assert_not_called()
     mock_client.count.assert_not_called()
     mock_log.assert_not_called()
+
+
+# Rendered in a subprocess by test_resource_embedding_checksum_is_process_stable.
+# Reads a serialized resource document as JSON on stdin, writes the rendered
+# markdown and its embedding checksum as JSON on stdout. Kept free of database
+# and network access so it needs nothing but django.setup().
+_CHECKSUM_PROBE = """
+import json, os, sys
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "main.settings")
+import django
+
+django.setup()
+
+from learning_resources.serializers import LearningResourceMetadataDisplaySerializer
+from vector_search.utils import resource_embedding_checksum
+
+document = json.load(sys.stdin)
+markdown = LearningResourceMetadataDisplaySerializer(document).render_markdown()
+sys.stdout.write(
+    json.dumps(
+        {"checksum": resource_embedding_checksum(markdown), "markdown": markdown}
+    )
+)
+"""
+
+# Multiple runs contributing overlapping instructors, languages and levels, so
+# every field that de-duplicates through a set has more than one element to
+# order. A course (not a program) keeps get_program_courses off the database.
+_CHECKSUM_PROBE_DOCUMENT = {
+    "readable_id": "course-v1:MITxT+6.3710.5x",
+    "resource_type": LearningResourceType.course.name,
+    "title": "Probability: Multiple Random Variables",
+    "description": "Discrete and continuous random variables.",
+    "url": "https://example.edu/6.3710.5x",
+    "free": True,
+    "professional": False,
+    "certification_type": {"code": "completion", "name": "Certificate of Completion"},
+    "prices": ["0.00"],
+    "topics": [{"name": "Mathematics"}, {"name": "Data Science"}],
+    "departments": [
+        {"name": "Electrical Engineering", "school": {"name": "Engineering"}}
+    ],
+    "platform": {"name": "edX"},
+    "offered_by": {"name": "MITx"},
+    "delivery": [{"code": "online", "name": "Online"}],
+    "availability": "dated",
+    "runs": [
+        {
+            "run_id": 1,
+            "start_date": "2024-02-01T00:00:00Z",
+            "languages": ["en-us", "es-es"],
+            "level": [{"name": "Advanced"}, {"name": "Graduate"}],
+            "delivery": [{"code": "online", "name": "Online"}],
+            "resource_prices": [{"currency": "USD", "amount": "0.00"}],
+            "prices": ["0.00"],
+            "instructors": [
+                {"full_name": "Devavrat Shah"},
+                {"full_name": "John Tsitsiklis"},
+                {"full_name": "Yury Polyanskiy"},
+            ],
+        },
+        {
+            "run_id": 2,
+            "start_date": "2024-09-01T00:00:00Z",
+            "languages": ["fr-fr", "zh-cn", "en-us"],
+            "level": [{"name": "Undergraduate"}, {"name": "Advanced"}],
+            "delivery": [{"code": "online", "name": "Online"}],
+            "resource_prices": [{"currency": "USD", "amount": "0.00"}],
+            "prices": ["0.00"],
+            "instructors": [
+                {"full_name": "Patrick Jaillet"},
+                {"full_name": "Guy Bresler"},
+                {"full_name": "Devavrat Shah"},
+            ],
+        },
+    ],
+}
+
+# Enough seeds that an accidental set ordering is very unlikely to match sorted
+# order in all of them (five instructors order 120 ways).
+_CHECKSUM_PROBE_HASH_SEEDS = ("1", "2", "3", "4")
+
+
+def _render_checksum_probe(hash_seed):
+    """Render the probe document in a subprocess under the given hash seed"""
+    completed = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", _CHECKSUM_PROBE],
+        input=json.dumps(_CHECKSUM_PROBE_DOCUMENT),
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "PYTHONHASHSEED": hash_seed},
+    )
+    if completed.returncode != 0:
+        pytest.fail(
+            f"checksum probe failed under PYTHONHASHSEED={hash_seed}:\n"
+            f"{completed.stderr[-2000:]}"
+        )
+    return json.loads(completed.stdout)
+
+
+def test_resource_embedding_checksum_is_process_stable():
+    """
+    The same resource must checksum identically in every process.
+
+    resource_embedding_checksum is the resource's embedding identity: the embed
+    gate re-embeds whenever the stored checksum differs from the one computed
+    now. Anything in the rendered document ordered by a set makes that identity
+    depend on the interpreter's hash seed, so every celery pod computes a
+    different checksum for the same resource and they re-embed each other's
+    work on every scheduled run -- real spend, and invisible locally because
+    prefork workers share their parent's seed.
+
+    Rendering in subprocesses is what gives the seeds a chance to differ; a
+    single process would render identically all day with the bug present.
+    """
+    # Each probe pays for its own django.setup(); run them concurrently so the
+    # test costs one startup rather than four.
+    with ThreadPoolExecutor(max_workers=len(_CHECKSUM_PROBE_HASH_SEEDS)) as pool:
+        renders = list(pool.map(_render_checksum_probe, _CHECKSUM_PROBE_HASH_SEEDS))
+
+    baseline = renders[0]
+    for seed, render in zip(_CHECKSUM_PROBE_HASH_SEEDS[1:], renders[1:]):
+        assert render["markdown"] == baseline["markdown"], (
+            f"rendered document differs under PYTHONHASHSEED={seed}; sort the "
+            "field that changed order (see get_instructors)\n"
+            + "\n".join(
+                difflib.unified_diff(
+                    baseline["markdown"].splitlines(),
+                    render["markdown"].splitlines(),
+                    fromfile=f"seed={_CHECKSUM_PROBE_HASH_SEEDS[0]}",
+                    tofile=f"seed={seed}",
+                    lineterm="",
+                )
+            )
+        )
+        assert render["checksum"] == baseline["checksum"]
