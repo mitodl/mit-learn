@@ -16,7 +16,6 @@ DEFAULT_CONFIGURATIONS = [
             "Generate an Open Badges 3.0 description field with this content"
             " in 1-2 sentences."
         ),
-        "max_output_tokens": 300,
     },
     {
         "field": constants.CredentialMetadataField.criteria.name,
@@ -25,7 +24,6 @@ DEFAULT_CONFIGURATIONS = [
             " bullet points that demonstrate what the learner did to complete"
             " the course."
         ),
-        "max_output_tokens": 1024,
         "retrieval_query": (
             "course learning outcomes, skills gained, assessment and grading"
             " criteria, syllabus"
@@ -33,7 +31,7 @@ DEFAULT_CONFIGURATIONS = [
     },
 ]
 
-DEFAULT_LLM_MODEL = "gpt-5"
+DEFAULT_LLM_MODEL = "gpt-4o-mini"
 
 
 def add_credential_metadata_defaults(apps, schema_editor):
@@ -112,7 +110,6 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("temperature", models.FloatField(default=0.0)),
-                ("max_output_tokens", models.PositiveIntegerField(default=2048)),
                 (
                     "retrieval_query",
                     models.TextField(

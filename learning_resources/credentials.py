@@ -321,18 +321,31 @@ async def build_credential_context(
 
 
 def _get_llm(config: CredentialMetadataConfiguration) -> ChatLiteLLM:
-    """Get the ChatLiteLLM instance for a field's configuration"""
-    if not settings.OPENAI_API_KEY:
-        raise ValueError("The 'OPENAI_API_KEY' setting must be set.")  # noqa: EM101, TRY003
+    """
+    Get the ChatLiteLLM instance for a field's configuration.
 
-    if not settings.LITELLM_CUSTOM_PROVIDER:
-        raise ValueError("The 'LITELLM_CUSTOM_PROVIDER' setting must be set.")  # noqa: EM101, TRY003
+    The provider is litellm's to infer from the model id, so the admin's
+    llm_model is the only thing that has to change to switch provider:
+    `gpt-5` routes to OpenAI, `claude-opus-5` to Anthropic. Passing
+    LITELLM_CUSTOM_PROVIDER here instead would pin every model to one
+    provider -- it defaults to "openai", which sent `claude-opus-5` to
+    OpenAI and came back "the model does not exist". Prefix the id
+    (`anthropic/claude-opus-5`) if a model is ever ambiguous.
 
+    Each provider reads its own key from the environment: OPENAI_API_KEY,
+    ANTHROPIC_API_KEY. A missing one raises litellm's own AuthenticationError,
+    which names the provider it wanted -- clearer than a check here could be,
+    and recorded on the generation log row like any other failure.
+
+    No max_tokens: the provider default is the model's own limit, and a cap
+    here is measured in total completion tokens -- which on a reasoning model
+    covers reasoning too. gpt-5 spent an entire 1024-token cap on reasoning and
+    returned empty content, which then failed to parse as JSON. The prompts
+    bound the output far better than a number does.
+    """
     return ChatLiteLLM(
         model=config.llm_model,
         temperature=config.temperature,
-        max_tokens=config.max_output_tokens,
-        custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
         api_base=settings.LITELLM_API_BASE,
     )
 
@@ -399,16 +412,6 @@ async def _generate_field(
     return response
 
 
-def render_criteria_narrative(skills: list[str]) -> str:
-    """
-    Render the Open Badges criteria narrative from discrete skills.
-
-    Kept in Python so the model never touches the Open Badges schema and never
-    mints identifiers -- asked for criteria directly it invented both.
-    """
-    return "\n".join(f"- {skill}" for skill in skills)
-
-
 async def generate_credential_metadata(resource: LearningResource, user=None) -> dict:
     """
     Generate every configured credential metadata field for a resource.
@@ -454,6 +457,5 @@ async def generate_credential_metadata(resource: LearningResource, user=None) ->
         elif config.field == CredentialMetadataField.criteria.name:
             skills = [skill for skill in response.get("skills") or [] if skill]
             if skills:
-                metadata["criteria"] = render_criteria_narrative(skills)
-                metadata["criteria_skills"] = skills
+                metadata["criteria"] = skills
     return metadata

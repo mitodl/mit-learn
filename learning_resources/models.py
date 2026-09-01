@@ -1689,7 +1689,6 @@ class CredentialMetadataConfiguration(TimestampedModel):
     )
     prompt = models.TextField(help_text="Appended to the assembled course context.")
     temperature = models.FloatField(default=0.0)
-    max_output_tokens = models.PositiveIntegerField(default=2048)
     # Read only from a field generated out of course content -- criteria today.
     # Retrieval happens once per request and is shared, so the first such field
     # supplies the query.
