@@ -372,20 +372,17 @@ const RefundRequestDialogInner: React.FC<RefundRequestDialogProps> = ({
         </Alert>
 
         {/*
-         * `RadioChoiceField` renders MUI's `RadioGroup`, which supplies the
-         * `radiogroup` role itself and exposes no prop to mark it required.
-         *
-         * So the requirement rides in the label rather than the description
-         * below it: `RadioChoiceField` points the group at its label with
-         * `aria-labelledby`, while the description is an unassociated sibling
-         * that a screen reader never reaches. The error announces itself
-         * through `role="alert"` for the same reason.
+         * The error still announces itself through `role="alert"` rather than
+         * an `aria-describedby` on the group: `RadioChoiceField` takes no
+         * `errorText`, and describing the wrapper instead does nothing, since
+         * `aria-describedby` is only read from the focused element.
          */}
         {isLate ? null : (
           <Field>
             <Reasons
               name="refund_reason"
-              label="Reason for refund request (required)"
+              label="Reason for refund request"
+              required
               choices={REFUND_REASONS}
               value={formik.values.refund_reason}
               onChange={handleChange}

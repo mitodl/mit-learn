@@ -104,6 +104,15 @@ describe("RefundRequestDialog, inside the refund window", () => {
     ])
   })
 
+  test("marks the reason group required for assistive tech", async () => {
+    const dialog = await openDialog()
+
+    const group = within(dialog).getByRole("radiogroup", {
+      name: "Reason for refund request",
+    })
+    expect(group).toHaveAttribute("aria-required", "true")
+  })
+
   test("will not submit without a reason", async () => {
     const dialog = await openDialog()
 
