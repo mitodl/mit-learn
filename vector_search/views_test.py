@@ -933,9 +933,12 @@ def test_vector_search_applies_staleness_penalty(
         assert weight == settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT
         decay = staleness.sum[1].neg.lin_decay
         assert decay.x.datetime_key == RESOURCE_AGE_DATE_PAYLOAD_KEY
+        # half the horizon at the default midpoint -- see
+        # staleness_penalty_expression, which cannot use a midpoint of 0
         assert decay.scale == (
-            settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS * SECONDS_PER_YEAR
+            settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS * SECONDS_PER_YEAR / 2
         )
+        assert decay.midpoint == 0.5
 
 
 def test_dense_vector_search_without_formula_queries_vectors_directly(

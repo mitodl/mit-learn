@@ -172,6 +172,18 @@ QDRANT_TOPIC_INDEXES = {
 CONTENT_FILES_RETRIEVE_PAYLOAD = True
 RESOURCES_RETRIEVE_PAYLOAD = ["readable_id", "platform"]
 
+# Payload key holding the checksum of the text that produced a resource point's
+# vector. The embed gate compares it against the checksum of the context
+# rendered now -- see should_generate_resource_embeddings.
+RESOURCE_EMBEDDING_CHECKSUM_FIELD = "embedding_checksum"
+
+# Folded into that checksum so that changes to the *format* of the embedding
+# context -- a serializer change that renders the same underlying data
+# differently, a new section, a reordering -- invalidate every stored checksum.
+# Bump it whenever _learning_resource_embedding_context starts producing
+# different text for unchanged data.
+RESOURCE_EMBEDDING_VERSION = 1
+
 # Payload keys dropped when resource hits are served straight from the Qdrant
 # payload (VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD): what the indexing serializer
 # adds on top of the LearningResourceSerializer shape the API returns, plus
@@ -198,6 +210,7 @@ RESOURCES_PAYLOAD_EXCLUDE = [
     "featured_rank",
     "is_incomplete_or_stale",
     "video.transcript",
+    RESOURCE_EMBEDDING_CHECKSUM_FIELD,
     "podcast_episode.transcript",
 ]
 
