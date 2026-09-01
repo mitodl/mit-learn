@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.78.3
+--------------
+
+- Move the shared media players into page-components (#3875)
+- vector search: embedding call request hedging (#3853)
+- Update dependency youtube-transcript-api to >=1.2.4,<1.3 (#3861)
+
 Version 0.78.2 (Released September 01, 2026)
 --------------
 
