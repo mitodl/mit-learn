@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.78.1
+Version 0.78.1 (Released September 01, 2026)
 --------------
 
 - adding initial fix (#3872)
