@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.78.2
+Version 0.78.2 (Released September 01, 2026)
 --------------
 
 - Checkout completed and account created GTM events (#3795)
