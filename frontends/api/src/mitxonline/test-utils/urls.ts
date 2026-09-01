@@ -158,6 +158,7 @@ const orders = {
     `${getApiBaseUrl()}/api/v0/orders/receipt/${orderId}/`,
   historyList: (params?: OrdersApiOrdersHistoryListRequest) =>
     `${getApiBaseUrl()}/api/v0/orders/history/${queryify(params)}`,
+  refundRequests: () => `${getApiBaseUrl()}/api/v0/orders/refund-requests/`,
 }
 
 const verifiedProgramEnrollments = {

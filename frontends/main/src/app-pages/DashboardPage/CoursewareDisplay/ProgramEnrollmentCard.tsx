@@ -61,12 +61,11 @@ export const ProgramEnrollmentCard = ({
     programEnrollment.enrollment_mode,
   )
   /**
-   * Skipped for audit enrollments, which never have a receipt. Shares one
-   * `orders/history` query with every other card on the dashboard.
+   * Not gated on enrollment mode: a refund returns the learner to audit, and the
+   * receipt is where they confirm it went through. Shares one `orders/history`
+   * query with every other card on the dashboard.
    */
-  const receiptResolution = useOrderIdForProgram(
-    upgradedAndIncomplete ? programId : null,
-  )
+  const receiptResolution = useOrderIdForProgram(programId)
   const displayMode = program.display_mode
   const titleSection = (
     <Stack gap="12px">
@@ -125,7 +124,6 @@ export const ProgramEnrollmentCard = ({
     })
   }
   const receiptMenuItem = getReceiptMenuItem(
-    programEnrollment.enrollment_mode,
     receiptResolution,
     receiptByProgramView(programId),
   )

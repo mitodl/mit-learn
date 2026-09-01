@@ -17,6 +17,7 @@ export enum FeatureFlags {
   Arithmix = "arithmix",
   Hacksnack = "hacksnack",
   AccountManagement = "account-management",
+  SelfServiceRefunds = "self-service-refunds",
 }
 
 /**

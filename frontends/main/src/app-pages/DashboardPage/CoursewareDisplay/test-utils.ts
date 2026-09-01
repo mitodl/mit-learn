@@ -26,10 +26,11 @@ const makeGrade = factories.enrollment.grade
 const makeContract = factories.contracts.contract
 
 /**
- * Mock the order history that verified enrollment cards fetch to decide whether to
- * show a "Receipt" item. Required in any suite rendering a verified enrollment,
- * or the unmocked request fails the test. Defaults to an empty history (no
- * receipt); pass `runId`/`programId` to make one resolve.
+ * Mock the order history that enrollment cards fetch to decide whether to show a
+ * "Receipt" item. Required in any suite rendering an enrollment card, whatever
+ * its mode — a refunded order leaves the learner auditing and still has a
+ * receipt — or the unmocked request fails the test. Defaults to an empty history
+ * (no receipt); pass `runId`/`programId` to make one resolve.
  */
 const setupOrderHistory = ({
   runId,
