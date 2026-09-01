@@ -16,12 +16,12 @@ from learning_resources.constants import (
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.ovs import (
     _build_caption_urls,
-    clean_description,
     _duration_to_iso8601,
     _fetch_transcript,
     _get_cover_image_url,
     _get_resource_url,
     _get_source_url,
+    clean_description,
     extract,
     get_ovs_transcripts,
     get_ovs_videos_for_transcripts_job,
