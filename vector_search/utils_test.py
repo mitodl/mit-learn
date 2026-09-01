@@ -1282,15 +1282,17 @@ def test_embedding_context_includes_course_code(serialized_course):
     [
         (
             [{"value": "18.06"}, {"value": "18.061"}],
-            "**Course numbers:** 18.06, 18.061",
+            "**Course numbers:**\n\n- 18.06\n- 18.061",
         ),
-        (["18.06", "18.061"], "**Course numbers:** 18.06, 18.061"),
+        (["18.06", "18.061"], "**Course numbers:**\n\n- 18.06\n- 18.061"),
+        ([{"value": "18.06"}], "**Course numbers:** 18.06"),
+        (["18.06"], "**Course numbers:** 18.06"),
     ],
 )
 def test_embedding_context_includes_course_numbers(
     serialized_course, course_numbers, expected
 ):
-    """The resource's course_numbers should be formatted as a comma-separated list."""
+    """Multiple course_numbers render as a markdown list, a single one inline."""
     serialized_course["course_numbers"] = course_numbers
 
     context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001

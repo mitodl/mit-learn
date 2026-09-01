@@ -551,8 +551,11 @@ def _learning_resource_embedding_context(document, serializer_context=None):
             for num in course_numbers
             if (num.get("value") if isinstance(num, dict) else num)
         ]
-        if formatted_numbers:
-            parts.append(f"**Course numbers:** {', '.join(formatted_numbers)}")
+        if len(formatted_numbers) > 1:
+            numbers_list = "\n".join(f"- {num}" for num in formatted_numbers)
+            parts.append(f"**Course numbers:**\n\n{numbers_list}")
+        elif formatted_numbers:
+            parts.append(f"**Course numbers:** {formatted_numbers[0]}")
     elif document.get("resource_type_group") == "course" and document.get(
         "readable_id"
     ):
