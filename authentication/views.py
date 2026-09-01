@@ -1,14 +1,20 @@
 """Authentication views"""
 
+import json
 import logging
+from http import HTTPStatus
+from urllib.parse import urlencode as urlencode_qs
 from urllib.parse import urlparse, urlunparse
 
 from django.conf import settings
 from django.contrib.auth import logout
-from django.shortcuts import redirect
+from django.http import HttpResponse
+from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views import View
+from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.generic.base import RedirectView
 
 from authentication.api import is_sso_user
@@ -22,7 +28,7 @@ from authentication.constants import (
     AccountActionStatus,
     parse_account_action,
 )
-from main.middleware.apisix_user import ApisixUserMiddleware, decode_apisix_headers
+from main.middleware.apisix_user import decode_apisix_headers
 from profiles.tasks import send_welcome_email
 
 log = logging.getLogger(__name__)
@@ -50,10 +56,90 @@ def get_redirect_url(request, param_names):
     return "/app"
 
 
+def _origin(url):
+    """Reduce a URL to its scheme://host[:port] origin, for CSP source lists."""
+    parsed = urlparse(url)
+    return f"{parsed.scheme}://{parsed.netloc}"
+
+
+class LogoutCompleteView(View):
+    """
+    Signal that the cross-application logout fan-out has finished.
+
+    Open edX's logout page navigates itself here once it has framed every
+    application in its ``IDA_LOGOUT_URI_LIST``.  This lives on Learn's own
+    origin precisely so that the interstitial framing that page can tell it
+    happened: a cross-origin frame's location is unreadable, a same-origin one
+    is not.  Nothing here needs to render -- the parent only watches where the
+    frame ended up.
+    """
+
+    @method_decorator(xframe_options_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        """Allow this to be framed; it is only ever loaded inside one."""
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(
+        self,
+        request,  # noqa: ARG002
+        *args,  # noqa: ARG002
+        **kwargs,  # noqa: ARG002
+    ):
+        """Return an empty 204; the parent frame reads the URL, not the body."""
+        return HttpResponse(status=HTTPStatus.NO_CONTENT)
+
+
 class CustomLogoutView(View):
     """
-    Log out the user from django
+    Log the user out of Learn, and of the applications that share its identity.
+
+    Learn, MITx Online, studio and Open edX each hold a separate APISIX gateway
+    session on a separate parent domain, so clearing Learn's cookie leaves the
+    others asserting the previous user for as long as their cached access tokens
+    last (hq#12763).  Open edX already maintains the list of applications to
+    notify (``IDA_LOGOUT_URI_LIST``) and fans a logout out to it by rendering an
+    iframe per application, so this hands off to that rather than keeping a
+    second copy of the list.
+
+    The gateway hop comes last, because it ends the Keycloak SSO session that the
+    siblings' token refreshes depend on.
+
+    Three entry points:
+
+    ``?no_redirect=1``
+        Learn is itself one of the applications in that list, so Open edX frames
+        this view during a logout started anywhere else.  That branch logs out
+        and hands straight to the gateway, with no interstitial -- rendering one
+        would frame Open edX's page inside Open edX's own fan-out, recursively.
+
+    Returning from Keycloak
+        The gateway's ``post_logout_redirect_uri`` points back at this same view,
+        so the return leg has to be distinguishable from a fresh request or the
+        two would redirect to each other forever.  It is marked by a short-lived
+        cookie set on the way out, which also carries `next` across the hop --
+        ``post_logout_redirect_uri`` is fixed configuration and cannot.
+
+    Everything else
+        The user clicked "log out" on Learn.  Render the interstitial, which
+        frames Open edX's page and then continues to the gateway logout.
     """
+
+    @method_decorator(xframe_options_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        """Permit Open edX to frame this view as one of its logout targets.
+
+        Django would otherwise send ``X-Frame-Options: DENY`` here, which has no
+        way to name an allowed origin, so Open edX's iframe is refused and
+        Learn's session is quietly left alone.  The narrower
+        ``frame-ancestors`` restriction is applied in place of it below.
+        """
+        response = super().dispatch(request, *args, **kwargs)
+        if settings.OPENEDX_LOGOUT_URL:
+            openedx_origin = _origin(settings.OPENEDX_LOGOUT_URL)
+            response["Content-Security-Policy"] = (
+                f"frame-ancestors 'self' {openedx_origin}"
+            )
+        return response
 
     def get(
         self,
@@ -65,14 +151,64 @@ class CustomLogoutView(View):
         GET endpoint reached after logging a user out from Keycloak
         """
         user = getattr(request, "user", None)
-        user_redirect_url = get_redirect_url(request, ["next"])
         if user and user.is_authenticated:
             logout(request)
-        if request.META.get(ApisixUserMiddleware.header):
-            # Still logged in via Apisix/Keycloak, so log out there as well
-            return redirect(settings.OIDC_LOGOUT_URL)
+
+        returning_from_keycloak = settings.LOGOUT_RETURN_COOKIE_NAME in request.COOKIES
+        if returning_from_keycloak:
+            # Keycloak has ended the SSO session and sent the browser back here.
+            # Everything is torn down; deliver the user to wherever they were
+            # headed and drop the marker so a later logout starts clean.
+            target = request.COOKIES[settings.LOGOUT_RETURN_COOKIE_NAME]
+            if not url_has_allowed_host_and_scheme(
+                target, allowed_hosts=settings.ALLOWED_REDIRECT_HOSTS
+            ):
+                target = "/app"
+            response = redirect(target)
+            response.delete_cookie(settings.LOGOUT_RETURN_COOKIE_NAME)
+            return response
+
+        # Hand off to the gateway even when the request carries no APISIX header.
+        # The old behaviour keyed on that header, which meant a lapsed Learn
+        # gateway session skipped Keycloak entirely -- leaving the SSO session
+        # running, and the siblings refreshing the previous user's tokens against
+        # it for the full 14-day session rather than the few minutes an access
+        # token lasts.
+        if not settings.OIDC_LOGOUT_URL:
+            return redirect(get_redirect_url(request, ["next"]))
+
+        framed = request.GET.get("no_redirect") == "1"
+        if framed or not settings.OPENEDX_LOGOUT_URL:
+            response = redirect(settings.OIDC_LOGOUT_URL)
         else:
-            return redirect(user_redirect_url)
+            response = render(
+                request,
+                "authentication/logout_interstitial.html",
+                {"logout_config": json.dumps(self._interstitial_config(request))},
+            )
+
+        response.set_cookie(
+            settings.LOGOUT_RETURN_COOKIE_NAME,
+            get_redirect_url(request, ["next"]),
+            max_age=settings.LOGOUT_RETURN_COOKIE_TTL,
+            secure=request.is_secure(),
+            httponly=True,
+            samesite="Lax",
+        )
+        return response
+
+    @staticmethod
+    def _interstitial_config(request):
+        """Build the values the interstitial's script needs."""
+        complete_path = reverse("logout-complete")
+        complete_url = request.build_absolute_uri(complete_path)
+        query = urlencode_qs({"redirect_url": complete_url})
+        return {
+            "openedxLogoutUrl": f"{settings.OPENEDX_LOGOUT_URL}?{query}",
+            "completePath": complete_path,
+            "oidcLogoutUrl": settings.OIDC_LOGOUT_URL,
+            "timeoutMs": settings.LOGOUT_INTERSTITIAL_TIMEOUT_MS,
+        }
 
 
 class CustomLoginView(View):
