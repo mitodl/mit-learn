@@ -1306,7 +1306,7 @@ def load_podcast_episode(episode_data: dict) -> LearningResource:
     return learning_resource
 
 
-def load_podcast(podcast_data: dict) -> LearningResource:
+def load_podcast(podcast_data: dict) -> LearningResource | None:
     """
     Load a single podcast
 
@@ -1316,20 +1316,30 @@ def load_podcast(podcast_data: dict) -> LearningResource:
         config (PodcastLoaderConfig):
             configuration for this loader
     Returns:
-        LearningResource:
-            the updated or created podcast resource; unpublished if the
-            feed has no episodes
+        LearningResource | None:
+            the updated or created podcast resource, or None if the feed
+            has no episodes
     """
     readable_id = podcast_data.pop("readable_id")
     episodes_data = list(podcast_data.pop("episodes", []))
+    if not episodes_data:
+        existing_resource = LearningResource.objects.filter(
+            readable_id=readable_id,
+            resource_type=LearningResourceType.podcast.name,
+            platform__code=PlatformType.podcast.name,
+            published=True,
+        ).first()
+        if existing_resource:
+            existing_resource.published = False
+            existing_resource.save()
+            update_index(existing_resource, newly_created=False)
+        return None
     topics_data = podcast_data.pop("topics", [])
     offered_by_data = podcast_data.pop("offered_by", None)
     image_data = podcast_data.pop("image", {})
     podcast_model_data = podcast_data.pop("podcast", {})
     departments_data = podcast_data.pop("departments", [])
     podcast_data["resource_category"] = LearningResourceType.podcast.value
-    if not episodes_data:
-        podcast_data["published"] = False
     with transaction.atomic():
         learning_resource, created = LearningResource.objects.update_or_create(
             readable_id=readable_id,
@@ -1352,27 +1362,27 @@ def load_podcast(podcast_data: dict) -> LearningResource:
             episode = load_podcast_episode(episode_data)
             episode_ids.append(episode.id)
 
-    unpublished_episode_ids = (
-        learning_resource.children.filter(
-            relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
+        unpublished_episode_ids = (
+            learning_resource.children.filter(
+                relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
+            )
+            .exclude(child__id__in=episode_ids)
+            .values_list("child__id", flat=True)
         )
-        .exclude(child__id__in=episode_ids)
-        .values_list("child__id", flat=True)
-    )
-    LearningResource.objects.filter(id__in=unpublished_episode_ids).update(
-        published=False
-    )
-    bulk_resources_unpublished_actions(
-        unpublished_episode_ids,
-        LearningResourceType.podcast_episode.name,
-    )
-    episode_ids.extend(unpublished_episode_ids)
-    learning_resource.resources.set(
-        episode_ids,
-        through_defaults={
-            "relation_type": LearningResourceRelationTypes.PODCAST_EPISODES,
-        },
-    )
+        LearningResource.objects.filter(id__in=unpublished_episode_ids).update(
+            published=False
+        )
+        bulk_resources_unpublished_actions(
+            unpublished_episode_ids,
+            LearningResourceType.podcast_episode.name,
+        )
+        episode_ids.extend(unpublished_episode_ids)
+        learning_resource.resources.set(
+            episode_ids,
+            through_defaults={
+                "relation_type": LearningResourceRelationTypes.PODCAST_EPISODES,
+            },
+        )
 
     update_index(learning_resource, created)
 
@@ -1405,7 +1415,8 @@ def load_podcasts(
         except ExtractException:
             log.exception("Error with extracted podcast: podcast_id=%s", readable_id)
         else:
-            podcast_resources.append(podcast_resource)
+            if podcast_resource:
+                podcast_resources.append(podcast_resource)
 
     if not tracked_ids:
         msg = "No podcasts to track, refusing to unpublish every podcast"

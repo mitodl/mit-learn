@@ -2408,16 +2408,16 @@ def test_load_podcast_episode(
 
 
 def test_load_podcast_no_episodes(mock_upsert_tasks, podcast_platform):
-    """A podcast whose feed has no episodes gets unpublished, along with its episodes"""
+    """A podcast whose feed has no episodes is not loaded, and unpublished if it exists"""
     podcast = PodcastFactory.create().learning_resource
-    assert podcast.resources.filter(published=True).exists()
     result = load_podcast(
         {"readable_id": podcast.readable_id, "published": True, "episodes": iter([])}
     )
-    assert result.published is False
-    assert not result.resources.filter(published=True).exists()
+    assert result is None
+    podcast.refresh_from_db()
+    assert podcast.published is False
     mock_upsert_tasks.deindex_learning_resource_immutable_signature.assert_called_with(
-        result.id, result.resource_type
+        podcast.id, podcast.resource_type
     )
 
 
