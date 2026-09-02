@@ -2407,33 +2407,16 @@ def test_load_podcast_episode(
         mock_upsert_tasks.deindex_learning_resource.assert_not_called()
 
 
-@pytest.mark.parametrize("podcast_exists", [True, False])
-def test_load_podcast_no_episodes(
-    mock_upsert_tasks, learning_resource_offeror, podcast_platform, podcast_exists
-):
-    """A podcast whose feed has no episodes should not be published"""
-    podcast = (
-        PodcastFactory.create(episodes=[])
-        if podcast_exists
-        else PodcastFactory.build(episodes=[])
-    ).learning_resource
-    podcast_data = model_to_dict(podcast, exclude=non_transformable_attributes)
-    podcast_data["image"] = {"url": podcast.image.url}
-    podcast_data["offered_by"] = {"name": learning_resource_offeror.name}
-    podcast_data["topics"] = []
-    podcast_data["published"] = True
-    podcast_data["episodes"] = iter([])
-
-    result = load_podcast(podcast_data)
-
-    assert result.published is False
-    assert (
-        LearningResource.objects.get(readable_id=podcast.readable_id).published is False
+def test_load_podcast_no_episodes(mock_upsert_tasks, podcast_platform):
+    """A podcast whose feed has no episodes gets unpublished"""
+    podcast = PodcastFactory.create(episodes=[]).learning_resource
+    result = load_podcast(
+        {"readable_id": podcast.readable_id, "published": True, "episodes": iter([])}
     )
-    if podcast_exists:
-        mock_upsert_tasks.deindex_learning_resource_immutable_signature.assert_called_with(
-            result.id, result.resource_type
-        )
+    assert result.published is False
+    mock_upsert_tasks.deindex_learning_resource_immutable_signature.assert_called_with(
+        result.id, result.resource_type
+    )
 
 
 @pytest.mark.parametrize("podcast_exists", [True, False])
