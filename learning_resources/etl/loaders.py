@@ -1317,16 +1317,19 @@ def load_podcast(podcast_data: dict) -> LearningResource:
             configuration for this loader
     Returns:
         LearningResource:
-            the updated or created podcast resource
+            the updated or created podcast resource; unpublished if the
+            feed has no episodes
     """
     readable_id = podcast_data.pop("readable_id")
-    episodes_data = podcast_data.pop("episodes", [])
+    episodes_data = list(podcast_data.pop("episodes", []))
     topics_data = podcast_data.pop("topics", [])
     offered_by_data = podcast_data.pop("offered_by", None)
     image_data = podcast_data.pop("image", {})
     podcast_model_data = podcast_data.pop("podcast", {})
     departments_data = podcast_data.pop("departments", [])
     podcast_data["resource_category"] = LearningResourceType.podcast.value
+    if not episodes_data:
+        podcast_data["published"] = False
     with transaction.atomic():
         learning_resource, created = LearningResource.objects.update_or_create(
             readable_id=readable_id,
