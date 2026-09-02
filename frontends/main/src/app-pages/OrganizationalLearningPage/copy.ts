@@ -235,15 +235,6 @@ export const clientLogos = {
   ] satisfies ClientLogoItem[],
 }
 
-/**
- * `items` drives the carousel: a lone study renders on its own with no
- * navigation, and appending a second one turns the carousel on with no change
- * to CaseStudiesSection.
- *
- * The study below is deliberately anonymized. The Figma design names the client
- * and shows its seal, but that attribution is not approved to ship — add `logo`
- * and the real name only once it is.
- */
 export const caseStudies = {
   eyebrow: "CASE STUDIES",
   title: "See how organizations turn learning into impact",
@@ -297,37 +288,35 @@ export const caseStudies = {
   ] satisfies CaseStudyItem[],
 }
 
-const FAQ_ANSWER_PENDING = "Answer pending from the content handoff."
-
 export const faq = {
   eyebrow: "LET'S TALK SOLUTIONS",
   title: "Answers before you talk to our team.",
   items: [
     {
       question: "Do we need to know exactly what type of solution we need?",
-      answer: FAQ_ANSWER_PENDING,
+      answer: "Answer pending from the content handoff.",
     },
     {
       question: "How are the lectures by MIT faculty and experts structured?",
-      answer: FAQ_ANSWER_PENDING,
+      answer: "Answer pending from the content handoff.",
     },
     {
       question: "How do guided exercises support learning?",
-      answer: FAQ_ANSWER_PENDING,
+      answer: "Answer pending from the content handoff.",
     },
     {
       question:
         "What is the AI-powered AskTIM feature and how does it support learners?",
-      answer: FAQ_ANSWER_PENDING,
+      answer: "Answer pending from the content handoff.",
     },
     {
       question: "How is learning assessed throughout the modules?",
-      answer: FAQ_ANSWER_PENDING,
+      answer: "Answer pending from the content handoff.",
     },
     {
       question:
         "What kind of support is available for administrators and instructors?",
-      answer: FAQ_ANSWER_PENDING,
+      answer: "Answer pending from the content handoff.",
     },
   ] satisfies FaqItem[],
 }

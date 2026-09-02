@@ -338,7 +338,6 @@ const CaseStudyCarousel = ({ items, label }: CaseStudyCarouselProps) => {
           >
             <RiArrowLeftLine aria-hidden />
           </ActionButton>
-          {/* The live region below carries this for screen readers. */}
           <Counter aria-hidden>
             {index + 1} / {total}
           </Counter>
@@ -364,10 +363,6 @@ const CaseStudyCarousel = ({ items, label }: CaseStudyCarouselProps) => {
   )
 }
 
-/**
- * Appending to `caseStudies.items` in copy.ts is the only change needed to turn
- * this section into a working carousel.
- */
 const CaseStudiesSection = () => (
   <Band aria-labelledby="case-studies-heading">
     <Inner>
