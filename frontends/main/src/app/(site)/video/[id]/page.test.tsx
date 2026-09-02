@@ -15,7 +15,12 @@ beforeEach(() => {
 })
 
 test("bare /video/{id} redirects to the slug + first playlist", async () => {
+  const id = 777
   const video = factories.learningResources.video({
+    id,
+    // The backend names the slug; the page resolves ?playlist against the
+    // request, so learn_url carries the canonical playlist.
+    learn_url: `http://test.learn.odl.local:8062/video/${id}/beyond-biology?playlist=55`,
     title: "Beyond Biology",
     playlists: ["55", "66"],
   })

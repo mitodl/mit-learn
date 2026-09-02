@@ -9,6 +9,7 @@ import {
 } from "@/test-utils"
 import { makeRequest } from "api/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
+import { setupOrderHistory } from "./test-utils"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import { waitFor } from "@testing-library/react"
 import invariant from "tiny-invariant"
@@ -91,6 +92,9 @@ describe("ProgramAsCourseCard", () => {
       mitxonline.urls.userMe.get(),
       mitxonline.factories.user.user(),
     )
+    // Every enrollment card looks up order history to decide whether to offer a
+    // Receipt item, regardless of enrollment mode.
+    setupOrderHistory()
 
     return {
       courseProgram: program,

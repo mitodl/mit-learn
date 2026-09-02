@@ -36,7 +36,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.78.1"
+VERSION = "0.78.2"
 
 log = logging.getLogger()
 
@@ -82,6 +82,8 @@ ALLOWED_REDIRECT_HOSTS = get_list_of_str(
 AUTH_USER_MODEL = "users.User"
 
 SECURE_SSL_REDIRECT = get_bool("MITOL_SECURE_SSL_REDIRECT", True)  # noqa: FBT003
+if get_bool("MITOL_SECURE_PROXY_SSL_HEADER", True):  # noqa: FBT003
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_REDIRECT_EXEMPT = [
     "^health/startup/$",
     "^health/liveness/$",
@@ -923,6 +925,30 @@ LITELLM_API_BASE = get_string(name="LITELLM_API_BASE", default=None)
 OPENAI_API_KEY = get_string(
     name="OPENAI_API_KEY",
     default=None,
+)
+
+# Hedged embedding requests: if the first request for a search query has not
+# come back within EMBEDDING_HEDGE_DELAY_SECONDS, send backup requests and use
+# whichever finishes first. The delay keeps the extra backend load proportional
+# to the tail rather than doubling it on every query - set it to 0 to always
+# send the backups immediately.
+EMBEDDING_REQUEST_HEDGING_ENABLED = get_bool(
+    name="EMBEDDING_REQUEST_HEDGING_ENABLED", default=True
+)
+EMBEDDING_HEDGE_COUNT = get_int(name="EMBEDDING_HEDGE_COUNT", default=2)
+EMBEDDING_HEDGE_DELAY_SECONDS = get_float(
+    name="EMBEDDING_HEDGE_DELAY_SECONDS", default=0.45
+)
+# Primary and speculative query embedding requests run in separate, bounded
+# thread pools so abandoned hedges cannot starve later primary requests. Both
+# pools reject work when full: a saturated primary pool falls back to running
+# the request inline, a saturated hedge pool skips the backups.
+EMBEDDING_QUERY_MAX_WORKERS = get_int(name="EMBEDDING_QUERY_MAX_WORKERS", default=16)
+EMBEDDING_HEDGE_MAX_WORKERS = get_int(name="EMBEDDING_HEDGE_MAX_WORKERS", default=16)
+# Explicit per-request timeout for hedged query embeddings, so a losing request
+# releases its worker instead of occupying it for the life of the connection.
+EMBEDDING_HEDGE_REQUEST_TIMEOUT_SECONDS = get_float(
+    name="EMBEDDING_HEDGE_REQUEST_TIMEOUT_SECONDS", default=10.0
 )
 
 CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = get_int(

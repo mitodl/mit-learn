@@ -2,7 +2,7 @@
 
 import React from "react"
 import { styled } from "ol-components"
-import VideoResourcePlayer from "@/app-pages/VideoPlaylistCollectionPage/VideoResourcePlayer"
+import VideoResourcePlayer from "@/page-components/VideoPlayer/VideoResourcePlayer"
 import type { VideoResource } from "api/v1"
 
 const EmbedPlayer = styled(VideoResourcePlayer)({

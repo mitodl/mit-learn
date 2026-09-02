@@ -4,7 +4,7 @@ import { factories } from "api/test-utils"
 import { ResourceTypeEnum } from "api/v1"
 import type { VideoResource } from "api/v1"
 import VideoShareButton from "./VideoShareButton"
-import type { VideoPlayerHandle } from "./VideoResourcePlayer"
+import type { VideoPlayerHandle } from "@/page-components/VideoPlayer/VideoResourcePlayer"
 
 const makeVideo = (overrides: Partial<VideoResource> = {}): VideoResource =>
   factories.learningResources.video({

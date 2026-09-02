@@ -1,5 +1,11 @@
 import asyncio
+import difflib
+import json
+import os
 import random
+import subprocess
+import sys
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock
@@ -60,6 +66,7 @@ from vector_search.constants import (
     QDRANT_OPTIMIZER_THRESHOLD_SMALL,
     QDRANT_RESOURCE_PARAM_MAP,
     RESOURCE_AGE_DATE_PAYLOAD_KEY,
+    RESOURCE_EMBEDDING_CHECKSUM_FIELD,
     RESOURCES_COLLECTION_NAME,
     RESOURCES_PAYLOAD_EXCLUDE,
     RESOURCES_RETRIEVE_PAYLOAD,
@@ -88,6 +95,7 @@ from vector_search.utils import (
     filter_existing_qdrant_points,
     qdrant_query_conditions,
     remove_qdrant_records,
+    resource_embedding_checksum,
     resources_payload_selector,
     score_formula_query,
     should_generate_content_embeddings,
@@ -1013,52 +1021,212 @@ def test_course_metadata_document_contents(mocker):
             assert level["name"] in course_metadata_content
 
 
-def test_should_generate_for_changed_resource(mocker):
-    """Should generate embeddings when resource content has changed"""
-    resource = LearningResourceFactory.create()
-    serialized_resources = list(serialize_bulk_learning_resources([resource.id]))
-
+def _mock_resource_point(mocker, payload):
+    """Point the resources collection retrieve at a single stored payload."""
     mock_qdrant = mocker.MagicMock()
-    fake_payload = {
-        "title": "Different title",
-        "description": serialized_resources[0]["description"],
-        "full_description": serialized_resources[0]["full_description"],
-    }
     mock_point = mocker.MagicMock()
-    # return record with different title
-    mock_point.payload = fake_payload
-    mock_qdrant.retrieve.return_value = [mock_point]
+    mock_point.payload = payload
+    mock_qdrant.retrieve.return_value = [] if payload is None else [mock_point]
     mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
-    result = should_generate_resource_embeddings(serialized_resources[0])
-    assert result is True
+    return mock_qdrant
 
 
-def test_embedding_context_includes_content_files():
+def test_should_generate_for_changed_resource(mocker):
+    """Should generate embeddings when the embedding context has changed"""
+    resource = LearningResourceFactory.create()
+    doc = next(iter(serialize_bulk_learning_resources([resource.id])))
+    _mock_resource_point(
+        mocker,
+        {
+            RESOURCE_EMBEDDING_CHECKSUM_FIELD: resource_embedding_checksum(
+                "the context that was actually embedded"
+            )
+        },
+    )
+
+    assert should_generate_resource_embeddings(doc, "a different context") is True
+
+
+def test_should_not_generate_for_matching_checksum(mocker):
+    """A point whose stored checksum matches what we would embed is left alone"""
+    resource = LearningResourceFactory.create()
+    doc = next(iter(serialize_bulk_learning_resources([resource.id])))
+    context = vs_utils._learning_resource_embedding_context(doc)  # noqa: SLF001
+    _mock_resource_point(
+        mocker,
+        {RESOURCE_EMBEDDING_CHECKSUM_FIELD: resource_embedding_checksum(context)},
+    )
+
+    assert should_generate_resource_embeddings(doc, context) is False
+
+
+def test_should_generate_for_resource_without_stored_checksum(mocker):
+    """
+    Points embedded before the checksum existed have no stored value, so they
+    are re-embedded once. This is what pulls the existing catalog onto the
+    metadata-document context instead of leaving it on its old vectors.
+    """
+    resource = LearningResourceFactory.create()
+    doc = next(iter(serialize_bulk_learning_resources([resource.id])))
+    context = vs_utils._learning_resource_embedding_context(doc)  # noqa: SLF001
+    _mock_resource_point(mocker, {"title": doc["title"]})
+
+    assert should_generate_resource_embeddings(doc, context) is True
+
+
+def test_should_generate_for_missing_resource_point(mocker):
+    """A resource with no point at all is always embedded"""
+    resource = LearningResourceFactory.create()
+    doc = next(iter(serialize_bulk_learning_resources([resource.id])))
+    _mock_resource_point(mocker, None)
+
+    assert should_generate_resource_embeddings(doc, "any context") is True
+
+
+def test_resource_embedding_checksum_tracks_the_version(mocker):
+    """
+    Bumping RESOURCE_EMBEDDING_VERSION changes the checksum of unchanged text,
+    so a format change that renders the same data differently still invalidates
+    every stored point.
+    """
+    before = resource_embedding_checksum("unchanged context")
+    mocker.patch("vector_search.utils.RESOURCE_EMBEDDING_VERSION", 2)
+
+    assert resource_embedding_checksum("unchanged context") != before
+
+
+@pytest.fixture
+def serialized_course():
+    """Serialize a course the way the embedding pipeline sees it."""
+    resource = LearningResourceFactory.create(resource_type=COURSE_TYPE, published=True)
+    LearningResourceRunFactory.create(learning_resource=resource, published=True)
+    return next(iter(serialize_bulk_learning_resources([resource.id])))
+
+
+def test_embedding_context_is_the_course_metadata_document(serialized_course):
+    """
+    The course metadata document -- the markdown rendering of the resource
+    drawer -- is the embedding context, so instructors, prices and dates are
+    all searchable.
+    """
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
+
+    assert context.startswith("# Information about this course:")
+    assert serialized_course["title"] in context
+    assert serialized_course["description"] in context
+    assert serialized_course["full_description"] in context
+    assert "**Instructors**" in context
+    for run in serialized_course["runs"]:
+        for instructor in run["instructors"]:
+            assert instructor["full_name"] in context
+    for topic in serialized_course["topics"]:
+        assert topic["name"] in context
+
+
+def test_embedding_context_matches_rendered_metadata_document(serialized_course):
+    """
+    The context leads with the same document that gets embedded into the
+    content file collection.
+    """
+    metadata_document = LearningResourceMetadataDisplaySerializer(
+        serialized_course,
+        context=vs_utils._metadata_serializer_context(),  # noqa: SLF001
+    ).render_markdown()
+
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
+
+    assert context.startswith(metadata_document)
+
+
+def test_embedding_context_is_none_when_the_document_cannot_render(
+    mocker, serialized_course
+):
+    """
+    A document the display serializer chokes on yields no context at all,
+    rather than a degraded one.
+    """
+    mocker.patch.object(
+        LearningResourceMetadataDisplaySerializer,
+        "render_markdown",
+        side_effect=KeyError("delivery"),
+    )
+
+    assert vs_utils._learning_resource_embedding_context(serialized_course) is None  # noqa: SLF001
+
+
+def test_unrenderable_resource_is_skipped_not_embedded(mocker, serialized_course):
+    """
+    A render failure leaves the existing point completely alone -- no embedding
+    from a degraded context, and no payload refresh either, since that would
+    overwrite the checksum of the vector the point still holds. The next run
+    retries and repairs it.
+    """
+    mocker.patch.object(
+        LearningResourceMetadataDisplaySerializer,
+        "render_markdown",
+        side_effect=KeyError("delivery"),
+    )
+    mock_qdrant = _mock_resource_point(mocker, None)
+
+    assert vs_utils._process_resource_embeddings([serialized_course]) is None  # noqa: SLF001
+    mock_qdrant.overwrite_payload.assert_not_called()
+
+
+def test_unchanged_resource_is_not_re_embedded_on_the_next_run(mocker):
+    """
+    The checksum the first run stores comes back through Qdrant as JSON -- the
+    serialized doc carries real datetimes and Decimals, the stored payload
+    carries strings -- and still matches, so the second run refreshes the
+    payload instead of re-embedding. Comparing rendered documents instead would
+    re-embed the whole catalog every run.
+    """
+    resource = LearningResourceFactory.create(resource_type=COURSE_TYPE, published=True)
+    LearningResourceRunFactory.create(learning_resource=resource, published=True)
+    mock_qdrant = _mock_resource_point(mocker, None)
+
+    points = list(
+        vs_utils._process_resource_embeddings(  # noqa: SLF001
+            serialize_bulk_learning_resources([resource.id])
+        )
+    )
+    assert len(points) == 1
+    stored_payload = json.loads(json.dumps(points[0].payload, default=str))
+    assert stored_payload[RESOURCE_EMBEDDING_CHECKSUM_FIELD]
+
+    stored_point = mocker.MagicMock()
+    stored_point.payload = stored_payload
+    mock_qdrant.retrieve.return_value = [stored_point]
+
+    assert (
+        vs_utils._process_resource_embeddings(  # noqa: SLF001
+            serialize_bulk_learning_resources([resource.id])
+        )
+        is None
+    )
+    # ...and the refresh writes the checksum back, rather than blanking the key
+    # and re-embedding on every subsequent run.
+    refreshed = mock_qdrant.overwrite_payload.call_args.kwargs["payload"]
+    assert (
+        refreshed[RESOURCE_EMBEDDING_CHECKSUM_FIELD]
+        == stored_payload[RESOURCE_EMBEDDING_CHECKSUM_FIELD]
+    )
+
+
+def test_embedding_context_includes_content_files(serialized_course):
     """
     Content file text should be folded into the embedding context for any
     resource type, mirroring the OpenSearch query.
     """
-    serialized_resource = {
-        "title": "A title",
-        "description": "A short description",
-        "full_description": "A full description",
-        "readable_id": "18.06",
-        "resource_type_group": "course",
-        "resource_type": "course",
-        "content_files": [
-            {"content": "The first content file text"},
-            {"content": None},
-            {"content": "The second content file text"},
-        ],
-    }
+    serialized_course["content_files"] = [
+        {"content": "The first content file text"},
+        {"content": None},
+        {"content": "The second content file text"},
+    ]
 
-    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
-        serialized_resource
-    )
-    assert context == (
-        "# A title\n\nA short description A full description\n\n"
-        "Course number: 18.06\n\n## Content\n"
-        "The first content file text\n\nThe second content file text"
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
+
+    assert context.endswith(
+        "\n\n## Content\nThe first content file text\n\nThe second content file text"
     )
 
 
@@ -1072,28 +1240,16 @@ def test_embedding_context_includes_serialized_content_files():
     assert "sentinel text" in vs_utils._learning_resource_embedding_context(serialized)  # noqa: SLF001
 
 
-def test_embedding_context_without_content_files():
-    """Resources without content files should just use title/description text."""
-    serialized_resource = {
-        "title": "A title",
-        "description": "A short description",
-        "full_description": "A full description",
-        "readable_id": "18.06",
-        "resource_type_group": "course",
-        "resource_type": "course",
-        "content_files": [],
-    }
+def test_embedding_context_without_content_files(serialized_course):
+    """Resources without content files should just use the metadata document."""
+    serialized_course["content_files"] = []
 
-    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
-        serialized_resource
-    )
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
 
-    assert context == (
-        "# A title\n\nA short description A full description\n\nCourse number: 18.06"
-    )
+    assert "## Content" not in context
 
 
-def test_embedding_context_truncates_content(mocker):
+def test_embedding_context_truncates_content(mocker, serialized_course):
     """The combined context should be truncated to the embedding model's limit."""
     encoder = mocker.MagicMock(
         model_name="test-model",
@@ -1104,124 +1260,72 @@ def test_embedding_context_truncates_content(mocker):
         "vector_search.utils.truncate_to_model_limit",
         side_effect=lambda text, *_args, **_kwargs: text[:10],
     )
-    serialized_resource = {
-        "title": "A title",
-        "description": "A short description",
-        "full_description": "A full description",
-        "readable_id": "18.06",
-        "resource_type_group": "course",
-        "content_files": [{"content": "0123456789ABCDEF"}],
-        "resource_type": "course",
-    }
+    serialized_course["content_files"] = [{"content": "0123456789ABCDEF"}]
 
-    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
-        serialized_resource
-    )
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
 
-    assert context == "# A title\n"
-    truncate_mock.assert_called_once_with(
-        "# A title\n\nA short description A full description\n\n"
-        "Course number: 18.06\n\n## Content\n0123456789ABCDEF",
-        "test-model",
-        token_encoding_name="test-encoding",  # noqa: S106
-    )
+    assert context == "# Informat"
+    untruncated, model = truncate_mock.call_args.args
+    assert untruncated.endswith("## Content\n0123456789ABCDEF")
+    assert model == "test-model"
+    assert truncate_mock.call_args.kwargs == {"token_encoding_name": "test-encoding"}
 
 
-def test_embedding_context_includes_course_code():
-    """The resource's readable_id should be included as the course number."""
-    serialized_resource = {
-        "title": "Linear Algebra",
-        "description": "A short description",
-        "full_description": "A full description",
-        "readable_id": "18.06",
-        "resource_type_group": "course",
-        "content_files": [],
-    }
+def test_embedding_context_includes_course_code(serialized_course):
+    """A resource without course numbers falls back to its readable_id."""
+    serialized_course["course_numbers"] = None
+    serialized_course["course"] = None
+    serialized_course["readable_id"] = "18.06"
 
-    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
-        serialized_resource
-    )
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
 
-    assert "Course number: 18.06" in context
+    assert "**Course number:** 18.06" in context
 
 
 @pytest.mark.parametrize(
     ("course_numbers", "expected"),
     [
-        ([{"value": "18.06"}, {"value": "18.061"}], "Course numbers: 18.06, 18.061"),
-        (["18.06", "18.061"], "Course numbers: 18.06, 18.061"),
+        (
+            [{"value": "18.06"}, {"value": "18.061"}],
+            "**Course numbers:**\n\n- 18.06\n- 18.061",
+        ),
+        (["18.06", "18.061"], "**Course numbers:**\n\n- 18.06\n- 18.061"),
+        ([{"value": "18.06"}], "**Course numbers:** 18.06"),
+        (["18.06"], "**Course numbers:** 18.06"),
     ],
 )
-def test_embedding_context_includes_course_numbers(course_numbers, expected):
-    """The resource's course_numbers should be formatted as a comma-separated list."""
-    serialized_resource = {
-        "title": "Linear Algebra",
-        "description": "A short description",
-        "full_description": "A full description",
-        "readable_id": "18.06",
-        "course_numbers": course_numbers,
-        "resource_type_group": "course",
-        "content_files": [],
-    }
+def test_embedding_context_includes_course_numbers(
+    serialized_course, course_numbers, expected
+):
+    """Multiple course_numbers render as a markdown list, a single one inline."""
+    serialized_course["course_numbers"] = course_numbers
 
-    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
-        serialized_resource
-    )
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
 
     assert expected in context
 
 
-def test_embedding_context_markdown_formatting():
-    """Title and content should be rendered as markdown headings."""
-    serialized_resource = {
-        "title": "Linear Algebra",
-        "description": "A short description",
-        "full_description": "A full description",
-        "readable_id": "18.06",
-        "resource_type_group": "course",
-        "content_files": [{"content": "Some content file text"}],
-    }
-
-    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
-        serialized_resource
-    )
-
-    assert context.startswith("# Linear Algebra\n")
-    assert "\n## Content\n" in context
-
-
 @pytest.mark.parametrize(
-    ("description", "full_description", "expected"),
+    ("description", "full_description"),
     [
-        (
-            "A short description",
-            "A full description",
-            "A short description A full description\n\n",
-        ),
-        (None, "A full description", "A full description\n\n"),
-        ("A short description", None, "A short description\n\n"),
-        (None, None, ""),
+        ("A short description", "A full description"),
+        (None, "A full description"),
+        ("A short description", None),
+        (None, None),
     ],
 )
 def test_embedding_context_omits_missing_descriptions(
-    description, full_description, expected
+    serialized_course, description, full_description
 ):
     """Missing description fields should be dropped rather than rendered as None."""
-    serialized_resource = {
-        "title": "Linear Algebra",
-        "description": description,
-        "full_description": full_description,
-        "readable_id": "18.06",
-        "resource_type_group": "course",
-        "content_files": [],
-        "resource_type": "course",
-    }
+    serialized_course["description"] = description
+    serialized_course["full_description"] = full_description
 
-    context = vs_utils._learning_resource_embedding_context(  # noqa: SLF001
-        serialized_resource
-    )
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
 
-    assert context == f"# Linear Algebra\n\n{expected}Course number: 18.06"
+    for value in (description, full_description):
+        if value:
+            assert value in context
     assert "None" not in context
 
 
@@ -3029,9 +3133,12 @@ def test_staleness_penalty_expression(settings):
     decay = staleness.sum[1].neg.lin_decay
     assert decay.x.datetime_key == RESOURCE_AGE_DATE_PAYLOAD_KEY
     assert decay.target.datetime == now.isoformat()
-    assert decay.scale == 20 * SECONDS_PER_YEAR
-    # decay bottoms out at the horizon rather than halfway to it
-    assert decay.midpoint == 0.0
+    # Qdrant rejects a midpoint of 0, so the horizon is expressed as the default
+    # midpoint over half the scale -- the same line, bottoming out at the horizon
+    # rather than halfway to it.
+    assert decay.scale == 20 * SECONDS_PER_YEAR / 2
+    assert decay.midpoint == 0.5
+    assert 0 < decay.midpoint < 1
 
 
 @pytest.mark.parametrize("age_years", [0, 5, 20, 40])
@@ -3358,3 +3465,141 @@ def test_check_missing_content_file_ids_skips_unimportant_block_types(mocker):
     mock_present.assert_not_called()
     mock_client.count.assert_not_called()
     mock_log.assert_not_called()
+
+
+# Rendered in a subprocess by test_resource_embedding_checksum_is_process_stable.
+# Reads a serialized resource document as JSON on stdin, writes the rendered
+# markdown and its embedding checksum as JSON on stdout. Kept free of database
+# and network access so it needs nothing but django.setup().
+_CHECKSUM_PROBE = """
+import json, os, sys
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "main.settings")
+import django
+
+django.setup()
+
+from learning_resources.serializers import LearningResourceMetadataDisplaySerializer
+from vector_search.utils import resource_embedding_checksum
+
+document = json.load(sys.stdin)
+markdown = LearningResourceMetadataDisplaySerializer(document).render_markdown()
+sys.stdout.write(
+    json.dumps(
+        {"checksum": resource_embedding_checksum(markdown), "markdown": markdown}
+    )
+)
+"""
+
+# Multiple runs contributing overlapping instructors, languages and levels, so
+# every field that de-duplicates through a set has more than one element to
+# order. A course (not a program) keeps get_program_courses off the database.
+_CHECKSUM_PROBE_DOCUMENT = {
+    "readable_id": "course-v1:MITxT+6.3710.5x",
+    "resource_type": LearningResourceType.course.name,
+    "title": "Probability: Multiple Random Variables",
+    "description": "Discrete and continuous random variables.",
+    "url": "https://example.edu/6.3710.5x",
+    "free": True,
+    "professional": False,
+    "certification_type": {"code": "completion", "name": "Certificate of Completion"},
+    "prices": ["0.00"],
+    "topics": [{"name": "Mathematics"}, {"name": "Data Science"}],
+    "departments": [
+        {"name": "Electrical Engineering", "school": {"name": "Engineering"}}
+    ],
+    "platform": {"name": "edX"},
+    "offered_by": {"name": "MITx"},
+    "delivery": [{"code": "online", "name": "Online"}],
+    "availability": "dated",
+    "runs": [
+        {
+            "run_id": 1,
+            "start_date": "2024-02-01T00:00:00Z",
+            "languages": ["en-us", "es-es"],
+            "level": [{"name": "Advanced"}, {"name": "Graduate"}],
+            "delivery": [{"code": "online", "name": "Online"}],
+            "resource_prices": [{"currency": "USD", "amount": "0.00"}],
+            "prices": ["0.00"],
+            "instructors": [
+                {"full_name": "Devavrat Shah"},
+                {"full_name": "John Tsitsiklis"},
+                {"full_name": "Yury Polyanskiy"},
+            ],
+        },
+        {
+            "run_id": 2,
+            "start_date": "2024-09-01T00:00:00Z",
+            "languages": ["fr-fr", "zh-cn", "en-us"],
+            "level": [{"name": "Undergraduate"}, {"name": "Advanced"}],
+            "delivery": [{"code": "online", "name": "Online"}],
+            "resource_prices": [{"currency": "USD", "amount": "0.00"}],
+            "prices": ["0.00"],
+            "instructors": [
+                {"full_name": "Patrick Jaillet"},
+                {"full_name": "Guy Bresler"},
+                {"full_name": "Devavrat Shah"},
+            ],
+        },
+    ],
+}
+
+# Enough seeds that an accidental set ordering is very unlikely to match sorted
+# order in all of them (five instructors order 120 ways).
+_CHECKSUM_PROBE_HASH_SEEDS = ("1", "2", "3", "4")
+
+
+def _render_checksum_probe(hash_seed):
+    """Render the probe document in a subprocess under the given hash seed"""
+    completed = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", _CHECKSUM_PROBE],
+        input=json.dumps(_CHECKSUM_PROBE_DOCUMENT),
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "PYTHONHASHSEED": hash_seed},
+    )
+    if completed.returncode != 0:
+        pytest.fail(
+            f"checksum probe failed under PYTHONHASHSEED={hash_seed}:\n"
+            f"{completed.stderr[-2000:]}"
+        )
+    return json.loads(completed.stdout)
+
+
+def test_resource_embedding_checksum_is_process_stable():
+    """
+    The same resource must checksum identically in every process.
+
+    resource_embedding_checksum is the resource's embedding identity: the embed
+    gate re-embeds whenever the stored checksum differs from the one computed
+    now. Anything in the rendered document ordered by a set makes that identity
+    depend on the interpreter's hash seed, so every celery pod computes a
+    different checksum for the same resource and they re-embed each other's
+    work on every scheduled run -- real spend, and invisible locally because
+    prefork workers share their parent's seed.
+
+    Rendering in subprocesses is what gives the seeds a chance to differ; a
+    single process would render identically all day with the bug present.
+    """
+    # Each probe pays for its own django.setup(); run them concurrently so the
+    # test costs one startup rather than four.
+    with ThreadPoolExecutor(max_workers=len(_CHECKSUM_PROBE_HASH_SEEDS)) as pool:
+        renders = list(pool.map(_render_checksum_probe, _CHECKSUM_PROBE_HASH_SEEDS))
+
+    baseline = renders[0]
+    for seed, render in zip(_CHECKSUM_PROBE_HASH_SEEDS[1:], renders[1:]):
+        assert render["markdown"] == baseline["markdown"], (
+            f"rendered document differs under PYTHONHASHSEED={seed}; sort the "
+            "field that changed order (see get_instructors)\n"
+            + "\n".join(
+                difflib.unified_diff(
+                    baseline["markdown"].splitlines(),
+                    render["markdown"].splitlines(),
+                    fromfile=f"seed={_CHECKSUM_PROBE_HASH_SEEDS[0]}",
+                    tofile=f"seed={seed}",
+                    lineterm="",
+                )
+            )
+        )
+        assert render["checksum"] == baseline["checksum"]

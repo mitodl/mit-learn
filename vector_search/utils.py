@@ -64,6 +64,8 @@ from vector_search.constants import (
     QDRANT_RESOURCE_PARAM_MAP,
     QDRANT_TOPIC_INDEXES,
     RESOURCE_AGE_DATE_PAYLOAD_KEY,
+    RESOURCE_EMBEDDING_CHECKSUM_FIELD,
+    RESOURCE_EMBEDDING_VERSION,
     RESOURCES_COLLECTION_NAME,
     RESOURCES_PAYLOAD_EXCLUDE,
     RESOURCES_RETRIEVE_PAYLOAD,
@@ -476,26 +478,68 @@ def _chunk_markdown_documents(text, metadata):
     return split_docs
 
 
-def _learning_resource_embedding_context(document):
+def _metadata_serializer_context():
     """
-    Get the embedding context for a learning resource
+    Context for the metadata display serializer, including the per-batch
+    cache the program course lookups populate.
+    """
+    return {
+        PROGRAM_COURSE_CACHE_KEY_TEST_MODE: {},
+        "include_test_mode_children": True,
+    }
+
+
+def _resource_metadata_markdown(document, serializer_context=None):
+    """
+    Render the resource's metadata document as markdown, or None if the display
+    serializer cannot render it.
+
+    This is the same document that gets chunked into the content file
+    collection by _embed_course_metadata_as_contentfile.
+
+    A render failure skips the resource rather than substituting a degraded
+    context: whatever we embed gets checksummed and stored as if it were the
+    real thing, so a partial context would look up to date forever after. The
+    next run retries from scratch and repairs it.
+    """
+    serializer = LearningResourceMetadataDisplaySerializer(
+        document,
+        context=(
+            serializer_context
+            if serializer_context is not None
+            else _metadata_serializer_context()
+        ),
+    )
+    try:
+        return serializer.render_markdown()
+    except Exception:
+        logger.exception(
+            "Failed to render metadata document for %s",
+            document.get("readable_id"),
+        )
+        return None
+
+
+def _learning_resource_embedding_context(document, serializer_context=None):
+    """
+    Get the embedding context for a learning resource, or None if its metadata
+    document cannot be rendered (see _resource_metadata_markdown).
+
+    The resource's metadata document -- the markdown rendering of everything
+    shown in the resource drawer (title, description, instructors, prices,
+    dates, levels, ...) -- stands in for the old title/description text so
+    that vector search can match on the details the OpenSearch query exposes
+    as searchable fields.
 
     Content from any attached content files is folded in, mirroring the
     OpenSearch text query which matches against the content of all of a
     resource's content files regardless of resource type. The combined
     context is truncated to the embedding model's input limit.
     """
-    description = " ".join(
-        filter(
-            None,
-            [
-                document.get("description"),
-                document.get("full_description"),
-            ],
-        )
-    )
-
-    parts = [f"# {document.get('title')}", description]
+    metadata_markdown = _resource_metadata_markdown(document, serializer_context)
+    if metadata_markdown is None:
+        return None
+    parts = [metadata_markdown]
     course_numbers = document.get("course_numbers") or (
         document.get("course", {}).get("course_numbers")
         if isinstance(document.get("course"), dict)
@@ -507,12 +551,15 @@ def _learning_resource_embedding_context(document):
             for num in course_numbers
             if (num.get("value") if isinstance(num, dict) else num)
         ]
-        if formatted_numbers:
-            parts.append(f"Course numbers: {', '.join(formatted_numbers)}")
+        if len(formatted_numbers) > 1:
+            numbers_list = "\n".join(f"- {num}" for num in formatted_numbers)
+            parts.append(f"**Course numbers:**\n\n{numbers_list}")
+        elif formatted_numbers:
+            parts.append(f"**Course numbers:** {formatted_numbers[0]}")
     elif document.get("resource_type_group") == "course" and document.get(
         "readable_id"
     ):
-        parts.append(f"Course number: {document.get('readable_id')}")
+        parts.append(f"**Course number:** {document.get('readable_id')}")
 
     context = dedent("\n\n".join(filter(None, parts)))
     content = "\n\n".join(
@@ -521,13 +568,13 @@ def _learning_resource_embedding_context(document):
         if content_file.get("content")
     )
     if content:
-        encoder = dense_encoder()
-        context = truncate_to_model_limit(
-            f"{context}\n\n## Content\n{content}",
-            encoder.model_name,
-            token_encoding_name=getattr(encoder, "token_encoding_name", None),
-        )
-    return context
+        context = f"{context}\n\n## Content\n{content}"
+    encoder = dense_encoder()
+    return truncate_to_model_limit(
+        context,
+        encoder.model_name,
+        token_encoding_name=getattr(encoder, "token_encoding_name", None),
+    )
 
 
 def _content_file_embedding_context(document):
@@ -564,14 +611,29 @@ def _process_resource_embeddings(serialized_resources):
     ids = []
     encoder_dense = dense_encoder()
     encoder_sparse = sparse_encoder()
+    serializer_context = _metadata_serializer_context()
 
     for doc in serialized_resources:
-        if not should_generate_resource_embeddings(doc):
+        embedding_context = _learning_resource_embedding_context(
+            doc, serializer_context
+        )
+        if embedding_context is None:
+            # Rendering failed and was logged. Leave the point untouched --
+            # refreshing the payload here would overwrite the checksum of the
+            # vector it still holds.
+            continue
+        # Set before the gate so both branches persist it: the skip branch
+        # overwrites the whole payload, and the value it writes is the one
+        # already stored (that is why it is skipping).
+        doc[RESOURCE_EMBEDDING_CHECKSUM_FIELD] = resource_embedding_checksum(
+            embedding_context
+        )
+        if not should_generate_resource_embeddings(doc, embedding_context):
             update_learning_resource_payload(doc)
             continue
         metadata.append(doc)
         ids.append(vector_point_id(vector_point_key(doc)))
-        docs.append(_learning_resource_embedding_context(doc))
+        docs.append(embedding_context)
     if len(docs) > 0:
         embeddings = encoder_dense.embed_documents(docs)
         sparse_embeddings = encoder_sparse.embed_documents(docs)
@@ -649,27 +711,43 @@ def _set_payload(points, document, param_map, collection_name):
         )
 
 
-def should_generate_resource_embeddings(serialized_document):
+def resource_embedding_checksum(embedding_context):
+    """
+    Checksum the text a resource point's vector was generated from.
+
+    Stored alongside the point under RESOURCE_EMBEDDING_CHECKSUM_FIELD so the
+    embed gate can compare what was actually embedded against what we would
+    embed now. Re-rendering the stored payload cannot answer that question: the
+    display serializer pulls program children from current database rows, so a
+    changed child title renders identically on both sides and the parent's
+    vector stays stale -- and any change to the rendering itself is invisible
+    for the same reason. RESOURCE_EMBEDDING_VERSION covers the latter.
+    """
+    return checksum_for_content(f"{RESOURCE_EMBEDDING_VERSION}\n{embedding_context}")
+
+
+def should_generate_resource_embeddings(serialized_document, embedding_context):
     """
     Determine if we should generate embeddings for a learning resource
+
+    embedding_context is the rendered context the caller is about to embed --
+    rendering it is not cheap, so the caller passes the one it already has.
+
+    Points embedded before the checksum existed carry no stored value and are
+    re-embedded once, which is what pulls the existing catalog onto a new
+    context format.
     """
     client = qdrant_client()
     point_id = vector_point_id(vector_point_key(serialized_document))
     response = client.retrieve(
         collection_name=RESOURCES_COLLECTION_NAME,
         ids=[point_id],
+        with_payload=[RESOURCE_EMBEDDING_CHECKSUM_FIELD],
     )
-    if len(response) > 0:
-        resource_payload = response[0].payload
-        stored_embedding_content = _learning_resource_embedding_context(
-            resource_payload
-        )
-        current_embedding_content = _learning_resource_embedding_context(
-            serialized_document
-        )
-        if stored_embedding_content == current_embedding_content:
-            return False
-    return True
+    if not response:
+        return True
+    stored_checksum = (response[0].payload or {}).get(RESOURCE_EMBEDDING_CHECKSUM_FIELD)
+    return stored_checksum != resource_embedding_checksum(embedding_context)
 
 
 def _retrieve_content_file_point(
@@ -737,10 +815,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
     client = qdrant_client()
     encoder_dense = dense_encoder()
     encoder_sparse = sparse_encoder()
-    serializer_context = {
-        PROGRAM_COURSE_CACHE_KEY_TEST_MODE: {},
-        "include_test_mode_children": True,
-    }
+    serializer_context = _metadata_serializer_context()
     metadata = []
     ids = []
     docs = []
@@ -1811,10 +1886,16 @@ def staleness_penalty_expression(
                                     target=models.DatetimeExpression(
                                         datetime=now.isoformat()
                                     ),
-                                    scale=horizon_years * SECONDS_PER_YEAR,
-                                    # decay reaches 0 -- a full penalty -- at the
-                                    # horizon rather than the default half of it
-                                    midpoint=0.0,
+                                    # Qdrant's linear decay is
+                                    # 1 - (1 - midpoint) * age / scale, and it
+                                    # rejects a midpoint of exactly 0 (it must be
+                                    # in the open interval 0..1). Halving the
+                                    # scale at the default midpoint gives the
+                                    # same line -- 1 - age / horizon -- so decay
+                                    # still reaches 0, a full penalty, at the
+                                    # horizon rather than halfway to it.
+                                    scale=horizon_years * SECONDS_PER_YEAR / 2,
+                                    midpoint=0.5,
                                 )
                             )
                         ),

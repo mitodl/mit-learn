@@ -9,7 +9,9 @@ import {
   CardRoot,
   CardTypeText,
   CoursewareButton,
+  TitleHeading,
   TitleText,
+  TitleButton,
   CourseDateSummary,
   Separator,
 } from "./CardShared"
@@ -97,14 +99,14 @@ export const UnenrolledCourseCard = ({
     handleEnrollmentClick()
   }
   const isCompact = layout === "compact"
-  const titleSection = (
-    <TitleText
-      as={headingLevel}
-      clickable={!isDisabled}
-      onClick={isDisabled ? undefined : enrollClick}
-    >
-      {title}
-    </TitleText>
+  const titleSection = isDisabled ? (
+    <TitleText as={headingLevel}>{title}</TitleText>
+  ) : (
+    <TitleHeading as={headingLevel}>
+      <TitleButton type="button" onClick={enrollClick}>
+        {title}
+      </TitleButton>
+    </TitleHeading>
   )
   const hasCourseDateText =
     getCourseDateText(courseRun?.start_date, courseRun?.end_date) !== null

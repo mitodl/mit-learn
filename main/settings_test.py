@@ -12,7 +12,7 @@ import pytest
 from django.conf import settings
 from django.core import mail
 from django.core.exceptions import ImproperlyConfigured
-from django.test import TestCase
+from django.test import RequestFactory, TestCase
 
 REQUIRED_SETTINGS = {
     "OPENSEARCH_URL": "http://localhost:9300/",
@@ -149,6 +149,33 @@ class TestSettings(TestCase):
             assert settings_vars["DATABASES"]["default"]["OPTIONS"] == {
                 "sslmode": "require"
             }
+
+    def test_secure_proxy_ssl_header(self):
+        """SECURE_PROXY_SSL_HEADER is set by default and removable with the env var"""
+
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            settings_vars = self.reload_settings()
+            assert settings_vars["SECURE_PROXY_SSL_HEADER"] == (
+                "HTTP_X_FORWARDED_PROTO",
+                "https",
+            )
+
+        # reload() doesn't remove attributes the gated-off module no longer sets
+        delattr(sys.modules["main.settings"], "SECURE_PROXY_SSL_HEADER")
+        with mock.patch.dict(
+            "os.environ",
+            {**REQUIRED_SETTINGS, "MITOL_SECURE_PROXY_SSL_HEADER": "False"},
+            clear=True,
+        ):
+            settings_vars = self.reload_settings()
+            assert "SECURE_PROXY_SSL_HEADER" not in settings_vars
+
+    def test_x_forwarded_proto_makes_request_secure(self):
+        """Only X-Forwarded-Proto: https marks a request as secure"""
+        factory = RequestFactory()
+        assert factory.get("/", HTTP_X_FORWARDED_PROTO="https").is_secure() is True
+        assert factory.get("/", HTTP_X_FORWARDED_PROTO="http").is_secure() is False
+        assert factory.get("/").is_secure() is False
 
     def test_opensearch_index_pr_build(self):
         """For PR builds we will use the heroku app name instead of the given OPENSEARCH_INDEX"""

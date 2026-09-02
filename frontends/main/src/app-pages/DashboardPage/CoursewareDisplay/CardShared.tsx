@@ -80,17 +80,37 @@ const TitleLink = styled(Link)(({ theme }) => ({
   ...theme.typography.subtitle1,
 }))
 
-const TitleText = styled.h3<{ clickable?: boolean }>(
-  ({ theme, clickable }) => ({
-    margin: 0,
-    ...theme.typography.subtitle1,
-    color: theme.custom.colors.darkGray2,
-    cursor: clickable ? "pointer" : "default",
-    [theme.breakpoints.down("sm")]: {
-      maxWidth: "calc(100% - 16px)",
-    },
-  }),
-)
+const TitleText = styled.h3(({ theme }) => ({
+  margin: 0,
+  ...theme.typography.subtitle1,
+  color: theme.custom.colors.darkGray2,
+  [theme.breakpoints.down("sm")]: {
+    maxWidth: "calc(100% - 16px)",
+  },
+}))
+
+/**
+ * A title rendered as an actual button (nested inside a TitleHeading), for
+ * cards whose title click triggers an action rather than navigation. Keeps
+ * the heading itself focusable-by-heading-role for AT heading navigation
+ * while making the title text a real, keyboard-operable control.
+ */
+const TitleButton = styled.button(({ theme }) => ({
+  margin: 0,
+  padding: 0,
+  border: "none",
+  background: "none",
+  appearance: "none",
+  display: "block",
+  width: "100%",
+  textAlign: "left",
+  cursor: "pointer",
+  color: theme.custom.colors.darkGray2,
+  ...theme.typography.subtitle1,
+  [theme.breakpoints.down("sm")]: {
+    maxWidth: "calc(100% - 16px)",
+  },
+}))
 
 const SubtitleLinkRoot = styled.div(({ theme }) => ({
   display: "flex",
@@ -336,6 +356,7 @@ export {
   TitleHeading,
   TitleLink,
   TitleText,
+  TitleButton,
   SubtitleLinkRoot,
   SubtitleLink,
   MenuButton,

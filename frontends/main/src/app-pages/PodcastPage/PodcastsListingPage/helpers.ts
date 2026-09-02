@@ -2,28 +2,12 @@ import moment from "moment"
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource, PodcastEpisodeParent } from "api/v1"
 
+// Defined in common/ so page-components can use it too; re-exported here to
+// keep this module the single helper import for the podcast pages.
+export { getEpisodeAudioUrl } from "@/common/podcasts"
+
 export const formatApproxCount = (count: number): string =>
   count >= 100 ? `${Math.floor(count / 100) * 100}+` : String(count)
-
-/**
- * The URL to play/link for an episode.
- *
- * Defaults to the direct `audio_url`, falling back to `episode_link`. Pass
- * `{ allowEpisodeLink: false }` when the URL is fed straight into an `<audio>`
- * element (e.g. the embed player), since `episode_link` may point at a webpage
- * rather than a media file.
- */
-export const getEpisodeAudioUrl = (
-  episode: LearningResource,
-  { allowEpisodeLink = true }: { allowEpisodeLink?: boolean } = {},
-): string | null => {
-  if (episode.resource_type !== ResourceTypeEnum.PodcastEpisode) return null
-  const candidateUrl = allowEpisodeLink
-    ? (episode.podcast_episode?.audio_url ??
-      episode.podcast_episode?.episode_link)
-    : episode.podcast_episode?.audio_url
-  return candidateUrl?.trim() ? candidateUrl.trim() : null
-}
 
 export const getEpisodeDurationMinutes = (
   episode: LearningResource,

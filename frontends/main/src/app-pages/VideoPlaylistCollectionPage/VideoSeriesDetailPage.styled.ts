@@ -2,13 +2,11 @@ import Link from "next/link"
 import { Typography, styled, theme } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import VideoContainer from "./VideoContainer"
+export { SkipLinksNav, StyledBreadcrumbs, VideoTitle } from "./shared.styled"
 export {
-  SkipLinksNav,
-  StyledBreadcrumbs,
   NoVideoMessage,
   ScreenReaderOnly,
-  VideoTitle,
-} from "./shared.styled"
+} from "@/page-components/VideoPlayer/shared.styled"
 
 export const PageWrapper = styled.div({
   backgroundColor: theme.custom.colors.lightGray1,
