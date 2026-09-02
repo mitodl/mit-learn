@@ -1352,27 +1352,27 @@ def load_podcast(podcast_data: dict) -> LearningResource:
             episode = load_podcast_episode(episode_data)
             episode_ids.append(episode.id)
 
-        unpublished_episode_ids = (
-            learning_resource.children.filter(
-                relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
-            )
-            .exclude(child__id__in=episode_ids)
-            .values_list("child__id", flat=True)
+    unpublished_episode_ids = (
+        learning_resource.children.filter(
+            relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
         )
-        LearningResource.objects.filter(id__in=unpublished_episode_ids).update(
-            published=False
-        )
-        bulk_resources_unpublished_actions(
-            unpublished_episode_ids,
-            LearningResourceType.podcast_episode.name,
-        )
-        episode_ids.extend(unpublished_episode_ids)
-        learning_resource.resources.set(
-            episode_ids,
-            through_defaults={
-                "relation_type": LearningResourceRelationTypes.PODCAST_EPISODES,
-            },
-        )
+        .exclude(child__id__in=episode_ids)
+        .values_list("child__id", flat=True)
+    )
+    LearningResource.objects.filter(id__in=unpublished_episode_ids).update(
+        published=False
+    )
+    bulk_resources_unpublished_actions(
+        unpublished_episode_ids,
+        LearningResourceType.podcast_episode.name,
+    )
+    episode_ids.extend(unpublished_episode_ids)
+    learning_resource.resources.set(
+        episode_ids,
+        through_defaults={
+            "relation_type": LearningResourceRelationTypes.PODCAST_EPISODES,
+        },
+    )
 
     update_index(learning_resource, created)
 
@@ -1808,6 +1808,7 @@ def load_playlist(
             existing_resource = LearningResource.objects.filter(
                 readable_id=playlist_id,
                 resource_type=LearningResourceType.video_playlist.name,
+                platform__code=playlist_data.get("platform", PlatformType.youtube.name),
                 published=True,
             ).first()
             if existing_resource:
