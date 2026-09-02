@@ -6,6 +6,7 @@ import FeaturedProgramSection from "./FeaturedProgramSection"
 import OfferingsSection from "./OfferingsSection"
 import DeliveryFormatsSection from "./DeliveryFormatsSection"
 import ContinuumSection from "./ContinuumSection"
+import ClientLogosSection from "./ClientLogosSection"
 import FaqSection from "./FaqSection"
 import GetInTouchSection from "./GetInTouchSection"
 
@@ -23,7 +24,8 @@ const OrganizationalLearningPage: React.FC = () => (
     <OfferingsSection />
     <DeliveryFormatsSection />
     <ContinuumSection />
-    {/* <ClientsSection /> — pending approved case studies, logos, testimonials */}
+    <ClientLogosSection />
+    {/* <ClientsSection /> — pending approved case studies and testimonials */}
     <FaqSection />
     <GetInTouchSection />
   </>

@@ -21,6 +21,12 @@ export type ContinuumStepItem = {
   body: string
 }
 export type FaqItem = { question: string; answer: string }
+export type ClientLogoItem = {
+  name: string
+  src: string
+  width: number
+  height: number
+}
 
 export const hero = {
   title:
@@ -170,6 +176,48 @@ export const continuum = {
       body: "Employ expertise for impact at-scale.",
     },
   ] satisfies ContinuumStepItem[],
+}
+
+export const clientLogos = {
+  eyebrow: "TRUSTED BY LEADING ORGANIZATIONS",
+  logos: [
+    {
+      name: "BAE Systems",
+      src: "/images/organizational_learning/client-logos/bae-systems.png",
+      width: 160,
+      height: 23,
+    },
+    {
+      name: "Boeing",
+      src: "/images/organizational_learning/client-logos/boeing.png",
+      width: 160,
+      height: 60,
+    },
+    {
+      name: "Ford",
+      src: "/images/organizational_learning/client-logos/ford.png",
+      width: 160,
+      height: 99,
+    },
+    {
+      name: "Halliburton",
+      src: "/images/organizational_learning/client-logos/halliburton.png",
+      width: 160,
+      height: 76,
+    },
+    {
+      name: "IBM",
+      src: "/images/organizational_learning/client-logos/ibm.png",
+      width: 160,
+      height: 73,
+    },
+    {
+      name: "Shell",
+      src: "/images/organizational_learning/client-logos/shell.png",
+      width: 87,
+      height: 80,
+    },
+  ] satisfies ClientLogoItem[],
 }
 
 const FAQ_ANSWER_PENDING = "Answer pending from the content handoff."

@@ -10,6 +10,7 @@ import {
   offerings,
   deliveryFormats,
   continuum,
+  clientLogos,
   faq,
   getInTouch,
 } from "./copy"
@@ -42,6 +43,7 @@ describe("OrganizationalLearningPage", () => {
       offerings.title,
       deliveryFormats.title,
       continuum.title,
+      clientLogos.eyebrow,
       faq.title,
       getInTouch.title,
     ]
@@ -50,13 +52,17 @@ describe("OrganizationalLearningPage", () => {
     })
   })
 
-  test("omits the Clients section, whose content is not approved to ship", () => {
+  test("renders the trusted-by client logos", () => {
+    renderWithProviders(<OrganizationalLearningPage />)
+    clientLogos.logos.forEach((logo) => {
+      expect(screen.getByRole("img", { name: logo.name })).toBeInTheDocument()
+    })
+  })
+
+  test("omits the rest of the Clients section, whose content is not approved to ship", () => {
     renderWithProviders(<OrganizationalLearningPage />)
     expect(
       screen.queryByText(/See how organizations turn learning into impact/i),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByText(/TRUSTED BY LEADING ORGANIZATIONS/i),
     ).not.toBeInTheDocument()
     expect(screen.queryByText(/SUCCESS STORIES/i)).not.toBeInTheDocument()
     expect(
@@ -77,6 +83,7 @@ describe("OrganizationalLearningPage", () => {
       ...deliveryFormats.items.map((item) => ({ level: 3, name: item.title })),
       { level: 2, name: continuum.title },
       ...continuum.steps.map((step) => ({ level: 3, name: step.title })),
+      { level: 2, name: clientLogos.eyebrow },
       { level: 2, name: faq.title },
       // MUI renders each AccordionSummary inside an h3, which is the
       // recommended shape for an FAQ: every question is a heading.
