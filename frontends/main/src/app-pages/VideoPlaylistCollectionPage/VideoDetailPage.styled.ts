@@ -219,7 +219,12 @@ export const MoreFromItemTitle = styled(Typography)({
 export const MoreFromItemMeta = styled(Typography)({
   /* Clamped to a couple of lines, so a real list would blow the box out.
      Anchors are already stripped by the component; flatten the rest. */
-  "p, ul, ol, li": { display: "inline", margin: 0, padding: 0, listStyle: "none" },
+  "p, ul, ol, li": {
+    display: "inline",
+    margin: 0,
+    padding: 0,
+    listStyle: "none",
+  },
   "p + p::before, li + li::before": { content: '" "' },
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,

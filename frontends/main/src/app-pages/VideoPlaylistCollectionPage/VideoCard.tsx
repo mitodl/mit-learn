@@ -92,7 +92,12 @@ const CardMetaGroup = styled.div({
 const CardMetaValue = styled(Typography)(({ theme }) => ({
   /* Clamped preview: description markup is flattened so a list cannot blow the
      box out. Anchors are stripped in the component (the row is itself a link). */
-  "p, ul, ol, li": { display: "inline", margin: 0, padding: 0, listStyle: "none" },
+  "p, ul, ol, li": {
+    display: "inline",
+    margin: 0,
+    padding: 0,
+    listStyle: "none",
+  },
   "p + p::before, li + li::before": { content: '" "' },
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,

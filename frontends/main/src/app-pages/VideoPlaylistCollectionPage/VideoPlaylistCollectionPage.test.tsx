@@ -97,7 +97,7 @@ describe("VideoPage", () => {
       // value, so an author's formatting reached the learner as visible tags.
       const playlist = makePlaylist()
       playlist.description =
-        '<p>A <strong>seminar</strong> series</p><ul><li>Start with ' +
+        "<p>A <strong>seminar</strong> series</p><ul><li>Start with " +
         '<a href="https://learn.mit.edu/x">session 3</a></li></ul>'
       setupApis({ playlistId: playlist.id, videos: [], playlist })
 
@@ -106,9 +106,10 @@ describe("VideoPage", () => {
       const emphasis = await screen.findByText("seminar")
       expect(emphasis.tagName).toBe("STRONG")
       expect(screen.getByRole("listitem")).toBeInTheDocument()
-      expect(
-        screen.getByRole("link", { name: "session 3" }),
-      ).toHaveAttribute("href", "https://learn.mit.edu/x")
+      expect(screen.getByRole("link", { name: "session 3" })).toHaveAttribute(
+        "href",
+        "https://learn.mit.edu/x",
+      )
       expect(screen.queryByText(/<strong>/)).not.toBeInTheDocument()
     })
   })

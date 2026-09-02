@@ -35,7 +35,10 @@ const descriptionToPlainText = (html: string): string =>
     .replace(/<\/(?:p|li|ul|ol|blockquote)>/gi, " ")
     .replace(/<br\s*\/?>/gi, " ")
     .replace(/<[^>]*>/g, "")
-    .replace(/&[a-z#0-9]+;/gi, (entity) => HTML_ENTITIES[entity.toLowerCase()] ?? entity)
+    .replace(
+      /&[a-z#0-9]+;/gi,
+      (entity) => HTML_ENTITIES[entity.toLowerCase()] ?? entity,
+    )
     .replace(/\s+/g, " ")
     .trim()
 
