@@ -1,10 +1,10 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useCallback, useRef, useState } from "react"
 import Image from "next/image"
 import { styled } from "ol-components"
-import { ActionButton, VisuallyHidden } from "@mitodl/smoot-design"
-import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
+import { CarouselV2 } from "ol-components/CarouselV2"
+import { VisuallyHidden } from "@mitodl/smoot-design"
 import {
   Section,
   SectionInner,
@@ -38,6 +38,7 @@ const Carousel = styled.div({
   display: "flex",
   flexDirection: "column",
   gap: "32px",
+  minWidth: 0,
 })
 
 const Nav = styled.div({
@@ -45,6 +46,22 @@ const Nav = styled.div({
   alignItems: "center",
   justifyContent: "center",
   gap: "24px",
+})
+
+const ArrowSlot = styled.div({
+  display: "contents",
+  "& > button:last-of-type": {
+    order: 1,
+  },
+})
+
+const Track = styled(CarouselV2)({
+  minWidth: 0,
+})
+
+const Slide = styled.div({
+  flex: "0 0 100%",
+  minWidth: 0,
 })
 
 const Counter = styled.p(({ theme }) => ({
@@ -296,25 +313,41 @@ type CaseStudyCarouselProps = {
 /**
  * One panel at a time, paged by the prev/next controls.
  *
+ * Slides on Embla via the shared CarouselV2 so the motion matches the Featured
+ * Courses carousel on the home page rather than being a second, hand-rolled
+ * animation.
+ *
  * A single study renders on its own with no navigation rather than shipping
  * dead arrows and a "1 / 1" counter, so this same component covers both the
  * one-study case shipping now and the carousel it becomes later.
  *
  * Activating a control deliberately leaves focus on that control, per the
  * WAI-ARIA carousel pattern — the live region reports the new position instead,
- * so paging repeatedly does not require re-Tabbing.
+ * so paging repeatedly does not require re-Tabbing. Position is read off the
+ * settle event, so the counter and the announcement land with the slide rather
+ * than ahead of it.
  */
 const CaseStudyCarousel = ({ items, label }: CaseStudyCarouselProps) => {
+  const [arrows, setArrows] = useState<HTMLDivElement | null>(null)
   const [index, setIndex] = useState(0)
   const [announcement, setAnnouncement] = useState("")
+  const settledIndex = useRef(0)
 
   const total = items.length
   const isCarousel = total > 1
 
-  const goTo = (next: number) => {
-    setIndex(next)
-    setAnnouncement(`${next + 1} of ${total}: ${items[next].org}`)
-  }
+  const handleSettle = useCallback(
+    (slidesInView: number[]) => {
+      const next = slidesInView[0]
+      if (next === undefined || next === settledIndex.current) {
+        return
+      }
+      settledIndex.current = next
+      setIndex(next)
+      setAnnouncement(`${next + 1} of ${total}: ${items[next].org}`)
+    },
+    [items, total],
+  )
 
   const carouselProps = isCarousel
     ? {
@@ -328,29 +361,10 @@ const CaseStudyCarousel = ({ items, label }: CaseStudyCarouselProps) => {
     <Carousel {...carouselProps}>
       {isCarousel ? (
         <Nav>
-          <ActionButton
-            size="small"
-            edge="rounded"
-            variant="tertiary"
-            aria-label="Previous case study"
-            disabled={index === 0}
-            onClick={() => goTo(index - 1)}
-          >
-            <RiArrowLeftLine aria-hidden />
-          </ActionButton>
+          <ArrowSlot ref={setArrows} />
           <Counter aria-hidden>
             {index + 1} / {total}
           </Counter>
-          <ActionButton
-            size="small"
-            edge="rounded"
-            variant="tertiary"
-            aria-label="Next case study"
-            disabled={index === total - 1}
-            onClick={() => goTo(index + 1)}
-          >
-            <RiArrowRightLine aria-hidden />
-          </ActionButton>
         </Nav>
       ) : null}
 
@@ -358,7 +372,19 @@ const CaseStudyCarousel = ({ items, label }: CaseStudyCarouselProps) => {
         {announcement}
       </VisuallyHidden>
 
-      <CaseStudyPanel study={items[index]} isSlide={isCarousel} />
+      <Track
+        arrowsContainer={arrows}
+        prevLabel="Previous case study"
+        nextLabel="Next case study"
+        mobileBleed="none"
+        onSettle={handleSettle}
+      >
+        {items.map((study) => (
+          <Slide key={study.org}>
+            <CaseStudyPanel study={study} isSlide={isCarousel} />
+          </Slide>
+        ))}
+      </Track>
     </Carousel>
   )
 }

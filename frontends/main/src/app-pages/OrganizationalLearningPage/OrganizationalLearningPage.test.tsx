@@ -86,12 +86,12 @@ describe("OrganizationalLearningPage", () => {
       ...continuum.steps.map((step) => ({ level: 3, name: step.title })),
       { level: 2, name: clientLogos.eyebrow },
       { level: 2, name: caseStudies.title },
-      // Only the active slide is in the DOM, so just the first study's headings.
-      { level: 3, name: caseStudies.items[0].org },
-      ...caseStudies.items[0].pillars.map((pillar) => ({
-        level: 4,
-        name: pillar.title,
-      })),
+      // Every study shares the carousel track, so all of their headings are in
+      // the DOM regardless of which slide is on screen.
+      ...caseStudies.items.flatMap((study) => [
+        { level: 3, name: study.org },
+        ...study.pillars.map((pillar) => ({ level: 4, name: pillar.title })),
+      ]),
       { level: 2, name: faq.title },
       // MUI renders each AccordionSummary inside an h3, which is the
       // recommended shape for an FAQ: every question is a heading.

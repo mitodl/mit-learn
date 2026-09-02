@@ -333,8 +333,7 @@ export const getInTouch = {
   ],
   submitLabel: "Talk with our team",
   audience: {
-    label:
-      "Who are you exploring learning for? This helps us connect you with the right team.",
+    label: "Who are you exploring learning for?",
     hint: "This helps us connect you with the right team.",
     organizationLabel: "My Organization",
     organizationDescription:

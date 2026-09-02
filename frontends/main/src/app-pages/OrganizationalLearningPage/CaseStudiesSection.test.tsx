@@ -1,8 +1,50 @@
 import React from "react"
-import { renderWithProviders, screen, user } from "@/test-utils"
+import { act, renderWithProviders, screen, user } from "@/test-utils"
 import CaseStudiesSection, { CaseStudyCarousel } from "./CaseStudiesSection"
 import { caseStudies } from "./copy"
 import type { CaseStudyItem } from "./copy"
+
+/**
+ * Embla derives slide positions from real element widths via
+ * getBoundingClientRect, which jsdom always reports as zero, so paging and the
+ * arrows' disabled state cannot be exercised for real here. Embla is faked so
+ * the carousel's own wiring — arrow labels, counter, live region — is testable.
+ */
+const mockScrollTo = jest.fn()
+const mockScrollPrev = jest.fn()
+const mockScrollNext = jest.fn()
+const mockCanScrollPrev = jest.fn(() => true)
+const mockCanScrollNext = jest.fn(() => true)
+const mockSlidesInView = jest.fn(() => [0])
+const mockOn = jest.fn()
+const mockOff = jest.fn()
+
+const fakeEmblaApi = {
+  scrollTo: mockScrollTo,
+  scrollPrev: mockScrollPrev,
+  scrollNext: mockScrollNext,
+  canScrollPrev: mockCanScrollPrev,
+  canScrollNext: mockCanScrollNext,
+  slidesInView: mockSlidesInView,
+  on: mockOn,
+  off: mockOff,
+}
+
+jest.mock("embla-carousel-react", () => ({
+  __esModule: true,
+  default: jest.fn(() => [jest.fn(), fakeEmblaApi]),
+}))
+
+jest.mock("embla-carousel-wheel-gestures", () => ({
+  WheelGesturesPlugin: jest.fn(() => ({})),
+}))
+
+/** Land on `index` the way a real page, drag, or wheel scroll would. */
+const settleOn = (index: number) => {
+  mockSlidesInView.mockReturnValue([index])
+  const settle = mockOn.mock.calls.find(([event]) => event === "settle")?.[1]
+  act(() => settle())
+}
 
 const makeStudy = (org: string): CaseStudyItem => ({
   eyebrow: "INSTITUTIONAL SOLUTIONS",
@@ -20,14 +62,37 @@ const makeStudy = (org: string): CaseStudyItem => ({
 
 const THREE_STUDIES = ["Study A", "Study B", "Study C"].map(makeStudy)
 
+beforeEach(() => {
+  jest.clearAllMocks()
+  mockCanScrollPrev.mockReturnValue(true)
+  mockCanScrollNext.mockReturnValue(true)
+  mockSlidesInView.mockReturnValue([0])
+})
+
 describe("CaseStudiesSection", () => {
-  test("renders the study from copy", () => {
+  test("renders the section heading and every study from copy", () => {
     renderWithProviders(<CaseStudiesSection />)
-    const [study] = caseStudies.items
 
     expect(
       screen.getByRole("heading", { name: caseStudies.title }),
     ).toBeInTheDocument()
+    expect(screen.getByText(caseStudies.body)).toBeInTheDocument()
+    caseStudies.items.forEach((study) => {
+      expect(
+        screen.getByRole("heading", { name: study.org }),
+      ).toBeInTheDocument()
+    })
+  })
+
+  // Scoped to a single study: every study now shares the track, so copy that
+  // repeats across studies (a "50+" stat, a shared pillar title) is ambiguous
+  // at the section level.
+  test("renders a study's tagline, stats, and pillars", () => {
+    const [study] = caseStudies.items
+    renderWithProviders(
+      <CaseStudyCarousel items={[study]} label={caseStudies.navLabel} />,
+    )
+
     expect(screen.getByRole("heading", { name: study.org })).toBeInTheDocument()
     expect(screen.getByText(study.tagline)).toBeInTheDocument()
 
@@ -106,40 +171,38 @@ describe("CaseStudyCarousel with several studies", () => {
   const nextButton = () =>
     screen.getByRole("button", { name: "Next case study" })
 
-  test("shows one study at a time and pages forward", async () => {
+  test("holds every study in one track and pages it with Embla", async () => {
     renderCarousel()
 
-    expect(screen.getByRole("heading", { name: "Study A" })).toBeInTheDocument()
-    expect(
-      screen.queryByRole("heading", { name: "Study B" }),
-    ).not.toBeInTheDocument()
+    THREE_STUDIES.forEach((study) => {
+      expect(
+        screen.getByRole("heading", { name: study.org }),
+      ).toBeInTheDocument()
+    })
     expect(screen.getByText("1 / 3")).toBeInTheDocument()
 
     await user.click(nextButton())
+    expect(mockScrollNext).toHaveBeenCalledTimes(1)
 
-    expect(screen.getByRole("heading", { name: "Study B" })).toBeInTheDocument()
-    expect(
-      screen.queryByRole("heading", { name: "Study A" }),
-    ).not.toBeInTheDocument()
+    await user.click(prevButton())
+    expect(mockScrollPrev).toHaveBeenCalledTimes(1)
+  })
+
+  test("counts up once the slide settles rather than on the click", async () => {
+    renderCarousel()
+
+    await user.click(nextButton())
+    expect(screen.getByText("1 / 3")).toBeInTheDocument()
+
+    settleOn(1)
     expect(screen.getByText("2 / 3")).toBeInTheDocument()
   })
 
-  test("clamps at both ends rather than looping", async () => {
+  test("clamps at both ends rather than looping", () => {
+    mockCanScrollPrev.mockReturnValue(false)
     renderCarousel()
 
     expect(prevButton()).toBeDisabled()
-    expect(nextButton()).toBeEnabled()
-
-    await user.click(nextButton())
-    await user.click(nextButton())
-
-    expect(screen.getByRole("heading", { name: "Study C" })).toBeInTheDocument()
-    expect(nextButton()).toBeDisabled()
-    expect(prevButton()).toBeEnabled()
-
-    await user.click(prevButton())
-
-    expect(screen.getByRole("heading", { name: "Study B" })).toBeInTheDocument()
     expect(nextButton()).toBeEnabled()
   })
 
@@ -147,26 +210,25 @@ describe("CaseStudyCarousel with several studies", () => {
     renderCarousel()
 
     await user.click(nextButton())
+    settleOn(1)
 
     expect(screen.getByText("2 of 3: Study B")).toBeInTheDocument()
     // Focus stays put so repeated paging does not require re-Tabbing.
     expect(nextButton()).toHaveFocus()
   })
 
-  test("labels the carousel and its slides for assistive tech", async () => {
+  test("labels the carousel and its slides for assistive tech", () => {
     renderCarousel()
 
     expect(screen.getByRole("group", { name: "Case studies" })).toHaveAttribute(
       "aria-roledescription",
       "carousel",
     )
-    expect(screen.getByRole("group", { name: "Study A" })).toHaveAttribute(
-      "aria-roledescription",
-      "slide",
-    )
-
-    await user.click(nextButton())
-
-    expect(screen.getByRole("group", { name: "Study B" })).toBeInTheDocument()
+    THREE_STUDIES.forEach((study) => {
+      expect(screen.getByRole("group", { name: study.org })).toHaveAttribute(
+        "aria-roledescription",
+        "slide",
+      )
+    })
   })
 })
