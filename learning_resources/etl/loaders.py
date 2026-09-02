@@ -1318,7 +1318,7 @@ def load_podcast(podcast_data: dict) -> LearningResource | None:
     Returns:
         LearningResource | None:
             the updated or created podcast resource, or None if the feed
-            has no episodes
+            has no episodes (an existing podcast and its episodes get unpublished)
     """
     readable_id = podcast_data.pop("readable_id")
     episodes_data = list(podcast_data.pop("episodes", []))
@@ -1333,6 +1333,15 @@ def load_podcast(podcast_data: dict) -> LearningResource | None:
             existing_resource.published = False
             existing_resource.save()
             update_index(existing_resource, newly_created=False)
+            episode_ids = list(
+                existing_resource.children.filter(
+                    relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value
+                ).values_list("child__id", flat=True)
+            )
+            LearningResource.objects.filter(id__in=episode_ids).update(published=False)
+            bulk_resources_unpublished_actions(
+                episode_ids, LearningResourceType.podcast_episode.name
+            )
         return None
     topics_data = podcast_data.pop("topics", [])
     offered_by_data = podcast_data.pop("offered_by", None)
