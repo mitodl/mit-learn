@@ -15,7 +15,7 @@ jest.mock("@tanstack/react-query", () => ({
   dehydrate: jest.fn().mockReturnValue({}),
 }))
 
-jest.mock("@/app-pages/PodcastPage/PodcastEmbedPlayer", () => ({
+jest.mock("@/page-components/PodcastEmbedPlayer/PodcastEmbedPlayer", () => ({
   __esModule: true,
   default: () => null,
 }))

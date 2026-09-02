@@ -11,7 +11,7 @@ import {
   RiErrorWarningLine,
 } from "@remixicon/react"
 import type { LearningResource } from "api/v1"
-import { getEpisodeAudioUrl } from "./PodcastsListingPage/helpers"
+import { getEpisodeAudioUrl } from "@/common/podcasts"
 import { useAudioPlayer, formatClockTime } from "./useAudioPlayer"
 import { usePlaybackRecovery, RETRYING_STATUS } from "./usePlaybackRecovery"
 import {

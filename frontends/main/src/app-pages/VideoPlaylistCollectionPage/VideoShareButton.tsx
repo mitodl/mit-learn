@@ -6,7 +6,7 @@ import { RiShareForwardFill } from "@remixicon/react"
 import type { VideoResource } from "api/v1"
 import ShareDialog from "@/components/ShareDialog/ShareDialog"
 import ShareButton from "@/components/ShareButton/ShareButton"
-import type { VideoPlayerHandle } from "./VideoResourcePlayer"
+import type { VideoPlayerHandle } from "@/page-components/VideoPlayer/VideoResourcePlayer"
 
 // Both video pages sized the button identically via their own
 // `styled(VideoShareButton)` wrapper; that sizing now lives here instead.

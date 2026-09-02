@@ -1,19 +1,19 @@
 import Link from "next/link"
 import { Typography, styled, theme } from "ol-components"
-import VideoResourcePlayer from "./VideoResourcePlayer"
+import VideoResourcePlayer from "@/page-components/VideoPlayer/VideoResourcePlayer"
 
 // Primitives shared with the other video pages, re-exported so consumers of this
 // module have a single import for the page's styles.
 export {
   SkipLinksNav,
   StyledBreadcrumbs,
-  ScreenReaderOnly,
   DurationBadge,
   PlayOverlay,
   PlayIcon,
   ThumbnailWrapper,
   VideoTitle,
 } from "./shared.styled"
+export { ScreenReaderOnly } from "@/page-components/VideoPlayer/shared.styled"
 
 // ── Page shell ──
 

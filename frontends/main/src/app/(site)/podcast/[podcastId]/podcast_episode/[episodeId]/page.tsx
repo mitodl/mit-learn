@@ -8,7 +8,11 @@ import {
   parseResourceId,
   resolveEpisodeParent,
 } from "@/common/slugs"
-import { carrySearchParams, podcastEpisodePageView } from "@/common/urls"
+import {
+  carrySearchParams,
+  learnUrlSlug,
+  podcastEpisodePath,
+} from "@/common/urls"
 
 /**
  * Bare /podcast/{podcastId}/podcast_episode/{episodeId} is never canonical →
@@ -39,10 +43,10 @@ const Page = async (
   }
   redirect(
     carrySearchParams(
-      podcastEpisodePageView(
+      podcastEpisodePath(
         String(epId),
         String(canonicalPodcastId),
-        episode.title,
+        learnUrlSlug(episode.learn_url),
       ),
       await props.searchParams,
     ),

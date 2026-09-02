@@ -6,9 +6,13 @@ import { useRouter } from "next-nprogress-bar"
 import { useQuery } from "@tanstack/react-query"
 import { RiArrowLeftLine, RiPrinterLine } from "@remixicon/react"
 import { Container, Skeleton, Typography, styled } from "ol-components"
-import { Button, ButtonLink, VisuallyHidden } from "@mitodl/smoot-design"
+import NiceModal from "@ebay/nice-modal-react"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { Alert, Button, ButtonLink, VisuallyHidden } from "@mitodl/smoot-design"
+import { FeatureFlags } from "@/common/feature_flags"
 import { orderQueries } from "api/mitxonline-hooks/orders"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
+import { RefundStatusEnum } from "@mitodl/mitxonline-api-axios/v2"
 import type { Order } from "@mitodl/mitxonline-api-axios/v2"
 import type { AxiosError } from "axios"
 import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
@@ -19,6 +23,8 @@ import { ReceiptCard, ReceiptCardStack } from "./ReceiptCard"
 import { ReceiptDetailList, populatedRows } from "./ReceiptDetailList"
 import type { ReceiptDetail } from "./ReceiptDetailList"
 import { ReceiptOrderSummary } from "./ReceiptOrderSummary"
+import { ReceiptRefundCard } from "./ReceiptRefundCard"
+import { RefundRequestDialog } from "./RefundRequestDialog"
 import {
   formatDateRange,
   formatMoney,
@@ -94,11 +100,31 @@ const Columns = styled.div(({ theme }) => ({
 }))
 
 const SummaryColumn = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "32px",
   [theme.breakpoints.up("md")]: {
     gridColumn: 2,
     gridRow: 1,
   },
+  // The refund actions are not part of a printed receipt.
+  "@media print": {
+    gap: 0,
+  },
 }))
+
+const PrintHiddenRefundCard = styled(ReceiptRefundCard)({
+  "@media print": {
+    display: "none",
+  },
+})
+
+// Transient, so it has no place on a printed receipt.
+const SubmittedAlert = styled(Alert)({
+  "@media print": {
+    display: "none",
+  },
+})
 
 const DetailColumn = styled.div(({ theme }) => ({
   display: "flex",
@@ -187,6 +213,12 @@ const ReceiptSkeleton: React.FC = () => (
 const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
   const router = useRouter()
   const orderQuery = useQuery(orderQueries.receipt(orderId))
+  /**
+   * Undefined until the flags arrive, so the card stays hidden rather than
+   * appearing and then vanishing for learners who should not see it.
+   */
+  const refundsEnabled = useFeatureFlagEnabled(FeatureFlags.SelfServiceRefunds)
+  const [submitted, setSubmitted] = React.useState(false)
   /**
    * `Order.purchaser` has no name field. The endpoint only returns the requester's
    * own orders, so the logged-in user is the purchaser.
@@ -306,7 +338,39 @@ const ReceiptPage: React.FC<{ orderId: number }> = ({ orderId }) => {
         ) : (
           <Columns>
             <SummaryColumn>
+              {/*
+               * Deliberately promises no email: the only notification
+               * mitxonline sends on a request goes to customer service, not the
+               * learner. The refund panel below is where they can follow it.
+               */}
+              {submitted ? (
+                <SubmittedAlert
+                  severity="success"
+                  label="Request submitted"
+                  closable
+                  onClose={() => setSubmitted(false)}
+                >
+                  We've received your refund request. You can follow its status
+                  in the Refund panel below.
+                </SubmittedAlert>
+              ) : null}
               <ReceiptOrderSummary order={order} />
+              {refundsEnabled ? (
+                <PrintHiddenRefundCard
+                  order={order}
+                  onRequestRefund={() =>
+                    NiceModal.show(RefundRequestDialog, {
+                      onSubmitted: () => setSubmitted(true),
+                      order,
+                      // One line per order in practice; see the note on
+                      // `hasFreeAudit` in RefundRequestDialog.
+                      title: order.lines[0]?.content_title ?? "this course",
+                      isLate:
+                        order.refund_status === RefundStatusEnum.WindowClosed,
+                    })
+                  }
+                />
+              ) : null}
             </SummaryColumn>
 
             <DetailColumn>

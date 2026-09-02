@@ -395,33 +395,88 @@ export const podcastPageView = (id: string, title: string | undefined) => {
 }
 export const PODCAST_EPISODE_PAGE_VIEW =
   "/podcast/[podcastId]/podcast_episode/[episodeId]"
-export const podcastEpisodePageView = (
+/**
+ * An episode's path from an already-known slug. The episode pages read the slug
+ * from the resource's `learn_url` but resolve the parent podcast against the
+ * request, since an episode in several podcasts is viewable under any of them.
+ */
+export const podcastEpisodePath = (
   id: string,
   podcastId: string,
-  title: string | undefined,
+  slug: string | undefined,
 ) => {
   const base = generatePath(PODCAST_EPISODE_PAGE_VIEW, {
     podcastId: String(podcastId), // bare context id
     episodeId: String(id),
   })
-  return title === undefined ? base : `${base}/${pathSlug(title)}`
+  return slug === undefined ? base : `${base}/${slug}`
 }
+
+export const podcastEpisodePageView = (
+  id: string,
+  podcastId: string,
+  title: string | undefined,
+) =>
+  podcastEpisodePath(
+    id,
+    podcastId,
+    title === undefined ? undefined : pathSlug(title),
+  )
 export const VIDEO_DETAIL_PAGE_VIEW = "/video/[videoId]"
-export const videoDetailPageView = (
+/**
+ * A video's path from an already-known slug. The video pages read the slug from
+ * the resource's `learn_url` but resolve `?playlist` against the request, since
+ * a video in several playlists is legitimately viewable in any of them.
+ */
+export const videoDetailPath = (
   videoId: number,
   playlistId: number | undefined,
-  title: string | undefined,
+  slug: string | undefined,
 ) => {
   const path = generatePath(VIDEO_DETAIL_PAGE_VIEW, {
     videoId: String(videoId),
   })
-  const base = title === undefined ? path : `${path}/${pathSlug(title)}`
+  const base = slug === undefined ? path : `${path}/${slug}`
   if (playlistId !== undefined) {
     const params = new URLSearchParams({ playlist: String(playlistId) })
     return `${base}?${params.toString()}`
   }
   return base
 }
+
+export const videoDetailPageView = (
+  videoId: number,
+  playlistId: number | undefined,
+  title: string | undefined,
+) => {
+  return videoDetailPath(
+    videoId,
+    playlistId,
+    title === undefined ? undefined : pathSlug(title),
+  )
+}
+/**
+ * The path and query of a resource's `learn_url`.
+ *
+ * `learn_url` is absolute; redirect targets and the [slug] pages' canonical
+ * comparisons are same-origin paths. Parsing rather than string-slicing keeps
+ * the readable-id characters that are legal unescaped in a path — an MITx
+ * Online id such as `course-v1:MITxT+14.100x` survives intact.
+ */
+export const learnUrlPath = (learnUrl: string): string => {
+  const { pathname, search } = new URL(learnUrl)
+  return `${pathname}${search}`
+}
+
+/**
+ * The slug segment of a dedicated-page `learn_url`, i.e. its final path
+ * segment. Used where a page owns part of the URL the backend does not — a
+ * video's `?playlist`, which is resolved against the incoming request rather
+ * than fixed to the canonical parent.
+ */
+export const learnUrlSlug = (learnUrl: string): string =>
+  new URL(learnUrl).pathname.split("/").filter(Boolean).at(-1) ?? ""
+
 /**
  * Append a request's incoming search params to a canonical URL so redirects
  * preserve tracking params (e.g. utm_*). Params the canonical already sets

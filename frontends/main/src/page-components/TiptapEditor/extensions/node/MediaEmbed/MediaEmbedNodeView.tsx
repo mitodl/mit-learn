@@ -6,7 +6,7 @@ import { RiCloseLargeLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
 import { EditableCaption } from "../shared/EditableCaption"
 import { useLearningResourcesDetail } from "api/hooks/learningResources"
-import VideoResourcePlayer from "@/app-pages/VideoPlaylistCollectionPage/VideoResourcePlayer"
+import VideoResourcePlayer from "@/page-components/VideoPlayer/VideoResourcePlayer"
 import type { VideoResource } from "api/v1"
 
 const StyledNodeViewWrapper = styled(NodeViewWrapper, {

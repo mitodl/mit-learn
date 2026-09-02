@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.78.2 (Released September 01, 2026)
+--------------
+
+- Checkout completed and account created GTM events (#3795)
+- Unify actions/checkout on v7.0.1 (#3866)
+- Clear the a11y findings eslint-plugin-styled-components-a11y 2.2 adds (#3868)
+
 Version 0.78.1 (Released September 01, 2026)
 --------------
 

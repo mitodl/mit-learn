@@ -4,7 +4,7 @@ import { ResourceTypeEnum } from "api"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { notFound, redirect } from "next/navigation"
 import { parseResourceId } from "@/common/slugs"
-import { carrySearchParams, podcastPageView } from "@/common/urls"
+import { carrySearchParams, learnUrlPath } from "@/common/urls"
 
 /** Bare /podcast/{id} is never canonical → 307-redirect to the slugged form. */
 const Page = async (props: AppPageProps<"/podcast/[podcastId]">) => {
@@ -22,7 +22,7 @@ const Page = async (props: AppPageProps<"/podcast/[podcastId]">) => {
   }
   redirect(
     carrySearchParams(
-      podcastPageView(String(id), resource.title),
+      learnUrlPath(resource.learn_url),
       await props.searchParams,
     ),
   )
