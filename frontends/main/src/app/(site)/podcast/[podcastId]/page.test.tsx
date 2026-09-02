@@ -26,10 +26,20 @@ const pageProps = (
   searchParams: Promise.resolve(searchParams),
 })
 
-test("bare podcast id redirects to the slugged canonical", async () => {
-  const podcast = factories.learningResources.podcast({
+/**
+ * The backend names the canonical URL, so a test that asserts on it must say
+ * what the backend returned. The factory default is a drawer URL, which is what
+ * a resource with no page of its own gets.
+ */
+const podcastWithPage = (id: number, slug: string) =>
+  factories.learningResources.podcast({
+    id,
     title: "Beyond Biology",
+    learn_url: `http://test.learn.odl.local:8062/podcast/${id}/${slug}`,
   })
+
+test("bare podcast id redirects to the slugged canonical", async () => {
+  const podcast = podcastWithPage(3109228027655524, "beyond-biology")
   setMockResponse.get(
     urls.learningResources.details({ id: podcast.id }),
     podcast,
@@ -43,9 +53,7 @@ test("bare podcast id redirects to the slugged canonical", async () => {
 })
 
 test("redirect carries incoming query params (e.g. utm)", async () => {
-  const podcast = factories.learningResources.podcast({
-    title: "Beyond Biology",
-  })
+  const podcast = podcastWithPage(6347606532587373, "beyond-biology")
   setMockResponse.get(
     urls.learningResources.details({ id: podcast.id }),
     podcast,

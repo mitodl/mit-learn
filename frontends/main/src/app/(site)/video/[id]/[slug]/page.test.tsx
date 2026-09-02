@@ -29,8 +29,13 @@ beforeEach(() => {
   })
 })
 
-const mockVideo = (playlists: string[]) => {
+const mockVideo = (playlists: string[], slug = "beyond-biology") => {
+  const id = 777
   const video = factories.learningResources.video({
+    id,
+    // The backend names the slug, always under the canonical playlist; the page
+    // resolves ?playlist against the request.
+    learn_url: `http://test.learn.odl.local:8062/video/${id}/${slug}?playlist=${playlists[0]}`,
     title: "Beyond Biology",
     playlists,
   })
@@ -70,14 +75,18 @@ test("redirects to the first playlist when ?playlist isn't canonical, carrying o
   )
 })
 
-test("generateMetadata canonical includes the playlist (criterion 5's SEO half)", async () => {
+test("generateMetadata canonical is the same URL in every playlist context", async () => {
+  // One canonical per video: viewing it under a non-canonical playlist still
+  // points crawlers at the single URL that owns the content.
   const video = mockVideo(["55", "66"])
   const meta = await generateMetadata({
     params: Promise.resolve({ id: String(video.id), slug: "beyond-biology" }),
     searchParams: Promise.resolve({ playlist: "66" }),
   })
+  // Viewed under playlist 66, but canonical names the video's own URL.
+  expect(meta.alternates?.canonical).toBe(video.learn_url)
   expect(meta.alternates?.canonical).toMatch(
-    new RegExp(`/video/${video.id}/beyond-biology\\?playlist=66$`),
+    new RegExp(`/video/${video.id}/beyond-biology\\?playlist=55$`),
   )
 })
 
