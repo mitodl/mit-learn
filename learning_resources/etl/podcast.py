@@ -291,7 +291,7 @@ def transform(extracted_podcasts):
                 },
                 "availability": Availability.anytime.name,
             }
-        except (AttributeError, TypeError, KeyError):
+        except (AttributeError, TypeError, KeyError, ValueError):
             log.exception("Error parsing podcast data from %s", config_data["rss_url"])
             continue
 

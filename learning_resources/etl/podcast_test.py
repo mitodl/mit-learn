@@ -240,11 +240,20 @@ def test_transform_with_error(mocker, mock_github_client):
     assert results[0]["url"] == "http://website.url/podcast"
 
 
-@pytest.mark.parametrize("missing_tag", ["pubDate", "enclosure"])
-def test_transform_skips_feed_with_bad_episode(mocker, missing_tag):
+@pytest.mark.parametrize(
+    "break_item",
+    [
+        lambda item: item.pubDate.decompose(),
+        lambda item: item.pubDate.string.replace_with("not a date"),
+        lambda item: item.enclosure.decompose(),
+        lambda item: item.append(bs("<image/>", "xml").image),
+    ],
+    ids=["no-pubdate", "bad-pubdate", "no-enclosure", "image-without-href"],
+)
+def test_transform_skips_feed_with_bad_episode(mocker, break_item):
     """A feed with one unparseable item is logged and skipped; later feeds still load"""
     bad_feed = bs(rss_content(), "xml")
-    bad_feed.find("item").find(missing_tag).decompose()
+    break_item(bad_feed.find("item"))
     mock_log = mocker.patch("learning_resources.etl.podcast.log.exception")
 
     results = list(
