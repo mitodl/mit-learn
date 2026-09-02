@@ -15,7 +15,6 @@ from learning_resources.credentials import (
     _prepare_marketing_page,
     build_credential_context,
     generate_credential_metadata,
-    render_criteria_narrative,
 )
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE
 from learning_resources.factories import (
@@ -72,7 +71,7 @@ Massachusetts Institute of Technology
 
 LLM_RESPONSES = {
     BadgeDescription: {"description": "A course about modelling fluid flow."},
-    BadgeCriteria: {"skills": ["Applied conservation laws", "Modelled fluid flow"]},
+    BadgeCriteria: {"criteria": ["Applied conservation laws", "Modelled fluid flow"]},
 }
 
 
@@ -369,27 +368,19 @@ def test_assemble_omits_a_missing_marketing_page():
     assert point_ids == ["chunk-1"]
 
 
-def test_render_criteria_narrative():
-    """Skills render as a markdown bullet list"""
-    assert render_criteria_narrative(["First", "Second"]) == "- First\n- Second"
-
-
 @pytest.mark.django_db(transaction=True)
 def test_generate_credential_metadata(
     resource, configurations, mock_llm, mock_retrieval
 ):
-    """Both fields are generated, with criteria rendered from skills"""
+    """Both fields are generated, each keyed by its field name"""
     user = UserFactory.create()
     metadata = asyncio.run(generate_credential_metadata(resource, user=user))
 
     assert metadata["description"] == "A course about modelling fluid flow."
-    assert metadata["criteria_skills"] == [
+    assert metadata["criteria"] == [
         "Applied conservation laws",
         "Modelled fluid flow",
     ]
-    assert metadata["criteria"] == (
-        "- Applied conservation laws\n- Modelled fluid flow"
-    )
     # One context, one call per field over it.
     assert mock_retrieval.call_count == 1
 
@@ -524,7 +515,6 @@ def test_generate_credential_metadata_records_a_failure(
     # Absent rather than empty, so a caller cannot overwrite a good value with
     # a blank one.
     assert "criteria" not in metadata
-    assert "criteria_skills" not in metadata
     assert metadata["description"] == "A course about modelling fluid flow."
 
     failure = CredentialMetadataGenerationLog.objects.get(
@@ -541,7 +531,7 @@ def test_generate_credential_metadata_omits_empty_values(
     """An empty draft is left out rather than returned as a blank field"""
     empty = {
         BadgeDescription: {"description": ""},
-        BadgeCriteria: {"skills": ["", None]},
+        BadgeCriteria: {"criteria": ["", None]},
     }
 
     def with_structured_output(schema):

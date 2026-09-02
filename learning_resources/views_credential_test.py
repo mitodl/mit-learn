@@ -10,8 +10,7 @@ from learning_resources.factories import LearningResourceFactory
 
 GENERATED = {
     "description": "A course about modelling fluid flow.",
-    "criteria": "- Applied conservation laws",
-    "criteria_skills": ["Applied conservation laws"],
+    "criteria": ["Applied conservation laws"],
 }
 
 

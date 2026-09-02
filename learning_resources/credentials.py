@@ -1,14 +1,6 @@
 """
 Generate Open Badges credential metadata for a learning resource.
 
-Each request assembles one context -- resource metadata, the scraped marketing
-page, and the highest-scoring content-file chunks for the resource -- then fans
-out one LLM call per credential field over it. There is no agent because there
-is nothing for a model to decide: the retrieval query is fixed, so retrieval is
-a deterministic call in our own code rather than a tool.
-
-Nothing here is cached. An author who dislikes a draft asks again and gets a
-new one; every call appends a CredentialMetadataGenerationLog row instead.
 """
 
 import asyncio
@@ -36,7 +28,6 @@ from vector_search.utils import async_content_file_chunks_for_resource
 
 logger = logging.getLogger(__name__)
 
-# drop unsupported model params
 litellm.drop_params = True
 
 
@@ -51,7 +42,7 @@ class BadgeDescription(TypedDict):
 class BadgeCriteria(TypedDict):
     """Structured response for the Open Badges criteria field"""
 
-    skills: Annotated[
+    criteria: Annotated[
         list[str],
         ...,
         "Skill-focused criteria bullets, one skill the learner demonstrated per item",
@@ -63,25 +54,10 @@ RESPONSE_SCHEMAS = {
     CredentialMetadataField.criteria.name: BadgeCriteria,
 }
 
-# Only criteria is generated from retrieved course content. Criteria are claims
-# about what a learner actually did, so they need the course's own material --
-# syllabus, assessments, lecture prose. A description is 1-2 sentences about
-# what the course is, which the resource metadata and marketing page already
-# say directly; adding lecture text to that prompt dilutes it.
+# Only criteria is generated from retrieved course content.
 FIELDS_USING_CONTENT_FILES = frozenset({CredentialMetadataField.criteria.name})
 
-# Sections that say nothing about what a learner demonstrated:
-#
-# - instructor CVs and publication lists, about a third of a course page
-# - prerequisites, which are the opposite of an outcome -- left in, the model
-#   reported prerequisite mathematics as a skill the learner gained
-#
-# Dropped section by section rather than by cutting everything below the
-# heading, because a heading is not reliably last: a program page carries the
-# program's own instructors ahead of every child course's content, so cutting
-# the tail threw all of it away. Measured over 214 scraped pages, 9 have an
-# instructor heading that is not last, and 2 of those -- both programs -- lost
-# real content to the cut.
+
 MARKETING_PAGE_DROPPED_SECTIONS = (
     "meet your instructors",
     "about professor",
@@ -324,24 +300,7 @@ def _get_llm(config: CredentialMetadataConfiguration) -> ChatLiteLLM:
     """
     Get the ChatLiteLLM instance for a field's configuration.
 
-    The provider is litellm's to infer from the model id, so the admin's
-    llm_model is the only thing that has to change to switch provider:
-    `gpt-5` routes to OpenAI, `claude-opus-5` to Anthropic. Passing
-    LITELLM_CUSTOM_PROVIDER here instead would pin every model to one
-    provider -- it defaults to "openai", which sent `claude-opus-5` to
-    OpenAI and came back "the model does not exist". Prefix the id
-    (`anthropic/claude-opus-5`) if a model is ever ambiguous.
 
-    Each provider reads its own key from the environment: OPENAI_API_KEY,
-    ANTHROPIC_API_KEY. A missing one raises litellm's own AuthenticationError,
-    which names the provider it wanted -- clearer than a check here could be,
-    and recorded on the generation log row like any other failure.
-
-    No max_tokens: the provider default is the model's own limit, and a cap
-    here is measured in total completion tokens -- which on a reasoning model
-    covers reasoning too. gpt-5 spent an entire 1024-token cap on reasoning and
-    returned empty content, which then failed to parse as JSON. The prompts
-    bound the output far better than a number does.
     """
     return ChatLiteLLM(
         model=config.llm_model,
@@ -425,9 +384,9 @@ async def generate_credential_metadata(resource: LearningResource, user=None) ->
         user (User): the user the generation is logged against
 
     Returns:
-        dict: description (str), criteria (the rendered narrative) and
-            criteria_skills (list[str]). A field whose generation failed, or
-            which has no active configuration, is absent.
+        dict: one entry per configured field -- description (str) and criteria
+            (list[str]). A field whose generation failed, returned nothing, or
+            has no active configuration is absent.
     """
     configs = await db_sync_to_async(
         lambda: list(CredentialMetadataConfiguration.objects.filter(is_active=True))
@@ -444,18 +403,15 @@ async def generate_credential_metadata(resource: LearningResource, user=None) ->
         *[_generate_field(resource, config, context, user=user) for config in configs]
     )
 
-    # An empty value is left out entirely, like a failure: a caller
-    # prepopulating a field must not overwrite a good value with a blank one,
-    # and a field a human fills in beats a fabrication they rubber-stamp.
+    # Each response schema keys its value by the field name, so no field needs
+    # a case of its own here. An empty value is left out entirely, like a
+    # failure: a caller prepopulating a form must not overwrite a good value
+    # with a blank one.
     metadata = {}
     for config, response in zip(configs, responses):
-        if not response:
-            continue
-        if config.field == CredentialMetadataField.description.name:
-            if response.get("description"):
-                metadata["description"] = response["description"]
-        elif config.field == CredentialMetadataField.criteria.name:
-            skills = [skill for skill in response.get("skills") or [] if skill]
-            if skills:
-                metadata["criteria"] = skills
+        value = (response or {}).get(config.field)
+        if isinstance(value, list):
+            value = [item for item in value if item]
+        if value:
+            metadata[config.field] = value
     return metadata

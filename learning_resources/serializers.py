@@ -2031,20 +2031,12 @@ class CredentialMetadataSerializer(serializers.Serializer):
         required=False,
         help_text="The Open Badges 3.0 description, 1-2 sentences",
     )
-    criteria = serializers.CharField(
-        read_only=True,
-        required=False,
-        help_text=(
-            "The Open Badges 3.0 criteria narrative, rendered as a markdown"
-            " bullet list from criteria_skills"
-        ),
-    )
-    criteria_skills = serializers.ListField(
+    criteria = serializers.ListField(
         child=serializers.CharField(),
         read_only=True,
         required=False,
         help_text=(
-            "The discrete skills the criteria narrative was rendered from, one"
-            " per bullet"
+            "Open Badges 3.0 criteria, one skill-focused bullet per item, for"
+            " rendering into the criteria narrative"
         ),
     )
