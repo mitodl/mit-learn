@@ -10,6 +10,7 @@ import {
 import { HomeEnrollmentsDisplay } from "./HomeEnrollmentsDisplay"
 import { CoursewareCard } from "./CoursewareCard"
 import { setupEnrollments, setupOrderHistory } from "./test-utils"
+import { formatRunDateRange } from "./courseDateUtils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { makeRequest } from "api/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -85,7 +86,7 @@ describe("DashboardDialogs", () => {
     await user.click(emailSettingsButton)
 
     const dialog = await screen.findByRole("dialog", {
-      name: "Email Settings",
+      name: /^Email Settings/,
     })
     expect(dialog).toBeInTheDocument()
 
@@ -132,7 +133,9 @@ describe("DashboardDialogs", () => {
       await screen.findByRole("menuitem", { name: "Email Settings" }),
     )
 
-    const dialog = await screen.findByRole("dialog", { name: "Email Settings" })
+    const dialog = await screen.findByRole("dialog", {
+      name: /^Email Settings/,
+    })
     await user.click(
       within(dialog).getByRole("checkbox", { name: "Receive course emails" }),
     )
@@ -175,7 +178,7 @@ describe("DashboardDialogs", () => {
     await user.click(await screen.findByRole("menuitem", { name: "Unenroll" }))
 
     const dialog = await screen.findByRole("dialog", {
-      name: `Unenroll from ${enrollment.run.title}`,
+      name: new RegExp(`Unenroll from ${enrollment.run.title}`),
     })
     await user.click(within(dialog).getByRole("button", { name: "Unenroll" }))
 
@@ -214,6 +217,18 @@ describe("DashboardDialogs", () => {
       name: "Unenroll",
     })
     await user.click(unenrollButton)
+
+    // Named even for a single-run learner, so the run is always confirmable,
+    // and part of the dialog's name because that is all a screen reader
+    // announces on open.
+    await screen.findByRole("dialog", {
+      name: new RegExp(
+        `Course run: ${formatRunDateRange(
+          enrollment.run.start_date,
+          enrollment.run.end_date,
+        )}`,
+      ),
+    })
 
     const confirmButton = await screen.findByRole("button", {
       name: "Unenroll",

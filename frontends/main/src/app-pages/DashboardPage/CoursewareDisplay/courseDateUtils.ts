@@ -1,4 +1,9 @@
-import { calendarDaysUntil, formatCalendarDays, isInPast } from "ol-utilities"
+import {
+  calendarDaysUntil,
+  formatCalendarDays,
+  formatDate,
+  isInPast,
+} from "ol-utilities"
 
 export type RunTimeState = "upcoming" | "underway" | "ended"
 
@@ -15,6 +20,25 @@ export const getRunTimeState = (
   if (startDate && isInPast(startDate) === false) return "upcoming"
   if (endDate && isInPast(endDate) === true) return "ended"
   return "underway"
+}
+
+/**
+ * A run's date range, as shown on the sibling-runs rows and in the unenroll /
+ * email settings dialogs. Shared so a dialog names the run the same way the row
+ * the learner opened it from does — the whole point of showing it is letting
+ * them spot the wrong run, which fails if the two spell it differently.
+ *
+ * Returns "" when the run has neither date, so callers can omit the label
+ * rather than render an empty one.
+ */
+export const formatRunDateRange = (
+  startDate?: string | null,
+  endDate?: string | null,
+): string => {
+  const parts: string[] = []
+  if (startDate) parts.push(formatDate(startDate, "MMM D, YYYY"))
+  if (endDate) parts.push(formatDate(endDate, "MMM D, YYYY"))
+  return parts.join(" – ")
 }
 
 export const getCourseDateText = (

@@ -22,10 +22,50 @@ import {
   trackCourseUnenrolled,
   trackProgramUnenrolled,
 } from "@/common/analytics/gtm"
+import { formatRunDateRange } from "./courseDateUtils"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
 
 const BoldText = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
 }))
+
+/**
+ * The run being acted on, or null when it should not be named. A learner
+ * enrolled in several runs of one course reaches these dialogs from a specific
+ * row, and the course title alone can't tell them whether the row they clicked
+ * was the one they meant.
+ *
+ * Behind the same flag as the per-run row menus, so turning the flag off
+ * restores the previous dialogs exactly rather than leaving new copy behind.
+ * Null for a run with no dates, rather than an empty label.
+ */
+const useRunDateRange = (enrollment: CourseRunEnrollmentV3): string | null => {
+  const enabled = useFeatureFlagEnabled(FeatureFlags.MultipleRunContextMenus)
+  const dateRange = formatRunDateRange(
+    enrollment.run?.start_date,
+    enrollment.run?.end_date,
+  )
+  return enabled && dateRange ? dateRange : null
+}
+
+/**
+ * Names the run in the dialog body, and is pulled into the dialog's accessible
+ * name via `additionalLabelledBy`.
+ *
+ * Verified with Orca: it announces a dialog's accessible name on open and
+ * nothing else — not the body copy, and not a container-level
+ * `aria-describedby`. So this line has to join the name to be spoken at all,
+ * while the heading itself stays short.
+ */
+const RunLabel: React.FC<{ id: string; dateRange: string }> = ({
+  id,
+  dateRange,
+}) => (
+  <Typography id={id} variant="body1">
+    Course run: <BoldText>{dateRange}</BoldText>
+  </Typography>
+)
 
 type DashboardDialogProps = {
   title: string
@@ -36,6 +76,8 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
   enrollment,
 }) => {
   const modal = NiceModal.useModal()
+  const runDateRange = useRunDateRange(enrollment)
+  const runLabelId = React.useId()
   const formik = useFormik({
     enableReinitialize: true,
     validateOnChange: false,
@@ -60,8 +102,9 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
   const updateEnrollment = useUpdateEnrollment({ meta: SILENCE_ERROR_TOAST })
   return (
     <FormDialog
-      title={"Email Settings"}
+      title="Email Settings"
       fullWidth
+      additionalLabelledBy={runDateRange ? runLabelId : undefined}
       onReset={formik.resetForm}
       onSubmit={formik.handleSubmit}
       {...muiDialogV5(modal)}
@@ -94,6 +137,7 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
         <Typography variant="body1">
           Update your email preferences for <BoldText>{title}.</BoldText>
         </Typography>
+        {runDateRange && <RunLabel id={runLabelId} dateRange={runDateRange} />}
         <Alert severity="warning">
           Unchecking the box will prevent you from receiving important course
           updates and emails.
@@ -120,6 +164,8 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
   enrollment,
 }) => {
   const modal = NiceModal.useModal()
+  const runDateRange = useRunDateRange(enrollment)
+  const runLabelId = React.useId()
   // Renders its own inline error below (destroyEnrollment.isError), so suppress
   // the global error toast.
   const destroyEnrollment = useDestroyEnrollment({ meta: SILENCE_ERROR_TOAST })
@@ -141,6 +187,7 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
     <FormDialog
       title={`Unenroll from ${title}`}
       fullWidth
+      additionalLabelledBy={runDateRange ? runLabelId : undefined}
       onReset={formik.resetForm}
       onSubmit={formik.handleSubmit}
       {...muiDialogV5(modal)}
@@ -169,15 +216,18 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
         </DialogActions>
       }
     >
-      <Typography variant="body1">
-        Are you sure you want to unenroll from {title}?
-      </Typography>
-      {destroyEnrollment.isError && (
-        <Alert severity="error">
-          There was a problem unenrolling you from this course. Please try again
-          later.
-        </Alert>
-      )}
+      <Stack direction="column" gap="16px">
+        <Typography variant="body1">
+          Are you sure you want to unenroll from {title}?
+        </Typography>
+        {runDateRange && <RunLabel id={runLabelId} dateRange={runDateRange} />}
+        {destroyEnrollment.isError && (
+          <Alert severity="error">
+            There was a problem unenrolling you from this course. Please try
+            again later.
+          </Alert>
+        )}
+      </Stack>
     </FormDialog>
   )
 }

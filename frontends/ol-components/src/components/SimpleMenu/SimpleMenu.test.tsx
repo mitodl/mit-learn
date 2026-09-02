@@ -35,6 +35,25 @@ describe("SimpleMenu", () => {
     expect(screen.queryByRole("menu")).not.toBe(null)
   })
 
+  it("Marks the trigger as a menu button and reflects its open state", async () => {
+    const items: SimpleMenuItem[] = [
+      { key: "one", label: "Item 1", onClick: jest.fn() },
+    ]
+
+    renderWithTheme(
+      <SimpleMenu trigger={<button>Open Menu</button>} items={items} />,
+    )
+
+    // Without these the trigger is indistinguishable from a plain button, and
+    // nothing announces that activating it opened anything.
+    const trigger = screen.getByRole("button", { name: "Open Menu" })
+    expect(trigger).toHaveAttribute("aria-haspopup", "menu")
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
+
+    await user.click(trigger)
+    expect(trigger).toHaveAttribute("aria-expanded", "true")
+  })
+
   it("Calls the menuitem's event andler when clicked and closes menu", async () => {
     const items: SimpleMenuItem[] = [
       { key: "one", label: "Item 1", onClick: jest.fn() },
