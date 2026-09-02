@@ -1,6 +1,6 @@
 import Link from "next/link"
-import { Typography, styled, theme } from "ol-components"
-import type { TypographyProps } from "ol-components"
+import { Typography, styled, theme, type TypographyProps } from "ol-components"
+import { richTextDescription } from "./shared.styled"
 import VideoResourcePlayer from "@/page-components/VideoPlayer/VideoResourcePlayer"
 
 // Primitives shared with the other video pages, re-exported so consumers of this
@@ -105,38 +105,6 @@ export const BorderLine = styled.div(({ theme }) => ({
   },
 }))
 
-/*
- * Typography for rendered description markup. OVS descriptions are rich text
- * now, so these surfaces receive <p>, <ul>/<ol>/<li>, <strong>/<em> and <a> -
- * none of which the plain-text styles below cover on their own. The first/last
- * child resets stop the block adding stray leading and trailing space.
- */
-export const richTextDescription = {
-  p: { margin: "0 0 16px" },
-  "ul, ol": { margin: "0 0 16px", paddingLeft: "24px" },
-  li: { marginBottom: "6px" },
-  blockquote: {
-    margin: "0 0 16px",
-    paddingLeft: "16px",
-    borderLeft: `3px solid ${theme.custom.colors.lightGray2}`,
-    color: theme.custom.colors.darkGray1,
-  },
-  a: {
-    color: theme.custom.colors.red,
-    textDecoration: "underline",
-    textUnderlineOffset: "2px",
-    "&:hover": { color: theme.custom.colors.mitRed },
-  },
-  strong: { fontWeight: theme.typography.fontWeightBold },
-  em: { fontStyle: "italic" },
-  "> :first-of-type": { marginTop: 0 },
-  "> :last-child": { marginBottom: 0 },
-} as const
-
-/*
- * The Pick<TypographyProps, "component"> generic is what allows
- * component="div" at the call site. A sanitized OVS description contains block elements (<p>, <ul>), which are invalid inside Typography's default element for these variants (<p>).
- */
 export const DescriptionText = styled(Typography)<
   Pick<TypographyProps, "component">
 >(({ theme }) => ({

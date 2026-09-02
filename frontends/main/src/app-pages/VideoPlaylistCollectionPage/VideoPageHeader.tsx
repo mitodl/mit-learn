@@ -1,8 +1,14 @@
 import React from "react"
-import { Breadcrumbs, Skeleton, Typography, styled } from "ol-components"
+import {
+  Breadcrumbs,
+  Skeleton,
+  Typography,
+  styled,
+  type TypographyProps,
+} from "ol-components"
 import type { VideoPlaylistResource } from "api/v1"
 import VideoContainer from "./VideoContainer"
-import { richTextDescription } from "./VideoDetailPage.styled"
+import { richTextDescription } from "./shared.styled"
 import { addExternalLinkTargets } from "@/common/utils"
 
 const BreadcrumbBar = styled.div(({ theme }) => ({

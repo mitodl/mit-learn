@@ -1,8 +1,13 @@
 import React, { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Typography, styled, theme, Skeleton } from "ol-components"
-import type { TypographyProps } from "ol-components"
+import {
+  Typography,
+  styled,
+  theme,
+  Skeleton,
+  type TypographyProps,
+} from "ol-components"
 import { formatDurationClockTime } from "ol-utilities"
 import { stripAnchorTags } from "@/common/utils"
 import type { VideoResource } from "api/v1"

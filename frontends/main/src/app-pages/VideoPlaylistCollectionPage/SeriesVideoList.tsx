@@ -2,7 +2,7 @@
 
 import React from "react"
 import Link from "next/link"
-import { Typography, styled } from "ol-components"
+import { Typography, styled, type TypographyProps } from "ol-components"
 import { RiPlayFill, RiArrowRightSLine } from "@remixicon/react"
 import type { LearningResource } from "api/v1"
 import { formatDate, formatDurationClockTime } from "ol-utilities"
