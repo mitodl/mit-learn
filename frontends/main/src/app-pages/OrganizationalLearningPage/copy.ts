@@ -23,8 +23,9 @@ export type ContinuumStepItem = {
 export type FaqItem = { question: string; answer: string }
 
 export const hero = {
-  title: "Empower people across your organization",
-  body: "We offer a portfolio of educational programs for businesses, government, and higher education institutions. We'll help you explore MIT learning opportunities that best align with your organization's goals.",
+  title:
+    "Transform your organization with MIT Open Learning’s technical expertise",
+  body: "We work with businesses, schools, and government agencies to educate diverse workforces on the most impactful technologies of the moment. Connect with our team to learn how our portfolio of MIT Open Learning courses and programs can be matched to your organization’s training goals.",
   ctaLabel: "Get in Touch",
   image: "/images/uai_landing/uai-landing-hero-2.jpg",
   imageAlt: "",
@@ -36,14 +37,14 @@ export const hero = {
 }
 
 export const featuredProgram = {
-  eyebrow: "FEATURED PROGRAM",
+  eyebrow: "PROGRAM SPOTLIGHT",
   title: "Universal AI",
   tagline: "Build AI fluency across your organization.",
   body: "A flexible, self-paced curriculum from MIT faculty and experts, combining foundational AI learning with industry-specific applications.",
   highlights: [
-    "Self-paced",
+    "Self-paced program",
     "MIT faculty & experts",
-    "Stackable",
+    "Stackable modules",
     "AI tutor support",
     "Translation available",
   ],
@@ -52,7 +53,7 @@ export const featuredProgram = {
     title: "20+ modules to build and apply AI skills",
     groups: [
       {
-        title: "FOUNDATIONAL",
+        title: "EXAMPLE FOUNDATIONAL MODULES",
         modules: [
           "Hands-On Deep Learning",
           "Large Language Models",
@@ -60,51 +61,49 @@ export const featuredProgram = {
         ],
       },
       {
-        title: "INDUSTRY APPLICATIONS",
+        title: "EXAMPLE INDUSTRY APPLICATION MODULES",
         modules: [
           "AI + Healthcare",
-          "AI + Sustainability: Energy",
+          "AI + Sustainability and Energy",
           "AI + Finance",
         ],
       },
     ],
-    footnote: "6 MODULES FROM THE FULL COLLECTION",
   },
   ctaLabel: "Talk with our team",
 }
 
 export const offerings = {
   eyebrow: "FOR YOUR ORGANIZATION",
-  title: "Learning solutions for every stage of your organization",
-  body: "Flexible learning options designed to meet your goals — whether you're building leadership skills, adopting AI, or strengthening technical capabilities.",
+  title: "Learning Solutions for Every Role and Responsibility",
+  body: "Flexible learning options designed around your goals, whether you're building leadership skills, adopting AI, or strengthening technical capabilities.",
   cards: [
     {
-      title: "Executive & Leadership",
-      tagline:
-        "Build confident leaders who drive change and inspire high-performing teams",
-      body: "Live sessions with global thought leaders, plus real-world frameworks.",
-      bestForLabel: "Best for:",
-      bestFor: ["Executives", "Leaders", "Directors", "Managers"],
-    },
-    {
-      title: "AI Training",
-      tagline: "Equip your teams to work smarter and innovate with AI.",
-      body: "Practical skills to apply AI tools and techniques in your organization.",
+      title: "Programs for Aspiring AI Specialists",
+      tagline: "Equip your teams to work smarter and innovate with AI",
+      body: "Practical skills to apply AI tools and techniques in your organization",
       bestForLabel: "Best for:",
       bestFor: ["All roles", "Specialists", "Analysts", "Teams"],
     },
     {
-      title: "Technical & Professional Skills",
-      tagline:
-        "Strengthen technical skills and solve real business challenges.",
-      body: "In-depth learning in topics critical to your projects and goals.",
+      title: "Programs for Other Technologists",
+      tagline: "Strengthen technical skills and solve real business challenges",
+      body: "In-depth learning in topics critical to your projects and goals",
       bestForLabel: "Best for:",
       bestFor: ["Engineers", "Developers", "Analysts", "Teams"],
+    },
+    {
+      title: "Programs for Leaders",
+      tagline:
+        "Build leaders who drive transformation through technical understanding and proven leadership frameworks",
+      body: "Asynchronous programs or synchronous sessions meant to develop technical understanding and inform organizational strategy",
+      bestForLabel: "Best for:",
+      bestFor: ["Executives", "Leaders", "Directors", "Managers"],
     },
   ] satisfies OfferingCardItem[],
   flexibleSolutions: {
     title: "Flexible Solutions",
-    body: "From short executive briefings to in-depth learning programs, we offer flexible formats designed to fit your organization's needs, priorities, and scale.",
+    body: "From short executive briefings to in-depth learning programs designed to fit your organization’s needs, priorities, and scale.",
     pills: [
       "Audience",
       "Technical depth",
@@ -118,9 +117,9 @@ export const offerings = {
 }
 
 export const deliveryFormats = {
-  eyebrow: "FLEXIBLE LEARNING FORMATS",
-  title: "Build the right solution from flexible learning formats",
-  body: "Select the formats that fit your people and goals — scalable, flexible and designed for real-world impact.",
+  eyebrow: "HOW WE TAILOR SUCCESSFUL PROGRAMS",
+  title:
+    "Our team will learn about your priorities and needs to find the right combination of learning modalities.",
   items: [
     {
       title: "Programs",
@@ -151,24 +150,24 @@ export const deliveryFormats = {
 }
 
 export const continuum = {
-  eyebrow: "MIT'S LEARNING APPROACH",
-  title: "One continuum, from first exposure to organizational leadership",
-  body: "MIT brings the continuum in organizational education — so you can grow skills, apply them to your work, and lead at the highest level.",
+  eyebrow: "MIT OPEN LEARNING’S APPROACH",
+  title: "One continuum from literacy to fluency to specialization",
+  body: "MIT Open Learning employs principles of instructional design and research into the science of learning to create progressive programs that develop real and impactful expertise.",
   steps: [
     {
       eyebrow: "01 . FOUNDATIONAL LITERACY",
-      title: "Build awareness",
-      body: "Introduce your team to new ideas and future-focused thinking.",
+      title: "Build understanding",
+      body: "Develop a knowledge of the core principles behind specific, impactful technologies.",
     },
     {
-      eyebrow: "02 . TECHNICAL SKILL BUILDING",
-      title: "Grow capabilities",
-      body: "Deepen skills through structured learning and practical application.",
+      eyebrow: "02 . TECHNICAL FLUENCY",
+      title: "Explore applications",
+      body: "Deepen proficiency through practical application in ways that generate real, measurable impact.",
     },
     {
-      eyebrow: "03 . LEADERSHIP FLUENCY",
+      eyebrow: "03 . SPECIALIZATION AND INNOVATION",
       title: "Drive transformation",
-      body: "Embed learning into strategy and culture to achieve lasting impact.",
+      body: "Employ expertise for impact at-scale.",
     },
   ] satisfies ContinuumStepItem[],
 }
@@ -184,7 +183,7 @@ export const faq = {
       answer: FAQ_ANSWER_PENDING,
     },
     {
-      question: "How are the lectures by MIT faculty structured?",
+      question: "How are the lectures by MIT faculty and experts structured?",
       answer: FAQ_ANSWER_PENDING,
     },
     {
@@ -210,19 +209,20 @@ export const faq = {
 
 export const getInTouch = {
   eyebrow: "GET IN TOUCH",
-  title: "Let's build your organization's learning solution.",
+  title: "We’re ready to learn about your organization.",
   pitch:
-    "You don't need a program or solution mapped out before reaching out. Our team can help you explore challenges, identify the right approach, and guide you every step of the way.",
+    "You don’t need to have a program or solution mapped out before contacting us. Our team can help you explore challenges, identify the right approach, and guide you every step of the way.",
   assurances: [
-    "No pressure — just a conversation about your goals.",
+    "Let’s start a conversation about your goals.",
     "We'll help you identify the right first step, for now or later.",
-    "We take data and privacy seriously.",
+    "We take your data and privacy seriously.",
   ],
   submitLabel: "Talk with our team",
   audience: {
-    label: "Who are you exploring learning for?",
+    label:
+      "Who are you exploring learning for? This helps us connect you with the right team.",
     hint: "This helps us connect you with the right team.",
-    organizationLabel: "My organization",
+    organizationLabel: "My Organization",
     organizationDescription:
       "Businesses, government, universities, and other institutions",
     individualLabel: "Myself",

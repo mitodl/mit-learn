@@ -52,12 +52,6 @@ const Heading = styled(SectionHeading)(({ theme }) => ({
   color: theme.custom.colors.white,
 }))
 
-const Body = styled.p(({ theme }) => ({
-  ...theme.typography.body2,
-  color: theme.custom.colors.white,
-  margin: 0,
-}))
-
 const Formats = styled.ul(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: "repeat(3, 1fr)",
@@ -144,7 +138,6 @@ const DeliveryFormatsSection: React.FC = () => (
       <CenteredHeader>
         <Eyebrow>{copy.eyebrow}</Eyebrow>
         <Heading id="delivery-formats-heading">{copy.title}</Heading>
-        <Body>{copy.body}</Body>
       </CenteredHeader>
 
       <Formats>

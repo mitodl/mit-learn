@@ -178,13 +178,6 @@ const Module = styled.li(({ theme }) => ({
   padding: "12px 16px",
 }))
 
-const Footnote = styled.p(({ theme }) => ({
-  ...theme.typography.body2,
-  color: theme.custom.colors.silverGrayLight,
-  margin: 0,
-  textAlign: "center",
-}))
-
 const FeaturedProgramSection: React.FC = () => (
   <Band aria-labelledby="featured-program-heading">
     <Inner>
@@ -225,7 +218,6 @@ const FeaturedProgramSection: React.FC = () => (
             </Modules>
           </Group>
         ))}
-        <Footnote>{copy.curriculum.footnote}</Footnote>
       </Curriculum>
     </Inner>
   </Band>
