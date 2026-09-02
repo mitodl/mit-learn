@@ -15,7 +15,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       default-jre && \
     echo "deb http://deb.debian.org/debian/ sid main" >> /etc/apt/sources.list && \
     apt-get update -qqy && \
-    apt-get install -qqy --no-install-recommends chromium chromium-driver
+    apt-get install -qqy --no-install-recommends \
+      -o Dpkg::Options::="--force-confnew" \
+      chromium chromium-driver
 
 FROM base AS deps
 
