@@ -456,6 +456,21 @@ class PodcastEpisodeParentSerializer(serializers.Serializer):
     id = serializers.IntegerField(source="parent_id")
     title = serializers.CharField(source="parent.title")
     readable_id = serializers.CharField(source="parent.readable_id")
+    learn_url = serializers.SerializerMethodField(
+        help_text="Where this podcast lives within Learn"
+    )
+
+    def get_learn_url(self, instance) -> str:
+        """
+        Return the parent podcast's own page on Learn.
+
+        An episode page names its series in a breadcrumb and in its
+        PodcastEpisode JSON-LD, so it needs the podcast's canonical URL and not
+        just an id. A podcast has no URL-forming parent of its own, hence the
+        empty parent list. `parent` is select_related by the `_podcasts`
+        prefetch, so this costs no extra query.
+        """
+        return learn_url_for_resource(instance.parent, [])
 
 
 class PodcastEpisodeSerializer(serializers.ModelSerializer):

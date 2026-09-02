@@ -67,6 +67,7 @@ const setupApis = ({
             id: podcast.id,
             title: podcast.title!,
             readable_id: podcast.readable_id,
+            learn_url: podcast.learn_url,
           },
         ]
       }

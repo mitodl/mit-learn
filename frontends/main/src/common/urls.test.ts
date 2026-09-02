@@ -6,10 +6,11 @@ import {
   coursePageView,
   ocwLearnPageView,
   programPageView,
-  podcastPageView,
-  podcastEpisodePageView,
-  videoDetailPageView,
-  videoPlaylistPageView,
+  podcastEpisodePath,
+  videoDetailPath,
+  learnUrlPath,
+  learnUrlSlug,
+  generateVideoPlaylistPath,
   canonicalResourceDrawerUrl,
   carrySearchParams,
   resourceDrawerSearch,
@@ -179,50 +180,6 @@ test.each([
   expect(ocwLearnPageView(input)).toBe(expected)
 })
 
-describe("slug-aware path builders", () => {
-  test("podcastPageView appends a slug segment; blank → 'resource'; no title → bare", () => {
-    expect(podcastPageView("123", "Beyond Biology")).toBe(
-      "/podcast/123/beyond-biology",
-    )
-    expect(podcastPageView("123", "2024")).toBe("/podcast/123/resource") // blank slug
-    // explicit undefined title → bare (redirects)
-    expect(podcastPageView("123", undefined)).toBe("/podcast/123")
-  })
-
-  test("podcastEpisodePageView slugs the episode, keeps podcast id bare", () => {
-    expect(podcastEpisodePageView("55", "123", "Episode One")).toBe(
-      "/podcast/123/podcast_episode/55/episode-one",
-    )
-    expect(podcastEpisodePageView("55", "123", "你好")).toBe(
-      "/podcast/123/podcast_episode/55/resource",
-    )
-  })
-
-  test("videoDetailPageView slugs the video and keeps ?playlist", () => {
-    expect(videoDetailPageView(16765, 13798, "Beyond Biology")).toBe(
-      "/video/16765/beyond-biology?playlist=13798",
-    )
-    expect(videoDetailPageView(16765, undefined, "Beyond Biology")).toBe(
-      "/video/16765/beyond-biology",
-    )
-    expect(videoDetailPageView(16765, 13798, undefined)).toBe(
-      "/video/16765?playlist=13798",
-    )
-  })
-
-  test("videoDetailPageView allows a slug equal to 'embed' (embed route moved out)", () => {
-    expect(videoDetailPageView(16765, undefined, "Embed")).toBe(
-      "/video/16765/embed",
-    )
-  })
-
-  test("videoPlaylistPageView appends a slug segment", () => {
-    expect(videoPlaylistPageView("13798", "Great Talks")).toBe(
-      "/video-playlist/13798/great-talks",
-    )
-  })
-})
-
 describe("separate-param drawer builders", () => {
   test("resourceDrawerSearch emits resource + optional resource_title (relative)", () => {
     expect(resourceDrawerSearch(114927, "Beyond Biology")).toBe(
@@ -244,17 +201,79 @@ describe("separate-param drawer builders", () => {
   })
 })
 
+describe("learn_url helpers", () => {
+  const ORIGIN = "http://test.learn.odl.local:8062"
+
+  test("learnUrlPath keeps the path and query, dropping the origin", () => {
+    expect(learnUrlPath(`${ORIGIN}/podcast/123/beyond-biology`)).toBe(
+      "/podcast/123/beyond-biology",
+    )
+    expect(learnUrlPath(`${ORIGIN}/video/16765/intro?playlist=13798`)).toBe(
+      "/video/16765/intro?playlist=13798",
+    )
+    expect(learnUrlPath(`${ORIGIN}/search?resource=42&resource_title=x`)).toBe(
+      "/search?resource=42&resource_title=x",
+    )
+  })
+
+  test("learnUrlPath leaves readable-id characters unescaped", () => {
+    // An MITx Online id contains ':' and '+', both legal in a path segment.
+    expect(learnUrlPath(`${ORIGIN}/courses/course-v1:MITxT+14.100x`)).toBe(
+      "/courses/course-v1:MITxT+14.100x",
+    )
+  })
+
+  test("learnUrlSlug returns the final path segment", () => {
+    expect(learnUrlSlug(`${ORIGIN}/podcast/123/beyond-biology`)).toBe(
+      "beyond-biology",
+    )
+    // The query is not part of the slug.
+    expect(learnUrlSlug(`${ORIGIN}/video/16765/intro?playlist=13798`)).toBe(
+      "intro",
+    )
+    // The backend emits the literal "resource" when a title yields no slug.
+    expect(learnUrlSlug(`${ORIGIN}/podcast/123/resource`)).toBe("resource")
+  })
+
+  test("podcastEpisodePath places the episode under the given podcast", () => {
+    expect(podcastEpisodePath("55", "123", "episode-one")).toBe(
+      "/podcast/123/podcast_episode/55/episode-one",
+    )
+    // No slug → bare, which redirects to the canonical form.
+    expect(podcastEpisodePath("55", "123", undefined)).toBe(
+      "/podcast/123/podcast_episode/55",
+    )
+  })
+
+  test("videoDetailPath keeps ?playlist alongside the slug", () => {
+    expect(videoDetailPath(16765, 13798, "beyond-biology")).toBe(
+      "/video/16765/beyond-biology?playlist=13798",
+    )
+    expect(videoDetailPath(16765, undefined, "beyond-biology")).toBe(
+      "/video/16765/beyond-biology",
+    )
+    expect(videoDetailPath(16765, 13798, undefined)).toBe(
+      "/video/16765?playlist=13798",
+    )
+  })
+
+  test("the bare playlist path redirects to the slugged canonical", () => {
+    expect(generateVideoPlaylistPath("13798")).toBe("/video-playlist/13798")
+  })
+})
+
 test("INVARIANT: canonical paths round-trip URL decoding byte-identically", () => {
-  // The [slug] pages compare Next's *decoded* route params against builder
-  // output; if a builder ever emits a percent-encodable character, a URL
-  // could redirect to a spelling of itself and loop. See pathSlug in urls.ts.
+  // The [slug] pages compare Next's *decoded* route params against these
+  // paths; if one ever carried a percent-encodable character, a URL could
+  // redirect to a spelling of itself and loop. The slug now comes from the
+  // backend, whose charset is [a-z0-9-] or the literal "resource".
   const paths = [
-    podcastPageView("123", "Beyond Biology!"),
-    podcastEpisodePageView("55", "123", "Épisode #1"),
-    videoDetailPageView(16765, 13798, "你好"),
-    videoPlaylistPageView("9", "a".repeat(70)),
+    podcastEpisodePath("55", "123", "episode-one"),
+    videoDetailPath(16765, 13798, "beyond-biology"),
+    learnUrlPath("http://test.learn.odl.local:8062/podcast/123/resource"),
+    generateVideoPlaylistPath("9"),
   ]
-  paths.forEach((p) => expect(decodeURIComponent(p)).toBe(p))
+  paths.forEach((path) => expect(decodeURIComponent(path)).toBe(path))
 })
 
 describe("carrySearchParams", () => {

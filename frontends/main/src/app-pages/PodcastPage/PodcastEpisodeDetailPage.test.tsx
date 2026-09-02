@@ -1,5 +1,6 @@
 import React from "react"
 import { factories, setMockResponse, urls } from "api/test-utils"
+import { kebabCase } from "lodash"
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource, PodcastEpisodeResource } from "api/v1"
 import { renderWithProviders, screen, user, waitFor } from "@/test-utils"
@@ -32,13 +33,24 @@ const makePodcastEpisode = (
     ...overrides,
   }) as PodcastEpisodeResource
 
+/**
+ * The episode page reads the series URL from the embedded parent's `learn_url`,
+ * so give the podcast its own page rather than the factory's drawer default.
+ */
 const makePodcast = (
   overrides: Partial<LearningResource> = {},
-): LearningResource =>
-  factories.learningResources.resource({
+): LearningResource => {
+  const podcast = factories.learningResources.resource({
     resource_type: ResourceTypeEnum.Podcast,
     ...overrides,
   })
+  return {
+    ...podcast,
+    learn_url: `http://test.learn.odl.local:8062/podcast/${podcast.id}/${kebabCase(
+      podcast.title,
+    )}`,
+  }
+}
 
 type SetupOptions = {
   episodeOverrides?: Partial<LearningResource>
@@ -77,6 +89,7 @@ const setupApis = ({
           id: podcast.id,
           title: podcast.title!,
           readable_id: podcast.readable_id,
+          learn_url: podcast.learn_url,
         },
       ],
       has_transcript:
@@ -247,6 +260,7 @@ describe("PodcastEpisodeDetailPage", () => {
         id: podcast.id,
         title: podcast.title!,
         readable_id: podcast.readable_id,
+        learn_url: podcast.learn_url,
       },
     ]
 
@@ -331,11 +345,13 @@ describe("PodcastEpisodeDetailPage", () => {
         id: podcastA.id,
         title: "Podcast A",
         readable_id: podcastA.readable_id,
+        learn_url: podcastA.learn_url,
       },
       {
         id: podcastB.id,
         title: "Podcast B",
         readable_id: podcastB.readable_id,
+        learn_url: podcastB.learn_url,
       },
     ]
 

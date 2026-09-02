@@ -43,10 +43,6 @@ import {
   FACEBOOK_SHARE_BASE_URL,
   TWITTER_SHARE_BASE_URL,
   LINKEDIN_SHARE_BASE_URL,
-  videoDetailPageView,
-  videoPlaylistPageView,
-  podcastPageView,
-  podcastEpisodePageView,
   ocwLearnPageView,
 } from "@/common/urls"
 import { parentPodcastIds, videoPlaylistIds } from "@/common/slugs"
@@ -321,27 +317,27 @@ const getResourceUrl = (
     ocwProductPages?: boolean
   },
 ) => {
+  // `learn_url` addresses these under their canonical parent, which is the
+  // parent these branches were already choosing. The membership guards stay:
+  // a video outside any playlist, or an episode with no podcast, still falls
+  // through to the source URL below rather than to a Learn page.
   if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
-    return videoPlaylistPageView(resource.id.toString(), resource.title)
+    return resource.learn_url
   }
   if (resource.resource_type === ResourceTypeEnum.Video) {
     const [firstPlaylist] = videoPlaylistIds(resource)
     if (firstPlaylist !== undefined) {
-      return videoDetailPageView(resource.id, firstPlaylist, resource.title)
+      return resource.learn_url
     }
   }
 
   if (resource.resource_type === ResourceTypeEnum.Podcast) {
-    return podcastPageView(resource.id.toString(), resource.title)
+    return resource.learn_url
   }
   if (resource.resource_type === ResourceTypeEnum.PodcastEpisode) {
     const [parentPodcastId] = parentPodcastIds(resource)
     if (parentPodcastId !== undefined) {
-      return podcastEpisodePageView(
-        resource.id.toString(),
-        String(parentPodcastId),
-        resource.title,
-      )
+      return resource.learn_url
     }
   }
 

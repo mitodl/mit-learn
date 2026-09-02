@@ -4449,8 +4449,13 @@ components:
           type: string
         readable_id:
           type: string
+        learn_url:
+          type: string
+          description: Where this podcast lives within Learn
+          readOnly: true
       required:
       - id
+      - learn_url
       - readable_id
       - title
     PodcastEpisodeResource:

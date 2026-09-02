@@ -200,7 +200,12 @@ describe("getEpisodeParentPodcastName", () => {
         id: 1,
         podcasts: [42],
         parent_podcasts: [
-          { id: 42, title: "The Show Name", readable_id: "the-show" },
+          {
+            id: 42,
+            title: "The Show Name",
+            readable_id: "the-show",
+            learn_url: "http://test.learn.odl.local:8062/podcast/42/the-show",
+          },
         ],
         duration: "PT1M",
         audio_url: "https://example.com/audio.mp3",
@@ -230,8 +235,18 @@ describe("getEpisodeParentPodcastName", () => {
         id: 1,
         podcasts: [1, 2],
         parent_podcasts: [
-          { id: 1, title: "Podcast A", readable_id: "podcast-a" },
-          { id: 2, title: "Podcast B", readable_id: "podcast-b" },
+          {
+            id: 1,
+            title: "Podcast A",
+            readable_id: "podcast-a",
+            learn_url: "http://test.learn.odl.local:8062/podcast/1/podcast-a",
+          },
+          {
+            id: 2,
+            title: "Podcast B",
+            readable_id: "podcast-b",
+            learn_url: "http://test.learn.odl.local:8062/podcast/2/podcast-b",
+          },
         ],
         duration: "PT1M",
         audio_url: "https://example.com/audio.mp3",
@@ -263,8 +278,18 @@ describe("getEpisodeParentPodcast", () => {
       id: 1,
       podcasts: [1, 2],
       parent_podcasts: [
-        { id: 1, title: "Podcast A", readable_id: "podcast-a" },
-        { id: 2, title: "Podcast B", readable_id: "podcast-b" },
+        {
+          id: 1,
+          title: "Podcast A",
+          readable_id: "podcast-a",
+          learn_url: "http://test.learn.odl.local:8062/podcast/1/podcast-a",
+        },
+        {
+          id: 2,
+          title: "Podcast B",
+          readable_id: "podcast-b",
+          learn_url: "http://test.learn.odl.local:8062/podcast/2/podcast-b",
+        },
       ],
       duration: "PT1M",
       audio_url: "https://example.com/audio.mp3",
@@ -284,6 +309,7 @@ describe("getEpisodeParentPodcast", () => {
       id: 2,
       title: "Podcast B",
       readable_id: "podcast-b",
+      learn_url: "http://test.learn.odl.local:8062/podcast/2/podcast-b",
     })
   })
 

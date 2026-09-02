@@ -49,12 +49,27 @@ test.each(["P", "PT", "P1DT", "17 minutes", "1:13:44", ""])(
 test("names the series it is given, not one it picks itself", () => {
   const episode = makeEpisode({
     parent_podcasts: [
-      { id: 1, title: "Podcast A", readable_id: "a" },
-      { id: 2, title: "Podcast B", readable_id: "b" },
+      {
+        id: 1,
+        title: "Podcast A",
+        readable_id: "a",
+        learn_url: "http://test.learn.odl.local:8062/podcast/1/podcast-a",
+      },
+      {
+        id: 2,
+        title: "Podcast B",
+        readable_id: "b",
+        learn_url: "http://test.learn.odl.local:8062/podcast/2/podcast-b",
+      },
     ],
   })
   const built = buildPodcastEpisodeStructuredData(episode, {
-    series: { id: 2, title: "Podcast B", readable_id: "b" },
+    series: {
+      id: 2,
+      title: "Podcast B",
+      readable_id: "b",
+      learn_url: "http://test.learn.odl.local:8062/podcast/2/podcast-b",
+    },
     seriesUrl: "https://learn.mit.edu/podcast/2/podcast-b",
   })
   expect(built).toHaveProperty("partOfSeries", {

@@ -114,27 +114,23 @@ describe("VideoDetailPage", () => {
 
   // Share URL is the slugged canonical form, and carries the playlist only
   // when present (no `?playlist=null` when the video is viewed without one).
-  test.each([
-    {
-      playlistId: 99,
-      expected:
-        "http://test.learn.odl.local:8062/video/720/intro-to-machine-learning?playlist=99",
-    },
-    {
-      playlistId: null,
-      expected:
-        "http://test.learn.odl.local:8062/video/720/intro-to-machine-learning",
-    },
-  ])(
-    "Share link is the slugged canonical URL (playlistId=$playlistId)",
-    async ({ playlistId, expected }) => {
-      const video = makeVideo({ id: 720, title: "Intro to Machine Learning" })
+  test.each([{ playlistId: 99 }, { playlistId: null }])(
+    "Share link is the video's own URL, whichever playlist is viewed (playlistId=$playlistId)",
+    async ({ playlistId }) => {
+      // One canonical URL per video, so sharing from a non-canonical playlist
+      // still hands out the URL that owns the content.
+      const video = makeVideo({
+        id: 720,
+        title: "Intro to Machine Learning",
+        learn_url:
+          "http://test.learn.odl.local:8062/video/720/intro-to-machine-learning?playlist=55",
+      })
       renderPage({ video, playlistId })
 
       await screen.findByRole("heading", { name: video.title })
       await user.click(screen.getByRole("button", { name: /share/i }))
 
-      expect(screen.getByRole("textbox")).toHaveValue(expected)
+      expect(screen.getByRole("textbox")).toHaveValue(video.learn_url)
     },
   )
 

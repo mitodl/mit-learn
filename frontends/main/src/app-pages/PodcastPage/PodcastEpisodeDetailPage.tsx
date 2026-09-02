@@ -13,7 +13,12 @@ import { useQuery } from "@tanstack/react-query"
 import { ResourceTypeEnum } from "api/v1"
 import type { PodcastEpisodeResource } from "api/v1"
 import { formatDate } from "ol-utilities"
-import { HOME, podcastPageView, podcastEpisodePageView } from "@/common/urls"
+import {
+  HOME,
+  learnUrlPath,
+  learnUrlSlug,
+  podcastEpisodePath,
+} from "@/common/urls"
 import { addExternalLinkTargets } from "@/common/utils"
 import { EpisodeItem } from "./PodcastsListingPage/EpisodeItem"
 import PodcastContainer from "./PodcastContainer"
@@ -259,14 +264,15 @@ export const PodcastEpisodeDetailPage: React.FC<
     toggle(episode, Number(podcastId))
   }
 
-  const podcastHref = podcastId
-    ? podcastPageView(podcastId, parentPodcast?.title)
+  // The series' own page. Used for the breadcrumb and, via `seriesUrl` below,
+  // for the JSON-LD `partOfSeries.url` — which has to name the canonical URL
+  // rather than one that redirects to it.
+  const podcastHref = parentPodcast
+    ? learnUrlPath(parentPodcast.learn_url)
     : "/"
 
-  const sharePageUrl =
-    episode && podcastId
-      ? `${NEXT_PUBLIC_ORIGIN}${podcastEpisodePageView(String(episode.id), podcastId, episode.title)}`
-      : ""
+  // The episode's own canonical location, matching the drawer's share button.
+  const sharePageUrl = episode?.learn_url ?? ""
 
   // Episode descriptions are sanitized on the backend with nh3 during ETL
   // (only <a href/title> is allowed), so the HTML is safe to render verbatim
@@ -398,10 +404,10 @@ export const PodcastEpisodeDetailPage: React.FC<
                   episode={episode}
                   href={
                     podcastId
-                      ? podcastEpisodePageView(
+                      ? podcastEpisodePath(
                           String(episode.id),
                           podcastId,
-                          episode.title,
+                          learnUrlSlug(episode.learn_url),
                         )
                       : ""
                   }
