@@ -29,16 +29,42 @@ const HTML_ENTITIES: Record<string, string> = {
   "&nbsp;": " ",
 }
 
+/*
+ * Strip tags to a fixed point rather than in one pass.
+ *
+ * A single `replace(/<[^>]*>/g, "")` is not idempotent: removing one match can
+ * join its neighbours into a new tag, so `<scr<div>ipt>` survives as `<script>`.
+ * CodeQL calls this incomplete multi-character sanitization and it is right -
+ * this value ends up inside a <script type="application/ld+json"> block. The
+ * injection point also escapes `</`, but a helper that claims to return plain
+ * text should not depend on its caller for that.
+ *
+ * Looping to a fixed point and then dropping any surviving angle bracket means
+ * the result cannot contribute to a tag in any context.
+ */
+const stripTags = (html: string): string => {
+  let previous = ""
+  let current = html
+  while (current !== previous) {
+    previous = current
+    current = current.replace(/<[^>]*>/g, "")
+  }
+  return current
+}
+
 const descriptionToPlainText = (html: string): string =>
-  html
-    // block boundaries become spaces, or adjacent paragraphs run together
-    .replace(/<\/(?:p|li|ul|ol|blockquote)>/gi, " ")
-    .replace(/<br\s*\/?>/gi, " ")
-    .replace(/<[^>]*>/g, "")
+  stripTags(
+    html
+      // block boundaries become spaces, or adjacent paragraphs run together
+      .replace(/<\/(?:p|li|ul|ol|blockquote)>/gi, " ")
+      .replace(/<br\s*\/?>/gi, " "),
+  )
+    // decode before dropping brackets, so an entity cannot smuggle one back in
     .replace(
       /&[a-z#0-9]+;/gi,
       (entity) => HTML_ENTITIES[entity.toLowerCase()] ?? entity,
     )
+    .replace(/[<>]/g, "")
     .replace(/\s+/g, " ")
     .trim()
 
