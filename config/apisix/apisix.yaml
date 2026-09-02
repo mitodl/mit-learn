@@ -3,6 +3,10 @@ upstreams:
     nodes:
       "nginx:${{NGINX_PORT}}": 1
     type: roundrobin
+    timeout:
+      connect: 6
+      send: 60
+      read: 180
   - id: 2
     nodes:
       "${{MITX_ONLINE_UPSTREAM}}": 1

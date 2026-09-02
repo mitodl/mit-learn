@@ -160,6 +160,32 @@ paths:
           description: Invalid feedback submission
         '429':
           description: Rate limit exceeded
+  /api/v0/credential_metadata/:
+    get:
+      operationId: credential_metadata_retrieve
+      description: |-
+        Generate Open Badges credential metadata for a learning resource.
+
+        Limited to MITx Online courses.
+      summary: Generate credential metadata
+      parameters:
+      - in: query
+        name: resource_readable_id
+        schema:
+          type: string
+          minLength: 1
+        description: The readable id of the learning resource to generate metadata
+          for
+        required: true
+      tags:
+      - credential_metadata
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CredentialMetadata'
+          description: ''
   /api/v0/learning_resources_search_admin_params/:
     get:
       operationId: learning_resources_search_admin_params_retrieve
@@ -2361,6 +2387,40 @@ components:
       type: string
       enum:
       - course
+    CredentialMetadata:
+      type: object
+      description: |-
+        Generated Open Badges credential metadata for a learning resource.
+
+        Every field is a draft for a human to review and edit: nothing here is
+        saved on the resource, and asking again returns a different draft. A field
+        whose generation failed is absent rather than empty, so a caller does not
+        overwrite a good value with a blank one.
+      properties:
+        resource_readable_id:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+          description: The Open Badges 3.0 description, 1-2 sentences
+        criteria:
+          type: string
+          readOnly: true
+          description: The Open Badges 3.0 criteria narrative, rendered as a markdown
+            bullet list from criteria_skills
+        criteria_skills:
+          type: array
+          items:
+            type: string
+          readOnly: true
+          description: The discrete skills the criteria narrative was rendered from,
+            one per bullet
+      required:
+      - criteria
+      - criteria_skills
+      - description
+      - resource_readable_id
     CurrentEducationEnum:
       enum:
       - Doctorate

@@ -1779,17 +1779,7 @@ class CredentialMetadataView(AsyncAPIView):
     """
     Generate Open Badges credential metadata for a learning resource.
 
-    Every request generates: there is no cache and no `regenerate` flag, so an
-    author who dislikes a draft asks again and gets a new one. Nothing is saved
-    on the resource -- the drafts are returned for a human to review, and each
-    generation is recorded in CredentialMetadataGenerationLog.
-
-    Author-only, because a request spends one frontier-model call per field on
-    a large prompt. The view is async so those calls, which run concurrently
-    and take seconds, occupy no blocking thread while they wait.
-
-    MITx Online courses only: that is what the prompts were written and
-    validated against. Anything else is a 400 rather than an unreviewed draft.
+    Limited to MITx Online courses.
     """
 
     permission_classes = (permissions.IsAdminOrCourseAuthor,)
@@ -1812,11 +1802,6 @@ class CredentialMetadataView(AsyncAPIView):
         if not resource:
             msg = f"No learning resource with readable_id {readable_id}"
             raise NotFound(msg)
-
-        # The prompts were written and validated against MITx Online courses.
-        # A program page is a different kind of document, and another platform's
-        # content is differently shaped, so rather than return a draft nobody
-        # has reviewed the prompts against, say so.
         if (
             resource.resource_type != LearningResourceType.course.name
             or resource.etl_source != ETLSource.mitxonline.name
