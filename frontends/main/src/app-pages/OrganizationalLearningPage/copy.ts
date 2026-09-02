@@ -27,6 +27,21 @@ export type ClientLogoItem = {
   width: number
   height: number
 }
+export type CaseStudyStat = { value: string; label: string }
+export type CaseStudyPillar = {
+  title: string
+  body: string
+  bullets: string[]
+}
+export type CaseStudyItem = {
+  eyebrow: string
+  org: string
+  tagline: string
+  /** Omitted while a study is anonymized; the panel then drops the logo frame. */
+  logo?: { src: string; width: number; height: number }
+  stats: CaseStudyStat[]
+  pillars: CaseStudyPillar[]
+}
 
 export const hero = {
   title:
@@ -218,6 +233,68 @@ export const clientLogos = {
       height: 80,
     },
   ] satisfies ClientLogoItem[],
+}
+
+/**
+ * `items` drives the carousel: a lone study renders on its own with no
+ * navigation, and appending a second one turns the carousel on with no change
+ * to CaseStudiesSection.
+ *
+ * The study below is deliberately anonymized. The Figma design names the client
+ * and shows its seal, but that attribution is not approved to ship — add `logo`
+ * and the real name only once it is.
+ */
+export const caseStudies = {
+  eyebrow: "CASE STUDIES",
+  title: "See how organizations turn learning into impact",
+  body: "Discover how organizations have applied MIT learning programs to achieve their goals and create lasting impact",
+  navLabel: "Case studies",
+  items: [
+    {
+      eyebrow: "INSTITUTIONAL SOLUTIONS",
+      org: "Global financial services firm",
+      tagline: "A custom learning solution built with MIT Learn",
+      stats: [
+        { value: "50+", label: "Program participants" },
+        { value: "30+", label: "Countries represented" },
+        { value: "CEUs", label: "Awarded for completion" },
+      ],
+      pillars: [
+        {
+          title: "Organizational solution evaluation",
+          body: "Customer needs assessment and alignment to goals.",
+          bullets: [
+            "Stakeholder interviews",
+            "Learning priorities",
+            "Success metrics",
+          ],
+        },
+        {
+          title: "Blended learning program",
+          body: "Curated content with live sessions and self-paced learning.",
+          bullets: ["Courses & programs", "Workshops & seminars", "Webinars"],
+        },
+        {
+          title: "Technical implementation",
+          body: "Setup, integration and support to launch seamlessly.",
+          bullets: [
+            "Platform integration",
+            "User provisioning",
+            "Onboarding & support",
+          ],
+        },
+        {
+          title: "Ongoing support & reporting",
+          body: "Engagement analytics and continuous improvement.",
+          bullets: [
+            "Usage & impact reports",
+            "Feedback & iteration",
+            "Dedicated support",
+          ],
+        },
+      ],
+    },
+  ] satisfies CaseStudyItem[],
 }
 
 const FAQ_ANSWER_PENDING = "Answer pending from the content handoff."

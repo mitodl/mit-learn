@@ -30,6 +30,16 @@ const setupApis = () => {
   setMockResponse.post(urls.hubspot.submit(FORM_ID), {})
 }
 
+/**
+ * Each radio's accessible name is its label plus its description, so these match
+ * on the label alone. Built from the copy rather than written out, so a
+ * capitalization pass on the labels cannot silently unmatch every query here.
+ */
+const AUDIENCE = {
+  organization: new RegExp(copy.audience.organizationLabel),
+  individual: new RegExp(copy.audience.individualLabel),
+}
+
 const selectAudience = (label: RegExp) =>
   user.click(screen.getByRole("radio", { name: label }))
 
@@ -67,7 +77,9 @@ describe("OrgLeadForm", () => {
     setupApis()
     renderWithProviders(<OrgLeadForm />)
 
-    expect(screen.getByRole("radio", { name: /My organization/ })).toBeChecked()
+    expect(
+      screen.getByRole("radio", { name: AUDIENCE.organization }),
+    ).toBeChecked()
     expect(screen.getByTestId("hubspot-form")).toBeInTheDocument()
   })
 
@@ -75,7 +87,7 @@ describe("OrgLeadForm", () => {
     setupApis()
     renderWithProviders(<OrgLeadForm />)
 
-    await selectAudience(/Myself/)
+    await selectAudience(AUDIENCE.individual)
 
     // The whole point of the branch: an individual is not a sales lead, so the
     // form must be gone rather than merely hidden alongside the links.
@@ -89,8 +101,8 @@ describe("OrgLeadForm", () => {
     setupApis()
     renderWithProviders(<OrgLeadForm />)
 
-    await selectAudience(/Myself/)
-    await selectAudience(/My organization/)
+    await selectAudience(AUDIENCE.individual)
+    await selectAudience(AUDIENCE.organization)
 
     expect(screen.getByTestId("hubspot-form")).toBeInTheDocument()
     expect(
@@ -161,7 +173,7 @@ describe("OrgLeadForm", () => {
     renderWithProviders(<OrgLeadForm />)
 
     await submitForm()
-    await selectAudience(/Myself/)
+    await selectAudience(AUDIENCE.individual)
 
     // The org submission succeeds in the background while the individual
     // path is showing — that choice must keep controlling what renders,
@@ -178,7 +190,7 @@ describe("OrgLeadForm", () => {
 
     // Confirm the submission really did succeed: switching back to the
     // organization path surfaces the confirmation.
-    await selectAudience(/My organization/)
+    await selectAudience(AUDIENCE.organization)
     expect(await screen.findByText(copy.success.title)).toBeInTheDocument()
   })
 
@@ -200,7 +212,9 @@ describe("OrgLeadForm", () => {
     expect(screen.getByText(copy.unavailable)).toBeInTheDocument()
     expect(screen.queryByTestId("hubspot-form")).not.toBeInTheDocument()
     // The audience selector still works — only the form itself is unavailable.
-    expect(screen.getByRole("radio", { name: /Myself/ })).toBeInTheDocument()
+    expect(
+      screen.getByRole("radio", { name: AUDIENCE.individual }),
+    ).toBeInTheDocument()
   })
 
   test("reports itself unavailable when the form definition fails to load", async () => {
@@ -214,6 +228,8 @@ describe("OrgLeadForm", () => {
     expect(await screen.findByText(copy.unavailable)).toBeInTheDocument()
     expect(screen.queryByTestId("hubspot-form")).not.toBeInTheDocument()
     // The audience selector still works — only the form itself is unavailable.
-    expect(screen.getByRole("radio", { name: /Myself/ })).toBeInTheDocument()
+    expect(
+      screen.getByRole("radio", { name: AUDIENCE.individual }),
+    ).toBeInTheDocument()
   })
 })
