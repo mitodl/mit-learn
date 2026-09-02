@@ -55,9 +55,14 @@ const stripTags = (html: string): string => {
 const descriptionToPlainText = (html: string): string =>
   stripTags(
     html
-      // block boundaries become spaces, or adjacent paragraphs run together
-      .replace(/<\/(?:p|li|ul|ol|blockquote)>/gi, " ")
-      .replace(/<br\s*\/?>/gi, " "),
+      /*
+       * Every block-level tag the backend allowlist keeps
+       * (main/constants.py ALLOWED_HTML_TAGS) is a boundary, or its neighbours
+       * run together: <div>First</div><div>Second</div> became "FirstSecond"
+       * when this list only covered p/li/ul/ol/blockquote.
+       */
+      .replace(/<\/(?:p|li|ul|ol|blockquote|div|pre|caption|center|q)>/gi, " ")
+      .replace(/<(?:br|hr)\s*\/?>/gi, " "),
   )
     // decode before dropping brackets, so an entity cannot smuggle one back in
     .replace(

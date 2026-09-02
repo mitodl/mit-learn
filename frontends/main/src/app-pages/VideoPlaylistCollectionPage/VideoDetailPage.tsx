@@ -216,6 +216,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
 
           {!isLoading && video?.description && (
             <Styled.DescriptionText
+              component="div"
               id="video-description"
               dangerouslySetInnerHTML={{
                 __html: addExternalLinkTargets(video.description),

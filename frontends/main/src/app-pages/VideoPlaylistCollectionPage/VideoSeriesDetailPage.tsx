@@ -203,6 +203,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
           {/* Description */}
           {!isLoading && video?.description && (
             <Styled.DescriptionText
+              component="div"
               id="video-description"
               style={nextVideo ? {} : { paddingTop: "40px" }}
               dangerouslySetInnerHTML={{

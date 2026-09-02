@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Typography, styled, theme } from "ol-components"
+import type { TypographyProps } from "ol-components"
 import VideoResourcePlayer from "@/page-components/VideoPlayer/VideoResourcePlayer"
 
 // Primitives shared with the other video pages, re-exported so consumers of this
@@ -132,7 +133,13 @@ export const richTextDescription = {
   "> :last-child": { marginBottom: 0 },
 } as const
 
-export const DescriptionText = styled(Typography)(({ theme }) => ({
+/*
+ * The Pick<TypographyProps, "component"> generic is what allows
+ * component="div" at the call site. A sanitized OVS description contains block elements (<p>, <ul>), which are invalid inside Typography's default element for these variants (<p>).
+ */
+export const DescriptionText = styled(Typography)<
+  Pick<TypographyProps, "component">
+>(({ theme }) => ({
   ...theme.typography.body1,
   ...richTextDescription,
   color: theme.custom.colors.darkGray2,
@@ -216,7 +223,13 @@ export const MoreFromItemTitle = styled(Typography)({
   lineHeight: "26px" /* 130% */,
 })
 
-export const MoreFromItemMeta = styled(Typography)({
+/*
+ * The Pick<TypographyProps, "component"> generic is what allows
+ * component="div" at the call site. A sanitized OVS description contains block elements (<p>, <ul>), which are invalid inside Typography's default element for these variants (<p>).
+ */
+export const MoreFromItemMeta = styled(Typography)<
+  Pick<TypographyProps, "component">
+>({
   /* Clamped to a couple of lines, so a real list would blow the box out.
      Anchors are already stripped by the component; flatten the rest. */
   "p, ul, ol, li": {

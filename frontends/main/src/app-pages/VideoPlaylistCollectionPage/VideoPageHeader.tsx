@@ -69,16 +69,22 @@ const PageTitle = styled.h1<{ isSeries?: boolean }>(({ theme, isSeries }) => ({
   },
 }))
 
-const PageDescription = styled(Typography)(({ theme }) => ({
-  ...richTextDescription,
-  color: theme.custom.colors.darkGray1,
-  ...theme.typography.body1,
-  lineHeight: "26px",
-  [theme.breakpoints.down("sm")]: {
-    ...theme.typography.body2,
-    lineHeight: "22px",
-  },
-}))
+/*
+ * The Pick<TypographyProps, "component"> generic is what allows
+ * component="div" at the call site. A sanitized OVS description contains block elements (<p>, <ul>), which are invalid inside Typography's default element for these variants (<p>).
+ */
+const PageDescription = styled(Typography)<Pick<TypographyProps, "component">>(
+  ({ theme }) => ({
+    ...richTextDescription,
+    color: theme.custom.colors.darkGray1,
+    ...theme.typography.body1,
+    lineHeight: "26px",
+    [theme.breakpoints.down("sm")]: {
+      ...theme.typography.body2,
+      lineHeight: "22px",
+    },
+  }),
+)
 
 const CollectionTitle = styled(Typography)(({ theme }) => ({
   ...theme.typography.body1,
@@ -136,6 +142,7 @@ const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({
             <Skeleton width={520} height={28} />
           ) : (
             <PageDescription
+              component="div"
               /* Rich text, sanitized during ETL. Rendered as markup rather
                  than interpolated, or an author's formatting would appear to
                  the learner as visible tags. */

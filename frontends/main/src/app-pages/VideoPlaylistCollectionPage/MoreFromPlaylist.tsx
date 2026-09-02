@@ -61,6 +61,7 @@ const MoreFromPlaylistItem: React.FC<{
         </Styled.MoreFromItemTitle>
         {video.description && (
           <Styled.MoreFromItemMeta
+            component="div"
             /* Row is a link; anchors from the description would nest. */
             dangerouslySetInnerHTML={{
               __html: stripAnchorTags(video.description),

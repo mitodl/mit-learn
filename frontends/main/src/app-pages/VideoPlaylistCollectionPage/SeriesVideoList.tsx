@@ -29,7 +29,13 @@ const EpisodeNumber = styled.span<{ $isFirst?: boolean }>(
   }),
 )
 
-const EpisodeDescription = styled(Typography)(({ theme }) => ({
+/*
+ * The Pick<TypographyProps, "component"> generic is what allows
+ * component="div" at the call site. A sanitized OVS description contains block elements (<p>, <ul>), which are invalid inside Typography's default element for these variants (<p>).
+ */
+const EpisodeDescription = styled(Typography)<
+  Pick<TypographyProps, "component">
+>(({ theme }) => ({
   /* Clamped preview: description markup is flattened so a list cannot blow the
      box out. Anchors are stripped in the component (the row is itself a link). */
   "p, ul, ol, li": {
@@ -240,6 +246,7 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
             {/* The whole row is a link, so anchors from the description
                 have to go - a nested <a> splits the row's own link. */}
             <EpisodeDescription
+              component="div"
               variant="body2"
               dangerouslySetInnerHTML={{
                 __html: stripAnchorTags(episode.description ?? ""),
