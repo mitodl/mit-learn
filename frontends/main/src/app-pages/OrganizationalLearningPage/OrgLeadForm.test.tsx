@@ -43,8 +43,9 @@ const AUDIENCE = {
 const selectAudience = (label: RegExp) =>
   user.click(screen.getByRole("radio", { name: label }))
 
-const submitForm = () =>
-  user.click(screen.getByRole("button", { name: "Submit stub" }))
+/** Awaits the stub: the form only mounts once its definition has loaded. */
+const submitForm = async () =>
+  user.click(await screen.findByRole("button", { name: "Submit stub" }))
 
 describe("OrgLeadForm", () => {
   beforeEach(() => {
@@ -64,6 +65,8 @@ describe("OrgLeadForm", () => {
         >
           Submit stub
         </button>
+        {/* Passed in by OrgLeadForm, so it is under test rather than stubbed. */}
+        {props.submitButton}
         {props.errorText ? <div role="alert">{props.errorText}</div> : null}
       </div>
     ))
@@ -73,14 +76,32 @@ describe("OrgLeadForm", () => {
     delete process.env.NEXT_PUBLIC_ORG_LEARNING_HUBSPOT_FORM_ID
   })
 
-  test("shows the lead form by default, so it is visible without interaction", () => {
+  test("shows the lead form by default, so it is visible without interaction", async () => {
     setupApis()
     renderWithProviders(<OrgLeadForm />)
 
     expect(
       screen.getByRole("radio", { name: AUDIENCE.organization }),
     ).toBeChecked()
-    expect(screen.getByTestId("hubspot-form")).toBeInTheDocument()
+    expect(await screen.findByTestId("hubspot-form")).toBeInTheDocument()
+  })
+
+  test("says the form is loading rather than leaving the card empty", async () => {
+    const pending = Promise.withResolvers<unknown>()
+    setMockResponse.get(
+      urls.hubspot.details({ form_id: FORM_ID }),
+      pending.promise,
+    )
+    renderWithProviders(<OrgLeadForm />)
+
+    // HubspotForm renders nothing without a definition, so without this branch
+    // the card body is blank for the whole request.
+    const [announced, visible] = screen.getAllByText(copy.loading)
+    expect(announced).toHaveAttribute("aria-live", "polite")
+    // Announced once: the visible copy is hidden from assistive tech so the
+    // live region is not doubled up by it.
+    expect(visible).toHaveAttribute("aria-hidden", "true")
+    expect(screen.queryByTestId("hubspot-form")).not.toBeInTheDocument()
   })
 
   test("replaces the form with B2C links when exploring for oneself", async () => {
@@ -164,6 +185,39 @@ describe("OrgLeadForm", () => {
     expect(await screen.findByText(copy.success.title)).toBeInTheDocument()
     // Terminal by design: inline, there is no dialog to dismiss back to a form.
     expect(screen.queryByTestId("hubspot-form")).not.toBeInTheDocument()
+  })
+
+  test("moves focus to the confirmation, which the submit button's removal would otherwise drop", async () => {
+    setupApis()
+    renderWithProviders(<OrgLeadForm />)
+
+    await submitForm()
+    const title = await screen.findByText(copy.success.title)
+
+    // Focus lands on the container so both lines are announced, and so it does
+    // not fall to document.body when the form unmounts.
+    const confirmation = title.parentElement
+    expect(confirmation).toHaveFocus()
+    expect(confirmation).toHaveTextContent(copy.success.body)
+  })
+
+  test("marks the submit button busy while the submission is in flight", async () => {
+    setupApis()
+    const pending = Promise.withResolvers<Record<string, never>>()
+    setMockResponse.post(urls.hubspot.submit(FORM_ID), pending.promise)
+    renderWithProviders(<OrgLeadForm />)
+
+    const submit = await screen.findByRole("button", {
+      name: copy.submitLabel,
+    })
+    expect(submit).not.toHaveAttribute("aria-busy", "true")
+
+    await submitForm()
+
+    // Disabling alone leaves a screen reader with no signal that anything is
+    // happening, since the label does not change.
+    await waitFor(() => expect(submit).toHaveAttribute("aria-busy", "true"))
+    expect(screen.getByText(copy.submitting)).toBeInTheDocument()
   })
 
   test("keeps the individual panel visible if the audience changes before a pending org submission resolves", async () => {

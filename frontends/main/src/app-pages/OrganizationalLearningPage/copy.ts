@@ -354,4 +354,6 @@ export const getInTouch = {
   /** Rendered when no HubSpot form id is configured for the environment. */
   unavailable:
     "The contact form is unavailable right now. Please try again later.",
+  loading: "Loading the form…",
+  submitting: "Submitting your request…",
 }

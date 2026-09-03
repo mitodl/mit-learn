@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { styled, theme } from "ol-components"
+import { styled } from "ol-components"
 import { RiCheckLine } from "@remixicon/react"
 import { ORGANIZATIONAL_LEARNING_FORM_ID } from "@/common/urls"
 import OrgLeadForm from "./OrgLeadForm"
@@ -97,12 +97,12 @@ const Assurance = styled.li({
   gap: "12px",
 })
 
-const AssuranceIcon = styled(RiCheckLine)({
+const AssuranceIcon = styled(RiCheckLine)(({ theme }) => ({
   color: theme.custom.colors.green,
   flexShrink: 0,
   width: "24px",
   height: "24px",
-})
+}))
 
 const AssuranceText = styled.span(({ theme }) => ({
   ...theme.typography.body1,

@@ -4,8 +4,6 @@ import { styled } from "ol-components"
 import { RiMenuLine } from "@remixicon/react"
 import React from "react"
 
-const MenuIcon = styled(RiMenuLine)({})
-
 const MenuButtonText = styled.div(({ theme }) => ({
   alignSelf: "center",
   paddingLeft: "16px",
@@ -72,7 +70,7 @@ const MenuButton = React.forwardRef<HTMLButtonElement, MenuButtonProps>(
       aria-label={text ? undefined : ariaLabel}
     >
       <MenuButtonInner>
-        <MenuIcon />
+        <RiMenuLine aria-hidden />
         {text ? <MenuButtonText>{text}</MenuButtonText> : ""}
       </MenuButtonInner>
     </StyledMenuButton>

@@ -171,9 +171,12 @@ const Header: FunctionComponent = () => {
   const drawerToggleEvent = drawerOpen
     ? PostHogEvents.ClosedNavDrawer
     : PostHogEvents.OpenedNavDrawer
-  const posthogCapture = (event: string) => {
+  const posthogCapture = (
+    event: string,
+    properties?: Record<string, unknown>,
+  ) => {
     if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-      posthog.capture(event)
+      posthog.capture(event, properties)
     }
   }
   const menuClick = () => {
@@ -217,7 +220,9 @@ const Header: FunctionComponent = () => {
                 label="For Organizations"
                 icon={<RiGlobalLine aria-hidden />}
                 onClick={() =>
-                  posthogCapture(PostHogEvents.ClickedNavForOrganizations)
+                  posthogCapture(PostHogEvents.ClickedNavForOrganizations, {
+                    placement: "headerBar",
+                  })
                 }
               />
             ) : null}
@@ -248,7 +253,14 @@ const Header: FunctionComponent = () => {
           posthogCapture(drawerToggleEvent)
           toggleDrawer.off()
         }}
-        posthogCapture={posthogCapture}
+        /**
+         * Stamped here rather than inside NavDrawer so the placement vocabulary
+         * stays in the app: several nav events fire from both the header bar
+         * and the drawer, and without this they are indistinguishable.
+         */
+        posthogCapture={(event) =>
+          posthogCapture(event, { placement: "navDrawer" })
+        }
       />
     </div>
   )

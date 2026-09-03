@@ -6,6 +6,7 @@ import {
   Button,
   ButtonLink,
   RadioChoiceField,
+  VisuallyHidden,
   type RadioChoiceFieldProps,
 } from "@mitodl/smoot-design"
 import { RiArrowRightLine, RiUserLine } from "@remixicon/react"
@@ -183,6 +184,7 @@ const mapValuesToFields = (
 const OrgLeadForm: React.FC<{ className?: string }> = ({ className }) => {
   const posthog = usePostHog()
   const [audience, setAudience] = React.useState<Audience>("organization")
+  const confirmation = React.useRef<HTMLDivElement>(null)
 
   const formId = getOrgLearningHubspotFormId()
   const recaptchaSiteKey = getRecaptchaSiteKey()
@@ -193,6 +195,20 @@ const OrgLeadForm: React.FC<{ className?: string }> = ({ className }) => {
     isError: isFormDetailError,
   } = useHubspotFormDetail(formId ? { form_id: formId } : undefined)
   const hubspotFormSubmit = useHubspotFormSubmit({ meta: SILENCE_ERROR_TOAST })
+
+  const isConfirmed = hubspotFormSubmit.isSuccess && audience === "organization"
+
+  /**
+   * Submitting unmounts the form, and with it whatever had focus, so focus has
+   * to be placed deliberately or it falls to `document.body`. The confirmation
+   * is also what announces the outcome: a screen reader reads the container it
+   * is moved into, which is why there is no live region duplicating this copy.
+   */
+  React.useEffect(() => {
+    if (isConfirmed) {
+      confirmation.current?.focus()
+    }
+  }, [isConfirmed])
 
   const capture = (event: string, properties?: Record<string, unknown>) => {
     if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
@@ -240,10 +256,10 @@ const OrgLeadForm: React.FC<{ className?: string }> = ({ className }) => {
       : "Failed to submit the form. Please try again."
     : null
 
-  if (hubspotFormSubmit.isSuccess && audience === "organization") {
+  if (isConfirmed) {
     return (
       <Card className={className}>
-        <Message role="status">
+        <Message ref={confirmation} tabIndex={-1}>
           <MessageTitle>{copy.success.title}</MessageTitle>
           <MessageBody>{copy.success.body}</MessageBody>
         </Message>
@@ -253,6 +269,20 @@ const OrgLeadForm: React.FC<{ className?: string }> = ({ className }) => {
 
   return (
     <Card className={className}>
+      {/**
+       * Mounted for every state the form passes through, so each status change
+       * lands as a mutation inside a region assistive tech is already
+       * watching. A live region added to the tree with its text already in it
+       * is not reliably announced. The success outcome is not routed through
+       * here — focus moves to the confirmation, which announces it.
+       */}
+      <VisuallyHidden aria-live="polite" aria-atomic="true">
+        {hubspotFormSubmit.isPending
+          ? copy.submitting
+          : isLoading
+            ? copy.loading
+            : ""}
+      </VisuallyHidden>
       <AudienceField
         name={AUDIENCE_FIELD_NAME}
         value={audience}
@@ -285,10 +315,17 @@ const OrgLeadForm: React.FC<{ className?: string }> = ({ className }) => {
         </IndividualPanel>
       ) : !formId || isFormDetailError ? (
         <MessageBody role="alert">{copy.unavailable}</MessageBody>
+      ) : isLoading ? (
+        /**
+         * HubspotForm renders nothing at all until it has a form definition —
+         * its own `isLoading` branch sits behind that early return — so the
+         * wait is covered here instead. Presentational because the live region
+         * above already announces it; without this it is read twice.
+         */
+        <MessageBody aria-hidden="true">{copy.loading}</MessageBody>
       ) : (
         <StyledHubspotForm
           form={hubspotForm}
-          isLoading={isLoading}
           isSubmitting={hubspotFormSubmit.isPending}
           recaptchaEnabled={Boolean(recaptchaSiteKey)}
           recaptchaSiteKey={recaptchaSiteKey}
@@ -299,6 +336,7 @@ const OrgLeadForm: React.FC<{ className?: string }> = ({ className }) => {
               variant="primary"
               size="large"
               disabled={hubspotFormSubmit.isPending}
+              aria-busy={hubspotFormSubmit.isPending}
             >
               {copy.submitLabel}
             </SubmitButton>
